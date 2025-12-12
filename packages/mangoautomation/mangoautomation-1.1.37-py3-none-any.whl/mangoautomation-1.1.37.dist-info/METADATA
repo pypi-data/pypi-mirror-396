@@ -1,0 +1,215 @@
+Metadata-Version: 2.4
+Name: mangoautomation
+Version: 1.1.37
+Summary: 测试工具
+Home-page: https://gitee.com/mao-peng/testkit
+Author: 毛鹏
+Author-email: 729164035@qq.com
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.12
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: setuptools==78.1.1
+Requires-Dist: pydantic>=2.9.2
+Requires-Dist: playwright==1.43.0
+Requires-Dist: uiautomation>=2.0.20
+Requires-Dist: uiautomator2>=3.2.5
+Requires-Dist: mangotools>=1.1.61
+Requires-Dist: adbutils~=2.8.9
+Requires-Dist: uiautodev>=0.9.0
+Requires-Dist: beautifulsoup4==4.14.2
+Requires-Dist: openai==2.6.1
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: license-file
+Dynamic: requires-dist
+Dynamic: summary
+
+# 芒果自动化测试平台 (Mango Automation)
+
+[![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.12-blue)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
+## 项目简介
+
+芒果自动化测试平台（Mango Automation）是一个多平台UI自动化测试工具，支持Android、iOS、PC和Web端的自动化操作。该平台集成了AI智能元素识别功能，能够通过大模型辅助进行元素定位，提高测试脚本的稳定性和维护效率。
+
+## 核心功能
+
+- ✅ **多平台支持**：支持Web、Android、iOS、PC桌面应用的自动化测试
+- ✅ **AI智能定位**：基于大模型的智能元素识别（React Agent），自动修复定位失败问题
+- ✅ **统一驱动封装**：跨平台UI驱动封装，提供一致的API接口
+- ✅ **元素操作**：支持元素查找、断言、输入模拟等基础操作
+- ✅ **智能重试机制**：自动记忆成功/失败的定位表达式，优化后续定位效率
+
+## 技术架构
+
+```
+mangoautomation/
+├── enums/           # 枚举定义
+├── exceptions/      # 异常处理模块
+├── models/          # 数据模型
+├── react_agent/     # AI代理模块（核心）
+├── tools/           # 辅助工具
+├── uidrive/         # 统一驱动接口
+├── uidrives/        # 多平台具体实现（android, ios, pc, web）
+└── __init__.py      # 模块初始化
+```
+
+## 技术栈
+
+- **Playwright**: Web端自动化
+- **uiautomation**: Windows桌面应用自动化
+- **uiautomator2** 和 **uiautodev**: Android设备自动化控制
+- **adbutils**: ADB通信工具
+- **OpenAI**: 大模型能力支持智能测试
+- **Pydantic**: 数据模型校验
+- **BeautifulSoup4**: HTML解析辅助
+
+## 安装方式
+
+### pip安装
+
+```bash
+pip install mangoautomation
+```
+
+### 源码安装
+
+```bash
+git clone https://gitee.com/mao-peng/testkit.git
+cd mangoautomation
+pip install -r requirements.txt
+python setup.py install
+```
+
+## 快速开始
+
+### Web自动化示例
+
+```python
+from mangoautomation.uidrive import DriverObject, BaseData
+from mangoautomation.models import ElementModel
+from mangotools.data_processor import DataProcessor
+from mangotools.log_collector import set_log
+
+# 初始化日志和数据处理器
+log = set_log('./logs')
+test_data = DataProcessor()
+
+# 创建驱动对象
+driver_object = DriverObject(log, is_async=True)
+driver_object.set_web(web_type=0, web_path="/path/to/chrome")
+
+# 配置基础数据
+base_data = BaseData(test_data, log)
+base_data.set_url("https://www.baidu.com/")
+
+# 创建元素模型
+element_model = ElementModel(
+    id=1,
+    type=0,  # 元素操作类型
+    name="搜索框",
+    elements=[
+        {
+            "exp": 2,  # 定位方式：locator
+            "loc": "locator(\"#kw\")",  # 定位表达式
+            "sub": None,
+            "is_iframe": 0,
+            "prompt": "查找元素：搜索框"
+        }
+    ],
+    ope_key="w_input",  # 操作方法
+    ope_value=[{"v": "芒果测试平台"}]  # 操作值
+)
+
+# 执行自动化操作
+async def run_test():
+    context, page = await driver_object.web.new_web_page()
+    base_data.set_page_context(page, context)
+    
+    # 创建元素操作对象
+    element = AsyncElement(base_data, 0)  # 0表示Web平台
+    
+    # 打开URL
+    await element.open_url()
+    
+    # 执行元素操作
+    await element.element_main(element_model)
+
+# 运行测试
+import asyncio
+asyncio.run(run_test())
+```
+
+### Android自动化示例
+
+```python
+# TODO: 添加Android示例
+```
+
+### PC桌面应用自动化示例
+
+```python
+# TODO: 添加PC示例
+```
+
+## AI智能定位功能
+
+芒果自动化平台集成了基于OpenAI的AI智能定位功能，能够：
+
+1. 当元素定位失败时，自动调用AI重新生成定位表达式
+2. 记忆成功和失败的定位表达式，优化后续定位效率
+3. 支持HTML内容分段处理，解决大页面定位问题
+
+```python
+# 启用AI定位功能
+base_data = BaseData(test_data, log)
+base_data.set_agent(
+    True, 
+    'your-openai-api-key',
+    'https://api.openai.com/v1',  # base_url
+    'gpt-4'  # model
+)
+```
+
+## Docker部署
+
+项目提供了Dockerfile支持容器化部署：
+
+```bash
+# 构建镜像
+docker build -t mango_automation .
+
+# 运行容器
+docker run -d --name mango_automation mango_automation
+```
+
+## 项目结构说明
+
+```
+tests/               # 测试用例目录
+├── test_ui_web.py   # Web自动化测试
+├── test_ui_and.py   # Android测试
+└── demo1.py         # 示例脚本
+```
+
+## 贡献指南
+
+欢迎提交Issue和Pull Request来改进芒果自动化测试平台。
+
+## 许可证
+
+本项目采用MIT许可证，详情请见[LICENSE](LICENSE)文件。
+
+## 联系方式
+
+如有问题或建议，请联系：729164035@qq.com
+
+## 项目链接
+
+- Gitee: https://gitee.com/mao-peng/testkit
