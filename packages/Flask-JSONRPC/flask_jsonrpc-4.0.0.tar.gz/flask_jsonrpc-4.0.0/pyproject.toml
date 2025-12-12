@@ -1,0 +1,514 @@
+[project]
+name = "Flask-JSONRPC"
+version = "4.0.0"
+description = "Adds JSONRPC support to Flask."
+readme = {file = "README.md", content-type = "text/markdown"}
+license = {file = "LICENSE.txt"}
+authors = [{name = "Nycholas Oliveira", email = "nycholas@cenobit.es"}]
+maintainers = [{name = "Cenobit Technologies Inc.", email = "hi@cenobit.es"}]
+keywords = ["flask", "flask-extensions", "jsonrpc"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Web Environment",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: Free Threading :: 1 - Unstable",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "Flask>=3.0.0,<4.0", # https://github.com/pallets/flask
+    "typeguard==4.4.4", # https://github.com/agronholm/typeguard
+    "typing-extensions>=4.3.0", # https://github.com/python/typing/blob/master/typing_extensions/README.rst
+    "typing-inspect==0.9.0", # https://github.com/ilevkivskyi/typing_inspect
+    "pydantic>=1.7.4,!=1.8,!=1.8.1,!=2.0.0,!=2.0.1,!=2.1.0,<3.0.0", # https://github.com/pydantic/pydantic
+    "eval-type-backport==0.3.1", # https://github.com/alexmojaki/eval_type_backport
+    "annotated-types==0.7.0", # https://github.com/annotated-types/annotated-types
+]
+
+[project.optional-dependencies]
+async = ["Flask[async]>=3.0.0,<4.0"]
+dotenv = ["Flask[dotenv]>=3.0.0,<4.0"]
+
+[project.urls]
+Donate = "https://github.com/sponsors/nycholas"
+Documentation = "https://flask-jsonrpc.readthedocs.io/"
+"Source Code" = "https://github.com/cenobites/flask-jsonrpc"
+"Issue Tracker" = "https://github.com/cenobites/flask-jsonrpc/issues/"
+Website = "https://flask-jsonrpc.readthedocs.io/"
+
+[dependency-groups]
+dev = [
+    "ipdb", # https://github.com/gotcha/ipdb
+    "tox<4.30", # https://github.com/tox-dev/tox
+    "tox-uv", # https://github.com/tox-dev/tox-uv
+]
+pre-commit = [
+    "pre-commit", # https://github.com/pre-commit/pre-commit
+    "pre-commit-uv", # https://github.com/tox-dev/pre-commit-uv
+]
+tests = [
+    "pytest==9.0.2", # https://github.com/pytest-dev/pytest
+    "pytest-cov==7.0.0", # https://github.com/pytest-dev/pytest-cov
+    "pytest-xdist==3.8.0", # https://github.com/pytest-dev/pytest-xdist
+    "pytest-sugar==1.1.1", # https://github.com/Frozenball/pytest-sugar
+    "pytest-env==1.2.0", # https://github.com/MobileDynasty/pytest-env
+    "pytest-clarity==1.0.1", # https://github.com/darrenburns/pytest-clarity
+    "typeguard==4.4.4", # https://github.com/agronholm/typeguard
+    "coverage[toml]==7.13.0", # https://github.com/nedbat/coveragepy
+    "requests==2.32.5", # https://github.com/psf/requests
+]
+ci-tests = [
+    {include-group = "tests"},
+    "pytest-repeat==0.9.4", # https://github.com/pytest-dev/pytest-repeat
+    "pytest-rerunfailures==16.1", # https://github.com/pytest-dev/pytest-rerunfailures
+    "pytest-randomly==4.0.1", # https://github.com/pytest-dev/pytest-randomly
+    "pytest-random-order==1.2.0", # https://github.com/pytest-dev/pytest-random-order
+]
+parallel-tests = [
+    {include-group = "ci-tests"},
+    "pytest-run-parallel==0.8.0", # https://github.com/Quansight-Labs/pytest-run-parallel
+]
+integration-tests = [
+    {include-group = "ci-tests"},
+    "pytest-playwright==0.7.2", # https://github.com/microsoft/playwright-python
+    "playwright==1.56.0", # https://github.com/microsoft/playwright-python
+]
+style = [
+    "ruff==0.14.8", # https://github.com/astral-sh/ruff
+]
+typing = [
+    "mypy==1.18.2;python_version>='3.11'", # https://github.com/python/mypy
+    "types_setuptools==80.9.0.20250822", # https://github.com/python/typeshed
+    "typeguard==4.4.4", # https://github.com/agronholm/typeguard
+    "pyright==1.1.407;python_version>='3.11'", # https://github.com/microsoft/pyright
+]
+security = [
+    "bandit;python_version>='3.11'", # https://github.com/PyCQA/bandit
+]
+build = [
+    "hatch==1.16.2", # https://github.com/pypa/hatch
+]
+cbuild = [
+    "cibuildwheel==3.2.0;python_version>='3.11'", # https://github.com/pypa/cibuildwheel
+    "hatch-mypyc==0.16.0", # https://github.com/ofek/hatch-mypyc
+    "mypy[mypyc]==1.18.2", # https://github.com/python/mypy
+    "mypy-extensions==1.1.0", # https://github.com/python/mypy_extensions
+    "setuptools>=77.0.0", # https://github.com/pypa/setuptools
+]
+docs = [
+    "Sphinx<8", # https://github.com/sphinx-doc/sphinx
+    "sphinx-tabs==3.4.7", # https://github.com/executablebooks/sphinx-tabs
+    "sphinxcontrib-log-cabinet==1.0.1", # https://github.com/davidism/sphinxcontrib-log-cabinet
+    "Pallets-Sphinx-Themes==2.3.0", # https://github.com/pallets/pallets-sphinx-themes
+    "sphinx-autodoc-typehints==2.2.0", # https://github.com/tox-dev/sphinx-autodoc-typehints
+]
+docs-auto = [
+    "sphinx-autobuild", # https://github.com/sphinx-doc/sphinx-autobuild
+]
+
+# Uncomment the following to use setuptools as the build backend for Mypyc builds.
+# [build-system]
+# requires = [
+#     "wheel>=0.42",
+#     "setuptools>=77.0.0",
+#     "mypy==1.18.2",
+#     "pydantic>=1.7.4,!=1.8,!=1.8.1,!=2.0.0,!=2.0.1,!=2.1.0,<3.0.0"
+# ]
+# build-backend = "setuptools.build_meta"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+only-include = ["src/flask_jsonrpc"]
+packages = ["src/flask_jsonrpc"]
+
+[tool.hatch.build.targets.sdist]
+ignore-vcs = true
+include = [
+    "src/flask_jsonrpc",
+    "docs/",
+    "examples/",
+    "tests/",
+    "uv.lock",
+]
+exclude = [
+    ".devcontainer",
+    ".docker",
+    ".github",
+    "bin/",
+    ".tox/",
+    "venv/",
+    ".venv/",
+    ".venv.*/",
+    "**/venv/",
+    "**/.venv/",
+    "**/.venv.*",
+    "**/.tox/",
+    "**/junit/",
+    "**/htmlcov/",
+    "**/coverage.*",
+    "docs/_build/",
+]
+
+[tool.hatch.build.targets.wheel.hooks.mypyc]
+enable-by-default = false
+require-runtime-dependencies = true
+dependencies = [
+    "wheel>=0.42",
+    "setuptools>=77.0.0",
+    "mypy==1.18.2",
+    "hatch-mypyc==0.16.0"
+]
+mypy-args = [
+    "--config-file=pyproject.toml.bak", # hatch-mypyc issue #37
+    "--install-types",
+    "--non-interactive",
+    "--strict",
+    "--check-untyped-defs",
+    "--ignore-missing-imports",
+    "--disallow-untyped-defs",
+    "--disable-error-code=unused-ignore",
+    "--disable-error-code=no-any-return",
+    "--disable-error-code=call-arg",
+    "--disable-error-code=misc",
+]
+
+[tool.hatch.build.targets.wheel.hooks.mypyc.options]
+opt_level = "3"
+debug_level = "0"
+strip_asserts = true
+include_runtime_files = true
+
+[tool.setuptools]
+zip-safe = false
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+namespaces = false
+
+[tool.uv]
+package = true
+default-groups = ["dev", "pre-commit", "tests", "style", "typing"]
+
+[tool.uv.build-backend]
+module-name = "flask_jsonrpc"
+
+[tool.cibuildwheel]
+before-all = "uname -a"
+build-frontend = "build[uv]"
+build-verbosity = 1
+skip = [
+    "cp3{8,9,10,11,12}-*",
+    "*-manylinux_i686",
+    "*-musllinux_i686",
+    "*-win32",
+    "pp*",
+]
+test-groups = ["ci-tests"]
+test-command = "py.test -rsxX -vv --numprocesses=auto --tb=short --rootdir={project} {project}/tests --cov-fail-under=0 --random-order --count=5 --reruns=5 --exitfirst"
+
+[tool.cibuildwheel.environment]
+CIBW_PROJECT_REQUIRES_PYTHON = ">=3.11"
+SETUPTOOLS_BUILD_ENABLE_MYPYC = "1"
+HATCH_BUILD_HOOK_ENABLE_MYPYC = "0"
+
+[tool.ruff]
+src = ["src"]
+fix = true
+show-fixes = true
+output-format = "concise"
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle error
+    "W",    # pycodestyle warning
+    "F",    # pyflakes
+    "UP",   # pyupgrade
+    "ANN",  # flake8-annotations
+    "B",    # flake8-bugbear
+    "Q",    # flake8-quotes
+    "SIM",  # flake8-simplify
+    "T",    # flake8-type-checking
+    "B",    # flake8-bandit
+    "C",    # flake8-copyright
+    "I",    # isort
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.flake8-quotes]
+inline-quotes = "single"
+docstring-quotes = "double"
+
+[tool.ruff.lint.flake8-type-checking]
+exempt-modules = ["typing", "typing_extensions", "annotated_types"]
+
+[tool.ruff.lint.flake8-bandit]
+check-typed-exception = true
+
+[tool.ruff.lint.flake8-copyright]
+author = "Cenobit Technologies, Inc. http://cenobit.es/"
+
+[tool.ruff.lint.isort]
+length-sort = true
+combine-as-imports = true
+order-by-type = true
+force-sort-within-sections = true
+split-on-trailing-comma = false
+section-order = [
+    "future",
+    "standard-library",
+    "typing-extensions",
+    "flask",
+    "pydantic",
+    "third-party",
+    "first-party",
+    "local-folder"
+]
+
+[tool.ruff.lint.isort.sections]
+"flask" = ["flask"]
+"pydantic" = ["pydantic"]
+"typing-extensions" = ["typing_inspect", "typing_extensions", "annotated_types"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+skip-magic-trailing-comma = true
+docstring-code-format = true
+docstring-code-line-length = 79
+
+[tool.pytest.ini_options]
+addopts = "-rsxX -vv --pyargs --doctest-modules --showlocals --strict-markers --numprocesses=auto --junitxml=junit/test-results.xml --cov-report=html --cov-report=term --cov-report=lcov --cov=flask_jsonrpc --cov-fail-under=100"
+junit_family = "xunit2"
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
+pythonpath = "src/"
+testpaths = [
+    "src/flask_jsonrpc",
+    "tests",
+]
+filterwarnings = [
+    "error",
+    "ignore::pytest.PytestUnraisableExceptionWarning"
+]
+norecursedirs = [
+    "tests/shared",
+    "tests/test_apps",
+    "tests/integration",
+]
+markers = [
+    "parallel_threads: mark test to run in parallel threads",
+]
+required_plugins = [
+    "pytest-cov==7.0.0",
+    "pytest-xdist==3.8.0",
+    "pytest-sugar==1.1.1",
+    "pytest-env==1.2.0",
+    "pytest-clarity==1.0.1",
+]
+
+[tool.coverage.run]
+branch = true
+source = [
+    "src/flask_jsonrpc",
+    "tests",
+]
+omit = [
+    "*/fixtures.py",
+    "*/tests.py",
+    "*/test_*.py",
+    "*/*_tests.py",
+]
+
+[tool.coverage.paths]
+source = [
+    "src",
+    "*/site-packages",
+]
+
+[tool.coverage.report]
+fail_under = 100
+ignore_errors = true
+skip_covered = true
+exclude_lines = [
+    "pragma: no cover",
+    "pragma: no cover ${PRAGMA_VERSION}",
+    "def __repr__",
+    "if self\\.debug",
+    "if settings\\.DEBUG",
+    "if current_app\\.config\\['DEBUG'\\]",
+    "if app\\.config\\['DEBUG'\\]",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "if t\\.TYPE_CHECKING:",
+    "if sys\\.version_info"
+]
+
+[tool.mypy]
+plugins = ["pydantic.mypy"]
+files = ["src/flask_jsonrpc"]
+python_version = "3.14"
+pretty = true
+strict = true
+show_error_codes = true
+ignore_errors = false
+ignore_missing_imports = false
+warn_redundant_casts = true
+warn_unused_ignores = true
+no_implicit_reexport = true
+check_untyped_defs = true
+disallow_any_generics = true
+disallow_untyped_defs = true
+follow_imports = "silent"
+
+[[tool.mypy.overrides]]
+module = [
+    "asgiref.*",
+    "mypy-werkzeug.datastructures.*",
+    "typeguard.*",
+    "typing_inspect.*",
+    "dotenv.*",
+]
+ignore_missing_imports = true
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+
+[tool.pyright]
+pythonVersion = "3.14"
+include = ["src/flask_jsonrpc"]
+typeCheckingMode = "basic"
+
+[tool.tox]
+requires = [
+    "tox<4.30", # tox-dev issue: #3602
+    "tox-uv>=1.26.1"
+]
+env_list = [
+    "py3.14", "py3.14t", "py3.13", "py3.12", "py3.11", "py3.10",
+    "py3.14-async", "py3.14t-async", "py3.13-async", "py3.12-async", "py3.11-async", "py3.10-async",
+    "paralleltests",
+    "style",
+    "typing",
+    "security",
+    "docs"
+]
+skip_missing_interpreters = true
+
+[tool.tox.env_run_base]
+package = "wheel"
+wheel_build_env = ".pkg"
+runner = "uv-venv-lock-runner"
+env_tmp_dir = "{toxworkdir}/tmp/{envname}"
+constrain_package_deps = true
+use_frozen_constraints = true
+deps = [
+    "async: .[async]",
+]
+dependency_groups = [
+    "ci-tests",
+]
+no_default_groups = true
+commands = [[
+    "pytest", "-rsxX", "-vv", "--numprocesses=auto", "--tb=short", "--basetemp={env_tmp_dir}",
+    "--random-order", "--count=5", "--reruns=5", "--exitfirst",
+    {replace = "posargs", default = [], extend = true}
+]]
+
+[tool.tox.env.paralleltests]
+runner = "uv-venv-lock-runner"
+base_python = ["3.14t"]
+extras = ["async"]
+dependency_groups = [
+    "parallel-tests",
+]
+no_default_groups = true
+commands = [[
+    "pytest", "-rsxX", "-vv", "--numprocesses=auto", "--tb=short", "--basetemp={env_tmp_dir}",
+    "--random-order", "--count=5", "--reruns=5", "--parallel-threads=10", "--iterations=10", "--exitfirst",
+    {replace = "posargs", default = [], extend = true}
+]]
+
+[tool.tox.env.style]
+runner = "uv-venv-lock-runner"
+base_python = ["3.14"]
+dependency_groups = [
+    "pre-commit"
+]
+no_default_groups = true
+commands = [[
+    "pre-commit", "run", "--all-files", "--show-diff-on-failure"
+]]
+
+[tool.tox.env.typing]
+runner = "uv-venv-lock-runner"
+base_python = ["3.14"]
+dependency_groups = [
+    "typing"
+]
+no_default_groups = true
+commands = [
+    ["mypy", "--install-types", "--non-interactive", "run.py", "src/"],
+    ["pyright"],
+]
+
+[tool.tox.env.security]
+runner = "uv-venv-lock-runner"
+base_python = ["3.14"]
+dependency_groups = [
+    "security"
+]
+no_default_groups = true
+commands = [
+    ["bandit", "-r", "src/"],
+]
+
+[tool.tox.env.docs]
+runner = "uv-venv-lock-runner"
+base_python = ["3.14"]
+dependency_groups = [
+    "docs"
+]
+no_default_groups = true
+commands = [[
+    "sphinx-build", "-E", "-W", "-b", "html", "-d", "{envtmpdir}/doctrees", "docs", "{envtmpdir}/html"
+]]
+
+[tool.tox.env.docs-auto]
+description = "continuously rebuild docs and start a local server"
+dependency_groups = ["docs", "docs-auto"]
+commands = [[
+    "sphinx-autobuild", "-W", "-b", "dirhtml", "--watch", "src", "docs", "docs/_build/dirhtml"
+]]
+
+[tool.tox.env.update-requirements]
+base_python = ["3.14"]
+dependency_groups = []
+no_default_groups = true
+skip_install = true
+commands = [["uv", "lock", {replace = "posargs", default = ["-U"], extend = true}]]
