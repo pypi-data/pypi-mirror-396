@@ -1,0 +1,250 @@
+
+
+
+{
+  "code_meaning": {
+    "0": "양호",
+    "1~9": "취약",
+    "10~19": "경고"
+  },
+
+  "U_00": {
+    "0": {"desc": "tty로만 root로그인이 가능"},
+    "1": {"desc": "pty로 root 로그인 가능", "action": "/etc/securetty 파일에서 pts/0 ~ pts/x 관련 설정 수정"},
+    "2": {"desc": "auth required /lib/security/pam_securetty.so 설정이 포함되어 있지 않음.", "action": "/etc/pam.d/login 파일에 auth required /lib/security/pam_securetty.so을 추가"},
+    "10": {"desc": "/etc/securetty 파일이 존재하지 않음.", "action": "/etc/securetty 파일을 생성해주세요."},
+    "11": {"desc": "/etc/pam.d/login 파일이 존재하지 않음.", "action": "/etc/pam.d/login 파일을 생성해주세요."}
+
+  },
+  "U_01": {
+    "0": {"desc": "ssh 루트 로그인, 비밀번호 로그인 차단 완료"},
+    "1": {"desc": "원격 비밀번호 로그인 가능", "action": "/etc/ssh/sshd_config 파일에 passwordAuthentication yes를 주석 처리 해주세요."},
+    "2": {"desc": "원격 루트 로그인 가능", "action": "/etc/ssh/sshd_config 파일에 PermitRootLogin yes를 주석 처리 해주세요."},
+    "10": {"desc": "ssh설정파일이 없습니다.", "action": "ssh 설치 여부를 확인해주세요"}
+  },
+
+    "U_02": {
+    "0": {"desc": "패스워드 복잡성 설정이 완료된 상태"},
+    "1": {"desc": "최소 소문자 개수 부족", "action": "/etc/security/pwquality.conf 파일의 lcredit 값을 확인해주세요."},
+    "2": {"desc": "최소 대문자 개수 부족", "action": "/etc/security/pwquality.conf 파일의 ucredit 값을 확인해주세요."},
+    "3": {"desc": "최소 숫자 개수 부족", "action": "/etc/security/pwquality.conf 파일의 dcredit 값을 확인해주세요."},
+    "4": {"desc": "최소 특수문자 개수 부족", "action": "/etc/security/pwquality.conf 파일의 ocredit 값을 확인해주세요."},
+    "5": {"desc": "최소 패스워드 길이가 짧습니다.", "action": "/etc/security/pwquality.conf 파일의 minlen 값을 확인해주세요."},
+    "10": {"desc": "패스워드 설정파일이 없습니다.", "action": "/etc/security/pwquality.conf 파일을 확인해주세요."}
+  },
+
+
+  "U_03": {
+    "0": {"desc": "계정 잠금 임계값 설정 완료"},
+    "1": {"desc": "deny설정이 없거나 10회 이상", "action": "/etc/pam.d/system-auth 파일에 auth required /lib/security/pam_tally.so deny=5를 추가해주세요"},
+    "2": {"desc": "pam_tally.so모듈을 사용하고 있지 않습니다", "action": "/etc/pam.d/system-auth 파일에 account required /lib/security/pam_tally.so를 추가해주세요"},
+    "10": {"desc": "/etc/pam.d/system-auth 파일이 존재하지 않습니다.", "action": "/etc/pam.d/system-auth 파일 존재 여부를 확인해주세요"}
+  },
+
+  "U_04": {
+    "0": {"desc": "섀도 패스워드 설정 완료"},
+    "1": {"desc": "섀도 패스워드가 설정되어 있지 않음", "action": "sudo pwconv 명령어로 섀도 패스워드를 적용해주세요."}
+  },  
+
+    "U_05": {
+    "0": {"desc": "PATH 환경변수 문제 없음"},
+    "1": {"desc": "\".\"이 맨 앞이나 중간에 포함되어 있거나 ::가 존재", "action": "vi /etc/profile 혹은 vi ~/.profile명령어로 파일을 열어서 PATH의 맨 앞이나 중간에 있는 . 혹은 ::를 제거해주세요"}
+  },
+
+    "U_06": {
+    "0": {"desc": "소유자가 불분명한 파일/디렉토리가 존재하지 않음"},
+    "1": {"desc": "/etc/passwd에 등록되지 않은 유저와 그룹 소유의 파일 혹은 디렉토리가 존재합니다", "action": "sudo find / -nouser -quit -print 및 sudo find / -nogroup -quit -print 명령을 실행하고 소유자가 불분명한 파일을 제거해주세요. "},
+    "2": {"desc": "/etc/passwd에 등록되지 않은 유저 소유의 파일 혹은 디렉토리가 존재합니다", "action": "sudo find / -nouser -quit -print 명령을 실행하고 소유자가 불분명한 파일을 제거해주세요."},
+    "3": {"desc": "/etc/passwd에 등록되지 않은 그룹 소유의 파일 혹은 디렉토리가 존재합니다", "action": "sudo find / -nogroup -quit -print 명령을 실행하고 소유자가 불분명한 파일을 제거해주세요."}
+  },
+
+    "U_07": {
+    "0": {"desc": "/etc/passwd 파일의 권한이 적절하게 설정되어 있음"},
+    "1": {"desc": "/etc/passwd 파일의 권한이 큽니다.", "action": "/etc/passwd파일의 권한을 644 이하로 설정해주세요. "},
+    "2": {"desc": "/etc/passwd 파일의 소유자가 root가 아닙니다. ", "action": "/etc/passwd 파일의 소유자를 root로 변경해주세요"},
+    "10": {"desc": "/etc/passwd 파일이 존재하지 않습니다.", "action": "/etc/passwd 파일을 생성해주세요"}
+  },
+
+    "U_08": {
+    "0": {"desc": "/etc/shadow 파일의 권한이 적절하게 설정되어 있음"},
+    "1": {"desc": "/etc/shadow 파일의 권한이 큽니다.", "action": "/etc/passwd파일의 권한을 400 이하로 설정해주세요. "},
+    "2": {"desc": "/etc/shadow 파일의 소유자가 root가 아닙니다. ", "action": "/etc/shadow 파일의 소유자를 root로 변경해주세요"},
+    "10": {"desc": "/etc/shadow 파일이 존재하지 않습니다.", "action": "/etc/shadow 파일을 생성해주세요"}
+  },
+
+    "U_09": {
+    "0": {"desc": "/etc/hosts 파일의 권한이 적절하게 설정되어 있음"},
+    "1": {"desc": "/etc/hosts 파일의 권한이 큽니다.", "action": "/etc/hosts 파일의 권한을 600 이하로 설정해주세요. "},
+    "2": {"desc": "/etc/hosts 파일의 소유자가 root가 아닙니다. ", "action": "/etc/hosts 파일의 소유자를 root로 변경해주세요"},
+    "10": {"desc": "/etc/hosts 파일이 존재하지 않습니다.", "action": "/etc/hosts 파일을 생성해주세요"}
+  },
+
+
+    "U_10": {
+    "0": {"desc": "xinetd 관련 파일의 권한이 적절하게 설정되어 있음"},
+    "1": {"desc": "/etc/xinetd.conf 파일의 소유자가 root가 아닙니다.", "action": "/etc/xinetd.conf 파일의 소유자를 root로 변경해주세요."},
+    "2": {"desc": "/etc/xinetd.conf 파일의 권한이 600이 아닙니다. ", "action": "/etc/xinetd.conf 파일의 권한을 600으로 조절해주세요."},
+    "10": {"desc": "/etc/xinetd.d 디렉토리 아래에 파일의 권한이 600이 아닌 파일이 존재합니다.", "action": "/etc/xinetd.d 디렉토리 아래에 있는 파일들의 권한을 600으로 맞춰주세요."},
+    "11": {"desc": "/etc/xinetd.d 디렉토리 아래에 파일의 소유자가 root가 아닌 파일이 존재합니다.", "action": "/etc/xinetd.d 디렉토리 아래에 있는 파일들의 소유자를 root로 맞춰주세요."}
+  },
+
+
+    "U_11": {
+    "0": {"desc": "rsyslog.conf 파일의 권한이 적절하게 설정되어 있음"},
+    "1": {"desc": "rsyslog.conf 파일의 권한이 큽니다.", "action": "rsyslog.conf 파일의 권한을 640 이하로 설정해주세요. "},
+    "2": {"desc": "rsyslog.conf 파일의 소유자가 root가 아닙니다. ", "action": "rsyslog.conf 파일의 소유자를 root로 변경해주세요"},
+    "10": {"desc": "rsyslog.conf 파일이 존재하지 않습니다.", "action": "rsyslog.conf 파일을 생성해주세요"}
+  },
+    "U_12": {
+    "0": {"desc": "/etc/services 파일의 권한이 적절하게 설정되어 있음"},
+    "1": {"desc": "/etc/services 파일의 권한이 큽니다.", "action": "/etc/services 파일의 권한을 644 이하로 설정해주세요. "},
+    "2": {"desc": "/etc/services 파일의 소유자가 root가 아닙니다. ", "action": "/etc/services 파일의 소유자를 root로 변경해주세요"},
+    "10": {"desc": "/etc/services 파일이 존재하지 않습니다.", "action": "/etc/services 파일을 생성해주세요"}
+  },
+
+    "U_13": {
+    "0": {"desc": "SUID 혹은 SGID가 설정되어 있는 중요 파일이 존재하지 않음"},
+    "1": {"desc": "SUID 혹은 SGID가 설정되어 있는 중요 파일이 존재함", "action": "불필요한 SUID 혹은 SGID을 제거해주세요 명령어: chmod -s <file_name> "}
+  },
+
+    "U_14": {
+    "0": {"desc": "사용자 환경파일의 소유자 및 권한이 적절하게 설정되어 있음"},
+    "1": {"desc": "사용자 환경파일의 소유자 및 권한이 적절하지 않은 파일이 존재함", "action": "사용자 환경파일의 소유자 및 권한을 확인해주세요."}
+  },
+
+    "U_15": {
+    "0": {"desc": "world writable 파일이 존재하지 않음"},
+    "1": {"desc": "world writable 파일이 존재함", "action": "불필요한 world writable 파일을 제거해주세요"}
+  },
+
+    "U_16": {
+    "0": {"desc": "/dev 디렉토리 이상 무"},
+    "1": {"desc": "/dev에 파일 타입의 데이터가 존재하거나 major, minor number를 가지지 않는 device 파일이 존재", "action": "불필요한 device파일을 제거해주세요"}
+  },
+  
+    "U_17": {
+    "0": {"desc": "접속 IP 및 포트 제한이 설정되있음"},
+    "1": {"desc": "/etc/hosts.allow 파일에 ALL:ALL 설정이 있습니다.", "action": "/etc/hosts.allow 파일에 ALL:ALL 설정을 제거해주세요"},
+    "2": {"desc": "/etc/hosts.deny 파일에 ALL:ALL 설정이 없습니다.", "action": "/etc/hosts.deny 파일에 ALL:ALL 설정을 추가해주세요"},
+    "10": {"desc": "/etc/hosts.deny 파일이 존재하지 않습니다.", "action": "/etc/hosts.deny 파일을 생성해주세요"}
+  },
+
+    "U_18": {
+    "0": {"desc": "finger서비스가 비활성화 중입니다."},
+    "1": {"desc": "finger서비스가 활성화 중입니다.", "action": "사용하지 않는 finger서비스를 중지해주세요"}
+    },
+
+    "U_19": {
+    "0": {"desc": "FTP 계정이 존재하지 않습니다."},
+    "1": {"desc": "FTP 계정이 존재합니다.", "action": "/etc/passwd 파일에 있는 ftp계정을 삭제해주세요"}
+    },
+
+    "U_20": {
+    "0": {"desc": "불필요한 r계열 서비스가 비활성화 되어 있습니다."},
+    "1": {"desc": "r계열 서비스가 실행중입니다.", "action": "실행중인 r계열 서비스를 중지해주세요. ex) rsh/rlogin/rexec..."}
+    },
+
+    "U_21": {
+    "0": {"desc": "crond 파일 소유자 및 권한이 적절하게 설정되어 있습니다."},
+    "1": {"desc": "파일의 권한이 크거나 소유자가 root가 아닌 파일 혹은 디렉토리가 존재합니다.", "action": "파일 혹은 디렉토리의 권한을 640 이하로 설정하거나 소유자를 root로 변경해주세요."}
+    },
+
+    "U_22": {
+    "0": {"desc": "DoS 공격에 취약한 서비스들이 모두 비활성화 상태입니다."},
+    "1": {"desc": "DoS 공격에 취약한 서비스가 실행중입니다.", "action": "서비스를 비활성화 해주세요."}
+    },
+
+    "U_23": {
+    "0": {"desc": "불필요한 NFS 서비스들이 모두 비활성화 상태입니다"},
+    "1": {"desc": "불필요한 NFS 서비스가 실행중입니다.", "action": "서비스를 비활성화 해주세요."}
+    },
+
+    "U_24": {
+    "0": {"desc": "NFS 사용시 허가된 사용자만 접근 가능하게 설정되어 있습니다."},
+    "1": {"desc": "모든 사용자가 NFS 접근 가능하게 설정되어 있습니다", "action": "/etc/exports 파일에 *를 주석처리 해주세요"},
+    "10":{"desc": "/etc/exports 파일이 존재하지 않습니다." , "action" : "/etc/exports 파일을 생성 해주세요."}
+    },
+
+    "U_25": {
+    "0": {"desc": "automount 서비스가 비활성화 중입니다."},
+    "1": {"desc": "automount 서비스가 동작중입니다.", "action": "automountd 서비스를 비활성화 해주세요."}
+    },
+
+    "U_26": {
+    "0": {"desc": "불필요한 RPC 서비스들이 모두 비활성화 상태입니다"},
+    "1": {"desc": "불필요한 RPC 서비스가 실행중입니다.", "action": "서비스를 비활성화 해주세요."}
+    },
+
+    "U_27": {
+    "0": {"desc": "불필요한 NIS 서비스들이 모두 비활성화 상태입니다"},
+    "1": {"desc": "불필요한 NIS 서비스가 실행중입니다.", "action": "서비스를 비활성화 해주세요."}
+    },
+
+    "U_28": {
+    "0": {"desc": "불필요한 tftp, talk 서비스들이 모두 비활성화 상태입니다"},
+    "1": {"desc": "불필요한 tftp, talk 서비스가 실행중입니다.", "action": "서비스를 비활성화 해주세요."}
+    },
+
+    "U_29": {
+    "0": {"desc": "SMTP 서버의 릴레이 기능 제한이 설정되어 있는 상태입니다."},
+    "1": {"desc": "스팸 메일 릴레이 제한이 설정되있지 않습니다.", "action": "sendmail 서비스를 비활성화 하거나 /etc/mail/sendmail.cf 파일에 #R$* $#error $@ 5.7.1 $: \"550 Relaying denied\" 부분의 주석을 제거해주세요"},
+    "10": {"desc": "/etc/mail/sendmail.cf 파일이 존재하지 않습니다", "action": "/etc/mail/sendmail.cf 파일을 확인해 주세요."}
+    },
+
+    "U_30": {
+    "0": {"desc": "SMTP 서비스 사용 시 일반사용자의 q 옵션이 제한되어 있는 상태입니다."},
+    "1": {"desc": "일반사용자의 q 옵션이 허용되어 있는 상태입니다.", "action": "sendmail 서비스를 비활성화 하거나 /etc/mail/sendmail.cf 파일의 O PrivacyOptions 부분에 restrictqrun 옵션을 추가해주세요.  "},
+    "10": {"desc": "/etc/mail/sendmail.cf 파일이 존재하지 않습니다", "action": "/etc/mail/sendmail.cf 파일을 확인해 주세요."}
+    },
+
+    "U_31": {
+    "0": {"desc": "DNS 서비스 미사용중 혹은 허가된 사용자에게만 Zone Transfer이 설정되어 있는 상태입니다."},
+    "1": {"desc": "Zone Transfer를 모든 사용자에게 허용중입니다.", "action": "/etc/named.conf 파일에 allow-transfer { any; } 부분을 주석처리 해주세요."},
+    "10": {"desc": "/etc/named.conf 파일이 존재하지 않습니다", "action": "/etc/named.conf 파일을 확인해 주세요."}
+    },
+
+    "U_32": {
+    "0": {"desc": "웹서비스 디렉토리 리스팅 기능이 제한된 상태입니다."},
+    "1": {"desc": "웹서비스 디렉토리 리스팅이 가능한 상태입니다.", "action": "/etc/httpd/conf/httpd.conf 파일의 Options부분의 Indexes 옵션을 주석처리 해주세요."},
+    "10": {"desc": "/etc/httpd/conf/httpd.conf 파일이 존재하지 않습니다.", "action": "웹서버의 기본 설정파일 경로를 확인해주세요."}
+    },
+
+    "U_33": {
+    "0": {"desc": "Apache 데몬의 권한이 적절한 상태입니다."},
+    "1": {"desc": "Apache 데몬이 root 유저 권한으로 작동중입니다.", "action": "/etc/httpd/conf/httpd.conf에서 User root 부분을 주석처리 해주세요."},
+    "2": {"desc": "Apache 데몬이 root 그룹 권한으로 작동중입니다.", "action": "/etc/httpd/conf/httpd.conf에서 Group root 부분을 주석처리 해주세요."},
+    "10": {"desc": "/etc/httpd/conf/httpd.conf 파일이 존재하지 않습니다.", "action": "웹서버의 기본 설정파일 경로를 확인해주세요."}
+    },
+
+    "U_34": {
+    "0": {"desc": "상위 디렉터리 이동이 제한된 상태입니다."},
+    "1": {"desc": "상위 디렉터리에 이동이 가능한 상태입니다.", "action": "/etc/httpd/conf/httpd.conf 파일의 AllowOverride None 부분을 주석처리 해주세요."},
+    "10": {"desc": "/etc/httpd/conf/httpd.conf 파일이 존재하지 않습니다.", "action": "웹서버의 기본 설정파일 경로를 확인해주세요."}
+    },
+
+    "U_35": {
+    "0": {"desc": "웹서비스 불필요한 파일이 존재하지 않는 상태입니다."},
+    "1": {"desc": "/usr/share/httpd/htdocs/manual 디렉토리가 존재합니다.", "action": "/usr/share/httpd/htdocs/manual 디렉토리를 삭제해주세요."},
+    "2": {"desc": "/usr/share/httpd/manual 디렉토리가 존재합니다.", "action": "/usr/share/httpd/manual 디렉토리를 삭제해주세요."}
+    },
+
+    "U_36": {
+    "0": {"desc": "심볼릭 링크와 aliases 사용이 제한된 상태입니다."},
+    "1": {"desc": "심볼릭 링크와 aliases 사용이 가능한 상태입니다.", "action": "/etc/httpd/conf/httpd.conf 파일의 Options FollowSymLinks을 삭제 또는 -FollowSymLinks 으로 수정해주세요."},
+    "10": {"desc": "/etc/httpd/conf/httpd.conf 파일이 존재하지 않습니다.", "action": "웹서버의 기본 설정파일 경로를 확인해주세요."}
+    },
+
+    "U_37": {
+    "0": {"desc": "파일 업로드 및 다운로드의 사이즈가 5MB 이하로 제한된 상태입니다."},
+    "1": {"desc": "파일 업로드 및 다운로드를 제한하지 않은 상태입니다.", "action": "/etc/httpd/conf/httpd.conf 파일의 LimitRequestBody를 5000000 이하로 설정해주세요."},
+    "10": {"desc": "/etc/httpd/conf/httpd.conf 파일이 존재하지 않습니다.", "action": "웹서버의 기본 설정파일 경로를 확인해주세요."},
+    "11": {"desc": "파일 업로드 및 다운로드의 사이즈가 5MB 초과로 제한된 상태입니다.", "action": "/etc/httpd/conf/httpd.conf 파일의 LimitRequestBody를 5000000 이하로 설정해주세요."}
+    },
+
+    "U_38": {
+    "0": {"desc": "DocumentRoot가 기본경로가 아닌 별도의 디렉터리로 지정된 상태입니다."},
+    "1": {"desc": "DocumentRoot가 기본경로로 지정된 상태입니다.", "action": "DocumentRoot를 /usr/local/apache/htdocs, /usr/local/apache2/htdocs, /var/www/html 이외의 경로로 설정해주세요."},
+    "2": {"desc": "DocumentRoot가 설정되어 있지 않습니다.", "action": "/etc/httpd/conf/httpd.conf 파일에 DocumentRoot를 추가해주세요."},
+    "10": {"desc": "/etc/httpd/conf/httpd.conf 파일이 존재하지 않습니다.", "action": "웹서버의 기본 설정파일 경로를 확인해주세요."}
+    }
+}
