@@ -1,0 +1,80 @@
+[project]
+name = "aiofdfs"
+dynamic = ["version"]
+description = "A crude but basically usable fastdfs client based on asyncio"
+requires-python = ">=3.12"
+dependencies = [
+    "aiofiles>=25.1.0",
+]
+# 协议信息
+license = "Apache-2.0 OR MIT"
+authors = [
+  { name = "ferdinand", email = "gongjpa@gmail.com" },
+]
+# 关键字方便快速检索
+keywords = [
+  "fastdfs", "asyncio", "client", "aio"
+]
+readme = "README.md"
+
+# 可以到网站https://pypi.org/classifiers/查找合适的classifiers
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
+]
+
+[tool.uv]
+default-groups = ["dev"]
+
+# === 关键配置: 构建系统 ===
+# uv build 底层需要依赖一个构建后端，hatchling 是一个现代且优秀的默认选择
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# === 关键配置: 指定包的位置 ===
+# 告诉 hatchling，真正的包代码在 src 目录下
+[tool.hatch.build.targets.wheel]
+packages = ["src/aiofdfs"]
+
+# --- Sdist 源码包配置 (用于发布到 PyPI 的归档) ---
+[tool.hatch.build.targets.sdist]
+# 明确指定 sdist 只包含 src 目录，排除 test 目录等其他根目录文件
+include = [
+    "src",
+    # 建议也包含 README 和 LICENSE，否则 pip 安装有时会发出警告
+    "README.md",
+    "pyproject.toml"
+]
+# 或者使用 exclude 反向排除
+# exclude = [
+#   "/test",
+#   "/.github"
+# ]
+
+# pyproject.toml 在 [project] 中启用 dynamic = ["version"]
+# 删掉version = "0.1.0"
+# 在src/aiofdfs/__init__.py中增加__version__ = "0.1.0"
+# 增加如下配置，让hatchling 读取 __version__ 作为版本
+[tool.hatch.version]
+path = "src/aiofdfs/__init__.py"
+
+[[tool.uv.index]]
+name = "testpypi"
+url = "https://test.pypi.org/simple/"
+publish-url = "https://test.pypi.org/legacy/"
+explicit = true
+
