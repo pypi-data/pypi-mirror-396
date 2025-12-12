@@ -1,0 +1,147 @@
+# Automatically create tags when version changes in pyproject.toml
+name: Auto Tag on Version Change
+
+on:
+  push:
+    branches: [main]
+    paths: [pyproject.toml]
+
+permissions:
+  contents: write
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get-version.outputs.version }}
+      version-changed: ${{ steps.check-version.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Need previous commit to compare
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install toml
+
+      - name: Get current version
+        id: get-version
+        run: |
+          VERSION=$(python -c "import toml; print(toml.load('pyproject.toml')['project']['version'])")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $VERSION"
+
+      - name: Get previous version
+        id: get-prev-version
+        run: |
+          git checkout HEAD~1 -- pyproject.toml || echo "No previous version found"
+          if [ -f pyproject.toml ]; then
+            PREV_VERSION=$(python -c "import toml; print(toml.load('pyproject.toml')['project']['version'])" 2>/dev/null || echo "0.0.0")
+          else
+            PREV_VERSION="0.0.0"
+          fi
+          echo "prev-version=$PREV_VERSION" >> $GITHUB_OUTPUT
+          echo "Previous version: $PREV_VERSION"
+          git checkout HEAD -- pyproject.toml
+
+      - name: Check if version changed
+        id: check-version
+        run: |
+          CURRENT="${{ steps.get-version.outputs.version }}"
+          PREVIOUS="${{ steps.get-prev-version.outputs.prev-version }}"
+
+          if [ "$CURRENT" != "$PREVIOUS" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "✅ Version changed from $PREVIOUS to $CURRENT"
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ Version unchanged: $CURRENT"
+          fi
+
+  create-tag:
+    needs: check-version
+    if: needs.check-version.outputs.version-changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check if tag exists
+        id: check-tag
+        run: |
+          TAG="v${{ needs.check-version.outputs.version }}"
+          if git tag -l | grep -q "^$TAG$"; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "⚠️ Tag $TAG already exists"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "✅ Tag $TAG does not exist, will create"
+          fi
+
+      - name: Create and push tag
+        if: steps.check-tag.outputs.exists == 'false'
+        run: |
+          TAG="v${{ needs.check-version.outputs.version }}"
+
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Create annotated tag
+          git tag -a "$TAG" -m "Release $TAG
+
+          🚀 Auto-generated release for version ${{ needs.check-version.outputs.version }}
+
+          Generated from commit: ${{ github.sha }}
+          Triggered by: ${{ github.event.head_commit.message }}
+          Author: ${{ github.event.head_commit.author.name }}"
+
+          # Push tag
+          git push origin "$TAG"
+
+          echo "🎉 Created and pushed tag: $TAG"
+
+      - name: Create GitHub Release
+        if: steps.check-tag.outputs.exists == 'false'
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ needs.check-version.outputs.version }}
+          release_name: Release v${{ needs.check-version.outputs.version }}
+          body: |
+            ## 🚀 Release v${{ needs.check-version.outputs.version }}
+
+            **Auto-generated release from version bump in pyproject.toml**
+
+            ### What's Changed
+            - Version updated to ${{ needs.check-version.outputs.version }}
+
+            ### Installation
+            ```bash
+            pip install alation-data-quality-sdk==${{ needs.check-version.outputs.version }}
+            ```
+
+            ### Full Changelog
+            See [commits since last release](https://github.com/${{ github.repository }}/commits/v${{ needs.check-version.outputs.version }})
+          draft: false
+          prerelease: false
+
+  notify:
+    needs: [check-version, create-tag]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summary
+        run: |
+          if [ "${{ needs.check-version.outputs.version-changed }}" == "true" ]; then
+            echo "✅ Auto-tagging completed for version ${{ needs.check-version.outputs.version }}"
+            echo "🎯 This will trigger the PyPI publishing workflow"
+          else
+            echo "ℹ️ No version change detected, skipping tag creation"
+          fi

@@ -1,0 +1,132 @@
+# Publish Alation Data Quality SDK to Internal Artifactory
+# Based on data-quality-utils build-and-push-query-service-client.yaml
+
+name: Build and Publish to Internal Artifactory
+
+on:
+  # Trigger on every merge to main
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+  # Manual trigger option
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type'
+        required: false
+        default: 'dev'
+        type: choice
+        options:
+        - dev
+        - release
+
+permissions:
+  # Required for Vault JWT authentication
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build hatchling toml
+
+    - name: Determine build type and version
+      id: build-info
+      run: |
+        # Get base version from pyproject.toml
+        BASE_VERSION=$(python -c "import toml; print(toml.load('pyproject.toml')['project']['version'])")
+
+        # Determine build type
+        if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
+          BUILD_TYPE="release"
+          VERSION="${BASE_VERSION}.${GITHUB_RUN_NUMBER}"
+        elif [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.build_type }}" == "release" ]]; then
+          BUILD_TYPE="release"
+          VERSION="${BASE_VERSION}.${GITHUB_RUN_NUMBER}"
+        else
+          BUILD_TYPE="dev"
+          VERSION="${BASE_VERSION}.dev${GITHUB_RUN_NUMBER}"
+        fi
+
+        echo "base-version=$BASE_VERSION" >> $GITHUB_OUTPUT
+        echo "build-type=$BUILD_TYPE" >> $GITHUB_OUTPUT
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+        echo "📦 Base Version: $BASE_VERSION"
+        echo "🏗️ Build Type: $BUILD_TYPE"
+        echo "🎯 Final Version: $VERSION"
+
+    - name: Update version in pyproject.toml for build
+      run: |
+        # Temporarily update version for build
+        sed -i 's/version = ".*"/version = "${{ steps.build-info.outputs.version }}"/' pyproject.toml
+
+        # Verify the change
+        echo "📋 Updated pyproject.toml version:"
+        grep 'version = ' pyproject.toml
+
+    - name: Build package
+      run: |
+        python -m build
+
+        echo "📦 Built packages:"
+        ls -la dist/
+
+    - name: Import Secrets from Vault
+      id: secrets
+      uses: hashicorp/vault-action@v2.4.0
+      with:
+        url: https://vault.alationblue.com/
+        method: jwt
+        role: eng-infra-shared
+        secrets: eng-infra-shared/data/artifactory jenkins-local | ARTIFACTORY_PASSWORD
+
+    - name: Publish to Internal Artifactory
+      uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
+      with:
+        user: jenkins-local
+        password: ${{ env.ARTIFACTORY_PASSWORD }}
+        repository_url: https://artifactory.alationdevops.com/artifactory/api/pypi/pypi-local
+        packages_dir: dist/
+
+    - name: Build Summary
+      run: |
+        echo "## 🎉 Build Complete! " >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Detail | Value |" >> $GITHUB_STEP_SUMMARY
+        echo "|--------|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| **Package** | alation-data-quality-sdk |" >> $GITHUB_STEP_SUMMARY
+        echo "| **Version** | ${{ steps.build-info.outputs.version }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| **Build Type** | ${{ steps.build-info.outputs.build-type }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| **Trigger** | ${{ github.event_name }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| **Repository** | Internal Artifactory |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📦 Installation" >> $GITHUB_STEP_SUMMARY
+        echo '```bash' >> $GITHUB_STEP_SUMMARY
+        echo "pip install --index-url https://artifactory.alationdevops.com/artifactory/api/pypi/pypi-local/simple/ alation-data-quality-sdk==${{ steps.build-info.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🔗 Artifactory URL" >> $GITHUB_STEP_SUMMARY
+        echo "https://artifactory.alationdevops.com/artifactory/webapp/#/artifacts/browse/tree/General/pypi-local/alation-data-quality-sdk" >> $GITHUB_STEP_SUMMARY
+
+    - name: Restore original pyproject.toml
+      if: always()
+      run: |
+        # Restore original version
+        git checkout HEAD -- pyproject.toml
+        echo "✅ Restored original pyproject.toml"
