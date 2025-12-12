@@ -1,0 +1,372 @@
+# *wsidicomizer*
+
+*wsidicomizer* is a Python library for opening WSIs in proprietary formats and optionally convert them to DICOM. The aims of the project are:
+
+- Provide read support for various proprietary formats.
+- Provide lossless conversion for files supported by opentile.
+- Provide 'as good as possible' conversion for other formats.
+- Simplify the encoding of WSI metadata into DICOM.
+
+## Supported formats
+
+*wsidicomizer* currently supports the following formats:
+
+- Aperio svs (lossless)
+- Hamamatsu ndpi (lossless)
+- Philips tiff (lossless)
+- Zeiss czi (lossy)
+- Optional: Formats supported by Bioformats (lossy)
+
+With the `openslide` extra the following formats are also supported:
+
+- Mirax mrxs (lossy)
+- Leica scn (lossy)
+- Sakura svslide (lossy)
+- Trestle tif (lossy)
+- Ventana bif, tif (lossy)
+- Hamamatsu vms, vmu (lossy)
+
+The `bioformats` extra by default enables lossy support for the [BSD-licensed Bioformat formats](https://docs.openmicroscopy.org/bio-formats/8.0.1/supported-formats.html).
+
+The `isyntax` extra enables lossy single-thread support for isynax files.
+
+For czi and isyntax only the base level is read from file. To produce a conversion with full levels, use `add_missing_levels` in the `save()` method.
+
+## Installation
+
+***Install wsidicomizer from pypi***
+
+```console
+pip install wsidicomizer
+```
+
+See [Openslide support](#openslide-support) and [Bioformats support](#bioformats-support) for how to install optional extras.
+
+***Install libjpeg-turbo***
+Install libjpeg-turbo either as binary from <https://libjpeg-turbo.org/> or using your package manager.
+For Windows, you also need to add libjpeg-turbo's bin-folder to the environment variable 'Path'
+
+## Important note
+
+Please note that this is an early release and the API is not frozen yet. Function names and functionality is prone to change.
+
+## Requirements
+
+*wsidicomizer* requires python >=3.8 and uses numpy, pydicom, highdicom, imagecodecs, PyTurboJPEG, opentile, and wsidicom.
+
+## Basic cli-usage
+
+***Convert a wsi-file into DICOM using cli-interface***
+
+```console
+wsidicomizer -i 'path_to_wsi_file' -o 'path_to_output_folder'
+```
+
+### Options
+
+```console
+  -i, --input PATH                Path to input wsi file.  [required]
+  -o, --output PATH               Path to output folder. Folder will be
+                                  created and must not exist. If not specified
+                                  a folder named after the input file is
+                                  created in the same path.
+  -t, --tile-size INTEGER         Tile size (same for width and height).
+                                  Required for ndpi and openslide formats.
+  -m, --metadata PATH             Path to json metadata that will override
+                                  metadata from source image file.
+  -d, --default-metadata PATH     Path to json metadata that will be used as
+                                  default values.
+  -l, --levels INTEGER            Pyramid levels to include, if not all. E.g.
+                                  0 1 for base and first pyramid layer. Can be
+                                  specified multiple times.
+  --add-missing-levels            If to add missing dyadic levels up to the
+                                  single tile level.
+  --label PATH                    Optional label image to use instead of label
+                                  found in file.
+  --no-label                      If not to include label
+  --no-overview                   If not to include overview
+  --no-confidential               If not to include confidential metadata
+  -w, --workers INTEGER           Number of worker threads to use
+  --chunk-size INTEGER            Number of tiles to give each worker at a
+                                  time
+  --format [jpeg|jpeg2000|htjpeg2000|jpegxl]
+                                  Encoding format to use if re-encoding.
+  --quality FLOAT                 Quality to use if re-encoding. It is not
+                                  recommended to use > 95 for jpeg. Use < 1 or
+                                  > 1000 for lossless jpeg2000.
+  --subsampling [r444|r422|r420|r411|r440]
+                                  Subsampling option if using jpeg for re-
+                                  encoding. Use '444' for no subsampling,
+                                  '422' for 2x1 subsampling, and '420' for 2x2
+                                  subsampling.
+  --offset-table [basic|extended|empty]
+                                  Offset table to use.
+  --source [opentile|tiffslide|openslide|czi|isyntax|bioformats]
+                                  Source library to use for reading the input
+                                  file. If not specified, the library will be
+                                  chosen based on file type.
+  --help                          Show this message and exit.
+```
+
+Using the no-confidential-flag properties according to [DICOM Basic Confidentiality Profile](https://dicom.nema.org/medical/dicom/current/output/html/part15.html#table_E.1-1) are not included in the output file. Properties otherwise included are currently:
+
+- Acquisition DateTime
+- Device Serial Number
+
+## Basic usage
+
+***Create metadata (Optional)***
+
+```python
+from wsidicom.conceptcode import (
+    AnatomicPathologySpecimenTypesCode,
+    ContainerTypeCode,
+    SpecimenCollectionProcedureCode,
+    SpecimenEmbeddingMediaCode,
+    SpecimenFixativesCode,
+    SpecimenSamplingProcedureCode,
+    SpecimenStainsCode,
+)
+from wsidicom.metadata import (
+    Collection,
+    Embedding,
+    Equipment,
+    Fixation,
+    Label,
+    Patient,
+    Sample,
+    Series,
+    Slide,
+    SlideSample,
+    Specimen,
+    Staining,
+    Study,
+)
+from wsidicomizer.metadata import WsiDicomizerMetadata
+
+study = Study(identifier="Study identifier")
+series = Series(number=1)
+patient = Patient(name="FamilyName^GivenName")
+label = Label(text="Label text")
+equipment = Equipment(
+    manufacturer="Scanner manufacturer",
+    model_name="Scanner model name",
+    device_serial_number="Scanner serial number",
+    software_versions=["Scanner software versions"],
+)
+
+specimen = Specimen(
+    identifier="Specimen",
+    extraction_step=Collection(method=SpecimenCollectionProcedureCode("Excision")),
+    type=AnatomicPathologySpecimenTypesCode("Gross specimen"),
+    container=ContainerTypeCode("Specimen container"),
+    steps=[Fixation(fixative=SpecimenFixativesCode("Neutral Buffered Formalin"))],
+)
+
+block = Sample(
+    identifier="Block",
+    sampled_from=[specimen.sample(method=SpecimenSamplingProcedureCode("Dissection"))],
+    type=AnatomicPathologySpecimenTypesCode("tissue specimen"),
+    container=ContainerTypeCode("Tissue cassette"),
+    steps=[Embedding(medium=SpecimenEmbeddingMediaCode("Paraffin wax"))],
+)
+
+slide_sample = SlideSample(
+    identifier="Slide sample",
+    sampled_from=block.sample(method=SpecimenSamplingProcedureCode("Block sectioning")),
+)
+
+slide = Slide(
+    identifier="Slide",
+    stainings=[
+        Staining(
+            substances=[
+                SpecimenStainsCode("hematoxylin stain"),
+                SpecimenStainsCode("water soluble eosin stain"),
+            ]
+        )
+    ],
+    samples=[slide_sample],
+)
+metadata = WsiDicomizerMetadata(
+    study=study,
+    series=series,
+    patient=patient,
+    equipment=equipment,
+    slide=slide,
+    label=label,
+)
+```
+
+***Convert a wsi-file into DICOM using python-interface***
+
+```python
+from wsidicomizer import WsiDicomizer
+created_files = WsiDicomizer.convert(
+    filepath=path_to_wsi_file,
+    output_path=path_to_output_folder,
+    metadata=metadata,
+    tile_size=tile_size
+)
+```
+
+***Import a wsi file as a WsiDicom object.***
+
+```python
+from wsidicomizer import WsiDicomizer
+wsi = WsiDicomizer.open(path_to_wsi_file)
+region = wsi.read_region((1000, 1000), 6, (200, 200))
+wsi.close()
+```
+
+## Metadata handling
+
+The `open()` and `convert()` methods of `WsiDicomizer` takes three parameters that are important for inserting additional metadata into the DICOM dataset of the converted image:
+
+- `metadata`
+- `default_metadata`
+- `metadata_post_processor`
+
+### Metadata merging
+
+When creating the DICOM dataset, the metadata provided in the `metadata` and `default_metadata` parameters are merged with metadata that is parsed from the source image file, with the following descending preference:
+
+1. Metadata from the `metadata` parameter
+2. Metadata from the source image
+3. Metadata from the `default_metadata` parameter
+
+For example:
+
+- `equipment` in the `metadata`-parameter metadata will override the `equipment` metadata from the source image (if present).
+- `optical_paths` in the `default_metadata`-parameter metadata will be overriden by any `optical_paths` present in the `metadata` parameter metadata or source image metadata.
+
+Note that merging is also performed on nested metadata, e.g. `focus_method` in an `Image` can be merged from the different sources.
+
+### Metadata post processing
+
+After the metadata merge a pydicom `Dataset` is created from the result. Additional post processing can be performed using the `metadata_post_processor` parameter. This can be another `Dataset`, in which case the merged dataset is updated with (i.e. overwritten by) the provided dataset:
+
+```python
+from pydicom import Dataset
+
+dataset = Dataset()
+dataset.PatientAge = "042Y"
+
+WsiDicomizer.convert(
+    filepath=path_to_wsi_file,
+    output_path=path_to_output_folder,
+    metadata_post_processor=dataset
+)
+```
+
+For more complex processing a callback function that takes the merged `Dataset` and `WsiMetadata` as parameters and returns an updated `Dataset` can be used:
+
+```python
+from pydicom import Dataset
+from wsidicom.metadata import WsiMetadata
+
+def metadata_post_processor(dataset: Dataset, metadata: WsiMetadata) -> Dataset:
+    dataset.PatientAge = "042Y"
+    return dataset
+
+WsiDicomizer.convert(
+    filepath=path_to_wsi_file,
+    output_path=path_to_output_folder,
+    metadata_post_processor=metadata_post_processor
+)
+```
+
+### JSON metadata
+
+WsiDicom provides methods for serializing and deserialising metadata to and from JSON. This is useful for example for providing metadata when performing conversion using the cli. As there is not yet any documentation on the JSON schema, the simplest way to produce metadata in the JSON-format is to first construct it in Python and then calling the provided serializer:
+
+```python
+import json
+from wsidicom.metadata.schema.json import WsiMetadataJsonSchema
+metadata = WsiDicomizerMetadata(
+    study=study,
+    series=series,
+    patient=patient,
+    equipment=equipment,
+    slide=slide,
+    label=label,
+)
+with open('metadata.json', 'w') as f:
+    json.dump(WsiMetadataJsonSchema().dump(metadata), f, indent=4)
+```
+
+## Openslide support
+
+### Installation
+
+Support for reading images using Openslide c library can optionally be enabled by installing *wsidicomizer* with the `openslide` extra:
+
+```console
+pip install wsidicomizer[openslide]
+```
+
+The OpenSlide extra requires the OpenSlide library to be installed separately. This can be done through pip:
+
+```sh
+pip install openslide-bin
+```
+
+Alternative instructions for how to install OpenSlide is available on <https://openslide.org/download/>
+
+## Bioformats support
+
+### Installation
+
+Support for reading images using Bioformats java library can optionally be enabled by installing *wsidicomizer* with the `bioformats` extra:
+
+```console
+pip install wsidicomizer[bioformats]
+```
+
+The `bioformats` extra enables usage of the `bioformats` module.The required Bioformats java library (jar-file) is downloaded automatically when the module is imported using [scyjava](https://github.com/scijava/scyjava).
+
+### Using
+
+As the Bioformats library is a java library it needs to run in a java virtual machine (JVM). A JVM is started automatically when the `bioformats` module is imported. The JVM can´t be restarted in the same Python inteprenter, and is therefore left running once started. If you want to shutdown the JVM (without closing the Python inteprenter) you can call the shutdown_jvm()-method:
+
+```python
+import scyjava
+scyjava.shutdown_jvm()
+```
+
+Due to the need to start a JVM, the `bioformats` module is not imported when using the default `WsiDicomzer`-class unless `SourceIdentifier.BIOFORMATS` is used as preferred_source:
+
+```python
+from wsidicomizer import SouceIdentifier, WsiDicomizer
+
+with WsiDicomizer('input file', preferred_source=SourceIdentifier.BIOFORMASTS) as wsi:
+    ...
+```
+
+### Bioformats version
+
+The Bioformats java library is available in two versions, one with BSD and one with GPL2 license, and can read several [WSI formats](https://bio-formats.readthedocs.io/en/v8.3.0/supported-formats.html). However, most formats are only available in the GPL2 version. Due to the licensing incompatibility between Apache 2.0 and GPL2, *wsidicomizer* is distributed with a default setting of using the BSD licensed library. The loaded Biformats version can be changed by the user by setting the `BIOFORMATS_VERSION` environmental variable from the default value `bsd:8.3.0`.
+
+## Limitations
+
+Files with z-stacks or multiple focal paths are currently fully not supported.
+
+## Other DICOM python tools
+
+- [pydicom](https://pydicom.github.io/)
+- [highdicom](https://github.com/MGHComputationalPathology/highdicom)
+- [wsidicom](https://github.com/imi-bigpicture/wsidicom)
+
+## Contributing
+
+We welcome any contributions to help improve this tool for the WSI DICOM community!
+
+We recommend first creating an issue before creating potential contributions to check that the contribution is in line with the goals of the project. To submit your contribution, please issue a pull request on the imi-bigpicture/wsidicomizer repository with your changes for review.
+
+Our aim is to provide constructive and positive code reviews for all submissions. The project relies on gradual typing and roughly follows PEP8. However, we are not dogmatic. Most important is that the code is easy to read and understand.
+
+## Acknowledgement
+
+*wsidicomizer*: Copyright 2021 Sectra AB, licensed under Apache 2.0.
+
+This project is part of a project that has received funding from the Innovative Medicines Initiative 2 Joint Undertaking under grant agreement No 945358. This Joint Undertaking receives support from the European Union’s Horizon 2020 research and innovation programme and EFPIA. IMI website: <www.imi.europa.eu>
