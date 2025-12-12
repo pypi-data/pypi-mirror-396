@@ -1,0 +1,19 @@
+# This is for CI only.
+
+FROM ghcr.io/astral-sh/uv:python3.13-trixie-slim
+
+ENV UV_LINK_MODE=copy
+
+# install git for setuptools scm
+RUN apt-get update -y && \
+    apt-get install \
+        git \
+        -y --no-install-recommends && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY tests/prosody/prosody.crt /usr/local/share/ca-certificates/
+RUN update-ca-certificates
+
+WORKDIR /
+COPY uv.lock pyproject.toml /
+RUN uv sync --no-install-project --all-groups --all-extras && rm -rf .venv

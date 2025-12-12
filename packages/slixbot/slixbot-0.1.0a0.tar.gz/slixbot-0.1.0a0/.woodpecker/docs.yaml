@@ -1,0 +1,34 @@
+when:
+  event: [ push, tag, pull_request ]
+  branch: [ main ]
+  path: [ "**/*.py" ]
+
+clone:
+  - name: clone-deep
+    image: woodpeckerci/plugin-git
+    settings:
+      tags: true
+      partial: false
+
+depends_on: [ container ]
+
+steps:
+  build:
+    image: codeberg.org/nicoco/slixbot:ci
+    pull: true
+    commands:
+      - uv run pdoc slixbot --output build/docs
+
+  publish:
+    image: codeberg.org/nicoco/slixbot:ci
+    when:
+      event: [ push, tag ]
+    environment:
+      from_secret:
+        CODEBERG_TOKEN: CODEBERG_TOKEN
+    commands:
+      - git checkout pages
+      - mv build/docs ${CI_COMMIT_TAG:-$CI_COMMIT_BRANCH}/
+      - git commit ${CI_COMMIT_TAG:-$CI_COMMIT_BRANCH}/ -m "Automatic documentation update ($CI_COMMIT_SHA)"
+      - git remote set-url origin https://$CODEBERG_TOKEN@codeberg.org/nicoco/slixbot.git
+      - git push -u origin pages

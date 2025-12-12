@@ -1,0 +1,58 @@
+when:
+  event: [ push, tag ]
+  path: [ "**/*.py", "pyproject.toml", "README.md" ]
+  branch: main
+
+depends_on: [ container ]
+
+clone:
+  - name: clone-deep
+    image: woodpeckerci/plugin-git
+    settings:
+      tags: true
+      partial: false
+
+steps:
+  changelog:
+    image: codeberg.org/slidge/woodpecker-generate-changelog
+    pull: true
+
+  build:
+    image: codeberg.org/nicoco/slixbot:ci
+    pull: true
+    commands:
+      - uv build
+
+  codeberg-pypi:
+    when:
+      event: [ push, tag ]
+    image: codeberg.org/nicoco/slixbot:ci
+    depends_on: build
+    environment:
+      CODEBERG_TOKEN:
+        from_secret: CODEBERG_TOKEN
+    commands:
+      - uv publish --index codeberg --token $CODEBERG_TOKEN
+
+  pypi:
+    image: codeberg.org/nicoco/slixbot:ci
+    depends_on: build
+    when:
+      event: tag
+    environment:
+      PYPI_TOKEN:
+        from_secret: PYPI_TOKEN
+    commands:
+      - uv publish --token $PYPI_TOKEN
+
+  codeberg-release:
+    image: woodpeckerci/plugin-release
+    depends_on: [ changelog, build ]
+    when:
+      event: tag
+    settings:
+      files:
+        - dist/matteridge*
+      api_key:
+        from_secret: CODEBERG_TOKEN
+      note: CHANGELOG

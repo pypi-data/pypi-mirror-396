@@ -1,0 +1,41 @@
+variables:
+  - &settings
+    repo: codeberg.org/nicoco/slixbot
+    username: nicoco
+    password:
+      from_secret: CODEBERG_TOKEN
+    registry: codeberg.org
+
+steps:
+  # TODO: ditch this step once https://github.com/woodpecker-ci/woodpecker/issues/3823 is solved
+  dummy:
+    image: woodpeckerci/plugin-git
+    commands:
+      - echo "Dummy step!"
+
+  ci:
+    when:
+      - event: push
+        branch: [ main ]
+        path: [ "uv.lock", "pyproject.toml", "Containerfile" ]
+    image: woodpeckerci/plugin-docker-buildx:6.0.2
+    settings:
+      <<: *settings
+      dockerfile: Containerfile
+      tags:
+        - ci
+    depends_on: []
+
+  prosody:
+    when:
+      - event: push
+        branch: [ main ]
+        path: [ "tests/prosody/*" ]
+    image: woodpeckerci/plugin-docker-buildx:6.0.2
+    settings:
+      <<: *settings
+      context: tests/prosody
+      dockerfile: tests/prosody/Containerfile
+      tags:
+        - prosody
+    depends_on: []

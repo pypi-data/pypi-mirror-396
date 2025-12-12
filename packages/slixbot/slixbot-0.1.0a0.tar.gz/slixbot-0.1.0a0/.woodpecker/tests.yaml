@@ -1,0 +1,35 @@
+when:
+  event: [ push, pull_request ]
+  path: [ pyproject.toml, uv.lock, "**/*.py", ".woodpecker/tests.yaml" ]
+
+depends_on: [ container ]
+
+services:
+  - name: prosody
+    image: codeberg.org/nicoco/slixbot:prosody
+
+steps:
+  update-venv:
+    image: codeberg.org/nicoco/slixbot:ci
+    pull: true
+    commands:
+      - uv sync --all-groups --all-extras
+
+  ruff:
+    image: codeberg.org/nicoco/slixbot:ci
+    depends_on: update-venv
+    commands:
+      - uv run ruff check
+      - uv run ruff format --check
+
+  mypy:
+    image: codeberg.org/nicoco/slixbot:ci
+    depends_on: update-venv
+    commands:
+      - uv run mypy
+
+  test:
+    image: codeberg.org/nicoco/slixbot:ci
+    depends_on: update-venv
+    commands:
+      - uv run pytest tests --doctest-modules slixbot

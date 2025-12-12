@@ -1,0 +1,20 @@
+FROM docker.io/library/alpine:edge
+
+RUN apk add prosody luarocks openssl
+RUN ln -s /usr/bin/luarocks-?.? /usr/bin/luarocks
+
+COPY prosody.crt /etc/prosody/certs/localhost.crt
+COPY prosody.key /etc/prosody/certs/localhost.key
+COPY prosody.crt /etc/prosody/certs/prosody.crt
+COPY prosody.key /etc/prosody/certs/prosody.key
+
+COPY ./prosody.cfg.lua /etc/prosody/prosody.cfg.lua
+
+RUN prosodyctl register test1 localhost password
+RUN prosodyctl register test2 localhost password
+RUN prosodyctl register test1 prosody password
+RUN prosodyctl register test2 prosody password
+
+USER prosody
+
+ENTRYPOINT ["prosody", "-F"]
