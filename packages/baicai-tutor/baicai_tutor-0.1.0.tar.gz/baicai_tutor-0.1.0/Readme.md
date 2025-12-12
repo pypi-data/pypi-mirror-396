@@ -1,0 +1,125 @@
+# Baicai Tutor
+
+An AI-powered tutoring system designed to provide personalized learning experiences for everyone.
+
+## Overview
+
+Baicai Tutor is an intelligent tutoring system that leverages advanced AI technologies to create adaptive and engaging learning experiences. It's built on top of the Baicai Base framework and aims to make quality education accessible to all.
+
+## Features
+
+- AI-powered personalized tutoring
+- Adaptive learning paths
+- Interactive learning experiences
+- Comprehensive knowledge base
+- Real-time feedback and assessment
+
+## Requirements
+
+- Python 3.10 or higher (but less than 3.12)
+- Poetry for dependency management
+
+## Installation
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/yourusername/baicai_tutor.git
+cd baicai_tutor
+```
+
+2. Install dependencies using Poetry:
+
+```bash
+poetry install
+```
+
+3. Activate the virtual environment:
+
+```bash
+poetry shell
+```
+
+## Usage
+
+The project provides a command-line interface:
+
+```bash
+baicai-tutor
+```
+
+## Development
+
+### Project Structure
+
+```
+baicai_tutor/
+├── baicai_tutor/    # Main package directory
+├── docs/            # Documentation
+├── tests/           # Test files
+└── pyproject.toml   # Project configuration
+```
+
+### Development Tools
+
+- **Testing**: pytest (>=8.0.0)
+- **Type Checking**: mypy (>=1.5.0)
+- **Code Formatting**: ruff (^0.11.6)
+- **Documentation**: mkdocs (optional)
+
+### Running Tests
+
+```bash
+poetry run pytest
+```
+
+### Code Quality
+
+The project uses several tools to maintain code quality:
+
+- **Type Checking**:
+
+```bash
+poetry run mypy .
+```
+
+- **Code Formatting**:
+
+```bash
+poetry run ruff format .
+```
+
+- **Linting**:
+
+```bash
+poetry run ruff check .
+```
+
+## Documentation
+
+Documentation is available in the `docs/` directory and can be built using MkDocs:
+
+```bash
+poetry run mkdocs build
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
+
+## License
+
+This project is licensed under the [GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.en.html) License.
+
+## Authors
+
+- Zhaoyang tech <gengyabc@aliyun.com>
+
+## Acknowledgments
+
+- Built on top of the Baicai Base framework
+- Uses various open-source libraries and tools
