@@ -1,0 +1,117 @@
+[tool.poetry]
+name = "baicai-dev"
+version = "0.1.0"
+description = "Development package for Baicai"
+authors = ["Zhaoyang tech <gengyabc@aliyun.com>"]
+readme = "Readme.md"
+license = "MIT"
+keywords = ["python", "agent", "AI", "machine learning", "LLM"]
+
+[tool.poetry.dependencies]
+python = ">=3.10, <3.12"
+baicai-base = "0.1.2"
+pandas = ">=2.2.3,<3.0.0"
+scikit-learn = ">=1.6.1"
+catboost = ">=1.2.7"
+torch = ">=2.5.1"
+torchvision = ">=0.20.1"
+torchaudio = ">=2.5.1"
+fastai = ">=2.7.18"
+datasets = ">=3.2.0"
+sentence-transformers = "==2.5.1"
+accelerate = "==0.28.0"
+transformers = ">=4.38.2"
+plotly = ">=6.0.0,<7.0.0"
+shap = ">=0.47.0,<0.48.0"
+seaborn = ">=0.13.2,<0.14.0"
+statsmodels = ">=0.14.4,<0.15.0"
+xgboost = ">=3.0.0,<4.0.0"
+lightgbm = "^4.6.0"
+
+[tool.poetry.scripts]
+baicai-dev = "baicai_dev.cli:main"
+
+[tool.poetry.group.dev.dependencies]
+pytest = ">=8.0.0"
+pytest-asyncio = ">=0.23.0"
+mypy = ">=1.5.0"
+ruff = "^0.11.6"
+
+[tool.poetry.group.docs]
+optional = true
+
+[tool.poetry.group.docs.dependencies]
+mkdocs = "*"
+
+[[tool.poetry.source]]
+name = "mirrors"
+url = "https://mirrors.aliyun.com/pypi/simple/"
+priority = "primary"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+# Minimum required pytest version
+minversion = "8.0"
+
+# Command line options that are always applied when running pytest
+# -ra: show extra test summary info about (a)ll except passed tests
+# -q: quiet mode (less verbose output)
+addopts = "-ra -q"
+
+# Directories to look for tests in
+testpaths = [
+    "tests",
+]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.ruff]
+# Same as Black.
+line-length = 120
+indent-width = 4
+
+# Using Python 3.11
+target-version = "py311"
+
+[tool.ruff.lint]
+# Select which rule sets to enable:
+select = [
+    "E",  # pycodestyle errors
+    "F",  # Pyflakes
+    "I",  # isort
+    "N",  # pep8-naming
+    "W",  # pycodestyle warnings
+    "B",  # flake8-bugbear
+    "Q",  # flake8-quotes
+]
+
+# Rules to ignore (empty means enforce all selected rules)
+ignore = []
+
+# Allow auto-fixing for all selected rules
+fixable = ["ALL"]
+# No rules explicitly prevented from auto-fixing
+unfixable = []
+
+# Regex pattern for allowing unused variables if they match (e.g., _ignored)
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.format]
+# Use double quotes for strings.
+quote-style = "double"
+
+# Indent with spaces, rather than tabs.
+indent-style = "space"
+
+# Respect magic trailing commas.
+skip-magic-trailing-comma = false
+
+# Automatically detect the appropriate line ending.
+line-ending = "auto" 
