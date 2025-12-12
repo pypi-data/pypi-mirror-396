@@ -1,0 +1,109 @@
+@use 'sass:math';
+
+.pole-icon {
+    font-size: 1.4rem;
+    line-height: 1rem;
+    vertical-align: -0.15rem;
+}
+
+.distribution-bar-container {
+    position: relative;
+    border-radius: 3px;
+    flex-grow: 1;
+    background: $lighter-gray;
+    box-shadow: inset 0 0 0 1px $light-gray;
+    @include no-user-select;
+
+    .middle {
+        background: $lighter-gray;
+        position: absolute;
+        height: 100%;
+        $width: 2px;
+        width: $width;
+        top: 0;
+        left: calc(50% - math.div($width, 2));
+        border-radius: 3px;
+        box-shadow: 0 0 1px $dark-gray;
+    }
+
+    .left, .right {
+        position: absolute;
+        top: 0.05rem;
+        color: $darker-gray;
+        font-size: 0.9rem;
+        @include bar-shadow($white);
+    }
+
+    $distance: 0.5rem;
+
+    .left {
+        left: $distance;
+
+        .pole-icon {
+            vertical-align: -0.15rem;
+        }
+    }
+
+    .right {
+        right: $distance;
+
+        .pole-icon {
+            vertical-align: -0.25rem;
+        }
+    }
+
+    .pole-icon {
+        color: $white;
+        @include bar-shadow($medium-gray);
+    }
+
+    .adjective {
+        display: none;
+        margin: 0 0.5rem;
+    }
+
+    &:not(:empty) {
+        min-width: calc(3ch + 2*3px); // 3 characters + left and right border
+    }
+
+}
+
+.result-widget:hover {
+    .pole-icon {
+        color: $darker-gray;
+        @include bar-shadow($white);
+    }
+
+    @include media-breakpoint-up(sm) {
+        .adjective {
+            display: inline;
+        }
+    }
+}
+
+.distribution-bar {
+    @include no-user-select;
+    overflow: hidden;
+    white-space: nowrap;
+    border-radius: 3px;
+    flex-grow: 1;
+    transition: box-shadow 0.15s ease-in-out;
+    position: relative;
+
+    &.vote-type-bipolar {
+        width: 50%;
+    }
+
+    div {
+        display: inline-block;
+
+        &:last-child {
+            width: 100% !important;
+        }
+    }
+}
+
+.distribution-bar-disabled {
+    background-color: $light-gray;
+    color: tint-color($medium-gray, 10%);
+}

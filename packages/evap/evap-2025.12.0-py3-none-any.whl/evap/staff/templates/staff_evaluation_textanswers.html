@@ -1,0 +1,64 @@
+{% extends 'staff_evaluation_base.html' %}
+
+{% load evaluation_filters %}
+
+{% block breadcrumb %}
+    {{ block.super }}
+    <li class="breadcrumb-item">{% translate 'Text answers' %}</li>
+{% endblock %}
+
+{% block content %}
+    {{ block.super }}
+
+    <div class="row mb-3 align-items-end">
+        <div class="col">
+            <h3 class="mb-0">{{ evaluation.full_name }} ({{ evaluation.course.semester.name }})</h3>
+        </div>
+        <div class="col-auto">
+            <div class="btn-switch btn-switch-light my-auto d-print-none">
+                <div class="btn-switch-label">{% translate 'View' %}</div>
+                <div class="btn-switch btn-group">
+                    <a
+                        href="{% url 'staff:evaluation_textanswers' evaluation.id %}"
+                        role="button"
+                        class="btn btn-sm btn-light{% if view == 'quick' %} active{% endif %}"
+                    >
+                        {% translate 'Quick' %}
+                    </a>
+                    <a
+                        href="{% url 'staff:evaluation_textanswers' evaluation.id %}?view=full"
+                        role="button"
+                        class="btn btn-sm btn-light{% if view == 'full' %} active{% endif %}"
+                    >
+                        {% translate 'Full' %}
+                    </a>
+                    <a
+                        href="{% url 'staff:evaluation_textanswers' evaluation.id %}?view=undecided"
+                        role="button"
+                        class="btn btn-sm btn-light{% if view == 'undecided' %} active{% endif %}"
+                    >
+                        {% translate 'Undecided' %}
+                    </a>
+                    <a
+                        href="{% url 'staff:evaluation_textanswers' evaluation.id %}?view=flagged"
+                        role="button"
+                        class="btn btn-sm btn-light{% if view == 'flagged' %} active{% endif %}"
+                    >
+                        {% translate 'Flagged' %}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="mb-2">
+        {% if evaluation.state == evaluation.State.IN_EVALUATION %}
+            <span class="badge bg-warning"><span class="fas fa-play icon-gray"></span> {% translate 'Still in evaluation' %}</span>
+        {% else %}
+            <span class="badge bg-light"><span class="fas fa-stop icon-green"></span> {% translate 'Evaluation finished' %}</span>
+        {% endif %}
+        {% include 'evaluation_badges.html' with mode='manager' %}
+    </div>
+    <div class="callout callout-warning">
+        {% blocktranslate %}If you select "delete" for a text answer on this page, the respective answer will be deleted irrevocably when publishing the evaluation's results. If you edit an answer, the original answer will also be deleted when publishing the evaluation's results.{% endblocktranslate %}
+    </div>
+{% endblock %}

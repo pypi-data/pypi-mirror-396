@@ -1,0 +1,128 @@
+{% extends 'staff_questionnaire_base.html' %}
+
+{% load static %}
+
+{% block content %}
+    {{ block.super }}
+    <div class="row mb-3 align-items-center">
+        <div class="col">
+            <a href="{% url 'staff:questionnaire_create' %}" class="btn btn-sm btn-dark">{% translate 'Create new questionnaire' %}</a>
+        </div>
+        <div class="col-auto">
+            <div class="btn-switch btn-switch-light">
+                <div class="btn-switch-label">{% translate 'Hidden questionnaires' %}</div>
+                <div class="btn-switch btn-group">
+                    <a href="{% url 'staff:questionnaire_index' %}?filter_questionnaires=false" role="button" class="btn btn-sm btn-light{% if not filter_questionnaires %} active{% endif %}">
+                    {% translate 'Show' %}
+                    </a>
+                    <a href="{% url 'staff:questionnaire_index' %}?filter_questionnaires=true" role="button" class="btn btn-sm btn-light{% if filter_questionnaires %} active{% endif %}">
+                        {% translate 'Hide' %}
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-3">
+            <div class="input-group">
+                <input type="search" name="search" class="form-control" placeholder="{% translate 'Search...' %}" />
+                <button class="btn btn-light text-secondary" type="button" data-reset="search" data-bs-toggle="tooltip" data-bs-placement="top" title="{% translate 'Clear filter' %}">
+                    <span class="fas fa-delete-left"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {% if general_questionnaires_top or general_questionnaires_bottom or contributor_questionnaires %}
+        <form id="questionnaire-deletion-form" method="POST" action="{% url 'staff:questionnaire_delete' %}">
+            {% csrf_token %}
+        </form>
+
+        <script type="module">
+            import { assert, fadeOutThenRemove } from "{% static 'js/utils.js' %}";
+
+            const form = document.getElementById("questionnaire-deletion-form");
+            form.addEventListener("submit", event => {
+                event.preventDefault();
+                const body = new FormData(form);
+                const request = fetch(
+                    form.action,
+                    { method: form.method, body },
+                );
+                request.then(response => {
+                    assert(response.ok);
+                    fadeOutThenRemove(document.querySelector(`#questionnaire-row-${body.get("questionnaire_id")}`));
+                }).catch(error => {
+                    window.alert("{% translate 'The server is not responding.' %}");
+                });;
+            });
+        </script>
+
+        {% translate 'Top general questionnaires' as headline %}
+        {% include 'staff_questionnaire_index_list.html' with questionnaires=general_questionnaires_top headline=headline extra_classes='mb-3' type='top' %}
+        {% translate 'Contributor questionnaires' as headline %}
+        {% include 'staff_questionnaire_index_list.html' with questionnaires=contributor_questionnaires headline=headline extra_classes='mb-3' type='contributor' %}
+        {% translate 'Bottom general questionnaires' as headline %}
+        {% include 'staff_questionnaire_index_list.html' with questionnaires=general_questionnaires_bottom headline=headline extra_classes='mb-3' type='bottom' %}
+        {% translate 'Dropout questionnaires' as headline %}
+        {% include 'staff_questionnaire_index_list.html' with questionnaires=dropout_questionnaires headline=headline extra_classes='' type='dropout' %}
+    {% else %}
+        <p>
+            {% translate 'There are no questionnaires yet.' %}
+        </p>
+    {% endif %}
+{% endblock %}
+
+{% block additional_javascript %}
+    <script type="module">
+        import {QuestionnaireGrid} from "{% static 'js/datagrid.js' %}";
+        document.querySelectorAll(".questionnaire-table").forEach(table => {
+            new QuestionnaireGrid({
+                storageKey: "questionnaires-data-grid",
+                updateUrl: "{% url 'staff:questionnaire_update_indices' %}",
+                table,
+                searchInput: document.querySelector("input[name=search]"),
+                resetSearch: document.querySelector("[data-reset=search]"),
+            }).init();
+        });
+    </script>
+
+    <script type="module">
+        import { CSRF_HEADERS } from "{% static 'js/csrf-utils.js' %}";
+        import { assert } from "{% static 'js/utils.js' %}";
+
+        function changeVisibility(element) {
+            const questionnaire = element.closest(".questionnaire");
+            const visibility = element.dataset.visibility;
+
+            fetch("{% url 'staff:questionnaire_visibility' %}", {
+                body: new URLSearchParams({questionnaire_id: questionnaire.dataset.id, visibility}),
+                headers: CSRF_HEADERS,
+                method: "POST",
+            }).then(response => {
+                assert(response.ok);
+                questionnaire.querySelectorAll(`button[data-visibility]`).forEach(button => {button.classList.remove("active");});
+                questionnaire.querySelectorAll(`button[data-visibility="${visibility}"]`).forEach(button => {button.classList.add("active");});
+            }).catch(error => {window.alert("{% translate 'The server is not responding.' %}");});
+        }
+        for (const button of document.querySelectorAll(".change-visibility-button")) {
+            button.addEventListener("click", () => changeVisibility(button));
+        }
+
+        function changeLocked(element) {
+            const questionnaire = element.closest(".questionnaire");
+            const is_locked = element.dataset.isLocked;
+
+            fetch("{% url 'staff:questionnaire_set_locked' %}", {
+                body: new URLSearchParams({questionnaire_id: questionnaire.dataset.id, is_locked}),
+                headers: CSRF_HEADERS,
+                method: "POST",
+            }).then(response => {
+                assert(response.ok);
+                questionnaire.querySelectorAll(`button[data-is-locked]`).forEach(button => {button.classList.remove("active");});
+                questionnaire.querySelectorAll(`button[data-is-locked="${is_locked}"]`).forEach(button => {button.classList.add("active");});
+            }).catch(error => {window.alert("{% translate 'The server is not responding.' %}");});
+        }
+        for (const button of document.querySelectorAll(".change-is-locked-button")) {
+            button.addEventListener("click", () => changeLocked(button));
+        }
+    </script>
+{% endblock %}

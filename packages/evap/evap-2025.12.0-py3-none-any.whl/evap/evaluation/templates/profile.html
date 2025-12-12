@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block title %}{% translate 'Profile' %} - {{ block.super }}{% endblock %}
+
+{% block content %}
+    {{ block.super }}
+    <h3>{% translate 'Profile' %}</h3>
+
+    <form id="profile-form" method="POST" class="form-horizontal multiselect-form">
+        {% csrf_token %}
+        <div class="row row-cols-1 row-cols-md-2 g-4 mb-3">
+            <div class="col">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h4 class="card-title mb-4">{% translate 'Personal information' %}</h4>
+                        {% for field in profile_form %}
+                            {% if field != profile_form.delegates %}
+                                {% include 'bootstrap_form_field.html' with field=field %}
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% if user.is_editor %}
+                <div class="col">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h4 class="card-title mb-4">{% translate 'Delegates and emails' %}</h4>
+                            <table class="table table-vertically-aligned table-headerless">
+                                <tr>
+                                    <td>
+                                        <strong>{% translate 'Your delegates' %}</strong><br />
+                                        {% include 'bootstrap_form_field_widget.html' with field=profile_form.delegates %}
+                                        <div class="form-text">{% translate 'Your delegates will receive emails sent to you in CC, will be able to prepare evaluations on your behalf, and will see the results of your evaluations.' %}</div>
+                                    </td>
+                                </tr>
+                                {% if delegate_of %}
+                                    <tr>
+                                        <td>
+                                            <strong>{% translate 'You are a delegate of' %}</strong><br />
+                                            {% for delegate in delegate_of %}
+                                                {{ delegate.full_name }}{% if not forloop.last %}, {% endif %}
+                                            {% endfor %}
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                                    <td>
+                                        <strong>{% translate 'CC all my emails to' %}</strong><br />
+                                        {% for cc_user in cc_users %}
+                                            {{ cc_user.full_name }}{% if not forloop.last %}, {% endif %}
+                                        {% empty %}
+                                            <i>{% translate 'Nobody' %}</i>
+                                        {% endfor %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <strong>{% blocktranslate %}You receive CC'ed emails for{% endblocktranslate %}</strong><br />
+                                        {% for ccing_user in ccing_users %}
+                                            {{ ccing_user.full_name }}{% if not forloop.last %}, {% endif %}
+                                        {% empty %}
+                                            <i>{% translate 'Nobody' %}</i>
+                                        {% endfor %}
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="row row-cols-1 {% if user.is_editor %}row-cols-md-1{% else %}row-cols-md-2{% endif %} g-4">
+            <div class="col">
+                <div class="card card-submit-area card-submit-area-2 text-center">
+                    <div class="card-body tab-row">
+                        <button type="submit" class="btn btn-primary">
+                            {% translate 'Save' %}
+                        </button>
+                        <button type="button" class="btn btn-light" id="changeRequestModalShowButton">
+                            {% translate 'Request changes' %}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+{% endblock %}
+
+{% block modals %}
+    {{ block.super }}
+    {% translate 'Request user setting changes' as title %}
+    {% translate 'Please tell us which of your settings we should change.' as teaser %}
+    {% include 'contact_modal.html' with modal_id='changeRequestModal' user=request.user title=title teaser=teaser %}
+{% endblock %}

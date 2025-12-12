@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}{% translate 'FAQ' %} - {{ block.super }}{% endblock %}
+
+{% block content %}
+    <h2 class="mb-4">{% translate 'Frequently Asked Questions (FAQs)' %}</h2>
+
+    <div class="accordion accordion-flush pb-4" id="accordionFAQ">
+        {% for section in sections %}
+            <h4 id="faq-{{ section.id }}-s">{{ section.title }}</h4>
+            {% for question in section.questions.all %}
+                <div id="faq-{{ question.id }}-card" class="accordion-item{% if not forloop.last %} mb-1{% else %} mb-4{% endif %}">
+                    <h2 id="faq-{{ question.id }}-q" class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq-{{ question.id }}-a" aria-expanded="false" aria-controls="faq-{{ question.id }}-a">
+                            {{ question.question }}
+                        </button>
+                    </h2>
+                    <div id="faq-{{ question.id }}-a" class="accordion-collapse collapse" aria-labelledby="faq-{{ question.id }}-q" data-bs-parent="#accordionFAQ">
+                        <div class="accordion-body">
+                            {{ question.answer|safe }}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% endfor %}
+    </div>
+{% endblock %}
+
+{% block additional_javascript %}
+    <script type="text/javascript">
+        const anchor = window.location.hash.replace("#", "").split('-');
+        const id = anchor[1];
+        const type = anchor[2];
+
+        if(type == "q"){
+            // open collapsed answer and scroll into center
+            window.history.pushState('', id, '/faq#faq-' + id + '-q');
+            var answerCard = document.getElementById("faq-"+id+"-a");
+            var answerCardCollapse = bootstrap.Collapse.getOrCreateInstance(answerCard);
+            answerCardCollapse.show();
+            answerCard.scrollIntoView();
+        }
+        if(type == "q" || type == "s") {
+            // scroll section heading below navbar
+            setTimeout(function(){
+                window.scrollBy(0, -50);
+            }, 0);
+        }
+    </script>
+{% endblock %}

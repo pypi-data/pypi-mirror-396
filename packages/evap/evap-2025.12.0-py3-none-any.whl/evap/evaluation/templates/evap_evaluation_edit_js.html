@@ -1,0 +1,78 @@
+{% load static %}
+
+{% if editable %}
+    <script type="module">
+        import { makeFormSortable } from "{% static 'js/sortable-form.js' %}";
+        const rowChanged = function(row) {
+            const name = row.querySelector("select[id$=-contributor] > [selected]")?.textContent;
+            const nameChanged = name && name !== "---------";
+            const idChanged = row.querySelector("input[id$=-id]")?.value;
+
+            const questionnaireChanged = row.querySelector("input[name$=-questionnaires]:checked") !== null
+
+            const roleChanged = ! row.querySelector("input[id$=-role_0]")?.checked;
+            const commVisibilityChanged = ! row.querySelector("input[id$=_visibility_0]")?.checked;
+            const labelChanged = row.querySelector("input[id$=-label]")?.value;
+
+            return idChanged || nameChanged || questionnaireChanged || roleChanged || commVisibilityChanged || labelChanged;
+        };
+
+        const rowAdded = function(row) {
+            assignClickHandlers();
+            applyTomSelect(row.querySelectorAll("select"));
+            activateTooltips('#contribution_table');
+        }
+        makeFormSortable("contribution_table", "contributions", rowChanged, rowAdded, false, true);
+    </script>
+{% endif %}
+
+<script type="text/javascript">
+    function makeDoesNotContributeChangeHandler(i) {
+        return () => {
+            const doesNotContributeInput = document.querySelector("input[name=contributions-" + i + "-does_not_contribute]");
+
+            if (doesNotContributeInput.disabled)
+                return false;
+
+            if (doesNotContributeInput.checked) {
+                // uncheck and disable all questionnaire checkboxes
+                document.querySelectorAll("input[name=contributions-" + i + "-questionnaires]").forEach(checkbox => {
+                    checkbox.checked = false;
+                    checkbox.disabled = true;
+                });
+            } else {
+                // enable all questionnaire checkboxes
+                document.querySelectorAll("input[name=contributions-" + i + "-questionnaires]").forEach(checkbox => {
+                    checkbox.disabled = false;
+                });
+            }
+        };
+    }
+
+    function getContributorCount() {
+        return document.querySelectorAll("#contribution_table select").length;
+    }
+
+    function assignClickHandlers() {
+        const count = getContributorCount();
+        for (let i = 0; i < count; i++) {
+            document.querySelector(`input[name=contributions-${i}-does_not_contribute]`).parentElement.addEventListener("click", makeDoesNotContributeChangeHandler(i));
+        }
+    }
+
+    assignClickHandlers();
+
+    // apply initial settings
+    for (let i = 0; i < getContributorCount(); i++){
+        if (document.querySelector("input[name=contributions-" + i + "-does_not_contribute]").checked) {
+            document.querySelectorAll("input[name=contributions-" + i + "-questionnaires]").forEach(checkbox => {
+                checkbox.checked = false;
+                checkbox.disabled = true;
+            });
+        }
+    }
+</script>
+
+{% block additional_javascript %}
+{% include 'bootstrap_datetimepicker.html' %}
+{% endblock %}

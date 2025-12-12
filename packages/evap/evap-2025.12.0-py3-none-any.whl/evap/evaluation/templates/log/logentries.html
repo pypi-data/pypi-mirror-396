@@ -1,0 +1,30 @@
+{% load static %}
+{% load i18n %}
+
+<ul class="list-group">
+    {% for log_group in logged_object.grouped_logentries %}
+        <li class="list-group-item">
+            <p>
+                <span class="pe-3">
+                    <span class="far fa-clock" aria-hidden="true"></span>
+                    {{ log_group.0.datetime|date:"SHORT_DATETIME_FORMAT" }}
+                </span>
+                {% if log_group.0.user %}
+                    {% if log_group.0.user.is_manager %}
+                        <span class="far fa-id-card fa-fw"
+                              data-bs-toggle="tooltip"
+                              title="{% translate "This change was performed by a manager." %}">
+                        </span>
+                    {% else %}
+                        <span class="fas fa-user fa-fw"></span>
+                    {% endif %}
+                    {{ log_group.0.user.full_name }}
+                {% endif %}
+            </p>
+
+            {% for log in log_group %}
+                {% include "log/changed_fields_entry.html" with log=log %}
+            {% endfor %}
+        </li>
+    {% endfor %}
+</ul>

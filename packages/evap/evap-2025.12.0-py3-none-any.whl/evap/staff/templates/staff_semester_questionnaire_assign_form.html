@@ -1,0 +1,62 @@
+{% extends 'staff_semester_base.html' %}
+
+{% block breadcrumb %}
+    {{ block.super }}
+    <li class="breadcrumb-item">{% translate 'Assign questionnaires' %}</li>
+{% endblock %}
+
+{% block content %}
+    {{ block.super }}
+    <h3>{% translate 'Assign questionnaires' %}</h3>
+
+    <form id="questionnaire-assign-form" method="POST" class="form-horizontal multiselect-form">
+        {% csrf_token %}
+        <div class="card mb-3">
+            <div class="card-body">
+                <p>{% translate 'Select the questionnaires to be used for each course/exam type. This will only change evaluations in preparation. Their questionnaires will be overwritten by this operation. Selecting nothing will not change the currently used questionnaires.' %}</p>
+                {% include 'bootstrap_form_errors.html' with errors=form.non_field_errors %}
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h4 class="card-title">{% translate 'General' %}</h4>
+                                <fieldset>
+                                    {% for field in general_fields %}
+                                        {% include 'bootstrap_form_field.html' with field=field wide=True%}
+                                    {% endfor %}
+                                </fieldset>
+                            </div>
+                        </div>
+                        <div class="card mt-2">
+                            <div class="card-body">
+                                <h4 class="card-title">{% translate 'Exam' %}</h4>
+                                <fieldset>
+                                    {% for field in exam_fields %}
+                                        {% include 'bootstrap_form_field.html' with field=field wide=True %}
+                                    {% endfor %}
+                                </fieldset>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h4 class="card-title">{% translate 'Contributors' %}</h4>
+                                <fieldset>
+                                    {% for field in contributor_fields %}
+                                        {% include 'bootstrap_form_field.html' with field=field wide=True%}
+                                    {% endfor %}
+                                </fieldset>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card card-submit-area text-center mb-3">
+            <div class="card-body">
+                <button type="submit" class="btn btn-primary">{% translate 'Assign questionnaires' %}</button>
+            </div>
+        </div>
+    </form>
+{% endblock %}

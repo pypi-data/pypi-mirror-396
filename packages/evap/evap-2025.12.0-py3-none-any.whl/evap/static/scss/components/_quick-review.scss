@@ -1,0 +1,83 @@
+.slider-inner {
+    display: flex;
+    overflow: hidden;
+}
+.slider-side {
+    width: 3rem;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    // slider controls should not be overlapped by sliding slides
+    z-index: 5;
+    visibility: hidden;
+    .fas {
+        margin: 0.2rem 0;
+        font-size: 2rem;
+        color: grey;
+        cursor: pointer;
+    }
+}
+.slider-items {
+    height: 24rem;
+    flex: auto;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+.slider-item {
+    width: 100%;
+    flex: none;
+    position: absolute;
+    display: none;
+    overflow-y: auto;
+    opacity: 0;
+    transition-property: transform, opacity;
+    transition-duration: 0.2s;
+    &.alert, &[data-layer="2"] {
+        flex: auto;
+    }
+    &.alert {
+        margin: 0;
+        justify-content: center;
+    }
+    &.to-left, &.to-right, &.active {
+        display: flex;
+        flex-direction: column;
+    }
+    &.to-left {
+        transform: translateX(-10%);
+    }
+    &.to-right {
+        transform: translateX(10%);
+    }
+    &.active {
+        position: static;
+        transform: translateX(0);
+        opacity: 1;
+    }
+    &:focus {
+        outline: none;
+    }
+    &[data-layer="0"] {
+        flex-direction: row;
+    }
+}
+[data-layer="0"] {
+    border: $card-border-width solid $card-border-color;
+    @include border-top-radius($card-border-radius);
+}
+[data-layer="1"] {
+    background-color: $light;
+    border-left: $card-border-width solid $card-border-color;
+    border-right: $card-border-width solid $card-border-color;
+}
+[data-layer="2"] {
+    border: $card-border-width solid $card-border-color;
+    @include border-bottom-radius($card-border-radius);
+}
+.hotkey-btn {
+    float: right;
+    cursor: pointer;
+}

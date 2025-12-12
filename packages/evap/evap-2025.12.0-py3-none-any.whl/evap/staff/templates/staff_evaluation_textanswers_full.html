@@ -1,0 +1,43 @@
+{% extends 'staff_evaluation_textanswers.html' %}
+
+{% block content %}
+    {{ block.super }}
+
+    <div class="card card-outline-primary mb-3">
+        <div class="card-header">
+            {% translate 'General text answers' %}
+        </div>
+        <div class="card-body">
+            {% if evaluation_sections %}
+                {% with evaluation_sections as sections %}
+                    {% include 'staff_evaluation_textanswers_section.html' with evaluation_id=evaluation.id %}
+                {% endwith %}
+            {% else %}
+                <span class="fst-italic">{% translate 'No text answers' %}</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card card-outline-primary">
+        <div class="card-header">
+            {% translate 'Text answers about the contributors' %}
+        </div>
+        <div class="card-body">
+            {% if contributor_sections %}
+                {% with contributor_sections as sections %}
+                    {% include 'staff_evaluation_textanswers_section.html' with evaluation_id=evaluation.id %}
+                {% endwith %}
+            {% else %}
+                <span class="fst-italic">{% translate 'No text answers' %}</span>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block additional_javascript %}
+    <script type="text/javascript">
+        document
+            .querySelectorAll(".full-update-textanswer-form input[type='radio'], .full-textanswer-flag-form input[type='radio']")
+            .forEach(input => input.addEventListener("change", () => input.form.requestSubmit()));
+    </script>
+{% endblock %}

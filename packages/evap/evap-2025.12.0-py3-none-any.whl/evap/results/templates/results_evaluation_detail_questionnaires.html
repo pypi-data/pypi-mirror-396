@@ -1,0 +1,41 @@
+<div class="d-md-flex print-no-break">
+    <h4>{{ questionnaire_result.questionnaire.public_name }}</h4>
+    {% if questionnaire_result.warning %}
+        <p class="ms-auto mt-auto participants-warning">
+            <span class="fas fa-triangle-exclamation"></span>
+            {% translate 'Only a few participants answered these questions.' %}
+        </p>
+    {% endif %}
+</div>
+<div class="container-fluid container-striped{% if not forloop.last %} mb-3{% endif %}">
+    {% for question_result in questionnaire_result.question_results %}
+        {% if question_result.question.is_heading_question %}
+            {# We want to start a new section here, so we close the container, render the heading and open a new container #}
+            </div>
+            <h5{% if not forloop.first %} class="mt-3"{% endif %}>{{ question_result.question.text }}</h5>
+            <div class="container-fluid container-striped{% if not forloop.last %} mb-3{% endif %}">
+        {% elif question_result.question.is_rating_question %}
+            <div class="row print-no-break">
+                <div class="col-question col-lg-broad col-lg-7 my-auto">{{ question_result.question.text }}</div>
+                <div class="col-answer col-lg-broad col-lg-5 my-auto">
+                    {% include 'distribution_widget.html' with question_result=question_result num_voters=evaluation.num_voters %}
+                </div>
+                {% if question_result.additional_text_result %}
+                    <div class="col-question col-lg-broad col-lg-4"></div>
+                    <div class="col-answer col-lg-broad col-lg-8 d-flex pt-0 break-word">
+                        {% include 'textanswer_list.html' with question_result=question_result.additional_text_result num_voters=evaluation.num_voters num_answers=question_result.additional_text_result.answers|length %}
+                    </div>
+                {% endif %}
+            </div>
+        {% elif question_result.question.is_text_question %}
+            <div class="row">
+                <div class="col-question col-lg-broad col-lg-4">
+                        {{ question_result.question.text }}
+                </div>
+                <div class="col-answer col-lg-broad col-lg-8 d-flex break-word">
+                    {% include 'textanswer_list.html' with question_result=question_result num_voters=evaluation.num_voters num_answers=question_result.answers|length %}
+                </div>
+            </div>
+        {% endif %}
+    {% endfor %}
+</div>

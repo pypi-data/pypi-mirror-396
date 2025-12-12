@@ -1,0 +1,84 @@
+{% extends 'staff_semester_base.html' %}
+
+{% load evaluation_filters static %}
+
+{% block breadcrumb %}
+    {{ block.super }}
+    <li class="breadcrumb-item">{% translate 'Export' %}</li>
+{% endblock %}
+
+{% block content %}
+    {{ block.super }}
+    <h3>{% translate 'Export' %} {{ semester.name }}</h3>
+
+    <form id="semester-export-form" method="POST" class="form-horizontal multiselect-form">
+        {% csrf_token %}
+
+        {{ formset.management_form }}
+
+        <div class="card mb-3">
+            <div class="card-body">
+                <p>{% translate 'Select the programs and course types you want to export. An export will include all evaluations of courses that have at least one of the selected programs and one of the selected course types. Add multiple lines to create an export file with multiple sheets.' %}</p>
+                <table id="exportsheets-table" class="table">
+                    <thead>
+                        <tr>
+                            <th class="width-percent-25">{% translate 'Programs' %}</th>
+                            <th class="width-percent-65">{% translate 'Course types' %}</th>
+                            <th class="width-percent-10"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for form in formset %}
+                            {% include 'bootstrap_form_errors.html' with errors=form.non_field_errors %}
+                            <tr class="sortable">
+                                {% for field in form.hidden_fields %}
+                                    {{ field }}
+                                {% endfor %}
+                                <td>
+                                    {% include 'multiple_checkbox_widget.html' with field=form.selected_programs %}
+                                </td>
+                                <td>
+                                    {% include 'multiple_checkbox_widget.html' with field=form.selected_course_types %}
+                                </td>
+                                <td>{% include 'bootstrap_form_field_widget.html' with field=form.DELETE class="d-none" %}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="form-check">
+                    <input class="form-check-input" id="include_unpublished" type="checkbox" name="include_unpublished" />
+                    <label class="form-check-label" for="include_unpublished">
+                        {% translate 'Include unpublished evaluations where the evaluation period ended in the export' %}
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" id="include_not_enough_voters" type="checkbox" name="include_not_enough_voters" />
+                    <label class="form-check-label" for="include_not_enough_voters">
+                        {% translate 'Include evaluations where not enough votes were given in the export' %}
+                    </label>
+                </div>
+            </div>
+        </div>
+        <div class="card card-submit-area text-center mb-3">
+            <div class="card-body">
+                <button type="submit" class="btn btn-primary form-submit-btn">{% translate 'Export' %}</button>
+            </div>
+        </div>
+    </form>
+{% endblock %}
+
+{% block additional_javascript %}
+    <script type="module">
+        import { makeFormSortable } from "{% static 'js/sortable-form.js' %}";
+        const rowChanged = function(row) {
+            const id = row.querySelector("input[id$=-id]")?.value;
+            return id;
+        };
+        const rowAdded = function(row) { };
+        makeFormSortable("exportsheets-table", "form", rowChanged, rowAdded, false, false);
+    </script>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% load infotext_templatetags %}
+{% load evaluation_filters %}
+
+{% block title %}{% translate 'Evaluation' %} - {{ block.super }}{% endblock %}
+
+{% block content %}
+    {{ block.super }}
+
+    {% show_infotext "student_index" %}
+    {% if user.show_startpage_button %}
+        <div class="d-flex mb-3">
+            <div class="ms-auto d-print-none">
+                {% include 'startpage_button.html' with page='ST' btnClass='btn-sm' %}
+            </div>
+        </div>
+    {% endif %}
+
+    {% include 'student_global_reward.html' with global_rewards=global_rewards %}
+
+    {% if unfinished_evaluations %}
+        <div class="card card-outline-primary mb-3">
+            <div class="card-header">
+                {% translate 'Open and upcoming evaluations' %}
+            </div>
+            <div class="card-body table-responsive">
+                {% include 'student_index_unfinished_evaluations_list.html' %}
+            </div>
+        </div>
+    {% endif %}
+    {% include 'student_index_semester_evaluations_list.html' %}
+{% endblock %}

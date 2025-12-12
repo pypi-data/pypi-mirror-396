@@ -1,0 +1,21 @@
+{% if not mode == 'student' and not mode == 'subentry' %}
+    {% for program in evaluation.course.programs.all %}
+        <span class="badge bg-primary badge-program">{{ program }}</span>
+    {% endfor %}
+{% endif %}
+{% if not mode == 'subentry' %}
+    {% if evaluation.exam_type %}
+        <span class="badge bg-light badge-exam-type">{{ evaluation.exam_type }}</span>
+    {% else %}
+        <span class="badge bg-secondary badge-course-type">{{ evaluation.course.type }}</span>
+    {% endif %}
+{% endif %}
+{% if evaluation.is_midterm_evaluation %}<span class="badge bg-dark">{% translate 'Midterm evaluation' %}</span>{% endif %}
+{% if mode == 'manager' %}
+    {% if not evaluation.wait_for_grade_upload_before_publishing %}<span class="badge bg-dark">{% translate 'not graded' %}</span>{% endif %}
+    {% if not evaluation.is_rewarded %}<span class="badge bg-dark">{% translate 'not rewarded' %}</span>{% endif %}
+    {% if evaluation.course.is_private %}<span class="badge bg-dark">{% translate 'private' %}</span>{% endif %}
+    {% if evaluation.course.has_external_responsible %}
+        <span class="badge bg-warning">{% translate 'External responsible' %}</span>
+    {% endif %}
+{% endif %}

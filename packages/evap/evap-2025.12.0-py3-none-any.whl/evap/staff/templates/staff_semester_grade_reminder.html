@@ -1,0 +1,26 @@
+{% extends 'staff_semester_base.html' %}
+
+{% block breadcrumb %}
+    {{ block.super }}
+    <li class="breadcrumb-item">{% translate 'Grade publish reminder' %}</li>
+{% endblock %}
+
+{% block content %}
+    {{ block.super }}
+    <h3>
+        {% translate 'Grade publish reminder' %} ({{ semester.name }})
+    </h3>
+    <div class="card">
+        <div class="card-body">
+            {% for responsible, courses in responsibles_and_courses_without_final_grades %}
+                <b>{{ responsible.full_name }}</b><br />
+                {% for course in courses %}
+                    - {{ course.name }} (<span class="fst-italic">{{ course.type }}</span>)<br />
+                {% endfor %}
+                {% if not forloop.last %}
+                    <br />
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+{% endblock %}

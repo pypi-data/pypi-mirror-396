@@ -1,0 +1,229 @@
+{% spaceless %}
+{% load static %}
+{% load cache %}
+{% load evaluation_filters %}
+{% load navbar_templatetags %}
+
+{% endspaceless %}<!DOCTYPE html>
+{% get_current_language as LANGUAGE_CODE %}
+<html lang="{{ LANGUAGE_CODE }}">
+    <head>
+        {% block header %}
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+            <title>{% block title %}EvaP{% endblock %}</title>
+
+            <link rel="stylesheet" href="{% static 'css/tom-select.bootstrap5.min.css' %}" />
+            <link rel="stylesheet" href="{% static 'css/bootstrap-datetimepicker.min.css' %}" />
+            <link rel="stylesheet" href="{% static 'css/evap.css' %}" />
+            {% if debug %}
+                <link rel="icon" type="image/png" sizes="64x64" href="{% static 'images/favicon_gray.png' %}" />
+            {% else %}
+                <link rel="icon" type="image/png" sizes="64x64" href="{% static 'images/favicon_64.png' %}" />
+                <link rel="icon" type="image/png" sizes="32x32" href="{% static 'images/favicon_32.png' %}" />
+                <link rel="icon" type="image/png" sizes="16x16" href="{% static 'images/favicon_16.png' %}" />
+            {% endif %}
+        {% endblock %}
+    </head>
+    <body{% if not plain_page %} class="mb-footer"{% endif %}>
+        <script type="text/javascript" src="{% static 'bootstrap/dist/js/bootstrap.bundle.min.js' %}"></script>
+
+        {% include "custom_elements.html" %}
+
+        {% block modals %}
+            {% if user.is_authenticated %}
+                {% translate 'Feedback' as title %}
+                {% translate 'You are welcome to submit feedback regarding the evaluation platform or specific evaluations. Please let us know how we can improve your experience on EvaP.' as teaser %}
+                {% include 'contact_modal.html' with modal_id='feedbackModal' user=request.user title=title teaser=teaser %}
+            {% endif %}
+        {% endblock %}
+
+        <div class="sticky-top d-print-none z-over-fixed">
+            {% include_navbar user LANGUAGE_CODE %}
+
+            {% block breadcrumb_bar %}
+            {% endblock %}
+        </div>
+
+        <img class="print-brand-image d-none d-print-block" src="{% static 'images/evap.png' %}" alt="{% translate 'Evaluation Platform' %}" />
+
+        {% if user.is_authenticated and not plain_page %}
+            {% include 'notebook.html' %}
+        {% endif %}
+
+        <div{% if not plain_page %} class="p-3 mb-4"{% endif %} id="evapContent">
+            <div class="{% if plain_page %}container-fluid d-flex max-content-height{% else %}container{% endif %}">
+                {% if not plain_page %}
+                    {% include 'messages.html' %}
+                {% endif %}
+
+                {% block content %}
+                {% endblock %}
+            </div>
+        </div>
+
+        {% if not plain_page %}
+            {% include 'footer.html' %}
+        {% endif %}
+
+        <script src="{% url 'javascript-catalog' %}"></script>
+
+        <script type="text/javascript" src="{% static 'js/jquery-2.1.3.min.js' %}"></script>
+        <script type="text/javascript" src="{% static 'js/tom-select.complete.min.js' %}"></script>
+        <script type="text/javascript" src="{% static 'js/plugins/jquery.formset.js' %}"></script>
+        <script type="text/javascript" src="{% static 'js/Sortable.min.js' %}"></script>
+
+        <script type="module" src="{% static 'js/csrf-utils.js' %}"></script>
+        <script type="module" src="{% static 'js/utils.js' %}"></script>
+
+        <script type="module" src="{% static 'js/base-template.js' %}"></script>
+        <script type="text/javascript">
+            activateTooltips = function(selector = "") {
+                var tooltipTriggerList = [].slice.call(document.querySelectorAll(selector + ' [data-bs-toggle="tooltip"]'))
+                var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                    var container = 'body';
+                    if (tooltipTriggerEl.dataset.container){
+                        container = tooltipTriggerEl.closest(tooltipTriggerEl.dataset.container);
+                    }
+                    return new bootstrap.Tooltip(tooltipTriggerEl, {container: container, html: true, trigger: 'hover'})
+                })
+
+            };
+            activateTooltips();
+
+            // These are workarounds around incompatibilities of django, django-dynamic-formsets, and tomselect.
+            // tomselect can't handle already tomselect'd forms that were copies made by django-dynamic-formsets'
+            // "add another" button, so we take a copy of a non-tomselect'd form here
+            const tomSelectRows = document.querySelectorAll(".tomselecttr");
+
+            if(tomSelectRows.length != 0) {
+                const templateForm = tomSelectRows[tomSelectRows.length - 1].cloneNode(true);
+
+                // later we use this class to give this to django-dynamic-formsets as template and to make sure it does not get tomselect'd
+                templateForm.classList.add("form-template");
+                templateForm.style.display = "none";
+
+                // django-dynamic-formsets doesn't hide the "delete this row" input in the clone since it's not part of the formset.
+                templateForm.querySelectorAll("input[id$=-DELETE]").forEach(input => {input.type = "hidden";});
+
+                // For some reason, django validates this template if it's part of the form, so we insert the copy outside of the form.
+                document.querySelector(".tomselectform").insertAdjacentElement("afterend", templateForm);
+            }
+
+            // used in derived templates. Tag inputs are multi-inputs where users can add options
+            const tagTomSelectOptions = {
+                create: true,
+                createOnBlur: true,
+                delimiter: '', // we don't want the default "comma creates entry" behavior
+
+                dropdownParent: document.createElement("div"),  // To make it invisible
+                // On enter, with hidden dropdown, always add current text. Otherwise, adding a
+                // prefix of an existing item doesn't work
+                addPrecedence: true,
+            };
+
+            class MinimumInputLengthTomSelect extends TomSelect {
+                constructor(...args) {
+                    super(...args);
+                    this.settings.shouldLoad = () => true;  // Otherwise, for empty inputs, no dropdown would be shown.
+                }
+                // hacky solution, comes from
+                // https://github.com/orchidjs/tom-select/discussions/376
+                // ( via https://stackoverflow.com/questions/72233401/ )
+                search(query) {
+                    if(query.length < this.settings.minimumInputLength) {
+                        return this.sifter.prepareSearch(query, {});
+                    }
+                    return super.search(query);
+                }
+            }
+
+            applyTomSelect = function(elements, additionalOptions = {}) {
+                elements.forEach((element) => {
+                    const minimumInputLength = element.options.length >= 50 ? 3 : 0;
+
+                    element.tomselect?.destroy();
+                    element.classList.remove("form-select");  // TomSelect applies their own matching classes / styles
+                    if(element.parentElement.classList.contains("is-invalid")) {  // hotfix for our wrongly placed is-invalid
+                        element.parentElement.classList.remove("is-invalid");
+                        element.classList.add("is-invalid");
+                    }
+                    const baseOptions = {
+                        createOnBlur: true,
+                        placeholder: "{% translate 'Please select...' %}",
+                        hidePlaceholder: element.hasAttribute("data-tomselect-fullwidth") ? false : true,
+                        minimumInputLength,
+                        render: {
+                            option_create: (data, escape) => `<div class="create">${ escape(data.input) }</div>`,
+                            no_results: (data, escape) => {
+                                if(data.input.length < minimumInputLength) {
+                                    return `<div class="no-results">{% translate "Please enter ${ minimumInputLength } characters or more..." %}</div>`;
+                                } else {
+                                    return '<div class="no-results">{% translate "No results found" %}</div>';
+                                }
+                            }
+                        },
+                        closeAfterSelect: true, // also clears search input on enter.
+                        plugins: {},
+                        hideSelected: false,
+                    };
+                    if (element.hasAttribute("tomselect-no-sort")) {
+                        baseOptions.sortField = [{field:'$order'},{field:'$score'}];
+                    }
+                    if(element.hasAttribute("data-tomselect-fullwidth")) {
+                        // span needed to the "remove this icon" button is right-aligned
+                        baseOptions.render.item = (data, escape) => `<div class="w-100"><span class="w-100">${ escape(data.text) }</span></div>`;
+                    }
+                    if(element.multiple) {
+                        baseOptions.plugins.clear_button = {"title": "{% translate 'Remove all items' %}"};
+                        baseOptions.plugins.remove_button = {"title": "{% translate 'Remove this item' %}"};
+                    }
+                    new MinimumInputLengthTomSelect(element, Object.assign({}, baseOptions, additionalOptions));
+                });
+            };
+            applyTomSelect(document.querySelectorAll("select:not(.form-template select):not(.no-tomselect)"));
+
+            document.addEventListener('change', e => e.target.classList.remove("invalid"), true);
+
+            // activate clickable hover tables
+            document.querySelectorAll(".table-seamless-links [data-url]").forEach(row => {
+                row.addEventListener("click", event => {
+                    event.preventDefault();
+                    // We navigate via the <a> tag to enable browser behavior for Ctrl-Click. We cannot insert an actual
+                    // <a> tag, because there cannot be any non-table tags between for example <tbody> and <tr>.
+                    const anchor = document.createElement("a");
+                    anchor.href = row.dataset.url;
+                    // As `event` is bound to `row`, we need to clone it.
+                    anchor.dispatchEvent(new event.constructor(event.type, event));
+                });
+            });
+
+            document.querySelectorAll(".hover-row").forEach(row => {
+                row.querySelectorAll(".btn:not(.btn-row-hover)").forEach(button => {
+                    button.addEventListener("mouseover", () => row.classList.remove("hover-row"));
+                    button.addEventListener("mouseout", () => row.classList.add("hover-row"));
+                });
+            });
+
+            function setSpinnerIcon(id) {
+                const element = document.getElementById(id);
+                element.innerHTML = "";
+                element.className = "fas fa-spinner fa-spin";  // clears all other classes
+            };
+
+            document.querySelectorAll("[data-set-spinner-icon]").forEach(el => {
+                el.addEventListener("click", () => setSpinnerIcon(el.dataset.setSpinnerIcon));
+            });
+        </script>
+
+        <script type="module">
+            import { setupForms } from "{% static 'js/custom-success-form.js' %}";
+            import { setupTomSelectCount } from "{% static 'js/tom-select-count.js'%}"
+
+            setupForms();
+            setupTomSelectCount();
+        </script>
+
+        {% block additional_javascript %}{% endblock %}
+    </body>
+</html>

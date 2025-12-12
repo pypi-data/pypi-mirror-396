@@ -1,0 +1,39 @@
+{% extends 'staff_base.html' %}
+
+{% load evaluation_filters %}
+
+{% block breadcrumb %}
+    {{ block.super }}
+    <li class="breadcrumb-item"><a href="{% url 'staff:course_type_index' %}">{% translate 'Course types' %}</a></li>
+    <li class="breadcrumb-item">{% translate 'Merge course types' %}</li>
+{% endblock %}
+
+{% block content %}
+    {{ block.super }}
+    <h3>{% translate 'Merge course types' %}</h3>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <p>
+                {% blocktranslate %}The following courses currently have the course type <strong>{{ other_type }}</strong> and will
+                get the type <strong>{{ main_type }}</strong> once you merge the course types. The course type <strong>
+                {{ other_type }}</strong> will be deleted after that.{% endblocktranslate %}
+            </p>
+
+            <ul>
+                {% for course in courses_with_other_type %}
+                    <li>{{ course }} ({{ course.semester }})</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <form id="course-type-merge-form" method="POST" class="form-horizontal">
+        {% csrf_token %}
+        <div class="card card-submit-area text-center mb-3">
+            <div class="card-body">
+                <button type="submit" class="btn btn-primary">{% translate 'Merge course types' %}</button>
+            </div>
+        </div>
+    </form>
+{% endblock %}

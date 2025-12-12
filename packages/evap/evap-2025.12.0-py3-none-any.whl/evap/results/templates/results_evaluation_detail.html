@@ -1,0 +1,242 @@
+{% extends 'base.html' %}
+
+{% load static %}
+{% load evaluation_filters %}
+{% load results_templatetags %}
+
+{% block title %}{{ evaluation.full_name }} - {{ evaluation.course.semester.name }} - {% translate 'Results' %} - {{ block.super }}{% endblock %}
+
+{% block breadcrumb_bar %}
+    <div class="breadcrumb-bar">
+        <ul class="breadcrumb">
+            <li class="breadcrumb-item">{{ evaluation.course.semester.name }}</li>
+            <li class="breadcrumb-item">{{ evaluation.full_name }}</li>
+        </ul>
+    </div>
+{% endblock %}
+
+{% block content %}
+    {{ block.super }}
+
+    {% if evaluation.state != evaluation.State.PUBLISHED %}
+        <div class="alert alert-warning">{% translate 'This is a preview. The results have not been published yet.' %}</div>
+    {% endif %}
+    {% if is_reviewer or is_responsible_or_contributor_or_delegate %}
+        {% if evaluation.course.is_private %}
+            <div class="alert alert-info d-print-none">
+                <span class="fas fa-lock"></span> {% translate 'This evaluation is private. Only contributors and participants can see the results.' %}
+            </div>
+        {% endif %}
+        <div class="row align-items-end mb-3">
+            <div class="col">
+                <h3 class="mb-0">{{ evaluation.full_name }} ({{ evaluation.course.semester.name }})</h3>
+            </div>
+            <div class="col-auto">
+                <div class="row">
+                    <div class="col-auto ms-auto">
+                        <div class="btn-switch btn-switch-light my-auto d-print-none">
+                            <div class="btn-switch-label">
+                                {% translate 'General results' %}
+                            </div>
+                            <div class="btn-switch btn-group">
+                                <a
+                                    href="{% url 'results:evaluation_detail' evaluation.course.semester.id evaluation.id %}?view_general_results=full&view_contributor_results={{ view_contributor_results.value }}"
+                                    role="button"
+                                    class="btn btn-sm btn-light{% if not general_textanswers %} disabled{% elif view_general_results == ViewGeneralResults.FULL %} active{% endif %}"
+                                >
+                                    {% translate 'Ratings and texts' %}
+                                </a>
+                                <a
+                                    href="{% url 'results:evaluation_detail' evaluation.course.semester.id evaluation.id %}?view_general_results=ratings&view_contributor_results={{ view_contributor_results.value }}"
+                                    role="button"
+                                    class="btn btn-sm btn-light{% if not general_textanswers %} disabled active{% elif view_general_results == ViewGeneralResults.RATINGS %} active{% endif %}"
+                                >
+                                    {% translate 'Ratings' %}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-1">
+                    <div class="col-auto">
+                        <div class="btn-switch btn-switch-light my-auto d-print-none">
+                            <div class="btn-switch-label">
+                                {% translate 'Contributor results' %}
+                            </div>
+                            <div class="btn-switch btn-group">
+                                <a
+                                    href="{% url 'results:evaluation_detail' evaluation.course.semester.id evaluation.id %}?view_general_results={{ view_general_results.value }}&view_contributor_results=personal"
+                                    role="button"
+                                    class="btn btn-sm btn-light{% if not contributor_textanswers or not contributor_personal %} disabled{% elif view_contributor_results == ViewContributorResults.PERSONAL %} active{% endif %}"
+                                >
+                                    {% translate 'Only mine' %}
+                                </a>
+                                <a
+                                    href="{% url 'results:evaluation_detail' evaluation.course.semester.id evaluation.id %}?view_general_results={{ view_general_results.value }}&view_contributor_results=full"
+                                    role="button"
+                                    class="btn btn-sm btn-light{% if not contributor_textanswers %} disabled{% elif view_contributor_results == ViewContributorResults.FULL %} active{% endif %}"
+                                >
+                                    {% translate 'Ratings and texts' %}
+                                </a>
+                                <a
+                                    href="{% url 'results:evaluation_detail' evaluation.course.semester.id evaluation.id %}?view_general_results={{ view_general_results.value }}&view_contributor_results=ratings"
+                                    role="button"
+                                    class="btn btn-sm btn-light{% if not contributor_textanswers %} disabled active{% elif view_contributor_results == ViewContributorResults.RATINGS %} active{% endif %}"
+                                >
+                                    {% translate 'Ratings' %}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <h3>{{ evaluation.full_name }} ({{ evaluation.course.semester.name }})</h3>
+    {% endif %}
+
+    <div class="card card-outline-primary mb-3">
+        <div class="card-header d-flex">
+            <div class="me-auto">{% translate 'Overview' %}</div>
+            {% if can_export_text_answers %}
+                <a class="btn btn-sm btn-light d-print-none" href="{% url 'results:evaluation_text_answers_export' evaluation.id %}?view_general_results={{ view_general_results.value }}&view_contributor_results={{ view_contributor_results.value }}{% if contributor_id is not None %}&contributor_id={{ contributor_id }}{% endif %}" type="button">
+                    {% translate 'Export visible text answers' %}
+                </a>
+            {% endif %}
+            {% if evaluation.course.grade_documents.count == 1 and can_download_grades %}
+                <a class="btn btn-sm btn-light d-print-none ms-2" href="{% url 'grades:download_grades' evaluation.course.grade_documents.first.id %}">{{ evaluation.course.grade_documents.first.description }}</a>
+            {% elif evaluation.course.grade_documents.count > 1 and can_download_grades %}
+                <div class="btn-group d-print-none ms-2" role="group">
+                    <button type="button" id="btnDownload" class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{% translate 'Grades' %}</button>
+                    <div class="dropdown-menu" aria-labelledby="btnDownload">
+                        {% for grade_document in evaluation.course.grade_documents.all %}
+                            <a class="dropdown-item" href="{% url 'grades:download_grades' grade_document.id %}">{{ grade_document.description }}</a>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+        <div class="card-body pt-2">
+            <div class="result-grid">
+                <div class="grid-header results-grid-row border-bottom d-none d-lg-grid">
+                        <div data-col="name">{% translate 'Evaluation' %}</div>
+                        <div data-col="semester">{% translate 'Semester' %}</div>
+                        <div data-col="responsible">{% translate 'Responsible' %}</div>
+                        <div data-col="voters">{% translate 'Voters' %}</div>
+                        <div data-col="result">{% translate 'Distribution and average grade' %}</div>
+                </div>
+                {% if course_evaluations %}
+                    {% include 'results_index_course.html' with evaluations=course_evaluations %}
+                    {% for course_evaluation in course_evaluations %}
+                        {% if course_evaluation.pk == evaluation.pk %}
+                            {# we cannot add a class to the actual row because it is cached globally. so we use a + selector in css to style the following row. #}
+                            <div class="current-row-follows"></div>
+                        {% endif %}
+                        {% include 'results_index_evaluation.html' with evaluation=course_evaluation links_to_results_page=course_evaluation|can_results_page_be_seen_by:request.user is_subentry=True %}
+                    {% endfor %}
+                {% else %}
+                    {% include 'results_index_evaluation.html' with links_to_results_page=False is_subentry=False %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% if general_questionnaire_results_top %}
+        <div class="card card-outline-primary mb-3">
+            <div class="card-header">
+                {% translate 'General' %}
+            </div>
+            <div class="card-body">
+                {% for questionnaire_result in general_questionnaire_results_top %}
+                    {% include 'results_evaluation_detail_questionnaires.html' %}
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    {% if contributor_contribution_results or contributors_with_omitted_results %}
+        <div class="card card-outline-primary mb-3">
+            <div class="card-header">
+                {% translate 'Contributors' %}
+            </div>
+            <div class="card-body">
+                {% for contribution_result in contributor_contribution_results %}
+                    <div class="card collapsible{% if not forloop.last %} mb-3{% endif %}">
+                        <div class="card-header d-flex">
+                            <div class="me-auto">
+                                <a class="collapse-toggle{% if not contribution_result.has_answers %} collapsed{% endif %}"
+                                        data-bs-toggle="collapse" href="#contributor-{{ contribution_result.contributor.id }}"
+                                        aria-controls="contributor-{{ contribution_result.contributor.id }}">
+                                    {{ contribution_result.contributor.full_name }}
+                                    {% if contribution_result.label %}
+                                        &ndash; <span class="fst-italic">{{ contribution_result.label }}</span>
+                                    {% endif %}
+                                </a>
+                            </div>
+                            {% if not contribution_result.has_answers %}
+                                <div class="participants-warning">
+                                    <span class="fas fa-circle-info"></span>
+                                    {% translate 'There are no results for this person.' %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="collapse{% if contribution_result.has_answers %} show{% endif %}" id="contributor-{{ contribution_result.contributor.id }}">
+                            <div class="card-body">
+                                {% for questionnaire_result in contribution_result.questionnaire_results %}
+                                    {% include 'results_evaluation_detail_questionnaires.html' with last=forloop.last %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+                {% if contributors_with_omitted_results %}
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            {% translate 'Other contributors' %}
+                        </div>
+                        <div class="card-body">
+                            <ul>
+                                {% for contributor in contributors_with_omitted_results %}
+                                    <li>{{ contributor.full_name }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+
+    {% if general_questionnaire_results_bottom %}
+        <div class="card card-outline-primary mb-3">
+            <div class="card-header">
+                {% translate 'General' %}
+            </div>
+            <div class="card-body">
+                {% for questionnaire_result in general_questionnaire_results_bottom %}
+                    {% include 'results_evaluation_detail_questionnaires.html' %}
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    {% if evaluation.is_dropout_allowed or evaluation.dropout_count > 0 or dropout_questionnaire_results %}
+        <div class="card card-outline-primary mb-3">
+            <div class="card-header d-flex flex-row justify-content-between">
+                <span>{% translate 'Dropout' %}</span>
+
+                <div class="badge-participants badge-participants-{{ evaluation.dropout_count|participationclass:evaluation.num_voters }} ms-2 ms-lg-3">
+                    <span class="fas fa-user"></span> {{ evaluation.dropout_count }}
+                </div>
+            </div>
+            <div class="card-body">
+                {% for questionnaire_result in dropout_questionnaire_results %}
+                    {% include 'results_evaluation_detail_questionnaires.html' %}
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    {# Leave some space for big tooltips #}
+    <div class="py-5 py-md-0"></div>
+{% endblock %}
