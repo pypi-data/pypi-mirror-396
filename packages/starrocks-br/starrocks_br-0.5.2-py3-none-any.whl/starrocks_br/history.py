@@ -1,0 +1,104 @@
+# Copyright 2025 deep-bi
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from . import logger
+
+
+def log_backup(db, entry: dict[str, str | None]) -> None:
+    """Write a backup history entry to ops.backup_history.
+
+    Expected keys in entry:
+      - job_id (optional; auto-generated if missing)
+      - label
+      - backup_type (incremental|full)
+      - status (FINISHED|FAILED|CANCELLED)
+      - repository
+      - started_at (YYYY-MM-DD HH:MM:SS)
+      - finished_at (YYYY-MM-DD HH:MM:SS)
+      - error_message (nullable)
+    """
+    label = entry.get("label", "")
+    backup_type = entry.get("backup_type", "")
+    status = entry.get("status", "")
+    repository = entry.get("repository", "")
+    started_at = entry.get("started_at", "NULL")
+    finished_at = entry.get("finished_at", "NULL")
+    error_message = entry.get("error_message")
+
+    def esc(val: str | None) -> str:
+        if val is None:
+            return "NULL"
+        return "'" + str(val).replace("'", "''") + "'"
+
+    sql = f"""
+    INSERT INTO ops.backup_history (
+        label, backup_type, status, repository, started_at, finished_at, error_message
+    ) VALUES (
+        {esc(label)}, {esc(backup_type)}, {esc(status)}, {esc(repository)},
+        {esc(started_at)}, {esc(finished_at)}, {esc(error_message)}
+    )
+    """
+
+    try:
+        db.execute(sql)
+    except Exception as e:
+        logger.error(f"Failed to log backup history: {str(e)}")
+        raise
+
+
+def log_restore(db, entry: dict[str, str | None]) -> None:
+    """Write a restore history entry to ops.restore_history.
+
+    Expected keys in entry:
+      - job_id
+      - backup_label
+      - restore_type (partition|table|database)
+      - status (FINISHED|FAILED|CANCELLED)
+      - repository
+      - started_at (YYYY-MM-DD HH:MM:SS)
+      - finished_at (YYYY-MM-DD HH:MM:SS)
+      - error_message (nullable)
+      - verification_checksum (optional)
+    """
+    job_id = entry.get("job_id", "")
+    backup_label = entry.get("backup_label", "")
+    restore_type = entry.get("restore_type", "")
+    status = entry.get("status", "")
+    repository = entry.get("repository", "")
+    started_at = entry.get("started_at", "NULL")
+    finished_at = entry.get("finished_at", "NULL")
+    error_message = entry.get("error_message")
+    verification_checksum = entry.get("verification_checksum")
+
+    def esc(val: str | None) -> str:
+        if val is None:
+            return "NULL"
+        return "'" + str(val).replace("'", "''") + "'"
+
+    sql = f"""
+    INSERT INTO ops.restore_history (
+        job_id, backup_label, restore_type, status, repository, 
+        started_at, finished_at, error_message, verification_checksum
+    ) VALUES (
+        {esc(job_id)}, {esc(backup_label)}, {esc(restore_type)}, {esc(status)}, 
+        {esc(repository)}, {esc(started_at)}, {esc(finished_at)}, 
+        {esc(error_message)}, {esc(verification_checksum)}
+    )
+    """
+
+    try:
+        db.execute(sql)
+    except Exception as e:
+        logger.error(f"Failed to log restore history: {str(e)}")
+        raise
