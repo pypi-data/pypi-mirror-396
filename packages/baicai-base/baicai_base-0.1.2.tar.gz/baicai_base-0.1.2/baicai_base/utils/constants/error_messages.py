@@ -1,0 +1,7 @@
+PREV_FAIL_FAST = "Failed because previous node/graph fail_fast."
+MAX_ITER_EXCEEDED = "Failed because run_node max iteration exceeded."
+CONTINUE_AFTER_MAX_ITER = "Max iteration exceeded, but there are some successful runs, continue."
+MAX_ITER_EXCEEDED_NO_GRAPH_SUCCESS = "Failed because run_node max iteration exceeded without any successful graph run."
+EXTRA_PACKAGE_NEEDED = "Failed because you need to install the extra package first."
+JSON_FORMAT_ERROR = "The generation is empty or not with any json format, please try again."
+JSON_RETRY_TOO_MANY = "Too many iterations to generate JSON, please check the previous steps and prompts."
