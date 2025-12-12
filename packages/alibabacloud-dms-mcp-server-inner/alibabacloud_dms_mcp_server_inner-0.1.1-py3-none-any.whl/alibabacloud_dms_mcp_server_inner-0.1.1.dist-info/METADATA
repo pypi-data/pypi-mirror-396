@@ -1,0 +1,125 @@
+Metadata-Version: 2.4
+Name: alibabacloud-dms-mcp-server-inner
+Version: 0.1.1
+Summary: MCP Server for DMS
+Author: DMS
+Requires-Python: >=3.10
+Requires-Dist: httpx>=0.28.1
+Requires-Dist: mcp[cli]>=1.8.1
+Description-Content-Type: text/markdown
+
+# AlibabaCloud DMS MCP Server
+
+**AI时代的数据安全访问网关**
+
+---
+## 使用方式
+DMS MCP Server 现在支持两种使用模式。
+
+### 模式一：多实例模式
+- 适用于需要管理和访问多个数据库实例的场景。
+#### 场景示例：
+需要在生产、测试和开发等多个环境中管理和访问 MySQL、PostgreSQL 等多种数据库实例。通过DMS MCP Server，可以实现对这些异构数据库的统一接入与集中管理。
+
+**典型提问示例：**  
+- 获取 myHost:myPort 实例详情
+- 获取 myHost:myPort 实例中 test_db 数据库的详细信息。
+- 开发环境的test_logic_db逻辑库下有哪些逻辑表？
+- 获取test_logic_db逻辑库下test_logic_table表详情
+
+### 模式二：单数据库模式
+- 通过在SERVER中配置 CONNECTION_STRING 参数（格式为 dbName@host:port），直接指定需要访问的数据库。
+- 适用于专注一个数据库访问的场景。
+#### 场景示例：
+你是一个开发人员，只需要频繁访问一个固定的数据库（如 mydb@192.168.1.100:3306）进行开发测试。在 DMS MCP Server 的配置中设置一个 CONNECTION_STRING 参数，例如：
+```ini
+CONNECTION_STRING = mydb@192.168.1.100:3306
+```
+之后每次启动服务时，DMS MCP Server都会直接访问这个指定的数据库，无需切换实例。
+
+**典型提问示例：**  
+- 我有哪些表？
+- 查看test_table表的字段信息
+
+---
+
+## 工具清单
+| 工具名称           | 描述                          | 适用模式                |
+|------------------|-----------------------------|----------------------|
+| getInstance      | 根据 host 和 port 获取实例详细信息。    | 多实例模式              |
+| searchDatabase    | 根据 schemaName 搜索数据库。        | 多实例模式              |
+| searchLogicDatabase    | 根据逻辑库名搜索逻辑库。                | 多实例模式              |
+| getDatabase      | 获取host、port和库名获取指定数据库的详细信息。 | 多实例模式              |
+| listTable        | 搜索指定数据库下的数据表。               | 多实例模式 & 单数据库模式 |
+| listLogicTables      | 搜索指定逻辑库下的逻辑表。               | 多实例模式              |
+| getTableDetailInfo | 获取特定数据库表的详细信息。              | 多实例模式 & 单数据库模式 |
+| executeScript | 执行SQL。                      | 多实例模式 & 单数据库模式 |
+
+---
+## 前提条件
+- 已安装uv
+- 已安装Python 3.10+
+- 已获取DMS访问凭证（获取方式请参考[DMS MCP文档](https://alidocs.dingtalk.com/i/nodes/EpGBa2Lm8aZxe5myCZYKkoYkWgN7R35y?iframeQuery=utm_source%3Dportal%26utm_medium%3Dportal_recent)步骤一）
+
+---
+
+## 快速开始
+
+#### 下载代码
+```bash
+git clone http://gitlab.alibaba-inc.com/idb/alibabacloud-dms-mcp-server-inner.git
+```
+
+#### 配置MCP客户端
+在配置文件中添加以下内容：
+
+**多实例模式**
+```json
+{
+  "mcpServers": {
+    "dms-mcp-server": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/path/to/alibabacloud-dms-mcp-server-inner/src/alibabacloud_dms_mcp_server_inner",
+        "run",
+        "server.py"
+      ],
+      "env": {
+        "ACCESS_KEY_ID": "access_id",
+        "ACCESS_KEY_SECRET": "access_key"
+      }
+    }
+  }
+}
+```
+**单数据库模式**
+```json
+{
+  "mcpServers": {
+    "dms-mcp-server": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/path/to/alibabacloud-dms-mcp-server-inner/src/alibabacloud_dms_mcp_server_inner",
+        "run",
+        "server.py"
+      ],
+      "env": {
+        "ACCESS_KEY_ID": "access_id",
+        "ACCESS_KEY_SECRET": "access_key",
+        "CONNECTION_STRING": "dbName@host:port"
+      }
+    }
+  }
+}
+```
+
+
+---
+
+## Contact us
+
+如果您有使用问题或建议, 请加入[Alibaba Cloud DMS MCP讨论组](https://h5.dingtalk.com/circle/joinCircle.html?corpId=dinga0bc5ccf937dad26bc961a6cb783455b&token=2f373e6778dcde124e1d3f22119a325b&groupCode=v1,k1,NqFGaQek4YfYPXVECdBUwn+OtL3y7IHStAJIO0no1qY=&from=group&ext=%7B%22channel%22%3A%22QR_GROUP_NORMAL%22%2C%22extension%22%3A%7B%22groupCode%22%3A%22v1%2Ck1%2CNqFGaQek4YfYPXVECdBUwn%2BOtL3y7IHStAJIO0no1qY%3D%22%2C%22groupFrom%22%3A%22group%22%7D%2C%22inviteId%22%3A2823675041%2C%22orgId%22%3A784037757%2C%22shareType%22%3A%22GROUP%22%7D&origin=11) (钉钉群号:129600002740) 进行讨论.
+
+
