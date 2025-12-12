@@ -1,0 +1,34 @@
+version: "3.3"
+
+services:
+  mongo:
+    image: mongo:6.0
+    restart: always
+    command: --bind_ip_all
+    volumes:
+      - pycivil-mongo:/data/db
+
+  pycivile:
+    build: .
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      UVICORN_BIND: 0.0.0.0
+    volumes:
+      - pycivil:/app/working-data
+      - pycivilxls:/app/res/excel-structural-sheets
+      - ./tests:/app/tests
+
+  codeaster:
+    image: registry.gitlab.com/luigi_paone/code_aster_whale/code-aster:devel
+    restart: always
+    ports:
+      - "8100:8100"
+    volumes:
+      - pycivil:/app/working-data
+
+volumes:
+  pycivil:
+  pycivilxls:
+  pycivil-mongo:
