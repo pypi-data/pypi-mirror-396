@@ -1,0 +1,570 @@
+Metadata-Version: 2.1
+Name: packupdate
+Version: 1.1.4
+Summary: A Python utility to update Node.js project dependencies safely with interactive mode and version management.
+Home-page: https://github.com/sthpratik/PackUpdate
+Author: Manish Shrestha
+Author-email: sth.pratik@gmail.com
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: inquirer>=2.10.0
+Requires-Dist: requests>=2.25.0
+
+# Python Package - packUpdate
+
+## Overview
+
+`updatepkgs` is a comprehensive Python utility that automates the process of updating Node.js project dependencies with intelligent dependency resolution, breaking change detection, and comprehensive safety mechanisms.
+
+**Available Commands:**
+- `updatepkgs` - Main command (consistent across Node.js and Python)
+- `packUpdate` - Alternative command name
+
+## Features
+
+### 🚀 Core Update Features
+- **Smart Update Algorithm**: Latest → Wanted → Revert strategy with automatic rollback
+- **Safe Mode**: Test builds and tests after each update
+- **Dependency Resolution**: Updates packages in correct dependency order
+- **Multiple Passes**: Configurable number of update attempts
+
+### 🎯 Interactive Mode
+- **Selective Package Updates**: Choose specific packages from an interactive checkbox list
+- **Version Control**: Select between minor or major updates for each package individually
+- **Batch Operations**: Update multiple packages with different version strategies at once
+- **Update Preview**: See exactly what will be updated before confirming changes
+- **Skip Options**: Easily skip packages you don't want to update
+- **Safe Integration**: Works with safe mode for tested interactive updates
+
+### 🔧 Version Management
+- **Automatic Version Updates**: Update project version after successful package updates
+- **Flexible Version Types**: Support for major, minor, patch, or specific version numbers
+- **Dual File Updates**: Updates both package.json and package-lock.json automatically
+- **Success-Based Updates**: Only updates version if package updates were successful
+- **Semver Compliance**: Maintains proper semantic versioning format
+
+### 🤖 Git Automation
+- **Complete Workflow Automation**: Clone → Update → Commit → PR
+- **Multi-Platform Support**: Bitbucket Server, GitHub, GitLab
+- **Smart Branch Management**: Auto-detects develop/master branches
+- **Pull Request Generation**: Detailed PRs with update logs and security reports
+- **Ticket Integration**: Jira/ticket linking in commits and PRs
+- **SSH Authentication**: Secure git operations with SSH keys
+
+### 📝 Advanced Logging
+- **Comprehensive Logging**: Creates unique timestamped log files for every run
+- **Quiet Mode**: Runs in background with minimal console output while maintaining full logging
+- **Error Tracking**: All errors are captured with detailed information
+- **Success Tracking**: Successful updates are logged with version details
+
+## SSH Key Setup for Automation
+
+The automation features require SSH keys for git operations. Follow these steps to set up SSH authentication:
+
+### 1. Generate SSH Key
+```bash
+# Generate a new SSH key (if you don't have one)
+ssh-keygen -t rsa -b 4096 -C "your.email@company.com"
+
+# Save to default location (~/.ssh/id_rsa) when prompted
+# Set a passphrase for security (recommended)
+```
+
+### 2. Add to SSH Agent
+```bash
+# Start SSH agent
+eval "$(ssh-agent -s)"
+
+# Add your SSH key
+ssh-add ~/.ssh/id_rsa
+
+# For macOS, add to keychain
+ssh-add --apple-use-keychain ~/.ssh/id_rsa
+```
+
+### 3. Add Public Key to Git Servers
+
+**Copy your public key:**
+```bash
+cat ~/.ssh/id_rsa.pub
+```
+
+**Bitbucket Server:**
+- Personal Settings → SSH keys → Add key
+- Paste public key content
+
+**GitHub:**
+- Settings → SSH and GPG keys → New SSH key
+- Paste public key content
+
+**GitLab:**
+- User Settings → SSH Keys → Add key
+- Paste public key content
+
+### 4. Test SSH Connection
+```bash
+# Test your connections
+ssh -T git@your-bitbucket-server.com
+ssh -T git@github.com
+ssh -T git@gitlab.com
+```
+
+### 5. Configure Custom SSH Ports (if needed)
+Edit `~/.ssh/config`:
+```
+Host your-bitbucket-server.com
+    HostName your-bitbucket-server.com
+    Port 7999
+    User git
+    IdentityFile ~/.ssh/id_rsa
+```
+
+For detailed SSH setup instructions, see the [Automation Documentation](https://sthpratik.github.io/PackUpdate/#/automation).
+
+### Automation Examples
+
+```bash
+# Basic Bitbucket Server automation (safe mode automatic)
+updatepkgs --automate \
+  --platform bitbucket-server \
+  --endpoint https://your-bitbucket-server.com \
+  --token your-access-token \
+  --repository WORKSPACE/repository \
+  --ticket-no JIRA-456
+
+# GitHub automation with minor-only updates (safe mode automatic)
+updatepkgs --automate \
+  --platform github \
+  --repository myorg/myapp \
+  --minor-only
+
+# Combined with existing features (safe mode automatic)
+updatepkgs --automate \
+  --platform bitbucket-server \
+  --repository WORKSPACE/webapp \
+  --pass=3 \
+  --remove-unused \
+  --reviewers john.doe,jane.smith
+```
+
+### Environment Variables
+
+```bash
+# Set defaults to avoid repeating parameters
+export PACKUPDATE_BITBUCKET_TOKEN="your-token"
+export PACKUPDATE_BITBUCKET_ENDPOINT="https://your-bitbucket-server.com"
+export PACKUPDATE_REVIEWERS="john.doe,jane.smith"
+
+# Then use simplified commands
+updatepkgs --automate --platform bitbucket-server --repository WORKSPACE/repo
+```
+
+## Prerequisites
+
+- Python (v3.8 or higher)
+- Node.js (v14 or higher)
+- npm (v6 or higher)
+
+## Installation
+
+Install the library using pip:
+
+```bash
+pip install packupdate
+```
+
+## Usage
+
+### Basic Commands
+
+```bash
+# Update packages in current directory
+updatepkgs
+
+# Update specific project
+updatepkgs /path/to/project
+
+# Safe mode with testing
+updatepkgs --safe
+
+# Interactive mode for selective updates
+updatepkgs --interactive
+
+# Quiet mode for automation
+updatepkgs --quiet
+```
+
+### Interactive Mode
+
+```bash
+# Interactive package selection
+updatepkgs --interactive
+
+# Interactive with safe mode
+updatepkgs --interactive --safe
+```
+
+**Interactive Features:**
+- **Package Selection**: Choose specific packages to update from a list
+- **Version Choice**: Select between minor or major version updates for each package
+- **Batch Operations**: Update multiple packages with different version strategies
+- **Update Preview**: See exactly what will be updated before confirming
+- **Selective Control**: Skip packages you don't want to update
+
+### Version Management
+
+```bash
+# Update packages and bump project version
+updatepkgs --update-version=minor
+updatepkgs --update-version=major
+
+# Set specific project version after updates
+updatepkgs --update-version=1.2.3
+updatepkgs --update-version=2.0.0
+
+# Combined with other options
+updatepkgs --safe --update-version=patch
+updatepkgs --interactive --update-version=minor
+```
+
+**Version Update Types:**
+- **`major`** - Increment major version (1.0.0 → 2.0.0)
+- **`minor`** - Increment minor version (1.0.0 → 1.1.0)  
+- **`patch`** - Increment patch version (1.0.0 → 1.0.1)
+- **`x.y.z`** - Set specific version (e.g., 1.2.3)
+
+### Version-Specific Updates
+
+```bash
+# Update only minor versions (safer)
+updatepkgs --minor-only
+
+# Multiple update passes
+updatepkgs --pass=3
+
+# Combined safe minor updates
+updatepkgs --safe --minor-only
+```
+
+### Analysis & Reporting
+
+```bash
+# Generate comprehensive report (no updates)
+updatepkgs --generate-report
+
+# Report with specific project
+updatepkgs /path/to/project --generate-report
+
+# Quiet report generation
+updatepkgs --generate-report --quiet
+```
+
+### Cleanup Operations
+
+```bash
+# Remove unused dependencies
+updatepkgs --remove-unused
+
+# Deduplicate packages
+updatepkgs --dedupe-packages
+
+# Combined cleanup
+updatepkgs --remove-unused --dedupe-packages
+```
+
+## Command Line Options
+
+### Core Options
+- `--safe` - Enable safe mode (test updates before applying)
+- `--quiet` - Enable quiet mode (minimal console output)
+- `--interactive` - Interactive mode for selective package updates
+- `--pass=<number>` - Number of update passes (default: 1)
+
+### Update Control
+- `--minor-only` - Update only minor versions (1.2.x → 1.3.x, skip major updates)
+
+### Analysis & Reporting
+- `--generate-report` - Generate comprehensive security & dependency report (no updates)
+
+### Cleanup & Maintenance
+- `--remove-unused` - Clean up unused dependencies
+- `--dedupe-packages` - Remove duplicate dependencies
+
+### Version Management
+- `--update-version=<type>` - Update project version after successful updates (major|minor|patch|x.y.z)
+
+### Information
+- `--version` - Show package version
+- `--type` - Show package type (python)
+- `--help` - Show help message
+
+```bash
+updatenpmpackages <project_path> [--safe] [--quiet] [--pass=N]
+```
+
+### Parameters
+
+- `<project_path>`: The path to the Node.js project directory containing `package.json`.
+- `--safe`: Enables safe mode with comprehensive testing and fallback.
+- `--quiet`: Runs in quiet mode, suppressing detailed console output while maintaining full logging.
+- `--pass=N`: Specifies the number of update passes to perform. Default is 1.
+
+### Examples
+
+- Basic Update:
+  ```bash
+  updatenpmpackages /path/to/project
+  ```
+
+- Safe Mode:
+  ```bash
+  updatenpmpackages /path/to/project --safe
+  ```
+
+- Quiet Mode:
+  ```bash
+  updatenpmpackages /path/to/project --quiet
+  ```
+
+- Multiple Passes:
+  ```bash
+  updatenpmpackages /path/to/project --pass=3
+  ```
+
+- Combined Parameters:
+  ```bash
+  updatenpmpackages /path/to/project --safe --quiet --pass=2
+  ```
+
+## Run using code
+Clone the repository to your local machine:
+
+```bash
+git clone <repository-url>
+cd PackUpdate/python
+```
+
+Install the required Python dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+## Usage
+
+### 1. Run the Update Process
+
+To update the packages in your Node.js project, use the following command:
+
+```bash
+python updatePackages.py <project_path> [--safe] [--quiet] [--pass=N]
+```
+
+### 2. Available Commands and Options
+
+- `<project_path>`: **(Optional)** The path to the Node.js project directory containing `package.json` and `package-lock.json`. If not provided, uses the current directory.
+
+- `--safe`: **(Optional)** Enables safe mode. In this mode:
+  - The script first attempts to update packages to their latest versions.
+  - If tests fail, it reverts to the "wanted" version.
+  - If tests fail again, it reverts to the current version.
+
+- `--quiet`: **(Optional)** Enables quiet mode:
+  - Suppresses detailed console output and test logs.
+  - Runs npm operations in background.
+  - Only shows critical errors and final log file location.
+  - Full detailed logs are still written to the log file.
+
+- `--version`: **(Optional)** Shows the current version of the package.
+
+- `--type`: **(Optional)** Shows the package type (python).
+
+- `--help`: **(Optional)** Shows help message with all available parameters.
+
+- `--pass=N`: **(Optional)** Specifies the number of passes to attempt updating packages. Default is 1.
+
+**Note:** Parameters can be specified in any order. If no project path is provided, the current directory is used.
+
+### 3. Examples
+
+#### Example 1: Basic Update
+Run the script to update packages in a project located at `/path/to/project`:
+```bash
+python updatePackages.py /path/to/project
+```
+
+#### Example 2: Safe Mode
+Run the script in safe mode to ensure updates are validated with tests:
+```bash
+python updatePackages.py /path/to/project --safe
+```
+
+#### Example 3: Quiet Mode
+Run the script in quiet mode for background execution:
+```bash
+python updatePackages.py /path/to/project --quiet
+```
+
+#### Example 4: Multiple Passes
+Run the script with 3 passes to attempt updates multiple times:
+```bash
+python updatePackages.py /path/to/project --pass=3
+```
+
+#### Example 5: Combined Options
+Combine safe mode, quiet mode, and multiple passes:
+```bash
+python updatePackages.py /path/to/project --safe --quiet --pass=3
+```
+
+#### Example 6: Check Version
+Check the current version:
+```bash
+python updatePackages.py --version
+```
+
+#### Example 7: Check Package Type
+Check the package type:
+```bash
+python updatePackages.py --type
+```
+
+#### Example 8: Show Help
+Show all available options:
+```bash
+python updatePackages.py --help
+```
+
+### 4. Logging
+
+- **Automatic Logging**: Every run creates a unique timestamped log file (e.g., `packupdate-2025-10-08T11-35-03-140.log`)
+- **Error Tracking**: All errors are logged with detailed information
+- **Success Tracking**: Successful package updates are recorded with version details
+- **Failed Updates**: Packages that fail to update are tracked and logged
+- **Review**: Log files can be reviewed later for troubleshooting or analysis
+
+### 5. How It Works
+
+1. **Dependency Update**:
+   - The script identifies outdated packages using `npm outdated`.
+   - It attempts to update each package to the latest version or the "wanted" version based on the mode.
+
+2. **Audit Fix**:
+   - After updating dependencies, the script runs `npm audit fix` to resolve any security vulnerabilities.
+
+3. **Validation**:
+   - The script runs your project's test suite (`npm test`) to ensure that the updates do not break functionality.
+
+4. **Build**:
+   - After updates, the script runs `npm run build` to ensure the project builds successfully.
+
+5. **Logging**:
+   - All operations are logged to a timestamped file for later review.
+
+### 6. Logs and Output
+
+- The script provides detailed logs during the update process, indicating:
+  - Which packages were updated successfully.
+  - Which packages were reverted to the "wanted" or current version due to issues.
+  - Audit issues that were resolved.
+- In quiet mode, detailed output is suppressed but full logs are maintained in the log file.
+
+### 7. Rollback
+
+If you encounter issues after running the script, you can manually revert to a previous state using your version control system (e.g., Git).
+
+## Example Workflow
+
+1. Ensure your project has a valid `package.json` and `package-lock.json`.
+2. Run the script:
+   ```bash
+   python updatePackages.py /path/to/project --safe --quiet --pass=2
+   ```
+3. Review the generated log file to confirm updates and audit fixes.
+4. Run your application to verify everything works as expected.
+
+## Local Development
+
+For testing local changes without publishing:
+
+```bash
+cd PackUpdate/python
+pip install -e .
+updatenpmpackages --version  # Test your changes
+```
+
+For detailed local development instructions, see [Local Development Guide](./local-development.md).
+
+## Publishing to PyPI
+
+To publish the `PackUpdate` package to PyPI, follow these steps:
+
+1. **Install Required Tools**:
+   Ensure you have `setuptools`, `wheel`, and `twine` installed:
+   ```bash
+   pip install setuptools wheel twine
+   ```
+
+2. **Build the Package**:
+   Run the following command to create the distribution files:
+   ```bash
+   python setup.py sdist bdist_wheel
+   ```
+
+   This will generate the `dist/` directory containing the `.tar.gz` and `.whl` files.
+
+3. **Upload to PyPI**:
+   Use `twine` to upload the package to PyPI:
+   ```bash
+   twine upload dist/*
+   ```
+
+4. **Authenticate**:
+   Enter your PyPI username and password when prompted.
+
+5. **Verify the Upload**:
+   Visit [https://pypi.org/project/PackUpdate/](https://pypi.org/project/PackUpdate/) to confirm the package is live.
+
+### Notes:
+- Ensure your `setup.py` file is correctly configured with metadata like `name`, `version`, `author`, etc.
+- If you are testing the upload, use the Test PyPI repository:
+  ```bash
+  twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+  ```
+
+This comprehensive Python package provides enterprise-grade dependency management with safety, intelligence, and automation capabilities.
+
+## 📚 Documentation
+Full documentation is available at: [PackUpdate Docs](https://sthpratik.github.io/PackUpdate/#/)
+
+Or serve locally:
+```bash
+git clone https://github.com/sthpratik/PackUpdate.git
+cd PackUpdate/docs
+python -m http.server 3000
+```
+
+## 🤝 Contributing
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Commit changes: `git commit -m 'Add amazing feature'`
+4. Push to branch: `git push origin feature/amazing-feature`
+5. Open a Pull Request
+
+## 📄 License
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/sthpratik/PackUpdate/blob/main/LICENSE) file for details.
+
+## 🙏 Acknowledgments
+- [npm](https://www.npmjs.com/) - Package management
+- [inquirer](https://github.com/magmax/python-inquirer) - Interactive CLI
+- [Python](https://www.python.org/) - Programming language
+
+## 🐛 Issues & Support
+- Report bugs: [GitHub Issues](https://github.com/sthpratik/PackUpdate/issues)
+- Feature requests: [GitHub Discussions](https://github.com/sthpratik/PackUpdate/discussions)
+- Documentation: [PackUpdate Docs](https://sthpratik.github.io/PackUpdate/#/)
+
