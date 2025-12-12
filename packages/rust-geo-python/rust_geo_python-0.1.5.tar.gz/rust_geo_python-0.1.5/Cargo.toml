@@ -1,0 +1,32 @@
+[package]
+name = "rust-geo-python"
+version = "0.1.5"
+authors = ["plooney"]
+edition = "2024"
+readme = "README.md"
+
+[lib]
+name = "rust_geo_python"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.27.1", features = ["extension-module", "abi3-py37"] }
+ndarray = {version="0.17.1", features = ["rayon"]}
+numpy = "0.27.1"
+geo = { version = "0.32.0" }
+wkt = "0.14.0"
+wkb = "0.9.1"
+
+[workspace]
+
+[tool.cibuildwheel.macos.environment]
+MACOSX_DEPLOYMENT_TARGET = "10.12"
+
+[tool.cibuildwheel]
+skip = ["*-musllinux_i686"]
+
+[target.x86_64-apple-darwin]
+rustflags = [
+  "-C", "link-arg=-undefined",
+  "-C", "link-arg=dynamic_lookup",
+]
