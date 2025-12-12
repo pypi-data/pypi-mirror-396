@@ -1,0 +1,151 @@
+{% macro render_series_timeline(series) %}
+    <div class="carousel">
+        <div class="carousel__items py-2">
+            {% for s in series %}
+                <div class="carousel-item">
+                    {% if loop.changed(s.added_on_date) %}
+                    <h2 class="text-sm text-muted text-uppercase mb-3">{{s.added_on_date|to_date|timeline_date}}</h2>
+                    {% else %}
+                    <div class="text-sm mb-3">&nbsp;</div>                        
+                    {% endif %}
+                    {% set episode_hash = 'e' ~ s.episode.id %}
+                    <div class="card-episode mb-2">
+                        <a href="{{ url_for('main.series_detail', series_id=s.id, view='list', _anchor=episode_hash) }}">
+                            <img class="card-episode__image w-100 img-fluid rounded" loading="lazy" src="{{ s.episode.thumbnail }}" width="300" height="170"
+                            alt="Still for episode {{s.episode.season_episode_id}}" />
+                        </a>           
+                        <a href="{{ url_for('main.series_detail', series_id=s.id) }}">
+                            <img class="card-episode__poster img-fluid rounded" loading="lazy" src="{{ s.poster }}" width="340" height="500" alt="Poster for {{ s.name }}" />                                            
+                        </a>
+                    </div>
+                    <div>
+                        <h2 class="text-sm text-muted text-uppercase mb-2">{{s.episode.season_episode_id}}</h2>
+                        <h3 class="text-regular font-weight-semibold mb-2">
+                            <a href="{{ url_for('main.series_detail', series_id=s.id, view='list', _anchor=episode_hash) }}">
+                                {{ s.episode.name }} 
+                            </a>
+                        </h3>                        
+                        <p class="text-muted text-sm">{{ "{:,}".format(s.release_count)}} new torrents</p>                        
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+{% endmacro %}
+
+{% macro render_series_grid(series) %}
+    <div class="episode-grid">
+        {% for s in series %}
+            <div class="_">
+                {% if loop.changed(s.added_on_date) %}
+                    <h2 class="text-sm text-muted text-uppercase mb-3">{{s.added_on_date|to_date|timeline_date}}</h2>
+                {% else %}
+                    <div class="text-sm mb-3">&nbsp;</div>                        
+                {% endif %}
+                {% set episode_hash = 'e' ~ s.episode.id %}
+                <div class="card-episode mb-2">
+                    <a href="{{ url_for('main.series_detail', series_id=s.id, view='list', _anchor=episode_hash) }}">
+                        <img class="card-episode__image w-100 img-fluid rounded" loading="lazy" src="{{ s.episode.thumbnail }}" width="300" height="170"
+                        alt="Still for episode {{s.episode.season_episode_id}}" />
+                    </a>           
+                    <a href="{{ url_for('main.series_detail', series_id=s.id) }}">
+                        <img class="card-episode__poster img-fluid rounded" loading="lazy" src="{{ s.poster }}" width="340" height="500" alt="Poster for {{ s.name }}" />                                            
+                    </a>
+                </div>
+                <div>
+                    <h2 class="text-sm text-muted text-uppercase mb-2">{{s.episode.season_episode_id}}</h2>
+                    <h3 class="text-regular font-weight-semibold mb-2">
+                        <a href="{{ url_for('main.series_detail', series_id=s.id, view='list', _anchor=episode_hash) }}">
+                            {{ s.episode.name }} 
+                        </a>
+                    </h3>                        
+                    <p class="text-muted text-sm">{{ "{:,}".format(s.release_count)}} new torrents</p>                        
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% endmacro %}
+
+{% macro render_series_card(series) %}
+    <div class="card-series">        
+        <a href="{{ url_for( 'main.series_detail', series_id=series.id) }}">
+            <img class="card-series__image rounded img-fluid" src="{{ series.poster }}" width="500" height="750"
+                loading="lazy" alt="Poster for {{series.name}}" />
+            <h3 class="card-series__name my-1 font-weight-normal text-sm text-center">{{series.name}}</h3>
+        </a>
+    </div>
+{% endmacro %}
+
+{% macro air_date(value, today) %}
+    {% if value %}
+        {% if value <= today %}
+            {{value | human_date}}
+        {% else %}
+            Will air {{value | human_date}}
+        {% endif %} 
+    {% else %}
+        &nbsp;
+    {% endif %}
+{% endmacro %}
+
+{% macro torrent_download_status(release, status) %}
+    {% if status == 'D' %}
+        <div class="d-flex justify-content-center align-items-center">
+            {{icon("#icon-check-bold", width=16, height=16, class="text-success mr-1")}}<span class="text-sm">Downloaded</span>
+        </div>
+    {% elif status == 'A' or status == 'd' %}
+        <span class="anim-progress text-accent text-sm">&hellip;</span>
+    {% else %}
+        {% set request_url = url_for('main.download_torrent', release_id=release.id) %}
+        <button onclick="Videobox.downloadTorrent('{{request_url}}', '_download-button', event);" class="btn-icon" aria-label="Download now" data-balloon-pos="up">{{icon('#icon-download', width=20, height=20)}}
+        </button>
+    {% endif %}
+{% endmacro %}
+
+{% macro torrent_download_progress(release) %}
+    <div class="download-progress flex-grow-1" id="download-progress-{{release.info_hash}}">
+        <div class="download-progress__stats text-sm">Checking download status&hellip;</div>
+        <progress class="w-100" value="0" max="100"></progress>
+    </div>
+{% endmacro %}
+
+{% macro torrent_files(torrent) %}
+    <div class="torrent-files">
+        <ul>
+            {% for f in torrent.file_storage %}
+                <li class="d-flex align-items-start">
+                    {{icon("#icon-file", width=20, height=20, class="mr-1")}}{{f.file_path}} ({{f.file_size | filesizeformat}} bytes)
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+{% endmacro %}
+
+{% macro icon(id, width=30, height=30, class="") %}
+    <svg aria-hidden="true" class="{{class}}" xmlns="http://www.w3.org/2000/svg" width="{{width}}" height="{{height}}"><use href="{{id}}" /></svg>
+{% endmacro %}
+
+{% macro tracker_status_icon(value) %}
+    {% if value == 'K' %}
+      {{icon("#icon-check-bold", width=16, height=16, class="text-success")}}
+    {% elif value == 'N' %}        
+      {{icon("#icon-hourglass-bold", width=16, height=16, class="text-info")}}
+    {% else %}
+      {{icon("#icon-warning-bold", width=16, height=16, class="text-warning")}}
+    {% endif %}
+{% endmacro %}
+
+{% macro tracker_status_description(value) %}
+    {% if value == 'K' %}   
+    {% elif value == 'N' %}
+      (not contacted yet)
+    {% elif value == 'T' %}  
+      (timed out)
+    {% elif value == 'P' %}  
+      (protocol error) 
+    {% elif value == 'D' %}  
+      (DNS error)       
+    {% else %}
+      (error)
+    {% endif %}
+{% endmacro %}
