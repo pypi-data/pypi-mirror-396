@@ -1,0 +1,93 @@
+{#- Template for inputs.
+
+Context:
+  inputs (list of mkdocstrings_handlers.github.objects.Input): The inputs to render.
+  data (mkdocstrings_handlers.github.objects.Action | Workflow): The object to render.
+  config (mkdocstrings_handlers.github.config.GitHubConfig): The global configuration
+  options (dict): The local options
+-#}
+
+{% from "_macros.html.jinja" import render_grouped_list %}
+
+{% block logs scoped %}
+  {{ log.debug("Rendering inputs of " + data.id) }}
+{% endblock logs %}
+
+{# If there are no inputs, do not render anything. #}
+{% if inputs | length > 0 %}
+
+{% set header_id -%}
+  inputs-{{ data.id | replace('/', '-') | replace('.', '') | lower }}
+{%- endset %}
+
+{% set default_column = inputs | selectattr("default") | list | length > 0 %}
+
+{# Render the inputs section #}
+{% if options.parameters_section_style == "table" %}
+  {% block table_style scoped %}
+    <p>
+      <span class="doc-section-title">Inputs:</span>
+      <a class="headerlink" href="#{{ header_id }}" title="Link to {{ data.name }} outputs">¤</a>
+    </p>
+    <table data-gh-parameters>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+          {% if default_column %}<th>Default</th>{% endif %}
+        </tr>
+      </thead>
+      {% set grouped_inputs = inputs | group_parameters(options.parameters_groups) %}
+      {% for group, group_inputs in grouped_inputs.items() %}
+      <tbody>
+        {% if options.parameters_group_title_row and grouped_inputs | length > 1 and group != "" %}
+        <tr class="doc-section-item">
+          <td class="gh-group-title" colspan="{% if default_column %}3{% else %}2{% endif %}">{{ group }}</td>
+        </tr>
+        {% endif %}
+        {% for input in group_inputs %}
+          {% if options.parameters_anchors %}
+            {% set anchor_id = input.name | anchor_id("inputs", data.id) %}
+          {% else %}
+            {% set anchor_id = None %}
+          {% endif %}
+          <tr class="doc-section-item">
+            <td id="{{ anchor_id }}">
+              {% if input.required %}
+                <strong><code>{{ input.name }}</code></strong>
+              {% else %}
+                <code>{{ input.name }}</code>
+              {% endif %}
+              {% if options.parameters_anchors %}
+                <a class="headerlink" href="#{{ anchor_id }}" title="Link to {{ input.name }}">¤</a>
+              {% endif %}
+            </td>
+            <td>
+              {{ input.description | convert_markdown(options.heading_level, data.id) }}
+            </td>
+            {% if default_column %}
+            <td>
+              {% if input.default is not none %}
+                <code>{{ input.default | as_string }}</code>
+              {% endif %}
+            </td>
+            {% endif %}
+          </tr>
+        {% endfor %}
+      </tbody>
+      {% endfor %}
+    </table>
+  {% endblock table_style %}
+{% elif options.parameters_section_style == "list" %}
+  {% block list_style scoped %}
+    <p>
+      <span class="doc-section-title">Inputs:</span>
+      <a class="headerlink" href="#{{ header_id }}" title="Link to {{ data.name }} outputs">¤</a>
+    </p>
+    <ul>
+      {{ render_grouped_list(inputs, "inputs", options, data) }}
+    </ul>
+  {% endblock list_style %}
+{% endif %}
+
+{% endif %}
