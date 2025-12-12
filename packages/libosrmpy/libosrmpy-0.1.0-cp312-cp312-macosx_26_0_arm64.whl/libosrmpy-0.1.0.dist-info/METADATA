@@ -1,0 +1,66 @@
+Metadata-Version: 2.2
+Name: libosrmpy
+Version: 0.1.0
+Summary: Python bindings for libosrm using pybind11
+Author-Email: huiseomKimML <huiseom.kim@meshkorea.net>
+Requires-Python: >=3.12
+Requires-Dist: numpy>=2.3.5
+Description-Content-Type: text/markdown
+
+# libosrmpy
+
+OSRM(Open Source Routing Machine)을 Python에서 사용할 수 있도록 바인딩한 라이브러리입니다.
+
+## 설치 방법
+
+### 1. uv 설치
+
+```bash
+# macOS / Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+### 2. 라이브러리 설치
+
+```bash
+uv pip install path/to/libosrmpy-0.1.0-cp312-cp312-macosx_26_0_arm64.whl
+```
+
+## 서울 지역 지도 데이터 생성
+
+OSRM에서 사용할 서울 지역 지도 데이터를 Docker를 사용하여 생성하는 방법입니다.
+
+### 1. OSM 데이터 다운로드
+
+```bash
+curl -L -o seoul.osm.pbf http://download.geofabrik.de/asia/south-korea-latest.osm.pbf
+```
+
+> Geofabrik에서 한국 전체 OSM 데이터를 다운로드합니다.
+
+### 2. OSRM 데이터 처리
+
+```bash
+# Extract - OSM 데이터 추출
+docker run -t --rm -v $(pwd):/data ghcr.io/project-osrm/osrm-backend:latest osrm-extract -p /opt/car.lua /data/seoul.osm.pbf
+
+
+# Partition - 데이터 파티셔닝
+docker run -t --rm -v $(pwd):/data ghcr.io/project-osrm/osrm-backend:latest osrm-partition /data/seoul.osrm
+
+# Customize - 데이터 최적화
+docker run -t --rm -v $(pwd):/data ghcr.io/project-osrm/osrm-backend:latest osrm-customize /data/seoul.osrm
+```
+
+### 3. run examples
+```bash
+uv run python3 examples/hello_libosrm.py 
+uv pip install wheels/libosrmpy-*.whl --force-reinstall --no-deps; uv run pytest # force to re-install 
+```
+
+### 참고 사항
+
+- **프로파일 옵션**
+  - `/opt/car.lua` - 자동차
+  - `/opt/bicycle.lua` - 자전거
+  - `/opt/foot.lua` - 도보
