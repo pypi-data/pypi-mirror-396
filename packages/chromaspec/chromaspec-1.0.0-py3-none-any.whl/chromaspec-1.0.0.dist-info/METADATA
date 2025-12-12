@@ -1,0 +1,215 @@
+Metadata-Version: 2.4
+Name: chromaspec
+Version: 1.0.0
+Summary: Python CLI tool for color palette analysis. Extract colors from images and SVG files, generate professional PDF swatches with HEX/RGB/CMYK values, frequency stats, pie charts, color harmonies, and WCAG accessibility ratings.
+Author: Michail Semoglou
+License: MIT
+Project-URL: Homepage, https://github.com/MichailSemoglou/chromaspec
+Project-URL: Repository, https://github.com/MichailSemoglou/chromaspec
+Project-URL: Issues, https://github.com/MichailSemoglou/chromaspec/issues
+Keywords: color,palette,color-extraction,image-analysis,svg,pdf,color-swatch,design,accessibility,wcag,cmyk,rgb,hex
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Environment :: Console
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: End Users/Desktop
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Multimedia :: Graphics
+Classifier: Topic :: Multimedia :: Graphics :: Graphics Conversion
+Classifier: Topic :: Printing
+Classifier: Topic :: Utilities
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: reportlab>=4.0.0
+Requires-Dist: Pillow>=10.0.0
+Dynamic: license-file
+
+# ChromaSpec
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17864788.svg)](https://doi.org/10.5281/zenodo.17864788)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+
+A Python tool for color palette analysis that extracts colors from SVG or image files (PNG, JPG, etc.) and generates a professional PDF color swatch document with designer-friendly visualizations organized by Red, Green, and Blue sections.
+
+## Features
+
+### Color Extraction
+
+- Extracts colors from **SVG files** (via regex) and **image files** (via pixel analysis)
+- Organizes colors into **Red**, **Green**, and **Blue** sections
+- Displays **HEX**, **RGB**, and **CMYK** color values
+- Shows **frequency percentage** for each color
+- Supports both 3-digit (`#ABC`) and 6-digit (`#AABBCC`) HEX formats
+- Supports multiple image formats: PNG, JPG, JPEG, GIF, BMP, TIFF, WebP
+
+### Designer Visualizations
+
+- **Color Distribution** - Pie chart and bar chart showing RGB breakdown
+- **Top Colors & Harmonies** - Shows the 5 most used colors with:
+  - HSL (Hue, Saturation, Lightness) values
+  - Complementary color (opposite on color wheel)
+  - Analogous colors (adjacent ±30° on color wheel)
+- **Accessibility & Contrast** - WCAG 2.1 compliance checker:
+  - Contrast ratios against white and black backgrounds
+  - AAA/AA/AA Large/Fail ratings
+  - Recommendations for dark or light backgrounds
+
+### PDF Features
+
+- **Cover page** with image preview and color summary
+- **Headers and footers** on all pages with page numbers
+- Colors sorted by frequency (most common first)
+- Clean monospaced Courier font for consistent alignment
+- Command-line interface with flexible options
+
+## Installation
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/MichailSemoglou/chromaspec.git
+cd chromaspec
+```
+
+2. Create a virtual environment (recommended):
+
+```bash
+python3 -m venv venv
+source venv/bin/activate  # On macOS/Linux
+# or
+venv\Scripts\activate  # On Windows
+```
+
+3. Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+## Usage
+
+### Basic Usage
+
+```bash
+# From SVG file
+python chromaspec.py input.svg
+
+# From image file
+python chromaspec.py photo.png
+python chromaspec.py image.jpg
+```
+
+This will create `<input_name>_colors.pdf` in the same directory.
+
+### Custom Output Path
+
+```bash
+python chromaspec.py input.png custom_output.pdf
+```
+
+### Help
+
+```bash
+python chromaspec.py --help
+```
+
+## Supported Formats
+
+| Format | Extension       |
+| ------ | --------------- |
+| SVG    | `.svg`          |
+| PNG    | `.png`          |
+| JPEG   | `.jpg`, `.jpeg` |
+| GIF    | `.gif`          |
+| BMP    | `.bmp`          |
+| TIFF   | `.tiff`         |
+| WebP   | `.webp`         |
+
+## Example Output
+
+The generated PDF contains:
+
+1. **Cover page** with:
+
+   - Title and input filename
+   - Image preview (for image files)
+   - Color summary (count of Red, Green, Blue colors)
+
+2. **Color Distribution page** with:
+
+   - Pie chart showing RGB distribution
+   - Bar chart comparing color counts
+   - Percentage breakdown
+
+3. **Top Colors & Harmonies page** with:
+
+   - The 5 most frequently used colors
+   - HSL values for each color
+   - Complementary and analogous color suggestions
+
+4. **Accessibility & Contrast page** with:
+
+   - WCAG contrast ratios vs white and black
+   - AAA/AA/Fail ratings for each color
+   - Background usage recommendations
+
+5. **Color swatch pages** with:
+   - Section headers for Red, Green, and Blue
+   - Color rectangles with no borders
+   - Full color information: `#FF8040  RGB(255,128, 64)  CMYK(  0, 50, 75,  0)  0.153%`
+
+- **Headers and footers** on all pages
+
+## Requirements
+
+- Python 3.8+
+- reportlab >= 4.0.0
+- Pillow >= 10.0.0 (for image file support)
+
+## How It Works
+
+1. **Extract**:
+   - For SVG files: Parses and finds all HEX color codes using regex
+   - For images: Analyzes pixel data to extract dominant colors with frequencies
+2. **Categorize**: Groups colors into Red, Green, and Blue based on dominant RGB component
+3. **Convert**: Calculates RGB and CMYK values for each color
+4. **Generate**: Creates a professional PDF document with cover page and organized color swatch sections
+
+## Color Classification
+
+A color is classified based on its dominant RGB component:
+
+- **Red**: Red component > Green and Blue
+- **Green**: Green component > Red and Blue
+- **Blue**: Blue component > Red and Green
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+## Citation
+
+If you use ChromaSpec in your research, please cite it:
+
+```bibtex
+@software{semoglou_chromaspec_2025,
+  author       = {Semoglou, Michail},
+  title        = {ChromaSpec: Color Palette Analyzer},
+  year         = {2025},
+  publisher    = {Zenodo},
+  doi          = {10.5281/zenodo.17864788},
+  url          = {https://doi.org/10.5281/zenodo.17864788}
+}
+```
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
