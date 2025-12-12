@@ -1,0 +1,239 @@
+Metadata-Version: 2.4
+Name: plusml-rh56dftp
+Version: 0.1.7
+Summary: A Python library for communicating with RH56DFTP devices (tactile hand)
+Home-page: https://github.com/plus-m-r/RH56DFTP_teach
+Author: plus-m-r
+Author-email: 
+Project-URL: Homepage, https://github.com/plus-m-r/RH56DFTP_teach
+Project-URL: Repository, https://github.com/plus-m-r/RH56DFTP_teach
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: pymodbus==3.11.3
+Dynamic: home-page
+Dynamic: license-file
+Dynamic: requires-python
+
+# plusml-rh56dftp Python Library
+
+A Python library for communicating with RH56DFTP devices (tactile hand) via Modbus TCP, developed by plusml.
+
+## Features
+
+- Easy-to-use API for communicating with RH56DFTP tactile hand devices
+- Support for reading and writing registers
+- Built-in logging system for monitoring all operations
+- Comprehensive register definitions including force, current, temperature, and error data
+- Support for tactile data acquisition from all fingers and palm
+- Modular design for easy extension
+
+## Installation
+
+### From PyPI (Recommended)
+
+You can install the library directly from PyPI using pip:
+
+```bash
+pip install plusml-rh56dftp
+```
+
+### From Source
+
+You can also install the library from the GitHub repository:
+
+```bash
+git clone https://github.com/plus-m-r/RH56DFTP_teach.git
+cd RH56DFTP_teach
+pip install -e .
+```
+
+### From Local Package
+
+After building the package, you can install it from the generated wheel file:
+
+```bash
+pip install dist/plusml-rh56dftp-0.1.0-py3-none-any.whl
+```
+
+## Requirements
+
+- Python 3.7 or higher
+- pymodbus 3.11.3
+
+## Usage
+
+### Basic Usage
+
+```python
+# First install the library: pip install plusml-rh56dftp
+from RH56DFTP.RH56DFTP_TCP import RH56DFTP_TCP
+from Register.RegisterKey.ftp_registers_keys import (
+    HAND_ID, FORCE_ACT_0, FORCE_ACT_1, FORCE_ACT_2,
+    FORCE_ACT_3, FORCE_ACT_4, FORCE_ACT_5,
+    TEMP_0, TEMP_1, TEMP_2, TEMP_3, TEMP_4, TEMP_5
+)
+
+# Initialize connection to the tactile hand
+try:
+    # Replace with your device's IP address and port
+    client = RH56DFTP_TCP(host="192.168.123.210", port=6000)
+    print("✅ Connected successfully to tactile hand")
+    
+    # Read device ID - using function pointer (IDE auto-complete supported)
+    hand_id = client.get(HAND_ID)
+    print(f"🤖 Hand ID: {hand_id}")
+    
+    # Write to a register (if supported) - using function pointer
+    success = client.set(HAND_ID, 2)
+    print(f"🔧 Set HAND_ID to 2: {success}")
+    
+    # Read force values from fingers - using function pointers
+    print("\n💪 Force Values (g):")
+    print(f"   - Pinky: {client.get(FORCE_ACT_0)} g")
+    print(f"   - Ring: {client.get(FORCE_ACT_1)} g")
+    print(f"   - Middle: {client.get(FORCE_ACT_2)} g")
+    print(f"   - Index: {client.get(FORCE_ACT_3)} g")
+    print(f"   - Thumb Bend: {client.get(FORCE_ACT_4)} g")
+    print(f"   - Thumb Rotate: {client.get(FORCE_ACT_5)} g")
+    
+    # Read temperature values - using function pointers
+    print("\n🌡️  Temperature Values (°C):")
+    for i, temp_func in enumerate([TEMP_0, TEMP_1, TEMP_2, TEMP_3, TEMP_4, TEMP_5]):
+        print(f"   - Actuator {i}: {client.get(temp_func)} °C")
+    
+    # Close connection properly
+    client.close()
+    print("\n👋 Connection closed")
+except Exception as e:
+    print(f"❌ Error: {e}")
+```
+
+### Function Pointer Auto-Complete
+
+The library now supports IDE auto-complete for register functions. When you type `client.get(`, your IDE will display all available register functions with their documentation.
+
+#### Key Benefits
+- **IDE Auto-Complete**: No need to memorize register names
+- **Type Safety**: Register functions are properly typed
+- **Documentation Hints**: Each function shows register details
+- **Readable Code**: More intuitive than string literals
+
+#### Available Register Functions
+
+The library provides functions for all 71 registers, including:
+- `HAND_ID()` - Device ID
+- `TEMP_0()`, `TEMP_1()`, ... - Actuator temperatures
+- `FORCE_ACT_0()`, `FORCE_ACT_1()`, ... - Finger force values
+- `CURRENT_0()`, `CURRENT_1()`, ... - Actuator current values
+- `POS_SET_0()`, `POS_SET_1()`, ... - Position settings
+- `ANGLE_SET_0()`, `ANGLE_SET_1()`, ... - Angle settings
+- And many more...
+
+### String-Based Access (Legacy)
+
+String-based access is still supported for backward compatibility:
+
+```python
+# Legacy string-based access (still supported)
+hand_id = client.get("HAND_ID")
+force_0 = client.get("FORCE_ACT(0)")
+temp_1 = client.get("TEMP(1)")
+```
+
+### Register Categories
+
+The library provides predefined register names organized by function:
+
+#### Device Configuration
+- `HAND_ID`: Device ID (1-254)
+- `REDU_RATIO`: Baud rate setting
+- `CLEAR_ERROR`: Clear errors command
+- `SAVE`: Save configuration to flash
+- `RESET_PARA`: Restore factory settings
+
+#### Finger Force Data (Read-only)
+- `FORCE_ACT(0)`: Pinky finger force
+- `FORCE_ACT(1)`: Ring finger force  
+- `FORCE_ACT(2)`: Middle finger force
+- `FORCE_ACT(3)`: Index finger force
+- `FORCE_ACT(4)`: Thumb bending force
+- `FORCE_ACT(5)`: Thumb rotation force
+
+#### Actuator Data (Read-only)
+- `CURRENT(0-5)`: Actuator current values (mA)
+- `ERROR(0-5)`: Actuator error codes
+- `TEMP(0-5)`: Actuator temperature values (°C)
+
+#### Tactile Data (Read-only)
+- Various tactile data registers for all fingers and palm
+- 3x3, 12x8, and 10x8 matrix configurations
+- 16-bit integer values (0-4096)
+
+## Register Configuration
+
+Register definitions are located in the `Register/config/configFTP` directory:
+- `ftp_registers.py`: Main register configuration
+- `ftp_registers_keys.py`: Register name constants
+
+The library automatically loads these configurations during initialization.
+
+## Logging
+
+The library includes a built-in logging system that records:
+- All `get` and `set` operations with timestamps
+- Connection status and errors
+- Register addresses and values
+
+Logs are saved to `rh56dftp.log` and also printed to the console with the format:
+```
+YYYY-MM-DD HH:MM:SS - RH56DFTP - LEVEL - MESSAGE
+```
+
+## Project Structure
+
+```
+RH56DFTP_teach/
+├── RH56DFTP/              # Main library code
+│   ├── RH56DFTP_base.py   # Abstract base class
+│   ├── RH56DFTP_base.pyi  # Type hints for base class
+│   ├── RH56DFTP_TCP.py    # TCP implementation
+│   ├── RH56DFTP_TCP.pyi   # Type hints for TCP implementation
+│   └── __init__.py        # Package initialization
+├── Register/              # Register configuration
+│   ├── config/            # Configuration files
+│   │   └── configFTP/     # FTP register configs
+│   ├── RegisterKey/       # Register name constants
+│   └── RegisterSet/       # Register classes
+├── connect.py             # Example connection script
+├── LICENSE                # MIT License file
+├── README.md              # This file
+├── pyproject.toml         # Modern package configuration
+├── setup.py               # Package setup (legacy)
+└── requirements.txt       # Dependencies
+```
+
+## Development
+
+### Building the Package
+
+To build the package for distribution (recommended method):
+
+```bash
+python -m build
+```
+
+This will generate:
+- `dist/plusml-rh56dftp-0.1.0.tar.gz` (source distribution)
+- `dist/plusml-rh56dftp-0.1.0-py3-none-any.whl` (wheel distribution)
+
+## License
+
+MIT License
+
+## Repository
+
+[https://github.com/plus-m-r/RH56DFTP_teach](https://github.com/plus-m-r/RH56DFTP_teach)
