@@ -1,0 +1,89 @@
+Metadata-Version: 2.4
+Name: trackle-ml
+Version: 0.1.1
+Summary: Local-first, git-aware ML experiment tracking.
+Author: Trackle Developers
+License: MIT
+Project-URL: Homepage, https://github.com/achintya-p/trackle
+Project-URL: Repository, https://github.com/achintya-p/trackle
+Keywords: experiment-tracking,mlops,ml,git,local
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Operating System :: OS Independent
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Classifier: Topic :: Software Development :: Libraries
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Provides-Extra: viz
+Requires-Dist: matplotlib; extra == "viz"
+Provides-Extra: rich
+Requires-Dist: rich; extra == "rich"
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: pytest-cov; extra == "dev"
+Dynamic: license-file
+
+# Trackle
+
+Trackle is a lightweight, local-first, git-aware ML experiment tracker.
+
+## Goals
+
+- Local filesystem storage only
+- No servers or networking
+- Simple Python API and CLI
+- Git-based reproducibility
+
+## Quick start
+
+```bash
+pip install -e .
+```
+
+```python
+import trackle
+
+trackle.init(run_name="demo")
+trackle.log_params({"lr": 0.01})
+trackle.log_metric("loss", 0.5, step=1)
+trackle.finish()
+```
+
+## Storage layout
+
+Runs are stored locally (default `./trackle_experiments`):
+
+```
+trackle_experiments/
+  runs/
+    <run_id>/
+      run.json       # metadata: name, created_at, finished_at, duration_s, tags
+      params.json    # merged params
+      metrics.csv    # step,key,value,timestamp
+      context.json   # env info (python/os/hw/torch)
+      git.json       # git commit/branch/dirty/remote
+      artifacts/     # copied artifacts
+      notes.md       # optional note
+```
+
+## CLI
+
+```
+trackle list-runs [--base DIR] [--limit N]
+trackle diff-runs <run_a> <run_b> [--base DIR]
+trackle plot-metrics <run_id> [--key metric] [--base DIR]
+```
+
+## Extras
+
+- `pip install trackle[viz]` to enable matplotlib plotting in the CLI.
+- `pip install trackle[rich]` to enable richer CLI output (if extended later).
+
