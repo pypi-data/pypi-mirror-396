@@ -1,0 +1,983 @@
+Metadata-Version: 2.4
+Name: synapsis-face-preprocessor-lib
+Version: 1.0.0
+Summary: Library Synapsis untuk melakukan preprocessing wajah yang fleksibel dan dapat dikonfigurasi untuk berbagai model face embedding.
+Author-email: mufid hadi <mufidmove@gmail.com>
+Requires-Python: >=3.11
+Requires-Dist: opencv-python>=4.12.0.88
+Description-Content-Type: text/markdown
+
+# Synapsis Face Preprocessing Library
+
+Library Synapsis untuk melakukan preprocessing wajah yang fleksibel dan dapat dikonfigurasi untuk berbagai model face embedding.
+
+## Daftar Isi
+
+- [Overview](#overview)
+- [Instalasi](#instalasi)
+- [Quick Start](#quick-start)
+- [Arsitektur Pipeline](#arsitektur-pipeline)
+- [Konfigurasi](#konfigurasi)
+  - [PreprocessConfig](#preprocessconfig)
+  - [Model Presets](#model-presets)
+  - [Color Format](#color-format)
+- [Fungsi-Fungsi Utama](#fungsi-fungsi-utama)
+  - [preprocess_face](#preprocess_face)
+  - [FacePreprocessor Class](#facepreprocessor-class)
+- [Fungsi Individual](#fungsi-individual)
+  - [Brightness Normalization](#brightness-normalization)
+  - [Face Alignment](#face-alignment)
+  - [RGB Normalization](#rgb-normalization)
+- [Reference Landmarks](#reference-landmarks)
+- [Contoh Penggunaan](#contoh-penggunaan)
+- [Best Practices](#best-practices)
+- [Troubleshooting](#troubleshooting)
+- [API Reference](#api-reference)
+
+---
+
+## Overview
+
+Library ini menyediakan pipeline preprocessing untuk gambar wajah sebelum ekstraksi embedding. Dirancang untuk:
+
+- **Fleksibilitas**: Setiap step preprocessing dapat di-enable/disable secara individual
+- **Kompatibilitas**: Mendukung berbagai model embedding (ArcFace, FaceNet, VGGFace, dll)
+- **Konfigurasi**: Output size, normalization parameters, dan alignment dapat disesuaikan
+- **Kemudahan**: Preset configurations untuk model-model populer
+
+### Fitur Utama
+
+| Fitur | Deskripsi |
+|-------|-----------|
+| **Brightness Normalization** | Gamma correction + CLAHE untuk menormalisasi pencahayaan |
+| **Face Alignment** | 5-point landmark alignment menggunakan warp affine transform |
+| **RGB Normalization** | Normalisasi nilai pixel untuk input model |
+| **Multi-size Support** | 112x112, 160x160, 224x224, atau custom |
+| **Color Format** | Input/output RGB atau BGR |
+| **Batch Processing** | Proses multiple wajah sekaligus |
+
+---
+
+## Instalasi
+
+Library ini adalah bagian dari project. Untuk menggunakannya:
+
+```python
+from synapsis_face_preprocessor_lib import (
+    FacePreprocessor,
+    PreprocessConfig,
+    ColorFormat,
+    preprocess_face,
+)
+```
+
+### Dependencies
+
+- `numpy`
+- `opencv-python` (cv2)
+
+---
+
+## Quick Start
+
+### Penggunaan Paling Sederhana
+
+```python
+from synapsis_face_preprocessor_lib import FacePreprocessor, PreprocessConfig
+
+# Buat preprocessor dengan default config (112x112, semua step aktif)
+preprocessor = FacePreprocessor()
+
+# Preprocess face image
+processed = preprocessor(face_image, landmarks)
+
+# Untuk input ke model (tensor format)
+tensor = preprocessor.to_model_input(face_image, landmarks)
+# Output: shape (1, 3, 112, 112), dtype float32
+```
+
+### Dengan Config Preset
+
+```python
+# Untuk ArcFace/MobileFaceNet (112x112)
+preprocessor = FacePreprocessor(PreprocessConfig.for_arcface())
+
+# Untuk FaceNet/InceptionResNet (160x160)
+preprocessor = FacePreprocessor(PreprocessConfig.for_facenet())
+
+# Untuk VGGFace (224x224)
+preprocessor = FacePreprocessor(PreprocessConfig.for_vggface())
+```
+
+---
+
+## Arsitektur Pipeline
+
+Pipeline preprocessing terdiri dari beberapa tahap yang dapat dikonfigurasi:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    INPUT IMAGE (BGR/RGB)                        │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Step 0: Color Conversion (jika input BGR → RGB)                │
+│          [Otomatis berdasarkan input_color_format]              │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Step 1: Brightness Normalization [OPTIONAL]                    │
+│  ├── Gamma Correction (auto atau manual)                        │
+│  │   - Menyesuaikan kecerahan global                            │
+│  │   - Auto: estimasi gamma berdasarkan mean brightness         │
+│  │                                                              │
+│  └── CLAHE (Contrast Limited Adaptive Histogram Equalization)   │
+│      - Meningkatkan kontras lokal                               │
+│      - Diterapkan pada L channel di LAB color space             │
+│                                                                 │
+│  Flag: use_brightness_normalization, use_gamma_correction,      │
+│        use_clahe                                                │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Step 2: Face Alignment [OPTIONAL]                              │
+│  - Menggunakan 5-point landmarks                                │
+│  - Similarity transform (rotation, scale, translation)         │
+│  - Output: aligned face pada target size                        │
+│                                                                 │
+│  Landmarks order:                                               │
+│  [left_eye, right_eye, nose, left_mouth, right_mouth]           │
+│                                                                 │
+│  Flag: use_alignment                                            │
+│  Jika disabled atau no landmarks: hanya resize                  │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Step 3: Resize to Target Size                                  │
+│  - Default: 112x112 (ArcFace)                                   │
+│  - Alternatif: 160x160 (FaceNet), 224x224 (VGGFace), custom     │
+│                                                                 │
+│  Parameter: output_size, interpolation                          │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Step 4: RGB Normalization [OPTIONAL]                           │
+│  - Formula: normalized = (pixel/255.0 - mean) / std             │
+│  - Default: mean=0.5, std=0.5 → maps to [-1, 1]                 │
+│  - VGGFace: ImageNet normalization                              │
+│                                                                 │
+│  Flag: use_rgb_normalization                                    │
+│  Output: uint8 atau float32 (normalize_to_float)                │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Step 5: Output Color Conversion (jika output BGR)              │
+│          [Otomatis berdasarkan output_color_format]             │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                   OUTPUT IMAGE                                  │
+│  - Size: output_size (e.g., 112x112)                            │
+│  - Type: uint8 atau float32                                     │
+│  - Format: RGB atau BGR                                         │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Konfigurasi
+
+### PreprocessConfig
+
+`PreprocessConfig` adalah dataclass untuk mengatur semua parameter preprocessing:
+
+```python
+from synapsis_face_preprocessor_lib import PreprocessConfig, ColorFormat
+
+config = PreprocessConfig(
+    # Output Configuration
+    output_size=(112, 112),              # (width, height)
+    
+    # Color Format
+    input_color_format=ColorFormat.BGR,  # Input dari cv2.imread adalah BGR
+    output_color_format=ColorFormat.RGB, # Output dalam RGB
+    
+    # Step Enable/Disable Flags
+    use_brightness_normalization=True,   # Enable brightness normalization
+    use_gamma_correction=True,           # Enable gamma correction
+    use_clahe=True,                      # Enable CLAHE
+    use_alignment=True,                  # Enable face alignment
+    use_rgb_normalization=True,          # Enable RGB normalization
+    
+    # Gamma Correction Parameters
+    gamma=1.0,                           # Manual gamma (jika auto_gamma=False)
+    auto_gamma=True,                     # Auto-estimate gamma
+    gamma_target_mean=127.0,             # Target brightness untuk auto gamma
+    gamma_range=(0.5, 2.0),              # Clamp range untuk gamma
+    
+    # CLAHE Parameters
+    clahe_clip_limit=1.5,                # Contrast limiting (1.0-3.0)
+    clahe_grid_size=(8, 8),              # Grid size
+    
+    # RGB Normalization Parameters
+    normalize_mean=(0.5, 0.5, 0.5),      # Mean per channel
+    normalize_std=(0.5, 0.5, 0.5),       # Std per channel
+    normalize_to_float=False,            # True = output float32
+    
+    # Alignment Parameters
+    reference_landmarks=None,            # Custom landmarks (atau gunakan preset)
+    
+    # Interpolation
+    interpolation=cv2.INTER_LINEAR,      # cv2 interpolation flag
+)
+```
+
+### Parameter Details
+
+#### Output Size
+| Size | Model |
+|------|-------|
+| `(112, 112)` | ArcFace, MobileFaceNet, CosFace |
+| `(160, 160)` | FaceNet, InceptionResNet-V1 |
+| `(128, 128)` | Beberapa model custom |
+| `(224, 224)` | VGGFace2, ResNet-based models |
+
+#### Step Flags
+
+| Flag | Default | Deskripsi |
+|------|---------|-----------|
+| `use_brightness_normalization` | `True` | Master switch untuk brightness normalization |
+| `use_gamma_correction` | `True` | Enable gamma correction dalam brightness norm |
+| `use_clahe` | `True` | Enable CLAHE dalam brightness norm |
+| `use_alignment` | `True` | Enable 5-point face alignment |
+| `use_rgb_normalization` | `True` | Enable RGB value normalization |
+
+### Model Presets
+
+Library menyediakan preset untuk model-model populer:
+
+```python
+# ArcFace / MobileFaceNet (112x112)
+config = PreprocessConfig.for_arcface()
+# Equivalent to:
+# - output_size: (112, 112)
+# - normalize_mean: (0.5, 0.5, 0.5)
+# - normalize_std: (0.5, 0.5, 0.5)
+# - normalize_to_float: True
+
+# FaceNet / InceptionResNet (160x160)
+config = PreprocessConfig.for_facenet()
+# Equivalent to:
+# - output_size: (160, 160)
+# - normalize_mean: (0.5, 0.5, 0.5)
+# - normalize_std: (0.5, 0.5, 0.5)
+# - normalize_to_float: True
+
+# VGGFace (224x224)
+config = PreprocessConfig.for_vggface()
+# Equivalent to:
+# - output_size: (224, 224)
+# - normalize_mean: (0.485, 0.456, 0.406)  # ImageNet
+# - normalize_std: (0.229, 0.224, 0.225)   # ImageNet
+# - normalize_to_float: True
+
+# Minimal - hanya resize, tanpa preprocessing
+config = PreprocessConfig.minimal(output_size=(112, 112))
+# Equivalent to:
+# - use_brightness_normalization: False
+# - use_alignment: False
+# - use_rgb_normalization: False
+```
+
+#### Override Preset Values
+
+```python
+# ArcFace tapi tanpa brightness normalization
+config = PreprocessConfig.for_arcface(
+    use_brightness_normalization=False
+)
+
+# FaceNet dengan custom CLAHE
+config = PreprocessConfig.for_facenet(
+    clahe_clip_limit=2.0,
+    clahe_grid_size=(4, 4)
+)
+```
+
+### Color Format
+
+```python
+from synapsis_face_preprocessor_lib import ColorFormat
+
+# Enum values
+ColorFormat.RGB  # "rgb"
+ColorFormat.BGR  # "bgr"
+
+# Dalam config - bisa pakai enum atau string
+config = PreprocessConfig(
+    input_color_format=ColorFormat.BGR,      # atau 'bgr'
+    output_color_format=ColorFormat.RGB,     # atau 'rgb'
+)
+```
+
+---
+
+## Fungsi-Fungsi Utama
+
+### preprocess_face
+
+Fungsi utama untuk preprocessing satu gambar wajah:
+
+```python
+from synapsis_face_preprocessor_lib import preprocess_face, PreprocessConfig
+
+# Basic usage
+processed = preprocess_face(face_image)
+
+# Dengan landmarks untuk alignment
+processed = preprocess_face(face_image, landmarks)
+
+# Dengan custom config
+config = PreprocessConfig(output_size=(160, 160))
+processed = preprocess_face(face_image, landmarks, config)
+```
+
+#### Parameters
+
+| Parameter | Type | Default | Deskripsi |
+|-----------|------|---------|-----------|
+| `image` | `np.ndarray` | Required | Input image (uint8, 3 channel) |
+| `landmarks` | `np.ndarray` | `None` | 5-point landmarks, shape (5, 2) atau (10,) |
+| `config` | `PreprocessConfig` | `None` | Configuration (default jika None) |
+
+#### Returns
+
+- `np.ndarray`: Preprocessed image
+  - `uint8` jika `normalize_to_float=False`
+  - `float32` jika `normalize_to_float=True`
+
+### FacePreprocessor Class
+
+Class wrapper untuk preprocessing dengan interface yang lebih nyaman:
+
+```python
+from synapsis_face_preprocessor_lib import FacePreprocessor, PreprocessConfig
+
+# Inisialisasi
+preprocessor = FacePreprocessor()
+# atau dengan config
+preprocessor = FacePreprocessor(PreprocessConfig.for_arcface())
+
+# Property
+print(preprocessor.output_size)  # (112, 112)
+```
+
+#### Methods
+
+##### `__call__` / `preprocess`
+
+```python
+# Kedua cara ini equivalent
+processed = preprocessor(image, landmarks)
+processed = preprocessor.preprocess(image, landmarks)
+```
+
+##### `to_model_input`
+
+Menghasilkan tensor siap untuk model inference (NCHW format):
+
+```python
+tensor = preprocessor.to_model_input(image, landmarks)
+# tensor.shape = (1, 3, H, W)
+# tensor.dtype = float32
+
+# Bisa langsung digunakan untuk inference
+output = model(tensor)
+```
+
+##### `to_batch_input`
+
+Memproses multiple wajah menjadi batch tensor:
+
+```python
+images = [face1, face2, face3]
+landmarks_list = [lm1, lm2, lm3]
+
+batch = preprocessor.to_batch_input(images, landmarks_list)
+# batch.shape = (3, 3, H, W)
+```
+
+##### `preprocess_batch`
+
+Memproses batch tanpa konversi ke tensor:
+
+```python
+processed_list = preprocessor.preprocess_batch(images, landmarks_list)
+# Returns list of processed images
+```
+
+---
+
+## Fungsi Individual
+
+Setiap step preprocessing tersedia sebagai fungsi terpisah:
+
+### Brightness Normalization
+
+#### `gamma_correction`
+
+Menyesuaikan kecerahan global gambar:
+
+```python
+from synapsis_face_preprocessor_lib import gamma_correction
+
+# Brighten dark image (gamma < 1.0)
+brightened = gamma_correction(image, gamma=0.7)
+
+# Darken bright image (gamma > 1.0)
+darkened = gamma_correction(image, gamma=1.5)
+
+# No change (gamma = 1.0)
+same = gamma_correction(image, gamma=1.0)
+```
+
+#### `estimate_gamma`
+
+Mengestimasi gamma optimal berdasarkan brightness:
+
+```python
+from synapsis_face_preprocessor_lib import estimate_gamma
+
+gamma = estimate_gamma(image, target_mean=127.0)
+# Returns float gamma value
+```
+
+#### `apply_clahe`
+
+CLAHE untuk contrast enhancement:
+
+```python
+from synapsis_face_preprocessor_lib import apply_clahe
+
+enhanced = apply_clahe(
+    image,
+    clip_limit=1.5,      # 1.0-3.0, lower = more subtle
+    grid_size=(8, 8)
+)
+```
+
+#### `normalize_brightness`
+
+Kombinasi gamma + CLAHE:
+
+```python
+from synapsis_face_preprocessor_lib import normalize_brightness
+
+normalized = normalize_brightness(
+    image,
+    gamma=1.0,
+    auto_gamma=True,
+    use_gamma=True,
+    use_clahe=True,
+    clahe_clip_limit=1.5,
+    clahe_grid_size=(8, 8),
+    gamma_target_mean=127.0,
+    gamma_range=(0.5, 2.0)
+)
+```
+
+### Face Alignment
+
+#### `align_face_5point`
+
+Alignment menggunakan 5-point landmarks:
+
+```python
+from synapsis_face_preprocessor_lib import align_face_5point
+
+aligned = align_face_5point(
+    image,
+    landmarks,                 # Shape (5, 2)
+    output_size=(112, 112),
+    reference_landmarks=None,  # Gunakan preset
+    interpolation=cv2.INTER_LINEAR
+)
+```
+
+#### `estimate_affine_matrix`
+
+Menghitung transformation matrix:
+
+```python
+from synapsis_face_preprocessor_lib import estimate_affine_matrix
+
+matrix = estimate_affine_matrix(src_landmarks, dst_landmarks)
+# matrix.shape = (2, 3)
+# Bisa digunakan dengan cv2.warpAffine
+```
+
+### RGB Normalization
+
+#### `normalize_rgb`
+
+Normalisasi nilai pixel:
+
+```python
+from synapsis_face_preprocessor_lib import normalize_rgb
+
+# Output uint8
+normalized = normalize_rgb(
+    image,
+    mean=(0.5, 0.5, 0.5),
+    std=(0.5, 0.5, 0.5),
+    to_float=False
+)
+
+# Output float32 [-1, 1]
+normalized = normalize_rgb(
+    image,
+    mean=(0.5, 0.5, 0.5),
+    std=(0.5, 0.5, 0.5),
+    to_float=True
+)
+```
+
+---
+
+## Reference Landmarks
+
+### Preset Landmarks
+
+Library menyediakan reference landmarks untuk berbagai output size:
+
+```python
+from synapsis_face_preprocessor_lib import (
+    ARCFACE_REF_LANDMARKS,
+    REFERENCE_LANDMARKS_PRESETS,
+    get_reference_landmarks
+)
+
+# ArcFace 112x112 reference
+print(ARCFACE_REF_LANDMARKS)
+# [[38.2946, 51.6963],   # left eye
+#  [73.5318, 51.5014],   # right eye
+#  [56.0252, 71.7366],   # nose tip
+#  [41.5493, 92.3655],   # left mouth corner
+#  [70.7299, 92.2041]]   # right mouth corner
+
+# Available presets
+print(REFERENCE_LANDMARKS_PRESETS.keys())
+# dict_keys([(112, 112), (160, 160), (128, 128), (224, 224)])
+
+# Get landmarks untuk size tertentu
+landmarks_160 = get_reference_landmarks((160, 160))
+landmarks_custom = get_reference_landmarks((200, 200))  # Auto-scaled
+```
+
+### Custom Reference Landmarks
+
+```python
+import numpy as np
+
+custom_landmarks = np.array([
+    [30.0, 40.0],   # left eye
+    [80.0, 40.0],   # right eye
+    [55.0, 65.0],   # nose
+    [35.0, 90.0],   # left mouth
+    [75.0, 90.0],   # right mouth
+], dtype=np.float32)
+
+config = PreprocessConfig(
+    output_size=(112, 112),
+    reference_landmarks=custom_landmarks
+)
+```
+
+---
+
+## Contoh Penggunaan
+
+### 1. Basic Face Recognition Pipeline
+
+```python
+import cv2
+import numpy as np
+from synapsis_face_preprocessor_lib import FacePreprocessor, PreprocessConfig, ColorFormat
+
+# Setup
+config = PreprocessConfig(
+    output_size=(112, 112),
+    input_color_format=ColorFormat.BGR,  # cv2.imread returns BGR
+    normalize_to_float=True
+)
+preprocessor = FacePreprocessor(config)
+
+# Load image
+image = cv2.imread("face.jpg")
+
+# Detect face and get landmarks (dari face detector)
+# landmarks = face_detector.detect(image)
+landmarks = np.array([
+    [100, 120],  # left eye
+    [150, 120],  # right eye
+    [125, 150],  # nose
+    [105, 180],  # left mouth
+    [145, 180],  # right mouth
+], dtype=np.float32)
+
+# Preprocess
+tensor = preprocessor.to_model_input(image, landmarks)
+print(f"Tensor shape: {tensor.shape}")  # (1, 3, 112, 112)
+
+# Run embedding model
+# embedding = model.run(tensor)
+```
+
+### 2. Batch Processing untuk Multiple Faces
+
+```python
+from synapsis_face_preprocessor_lib import FacePreprocessor, PreprocessConfig
+
+preprocessor = FacePreprocessor(PreprocessConfig.for_arcface())
+
+# Multiple face images dan landmarks
+faces = [face1, face2, face3, face4]
+landmarks_list = [lm1, lm2, lm3, lm4]
+
+# Process batch
+batch_tensor = preprocessor.to_batch_input(faces, landmarks_list)
+print(f"Batch shape: {batch_tensor.shape}")  # (4, 3, 112, 112)
+
+# Batch inference
+# embeddings = model.run(batch_tensor)
+```
+
+### 3. Preprocessing untuk Visualisasi (tanpa normalization)
+
+```python
+from synapsis_face_preprocessor_lib import FacePreprocessor, PreprocessConfig, ColorFormat
+
+config = PreprocessConfig(
+    output_size=(112, 112),
+    input_color_format=ColorFormat.BGR,
+    output_color_format=ColorFormat.BGR,  # Keep BGR untuk cv2.imwrite
+    use_brightness_normalization=True,
+    use_alignment=True,
+    use_rgb_normalization=False,  # Jangan normalize untuk visualisasi
+    normalize_to_float=False
+)
+preprocessor = FacePreprocessor(config)
+
+# Process
+aligned_face = preprocessor(image, landmarks)
+
+# Save - masih uint8 BGR
+cv2.imwrite("aligned_face.jpg", aligned_face)
+```
+
+### 4. Comparison: Dengan dan Tanpa Preprocessing
+
+```python
+from synapsis_face_preprocessor_lib import FacePreprocessor, PreprocessConfig
+
+# Full preprocessing
+full_config = PreprocessConfig(
+    use_brightness_normalization=True,
+    use_alignment=True,
+    use_rgb_normalization=True,
+    normalize_to_float=True
+)
+
+# Minimal - hanya resize
+minimal_config = PreprocessConfig.minimal()
+
+# Tanpa CLAHE
+no_clahe_config = PreprocessConfig(
+    use_clahe=False  # Gamma masih aktif
+)
+
+# Tanpa gamma
+no_gamma_config = PreprocessConfig(
+    use_gamma_correction=False  # CLAHE masih aktif
+)
+
+# Process dengan berbagai config
+preprocessor_full = FacePreprocessor(full_config)
+preprocessor_minimal = FacePreprocessor(minimal_config)
+
+result_full = preprocessor_full(image, landmarks)
+result_minimal = preprocessor_minimal(image)  # Tanpa landmarks karena no alignment
+```
+
+### 5. FaceNet 160x160 Pipeline
+
+```python
+from synapsis_face_preprocessor_lib import FacePreprocessor, PreprocessConfig
+
+# FaceNet preset
+config = PreprocessConfig.for_facenet(
+    input_color_format='bgr'  # cv2.imread
+)
+preprocessor = FacePreprocessor(config)
+
+print(f"Output size: {preprocessor.output_size}")  # (160, 160)
+
+# Process
+tensor = preprocessor.to_model_input(image, landmarks)
+print(f"Shape: {tensor.shape}")  # (1, 3, 160, 160)
+print(f"Value range: [{tensor.min():.2f}, {tensor.max():.2f}]")  # [-1, 1]
+```
+
+### 6. Integration dengan YuNet Face Detector
+
+```python
+import cv2
+import numpy as np
+from synapsis_face_preprocessor_lib import FacePreprocessor, PreprocessConfig, ColorFormat
+
+# Initialize
+detector = cv2.FaceDetectorYN.create("yunet.onnx", "", (320, 320))
+preprocessor = FacePreprocessor(PreprocessConfig(
+    input_color_format=ColorFormat.BGR,
+    normalize_to_float=True
+))
+
+# Load and detect
+image = cv2.imread("photo.jpg")
+h, w = image.shape[:2]
+detector.setInputSize((w, h))
+_, faces = detector.detect(image)
+
+if faces is not None:
+    for face in faces:
+        # YuNet returns: [x, y, w, h, x1, y1, x2, y2, x3, y3, x4, y4, x5, y5, score]
+        # Landmarks: left_eye, right_eye, nose, left_mouth, right_mouth
+        landmarks = face[4:14].reshape((5, 2)).astype(np.float32)
+        
+        # Preprocess
+        tensor = preprocessor.to_model_input(image, landmarks)
+        
+        # Get embedding
+        # embedding = embedding_model.run(tensor)
+```
+
+---
+
+## Best Practices
+
+### 1. Pilih Config yang Tepat
+
+```python
+# ✅ Gunakan preset untuk model standar
+config = PreprocessConfig.for_arcface()
+
+# ✅ Override hanya yang perlu
+config = PreprocessConfig.for_arcface(
+    use_brightness_normalization=False
+)
+
+# ❌ Jangan copy-paste semua parameters jika tidak perlu
+```
+
+### 2. Handle Input Color Format dengan Benar
+
+```python
+# ✅ cv2.imread returns BGR
+config = PreprocessConfig(input_color_format=ColorFormat.BGR)
+
+# ✅ PIL/matplotlib biasanya RGB
+from PIL import Image
+pil_image = Image.open("face.jpg")
+rgb_array = np.array(pil_image)  # RGB
+config = PreprocessConfig(input_color_format=ColorFormat.RGB)
+```
+
+### 3. Landmarks Format
+
+```python
+# ✅ Shape (5, 2)
+landmarks = np.array([
+    [x1, y1],  # left eye
+    [x2, y2],  # right eye
+    [x3, y3],  # nose
+    [x4, y4],  # left mouth
+    [x5, y5],  # right mouth
+], dtype=np.float32)
+
+# ✅ Shape (10,) juga OK - akan di-reshape otomatis
+landmarks = np.array([x1, y1, x2, y2, x3, y3, x4, y4, x5, y5], dtype=np.float32)
+```
+
+### 4. Error Handling
+
+```python
+from synapsis_face_preprocessor_lib import FacePreprocessor
+
+preprocessor = FacePreprocessor()
+
+try:
+    result = preprocessor(image, landmarks)
+except ValueError as e:
+    print(f"Invalid input: {e}")
+    # Fallback ke resize saja
+    result = cv2.resize(image, preprocessor.output_size)
+```
+
+### 5. Performance Tips
+
+```python
+# ✅ Reuse preprocessor instance
+preprocessor = FacePreprocessor(config)
+for face in faces:
+    result = preprocessor(face, landmarks)
+
+# ❌ Jangan buat instance baru setiap kali
+for face in faces:
+    preprocessor = FacePreprocessor(config)  # Inefficient!
+    result = preprocessor(face, landmarks)
+
+# ✅ Batch processing untuk multiple faces
+batch = preprocessor.to_batch_input(faces, landmarks_list)
+```
+
+---
+
+## Troubleshooting
+
+### Q: Output gambar terlihat aneh setelah preprocessing
+
+**A:** Cek color format:
+```python
+# Jika input dari cv2.imread, gunakan BGR
+config = PreprocessConfig(input_color_format=ColorFormat.BGR)
+
+# Jika output untuk cv2.imwrite, gunakan BGR
+config = PreprocessConfig(output_color_format=ColorFormat.BGR)
+```
+
+### Q: Face alignment tidak bekerja dengan baik
+
+**A:** Pastikan landmarks dalam urutan yang benar:
+```python
+# Urutan: left_eye, right_eye, nose, left_mouth, right_mouth
+# Pastikan coordinates adalah ABSOLUTE (bukan relative to bbox)
+```
+
+### Q: Brightness normalization terlalu kuat/lemah
+
+**A:** Adjust CLAHE parameters:
+```python
+config = PreprocessConfig(
+    clahe_clip_limit=1.0,  # Lower = more subtle (range: 1.0-3.0)
+    clahe_grid_size=(4, 4)  # Larger grid = more global effect
+)
+```
+
+### Q: Model inference menghasilkan error
+
+**A:** Pastikan output format sesuai:
+```python
+# Untuk model yang butuh float32 [-1, 1]:
+config = PreprocessConfig(
+    normalize_to_float=True,
+    normalize_mean=(0.5, 0.5, 0.5),
+    normalize_std=(0.5, 0.5, 0.5)
+)
+
+# Untuk model yang butuh float32 [0, 1]:
+config = PreprocessConfig(
+    normalize_to_float=True,
+    normalize_mean=(0.0, 0.0, 0.0),
+    normalize_std=(1.0, 1.0, 1.0)
+)
+```
+
+### Q: to_model_input output shape salah
+
+**A:** Cek output_size dan format:
+```python
+tensor = preprocessor.to_model_input(image, landmarks)
+print(f"Shape: {tensor.shape}")  # Harus (1, 3, H, W)
+print(f"Dtype: {tensor.dtype}")  # Harus float32
+
+# Jika model butuh (1, H, W, 3) NHWC:
+tensor_nhwc = np.transpose(tensor, (0, 2, 3, 1))
+```
+
+---
+
+## API Reference
+
+### Classes
+
+| Class | Deskripsi |
+|-------|-----------|
+| `PreprocessConfig` | Dataclass untuk konfigurasi preprocessing |
+| `FacePreprocessor` | Class wrapper untuk preprocessing pipeline |
+| `ColorFormat` | Enum untuk format warna (RGB/BGR) |
+
+### Functions
+
+| Function | Deskripsi |
+|----------|-----------|
+| `preprocess_face(image, landmarks, config)` | Main preprocessing function |
+| `gamma_correction(image, gamma)` | Apply gamma correction |
+| `estimate_gamma(image, target_mean)` | Estimate optimal gamma |
+| `apply_clahe(image, clip_limit, grid_size)` | Apply CLAHE |
+| `normalize_brightness(...)` | Combined brightness normalization |
+| `align_face_5point(image, landmarks, ...)` | 5-point face alignment |
+| `estimate_affine_matrix(src, dst)` | Compute affine matrix |
+| `normalize_rgb(image, mean, std, to_float)` | RGB normalization |
+| `get_reference_landmarks(output_size)` | Get reference landmarks for size |
+
+### Constants
+
+| Constant | Deskripsi |
+|----------|-----------|
+| `ARCFACE_REF_LANDMARKS` | Reference landmarks untuk 112x112 |
+| `REFERENCE_LANDMARKS_PRESETS` | Dict of presets untuk berbagai size |
+
+---
+
+# License
+
+This library is licensed under the Creative Commons Attribution-NoDerivatives 4.0 International License (CC BY-ND 4.0).
+
+You are free to:
+- Use the library for any purpose, including commercial purposes.
+- Copy and redistribute the library in any medium or format.
+
+Under the following terms:
+- Attribution: You must give appropriate credit, provide a link to the license, and indicate if changes were made.
+- NoDerivatives: You may not alter, transform, or build upon this library.
+
+Additional Clause:
+- Modification of the source code is strictly prohibited for external users.
+- Only the internal engineering team of **PT Synapsis Synergi Digital** is permitted to modify, update, or create derivative works of this library.
+
+Full License:
+https://creativecommons.org/licenses/by-nd/4.0/
+
+
+---
+
+## Changelog
+
+### v1.0.0
+- Initial release
+- Flexible preprocessing pipeline
+- Support for multiple output sizes
+- Model presets (ArcFace, FaceNet, VGGFace)
+- Input/output color format configuration
+- Individual step enable/disable flags
+- Batch processing support
+
+### creator
+- [Adrian Fahri Affandi](https://www.linkedin.com/in/adrianfhr/?originalSubdomain=id)
