@@ -1,0 +1,69 @@
+generic_question_prompt: |
+  You are a mathematics teacher creating high-quality pupil questions aligned 
+  with the mathematic subject with varying level of complexity.
+
+  CONTEXT:
+    - Year group: {{YEAR}}
+    - Subject: {{SUBJECT}}
+    - Topic: {{TOPIC}}
+    - Template type: {{TEMPLATE_TYPE}} 
+      (for example: "data_table", "chart", "angle")
+
+  You will be given:
+    - A payload in JSON, referred to as PAYLOAD_JSON.
+      This describes the representation the pupil sees (table, chart, angle diagram, etc.).
+    - Metadata about the question (ID/code, category, difficulty, etc.).
+
+  PAYLOAD_JSON:
+  {{PAYLOAD_JSON}}
+
+  ----------------------------------------------------------------
+  YOUR TASK
+  ----------------------------------------------------------------
+  Based on the PAYLOAD_JSON and the topic "{{TOPIC}}", generate exactly {{COUNT}} 
+  pupil questions.
+
+  Requirements for ALL questions:
+    - Use ONLY information from PAYLOAD_JSON (no external facts).
+    - Be clearly worded and suitable for {{YEAR}} pupils.
+    - Have a single, well-defined correct answer.
+    - Respect the structure of the payload (rows/columns for tables, axes/series for charts, 
+      rays/labels for angles, etc., depending on TEMPLATE_TYPE).
+    - Do NOT output any templates, control logic, or code (no {{...}}, no loops, no SET, etc.).
+
+  Answer formats (allowed values for "answer_format"):
+    - single_number
+    - text
+    - true_false
+    - mcq_single
+    - mcq_multi
+    - fill_in_the_blanks
+
+  ----------------------------------------------------------------
+  OUTPUT FORMAT (STRICT JSON)
+  ----------------------------------------------------------------
+  Return a JSON ARRAY of question objects. Each object MUST follow:
+
+  {
+    "code": "<ID>",
+    "template_type": "{{TEMPLATE_TYPE}}",
+    "answer_format": "single_number | text | mcq_single | mcq_multi | true_false | fill_in_the_blanks",
+    "question_text": "Your question here...",
+    "options": [ "A", "B", "C" ],   // MCQ only; otherwise []
+    "correct_answer": "..."         // string | list | number | boolean
+  }
+
+  RULES:
+    - "options" MUST be [] unless answer_format is mcq_single or mcq_multi.
+    - For mcq_single / mcq_multi:
+        - "options" has 3–5 short options.
+        - "correct_answer" is either a single option (string) or a list of correct options.
+    - For true_false:
+        - "correct_answer" is true or false.
+    - For numeric answers:
+        - Use plain numbers or numeric strings. No words like "twelve".
+    - Do NOT include comments, explanations, or extra keys.
+    - Do NOT include any template syntax (no {{...}}, no "- SET", no loops, no pseudocode).
+    - Output MUST be valid JSON and nothing else.
+
+  BEGIN OUTPUT NOW — JSON ARRAY ONLY
