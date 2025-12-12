@@ -1,0 +1,56 @@
+from enum import Enum
+
+
+class CustomTypeEntityType(Enum):
+    Sample = "Sample"
+    Dataset = "Dataset"
+    InventoryItem = "InventoryItem"
+    Project = "Project"
+    Person = "Person"
+
+
+class CustomFieldDataType(Enum):
+    String = "String"
+    StringArray = "StringArray"
+    Integer = "Integer"
+    IntegerArray = "IntegerArray"
+    Float = "Float"
+    FloatArray = "FloatArray"
+    Boolean = "Boolean"
+    Date = "Date"
+    DateArray = "DateArray"
+    DateTime = "DateTime"
+    DateTimeArray = "DateTimeArray"
+    Time = "Time"
+    TimeArray = "TimeArray"
+    DateTimeRange = "DateTimeRange"
+    TimeRange = "TimeRange"
+    Dataset = "Dataset"
+    DatasetArray = "DatasetArray"
+    Sample = "Sample"
+    SampleArray = "SampleArray"
+    Project = "Project"
+    ProjectArray = "ProjectArray"
+    Person = "Person"
+    PersonArray = "PersonArray"
+    Method = "Method"
+    MethodArray = "MethodArray"
+    SharedContent = "SharedContent"
+    SharedContentArray = "SharedContentArray"
+    LabNotebook = "LabNotebook"
+    LabNotebookArray = "LabNotebookArray"
+    LabNotebookExperiment = "LabNotebookExperiment"
+    LabNotebookExperimentArray = "LabNotebookExperimentArray"
+    LabNotebookEntry = "LabNotebookEntry"
+    LabNotebookEntryArray = "LabNotebookEntryArray"
+    Attachment = "Attachment"
+    InventoryItem = "InventoryItem"
+    InventoryItemArray = "InventoryItemArray"
+    Barcode = "Barcode"
+    Url = "Url"
+    UrlArray = "UrlArray"
+
+
+class CustomFieldValuesSearchPredicate(Enum):
+    AND = "AND"
+    OR = "OR"
