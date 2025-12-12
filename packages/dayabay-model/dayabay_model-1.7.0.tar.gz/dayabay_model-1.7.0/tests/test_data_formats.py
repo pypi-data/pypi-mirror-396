@@ -1,0 +1,41 @@
+from dag_modelling.tools.logger import set_verbosity
+from numpy import allclose, fabs
+from pytest import fixture, mark
+from dayabay_data_official import get_path_data
+
+from dayabay_model import model_dayabay
+
+source_type_reference = "hdf5"
+source_types_other = ["tsv", "npz", "root"]
+data_location = "dayabay-data-official"
+
+precision_requirement = {"tsv": 2.0e-10, "root": 0, "npz": 0}
+set_verbosity(1)
+
+
+@fixture(scope="session")
+def reference_model():
+    return model_dayabay(
+        path_data=get_path_data("hdf5")
+    )
+
+@mark.parametrize("source_type", source_types_other)
+def test_dayabay_source_type(reference_model, source_type: str):
+    model = model_dayabay(
+        path_data=get_path_data(source_type)
+    )
+
+    outname = "outputs.eventscount.final.concatenated.detector_period"
+    output_ref = reference_model.storage[outname]
+    output = model.storage[outname]
+
+    data_ref = output_ref.data
+    data = output.data
+
+    diff = fabs(data - data_ref)
+    diff_rel = diff / data_ref
+    diff_rel[data_ref == 0.0] = 0.0
+    print(f"{source_type}: maxdiff {diff.max()} rel. diff max {diff_rel.max()}")
+
+    rtol = precision_requirement[source_type]
+    assert allclose(data, data_ref, rtol=rtol, atol=0.0), f"{source_type} requires {rtol=}"
