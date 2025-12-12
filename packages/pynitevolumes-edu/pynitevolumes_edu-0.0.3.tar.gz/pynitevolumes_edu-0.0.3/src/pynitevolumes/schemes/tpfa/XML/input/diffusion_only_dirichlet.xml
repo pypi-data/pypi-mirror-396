@@ -1,0 +1,70 @@
+<?xml version="1.0"?>
+<computation name="Resolution of a generic linear elliptic equation" output_file="Results">
+    <simulation>
+        <space mesh_family="mesh1" coarsest="0" finest="5"></space>
+    </simulation>
+    <problem>
+        <operator>
+            <diffusion type='const'>
+                1.0
+            </diffusion>
+        </operator>
+        <boundary>
+            <dirichlet>
+                <where type='whole'></where>
+                <data type='reference'></data>
+                <parameters></parameters>
+            </dirichlet>
+        </boundary>
+        <right-hand-side type='reference'>
+        </right-hand-side>
+    </problem>
+    <reference type='expr'>
+        X*(1.0-X)+Y*(1.0-Y)
+    </reference>
+    <output>
+        <figure>
+            <nfig>1</nfig>
+            <title> "mon test" </title>
+            <subfigure_shape>
+                <nline> 2 </nline>
+                <ncol> 1 </ncol>
+            </subfigure_shape>
+            <split timelapse = "1" value = "False"></split>
+            <draw type = "plotmesh" format = "primal" posx = "0" posy = "0" title = "False" ylabel = "False"></draw>
+            <draw u = "error" type = "pcolor_discrete" posx = "0" posy = "0" title = "True" ylabel = "True"></draw>
+            <draw u = "exact" type = "pcolor_discrete" posx = "0" posy = "1" title = "True" ylabel = "False"></draw>
+        </figure>
+        <figure>
+            <nfig>2</nfig>
+            <title>mon test 2</title>
+            <draw type="plotmesh"></draw>
+        </figure>
+        <norm_error>
+            <eval>
+                <L2 order_meshsize="True" order_unknowns="True"></L2>
+                <H1 order_meshsize="True" order_unknowns="True"></H1>
+            </eval>
+            <figure>
+                <nfig>8</nfig>
+                <title>Error norm</title>
+                <subfigure_shape>
+                    <nline> 1 </nline>
+                    <ncol> 2 </ncol>
+                </subfigure_shape>
+                <draw type= "error_curve" xaxis = 'meshsize' curve= 'all' legend = "True" posx="0" posy="0"> </draw>
+                <draw type= "error_curve" xaxis = 'Nbunknowns' curve= 'all' legend = "True" posx="1" posy="0"> </draw>
+            </figure>
+            <figure>
+                <nfig>7</nfig>
+                <title> "Error norm" </title>
+                <subfigure_shape>
+                    <nline> 2 </nline>
+                    <ncol> 1 </ncol>
+                </subfigure_shape>
+                <draw type = "error_curve" xaxis ='meshsize' curve= 'L2' legend = "True" posx="0" posy ="0"> </draw>
+                <draw type = "error_curve" xaxis ='meshsize' curve= 'H1' legend = "True" posx="0" posy ="1"> </draw>
+            </figure>
+        </norm_error>
+    </output>
+</computation>

@@ -1,0 +1,70 @@
+<?xml version="1.0"?>
+<computation name="Resolution of a generic linear parabolic equation">
+    <simulation>
+        <space mesh_family="rect4" coarsest="0" finest="4"></space>
+        <time t0='0.0' tf='1.0' autonomous='True'>
+        <!--><dt type='single' value='0.001'></dt><-->
+        <dt type='exponential' value='1.0' step='10.0' coarsest="1" finest="3"></dt>
+        </time>
+    </simulation>
+    <problem>
+        <operator>
+            <time-derivative type="const" scheme="ImplicitEuler">
+                1.0
+            </time-derivative>
+            <diffusion type='expr'>
+                3.0*(1+X**2)
+            </diffusion>
+            <convection type='constant' scheme='upwind'>
+                <vx type='const'>
+                    0.0
+                </vx>
+                <vy type='const'>
+                    1.0
+                </vy>
+            </convection>
+            <volumic type='const'>
+                1.0
+            </volumic>
+        </operator>
+        <boundary>
+            <dirichlet>
+                <where type='expr'>
+                    Y
+                </where>
+                <data type='reference'></data>
+                <parameters></parameters>
+            </dirichlet>
+            <robin type='reference'>
+                <where type='expr'>
+                    1-X
+                </where>
+                <data type='reference'></data>
+                <parameters>
+                    <a type='expr'> X-0.5</a>
+                    <b type='expr'> X-0.7</b></parameters>
+            </robin>
+            <flux>
+                <where type='expr'>
+                    X
+                </where>
+                <data type='reference'></data>
+                <parameters></parameters>
+            </flux>
+            <neumann>
+                <where type='expr'>
+                    1-Y
+                </where>
+                <data type='reference'></data>
+                <parameters></parameters>
+            </neumann>
+        </boundary>
+        <right-hand-side type='reference'>
+        </right-hand-side>
+        <init type='reference'>
+        </init>
+    </problem>
+    <reference type='expr'>
+        exp(-T)*(X*(1.0-X)+Y*(1.0-Y))
+    </reference>
+</computation>

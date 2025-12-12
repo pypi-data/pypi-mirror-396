@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<computation name="Laplace equation with Dirichlet on the boundary" output_file="Results">
+    <simulation>
+        <space  mesh_family="mesh1" coarsest="0" finest="6"></space>
+    </simulation>
+    <problem>
+        <operator>
+            <diffusion type='expr'>
+                1.0*(1.0+X**2+2*Y**2)
+            </diffusion>
+            <convection scheme='upwind'>
+                <vx type='expr'>
+                    -Y
+                </vx>
+                <vy type='expr'>
+                    X
+                </vy>
+            </convection>
+            <volumic type='expr'>
+                1.0+2*X**2+Y**2
+            </volumic>
+        </operator>
+        <boundary>
+            <flux>
+                <where type='whole'></where>
+                <data type='reference'></data>
+                <parameters></parameters>
+            </flux>
+        </boundary>
+        <right-hand-side type='reference'>
+        </right-hand-side>
+    </problem>
+    <reference type='expr'>
+        X*(1-X)+Y*(1-Y)
+    </reference>
+</computation>

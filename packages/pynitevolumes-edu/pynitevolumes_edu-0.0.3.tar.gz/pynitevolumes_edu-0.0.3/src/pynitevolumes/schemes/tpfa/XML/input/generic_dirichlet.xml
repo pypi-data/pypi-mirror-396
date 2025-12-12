@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<computation name="Laplace equation with Dirichlet on the boundary" output_file="Results">
+    <simulation>
+        <space mesh_family="rect" coarsest="0" finest="6"></space>
+    </simulation>
+    <problem>
+        <operator>
+            <diffusion type='const'>
+                1.0
+            </diffusion>
+            <volumic type='const'>
+                0.0
+            </volumic>
+            <convection scheme='centered'>
+                <vx type='expr'>
+                    -Y
+                </vx>
+                <vy type ='expr'>
+                    X
+                </vy>
+            </convection>
+        </operator>
+        <boundary>
+            <dirichlet>
+                <where type='whole'></where>
+                <data type='reference'></data>
+                <parameters></parameters>
+            </dirichlet>
+        </boundary>
+        <right-hand-side type='reference'>
+        </right-hand-side>
+    </problem>
+    <reference type='expr'>
+        X*(1-X)+Y*(1-Y)
+    </reference>
+</computation>
