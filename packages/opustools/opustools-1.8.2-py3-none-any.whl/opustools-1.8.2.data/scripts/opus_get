@@ -1,0 +1,46 @@
+#!python
+import argparse
+
+from opustools import OpusGet
+from opustools import update_db
+
+parser = argparse.ArgumentParser(prog='opus_get',
+    description='Download files from OPUS')
+parser.add_argument('-s', '--source', help='Source language')
+parser.add_argument('-t', '--target', help='Target language')
+parser.add_argument('-d', '--directory', help='Corpus name')
+parser.add_argument('-r', '--release', help='Release', default='latest')
+parser.add_argument('-p', '--preprocess',
+    help='Preprocess type', default='xml',
+    choices=['raw', 'xml', 'parsed', 'mono', 'moses', 'tmx', 'truecaser',
+        'ud', 'freq', 'smt', 'dic'])
+parser.add_argument('-l', '--list_resources', help='List resources instead of downloading',
+    action='store_true')
+parser.add_argument('-ll', '--list_languages', help='List available languages. Use -d to find languages for a given corpus and -s for a given source language. Use both to find target language for a given source language in a given corpus.',
+    action='store_true')
+parser.add_argument('-lc', '--list_corpora', help='List available corpora. Use -s to find corpora for a given language and use both -s and -t to find corpora for a given language pair.',
+    action='store_true')
+parser.add_argument('--local_db', help='Search resources from the local database instead of the online OPUS-API.',
+    action='store_true')
+parser.add_argument('-db', '--database', help='Sqlite db file location', default='~/.OpusTools/opusdata.db')
+parser.add_argument('-dl', '--download_dir',
+    help='Set download directory (default=current directory)', default='.')
+parser.add_argument('-q', '--suppress_prompts',
+    help='Download necessary files without prompting "(y/n)"',
+    action='store_true')
+parser.add_argument('-u', '--update_db', help='Update the local corpus database. This could take up to 1 hour."', action='store_true')
+parser.add_argument('-w', '--warnings', help='When updating the local database, log warnings in addition to errors in "opusdb_update_error.log"', action='store_const', const='warnings', default='errors')
+
+args = parser.parse_args()
+
+if args.update_db:
+    if not args.suppress_prompts:
+        answer = input('Starting database update, could take up to 1 hour. Continue? (y/n) ')
+        if answer in ['', 'y']:
+            update_db(args.database, args.warnings)
+    else:
+        update_db(args.database, args.warnings)
+else:
+    del args.update_db
+    del args.warnings
+    OpusGet(**vars(args)).get_files()
