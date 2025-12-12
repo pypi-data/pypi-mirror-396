@@ -1,0 +1,17 @@
+{% load i18n %}
+<div class="filter-group">
+  <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+    <i class="ri-filter-line me-1"></i>
+    {% blocktranslate with filter_title=title %}{{ filter_title }}{% endblocktranslate %}
+  </button>
+  <ul class="dropdown-menu">
+    {% for choice in choices %}
+      <li>
+        <a class="dropdown-item{% if choice.selected %} active{% endif %}" href="{{ choice.query_string|iriencode }}">
+          {% if choice.selected %}<i class="ri-check-line me-1"></i>{% endif %}
+          {{ choice.display }}
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+</div>

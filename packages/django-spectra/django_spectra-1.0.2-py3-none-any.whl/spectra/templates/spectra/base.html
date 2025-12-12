@@ -1,0 +1,170 @@
+{% load static i18n %}
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light" data-menu-color="dark" data-topbar-color="light">
+
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>{% block title %}{{ SPECTRA_CONFIG.site_title|default:"Django Spectra" }}{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Modern Django Admin Dashboard">
+    <meta name="author" content="Django Spectra">
+    
+    <!-- Favicon -->
+    {% if SPECTRA_CONFIG.favicon %}
+        {% if SPECTRA_CONFIG.favicon|slice:":4" == "http" or SPECTRA_CONFIG.favicon|first == "/" %}
+    <link rel="icon" href="{{ SPECTRA_CONFIG.favicon }}">
+        {% else %}
+    <link rel="icon" href="{% static SPECTRA_CONFIG.favicon %}">
+        {% endif %}
+    {% else %}
+    <link rel="icon" href="{% static 'spectra/images/favicon.ico' %}">
+    {% endif %}
+    
+    {% block extra_css %}{% endblock %}
+    
+    <!-- App CSS -->
+    <link href="{% static 'spectra/css/app.min.css' %}" rel="stylesheet" type="text/css" />
+    <link href="{% static 'spectra/css/icons.min.css' %}" rel="stylesheet" type="text/css" />
+    
+    <!-- Custom User Styles -->
+    {% for css_file in SPECTRA_CONFIG.custom_css %}
+    <link rel="stylesheet" href="{% static css_file %}">
+    {% endfor %}
+    
+    <!-- Theme Configuration - Load with defer to ensure DOM is ready -->
+    <script defer src="{% static 'spectra/js/config.min.js' %}"></script>
+    <script defer src="{% static 'spectra/js/layout.min.js' %}"></script>
+    
+    {% block head_scripts %}{% endblock %}
+</head>
+
+<body>
+    
+    {% block preloader %}{% endblock %}
+    
+    <!-- Wrapper -->
+    <div class="wrapper">
+        
+        <!-- ========== Topbar Start ========== -->
+        {% include "spectra/includes/topbar.html" %}
+        <!-- ========== Topbar End ========== -->
+
+        <!-- ========== Left Sidebar Start ========== -->
+        {% include "spectra/includes/sidebar.html" %}
+        <!-- ========== Left Sidebar End ========== -->
+
+        <!-- ============================================================== -->
+        <!-- Start Page Content here -->
+        <!-- ============================================================== -->
+
+        <div class="page-content">
+            
+            <div class="container-fluid">
+                
+                <!-- Start Content-->
+                <div class="container-fluid">
+                    
+                    {% block page_title %}
+                    <!-- start page title -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="page-title-box">
+                                <div class="page-title-right">
+                                    {% block page_title_right %}
+                                    <nav aria-label="breadcrumb">
+                                        <ol class="breadcrumb m-0">
+                                            <li class="breadcrumb-item"><a href="{% url 'admin:index' %}">{% trans "Dashboard" %}</a></li>
+                                            {% block breadcrumbs %}{% endblock %}
+                                        </ol>
+                                    </nav>
+                                    {% endblock %}
+                                </div>
+                                <h4 class="page-title">{% block page_heading %}{{ title|default:"Dashboard" }}{% endblock %}</h4>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- end page title -->
+                    {% endblock page_title %}
+                    
+                    <!-- Messages -->
+                    {% if messages %}
+                    <div class="row">
+                        <div class="col-12">
+                            {% for message in messages %}
+                            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                {{ message }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% block content %}
+                    <!-- Main content goes here -->
+                    {% endblock content %}
+
+                </div>
+                <!-- container-fluid -->
+
+            </div>
+            <!-- Footer Start -->
+            {% include "spectra/includes/footer.html" %}
+            <!-- end Footer -->
+
+        </div>
+        <!-- ============================================================== -->
+        <!-- End Page content -->
+        <!-- ============================================================== -->
+
+    </div>
+    <!-- END wrapper -->
+
+    <!-- Right Sidebar (Theme Customizer) -->
+    {% if SPECTRA_CONFIG.show_theme_customizer %}
+    {% include "spectra/includes/theme-customizer.html" %}
+    {% endif %}
+
+    <!-- Vendor js -->
+    <script defer src="{% static 'spectra/js/vendors.min.js' %}"></script>
+
+    <!-- App js -->
+    <script defer src="{% static 'spectra/js/app.min.js' %}"></script>
+
+    <!-- Custom User Scripts -->
+    {% for js_file in SPECTRA_CONFIG.custom_js %}
+    <script defer src="{% static js_file %}"></script>
+    {% endfor %}
+
+    {% block extra_javascript %}{% endblock %}
+
+    <!-- Mobile Menu Toggle Fallback -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Ensure mobile menu toggle works
+            const menuToggleBtn = document.querySelector('.button-toggle-menu');
+            const wrapper = document.querySelector('.wrapper');
+            
+            if (menuToggleBtn && wrapper) {
+                menuToggleBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    wrapper.classList.toggle('sidebar-enable');
+                });
+            }
+            
+            // Mobile overlay close
+            const pageContent = document.querySelector('.page-content');
+            if (pageContent) {
+                pageContent.addEventListener('click', function() {
+                    if (wrapper && wrapper.classList.contains('sidebar-enable')) {
+                        wrapper.classList.remove('sidebar-enable');
+                    }
+                });
+            }
+        });
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,998 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_list %}
+
+{% block page_heading %}
+    {{ title }}
+{% endblock %}
+
+{% block breadcrumbs %}
+    <li class="breadcrumb-item"><a href="{% url 'admin:index' %}">{% trans 'Home' %}</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'admin:app_list' app_label=cl.opts.app_label %}">{{ cl.opts.app_config.verbose_name }}</a></li>
+    <li class="breadcrumb-item active">{{ cl.opts.verbose_name_plural|capfirst }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center border-bottom">
+                <div>
+                    <h4 class="card-title mb-0 fw-semibold">
+                        {{ cl.result_count }} {{ cl.opts.verbose_name_plural|capfirst }}
+                    </h4>
+                </div>
+                <div class="d-flex gap-2 align-items-center">
+                    {% block search %}{% search_form cl %}{% endblock %}
+                    
+                    {% if has_add_permission %}
+                    <a href="{% url cl.opts|admin_urlname:'add' %}{% if is_popup %}?{{ is_popup }}{% endif %}" class="btn btn-success btn-sm">
+                        <i class="ri-add-line"></i> {% trans 'Add' %} {{ cl.opts.verbose_name }}
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% block date_hierarchy %}
+                {% if cl.date_hierarchy %}
+                <div class="card-body border-bottom py-2">
+                    {% date_hierarchy cl %}
+                </div>
+                {% endif %}
+            {% endblock %}
+
+            {% block filters %}
+                {% if cl.has_filters %}
+                <div class="card-body border-bottom py-3">
+                    {# Show active filters with remove option #}
+                    {% if cl.has_active_filters %}
+                    <div class="mb-3">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <h6 class="mb-0 fw-semibold">
+                                <i class="ri-filter-line me-1"></i>{% trans "Active Filters" %}
+                            </h6>
+                            <a href="{% url opts|admin_urlname:'changelist' %}" class="btn btn-sm btn-outline-secondary">
+                                <i class="ri-close-line me-1"></i>{% trans "Clear all" %}
+                            </a>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for spec in cl.filter_specs %}
+                                {% for choice in spec.choices %}
+                                    {% if choice.selected and choice.query_string != cl.get_query_string %}
+                                        <span class="badge bg-primary-subtle text-primary border border-primary d-inline-flex align-items-center gap-1 px-3 py-2">
+                                            <span class="fw-medium">{{ spec.title }}:</span>
+                                            <span>{{ choice.display }}</span>
+                                            <a href="{{ choice.query_string|iriencode }}" class="text-primary text-decoration-none ms-1" title="{% trans 'Remove this filter' %}">
+                                                <i class="ri-close-circle-fill"></i>
+                                            </a>
+                                        </span>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {# Filter dropdowns #}
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <span class="text-muted small fw-medium">
+                            <i class="ri-filter-2-line me-1"></i>{% trans "Filter by:" %}
+                        </span>
+                        {% for spec in cl.filter_specs %}
+                        <div class="dropdown">
+                            {% admin_list_filter cl spec %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            {% endblock %}
+
+            <div class="card-body p-0">
+                {% if cl.formset and cl.formset.errors %}
+                    <div class="alert alert-danger m-3">
+                        <p class="errornote">
+                            {% blocktrans count counter=cl.formset.total_error_count %}Please correct the error below.{% plural %}Please correct the errors below.{% endblocktrans %}
+                        </p>
+                        {{ cl.formset.non_form_errors }}
+                    </div>
+                {% endif %}
+
+                <form id="changelist-form" method="post"{% if cl.formset and cl.formset.is_multipart %} enctype="multipart/form-data"{% endif %} novalidate>
+                {% csrf_token %}
+                {% if cl.formset %}
+                  <div>{{ cl.formset.management_form }}</div>
+                {% endif %}
+
+                {% block result_list %}
+                    <div class="table-responsive">
+                        {% if action_form and actions_on_top and cl.show_admin_actions %}
+                            {% admin_actions %}
+                        {% endif %}
+                        
+                        {% result_list cl %}
+                        
+                        {% if action_form and actions_on_bottom and cl.show_admin_actions %}
+                            {% admin_actions %}
+                        {% endif %}
+                    </div>
+                {% endblock %}
+
+                {% block pagination %}
+                    {% if cl.result_count %}
+                        <div class="p-3 border-top">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="text-muted">
+                                    {% if cl.result_count == cl.full_result_count %}
+                                        {{ cl.result_count }} {% if cl.result_count == 1 %}{{ cl.opts.verbose_name }}{% else %}{{ cl.opts.verbose_name_plural }}{% endif %}
+                                    {% else %}
+                                        {{ cl.full_result_count }} {% if cl.full_result_count == 1 %}{{ cl.opts.verbose_name }}{% else %}{{ cl.opts.verbose_name_plural }}{% endif %}
+                                        ({{ cl.result_count }} {% trans 'shown' %})
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    {% pagination cl %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endblock %}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Select Debug and Fix Script -->
+<script src="{% url 'admin:jsi18n' %}"></script>
+<script src="{% static 'admin/js/actions.js' %}"></script>
+<script>
+(function() {
+    'use strict';
+    
+    console.log('=== Bulk Select Script Loading ===');
+    
+    function initBulkSelect() {
+        console.log('--- Initializing Bulk Select ---');
+        
+        // Find Django's native checkboxes
+        const actionCheckboxes = document.querySelectorAll('input[name="_selected_action"]');
+        
+        // Find Django's header checkbox - it's inside the action-checkbox-column
+        const headerCheckbox = document.querySelector('.action-checkbox-column input[type="checkbox"]');
+        
+        console.log('Found elements:', {
+            actionCheckboxes: actionCheckboxes.length,
+            headerCheckbox: headerCheckbox ? 'YES' : 'NO'
+        });
+        
+        if (actionCheckboxes.length === 0) {
+            console.warn('⚠️ No action checkboxes found. Make sure actions are enabled in admin.');
+            return;
+        }
+        
+        if (!headerCheckbox) {
+            console.warn('⚠️ No header checkbox found.');
+            return;
+        }
+        
+        console.log('✅ Bulk select ready with', actionCheckboxes.length, 'items');
+        
+        // Style all checkboxes to be visible and properly sized
+        const allCheckboxes = [headerCheckbox, ...actionCheckboxes];
+        allCheckboxes.forEach(cb => {
+            cb.style.width = '18px';
+            cb.style.height = '18px';
+            cb.style.cursor = 'pointer';
+            cb.classList.add('action-select');
+        });
+        
+        // Override Django's click handler with our enhanced version
+        headerCheckbox.addEventListener('click', function(e) {
+            const isChecked = this.checked;
+            console.log('🔵 Header checkbox clicked:', isChecked);
+            
+            actionCheckboxes.forEach(cb => {
+                cb.checked = isChecked;
+                highlightRow(cb, isChecked);
+            });
+            
+            updateCounter();
+        });
+        
+        // Add listeners to row checkboxes
+        actionCheckboxes.forEach((cb, index) => {
+            cb.addEventListener('change', function() {
+                console.log(`✓ Checkbox ${index + 1} changed:`, this.checked);
+                highlightRow(this, this.checked);
+                
+                // Update header checkbox state
+                const allChecked = Array.from(actionCheckboxes).every(c => c.checked);
+                const someChecked = Array.from(actionCheckboxes).some(c => c.checked);
+                
+                headerCheckbox.checked = allChecked;
+                headerCheckbox.indeterminate = someChecked && !allChecked;
+                
+                updateCounter();
+            });
+        });
+        
+        function highlightRow(checkbox, isChecked) {
+            const row = checkbox.closest('tr');
+            if (row) {
+                if (isChecked) {
+                    row.classList.add('selected');
+                } else {
+                    row.classList.remove('selected');
+                }
+            }
+        }
+        
+        function updateCounter() {
+            const checkedCount = document.querySelectorAll('input[name="_selected_action"]:checked').length;
+            console.log('📊 Selected:', checkedCount, '/', actionCheckboxes.length);
+            
+            const counter = document.querySelector('.action-counter');
+            if (counter) {
+                counter.textContent = `${checkedCount} of ${actionCheckboxes.length} selected`;
+            }
+        }
+        
+        console.log('=== ✅ Bulk Select Initialized ===');
+    }
+    
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initBulkSelect);
+    } else {
+        initBulkSelect();
+    }
+    
+    // Backup initialization after delay
+    setTimeout(initBulkSelect, 300);
+})();
+</script>
+
+{% endblock %}
+
+{% block extra_content %}{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+/* ===== LAHOMES THEME TABLE STYLES ===== */
+
+/* Hidden class for JavaScript (actions.js compatibility) */
+.hidden {
+    display: none !important;
+}
+
+/* Active Filters Badges */
+.badge.bg-primary-subtle {
+    background-color: #e7f3ff !important;
+    font-size: 0.875rem;
+    font-weight: 500;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.375rem;
+    transition: all 0.2s;
+}
+
+.badge.bg-primary-subtle:hover {
+    background-color: #d1e8ff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(13, 110, 253, 0.15);
+}
+
+.badge.bg-primary-subtle a {
+    transition: transform 0.2s;
+}
+
+.badge.bg-primary-subtle a:hover {
+    transform: scale(1.2);
+}
+
+/* Filter section improvements */
+.dropdown-toggle::after {
+    margin-left: 0.5em;
+}
+
+/* Card styling */
+.card {
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    padding: 1rem 1.5rem;
+    background-color: #fff !important;
+}
+
+.card-title {
+    font-size: 1.125rem;
+    color: #1e293b;
+}
+
+/* Table container */
+.results {
+    width: 100%;
+    overflow-x: auto;
+}
+
+#result_list {
+    width: 100%;
+    margin-bottom: 0 !important;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+/* Table header */
+#result_list thead th {
+    background-color: #f8f9fa !important;
+    font-weight: 600 !important;
+    padding: 1rem !important;
+    border-bottom: 2px solid #e9ecef !important;
+    font-size: 0.875rem !important;
+    color: #344054 !important;
+    text-align: left;
+    white-space: nowrap;
+    vertical-align: middle !important;
+    position: relative;
+}
+
+#result_list thead th a {
+    color: #344054 !important;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+#result_list thead th a:hover {
+    color: #0d6efd !important;
+}
+
+#result_list thead th.sorted {
+    background-color: #e9ecef !important;
+}
+
+/* Table body */
+#result_list tbody td {
+    padding: 0.875rem 1rem !important;
+    vertical-align: middle !important;
+    border-bottom: 1px solid #f1f3f5 !important;
+    font-size: 0.9375rem;
+    color: #495057;
+}
+
+#result_list tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+#result_list tbody tr:hover {
+    background-color: #f8f9fa !important;
+}
+
+#result_list tbody tr:last-child td {
+    border-bottom: none !important;
+}
+
+/* Links in table */
+#result_list tbody td a {
+    color: #0d6efd;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+#result_list tbody td a:hover {
+    color: #0a58ca;
+    text-decoration: underline;
+}
+
+/* Action column - checkbox */
+#result_list td.action-checkbox,
+#result_list th.action-checkbox-column {
+    width: 50px !important;
+    text-align: center !important;
+    padding: 0.875rem 0.5rem !important;
+}
+
+/* Checkboxes - both header and row checkboxes */
+#result_list input[type="checkbox"],
+#result_list .action-select,
+#action-toggle,
+input.action-select {
+    width: 18px !important;
+    height: 18px !important;
+    cursor: pointer !important;
+    border-radius: 0.25rem !important;
+    border: 2px solid #d1d5db !important;
+    margin: 0 auto !important;
+    display: inline-block !important;
+    vertical-align: middle !important;
+    -webkit-appearance: checkbox !important;
+    -moz-appearance: checkbox !important;
+    appearance: checkbox !important;
+}
+
+#result_list input[type="checkbox"]:checked,
+#result_list .action-select:checked,
+#action-toggle:checked,
+input.action-select:checked {
+    background-color: #0d6efd !important;
+    border-color: #0d6efd !important;
+    accent-color: #0d6efd !important;
+}
+
+/* Force checkbox visibility */
+td.action-checkbox input[type="checkbox"],
+th.action-checkbox-column input[type="checkbox"] {
+    opacity: 1 !important;
+    visibility: visible !important;
+    position: relative !important;
+}
+
+/* Boolean icons - make checkmarks and x's look nice */
+#result_list img[alt="True"],
+#result_list img[alt="False"],
+#result_list img[src*="icon-yes"],
+#result_list img[src*="icon-no"] {
+    width: 20px;
+    height: 20px;
+}
+
+/* Replace boolean images with icons */
+#result_list td:has(img[alt="True"])::before {
+    content: "✓";
+    color: #198754;
+    font-weight: 700;
+    font-size: 1.25rem;
+}
+
+#result_list td:has(img[alt="False"])::before {
+    content: "✗";
+    color: #dc3545;
+    font-weight: 700;
+    font-size: 1.25rem;
+}
+
+#result_list td img[alt="True"],
+#result_list td img[alt="False"] {
+    display: none;
+}
+
+/* Search form */
+#changelist-search {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin: 0;
+}
+
+#changelist-search label {
+    display: none;
+}
+
+#changelist-search input[type="text"],
+#changelist-search input[type="search"] {
+    min-width: 250px;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    font-size: 0.9375rem;
+}
+
+#changelist-search input:focus {
+    border-color: #0d6efd;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+#changelist-search button[type="submit"],
+#changelist-search input[type="submit"] {
+    padding: 0.5rem 1rem;
+    background-color: #0d6efd;
+    color: white;
+    border: none;
+    border-radius: 0.375rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+#changelist-search button[type="submit"]:hover,
+#changelist-search input[type="submit"]:hover {
+    background-color: #0a58ca;
+}
+
+/* Actions area */
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.actions label {
+    margin: 0;
+    font-weight: 500;
+    color: #344054;
+}
+
+.actions select {
+    min-width: 200px;
+    padding: 0.5rem 2rem 0.5rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    font-size: 0.9375rem;
+    background-color: white;
+    cursor: pointer;
+}
+
+.actions select:focus {
+    border-color: #0d6efd;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.actions button[type="submit"],
+.actions .button {
+    padding: 0.5rem 1rem;
+    background-color: #0d6efd;
+    color: white;
+    border: none;
+    border-radius: 0.375rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    text-decoration: none;
+}
+
+.actions button[type="submit"]:hover,
+.actions .button:hover {
+    background-color: #0a58ca;
+    color: white;
+}
+
+/* Pagination */
+.pagination {
+    margin-bottom: 0;
+    display: flex;
+    gap: 0.25rem;
+    align-items: center;
+}
+
+.pagination a,
+.pagination span {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    color: #495057;
+    text-decoration: none;
+    font-size: 0.9375rem;
+    transition: all 0.2s;
+    display: inline-block;
+}
+
+.pagination a:hover {
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+}
+
+.pagination .this-page {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    color: white !important;
+    font-weight: 600;
+}
+
+.pagination .end {
+    border: none;
+    padding: 0.5rem;
+    color: #6c757d;
+}
+
+/* Filters */
+#changelist-filter {
+    background: transparent;
+    border: none;
+    padding: 0;
+}
+
+#changelist-filter h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #1e293b;
+}
+
+#changelist-filter h3 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    margin-top: 1rem;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+#changelist-filter ul {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1rem 0;
+}
+
+#changelist-filter li {
+    padding: 0.375rem 0.5rem;
+    border-radius: 0.25rem;
+    transition: background-color 0.2s;
+}
+
+#changelist-filter li:hover {
+    background-color: #f8f9fa;
+}
+
+#changelist-filter a {
+    color: #64748b;
+    text-decoration: none;
+    font-size: 0.9375rem;
+    transition: color 0.2s;
+    display: block;
+}
+
+#changelist-filter a:hover {
+    color: #0d6efd;
+}
+
+#changelist-filter a.selected {
+    color: #0d6efd;
+    font-weight: 600;
+}
+
+#changelist-filter .selected {
+    background-color: #e7f3ff;
+}
+
+/* Date hierarchy */
+.xfull {
+    padding: 0.75rem 1rem;
+    background-color: #f8f9fa;
+    border-radius: 0.375rem;
+    font-size: 0.9375rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.xfull a {
+    color: #0d6efd;
+    text-decoration: none;
+}
+
+.xfull a:hover {
+    text-decoration: underline;
+}
+
+/* Empty message */
+.results p.paginator {
+    padding: 2rem;
+    text-align: center;
+    color: #6c757d;
+    margin: 0;
+}
+
+/* Object tools (buttons in header) */
+.object-tools {
+    display: flex;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.object-tools li {
+    display: inline-block;
+    margin: 0;
+}
+
+.object-tools a.addlink {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 1rem;
+    background-color: #198754;
+    color: white !important;
+    border-radius: 0.375rem;
+    text-decoration: none;
+    font-weight: 500;
+    transition: background-color 0.2s;
+    font-size: 0.9375rem;
+}
+
+.object-tools a.addlink:hover {
+    background-color: #157347;
+}
+
+.object-tools a.addlink::before {
+    content: "+";
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+/* Sortable headers */
+#result_list th.sortable a {
+    cursor: pointer;
+}
+
+#result_list th.sorted.ascending .text a::after {
+    content: " ↑";
+    color: #0d6efd;
+}
+
+#result_list th.sorted.descending .text a::after {
+    content: " ↓";
+    color: #0d6efd;
+}
+
+/* Action counter text */
+.action-counter {
+    font-size: 0.875rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    #changelist-search input[type="text"],
+    #changelist-search input[type="search"] {
+        min-width: 150px;
+    }
+    
+    #result_list thead th,
+    #result_list tbody td {
+        padding: 0.5rem !important;
+        font-size: 0.875rem !important;
+    }
+    
+    .card-header {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .card-header > div {
+        width: 100%;
+    }
+    
+    .actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .actions select {
+        width: 100%;
+    }
+}
+
+/* Fix for very long text */
+#result_list td {
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Highlight selected rows */
+#result_list tbody tr.selected {
+    background-color: #e7f3ff !important;
+}
+
+/* Make sure form elements in cells are styled */
+#result_list td input[type="text"],
+#result_list td select {
+    padding: 0.25rem 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+}
+
+#result_list td input[type="text"]:focus,
+#result_list td select:focus {
+    border-color: #0d6efd;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* ===== DARK MODE SUPPORT ===== */
+[data-bs-theme="dark"] .card {
+    background-color: var(--bs-card-bg, #1a1d21) !important;
+    border-color: var(--bs-border-color, #2d3139) !important;
+}
+
+[data-bs-theme="dark"] .card-header {
+    background-color: var(--bs-card-cap-bg, #1a1d21) !important;
+    border-bottom-color: var(--bs-border-color, #2d3139) !important;
+}
+
+[data-bs-theme="dark"] .card-title,
+[data-bs-theme="dark"] .text-dark,
+[data-bs-theme="dark"] h4,
+[data-bs-theme="dark"] h6,
+[data-bs-theme="dark"] label {
+    color: var(--bs-body-color, #e3e6e8) !important;
+}
+
+[data-bs-theme="dark"] #result_list {
+    background-color: var(--bs-card-bg, #1a1d21) !important;
+    color: var(--bs-body-color, #e3e6e8) !important;
+}
+
+[data-bs-theme="dark"] #result_list thead {
+    background-color: var(--bs-secondary-bg, #2d3139) !important;
+}
+
+[data-bs-theme="dark"] #result_list th,
+[data-bs-theme="dark"] #result_list td {
+    color: var(--bs-body-color, #e3e6e8) !important;
+    border-color: var(--bs-border-color, #2d3139) !important;
+}
+
+[data-bs-theme="dark"] #result_list tbody tr:hover {
+    background-color: var(--bs-tertiary-bg, #252a30) !important;
+}
+
+[data-bs-theme="dark"] #result_list tbody tr.selected {
+    background-color: rgba(99, 102, 241, 0.2) !important;
+}
+
+[data-bs-theme="dark"] .table-hover tbody tr:hover {
+    background-color: var(--bs-tertiary-bg, #252a30) !important;
+}
+
+/* Form controls in dark mode */
+[data-bs-theme="dark"] .form-control,
+[data-bs-theme="dark"] .form-select,
+[data-bs-theme="dark"] select,
+[data-bs-theme="dark"] input[type="text"],
+[data-bs-theme="dark"] input[type="search"] {
+    background-color: var(--bs-secondary-bg, #2d3139) !important;
+    border-color: var(--bs-border-color, #3d424a) !important;
+    color: var(--bs-body-color, #e3e6e8) !important;
+}
+
+[data-bs-theme="dark"] .form-control:focus,
+[data-bs-theme="dark"] .form-select:focus,
+[data-bs-theme="dark"] select:focus,
+[data-bs-theme="dark"] input[type="text"]:focus,
+[data-bs-theme="dark"] input[type="search"]:focus {
+    background-color: var(--bs-secondary-bg, #2d3139) !important;
+    border-color: #6366f1 !important;
+    color: var(--bs-body-color, #e3e6e8) !important;
+    box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25) !important;
+}
+
+/* Buttons in dark mode */
+[data-bs-theme="dark"] .btn-outline-secondary {
+    color: var(--bs-body-color, #e3e6e8) !important;
+    border-color: var(--bs-border-color, #3d424a) !important;
+}
+
+[data-bs-theme="dark"] .btn-outline-secondary:hover {
+    background-color: var(--bs-secondary-bg, #2d3139) !important;
+    border-color: var(--bs-border-color, #3d424a) !important;
+    color: var(--bs-body-color, #e3e6e8) !important;
+}
+
+/* Badges in dark mode */
+[data-bs-theme="dark"] .badge.bg-primary-subtle {
+    background-color: rgba(99, 102, 241, 0.15) !important;
+    color: #a5b4fc !important;
+}
+
+[data-bs-theme="dark"] .badge.bg-primary-subtle:hover {
+    background-color: rgba(99, 102, 241, 0.25) !important;
+}
+
+[data-bs-theme="dark"] .badge.bg-primary-subtle a {
+    color: #c7d2fe !important;
+}
+
+[data-bs-theme="dark"] .badge.bg-light-subtle {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    color: var(--bs-body-color, #e3e6e8) !important;
+}
+
+/* Dropdown menus in dark mode */
+[data-bs-theme="dark"] .dropdown-menu {
+    background-color: var(--bs-secondary-bg, #2d3139) !important;
+    border-color: var(--bs-border-color, #3d424a) !important;
+}
+
+[data-bs-theme="dark"] .dropdown-item {
+    color: var(--bs-body-color, #e3e6e8) !important;
+}
+
+[data-bs-theme="dark"] .dropdown-item:hover,
+[data-bs-theme="dark"] .dropdown-item:focus {
+    background-color: var(--bs-tertiary-bg, #252a30) !important;
+    color: var(--bs-body-color, #e3e6e8) !important;
+}
+
+/* Pagination in dark mode */
+[data-bs-theme="dark"] .pagination .page-link {
+    background-color: var(--bs-secondary-bg, #2d3139) !important;
+    border-color: var(--bs-border-color, #3d424a) !important;
+    color: var(--bs-body-color, #e3e6e8) !important;
+}
+
+[data-bs-theme="dark"] .pagination .page-link:hover {
+    background-color: var(--bs-tertiary-bg, #252a30) !important;
+    border-color: var(--bs-border-color, #3d424a) !important;
+    color: var(--bs-body-color, #e3e6e8) !important;
+}
+
+[data-bs-theme="dark"] .pagination .page-item.active .page-link {
+    background-color: #6366f1 !important;
+    border-color: #6366f1 !important;
+}
+
+/* Links in dark mode */
+[data-bs-theme="dark"] a:not(.btn) {
+    color: #a5b4fc !important;
+}
+
+[data-bs-theme="dark"] a:not(.btn):hover {
+    color: #c7d2fe !important;
+}
+
+/* Action counter in dark mode */
+[data-bs-theme="dark"] .action-counter {
+    color: var(--bs-secondary-color, #adb5bd) !important;
+}
+
+/* Checkboxes - ensure visibility in dark mode */
+[data-bs-theme="dark"] input[type="checkbox"] {
+    accent-color: #6366f1 !important;
+    background-color: var(--bs-secondary-bg, #2d3139) !important;
+    border: 1px solid var(--bs-border-color, #3d424a) !important;
+}
+
+/* Sort icons in dark mode */
+[data-bs-theme="dark"] #result_list th .text a {
+    color: var(--bs-body-color, #e3e6e8) !important;
+}
+
+/* Filter button in dark mode */
+[data-bs-theme="dark"] .dropdown-toggle {
+    background-color: var(--bs-secondary-bg, #2d3139) !important;
+    border-color: var(--bs-border-color, #3d424a) !important;
+    color: var(--bs-body-color, #e3e6e8) !important;
+}
+
+/* Text colors for various elements */
+[data-bs-theme="dark"] .text-muted {
+    color: var(--bs-secondary-color, #adb5bd) !important;
+}
+
+[data-bs-theme="dark"] .fw-semibold,
+[data-bs-theme="dark"] .fw-bold {
+    color: var(--bs-body-color, #e3e6e8) !important;
+}
+
+/* Border adjustments */
+[data-bs-theme="dark"] .border-bottom {
+    border-bottom-color: var(--bs-border-color, #2d3139) !important;
+}
+
+[data-bs-theme="dark"] .border {
+    border-color: var(--bs-border-color, #2d3139) !important;
+}
+
+/* Shadow adjustments for dark mode */
+[data-bs-theme="dark"] .shadow-sm {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Action bar select in dark mode */
+[data-bs-theme="dark"] .actions select[name="action"] {
+    background-color: var(--bs-secondary-bg, #2d3139) !important;
+    border-color: var(--bs-border-color, #3d424a) !important;
+    color: var(--bs-body-color, #e3e6e8) !important;
+}
+</style>
+{% endblock %}

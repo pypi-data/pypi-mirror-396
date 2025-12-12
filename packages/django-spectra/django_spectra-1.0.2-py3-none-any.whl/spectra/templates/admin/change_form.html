@@ -1,0 +1,531 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block page_heading %}
+    {% if add %}{% blocktrans with name=opts.verbose_name %}Add {{ name }}{% endblocktrans %}{% else %}{% blocktrans with name=opts.verbose_name %}Change {{ name }}{% endblocktrans %}{% endif %}
+{% endblock %}
+
+{% block breadcrumbs %}
+    <li class="breadcrumb-item"><a href="{% url 'admin:index' %}">{% trans 'Home' %}</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a></li>
+    <li class="breadcrumb-item"><a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a></li>
+    <li class="breadcrumb-item active">{% if add %}{% trans 'Add' %}{% else %}{% trans 'Change' %}{% endif %}</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-xl-12">
+        <form {% if has_file_field %}enctype="multipart/form-data" {% endif %}method="post" id="{{ opts.model_name }}_form" novalidate>
+            {% csrf_token %}
+            {% block form_top %}{% endblock %}
+
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center border-bottom">
+                    <h4 class="card-title mb-0">
+                        {% if add %}
+                            {% blocktrans with name=opts.verbose_name %}Add {{ name }}{% endblocktrans %}
+                        {% else %}
+                            {% blocktrans with name=opts.verbose_name %}Change {{ name }}{% endblocktrans %}
+                        {% endif %}
+                    </h4>
+                    <div class="d-flex gap-2">
+                        {% if not is_popup %}
+                        <a href="{% url opts|admin_urlname:'changelist' %}" class="btn btn-light btn-sm">
+                            <i class="ri-arrow-left-line"></i> {% trans 'Back to list' %}
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    {% if errors %}
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <h5 class="alert-heading">
+                                {% blocktrans count counter=errors|length %}Please correct the error below.{% plural %}Please correct the errors below.{% endblocktrans %}
+                            </h5>
+                            {% if adminform.form.non_field_errors %}
+                                {{ adminform.form.non_field_errors }}
+                            {% endif %}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endif %}
+
+                    {% block field_sets %}
+                        {% for fieldset in adminform %}
+                            {% include "admin/includes/fieldset.html" %}
+                        {% endfor %}
+                    {% endblock %}
+
+                    {% block after_field_sets %}{% endblock %}
+
+                    {% block inline_field_sets %}
+                        {% for inline_admin_formset in inline_admin_formsets %}
+                            {% include inline_admin_formset.opts.template %}
+                        {% endfor %}
+                    {% endblock %}
+
+                    {% block after_related_objects %}{% endblock %}
+                </div>
+
+                <div class="card-footer border-top">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            {% if show_delete_link %}
+                                <a href="{% url opts|admin_urlname:'delete' original.pk|admin_urlquote %}" class="btn btn-soft-danger">
+                                    <i class="ri-delete-bin-line"></i> {% trans 'Delete' %}
+                                </a>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex gap-2">
+                            {% block submit_buttons_bottom %}
+                                {% if not is_popup %}
+                                    <a href="{% url opts|admin_urlname:'changelist' %}" class="btn btn-light">
+                                        {% trans 'Cancel' %}
+                                    </a>
+                                {% endif %}
+                                {% if show_save_and_add_another %}
+                                    <button type="submit" name="_addanother" value="1" class="btn btn-outline-primary">
+                                        {% trans 'Save and add another' %}
+                                    </button>
+                                {% endif %}
+                                {% if show_save_and_continue %}
+                                    <button type="submit" name="_continue" value="1" class="btn btn-outline-primary">
+                                        {% trans 'Save and continue editing' %}
+                                    </button>
+                                {% endif %}
+                                <button type="submit" name="_save" value="1" class="btn btn-primary">
+                                    <i class="ri-save-line"></i> {% trans 'Save' %}
+                                </button>
+                            {% endblock %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if adminform and add %}
+                <script>
+                document.getElementById("{{ adminform.first_field.id_for_label }}").focus();
+                </script>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<style>
+/* Form field styling */
+.form-row {
+    margin-bottom: 1.5rem;
+}
+
+.form-row label {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    display: block;
+    color: #344054;
+}
+
+.form-row .helptext {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.form-row .errors {
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+.form-row input[type="text"],
+.form-row input[type="email"],
+.form-row input[type="url"],
+.form-row input[type="number"],
+.form-row input[type="password"],
+.form-row input[type="date"],
+.form-row input[type="time"],
+.form-row input[type="datetime-local"],
+.form-row textarea,
+.form-row select {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    font-size: 0.9375rem;
+}
+
+.form-row input:focus,
+.form-row textarea:focus,
+.form-row select:focus {
+    border-color: #0d6efd;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* Fieldset styling */
+.module {
+    border: none;
+    margin-bottom: 2rem;
+}
+
+.module h2 {
+    background: #f8f9fa;
+    padding: 0.75rem 1rem;
+    margin: -1.5rem -1.5rem 1.5rem -1.5rem;
+    border-radius: 0.375rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #344054;
+}
+
+/* Inline formsets */
+.inline-group {
+    margin-top: 2rem;
+}
+
+.inline-group .tabular {
+    overflow-x: auto;
+}
+
+.inline-group table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.inline-group thead th {
+    background-color: #f3f4f6;
+    font-weight: 600;
+    padding: 0.75rem;
+    border-bottom: 2px solid #e5e7eb;
+    font-size: 0.875rem;
+}
+
+.inline-group tbody td {
+    padding: 0.75rem;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.inline-group .add-row {
+    margin-top: 1rem;
+}
+
+.inline-group .add-row a {
+    color: #0d6efd;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.inline-group .add-row a:hover {
+    text-decoration: underline;
+}
+
+/* Checkbox and radio styling */
+.form-row input[type="checkbox"],
+.form-row input[type="radio"] {
+    width: auto;
+    margin-right: 0.5rem;
+}
+
+.checkbox-row,
+.radio-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+/* File upload styling */
+.form-row input[type="file"] {
+    border: 1px dashed #d1d5db;
+    padding: 1rem;
+    border-radius: 0.375rem;
+    background: #f9fafb;
+}
+
+.form-row .file-upload {
+    margin-top: 0.5rem;
+}
+
+/* Related widget styling */
+.related-widget-wrapper {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.related-widget-wrapper select {
+    flex: 1;
+}
+
+.related-widget-wrapper a {
+    padding: 0.5rem 0.75rem;
+    background: #e9ecef;
+    border-radius: 0.375rem;
+    color: #495057;
+    text-decoration: none;
+}
+
+.related-widget-wrapper a:hover {
+    background: #dee2e6;
+}
+
+/* vDateField and vTimeField styling */
+.vDateField,
+.vTimeField {
+    width: auto !important;
+    display: inline-block;
+}
+
+/* Django admin specific overrides */
+.aligned label {
+    font-weight: 500 !important;
+}
+
+.aligned .form-row > div {
+    padding-left: 0 !important;
+}
+
+/* Make fields stack nicely */
+.form-row.field-box {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+}
+
+@media (min-width: 768px) {
+    .form-row.field-box {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* ===== DARK MODE SUPPORT ===== */
+[data-bs-theme="dark"] .card {
+    background-color: var(--bs-card-bg, #1a1d21) !important;
+    border-color: var(--bs-border-color, #2d3139) !important;
+}
+
+[data-bs-theme="dark"] .card-header {
+    background-color: var(--bs-card-cap-bg, #1a1d21) !important;
+    border-bottom-color: var(--bs-border-color, #2d3139) !important;
+}
+
+[data-bs-theme="dark"] .card-footer {
+    background-color: var(--bs-card-cap-bg, #1a1d21) !important;
+    border-top-color: var(--bs-border-color, #2d3139) !important;
+}
+
+[data-bs-theme="dark"] .card-title,
+[data-bs-theme="dark"] .card-body h2,
+[data-bs-theme="dark"] .card-body h3,
+[data-bs-theme="dark"] .card-body h4,
+[data-bs-theme="dark"] .card-body label {
+    color: var(--bs-body-color, #e3e6e8) !important;
+}
+
+[data-bs-theme="dark"] .form-row label {
+    color: var(--bs-body-color, #e3e6e8) !important;
+}
+
+[data-bs-theme="dark"] .form-row .helptext {
+    color: var(--bs-secondary-color, #adb5bd) !important;
+}
+
+[data-bs-theme="dark"] .form-row .errors {
+    color: #f87171 !important;
+}
+
+/* Form inputs in dark mode */
+[data-bs-theme="dark"] .form-row input[type="text"],
+[data-bs-theme="dark"] .form-row input[type="email"],
+[data-bs-theme="dark"] .form-row input[type="url"],
+[data-bs-theme="dark"] .form-row input[type="number"],
+[data-bs-theme="dark"] .form-row input[type="password"],
+[data-bs-theme="dark"] .form-row input[type="date"],
+[data-bs-theme="dark"] .form-row input[type="time"],
+[data-bs-theme="dark"] .form-row input[type="datetime-local"],
+[data-bs-theme="dark"] .form-row textarea,
+[data-bs-theme="dark"] .form-row select,
+[data-bs-theme="dark"] input[type="text"],
+[data-bs-theme="dark"] input[type="email"],
+[data-bs-theme="dark"] input[type="url"],
+[data-bs-theme="dark"] input[type="number"],
+[data-bs-theme="dark"] input[type="password"],
+[data-bs-theme="dark"] textarea,
+[data-bs-theme="dark"] select {
+    background-color: var(--bs-secondary-bg, #2d3139) !important;
+    border-color: var(--bs-border-color, #3d424a) !important;
+    color: var(--bs-body-color, #e3e6e8) !important;
+}
+
+[data-bs-theme="dark"] .form-row input:focus,
+[data-bs-theme="dark"] .form-row textarea:focus,
+[data-bs-theme="dark"] .form-row select:focus,
+[data-bs-theme="dark"] input:focus,
+[data-bs-theme="dark"] textarea:focus,
+[data-bs-theme="dark"] select:focus {
+    background-color: var(--bs-secondary-bg, #2d3139) !important;
+    border-color: #6366f1 !important;
+    color: var(--bs-body-color, #e3e6e8) !important;
+    box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25) !important;
+}
+
+/* Fieldset styling in dark mode */
+[data-bs-theme="dark"] .module h2 {
+    background: var(--bs-secondary-bg, #2d3139) !important;
+    color: var(--bs-body-color, #e3e6e8) !important;
+}
+
+/* File upload in dark mode */
+[data-bs-theme="dark"] .form-row input[type="file"] {
+    border-color: var(--bs-border-color, #3d424a) !important;
+    background: var(--bs-secondary-bg, #2d3139) !important;
+    color: var(--bs-body-color, #e3e6e8) !important;
+}
+
+/* Inline formsets in dark mode */
+[data-bs-theme="dark"] .inline-group thead th {
+    background-color: var(--bs-secondary-bg, #2d3139) !important;
+    color: var(--bs-body-color, #e3e6e8) !important;
+    border-bottom-color: var(--bs-border-color, #3d424a) !important;
+}
+
+[data-bs-theme="dark"] .inline-group tbody td {
+    border-bottom-color: var(--bs-border-color, #2d3139) !important;
+    color: var(--bs-body-color, #e3e6e8) !important;
+}
+
+[data-bs-theme="dark"] .inline-group .add-row a {
+    color: #a5b4fc !important;
+}
+
+[data-bs-theme="dark"] .inline-group .add-row a:hover {
+    color: #c7d2fe !important;
+}
+
+/* Related widget in dark mode */
+[data-bs-theme="dark"] .related-widget-wrapper a {
+    background: var(--bs-secondary-bg, #2d3139) !important;
+    color: var(--bs-body-color, #e3e6e8) !important;
+    border: 1px solid var(--bs-border-color, #3d424a) !important;
+}
+
+[data-bs-theme="dark"] .related-widget-wrapper a:hover {
+    background: var(--bs-tertiary-bg, #252a30) !important;
+}
+
+/* Buttons in dark mode */
+[data-bs-theme="dark"] .btn-light {
+    background-color: var(--bs-secondary-bg, #2d3139) !important;
+    border-color: var(--bs-border-color, #3d424a) !important;
+    color: var(--bs-body-color, #e3e6e8) !important;
+}
+
+[data-bs-theme="dark"] .btn-light:hover {
+    background-color: var(--bs-tertiary-bg, #252a30) !important;
+    border-color: var(--bs-border-color, #3d424a) !important;
+    color: var(--bs-body-color, #e3e6e8) !important;
+}
+
+[data-bs-theme="dark"] .btn-outline-primary {
+    color: #a5b4fc !important;
+    border-color: #6366f1 !important;
+}
+
+[data-bs-theme="dark"] .btn-outline-primary:hover {
+    background-color: #6366f1 !important;
+    border-color: #6366f1 !important;
+    color: #fff !important;
+}
+
+[data-bs-theme="dark"] .btn-soft-danger {
+    background-color: rgba(239, 68, 68, 0.1) !important;
+    color: #f87171 !important;
+    border: 1px solid rgba(239, 68, 68, 0.2) !important;
+}
+
+[data-bs-theme="dark"] .btn-soft-danger:hover {
+    background-color: rgba(239, 68, 68, 0.2) !important;
+    color: #fca5a5 !important;
+}
+
+/* Alert in dark mode */
+[data-bs-theme="dark"] .alert-danger {
+    background-color: rgba(239, 68, 68, 0.15) !important;
+    border-color: rgba(239, 68, 68, 0.3) !important;
+    color: #fca5a5 !important;
+}
+
+[data-bs-theme="dark"] .alert-danger .alert-heading {
+    color: #f87171 !important;
+}
+
+/* Checkboxes in dark mode */
+[data-bs-theme="dark"] input[type="checkbox"],
+[data-bs-theme="dark"] input[type="radio"] {
+    accent-color: #6366f1 !important;
+    background-color: var(--bs-secondary-bg, #2d3139) !important;
+    border: 1px solid var(--bs-border-color, #3d424a) !important;
+}
+
+/* Text colors */
+[data-bs-theme="dark"] .text-muted {
+    color: var(--bs-secondary-color, #adb5bd) !important;
+}
+
+[data-bs-theme="dark"] .file-label {
+    color: var(--bs-secondary-color, #adb5bd) !important;
+}
+
+/* Django admin specific elements */
+[data-bs-theme="dark"] .aligned label {
+    color: var(--bs-body-color, #e3e6e8) !important;
+}
+
+/* Placeholder text */
+[data-bs-theme="dark"] ::placeholder {
+    color: var(--bs-secondary-color, #6c757d) !important;
+    opacity: 0.7;
+}
+
+/* Border adjustments */
+[data-bs-theme="dark"] .border-top {
+    border-top-color: var(--bs-border-color, #2d3139) !important;
+}
+
+[data-bs-theme="dark"] .border-bottom {
+    border-bottom-color: var(--bs-border-color, #2d3139) !important;
+}
+
+[data-bs-theme="dark"] .border {
+    border-color: var(--bs-border-color, #2d3139) !important;
+}
+</style>
+
+{% block admin_change_form_document_ready %}
+<script>
+(function($) {
+    $(document).ready(function() {
+        // Auto-focus first field
+        var firstField = $('input:text:visible:first');
+        if (firstField.length) {
+            firstField.focus();
+        }
+        
+        // Enhance file upload fields
+        $('input[type="file"]').on('change', function() {
+            var fileName = $(this).val().split('\\').pop();
+            if (fileName) {
+                var label = $(this).siblings('.file-label');
+                if (!label.length) {
+                    label = $('<div class="file-label text-muted mt-2"></div>');
+                    $(this).after(label);
+                }
+                label.text('Selected: ' + fileName);
+            }
+        });
+    });
+})(django.jQuery);
+</script>
+{% endblock %}
+
+{% endblock %}

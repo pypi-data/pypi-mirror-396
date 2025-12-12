@@ -1,0 +1,162 @@
+{% load i18n %}
+
+<div class="spectra-widget recent-actions-widget">
+    <div class="widget-header">
+        <h3 class="widget-title">
+            <svg class="widget-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            {{ name|default:"Recent Actions" }}
+        </h3>
+    </div>
+    <div class="widget-body">
+        {% if recent_actions %}
+        <ul class="action-list">
+            {% for item in recent_actions %}
+            <li class="action-item">
+                <div class="action-content">
+                    <div class="action-info">
+                        <span class="action-type action-{{ item.action.action_flag }}">
+                            {% if item.action.action_flag == 1 %}
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                                {% trans "Added" %}
+                            {% elif item.action.action_flag == 2 %}
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                                {% trans "Changed" %}
+                            {% elif item.action.action_flag == 3 %}
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                </svg>
+                                {% trans "Deleted" %}
+                            {% endif %}
+                        </span>
+                        <a href="{{ item.action.get_admin_url }}" class="action-object">
+                            {{ item.action.object_repr|truncatewords:8 }}
+                        </a>
+                    </div>
+                    <div class="action-meta">
+                        <span class="action-user">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="12" cy="7" r="4"></circle>
+                            </svg>
+                            {{ item.action.user.get_username }}
+                        </span>
+                        <span class="action-time">{{ item.action.action_time|timesince }} {% trans "ago" %}</span>
+                    </div>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="no-data">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" opacity="0.3">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <p>{% trans "No recent actions" %}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.action-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.action-item {
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color var(--transition-fast);
+}
+
+.action-item:last-child {
+    border-bottom: none;
+}
+
+.action-item:hover {
+    background-color: var(--bg-secondary);
+}
+
+.action-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.action-info {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+}
+
+.action-type {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.action-1 {
+    background-color: var(--spectra-success-light);
+    color: var(--spectra-success-hover);
+}
+
+.action-2 {
+    background-color: var(--spectra-warning-light);
+    color: var(--spectra-warning-hover);
+}
+
+.action-3 {
+    background-color: var(--spectra-danger-light);
+    color: var(--spectra-danger-hover);
+}
+
+.action-object {
+    color: var(--text-primary);
+    text-decoration: none;
+    font-weight: var(--font-weight-medium);
+    transition: color var(--transition-fast);
+}
+
+.action-object:hover {
+    color: var(--spectra-primary);
+}
+
+.action-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.action-user {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.action-time {
+    font-style: italic;
+}
+</style>
+

@@ -1,0 +1,182 @@
+{% extends "admin/base_site.html" %}
+{% load i18n l10n admin_urls static %}
+
+{% block extrahead %}
+    {{ block.super }}
+    {{ media }}
+    <script src="{% static 'admin/js/cancel.js' %}" async></script>
+{% endblock %}
+
+{% block page_heading %}
+    {% translate 'Delete multiple objects' %}
+{% endblock %}
+
+{% block breadcrumbs %}
+    <li class="breadcrumb-item"><a href="{% url 'admin:index' %}">{% translate 'Home' %}</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a></li>
+    <li class="breadcrumb-item"><a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a></li>
+    <li class="breadcrumb-item active">{% translate 'Delete multiple objects' %}</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-xl-10 offset-xl-1">
+        <div class="card border-danger shadow-sm">
+            <div class="card-header bg-danger text-white border-bottom">
+                <h4 class="card-title mb-0 text-white d-flex align-items-center">
+                    <i class="ri-alert-line me-2 fs-4"></i>
+                    {% translate 'Delete multiple objects' %}
+                </h4>
+            </div>
+            
+            <div class="card-body">
+                {% if perms_lacking %}
+                    <div class="alert alert-warning border-warning">
+                        <h5 class="alert-heading">
+                            <i class="ri-error-warning-line me-2"></i>
+                            {% translate "Permission Required" %}
+                        </h5>
+                        <p>{% blocktranslate %}Deleting the selected {{ objects_name }} would result in deleting related objects, but your account doesn't have permission to delete the following types of objects:{% endblocktranslate %}</p>
+                        <ul class="mb-0">{{ perms_lacking|unordered_list }}</ul>
+                    </div>
+                    <div class="mt-3">
+                        <a href="{% url opts|admin_urlname:'changelist' %}" class="btn btn-light">
+                            <i class="ri-arrow-left-line me-1"></i>{% translate "Go back" %}
+                        </a>
+                    </div>
+                {% elif protected %}
+                    <div class="alert alert-warning border-warning">
+                        <h5 class="alert-heading">
+                            <i class="ri-shield-line me-2"></i>
+                            {% translate "Protected Objects" %}
+                        </h5>
+                        <p>{% blocktranslate %}Deleting the selected {{ objects_name }} would require deleting the following protected related objects:{% endblocktranslate %}</p>
+                        <ul class="mb-0">{{ protected|unordered_list }}</ul>
+                    </div>
+                    <div class="mt-3">
+                        <a href="{% url opts|admin_urlname:'changelist' %}" class="btn btn-light">
+                            <i class="ri-arrow-left-line me-1"></i>{% translate "Go back" %}
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="alert alert-danger border-danger">
+                        <h5 class="alert-heading mb-3">
+                            <i class="ri-alert-line me-2"></i>
+                            {% blocktranslate %}Are you sure you want to delete the selected {{ objects_name }}?{% endblocktranslate %}
+                        </h5>
+                        <p class="mb-0">{% translate "All of the following objects and their related items will be deleted:" %}</p>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <div class="card bg-light-subtle border-0 h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title text-danger mb-3">
+                                        <i class="ri-folder-line me-2"></i>{% translate "Summary" %}
+                                    </h5>
+                                    {% include "admin/includes/object_delete_summary.html" %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card bg-light-subtle border-0 h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title text-danger mb-3">
+                                        <i class="ri-file-list-line me-2"></i>{% translate "Objects" %}
+                                    </h5>
+                                    <div style="max-height: 300px; overflow-y: auto;">
+                                        {% for deletable_object in deletable_objects %}
+                                            <ul class="list-unstyled ps-2">{{ deletable_object|unordered_list }}</ul>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form method="post" id="delete-form">
+                        {% csrf_token %}
+                        <div>
+                            {% for obj in queryset %}
+                            <input type="hidden" name="{{ action_checkbox_name }}" value="{{ obj.pk|unlocalize }}">
+                            {% endfor %}
+                            <input type="hidden" name="action" value="delete_selected">
+                            <input type="hidden" name="post" value="yes">
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                            <a href="{% url opts|admin_urlname:'changelist' %}" class="btn btn-light btn-lg cancel-link">
+                                <i class="ri-arrow-left-line me-1"></i>{% translate "No, take me back" %}
+                            </a>
+                            <button type="submit" class="btn btn-danger btn-lg">
+                                <i class="ri-delete-bin-line me-1"></i>{% translate "Yes, I'm sure" %}
+                            </button>
+                        </div>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Nested list styling */
+.card-body ul {
+    margin-left: 0;
+    padding-left: 1.5rem;
+}
+
+.card-body ul ul {
+    margin-left: 1rem;
+    margin-top: 0.25rem;
+}
+
+.card-body li {
+    padding: 0.25rem 0;
+    color: #6c757d;
+}
+
+.card-body li::marker {
+    color: #dc3545;
+}
+
+/* Summary list styling */
+.card-body ul li strong {
+    color: #495057;
+    font-weight: 600;
+}
+
+/* Scrollbar styling */
+div[style*="overflow-y"]::-webkit-scrollbar {
+    width: 8px;
+}
+
+div[style*="overflow-y"]::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+div[style*="overflow-y"]::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 4px;
+}
+
+div[style*="overflow-y"]::-webkit-scrollbar-thumb:hover {
+    background: #a0aec0;
+}
+
+/* Button hover effects */
+.btn-danger:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+    transition: all 0.2s;
+}
+
+.cancel-link:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s;
+}
+</style>
+{% endblock %}

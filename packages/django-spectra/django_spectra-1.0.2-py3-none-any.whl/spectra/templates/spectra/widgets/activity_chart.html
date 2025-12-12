@@ -1,0 +1,197 @@
+{% load i18n %}
+
+<div class="spectra-widget activity-chart-widget">
+    <div class="widget-header">
+        <h3 class="widget-title">
+            <svg class="widget-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            </svg>
+            {{ name|default:"Activity Chart" }}
+        </h3>
+        <div class="widget-actions">
+            <select id="chartPeriod" class="chart-period-select">
+                <option value="7">{% trans "Last 7 days" %}</option>
+                <option value="30" selected>{% trans "Last 30 days" %}</option>
+                <option value="90">{% trans "Last 90 days" %}</option>
+            </select>
+        </div>
+    </div>
+    <div class="widget-body">
+        <div class="chart-container">
+            <canvas id="activityChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('activityChart');
+    if (!ctx) return;
+
+    // Get current theme
+    const theme = document.documentElement.getAttribute('data-theme') || 'light';
+    const isDark = theme === 'dark';
+
+    // Theme-aware colors
+    const colors = {
+        primary: getComputedStyle(document.documentElement).getPropertyValue('--spectra-primary').trim(),
+        text: isDark ? '#f1f5f9' : '#111827',
+        grid: isDark ? '#334155' : '#e5e7eb',
+        background: isDark ? 'rgba(129, 140, 248, 0.1)' : 'rgba(99, 102, 241, 0.1)'
+    };
+
+    const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ chart_data.labels|default:"[]"|safe }},
+            datasets: [{
+                label: '{% trans "Admin Actions" %}',
+                data: {{ chart_data.data|default:"[]"|safe }},
+                borderColor: colors.primary,
+                backgroundColor: colors.background,
+                tension: 0.4,
+                fill: true,
+                borderWidth: 2,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                pointBackgroundColor: colors.primary,
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'bottom',
+                    labels: {
+                        color: colors.text,
+                        padding: 15,
+                        font: {
+                            size: 12,
+                            weight: '500'
+                        }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                    titleColor: colors.text,
+                    bodyColor: colors.text,
+                    borderColor: colors.grid,
+                    borderWidth: 1,
+                    padding: 12,
+                    displayColors: false,
+                    callbacks: {
+                        label: function(context) {
+                            return context.parsed.y + ' actions';
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        precision: 0,
+                        color: colors.text,
+                        font: {
+                            size: 11
+                        }
+                    },
+                    grid: {
+                        color: colors.grid,
+                        drawBorder: false
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: colors.text,
+                        font: {
+                            size: 11
+                        }
+                    },
+                    grid: {
+                        display: false,
+                        drawBorder: false
+                    }
+                }
+            },
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            }
+        }
+    });
+
+    // Update chart on theme change
+    window.addEventListener('spectra:themeChanged', function(e) {
+        const newTheme = e.detail.theme;
+        const isDark = newTheme === 'dark';
+        
+        const newColors = {
+            primary: getComputedStyle(document.documentElement).getPropertyValue('--spectra-primary').trim(),
+            text: isDark ? '#f1f5f9' : '#111827',
+            grid: isDark ? '#334155' : '#e5e7eb',
+            background: isDark ? 'rgba(129, 140, 248, 0.1)' : 'rgba(99, 102, 241, 0.1)'
+        };
+
+        chart.data.datasets[0].borderColor = newColors.primary;
+        chart.data.datasets[0].backgroundColor = newColors.background;
+        chart.data.datasets[0].pointBackgroundColor = newColors.primary;
+        
+        chart.options.plugins.legend.labels.color = newColors.text;
+        chart.options.plugins.tooltip.backgroundColor = isDark ? '#1e293b' : '#ffffff';
+        chart.options.plugins.tooltip.titleColor = newColors.text;
+        chart.options.plugins.tooltip.bodyColor = newColors.text;
+        chart.options.plugins.tooltip.borderColor = newColors.grid;
+        
+        chart.options.scales.y.ticks.color = newColors.text;
+        chart.options.scales.y.grid.color = newColors.grid;
+        chart.options.scales.x.ticks.color = newColors.text;
+        
+        chart.update();
+    });
+});
+</script>
+
+<style>
+.widget-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.chart-period-select {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+    transition: border-color var(--transition-fast);
+}
+
+.chart-period-select:hover {
+    border-color: var(--border-color-dark);
+}
+
+.chart-period-select:focus {
+    outline: none;
+    border-color: var(--spectra-primary);
+}
+
+.chart-container {
+    position: relative;
+    height: 300px;
+    padding: var(--spacing-md);
+}
+</style>
+
+            }
+        });
+    }
+});
+</script>
