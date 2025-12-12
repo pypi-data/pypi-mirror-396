@@ -1,0 +1,49 @@
+Metadata-Version: 2.4
+Name: homey-stubs
+Version: 0.0.1.0
+Summary: Type annotations for the Homey SDK
+Project-URL: homepage, https://homey.app/
+Project-URL: documentation, https://apps.developer.homey.app/
+Author: Athom B.V.
+License-Expression: ISC
+Keywords: homey,homey-stubs,mypy,pyright,smart home,smarthome,stubs,typing
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved
+Classifier: License :: OSI Approved :: ISC License (ISCL)
+Classifier: Natural Language :: English
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Typing :: Stubs Only
+Requires-Python: ==3.13.*
+Description-Content-Type: text/markdown
+
+# homey-stubs
+
+Type annotations for the Homey SDK
+
+### Static type-checkers
+These types have been tested with:
+- [Pyright](https://github.com/microsoft/pyright) version 1.1.406
+
+A static type-checking package is not required, however, and these stubs will still improve autocomplete suggestions
+and error detection in your IDE if you don't install one.
+
+### Example
+
+The following example illustrates some situations that will be caught by pyright.
+
+```python
+from homey.driver import Driver
+from homey.flow_card_trigger_device import FlowCardTriggerDevice
+
+class  MyDriver(Driver):
+    async def on_init(self) -> None:
+        # Type "FlowCardTrigger" is not assignable to declared type "FlowCardTriggerDevice"
+        trigger_card: FlowCardTriggerDevice = self.homey.flow.get_trigger_card("something_happens")
+        some_token = await self.homey.flow.create_token("some_token", "number", "Some token")
+        # Type "Literal['value']" is not assignable to type "float | None"
+        await some_token.set_value("value")
+
+```
