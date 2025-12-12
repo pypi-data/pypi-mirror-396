@@ -1,0 +1,113 @@
+Metadata-Version: 2.4
+Name: criipto-signatures
+Version: 1.29.1
+Summary: A library for interacting with the Criipto signatures GraphQL API.
+Author: Jan Aagaard Meier
+Author-email: Jan Aagaard Meier <jan.meier@criipto.com>
+License-Expression: MIT
+Classifier: Development Status :: 3 - Alpha
+Classifier: License :: OSI Approved :: MIT License
+Requires-Dist: gql[httpx]>=4.0.0
+Requires-Dist: httpx>=0.28.1
+Requires-Dist: pydantic>=2.11.7
+Requires-Python: >=3.13
+Project-URL: changelog, https://github.com/criipto/criipto-signatures-sdk/releases
+Project-URL: homepage, https://criipto.com
+Project-URL: issues, https://github.com/criipto/criipto-signatures-sdk/issues
+Project-URL: source, https://github.com/criipto/criipto-signatures-sdk/tree/master/packages/python
+Description-Content-Type: text/markdown
+
+# criipto-signatures
+
+A python SDK for Criipto Signatures.
+
+Sign PAdeS-LTA documents using MitID, BankID or any other eID supported by Criipto.
+
+[Examples](https://docs.criipto.com/signatures/graphql/examples/)
+
+## Getting started
+
+### Requirements
+
+This library supports python 3.13 and later.
+
+### Installation
+
+The SDK is available on [PYPI](https://pypi.org/project/criipto-signatures/):
+
+```
+python3 -m pip install criipto-signatures
+```
+
+### Configure the SDK
+
+The SDK is available in both a sync and an async version
+
+```python
+from criipto_signatures import (
+  CriiptoSignaturesSDKAsync,
+  CriiptoSignaturesSDKSync,
+)
+asyncClient = CriiptoSignaturesSDKAsync(
+    '{YOUR_CRIIPTO_CLIENT_ID}',
+    '{YOUR_CRIIPTO_CLIENT_SECRET}'
+)
+syncClient = CriiptoSignaturesSDKSync(
+    '{YOUR_CRIIPTO_CLIENT_ID}',
+    '{YOUR_CRIIPTO_CLIENT_SECRET}'
+)
+```
+
+## Basic example
+
+```python
+from criipto_signatures import CriiptoSignaturesSDKAsync
+from criipto_signatures.models import (
+    CreateSignatureOrderInput,
+    DocumentInput,
+    PadesDocumentInput,
+    DocumentStorageMode,
+    AddSignatoryInput,
+    CloseSignatureOrderInput,
+)
+
+client = CriiptoSignaturesSDKAsync(
+    '{YOUR_CRIIPTO_CLIENT_ID}',
+    '{YOUR_CRIIPTO_CLIENT_SECRET}'
+)
+
+# Create signature order
+signatureOrder = await client.createSignatureOrder(
+    CreateSignatureOrderInput(
+        documents=[
+            DocumentInput(
+                pdf=PadesDocumentInput(
+                    title="My document",
+                    blob=data, # bytes object, or a base64 encoded string
+                    storageMode=DocumentStorageMode.Temporary,
+                )
+            )
+        ]
+    )
+)
+
+# Add signatory to signature order
+signatory = await client.addSignatory(
+    AddSignatoryInput(
+        signatureOrderId=signatureOrder.id
+    )
+)
+print(signatory.href)
+
+# ... Wait for the signatory to sign
+
+# And close the order
+await client.closeSignatureOrder(
+    CloseSignatureOrderInput(
+        signatureOrderId=signatureOrder.id,
+        retainDocumentsForDays=1
+    )
+)
+```
+
+For a more complete example, see the [example project](https://github.com/criipto/criipto-signatures-sdk/tree/master/packages/python/example)
