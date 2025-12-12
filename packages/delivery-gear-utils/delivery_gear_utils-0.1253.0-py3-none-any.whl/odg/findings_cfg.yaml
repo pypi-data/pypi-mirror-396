@@ -1,0 +1,296 @@
+- type: finding/vulnerability
+  issues:
+    enable_assignees: False
+  rescoring_ruleset:
+    cfg_name: gardener
+    ref:
+      path: odg/defaults.yaml
+  categorisations:
+    cfg_name: gardener
+    ref:
+      path: odg/defaults.yaml
+
+- type: finding/license
+  issues:
+    enable_assignees: False
+  categorisations:
+    - id: NONE
+      display_name: NONE
+      value: 0
+      allowed_processing_time: ~
+      rescoring: manual
+    - id: BLOCKER
+      display_name: BLOCKER
+      value: 16
+      allowed_processing_time: 0
+      rescoring: manual
+      selector:
+        license_names:
+          - sleepycat
+
+- type: finding/malware
+  issues:
+    enable_assignees: False
+  categorisations:
+    - id: NONE
+      display_name: NONE
+      value: 0
+      allowed_processing_time: ~
+      rescoring: manual
+    - id: BLOCKER
+      display_name: BLOCKER
+      value: 16
+      allowed_processing_time: 0
+      rescoring: manual
+      selector:
+        malware_names:
+          - .*
+
+- type: finding/sast
+  issues:
+    enable_issues: False
+  rescoring_ruleset:
+    name: sast-rescoring-v1
+    rules:
+      - name: local-linting-is-optional-for-internal-components
+        match:
+          - component_name: github.internal/.*
+        sub_types:
+          - local-linting
+        sast_status: no-linter
+        operation: set-to-NONE
+      - name: central-linting-is-optional-for-external-components
+        match:
+          - component_name: github.com/.*
+        sub_types:
+          - central-linting
+        sast_status: no-linter
+        operation: set-to-NONE
+  categorisations:
+    - id: NONE
+      display_name: NONE
+      value: 0
+      rescoring: manual
+      allowed_processing_time: ~
+    - id: BLOCKER
+      display_name: BLOCKER
+      value: 16
+      allowed_processing_time: 0
+      rescoring: [manual, automatic]
+      selector:
+        sub_types:
+          - .*
+
+- type: finding/diki
+  filter:
+    - semantics: include
+      artefact_kind: runtime
+  issues:
+    title_template: '[{meta.type}] - {artefact.component_name}:{artefact.artefact.artefact_name} - {data.key}'
+    enable_assignees: False
+    enable_per_finding: True
+  categorisations:
+    - id: NONE
+      display_name: Not Exploitable / Accept
+      value: 0
+      allowed_processing_time: ~
+      rescoring: manual
+    - id: postpone
+      display_name: Postpone
+      value: 1
+      allowed_processing_time: input
+      rescoring: manual
+    - id: MEDIUM
+      display_name: Medium
+      value: 2
+      allowed_processing_time: 90
+      rescoring: manual
+    - id: HIGH
+      display_name: High
+      value: 4
+      allowed_processing_time: 30
+      rescoring: manual
+
+- type: finding/crypto
+  issues:
+    enable_assignees: False
+  categorisations:
+    - id: false-positive
+      display_name: False Positive
+      value: 0
+      rescoring: manual
+    - id: security-irrelevant
+      display_name: Security Irrelevant
+      value: 0
+      rescoring: manual
+    - id: compliant
+      display_name: Compliant
+      value: 0
+      rescoring: manual
+      selector:
+        ratings:
+          - compliant
+    - id: maybe-standard-compliant
+      display_name: Maybe Compliant
+      value: 2
+      allowed_processing_time: 90
+      rescoring: manual
+      selector:
+        ratings:
+          - maybe-compliant
+    - id: not-standard-compliant
+      display_name: Not Compliant
+      value: 8
+      allowed_processing_time: 30
+      rescoring: manual
+      selector:
+        ratings:
+          - not-compliant
+
+- type: finding/inventory
+  filter:
+    - semantics: include
+      artefact_kind: runtime
+  issues:
+    title_template: '[{meta.type}] - {artefact.component_name} - {artefact.artefact.artefact_type} - {artefact.artefact.artefact_name}'
+    enable_assignees: False
+    enable_per_finding: True
+  categorisations:
+    - id: NONE
+      display_name: NONE
+      value: 0
+      allowed_processing_time: ~
+    - id: MEDIUM
+      display_name: MEDIUM
+      value: 2
+      allowed_processing_time: 90
+    - id: HIGH
+      display_name: HIGH
+      value: 4
+      allowed_processing_time: 30
+
+- type: finding/osid
+  issues:
+    enable_assignees: False
+  categorisations:
+    - id: empty-os-id
+      display_name: Empty OS ID
+      value: -1
+      allowed_processing_time: ~
+      selector:
+        status:
+          - emptyOsId
+    - id: no-branch-info
+      display_name: No Branch Info
+      value: -1
+      allowed_processing_time: ~
+      selector:
+        status:
+          - noBranchInfo
+    - id: no-release-info
+      display_name: No Release Info
+      value: -1
+      allowed_processing_time: ~
+      selector:
+        status:
+          - noReleaseInfo
+    - id: unable-to-compare-version
+      display_name: Unable to Compare Version
+      value: -1
+      allowed_processing_time: ~
+      selector:
+        status:
+          - unableToCompareVersion
+    - id: up-to-date
+      display_name: Up to Date
+      value: 0
+      allowed_processing_time: ~
+      rescoring: manual
+    - id: false-positive
+      display_name: False-Positive
+      value: 0
+      allowed_processing_time: ~
+      rescoring: manual
+    - id: distroless
+      display_name: Distroless
+      value: 0
+      allowed_processing_time: ~
+      rescoring: manual
+      selector:
+        status:
+          - distroless
+    - id: one-patchlevel-behind
+      display_name: One Patchlevel behind (tip)
+      value: 0
+      allowed_processing_time: ~
+      rescoring: manual
+    - id: postpone
+      display_name: Postpone
+      value: 1
+      allowed_processing_time: input
+      rescoring: manual
+    - id: more-than-one-patchlevel-behind
+      display_name: More than one Patchlevel behind
+      value: 2
+      allowed_processing_time: 90
+      rescoring: manual
+      selector:
+        status:
+          - moreThanOnePatchlevelBehind
+    - id: eol
+      display_name: Branch no longer supported
+      value: 8
+      allowed_processing_time: 30
+      rescoring: manual
+      selector:
+        status:
+          - branchReachedEol
+- type: finding/ghas
+  filter:
+    - semantics: include
+      artefact_kind: source
+  issues:
+    title_template: '[{meta.type}] - {artefact.component_name}:{artefact.artefact.artefact_name} - {data.key}'
+    enable_assignees: False
+    enable_per_finding: True
+  categorisations:
+    - id: false-positive
+      display_name: False Positive
+      value: 0
+      allowed_processing_time: ~
+      rescoring: manual
+      selector:
+        resolutions:
+          - false_positive
+    - id: revoked
+      display_name: Revoked
+      value: 0
+      allowed_processing_time: ~
+      rescoring: manual
+      selector:
+        resolutions:
+          - revoked
+    - id: wont-fix
+      display_name: Won't Fix
+      value: 0
+      allowed_processing_time: ~
+      rescoring: manual
+      selector:
+        resolutions:
+          - wont_fix
+    - id: used-in-tests
+      display_name: Used In Tests
+      value: 0
+      allowed_processing_time: ~
+      rescoring: manual
+      selector:
+        resolutions:
+          - used_in_tests
+    - id: MEDIUM
+      display_name: MEDIUM
+      value: 2
+      allowed_processing_time: 90
+      rescoring: manual
+      selector:
+        resolutions:
+          - null
