@@ -1,0 +1,84 @@
+Metadata-Version: 2.4
+Name: cattle-hugs
+Version: 0.1.0
+Project-URL: Repository, https://codeberg.org/bovine/cattle_hugs
+Requires-Python: >=3.11
+Requires-Dist: cattle-grid>=0.5.18
+Requires-Dist: muck-out>=0.3.15
+Description-Content-Type: text/markdown
+
+# cattle_hugs
+
+cattle_hugs is an interaction management extension for
+[cattle_grid](https://bovine.codeberg.page/cattle_grid/).
+The goal of cattle_hugs is to provide some of the primitives
+needed to interact with the rest of the Fediverse.
+
+## Features
+
+The two features of this extension are:
+
+* Keep track of information used to display an actor, i.e. ObjectMetaInfo from muck_out
+* Allow the tracking of interactions, e.g. replies and likes
+
+There are some derived features such as providing API
+endpoints to retrieve this data. However, the above two
+features consider the goals of this extension.
+
+We note that cattle_hugs is for public information.
+
+### Methods
+
+The methods to implement something should be exported from
+`cattle_hugs` and the used pydantic models from `cattle_hugs.types`.
+
+The information on this may change.
+
+### Including in cattle_grid
+
+Currently the cattle_grid extension has no configuration and can
+be included by installing the package `cattle-hugs` and then adding
+
+```toml
+[[extensions]]
+module = "cattle_hugs"
+```
+
+to your `extensions.toml` file.
+
+## Development
+
+### Running tests
+
+One can run the tests via
+
+```bash
+uv run pytest
+```
+
+### Running BDD Tests
+
+First one needs to download the [fediverse-features](https://codeberg.org/helge/fediverse-features)
+via
+
+```bash
+uv run python -mfediverse_features
+```
+
+This downloads
+
+```
+features/fediverse-features/
+└── w3c
+    ├── ap_likes.feature
+    ├── ap_replies.feature
+    └── ap_shares.feature
+```
+
+Then one can run the tests with
+
+```bash
+docker compose up --wait
+docker compose run --name runner --rm cattle_grid_app ./test_shell.sh
+behave
+```

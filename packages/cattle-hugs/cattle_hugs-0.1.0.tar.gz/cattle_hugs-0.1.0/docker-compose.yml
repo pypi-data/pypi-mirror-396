@@ -1,0 +1,48 @@
+services:
+  cattle_grid_mq:
+    image: docker.io/helgekr/pasture-cattle-grid-rabbitmq
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 10s
+      retries: 3
+  cattle_grid_db:
+    image: docker.io/postgres:17
+    environment:
+      POSTGRES_PASSWORD: pass
+    healthcheck:
+      { test: pg_isready -U postgres, interval: 30s, timeout: 10s, retries: 3 }
+  cattle_grid_app:
+    image: docker.io/helgekr/pasture-cattle-grid:${VERSION:-latest}
+    command: ./run.sh
+    volumes:
+      - ./cattle_grid-0.5.18a1-py3-none-any.whl:/opt/cattle_grid/cattle_grid-0.5.18a1-py3-none-any.whl
+      - ./cattle_hugs:/opt/cattle_grid/cattle_hugs
+      - ./features:/opt/cattle_grid/features
+      - ./resources/docker/cattle_grid_extensions.toml:/opt/cattle_grid/config/extensions.toml
+      - ./resources/docker/pyproject.toml:/opt/cattle_grid/pyproject.toml
+      - ./resources/docker/run.sh:/opt/cattle_grid/run.sh
+      - ./resources/docker/test_shell.sh:/opt/cattle_grid/test_shell.sh
+    healthcheck:
+      test: curl --fail http://localhost/ || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      cattle_grid_db: { condition: service_healthy }
+      cattle_grid_mq: { condition: service_healthy }
+  cattle_grid:
+    image: docker.io/helgekr/pasture-cattle-grid:${VERSION:-latest}
+    depends_on:
+      cattle_grid_app: { condition: service_healthy }
+    ports: ["2990:80"]
+    healthcheck:
+      test: curl --fail http://localhost/ || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    command: nginx -g "daemon off;"
+networks:
+  default:
+    external: true
+    name: fediverse-pasture
