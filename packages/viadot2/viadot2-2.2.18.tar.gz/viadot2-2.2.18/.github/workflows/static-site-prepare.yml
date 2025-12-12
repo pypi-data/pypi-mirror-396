@@ -1,0 +1,22 @@
+name: Static Site Prepare
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    types:
+      - closed
+    paths:
+      - "mkdocs.yml"
+      - "docs/**"
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/template_static_site_prepare_mkdocs.yml
+    with:
+      project_manager: rye
+      static_site_branch: static-site
+      mkdocs_config: mkdocs.yml
+      site_dir: site
+    secrets: inherit # pragma: allowlist secret
