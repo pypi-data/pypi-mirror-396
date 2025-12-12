@@ -1,0 +1,1 @@
+import{v as e}from"./material-react-table-B5vcPysv.js";const r=e("div",{name:"Nav",slot:"root"})(({theme:a})=>({display:"flex",flexDirection:"column",gap:a.spacing(1),marginTop:a.spacing(1),marginBottom:a.spacing(1)}));function t(a,n,o){return{add:()=>{},recent:()=>[],remove:()=>{},reset:()=>{}}}export{r as N,t as u};

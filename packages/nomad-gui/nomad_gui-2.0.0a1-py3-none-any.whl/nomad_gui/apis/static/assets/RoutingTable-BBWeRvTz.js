@@ -1,0 +1,1 @@
+import{j as t}from"./material-react-table-B5vcPysv.js";import{m as i}from"./index-Ch6wx3XL.js";import{C as r}from"./ControlledDataTable-DvZXjuQB.js";function g(o){const[a,n]=i();return t.jsx(r,{...o,pagination:a,onPaginationChange:n})}export{g as R};
