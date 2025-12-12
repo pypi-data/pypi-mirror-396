@@ -1,0 +1,140 @@
+{% extends "spectra/base.html" %}
+{% load static i18n %}
+
+{% block page_heading %}{{ title }}{% endblock %}
+
+{% block breadcrumbs %}
+{% if title %}
+<li class="breadcrumb-item active">{{ title }}</li>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+    <!-- Include the original Django admin content -->
+    {% block content_title %}{% endblock %}
+    
+    <div class="row">
+        <div class="col-12">
+            {% block content_block %}
+            <!-- Original Django admin content renders here -->
+            {% endblock %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+/* Dynamic Theme Colors from Configuration */
+:root {
+    --spectra-primary: {{ SPECTRA_CONFIG.theme_colors.primary|default:"#6366f1" }};
+    --spectra-primary-hover: {{ SPECTRA_CONFIG.theme_colors.primary_hover|default:"#4f46e5" }};
+    --spectra-secondary: {{ SPECTRA_CONFIG.theme_colors.secondary|default:"#10b981" }};
+    --spectra-secondary-hover: {{ SPECTRA_CONFIG.theme_colors.secondary_hover|default:"#059669" }};
+    --spectra-accent: {{ SPECTRA_CONFIG.theme_colors.accent|default:"#f59e0b" }};
+    --spectra-danger: {{ SPECTRA_CONFIG.theme_colors.danger|default:"#ef4444" }};
+    --spectra-success: {{ SPECTRA_CONFIG.theme_colors.success|default:"#10b981" }};
+    --spectra-warning: {{ SPECTRA_CONFIG.theme_colors.warning|default:"#f59e0b" }};
+    --spectra-info: {{ SPECTRA_CONFIG.theme_colors.info|default:"#3b82f6" }};
+}
+
+/* Theme Toggle Button Styles */
+.theme-toggle-button {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-sm);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    transition: all var(--transition-fast);
+    color: var(--text-secondary);
+}
+
+.theme-toggle-button:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--border-color-dark);
+    color: var(--text-primary);
+}
+
+.theme-icon {
+    width: 20px;
+    height: 20px;
+    transition: transform var(--transition-base);
+}
+
+/* Show/hide icons based on theme */
+.theme-icon-moon {
+    display: none;
+}
+
+[data-theme="dark"] .theme-icon-sun {
+    display: none;
+}
+
+[data-theme="dark"] .theme-icon-moon {
+    display: block;
+}
+
+.spectra-header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+/* Footer Styles */
+.spectra-footer {
+    background: var(--bg-card);
+    border-top: 1px solid var(--border-color);
+    padding: var(--spacing-lg) var(--spacing-xl);
+    margin-top: var(--spacing-2xl);
+}
+
+.footer-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+}
+
+.footer-text {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.footer-content a {
+    color: var(--spectra-primary);
+    text-decoration: none;
+    font-weight: var(--font-weight-medium);
+    transition: color var(--transition-fast);
+}
+
+.footer-content a:hover {
+    color: var(--spectra-primary-hover);
+    text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+    .footer-content {
+        flex-direction: column;
+        text-align: center;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extrajs %}
+{{ block.super }}
+<script src="{% static 'spectra/js/theme-switcher.js' %}"></script>
+<script src="{% static 'spectra/js/layout.js' %}"></script>
+<script src="{% static 'spectra/js/dashboard.js' %}"></script>
+{% for js_file in SPECTRA_CONFIG.custom_js %}
+<script src="{% static js_file %}"></script>
+{% endfor %}
+{% endblock %}

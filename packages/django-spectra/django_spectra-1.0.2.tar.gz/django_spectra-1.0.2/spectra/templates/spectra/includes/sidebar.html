@@ -1,0 +1,119 @@
+{% load static i18n %}
+
+<div class="main-nav">
+    <!-- Sidebar Logo -->
+    <div class="logo-box">
+        <a href="{% url 'admin:index' %}" class="logo-dark">
+            {% if SPECTRA_CONFIG.logo_sm %}
+            <img src="{{ SPECTRA_CONFIG.logo_sm }}" class="logo-sm" alt="logo sm">
+            {% else %}
+            <img src="{% static 'spectra/images/logo-sm.png' %}" class="logo-sm" alt="logo sm">
+            {% endif %}
+            
+            {% if SPECTRA_CONFIG.logo_dark %}
+            <img src="{{ SPECTRA_CONFIG.logo_dark }}" class="logo-lg" alt="logo dark">
+            {% else %}
+            <img src="{% static 'spectra/images/logo-dark.png' %}" class="logo-lg" alt="logo dark">
+            {% endif %}
+        </a>
+
+        <a href="{% url 'admin:index' %}" class="logo-light">
+            {% if SPECTRA_CONFIG.logo_sm %}
+            <img src="{{ SPECTRA_CONFIG.logo_sm }}" class="logo-sm" alt="logo sm">
+            {% else %}
+            <img src="{% static 'spectra/images/logo-sm.png' %}" class="logo-sm" alt="logo sm">
+            {% endif %}
+            
+            {% if SPECTRA_CONFIG.logo %}
+            <img src="{{ SPECTRA_CONFIG.logo }}" class="logo-lg" alt="logo light">
+            {% else %}
+            <img src="{% static 'spectra/images/logo-light.png' %}" class="logo-lg" alt="logo light">
+            {% endif %}
+        </a>
+    </div>
+
+    <!-- Menu Toggle Button (sm-hover) -->
+    <button type="button" class="button-sm-hover" aria-label="Show Full Sidebar">
+        <i class="ri-menu-2-line fs-24 button-sm-hover-icon"></i>
+    </button>
+
+    <div class="scrollbar" data-simplebar>
+
+        <ul class="navbar-nav" id="navbar-nav">
+
+            <li class="menu-title">{% trans 'Navigation' %}</li>
+
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'admin:index' %}">
+                    <span class="nav-icon">
+                        <i class="ri-dashboard-2-line"></i>
+                    </span>
+                    <span class="nav-text">{% trans 'Dashboard' %}</span>
+                </a>
+            </li>
+
+            {% if app_list %}
+            <li class="menu-title">{% trans 'Applications' %}</li>
+            
+            {% for app in app_list %}
+            <li class="nav-item">
+                {% if app.models|length == 1 %}
+                    {# Single model - direct link #}
+                    {% with model=app.models.0 %}
+                    <a class="nav-link" href="{% if model.admin_url %}{{ model.admin_url }}{% else %}#{% endif %}">
+                        <span class="nav-icon">
+                            <i class="ri-file-list-3-line"></i>
+                        </span>
+                        <span class="nav-text">{{ model.name }}</span>
+                    </a>
+                    {% endwith %}
+                {% else %}
+                    {# Multiple models - collapsible menu #}
+                    <a class="nav-link menu-arrow" href="#sidebar{{ app.app_label }}" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebar{{ app.app_label }}">
+                        <span class="nav-icon">
+                            <i class="ri-apps-2-line"></i>
+                        </span>
+                        <span class="nav-text">{{ app.name }}</span>
+                    </a>
+                    <div class="collapse" id="sidebar{{ app.app_label }}">
+                        <ul class="nav sub-navbar-nav">
+                            {% for model in app.models %}
+                            <li class="sub-nav-item">
+                                <a class="sub-nav-link" href="{% if model.admin_url %}{{ model.admin_url }}{% else %}#{% endif %}">
+                                    {{ model.name }}
+                                </a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+            </li>
+            {% endfor %}
+            {% endif %}
+
+            <!-- System Section -->
+            <li class="menu-title">{% trans 'System' %}</li>
+
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'admin:index' %}">
+                    <span class="nav-icon">
+                        <i class="ri-settings-3-line"></i>
+                    </span>
+                    <span class="nav-text">{% trans 'Settings' %}</span>
+                </a>
+            </li>
+
+            {% if user.is_authenticated %}
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'admin:logout' %}">
+                    <span class="nav-icon">
+                        <i class="ri-logout-box-line"></i>
+                    </span>
+                    <span class="nav-text">{% trans 'Logout' %}</span>
+                </a>
+            </li>
+            {% endif %}
+
+        </ul>
+    </div>
+</div>

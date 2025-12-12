@@ -1,0 +1,269 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static admin_list %}
+
+{% block page_heading %}
+    {% trans 'Dashboard' %}
+{% endblock %}
+
+{% block breadcrumbs %}
+    <li class="breadcrumb-item active">{% trans 'Dashboard' %}</li>
+{% endblock %}
+
+{% block content %}
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+    <div class="col-md-6 col-xl-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="row align-items-center justify-content-between">
+                    <div class="col-6">
+                        <div class="avatar-md bg-light bg-opacity-50 rounded">
+                            <i class="ri-database-2-line fs-32 text-primary avatar-title d-flex align-items-center justify-content-center"></i>
+                        </div>
+                        <p class="text-muted mb-2 mt-3">{% trans 'Total Models' %}</p>
+                        <h3 class="text-dark fw-bold mb-0">
+                            {% with total=app_list|length %}{{ total }}{% endwith %}
+                        </h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 col-xl-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="row align-items-center justify-content-between">
+                    <div class="col-6">
+                        <div class="avatar-md bg-light bg-opacity-50 rounded">
+                            <i class="ri-apps-2-line fs-32 text-success avatar-title d-flex align-items-center justify-content-center"></i>
+                        </div>
+                        <p class="text-muted mb-2 mt-3">{% trans 'Applications' %}</p>
+                        <h3 class="text-dark fw-bold mb-0">
+                            {% with count=app_list|length %}{{ count }}{% endwith %}
+                        </h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 col-xl-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="row align-items-center justify-content-between">
+                    <div class="col-6">
+                        <div class="avatar-md bg-light bg-opacity-50 rounded">
+                            <i class="ri-user-line fs-32 text-info avatar-title d-flex align-items-center justify-content-center"></i>
+                        </div>
+                        <p class="text-muted mb-2 mt-3">{% trans 'Welcome' %}</p>
+                        <h3 class="text-dark fw-bold mb-0" style="font-size: 1.2rem;">
+                            {{ user.get_full_name|default:user.username }}
+                        </h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 col-xl-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="row align-items-center justify-content-between">
+                    <div class="col-6">
+                        <div class="avatar-md bg-light bg-opacity-50 rounded">
+                            <i class="ri-shield-user-line fs-32 text-warning avatar-title d-flex align-items-center justify-content-center"></i>
+                        </div>
+                        <p class="text-muted mb-2 mt-3">{% trans 'Role' %}</p>
+                        <h3 class="text-dark fw-bold mb-0" style="font-size: 1.2rem;">
+                            {% if user.is_superuser %}{% trans 'Superuser' %}{% else %}{% trans 'Staff' %}{% endif %}
+                        </h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Applications Grid -->
+<div class="row">
+    {% for app in app_list %}
+    <div class="col-md-6 col-xl-4 mb-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-header bg-gradient border-0" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <h5 class="card-title mb-0 text-white">
+                            <i class="ri-apps-2-line me-2"></i>{{ app.name }}
+                        </h5>
+                    </div>
+                    <div class="badge bg-white text-primary">
+                        {{ app.models|length }} {% trans 'models' %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for model in app.models %}
+                    <div class="list-group-item border-0 py-3">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center gap-3 flex-grow-1">
+                                <div class="avatar-sm bg-light rounded">
+                                    <i class="ri-file-list-3-line fs-20 text-primary d-flex align-items-center justify-content-center h-100"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0">
+                                        <a href="{% if model.admin_url %}{{ model.admin_url }}{% else %}#{% endif %}" class="text-dark text-decoration-none">
+                                            {{ model.name }}
+                                        </a>
+                                    </h6>
+                                    <p class="text-muted mb-0 small">
+                                        {% if model.add_url %}
+                                            <a href="{{ model.add_url }}" class="text-muted text-decoration-none">
+                                                <i class="ri-add-line"></i> {% trans 'Add' %}
+                                            </a>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex gap-1">
+                                {% if model.admin_url %}
+                                <a href="{{ model.admin_url }}" class="btn btn-sm btn-light" title="{% trans 'View' %}">
+                                    <i class="ri-list-check"></i>
+                                </a>
+                                {% endif %}
+                                {% if model.add_url %}
+                                <a href="{{ model.add_url }}" class="btn btn-sm btn-soft-primary" title="{% trans 'Add' %}">
+                                    <i class="ri-add-line"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="ri-inbox-line fs-48 text-muted mb-3 d-block"></i>
+                <h5 class="text-muted">{% trans 'No applications available' %}</h5>
+                <p class="text-muted mb-0">{% trans 'You don\'t have permission to view any models.' %}</p>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Recent Actions -->
+{% if user.is_superuser %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header border-bottom">
+                <h5 class="card-title mb-0">
+                    <i class="ri-history-line me-2"></i>{% trans 'Quick Links' %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <a href="{% url 'admin:auth_user_changelist' %}" class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center gap-2 py-3">
+                            <i class="ri-user-line fs-20"></i>
+                            <span>{% trans 'Manage Users' %}</span>
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'admin:auth_group_changelist' %}" class="btn btn-outline-success w-100 d-flex align-items-center justify-content-center gap-2 py-3">
+                            <i class="ri-group-line fs-20"></i>
+                            <span>{% trans 'Manage Groups' %}</span>
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'admin:password_change' %}" class="btn btn-outline-warning w-100 d-flex align-items-center justify-content-center gap-2 py-3">
+                            <i class="ri-lock-password-line fs-20"></i>
+                            <span>{% trans 'Change Password' %}</span>
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'admin:index' %}" class="btn btn-outline-info w-100 d-flex align-items-center justify-content-center gap-2 py-3">
+                            <i class="ri-settings-3-line fs-20"></i>
+                            <span>{% trans 'View Site' %}</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<style>
+.avatar-md {
+    width: 56px;
+    height: 56px;
+}
+
+.avatar-sm {
+    width: 40px;
+    height: 40px;
+}
+
+.avatar-title {
+    width: 100%;
+    height: 100%;
+}
+
+.bg-gradient {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+}
+
+.card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+}
+
+.list-group-item:hover {
+    background-color: #f8f9fa;
+}
+
+.btn-soft-primary {
+    background-color: rgba(13, 110, 253, 0.1);
+    color: #0d6efd;
+    border: none;
+}
+
+.btn-soft-primary:hover {
+    background-color: rgba(13, 110, 253, 0.2);
+    color: #0d6efd;
+}
+
+/* Alternate gradient colors for cards */
+.card:nth-child(3n+1) .card-header.bg-gradient {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+}
+
+.card:nth-child(3n+2) .card-header.bg-gradient {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;
+}
+
+.card:nth-child(3n+3) .card-header.bg-gradient {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%) !important;
+}
+
+.shadow-sm {
+    box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075) !important;
+}
+</style>
+
+{% endblock %}

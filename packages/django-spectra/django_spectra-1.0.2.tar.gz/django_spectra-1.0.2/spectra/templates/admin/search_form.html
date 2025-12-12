@@ -1,0 +1,48 @@
+{% load i18n static %}
+{% if cl.search_fields %}
+<form id="changelist-search" method="get" class="d-flex gap-2 align-items-center" role="search">
+    <div class="position-relative">
+        <input 
+            type="search" 
+            class="form-control form-control-sm" 
+            name="{{ search_var }}" 
+            value="{{ cl.query }}" 
+            id="searchbar"
+            placeholder="{% translate 'Search' %}"
+            style="min-width: 250px; padding-left: 2.25rem;"
+            {% if cl.search_help_text %}aria-describedby="searchbar_helptext"{% endif %}
+        >
+        <i class="ri-search-line position-absolute" style="left: 0.75rem; top: 50%; transform: translateY(-50%); color: #6c757d;"></i>
+    </div>
+    
+    <button type="submit" class="btn btn-primary btn-sm">
+        <i class="ri-search-line me-1"></i>{% translate 'Search' %}
+    </button>
+    
+    {% if cl.query %}
+    <a href="?{% for pair in cl.params.items %}{% if pair.0 != search_var and pair.0 != 'p' %}{{ pair.0 }}={{ pair.1 }}&{% endif %}{% endfor %}" 
+       class="btn btn-outline-secondary btn-sm" 
+       title="{% translate 'Clear search' %}">
+        <i class="ri-close-line"></i>
+    </a>
+    {% endif %}
+    
+    {% if show_result_count %}
+        <span class="badge bg-secondary">
+            {% blocktranslate count counter=cl.result_count %}{{ counter }} result{% plural %}{{ counter }} results{% endblocktranslate %}
+        </span>
+    {% endif %}
+    
+    {% for pair in cl.params.items %}
+        {% if pair.0 != search_var and pair.0 != 'p' %}
+            <input type="hidden" name="{{ pair.0 }}" value="{{ pair.1 }}">
+        {% endif %}
+    {% endfor %}
+</form>
+
+{% if cl.search_help_text %}
+<div class="help text-muted small mt-1" id="searchbar_helptext">
+    <i class="ri-information-line"></i> {{ cl.search_help_text }}
+</div>
+{% endif %}
+{% endif %}

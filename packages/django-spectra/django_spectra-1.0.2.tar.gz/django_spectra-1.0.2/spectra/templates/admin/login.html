@@ -1,0 +1,486 @@
+{% load i18n static %}
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>{% trans 'Log in' %} | {{ site_title|default:"Django Spectra" }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="NONE,NOARCHIVE" />
+    
+    <!-- App CSS -->
+    <link href="{% static 'spectra/css/app.min.css' %}" rel="stylesheet" type="text/css" />
+    <link href="{% static 'spectra/css/icons.min.css' %}" rel="stylesheet" type="text/css" />
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+        
+        .authentication-bg {
+            background: linear-gradient(135deg, #3b5998 0%, #8b5cf6 50%, #6366f1 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .authentication-bg::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: moveBackground 20s linear infinite;
+        }
+        
+        @keyframes moveBackground {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+        
+        .account-pages {
+            width: 100%;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .auth-card {
+            border: none;
+            border-radius: 1.5rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 480px;
+            width: 100%;
+            margin: 0 auto;
+        }
+        
+        .auth-logo {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .auth-logo img {
+            max-height: 50px;
+            width: auto;
+        }
+        
+        .card-body {
+            padding: 2.5rem 2rem;
+        }
+        
+        .card-body h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 0.5rem;
+        }
+        
+        .card-body p {
+            color: #6b7280;
+            font-size: 0.9375rem;
+            line-height: 1.6;
+        }
+        
+        .form-label {
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 0.5rem;
+            font-size: 0.9375rem;
+            display: block;
+        }
+        
+        .form-control {
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            border: 2px solid #e5e7eb;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            width: 100%;
+            background-color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .form-control:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+            outline: none;
+            background-color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .bg-light.bg-opacity-50 {
+            background-color: rgba(248, 250, 252, 0.5) !important;
+        }
+        
+        .border-light {
+            border-color: #e5e7eb !important;
+        }
+        
+        .py-2 {
+            padding-top: 0.75rem !important;
+            padding-bottom: 0.75rem !important;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            border: none;
+            border-radius: 0.75rem;
+            padding: 0.875rem 2rem;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+            width: 100%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            color: white;
+            cursor: pointer;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+        }
+        
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+        
+        .errorlist {
+            list-style: none;
+            padding: 0;
+            margin: 0.5rem 0 0 0;
+        }
+        
+        .errorlist li {
+            color: #dc3545;
+            font-size: 0.875rem;
+        }
+        
+        .alert {
+            border-radius: 0.75rem;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+            border: none;
+            animation: slideDown 0.3s ease-out;
+        }
+        
+        .alert-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+        
+        .alert-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+        
+        .alert-warning {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+        }
+        
+        .alert-info {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+        }
+        
+        .alert .btn-close {
+            filter: brightness(0) invert(1);
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .text-white {
+            color: rgba(255, 255, 255, 0.95) !important;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        .text-white:hover {
+            color: rgba(255, 255, 255, 1) !important;
+        }
+        
+        /* Dark mode */
+        [data-bs-theme="dark"] .authentication-bg {
+            background: linear-gradient(135deg, #1a1d21 0%, #2d3139 50%, #1f2937 100%);
+        }
+        
+        [data-bs-theme="dark"] .auth-card {
+            background-color: #1a1d21 !important;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+        }
+        
+        [data-bs-theme="dark"] .card-body h2,
+        [data-bs-theme="dark"] .form-label {
+            color: #e5e7eb;
+        }
+        
+        [data-bs-theme="dark"] .card-body p {
+            color: #9ca3af;
+        }
+        
+        [data-bs-theme="dark"] .form-control {
+            background-color: #2d3139;
+            border-color: #3d424a;
+            color: #e5e7eb;
+        }
+        
+        [data-bs-theme="dark"] .form-control:focus {
+            background-color: #2d3139;
+            border-color: #818cf8;
+            color: #e5e7eb;
+            box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.1);
+        }
+        
+        [data-bs-theme="dark"] .form-control::placeholder {
+            color: #6b7280;
+        }
+        
+        [data-bs-theme="dark"] .bg-light.bg-opacity-50 {
+            background-color: rgba(45, 49, 57, 0.5) !important;
+        }
+        
+        [data-bs-theme="dark"] .border-light {
+            border-color: #3d424a !important;
+        }
+        
+        /* Mobile responsive */
+        @media (max-width: 576px) {
+            .authentication-bg {
+                padding: 0.5rem;
+            }
+            
+            .card-body {
+                padding: 1.5rem 1rem;
+            }
+            
+            .card-body h2 {
+                font-size: 1.25rem;
+            }
+            
+            .card-body p {
+                font-size: 0.875rem;
+            }
+            
+            .form-label {
+                font-size: 0.875rem;
+            }
+            
+            .form-control {
+                padding: 0.625rem 0.875rem;
+                font-size: 0.9375rem;
+            }
+            
+            .btn-primary {
+                padding: 0.75rem 1.5rem;
+                font-size: 0.9375rem;
+            }
+            
+            .auth-logo img {
+                max-height: 40px;
+            }
+            
+            .px-3 {
+                padding-left: 0.5rem !important;
+                padding-right: 0.5rem !important;
+            }
+        }
+        
+        /* Tablet */
+        @media (min-width: 577px) and (max-width: 768px) {
+            .card-body {
+                padding: 2rem 1.5rem;
+            }
+        }
+        
+        /* Very small mobile */
+        @media (max-width: 375px) {
+            .auth-card {
+                border-radius: 1rem;
+            }
+            
+            .card-body {
+                padding: 1.25rem 0.875rem;
+            }
+            
+            .card-body h2 {
+                font-size: 1.125rem;
+            }
+        }
+    </style>
+</head>
+
+<body class="authentication-bg">
+
+<div class="account-pages">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-12 col-sm-11 col-md-9 col-lg-7 col-xl-6 col-xxl-5">
+                <div class="card auth-card">
+                    <div class="card-body">
+                        <div class="auth-logo">
+                            <a href="{% url 'admin:index' %}">
+                                {% if SPECTRA_CONFIG.logo_dark %}
+                                <img src="{{ SPECTRA_CONFIG.logo_dark }}" alt="logo" class="logo-dark">
+                                {% else %}
+                                <img src="{% static 'spectra/images/logo-dark.png' %}" alt="logo" class="logo-dark">
+                                {% endif %}
+                                
+                                {% if SPECTRA_CONFIG.logo %}
+                                <img src="{{ SPECTRA_CONFIG.logo }}" alt="logo" class="logo-light">
+                                {% else %}
+                                <img src="{% static 'spectra/images/logo-light.png' %}" alt="logo" class="logo-light">
+                                {% endif %}
+                            </a>
+                        </div>
+
+                        <h2 class="text-center text-uppercase">{% trans 'Django Administration' %}</h2>
+                        <p class="text-center mb-4">{% trans 'Enter your credentials to access the admin panel' %}</p>
+
+                        {% if messages %}
+                        {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {% if message.tags == 'success' %}
+                            <i class="ri-checkbox-circle-line me-1"></i>
+                            {% elif message.tags == 'error' %}
+                            <i class="ri-error-warning-line me-1"></i>
+                            {% elif message.tags == 'warning' %}
+                            <i class="ri-alert-line me-1"></i>
+                            {% else %}
+                            <i class="ri-information-line me-1"></i>
+                            {% endif %}
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        {% endfor %}
+                        {% endif %}
+
+                        {% if form.errors and not form.non_field_errors %}
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="ri-error-warning-line me-1"></i>
+                            {% if form.errors.items|length == 1 %}
+                                {% trans "Please correct the error below." %}
+                            {% else %}
+                                {% trans "Please correct the errors below." %}
+                            {% endif %}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        {% endif %}
+
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="ri-error-warning-line me-1"></i>
+                            {{ form.non_field_errors }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        {% endif %}
+
+                        <div class="px-3">
+                            <form action="{{ app_path }}" method="post" id="login-form">
+                                {% csrf_token %}
+                                
+                                <div class="mb-3">
+                                    <label class="form-label" for="id_username">{{ form.username.label }}</label>
+                                    {{ form.username }}
+                                    {% if form.username.errors %}
+                                        <ul class="errorlist">
+                                            {% for error in form.username.errors %}
+                                            <li>{{ error }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% endif %}
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label" for="id_password">{{ form.password.label }}</label>
+                                    {{ form.password }}
+                                    {% if form.password.errors %}
+                                        <ul class="errorlist">
+                                            {% for error in form.password.errors %}
+                                            <li>{{ error }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% endif %}
+                                </div>
+
+                                <input type="hidden" name="next" value="{{ next }}">
+
+                                <div class="mb-4 text-center d-grid">
+                                    <button class="btn btn-primary" type="submit">
+                                        <i class="ri-login-box-line me-2"></i>
+                                        {% trans 'Log in' %}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="mb-0 text-center text-white mt-4">
+                    <a href="/admin/password_reset/password_reset/" class="text-white text-decoration-underline">
+                        <i class="ri-lock-password-line me-1"></i>
+                        {% trans 'Forgotten your password or username?' %}
+                    </a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'spectra/js/vendors.min.js' %}"></script>
+<script src="{% static 'spectra/js/app.min.js' %}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add Bootstrap classes to form fields
+        const username = document.getElementById('id_username');
+        const password = document.getElementById('id_password');
+        
+        if (username) {
+            username.className = 'form-control bg-light bg-opacity-50 border-light py-2';
+            username.setAttribute('placeholder', '{% trans "Username" %}');
+            username.focus(); // Auto-focus username field
+        }
+        
+        if (password) {
+            password.className = 'form-control bg-light bg-opacity-50 border-light py-2';
+            password.setAttribute('placeholder', '{% trans "Password" %}');
+        }
+        
+        // Auto-hide alerts after 5 seconds with smooth fade
+        const alerts = document.querySelectorAll('.alert');
+        if (alerts.length > 0) {
+            alerts.forEach(function(alert) {
+                setTimeout(function() {
+                    if (typeof bootstrap !== 'undefined' && bootstrap.Alert) {
+                        const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+                        bsAlert.close();
+                    } else {
+                        alert.style.display = 'none';
+                    }
+                }, 5000); // Auto-close after 5 seconds
+            });
+        }
+    });
+</script>
+
+</body>
+</html>

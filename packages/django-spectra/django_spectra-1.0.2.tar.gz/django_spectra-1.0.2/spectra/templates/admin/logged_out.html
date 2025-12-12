@@ -1,0 +1,319 @@
+{% load i18n static %}
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>{% trans 'Logged out' %} | {{ site_title|default:"Django Spectra" }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="NONE,NOARCHIVE" />
+    
+    <!-- App CSS -->
+    <link href="{% static 'spectra/css/app.min.css' %}" rel="stylesheet" type="text/css" />
+    <link href="{% static 'spectra/css/icons.min.css' %}" rel="stylesheet" type="text/css" />
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        
+        .authentication-bg {
+            background: linear-gradient(135deg, #3b5998 0%, #8b5cf6 50%, #6366f1 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .authentication-bg::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: moveBackground 20s linear infinite;
+        }
+        
+        @keyframes moveBackground {
+            0% {
+                transform: translate(0, 0);
+            }
+            100% {
+                transform: translate(50px, 50px);
+            }
+        }
+        
+        .auth-card {
+            border: none;
+            border-radius: 1.5rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            position: relative;
+            z-index: 1;
+            max-width: 450px;
+            width: 100%;
+        }
+        
+        .success-icon {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            animation: scaleIn 0.6s ease-out;
+            box-shadow: 0 10px 30px rgba(16, 185, 129, 0.4);
+        }
+        
+        @keyframes scaleIn {
+            0% {
+                transform: scale(0) rotate(-180deg);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.1) rotate(10deg);
+            }
+            100% {
+                transform: scale(1) rotate(0deg);
+                opacity: 1;
+            }
+        }
+        
+        .success-icon i {
+            font-size: 50px;
+            color: white;
+            animation: iconPulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes iconPulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+        }
+        
+        .card-body h2 {
+            color: #1f2937;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+        
+        .card-body p {
+            color: #6b7280;
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            border: none;
+            border-radius: 0.75rem;
+            padding: 0.875rem 2rem;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+            text-decoration: none;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+        }
+        
+        .btn-outline-primary {
+            color: #6366f1;
+            border: 2px solid #6366f1;
+            border-radius: 0.75rem;
+            padding: 0.875rem 2rem;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            background: transparent;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+            text-decoration: none;
+        }
+        
+        .btn-outline-primary:hover {
+            background: #6366f1;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+        }
+        
+        .text-white {
+            color: rgba(255, 255, 255, 0.9) !important;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Dark mode support */
+        [data-bs-theme="dark"] .authentication-bg {
+            background: linear-gradient(135deg, #1a1d21 0%, #2d3139 50%, #1f2937 100%);
+        }
+        
+        [data-bs-theme="dark"] .auth-card {
+            background-color: #1a1d21 !important;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+        }
+        
+        [data-bs-theme="dark"] .card-body h2 {
+            color: #e5e7eb;
+        }
+        
+        [data-bs-theme="dark"] .card-body p {
+            color: #9ca3af;
+        }
+        
+        [data-bs-theme="dark"] .btn-outline-primary {
+            color: #818cf8;
+            border-color: #818cf8;
+        }
+        
+        [data-bs-theme="dark"] .btn-outline-primary:hover {
+            background: #6366f1;
+            border-color: #6366f1;
+            color: white;
+        }
+        
+        /* Mobile responsive */
+        @media (max-width: 576px) {
+            .authentication-bg {
+                padding: 1rem 0.5rem;
+            }
+            
+            .auth-card {
+                border-radius: 1rem;
+            }
+            
+            .card-body {
+                padding: 1.5rem 1rem !important;
+            }
+            
+            .success-icon {
+                width: 70px !important;
+                height: 70px !important;
+            }
+            
+            .success-icon i {
+                font-size: 35px !important;
+            }
+            
+            .card-body h2 {
+                font-size: 1.125rem !important;
+            }
+            
+            .card-body p {
+                font-size: 0.875rem !important;
+            }
+            
+            .btn {
+                padding: 0.75rem 1.5rem !important;
+                font-size: 0.9375rem !important;
+            }
+            
+            .px-3 {
+                padding-left: 0.5rem !important;
+                padding-right: 0.5rem !important;
+            }
+        }
+        
+        /* Very small mobile */
+        @media (max-width: 375px) {
+            .success-icon {
+                width: 60px !important;
+                height: 60px !important;
+            }
+            
+            .success-icon i {
+                font-size: 30px !important;
+            }
+            
+            .card-body h2 {
+                font-size: 1rem !important;
+            }
+            
+            .btn {
+                padding: 0.625rem 1.25rem !important;
+                font-size: 0.875rem !important;
+            }
+        }
+        
+        /* Tablet */
+        @media (min-width: 577px) and (max-width: 768px) {
+            .success-icon {
+                width: 85px;
+                height: 85px;
+            }
+            
+            .success-icon i {
+                font-size: 42px;
+            }
+        }
+    </style>
+</head>
+
+<body class="authentication-bg">
+
+<div class="account-pages">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-12 col-sm-11 col-md-9 col-lg-7 col-xl-6 col-xxl-5">
+                <div class="card auth-card">
+                    <div class="card-body px-4 py-5 text-center">
+                        <div class="success-icon">
+                            <i class="ri-logout-box-line"></i>
+                        </div>
+
+                        <h2 class="fw-bold text-uppercase mb-3">{% trans 'Logged Out Successfully' %}</h2>
+                        <p class="text-muted mb-4 px-2">{% trans "Thanks for spending some quality time with the site today." %}</p>
+
+                        <div class="px-3">
+                            <a href="{% url 'admin:login' %}" class="btn btn-primary w-100 mb-3">
+                                <i class="ri-login-box-line me-2"></i>
+                                {% trans 'Log in again' %}
+                            </a>
+                            
+                            <a href="/" class="btn btn-outline-primary w-100">
+                                <i class="ri-home-line me-2"></i>
+                                {% trans 'Go to homepage' %}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="mb-0 text-center text-white mt-4">
+                    <small>
+                        <i class="ri-shield-check-line me-1"></i>
+                        {{ site_title|default:"Django Spectra" }} &copy; {% now "Y" %}
+                    </small>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'spectra/js/vendors.min.js' %}"></script>
+<script src="{% static 'spectra/js/app.min.js' %}"></script>
+
+</body>
+</html>

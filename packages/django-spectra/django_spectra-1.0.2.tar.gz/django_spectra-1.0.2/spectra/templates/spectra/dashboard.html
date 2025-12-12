@@ -1,0 +1,233 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+{% load i18n %}
+
+{% block content %}
+<div class="spectra-dashboard">
+    <!-- Dashboard Header -->
+    <div class="dashboard-header">
+        <div class="header-content">
+            <div class="header-text">
+                <h1 class="dashboard-title">{{ title|default:"Dashboard" }}</h1>
+                <p class="dashboard-subtitle">
+                    {% trans "Welcome back" %}, <strong>{{ user.get_full_name|default:user.username }}</strong>. 
+                    {% trans "Here's what's happening today." %}
+                </p>
+            </div>
+            <div class="header-actions">
+                {% if config.show_add_button %}
+                <a href="{% url 'admin:index' %}" class="btn btn-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    {% trans "Add New" %}
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard Widgets -->
+    <div class="dashboard-widgets">
+        {% for widget in widgets %}
+        <div class="widget-container {{ widget.width|default:'w-full' }}">
+            {{ widget.html|safe }}
+        </div>
+        {% empty %}
+        <div class="no-widgets">
+            <div class="no-widgets-content">
+                <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" class="no-widgets-icon">
+                    <rect x="3" y="3" width="7" height="7"></rect>
+                    <rect x="14" y="3" width="7" height="7"></rect>
+                    <rect x="14" y="14" width="7" height="7"></rect>
+                    <rect x="3" y="14" width="7" height="7"></rect>
+                </svg>
+                <h3>{% trans "No widgets configured" %}</h3>
+                <p>{% trans "Add widgets to your SPECTRA_CONFIG in settings.py to see them here." %}</p>
+                <a href="https://github.com/sundaradh/django-spectra#configuration" target="_blank" rel="noopener" class="btn btn-outline">
+                    {% trans "Learn More" %}
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Application List -->
+    {% if config.show_app_list %}
+    <div class="app-list-section">
+        <div class="section-header">
+            <h2 class="section-title">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="section-icon">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                </svg>
+                {% trans "Applications" %}
+            </h2>
+        </div>
+        <div class="app-list-grid">
+            {% include "admin/app_list.html" %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+/* Dashboard Header Enhancement */
+.dashboard-header {
+    margin-bottom: var(--spacing-2xl);
+    padding-bottom: var(--spacing-lg);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--spacing-lg);
+    flex-wrap: wrap;
+}
+
+.header-text {
+    flex: 1;
+    min-width: 300px;
+}
+
+.header-actions {
+    display: flex;
+    gap: var(--spacing-md);
+    align-items: center;
+}
+
+.dashboard-subtitle strong {
+    color: var(--spectra-primary);
+    font-weight: var(--font-weight-semibold);
+}
+
+/* No Widgets State */
+.no-widgets {
+    grid-column: 1 / -1;
+    background: var(--bg-card);
+    border: 2px dashed var(--border-color);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-2xl);
+}
+
+.no-widgets-content {
+    text-align: center;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.no-widgets-icon {
+    color: var(--text-tertiary);
+    margin-bottom: var(--spacing-lg);
+}
+
+.no-widgets-content h3 {
+    font-size: var(--font-size-xl);
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-sm);
+}
+
+.no-widgets-content p {
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-lg);
+}
+
+/* App List Section */
+.app-list-section {
+    margin-top: var(--spacing-2xl);
+}
+
+.section-header {
+    margin-bottom: var(--spacing-lg);
+}
+
+.section-title {
+    font-size: var(--font-size-2xl);
+    font-weight: var(--font-weight-semibold);
+    margin: 0;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.section-icon {
+    color: var(--spectra-primary);
+}
+
+.app-list-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--spacing-lg);
+}
+
+/* Enhanced App List Styling */
+.module {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    transition: transform var(--transition-base), box-shadow var(--transition-base);
+}
+
+.module:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.module h2 {
+    background: var(--bg-header);
+    padding: var(--spacing-lg);
+    margin: 0;
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.module table {
+    width: 100%;
+    border: none;
+    box-shadow: none;
+}
+
+.module td {
+    padding: var(--spacing-md) var(--spacing-lg);
+}
+
+.module a {
+    color: var(--text-link);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+    font-weight: var(--font-weight-medium);
+}
+
+.module a:hover {
+    color: var(--text-link-hover);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .header-content {
+        flex-direction: column;
+    }
+    
+    .header-actions {
+        width: 100%;
+    }
+    
+    .header-actions .btn {
+        flex: 1;
+        justify-content: center;
+    }
+    
+    .app-list-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
