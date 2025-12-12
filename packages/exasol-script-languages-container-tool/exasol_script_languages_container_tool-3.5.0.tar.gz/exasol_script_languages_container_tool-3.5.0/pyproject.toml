@@ -1,0 +1,102 @@
+[project]
+name = "exasol-script-languages-container-tool"
+version = "3.5.0"
+requires-python = ">=3.10,<3.14"
+description = "Script Languages Container Tool"
+keywords = ['exasol', 'udf', 'script-languages']
+
+readme = 'README.rst'
+license = "MIT"
+
+authors = [
+    { name = "Torsten Kilias", email = "Torsten Kilias <torsten.kilias@exasol.com>" },
+    { name = "Thomas Uebensee", email = "Thomas Uebensee <ext.thomas.uebensee@exasol.com>"}
+]
+
+dynamic = ["dependencies"]
+
+[tool.poetry]
+
+requires-poetry = ">=2.1.0"
+
+packages = [
+    {include = "README.rst"},
+    {include = "LICENSE"},
+    {include = "exasol"},
+]
+
+
+[project.urls]
+repository = "https://github.com/exasol/script-languages-container-tool"
+homepage = "https://github.com/exasol/script-languages-container-tool"
+documentation = "https://github.com/exasol/script-languages-container-tool"
+source = "https://github.com/exasol/script-languages-container-tool"
+issues = "https://github.com/exasol/script-languages-container-tool/issues"
+
+
+[tool.poetry.dependencies]
+importlib_metadata = ">=4.6.0"
+importlib-resources = ">=6.4.0"
+networkx = "^3.3.0"
+exasol-integration-test-docker-environment = ">=4.4.1, <6.0.0"
+exasol-bucketfs=">=1,<3"
+pydantic="^2.10.2"
+jsonschema="^4.23.0"
+click = ">=8.2.1, <8.3.0" #Conflict with default values in click ('Sentinel.UNSET' vs ()/None). Need a new version of ITDE before updating click.
+
+[build-system]
+requires = ["poetry_core>=2.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.group.dev.dependencies]
+toml = ">=0.10.2"
+configobj = "^5.0.8" # moved to dev dependencie so security alert does not propagate further up
+exasol-toolbox = "^1.6.0"
+aiohttp = "^3.12.7"
+tqdm = "^4.67.1"
+pyexasol = ">=1.3.0, <2.0.0"
+
+
+[tool.poetry.scripts]
+exaslct = 'exasol.slc.tool.main:main'
+
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+
+testpaths = [
+    "test"
+]
+
+[[tool.mypy.overrides]]
+module = ["luigi.*", "docker.*", "humanfriendly", "configobj", "toml", "tqdm"]
+ignore_missing_imports = true
+
+[tool.black]
+line-length = 88
+verbose = false
+include = "\\.pyi?$"
+
+[tool.isort]
+profile = "black"
+
+[tool.pylint.'MESSAGES CONTROL']
+max-line-length = 120
+disable = """
+    W,R,C,
+    duplicate-code,
+    missing-class-docstring,
+    missing-module-docstring,
+    missing-function-docstring,
+    too-many-ancestors,
+    broad-exception-raised,
+    broad-exception-caught,
+    consider-using-f-string,
+    useless-parent-delegation
+"""
+
+
+[tool.sonar]
+projectKey = "com.exasol:script-languages-container-tool"
+hostUrl = "https://sonarcloud.io"
+organization = "exasol"
