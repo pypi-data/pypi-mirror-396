@@ -1,0 +1,1008 @@
+# Copyright (c) typedef int GmbH, Germany, 2025. All rights reserved.
+#
+
+# IMPORTANT:
+# Ubuntu: sudo apt install gir1.2-girepository-2.0-dev
+# Debian: https://pkgs.org/search/?q=girepository
+
+
+# -----------------------------------------------------------------------------
+# -- just global configuration
+# -----------------------------------------------------------------------------
+
+set unstable := true
+set positional-arguments := true
+set script-interpreter := ['uv', 'run', '--script']
+
+# uv env vars
+# see: https://docs.astral.sh/uv/reference/environment/
+
+# project base directory = directory of this justfile
+PROJECT_DIR := justfile_directory()
+
+# Default recipe: show project header and list all recipes
+default:
+    #!/usr/bin/env bash
+    set -e
+    VERSION=$(grep '^version' pyproject.toml | head -1 | sed 's/.*= *"\(.*\)"/\1/')
+    GIT_REV=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+    echo ""
+    echo "==============================================================================="
+    echo "                                    txaio                                      "
+    echo ""
+    echo "           Compatibility API between asyncio/Twisted/Trollius                 "
+    echo ""
+    echo "   Python Package:         txaio                                              "
+    echo "   Python Package Version: ${VERSION}                                         "
+    echo "   Git Version:            ${GIT_REV}                                         "
+    echo "   Protocol Specification: https://wamp-proto.org/                            "
+    echo "   Documentation:          https://txaio.readthedocs.io                       "
+    echo "   Package Releases:       https://pypi.org/project/txaio/                    "
+    echo "   Nightly/Dev Releases:   https://github.com/crossbario/txaio/releases       "
+    echo "   Source Code:            https://github.com/crossbario/txaio                "
+    echo "   Copyright:              typedef int GmbH (Germany/EU)                      "
+    echo "   License:                MIT License                                        "
+    echo ""
+    echo "       >>>   Created by The WAMP/Autobahn/Crossbar.io OSS Project   <<<       "
+    echo "==============================================================================="
+    echo ""
+    just --list
+    echo ""
+
+# Tell uv to always copy files instead of trying to hardlink them.
+# set export UV_LINK_MODE := 'copy'
+
+# Tell uv to use project-local cache directory.
+export UV_CACHE_DIR := './.uv-cache'
+
+# Use this common single directory for all uv venvs.
+VENV_DIR := './.venvs'
+
+# Define a justfile-local variable for our environments.
+ENVS := 'cpy314 cpy313 cpy312 cpy311 pypy311'
+
+# Internal helper to map Python version short name to full uv version
+_get-spec short_name:
+    #!/usr/bin/env bash
+    set -e
+    case {{short_name}} in
+        cpy314)  echo "cpython-3.14";;  # cpython-3.14.0b3-linux-x86_64-gnu
+        cpy313)  echo "cpython-3.13";;  # cpython-3.13.5-linux-x86_64-gnu
+        cpy312)  echo "cpython-3.12";;  # cpython-3.12.11-linux-x86_64-gnu
+        cpy311)  echo "cpython-3.11";;  # cpython-3.11.13-linux-x86_64-gnu
+        pypy311) echo "pypy-3.11";;     # pypy-3.11.11-linux-x86_64-gnu
+        *)       echo "Unknown environment: {{short_name}}" >&2; exit 1;;
+    esac
+
+# uv python install pypy-3.11-linux-aarch64-gnu --preview --verbose
+# file /home/oberstet/.local/share/uv/python/pypy-3.11.11-linux-aarch64-gnu/bin/pypy3.11
+# /home/oberstet/.local/share/uv/python/pypy-3.11.11-linux-aarch64-gnu/bin/pypy3.11: ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux-aarch64.so.1, BuildID[sha1]=150f642a07dc36d3e465beaa0109e70da76ca67e, for GNU/Linux 3.7.0, stripped
+
+# Internal helper that calculates and prints the system-matching venv name.
+_get-system-venv-name:
+    #!/usr/bin/env bash
+    set -e
+    SYSTEM_VERSION=$(/usr/bin/python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+    ENV_NAME="cpy$(echo ${SYSTEM_VERSION} | tr -d '.')"
+
+    if ! echo "{{ ENVS }}" | grep -q -w "${ENV_NAME}"; then
+        echo "Error: System Python (${SYSTEM_VERSION}) maps to '${ENV_NAME}', which is not a supported environment in this project." >&2
+        exit 1
+    fi
+    # The only output of this recipe is the name itself.
+    echo "${ENV_NAME}"
+
+# Helper recipe to get the python executable path for a venv
+_get-venv-python venv="":
+    #!/usr/bin/env bash
+    set -e
+    VENV_NAME="{{ venv }}"
+    if [ -z "${VENV_NAME}" ]; then
+        VENV_NAME=$(just --quiet _get-system-venv-name)
+    fi
+    VENV_PATH="{{VENV_DIR}}/${VENV_NAME}"
+
+    # In your main recipes, replace direct calls to python with:
+    # VENV_PYTHON=$(just --quiet _get-venv-python "${VENV_NAME}")
+    # ${VENV_PYTHON} -V
+    # ${VENV_PYTHON} -m pip -V
+
+    if [[ "$OS" == "Windows_NT" ]]; then
+        echo "${VENV_PATH}/Scripts/python.exe"
+    else
+        echo "${VENV_PATH}/bin/python3"
+    fi
+
+# -----------------------------------------------------------------------------
+# -- General/global helper recipes
+# -----------------------------------------------------------------------------
+
+# Setup bash tab completion for the current user (to activate: `source ~/.config/bash_completion`).
+setup-completion:
+    #!/usr/bin/env bash
+    set -e
+
+    COMPLETION_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/bash_completion"
+    MARKER="# --- Just completion ---"
+
+    echo "==> Setting up bash tab completion for 'just'..."
+
+    # Check if we have already configured it.
+    if [ -f "${COMPLETION_FILE}" ] && grep -q "${MARKER}" "${COMPLETION_FILE}"; then
+        echo "--> 'just' completion is already configured."
+        exit 0
+    fi
+
+    echo "--> Configuration not found. Adding it now..."
+
+    # 1. Ensure the directory exists.
+    mkdir -p "$(dirname "${COMPLETION_FILE}")"
+
+    # 2. Add our marker comment to the file.
+    echo "" >> "${COMPLETION_FILE}"
+    echo "${MARKER}" >> "${COMPLETION_FILE}"
+
+    # 3. CRITICAL: Run `just` and append its raw output directly to the file.
+    #    No `echo`, no `eval`, no quoting hell. Just run and redirect.
+    just --completions bash >> "${COMPLETION_FILE}"
+
+    echo "--> Successfully added completion logic to ${COMPLETION_FILE}."
+
+    echo ""
+    echo "==> Setup complete. Please restart your shell or run the following command:"
+    echo "    source \"${COMPLETION_FILE}\""
+
+# Remove ALL generated files, including venvs, caches, and build artifacts. WARNING: This is a destructive operation.
+distclean:
+    #!/usr/bin/env bash
+    set -e
+
+    echo "==> Performing a deep clean (distclean)..."
+
+    # 1. Remove top-level directories known to us.
+    #    This is fast for the common cases.
+    echo "--> Removing venvs, cache, and build/dist directories..."
+    rm -rf {{UV_CACHE_DIR}} {{VENV_DIR}} build/ dist/ .pytest_cache/ .ruff_cache/ .ty/
+
+    # 2. Use `find` to hunt down and destroy nested artifacts that can be
+    #    scattered throughout the source tree. This is the most thorough part.
+    echo "--> Searching for and removing nested Python caches..."
+    find . -type d -name "__pycache__" -exec rm -rf {} +
+
+    echo "--> Searching for and removing compiled Python files..."
+    find . -type f -name "*.pyc" -delete
+    find . -type f -name "*.pyo" -delete
+
+    echo "--> Searching for and removing setuptools egg-info directories..."
+    find . -type d -name "*.egg-info" -exec rm -rf {} +
+
+    echo "--> Searching for and removing coverage data..."
+    rm -f .coverage
+    find . -type f -name ".coverage.*" -delete
+
+    echo "==> Distclean complete. The project is now pristine."
+
+# -----------------------------------------------------------------------------
+# -- Python virtual environments
+# -----------------------------------------------------------------------------
+
+# List all Python virtual environments
+list-all:
+    #!/usr/bin/env bash
+    set -e
+    echo
+    echo "Available CPython run-times:"
+    echo "============================"
+    echo
+    uv python list --all-platforms cpython
+    echo
+    echo "Available PyPy run-times:"
+    echo "========================="
+    echo
+    uv python list --all-platforms pypy
+    echo
+    echo "Mapped Python run-time shortname => full version:"
+    echo "================================================="
+    echo
+    # This shell loop correctly uses a SHELL variable ($env), not a just variable.
+    for env in {{ENVS}}; do
+        # We call our helper recipe to get the spec for the current env.
+        # The `--quiet` flag is important to only capture the `echo` output.
+        spec=$(just --quiet _get-spec "$env")
+        echo "  - $env => $spec"
+    done
+    echo
+    echo "Create a Python venv using: just create <shortname>"
+
+# Create a single Python virtual environment (usage: `just create cpy314` or `just create`)
+create venv="":
+    #!/usr/bin/env bash
+    set -e
+
+    VENV_NAME="{{ venv }}"
+
+    # This is the "default parameter" logic.
+    # If VENV_NAME is empty (because `just create` was run), calculate the default.
+    if [ -z "${VENV_NAME}" ]; then
+        echo "==> No venv name specified. Auto-detecting from system Python..."
+        VENV_NAME=$(just --quiet _get-system-venv-name)
+        echo "==> Defaulting to venv: '${VENV_NAME}'"
+    fi
+
+    VENV_PATH="{{ VENV_DIR }}/${VENV_NAME}"
+    VENV_PYTHON=$(just --quiet _get-venv-python "${VENV_NAME}")
+
+    # Only create the venv if it doesn't already exist
+    if [ ! -d "${VENV_PATH}" ]; then
+        # Get the Python spec just-in-time
+        PYTHON_SPEC=$(just --quiet _get-spec "${VENV_NAME}")
+
+        echo "==> Creating Python virtual environment '${VENV_NAME}' using ${PYTHON_SPEC} in ${VENV_PATH}..."
+        mkdir -p "{{ VENV_DIR }}"
+        uv venv --seed --python "${PYTHON_SPEC}" "${VENV_PATH}"
+        echo "==> Successfully created venv '${VENV_NAME}'."
+    else
+        echo "==> Python virtual environment '${VENV_NAME}' already exists in ${VENV_PATH}."
+    fi
+
+    ${VENV_PYTHON} -V
+    ${VENV_PYTHON} -m pip -V
+
+    echo "==> Activate Python virtual environment with: source ${VENV_PATH}/bin/activate"
+
+# Meta-recipe to run `create` on all environments
+create-all:
+    #!/usr/bin/env bash
+    for venv in {{ENVS}}; do
+        just create ${venv}
+    done
+
+# Get the version of a single virtual environment's Python (usage: `just version cpy314`)
+version venv="":
+    #!/usr/bin/env bash
+    set -e
+    VENV_NAME="{{ venv }}"
+
+    # This is the "default parameter" logic.
+    # If VENV_NAME is empty (because `just create` was run), calculate the default.
+    if [ -z "${VENV_NAME}" ]; then
+        echo "==> No venv name specified. Auto-detecting from system Python..."
+        VENV_NAME=$(just --quiet _get-system-venv-name)
+        echo "==> Defaulting to venv: '${VENV_NAME}'"
+    fi
+
+    if [ -d "{{ VENV_DIR }}/${VENV_NAME}" ]; then
+        echo "==> Python virtual environment '${VENV_NAME}' exists:"
+        "{{VENV_DIR}}/${VENV_NAME}/bin/python" -V
+    else
+        echo "==>  Python virtual environment '${VENV_NAME}' does not exist."
+    fi
+    echo ""
+
+# Get versions of all Python virtual environments
+version-all:
+    #!/usr/bin/env bash
+    for venv in {{ENVS}}; do
+        just version ${venv}
+    done
+
+# Make Python packages installed by the OS package manager available in a managed venv. Usage: `just link-system-packages "" "/usr/lib/kicad-nightly/lib/python3/dist-packages"`
+link-system-packages venv="" vendors="": (create venv)
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    VENV_NAME="{{ venv }}"
+    VENDOR_PATHS="{{ vendors }}"
+
+    if [ -z "${VENV_NAME}" ]; then
+        echo "==> No venv name specified. Auto-detecting from system Python..."
+        VENV_NAME=$(just --quiet _get-system-venv-name)
+        echo "==> Defaulting to venv: '${VENV_NAME}'"
+    fi
+
+    VENV_PATH="{{ VENV_DIR }}/${VENV_NAME}"
+
+    if [ ! -d "${VENV_PATH}" ] || [ ! -f "${VENV_PATH}/bin/python" ]; then
+        echo "✗ Error: Virtual environment '${VENV_NAME}' not found at '${VENV_PATH}'." >&2
+        exit 1
+    fi
+    echo "✓ Found virtual environment: ${VENV_PATH}"
+
+    SYSTEM_PYTHON="/usr/bin/python3"
+    SYSTEM_VERSION=$(${SYSTEM_PYTHON} -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+
+    # Collect all relevant site-packages directories (Debian + Ubuntu quirks)
+    SYSTEM_SITE_PACKAGES=$(${SYSTEM_PYTHON} -c "import sysconfig, site, os, sys; paths={sysconfig.get_path('purelib')}; [paths.add(p) for p in site.getsitepackages() if os.path.isdir(p)]; print('\n'.join(sorted(paths)))")
+
+    VENV_PYTHON=$(just --quiet _get-venv-python "${VENV_NAME}")
+    VENV_VERSION=$(${VENV_PYTHON} -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+    VENV_SITE_PACKAGES=$(${VENV_PYTHON} -c "import sysconfig; print(sysconfig.get_path('purelib'))")
+
+    echo "  - System Python ${SYSTEM_VERSION} site-packages: ${SYSTEM_SITE_PACKAGES}"
+    echo "  - Venv   Python ${VENV_VERSION} site-packages: ${VENV_SITE_PACKAGES}"
+
+    if [ "${VENV_VERSION}" != "${SYSTEM_VERSION}" ]; then
+        echo "✗ Error: Python version mismatch!" >&2
+        echo "  System is ${SYSTEM_VERSION}, but venv is ${VENV_VERSION}." >&2
+        echo "  Cannot link system packages due to risk of binary incompatibility." >&2
+        # exit 1
+    fi
+    echo "✓ Python versions match."
+
+    PTH_FILE="${VENV_SITE_PACKAGES}/__system_packages.pth"
+    echo "==> Writing link file: ${PTH_FILE}"
+
+    {
+        # system paths (multi-line safe)
+        while IFS= read -r sp; do
+            if [ -d "$sp" ]; then
+                echo "$sp"
+            else
+                echo "⚠ Warning: system path not found: $sp" >&2
+            fi
+        done <<< "${SYSTEM_SITE_PACKAGES}"
+
+        # vendor paths (comma/space separated)
+        if [ -n "${VENDOR_PATHS}" ]; then
+            IFS=', ' read -ra VENDOR_ARRAY <<< "${VENDOR_PATHS}"
+            for vp in "${VENDOR_ARRAY[@]}"; do
+                if [ -d "${vp}" ]; then
+                    echo "${vp}"
+                else
+                    echo "⚠ Warning: vendor path not found: ${vp}" >&2
+                fi
+            done
+        fi
+    } > "${PTH_FILE}"
+
+    echo "✓ Done."
+    echo
+    echo "Linked paths in $(basename "${PTH_FILE}"):"
+    echo
+    cat "${PTH_FILE}"
+    echo
+
+# -----------------------------------------------------------------------------
+# -- Installation and Test
+# -----------------------------------------------------------------------------
+
+# Install this package and its run-time dependencies in a single environment (usage: `just install cpy314` or `just install`)
+install venv="": (create venv)
+    #!/usr/bin/env bash
+    set -e
+    VENV_NAME="{{ venv }}"
+    if [ -z "${VENV_NAME}" ]; then
+        echo "==> No venv name specified. Auto-detecting from system Python..."
+        VENV_NAME=$(just --quiet _get-system-venv-name)
+        echo "==> Defaulting to venv: '${VENV_NAME}'"
+    fi
+    VENV_PATH="{{ VENV_DIR }}/${VENV_NAME}"
+    VENV_PYTHON=$(just --quiet _get-venv-python "${VENV_NAME}")
+    echo "==> Installing package with package runtime dependencies in ${VENV_NAME}..."
+    # uv pip install --python "{{VENV_DIR}}/${VENV_NAME}/bin/python" .[all]
+    ${VENV_PYTHON} -m pip install .[all]
+
+# Install this package in development (editable) mode and its run-time dependencies in a single environment (usage: `just install-dev cpy314` or `just install-dev`)
+install-dev venv="": (create venv)
+    #!/usr/bin/env bash
+    set -e
+    VENV_NAME="{{ venv }}"
+    if [ -z "${VENV_NAME}" ]; then
+        echo "==> No venv name specified. Auto-detecting from system Python..."
+        VENV_NAME=$(just --quiet _get-system-venv-name)
+        echo "==> Defaulting to venv: '${VENV_NAME}'"
+    fi
+    VENV_PATH="{{ VENV_DIR }}/${VENV_NAME}"
+    VENV_PYTHON=$(just --quiet _get-venv-python "${VENV_NAME}")
+    echo "==> Installing package - in editable mode - with package runtime dependencies in ${VENV_NAME}..."
+    # uv pip install --python "{{VENV_DIR}}/${VENV_NAME}/bin/python" -e .[all]
+    ${VENV_PYTHON} -m pip install -e .[all]
+
+# Meta-recipe to run `install` on all environments
+install-all:
+    #!/usr/bin/env bash
+    set -e
+    for venv in {{ENVS}}; do
+        just install ${venv}
+    done
+
+# Meta-recipe to run `install-dev` on all environments
+install-dev-all:
+    #!/usr/bin/env bash
+    for venv in {{ENVS}}; do
+        just install-dev ${venv}
+    done
+
+# Upgrade dependencies in a single environment (usage: `just upgrade cpy314`)
+upgrade venv="": (create venv)
+    #!/usr/bin/env bash
+    set -e
+    VENV_NAME="{{ venv }}"
+    if [ -z "${VENV_NAME}" ]; then
+        echo "==> No venv name specified. Auto-detecting from system Python..."
+        VENV_NAME=$(just --quiet _get-system-venv-name)
+        echo "==> Defaulting to venv: '${VENV_NAME}'"
+    fi
+    VENV_PYTHON=$(just --quiet _get-venv-python "${VENV_NAME}")
+    echo "==> Upgrading dependencies in ${VENV_NAME}..."
+    ${VENV_PYTHON} -m pip install --upgrade pip
+    ${VENV_PYTHON} -m pip install --upgrade -e .[all,dev]
+    echo "==> Dependencies upgraded in ${VENV_NAME}."
+
+# Meta-recipe to run `upgrade` on all environments
+upgrade-all:
+    #!/usr/bin/env bash
+    set -e
+    for venv in {{ENVS}}; do
+        just upgrade ${venv}
+    done
+
+# -----------------------------------------------------------------------------
+# -- Installation: Tools (Ruff, Sphinx, etc)
+# -----------------------------------------------------------------------------
+
+# Install the development tools for this Package in a single environment (usage: `just install-tools cpy314`)
+install-tools venv="": (create venv)
+    #!/usr/bin/env bash
+    set -e
+    VENV_NAME="{{ venv }}"
+    if [ -z "${VENV_NAME}" ]; then
+        echo "==> No venv name specified. Auto-detecting from system Python..."
+        VENV_NAME=$(just --quiet _get-system-venv-name)
+        echo "==> Defaulting to venv: '${VENV_NAME}'"
+    fi
+    VENV_PATH="{{ VENV_DIR }}/${VENV_NAME}"
+    VENV_PYTHON=$(just --quiet _get-venv-python "${VENV_NAME}")
+    echo "==> Installing package development tools in ${VENV_NAME}..."
+
+    ${VENV_PYTHON} -V
+    ${VENV_PYTHON} -m pip -V
+
+    # uv pip install --python "{{VENV_DIR}}/${VENV_NAME}/bin/python" -e .[dev]
+    ${VENV_PYTHON} -m pip install -e .[dev]
+
+# Meta-recipe to run `install-tools` on all environments
+install-tools-all:
+    #!/usr/bin/env bash
+    set -e
+    for venv in {{ENVS}}; do
+        just install-tools ${venv}
+    done
+
+# Install Rust (rustc & cargo) from upstream via rustup.
+install-rust:
+    #!/usr/bin/env bash
+    set -e
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+    . "$HOME/.cargo/env"
+    which rustc
+    rustc --version
+    which cargo
+    cargo --version
+
+# -----------------------------------------------------------------------------
+# -- Linting, Static Typechecking, .. the codebase
+# -----------------------------------------------------------------------------
+
+# Automatically fix all formatting and code style issues.
+fix-format venv="": (install-tools venv)
+    #!/usr/bin/env bash
+    set -e
+    VENV_NAME="{{ venv }}"
+    if [ -z "${VENV_NAME}" ]; then
+        echo "==> No venv name specified. Auto-detecting from system Python..."
+        VENV_NAME=$(just --quiet _get-system-venv-name)
+        echo "==> Defaulting to venv: '${VENV_NAME}'"
+    fi
+    VENV_PATH="{{ VENV_DIR }}/${VENV_NAME}"
+
+    echo "==> Automatically formatting code with ${VENV_NAME}..."
+
+    # 1. Run the FORMATTER first. This will handle line lengths, quotes, etc.
+    "${VENV_PATH}/bin/ruff" format --exclude ./tests ./src/txaio
+
+    # 2. Run the LINTER'S FIXER second. This will handle things like
+    #    removing unused imports, sorting __all__, etc.
+    "${VENV_PATH}/bin/ruff" check --fix --exclude ./tests ./src/txaio
+    echo "--> Formatting complete."
+
+# Alias for fix-format (backward compatibility)
+autoformat venv="": (fix-format venv)
+
+# Lint code using Ruff in a single environment
+check-format venv="": (install-tools venv)
+    #!/usr/bin/env bash
+    set -e
+    VENV_NAME="{{ venv }}"
+    if [ -z "${VENV_NAME}" ]; then
+        echo "==> No venv name specified. Auto-detecting from system Python..."
+        VENV_NAME=$(just --quiet _get-system-venv-name)
+        echo "==> Defaulting to venv: '${VENV_NAME}'"
+    fi
+    VENV_PATH="{{ VENV_DIR }}/${VENV_NAME}"
+    echo "==> Linting code with ${VENV_NAME}..."
+    "${VENV_PATH}/bin/ruff" check .
+
+# Run static type checking with ty (Astral's Rust-based type checker)
+# ty is installed as a standalone tool via `uv tool install ty`, not as a Python package
+check-typing venv="": (install venv)
+    #!/usr/bin/env bash
+    set -e
+    VENV_NAME="{{ venv }}"
+    if [ -z "${VENV_NAME}" ]; then
+        echo "==> No venv name specified. Auto-detecting from system Python..."
+        VENV_NAME=$(just --quiet _get-system-venv-name)
+        echo "==> Defaulting to venv: '${VENV_NAME}'"
+    fi
+    VENV_PATH="{{ VENV_DIR }}/${VENV_NAME}"
+    echo "==> Running static type checks with ty (using ${VENV_NAME} for type stubs)..."
+    # ty uses the venv's Python for resolving third-party type stubs
+    # Note: Some rules are ignored due to txaio's design patterns:
+    # - unresolved-attribute: txaio dynamically sets module attributes (using_twisted, using_asyncio)
+    # - possibly-missing-attribute: sys._getframe() returns FrameType | None
+    # - call-non-callable: callback type inference edge cases
+    # - deprecated: abc.abstractproperty usage (fix later)
+    ty check \
+        --python "${VENV_PATH}/bin/python" \
+        --ignore unresolved-attribute \
+        --ignore possibly-missing-attribute \
+        --ignore call-non-callable \
+        --ignore deprecated \
+        src/
+
+# Run tests and generate an HTML coverage report in a specific directory.
+check-coverage venv="": (install-tools venv) (install venv)
+    #!/usr/bin/env bash
+    set -e
+    VENV_NAME="{{ venv }}"
+    if [ -z "${VENV_NAME}" ]; then
+        echo "==> No venv name specified. Auto-detecting from system Python..."
+        VENV_NAME=$(just --quiet _get-system-venv-name)
+        echo "==> Defaulting to venv: '${VENV_NAME}'"
+    fi
+    VENV_PATH="{{ VENV_DIR }}/${VENV_NAME}"
+    echo "==> Running tests with coverage with ${VENV_NAME}..."
+    mkdir -p docs/_build/html
+    # for now, ignore any non-zero exit code by prefixing with hyphen (FIXME: remove later)
+    "${VENV_PATH}/bin/pytest" \
+        --cov=src/txaio \
+        --cov-report=html:docs/_build/html/coverage
+
+    echo "--> Coverage report generated in docs/_build/html/coverage/index.html"
+
+# Run all checks in single environment (usage: `just check cpy314`)
+check venv="": (check-format venv) (check-typing venv) (check-coverage venv)
+
+# -----------------------------------------------------------------------------
+# -- Unit tests
+# -----------------------------------------------------------------------------
+
+# Run the test suite using pytest (usage: `just test cpy314`)
+test venv="": (install-tools venv) (install venv)
+    #!/usr/bin/env bash
+    set -e
+    VENV_NAME="{{ venv }}"
+    if [ -z "${VENV_NAME}" ]; then
+        echo "==> No venv name specified. Auto-detecting from system Python..."
+        VENV_NAME=$(just --quiet _get-system-venv-name)
+        echo "==> Defaulting to venv: '${VENV_NAME}'"
+    fi
+    VENV_PATH="{{ VENV_DIR }}/${VENV_NAME}"
+    echo "==> Running test suite for ${VENV_NAME}..."
+    "${VENV_PATH}/bin/pytest"
+
+# Meta-recipe to run `test` on all environments
+test-all:
+    #!/usr/bin/env bash
+    set -e
+    for venv in {{ENVS}}; do
+        just test ${venv}
+    done
+
+# -----------------------------------------------------------------------------
+# -- Documentation
+# -----------------------------------------------------------------------------
+
+# Install documentation tools (Sphinx, Furo, etc.)
+install-docs venv="": (create venv)
+    #!/usr/bin/env bash
+    set -e
+    VENV_NAME="{{ venv }}"
+    if [ -z "${VENV_NAME}" ]; then
+        echo "==> No venv name specified. Auto-detecting from system Python..."
+        VENV_NAME=$(just --quiet _get-system-venv-name)
+        echo "==> Defaulting to venv: '${VENV_NAME}'"
+    fi
+    VENV_PYTHON=$(just --quiet _get-venv-python "${VENV_NAME}")
+    echo "==> Installing documentation tools in ${VENV_NAME}..."
+    ${VENV_PYTHON} -m pip install -e .[docs]
+
+# Sync images (logo and favicon) from autobahn-python (Autobahn subarea source)
+sync-images:
+    #!/usr/bin/env bash
+    set -e
+
+    SOURCEDIR="{{ PROJECT_DIR }}/../autobahn-python/docs/_static"
+    TARGETDIR="{{ PROJECT_DIR }}/docs/_static"
+    IMGDIR="${TARGETDIR}/img"
+
+    echo "==> Syncing images from autobahn-python..."
+    mkdir -p "${IMGDIR}"
+
+    # Copy optimized logo SVG
+    if [ -f "${SOURCEDIR}/img/autobahn_logo_blue.svg" ]; then
+        cp "${SOURCEDIR}/img/autobahn_logo_blue.svg" "${IMGDIR}/"
+        echo "  Copied: autobahn_logo_blue.svg"
+    else
+        echo "  Warning: autobahn_logo_blue.svg not found in autobahn-python"
+        echo "  Run 'just optimize-images' in autobahn-python first"
+    fi
+
+    # Copy favicon
+    if [ -f "${SOURCEDIR}/favicon.ico" ]; then
+        cp "${SOURCEDIR}/favicon.ico" "${TARGETDIR}/"
+        echo "  Copied: favicon.ico"
+    else
+        echo "  Warning: favicon.ico not found in autobahn-python"
+        echo "  Run 'just optimize-images' in autobahn-python first"
+    fi
+
+    echo "==> Image sync complete."
+
+# Build the HTML documentation using Sphinx
+docs venv="": (install-docs venv) (sync-images)
+    #!/usr/bin/env bash
+    set -e
+    VENV_NAME="{{ venv }}"
+    if [ -z "${VENV_NAME}" ]; then
+        echo "==> No venv name specified. Auto-detecting from system Python..."
+        VENV_NAME=$(just --quiet _get-system-venv-name)
+        echo "==> Defaulting to venv: '${VENV_NAME}'"
+    fi
+    VENV_PATH="{{ VENV_DIR }}/${VENV_NAME}"
+    echo "==> Building documentation..."
+    "${VENV_PATH}/bin/sphinx-build" -b html docs/ docs/_build/html
+
+# Open the built documentation in the default browser
+docs-view venv="": (docs venv)
+    echo "==> Opening documentation in viewer ..."
+    open docs/_build/html/index.html
+
+# Clean the generated documentation
+docs-clean:
+    echo "==> Cleaning documentation build artifacts..."
+    rm -rf docs/_build
+
+# Run spelling check on documentation
+docs-spelling venv="": (install-docs venv)
+    #!/usr/bin/env bash
+    set -e
+    VENV_NAME="{{ venv }}"
+    if [ -z "${VENV_NAME}" ]; then
+        echo "==> No venv name specified. Auto-detecting from system Python..."
+        VENV_NAME=$(just --quiet _get-system-venv-name)
+        echo "==> Defaulting to venv: '${VENV_NAME}'"
+    fi
+    VENV_PATH="{{ VENV_DIR }}/${VENV_NAME}"
+    TMPBUILDDIR="./.build"
+    mkdir -p "${TMPBUILDDIR}"
+    echo "==> Running spell check on documentation..."
+    "${VENV_PATH}/bin/sphinx-build" -b spelling -d "${TMPBUILDDIR}/docs/doctrees" docs "${TMPBUILDDIR}/docs/spelling"
+
+# -----------------------------------------------------------------------------
+# -- Building and Publishing
+# -----------------------------------------------------------------------------
+
+# Build wheel package (pure Python - single universal wheel)
+build venv="": (install-tools venv)
+    #!/usr/bin/env bash
+    set -e
+    VENV_NAME="{{ venv }}"
+    if [ -z "${VENV_NAME}" ]; then
+        echo "==> No venv name specified. Auto-detecting from system Python..."
+        VENV_NAME=$(just --quiet _get-system-venv-name)
+        echo "==> Defaulting to venv: '${VENV_NAME}'"
+    fi
+    VENV_PATH="{{ VENV_DIR }}/${VENV_NAME}"
+    VENV_PYTHON=$(just --quiet _get-venv-python "${VENV_NAME}")
+    echo "==> Building wheel package with ${VENV_NAME}..."
+    ${VENV_PYTHON} -m build --wheel
+    ls -la dist/*.whl
+
+# Build wheels for all environments (pure Python - only needs one build)
+build-all: (build "cpy311")
+    #!/usr/bin/env bash
+    echo "==> Pure Python package: single universal wheel built."
+    echo "==> Note: For native extension packages, this would build per-environment wheels."
+    ls -la dist/*.whl
+
+# Build source distribution
+build-sourcedist venv="": (install-tools venv)
+    #!/usr/bin/env bash
+    set -e
+    VENV_NAME="{{ venv }}"
+    if [ -z "${VENV_NAME}" ]; then
+        echo "==> No venv name specified. Auto-detecting from system Python..."
+        VENV_NAME=$(just --quiet _get-system-venv-name)
+        echo "==> Defaulting to venv: '${VENV_NAME}'"
+    fi
+    VENV_PATH="{{ VENV_DIR }}/${VENV_NAME}"
+    VENV_PYTHON=$(just --quiet _get-venv-python "${VENV_NAME}")
+    echo "==> Building source distribution with ${VENV_NAME}..."
+    ${VENV_PYTHON} -m build --sdist
+    ls -la dist/*.tar.gz
+
+# Clean build artifacts
+clean-build:
+    #!/usr/bin/env bash
+    echo "==> Cleaning build artifacts..."
+    rm -rf build/ dist/ *.egg-info/
+    find . -type d -name "*.egg-info" -exec rm -rf {} + 2>/dev/null || true
+    echo "==> Build artifacts cleaned."
+
+# Verify wheels using twine check (pure Python package - auditwheel not applicable)
+verify-wheels venv="": (install-tools venv)
+    #!/usr/bin/env bash
+    set -e
+    VENV_NAME="{{ venv }}"
+    if [ -z "${VENV_NAME}" ]; then
+        echo "==> No venv name specified. Auto-detecting from system Python..."
+        VENV_NAME=$(just --quiet _get-system-venv-name)
+        echo "==> Defaulting to venv: '${VENV_NAME}'"
+    fi
+    VENV_PATH="{{ VENV_DIR }}/${VENV_NAME}"
+
+    echo "==> Verifying wheels with twine check..."
+    "${VENV_PATH}/bin/twine" check dist/*
+
+    echo ""
+    echo "==> Note: This is a pure Python package (py3-none-any wheel)."
+    echo "    auditwheel verification is not applicable (no native extensions)."
+    echo "    For native extension packages, auditwheel would check binary compatibility."
+    echo ""
+    echo "==> Wheel verification complete."
+
+# Publish package to PyPI (requires twine setup) - meta-recipe
+publish venv="" tag="": (publish-pypi venv tag) (publish-rtd tag)
+
+# Download GitHub release artifacts (usage: `just download-github-release` for nightly, or `just download-github-release stable`)
+download-github-release release_type="nightly":
+    #!/usr/bin/env bash
+    set -e
+    echo "==> Downloading GitHub release artifacts (${release_type})..."
+    mkdir -p dist/
+    if [ "{{ release_type }}" = "stable" ]; then
+        gh release download --repo crossbario/txaio --pattern "*.whl" --pattern "*.tar.gz" --dir dist/
+    else
+        gh release download --repo crossbario/txaio --pattern "*.whl" --pattern "*.tar.gz" --dir dist/ nightly || echo "No nightly release found, trying latest..."
+        if [ ! -f dist/*.whl ]; then
+            gh release download --repo crossbario/txaio --pattern "*.whl" --pattern "*.tar.gz" --dir dist/
+        fi
+    fi
+    echo "==> Downloaded artifacts:"
+    ls -la dist/
+
+# Download release artifacts from GitHub and publish to PyPI
+publish-pypi venv="" tag="": (install-tools venv)
+    #!/usr/bin/env bash
+    set -e
+    VENV_NAME="{{ venv }}"
+    if [ -z "${VENV_NAME}" ]; then
+        echo "==> No venv name specified. Auto-detecting from system Python..."
+        VENV_NAME=$(just --quiet _get-system-venv-name)
+        echo "==> Defaulting to venv: '${VENV_NAME}'"
+    fi
+    VENV_PATH="{{ VENV_DIR }}/${VENV_NAME}"
+
+    TAG="{{ tag }}"
+    if [ -z "${TAG}" ]; then
+        echo "==> No tag specified, using local build..."
+        just build ${VENV_NAME}
+        just build-sourcedist ${VENV_NAME}
+    else
+        echo "==> Downloading release artifacts for tag ${TAG}..."
+        mkdir -p dist/
+        gh release download --repo crossbario/txaio --pattern "*.whl" --pattern "*.tar.gz" --dir dist/ "${TAG}"
+    fi
+
+    echo "==> Verifying artifacts..."
+    "${VENV_PATH}/bin/twine" check dist/*
+
+    echo "==> Publishing to PyPI..."
+    "${VENV_PATH}/bin/twine" upload dist/*
+
+# Trigger Read the Docs build for a specific tag
+publish-rtd tag="":
+    #!/usr/bin/env bash
+    set -e
+    TAG="{{ tag }}"
+    if [ -z "${TAG}" ]; then
+        echo "==> No tag specified. RTD will build from webhook on push."
+        echo "    To manually trigger: https://readthedocs.org/projects/txaio/builds/"
+    else
+        echo "==> RTD build triggered by GitHub webhook on tag push."
+        echo "    Monitor build at: https://readthedocs.org/projects/txaio/builds/"
+        echo "    Documentation will be available at: https://txaio.readthedocs.io/en/${TAG}/"
+    fi
+
+# -----------------------------------------------------------------------------
+# -- Release Workflow
+# -----------------------------------------------------------------------------
+
+# Generate changelog entry from git history (usage: `just prepare-changelog 25.12.1`)
+prepare-changelog version:
+    #!/usr/bin/env bash
+    set -e
+    VERSION="{{ version }}"
+    REPO="crossbario/txaio"
+
+    echo "==> Preparing changelog entry for version ${VERSION}..."
+
+    # Find the previous tag
+    PREV_TAG=$(git tag -l "v*" | sort -V | tail -2 | head -1)
+    CURR_TAG="v${VERSION}"
+
+    echo "    Previous tag: ${PREV_TAG}"
+    echo "    Current tag:  ${CURR_TAG}"
+    echo ""
+
+    # Check if tag exists
+    if git rev-parse "${CURR_TAG}" >/dev/null 2>&1; then
+        echo "==> Commits between ${PREV_TAG} and ${CURR_TAG}:"
+        git log --oneline "${PREV_TAG}..${CURR_TAG}"
+    else
+        echo "==> Commits since ${PREV_TAG} (tag ${CURR_TAG} not yet created):"
+        git log --oneline "${PREV_TAG}..HEAD"
+    fi
+
+    echo ""
+    echo "==> Suggested changelog entry format:"
+    echo ""
+    echo "${VERSION}"
+    echo "$(printf '%0.s-' $(seq 1 ${#VERSION}))"
+    echo ""
+    echo "**New**"
+    echo ""
+    echo "* <new feature description> (#issue)"
+    echo ""
+    echo "**Fix**"
+    echo ""
+    echo "* <bug fix description> (#issue)"
+    echo ""
+    echo "**Other**"
+    echo ""
+    echo "* <other changes>"
+    echo ""
+    echo "==> Add this entry to docs/changelog.rst after the introduction."
+
+# Draft a new release (usage: `just draft-release 25.12.2`)
+draft-release version:
+    #!/usr/bin/env bash
+    set -e
+    VERSION="{{ version }}"
+    REPO="crossbario/txaio"
+    PACKAGE="txaio"
+
+    echo "==> Drafting release ${VERSION}..."
+
+    # Check if changelog entry exists
+    if grep -q "^${VERSION}$" docs/changelog.rst; then
+        echo "    ✓ Changelog entry for ${VERSION} already exists"
+    else
+        echo "    ✗ Changelog entry for ${VERSION} not found"
+        echo ""
+        echo "    Add the following to docs/changelog.rst after the introduction:"
+        echo ""
+        echo "    ${VERSION}"
+        echo "    $(printf '%0.s-' $(seq 1 ${#VERSION}))"
+        echo ""
+        echo "    **New**"
+        echo ""
+        echo "    * <description>"
+        echo ""
+        echo "    **Fix**"
+        echo ""
+        echo "    * <description>"
+        echo ""
+    fi
+
+    # Check if release entry exists
+    if grep -q "^${VERSION}$" docs/releases.rst; then
+        echo "    ✓ Release entry for ${VERSION} already exists"
+    else
+        echo "    ✗ Release entry for ${VERSION} not found"
+        echo ""
+        echo "    Add the following to docs/releases.rst after the introduction:"
+        echo ""
+        echo "    ${VERSION}"
+        echo "    $(printf '%0.s-' $(seq 1 ${#VERSION}))"
+        echo ""
+        echo "    * \`GitHub Release <https://github.com/${REPO}/releases/tag/v${VERSION}>\`__"
+        echo "    * \`PyPI Package <https://pypi.org/project/${PACKAGE}/${VERSION}/>\`__"
+        echo "    * \`Documentation <https://${PACKAGE}.readthedocs.io/en/v${VERSION}/>\`__"
+        echo ""
+    fi
+
+    # Check pyproject.toml version
+    CURRENT_VERSION=$(grep '^version' pyproject.toml | head -1 | sed 's/.*= *"\(.*\)"/\1/')
+    if [ "${CURRENT_VERSION}" = "${VERSION}" ]; then
+        echo "    ✓ pyproject.toml version matches (${CURRENT_VERSION})"
+    else
+        echo "    ✗ pyproject.toml version mismatch: ${CURRENT_VERSION} != ${VERSION}"
+        echo "      Update pyproject.toml: version = \"${VERSION}\""
+    fi
+
+    echo ""
+    echo "==> After updating files, run: just prepare-release ${VERSION}"
+
+# Validate release is ready (usage: `just prepare-release 25.12.2`)
+prepare-release version venv="": (install-tools venv) (install venv)
+    #!/usr/bin/env bash
+    set -e
+    VERSION="{{ version }}"
+    VENV_NAME="{{ venv }}"
+
+    if [ -z "${VENV_NAME}" ]; then
+        VENV_NAME=$(just --quiet _get-system-venv-name)
+    fi
+    VENV_PATH="{{ VENV_DIR }}/${VENV_NAME}"
+
+    echo "==> Validating release ${VERSION}..."
+    ERRORS=0
+
+    # Check changelog entry
+    if grep -q "^${VERSION}$" docs/changelog.rst; then
+        echo "    ✓ Changelog entry exists"
+    else
+        echo "    ✗ Changelog entry missing for ${VERSION}"
+        ERRORS=$((ERRORS + 1))
+    fi
+
+    # Check release entry
+    if grep -q "^${VERSION}$" docs/releases.rst; then
+        echo "    ✓ Release entry exists"
+    else
+        echo "    ✗ Release entry missing for ${VERSION}"
+        ERRORS=$((ERRORS + 1))
+    fi
+
+    # Check pyproject.toml version
+    CURRENT_VERSION=$(grep '^version' pyproject.toml | head -1 | sed 's/.*= *"\(.*\)"/\1/')
+    if [ "${CURRENT_VERSION}" = "${VERSION}" ]; then
+        echo "    ✓ pyproject.toml version matches"
+    else
+        echo "    ✗ pyproject.toml version mismatch: ${CURRENT_VERSION} != ${VERSION}"
+        ERRORS=$((ERRORS + 1))
+    fi
+
+    # Run tests
+    echo "    → Running tests..."
+    if "${VENV_PATH}/bin/pytest" -q; then
+        echo "    ✓ Tests passed"
+    else
+        echo "    ✗ Tests failed"
+        ERRORS=$((ERRORS + 1))
+    fi
+
+    # Build docs
+    echo "    → Building documentation..."
+    if "${VENV_PATH}/bin/sphinx-build" -q -b html docs/ docs/_build/html; then
+        echo "    ✓ Documentation builds"
+    else
+        echo "    ✗ Documentation build failed"
+        ERRORS=$((ERRORS + 1))
+    fi
+
+    echo ""
+    if [ ${ERRORS} -eq 0 ]; then
+        echo "==> ✓ Release ${VERSION} is ready!"
+        echo ""
+        echo "    Next steps:"
+        echo "    1. git add docs/changelog.rst docs/releases.rst pyproject.toml"
+        echo "    2. git commit -m \"Release ${VERSION}\""
+        echo "    3. git tag v${VERSION}"
+        echo "    4. git push && git push --tags"
+    else
+        echo "==> ✗ Release ${VERSION} has ${ERRORS} error(s). Fix them and re-run."
+        exit 1
+    fi
