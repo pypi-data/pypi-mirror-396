@@ -1,0 +1,65 @@
+# # # storage class for model weights (temporary)
+# kind: StorageClass
+# apiVersion: storage.k8s.io/v1
+# metadata:
+#   name: {{storage_class_name}}
+# provisioner: driver.longhorn.io
+# allowVolumeExpansion: true
+# reclaimPolicy: Delete
+# volumeBindingMode: Immediate
+# parameters:
+#   shareManagerNodeSelector: {{storage_label_selector}}
+#   numberOfReplicas: "{{storage_replicas}}"
+#   staleReplicaTimeout: "10"
+#   fromBackup: ""
+#   fsType: "ext4"
+#   dataLocality: "disabled"
+#   unmapMarkSnapChainRemoved: "ignored"
+#   disableRevisionCounter: "true"
+#   dataEngine: "v1"
+# PRIORITY CLASSES
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: kalavai-system-priority
+value: 1000000
+preemptionPolicy: PreemptLowerPriority
+globalDefault: true
+description: "This is the highest priority for system-level workloads"
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: user-high-priority
+value: 100000
+preemptionPolicy: PreemptLowerPriority
+globalDefault: false
+description: "This is the highest priority for user-level workloads"
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: user-spot-priority
+value: 10000
+preemptionPolicy: PreemptLowerPriority
+globalDefault: false
+description: "This is medium priority for user-level workloads"
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: test-low-priority
+value: 1000
+preemptionPolicy: Never
+globalDefault: false
+description: "This is low priority for testing workloads, cannot preempt others"
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: test-high-priority
+value: 100000
+preemptionPolicy: Never
+globalDefault: false
+description: "This is high priority for testing workloads, cannot preempt others"
+
