@@ -1,0 +1,77 @@
+[project]
+name = "pyjarchery"
+version = "0.1.13"
+description = "Python binding to Java Archery Framework"
+readme = "README.md"
+authors = [
+    { name = "Romuald Rousseau", email = "romuald.rousseau@servier.com" },
+]
+requires-python = "~=3.11.0"
+dependencies = [
+    "jpype1>=1.6.0",
+    "pyarrow>=22.0.0",
+    "requests>=2.32.5",
+    "tqdm>=4.67.1",
+]
+
+[dependency-groups]
+dev = [
+    "pandas>=2.3.3",
+    "tabulate>=0.9.0",
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.5.0",
+    "mkdocstrings[python]>=0.24.0",
+    "pytest>=9.0.1",
+]
+pandas = ["pandas>=2.3.3"]
+
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+include = [
+    "src/pyarchery/**",
+    "src/pyarchery.libs/**",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = [
+  "src/pyarchery",
+  "src/pyarchery.libs",
+]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "N",  # PEP8 naming convetions
+    "D",  # pydocstyle
+]
+ignore = [
+    "C901", # Too complex
+    "W191", # Indentation contains tabs
+    "D401", # Imperative mood
+    "D100", # Missing docstring in public module
+    "D101", # Missing docstring in public class
+    "D102", # Missing docstring in public method
+    "D103", # Missing docstring in public function
+    "D104", # Missing docstring in public package
+    "D105", # Missing docstring in magic method
+    "D106", # Missing docstring in public nested class
+    "D107", # Missing docstring in `__init__`
+    "D203", # Incorrect Blank Line Before Class
+    "D213", # Multi-line Summary Second Line
+    "E731", # Lambda-assignment
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
