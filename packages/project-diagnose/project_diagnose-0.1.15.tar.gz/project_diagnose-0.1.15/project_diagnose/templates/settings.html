@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8"/>
+    <title>Настройки Diagnose</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+
+<body>
+
+<header>
+    <a href="/" class="button back-btn">← Назад</a>
+    <h1>Настройки</h1>
+
+    <label class="theme-switch">
+        <input type="checkbox" id="themeToggle">
+        <span class="switch-track">
+            <span class="icon sun">☀</span>
+            <span class="icon moon">🌙</span>
+        </span>
+    </label>
+</header>
+
+
+<section class="panel">
+    <h2>Файлы проекта</h2>
+    <div id="fileTree" class="file-tree"></div>
+    <p style="font-size:12px; opacity:0.7;">
+        Двойной клик по файлу или директории добавляет путь в include_files.
+    </p>
+</section>
+
+<section class="panel">
+    <h2>Конфигурация config.diagnose</h2>
+
+    <div class="settings-grid">
+        <div class="settings-card">
+            <h3>Расширения для включения</h3>
+            <div class="list" id="include_ext_list"></div>
+            <button class="small-btn" data-add="include_ext">+ Добавить</button>
+        </div>
+
+        <div class="settings-card">
+            <h3>Исключаемые директории</h3>
+            <div class="list" id="exclude_dirs_list"></div>
+            <button class="small-btn" data-add="exclude_dirs">+ Добавить</button>
+        </div>
+
+        <div class="settings-card">
+            <h3>Исключаемые файлы</h3>
+            <div class="list" id="exclude_files_list"></div>
+            <button class="small-btn" data-add="exclude_files">+ Добавить</button>
+        </div>
+
+        <div class="settings-card">
+            <h3>Принудительно включаемые файлы</h3>
+            <div class="list" id="include_files_list"></div>
+            <button class="small-btn" data-add="include_files">+ Добавить</button>
+        </div>
+
+        <div class="settings-card">
+            <h3>Особые JSON-файлы</h3>
+            <div class="list" id="special_json_list"></div>
+            <button class="small-btn" data-add="special_json">+ Добавить</button>
+        </div>
+    </div>
+
+    <button id="saveBtn" style="margin-top:15px;">💾 Сохранить настройки</button>
+    <pre id="statusBlock"></pre>
+
+</section>
+
+<!-- Проброс данных из Flask -->
+<script>
+    window.FILE_TREE = {{ tree | tojson }};
+    window.CURRENT_CONFIG = {{ config | tojson }};
+</script>
+
+<script>
+/* ---------- построение дерева ---------- */
+
+function buildTree(parent, node, basePath = "") {
+    for (const key in node) {
+        if (key === "_files") {
+            node["_files"].forEach(file => {
+                const full = basePath ? `${basePath}/${file}` : file;
+
+                const item = document.createElement("div");
+                item.className = "file-item indent-file";
+                item.dataset.path = full;
+                item.textContent = "📄 " + file;
+
+                parent.appendChild(item);
+            });
+            continue;
+        }
+
+        const folderPath = basePath ? `${basePath}/${key}` : key;
+
+        const folder = document.createElement("div");
+        folder.className = "file-item folder";
+        folder.dataset.path = folderPath;
+        folder.textContent = "📁 " + key;
+
+        const children = document.createElement("div");
+        children.className = "folder-children";
+        children.style.display = "none";
+
+        folder.addEventListener("click", () => {
+            children.style.display = children.style.display === "none" ? "block" : "none";
+        });
+
+        parent.appendChild(folder);
+        parent.appendChild(children);
+
+        buildTree(children, node[key], folderPath);
+    }
+}
+
+const treeContainer = document.getElementById("fileTree");
+buildTree(treeContainer, window.FILE_TREE);
+
+/* двойной клик добавляет путь */
+
+treeContainer.addEventListener("dblclick", e => {
+    const item = e.target.closest(".file-item");
+    if (!item) return;
+
+    const path = item.dataset.path;  // тут уже полный относительный путь, типа "analysis/tune_sltp.py"
+
+    const list = document.getElementById("exclude_files_list");
+    list.appendChild(createRow("exclude_files", path));
+});
+</script>
+
+<script>
+/* ---------- динамические списки ---------- */
+
+function createRow(fieldName, value = "") {
+    const row = document.createElement("div");
+    row.className = "item-row";
+
+    const input = document.createElement("input");
+    input.value = value;
+
+    const delBtn = document.createElement("button");
+    delBtn.className = "small-btn";
+    delBtn.textContent = "✕";
+    delBtn.onclick = () => row.remove();
+
+    row.appendChild(input);
+    row.appendChild(delBtn);
+    return row;
+}
+
+function initList(field) {
+    const container = document.getElementById(field + "_list");
+    container.innerHTML = "";
+    (window.CURRENT_CONFIG[field] || []).forEach(v =>
+        container.appendChild(createRow(field, v))
+    );
+}
+
+["include_ext","exclude_dirs","exclude_files","include_files","special_json"].forEach(initList);
+
+document.querySelectorAll("[data-add]").forEach(btn => {
+    btn.addEventListener("click", () => {
+        const field = btn.dataset.add;
+        document.getElementById(field + "_list")
+            .appendChild(createRow(field, ""));
+    });
+});
+</script>
+
+<script>
+/* ---------- сохранение ---------- */
+
+document.getElementById("saveBtn").addEventListener("click", () => {
+    const fields = ["include_ext","exclude_dirs","exclude_files","include_files","special_json"];
+    const cfg = {};
+
+    fields.forEach(field => {
+        cfg[field] = Array.from(document.querySelectorAll(`#${field}_list input`))
+            .map(i => i.value.trim())
+            .filter(v => v);
+    });
+
+    fetch("/save_settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ config: cfg }),
+    })
+    .then(r => r.json())
+    .then(data => {
+        const status = document.getElementById("statusBlock");
+        status.textContent =
+            data.status === "ok"
+                ? "✓ Настройки сохранены.\nПерезагрузите страницу."
+                : "Ошибка:\n" + data.message;
+    });
+});
+</script>
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
