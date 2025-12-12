@@ -1,0 +1,1 @@
+from .inference import inference as MPUM_inference
