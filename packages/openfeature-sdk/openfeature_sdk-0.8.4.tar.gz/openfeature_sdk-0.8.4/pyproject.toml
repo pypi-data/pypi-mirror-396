@@ -1,0 +1,142 @@
+# pyproject.toml
+[build-system]
+requires = ["uv_build~=0.9.0"]
+build-backend = "uv_build"
+
+[project]
+name = "openfeature_sdk"
+version = "0.8.4"
+description = "Standardizing Feature Flagging for Everyone"
+readme = "README.md"
+authors = [{ name = "OpenFeature", email = "openfeature-core@groups.io" }]
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+]
+keywords = [
+    "openfeature",
+    "feature",
+    "flags",
+    "toggles",
+]
+dependencies = []
+requires-python = ">=3.9"
+
+[project.urls]
+Homepage = "https://github.com/open-feature/python-sdk"
+
+[dependency-groups]
+dev = [
+    "behave",
+    "coverage[toml]>=6.5",
+    "pytest",
+    "pytest-asyncio",
+    "pre-commit"
+]
+
+[tool.uv]
+required-version = "~=0.9.0"
+
+[tool.uv.build-backend]
+module-name = "openfeature"
+module-root = ""
+namespace = true
+
+[tool.mypy]
+files = "openfeature,tests/typechecking"
+
+python_version = "3.9" # should be identical to the minimum supported version
+namespace_packages = true
+explicit_package_bases = true
+local_partial_types = true # will become the new default from version 2
+allow_redefinition_new = true # will become the new default from version 2
+fixed_format_cache = true # new caching mechanism
+pretty = true
+strict = true
+disallow_any_generics = false
+
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.coverage.report]
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "if typing.TYPE_CHECKING:",
+]
+
+[tool.ruff]
+exclude = [
+    ".git",
+    ".venv",
+    "__pycache__",
+    "venv",
+]
+target-version = "py39"
+
+[tool.ruff.lint]
+select = [
+    "A",
+    "B",
+    "C4",
+    "C90",
+    "E",
+    "F",
+    "FLY",
+    "FURB",
+    "I",
+    "ICN003",
+    "LOG",
+    "N",
+    "PERF",
+    "PGH",
+    "PLC",
+    "PLR0913",
+    "PLR0915",
+    "RUF",
+    "S",
+    "SIM",
+    "T10",
+    "T20",
+    "TID251",
+    "UP",
+    "W",
+    "YTT",
+]
+ignore = [
+    "E501", # the formatter will handle any too long line
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*" = ["PLR0913", "S101"]
+
+[tool.ruff.lint.pylint]
+max-args = 6
+max-statements = 30
+
+[tool.ruff.lint.pyupgrade]
+# Preserve types, even if a file imports `from __future__ import annotations`.
+keep-runtime-typing = true
+
+[tool.ruff.lint.flake8-import-conventions]
+banned-from = ["typing"]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"typing.Awaitable".msg = "Use collections.abc.Awaitable instead"
+"typing.Callable".msg = "Use collections.abc.Callable instead"
+"typing.Collection".msg = "Use collections.abc.Collection instead"
+"typing.Mapping".msg = "Use collections.abc.Mapping instead"
+"typing.Sequence".msg = "Use collections.abc.Sequence instead"
+"typing.MutableMapping".msg = "Use collections.abc.MutableMapping instead"
+"typing.MutableSequence".msg = "Use collections.abc.MutableSequence instead"
+
+[project.scripts]
+# workaround while UV doesn't support scripts directly in the pyproject.toml
+# see: https://github.com/astral-sh/uv/issues/5903
+test = "scripts.scripts:test"
+test-cov = "scripts.scripts:test_cov"
+cov-report = "scripts.scripts:cov_report"
+cov = "scripts.scripts:cov"
+e2e = "scripts.scripts:e2e"
+precommit = "scripts.scripts:precommit"
