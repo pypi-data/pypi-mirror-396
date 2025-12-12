@@ -1,0 +1,44 @@
+<configure
+    xmlns="http://namespaces.zope.org/zope"
+    xmlns:monkey="http://namespaces.plone.org/monkey"
+    >
+
+  <include
+      package="collective.monkeypatcher"
+      file="meta.zcml"
+      />
+
+  <monkey:patch
+      original="someMethod"
+      replacement=".dummypatch.patchedMethod"
+      class=".dummypatch.Dummy"
+      docstringWarning="false"
+      />
+
+  <monkey:patch
+      original="someFunction"
+      replacement=".dummypatch.patchedFunction"
+      module=".dummypatch"
+      description="This is the reason of this monkey patch"
+      />
+
+  <monkey:patch
+      original="someFooMethod"
+      replacement=".dummypatch.patchedFooMethod"
+      class=".dummypatch.Foo"
+      handler=".dummypatch.my_appy_patch"
+      docstringWarning="false"
+      />
+
+  <monkey:patch
+      original="config"
+      replacement=".dummypatch.patchedAttribute"
+      class=".dummypatch.Foo"
+      />
+
+  <subscriber
+      for="collective.monkeypatcher.interfaces.IMonkeyPatchEvent"
+      handler=".dummypatch.monkeyPatchHandler"
+      />
+
+</configure>
