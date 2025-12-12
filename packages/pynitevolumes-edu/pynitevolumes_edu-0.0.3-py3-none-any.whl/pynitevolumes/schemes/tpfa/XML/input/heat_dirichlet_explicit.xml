@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<computation name="Resolution of the heat equation with homogeneous Dirichlet boundary conditions">
+    * Domain: Square :math:`[0, 1]\times[0, 1]` meshed by triangles.
+    * Reference solution: :math:`(T, X, Y)\mapsto \exp(-T)\sin(\pi X)\sin(\pi Y)`.
+    * Operator: Heat operator :math:`\partial_t u-\Delta u`.
+    * Boundary conditions: Dirichlet condition on the whole boundary with data automatically computed.
+    * Right-hand side: automatically computed.
+    * Initial value: automatically computed.
+    * Time scheme: explicit (or forward) Euler scheme. Parameters have been chosen to obtain a stable
+      numerical simulation.
+    <simulation>
+        <space mesh_name="mesh1/mesh1_3.pvm"></space>
+        <time t0='0.0' tf='1.0'>
+        <dt type='single' value='0.0001'></dt>
+        </time>
+    </simulation>
+    <problem>
+        <operator>
+            <time-derivative type="const" scheme="ExplicitEuler">
+                1.0
+            </time-derivative>
+            <diffusion type='const'>
+                1.0
+            </diffusion>
+        </operator>
+        <boundary>
+            <dirichlet>
+                <where type='whole'></where>
+                <data type='reference'></data>
+                <parameters></parameters>
+            </dirichlet>
+        </boundary>
+        <right-hand-side type='reference'>
+        </right-hand-side>
+        <init type='reference'>
+        </init>
+    </problem>
+    <reference type='expr'>
+        exp(-T)*(X*(1.0-X)+Y*(1.0-Y))
+    </reference>
+</computation>

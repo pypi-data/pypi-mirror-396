@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<computation name="Simulation of an advection equation">
+    * Domain: Square :math:`[0, 1]\times[0, 1]` meshed by squares.
+    * Operator: :math:`\partial_t(u)+\mathrm{div}(uv)` where :math:`v(X, Y) = (-2(Y-0.5), 2(X-0.5))`.
+    * Boundary conditions: homogeneous Dirichlet boundary condition on the inflow part of the boundary.
+    * Right-hand side: :math:`(T, X, Y)\mapsto 0`.
+    * Initial value: :math:`(X, Y)\mapsto exp((-(X-0.25)^2-(Y-0.25)^2)/0.1^2)`.
+    * Time scheme: explicit (or forward) Euler scheme. Parameters have been chosen to obtain a stable
+      numerical simulation.
+    <simulation>
+        <space mesh_name="rect4/rect4_3.pvm" ></space>
+        <time t0='0.0' tf='1.0' autonomous='True'>
+            <dt type='single' value='0.014'></dt>
+        </time>
+    </simulation>
+    <problem>
+        <operator>
+            <time-derivative type="const" scheme="ExplicitEuler">
+                1.0
+            </time-derivative>
+            <convection scheme='upwind'>
+                <vx type='expr'>
+                    -2*(Y-0.5)
+                </vx>
+                <vy type='expr'>
+                    2*(X-0.5)
+                </vy>
+            </convection>
+        </operator>
+        <boundary>
+            <dirichlet>
+                <where type='whole' inflow='True'></where>
+                <data type='const'>0.0</data>
+                <parameters></parameters>
+            </dirichlet>
+        </boundary>
+        <right-hand-side type='const'>
+            0.0
+        </right-hand-side>
+        <init type='expr'>
+            exp((-(X-0.25)**2-(Y-0.25)**2)/0.1**2)
+        </init>
+    </problem>
+</computation>

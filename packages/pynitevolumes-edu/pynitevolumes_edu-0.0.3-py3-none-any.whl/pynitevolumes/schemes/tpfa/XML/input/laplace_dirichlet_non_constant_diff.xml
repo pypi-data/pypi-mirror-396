@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<computation name="Laplace equation with Dirichlet on the boundary">
+    * Domain: Square :math:`[0, 1]\times[0, 1]` meshed by triangles.
+    * Operator: Laplace operator :math:`-\Delta u`.
+    * Reference solution: :math:`(X, Y)\mapsto \sin(\pi X)\sin(\pi Y)`.
+    * Boundary conditions: Dirichlet condition on the whole boundary with data automatically computed.
+    * Right-hand side: automatically computed.
+    <simulation>
+        <space mesh_family="mesh1" coarsest="0" finest="6"></space>
+    </simulation>
+    <problem>
+        <operator>
+            <diffusion type='expr'>
+                1.0 + (X >= 0.5)*(Y >= 0.5) + (X &lt; 0.5)*(Y &lt; 0.5)
+            </diffusion>
+        </operator>
+        <boundary>
+            <dirichlet>
+                <where type='whole'></where>
+                <data type='reference'></data>
+                <parameters></parameters>
+            </dirichlet>
+        </boundary>
+        <right-hand-side type='reference'>
+        </right-hand-side>
+    </problem>
+    <reference type='expr'>
+        sin(pi*X)*sin(pi*Y)
+    </reference>
+</computation>

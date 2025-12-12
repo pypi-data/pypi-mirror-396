@@ -1,0 +1,77 @@
+<?xml version="1.0"?>
+<computation name="Resolution of a generic linear elliptic equation">
+    * Domain: Square :math:`[0, 1]\times[0, 1]` meshed by triangles.
+    * Reference solution: :math:`(X, Y)\mapsto X(1-X)+Y(1-Y)`.
+    * Operator: :math:`-\mathrm{div}(A\nabla u)+\mathrm{div}(uv)+qu` where
+    
+        * :math:`A(X, Y) = 3(1+X^2)`
+        * :math:`v(X, Y) = (X, Y)`
+        * :math:`q(X, Y) = 5(1+X^2)`
+        
+    * Boundary conditions: data are automatically computed.
+    
+        * Left side: Flux :math:`A\partial_n u+(v\cdot n)=g`
+        * Right side: Robin :math:`(X-0.5)u+(X-0.7)\partial_n u=g`
+        * Top side: Neumann :math:`\partial_n u=g`
+        * Bottom side: Dirichlet :math:`u=g`
+        
+    * Right-hand side: automatically computed.
+    <simulation>
+        <space mesh_family="mesh1" coarsest="0" finest="5"></space>
+    </simulation>
+    <problem>
+        <operator>
+            <diffusion type='expr'>
+                3.0*(1+X**2)
+            </diffusion>
+            <convection type='constant' scheme='centered'>
+                <vx type='expr'>
+                    X
+                </vx>
+                <vy type='expr'>
+                    Y
+                </vy>
+            </convection>
+            <volumic type='expr'>
+                5.0*(1.0+X**2)
+            </volumic>
+        </operator>
+        <boundary>
+            <dirichlet>
+                <where type='expr'>
+                    Y
+                </where>
+                <data type='reference'></data>
+                <parameters></parameters>
+            </dirichlet>
+            <robin>
+                <where type='expr'>
+                    1-X
+                </where>
+                <data type='reference'></data>
+                <parameters>
+                    <a type='expr'> X-0.5</a>
+                    <b type='expr'> X-0.7</b></parameters>
+            </robin>
+            <flux>
+                <where type='expr'>
+                    X
+                </where>
+                <data type='reference'></data>
+                <parameters></parameters>
+            </flux>
+            <neumann>
+                <where type='expr'>
+                    1-Y
+                </where>
+                <data type='reference'></data>
+                <parameters></parameters>
+            </neumann>
+        </boundary>
+        <right-hand-side type='reference'>
+        </right-hand-side>
+    </problem>
+    <reference type='expr'>
+        X*(1.0-X)+Y*(1.0-Y)
+    </reference>
+</computation>
