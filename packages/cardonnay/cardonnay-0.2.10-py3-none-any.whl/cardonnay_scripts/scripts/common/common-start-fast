@@ -1,0 +1,517 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+trap 'echo "Error at line $LINENO in ${BASH_SOURCE[0]}" >&2' ERR
+
+readonly PROTOCOL_VERSION="${PROTOCOL_VERSION:-10}"
+readonly NUM_BFT_NODES=1
+readonly NUM_CC=5
+readonly NUM_DREPS=5
+readonly TX_SUBMISSION_DELAY=60
+readonly SUBMIT_DELAY=5
+readonly POOL_PLEDGE=1000000000000
+readonly DREP_DELEGATED=500000000000
+readonly BYRON_INIT_SUPPLY=10020000000
+
+readonly INSTANCE_NUM="%%INSTANCE_NUM%%"
+readonly NUM_POOLS=%%NUM_POOLS%%
+readonly NODE_PORT_BASE=%%NODE_PORT_BASE%%
+readonly PORTS_PER_NODE=%%PORTS_PER_NODE%%
+readonly WEBSERVER_PORT=%%WEBSERVER_PORT%%
+
+initialize_globals() {
+  if [ -z "${CARDANO_NODE_SOCKET_PATH:-}" ]; then
+    echo "CARDANO_NODE_SOCKET_PATH is not set" >&2
+    exit 1
+  fi
+
+  SCRIPT_DIR="$(readlink -m "${0%/*}")"
+  readonly SCRIPT_DIR
+  SOCKET_PATH="$(readlink -m "$CARDANO_NODE_SOCKET_PATH")"
+  readonly SOCKET_PATH
+  readonly STATE_CLUSTER="${SOCKET_PATH%/*}"
+
+  if [ "$PWD" = "$STATE_CLUSTER" ]; then
+    echo "Please run this script from outside of '$STATE_CLUSTER'" >&2
+    exit 1
+  fi
+
+  readonly STATE_CLUSTER_NAME="${STATE_CLUSTER##*/}"
+  readonly SUPERVISORD_SOCKET_PATH="${STATE_CLUSTER}/supervisord.sock"
+  readonly START_CLUSTER_STATUS="${STATE_CLUSTER}/status_started"
+
+  if [[ "$SOCKET_PATH" != *"/state-cluster${INSTANCE_NUM}/"* ]]; then
+    echo "CARDANO_NODE_SOCKET_PATH must be set to a path containing 'state-cluster${INSTANCE_NUM}', line $LINENO in ${BASH_SOURCE[0]}" >&2
+    exit 1
+  fi
+
+  if [ -e "$SUPERVISORD_SOCKET_PATH" ]; then
+    echo "Cluster already running. Please run \`${STATE_CLUSTER}/stop-cluster\` first!" >&2
+    exit 1
+  fi
+
+  if [ "$NUM_POOLS" -lt 3 ]; then
+    echo "NUM_POOLS must be at least 3" >&2
+    exit 1
+  fi
+
+  case "${UTXO_BACKEND:=""}" in
+    "" | mem | disk)
+      ;;
+    *)
+      echo "Unknown \`UTXO_BACKEND\`: '$UTXO_BACKEND', line $LINENO in ${BASH_SOURCE[0]}" >&2
+      exit 1
+      ;;
+  esac
+  readonly UTXO_BACKEND
+
+  SECURITY_PARAM="$(jq '.securityParam' < "${SCRIPT_DIR}/genesis.spec.json")"
+  readonly SECURITY_PARAM
+  NETWORK_MAGIC="$(jq '.networkMagic' < "${SCRIPT_DIR}/genesis.spec.json")"
+  readonly NETWORK_MAGIC
+  MAX_SUPPLY="$(jq '.maxLovelaceSupply' < "${SCRIPT_DIR}/genesis.spec.json")"
+  readonly MAX_SUPPLY
+  POOL_COST="$(jq '.protocolParams.minPoolCost' < "${SCRIPT_DIR}/genesis.spec.json")"
+  if [ "$POOL_COST" -eq 0 ]; then
+    POOL_COST=600
+  fi
+  readonly POOL_COST
+
+  DELEG_MAGIC_VALUE=3340000000000000
+  readonly DELEG_MAGIC_VALUE
+  DELEG_SUPPLY="$((POOL_PLEDGE * NUM_POOLS + DELEG_MAGIC_VALUE))"
+  readonly DELEG_SUPPLY
+  NONDELEG_SUPPLY="$(( (MAX_SUPPLY - DELEG_SUPPLY) * 8 / 10))"
+  readonly NONDELEG_SUPPLY
+
+  # shellcheck disable=SC1091
+  source "${SCRIPT_DIR}/common.sh"
+
+  if [ -e "${SCRIPT_DIR}/shell_env" ]; then
+    # shellcheck disable=SC1091
+    source "${SCRIPT_DIR}/shell_env"
+  fi
+}
+
+create_genesis() {
+  local start_time_shelley start_time
+
+  start_time_shelley="$(date --utc +"%Y-%m-%dT%H:%M:%SZ" --date="5 seconds")"
+  start_time="$(date +%s --date="$start_time_shelley")"
+  echo "$start_time" > "${STATE_CLUSTER}/cluster_start_time"
+
+  cardano_cli_log byron genesis genesis \
+    --protocol-magic "$NETWORK_MAGIC" \
+    --k "$SECURITY_PARAM" \
+    --n-poor-addresses 0 \
+    --n-delegate-addresses "$NUM_POOLS" \
+    --total-balance "$BYRON_INIT_SUPPLY" \
+    --delegate-share 1 \
+    --avvm-entry-count 0 \
+    --avvm-entry-balance 0 \
+    --protocol-parameters-file "${STATE_CLUSTER}/byron-params.json" \
+    --genesis-output-dir "${STATE_CLUSTER}/byron" \
+    --start-time "$start_time"
+
+  mv "${STATE_CLUSTER}/byron-params.json" "${STATE_CLUSTER}/byron/params.json"
+
+  cardano_cli_log latest genesis create-staked \
+    --genesis-dir "${STATE_CLUSTER}/create_staked" \
+    --testnet-magic "$NETWORK_MAGIC" \
+    --gen-pools "$NUM_POOLS" \
+    --gen-utxo-keys 1 \
+    --supply "$NONDELEG_SUPPLY" \
+    --gen-stake-delegs "$NUM_POOLS" \
+    --supply-delegated "$DELEG_SUPPLY" \
+    --start-time "$start_time_shelley"
+
+  mv "${STATE_CLUSTER}/create_staked/delegate-keys" "${STATE_CLUSTER}/shelley/delegate-keys"
+  mv "${STATE_CLUSTER}/create_staked/genesis-keys" "${STATE_CLUSTER}/shelley/genesis-keys"
+
+  jq \
+    --argjson max_supply "$MAX_SUPPLY" \
+    --argjson prot_ver "$PROTOCOL_VERSION" \
+    '.protocolParams.protocolVersion.major = $prot_ver
+    | .maxLovelaceSupply = $max_supply' \
+    "${STATE_CLUSTER}/create_staked/genesis.json" > "${STATE_CLUSTER}/shelley/genesis.json"
+  rm -f "${STATE_CLUSTER}/create_staked/genesis.json"
+  jq '.costModels.PlutusV2 |= .[0:175]' \
+    "${STATE_CLUSTER}/create_staked/genesis.alonzo.json" > "${STATE_CLUSTER}/shelley/genesis.alonzo.json"
+  rm -f "${STATE_CLUSTER}/create_staked/genesis.alonzo.json"
+
+  mv "$STATE_CLUSTER"/create_staked/genesis*.json "${STATE_CLUSTER}/shelley/"
+
+  if [ ! -e "${STATE_CLUSTER}/shelley/genesis.dijkstra.json" ] \
+    && [ -e "${STATE_CLUSTER}/shelley/genesis.dijkstra.spec.json" ]; then
+    cp "${STATE_CLUSTER}/shelley/genesis.dijkstra.spec.json" \
+      "${STATE_CLUSTER}/shelley/genesis.dijkstra.json"
+  fi
+
+  mv "${STATE_CLUSTER}/create_staked/utxo-keys/utxo1.skey" "${STATE_CLUSTER}/shelley/genesis-utxo.skey"
+  mv "${STATE_CLUSTER}/create_staked/utxo-keys/utxo1.vkey" "${STATE_CLUSTER}/shelley/genesis-utxo.vkey"
+  cardano_cli_log conway address build --payment-verification-key-file \
+    "${STATE_CLUSTER}/shelley/genesis-utxo.vkey" \
+    --out-file "${STATE_CLUSTER}/shelley/genesis-utxo.addr" \
+    --testnet-magic "$NETWORK_MAGIC"
+
+  mv "${STATE_CLUSTER}/create_staked/stake-delegator-keys" "${STATE_CLUSTER}/shelley/stake-delegator-keys"
+}
+
+get_genesis_data() {
+  KEY_DEPOSIT="$(jq '.protocolParams.keyDeposit' \
+    < "${STATE_CLUSTER}/shelley/genesis.json")"
+  readonly KEY_DEPOSIT
+  DREP_DEPOSIT="$(jq '.dRepDeposit' \
+    < "${STATE_CLUSTER}/shelley/genesis.conway.json")"
+  readonly DREP_DEPOSIT
+
+  BYRON_GENESIS_HASH="$(cardano_cli_log byron genesis print-genesis-hash --genesis-json \
+    "${STATE_CLUSTER}/byron/genesis.json")"
+  readonly BYRON_GENESIS_HASH
+  SHELLEY_GENESIS_HASH="$(cardano_cli_log latest genesis hash --genesis \
+    "${STATE_CLUSTER}/shelley/genesis.json")"
+  readonly SHELLEY_GENESIS_HASH
+  ALONZO_GENESIS_HASH="$(cardano_cli_log latest genesis hash --genesis \
+    "${STATE_CLUSTER}/shelley/genesis.alonzo.json")"
+  readonly ALONZO_GENESIS_HASH
+  CONWAY_GENESIS_HASH="$(cardano_cli_log latest genesis hash --genesis \
+    "${STATE_CLUSTER}/shelley/genesis.conway.json")"
+  readonly CONWAY_GENESIS_HASH
+  DIJKSTRA_GENESIS_HASH=""
+  if [ "$PROTOCOL_VERSION" -ge 11 ]; then
+    DIJKSTRA_GENESIS_HASH="$(cardano_cli_log latest genesis hash --genesis \
+      "${STATE_CLUSTER}/shelley/genesis.dijkstra.json")"
+  fi
+  readonly DIJKSTRA_GENESIS_HASH
+}
+
+edit_node_configs() {
+  local live_tables_base="${STATE_CLUSTER_NAME}/lmdb"
+  local conf fname node_name pool_num
+
+  for conf in "$SCRIPT_DIR"/config-*.json; do
+    [ -e "$conf" ] || { echo "No config files found in ${SCRIPT_DIR}, line $LINENO in ${BASH_SOURCE[0]}" >&2; exit 1; }
+    fname="${conf##*/}"
+    node_name="${fname##config-}"
+    node_name="${node_name%.json}"
+
+    jq \
+      --arg byron_hash "$BYRON_GENESIS_HASH" \
+      --arg shelley_hash "$SHELLEY_GENESIS_HASH" \
+      --arg alonzo_hash "$ALONZO_GENESIS_HASH" \
+      --arg conway_hash "$CONWAY_GENESIS_HASH" \
+      --arg dijkstra_hash "$DIJKSTRA_GENESIS_HASH" \
+      --argjson prot_ver "$PROTOCOL_VERSION" \
+      --arg backend "$UTXO_BACKEND" \
+      --arg live_tables_path "${live_tables_base}-${node_name}" \
+      '.ByronGenesisHash = $byron_hash
+      | .ShelleyGenesisHash = $shelley_hash
+      | .AlonzoGenesisHash = $alonzo_hash
+      | .ConwayGenesisHash = $conway_hash
+      | if $dijkstra_hash != "" then
+          (.DijkstraGenesisFile = "shelley/genesis.dijkstra.json"
+            | .DijkstraGenesisHash = $dijkstra_hash
+            | .ExperimentalHardForksEnabled = true)
+        else
+          .
+        end
+      | if $prot_ver >= 12 then
+          .TestDijkstraHardForkAtEpoch = 0
+        else
+          .
+        end
+      | ."LastKnownBlockVersion-Major" = $prot_ver
+      | if $backend == "mem" then
+          (.LedgerDB.Backend = "V2InMemory"
+           | .LedgerDB.NumOfDiskSnapshots = 2
+           | .LedgerDB.QueryBatchSize = 100000
+           | .LedgerDB.SnapshotInterval = 216)
+        elif $backend == "disk" then
+          (.LedgerDB.Backend = "V1LMDB"
+           | .LedgerDB.LiveTablesPath = $live_tables_path)
+        elif has("LedgerDB") then
+          .LedgerDB |= del(.Backend)
+        else
+          .
+        end
+      | if (.LedgerDB? // {}) == {} then del(.LedgerDB) else . end
+      ' "$conf" > "${STATE_CLUSTER}/${fname}"
+
+    if [ -z "${ENABLE_LEGACY:-}" ]; then
+
+      if [ -n "${MIXED_P2P:-}" ]; then
+        if [ "$fname" = "config-bft1.json" ]; then
+          cp -f "$SCRIPT_DIR"/topology-bft1.json "$STATE_CLUSTER"
+          continue
+        fi
+
+        pool_num="${fname##*-pool}"
+        pool_num="${pool_num%.json}"
+        if [ "$((pool_num % 2))" != 0 ]; then
+          cp -f "${SCRIPT_DIR}/topology-pool${pool_num}.json" "$STATE_CLUSTER"
+          continue
+        fi
+      fi
+
+      jq \
+        '.EnableP2P = true
+        | .MaxConcurrencyBulkSync = 2
+        | .MaxConcurrencyDeadline = 4
+        | .TargetNumberOfRootPeers = 100
+        | .TargetNumberOfKnownPeers = 100
+        | .TargetNumberOfEstablishedPeers = 50
+        | .TargetNumberOfActivePeers = 20
+        | .TraceBlockFetchClient = true
+        | .TraceChainSyncClient = true' \
+        "${STATE_CLUSTER}/${fname}" > "${STATE_CLUSTER}/${fname}_jq"
+      cat "${STATE_CLUSTER}/${fname}_jq" > "${STATE_CLUSTER}/${fname}"
+      rm -f "${STATE_CLUSTER}/${fname}_jq"
+    fi
+  done
+}
+
+create_bft_nodes_files() {
+  local i bft_port
+
+  for i in $(seq 1 "$NUM_BFT_NODES"); do
+    mkdir -p "${STATE_CLUSTER}/nodes/node-bft$i"
+    bft_port="$((NODE_PORT_BASE + (i - 1) * PORTS_PER_NODE ))"
+    echo "$bft_port" > "${STATE_CLUSTER}/nodes/node-bft${i}/port"
+  done
+}
+
+_create_pool_node_keys() {
+  local pool_ix="${1:?}"
+
+  mkdir -p "${STATE_CLUSTER}/nodes/node-pool$pool_ix"
+  mv "${STATE_CLUSTER}/create_staked/pools/cold${pool_ix}.skey" "${STATE_CLUSTER}/nodes/node-pool${pool_ix}/cold.skey"
+  mv "${STATE_CLUSTER}/create_staked/pools/cold${pool_ix}.vkey" "${STATE_CLUSTER}/nodes/node-pool${pool_ix}/cold.vkey"
+
+  mv "${STATE_CLUSTER}/create_staked/pools/kes${pool_ix}.skey" "${STATE_CLUSTER}/nodes/node-pool${pool_ix}/kes.skey"
+  mv "${STATE_CLUSTER}/create_staked/pools/kes${pool_ix}.vkey" "${STATE_CLUSTER}/nodes/node-pool${pool_ix}/kes.vkey"
+
+  mv "${STATE_CLUSTER}/create_staked/pools/opcert${pool_ix}.cert" "${STATE_CLUSTER}/nodes/node-pool${pool_ix}/op.cert"
+  mv "${STATE_CLUSTER}/create_staked/pools/opcert${pool_ix}.counter" "${STATE_CLUSTER}/nodes/node-pool${pool_ix}/cold.counter"
+
+  mv "${STATE_CLUSTER}/create_staked/pools/staking-reward${pool_ix}.skey" "${STATE_CLUSTER}/nodes/node-pool${pool_ix}/reward.skey"
+  mv "${STATE_CLUSTER}/create_staked/pools/staking-reward${pool_ix}.vkey" "${STATE_CLUSTER}/nodes/node-pool${pool_ix}/reward.vkey"
+
+  mv "${STATE_CLUSTER}/create_staked/pools/vrf${pool_ix}.skey" "${STATE_CLUSTER}/nodes/node-pool${pool_ix}/vrf.skey"
+  mv "${STATE_CLUSTER}/create_staked/pools/vrf${pool_ix}.vkey" "${STATE_CLUSTER}/nodes/node-pool${pool_ix}/vrf.vkey"
+
+  echo "Generating Pool $pool_ix Secrets"
+
+  cardano_cli_log conway address key-gen \
+    --signing-key-file "${STATE_CLUSTER}/nodes/node-pool${pool_ix}/owner-utxo.skey" \
+    --verification-key-file "${STATE_CLUSTER}/nodes/node-pool${pool_ix}/owner-utxo.vkey"
+  cardano_cli_log conway stake-address key-gen \
+    --signing-key-file "${STATE_CLUSTER}/nodes/node-pool${pool_ix}/owner-stake.skey" \
+    --verification-key-file "${STATE_CLUSTER}/nodes/node-pool${pool_ix}/owner-stake.vkey"
+
+  cardano_cli_log conway address build \
+    --payment-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${pool_ix}/owner-utxo.vkey" \
+    --stake-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${pool_ix}/owner-stake.vkey" \
+    --testnet-magic "$NETWORK_MAGIC" \
+    --out-file "${STATE_CLUSTER}/nodes/node-pool${pool_ix}/owner.addr"
+
+  cardano_cli_log conway stake-address build \
+    --stake-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${pool_ix}/owner-stake.vkey" \
+    --testnet-magic "$NETWORK_MAGIC" \
+    --out-file "${STATE_CLUSTER}/nodes/node-pool${pool_ix}/owner-stake.addr"
+
+  cardano_cli_log conway stake-address registration-certificate \
+    --stake-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${pool_ix}/owner-stake.vkey" \
+    --key-reg-deposit-amt "$KEY_DEPOSIT" \
+    --out-file "${STATE_CLUSTER}/nodes/node-pool${pool_ix}/stake.reg.cert"
+
+  cardano_cli_log conway stake-address registration-and-vote-delegation-certificate \
+    --stake-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${pool_ix}/reward.vkey" \
+    --always-abstain \
+    --key-reg-deposit-amt "$KEY_DEPOSIT" \
+    --out-file "${STATE_CLUSTER}/nodes/node-pool${pool_ix}/stake-reward.reg.cert"
+
+  cardano_cli_log conway stake-address stake-and-vote-delegation-certificate \
+    --stake-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${pool_ix}/owner-stake.vkey" \
+    --cold-verification-key-file  "${STATE_CLUSTER}/nodes/node-pool${pool_ix}/cold.vkey" \
+    --always-abstain \
+    --out-file "${STATE_CLUSTER}/nodes/node-pool${pool_ix}/owner-stake.deleg.cert"
+}
+
+_create_pool_registration() {
+  local pool_ix="${1:?}"
+  local metadata_url="http://localhost:${WEBSERVER_PORT}/pool${pool_ix}.json"
+  local metadata_hash pool_port
+
+  metadata_hash="$(cardano_cli_log conway stake-pool metadata-hash --pool-metadata-file \
+    "${STATE_CLUSTER}/webserver/pool${pool_ix}.json")"
+  pool_port="$((NODE_PORT_BASE + (NUM_BFT_NODES + pool_ix - 1) * PORTS_PER_NODE))"
+  echo "$pool_port" > "${STATE_CLUSTER}/nodes/node-pool${pool_ix}/port"
+  echo "$POOL_PLEDGE" > "${STATE_CLUSTER}/nodes/node-pool${pool_ix}/pledge"
+
+  cardano_cli_log conway stake-pool registration-certificate \
+    --cold-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${pool_ix}/cold.vkey" \
+    --vrf-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${pool_ix}/vrf.vkey" \
+    --pool-pledge "$POOL_PLEDGE" \
+    --pool-margin 0.35 \
+    --pool-cost "$POOL_COST" \
+    --pool-reward-account-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${pool_ix}/reward.vkey" \
+    --pool-owner-stake-verification-key-file "${STATE_CLUSTER}/nodes/node-pool${pool_ix}/owner-stake.vkey" \
+    --metadata-url "$metadata_url" \
+    --metadata-hash "$metadata_hash" \
+    --pool-relay-port "$pool_port" \
+    --pool-relay-ipv4 "127.0.0.1" \
+    --testnet-magic "$NETWORK_MAGIC" \
+    --out-file "${STATE_CLUSTER}/nodes/node-pool${pool_ix}/register.cert"
+}
+
+create_pools_files() {
+  local i
+  for i in $(seq 1 "$NUM_POOLS"); do
+    _create_pool_node_keys "$i"
+    create_pool_metadata "$i"
+    _create_pool_registration "$i"
+  done
+}
+
+register_entities_in_conway() {
+  echo "Sleeping for initial Tx submission delay of $TX_SUBMISSION_DELAY seconds"
+  sleep "$TX_SUBMISSION_DELAY"
+
+  echo "Re-registering pools, creating CC members and DReps"
+
+  local genesis_signing=()
+  local skey
+  for skey in "$STATE_CLUSTER"/shelley/genesis-keys/genesis?.skey; do
+    [ -e "$skey" ] || { echo "No genesis signing keys found in ${STATE_CLUSTER}/shelley/genesis-keys, line $LINENO in ${BASH_SOURCE[0]}" >&2; exit 1; }
+    genesis_signing+=("--signing-key-file" "$skey")
+  done
+
+  local delegate_signing=()
+  for skey in "$STATE_CLUSTER"/shelley/delegate-keys/delegate?.skey; do
+    [ -e "$skey" ] || { echo "No delegate signing keys found in ${STATE_CLUSTER}/shelley/delegate-keys, line $LINENO in ${BASH_SOURCE[0]}" >&2; exit 1; }
+    delegate_signing+=("--signing-key-file" "$skey")
+  done
+
+  local deposit_for_pools="$((KEY_DEPOSIT * 2))"
+  local needed_amount_pools="$(( (POOL_PLEDGE + deposit_for_pools) * NUM_POOLS ))"
+  local deposit_for_dreps="$((KEY_DEPOSIT + DREP_DEPOSIT))"
+  local needed_amount_dreps="$(( (DREP_DELEGATED + deposit_for_dreps) * NUM_DREPS ))"
+  local needed_amount="$((needed_amount_pools + needed_amount_dreps))"
+
+  local fee_buffer=100000000
+  local txin_addr
+  txin_addr="$(<"$STATE_CLUSTER"/shelley/genesis-utxo.addr)"
+  local stop_txin_amount="$((needed_amount + fee_buffer))"
+
+  get_txins "$txin_addr" "$stop_txin_amount"
+
+  local pool_args=()
+  local pool_signing=()
+  local i
+  for i in $(seq 1 "$NUM_POOLS"); do
+    pool_args+=( \
+      "--tx-out" "$(<"${STATE_CLUSTER}/nodes/node-pool${i}/owner.addr")+${POOL_PLEDGE}" \
+      "--certificate-file" "${STATE_CLUSTER}/nodes/node-pool${i}/stake.reg.cert" \
+      "--certificate-file" "${STATE_CLUSTER}/nodes/node-pool${i}/stake-reward.reg.cert" \
+      "--certificate-file" "${STATE_CLUSTER}/nodes/node-pool${i}/register.cert" \
+      "--certificate-file" "${STATE_CLUSTER}/nodes/node-pool${i}/owner-stake.deleg.cert" \
+    )
+    pool_signing+=( \
+      "--signing-key-file" "${STATE_CLUSTER}/nodes/node-pool${i}/owner-stake.skey" \
+      "--signing-key-file" "${STATE_CLUSTER}/nodes/node-pool${i}/reward.skey" \
+      "--signing-key-file" "${STATE_CLUSTER}/nodes/node-pool${i}/cold.skey" \
+    )
+  done
+
+  local cc_args=()
+  local f
+  for f in "$STATE_CLUSTER"/governance_data/cc_member*_committee_hot_auth.cert; do
+    [ -e "$f" ] || continue
+    cc_args+=( "--certificate-file" "$f" )
+  done
+
+  local cc_signing=()
+  for f in "$STATE_CLUSTER"/governance_data/cc_member*_committee_cold.skey; do
+    [ -e "$f" ] || continue
+    cc_signing+=( "--signing-key-file" "$f" )
+  done
+
+  local dreps_args=()
+  local dreps_signing=()
+  for i in $(seq 1 "$NUM_DREPS"); do
+    dreps_args+=( \
+      "--tx-out" "$(<"${STATE_CLUSTER}/governance_data/vote_stake_addr${i}.addr")+${DREP_DELEGATED}" \
+      "--certificate-file" "${STATE_CLUSTER}/governance_data/default_drep_${i}_drep_reg.cert" \
+      "--certificate-file" "${STATE_CLUSTER}/governance_data/vote_stake_addr${i}_stake.reg.cert" \
+      "--certificate-file" "${STATE_CLUSTER}/governance_data/vote_stake_addr${i}_stake.vote_deleg.cert" \
+    )
+    dreps_signing+=( \
+      "--signing-key-file" "${STATE_CLUSTER}/governance_data/default_drep_${i}_drep.skey" \
+      "--signing-key-file" "${STATE_CLUSTER}/governance_data/vote_stake_addr${i}.skey" \
+      "--signing-key-file" "${STATE_CLUSTER}/governance_data/vote_stake_addr${i}_stake.skey" \
+    )
+  done
+
+  local witness_count="$((${#pool_signing[@]} + ${#genesis_signing[@]} + ${#delegate_signing[@]} + ${#cc_signing[@]} + ${#dreps_signing[@]} + 1))"
+
+  cardano_cli_log conway transaction build \
+    "${TXINS[@]}" \
+    --change-address   "$txin_addr" \
+    "${pool_args[@]}" \
+    "${cc_args[@]}" \
+    "${dreps_args[@]}" \
+    --witness-override "$witness_count" \
+    --testnet-magic    "$NETWORK_MAGIC" \
+    --out-file         "${STATE_CLUSTER}/shelley/transfer-register-delegate-tx.txbody"
+
+  cardano_cli_log conway transaction sign \
+    "${pool_signing[@]}" \
+    "${genesis_signing[@]}" \
+    "${delegate_signing[@]}" \
+    "${cc_signing[@]}" \
+    "${dreps_signing[@]}" \
+    --signing-key-file "${STATE_CLUSTER}/shelley/genesis-utxo.skey" \
+    --testnet-magic    "$NETWORK_MAGIC" \
+    --tx-body-file     "${STATE_CLUSTER}/shelley/transfer-register-delegate-tx.txbody" \
+    --out-file         "${STATE_CLUSTER}/shelley/transfer-register-delegate-tx.tx"
+
+  cardano_cli_log conway transaction submit \
+    --tx-file "${STATE_CLUSTER}/shelley/transfer-register-delegate-tx.tx" \
+    --testnet-magic "$NETWORK_MAGIC"
+
+  sleep "$SUBMIT_DELAY"
+  if ! check_spend_success "${TXINS[@]}"; then
+    echo "Failed to spend Tx inputs, line $LINENO in ${BASH_SOURCE[0]}" >&2
+    exit 1
+  fi
+
+  if [ -z "${NO_CC:-}" ]; then
+    local cc_size
+    cc_size="$(cardano-cli conway query committee-state --active --testnet-magic "$NETWORK_MAGIC" |
+      grep -c '"status": "Active"')"
+    [ "$cc_size" -ge "$NUM_CC" ] || \
+      { echo "The CC members were not registered, line $LINENO in ${BASH_SOURCE[0]}" >&2; exit 1; }
+  fi
+}
+
+main() {
+  initialize_globals
+  setup_state_cluster "${STATE_CLUSTER}/create_staked"
+  configure_supervisor
+  create_genesis
+  create_committee_keys_in_genesis
+  get_genesis_data
+  edit_node_configs
+  create_bft_nodes_files
+  create_pools_files
+  create_dreps_files
+  create_cluster_scripts
+  start_cluster_nodes
+  start_optional_services
+  register_entities_in_conway
+
+  : > "$START_CLUSTER_STATUS"
+  echo "Cluster started 🚀"
+}
+
+main "$@"
