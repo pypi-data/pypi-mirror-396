@@ -1,0 +1,129 @@
+.table {
+    margin-bottom: 0;
+}
+
+$table-colors: (
+    "primary" $evap-dark-blue $white,
+    "secondary" $medium-gray $black,
+    "success" $evap-green $black,
+    "info" $evap-light-blue $black,
+    "warning" $evap-yellow $black,
+    "danger" $evap-red $white $black,
+    "light" $light-gray $black,
+    "dark" $darker-gray $white
+);
+@each $name, $bg-color, $color in $table-colors {
+    .table-#{$name},
+    .table-#{$name} > th,
+    .table-#{$name} > td {
+        background-color: $bg-color !important;
+        color: $color;
+    }
+}
+
+.table-total-stats {
+    font-weight: bold;
+    background-color: $lighter-gray;
+}
+
+.table-vertically-aligned td {
+    vertical-align: middle;
+}
+
+.table-narrow td {
+    padding-top: 0.4rem;
+    padding-bottom: 0.4rem;
+}
+
+.table-seamless-links {
+  // Disable outline on cell after Ctrl-Click.
+  -moz-user-select: none;
+  td {
+      overflow: hidden;
+  }
+}
+
+// Hoverable rows
+.hover-row {
+    transition: background-color 0.15s ease-in-out;
+
+    &:hover {
+        background-color: rgba(0, 0, 0, 0.075);
+        cursor: pointer;
+
+        td {
+            background-color: inherit;  // workaround for bootstrap setting color in ".table > :not(caption) > * > *"
+        }
+
+        &.hover-row-info {
+            background-color: $evap-light-blue;
+
+            .btn-primary {
+                box-shadow: 0 0 0 3px rgba($evap-dark-blue, .5);
+            }
+        }
+
+        &.results-row, &.results-grid-row {
+            .distribution-bar, .badge-grade {
+                box-shadow: 0 0 0 3px rgba($dark-gray, .5);
+            }
+        }
+    }
+}
+
+.preview-row .evaluation-name {
+    color: $evap-dark-yellow;
+}
+
+.results-row {
+    height: 2.5rem;
+}
+
+tr.heading-row td {
+    border-bottom: none;
+}
+tr.heading-row:not(:first-child) td {
+    border-top: 1px solid $light-gray;
+}
+
+tr.heading-row.course-row {
+    td {
+        padding-bottom: 0.2rem;
+    }
+}
+
+tr.evaluation-row:not(.heading-row) {
+    height: 2.5rem;
+
+    td {
+        padding-top: 0.18rem;
+        padding-bottom: 0.18rem;
+        border: none;
+        font-size: 0.9rem;
+    }
+
+    td:first-of-type {
+        padding-left: 2rem;
+    }
+
+    .evaluation-name {
+        font-style: italic;
+        color: $dark-gray;
+    }
+}
+
+.current-row-follows + .results-grid-row {
+    border-radius: 0.2rem;
+    box-shadow: inset 0 0 6px $evap-dark-blue;
+}
+
+.heading-row {
+    .distribution-bar,
+    .badge-grade {
+        border: 1px solid $dark-gray;
+    }
+}
+
+.table-headerless tr:last-child td {
+    border-bottom-width: 0;
+}

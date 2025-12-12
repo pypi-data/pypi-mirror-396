@@ -1,0 +1,76 @@
+{% extends 'staff_base.html' %}
+
+{% load static %}
+
+{% block breadcrumb %}
+    {{ block.super }}
+    <li class="breadcrumb-item">{% translate 'FAQ Sections' %}</li>
+{% endblock %}
+
+{% block content %}
+    {{ block.super }}
+
+    <form method="POST" class="form-horizontal">
+        {% csrf_token %}
+        {{ formset.management_form }}
+
+        <div class="card mb-3">
+            <div class="card-body table-responsive">
+                <table id="section_table" class="table table-vertically-aligned">
+                    <thead>
+                        <tr>
+                            <th class="movable"></th>
+                            <th class="width-percent-45">{% translate 'Section title (German)' %}</th>
+                            <th class="width-percent-45">{% translate 'Section title (English)' %}</th>
+                            <th class="width-percent-10 text-end">{% translate 'Actions' %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for form in formset %}
+                        <tr class="sortable">
+                            <td class="movable">
+                                <span class="movable-icon fas fa-up-down"></span>
+                            </td>
+                            <td>
+                                {% for hidden in form.hidden_fields %}
+                                    {{ hidden }}
+                                {% endfor %}
+                                {% include 'bootstrap_form_field_widget.html' with field=form.title_de %}
+                            </td>
+                            <td>{% include 'bootstrap_form_field_widget.html' with field=form.title_en %}</td>
+                            <td class="text-end">
+                                {% if form.instance.id %}
+                                    <a href="{% url 'staff:faq_section' form.instance.id %}" class="btn btn-secondary btn-sm"><span class="fas fa-pencil"></span></a>
+                                {% endif %}
+                                {% include 'bootstrap_form_field_widget.html' with field=form.DELETE class="d-none" %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card card-submit-area text-center mb-3">
+            <div class="card-body">
+                <button type="submit" class="btn btn-primary">{% translate 'Save FAQ sections' %}</button>
+            </div>
+        </div>
+    </form>
+{% endblock %}
+
+{% block additional_javascript %}
+    <script type="module">
+        import { makeFormSortable } from "{% static 'js/sortable-form.js' %}";
+        const rowChanged = function(row) {
+            const nameDe = row.querySelector('input[id$=-title_de]')?.value;
+            const nameEn = row.querySelector('input[id$=-title_en]')?.value;
+            return nameDe || nameEn;
+        };
+        const rowAdded = function(row) {
+            row.querySelectorAll('a.btn-secondary').forEach(el => {
+                el.remove();
+            });
+        }
+        makeFormSortable("section_table", "form", rowChanged, rowAdded, true, false);
+    </script>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends 'staff_semester_base.html' %}
+
+{% load static %}
+
+{% block breadcrumb %}
+    {{ block.super }}
+    <li class="breadcrumb-item">{% translate 'Import semester data' %}</li>
+{% endblock %}
+
+{% block content %}
+    {{ block.super }}
+    <h3>{% translate 'Import semester data' %}</h3>
+
+    {% include 'staff_message_rendering_template.html' with importer_log=importer_log %}
+
+    <form id="semester-import-form" method="POST" enctype="multipart/form-data" class="form-horizontal">
+        <div class="card mb-3">
+            <div class="card-body">
+                <p>
+                    {% translate 'Upload Excel file' %}
+                    (<a href="{% url 'staff:download_sample_file' 'sample.xlsx' %}">{% translate 'Download sample file' %}</a>,
+                    <button type="button" class="btn btn-link" id="copy-headers-button">{% translate 'Copy headers to clipboard' %}</button>).
+                    {% translate 'This will create all containing participants, contributors and courses and connect them. It will also set the entered values as default for all evaluations.' %}
+                </p>
+                {% csrf_token %}
+                {% include 'bootstrap_form.html' with form=excel_form %}
+            </div>
+        </div>
+
+        <div class="card card-submit-area{% if test_passed %} card-submit-area-2{% endif %} text-center mb-3">
+            <div class="card-body">
+                {% if not test_passed %}
+                    <button name="operation" value="test" type="submit" class="btn btn-light form-submit-btn">{% translate 'Upload and test' %}</button>
+                {% else %}
+                    <button name="operation" value="test" type="submit" class="btn btn-light form-submit-btn">{% translate 'Upload and test' %}</button>
+                    <confirmation-modal type="submit" name="operation" value="import">
+                        <span slot="title">{% translate 'Import semester data' %}</span>
+                        <span slot="action-text">{% translate 'Import semester data' %}</span>
+                        <span slot="question">{% translate 'Do you really want to import semester data from the Excel file?' %}</span>
+
+                        <button slot="show-button" type="button" class="btn btn-primary form-submit-btn">{% translate 'Import previously uploaded file' %}</button>
+                    </confirmation-modal>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+{% endblock %}
+
+{% block additional_javascript %}
+    {% include 'bootstrap_datetimepicker.html' %}
+    <script type="module">
+        import { copyHeaders } from "{% static 'js/copy-to-clipboard.js' %}";
+
+        document.getElementById("copy-headers-button").addEventListener("click", async () => await copyHeaders([
+            'Program', 'Participant last name', 'Participant first name', 'Participant email address', 'Course kind',
+            'Course is graded', 'Course name (de)', 'Course name (en)', 'Responsible title', 'Responsible last name',
+            'Responsible first name', 'Responsible email address'])
+        );
+    </script>
+{% endblock %}

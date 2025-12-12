@@ -1,0 +1,77 @@
+{% extends 'staff_base.html' %}
+
+{% load static %}
+
+{% block breadcrumb %}
+    {{ block.super }}
+    <li class="breadcrumb-item"><a href="{% url 'staff:user_index' %}">{% translate 'Users' %}</a></li>
+    <li class="breadcrumb-item">{% translate 'User list' %}</li>
+{% endblock %}
+
+{% block content %}
+    {{ block.super }}
+    <div class="row mb-3 align-items-center">
+        <div class="col-auto">
+            <div class="btn-switch btn-switch-light">
+                <div class="btn-switch-label">{% translate 'Inactive users' %}</div>
+                <div class="btn-switch btn-group">
+                    <a href="{% url 'staff:user_list' %}?filter_users=false" role="button" class="btn btn-sm btn-light{% if not filter_users %} active{% endif %}">
+                        {% translate 'Show' %}
+                    </a>
+                    <a href="{% url 'staff:user_list' %}?filter_users=true" role="button" class="btn btn-sm btn-light{% if filter_users %} active{% endif %}">
+                        {% translate 'Hide' %}
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-3 ms-auto">
+            <div class="input-group">
+                <input type="search" name="search" class="form-control" placeholder="{% translate 'Search...' %}" />
+                <div class="input-group-append">
+                    <button class="btn btn-light text-secondary" type="button" data-reset="search" data-bs-toggle="tooltip" data-bs-placement="top" title="{% translate 'Clear search filter' %}">
+                        <span class="fas fa-backspace"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body table-responsive">
+            <table class="table table-vertically-aligned table-seamless-links user-table">
+                <thead>
+                    <tr>
+                        <th class="width-percent-25">{% translate 'Name' %}</th>
+                        <th class="width-percent-35">{% translate 'Email' %}</th>
+                        <th class="width-percent-30">{% translate 'Information' %}</th>
+                        <th class="width-percent-10"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                        <tr id="user-row-{{ user.id }}" class="hover-row hover-row-info" data-url="{% url 'staff:user_edit' user.id %}">
+                            <td>{{ user.full_name }}</td>
+                            <td>{% if user.email %}{{ user.email }}{% endif %}</td>
+                            <td>{% include 'staff_user_badges.html' with user=user %}</td>
+                            <td class="text-end">
+                                <a href="{% url 'staff:user_edit' user.id %}" class="btn btn-primary btn-sm btn-row-hover"><span class="fas fa-pencil-alt"></span></a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}
+
+{% block additional_javascript %}
+    <script type="module">
+        import {TableGrid} from "{% static 'js/datagrid.js' %}";
+        new TableGrid({
+            storageKey: "user-index-data-grid",
+            table: document.querySelector(".user-table"),
+            searchInput: document.querySelector("input[name=search]"),
+            resetSearch: document.querySelector("[data-reset=search]"),
+        }).init();
+    </script>
+{% endblock %}

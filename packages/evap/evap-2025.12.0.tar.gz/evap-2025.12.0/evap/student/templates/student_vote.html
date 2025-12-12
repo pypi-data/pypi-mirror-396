@@ -1,0 +1,453 @@
+{% extends for_rendering_in_modal|yesno:'base_empty.html,base.html' %}
+
+{% load static %}
+{% load evaluation_filters %}
+{% load student_filters %}
+
+{% block title %}{{ evaluation.full_name }} - {% translate 'Evaluation' %} - {{ block.super }}{% endblock %}
+
+{% block breadcrumb_bar %}
+    <div class="breadcrumb-bar">
+        <ul class="breadcrumb">
+            <li class="breadcrumb-item">{{ evaluation.course.semester.name }}</li>
+            <li class="breadcrumb-item">{{ evaluation.full_name }}</li>
+        </ul>
+    </div>
+{% endblock %}
+
+{% block content %}
+    {{ block.super }}
+    {% if errors_exist %}
+        <div class="callout callout-danger" role="alert">
+            <div class="d-flex align-items-center justify-content-between">
+                <div class="p-2">
+                    {% if contributor_errors_exist %}
+                        {% blocktranslate %}Please make sure to vote for all rating questions. You can also click on "I can't give feedback" to skip the questions about a single person.{% endblocktranslate %}
+                    {% else %}
+                        {% blocktranslate %}Please make sure to vote for all rating questions.{% endblocktranslate %}
+                    {% endif %}
+                </div>
+                <button id="btn-jump-unanswered-question" type="button" class="btn btn-light float-end" data-bs-toggle="tooltip" data-bs-placement="left" title="{% translate 'Jump to the first unanswered question' %}">
+                    <i class="fas fa-arrow-down"></i>
+                </button>
+            </div>
+        </div>
+    {% endif %}
+    {% if evaluation.is_midterm_evaluation %}
+        <div class="callout callout-warning">{% translate 'The results of this evaluation will be published while the course is still running. This means that the contributors will receive this feedback before the final grades for the course have been published.' %}</div>
+    {% endif %}
+    {% if evaluation.ends_soon %}
+        <div class="callout callout-danger">
+            {% translate 'The evaluation period will end in' %}
+            {{ evaluation.vote_end_datetime|timeuntil }} ({{ evaluation.vote_end_datetime }}).
+            {% translate 'Your evaluation will only be accepted if you send the completed questionnaire before this deadline ends.' %}
+        </div>
+    {% endif %}
+    {% if preview and not for_rendering_in_modal %}
+        <div class="callout callout-info">
+            <small>
+                <b>{% translate 'Questionnaire Preview' %}</b><br />
+                {% blocktranslate %}This is a preview of the questionnaire for the evaluation. Participants will see the questions below.{% endblocktranslate %}
+            </small>
+        </div>
+    {% endif %}
+    <h3 class="mb-3 d-flex justify-content-between flex-column-mobile">
+        {{ evaluation.full_name }} ({{ evaluation.course.semester.name }})
+
+        <div class="float-lg-end mt-3 mt-lg-0 d-flex justify-content-end height-fit-content">
+            <div class="btn-switch btn-switch-light btn-switch-evaluation-language">
+                <div class="btn-switch-label my-auto">
+                    {% translate "Questionnaire language" %}
+                    <span class="fas fa-circle-info" data-bs-toggle="tooltip" title="{% translate 'This only changes the language of the questionnaire and not the whole page. Changing this will not delete your existing answers.' %}"></span>
+                </div>
+                
+                <div class="btn-switch btn-group">
+                    {% for language_code, language_name in languages %}
+                        <a data-bs-toggle="tooltip"
+                           data-bs-placement="bottom"
+                           data-set-spinner-icon="span-set-evaluation-language-{{ language_code }}"
+                           title="{{ language_name }}"
+                           role="button"
+                           href="{{ request.path }}?language={{ language_code }}"
+                           class="btn btn-sm btn-light{% if evaluation_language == language_code %} active{% endif %}">
+                            <span id="span-set-evaluation-language-{{ language_code }}">{{ language_code|upper }}</span>
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </h3>
+    <form id="student-vote-form" method="POST" class="form-horizontal">
+        {% csrf_token %}
+
+        {% if small_evaluation_size_warning and not preview %}
+            <div class="callout callout-warning">
+                <div class="callout-header">
+                    <span class="fas fa-triangle-exclamation"></span> {% translate 'Small number of participants' %}
+                </div>
+                <div class="callout-content tab-row">
+                    <p>
+                        {% blocktranslate trimmed %}
+                            Only a small number of people can take part in this evaluation.
+                            You should be aware that contributors might be able to guess who voted for a specific answer and who wrote a text answer.
+                            Results will only be published if {{ voter_count_needed_for_publishing_rating_results }} or more people participated in the evaluation.
+                        {% endblocktranslate %}
+                    </p>
+                    {% if evaluation.num_voters == 0 %}
+                        <p>
+                            {% blocktranslate %}You're the first person taking part in this evaluation. If you want your text answers to be shown to the contributors even if you remain the only person taking part, please check the box below. Otherwise your text answers will be deleted if no other person takes part in the evaluation.{% endblocktranslate %}
+                        </p>
+                        <div class="form-check mt-3">
+                            <input class="form-check-input tab-selectable" id="text_results_publish_confirmation_top" type="checkbox"
+                                name="text_results_publish_confirmation_top" />
+                            <label class="form-check-label" for="text_results_publish_confirmation_top">
+                                {% translate 'Show my text answers to the contributors even if I remain the only person who takes part in this evaluation.' %}
+                            </label>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+
+        {% if evaluation_form_group_dropout %}
+            <div class="card card-outline-warning mb-3">
+                <div class="card-header">
+                    <span class="fas fa-triangle-exclamation"></span> {% translate 'Dropout questionnaire' %}
+                </div>
+                <div class="card-body">
+                    <p>
+                        {% blocktranslate trimmed %}
+                            You are marking this course as dropped. Your feedback on questions you can answer is still
+                            very welcome.
+                        {% endblocktranslate %}
+                    </p>
+                    {% include 'student_vote_questionnaire_group.html' with questionnaire_group=evaluation_form_group_dropout textanswers_visible_to=general_contribution_textanswers_visible_to preview=preview %}
+                </div>
+            </div>
+        {% endif %}
+
+        {% if not preview %}
+            <div class="callout callout-info">
+                {% blocktranslate trimmed %}Thank you for taking part in this evaluation. Please be polite and constructive in your feedback.{% endblocktranslate %}
+            </div>
+        {% endif %}
+
+        {% language evaluation_language %}
+            {% if evaluation_form_group_top %}
+                <div class="card card-outline-primary mb-3">
+                    <div class="card-header">
+                        {% translate 'General questions' %}
+                    </div>
+                    <div class="card-body">
+                        {% include 'student_vote_questionnaire_group.html' with questionnaire_group=evaluation_form_group_top textanswers_visible_to=general_contribution_textanswers_visible_to preview=preview %}
+                    </div>
+                </div>
+            {% endif %}
+            {% if contributor_form_groups %}
+                <div class="card card-outline-primary mb-3">
+                    <div class="card-header">
+                        {% translate 'Questions about the contributors' %}
+                    </div>
+                    <div class="card-body">
+                        {% if not preview %}
+                            <div class="callout callout-info">
+                                {% blocktranslate %}Please vote for all contributors you worked with. Click on "I can't give feedback" to skip a person.{% endblocktranslate %}
+                            </div>
+                        {% endif %}
+
+                        {% for contributor, label, form_group, contributor_has_errors, textanswers_visible_to in contributor_form_groups %}
+                            <div class="card collapsible{% if not forloop.last %} mb-3{% endif %}">
+                                <div class="card-header d-flex tab-row">
+                                    <div class="me-auto">
+                                        <button class="collapse-toggle{% if errors_exist and not contributor_has_errors %} collapsed tab-selectable{% endif %} bg-transparent" data-bs-toggle="collapse"
+                                            data-bs-target="#vote-area-{{ contributor.id }}" aria-expanded="false" aria-controls="vote-area-{{ contributor.id }}" tabindex="-1" type="button">
+                                            {{ contributor.full_name }}
+                                            {% if label %} &ndash; <span class="fst-italic">{{ label }}</span>{% endif %}
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="collapse{% if not errors_exist or contributor_has_errors %} show{% endif %}" id="vote-area-{{ contributor.id }}">
+                                    <div class="card-body">
+                                        {% include 'student_vote_questionnaire_group.html' with questionnaire_group=form_group preview=preview textanswers_visible_to=textanswers_visible_to contributor=contributor%}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+            {% if evaluation_form_group_bottom %}
+                <div class="card card-outline-primary mb-3">
+                    <div class="card-header">
+                        {% translate "General questions" %}
+                    </div>
+                    <div class="card-body">
+                        {% include "student_vote_questionnaire_group.html" with questionnaire_group=evaluation_form_group_bottom textanswers_visible_to=general_contribution_textanswers_visible_to preview=preview %}
+                    </div>
+                </div>
+            {% endif %}
+        {% endlanguage %}
+        {% if small_evaluation_size_warning and not preview and evaluation.num_voters == 0 %}
+            <div class="callout callout-warning mb-3" id="bottom_text_results_publish_confirmation_card">
+                <div class="callout-header">
+                    <span class="fas fa-triangle-exclamation"></span> {% translate 'Small number of participants' %}
+                </div>
+                <div class="callout-content tab-row">
+                    {% blocktranslate %}You're the first person taking part in this evaluation. If you want your text answers to be shown to the contributors even if you remain the only person taking part, please check the box below. Otherwise your text answers will be deleted if no other person takes part in the evaluation.{% endblocktranslate %}
+
+                    <div class="form-check mt-3">
+                        <input class="form-check-input tab-selectable" id="text_results_publish_confirmation_bottom" type="checkbox"
+                            name="text_results_publish_confirmation_bottom" />
+                        <label class="form-check-label" for="text_results_publish_confirmation_bottom">
+                            {% translate 'Show my text answers to the contributors even if I remain the only person who takes part in this evaluation.' %}
+                        </label>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+        {% if not for_rendering_in_modal %}
+            <div class="card card-submit-area{% if not preview %} card-submit-area-2{% endif %} text-center">
+                <div class="card-body tab-row">
+                    {% if preview %}
+                        <a class="btn btn-secondary" href="{{ request.META.HTTP_REFERER }}">{% translate 'Back' %}</a>
+                    {% else %}
+                        <div class="pb-3 text-secondary">
+                            <span id="last-saved"></span>
+                            <span class="fas fa-circle-info" data-bs-toggle="tooltip" title="{% translate 'The evaluation can be continued later using the same device and the same browser. But you have to submit it to send it to the server and make it count. After submitting, you cannot edit the evaluation anymore.' %}"></span>
+                        </div>
+                        <button id="vote-submit-btn" type="submit" class="btn btn-success tab-selectable">{% translate 'Submit questionnaire' %}</button>
+                        <p id="submit-error-warning" class="text-danger d-none">
+                            <span class="fas fa-triangle-exclamation"></span>
+                            {% blocktranslate %}The server can't be reached. Your answers have been stored in your browser and it's safe to leave the page. Please try again later to submit the questionnaire.{% endblocktranslate %}
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    </form>
+{% endblock %}
+
+{% block additional_javascript %}
+    {% if not preview %}
+        {{ text_answer_warnings|text_answer_warning_trigger_strings|json_script:'text-answer-warnings' }}
+
+        <script type="module">
+            import { AutoFormSaver } from "{% static 'js/auto-form-saver.js' %}";
+            import { CSRF_HEADERS } from "{% static 'js/csrf-utils.js' %}";
+            import { initTextAnswerWarnings } from "{% static 'js/text-answer-warnings.js' %}";
+            import { assert } from "{% static 'js/utils.js' %}";
+
+            const lastSavedStorageKey = "student-vote-last-saved-at-{{ evaluation.id }}-{{ request.user.id }}";
+            const textResultsPublishConfirmation = {
+                top: document.querySelector("#text_results_publish_confirmation_top"),
+                bottom: document.querySelector("#text_results_publish_confirmation_bottom"),
+                bottomCard: document.querySelector("#bottom_text_results_publish_confirmation_card"),
+            };
+
+            // Ensure that selected questionnaire language is saved and loaded
+            const languageStorageKey = "student-vote-language-{{ evaluation.id }}-{{ request.user.id }}";
+            const params = new URLSearchParams(document.location.search);
+            const currentlySelectedLanguage = "{{ evaluation_language|escapejs }}";
+            const savedLanguage = localStorage.getItem(languageStorageKey);
+
+            if (params.get("language")) {
+                localStorage.setItem(languageStorageKey, currentlySelectedLanguage);
+            } else if (savedLanguage && savedLanguage !== currentlySelectedLanguage) {
+                params.set("language", savedLanguage);
+                document.location.search = params.toString();
+            }
+
+            const formSaver = new AutoFormSaver(document.getElementById("student-vote-form"), {
+                customKeySuffix: "[user={{ request.user.id }}]", // don't load data for other users
+                onRestore: function () {
+                    // restore publish confirmation state
+                    if (textResultsPublishConfirmation.bottomCard) {
+                        updateTextResultsPublishConfirmation();
+                    }
+
+                    // show all non-empty additional text answer fields
+                    document.querySelectorAll(".row-question .collapse textarea").forEach(el => {
+                        if (el.value.length !== 0) {
+                            el.closest(".row").getElementsByClassName("btn-textanswer")[0].click();
+                        }
+                    });
+                },
+                onSave: function () {
+                    const timeNow = new Date();
+                    localStorage.setItem(lastSavedStorageKey, timeNow.toString());
+                },
+            });
+
+            function updateLastSavedLabel() {
+                const timeNow = new Date();
+                const lastSavedLabel = document.getElementById('last-saved');
+                if (localStorage.getItem(lastSavedStorageKey) !== null) {
+                    const lastSavedDate = new Date(localStorage.getItem(lastSavedStorageKey));
+                    const delta = Math.round((timeNow - lastSavedDate) / 1000);
+                    const languageCode = "{{ LANGUAGE_CODE }}";
+                    const relativeTimeFormat = new Intl.RelativeTimeFormat(languageCode);
+                    let timeStamp;
+                    if (delta < 3) {
+                        timeStamp = "{% translate 'just now' %}";
+                    } else if (delta < 10) {
+                        timeStamp = "{% translate 'less than 10 seconds ago' %}";
+                    } else if (delta < 30) {
+                        timeStamp = "{% translate 'less than 30 seconds ago' %}";
+                    } else if (delta < 60) {
+                        timeStamp = "{% translate 'less than 1 minute ago' %}";
+                    } else if (delta < 60 * 30) {
+                        timeStamp = relativeTimeFormat.format(-Math.round(delta / 60), 'minutes');
+                    } else if (delta < 60 * 60 * 12) {
+                        timeStamp = padWithLeadingZeros(lastSavedDate.getHours()) + ":" + padWithLeadingZeros(lastSavedDate.getMinutes());
+                    } else {
+                        timeStamp = lastSavedDate.getFullYear() + "-"
+                        + padWithLeadingZeros(lastSavedDate.getMonth() + 1) + "-"
+                        + padWithLeadingZeros(lastSavedDate.getDate()) + " "
+                        + padWithLeadingZeros(lastSavedDate.getHours()) + ":"
+                        + padWithLeadingZeros(lastSavedDate.getMinutes());
+                    }
+                    lastSavedLabel.innerText = "{% translate 'Last saved locally' %}: " + timeStamp;
+                } else {
+                    lastSavedLabel.innerText = "{% translate 'Could not save your information locally' %}";
+                }
+            }
+
+            function padWithLeadingZeros(number){
+                return number.toString().padStart(2, "0");
+            }
+
+            // save all data after loading the page
+            // (the data gets deleted every time the form is submitted, i.e. also when the form had errors and is displayed again)
+            formSaver.saveAllData();
+
+            // Initialize lastSavedLabel and update it every second
+            updateLastSavedLabel();
+            setInterval(updateLastSavedLabel, 1000);
+
+            initTextAnswerWarnings(document.querySelectorAll("#student-vote-form textarea"), JSON.parse(document.getElementById("text-answer-warnings").textContent));
+
+            const form = document.getElementById('student-vote-form');
+            const submitListener = (event) => {
+                event.preventDefault(); // don't use the default submission
+                const submitButton = document.getElementById('vote-submit-btn');
+                const originalText = submitButton.innerText;
+
+                submitButton.innerText = "{% translate 'Submitting...' %}";
+                submitButton.disabled = true;
+
+                fetch(form.action, {
+                    body: new FormData(form),
+                    headers: CSRF_HEADERS,
+                    method: form.method,
+                }).then(response => {
+                    assert(response.ok);
+                    return response.text();
+                }).then(response_text => {
+                    if(response_text === "{{ success_magic_string }}") {
+                        formSaver.releaseData();
+                        window.location.replace("{{ success_redirect_url }}");
+                    } else {
+                        // resubmit without this handler to show the site with the form errors
+                        form.removeEventListener("submit", submitListener);
+                        form.requestSubmit();
+                    }
+                }).catch(error => {
+                    // show a warning if the post isn't successful
+                    document.getElementById('submit-error-warning').classList.remove("d-none");
+                    submitButton.innerText = originalText;
+                    submitButton.disabled = false;
+                });
+            };
+            form.addEventListener("submit", submitListener);
+
+            function clearChoiceError(voteButton) {
+                voteButton.closest(".row").querySelectorAll(".choice-error").forEach(highlightedElement => {
+                    highlightedElement.classList.remove("choice-error");
+                });
+            }
+
+            document.querySelectorAll("[data-mark-no-answers-for]").forEach(button => {
+                const contributorId = button.dataset.markNoAnswersFor;
+                const voteArea = document.getElementById(`vote-area-${contributorId}`);
+                const collapseToggle = voteArea.closest(".collapsible").querySelector(".collapse-toggle");
+
+                button.addEventListener("click", () => {
+                    voteArea.querySelectorAll(".vote-inputs [type=radio][value='6']").forEach(radioInput => {
+                        radioInput.checked = true;
+                        clearChoiceError(radioInput);
+                    });
+
+                    formSaver.saveAllData();
+
+                    // hide questionnaire for contributor
+                    const voteAreaCollapse = bootstrap.Collapse.getOrCreateInstance(voteArea);
+                    voteAreaCollapse.hide();
+                    collapseToggle.classList.add("tab-selectable");
+
+                    // Disable this button, until user changes a value
+                    button.classList.remove("tab-selectable");
+                    button.disabled = true;
+                });
+
+                voteArea.querySelectorAll(".vote-inputs [type=radio]:not([value='6'])")
+                    .forEach(radioInput => {
+                        radioInput.addEventListener("click", () => {
+                            collapseToggle.classList.remove("tab-selectable");
+                            button.classList.add("tab-selectable");
+                            button.disabled = false;
+                        });
+                    });
+
+                collapseToggle.addEventListener("click", () => {
+                    if (button.classList.contains("tab-selectable")) {
+                        collapseToggle.classList.remove("tab-selectable");
+                    }
+                });
+            });
+
+            // remove error highlighting when an answer was selected
+            document.querySelectorAll(".vote-btn.choice-error").forEach(voteButton => {
+                voteButton.addEventListener("click", () => clearChoiceError(voteButton));
+                const actualInput = document.getElementById(voteButton.attributes["for"].value);
+                actualInput.addEventListener("click", () => clearChoiceError(voteButton));
+            });
+
+            document.querySelectorAll(".btn-textanswer").forEach(textanswerButton => {
+                const textfieldClass = textanswerButton.dataset.bsTarget;
+                const textfield = textanswerButton.closest(".row").querySelector(textfieldClass + " textarea");
+                textanswerButton.addEventListener("click", () => {
+                    // focus textarea when opening the collapsed area
+                    const isOpening = textanswerButton.classList.contains("collapsed");
+                    if (isOpening) {
+                        requestAnimationFrame(() => textfield.focus());
+                    }
+                });
+                textfield.addEventListener("input", () => {
+                    if (textfield.value.trim().length !== 0)
+                        textanswerButton.classList.add("has-contents");
+                    else
+                        textanswerButton.classList.remove("has-contents");
+                });
+                textfield.dispatchEvent(new Event("input"));
+            });
+
+            // handle text_results_publish_confirmation checkbox changes
+            function updateTextResultsPublishConfirmation() {
+                const isChecked = textResultsPublishConfirmation.top.checked;
+                textResultsPublishConfirmation.bottom.checked = isChecked;
+                textResultsPublishConfirmation.bottomCard.classList.toggle("d-none", isChecked);
+            }
+            if (textResultsPublishConfirmation.bottomCard) {
+                textResultsPublishConfirmation.top.addEventListener("change", updateTextResultsPublishConfirmation);
+                textResultsPublishConfirmation.bottom.addEventListener("change", () => {
+                    // The top checkbox should only be visually checked without triggering the change event,
+                    // which would hide the bottom card.
+                    // To keep the top checkbox checked (after a reload or submit), save the form manually.
+                    textResultsPublishConfirmation.top.checked = textResultsPublishConfirmation.bottom.checked;
+                    formSaver.saveAllData();
+                });
+            }
+        </script>
+        <script type="module" src="{% static 'js/student-vote.js' %}"></script>
+    {% endif %}
+{% endblock %}

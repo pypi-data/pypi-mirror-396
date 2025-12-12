@@ -1,0 +1,117 @@
+{% extends 'staff_base.html' %}
+
+{% load static %}
+{% load student_filters %}
+
+{% block breadcrumb %}
+    {{ block.super }}
+    <li class="breadcrumb-item">{% translate 'Text answer warnings' %}</li>
+{% endblock %}
+
+{% block content %}
+    {{ block.super }}
+
+    <form id="text-answer-warnings-form" method="POST" class="form-horizontal tomselectform">
+        {% csrf_token %}
+        {{ formset.management_form }}
+
+        <div class="card mb-3">
+            <div class="card-body table-responsive">
+                <table id="text-answer-warnings-table" class="table table-vertically-aligned">
+                    <colgroup>
+                        <col />
+                        <col />
+                        <col class="width-percent-30" />
+                        <col class="width-percent-30" />
+                        <col />
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th class="movable"></th>
+                            <th>{% translate 'Trigger strings (case-insensitive)' %}</th>
+                            <th>{% translate 'Warning text (German)' %}</th>
+                            <th>{% translate 'Warning text (English)' %}</th>
+                            <th class="text-end">{% translate 'Actions' %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for form in formset %}
+                            <tr class="tomselecttr sortable">
+                                <td class="movable">
+                                    <span class="movable-icon fas fa-up-down"></span>
+                                </td>
+                                <td>
+                                    {% for hidden in form.hidden_fields %}
+                                        {{ hidden }}
+                                    {% endfor %}
+                                    {% include 'bootstrap_form_field_widget.html' with field=form.trigger_strings %}
+                                </td>
+                                <td>
+                                    {% include 'bootstrap_form_field_widget.html' with field=form.warning_text_de %}
+                                </td>
+                                <td>
+                                    {% include 'bootstrap_form_field_widget.html' with field=form.warning_text_en %}
+                                </td>
+                                <td class="text-end">
+                                    {% include 'bootstrap_form_field_widget.html' with field=form.DELETE class="d-none" %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card card-submit-area text-center mb-3">
+            <div class="card-body">
+                <button type="submit" class="btn btn-primary">{% translate 'Save text answer warnings' %}</button>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                {% translate 'Preview' %}
+            </div>
+            <div class="card-body">
+                <p>
+                    {% translate 'Changes of the form above are only reflected after the form has been saved.' %}
+                </p>
+                <div class="row">
+                    <div class="col-question col-lg-4 col-xl-5 d-flex flex-column">
+                        <label for="preview-textarea">
+                            {% translate 'Test textarea' %}
+                        </label>
+                        {% include 'student_text_answer_warnings.html' with text_answer_warnings=text_answer_warnings %}
+                    </div>
+                    <div class="col-answer col-lg-8 col-xl-7 d-flex">
+                        <div class="vote-inputs">
+                            <textarea id="preview-textarea" class="form-control"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+{% endblock %}
+
+{% block additional_javascript %}
+    {{ text_answer_warnings|text_answer_warning_trigger_strings|json_script:'text-answer-warnings' }}
+
+    <script type="module">
+        import {initTextAnswerWarnings} from "{% static 'js/text-answer-warnings.js' %}";
+        import { makeFormSortable } from "{% static 'js/sortable-form.js' %}";
+
+        initTextAnswerWarnings([document.querySelector("#preview-textarea")], JSON.parse(document.getElementById("text-answer-warnings").textContent));
+
+        const rowChanged = function(row) {
+            const triggerStrings = row.querySelector("select[id$=-trigger_strings]")?.value;
+            const warningTextDe = row.querySelector("textarea[id$=-warning_text_de]")?.value;
+            const warningTextEn = row.querySelector("textarea[id$=-warning_text_en]")?.value;
+            return triggerStrings || warningTextDe || warningTextEn;
+        };
+        const rowAdded = function(row) {
+            applyTomSelect(row.querySelectorAll("select"), tagTomSelectOptions);
+        };
+        makeFormSortable("text-answer-warnings-table", "form", rowChanged, rowAdded, true, true);
+
+        applyTomSelect(document.querySelectorAll("select:not(.form-template select)"), tagTomSelectOptions);
+    </script>
+{% endblock %}

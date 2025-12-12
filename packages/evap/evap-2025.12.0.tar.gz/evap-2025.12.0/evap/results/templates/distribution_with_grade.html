@@ -1,0 +1,51 @@
+{% load results_templatetags %}
+{% load evaluation_filters %}
+
+<div class="distribution-bar-container{% if question_result.warning %} participants-warning{% endif %}">
+    <div class="distribution-bar {{ question_result.choices.css_class }}"
+        {% if question_result.question.is_bipolar_likert_question %} style="left: {{ question_result.minus_balance_count|percentage_one_decimal:question_result.count_sum }}"{% endif %}
+    >
+        {% with colors=question_result|to_colors %}
+            {% for value, color in distribution|zip:colors %}
+                {% if value != 0 %}
+                    <div class="vote-bg-{{ color }}" style="width: {{ value|percentage_one_decimal:1 }};">&nbsp;</div>
+                {% endif %}
+            {% endfor %}
+        {% endwith %}
+    </div>
+    {% if question_result.question.is_bipolar_likert_question %}
+        <div class="left">
+            <span class="pole-icon fas fa-caret-down"></span>
+            <span class="adjective">{{ question_result.choices.minus_name }}</span>
+        </div>
+        <span class="middle"></span>
+        <div class="right">
+            <span class="adjective">{{ question_result.choices.plus_name }}</span>
+            <span class="pole-icon fas fa-caret-up"></span>
+        </div>
+    {% elif question_result.question.is_positive_yes_no_question %}
+        <div class="left">
+            <span class="adjective">{% translate 'Yes' %}</span>
+        </div>
+        <div class="right">
+            <span class="adjective">{% translate 'No' %}</span>
+        </div>
+    {% elif question_result.question.is_negative_yes_no_question %}
+        <div class="left">
+            <span class="adjective">{% translate 'No' %}</span>
+        </div>
+        <div class="right">
+            <span class="adjective">{% translate 'Yes' %}</span>
+        </div>
+    {% endif %}
+    {% if weight_info %}
+        <span class="right">{{ weight_info }}</span>
+    {% endif %}
+</div>
+<div class="badge-grade ms-2{% if question_result.warning %} participants-warning{% endif %}" style="background-color: {{ average|gradecolor }}">
+    {% if question_result.question.is_yes_no_question %}
+        {{ question_result.approval_count|percentage:question_result.count_sum }}
+    {% else %}
+        {{ average|floatformat:1 }}
+    {% endif %}
+</div>

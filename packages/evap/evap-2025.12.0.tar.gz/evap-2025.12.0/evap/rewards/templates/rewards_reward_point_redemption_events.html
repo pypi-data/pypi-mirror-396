@@ -1,0 +1,55 @@
+{% extends 'staff_base.html' %}
+
+{% load static %}
+
+{% block breadcrumb %}
+    {{ block.super }}
+    <li class="breadcrumb-item">{% translate 'Reward Point Redemption Events' %}</li>
+{% endblock %}
+
+{% block content %}
+    {{ block.super }}
+    <div class="row mb-2">
+        <div class="col">
+            <a href="{% url 'rewards:reward_point_redemption_event_create' %}" class="btn btn-dark btn-sm">{% translate 'Create new event' %}</a>
+        </div>
+        <div class="col text-end">
+            {% translate 'Available reward points' %}: {{ total_points_available }}
+            <a href="{% url 'rewards:reward_points_export' %}" class="btn btn-light btn-sm ms-2">{% translate 'Export reward points' %}</a>
+        </div>
+    </div>
+
+    <form id="event-deletion-form" method="POST" action="{% url 'rewards:reward_point_redemption_event_delete' %}">
+        {% csrf_token %}
+    </form>
+
+    <script type="module">
+        import { assert, fadeOutThenRemove } from "{% static 'js/utils.js' %}";
+
+        const form = document.getElementById("event-deletion-form");
+        form.addEventListener("submit", event => {
+            event.preventDefault();
+            const body = new FormData(form);
+            const request = fetch(
+                form.action,
+                { method: form.method, body },
+            );
+            request.then(response => {
+                assert(response.ok);
+                fadeOutThenRemove(document.querySelector(`#event-row-${body.get("event_id")}`));
+            }).catch(error => {
+                window.alert("{% translate 'The server is not responding.' %}");
+            });
+        });
+    </script>
+
+    <div class="card card-outline-primary mb-3">
+        {% translate 'Upcoming events' as title %}
+        {% include 'rewards_reward_point_redemption_event_list.html' with title=title events=upcoming_events %}
+    </div>
+
+    <div class="card">
+        {% translate 'Past events' as title %}
+        {% include 'rewards_reward_point_redemption_event_list.html' with title=title events=past_events %}
+    </div>
+{% endblock %}

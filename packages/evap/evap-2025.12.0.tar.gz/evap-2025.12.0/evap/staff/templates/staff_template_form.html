@@ -1,0 +1,48 @@
+{% extends 'staff_base.html' %}
+
+{% load static %}
+
+{% block breadcrumb %}
+    {{ block.super }}
+    <li class="breadcrumb-item">{% translate 'Templates' %}</li>
+    <li class="breadcrumb-item">{{ template.name }}</li>
+{% endblock %}
+
+{% block content %}
+    {{ block.super }}
+
+    <form id="template-form" method="POST" class="form-horizontal multiselect-form">
+        {% csrf_token %}
+        <div class="card mb-3">
+            <div class="card-body row">
+                <div class="col-9">
+                    {% include 'bootstrap_form.html' with form=form email_form=True fields_as_pills=form.visible_fields|slice:"-2:" %}
+                </div>
+                <div class="col-3">
+                    <p>{% translate 'The following variables are available for this email template:' %}</p>
+                    {% for variable in available_variables %}
+                        <button type="button" class="btn btn-sm btn-link text-dark pe-1 copy-variable-to-clipboard-btn" data-variable="{{ variable }}" data-bs-toggle="tooltip" data-bs-placement="top" title="{% translate 'Copy to clipboard' %}">
+                            <span class="fas fa-clipboard"></span>
+                        </button>
+                        <code>{{ variable }}</code>
+                        <br />
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        <div class="card card-submit-area text-center mb-3">
+            <div class="card-body">
+                <button type="submit" class="btn btn-primary">{% translate 'Save template' %}</button>
+            </div>
+        </div>
+    </form>
+
+{% endblock %}
+
+{% block additional_javascript %}
+    <script type="text/javascript">
+        for(const button of document.querySelectorAll(".copy-variable-to-clipboard-btn")) {
+            button.addEventListener("click", async event => await navigator.clipboard.writeText(button.dataset.variable));
+        }
+    </script>
+{% endblock %}

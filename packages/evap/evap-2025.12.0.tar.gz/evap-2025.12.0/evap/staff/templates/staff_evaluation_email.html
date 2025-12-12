@@ -1,0 +1,51 @@
+{% extends 'staff_evaluation_base.html' %}
+
+{% load evaluation_filters %}
+
+{% block content %}
+    {{ block.super }}
+    {% if form.errors %}
+        <div class="alert alert-danger" role="alert">{% blocktranslate %}Please fill out all required fields and select at least one recipient group.{% endblocktranslate %}</div>
+    {% endif %}
+    <form id="evaluation-email-form" method="POST" class="form-horizontal">
+        {% csrf_token %}
+        <div class="card mb-3">
+            <div class="card-body">
+                <fieldset>
+                    <div class="row justify-content-center">
+                        <div class="email-form col-9">
+                            {% with bodies=form.visible_fields|slice:"-2:" rest=form.visible_fields|slice:":-2" %}
+                                {% for field in rest %}
+                                    {% if field.name == 'recipients' %}
+                                        <div class="mb-3 d-flex">
+                                            {% include 'bootstrap_form_field_label.html' with field=field class='col-md-2 pe-4' %}
+                                            <div class="col-md-7{% if field.errors %} is-invalid{% endif %}">
+                                                <div class="btn-group btn-group-toggle mb-1" data-bs-toggle="buttons">
+                                                    {% for choice in field %}
+                                                        <input id="{{ choice.id_for_label }}" class="btn-check" name="{{ choice.data.name }}" type="checkbox" value="{{ choice.data.value }}" autocomplete="off"{% if choice.data.value in field.value %} checked{% endif %} />
+                                                        <label class="btn btn-sm btn-outline-primary{% if field.errors %} error-label{% endif %}" for="{{ choice.id_for_label }}">
+                                                            {{ choice.choice_label }} {{ choice.id }}
+                                                        </label>
+                                                    {% endfor %}
+                                                </div>
+                                                <button name="export" type="submit" formnovalidate class="btn btn-sm btn-secondary">{% translate 'Show Recipients' %}</button>
+                                            </div>
+                                        </div>
+                                    {% else %}
+                                        {% include 'bootstrap_form_field.html' with field=field email_form=True %}
+                                    {% endif %}
+                                {% endfor %}
+                                {% include 'bootstrap_form_pill_group.html' with fields=bodies %}
+                            {% endwith %}
+                        </div>
+                    </div>
+                </fieldset>
+            </div>
+        </div>
+        <div class="card card-submit-area text-center mb-3">
+            <div class="card-body">
+                <button name="send" type="submit" class="btn btn-primary">{% translate 'Send email' %}</button>
+            </div>
+        </div>
+    </form>
+{% endblock %}

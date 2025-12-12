@@ -1,0 +1,179 @@
+{% extends 'base.html' %}
+
+{% load static %}
+{% load results_templatetags %}
+{% load evaluation_filters %}
+
+{% block title %}{% translate 'Results' %} - {{ block.super }}{% endblock %}
+
+{% block content %}
+    {{ block.super }}
+    <h3>{% translate 'Evaluation results' %}</h3>
+    <div class="card mb-1">
+        <div class="card-body">
+            <h5 class="card-title">
+                {% translate 'Filter' %}
+                <span class="reset-button float-end" data-reset="filter">
+                    <span class="fas fa-eraser"></span>
+                    {% translate 'Clear all filters' %}
+                </span>
+            </h5>
+            <div class="row">
+                <div class="col-12 col-lg mb-3 mb-lg-0">
+                    <label>
+                        <div class="input-group">
+                            <input type="search" name="search" class="form-control" placeholder="{% translate 'Search...' %}" />
+                            <button class="btn btn-light text-secondary" type="button" data-reset="search" data-bs-toggle="tooltip" data-bs-placement="top" title="{% translate 'Clear search filter' %}">
+                                <span class="fas fa-delete-left"></span>
+                            </button>
+                        </div>
+                    </label>
+
+                    <h6 class="card-subtitle mt-4 mb-1">{% trans 'Participants' %}</h6>
+                    <div id="participant-filter">
+                        {% include 'results_widget_range_slider.html' %}
+                    </div>
+                </div>
+                <div class="col-6 col-sm-4 col-md">
+                    <h6 class="card-subtitle mb-1">{% translate 'Programs' %}</h6>
+                    <div id="program-select" class="result-filter-list">
+                        {% for program in programs %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="{{ program.id }}" data-filter="{{ program.name }}" name="program" id="program-{{ program.id }}" />
+                                <label class="form-check-label w-100" for="program-{{ program.id }}">
+                                    {{ program.name }}
+                                </label>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="col-6 col-sm-4 col-md">
+                    <h6 class="card-subtitle mb-1">{% translate 'Course types' %}</h6>
+                    <div id="course-type-select" class="result-filter-list">
+                        {% for course_type in course_types %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="{{ course_type.id }}" data-filter="{{ course_type.name }}" name="courseType" id="courseType-{{ course_type.id }}" />
+                                <label class="form-check-label w-100" for="courseType-{{ course_type.id }}">
+                                    {{ course_type.name }}
+                                </label>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="col-sm-4 col-md">
+                    <h6 class="card-subtitle mb-1">{% translate 'Semester' %}</h6>
+                    <div id="semester-select" class="result-filter-list">
+                        {% for semester in semesters %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="{{ semester.id }}" data-filter="{{ semester.short_name }}" name="semester" id="semester-{{ semester.id }}" />
+                                <label class="form-check-label w-100" for="semester-{{ semester.id }}">
+                                    {{ semester.name }}
+                                </label>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card mb-1">
+        <div class="card-body pb-lg-0">
+            <h5 class="card-title mb-lg-0">
+                {% translate 'Order' %}
+                <span class="reset-button float-end d-none d-lg-block" data-reset="order">
+                    <span class="fas fa-arrow-down-wide-short"></span>
+                    {% translate 'Order by evaluation and semester' %}
+                </span>
+            </h5>
+            <div class="grid-header results-grid-row d-none d-lg-grid">
+                <div data-col="name" class="col-order">{% translate 'Evaluation' %}</div>
+                <div data-col="semester" class="col-order">{% translate 'Semester' %}</div>
+                <div data-col="responsible" class="col-order">{% translate 'Responsible' %}</div>
+                <div data-col="voters" class="col-order">{% translate 'Voters' %}</div>
+                <div data-col="result" class="col-order">{% translate 'Distribution and average grade' %}</div>
+            </div>
+            <div class="d-flex d-lg-none">
+                <div class="me-2 btn-group icon-buttons" data-bs-toggle="buttons">
+                    <input id="sort-order-asc" class="btn-check" type="radio" name="result-sort-order" value="asc" checked />
+                    <label class="btn btn-outline-primary btn-lg" for="sort-order-asc">
+                        <span class="fas fa-arrow-down-a-z"></span>
+                    </label>
+                    <input id="sort-order-desc" class="btn-check" type="radio" name="result-sort-order" value="desc" />
+                    <label class="btn btn-outline-primary btn-lg" for="sort-order-desc">
+                        <span class="fas fa-arrow-up-z-a"></span>
+                    </label>
+                </div>
+                <select name="result-sort-column" class="form-select no-tomselect">
+                    <option value="name-semester">{% translate 'Evaluation and semester' %}</option>
+                    <option value="name">{% translate 'Evaluation' %}</option>
+                    <option value="semester">{% translate 'Semester' %}</option>
+                    <option value="responsible">{% translate 'Responsible' %}</option>
+                    <option value="voters">{% translate 'Voters' %}</option>
+                    <option value="result">{% translate 'Distribution and average grade' %}</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    <div class="card card-noflex">
+        <div class="card-body pt-0 pb-2">
+            {% if courses_and_evaluations %}
+                <div id="results-grid">
+                    {% for course, evaluations in courses_and_evaluations %}
+                        {# this is the reason why results_index_evaluation does not need to include is_subentry in the cache key: an evaluation is a subentry or no subentry regardless of which user asks #}
+                        {% if course.num_evaluations > 1 %}
+                            <div>
+                                {% include 'results_index_course.html' %}
+                                {% for evaluation in evaluations|dictsort:"name" %}
+                                    {% include 'results_index_evaluation.html' with links_to_results_page=evaluation|can_results_page_be_seen_by:request.user is_subentry=True %}
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            {% for evaluation in evaluations %}
+                                {% include 'results_index_evaluation.html' with links_to_results_page=evaluation|can_results_page_be_seen_by:request.user is_subentry=False %}
+                            {% endfor %}
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block additional_javascript %}
+    <script type="module">
+        import { ResultGrid } from "{% static 'js/datagrid.js' %}";
+        import { RangeSlider } from "{% static 'js/slider.js' %}";
+
+        new ResultGrid({
+            storageKey: "results-data-grid",
+            head: document.querySelector(".grid-header"),
+            container: document.querySelector("#results-grid"),
+            searchInput: document.querySelector("input[name=search]"),
+            filterCheckboxes: new Map([
+                ["semester", {
+                    checkboxes: [...document.querySelectorAll("input[name=semester]")],
+                    selector: "[data-col=semester]",
+                }],
+                ["program", {
+                    checkboxes: [...document.querySelectorAll("input[name=program]")],
+                    selector: ".badge-program",
+                }],
+                ["courseType", {
+                    checkboxes: [...document.querySelectorAll("input[name=courseType]")],
+                    selector: ".badge-course-type",
+                }],
+            ]),
+            filterSliders: new Map([
+                ["participants", {
+                    slider: new RangeSlider("participant-filter"),
+                    selector: "[data-col=voters]",
+                }],
+            ]),
+            sortColumnSelect: document.querySelector("[name=result-sort-column]"),
+            sortOrderCheckboxes: [...document.querySelectorAll("[name=result-sort-order]")],
+            resetFilter: document.querySelector("[data-reset=filter]"),
+            resetSearch: document.querySelector("[data-reset=search]"),
+            resetOrder: document.querySelector("[data-reset=order]"),
+        }).init();
+    </script>
+{% endblock %}
