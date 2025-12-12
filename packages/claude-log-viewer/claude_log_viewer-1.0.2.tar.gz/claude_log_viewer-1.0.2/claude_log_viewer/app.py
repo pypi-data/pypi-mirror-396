@@ -1,0 +1,2090 @@
+#!/usr/bin/env python3
+"""
+JSONL Log Viewer - Real-time viewer for Claude Code transcripts
+"""
+
+from flask import Flask, render_template, jsonify, request
+from pathlib import Path
+import json
+import os
+from datetime import datetime, timedelta
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+import threading
+import time
+import subprocess
+import requests
+import argparse
+import queue
+from collections import defaultdict
+from .database import (
+    init_db, insert_snapshot, get_snapshots_in_range, get_latest_snapshot,
+    insert_session, DB_PATH, get_db, migrate_add_fork_tracking,
+    insert_snapshot_tick, update_snapshot_calculations, get_snapshot_by_id,
+    get_setting, set_setting, get_all_settings,
+    get_project_git_enabled, set_project_git_enabled, get_all_project_git_settings,
+    get_repo_git_enabled, set_repo_git_enabled, get_all_repo_git_settings,
+    save_discovered_repos, get_project_repos, get_primary_repo_for_project
+)
+from .git_discovery import discover_repos_for_project, extract_project_names_from_entries
+from .token_counter import count_message_tokens
+from .timeline_builder import build_timeline
+from .git_manager import GitRollbackManager
+from .api_poller import ApiPoller
+from .backfill import check_null_snapshots, backfill_all_snapshots_async
+
+app = Flask(__name__)
+
+# API poller for backend-driven usage updates (initialized in main())
+api_poller = None
+
+# Get the Claude projects directory - monitor all projects
+CLAUDE_PROJECTS_DIR = Path.home() / '.claude' / 'projects'
+CLAUDE_TODOS_DIR = Path.home() / '.claude' / 'todos'
+target_project = None  # Set via --project CLI argument for project isolation
+
+# Store latest entries
+latest_entries = []
+latest_entries_lock = threading.Lock()  # Protect against race conditions with file watcher
+max_entries = 500  # Keep last 500 entries in memory (default, configurable via CLI)
+file_age_days = 2  # Only load files modified in last N days (default, configurable via CLI)
+
+# Cache for --all searches (LRU-style, max 5 entries)
+search_cache = {}  # query -> {results: [], timestamp: datetime, files_searched: int}
+search_cache_lock = threading.Lock()
+SEARCH_CACHE_MAX_SIZE = 5
+
+# Cache for usage data
+usage_cache = {
+    'data': None,
+    'timestamp': 0,
+    'cache_duration': 60  # Cache for 60 seconds
+}
+
+# Work queue for file processing (decouples file watching from processing)
+file_processing_queue = queue.Queue()
+processing_shutdown_event = threading.Event()
+
+
+def file_processing_worker():
+    """
+    Background worker thread that processes file changes from the queue.
+
+    This decouples file watching from file processing, preventing the file
+    watcher from blocking during expensive operations (reading, parsing,
+    token counting, etc.).
+    """
+    while not processing_shutdown_event.is_set():
+        try:
+            # Wait for work with timeout to check shutdown event periodically
+            file_path = file_processing_queue.get(timeout=1.0)
+
+            # Process the file
+            try:
+                load_latest_entries(file_path)
+            except Exception as e:
+                print(f"Error processing file {file_path}: {e}")
+
+            # Mark task as done
+            file_processing_queue.task_done()
+
+        except queue.Empty:
+            # No work available, continue to check shutdown event
+            continue
+
+
+class JSONLHandler(FileSystemEventHandler):
+    """Watch for changes to JSONL files"""
+
+    def on_modified(self, event):
+        if event.src_path.endswith('.jsonl'):
+            # Add reload signal to processing queue (non-blocking)
+            # Use None to signal "reload all files" (matches original behavior)
+            # Worker thread will process it asynchronously
+            file_processing_queue.put(None)
+
+
+class TodoHandler(FileSystemEventHandler):
+    """Watch for changes to todo JSON files"""
+
+    def on_modified(self, event):
+        if event.src_path.endswith('.json'):
+            # Todo files changed, but we don't need to reload here
+            # Frontend polls /api/todos regularly
+            pass
+
+    def on_created(self, event):
+        if event.src_path.endswith('.json'):
+            # New todo file created
+            pass
+
+
+def enrich_content(entry):
+    """Enrich entry with displayable content from structured data"""
+    # If entry already has non-empty string content, return it
+    content = entry.get('content', '')
+    if isinstance(content, str) and content and content.strip():
+        return content
+
+    # Handle different entry types
+    entry_type = entry.get('type', '')
+
+    # Summary entries
+    if entry_type == 'summary':
+        return entry.get('summary', '')
+
+    # File history snapshots
+    if entry_type == 'file-history-snapshot':
+        snapshot = entry.get('snapshot', {})
+        files = snapshot.get('trackedFileBackups', {})
+        if files:
+            file_list = list(files.keys())[:3]  # Show first 3 files
+            count = len(files)
+            preview = ', '.join(file_list)
+            if count > 3:
+                preview += f', ... (+{count-3} more)'
+            return f"📸 Snapshot: {count} file{'s' if count != 1 else ''} tracked - {preview}"
+        return "📸 File snapshot"
+
+    # System messages
+    if entry_type == 'system':
+        content = entry.get('content', '')
+        subtype = entry.get('subtype', '')
+        if subtype == 'compact_boundary':
+            metadata = entry.get('compactMetadata', {})
+            pre_tokens = metadata.get('preTokens', '')
+            if pre_tokens:
+                content += f" ({pre_tokens:,} tokens)"
+        return content
+
+    # User and assistant messages with structured content
+    message = entry.get('message', {})
+    if isinstance(message, dict):
+        content_array = message.get('content', [])
+
+        # Handle simple string content (common for user messages)
+        if isinstance(content_array, str) and content_array.strip():
+            return content_array
+
+        # Handle structured array content
+        if isinstance(content_array, list) and content_array:
+            parts = []
+
+            for item in content_array:
+                item_type = item.get('type', '')
+
+                # Text content
+                if item_type == 'text':
+                    text = item.get('text', '')
+                    if text:
+                        parts.append(text)
+
+                # Thinking content
+                elif item_type == 'thinking':
+                    thinking_text = item.get('thinking', '')
+                    if thinking_text:
+                        # Clean up thinking text: remove newlines and extra whitespace
+                        cleaned_text = ' '.join(thinking_text.split())
+                        parts.append(f'💭 Thought: {cleaned_text}')
+
+                # Tool use
+                elif item_type == 'tool_use':
+                    tool_name = item.get('name', 'Unknown')
+                    tool_input = item.get('input', {})
+
+                    # Format key parameters
+                    params = []
+                    for key, value in tool_input.items():
+                        if key in ['command', 'file_path', 'url', 'pattern', 'selector', 'description']:
+                            if isinstance(value, str):
+                                # Truncate long values
+                                display_value = value[:50] + '...' if len(value) > 50 else value
+                                params.append(f"{key}={display_value}")
+
+                    param_str = ', '.join(params[:2])  # Show first 2 params
+                    if param_str:
+                        parts.append(f"🔧 {tool_name}({param_str})")
+                    else:
+                        parts.append(f"🔧 {tool_name}")
+
+                # Tool result
+                elif item_type == 'tool_result':
+                    result_content = item.get('content', '')
+                    tool_use_id = item.get('tool_use_id', '')
+
+                    # Try to get tool name from toolUseResult
+                    tool_result = entry.get('toolUseResult', {})
+
+                    # Check if result is empty
+                    is_empty = not result_content or result_content == ''
+
+                    # Format based on tool type
+                    if isinstance(result_content, str):
+                        # Bash output
+                        if 'exit code' in result_content.lower() or 'command' in str(tool_result).lower():
+                            # Extract first line or exit status
+                            lines = result_content.split('\n')
+                            first_line = lines[0][:100] if lines else ''
+                            if 'exit code' in result_content.lower():
+                                parts.append(f"✓ Bash: {first_line}")
+                            else:
+                                parts.append(f"✓ Output: {first_line}")
+
+                        # File operations
+                        elif 'filePath' in tool_result:
+                            file_path = tool_result.get('filePath', '')
+                            file_name = file_path.split('/')[-1] if file_path else 'file'
+                            if 'oldString' in tool_result:
+                                parts.append(f"✓ Edited {file_name}")
+                            else:
+                                parts.append(f"✓ Updated {file_name}")
+
+                        # File read
+                        elif result_content and '\n' in result_content and '→' in result_content:
+                            # Looks like cat -n output
+                            line_count = len(result_content.split('\n'))
+                            parts.append(f"✓ Read file: {line_count} lines")
+
+                        # Generic result
+                        elif result_content:
+                            preview = result_content[:100]
+                            parts.append(f"✓ Result: {preview}")
+                        else:
+                            # Empty result
+                            parts.append("✓ Tool completed")
+
+                    # Handle non-string results (lists, objects)
+                    elif result_content:
+                        if isinstance(result_content, list):
+                            parts.append(f"✓ Result: [{len(result_content)} items]")
+                        elif isinstance(result_content, dict):
+                            parts.append(f"✓ Result: {{{len(result_content)} keys}}")
+                        else:
+                            parts.append(f"✓ Result: {str(result_content)[:100]}")
+                    else:
+                        # Completely empty
+                        parts.append("✓ Tool completed")
+
+            if parts:
+                return ' '.join(parts)
+
+    # Fallback
+    return entry.get('content', '')
+
+
+def extract_tool_items(entry):
+    """Extract tool_use and tool_result items from message content"""
+    tool_items = {
+        'tool_uses': [],
+        'tool_results': []
+    }
+
+    # Check if entry has message.content array
+    message = entry.get('message', {})
+    if isinstance(message, dict):
+        content_array = message.get('content', [])
+
+        if isinstance(content_array, list):
+            for item in content_array:
+                item_type = item.get('type', '')
+
+                # Extract tool uses
+                if item_type == 'tool_use':
+                    tool_items['tool_uses'].append({
+                        'id': item.get('id', ''),
+                        'name': item.get('name', ''),
+                        'input': item.get('input', {})
+                    })
+
+                # Extract tool results
+                elif item_type == 'tool_result':
+                    tool_items['tool_results'].append({
+                        'tool_use_id': item.get('tool_use_id', ''),
+                        'content': item.get('content', ''),
+                        'is_error': item.get('is_error', False)
+                    })
+
+    # Also include top-level toolUseResult if present
+    if 'toolUseResult' in entry:
+        tool_items['toolUseResult'] = entry['toolUseResult']
+
+    return tool_items if (tool_items['tool_uses'] or tool_items['tool_results']) else None
+
+
+def load_latest_entries(file_path=None):
+    """Load entries from JSONL files across all project directories"""
+    global latest_entries
+
+    if file_path:
+        files = [Path(file_path)]
+    else:
+        # Recursively find all .jsonl files in all project subdirectories
+        all_files = list(CLAUDE_PROJECTS_DIR.glob('**/*.jsonl'))
+
+        # Filter to only files modified in the last N days
+        cutoff_time = time.time() - (file_age_days * 24 * 60 * 60)
+        files = [f for f in all_files if f.stat().st_mtime > cutoff_time]
+
+        print(f"Found {len(files)} file(s) modified in the last {file_age_days} day(s) out of {len(all_files)} total")
+
+    entries = []
+    for file in files:
+        try:
+            with open(file, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if line:
+                        try:
+                            entry = json.loads(line)
+                            # Add metadata
+                            entry['_file'] = str(file)
+                            entry['_file_path'] = str(file)
+
+                            # Enrich content for display
+                            entry['content_display'] = enrich_content(entry)
+
+                            # Extract tool items for detailed viewing
+                            tool_items = extract_tool_items(entry)
+                            if tool_items:
+                                entry['tool_items'] = tool_items
+                                # Add a filterable type for tool results
+                                if tool_items.get('tool_results'):
+                                    entry['has_tool_results'] = True
+
+                            # Count tokens from actual content
+                            try:
+                                entry['content_tokens'] = count_message_tokens(entry)
+                            except Exception as e:
+                                # If token counting fails, set to 0 and log error
+                                entry['content_tokens'] = 0
+                                print(f"Error counting tokens for entry: {e}")
+
+                            entries.append(entry)
+                        except json.JSONDecodeError:
+                            continue
+        except Exception as e:
+            print(f"Error reading {file}: {e}")
+
+    # Sort by timestamp if available
+    entries.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+
+    # Keep only the latest entries (protected by lock)
+    with latest_entries_lock:
+        latest_entries = entries[:max_entries]
+
+
+def load_entries_for_time_range(start_timestamp, end_timestamp=None):
+    """
+    Load log entries from disk for a specific time range and add them to latest_entries.
+
+    Args:
+        start_timestamp: ISO timestamp string (start of range)
+        end_timestamp: ISO timestamp string (end of range, defaults to now)
+
+    Returns:
+        Number of entries loaded
+    """
+    global latest_entries
+
+    if end_timestamp is None:
+        end_timestamp = datetime.utcnow().isoformat() + 'Z'
+
+    # Find all .jsonl files in all project subdirectories
+    all_files = list(CLAUDE_PROJECTS_DIR.glob('**/*.jsonl'))
+
+    # Convert timestamps to datetime for comparison
+    start_dt = datetime.fromisoformat(start_timestamp.replace('Z', '+00:00'))
+    end_dt = datetime.fromisoformat(end_timestamp.replace('Z', '+00:00'))
+
+    # Get file modification times - only check files modified in the time range
+    files_to_check = []
+    for file in all_files:
+        file_mtime = datetime.fromtimestamp(file.stat().st_mtime, tz=start_dt.tzinfo)
+        # Check files modified around the time range (with some buffer)
+        if file_mtime >= start_dt - timedelta(hours=1):
+            files_to_check.append(file)
+
+    # Track which timestamps we already have in memory (protected by lock)
+    with latest_entries_lock:
+        existing_timestamps = {entry.get('timestamp') for entry in latest_entries if entry.get('timestamp')}
+
+    new_entries = []
+    for file in files_to_check:
+        try:
+            with open(file, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if line:
+                        try:
+                            entry = json.loads(line)
+                            entry_timestamp = entry.get('timestamp', '')
+
+                            # Skip if we already have this entry in memory
+                            if entry_timestamp in existing_timestamps:
+                                continue
+
+                            # Check if entry is in our time range
+                            if entry_timestamp:
+                                entry_dt = datetime.fromisoformat(entry_timestamp.replace('Z', '+00:00'))
+                                if start_dt <= entry_dt <= end_dt:
+                                    # Add metadata
+                                    entry['_file'] = str(file)
+                                    entry['_file_path'] = str(file)
+
+                                    # Enrich content
+                                    entry['content_display'] = enrich_content(entry)
+
+                                    # Extract tool items
+                                    tool_items = extract_tool_items(entry)
+                                    if tool_items:
+                                        entry['tool_items'] = tool_items
+                                        if tool_items.get('tool_results'):
+                                            entry['has_tool_results'] = True
+
+                                    # Count tokens
+                                    try:
+                                        entry['content_tokens'] = count_message_tokens(entry)
+                                    except Exception as e:
+                                        entry['content_tokens'] = 0
+
+                                    new_entries.append(entry)
+                        except json.JSONDecodeError:
+                            continue
+        except Exception as e:
+            print(f"Error reading {file} for time range: {e}")
+
+    # Add new entries to latest_entries (protected by lock)
+    if new_entries:
+        with latest_entries_lock:
+            latest_entries.extend(new_entries)
+            # Re-sort by timestamp
+            latest_entries.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+            # Keep only max_entries
+            latest_entries = latest_entries[:max_entries]
+        print(f"Loaded {len(new_entries)} entries from time range {start_timestamp} to {end_timestamp}")
+
+    return len(new_entries)
+
+
+def start_file_watcher():
+    """Start watching all project directories and todos directory for changes"""
+    observer = Observer()
+
+    # Watch JSONL files in projects directory
+    jsonl_handler = JSONLHandler()
+    observer.schedule(jsonl_handler, str(CLAUDE_PROJECTS_DIR), recursive=True)
+
+    # Watch todo JSON files in todos directory
+    if CLAUDE_TODOS_DIR.exists():
+        todo_handler = TodoHandler()
+        observer.schedule(todo_handler, str(CLAUDE_TODOS_DIR), recursive=False)
+
+    observer.start()
+    return observer
+
+
+@app.route('/')
+def index():
+    """Main page"""
+    return render_template('index.html', max_entries=max_entries, target_project=target_project)
+
+
+def format_usage_snapshot(snapshot):
+    """Format usage snapshot for display (mirrors frontend logic)"""
+    five_hour_pct = snapshot.get('five_hour_pct', 0) or 0
+    seven_day_pct = snapshot.get('seven_day_pct', 0) or 0
+    return f"📊 Usage Update: 5h: {five_hour_pct:.1f}% utilization | 7d: {seven_day_pct:.1f}% utilization"
+
+
+@app.route('/api/entries')
+def get_entries():
+    """Get latest entries with usage snapshots merged.
+
+    Query params:
+        q: Search query (case-insensitive, searches full JSON)
+        type: Filter by entry type (e.g., 'user', 'assistant', 'tool_result')
+        session: Filter by session ID
+        limit: Max entries to return (default: server's --limit setting)
+    """
+    # Get filter params
+    search_query = request.args.get('q', '').strip().lower()
+    type_filter = request.args.get('type', '')
+    session_filter = request.args.get('session', '')
+    file_filter = request.args.get('file', '').strip()
+    limit = min(int(request.args.get('limit', max_entries)), max_entries)
+
+    # If file filter specified, load entries directly from that file
+    if file_filter:
+        all_entries = []
+        file_path = Path(file_filter)
+        if file_path.exists() and file_path.suffix == '.jsonl':
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    for line_num, line in enumerate(f, 1):
+                        line = line.strip()
+                        if not line:
+                            continue
+                        try:
+                            entry = json.loads(line)
+                            entry['_file'] = str(file_path)
+                            entry['_file_path'] = str(file_path)
+                            entry['_line'] = line_num
+                            entry['content_display'] = enrich_content(entry)
+                            tool_items = extract_tool_items(entry)
+                            if tool_items:
+                                entry['tool_items'] = tool_items
+                                if tool_items.get('tool_results'):
+                                    entry['has_tool_results'] = True
+                            all_entries.append(entry)
+                        except json.JSONDecodeError:
+                            continue
+            except Exception as e:
+                print(f"Error reading file {file_path}: {e}")
+
+        # Apply search filter if provided (for highlighting)
+        # Sort by timestamp
+        all_entries.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+
+        # Mark entries that match the search query
+        if search_query:
+            for entry in all_entries:
+                if search_query in json.dumps(entry).lower():
+                    entry['_search_match'] = True
+
+        all_session_ids = set(e.get('sessionId') for e in all_entries if e.get('sessionId'))
+
+        return jsonify({
+            'entries': all_entries[:limit],
+            'total': len(all_entries),
+            'active_session_count': len(all_session_ids),
+            'total_session_count': len(all_session_ids)
+        })
+
+    # Take snapshot of entries (protected by lock)
+    with latest_entries_lock:
+        entries_snapshot = list(latest_entries)
+
+    # Start with all entries
+    all_entries = list(entries_snapshot)
+
+    # Track session counts for stats (before filtering)
+    all_session_ids = set(e.get('sessionId') for e in entries_snapshot if e.get('sessionId'))
+
+    # Apply filters (server-side, doesn't block browser)
+    if type_filter:
+        if type_filter == 'tool_result':
+            all_entries = [e for e in all_entries if e.get('has_tool_results')]
+        else:
+            all_entries = [e for e in all_entries if e.get('type') == type_filter]
+
+    if search_query:
+        all_entries = [e for e in all_entries
+                       if search_query in json.dumps(e).lower()]
+
+    if session_filter:
+        all_entries = [e for e in all_entries if e.get('sessionId') == session_filter]
+
+    # Get time range from filtered entries
+    if all_entries:
+        timestamps = [e.get('timestamp') for e in all_entries if e.get('timestamp')]
+        if timestamps:
+            start_time = min(timestamps)
+            end_time = max(timestamps)
+
+            # Fetch snapshots in same time range
+            snapshots = get_snapshots_in_range(start_time, end_time)
+
+            # Convert snapshots to entry format
+            for snapshot in snapshots:
+                snapshot_entry = {
+                    'type': 'usage-increment',
+                    'timestamp': snapshot['timestamp'],
+                    'sessionId': None,
+                    'content': 'Usage Increment',
+                    'content_display': format_usage_snapshot(snapshot),
+                    'snapshot': snapshot,
+                    '_isSnapshot': True,
+                    'uuid': f"snapshot-{snapshot['id']}"
+                }
+                all_entries.append(snapshot_entry)
+
+            # Sort merged list by timestamp (newest first)
+            all_entries.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+
+    # Apply limit (from query param)
+    all_entries = all_entries[:limit]
+
+    return jsonify({
+        'entries': all_entries,
+        'total': len(all_entries),
+        'active_session_count': len(all_session_ids),
+        'total_session_count': len(all_session_ids)
+    })
+
+
+@app.route('/api/fields')
+def get_fields():
+    """Get all unique fields across entries"""
+    # Take snapshot of entries (protected by lock)
+    with latest_entries_lock:
+        entries_snapshot = list(latest_entries)
+
+    fields = set()
+    for entry in entries_snapshot:
+        fields.update(entry.keys())
+    return jsonify(sorted(list(fields)))
+
+
+def _evict_oldest_cache_entry():
+    """Remove oldest cache entry if cache is full."""
+    if len(search_cache) >= SEARCH_CACHE_MAX_SIZE:
+        oldest_key = min(search_cache.keys(), key=lambda k: search_cache[k]['timestamp'])
+        del search_cache[oldest_key]
+
+
+def _perform_search(query_lower, limit):
+    """Perform the actual file search and return results."""
+    cutoff_time = time.time() - (file_age_days * 24 * 60 * 60)
+    all_files = list(CLAUDE_PROJECTS_DIR.glob('**/*.jsonl'))
+    files = [f for f in all_files if f.stat().st_mtime > cutoff_time]
+
+    results = []
+    files_searched = 0
+
+    for file in files:
+        files_searched += 1
+        try:
+            with open(file, 'r', encoding='utf-8') as f:
+                for line_num, line in enumerate(f, 1):
+                    line = line.strip()
+                    if not line:
+                        continue
+
+                    if query_lower not in line.lower():
+                        continue
+
+                    try:
+                        entry = json.loads(line)
+                        entry['_file'] = str(file)
+                        entry['_file_path'] = str(file)
+                        entry['_line'] = line_num
+                        entry['content_display'] = enrich_content(entry)
+
+                        tool_items = extract_tool_items(entry)
+                        if tool_items:
+                            entry['tool_items'] = tool_items
+                            if tool_items.get('tool_results'):
+                                entry['has_tool_results'] = True
+
+                        results.append(entry)
+
+                        if len(results) >= limit:
+                            break
+                    except json.JSONDecodeError:
+                        continue
+        except Exception as e:
+            print(f"Error searching {file}: {e}")
+
+        if len(results) >= limit:
+            break
+
+    # Sort by timestamp (newest first)
+    results.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+
+    return results, files_searched
+
+
+@app.route('/api/search')
+def search_all_files():
+    """Search all JSONL files directly (bypasses entry limit).
+
+    Query params:
+        q: Search query (required)
+        limit: Max results (default: 100)
+        nocache: Skip cache if 'true'
+    """
+    query = request.args.get('q', '').strip()
+    if not query:
+        return jsonify({'error': 'Missing search query'}), 400
+
+    limit = min(int(request.args.get('limit', 100)), 200)
+    skip_cache = request.args.get('nocache', '').lower() == 'true'
+    query_lower = query.lower()
+
+    # Check cache first
+    cache_key = f"{query_lower}:{limit}"
+    with search_cache_lock:
+        if not skip_cache and cache_key in search_cache:
+            cached = search_cache[cache_key]
+            # Update timestamp (LRU behavior)
+            cached['timestamp'] = time.time()
+            return jsonify({
+                'entries': cached['results'],
+                'total': len(cached['results']),
+                'files_searched': cached['files_searched'],
+                'query': query,
+                'limit': limit,
+                'truncated': len(cached['results']) >= limit,
+                'cached': True
+            })
+
+    # Perform search
+    results, files_searched = _perform_search(query_lower, limit)
+
+    # Store in cache
+    with search_cache_lock:
+        _evict_oldest_cache_entry()
+        search_cache[cache_key] = {
+            'results': results,
+            'files_searched': files_searched,
+            'timestamp': time.time()
+        }
+
+    return jsonify({
+        'entries': results,
+        'total': len(results),
+        'files_searched': files_searched,
+        'query': query,
+        'limit': limit,
+        'truncated': len(results) >= limit,
+        'cached': False
+    })
+
+
+@app.route('/api/search/stream')
+def search_all_files_stream():
+    """Search all JSONL files with streaming results.
+
+    Query params:
+        q: Search query (required)
+        limit: Max results (default: 100)
+
+    Returns NDJSON stream with:
+        {"type": "progress", "files_searched": N}
+        {"type": "result", "entry": {...}}
+        {"type": "done", "total": N, "files_searched": N, "truncated": bool, "cached": bool}
+    """
+    from flask import Response, stream_with_context
+
+    query = request.args.get('q', '').strip()
+    if not query:
+        return jsonify({'error': 'Missing search query'}), 400
+
+    limit = min(int(request.args.get('limit', 100)), 200)
+    query_lower = query.lower()
+
+    # Check cache first
+    cache_key = f"{query_lower}:{limit}"
+    with search_cache_lock:
+        if cache_key in search_cache:
+            cached = search_cache[cache_key]
+            # Update timestamp (LRU behavior)
+            cached['timestamp'] = time.time()
+
+            # Return cached results as stream format
+            def generate_cached():
+                for entry in cached['results']:
+                    yield json.dumps({'type': 'result', 'entry': entry}) + '\n'
+                yield json.dumps({
+                    'type': 'done',
+                    'total': len(cached['results']),
+                    'files_searched': cached['files_searched'],
+                    'query': query,
+                    'limit': limit,
+                    'truncated': len(cached['results']) >= limit,
+                    'cached': True
+                }) + '\n'
+
+            return Response(
+                stream_with_context(generate_cached()),
+                mimetype='application/x-ndjson',
+                headers={'X-Accel-Buffering': 'no'}
+            )
+
+    def generate():
+        # Get all JSONL files modified in last N days
+        cutoff_time = time.time() - (file_age_days * 24 * 60 * 60)
+        all_files = list(CLAUDE_PROJECTS_DIR.glob('**/*.jsonl'))
+        files = [f for f in all_files if f.stat().st_mtime > cutoff_time]
+
+        results_for_cache = []
+        files_searched = 0
+
+        for file in files:
+            files_searched += 1
+
+            # Send progress every 10 files
+            if files_searched % 10 == 0:
+                yield json.dumps({'type': 'progress', 'files_searched': files_searched}) + '\n'
+
+            try:
+                with open(file, 'r', encoding='utf-8') as f:
+                    for line_num, line in enumerate(f, 1):
+                        line = line.strip()
+                        if not line:
+                            continue
+
+                        # Quick case-insensitive check before JSON parsing
+                        if query_lower not in line.lower():
+                            continue
+
+                        try:
+                            entry = json.loads(line)
+                            # Add file metadata
+                            entry['_file'] = str(file)
+                            entry['_file_path'] = str(file)
+                            entry['_line'] = line_num
+
+                            # Enrich content for display
+                            entry['content_display'] = enrich_content(entry)
+
+                            # Extract tool items
+                            tool_items = extract_tool_items(entry)
+                            if tool_items:
+                                entry['tool_items'] = tool_items
+                                if tool_items.get('tool_results'):
+                                    entry['has_tool_results'] = True
+
+                            results_for_cache.append(entry)
+                            yield json.dumps({'type': 'result', 'entry': entry}) + '\n'
+
+                            if len(results_for_cache) >= limit:
+                                break
+                        except json.JSONDecodeError:
+                            continue
+            except Exception as e:
+                print(f"Error searching {file}: {e}")
+
+            if len(results_for_cache) >= limit:
+                break
+
+        # Sort results for cache
+        results_for_cache.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+
+        # Store in cache
+        with search_cache_lock:
+            _evict_oldest_cache_entry()
+            search_cache[cache_key] = {
+                'results': results_for_cache,
+                'files_searched': files_searched,
+                'timestamp': time.time()
+            }
+
+        # Send final summary
+        yield json.dumps({
+            'type': 'done',
+            'total': len(results_for_cache),
+            'files_searched': files_searched,
+            'query': query,
+            'limit': limit,
+            'truncated': len(results_for_cache) >= limit,
+            'cached': False
+        }) + '\n'
+
+    return Response(
+        stream_with_context(generate()),
+        mimetype='application/x-ndjson',
+        headers={'X-Accel-Buffering': 'no'}  # Disable nginx buffering
+    )
+
+
+@app.route('/api/refresh')
+def refresh():
+    """Force refresh all entries"""
+    load_latest_entries()
+    with latest_entries_lock:
+        total = len(latest_entries)
+    return jsonify({'status': 'success', 'total': total})
+
+
+@app.route('/screenshots/<path:filepath>')
+def serve_screenshot(filepath):
+    """Serve screenshot files from project's .claude/screenshots directory"""
+    from flask import send_from_directory
+    # Use project directory's .claude/screenshots, not home directory
+    project_dir = Path(__file__).parent.parent  # Go up from app.py to project root
+    screenshots_dir = project_dir / '.claude' / 'screenshots'
+    return send_from_directory(screenshots_dir, filepath)
+
+
+@app.route('/api/todos')
+def get_todos():
+    """Get todo files from ~/.claude/todos directory"""
+    session_id = request.args.get('session_id')
+    sessions_param = request.args.get('sessions')  # Comma-separated session IDs
+    todos_dir = Path.home() / '.claude' / 'todos'
+
+    if not todos_dir.exists():
+        return jsonify({'todos': [], 'error': 'Todos directory not found'})
+
+    try:
+        todo_files = []
+
+        if sessions_param:
+            # Get todos for multiple sessions (comma-separated)
+            session_ids = [sid.strip() for sid in sessions_param.split(',')]
+            files = []
+            for sid in session_ids:
+                pattern = f"{sid}-agent-*.json"
+                files.extend(list(todos_dir.glob(pattern)))
+        elif session_id:
+            # Get todos for specific session (legacy support)
+            pattern = f"{session_id}-agent-*.json"
+            files = list(todos_dir.glob(pattern))
+        else:
+            # Get all todo files
+            files = list(todos_dir.glob('*-agent-*.json'))
+
+        for file_path in files:
+            try:
+                # Extract session ID and agent ID from filename
+                # Format: {sessionId}-agent-{agentId}.json
+                filename = file_path.name
+                parts = filename.replace('.json', '').split('-agent-')
+                if len(parts) == 2:
+                    file_session_id = parts[0]
+                    agent_id = parts[1]
+
+                    # Read file content
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        todos = json.loads(f.read())
+
+                    # Get file modification time
+                    mtime = file_path.stat().st_mtime
+                    timestamp = datetime.fromtimestamp(mtime).isoformat()
+
+                    # Normalize todos to list
+                    todos_list = todos if isinstance(todos, list) else []
+
+                    # Only include files with non-empty todos (skip empty arrays)
+                    if len(todos_list) > 0:
+                        todo_files.append({
+                            'sessionId': file_session_id,
+                            'agentId': agent_id,
+                            'todos': todos_list,
+                            'timestamp': timestamp,
+                            'filename': filename
+                        })
+            except Exception as e:
+                print(f"Error reading todo file {file_path}: {e}")
+                continue
+
+        # Sort by timestamp (newest first)
+        todo_files.sort(key=lambda x: x['timestamp'], reverse=True)
+
+        return jsonify({
+            'todos': todo_files,
+            'total': len(todo_files)
+        })
+    except Exception as e:
+        return jsonify({'error': str(e), 'todos': []})
+
+
+def get_oauth_token():
+    """Retrieve OAuth token from macOS Keychain"""
+    try:
+        result = subprocess.run(
+            ['security', 'find-generic-password', '-s', 'Claude Code-credentials', '-w'],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        if result.returncode == 0:
+            credentials = result.stdout.strip()
+            # Parse JSON to extract accessToken
+            try:
+                creds_json = json.loads(credentials)
+                token = creds_json.get('claudeAiOauth', {}).get('accessToken')
+                if token:
+                    return token
+                else:
+                    print("OAuth token not found in credentials JSON")
+                    return None
+            except json.JSONDecodeError:
+                # If not JSON, assume it's the raw token
+                return credentials
+        else:
+            print(f"Failed to retrieve OAuth token: {result.stderr}")
+            return None
+    except Exception as e:
+        print(f"Error retrieving OAuth token: {e}")
+        return None
+
+
+def detect_active_sessions(entries):
+    """
+    Detect active sessions by finding leaf nodes (most recent entries in each branch)
+    and tracing back through their parent chains.
+
+    IMPORTANT: This returns sessions for UI filtering only.
+    Usage tracking counts ALL branches for accurate billing.
+
+    Args:
+        entries: List of log entries
+
+    Returns:
+        set of active session IDs (includes main session and agent sessions)
+    """
+    if not entries:
+        return set()
+
+    # Build parent-child map and entry index
+    entries_by_uuid = {}
+    children_map = defaultdict(list)  # uuid -> list of child uuids
+
+    for entry in entries:
+        uuid = entry.get('uuid')
+        if not uuid:
+            continue
+
+        entries_by_uuid[uuid] = entry
+        parent_uuid = entry.get('parentUuid')
+
+        if parent_uuid:
+            children_map[parent_uuid].append(uuid)
+
+    # Find ALL leaf nodes (entries with no children)
+    leaf_nodes = []
+    for uuid, entry in entries_by_uuid.items():
+        if uuid not in children_map:  # No children = leaf node
+            timestamp = entry.get('timestamp', '')
+            leaf_nodes.append((uuid, timestamp))
+
+    if not leaf_nodes:
+        return set()
+
+    # Sort leaf nodes by timestamp to find most recent branches
+    leaf_nodes.sort(key=lambda x: x[1], reverse=True)
+
+    # Take most recent leaf + any others within 60 seconds (concurrent work)
+    most_recent_timestamp = leaf_nodes[0][1]
+    active_leaves = [leaf_nodes[0][0]]
+
+    for uuid, timestamp in leaf_nodes[1:]:
+        if timestamp and most_recent_timestamp:
+            try:
+                recent_dt = datetime.fromisoformat(most_recent_timestamp.replace('Z', '+00:00'))
+                leaf_dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+
+                if recent_dt - leaf_dt <= timedelta(seconds=60):
+                    active_leaves.append(uuid)
+            except:
+                pass
+
+    # Trace back through parent chains from active leaves
+    active_uuids = set()
+    to_visit = list(active_leaves)
+
+    while to_visit:
+        current_uuid = to_visit.pop()
+
+        if not current_uuid or current_uuid in active_uuids:
+            continue  # Prevents circular references
+
+        active_uuids.add(current_uuid)
+
+        entry = entries_by_uuid.get(current_uuid)
+        if not entry:
+            continue
+
+        # Follow parentUuid backward
+        parent_uuid = entry.get('parentUuid')
+        if parent_uuid:
+            to_visit.append(parent_uuid)
+
+        # Also follow logicalParentUuid (cross-session links)
+        logical_parent_uuid = entry.get('logicalParentUuid')
+        if logical_parent_uuid:
+            to_visit.append(logical_parent_uuid)
+
+    # Extract session IDs from active entries
+    active_session_ids = set()
+    for uuid in active_uuids:
+        entry = entries_by_uuid.get(uuid)
+        if entry:
+            session_id = entry.get('sessionId')
+            if session_id:
+                active_session_ids.add(session_id)
+
+    return active_session_ids
+
+
+def filter_entries_by_active_sessions(entries, active_session_ids):
+    """
+    Filter entries to only include those from active session path.
+
+    Used for UI display to show users their current conversation context.
+    NOT used for usage tracking (which needs all entries for accurate billing).
+
+    Args:
+        entries: List of log entries
+        active_session_ids: Set of active session IDs from detect_active_sessions()
+
+    Returns:
+        Filtered list of entries from active sessions only
+    """
+    if not active_session_ids:
+        return entries
+
+    return [
+        entry for entry in entries
+        if entry.get('sessionId') in active_session_ids
+    ]
+
+
+def calculate_increment_stats(baseline_timestamp, active_session_ids=None):
+    """
+    Calculate tokens consumed and message count since baseline timestamp.
+
+    IMPORTANT: This counts ALL tokens from ALL branches for accurate billing tracking.
+    Claude API processes and bills for all conversation attempts, including abandoned forks.
+    The active_session_ids parameter is DEPRECATED and ignored (kept for backward compatibility).
+
+    Args:
+        baseline_timestamp: ISO timestamp string to calculate from, or None
+        active_session_ids: DEPRECATED - no longer used, counts all sessions
+
+    Returns:
+        dict with 'tokens' and 'messages' keys
+    """
+    if baseline_timestamp is None:
+        return {'tokens': 0, 'messages': 0}
+
+    total_tokens = 0
+    message_count = 0
+
+    # Take snapshot of entries (protected by lock)
+    with latest_entries_lock:
+        entries_snapshot = list(latest_entries)
+
+    # CORRECT: Query ALL entries since baseline (no session filtering)
+    # This accurately reflects what Claude API actually processed and billed
+    for entry in entries_snapshot:
+        entry_timestamp = entry.get('timestamp', '')
+        if entry_timestamp and entry_timestamp >= baseline_timestamp:
+            # NO FILTERING - count all tokens from all branches
+            content_tokens = entry.get('content_tokens', 0)
+            if content_tokens:
+                total_tokens += content_tokens
+            message_count += 1
+
+    return {
+        'tokens': total_tokens,
+        'messages': message_count
+    }
+
+
+def calculate_windowed_totals(reset_time, window_hours):
+    """
+    Calculate total tokens and messages within a time window using database query.
+
+    Args:
+        reset_time: ISO timestamp string when the window resets (in the future)
+        window_hours: Window duration in hours (5 for 5-hour, 168 for 7-day)
+
+    Returns:
+        dict with 'total_tokens' and 'total_messages' keys
+    """
+    if not reset_time:
+        return {'total_tokens': 0, 'total_messages': 0}
+
+    try:
+        # Parse reset time and calculate window start
+        reset_dt = datetime.fromisoformat(reset_time.replace('Z', '+00:00'))
+        window_start = (reset_dt - timedelta(hours=window_hours)).isoformat().replace('+00:00', 'Z')
+
+        # Query database for sum of deltas within window
+        with get_db() as conn:
+            cursor = conn.cursor()
+
+            if window_hours == 5:
+                cursor.execute("""
+                    SELECT
+                        COALESCE(SUM(five_hour_tokens_consumed), 0) as total_tokens,
+                        COALESCE(SUM(five_hour_messages_count), 0) as total_messages
+                    FROM usage_snapshots
+                    WHERE timestamp >= ?
+                      AND timestamp <= ?
+                      AND five_hour_tokens_consumed IS NOT NULL
+                """, (window_start, reset_time))
+            else:  # 7-day window (168 hours)
+                cursor.execute("""
+                    SELECT
+                        COALESCE(SUM(seven_day_tokens_consumed), 0) as total_tokens,
+                        COALESCE(SUM(seven_day_messages_count), 0) as total_messages
+                    FROM usage_snapshots
+                    WHERE timestamp >= ?
+                      AND timestamp <= ?
+                      AND seven_day_tokens_consumed IS NOT NULL
+                """, (window_start, reset_time))
+
+            result = cursor.fetchone()
+            return {
+                'total_tokens': result['total_tokens'],
+                'total_messages': result['total_messages']
+            }
+    except Exception as e:
+        print(f"Error calculating windowed totals: {e}")
+        return {'total_tokens': 0, 'total_messages': 0}
+
+
+def fetch_usage_data():
+    """
+    Fetch usage data from Anthropic OAuth API (for /api/usage endpoint).
+
+    Note: Snapshot creation and calculations are now handled by the API poller
+    in api_poller.py. This function only fetches current API data for display.
+    """
+    global usage_cache
+
+    # Check cache
+    current_time = time.time()
+    if usage_cache['data'] and (current_time - usage_cache['timestamp']) < usage_cache['cache_duration']:
+        return usage_cache['data']
+
+    # Get OAuth token
+    token = get_oauth_token()
+    if not token:
+        return {'error': 'Failed to retrieve OAuth token from Keychain'}
+
+    # Make API request
+    try:
+        response = requests.get(
+            'https://api.anthropic.com/api/oauth/usage',
+            headers={
+                'Authorization': f'Bearer {token}',
+                'anthropic-beta': 'oauth-2025-04-20',
+                'User-Agent': 'claude-code/2.0.32'
+            },
+            timeout=10
+        )
+
+        if response.status_code == 200:
+            data = response.json()
+
+            # Update cache
+            usage_cache['data'] = data
+            usage_cache['timestamp'] = current_time
+            return data
+        else:
+            return {'error': f'API returned status {response.status_code}', 'details': response.text}
+
+    except Exception as e:
+        return {'error': str(e)}
+
+
+@app.route('/api/usage')
+def get_usage():
+    """Get Claude Code usage statistics"""
+    data = fetch_usage_data()
+    return jsonify(data)
+
+
+@app.route('/api/usage-snapshots')
+def get_usage_snapshots():
+    """Get usage snapshots within a time range"""
+    start_time = request.args.get('start')
+    end_time = request.args.get('end')
+
+    if not start_time or not end_time:
+        return jsonify({'error': 'start and end parameters are required'}), 400
+
+    try:
+        snapshots = get_snapshots_in_range(start_time, end_time)
+        return jsonify({
+            'snapshots': snapshots,
+            'total': len(snapshots)
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/usage/latest')
+def get_latest_usage():
+    """
+    Get the latest usage snapshot with calculated values.
+
+    This endpoint returns pre-calculated usage data from the most recent
+    snapshot created by the backend API poller. Frontend should use this
+    instead of polling Claude API directly.
+
+    Returns:
+        JSON with:
+        - snapshot: Latest snapshot data (or null if none exists)
+        - timestamp: ISO timestamp of snapshot
+        - calculated: Calculated usage values from JSONL
+    """
+    try:
+        snapshot = get_latest_snapshot()
+
+        if not snapshot:
+            return jsonify({
+                'snapshot': None,
+                'message': 'No snapshots available yet. Backend poller is starting up.'
+            })
+
+        # Transform snapshot data to frontend format
+        return jsonify({
+            'snapshot': {
+                'id': snapshot['id'],
+                'timestamp': snapshot['timestamp'],
+                'five_hour': {
+                    'pct': snapshot.get('five_hour_pct', 0),
+                    'used': snapshot.get('five_hour_used', 0),
+                    'limit': snapshot.get('five_hour_limit', 0),
+                    'reset': snapshot.get('five_hour_reset'),
+                    'tokens_consumed': snapshot.get('five_hour_tokens_consumed'),
+                    'messages_count': snapshot.get('five_hour_messages_count'),
+                    'tokens_total': snapshot.get('five_hour_tokens_total'),
+                    'messages_total': snapshot.get('five_hour_messages_total')
+                },
+                'seven_day': {
+                    'pct': snapshot.get('seven_day_pct', 0),
+                    'used': snapshot.get('seven_day_used', 0),
+                    'limit': snapshot.get('seven_day_limit', 0),
+                    'reset': snapshot.get('seven_day_reset'),
+                    'tokens_consumed': snapshot.get('seven_day_tokens_consumed'),
+                    'messages_count': snapshot.get('seven_day_messages_count'),
+                    'tokens_total': snapshot.get('seven_day_tokens_total'),
+                    'messages_total': snapshot.get('seven_day_messages_total')
+                },
+                'active_sessions': snapshot.get('active_sessions'),
+                'recalculated': snapshot.get('recalculated', 0) == 1
+            }
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/timeline')
+def get_timeline():
+    """Get conversation timeline graph for visualization"""
+    session_id = request.args.get('session_id')
+
+    try:
+        # Take snapshot of entries (protected by lock)
+        with latest_entries_lock:
+            entries_snapshot = list(latest_entries)
+
+        # Filter entries by session if specified
+        entries_to_analyze = entries_snapshot
+        if session_id:
+            entries_to_analyze = [e for e in entries_snapshot
+                                 if e.get('sessionId') == session_id]
+
+        # Build timeline graph
+        timeline_data = build_timeline(entries_to_analyze)
+
+        return jsonify(timeline_data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/sessions/<session_id>/checkpoint', methods=['POST'])
+def create_checkpoint_api(session_id):
+    """
+    Create a manual checkpoint for a session.
+
+    Request body (JSON):
+    {
+        "description": "Optional description",
+        "message_uuid": "Optional message UUID"
+    }
+    """
+    try:
+        # Check if git management is enabled globally
+        if not get_setting('git_enabled', False):
+            return jsonify({
+                'success': False,
+                'error': 'Git management is disabled. Enable it in settings first.'
+            }), 403
+
+        # Get git repo path for project (from discovery)
+        git_repo_path = get_primary_repo_for_project(target_project) if target_project else None
+
+        # Check if git is enabled for this specific repository
+        if git_repo_path and not get_repo_git_enabled(git_repo_path):
+            return jsonify({
+                'success': False,
+                'error': f'Git checkpoints are disabled for repository "{git_repo_path}". Enable in settings.'
+            }), 403
+
+        # Create git manager with database connection
+        with get_db() as db:
+            git_manager = GitRollbackManager(project_dir=git_repo_path, db_connection=db)
+
+            # Get request data
+            data = request.get_json() or {}
+            description = data.get('description')
+            message_uuid = data.get('message_uuid')
+
+            # Create checkpoint
+            result = git_manager.create_checkpoint(
+                session_uuid=session_id,
+                checkpoint_type='manual',
+                message_uuid=message_uuid,
+                description=description
+            )
+
+            if result['success']:
+                return jsonify(result), 201
+            else:
+                return jsonify(result), 400
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/sessions/<session_id>/checkpoints', methods=['GET'])
+def list_checkpoints_api(session_id):
+    """Get all checkpoints for a session."""
+    try:
+        # Check if git management is enabled
+        if not get_setting('git_enabled', False):
+            return jsonify({
+                'session_id': session_id,
+                'checkpoints': [],
+                'count': 0,
+                'git_disabled': True
+            })
+
+        project_dir = CLAUDE_PROJECTS_DIR if target_project else None
+
+        with get_db() as db:
+            git_manager = GitRollbackManager(project_dir=project_dir, db_connection=db)
+            checkpoints = git_manager.list_checkpoints(session_uuid=session_id)
+
+            return jsonify({
+                'session_id': session_id,
+                'checkpoints': checkpoints,
+                'count': len(checkpoints)
+            })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/sessions/<session_id>/commits', methods=['GET'])
+def list_commits_api(session_id):
+    """Get all git commits for a session."""
+    try:
+        limit = int(request.args.get('limit', 50))
+        project_dir = CLAUDE_PROJECTS_DIR if target_project else None
+
+        with get_db() as db:
+            git_manager = GitRollbackManager(project_dir=project_dir, db_connection=db)
+            commits = git_manager.list_commits(session_uuid=session_id, limit=limit)
+
+            return jsonify({
+                'session_id': session_id,
+                'commits': commits,
+                'count': len(commits)
+            })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/git/status', methods=['GET'])
+def git_status_api():
+    """Get git repository status."""
+    try:
+        # Get git repo path for project (from discovery)
+        git_repo_path = get_primary_repo_for_project(target_project) if target_project else None
+
+        with get_db() as db:
+            # In all-projects mode (target_project is None), don't initialize git manager
+            # This prevents detecting the log-viewer's own repo
+            if target_project:
+                git_manager = GitRollbackManager(project_dir=git_repo_path, db_connection=db)
+                status = git_manager.get_repo_status()
+
+                # Add discovered repos for this specific project
+                repos = get_project_repos(target_project)
+                status['discovered_repos'] = repos
+            else:
+                # All-projects mode: return status indicating no specific repo
+                # This will trigger the "Discover All Projects" button in the UI
+                status = {
+                    'is_git_repo': False,
+                    'repo_path': None,
+                    'current_branch': None,
+                    'mode': 'all-projects'
+                }
+
+                # Include count of discovered repos across all projects
+                cursor = db.execute('SELECT COUNT(DISTINCT repo_path) FROM project_git_repos')
+                discovered_count = cursor.fetchone()[0]
+                status['discovered_repos_count'] = discovered_count
+
+            return jsonify(status)
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/messages/<message_uuid>/checkpoints', methods=['GET'])
+def list_message_checkpoints_api(message_uuid):
+    """Get all checkpoints associated with a specific message."""
+    try:
+        project_dir = CLAUDE_PROJECTS_DIR if target_project else None
+
+        with get_db() as db:
+            git_manager = GitRollbackManager(project_dir=project_dir, db_connection=db)
+            checkpoints = git_manager.list_checkpoints(message_uuid=message_uuid)
+
+            return jsonify({
+                'message_uuid': message_uuid,
+                'checkpoints': checkpoints,
+                'count': len(checkpoints)
+            })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/settings', methods=['GET'])
+def get_settings_api():
+    """Get all settings."""
+    try:
+        settings = get_all_settings()
+        return jsonify(settings)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/settings/<key>', methods=['GET'])
+def get_setting_api(key):
+    """Get a specific setting."""
+    try:
+        value = get_setting(key)
+        return jsonify({'key': key, 'value': value})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/settings/<key>', methods=['POST'])
+def set_setting_api(key):
+    """
+    Set a setting value.
+
+    Request body (JSON):
+    {
+        "value": <value>
+    }
+    """
+    try:
+        data = request.get_json()
+        if 'value' not in data:
+            return jsonify({'error': 'Missing value in request body'}), 400
+
+        set_setting(key, data['value'])
+
+        return jsonify({
+            'success': True,
+            'key': key,
+            'value': data['value']
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/projects/git-settings', methods=['GET'])
+def get_all_project_git_settings_api():
+    """Get git settings for all projects."""
+    try:
+        settings = get_all_project_git_settings()
+        return jsonify(settings)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/projects/<project_name>/git-enabled', methods=['GET'])
+def get_project_git_enabled_api(project_name):
+    """Check if git is enabled for a specific project."""
+    try:
+        enabled = get_project_git_enabled(project_name)
+        return jsonify({
+            'project_name': project_name,
+            'git_enabled': enabled
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/projects/<project_name>/git-enabled', methods=['POST'])
+def set_project_git_enabled_api(project_name):
+    """
+    Enable or disable git for a specific project.
+
+    Request body (JSON):
+    {
+        "enabled": true/false
+    }
+    """
+    try:
+        data = request.get_json()
+        if 'enabled' not in data:
+            return jsonify({'error': 'Missing enabled in request body'}), 400
+
+        # Check if global git is enabled
+        if not get_setting('git_enabled', False):
+            return jsonify({
+                'success': False,
+                'error': 'Global git management must be enabled first'
+            }), 403
+
+        enabled = bool(data['enabled'])
+        set_project_git_enabled(project_name, enabled)
+
+        return jsonify({
+            'success': True,
+            'project_name': project_name,
+            'git_enabled': enabled
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/repos/git-settings', methods=['GET'])
+def get_all_repo_git_settings_api():
+    """Get git settings for all repositories."""
+    try:
+        settings = get_all_repo_git_settings()
+        return jsonify(settings)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/repos/<path:repo_path>/git-enabled', methods=['GET'])
+def get_repo_git_enabled_api(repo_path):
+    """Check if git is enabled for a specific repository."""
+    try:
+        enabled = get_repo_git_enabled(repo_path)
+        return jsonify({
+            'repo_path': repo_path,
+            'git_enabled': enabled
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/repos/<path:repo_path>/git-enabled', methods=['POST'])
+def set_repo_git_enabled_api(repo_path):
+    """
+    Enable or disable git for a specific repository.
+
+    Request body (JSON):
+    {
+        "enabled": true/false
+    }
+    """
+    try:
+        data = request.get_json()
+        if 'enabled' not in data:
+            return jsonify({'error': 'Missing enabled in request body'}), 400
+
+        # Check if global git is enabled
+        if not get_setting('git_enabled', False):
+            return jsonify({
+                'success': False,
+                'error': 'Global git management must be enabled first'
+            }), 403
+
+        enabled = bool(data['enabled'])
+        set_repo_git_enabled(repo_path, enabled)
+
+        return jsonify({
+            'success': True,
+            'repo_path': repo_path,
+            'git_enabled': enabled
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/projects/<project_name>/discover-git', methods=['POST'])
+def discover_git_for_project_api(project_name):
+    """
+    Discover git repositories for a project by analyzing JSONL entries.
+
+    Scans recent entries for file operations, discovers git repos from paths.
+    Saves discovered repos to database.
+
+    Returns:
+    {
+        'success': True,
+        'repos': ['/path/to/repo1', '/path/to/repo2'],
+        'file_counts': {'/path/to/repo1': 45, '/path/to/repo2': 3},
+        'primary_repo': '/path/to/repo1',
+        'total_files': 48,
+        'entries_scanned': 150
+    }
+    """
+    try:
+        # Get latest entries snapshot
+        with latest_entries_lock:
+            entries_snapshot = list(latest_entries)
+
+        # Discover repos from entries
+        discovery_result = discover_repos_for_project(entries_snapshot, project_name)
+
+        # Save discovered repos to database
+        if discovery_result['repos']:
+            save_discovered_repos(
+                project_name,
+                discovery_result['file_counts'],
+                discovery_result['primary_repo']
+            )
+
+        return jsonify({
+            'success': True,
+            **discovery_result
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/projects/discover-all', methods=['POST'])
+def discover_all_projects_api():
+    """
+    Discover git repositories for ALL projects by analyzing JSONL entries.
+
+    Extracts all unique project names from entries, runs discovery for each,
+    and saves all discovered repos to database.
+
+    Returns:
+    {
+        'success': True,
+        'projects_scanned': 3,
+        'total_repos': 5,
+        'results': {
+            'project1': {
+                'repos': ['/path/to/repo1'],
+                'file_counts': {'/path/to/repo1': 45},
+                'primary_repo': '/path/to/repo1'
+            },
+            'project2': {...}
+        }
+    }
+    """
+    try:
+        # Get latest entries snapshot
+        with latest_entries_lock:
+            entries_snapshot = list(latest_entries)
+
+        # Extract all project names
+        project_names = extract_project_names_from_entries(entries_snapshot)
+
+        if not project_names:
+            return jsonify({
+                'success': False,
+                'error': 'No projects found in loaded entries'
+            })
+
+        # Discover repos for each project
+        all_results = {}
+        total_repos = 0
+
+        for project_name in project_names:
+            discovery_result = discover_repos_for_project(entries_snapshot, project_name)
+
+            # Save discovered repos to database
+            if discovery_result['repos']:
+                save_discovered_repos(
+                    project_name,
+                    discovery_result['file_counts'],
+                    discovery_result['primary_repo']
+                )
+                total_repos += len(discovery_result['repos'])
+
+            all_results[project_name] = discovery_result
+
+        return jsonify({
+            'success': True,
+            'projects_scanned': len(project_names),
+            'total_repos': total_repos,
+            'results': all_results
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/projects/<project_name>/git-repos', methods=['GET'])
+def get_project_repos_api(project_name):
+    """Get discovered git repositories for a project."""
+    try:
+        repos = get_project_repos(project_name)
+        return jsonify({
+            'project_name': project_name,
+            'repos': repos
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/projects/all-discovered', methods=['GET'])
+def get_all_discovered_projects_api():
+    """
+    Get all discovered git repositories, grouped and deduplicated by repo path.
+
+    Returns repos grouped by their path, with all sessions that use each repo.
+    """
+    try:
+        with get_db() as db:
+            # Get all repos with their associated projects/sessions
+            cursor = db.execute('''
+                SELECT repo_path, project_name, is_primary, file_count, discovered_at
+                FROM project_git_repos
+                ORDER BY repo_path, project_name
+            ''')
+            all_repos = cursor.fetchall()
+
+            # Group by repo_path and aggregate sessions
+            repos_grouped = {}
+            for row in all_repos:
+                repo_path, project_name, is_primary, file_count, discovered_at = row
+
+                if repo_path not in repos_grouped:
+                    repos_grouped[repo_path] = {
+                        'repo_path': repo_path,
+                        'total_files': 0,
+                        'sessions': [],
+                        'discovered_at': discovered_at
+                    }
+
+                repos_grouped[repo_path]['total_files'] += file_count
+                repos_grouped[repo_path]['sessions'].append({
+                    'session_id': project_name,
+                    'file_count': file_count,
+                    'is_primary': bool(is_primary)
+                })
+
+            # Convert to list and sort by total file count (most active first)
+            repos_list = sorted(
+                repos_grouped.values(),
+                key=lambda x: x['total_files'],
+                reverse=True
+            )
+
+            return jsonify({
+                'repos': repos_list
+            })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+def main():
+    """Main entry point for the CLI"""
+    global max_entries, file_age_days
+
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(
+        description='Claude Code Log Viewer - Interactive web-based transcript viewer'
+    )
+    parser.add_argument(
+        '--reset-db',
+        action='store_true',
+        help='Reset the database by deleting and recreating it'
+    )
+    parser.add_argument(
+        '--reset-preload',
+        action='store_true',
+        help='Clear all backfill data and fork detection, then recalculate on this startup'
+    )
+    parser.add_argument(
+        '--days',
+        type=int,
+        default=2,
+        help='Only load files modified in the last N days (default: 2)'
+    )
+    parser.add_argument(
+        '--limit',
+        type=int,
+        default=500,
+        help='Maximum number of entries to keep in memory (default: 500)'
+    )
+    parser.add_argument(
+        '--project',
+        type=str,
+        help='Target specific project directory (isolates JSONL processing and git operations)'
+    )
+    parser.add_argument(
+        '--skip-backfill',
+        action='store_true',
+        help='Skip the backfill process on startup (faster restart, but usage stats may be incomplete)'
+    )
+    args = parser.parse_args()
+
+    # Set global configuration from arguments
+    global target_project, CLAUDE_PROJECTS_DIR
+    file_age_days = args.days
+    max_entries = args.limit
+
+    # Handle project isolation
+    if args.project:
+        target_project = args.project
+        project_path = CLAUDE_PROJECTS_DIR / target_project
+        if not project_path.exists():
+            print(f"ERROR: Project directory not found: {project_path}")
+            print(f"Available projects:")
+            if CLAUDE_PROJECTS_DIR.exists():
+                for p in sorted(CLAUDE_PROJECTS_DIR.iterdir()):
+                    if p.is_dir():
+                        print(f"  - {p.name}")
+            import sys
+            sys.exit(1)
+        print(f"🎯 Targeting project: {target_project}")
+        print(f"   Project path: {project_path}")
+        # Override CLAUDE_PROJECTS_DIR for this session
+        CLAUDE_PROJECTS_DIR = project_path
+
+    # Handle database reset
+    if args.reset_db:
+        if os.path.exists(DB_PATH):
+            print(f"Resetting database at {DB_PATH}...")
+            os.remove(DB_PATH)
+            print("Database deleted.")
+        else:
+            print(f"No database found at {DB_PATH}")
+
+    # Initialize database
+    print(f"Initializing database at {DB_PATH}...")
+    init_db()
+
+    # Handle preload reset (clear backfill and forks)
+    if args.reset_preload:
+        print("Resetting preload data (backfill + forks)...")
+        with get_db() as conn:
+            cursor = conn.cursor()
+
+            # Clear all backfill calculations (set to NULL)
+            print("  Clearing backfill calculations...")
+            cursor.execute("""
+                UPDATE usage_snapshots
+                SET five_hour_tokens_consumed = NULL,
+                    five_hour_messages_count = NULL,
+                    seven_day_tokens_consumed = NULL,
+                    seven_day_messages_count = NULL,
+                    five_hour_tokens_total = NULL,
+                    five_hour_messages_total = NULL,
+                    seven_day_tokens_total = NULL,
+                    seven_day_messages_total = NULL
+            """)
+            backfill_cleared = cursor.rowcount
+
+            # Clear all fork detection data
+            print("  Clearing fork detection data...")
+            cursor.execute("DELETE FROM conversation_forks")
+            forks_cleared = cursor.rowcount
+
+            conn.commit()
+
+        print(f"✓ Cleared {backfill_cleared} snapshot calculations")
+        print(f"✓ Cleared {forks_cleared} fork records")
+        print("Backfill will run automatically to recalculate...")
+
+    # Check for NULL snapshots and start backfill if needed
+    backfill_cutoff_time = None  # Track when backfill completed
+
+    if args.skip_backfill:
+        print("⏭ Skipping backfill (--skip-backfill flag set)")
+        print("  Usage stats may be incomplete until next full startup")
+    else:
+        print("Checking for NULL usage snapshots...")
+        null_counts = check_null_snapshots()
+
+    if not args.skip_backfill and null_counts['total_nulls'] > 0:
+        print(f"⚠ Found {null_counts['total_nulls']} snapshots with NULL calculated fields")
+        print(f"  - 5-hour window: {null_counts['five_hour_nulls']} snapshots")
+        print(f"  - 7-day window: {null_counts['seven_day_nulls']} snapshots")
+        print("Starting backfill process (blocking - required for fork detection)...")
+        print("⏱ Drawing a line: backfill will process existing data, API poller handles new data after")
+
+        def backfill_progress_callback(progress):
+            """Print backfill progress"""
+            stage = progress.get('stage', '')
+            message = progress.get('message', '')
+            print(f"  [{stage}] {message}")
+
+        # Mark the cutoff time BEFORE backfill starts
+        from datetime import datetime
+        backfill_cutoff_time = datetime.now()
+        print(f"📍 Backfill cutoff time: {backfill_cutoff_time.isoformat()}")
+        print(f"   Data before this time: Processed by backfill")
+        print(f"   Data after this time:  Will be handled by API poller")
+
+        # Run backfill synchronously (blocks until complete)
+        try:
+            result = backfill_all_snapshots_async(
+                CLAUDE_PROJECTS_DIR,
+                callback=backfill_progress_callback
+            )
+            if result['success']:
+                print(f"✓ Backfill complete:")
+                print(f"  - Snapshots updated: {result['snapshots_updated']}")
+                print(f"  - Messages processed: {result['messages_processed']:,}")
+                print(f"  - Forks detected: {result['forks_detected']}")
+                print(f"  - Time: {result['total_time_seconds']:.2f}s")
+                print(f"✓ Clean handoff: API poller will now handle new data from {backfill_cutoff_time.isoformat()}")
+            else:
+                print(f"✗ Backfill failed: {result.get('error', 'Unknown error')}")
+                print("⚠ Server will start but fork data may be incomplete")
+        except Exception as e:
+            print(f"✗ Backfill error: {e}")
+            print("⚠ Server will start but fork data may be incomplete")
+    elif not args.skip_backfill:
+        print("✓ All snapshots have calculated values - no backfill needed")
+
+    # Initial load
+    print(f"Loading JSONL files from: {CLAUDE_PROJECTS_DIR}")
+    load_latest_entries()
+    with latest_entries_lock:
+        total = len(latest_entries)
+    print(f"Loaded {total} entries")
+
+    # Start file processing worker thread
+    worker_thread = threading.Thread(target=file_processing_worker, daemon=True, name="FileProcessor")
+    worker_thread.start()
+    print("Started file processing worker")
+
+    # Start file watcher in background
+    observer = start_file_watcher()
+    print("Started file watcher")
+
+    # Initialize and start API poller for backend-driven usage updates
+    global api_poller
+    try:
+        print("Initializing API poller...")
+        api_poller = ApiPoller(poll_interval=10)
+        api_poller.start()
+        print("✓ API poller started (10-second interval)")
+        print("  Backend will automatically poll Claude API and calculate usage")
+        print("  Frontend will read pre-calculated data from /api/usage/latest")
+    except ValueError as e:
+        print(f"⚠ Warning: Could not start API poller: {e}")
+        print("  Usage tracking will not update automatically.")
+        print("  Frontend can still use /api/usage endpoint for manual polling.")
+    except Exception as e:
+        print(f"⚠ Warning: Unexpected error starting API poller: {e}")
+
+    try:
+        # Run Flask app
+        print("Starting web server at http://localhost:5001")
+        app.run(host='0.0.0.0', port=5001, debug=True, use_reloader=False)
+    except KeyboardInterrupt:
+        print("\nShutting down...")
+        if api_poller:
+            api_poller.stop()
+        observer.stop()
+
+    if api_poller:
+        api_poller.stop()
+    observer.join()
+
+
+if __name__ == '__main__':
+    main()
