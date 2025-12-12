@@ -1,0 +1,57 @@
+Metadata-Version: 2.4
+Name: ansible-deployer
+Version: 0.0.57
+Summary: Wrapper around ansible-playbook allowing configurable tasks and permissions
+Home-page: https://github.com/cinek810/ansible-deployer
+Author: J. Wierzbowski, M. Stolarek
+Author-email: 
+License: MIT
+Project-URL: Source, https://github.com/cinek810/ansible-deployer
+Platform: linux
+Classifier: Development Status :: 3 - Alpha
+Classifier: Environment :: Console
+Classifier: Intended Audience :: System Administrators
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Natural Language :: English
+Classifier: Operating System :: POSIX :: Linux
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Topic :: System :: Systems Administration
+Classifier: Topic :: System :: Distributed Computing
+Classifier: Topic :: System :: Clustering
+Requires-Python: >=3.6
+Description-Content-Type: text/markdown; charset=UTF-8
+License-File: LICENSE
+Requires-Dist: pyyaml>=5.3.1
+Requires-Dist: cerberus>=1.3.1
+Requires-Dist: pytest-testinfra>=6.6.0
+Dynamic: license-file
+
+# ansible-deployer
+However ansible is a great tool for IT infrastructure automation in certain cases it's hard to use
+it for the complete deployment, because of that tools like ansible-tower/AWX try to wrap it's
+activity making further assumptions on the way ansible code is stored (versioning repository), the
+way it's executed - certain combinations of inventory/playbook/tag options used to achieve specific
+goals. Having it in mind ansible-deployer may be treated as yet another ansible-playbook wrapper, but
+focused on comprehensive command line intrface and easy YAML based configuration.
+
+## Some main fatures are
+- The results of whole excution are logged and saved together with the ansible code state for
+potential review in the future.
+- Only one active ansible-deployer per ansible inventory is allowed, attempt to execute ansible-deployer
+on already locked infrastructure will be rejected.
+- Working directory is setup per every execution of ansible-deployer separately to store the code
+state used. This is done by site configurable hook.
+- It's possible to lock/unlock inventory (defined as --infra --stage pairs) for manual manipulation,
+stopping ansible-deployer from being used.
+
+## Configuration files
+- `tasks.yaml` - Configuration of tasks (sets of playbooks to be executed)
+- `infra.yaml` - Configuration of infrastructures and stages of those mapping to ansible inventory
+
+## Examples
+```
+ansible-deployer run --task updateUsers --infra webServers --stage prod
+```
