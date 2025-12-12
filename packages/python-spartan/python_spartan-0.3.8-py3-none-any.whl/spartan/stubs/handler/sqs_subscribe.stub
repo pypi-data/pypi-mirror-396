@@ -1,0 +1,77 @@
+from typing import Dict, Any
+from http import HTTPStatus
+from pydantic import BaseModel, Field
+
+from app.helpers.environment import env
+from app.helpers.logger import get_logger
+from app.services.queue import QueueService
+
+logger = get_logger("spartan-framework")
+sqs = QueueService()
+
+class MessageBody(BaseModel):
+    firstname: str
+    lastname: str
+
+class SQSRecord(BaseModel):
+    messageId: str
+    receiptHandle: str
+    body: str
+    attributes: Dict[str, str]
+
+class LambdaResponse(BaseModel):
+    status_code: int = Field(..., ge=100, le=599)
+    message: str
+
+def process_message(record: SQSRecord) -> None:
+    """Process and delete SQS message"""
+    if env("SQS_ENABLED"):
+        sqs.delete_message(
+            queue_url=env("QUEUE_URL"),
+            receipt_handle=record.receiptHandle
+        )
+        logger.info("Message deleted", extra={"receipt_handle": record.receiptHandle})
+
+def main(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+    """Lambda handler function"""
+    try:
+        if not event.get("Records"):
+            raise ValueError("No records found in event")
+
+        # Process first record
+        record = SQSRecord.model_validate(event["Records"][0])
+        message = MessageBody.model_validate_json(record.body)
+
+        # Implement your business logic here
+
+        logger.info("Processing message", extra={"body": message.model_dump()})
+        process_message(record)
+
+        return LambdaResponse(
+            status_code=HTTPStatus.OK,
+            message="Success"
+        ).model_dump()
+
+    except Exception as e:
+        logger.error(f"Error: {str(e)}")
+        return LambdaResponse(
+            status_code=HTTPStatus.BAD_REQUEST,
+            message=str(e)
+        ).model_dump()
+
+if __name__ == "__main__":
+    from app.helpers.context import MockLambdaContext
+
+    test_event = {
+        "Records": [{
+            "messageId": "1",
+            "receiptHandle": "abc123",
+            "body": '{"firstname": "John", "lastname": "Doe"}',
+            "attributes": {
+                "SenderId": "123456789012",
+                "SentTimestamp": "1234567890"
+            }
+        }]
+    }
+
+    print(main(test_event, MockLambdaContext()))

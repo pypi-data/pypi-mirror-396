@@ -1,0 +1,59 @@
+from typing import Optional
+
+from pydantic import BaseModel, field_validator
+
+
+class {{name}}CreateRequest(BaseModel):
+    """
+    Represents a {{name}} request.
+
+    Attributes:
+        email (str): The email name.
+        price (float): The price amount.
+        year (int): The fiscal year.
+
+    Validators:
+        check_decimal_places: Validates that the price has exactly 2 decimal places.
+        check_year_is_integer: Validates that the fiscal year is a whole number (integer).
+        check_year_range: Validates that the fiscal year is between 2023 and 2024.
+    """
+
+    email: str
+    price: float
+    year: int
+
+    @field_validator("price")
+    @classmethod
+    def check_decimal_places(cls, value):
+        if isinstance(value, float) and round(value, 2) != value:
+            raise ValueError("Revenue should have exactly 2 decimal places")
+        return value
+
+    @field_validator("year")
+    @classmethod
+    def check_year_is_integer(cls, value):
+        if not isinstance(value, int) or value != round(value):
+            raise ValueError("Fiscal year should be a whole number (integer)")
+        return value
+
+    @field_validator("year")
+    @classmethod
+    def check_year_range(cls, value):
+        if value < 2023 or value > 2024:
+            raise ValueError("Fiscal year should be between 2023 and 2024")
+        return value
+
+
+class {{name}}UpdateRequest(BaseModel):
+    """
+    Data model for updating an existing {{name}}.
+
+    Attributes:
+        email (Optional[str]): The new email of the user. Optional.
+        price (Optional[float]): The new price of the user. Optional.
+        year (Optional[str]): The new year for the user. Optional.
+    """
+
+    email: Optional[str]
+    price: Optional[float]
+    year: Optional[int]

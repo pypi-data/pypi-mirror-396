@@ -1,0 +1,122 @@
+#!/usr/bin/env python3
+"""
+AWS Glue Job: Database to S3
+This script transfers data from a relational database to S3.
+"""
+
+import sys
+
+from awsglue.context import GlueContext
+from awsglue.dynamicframe import DynamicFrame
+from awsglue.job import Job
+from awsglue.transforms import *
+from awsglue.utils import getResolvedOptions
+from pyspark.context import SparkContext
+
+# Parse job arguments
+args = getResolvedOptions(sys.argv, [
+    'JOB_NAME',
+    'db_connection_name',
+    'source_table_schema',
+    'source_table_name',
+    'target_s3_path'
+])
+
+# Initialize Glue context
+sc = SparkContext()
+glueContext = GlueContext(sc)
+spark = glueContext.spark_session
+job = Job(glueContext)
+job.init(args['JOB_NAME'], args)
+
+try:
+    # Configuration
+    db_connection = args['db_connection_name']
+    source_schema = args.get('source_table_schema', 'public')
+    source_table = args['source_table_name']
+    target_s3_path = args['target_s3_path']
+
+    print(f"Starting Database to S3 transfer...")
+    print(f"DB Connection: {db_connection}")
+    print(f"Source Table: {source_schema}.{source_table}")
+    print(f"Target S3 Path: {target_s3_path}")
+
+    # Read from database
+    db_dyf = glueContext.create_dynamic_frame.from_catalog(
+        database="your_glue_database",  # Replace with your Glue catalog database
+        table_name=f"{source_schema}_{source_table}",
+        transformation_ctx="db_dyf"
+    )
+
+    # Alternative: Read directly from JDBC connection
+    # db_dyf = glueContext.create_dynamic_frame.from_options(
+    #     connection_type="postgresql",  # or "mysql", "oracle", "sqlserver"
+    #     connection_options={
+    #         "url": "jdbc:postgresql://your-host:5432/your-database",
+    #         "dbtable": f"{source_schema}.{source_table}",
+    #         "user": "your-username",
+    #         "password": "your-password"
+    #     }
+    # )
+
+    print(f"Records read from database: {db_dyf.count()}")
+
+    # Optional: Apply transformations
+    # Example transformations:
+
+    # 1. Apply field mappings
+    # mapped_dyf = ApplyMapping.apply(
+    #     frame=db_dyf,
+    #     mappings=[
+    #         ("user_id", "long", "id", "string"),
+    #         ("user_name", "string", "name", "string"),
+    #         ("created_at", "timestamp", "created_date", "string"),
+    #         # Add your field mappings here
+    #     ]
+    # )
+
+    # 2. Filter data
+    # filtered_dyf = Filter.apply(
+    #     frame=db_dyf,
+    #     f=lambda x: x["status"] == "active"
+    # )
+
+    # 3. Drop null fields
+    # clean_dyf = DropNullFields.apply(frame=db_dyf)
+
+    # 4. Format dates
+    # def format_dates(rec):
+    #     if "created_at" in rec:
+    #         rec["created_date"] = str(rec["created_at"])[:10]  # Extract date part
+    #     return rec
+    #
+    # formatted_dyf = Map.apply(frame=db_dyf, f=format_dates)
+
+    # Use transformed data or original
+    final_dyf = db_dyf
+
+    # Write to S3
+    glueContext.write_dynamic_frame.from_options(
+        frame=final_dyf,
+        connection_type="s3",
+        connection_options={
+            "path": target_s3_path,
+            "partitionKeys": []  # Add partition keys if needed, e.g., ["year", "month"]
+        },
+        format="parquet",  # Options: json, csv, parquet, orc
+        format_options={
+            "writeHeader": True,
+            "compression": "snappy"
+        }
+    )
+
+    print("✅ Data transfer completed successfully!")
+    print(f"📍 Data exported to: {target_s3_path}")
+    print(f"📊 Total records processed: {final_dyf.count()}")
+
+except Exception as e:
+    print(f"❌ Error during data transfer: {str(e)}")
+    raise e
+
+finally:
+    job.commit()

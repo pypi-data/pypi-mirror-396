@@ -1,0 +1,87 @@
+#!/usr/bin/env python3
+"""
+AWS Glue Job: DynamoDB to S3
+This script transfers data from DynamoDB table to S3 bucket.
+"""
+
+import sys
+
+import boto3
+from awsglue.context import GlueContext
+from awsglue.dynamicframe import DynamicFrame
+from awsglue.job import Job
+from awsglue.transforms import *
+from awsglue.utils import getResolvedOptions
+from pyspark.context import SparkContext
+
+# Parse job arguments
+args = getResolvedOptions(sys.argv, [
+    'JOB_NAME',
+    'source_table_name',
+    'target_s3_path',
+    'aws_region'
+])
+
+# Initialize Glue context
+sc = SparkContext()
+glueContext = GlueContext(sc)
+spark = glueContext.spark_session
+job = Job(glueContext)
+job.init(args['JOB_NAME'], args)
+
+try:
+    # Configuration
+    source_table = args['source_table_name']
+    target_s3_path = args['target_s3_path']
+    aws_region = args.get('aws_region', 'us-east-1')
+
+    print(f"Starting DynamoDB to S3 transfer...")
+    print(f"Source Table: {source_table}")
+    print(f"Target S3 Path: {target_s3_path}")
+
+    # Read from DynamoDB
+    dynamodb_dyf = glueContext.create_dynamic_frame.from_options(
+        connection_type="dynamodb",
+        connection_options={
+            "dynamodb.region": aws_region,
+            "dynamodb.input.tableName": source_table,
+            "dynamodb.throughput.read.percent": "0.5"
+        }
+    )
+
+    print(f"Records read from DynamoDB: {dynamodb_dyf.count()}")
+
+    # Optional: Apply transformations here
+    # transformed_dyf = ApplyMapping.apply(
+    #     frame=dynamodb_dyf,
+    #     mappings=[
+    #         ("id", "string", "id", "string"),
+    #         ("name", "string", "name", "string"),
+    #         # Add your field mappings here
+    #     ]
+    # )
+
+    # Write to S3
+    glueContext.write_dynamic_frame.from_options(
+        frame=dynamodb_dyf,
+        connection_type="s3",
+        connection_options={
+            "path": target_s3_path,
+            "partitionKeys": []  # Add partition keys if needed
+        },
+        format="parquet",  # Options: json, csv, parquet, orc
+        format_options={
+            "writeHeader": True,
+            "compression": "snappy"
+        }
+    )
+
+    print("✅ Data transfer completed successfully!")
+    print(f"📍 Data exported to: {target_s3_path}")
+
+except Exception as e:
+    print(f"❌ Error during data transfer: {str(e)}")
+    raise e
+
+finally:
+    job.commit()

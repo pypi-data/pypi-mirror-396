@@ -1,0 +1,12 @@
+Type: AWS::SQS::Queue
+Properties:
+    QueueName: ${self:custom.sqs.queues.{{sqs_name}}}
+    FifoQueue: true
+    ContentBaseDeduplication: true
+    MessageRetentionPeriod: 172800
+    RedrivePolicy:
+        maxReceiveCount: 3
+        deadLetterTargetArn:
+            Fn::GetAtt:
+                - "{{dlq_name}}"
+                - "Arn"

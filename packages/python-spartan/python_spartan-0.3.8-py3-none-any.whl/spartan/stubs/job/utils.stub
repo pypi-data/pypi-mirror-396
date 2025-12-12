@@ -1,0 +1,131 @@
+import logging
+import sys
+from urllib.parse import urlparse
+
+import boto3
+from awsglue.context import GlueContext
+from awsglue.utils import getResolvedOptions
+from pyspark.context import SparkContext
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("spartan-data-job")
+
+
+def parse_s3_uri(uri: str):
+    parsed = urlparse(uri)
+    if parsed.scheme != "s3" or not parsed.netloc or not parsed.path:
+        raise ValueError(f"Invalid S3 URI: {uri}")
+    bucket = parsed.netloc
+    prefix = parsed.path.lstrip("/")
+    return bucket, prefix
+
+
+def list_objects(s3, bucket: str, prefix: str):
+    paginator = s3.get_paginator("list_objects_v2")
+    for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
+        for obj in page.get("Contents", []):
+            yield obj["Key"]
+
+
+def copy_object(s3, src_bucket, src_key, dest_bucket, dest_key):
+    s3.copy_object(
+        Bucket=dest_bucket,
+        Key=dest_key,
+        CopySource={"Bucket": src_bucket, "Key": src_key},
+    )
+
+
+def delete_object(s3, bucket, key):
+    s3.delete_object(Bucket=bucket, Key=key)
+
+
+def rm(s3, bucket: str, prefix: str):
+    logger.info(f"Recursively deleting objects in s3://{bucket}/{prefix}")
+    paginator = s3.get_paginator("list_objects_v2")
+    count = 0
+    for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
+        objects = page.get("Contents", [])
+        if not objects:
+            continue
+        for obj in objects:
+            key = obj["Key"]
+            try:
+                s3.delete_object(Bucket=bucket, Key=key)
+                logger.info(f"Deleted s3://{bucket}/{key}")
+                count += 1
+            except Exception as e:
+                logger.error(f"Failed to delete s3://{bucket}/{key}: {e}")
+    logger.info(f"Total objects deleted: {count}")
+
+
+def main():
+    args = getResolvedOptions(
+        sys.argv,
+        ["operation", "source_uri"]
+        + (["dest_uri"] if "--dest_uri" in sys.argv else []),
+    )
+    operation = args["operation"]
+    source_uri = args["source_uri"]
+    dest_uri = args.get("dest_uri")
+
+    logger.info(
+        f"Starting Glue job with operation: {operation}, source: {source_uri}, dest: {dest_uri}"
+    )
+
+    try:
+        src_bucket, src_prefix = parse_s3_uri(source_uri)
+        dest_bucket, dest_prefix = (
+            parse_s3_uri(dest_uri) if dest_uri else (None, None)
+        )
+    except Exception as e:
+        logger.error(f"URI parsing error: {e}")
+        sys.exit(1)
+
+    s3 = boto3.client("s3")
+    sc = SparkContext.getOrCreate()
+    GlueContext(sc)
+
+    try:
+        if operation == "rm":
+            rm(s3, src_bucket, src_prefix)
+        else:
+            count = 0
+            for obj_key in list_objects(s3, src_bucket, src_prefix):
+                rel_key = (
+                    obj_key[len(src_prefix) :]
+                    if obj_key.startswith(src_prefix)
+                    else obj_key
+                )
+                if rel_key.startswith("/"):
+                    rel_key = rel_key[1:]
+                dest_obj_key = (
+                    dest_prefix.rstrip("/") + "/" + rel_key
+                    if dest_prefix and rel_key
+                    else (dest_prefix.rstrip("/") if dest_prefix else "")
+                )
+                if operation == "cp":
+                    logger.info(
+                        f"Copying s3://{src_bucket}/{obj_key} to s3://{dest_bucket}/{dest_obj_key}"
+                    )
+                    copy_object(
+                        s3, src_bucket, obj_key, dest_bucket, dest_obj_key
+                    )
+                if operation == "mv":
+                    logger.info(
+                        f"Copying s3://{src_bucket}/{obj_key} to s3://{dest_bucket}/{dest_obj_key}"
+                    )
+                    copy_object(
+                        s3, src_bucket, obj_key, dest_bucket, dest_obj_key
+                    )
+                    logger.info(f"Deleting s3://{src_bucket}/{obj_key}")
+                    delete_object(s3, src_bucket, obj_key)
+                count += 1
+            logger.info(f"Total objects processed: {count}")
+        logger.info("Glue job completed successfully.")
+    except Exception as e:
+        logger.error(f"Glue job failed: {e}")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

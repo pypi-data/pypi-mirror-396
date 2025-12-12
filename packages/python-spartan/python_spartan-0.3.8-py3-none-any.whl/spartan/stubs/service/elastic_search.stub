@@ -1,0 +1,70 @@
+import os
+
+import boto3
+import requests
+from dotenv import load_dotenv
+from elasticsearch import Elasticsearch, RequestsHttpConnection
+from elasticsearch.exceptions import ConnectionError, NotFoundError, RequestError
+from requests_aws4auth import AWS4Auth
+
+load_dotenv()
+
+
+class ElasticSearchService:
+	def __init__(self):
+		self.host = os.environ.get("ES_HOST")
+		self.port = os.environ.get("ES_PORT")
+		self.region = os.environ.get("REGION")
+		self.index = os.environ.get("ES_INDEX")
+
+
+	def search(self, size=5, scroll="1m", index="", query={}):
+
+		credentials = boto3.Session().get_credentials()
+
+		aws4auth = AWS4Auth(
+			credentials.access_key,
+			credentials.secret_key,
+			region,
+			"es",
+			session_token=credentials.token,
+		)
+
+		es = ElasticSearch(
+			hosts = [{
+				"host": self.host,
+				"port": self.port
+			}],
+			http_auth = aws4auth,
+			use_ssl = True,
+			verify_certs = True,
+			connection_class = RequestsHttpConnection
+		)
+
+
+		try:
+			results = es.search(
+				index = index,
+				doc_type = "_doc",
+				body = query,
+				size = size,
+				scroll = scroll
+			)
+
+		except RequestError as e:
+			print(f"Request error: {e}")
+
+		except ConnectionError as e:
+			print(f"Connection error: {e}")
+
+		except NotFoundError as e:
+			print(f"Resource not found error: {e}")
+
+		except requests.exceptions.RequestException as e:
+			print(f"Request exception: {e}")
+
+		except Exception as e:
+			print(f"Elasticsearch exception: {e}")
+
+
+		return results["hits"]["hits"]
