@@ -1,0 +1,201 @@
+{
+  "text": "![img-0.png](img-0.png)\n\n![img-1.jpg](img-1.jpg)\n\nProposition Commerciale\n\nMigration Python \u2013 Backports de s\u00e9curit\u00e9\n\n**Client** : SCC pour DGA/DRM/Escrim\n\n**Num\u00e9ro de devis\u00a0:** 112501\n\n**Date** : 08 d\u00e9cembre 2025\n\nVersion\u00a0: v1\n\nDestinataire\u00a0:\n\n| **DGA** | **Mohcin GUENOUN**  Courriel\u00a0: [mguenoun@fr.scc.com](mailto:mguenoun@fr.scc.com) |\n| --- | --- |\n\nAuteur\u00a0:\n\n| **Kairntech** | **Vincent Nibart**  T\u00e9l\u00e9phone : +33 (0)6 25 68 08 12  Courriel :[vincent.nibart@kairntech.com](mailto:vincent.nibart@kairntech.com) |\n| --- | --- |\n\n[1. RESUME EXECUTIF 4](#_Toc216109579)\n\n[2. PRESTATIONS DE SERVICE 4](#_Toc216109580)\n\n[3. PROPOSITION FINANCI\u00c8RE 6](#_Toc216109581)\n\n[4. CONDITIONS G\u00c9N\u00c9RALES DE VENTE 6](#_Toc216109582)\n\n[4.1. FACTURATION ET PAIEMENT 6](#_Toc216109583)\n\n[4.2. VALIDITE DE LA PROPOSITON 6](#_Toc216109584)\n\n[5. RENSEIGNEMENTS JURIDIQUES ET ADMINISTRATIFS 7](#_Toc216109585)\n\n# RESUME EXECUTIF\n\nLa plateforme Kairntech, utilis\u00e9e \u00e0 la DRM sur le projet ESCRIM, assiste les analystes sur l\u2019extraction d\u2019entit\u00e9s nomm\u00e9es afin d\u2019enrichir la base de connaissance.\n\nSuite \u00e0 la demande du service de coh\u00e9rence num\u00e9rique du minist\u00e8re des arm\u00e9es, la DGA demande \u00e0 Kairntech de pouvoir apporter la preuve que les versions Python utilis\u00e9es dans la plateforme Kairntech proviennent d'un d\u00e9p\u00f4t avec des backports de s\u00e9curit\u00e9.\n\nCe document est une proposition commerciale pour faire \u00e9voluer la plateforme Kairntech de fa\u00e7on \u00e0 pouvoir fournir une cha\u00eene de confiance compl\u00e8te depuis les sources jusqu'aux d\u00e9ploiements, avec des preuves v\u00e9rifiables et automatis\u00e9es.\n\n# PRESTATIONS DE SERVICE\n\nKairntech propose de migrer l'ensemble des composants Python de la plateforme vers la version 3.12 ou 3.13, mettre \u00e0 jour les images Docker de base vers Ubuntu 22.04 ou 24.04 LTS, et garantir la tra\u00e7abilit\u00e9 des binaires Python via un d\u00e9p\u00f4t avec des backports de s\u00e9curit\u00e9.\n\nDe mani\u00e8re d\u00e9taill\u00e9, cela consiste en\u00a0:\n\n**\u00c9tape 1 : \u00c9valuation et planification**\n\n* R\u00e9alisation d\u2019un audit complet de l'\u00e9tat actuel de la plateforme\u00a0;\n* Liste exhaustive de tous les composants logiciels, micro-services et scripts qui utilisent Python\u00a0;\n* Documentation des versions de Python actuellement d\u00e9ploy\u00e9es et les versions des images Docker de base utilis\u00e9es\u00a0;\n* Analyse de la matrice de d\u00e9pendances pour comprendre l'impact de la migration de Python sur les biblioth\u00e8ques cl\u00e9s, en particulier celles li\u00e9es au NLP et \u00e0 la GenAI (comme TensorFlow, PyTorch, Transformers, etc.), car elles peuvent avoir des pr\u00e9requis de version sp\u00e9cifiques\u00a0;\n* Disponibilit\u00e9 des paquets Python critiques dans les d\u00e9p\u00f4ts pour la version 3.12/3.13 afin d'anticiper les \u00e9ventuels blocages\u00a0;\n* S\u00e9lection du d\u00e9p\u00f4t de paquets Python qui fournira les binaires avec des backports de s\u00e9curit\u00e9.\n\n**\u00c9tape 2 : Pr\u00e9paration de l'environnement de d\u00e9veloppement et des CI/CD**\n\n* Mise \u00e0 jour des fichiers de configuration des environnements de d\u00e9veloppement, tels que pyenv ou les Dockerfiles de d\u00e9veloppement, pour proposer la version Python 3.12/3.13\u00a0;\n* Modification des pipelines d'int\u00e9gration continue (CI/CD) pour qu'ils cr\u00e9ent des environnements de test parall\u00e8les utilisant Python 3.12/3.13 et Ubuntu 22.04/24.04\u00a0;\n* Configuration des pipelines pour qu'ils ex\u00e9cutent automatiquement les tests de non-r\u00e9gression et les analyses de s\u00e9curit\u00e9 de code \u00e0 chaque commit sur la branche de migration.\n\n**\u00c9tape 3 : Mise \u00e0 jour des fichiers de d\u00e9pendances et des images Docker**\n\n* Mise \u00e0 jour de tous les fichiers de d\u00e9finition des d\u00e9pendances, comme requirements.txt ou pyproject.toml, en sp\u00e9cifiant les versions compatibles avec Python 3.12/3.13\u00a0;\n* R\u00e9\u00e9criture des Dockerfiles pour qu'ils utilisent l'image de base ubuntu 22.04/24.04 et qu'ils installent Python 3.12/3.13 exclusivement depuis le d\u00e9p\u00f4t de backports de s\u00e9curit\u00e9 choisie\u00a0;\n* Dans les Dockerfiles, documentation par un commentaire explicite l'URL source du d\u00e9p\u00f4t utilis\u00e9 pour l'installation de Python, afin de servir de preuve technique.\n\n**\u00c9tape 4 : Adaptation du code et r\u00e9solution des incompatibilit\u00e9s**\n\n* Lancement de campagnes de tests et d'analyse statique du code avec des outils comme ruff ou bandit pour d\u00e9tecter les APIs devenues obsol\u00e8tes ou les syntaxes non support\u00e9es\u00a0;\n* Correction de toutes les incompatibilit\u00e9s identifi\u00e9es, en accordant une attention particuli\u00e8re au code de bas niveau ou qui manipule les types de donn\u00e9es de mani\u00e8re avanc\u00e9e\u00a0;\n* Tests manuels approfondis sur les fonctionnalit\u00e9s les plus critiques de la plateforme pour valider le comportement attendu.\n\n**\u00c9tape 5 : Validation intensive et recette**\n\n* Ex\u00e9cution de la suite compl\u00e8te des tests automatis\u00e9s, incluant les tests unitaires, d'int\u00e9gration et de bout en bout, dans le nouvel environnement\u00a0;\n* R\u00e9alisation des tests de charge et de performance pour assurer que la nouvelle stack n'introduit pas de d\u00e9gradation.\n\n**\u00c9tape 6 : G\u00e9n\u00e9ration des preuves de conformit\u00e9 et de s\u00e9curit\u00e9**\n\n* Automatisation de la g\u00e9n\u00e9ration d'un rapport de conformit\u00e9 dans le pipeline CI/CD\u00a0;\n* Ce rapport doit capturer la version exacte de Python install\u00e9e et doit clairement indiquer l'origine du paquet, c'est-\u00e0-dire l'URL du d\u00e9p\u00f4t de backports de s\u00e9curit\u00e9.\n\n# PROPOSITION FINANCI\u00c8RE\n\nLe co\u00fbt pour ces travaux d\u00e9crits ci-dessus est pr\u00e9sent\u00e9 dans le tableau ci-dessous. Kairntech propose de r\u00e9aliser cette prestation au forfait.\n\n| **Prestations** | **Prix (\u20ac HT)** |\n| --- | --- |\n| Migration Python, Mise \u00e0 jour images Docker, garantie tra\u00e7abilit\u00e9 des binaires Python via un d\u00e9p\u00f4t avec des backports de s\u00e9curit\u00e9 | 40 000 |\n| **Total** | **40 000 \u20ac HT** |\n\nLe livrable sera une nouvelle version de la plateforme Kairntech.\n\nLa date de livraison pourra se faire au maximum 9 mois apr\u00e8s la r\u00e9ception de la commande.\n\n# CONDITIONS G\u00c9N\u00c9RALES DE VENTE\n\n## FACTURATION ET PAIEMENT\n\nKairntech propose l\u2019\u00e9ch\u00e9ancier de paiement ci-dessous\u00a0:\n\n* 100% \u00e0 la livraison / recette\n\nTous les paiements se font \u00e0 45 jours fin de mois.\n\n## VALIDITE DE LA PROPOSITON\n\nCette proposition commerciale est valable jusqu\u2019au 28 f\u00e9vrier 2026 inclus.\n\n# RENSEIGNEMENTS JURIDIQUES ET ADMINISTRATIFS\n\nD\u00e9nomination sociale Kairntech\n\nForme juridique SAS\n\nCapital 170 000 Euros\n\nSi\u00e8ge social 29 chemin du vieux ch\u00eane 38240 MEYLAN - FRANCE\n\nNum\u00e9ro SIRET 844 751 636 00011 RCS GRENOBLE\n\nCode APE 5829C\n\nTVA Intracommunautaire FR 37 844751636\n\nContact administratif\u00a0: Anne de Chauvigny\n\nanne.dechauvigny@kairntech.com",
+  "identifier": "PC_Kairntech_Python_BackportsSecurit\u00e9-v2.docx",
+  "title": "PC_Kairntech_Python_BackportsSecurit\u00e9-v2.docx",
+  "sourceText": null,
+  "boundaries": null,
+  "metadata": {
+    "original": "PC_Kairntech_Python_BackportsSecurit\u00e9-v2.docx",
+    "mime-type": "text/markdown",
+    "language": "fr"
+  },
+  "altTexts": [],
+  "properties": null,
+  "sentences": [
+    {
+      "start": 0,
+      "end": 362,
+      "metadata": {
+        "original": "PC_Kairntech_Python_BackportsSecurit\u00e9-v2.docx",
+        "mime-type": "text/markdown",
+        "language": "fr"
+      },
+      "categories": null
+    },
+    {
+      "start": 364,
+      "end": 534,
+      "metadata": {
+        "original": "PC_Kairntech_Python_BackportsSecurit\u00e9-v2.docx",
+        "mime-type": "text/markdown",
+        "language": "fr"
+      },
+      "categories": null
+    },
+    {
+      "start": 535,
+      "end": 774,
+      "metadata": {
+        "original": "PC_Kairntech_Python_BackportsSecurit\u00e9-v2.docx",
+        "mime-type": "text/markdown",
+        "language": "fr"
+      },
+      "categories": null
+    },
+    {
+      "start": 775,
+      "end": 887,
+      "metadata": {
+        "original": "PC_Kairntech_Python_BackportsSecurit\u00e9-v2.docx",
+        "mime-type": "text/markdown",
+        "language": "fr"
+      },
+      "categories": null
+    },
+    {
+      "start": 889,
+      "end": 1324,
+      "metadata": {
+        "original": "PC_Kairntech_Python_BackportsSecurit\u00e9-v2.docx",
+        "mime-type": "text/markdown",
+        "language": "fr",
+        "Headers": "RESUME EXECUTIF"
+      },
+      "categories": null
+    },
+    {
+      "start": 1326,
+      "end": 1561,
+      "metadata": {
+        "original": "PC_Kairntech_Python_BackportsSecurit\u00e9-v2.docx",
+        "mime-type": "text/markdown",
+        "language": "fr",
+        "Headers": "RESUME EXECUTIF"
+      },
+      "categories": null
+    },
+    {
+      "start": 1563,
+      "end": 2232,
+      "metadata": {
+        "original": "PC_Kairntech_Python_BackportsSecurit\u00e9-v2.docx",
+        "mime-type": "text/markdown",
+        "language": "fr",
+        "Headers": "PRESTATIONS DE SERVICE"
+      },
+      "categories": null
+    },
+    {
+      "start": 2233,
+      "end": 2813,
+      "metadata": {
+        "original": "PC_Kairntech_Python_BackportsSecurit\u00e9-v2.docx",
+        "mime-type": "text/markdown",
+        "language": "fr",
+        "Headers": "PRESTATIONS DE SERVICE"
+      },
+      "categories": null
+    },
+    {
+      "start": 2815,
+      "end": 3412,
+      "metadata": {
+        "original": "PC_Kairntech_Python_BackportsSecurit\u00e9-v2.docx",
+        "mime-type": "text/markdown",
+        "language": "fr",
+        "Headers": "PRESTATIONS DE SERVICE"
+      },
+      "categories": null
+    },
+    {
+      "start": 3414,
+      "end": 4006,
+      "metadata": {
+        "original": "PC_Kairntech_Python_BackportsSecurit\u00e9-v2.docx",
+        "mime-type": "text/markdown",
+        "language": "fr",
+        "Headers": "PRESTATIONS DE SERVICE"
+      },
+      "categories": null
+    },
+    {
+      "start": 4008,
+      "end": 4685,
+      "metadata": {
+        "original": "PC_Kairntech_Python_BackportsSecurit\u00e9-v2.docx",
+        "mime-type": "text/markdown",
+        "language": "fr",
+        "Headers": "PRESTATIONS DE SERVICE"
+      },
+      "categories": null
+    },
+    {
+      "start": 4686,
+      "end": 5126,
+      "metadata": {
+        "original": "PC_Kairntech_Python_BackportsSecurit\u00e9-v2.docx",
+        "mime-type": "text/markdown",
+        "language": "fr",
+        "Headers": "PRESTATIONS DE SERVICE"
+      },
+      "categories": null
+    },
+    {
+      "start": 5128,
+      "end": 5591,
+      "metadata": {
+        "original": "PC_Kairntech_Python_BackportsSecurit\u00e9-v2.docx",
+        "mime-type": "text/markdown",
+        "language": "fr",
+        "Headers": "PROPOSITION FINANCI\u00c8RE"
+      },
+      "categories": null
+    },
+    {
+      "start": 5593,
+      "end": 5682,
+      "metadata": {
+        "original": "PC_Kairntech_Python_BackportsSecurit\u00e9-v2.docx",
+        "mime-type": "text/markdown",
+        "language": "fr",
+        "Headers": "PROPOSITION FINANCI\u00c8RE"
+      },
+      "categories": null
+    },
+    {
+      "start": 5717,
+      "end": 5885,
+      "metadata": {
+        "original": "PC_Kairntech_Python_BackportsSecurit\u00e9-v2.docx",
+        "mime-type": "text/markdown",
+        "language": "fr",
+        "Headers": "CONDITIONS G\u00c9N\u00c9RALES DE VENTE / FACTURATION ET PAIEMENT"
+      },
+      "categories": null
+    },
+    {
+      "start": 5887,
+      "end": 5991,
+      "metadata": {
+        "original": "PC_Kairntech_Python_BackportsSecurit\u00e9-v2.docx",
+        "mime-type": "text/markdown",
+        "language": "fr",
+        "Headers": "CONDITIONS G\u00c9N\u00c9RALES DE VENTE / VALIDITE DE LA PROPOSITON"
+      },
+      "categories": null
+    },
+    {
+      "start": 5993,
+      "end": 6351,
+      "metadata": {
+        "original": "PC_Kairntech_Python_BackportsSecurit\u00e9-v2.docx",
+        "mime-type": "text/markdown",
+        "language": "fr",
+        "Headers": "RENSEIGNEMENTS JURIDIQUES ET ADMINISTRATIFS"
+      },
+      "categories": null
+    }
+  ],
+  "annotations": [],
+  "categories": []
+}
