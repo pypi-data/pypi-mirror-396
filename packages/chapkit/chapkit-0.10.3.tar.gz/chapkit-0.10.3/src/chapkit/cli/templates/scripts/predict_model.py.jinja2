@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+"""External prediction script for ML model inference via ShellModelRunner.
+
+This script demonstrates language-agnostic ML prediction by:
+- Reading config from YAML (config.yml in workspace)
+- Loading trained model from disk (model.pickle in workspace)
+- Loading future data from CSV
+- Making predictions (using the mean values from training)
+- Saving predictions to CSV
+
+Usage:
+    python predict_model.py --historic historic.csv --future future.csv --output predictions.csv --geo geo.json
+"""
+
+import argparse
+import pickle
+import sys
+
+import pandas as pd
+import yaml
+
+
+def main() -> None:
+    """Main prediction function."""
+    parser = argparse.ArgumentParser(description="Make predictions using trained model")
+    parser.add_argument("--historic", required=True, help="Path to historic data CSV")
+    parser.add_argument("--future", required=True, help="Path to future data CSV")
+    parser.add_argument("--output", required=True, help="Path to save predictions CSV")
+    parser.add_argument("--geo", default="", help="Path to GeoJSON file (optional)")
+
+    args = parser.parse_args()
+
+    try:
+        # Load config (fixed path in workspace)
+        with open("config.yml") as f:
+            config = yaml.safe_load(f)
+
+        print(f"Predicting with config: {config}", file=sys.stderr)
+
+        # Load model (fixed path in workspace)
+        with open("model.pickle", "rb") as f:
+            model = pickle.load(f)
+
+        print("Model loaded from model.pickle", file=sys.stderr)
+
+        # Load future data
+        future = pd.read_csv(args.future)
+        print(f"Loaded {len(future)} prediction samples", file=sys.stderr)
+
+        # Simple prediction: use mean from training as prediction
+        # This is a minimal example - replace with your own prediction logic
+        means = model.get("means", {})
+        prediction_value = sum(means.values()) / len(means) if means else 0.0
+
+        # Add predictions to dataframe
+        future["sample_0"] = prediction_value
+
+        print(f"Made {len(future)} predictions (value: {prediction_value})", file=sys.stderr)
+
+        # Save predictions
+        future.to_csv(args.output, index=False)
+
+        print(f"Predictions saved to {args.output}", file=sys.stderr)
+        print("SUCCESS: Prediction completed")
+
+    except Exception as e:
+        print(f"ERROR: Prediction failed: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
