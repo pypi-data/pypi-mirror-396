@@ -1,0 +1,129 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fastapi-openapi-plus"
+version = "0.1.0"
+description = "Library for simplifying OpenAPI documentation in FastAPI (parameters, schemas, examples)"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "Igor Selivanov", email = "seligoroff@gmail.com"}
+]
+keywords = ["fastapi", "openapi", "documentation", "api", "swagger"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Framework :: FastAPI",
+]
+dependencies = [
+    "fastapi>=0.104.0",
+    "pydantic>=1.10.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/seligoroff/fastapi-openapi-plus"
+Repository = "https://github.com/seligoroff/fastapi-openapi-plus"
+Issues = "https://github.com/seligoroff/fastapi-openapi-plus/issues"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+]
+audit = [
+    "click>=8.0.0",
+]
+
+[project.scripts]
+fastapi-openapi-plus-audit = "fastapi_openapi_plus.cli:audit"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["fastapi_openapi_plus*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+markers = [
+    "unit: Unit tests for individual components",
+    "integration: Integration tests with FastAPI application",
+    "pydantic_v1: Tests for Pydantic v1 compatibility",
+    "pydantic_v2: Tests for Pydantic v2 compatibility",
+]
+addopts = [
+    "--cov=fastapi_openapi_plus",
+    "--cov-report=term-missing",
+    "--cov-report=html:tests/htmlcov",
+    "--cov-report=xml:tests/coverage.xml",
+    "--cov-branch",
+    "--cov-fail-under=90",
+    "-v",
+    # Подавляем DeprecationWarning от FastAPI для example параметра
+    # Это известная проблема FastAPI - они показывают warning, но example= 
+    # все еще работает и это правильный формат для OpenAPI 3.0
+    # Рекомендуется использовать example= вместо examples=[{"value": ...}]
+    "-W",
+    "ignore::DeprecationWarning",
+    # Подавляем PydanticDeprecatedSince20 для __fields__ в v1 моделях
+    # Это ожидаемое поведение при работе с v1 моделями в v2 окружении
+    "-W",
+    "ignore::pydantic.warnings.PydanticDeprecatedSince20",
+]
+
+[tool.coverage.run]
+source = ["fastapi_openapi_plus"]
+data_file = "tests/.coverage"
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/venv/*",
+    "*/.venv/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
+precision = 2
+show_missing = true
+skip_covered = false
+
+[tool.coverage.html]
+directory = "tests/htmlcov"
+
+[tool.black]
+line-length = 100
+target-version = ['py38', 'py39', 'py310', 'py311']
+
+[tool.ruff]
+line-length = 100
+target-version = "py38"
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+
