@@ -1,0 +1,110 @@
+[project]
+name = "seven2one-questra-automation"
+version = "0.1.3"
+description = "Questra Automation Python Package"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Proprietary" }
+authors = [
+    { name = "Jürgen Talasch", email = "juergen.talasch@seven2one.de" }
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: Other/Proprietary License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+dependencies = [
+    "gql>=3.5.0,<4.0.0",
+    "httpx>=0.28.1,<1.0.0",
+    "loguru>=0.7.0,<1.0.0",
+    "pydantic>=2.10.5,<3.0.0",
+    "requests-toolbelt>=1.0.0,<2.0.0",
+    "seven2one-questra-authentication>=0.2.3",
+]
+
+[tool.uv]
+package = true
+index-strategy = "unsafe-best-match"
+
+[tool.uv.sources]
+seven2one-questra-authentication = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest-asyncio>=1.3.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/questra_automation"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "unit: marks tests as unit tests"
+]
+pythonpath = ["src"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E402",  # Module-level imports nach Logger-Setup
+    "E501",  # Line too long - Docstring-Lesbarkeit hat Vorrang
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "F401",  # Unused imports in Tests toleriert
+    "F403",  # Star imports in Tests toleriert
+    "F405",  # Undefined names from star imports
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+
+[tool.ariadne-codegen]
+schema_path = "schema/automation.sdl"
+queries_path = "graphql/operations.graphql"
+target_package_path = "src/questra_automation/_generated"
+target_package_name = "graphql_client"
+client_name = "AutomationClientGenerated"
+client_file_name = "client"
+async_client = true
+include_all_inputs = true
+include_all_enums = true
+convert_to_snake_case = true
+
+[tool.ariadne-codegen.scalars.DateTime]
+type = "datetime.datetime"
+
+[tool.ariadne-codegen.scalars.UUID]
+type = "uuid.UUID"
+
+[tool.ariadne-codegen.scalars.TimeSpan]
+type = "datetime.timedelta"
+
+[tool.ariadne-codegen.scalars.Long]
+type = "int"

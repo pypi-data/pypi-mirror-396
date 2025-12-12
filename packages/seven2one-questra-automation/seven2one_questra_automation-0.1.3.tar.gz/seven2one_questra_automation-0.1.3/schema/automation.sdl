@@ -1,0 +1,966 @@
+schema {
+  query: Query
+  mutation: Mutation
+}
+
+type AutomationArgumentDefinitionViewData {
+  name: String!
+  description: String!
+  mandatory: Boolean!
+}
+
+type AutomationArgumentInstanceViewData {
+  name: String!
+  value: String!
+}
+
+type AutomationBuildErrorViewData {
+  code: String!
+  messageTemplate: String!
+  data: [KeyValuePairOfStringAndString!]!
+}
+
+type AutomationExecutionView {
+  workspace: WorkspaceView
+  id: UUID!
+  branch: String!
+  commit: String!
+  workspaceName: String!
+  repositoryName: String!
+  repositoryUrl: String!
+  automationPath: String!
+  environment: String!
+  initiatorType: AutomationInitiatorTypeViewData!
+  initiatorReference: String
+  argumentInstances: [AutomationArgumentInstanceViewData!]!
+  status: AutomationExecutionStatusViewData!
+  output: String
+  domainStatus: AutomationExecutionDomainStatusViewData
+  domainStatusMessage: String
+  createdAt: DateTime!
+  startedAt: DateTime
+  finishedAt: DateTime
+  duration: TimeSpan
+}
+
+type AutomationView {
+  workspace: WorkspaceView
+  schedules: [ScheduleView]
+  workspaceName: String!
+  path: String!
+  description: String!
+  environment: String!
+  allowParallelExecution: Boolean!
+  argumentDefinitions: [AutomationArgumentDefinitionViewData!]!
+}
+
+"A connection to a list of items."
+type AutomationsConnection {
+  "Information to aid in pagination."
+  pageInfo: PageInfo!
+  "A list of edges."
+  edges: [AutomationsEdge!]
+  "A flattened list of the nodes."
+  nodes: [AutomationView!]
+  "Identifies the total count of items in the connection."
+  totalCount: Int!
+}
+
+"An edge in a connection."
+type AutomationsEdge {
+  "A cursor for use in pagination."
+  cursor: String!
+  "The item at the end of the edge."
+  node: AutomationView!
+}
+
+"Result of repository creation."
+type CreateRepositoryPayload {
+  name: String!
+}
+
+"Result of schedule creation."
+type CreateSchedulePayload {
+  name: String!
+  workspaceName: String!
+  automationPath: String!
+}
+
+"Result of workspace creation."
+type CreateWorkspacePayload {
+  name: String!
+}
+
+"Result of repository deletion."
+type DeleteRepositoryPayload {
+  name: String!
+}
+
+"Result of schedule deletion."
+type DeleteSchedulePayload {
+  name: String!
+  workspaceName: String!
+  automationPath: String!
+}
+
+"Result of workspace deletion."
+type DeleteWorkspacePayload {
+  name: String!
+}
+
+type ErrorCodeView {
+  code: String!
+  messageTemplate: String!
+  parameters: [String!]!
+}
+
+"A connection to a list of items."
+type ErrorCodesConnection {
+  "Information to aid in pagination."
+  pageInfo: PageInfo!
+  "A list of edges."
+  edges: [ErrorCodesEdge!]
+  "A flattened list of the nodes."
+  nodes: [ErrorCodeView!]
+  "Identifies the total count of items in the connection."
+  totalCount: Int!
+}
+
+"An edge in a connection."
+type ErrorCodesEdge {
+  "A cursor for use in pagination."
+  cursor: String!
+  "The item at the end of the edge."
+  node: ErrorCodeView!
+}
+
+"Result of an automation execution."
+type ExecutePayload {
+  "Unique identifier of the execution."
+  id: UUID!
+}
+
+"A connection to a list of items."
+type ExecutionsConnection {
+  "Information to aid in pagination."
+  pageInfo: PageInfo!
+  "A list of edges."
+  edges: [ExecutionsEdge!]
+  "A flattened list of the nodes."
+  nodes: [AutomationExecutionView!]
+  "Identifies the total count of items in the connection."
+  totalCount: Int!
+}
+
+"An edge in a connection."
+type ExecutionsEdge {
+  "A cursor for use in pagination."
+  cursor: String!
+  "The item at the end of the edge."
+  node: AutomationExecutionView!
+}
+
+type KeyValuePairOfStringAndString {
+  key: String!
+  value: String!
+}
+
+type Mutation {
+  "Executes an automation in a specified workspace with the provided arguments."
+  execute(input: ExecuteInput!): ExecutePayload! @authorize(roles: [ "Administrator" ])
+  "Creates a new repository with the specified name and remote configuration."
+  createRepository(input: CreateRepositoryInput!): CreateRepositoryPayload! @authorize(roles: [ "Administrator" ])
+  "Updates an existing repository's name or remote configuration."
+  updateRepository(input: UpdateRepositoryInput!): UpdateRepositoryPayload! @authorize(roles: [ "Administrator" ])
+  "Deletes a repository by name."
+  deleteRepository(input: DeleteRepositoryInput!): DeleteRepositoryPayload! @authorize(roles: [ "Administrator" ])
+  "Renews the SSH key for a repository."
+  renewRepositorySshKey(input: RenewRepositorySshKeyInput!): RenewRepositorySshKeyPayload! @authorize(roles: [ "Administrator" ])
+  "Creates a new schedule for automated execution of an automation."
+  createSchedule(input: CreateScheduleInput!): CreateSchedulePayload! @authorize(roles: [ "Administrator" ])
+  "Updates an existing schedule's configuration."
+  updateSchedule(input: UpdateScheduleInput!): UpdateSchedulePayload! @authorize(roles: [ "Administrator" ])
+  "Deletes a schedule."
+  deleteSchedule(input: DeleteScheduleInput!): DeleteSchedulePayload! @authorize(roles: [ "Administrator" ])
+  "Creates a new workspace in a repository with the specified branch."
+  createWorkspace(input: CreateWorkspaceInput!): CreateWorkspacePayload! @authorize(roles: [ "Administrator" ])
+  "Updates an existing workspace's name or branch configuration."
+  updateWorkspace(input: UpdateWorkspaceInput!): UpdateWorkspacePayload! @authorize(roles: [ "Administrator" ])
+  "Deletes a workspace by name."
+  deleteWorkspace(input: DeleteWorkspaceInput!): DeleteWorkspacePayload! @authorize(roles: [ "Administrator" ])
+  "Synchronizes a workspace with its remote repository."
+  synchronizeWorkspace(input: SynchronizeWorkspaceInput!): SynchronizeWorkspacePayload! @authorize(roles: [ "Administrator" ])
+}
+
+"Information about pagination in a connection."
+type PageInfo {
+  "Indicates whether more edges exist following the set defined by the clients arguments."
+  hasNextPage: Boolean!
+  "Indicates whether more edges exist prior the set defined by the clients arguments."
+  hasPreviousPage: Boolean!
+  "When paginating backwards, the cursor to continue."
+  startCursor: String
+  "When paginating forwards, the cursor to continue."
+  endCursor: String
+}
+
+type Query {
+  "Retrieves a paginated, filterable, and sortable list of automations."
+  automations("Returns the first _n_ elements from the list." first: Int "Returns the elements in the list that come after the specified cursor." after: String "Returns the last _n_ elements from the list." last: Int "Returns the elements in the list that come before the specified cursor." before: String where: AutomationViewFilterInput order: [AutomationViewSortInput!]): AutomationsConnection @authorize(roles: [ "Administrator" ])
+  "Retrieves a paginated, filterable, and sortable list of automation executions."
+  executions("Returns the first _n_ elements from the list." first: Int "Returns the elements in the list that come after the specified cursor." after: String "Returns the last _n_ elements from the list." last: Int "Returns the elements in the list that come before the specified cursor." before: String where: AutomationExecutionViewFilterInput order: [AutomationExecutionViewSortInput!]): ExecutionsConnection @authorize(roles: [ "Administrator" ])
+  "Retrieves all available error codes in the automation system with their message templates and parameters."
+  errorCodes("Returns the first _n_ elements from the list." first: Int "Returns the elements in the list that come after the specified cursor." after: String "Returns the last _n_ elements from the list." last: Int "Returns the elements in the list that come before the specified cursor." before: String where: ErrorCodeViewFilterInput order: [ErrorCodeViewSortInput!]): ErrorCodesConnection @authorize(roles: [ "Administrator" ])
+  "Retrieves a paginated, filterable, and sortable list of repositories."
+  repositories("Returns the first _n_ elements from the list." first: Int "Returns the elements in the list that come after the specified cursor." after: String "Returns the last _n_ elements from the list." last: Int "Returns the elements in the list that come before the specified cursor." before: String where: RepositoryViewFilterInput order: [RepositoryViewSortInput!]): RepositoriesConnection @authorize(roles: [ "Administrator" ])
+  "Retrieves a paginated, filterable, and sortable list of schedules."
+  schedules("Returns the first _n_ elements from the list." first: Int "Returns the elements in the list that come after the specified cursor." after: String "Returns the last _n_ elements from the list." last: Int "Returns the elements in the list that come before the specified cursor." before: String where: ScheduleViewFilterInput order: [ScheduleViewSortInput!]): SchedulesConnection @authorize(roles: [ "Administrator" ])
+  "Retrieves a paginated list of scheduled executions within a specified time range."
+  scheduledExecutions("Start time for scheduled executions (defaults to current time if not specified)." from: DateTime "End time for scheduled executions (optional)." to: DateTime "Returns the first _n_ elements from the list." first: Int "Returns the elements in the list that come after the specified cursor." after: String "Returns the last _n_ elements from the list." last: Int "Returns the elements in the list that come before the specified cursor." before: String): ScheduledExecutionsConnection @authorize(roles: [ "Administrator" ])
+  "Retrieves information about the automation service."
+  automationServiceInfo: ServiceInfo!
+  "Retrieves a paginated, filterable, and sortable list of workspaces."
+  workspaces("Returns the first _n_ elements from the list." first: Int "Returns the elements in the list that come after the specified cursor." after: String "Returns the last _n_ elements from the list." last: Int "Returns the elements in the list that come before the specified cursor." before: String where: WorkspaceViewFilterInput order: [WorkspaceViewSortInput!]): WorkspacesConnection @authorize(roles: [ "Administrator" ])
+}
+
+"Result of SSH key renewal."
+type RenewRepositorySshKeyPayload {
+  name: String!
+}
+
+"A connection to a list of items."
+type RepositoriesConnection {
+  "Information to aid in pagination."
+  pageInfo: PageInfo!
+  "A list of edges."
+  edges: [RepositoriesEdge!]
+  "A flattened list of the nodes."
+  nodes: [RepositoryView!]
+  "Identifies the total count of items in the connection."
+  totalCount: Int!
+}
+
+"An edge in a connection."
+type RepositoriesEdge {
+  "A cursor for use in pagination."
+  cursor: String!
+  "The item at the end of the edge."
+  node: RepositoryView!
+}
+
+type RepositoryView {
+  workspaces: [WorkspaceView]
+  name: String!
+  url: String!
+  createdAt: DateTime!
+  changedAt: DateTime!
+  authenticationMethod: RepositoryAuthenticationMethodViewData!
+  username: String
+  sshPublicKey: String
+}
+
+type ScheduleView {
+  workspace: WorkspaceView
+  fireTimes(count: IntBetweenZeroAndOneThousand! = 10 from: DateTime to: DateTime): [DateTime!]
+  automationPath: String!
+  name: String!
+  description: String!
+  cron: String!
+  timezone: String!
+  active: Boolean!
+  argumentInstances: [AutomationArgumentInstanceViewData!]!
+  version: Long!
+}
+
+"Represents a scheduled execution with computed fire times."
+type ScheduledExecutionView {
+  workspace: WorkspaceView
+  "Name of the schedule."
+  name: String!
+  "Description of the schedule."
+  description: String!
+  "Cron expression defining the schedule."
+  cron: String!
+  "Timezone for the schedule."
+  timezone: String!
+  "Path to the automation script."
+  automationPath: String!
+  "Next scheduled execution time."
+  fireTime: DateTime!
+  "Arguments configured for the scheduled execution."
+  argumentInstances: [AutomationArgumentInstanceViewData!]!
+}
+
+"A connection to a list of items."
+type ScheduledExecutionsConnection {
+  "Information to aid in pagination."
+  pageInfo: PageInfo!
+  "A list of edges."
+  edges: [ScheduledExecutionsEdge!]
+  "A flattened list of the nodes."
+  nodes: [ScheduledExecutionView!]
+}
+
+"An edge in a connection."
+type ScheduledExecutionsEdge {
+  "A cursor for use in pagination."
+  cursor: String!
+  "The item at the end of the edge."
+  node: ScheduledExecutionView!
+}
+
+"A connection to a list of items."
+type SchedulesConnection {
+  "Information to aid in pagination."
+  pageInfo: PageInfo!
+  "A list of edges."
+  edges: [SchedulesEdge!]
+  "A flattened list of the nodes."
+  nodes: [ScheduleView!]
+  "Identifies the total count of items in the connection."
+  totalCount: Int!
+}
+
+"An edge in a connection."
+type SchedulesEdge {
+  "A cursor for use in pagination."
+  cursor: String!
+  "The item at the end of the edge."
+  node: ScheduleView!
+}
+
+"Service Information"
+type ServiceInfo {
+  "Name of service"
+  name: String!
+  "Release version"
+  version: String!
+  "Build version"
+  informationalVersion: String!
+}
+
+"Result of workspace synchronization."
+type SynchronizeWorkspacePayload {
+  name: String!
+}
+
+"Result of repository update."
+type UpdateRepositoryPayload {
+  name: String!
+}
+
+"Result of schedule update."
+type UpdateSchedulePayload {
+  name: String!
+  workspaceName: String!
+  automationPath: String!
+}
+
+"Result of workspace update."
+type UpdateWorkspacePayload {
+  name: String!
+}
+
+type WorkspaceView {
+  repository: RepositoryView
+  automations: [AutomationView]
+  name: String!
+  repositoryName: String!
+  buildStatus: AutomationBuildStatusViewData!
+  buildErrors: [AutomationBuildErrorViewData!]!
+  buildBranch: String
+  buildCommit: String
+  buildStartedAt: DateTime
+  buildFinishedAt: DateTime
+  buildDuration: TimeSpan
+  activeBranch: String
+  activeCommit: String
+  createdAt: DateTime!
+  changedAt: DateTime!
+}
+
+"A connection to a list of items."
+type WorkspacesConnection {
+  "Information to aid in pagination."
+  pageInfo: PageInfo!
+  "A list of edges."
+  edges: [WorkspacesEdge!]
+  "A flattened list of the nodes."
+  nodes: [WorkspaceView!]
+  "Identifies the total count of items in the connection."
+  totalCount: Int!
+}
+
+"An edge in a connection."
+type WorkspacesEdge {
+  "A cursor for use in pagination."
+  cursor: String!
+  "The item at the end of the edge."
+  node: WorkspaceView!
+}
+
+input AutomationArgumentDefinitionViewDataFilterInput {
+  and: [AutomationArgumentDefinitionViewDataFilterInput!]
+  or: [AutomationArgumentDefinitionViewDataFilterInput!]
+  name: StringOperationFilterInput
+  description: StringOperationFilterInput
+  mandatory: BooleanOperationFilterInput
+}
+
+input AutomationArgumentInstanceViewDataFilterInput {
+  and: [AutomationArgumentInstanceViewDataFilterInput!]
+  or: [AutomationArgumentInstanceViewDataFilterInput!]
+  name: StringOperationFilterInput
+  value: StringOperationFilterInput
+}
+
+input AutomationBuildErrorViewDataFilterInput {
+  and: [AutomationBuildErrorViewDataFilterInput!]
+  or: [AutomationBuildErrorViewDataFilterInput!]
+  code: StringOperationFilterInput
+  messageTemplate: StringOperationFilterInput
+  data: ListFilterInputTypeOfKeyValuePairOfStringAndStringFilterInput
+}
+
+input AutomationBuildStatusViewDataOperationFilterInput {
+  eq: AutomationBuildStatusViewData
+  neq: AutomationBuildStatusViewData
+  in: [AutomationBuildStatusViewData!]
+  nin: [AutomationBuildStatusViewData!]
+}
+
+input AutomationExecutionStatusViewDataOperationFilterInput {
+  eq: AutomationExecutionStatusViewData
+  neq: AutomationExecutionStatusViewData
+  in: [AutomationExecutionStatusViewData!]
+  nin: [AutomationExecutionStatusViewData!]
+}
+
+input AutomationExecutionViewFilterInput {
+  and: [AutomationExecutionViewFilterInput!]
+  or: [AutomationExecutionViewFilterInput!]
+  id: UuidOperationFilterInput
+  branch: StringOperationFilterInput
+  commit: StringOperationFilterInput
+  workspaceName: StringOperationFilterInput
+  repositoryName: StringOperationFilterInput
+  repositoryUrl: StringOperationFilterInput
+  automationPath: StringOperationFilterInput
+  environment: StringOperationFilterInput
+  initiatorType: AutomationInitiatorTypeViewDataOperationFilterInput
+  initiatorReference: StringOperationFilterInput
+  argumentInstances: ListFilterInputTypeOfAutomationArgumentInstanceViewDataFilterInput
+  status: AutomationExecutionStatusViewDataOperationFilterInput
+  output: StringOperationFilterInput
+  domainStatus: NullableOfAutomationExecutionDomainStatusViewDataOperationFilterInput
+  domainStatusMessage: StringOperationFilterInput
+  createdAt: DateTimeOperationFilterInput
+  startedAt: DateTimeOperationFilterInput
+  finishedAt: DateTimeOperationFilterInput
+  duration: TimeSpanOperationFilterInput
+}
+
+input AutomationExecutionViewSortInput {
+  id: SortEnumType
+  workspaceId: SortEnumType
+  buildId: SortEnumType
+  repositoryId: SortEnumType
+  branch: SortEnumType
+  commit: SortEnumType
+  workspaceName: SortEnumType
+  repositoryName: SortEnumType
+  repositoryUrl: SortEnumType
+  automationPath: SortEnumType
+  environment: SortEnumType
+  initiatorType: SortEnumType
+  initiatorReference: SortEnumType
+  status: SortEnumType
+  output: SortEnumType
+  domainStatus: SortEnumType
+  domainStatusMessage: SortEnumType
+  createdAt: SortEnumType
+  startedAt: SortEnumType
+  finishedAt: SortEnumType
+  duration: SortEnumType
+}
+
+input AutomationInitiatorTypeViewDataOperationFilterInput {
+  eq: AutomationInitiatorTypeViewData
+  neq: AutomationInitiatorTypeViewData
+  in: [AutomationInitiatorTypeViewData!]
+  nin: [AutomationInitiatorTypeViewData!]
+}
+
+input AutomationViewFilterInput {
+  and: [AutomationViewFilterInput!]
+  or: [AutomationViewFilterInput!]
+  workspaceName: StringOperationFilterInput
+  path: StringOperationFilterInput
+  description: StringOperationFilterInput
+  environment: StringOperationFilterInput
+  allowParallelExecution: BooleanOperationFilterInput
+  argumentDefinitions: ListFilterInputTypeOfAutomationArgumentDefinitionViewDataFilterInput
+}
+
+input AutomationViewSortInput {
+  id: SortEnumType
+  workspaceId: SortEnumType
+  workspaceName: SortEnumType
+  path: SortEnumType
+  description: SortEnumType
+  environment: SortEnumType
+  allowParallelExecution: SortEnumType
+}
+
+input BooleanOperationFilterInput {
+  eq: Boolean
+  neq: Boolean
+}
+
+"Git branch configuration."
+input BranchInput {
+  "Name of the branch."
+  name: String!
+  "Commit hash to checkout."
+  commit: String!
+}
+
+"Input parameters for creating a repository."
+input CreateRepositoryInput {
+  name: String!
+  remote: RemoteInput!
+}
+
+"Input parameters for creating a schedule."
+input CreateScheduleInput {
+  "Name of the workspace containing the automation."
+  workspaceName: String!
+  "Path to the automation script."
+  automationPath: String!
+  "Name of the schedule."
+  name: String!
+  "Description of the schedule."
+  description: String!
+  "Cron expression defining the schedule."
+  cron: String!
+  "Timezone for the schedule."
+  timezone: String!
+  "Whether the schedule is active."
+  active: Boolean!
+  "Arguments to pass to the automation."
+  arguments: [ScheduleArgumentInput!]!
+}
+
+"Input parameters for creating a workspace."
+input CreateWorkspaceInput {
+  repositoryName: String!
+  name: String!
+  branch: BranchInput!
+}
+
+"Authentication credentials for repository access."
+input CredentialsInput {
+  "Username for authentication."
+  username: String
+  "Password or token for authentication."
+  password: String
+  "Authentication method (UsernamePassword or SshKey)."
+  method: RepositoryAuthenticationMethod!
+}
+
+input DateTimeOperationFilterInput {
+  eq: DateTime
+  neq: DateTime
+  in: [DateTime]
+  nin: [DateTime]
+  gt: DateTime
+  ngt: DateTime
+  gte: DateTime
+  ngte: DateTime
+  lt: DateTime
+  nlt: DateTime
+  lte: DateTime
+  nlte: DateTime
+}
+
+"Input parameters for deleting a repository."
+input DeleteRepositoryInput {
+  name: String!
+}
+
+"Input parameters for deleting a schedule."
+input DeleteScheduleInput {
+  workspaceName: String!
+  automationPath: String!
+  name: String!
+}
+
+"Input parameters for deleting a workspace."
+input DeleteWorkspaceInput {
+  name: String!
+}
+
+input ErrorCodeViewFilterInput {
+  and: [ErrorCodeViewFilterInput!]
+  or: [ErrorCodeViewFilterInput!]
+  code: StringOperationFilterInput
+}
+
+input ErrorCodeViewSortInput {
+  code: SortEnumType
+  messageTemplate: SortEnumType
+}
+
+"Argument to pass to an automation execution."
+input ExecuteArgumentInput {
+  "Name of the argument."
+  name: String!
+  "Value of the argument."
+  value: String!
+}
+
+"Input parameters for executing an automation."
+input ExecuteInput {
+  "Name of the workspace containing the automation."
+  workspaceName: String!
+  "Path to the automation script."
+  automationPath: String!
+  "Optional reference to the initiator."
+  initiatorReference: String
+  "Type of initiator (Manual, Script, or Schedule)."
+  initiatorType: ExecutionInitiator!
+  "Arguments to pass to the automation."
+  arguments: [ExecuteArgumentInput!]!
+}
+
+input KeyValuePairOfStringAndStringFilterInput {
+  and: [KeyValuePairOfStringAndStringFilterInput!]
+  or: [KeyValuePairOfStringAndStringFilterInput!]
+  key: StringOperationFilterInput
+  value: StringOperationFilterInput
+}
+
+input ListFilterInputTypeOfAutomationArgumentDefinitionViewDataFilterInput {
+  all: AutomationArgumentDefinitionViewDataFilterInput
+  none: AutomationArgumentDefinitionViewDataFilterInput
+  some: AutomationArgumentDefinitionViewDataFilterInput
+  any: Boolean
+}
+
+input ListFilterInputTypeOfAutomationArgumentInstanceViewDataFilterInput {
+  all: AutomationArgumentInstanceViewDataFilterInput
+  none: AutomationArgumentInstanceViewDataFilterInput
+  some: AutomationArgumentInstanceViewDataFilterInput
+  any: Boolean
+}
+
+input ListFilterInputTypeOfAutomationBuildErrorViewDataFilterInput {
+  all: AutomationBuildErrorViewDataFilterInput
+  none: AutomationBuildErrorViewDataFilterInput
+  some: AutomationBuildErrorViewDataFilterInput
+  any: Boolean
+}
+
+input ListFilterInputTypeOfKeyValuePairOfStringAndStringFilterInput {
+  all: KeyValuePairOfStringAndStringFilterInput
+  none: KeyValuePairOfStringAndStringFilterInput
+  some: KeyValuePairOfStringAndStringFilterInput
+  any: Boolean
+}
+
+input LongOperationFilterInput {
+  eq: Long
+  neq: Long
+  in: [Long]
+  nin: [Long]
+  gt: Long
+  ngt: Long
+  gte: Long
+  ngte: Long
+  lt: Long
+  nlt: Long
+  lte: Long
+  nlte: Long
+}
+
+input NullableOfAutomationExecutionDomainStatusViewDataOperationFilterInput {
+  eq: AutomationExecutionDomainStatusViewData
+  neq: AutomationExecutionDomainStatusViewData
+  in: [AutomationExecutionDomainStatusViewData]
+  nin: [AutomationExecutionDomainStatusViewData]
+}
+
+"Remote repository configuration."
+input RemoteInput {
+  "URL of the remote repository."
+  url: String!
+  "Credentials for accessing the remote repository."
+  credentials: CredentialsInput!
+}
+
+"Input parameters for renewing a repository SSH key."
+input RenewRepositorySshKeyInput {
+  name: String!
+}
+
+input RepositoryAuthenticationMethodViewDataOperationFilterInput {
+  eq: RepositoryAuthenticationMethodViewData
+  neq: RepositoryAuthenticationMethodViewData
+  in: [RepositoryAuthenticationMethodViewData!]
+  nin: [RepositoryAuthenticationMethodViewData!]
+}
+
+input RepositoryViewFilterInput {
+  and: [RepositoryViewFilterInput!]
+  or: [RepositoryViewFilterInput!]
+  name: StringOperationFilterInput
+  url: StringOperationFilterInput
+  createdAt: DateTimeOperationFilterInput
+  changedAt: DateTimeOperationFilterInput
+  authenticationMethod: RepositoryAuthenticationMethodViewDataOperationFilterInput
+  username: StringOperationFilterInput
+  sshPublicKey: StringOperationFilterInput
+}
+
+input RepositoryViewSortInput {
+  id: SortEnumType
+  name: SortEnumType
+  url: SortEnumType
+  createdAt: SortEnumType
+  changedAt: SortEnumType
+  authenticationMethod: SortEnumType
+  username: SortEnumType
+  sshPublicKey: SortEnumType
+}
+
+"Argument to pass to a scheduled automation execution."
+input ScheduleArgumentInput {
+  "Name of the argument."
+  name: String!
+  "Value of the argument."
+  value: String!
+}
+
+input ScheduleViewFilterInput {
+  and: [ScheduleViewFilterInput!]
+  or: [ScheduleViewFilterInput!]
+  automationPath: StringOperationFilterInput
+  name: StringOperationFilterInput
+  description: StringOperationFilterInput
+  cron: StringOperationFilterInput
+  timezone: StringOperationFilterInput
+  active: BooleanOperationFilterInput
+  argumentInstances: ListFilterInputTypeOfAutomationArgumentInstanceViewDataFilterInput
+  version: LongOperationFilterInput
+}
+
+input ScheduleViewSortInput {
+  id: SortEnumType
+  workspaceId: SortEnumType
+  automationPath: SortEnumType
+  name: SortEnumType
+  description: SortEnumType
+  cron: SortEnumType
+  timezone: SortEnumType
+  active: SortEnumType
+  version: SortEnumType
+}
+
+input StringOperationFilterInput {
+  and: [StringOperationFilterInput!]
+  or: [StringOperationFilterInput!]
+  eq: String
+  neq: String
+  contains: String
+  ncontains: String
+  in: [String]
+  nin: [String]
+  startsWith: String
+  nstartsWith: String
+  endsWith: String
+  nendsWith: String
+}
+
+"Input parameters for synchronizing a workspace."
+input SynchronizeWorkspaceInput {
+  name: String!
+}
+
+input TimeSpanOperationFilterInput {
+  eq: TimeSpan
+  neq: TimeSpan
+  in: [TimeSpan]
+  nin: [TimeSpan]
+  gt: TimeSpan
+  ngt: TimeSpan
+  gte: TimeSpan
+  ngte: TimeSpan
+  lt: TimeSpan
+  nlt: TimeSpan
+  lte: TimeSpan
+  nlte: TimeSpan
+}
+
+"Input parameters for updating a repository."
+input UpdateRepositoryInput {
+  name: String!
+  newName: String
+  remote: RemoteInput
+}
+
+"Input parameters for updating a schedule."
+input UpdateScheduleInput {
+  workspaceName: String!
+  automationPath: String!
+  name: String!
+  newName: String
+  description: String
+  cron: String
+  timezone: String
+  active: Boolean
+  arguments: [ScheduleArgumentInput!]
+}
+
+"Input parameters for updating a workspace."
+input UpdateWorkspaceInput {
+  name: String!
+  newName: String
+  branch: BranchInput
+}
+
+input UuidOperationFilterInput {
+  eq: UUID
+  neq: UUID
+  in: [UUID]
+  nin: [UUID]
+  gt: UUID
+  ngt: UUID
+  gte: UUID
+  ngte: UUID
+  lt: UUID
+  nlt: UUID
+  lte: UUID
+  nlte: UUID
+}
+
+input WorkspaceViewFilterInput {
+  and: [WorkspaceViewFilterInput!]
+  or: [WorkspaceViewFilterInput!]
+  name: StringOperationFilterInput
+  repositoryName: StringOperationFilterInput
+  buildId: UuidOperationFilterInput
+  buildStatus: AutomationBuildStatusViewDataOperationFilterInput
+  buildErrors: ListFilterInputTypeOfAutomationBuildErrorViewDataFilterInput
+  buildBranch: StringOperationFilterInput
+  buildCommit: StringOperationFilterInput
+  buildStartedAt: DateTimeOperationFilterInput
+  buildFinishedAt: DateTimeOperationFilterInput
+  buildDuration: TimeSpanOperationFilterInput
+  activeBuildId: UuidOperationFilterInput
+  activeBranch: StringOperationFilterInput
+  activeCommit: StringOperationFilterInput
+  createdAt: DateTimeOperationFilterInput
+  changedAt: DateTimeOperationFilterInput
+}
+
+input WorkspaceViewSortInput {
+  id: SortEnumType
+  name: SortEnumType
+  repositoryId: SortEnumType
+  repositoryName: SortEnumType
+  buildId: SortEnumType
+  buildStatus: SortEnumType
+  buildBranch: SortEnumType
+  buildCommit: SortEnumType
+  buildStartedAt: SortEnumType
+  buildFinishedAt: SortEnumType
+  buildDuration: SortEnumType
+  activeBuildId: SortEnumType
+  activeBranch: SortEnumType
+  activeCommit: SortEnumType
+  createdAt: SortEnumType
+  changedAt: SortEnumType
+}
+
+"Defines when a policy shall be executed."
+enum ApplyPolicy {
+  "Before the resolver was executed."
+  BEFORE_RESOLVER
+  "After the resolver was executed."
+  AFTER_RESOLVER
+  "The policy is applied in the validation step before the execution."
+  VALIDATION
+}
+
+enum AutomationBuildStatusViewData {
+  PENDING
+  RUNNING
+  FAILED
+  SUCCEEDED
+}
+
+enum AutomationExecutionDomainStatusViewData {
+  SUCCEEDED
+  FAILED
+}
+
+enum AutomationExecutionStatusViewData {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+enum AutomationInitiatorTypeViewData {
+  MANUAL
+  SCRIPT
+  SCHEDULE
+}
+
+"Type of initiator for an automation execution."
+enum ExecutionInitiator {
+  "Execution initiated manually by a user."
+  MANUAL
+  "Execution initiated by a script."
+  SCRIPT
+  "Execution initiated by a schedule."
+  SCHEDULE
+}
+
+"Authentication method for repository access."
+enum RepositoryAuthenticationMethod {
+  "Authenticate using username and password."
+  USERNAME_PASSWORD
+  "Authenticate using SSH key."
+  SSH_KEY
+}
+
+enum RepositoryAuthenticationMethodViewData {
+  USERNAME_PASSWORD
+  SSH_KEY
+}
+
+enum SortEnumType {
+  ASC
+  DESC
+}
+
+"The authorize directive."
+directive @authorize("The name of the authorization policy that determines access to the annotated resource." policy: String "Roles that are allowed to access the annotated resource." roles: [String!] "Defines when when the authorize directive shall be applied.By default the authorize directives are applied during the validation phase." apply: ApplyPolicy! = BEFORE_RESOLVER) repeatable on OBJECT | FIELD_DEFINITION
+
+"The `@specifiedBy` directive is used within the type system definition language to provide a URL for specifying the behavior of custom scalar definitions."
+directive @specifiedBy("The specifiedBy URL points to a human-readable specification. This field will only read a result for scalar types." url: String!) on SCALAR
+
+"The `DateTime` scalar represents an ISO-8601 compliant date time type."
+scalar DateTime @specifiedBy(url: "https:\/\/www.graphql-scalars.com\/date-time")
+
+"Int between 0 and 1000"
+scalar IntBetweenZeroAndOneThousand
+
+"The `Long` scalar type represents non-fractional signed whole 64-bit numeric values. Long can represent values between -(2^63) and 2^63 - 1."
+scalar Long
+
+"The `TimeSpan` scalar represents an ISO-8601 compliant duration type."
+scalar TimeSpan
+
+scalar UUID @specifiedBy(url: "https:\/\/tools.ietf.org\/html\/rfc4122")
