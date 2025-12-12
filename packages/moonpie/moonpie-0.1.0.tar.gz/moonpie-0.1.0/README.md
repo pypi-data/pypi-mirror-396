@@ -1,0 +1,148 @@
+# MoonPie - Lua Interpreter in Python
+
+A Lua interpreter written in Python, implementing core Lua language features.
+
+## Installation
+
+### From PyPI (when published)
+```bash
+pip install moonpie
+```
+
+### From Source
+```bash
+git clone https://github.com/yourusername/moonpie.git
+cd moonpie
+pip install -e .
+```
+
+## Features
+
+### Language Support
+- **Data Types**: numbers, strings, booleans, nil, tables, functions
+- **Operators**: arithmetic (+, -, *, /, %, ^), comparison (==, ~=, <, <=, >, >=), logical (and, or, not), string concatenation (..)
+- **Variables**: local and global variables
+- **Tables**: Lua's primary data structure with array and hash parts
+- **Functions**: first-class functions with closures
+- **Control Flow**: if/elseif/else, while, repeat-until, for loops (numeric and generic)
+- **Comments**: single-line (--) and multi-line (--[[ ]])
+
+### Built-in Functions
+- **Basic**: print, type, tonumber, tostring, assert, error
+- **Math**: abs, floor, ceil, sqrt, sin, cos, tan, max, min, pi
+- **String**: len, upper, lower, sub
+
+## Architecture
+
+The interpreter follows a classic architecture:
+
+1. **Lexer** (`lexer.py`) - Tokenizes Lua source code
+2. **Parser** (`parser.py`) - Builds an Abstract Syntax Tree (AST) from tokens
+3. **AST Nodes** (`ast_nodes.py`) - Defines all AST node types
+4. **Evaluator** (`evaluator.py`) - Traverses and executes the AST
+5. **Object System** (`lua_object.py`) - Implements Lua values and environment
+6. **Built-ins** (`lua_builtins.py`) - Provides standard Lua functions
+
+## Usage
+
+### Command Line (after installation)
+```bash
+moonpie                    # Start interactive REPL
+moonpie script.lua         # Execute a Lua file
+moonpie examples/examples.lua
+```
+
+### Python Module
+```bash
+python -m moonpie          # Start interactive REPL
+python -m moonpie script.lua
+```
+
+### As a Library
+```python
+from moonpie import LuaInterpreter
+
+interpreter = LuaInterpreter()
+result = interpreter.run("""
+    function add(a, b)
+        return a + b
+    end
+    print(add(5, 3))
+""")
+```
+
+### Example Code
+
+```lua
+-- Variables and arithmetic
+local x = 10
+local y = 20
+print(x + y)  -- 30
+
+-- Functions
+function factorial(n)
+    if n <= 1 then
+        return 1
+    else
+        return n * factorial(n - 1)
+    end
+end
+print(factorial(5))  -- 120
+
+-- Tables
+local person = {name = "John", age = 30}
+print(person.name)  -- John
+
+local array = {10, 20, 30}
+print(array[1])  -- 10
+print(#array)   -- 3
+
+-- Loops
+for i = 1, 5 do
+    print(i)
+end
+
+-- String operations
+local greeting = "Hello" .. " " .. "World"
+print(greeting)  -- Hello World
+```
+
+## Testing
+
+Run the test suite:
+```bash
+moonpie tests/test_basic.lua
+# or
+python -m moonpie tests/test_basic.lua
+```
+
+Run examples:
+```bash
+moonpie examples/examples.lua
+```
+
+## Implementation Details
+
+- **Lexer**: Character-by-character tokenization with support for keywords, operators, strings, numbers, and comments
+- **Parser**: Recursive descent parser with proper operator precedence
+- **Evaluator**: Tree-walking interpreter with environment-based scoping
+- **Tables**: Hybrid array/hash implementation matching Lua's behavior
+- **Functions**: Support for closures and first-class functions
+- **Error Handling**: Runtime errors, syntax errors, and type checking
+
+## Limitations
+
+This is a Lua interpreter for educational purposes. Some advanced features are not implemented:
+- Metatables and metamethods
+- Coroutines
+- Module system (require/module)
+- File I/O
+- Full standard library
+- Garbage collection optimization
+- Bytecode compilation
+
+## References
+
+- [Lua 5.4 Reference Manual](https://www.lua.org/manual/5.4/)
+- [Writing A Compiler In Go](https://compilerbook.com/)
+- [Crafting Interpreters](https://craftinginterpreters.com/)
