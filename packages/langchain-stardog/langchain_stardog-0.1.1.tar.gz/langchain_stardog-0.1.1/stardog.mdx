@@ -1,0 +1,317 @@
+---
+title: Stardog LangChain Integration
+description: LangChain integrations for Stardog products including Voicebox for natural language querying of knowledge graphs
+---
+
+# Stardog LangChain Integration
+
+Stardog Voicebox is a natural language interface for querying knowledge graphs. It enables users to ask questions in plain English and receive answers backed by SPARQL queries executed against Stardog databases.
+
+This integration provides LangChain tools for using Voicebox in agent workflows, allowing AI agents to query structured knowledge graphs through natural language.
+
+## Overview
+
+### Integration details
+
+| Class | Package | Serializable | JS support |
+|:------|:--------|:-------------|:-----------|
+| `VoiceboxAskTool` | [langchain-stardog](https://pypi.org/project/langchain-stardog/) | ✅ | ❌ |
+| `VoiceboxSettingsTool` | [langchain-stardog](https://pypi.org/project/langchain-stardog/) | ✅ | ❌ |
+| `VoiceboxGenerateQueryTool` | [langchain-stardog](https://pypi.org/project/langchain-stardog/) | ✅ | ❌ |
+
+### Tool features
+
+| Feature | VoiceboxAskTool | VoiceboxSettingsTool | VoiceboxGenerateQueryTool |
+|:--------|:----------------|:---------------------|:--------------------------|
+| Async support | ✅ | ✅ | ✅ |
+| Multi-turn conversations | ✅ | ❌ | ✅ |
+| Returns SPARQL query | ✅ | ❌ | ✅ |
+| Pricing | [Stardog Cloud pricing](https://www.stardog.com/pricing/) | [Stardog Cloud pricing](https://www.stardog.com/pricing/) | [Stardog Cloud pricing](https://www.stardog.com/pricing/) |
+
+## Setup
+
+### Installation
+
+```bash
+pip install langchain-stardog
+```
+
+### Prerequisites
+
+- A [Stardog Cloud](https://cloud.stardog.com) account
+- A Voicebox application configured with your data
+- A Voicebox API token
+
+### Getting Your API Token
+
+1. Log in to [Stardog Cloud](https://cloud.stardog.com)
+2. Navigate to your Voicebox application
+3. Go to **Settings** → **API Token**
+4. Copy your application API token
+
+### Credentials
+
+Set your API token as an environment variable:
+
+```python
+import getpass
+import os
+
+if not os.environ.get("SD_VOICEBOX_API_TOKEN"):
+    os.environ["SD_VOICEBOX_API_TOKEN"] = getpass.getpass("Enter your Voicebox API token: ")
+```
+
+Optional environment variables:
+
+```python
+os.environ["SD_VOICEBOX_CLIENT_ID"] = "my-app"  # Client identifier (default: VBX-LANGCHAIN)
+os.environ["SD_CLOUD_ENDPOINT"] = "https://cloud.stardog.com/api"  # Custom endpoint (optional)
+```
+
+## Instantiation
+
+### VoiceboxAskTool
+
+Ask natural language questions and receive answers with generated SPARQL queries.
+
+```python
+from langchain_stardog.voicebox import VoiceboxAskTool
+
+# Tools automatically load credentials from environment variables
+ask_tool = VoiceboxAskTool()
+```
+
+**Features:**
+- Translates natural language to SPARQL
+- Executes queries against your knowledge graph
+- Supports multi-turn conversations via `conversation_id`
+- Returns answer, SPARQL query, and conversation metadata
+
+### VoiceboxSettingsTool
+
+Retrieve Voicebox application configuration and metadata.
+
+```python
+from langchain_stardog.voicebox import VoiceboxSettingsTool
+
+settings_tool = VoiceboxSettingsTool()
+```
+
+**Use cases:**
+- Agent introspection: "How is Voicebox configured?"
+- Multi-app scenarios: Identify which knowledge base is active
+- Dynamic context: Discover available data sources
+
+### VoiceboxGenerateQueryTool
+
+Generate SPARQL queries without executing them.
+
+```python
+from langchain_stardog.voicebox import VoiceboxGenerateQueryTool
+
+query_tool = VoiceboxGenerateQueryTool()
+```
+
+**Use cases:**
+- Query inspection and validation
+- Custom query execution workflows
+- Educational purposes
+
+## Invocation
+
+### Direct invocation
+
+```python
+# Ask a question
+result = await ask_tool._arun(
+    question="What airports are in California?"
+)
+
+print(result["answer"])
+print(result["sparql_query"])
+```
+
+**Output:**
+```python
+{
+    "answer": "There are 3 airports in California: San Francisco International (SFO), Los Angeles International (LAX), and San Diego International (SAN).",
+    "sparql_query": "SELECT ?airport WHERE { ?airport a :Airport ; :locatedIn :California }",
+    "interpreted_question": "List airports located in California",
+    "conversation_id": "conv-abc123",
+    "message_id": "msg-xyz789"
+}
+```
+
+### Multi-turn conversation
+
+```python
+# First question
+result1 = await ask_tool._arun(
+    question="What flights depart from SFO?"
+)
+
+# Follow-up question using conversation_id
+result2 = await ask_tool._arun(
+    question="Which of those are going to New York?",
+    conversation_id=result1["conversation_id"]
+)
+
+print(result2["answer"])
+```
+
+### ToolCall invocation
+
+```python
+# Invoke with ToolCall
+from langchain_core.messages import ToolCall
+
+tool_call = ToolCall(
+    name="voicebox_ask",
+    args={"question": "How many flights are delayed?"},
+    id="call_123",
+    type="tool_call"
+)
+
+tool_msg = ask_tool.invoke(tool_call)
+print(tool_msg.content)
+```
+
+## Use within an agent
+
+```python
+import os
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from langchain_stardog.voicebox import (
+    VoiceboxAskTool,
+    VoiceboxSettingsTool
+)
+
+# Set up environment
+os.environ["SD_VOICEBOX_API_TOKEN"] = "your-token"
+os.environ["OPENAI_API_KEY"] = "your-openai-key"
+
+# Create LLM and tools
+llm = ChatOpenAI(model="gpt-4")
+tools = [
+    VoiceboxSettingsTool(),
+    VoiceboxAskTool(),
+]
+
+# Create agent
+agent = create_agent(
+    model=llm,
+    tools=tools,
+    system_prompt="You are a helpful assistant that can query knowledge graphs."
+)
+
+# Run agent
+result = await agent.ainvoke({
+    "messages": [
+        {"role": "user", "content": "What data sources are available?"}
+    ]
+})
+
+print(result)
+```
+
+## Runnables for LCEL Chains
+
+The integration also provides Runnables for composing with other LangChain components:
+
+```python
+from langchain_core.runnables import RunnablePassthrough
+from langchain_stardog.voicebox import VoiceboxAskRunnable
+
+# Create a chain
+chain = (
+    RunnablePassthrough()
+    | VoiceboxAskRunnable()
+    | (lambda x: f"Answer: {x['answer']}\n\nQuery: {x['sparql_query']}")
+)
+
+# Execute chain
+result = await chain.ainvoke({
+    "question": "Show me airports in Texas"
+})
+print(result)
+```
+
+## API Reference
+
+For detailed API documentation, see the [GitHub repository](https://github.com/stardog-union/stardog-langchain).
+
+**Available classes:**
+
+- `VoiceboxAskTool` - Ask questions and get answers
+- `VoiceboxSettingsTool` - Retrieve application settings
+- `VoiceboxGenerateQueryTool` - Generate SPARQL queries
+- `VoiceboxAskRunnable` - Runnable for LCEL chains
+- `VoiceboxSettingsRunnable` - Settings retrieval runnable
+- `VoiceboxGenerateQueryRunnable` - Query generation runnable
+- `VoiceboxClient` - Core client for Voicebox API
+
+## Example: Knowledge Graph Q&A
+
+This example demonstrates using Voicebox tools in an agent to answer questions about a flight planning knowledge graph:
+
+```python
+import asyncio
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from langchain_stardog.voicebox import VoiceboxAskTool
+
+async def main():
+    # Create agent with Voicebox tool
+    llm = ChatOpenAI(model="gpt-4")
+    agent = create_agent(
+        model=llm,
+        tools=[VoiceboxAskTool()],
+        system_prompt="You are an expert at querying flight data."
+    )
+
+    # Ask a complex question
+    result = await agent.ainvoke({
+        "messages": [
+            {
+                "role": "user",
+                "content": "What flights are delayed at SFO and what are their destinations?"
+            }
+        ]
+    })
+
+    print(result)
+
+asyncio.run(main())
+```
+
+## Troubleshooting
+
+### Authentication Error
+
+If you encounter authentication errors:
+1. Verify your API token is correct
+2. Check that `SD_VOICEBOX_API_TOKEN` environment variable is set
+3. Ensure your Voicebox application is active in Stardog Cloud
+
+### Empty or Incorrect Results
+
+If queries return unexpected results:
+1. Verify your Voicebox application is configured with the correct database
+2. Check that your knowledge graph contains the expected data
+3. Review the returned `sparql_query` to understand what was executed
+4. Consider using `VoiceboxGenerateQueryTool` to inspect generated queries
+
+### Multi-turn Conversation Issues
+
+For conversation tracking:
+1. Always pass the `conversation_id` from previous responses to follow-up questions
+2. Each new conversation starts with a blank `conversation_id` (system generates one)
+3. Conversation context is maintained server-side by Voicebox
+
+## Learn More
+
+- [Stardog Voicebox Documentation](https://docs.stardog.com/voicebox)
+- [Stardog Cloud](https://cloud.stardog.com)
+- [GitHub Repository](https://github.com/stardog-union/stardog-langchain)
+- [Stardog Community](https://community.stardog.com/)

@@ -1,0 +1,72 @@
+[project]
+name = "langchain-stardog"
+version = "0.1.1"
+description = "LangChain integrations for Stardog"
+authors = [
+    {name = "Stardog Union", email = "support@stardog.com"}
+]
+readme = "README.md"
+homepage = "https://github.com/stardog-union/stardog-langchain"
+repository = "https://github.com/stardog-union/stardog-langchain"
+documentation = "https://github.com/stardog-union/stardog-langchain#readme"
+requires-python = ">=3.10"
+license = {text = "Apache-2.0"}
+keywords = ["stardog", "voicebox", "langchain", "sparql", "knowledge-graph"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    "langchain-core==1.0.0",
+    "pystardog>=0.19.0",
+    "pydantic>=2.11.0",
+    "httpx>=0.28.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.4.1",
+    "pytest-asyncio==1.1.0",
+    "pytest-cov>=6.2.1",
+    "black==25.1.0",
+    "isort==6.0.1",
+    "mypy==1.17.1",
+    "flake8==7.3.0",
+    "langchain==1.0.0",
+    "langchain-tests==0.3.21",
+]
+
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--cov=langchain_stardog",
+    "--cov-report=html",
+    "--cov-report=term-missing",
+    "-v"
+]
+
+[tool.isort]
+profile = "black"
+
+[tool.mypy]
+ignore_missing_imports = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["langchain_stardog"]
