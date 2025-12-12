@@ -1,0 +1,93 @@
+# Automatic Docker Compose to Helm Values Translation
+
+The `k8s_sandbox` package supports automatically converting Docker Compose files to Helm
+values files which are compatible with the [built-in Helm chart](built-in-chart.md) at
+run time. This is done transparently: files won't be added to your repository.
+
+```py
+return Task(
+    ...,
+    sandbox=("k8s", "compose.yaml"),
+)
+```
+
+The following file names are supported for automatic translation: `compose.yaml`,
+`compose.yml`, `docker-compose.yaml`, `docker-compose.yml`. You must explicitly specify
+the relevant compose file name in the `sandbox` parameter; only `helm-values.yaml` and
+`values.yaml` are automatically discovered. This is to prevent unintentional translation
+of Docker Compose files (e.g. if your Helm values file were misnamed).
+
+Docker Compose files are first validated against the [Compose
+Spec](https://github.com/compose-spec/compose-spec).
+
+## Rationale
+
+This functionality intends to facilitate running some of the community-maintained evals
+which have not been (and may never be) ported to Helm `values.yaml`. Whilst it is easy
+to convert a `compose.yaml` file to a `values.yaml` file, it does add a maintenance
+burden, especially if an individual making changes in future does not have access to a
+Kubernetes cluster to test the changes.
+
+## Limitations
+
+Only basic Docker compose functionality is supported. For more complex needs, please
+write a Helm values file directly.
+
+Images will have to be available to the Kubernetes cluster; they won't be built or
+pushed for you.
+
+For internal, non-community eval suites, native Helm `values.yaml` files are still
+preferred over the automatic translation of `compose.yaml` files for a number of
+reasons:
+
+- To support the whole set of Helm chart and Kubernetes features
+- To explicitly _not_ support Docker for certain evals (reducing maintenance burden and
+  discourage use of Docker which lacks security features of Kubernetes)
+- To be more expressive about which services should get a DNS entry
+- To support more powerful readiness and liveness probes
+
+## Default Service
+
+The default service resolution follows the same rules as [Inspect sandboxing doc](https://inspect.aisi.org.uk/sandboxing.html#multiple-environments):
+
+> If you define multiple sandbox environments the default sandbox environment will be
+> determined as follows:
+>
+> 1. First, take any sandbox environment named `default`;
+> 2. Then, take any environment with the `x-default` key set to `true`;
+> 3. Finally, use the first sandbox environment as the default.
+
+During conversion, services matching rules 2 or 3 are renamed to `default` to ensure
+consistent default service resolution regardless of Kubernetes pod ordering. For rule 2,
+the service with `x-default: true` is renamed. For rule 3, the "first" service (determined
+by YAML order, not alphabetical order) is renamed. Single-service compose files are left
+unchanged.
+
+## Internet Access
+
+As per the built-in Helm chart, internet access is disabled by default. This is in
+contrast to Docker Compose. There is no native way of specifying which domains should be
+accessible in Docker Compose. To express which domains should be accessible when running
+an eval in k8s, use the `x-inspect_k8s_sandbox` extension in the Docker Compose file.
+
+```yaml
+services:
+  myservice:
+    image: ubuntu
+x-inspect_k8s_sandbox:
+  allow_domains:
+    - google.com
+```
+
+## Network Modes
+
+The only supported `network_mode` is `none`, which completely isolates a service from
+all network traffic (both ingress and egress). This is useful for evals where the agent
+should not have any network access.
+
+```yaml
+services:
+  isolated-service:
+    image: ubuntu
+    network_mode: none
+```

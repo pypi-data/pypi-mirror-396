@@ -1,0 +1,73 @@
+[project]
+name = "inspect-k8s-sandbox"
+version = "0.3.0"
+description = "A Kubernetes Sandbox Environment for Inspect"
+authors = [{name = "UK AI Security Institute"}]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "inspect-ai>=0.3.120",
+  "kubernetes>=31.0.0",
+  "jsonschema>=4.23.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "mypy>=1.9.0",
+  "pre-commit>=3.6.2",
+  "pytest>=8.1.1",
+  "pytest-asyncio>=0.23.7",
+  "pytest-env>=1.2.0",
+  "pytest-repeat>=0.9.3",
+  "ruff>=0.9.6",
+  "types-pyyaml>=6.0.12",
+  "types-jsonschema>=4.23.0.20241208",
+]
+
+[project.entry-points."inspect_ai"]
+k8s-sandbox = "k8s_sandbox._sandbox_environment"
+
+[tool.uv]
+package = true
+
+[tool.uv.sources]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/k8s_sandbox"]
+
+
+[tool.ruff.lint]
+select = [
+  "E",   # pycodestyle errors
+  "W",   # pycodestyle warnings
+  "F",   # flake8
+  "D",   # pydocstyle
+  "I",   # isort
+]
+ignore = [
+  "D212",  # multi-line-summary-first-line
+]
+
+[tool.ruff.lint.per-file-ignores]
+"test/*" = ["D10"]  # undocumented-(public|magic)-*
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+
+[tool.mypy]
+check_untyped_defs = true
+
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+markers = [
+    "req_k8s: marks tests as requiring a test Kubernetes cluster (deselect with '-m \"not req_k8s\"')"
+]
+env = [
+    "INSPECT_HELM_TIMEOUT=90"
+]
