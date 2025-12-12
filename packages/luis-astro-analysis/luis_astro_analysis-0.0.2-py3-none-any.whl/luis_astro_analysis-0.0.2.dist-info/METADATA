@@ -1,0 +1,181 @@
+Metadata-Version: 2.4
+Name: luis_astro_analysis
+Version: 0.0.2
+Summary: A small package assisting in data analysis for Xray astronomy
+Author-email: Luis Eiche <luis.eiche00@gmail.de>
+License-Expression: MIT
+License-File: LICENCE
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Requires-Python: >=3.10
+Requires-Dist: astropy>=7.1.1
+Requires-Dist: matplotlib>=3.10.7
+Requires-Dist: numpy>=2.3.4
+Requires-Dist: pandas>=2.3.3
+Requires-Dist: scipy>=1.16.2
+Requires-Dist: seaborn>=0.13.2
+Description-Content-Type: text/markdown
+
+# The `fits_util` library
+
+## Introduction
+
+This package is basically just a collection of useful functions, made for
+data-analysis of satellite data contained inside fits-files. For now, the scope
+of this project remains rather compact, featuring support for `.evt`-files (for
+lightcurve and CC/CI diagrams) and `.pha`-files (for spectral analysis). In
+addition there is support for the `qdp`-format.
+
+As the data-extraction differs from mission to mission, higher level functions
+have been prepared in mission-specific files (i.e. ninja.py).
+
+The newest addition to this package is the CCI_Analyzer class, that takes
+curated data in form of a pandas DataFrame and performs an automatic
+Colour-Colour and Colour-Intensity analysis.
+The class further provides the option to an interactive analysis, that lets the
+user choose certain values (binsize and the in-between colourband-boundaries),
+to make finding suitable values easier.
+Examples of how to use these functions can be found below.
+
+## Dependencies
+
+This Package depends on the following:
+
+- astropy
+- numpy
+- pandas
+- matplotlib
+- seaborn
+- ...
+
+## Overview
+
+The package has three subcategories, as indicated in the introduction.
+The first of these is of course `fits_util`, handling event data,
+while the other two (not as fleshed out yet), handle spectrum related
+stuff (`pha_util`) and qdp-formatted lightcurve-data (`qdp_util`)
+respectively.
+
+### fits_util
+
+`read_mjd_channel` expects a path to a event-fits file and returns the event
+times (using `mjd` as the unit) and channel info as a pandas DataFrame,
+with the following columns:
+
+```
+df = {
+    "mjd"       : float
+    "channel"   : int
+}
+```
+
+`read_rmf_ebounds` expects a path to a rmf-fits file and returns a pandas.a
+DataFrame containing the energy-bounds for each detector channel:
+(Tested only for NinjaSat-style rmf-files)
+
+```
+df = {
+    "channel"   : int
+    "energy"    : float
+    "e_lo"      : float
+    "e_hi"      : float
+}
+```
+
+`read_gti_intervals` expects a path to a gti-fits file and returns a
+`numpy.ndarray` with the following shape:
+
+```
+2D array of shape (N, 2)
+- Column 0 : start times
+- Column 1 : stop times
+```
+
+The time-unit is `mjd`
+
+`select_good_time` expects a 1D `numpy.ndarray`, containing the `mjd`-values
+of all photon events, and a 2D `numpy.ndarray`, containing gti-data,
+in the form as returned by `read_gti_intervals`.
+The function returns a boolean mask, that excludes all events outside the gti.
+It can be used like this:
+
+```
+mask = select_good_time(events_all)
+events_inside_gti = events_all[mask]
+```
+
+`bin_gti` expects a `numpy.ndarray` containing gti-data (see
+`read_gti_intervals`), and a `float` of the binsize in seconds. It then
+calculates bins using the provided binsize only inside the gti always starting
+at the left edge. If the binsize is larger than a gti, the whole gti will be
+considered as one bin. If the binsize fits into the gti n-times fully, but the
+n+1-th bin would reach outside the gti, it is truncated to the right edge of
+the gti, producing a smaller bin than the specified binsize. All bins inbetween
+gti intervals, have the same size as the time gap.
+
+### pha_util
+
+TODO
+
+### qdp_util
+
+TODO
+
+### CCI_Analyzer
+
+As an example, I have provided the method I use to analyse NinjaSat data:
+
+```
+
+import fits_util as f
+
+# paths
+ninja_path = "../../autodata/out/merged.evt"
+gti_path = "../../autodata/tmp/CygX2.gti"
+rmf_path = "../../autodata/out/CygX2.rmf"
+
+# initial colourbands (the outer limits of the initial bands-dict set the
+# outer bounds that the CCI_Analyzer uses as well)
+ninja_bands = {
+    "soft": (2, 4),
+    "med": (4, 8),
+    "hard": (8, 20),
+}
+
+### preliminary loading and formatting using the fits_util module
+events = f.read_mjd_channel(ninja_path)
+rmf = f.read_rmf_ebounds(rmf_path)
+gti = f.read_gti_intervals(gti_path)
+# apply chanel-energy information
+df = events.merge(rmf_info[["channel", "energy"]], on="channel", how="left")
+# select events inside gti
+mask = f.select_good_time(df["mjd"].to_numpy(), gti)
+df = df[mask]
+# initial binsize (will be used as the reference by CCI_Analyzer)
+binsize_sec = 600
+binsize_day = binsize_sec / 86400
+bins = f.bin_gti(gti, binsize_day)
+
+### initialize CCI_Analyzer:
+
+CCI = CCI_Analyzer()
+
+# load data. The expected formats can be found in the docstrings of the
+# fits_util module of the functions above, or below this example.
+CCI.load_data(df)
+CCI.load_gti(gti)
+# set initial bins and colourbands
+CCI.set_colorbands(ninja_bands)
+CCI.set_bins(600)
+CCI.set_bin_bounds(1, 1000)
+# interactive selection for binsize and colorband-bounds.
+# exiting this plot tells the CCI_Analyzer to use the last enterd values
+# for further analysis.
+CCI.select_bins_and_colors()
+# interactive selection for the different branches.
+# to confirm the selection, close the path by clicking the first vertex again.
+CCI.select_branches()
+# plotting the data, using the new values
+CCI.plot_color_intensity()
+CCI.plot_color_color()
+```
