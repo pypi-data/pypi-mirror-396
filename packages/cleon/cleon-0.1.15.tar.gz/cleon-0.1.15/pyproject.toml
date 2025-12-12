@@ -1,0 +1,54 @@
+[build-system]
+requires = ["maturin>=1.5,<2"]
+build-backend = "maturin"
+
+[project]
+name = "cleon"
+version = "0.1.15"
+description = "A Genetic Dynasty of Agentic Clones for Jupyter Notebooks"
+requires-python = ">=3.9"
+dependencies = [
+    "ipython>=8.0",
+    "websocket-client>=1.6",
+    "cleon-jupyter-extension>=0.1.0",
+]
+authors = [{ name = "Madhava Jay", email = "me@madhavajay.com" }]
+keywords = ["codex", "cleon", "ipython"]
+readme = "README.md"
+urls = { Homepage = "https://github.com/madhavajay/cleon", Repository = "https://github.com/madhavajay/cleon" }
+license = { text = "MIT" }
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+[project.scripts]
+cleon = "cleon.cli:main"
+
+[tool.maturin]
+features = ["pyo3/extension-module"]
+manifest-path = "cleon/Cargo.toml"
+module-name = "cleon._cleon"
+python-source = "src"
+python-packages = ["cleon"]
+include = [
+    "src/cleon/py.typed",
+    "src/cleon/_cleon.pyi",
+    "src/cleon/bin/*",
+    "src/cleon/images/*",
+]
+
+[dependency-groups]
+dev = ["types-pygments>=2.19.0.20251121"]
+
+[project.optional-dependencies]
+# This extra is a no-op placeholder to signal an install without Jupyter/extension
+no-jupyter = []
+jupyter = [
+    "jupyterlab>=4",
+]
