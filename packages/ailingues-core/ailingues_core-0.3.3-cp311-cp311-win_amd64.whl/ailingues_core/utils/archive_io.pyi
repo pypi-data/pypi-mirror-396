@@ -1,0 +1,23 @@
+from _typeshed import Incomplete
+from pathlib import Path
+from typing import BinaryIO, Sequence
+
+PathLike = str | Path
+ArchiveType: Incomplete
+
+class ArchiveIO:
+    DEFAULT_CHUNK_SIZE: int
+    @classmethod
+    def guess_type(cls, path: PathLike) -> ArchiveType: ...
+    @classmethod
+    def compress(cls, source: PathLike | Sequence[PathLike], dest: PathLike, *, archive_type: ArchiveType | None = None, overwrite: bool = False, compresslevel: int | None = None) -> Path: ...
+    @classmethod
+    def compress_to_stream(cls, source: PathLike | Sequence[PathLike], stream: BinaryIO, *, archive_type: ArchiveType, compresslevel: int | None = None) -> None: ...
+    @classmethod
+    def extract(cls, archive: PathLike, dest_dir: PathLike | None = None, *, overwrite: bool = False) -> Path: ...
+    @classmethod
+    def extract_from_stream(cls, stream: BinaryIO, dest_dir: PathLike, *, archive_type: ArchiveType, overwrite: bool = False, gz_member_name: str | None = None) -> Path: ...
+    @classmethod
+    def verify(cls, archive: PathLike) -> bool: ...
+    @classmethod
+    def hash_file(cls, path: PathLike, *, algo: str = 'sha256', chunk_size: int | None = None) -> str: ...
