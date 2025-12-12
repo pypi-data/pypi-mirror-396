@@ -1,0 +1,295 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Using gNMI with YANG Suite &mdash; yangsuite-gnmi 2.7.15 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="#" class="icon icon-home"> yangsuite-gnmi
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                2.7.15
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">Using gNMI with YANG Suite</a><ul>
+<li><a class="reference internal" href="#enabling-gnmi-in-a-device-profile">Enabling gNMI in a device profile</a></li>
+<li><a class="reference internal" href="#checking-device-capabilities">Checking device capabilities</a></li>
+<li><a class="reference internal" href="#loading-yang-modules">Loading YANG modules</a></li>
+<li><a class="reference internal" href="#building-an-rpc">Building an RPC</a><ul>
+<li><a class="reference internal" href="#get">Get</a></li>
+<li><a class="reference internal" href="#set">Set</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#running-an-rpc">Running an RPC</a></li>
+</ul>
+</li>
+</ul>
+</div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">yangsuite-gnmi</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="#">Docs</a> &raquo;</li>
+        
+      <li>Using gNMI with YANG Suite</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <section id="using-gnmi-with-yang-suite">
+<h1>Using gNMI with YANG Suite<a class="headerlink" href="#using-gnmi-with-yang-suite" title="Permalink to this heading">¶</a></h1>
+<section id="enabling-gnmi-in-a-device-profile">
+<h2>Enabling gNMI in a device profile<a class="headerlink" href="#enabling-gnmi-in-a-device-profile" title="Permalink to this heading">¶</a></h2>
+<p>By default, device profiles are marked as not supporting gNMI. You’ll need to
+enable gNMI support when creating/editing the device profile.
+If you’re not familiar with the basic concepts of device profiles,
+please refer to the device profile documentation at “Setup–&gt;Device profiles”.
+Be sure to select the correct platform and port number, and perform a
+connectivity check to verify this information is correct.</p>
+<img alt="Screenshot showing a device profile being edited to add gNMI support" src="_images/devprofile_enablement.png" />
+</section>
+<section id="checking-device-capabilities">
+<h2>Checking device capabilities<a class="headerlink" href="#checking-device-capabilities" title="Permalink to this heading">¶</a></h2>
+<p>From the sidebar on any YANG Suite page, select “Protocols–&gt;gNMI”
+to reach the main gNMI page. Here, you can select a device to use.
+Only device profiles that have enabled support for gNMI will be listed.</p>
+<p>You can then click the “Capabilities” button for a report of the device’s
+gNMI capabilities.</p>
+<img alt="Screenshot of device capabilities report" src="_images/capabilities.png" />
+</section>
+<section id="loading-yang-modules">
+<h2>Loading YANG modules<a class="headerlink" href="#loading-yang-modules" title="Permalink to this heading">¶</a></h2>
+<p>First, you’ll need to select a YANG module set.
+(If you haven’t already created one or more of these, see the
+filemanager documentation at “Setup–&gt;YANG files and repositories”.)</p>
+<img alt="Screenshot showing a yangset and devprofile selected in the UI" src="_images/yangset_and_devprofile.png" />
+<p>After selecting the YANG set, select the “Module(s)” area, start typing in
+the name or a portion of the name of the YANG file you wish to work from,
+and pick one or more module(s).</p>
+<img alt="Screenshot of dropdown menu displaying YANG models matching a search" src="_images/module_selection.png" />
+<p>Then select the “Load Module(s)” button, and after a few moments, the selected
+modules will be displayed.</p>
+<img alt="Screenshot of full page showing loaded YANG module trees" src="_images/modules_loaded.png" />
+<p>If you’re not already familiar with the basic concepts of YANG Suite’s tree UI
+for working with YANG modules, please refer to the corresponding
+documentation at “Explore–&gt;YANG”.</p>
+</section>
+<section id="building-an-rpc">
+<h2>Building an RPC<a class="headerlink" href="#building-an-rpc" title="Permalink to this heading">¶</a></h2>
+<p>Now that you have a device selected and YANG module(s) loaded, select the
+desired operation (Get, Set, or Subscribe) and any associated options
+(Get data type, prefixing style, etc.) using the buttons in the top section
+of the page.</p>
+<img alt="Screenshot showing the operation and options section of the UI." src="_images/rpc_options.png" />
+<p>In the YANG module tree display, you can then select the nodes of interest
+(and the associated values and operations, for a Set request) that you wish
+to use for building a gNMI RPC.</p>
+<section id="get">
+<h3>Get<a class="headerlink" href="#get" title="Permalink to this heading">¶</a></h3>
+<img alt="Screenshot showing selections in the YANG tree for a Get request" src="_images/tree_get.png" />
+</section>
+<section id="set">
+<h3>Set<a class="headerlink" href="#set" title="Permalink to this heading">¶</a></h3>
+<img alt="Screenshot showing selections in the YANG tree for a Set request." src="_images/tree_set.png" />
+<p>Once you have made the desired selections, click “Build JSON” to construct
+the corresponding RPC, which will be displayed as JSON in the field
+to the right.</p>
+<img alt="Screenshot showing a constructed Get request as JSON." src="_images/get_json.png" />
+</section>
+</section>
+<section id="running-an-rpc">
+<h2>Running an RPC<a class="headerlink" href="#running-an-rpc" title="Permalink to this heading">¶</a></h2>
+<p>Once you have constructed an RPC, simply select “Run RPC” to transmit it to
+the selected device and display the outcome.</p>
+<img alt="Screenshot showing the GetResponse received from a device." src="_images/rpc_run_get.png" />
+</section>
+</section>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, YANG Suite development team.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'2.7.15',
+            LANGUAGE:'en',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/documentation_options.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="_static/sphinx_highlight.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
+      });
+  </script> 
+
+</body>
+</html>

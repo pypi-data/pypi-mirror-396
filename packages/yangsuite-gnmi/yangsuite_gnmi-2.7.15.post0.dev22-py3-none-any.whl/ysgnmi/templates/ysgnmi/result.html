@@ -1,0 +1,117 @@
+{% load static %}
+<script src="{% static 'yangsuite/js/jquery-1.11.2.min.js' %}"></script>
+<script src="{% static 'yangsuite/js/jquery-ui.min.js' %}"></script>
+<script src="{% static 'yangsuite/js/js.cookie.js' %}"></script>
+<script src="{% static 'yangsuite/js/formatXML.js' %}"></script>
+<script src="{% static 'yangsuite/js/yangsuite.js' %}"></script>
+<script src="{% static 'ysgnmi/js/gnmi.js' %}"></script>
+<link rel="stylesheet" href="{% static 'yangsuite/css/cui-standard.min.css' %}"/>
+<link rel="stylesheet" href="{% static 'ysgnmi/css/ysgnmi.css' %}"/>
+<link rel="stylesheet" href="{% static 'yangsuite/css/excite-bike/jquery-ui.min.css' %}"/>
+<link rel="stylesheet" href="{% static 'yangsuite/css/yangsuite-cui.css' %}"/>
+{% block head %}
+<title>gNMI session running on {{ device }} </title>
+{% endblock head %}
+{% csrf_token %}
+<body class="cui">
+    <div class="container">
+        <div class="row">
+            <div class="col">
+                <button id="ys-stop-test"
+                    class="btn btn--primary">Stop Session</button>
+            </div>
+            <div class="col">
+            <strong>
+                <p id="status">Session status:  <span id="executed">0</span></p>
+            </strong>
+            </div>
+            <div class="col">
+            <strong>
+                <p>Received bytes of data:  <span id="passed">0</span> </p>
+            </strong>
+            </div>
+        </div>
+    </div>
+    <div class="test-output" id="ys-results"></div>
+</body>
+<div id="ys-dialog" title="YANG Suite"></div>
+
+<script type="text/javascript">
+$(function() {
+
+    var resultCount = 0;
+    var testInterval = 0;
+
+    $("#ys-stop-test").click(function() {
+        // TODO: need to send message to stop session
+        clearInterval(testInterval);
+        $("#executed").html("stopped");
+        gnmi.stopSession("{{ device }}").then(function() {
+            $("#ys-dialog").empty();
+            $("#ys-dialog").dialog({
+                modal: true,
+                height: "auto",
+                width: "auto",
+                buttons: {
+                    "Close Results window": function() {
+                        window.close();
+                    },
+                    "Ok": function() {
+                        $("#ys-dialog").dialog( "close" );
+                    }
+                },
+            });
+            $("#ys-dialog").html("Session Stopped");
+            $("#ys-dialog").dialog("open");
+        }).fail(function() {
+            alert('Session failed to stop.');
+        });
+    });
+
+    $(window).unload(function() {
+        gnmi.stopSession("{{ device }}");
+    });
+
+    function updateTestData() {
+        $("#executed").html("running");
+
+        $.getJSON('/gnmi/run?device=' + "{{ device }}", function(data) {
+            if (data.result.length == 0) {
+                return;
+            }
+
+            let target = $("#ys-results")
+            let scrolledToEnd = (target.scrollTop() + target.innerHeight() >=
+                                 target.prop("scrollHeight"));
+
+            for (let entry of data.result) {
+                if (entry) {
+                    if (typeof(entry) == "object") {
+                        entryStr = JSON.stringify(entry, null, 2);
+                        resultCount += entryStr.length;
+                        $("#passed").html(resultCount);
+                        target.append($('<pre>').text(entryStr));
+                    } else if (typeof(entry) == "string") {
+                        if (entry != "Waiting for notification") {
+                            resultCount += entry.length;
+                            $("#passed").html(resultCount);
+                        }
+                        target.append($('<pre>').text(entry));
+                    }
+                } else {
+                    target.append($('<pre style="color: red;">').text("Entry does not have data."));
+                }
+            }
+            if (scrolledToEnd) {
+                // Scroll to the new end of the page; else stay put
+                target.scrollTop(target.prop("scrollHeight"));
+            }
+        });
+    }
+
+    testInterval = setInterval(function() {
+        updateTestData();
+    }, 1000);
+});
+</script>
+</html>

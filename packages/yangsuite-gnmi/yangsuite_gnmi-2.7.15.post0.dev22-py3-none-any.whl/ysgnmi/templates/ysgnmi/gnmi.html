@@ -1,0 +1,824 @@
+{% extends 'yangsuite/base-cui.html' %}
+{% load static %}
+{% block javascript %}
+<script src="{% static 'ysfilemanager/js/yangsets.js' %}"></script>
+<script src="{% static 'ysdevices/js/devices.js' %}"></script>
+<script src="{% static 'ysyangtree/js/tasks.js' %}"></script>
+<script src="{% static 'ysyangtree/js/yangtree.js' %}"></script>
+<script src="{% static 'ysyangtree/js/rpc_ui.js' %}"></script>
+<script src="{% static 'ysyangtree/js/chosen/chosen.jquery.js' %}"></script>
+<script src="{% static 'ysyangtree/js/jstreegrid.js' %}"></script>
+<script src="{% static 'ysnetconf/js/rpcmanager.js' %}"></script>
+<script src="{% static 'ysnetconf/js/netconf.js' %}"></script>
+<script src="{% static 'ysgnmi/js/gnmi.js' %}"></script>
+<script src="{% static 'ysgnmi/js/json-stringify-pretty-compact.js' %}"></script>
+<script defer src="{% static 'yangsuite/js/fontawesome-all.js' %}"></script>
+{% endblock javascript %}
+{% block cui-css %}
+<link rel="stylesheet" href="{% static 'yangsuite/css/cui-standard-1.3.3.min.css' %}"/>
+{% endblock cui-css %}
+{% block css %}
+<link rel="stylesheet" href="{% static 'ysdevices/css/device.css' %}"/>
+<link rel="stylesheet" href="{% static 'ysyangtree/css/chosen/chosen.css' %}"/>
+<link rel="stylesheet" href="{% static 'ysyangtree/css/chosen-cui.css' %}"/>
+<link rel="stylesheet" href="{% static 'ysyangtree/css/yangtree.css' %}"/>
+<link rel="stylesheet" href="{% static 'ysgnmi/css/ysgnmi.css' %}"/>
+{% endblock css %}
+{% block breadcrumbs %}<li><span>gNMI</span></li>{% endblock %}
+{% block page-title %}gRPC Network Management Interface (gNMI){% endblock %}
+{% block help_url %}{% url 'help' section='ysgnmi' document='index'  %}{% endblock %}
+{% block body %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-4">
+      <div class="form-group">
+        <div class="form-group label--inline">
+          <div class="form-group__text select">
+            <label for="ys-yangset"><strong>YANG Set</strong></label>
+            <select id="ys-yangset"></select>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <form id="ys-module-select" class="ys-yangset-required">
+        <div class="form-group label--inline">
+          <div class="form-group__text">
+            <label for="ys-models"><strong>Module(s)</strong></label>
+            <select id="ys-models" multiple=""
+                    data-placeholder="Type here to filter available modules" >
+            </select>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="col-auto flex-center-vertical">
+      <input type="submit" value="Load Module(s)" form="ys-module-select"
+             class="btn btn--small btn--primary ys-yangset-required">
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-auto">
+      <div class="form-group label--inline">
+        <div class="form-group__text select">
+          <!-- tasks.js is hardcoded to look for "ys-devices-replay" by ID -->
+          <label for="ys-devices-replay"><strong>Device</strong></label>
+          <select id="ys-devices-replay" class="ys-devices">
+            <option value="" disabled selected>(none selected)</option>
+            {% for device in devices %}
+            <option value="{{ device.key }}" title="{{ device.description }}">{{ device.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="col-auto flex-center-vertical">
+      <button id="ys-edit-device" class="btn btn--secondary btn--small disabled">
+        <span class="fas fa-fw fa-lg fa-cog"></span>
+        Edit Device
+      </button>
+      <button class="btn btn--small btn--gray-ghost ys-device-required"
+                  data-value="capabilities" id="gnmi-op-capabilities" >
+            Capabilities
+      </button>
+    </div>
+    <div class="col-auto">
+      <div class="form-group label--inline">
+        <div class="form-group__text">
+          <label><strong>gNMI Operation</strong></label>
+          <div class="btn-group ys-module-required" data-toggle="buttons" role="group"
+              id="ys-rpc-group" aria-label="gNMI Operation:">
+            <button class="btn btn--small btn--primary-ghost ys-module-required ys-gnmi-op selected"
+                    data-value="get" id="gnmi-op-get">
+              Get
+            </button>
+            <button class="btn btn--small btn--primary-ghost ys-module-required ys-gnmi-op"
+                    data-value="set" id="gnmi-op-set">
+              Set
+            </button>
+            <button class="btn btn--small btn--primary-ghost ys-module-required ys-gnmi-op"
+                    data-value="subscribe" id="gnmi-op-subscribe">
+              Subscribe
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-auto">
+      <div class="col-auto" style="margin-bottom: 20px;">
+        <div class="form-group label--inline">
+          <div class="form-group__text">
+            <label class="checkbox"
+            title="Path element supports a prefix. Refer to gNMI specifications.">
+              <input type="checkbox" id="ys-prefix">
+              <span class="checkbox__input"></span>
+              <span class="checkbox__label"><strong>Prefix path</strong></span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-auto ys-set-params" hidden=true>
+      <div class="col-auto" style="margin-bottom: 20px;">
+        <div class="form-group label--inline">
+          <div class="form-group__text">
+            <label class="checkbox"
+            title="Convert text to binary format. Refer to target device specifications.">
+              <input type="checkbox" id="ys-base64">
+              <span class="checkbox__input"></span>
+              <span class="checkbox__label"><strong>Base64</strong></span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- <div class="col-auto flex-center-vertical">
+      <div class="dropdown">
+        <button class="btn btn--small btn--dropdown">
+          <span class="fas fa-fw fa-lg fa-redo"></span>Replays</button>
+        <div class="dropdown__menu">
+          <a id="ys-load-replay-menu-item">
+            <span class="fas fa-fw fa-lg fa-upload"></span> Load Replay&hellip;
+          </a>
+          <a id="ys-save-as-replay-menu-item">
+            <span class="fas fa-fw fa-lg fa-download"></span> Save as New Replay&hellip;
+          </a>
+          <a id="ys-edit-replay-menu-item" class="ys-replay-required disabled">
+            <span class="fas fa-fw fa-lg fa-edit"></span> Edit Replay Information&hellip;
+          </a>
+          <a id="ys-save-replay-menu-item" class="ys-replay-required disabled">
+            <span class="far fa-fw fa-lg fa-save"></span> Save Changes
+          </a>
+        </div>
+      </div>
+    </div> -->
+  </div>
+  <div class="row">
+    <!-- <div class="col-auto"> -->
+      <div class="col-auto ys-get-params">
+        <div class="col-auto"><strong>GET type:</strong></div>
+        <div class="form-group label--inline ys-module-required">
+          <div class="form-group__radio">
+            <label class="radio radio--alt">
+              <input type="radio" name="ys-get-type" value="ALL" checked>
+              <span class="radio__input"></span>
+              <span class="radio__label">All</span>
+            </label>
+            <label class="radio radio--alt">
+              <input type="radio" name="ys-get-type" value="CONFIG">
+              <span class="radio__input"></span>
+              <span class="radio__label">Config</span>
+            </label>
+            <label class="radio radio--alt">
+              <input type="radio" name="ys-get-type" value="STATE">
+              <span class="radio__input"></span>
+              <span class="radio__label">State</span>
+            </label>
+            <label class="radio radio--alt">
+              <input type="radio" name="ys-get-type" value="OPERATIONAL">
+              <span class="radio__input"></span>
+              <span class="radio__label">Operational</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="col-auto ys-subscribe-params" hidden=true>
+        <div class="form-group label--inline ys-module-required">
+          <div class="form-group__radio">
+            <label class="radio radio--alt">
+              <input type="radio" name="ys-subscribe-mode" value="STREAM" checked>
+              <span class="radio__input"></span>
+              <span class="radio__label">STREAM</span>
+            </label>
+            <label class="radio radio--alt">
+              <input type="radio" name="ys-subscribe-mode" value="ONCE">
+              <span class="radio__input"></span>
+              <span class="radio__label">ONCE</span>
+            </label>
+            <label class="radio radio--alt">
+              <input type="radio" name="ys-subscribe-mode" value="POLL">
+              <span class="radio__input"></span>
+              <span class="radio__label">POLL</span>
+            </label>
+          </div>
+          <div class="form-group__radio">
+            <label class="radio radio--alt">
+              <input type="radio" name="ys-subscribe-submode" value="ON_CHANGE" checked>
+              <span class="radio__input"></span>
+              <span class="radio__label">ON_CHANGE</span>
+            </label>
+            <label class="radio radio--alt">
+              <input type="radio" name="ys-subscribe-submode" value="SAMPLE">
+              <span class="radio__input"></span>
+              <span class="radio__label">SAMPLE</span>
+            </label>
+            <label class="radio radio--alt">
+              <input type="radio" name="ys-subscribe-submode" value="TARGET_DEFINED">
+              <span class="radio__input"></span>
+              <span class="radio__label">TARGET_DEFINED</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="col-auto ys-subscribe-params" hidden=true>
+        <div class="form-group label--inline ys-module-required">
+          <div class="form-group__text">
+            <input id="ys-sample-interval" size="5">
+            <label class="col-auto text-right">Sample interval</label>
+          </div>
+        </div>
+      </div>
+    <!-- </div> -->
+    <div class="col-auto">
+      <div class="col-auto"><strong>Origin:</strong></div>
+      <div class="form-group label--inline ys-device-required">
+        <div class="form-group__radio">
+          <label class="radio radio--alt">
+            <input type="radio" class="ys-origin" name="ys-origin-type" value="openconfig" checked>
+            <span class="radio__input"></span>
+            <span class="radio__label">Openconfig</span>
+          </label>
+          <label class="radio radio--alt">
+            <input type="radio" class="ys-origin" name="ys-origin-type" value="rfc7951">
+            <span class="radio__input"></span>
+            <span class="radio__label">RFC 7951</span>
+          </label>
+          <label class="radio radio--alt">
+            <input type="radio" class="ys-origin" name="ys-origin-type" value="module">
+            <span class="radio__input"></span>
+            <span class="radio__label">Module name</span>
+          </label>
+          <label class="radio radio--alt">
+            <input type="radio" class="ys-origin" name="ys-origin-type" value="other">
+            <span class="radio__input"></span>
+            <span class="radio__label">Other</span>
+          </label>
+        </div>
+      </div>
+    </div>
+    <div class="col-auto ys-origin-other" hidden=true>
+      <div class="form-group ys-module-required">
+        <div class="form-group__text">
+          <label>Custom Origin
+          <input id="ys-origin-other">
+          </label>
+        </div>
+      </div>
+    </div>
+      <div class="col-auto">
+        <div><label><strong>Encoding type:</strong></label></div>
+        <div class="form-group label--inline ys-device-required">
+          <div class="form-group__radio">
+            <label class="radio radio--alt">
+              <input type="radio" name="ys-encoding-type" value="json_ietf" checked>
+              <span class="radio__input"></span>
+              <span class="radio__label">JSON_IETF</span>
+            </label>
+            <label class="radio radio--alt">
+              <input type="radio" name="ys-encoding-type" value="json">
+              <span class="radio__input"></span>
+              <span class="radio__label">JSON</span>
+            </label>
+            <label class="radio radio--alt">
+              <input type="radio" name="ys-encoding-type" value="proto">
+              <span class="radio__input"></span>
+              <span class="radio__label">PROTO</span>
+            </label>
+            <label class="radio radio--alt">
+              <input type="radio" name="ys-encoding-type" value="ascii">
+              <span class="radio__input"></span>
+              <span class="radio__label">ASCII</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col">
+      <button id="ys-search-xpaths-btn" class="btn btn--small">
+        Search XPaths</button>
+      <button id="ys-icon" class="btn btn--small">
+          <span class="fas fa-fw fa-lg fa-list"></span>Legend</button>
+      <div class="dropdown">
+        <button class="btn btn--small btn--dropdown">
+          <span class="fas fa-fw fa-lg fa-redo"></span>Replays</button>
+        <div class="dropdown__menu">
+            <a id="ys-load-replay-menu-item">
+            <span class="fas fa-fw fa-lg fa-upload"></span> Load Replay&hellip;
+          </a>
+          <a id="ys-save-as-replay-menu-item">
+            <span class="fas fa-fw fa-lg fa-download"></span> Save as New Replay&hellip;
+          </a>
+          <a id="ys-edit-replay-menu-item" class="ys-replay-required disabled">
+            <span class="fas fa-fw fa-lg fa-edit"></span> Edit Replay Information&hellip;
+          </a>
+          <a id="ys-save-replay-menu-item" class="ys-replay-required disabled">
+            <span class="far fa-fw fa-lg fa-save"></span> Save Changes
+          </a>
+        <a id="ys-generate-python-menu-item">
+            <span class="fab fa-fw fa-lg fa-python"></span>Generate Python script</a>
+          <a id="ys-generate-ansible-menu-item">
+            <span class="fab fa-fw fa-lg fa-adn"></span>Generate Ansible playbook</a>
+        </div>
+      </div>
+      <button id="ys-gnmi-build-json"
+          class="btn btn--small btn--primary ys-module-required">
+          Build RPC
+        </button>
+      <button id="ys-clear" class="btn btn--small btn--negative">
+          Clear Values</button>
+    </div>
+    <div class="col-5">
+    <div class="row d-flex justify-content-center">
+      <button id="ys-run-rpc" class="btn btn--small btn--primary">Run RPC(s)</button>
+      <span class="pull-right">
+        <button id="ys-clear-rpcs-btn" class="btn btn--small btn--negative">
+          <span class="fas fa-fw fa-lg fa-ban"></span> Clear RPC(s)
+        </button>
+      </span>
+  </div>
+</div>
+</div>
+<div class="content">
+ <div class="container-fluid" style="height: 100%">
+  <div class="row" style="height: 100%">
+    <div class="col" style="overflow: auto; overflow-y: auto; height: 500px;">
+      <div id="tree"></div>
+    </div>
+    <div class="col" style="overflow: auto; overflow-y: auto; height: 500px;">
+      <textarea id="ys-gnmi-content" wrap="soft" cols="100%" rows="100%" style="height: 98%; width: 100%;"></textarea>
+    </div>
+  </div>
+ </div>
+</div>
+
+<div id="ys-icon-dialog" hidden>
+  <table id="ysyangtree-legend" class="table"></table>
+</div>
+
+<div id="ys-load-replay-dialog" hidden>
+  <div class="form-group">
+    <div class="form-group__text select">
+      <label for="ys-replay-cat-list">Replay Category</label>
+      <select id="ys-replay-cat-list"></select>
+    </div>
+  </div>
+  <div class="form-group">
+    <div class="form-group__text select">
+      <label for="ytool-task-list">Replay Name</label>
+      <select id="ytool-task-list"></select>
+    </div>
+  </div>
+  <!-- TODO: add this support -->
+  <!-- <div class="form-group label--inline">
+    <div class="form-group__text">
+      <label>Datastore</label>
+      <div class="btn-group" data-toggle="buttons" role="group"
+            id="ys-replay-datastore-group"
+            aria-label="Datastore:">
+        <button class="btn btn--small btn--primary-ghost"
+                data-value="candidate" id="replay-datastore-candidate">
+          candidate
+        </button>
+        <button class="btn btn--small btn--primary-ghost selected"
+                data-value="running" id="replay-datastore-running">
+          running
+        </button>
+        <button class="btn btn--small btn--primary-ghost"
+                data-value="startup" id="replay-datastore-startup">
+          startup
+        </button>
+      </div>
+    </div>
+  </div> -->
+  <div>
+    <label>Variables and Values</label>
+    <div>
+      <form-group id="ys-variables"></form-group>
+    </div>
+    <div>
+      <button id="ys-save-variables" class="btn btn--small"
+              title="Save variables and their values to the selected device profile">
+        Save Variables to Device</button>
+    </div>
+  </div>
+</div>
+
+<div id="gnmi-device-dialog"></div>
+<div id="ys-task-dialog" title="Yang Suite"></div>
+<div id="ys-save-task"></div>
+<div id="ys-ansible"></div>
+{% include "ysyangtree/search_xpaths_dialog.html" %}
+{% endblock body %}
+{% block script %}
+<script>
+$(function() {
+    let contextMenuHovered = false;
+    $(".ys-yangset-required").addClass("disabled");
+    $(".ys-module-required").addClass("disabled");
+    $("#ys-models").chosen({width: "85%"});
+
+    $("#ys-task-dialog").dialog({autoOpen: false});
+
+    yangsets.config.progress = 'div#ys-progress';
+    yangsets.config.yangsetsSelect = 'select#ys-yangset';
+
+    yangtree.config.exploreStateURI = "/gnmi/explore/";
+    yangtree.config.exploreStateTitle = 'gNMI';
+    yangtree.config.initialModuleSelection = "{{ modulenames }}".split(',');
+
+    yangtree.config.treeURI = "/gnmi/tree/";
+    rpc_ui.config.getProtocolOperation = function() {
+        let val = $("#ys-rpc-group .btn.selected").attr('data-value');
+        if (val == "get" || val == "subscribe") {
+            return "get";
+        } else if (val == "set") {
+            return "edit-config";
+        } else if (val == "subscribe") {
+            return "notification";
+        }
+    };
+
+    rpc_ui.config.buildEditProtocolOperationMenu = function(node) {
+        let target = $('<select class="ytool-edit-op" nodeid="' + node.id + '">');
+        target.append('<option selected disabled></option>');
+        target.append('<option>delete</option>');
+        target.append('<option>replace</option>');
+        target.append('<option>update</option>');
+        return target;
+    };
+
+    devices.config.deviceDialog = "div#gnmi-device-dialog";
+
+    yangtree.buildLegend($("#ysyangtree-legend"));
+
+    yangsets.getYangSets("{{ yangset }}");
+
+    $("#ys-search-xpaths-btn").click(function() {
+        $("#ys-search-xpaths-dialog").dialog({
+            title: "Searching YANG node XPaths",
+            width: 600,
+            height: 600,
+            buttons: {
+                "Show selected node(s)": function() {
+                    $(this).dialog("close");
+                    yangtree.selectNodes($("#ys-xpath-search-results").val());
+                },
+            },
+        }).dialog("open");
+    });
+
+    $("#ys-xpath-search-form").submit(yangtree.searchXpathsFormSubmit);
+
+    $("#ys-icon").click(function() {
+        $("#ys-icon-dialog")
+        .dialog({
+            title: "Tree Icon Legend",
+            height: '700',
+            width: 'auto',
+            resizable: false
+        }).dialog("open");
+    });
+
+    function toggleParams(target) {
+        let op = target.attr('data-value');
+        if (op == 'get') {
+            $(".ys-get-params").prop('hidden', false);
+            $(".ys-set-params").prop('hidden', true);
+            $(".ys-subscribe-params").prop('hidden', true);
+        } else if (op == 'set') {
+            $(".ys-get-params").prop('hidden', true);
+            $(".ys-set-params").prop('hidden', false);
+            $(".ys-subscribe-params").prop('hidden', true);
+        } else if (op == 'subscribe') {
+            $(".ys-get-params").prop('hidden', true);
+            $(".ys-set-params").prop('hidden', true);
+            $(".ys-subscribe-params").prop('hidden', false);
+        }
+    }
+
+    $("#ys-rpc-group .btn").click(function(e) {
+        if (!$(this).hasClass("disabled")) {
+            $("#ys-rpc-group .btn").removeClass("selected");
+            $(this).addClass("selected");
+            toggleParams($(this));
+            rpc_ui.clearGrid();
+        }
+    });
+
+    $(".ys-origin").change(function() {
+        if ($("[name=ys-origin-type]:checked").val() == "other") {
+            $(".ys-origin-other").prop("hidden", false);
+        } else {
+            $(".ys-origin-other").prop("hidden", true);
+        }
+    })
+
+    $("#ys-yangset").change(function(e) {
+        $.jstree.destroy($("#tree"));
+
+        $("#ys-models").empty();
+        $(".ys-module-required").addClass("disabled");
+
+        if ($("#ys-yangset").val() == "") {
+            $(".ys-yangset-required").addClass("disabled");
+            return;
+        }
+
+        yangtree.getModels($("#ys-yangset").val(), $("#ys-models"))
+            .done(function() {
+                yangtree.pushExploreState($("#ys-yangset").val(),
+                                          $("#ys-models").val());
+                $("#ys-models").trigger("chosen:updated");
+                $(".ys-yangset-required").removeClass("disabled");
+                /*
+                 * If we preselected a module(s) through
+                 * yangtree.config.initialModuleSelection,
+                 * load the module(s) now.
+                 */
+                if ($("#ys-models").val()) {
+                    $("#ys-module-select").trigger("submit");
+                }
+            });
+    });
+
+    $("#ys-clear").click(function(e) {
+        rpc_ui.clearGrid();
+    });
+
+    $("#ys-module-select").submit(function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        let names = $("#ys-models").val();
+
+        if (names) {
+            $(".ys-module-required").removeClass("disabled");
+            rpc_ui.makeJSTreeGrid(names, $("#ys-yangset").val(), plugin='yangsuite-gnmi');
+            rpc_ui.changeTree($("#tree"));
+
+            /* Wait for tree to load data 
+               and after that populate tree from response */
+            if (($(gnmi.config.rpcInfoTextarea).val())) {
+              (async() => {
+                await gnmi.waitForElement(".jstree-grid-midwrapper");
+                let data = {replay: $("#ytool-task-list").val(),
+                              category: $("#ys-replay-cat-list").val()};
+                  gnmi.showReplay(data);
+              })();
+            }     
+        } else if ($("#tree").jstree(true)) {
+            $.jstree.destroy($("#tree"));
+        }
+        yangtree.pushExploreState($("#ys-yangset").val(), names);
+    });
+
+    $("#ys-gnmi-build-json").click(function() {
+        clearGnmiRpc();
+        $("textarea#ys-gnmi-content").val("");
+        $("#ys-gnmi-content").removeClass("source-of-truth");
+        gnmi.buildJSON();
+    });
+
+    $("#ys-edit-device").click(function() {
+        let device = $("#ys-devices-replay").val();
+        devices.editDeviceDialog($("#ys-devices-replay").val());
+    });
+
+    $("#ys-gnmi-content").on("change", function() {
+        $("#ys-gnmi-content").addClass("source-of-truth");
+    });
+
+    $("#ys-run-rpc").click(function() {
+        let device = $("#ys-devices-replay").val();
+        let treeAreaLength = $('.jstree-grid-wrapper').length
+        let data = {};
+
+        if (!device) {
+            popDialog("Please select a device");
+            return;
+        } else if (!treeAreaLength){
+          popDialog("Please load module first");
+          return;
+        }
+
+        if ($("#ys-gnmi-content").hasClass("source-of-truth")) {
+            data["raw"] = $("textarea#ys-gnmi-content").val().trim();
+        }
+        gnmi.runGNMI(device, data);
+    });
+
+    $("#gnmi-op-capabilities").click(function() {
+
+        let device = $("#ys-devices-replay").val();
+
+        if (!device) {
+            popDialog("Please select a device");
+            return;
+        }
+
+        let data = {action: 'capabilities'};
+
+        gnmi.runCapabilities(device, data).then(function(retObj) {
+            if (!retObj.capabilities || $.isEmptyObject(retObj.capabilities)) {
+                alert("Capabilities not returned.");
+                return;
+            }
+            let output = $("<div>");
+            output.append("<p>gNMI version: " + retObj.capabilities["gNMIVersion"]);
+            output.append("<p>Supported encodings: " + retObj.capabilities.supportedEncodings);
+            let table = $('<table class="table table--compressed">');
+            table.append("<tr><th>Model</th><th>Version</th><th>Organization</th></tr>");
+            $.each(retObj.capabilities.supportedModels, function(i, model) {
+                table.append("<tr><td>" + model.name +
+                             "</td><td>" + model.version +
+                             "</td><td>" + model.organization +
+                             "</td></tr>");
+            });
+            output.append(table);
+            popDialog(output);
+            $("#ytool-dialog").html(output).dialog({
+                title: "Capabilities of " + device,
+                width: 800,
+                maxHeight: $(window).height() * 0.9,
+            }).dialog("open");
+        });
+    });
+
+    function clearGnmiRpc(){
+      rpcmanager.clearrpcs();
+      $("#ytool-rpc-data").val('').removeClass("source-of-truth");
+      $("#ys-gnmi-content").val("");
+      $(".jstree-grid-wrapper").addClass("source-of-truth");
+      $(".dropdown").removeClass("active");
+    }
+
+    /***************************
+     * "Clear RPCs" if gnmi operation
+     * is clicked
+     ***************************/
+
+     $(".ys-gnmi-op").click(function(e) {
+      clearGnmiRpc();
+    });
+    /***************************
+     * "Clear RPCs" button
+     ***************************/
+
+    $("#ys-clear-rpcs-btn").click(function(e) {
+      clearGnmiRpc();
+    });
+
+    /**
+     * TODO: Replay stuff should be in yangtree
+     */
+    $(".btn--dropdown").click(function() {
+      $(".dropdown").removeClass("active");
+      $(this).parent().toggleClass("active");
+     });
+
+     $(document).click(function (event) {
+       if (!contextMenuHovered) {
+           $(".dropdown").removeClass("active");
+       }
+     });
+
+     $(".dropdown").mouseenter(function(e) {
+       contextMenuHovered = true;
+     });
+
+     $(".dropdown").mouseleave(function(e) {
+       contextMenuHovered = false;
+     });
+
+     $("#ys-load-replay-menu-item").click(function() {
+        $(".dropdown").removeClass("active");
+        tasks.getTasks().then(function() {
+            $("#ys-replay-cat-list").chosen({width: "100%"});
+            $("#ytool-task-list").chosen({width: "100%"});
+            $("#ys-replay-cat-list").trigger('change');
+            $("#ys-load-replay-dialog").dialog({
+                title: 'Select replay to load',
+                width: 600,
+                minHeight: 600,
+                buttons: [
+                    {
+                        text: 'Delete Replay',
+                        icons: {primary: 'ui-icon-trash'},
+                        class: 'btn-negative',
+                        click: function() {
+                            if (!$("#ytool-task-list").val()) {
+                                popDialog("No task to delete");
+                                return;
+                            }
+
+                            if (confirm('Really delete replay "' +
+                                        $("#ytool-task-list").val() +
+                                        '"?\nWARNING: This action is not reversible.')) {
+                                tasks.deleteTask($("#ytool-task-list").val(),
+                                                 $("#ys-replay-cat-list").val());
+                            }
+                        },
+                    },
+                    {
+                        text: 'Run Replay',
+                        icons: {primary: 'ui-icon-play'},
+                        click: function() {
+                            if (!$("#ytool-task-list").val()) {
+                                popDialog("No task to run");
+                                return;
+                            }
+                            if (!$("#ys-devices-replay").val()) {
+                              popDialog("No device selected");
+                              return;
+                            }
+                            let device = $("#ys-devices-replay").val();
+
+                            if (!device) {
+                                popDialog("Please select a device");
+                                return;
+                            }
+
+                            let data = {replay: $("#ytool-task-list").val(),
+                                        category: $("#ys-replay-cat-list").val(),
+                                        device: device,
+                                        variables: tasks.replayVariables('retrieve')}
+
+                            gnmi.runReplay(device, data).then(function(retObj) {
+                                popDialog($("<pre>").text(stringify(retObj.response)));
+                            });
+                        },
+                    },
+                    {
+                        text: 'Show Replay',
+                        click: function() {
+                            if (!$("#ytool-task-list").val()) {
+                                popDialog("No task to load");
+                                return;
+                            }
+                            let data = {replay: $("#ytool-task-list").val(),
+                                        category: $("#ys-replay-cat-list").val()};
+
+                            gnmi.showReplay(data);
+                            $(".ys-replay-required").removeClass("disabled");
+                            $(this).dialog("close");
+                        },
+                    },
+                ],
+            }).dialog("open");
+        });
+    });
+
+     $("#ys-devices-replay").change(function() {
+        let device = $("#ys-devices-replay");
+        if (device.val()) {
+            $("#ys-edit-device").removeClass("disabled");
+            $("#ys-open-device-window").removeClass("disabled");
+        } else {
+            $("#ys-edit-device").addClass("disabled");
+            $("#ys-open-device-window").addClass("disabled");
+        }
+    });
+
+    // "Save as New Replay"
+
+    $("#ys-save-as-replay-menu-item").click(function() {
+        $(".dropdown").removeClass("active");
+        tasks.getSaveDialog();
+    });
+
+    // "Edit Replay Properties"
+
+    $("#ys-edit-replay-menu-item").click(function() {
+        if (!$("#ytool-task-list").val()) {
+            popDialog("No replay to edit");
+            return;
+        }
+
+        tasks.getEditDialog($("#ytool-task-list").val(),
+                            $("#ys-replay-cat-list").val());
+        $(".dropdown").removeClass("active");
+    });
+
+    // "Save Changes"
+
+    $("#ys-save-replay-menu-item").click(function() {
+        if (!$("#ytool-task-list").val()) {
+            popDialog("No replay to edit")
+            return;
+        }
+        tasks.updateTaskData();
+        $(".dropdown").removeClass("active");
+    });
+    // "Generate/ Download Ansible Playbook"
+
+    $("#ys-generate-ansible-menu-item").click(function() {
+        gnmi.getAnsibleDialog();
+        $(".dropdown").removeClass("active");
+    });
+
+});
+
+</script>
+{% endblock script %}
