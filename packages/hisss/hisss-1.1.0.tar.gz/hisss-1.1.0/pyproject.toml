@@ -1,0 +1,40 @@
+[project]
+name = "hisss"
+version = "1.1.0"
+description = "High-Speed Snake Simulator (HISSS)"
+readme = "README.md"
+authors = [
+    { name = "Yannik Mahlau", email = "mahlau@tnt.uni-hannover.de" },
+    { name = "Robin Schmöcker"},
+    { name = "Christoph Schnell"},
+]
+requires-python = ">=3.12"
+dependencies = [
+    "hatchling>=1.28.0",
+    "numpy>=2.3.5",
+    "pytest>=9.0.1",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+# --- BUILD HOOK REGISTRATION ---
+[tool.hatch.build.hooks.custom]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/hisss",
+    "hatch_build.py" # Ensure the build hook script itself is included!
+]
+exclude = [
+    "src/hisss/cpp/compiled" # Clean slate for the user
+]
+
+# --- WHEEL SETTINGS ---
+[tool.hatch.build.targets.wheel]
+packages = ["src/hisss"]
+artifacts = ["src/hisss/cpp/compiled/liblink.so"]
