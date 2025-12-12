@@ -1,0 +1,152 @@
+image: gitlab-registry.cern.ch/lhcb-docker/os-base/alma9-devel:latest
+
+stages:
+  - version_check
+  - unittest
+  - docs
+  - fetchCompileEPM
+  - Run_EPM
+  - EPM_compare
+  - pages
+
+before_script:
+    - dnf install -y python wget unzip which
+    - wget https://bootstrap.pypa.io/get-pip.py
+    - python get-pip.py
+    - pip install pytest flake8 sweights gitpython
+    - pip install -e .
+    - pip freeze
+    - git fetch --all # Needed for version checking
+
+version_check:
+    stage: version_check
+    script:
+        - current_branch=$(echo "$CI_COMMIT_REF_NAME")
+        - CURRENT_BRANCH="$current_branch" python -m pytest -xvs tests/version_check.py
+
+API_test:
+    stage: unittest
+    needs: [version_check]
+    script:
+        - python -m pytest -xvs tests/test_api.py
+
+# Copied more or less from DaVinci
+docs:
+  stage: docs
+  needs: [API_test]
+  variables:
+    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  before_script:
+    - dnf install -y python wget unzip which
+    - wget https://bootstrap.pypa.io/get-pip.py
+    - python get-pip.py
+    - pip install pytest flake8 sweights gitpython sphinx sphinx-rtd-theme 
+    - pip install -e .
+    - pip freeze
+    - git fetch --all # Needed for version checking
+  script:
+    - cd doc
+    - make html
+  artifacts:
+    untracked: false
+    expire_in: 30 days
+    paths:
+     - doc/_build/html/
+  cache:
+    key: "$CI_JOB_NAME"
+    paths:
+      - .cache/pip
+
+
+calibration_test:
+  stage: unittest
+  needs: [version_check]
+  script:
+      - python -m pytest -xsv tests/test_calibration.py
+  artifacts:
+    when: on_failure
+    paths:
+      - tests/error_plots/
+    expire_in: 1 day
+
+cli_test:
+    stage: unittest
+    needs: [version_check]
+    script:
+        - python -m pytest -xv tests/test_cli.py
+
+fetchCompileEPM:
+  stage: fetchCompileEPM
+  needs: [API_test, calibration_test, cli_test]
+  tags:
+    - cvmfs
+  artifacts:
+    paths:
+      - tests/epm_reference_data/
+      - EspressoPerformanceMonitor/
+    expire_in: 1 day
+  script:
+    # Install EspressoPerformanceMonitor
+    - HERE=$PWD
+    - ESPRESSO_COMMIT=987e2ed0c348aa1c191dbb56833a4631aec6ce18
+    - EPM_COMMIT=904c7bdd608ee9ea96cf1fb4994032a9e32c92cf
+
+    - wget https://gitlab.cern.ch/lhcb-ft/EspressoPerformanceMonitor/-/archive/${EPM_COMMIT}/EspressoPerformanceMonitor-${EPM_COMMIT}.zip
+    - unzip EspressoPerformanceMonitor-${EPM_COMMIT}.zip && rm EspressoPerformanceMonitor-${EPM_COMMIT}.zip
+    - mv EspressoPerformanceMonitor-${EPM_COMMIT} EspressoPerformanceMonitor && cd EspressoPerformanceMonitor && rm -r Espresso
+
+    - wget https://gitlab.cern.ch/lhcb-ft/Espresso/-/archive/${ESPRESSO_COMMIT}/Espresso-${ESPRESSO_COMMIT}.zip
+    - unzip Espresso-${ESPRESSO_COMMIT}.zip && rm Espresso-${ESPRESSO_COMMIT}.zip
+    - mv Espresso-${ESPRESSO_COMMIT} Espresso
+
+    - mkdir build && cd build
+    - source /cvmfs/sft.cern.ch/lcg/views/LCG_104/x86_64-el9-gcc13-opt/setup.sh
+    - cmake ..
+    - make
+    - cd $HERE
+
+run_EPM:
+  stage: Run_EPM
+  needs: [fetchCompileEPM]
+  tags:
+    - cvmfs
+  artifacts:
+    paths:
+      - tests/epm_reference_data/
+    expire_in: 1 day
+  script:
+    # Run EPM
+    - python ./tests/generate_epm_testdata.py 30000
+    - EPMBIN=$PWD/EspressoPerformanceMonitor/build/bin/SimpleEvaluator
+    - cd ./tests/epm_reference_data
+    - source /cvmfs/sft.cern.ch/lcg/views/LCG_104/x86_64-el9-gcc13-opt/setup.sh
+    - bash run_epm.sh $EPMBIN $SCENARIO
+  parallel:
+    matrix:
+      - SCENARIO: [ "Bs_poly1_mistag_tauerr", "Bd_bspline4_logit", "Bd_bspline5_mistag", "Bd_nspline3_mistag", "Bd_nspline4_logit", "Bd_poly1_logit", "Bd_poly2_mistag", "Bs_poly1_mistag", "Bu_poly1_mistag", "Bd_poly1_mistag", "Bd_poly1_mistag_sweights", "combination"]
+
+
+EPM_compare:
+  stage: EPM_compare
+  needs: [run_EPM]
+  dependencies:
+    - run_EPM
+  cache:
+    key: epmfiles-cache
+  script:
+    - python -m pytest -s tests/test_epm.py
+
+pages:
+  image: gitlab-registry.cern.ch/lhcb-docker/os-base/alma9-devel:latest
+  stage: pages
+  needs: [docs, EPM_compare]  # Don't build webpage unless test suite passes (and sphinx succeeds)
+  script: 
+    - "mv doc/_build/html public"
+  artifacts:
+    paths:
+    - public
+    expire_in: 1 hour
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: always
+
