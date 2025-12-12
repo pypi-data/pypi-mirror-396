@@ -1,0 +1,64 @@
+[project]
+name = "toolz-stubs"
+dynamic = ["version"]
+description = "Type stubs for toolz"
+readme = "README.md"
+authors = [
+    { name = "Michael Grinshpon", email = "mgrinshpon@gmail.com" }
+]
+license = "BSD-3-Clause"
+requires-python = ">=3.12"
+keywords = ["toolz", "tlz", "cytoolz", "stubs", "typing", "type hints", "functional"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Typing :: Stubs Only",
+]
+dependencies = ["toolz~=1.0", "typing_extensions>=4.10; python_version < '3.13'"]
+
+[project.urls]
+Homepage = "https://github.com/mgrinshpon/toolz-stubs"
+Repository = "https://github.com/mgrinshpon/toolz-stubs"
+Issues = "https://github.com/mgrinshpon/toolz-stubs/issues"
+
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/toolz-stubs"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/toolz-stubs" = "tlz-stubs"
+
+[dependency-groups]
+dev = [
+    "basedpyright>=1.31.7",
+    "ruff>=0.14.1",
+    "cytoolz~=1.0",
+    "pytest>=8.4.2",
+]
+
+[tool.ruff.lint]
+# Unused imports are expected in stub files
+# This mirrors library's API.
+per-file-ignores = {"**/__init__.pyi" = ["F401"]}
+
+[tool.ruff.lint.isort]
+# In __init__.pyi, without these rules, every import becomes its own line.
+# 1. Combine multiple imports from the same module into a single line
+# 2. Keep imports split across multiple lines if they don't fit
+combine-as-imports = true
+split-on-trailing-comma = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"

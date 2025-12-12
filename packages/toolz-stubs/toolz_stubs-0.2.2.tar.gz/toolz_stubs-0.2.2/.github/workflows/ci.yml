@@ -1,0 +1,144 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:  # Allow manual triggering
+
+# Cancel in-progress runs for the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: make sync
+
+      - name: Run ruff check
+        run: make lint
+
+      - name: Run ruff format check
+        run: make format
+
+  type-check:
+    name: Type Check (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13", "3.14"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+          cache-suffix: py${{ matrix.python-version }}
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Run basedpyright
+        run: make check
+
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13", "3.14"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+          cache-suffix: py${{ matrix.python-version }}
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Run pytest
+        run: make test
+
+      - name: Verify stub imports
+        run: |
+          # Test that stubs can be imported without errors
+          uv run --no-editable python -c "
+          import toolz
+          import tlz
+          from toolz import curry, compose, identity
+          from tlz import curry, compose, identity
+          from toolz.curried import map, filter
+          from tlz.curried import map, filter
+          print('✓ Stubs imported successfully')
+          "
+
+  build:
+    name: Build Verification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Build package
+        run: make build
+
+      - name: Verify wheel contents
+        run: |
+          echo "Checking wheel contents..."
+          WHEEL_FILE=$(ls dist/*.whl)
+          echo "Built wheel: $WHEEL_FILE"
+
+          # Check for toolz-stubs
+          unzip -l "$WHEEL_FILE" | grep -E 'toolz-stubs/.*\.pyi$' || (echo "❌ No toolz-stubs .pyi files found!" && exit 1)
+          echo "✓ toolz-stubs found"
+
+          # Check for tlz-stubs
+          unzip -l "$WHEEL_FILE" | grep -E 'tlz-stubs/.*\.pyi$' || (echo "❌ No tlz-stubs .pyi files found!" && exit 1)
+          echo "✓ tlz-stubs found"
+
+          # Check for py.typed markers
+          unzip -l "$WHEEL_FILE" | grep 'toolz-stubs/py\.typed' || (echo "❌ No toolz-stubs py.typed marker!" && exit 1)
+          unzip -l "$WHEEL_FILE" | grep 'tlz-stubs/py\.typed' || (echo "❌ No tlz-stubs py.typed marker!" && exit 1)
+          echo "✓ py.typed markers found"
+
+          echo "✓ Wheel structure verified successfully"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
