@@ -1,0 +1,89 @@
+{% import "macros.html" as macros %}
+
+{% macro render_episode_row(episode) %}
+  <tr id="e{{episode.id}}" style="scroll-margin-top: 80px;">
+    <td class="text-center">{{episode.number}}.</td>
+    <td colspan="5" class="text-left"><span class="font-weight-bold">{{ episode.name }}</span>{{render_episode_type(episode)}}&ensp;<span class="text-muted text-sm">{{macros.air_date(episode.aired_on, today)}}</span>    
+    </td>
+  </tr>
+  {{ render_release_row(episode.release) }}
+{% endmacro %}
+
+{% macro render_episode_type(episode) %}
+  {%if episode.type == "F" %}
+    &ensp;<span class="badge text-sm">Season Finale</span>
+  {% endif %}
+{% endmacro %}
+
+{% macro render_release_row(release) %}
+  <tr id="r{{release.info_hash}}" data-status="{{release.torrent.status|default('N')}}"  style="scroll-margin-top: 80px;">          
+    <td class="text-center">&nbsp;</td>
+    <td>
+      <button class="text-left btn-text text-sm text-muted" onclick="Videobox.loadReleaseInfo(event, {{release.id}});">{{release.name}}</button>
+    </td>
+    {% if allow_downloads %}
+      <td class="text-center releases__download">{{macros.torrent_download_status(release, release.torrent.status)}}</td>
+    {% else %}
+      <td class="text-center releases__download"><a class="d-flex align-items-center justify-content-center" aria-label="Download with magnet link" data-balloon-pos="up" download href="{{release.magnet_uri}}">{{macros.icon('#icon-magnet', width=20, height=20)}}</td>
+    {% endif %}
+    <td class="text-center"><span
+        class="badge-res badge-{{release.resolution}}">{{release.resolution if release.resolution else "?"}}</span></td>
+    <td class="text-right text-nowrap">{{release.size | filesizeformat}}</td>
+    <td class="text-right">{{release.seeders | torrent_health | safe if release.seeders else "—"}}</td>
+  </tr>   
+{% endmacro %}
+
+<template id="row-download-done">
+  <div class="d-flex justify-content-center align-items-center">
+    {{macros.icon("#icon-check-bold", width=16, height=16, class="text-success mr-1")}}<span class="text-sm">Downloaded</span>
+  </div>
+</template>
+
+{% for season, episodes in seasons_episodes %}
+
+  <h3 id="season-{{season}}" class="mb-3 mt-5 text-lg">Season {{season}} {{ "(Current)" if loop.index == 1 else "" }}</h3>
+
+  <table class="table releases w-100 mb-3">
+    <thead>
+      <tr>
+        <th class="text-center">#</th>
+        <th class="text-left">Episode</th>
+        <th class="text-center">Down.</th>
+        <th class="text-center">Res.</th>
+        <th class="text-right">Size</th>
+        <th class="text-right">Seeders</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for episode in episodes %}
+        {% if episode.release %} 
+          {% if resolution or size != 'any' %}
+            {{ render_episode_row(episode) }}
+          {% else %}
+            {% if loop.changed(episode.id) %}
+              {{ render_episode_row(episode) }}
+            {% else %}
+              {{ render_release_row(episode.release) }}
+            {% endif %}
+          {% endif %}
+        {% else %}
+          <!-- No releases -->
+          <tr id="e{{episode.id}}">          
+            <td class="text-muted text-center">{{episode.number}}.</td>            
+            <td class="text-muted"><span>{{ episode.name }}</span>&ensp;<span class="font-style-italic text-muted text-sm">{{macros.air_date(episode.aired_on, today)}}</span></td>
+            <td class="text-muted text-center">—</td>
+            <td class="text-muted text-center">—</td>
+            <td class="text-muted text-right">—</td>
+            <td class="text-muted text-right">—</td>
+          </tr>
+        {% endif %}            
+      {% endfor %}
+    </tbody>
+  </table>  
+ 
+{% else %}  
+    <div class="d-flex align-items-center border rounded p-3" style="max-width: fit-content">
+      {{macros.icon("#icon-warning-bold", width=16, height=16, class="text-warning mr-2")}}
+      <span>No releases found with <b>{{resolution}}p</b> resolution, try filtering for another value.</span>
+    </div>
+{% endfor %}

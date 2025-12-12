@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% import "macros.html" as macros %}
+
+{% block title %}
+  <title>{{tag.name}} • Videobox</title>
+{% endblock %}
+
+{% block content %}
+  <main id="main">
+    <div class="d-flex justify-content-between">
+      <div>
+        <h1 class="text-xlg mb-2 font-weight-black">{{tag.name}}</h1>
+        <p class="text-muted mb-5">Found <strong>{{series_count}}</strong> series</p>
+      </div>
+      <form id="sorting" class="d-flex" onchange="this.submit()" action="{{ url_for('main.tag_detail', slug=tag.slug) }}" method="GET">
+        <fieldset class="mb-4">
+            <legend class="mb-2">
+              Sort by
+            </legend>
+            <div class="radio-button-group">
+              <label class="radio-button-group__label" title="Most popular first">{{macros.icon("#icon-trend-down", width=20, height=20)}}
+                <input class="radio-button-group__input" type="radio" {{ 'checked' if series_sorting=='popularity' else '' }}
+                  name="sort" value="popularity">
+              </label>
+              <label class="radio-button-group__label" title="Title, ascending">{{macros.icon("#icon-sort-asc", width=20, height=20)}}
+                <input class="radio-button-group__input" type="radio" {{ 'checked' if series_sorting=='asc' else '' }}
+                  name="sort" value="asc">
+              </label>
+              <label class="radio-button-group__label" title="Title, descending">{{macros.icon("#icon-sort-desc", width=20, height=20)}}
+                <input class="radio-button-group__input" type="radio" {{ 'checked' if series_sorting=='desc' else '' }}
+                  name="sort" value="desc">
+              </label>
+            </div>
+        </fieldset>
+      </form>
+    </div>
+    <div class="load-more-wrapper">
+      {% include "_tag-card-grid.html" %}
+    </div>
+  </main>         
+{% endblock %}
+ 

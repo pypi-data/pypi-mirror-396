@@ -1,0 +1,74 @@
+{% import "macros.html" as macros %}
+
+{% macro render_episode_card(episode, series_id) %}
+  <div id="e{{episode.id}}" class="mb-2">
+    <div class="card-episode mb-2">
+      {% if episode.release %}
+        {% set episode_hash = 'e' ~ episode.id %} 
+        <a class="text-muted text-sm" href="{{ url_for('main.series_detail', series_id=series_id, view='list', _anchor=episode_hash) }}">
+          <img class="card-episode__image img-fluid rounded" loading="lazy" src="{{ episode.thumbnail }}" width="300" height="170" alt="Still for episode {{episode.season_episode_id}}">
+        </a>
+      {% else %}
+        <img class="card-episode__image img-fluid rounded" loading="lazy" src="{{ episode.thumbnail }}" width="300" height="170" alt="Still for episode {{episode.season_episode_id}}">
+      {% endif %}
+    </div>    
+    {# <span class="font-weight-bold">{{episode.number}}. {{ episode.name }}</span>&ensp;<span class="text-muted text-sm">{{macros.air_date(episode.aired_on, today)}}</span> #}
+    {{episode.number}}. <span class="font-weight-bold">{{ episode.name }}</span>
+  </div>
+{% endmacro %}
+
+{% macro render_release_row(release, episode_id, series_id) %}
+  <div class="d-flex align-items-center mb-1">
+    {% if release.torrent.status == 'D' %}
+        {{macros.icon("#icon-check-bold", width=16, height=16, class="text-success mr-1")}}
+    {% endif %}
+    {% if release.resolution -%}
+      <span class="badge-res badge-{{release.resolution}} mr-1">{{release.resolution}}</span>
+    {% endif %}
+    <button class="text-left btn-text text-sm text-muted" style="flex: 1;white-space: nowrap;overflow: hidden;text-overflow: ellipsis;"
+     onclick="Videobox.loadReleaseInfo(event, {{release.id}});">{{release.name}}</button>
+  </div>
+  <div>
+    <!-- {% set episode_hash = 'e' ~ episode_id %} 
+    <a class="text-muted text-sm" href="{{ url_for('main.series_detail', series_id=series_id, view='list', resolution=resolution, size=size, _anchor=episode_hash) }}">View all torrents</a> -->
+  </div>
+{% endmacro %}
+
+{% for season, episodes in seasons_episodes %}
+
+  <h3 id="season-{{season}}" class="mb-3 mt-5 text-lg">Season {{season}} {{ "(Current)" if loop.index == 1 else "" }}</h3>
+  
+  <div class="episode-grid mb-3">
+    {% set ns = namespace(prev_release_id=None) %}
+    {% for episode in episodes %}
+        {% if loop.changed(episode.id) %}     
+          {% if not loop.first %}
+            {# End previous grid cell if not at the very beginning #}
+            {% set ns.prev_release_id = None %}
+            </div>
+          {% endif %}
+          {# Start a new grid cell #}
+          <div class="episode-grid__cell">              
+            {{ render_episode_card(episode, series.id) }}   
+        {% endif %}
+          
+        {# Keep track if we already printed a release #}
+        {% if episode.release and (not ns.prev_release_id )%} 
+          {{ render_release_row(episode.release, episode.id, series.id) }}
+          {% set ns.prev_release_id = episode.release.id %}
+        {% elif not episode.release %}
+          <span class="text-muted font-style-italic text-sm">No torrents yet</span>
+        {% endif %}            
+
+        {% if loop.last %}
+          {# Close grid cell if at the very end #}
+          </div>
+        {% endif %}        
+    {% endfor %}
+  </div>   
+{% else %}  
+    <div class="d-flex align-items-center border rounded p-3" style="max-width: fit-content">
+      {{macros.icon("#icon-warning-bold", width=16, height=16, class="text-warning mr-2")}}
+    <span>No releases found with <b>{{resolution}}p</b> resolution, try filtering for another value.</span>
+  </div>
+{% endfor %}

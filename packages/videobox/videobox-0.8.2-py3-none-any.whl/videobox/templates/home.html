@@ -1,0 +1,132 @@
+{% import "macros.html" as macros %}
+{% extends "base.html" %}
+
+{% block content %} 
+    <main id="main">
+        <section>
+            <h1 class="text-xlg font-weight-black mb-5">Videobox</h1>
+
+            {% if server_alert %}
+                <p class="border rounded p-3 mb-5" style="max-width: fit-content">
+                    ⚠️ {{server_alert}}
+                </p>
+            {% endif %}
+    
+            {% if today_series %}
+                <h2 class="text-lg font-weight-black mb-1">Top episodes</h2>
+                <div class="text-muted text-sm mb-3">Today’s most downloaded episodes</div>
+        
+                <section class="today-series">
+                    <div class="carousel">
+                        <div class="carousel__items">
+                            {% for s in today_series %}
+                                <div class="carousel-item">
+                                    {% set episode_hash = 'e' ~ s.episode.id %}
+                                    <div class="card-episode mb-2">
+                                        <a href="{{ url_for('main.series_detail', series_id=s.id, view='list', _anchor=episode_hash) }}">
+                                            <img class="card-episode__image w-100 img-fluid rounded" loading="lazy" src="{{ s.episode.thumbnail }}" width="300" height="170"
+                                            alt="Still for episode {{s.episode.season_episode_id}}" />
+                                        </a>           
+                                        <a href="{{ url_for('main.series_detail', series_id=s.id) }}">
+                                            <img class="card-episode__poster img-fluid rounded-sm" loading="lazy" src="{{ s.poster }}" width="340" height="500" alt="Poster for {{ s.name }}" />                                            
+                                        </a>
+                                    </div>
+                                    <div>
+                                        <h2 class="text-sm text-muted text-uppercase mb-2">{{s.episode.season_episode_id}}</h2>
+                                        <h3 class="text-regular font-weight-semibold">
+                                            <a class="" href="{{ url_for('main.series_detail', series_id=s.id, view='list', _anchor=episode_hash) }}">
+                                                {{ s.episode.name }}<!-- {{ s.total_completed }} -->
+                                            </a>
+                                        </h3>                                    
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </section>
+            {% endif %}
+        </section>
+
+        <hr class="my-4">
+
+        <!-- FEATURED SERIES -->
+
+        <section>
+            <h2 class="text-lg font-weight-black mb-1">Featured series</h2>
+            <div class="text-muted text-sm mb-3">Most seeded series since yesterday</div>
+            <div class="mobile-carousel">
+                {% for series in featured_series %}
+                    <div class="mobile-carousel__item">
+                        {{ macros.render_series_card(series) }}
+                    </div>            
+                {% endfor %}
+            </div>    
+        </section>
+
+        <hr class="my-4">
+
+        <!-- FOLLOWED -->
+        
+        {% if followed_series %}
+            <section>
+                <h2 class="text-lg font-weight-black mb-1">Followed series</h2>
+                <div class="text-muted text-sm mb-3">Episodes with new torrents this week</div>
+                {{ macros.render_series_timeline(followed_series) }}
+            </section>       
+            <hr class="my-4">
+        {% endif %}
+
+        <!-- TAGS -->
+
+        <section>
+            <h2 class="text-lg font-weight-black mb-4">Popular genres</h2>
+            <div class="carousel">
+                <div class="carousel__items">
+                    {% for tag in top_tags %}      
+                        <a class="carousel-item" href="{{ url_for( 'main.tag_detail', slug=tag.tag_slug) }}">
+                            <div class="card-tag rounded">
+                                    <img class="img-fluid rounded" width="300" height="170" src="{{tag.thumbnail_url}}" alt=""><div class="card-tag__name rounded">{{tag.tag_name}}</div>
+                            </div>
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+
+        <hr class="my-4">
+
+        <footer>
+            <p class="text-muted mb-2">
+                <small><strong>This is Videobox {{version}}</strong></small>
+            </p>
+    
+            <div class="text-muted d-flex text-sm align-items-center mb-2" style="gap: .5rem">                
+                Tracking {{ "{:,}".format(total_series) }} series and {{ "{:,}".format(total_releases) }} torrents
+                {#                  
+                <details class="popup">
+                    <summary>Tracking {{ "{:,}".format(total_series) }} series and {{ "{:,}".format(total_releases) }} torrents</summary>
+                    <div class="popup-body">
+                        <iframe loading="lazy" src="{{ url_for('main.chart') }}">
+                            Loading chart...
+                        </iframe>
+                    </div>
+                </details>                
+                #}
+
+                {% if last_sync and last_sync.status == "K" %}
+                    <span class="d-flex align-items-center">{{macros.icon("#icon-check-bold", width=16, height=16, class="text-success mr-1")}}Library is up to date. Last checked {{last_sync.timestamp|datetime_since(utc_now)}}</span>
+                {% else %}
+                    <span class="d-flex align-items-center">{{macros.icon("#icon-warning-bold", width=16, height=16, class="text-warning mr-1")}}There were errors updating library</span>
+                {% endif %}
+            </div>
+            
+            <p class="text-muted body-copy">
+                <small>Videobox doesn’t host any copyrighted content. TV series information and
+                  images are provided by <a rel="noreferrer" href="https://www.themoviedb.org/">The Movie DB</a>, but we are not endorsed or
+                  certified by The Movie DB or its affiliates.</small>
+            </p>
+        </footer>
+    </main>
+{% endblock %}
+
+
