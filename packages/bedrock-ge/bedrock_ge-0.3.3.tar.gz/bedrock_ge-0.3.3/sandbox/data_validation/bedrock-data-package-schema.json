@@ -1,0 +1,219 @@
+{
+  "name": "ground-investigation-relational-database-schema",
+  "title": "The Relational Database Schema for Ground Investigation Data",
+  "licenses": ["..."],
+  "resources": [
+    {
+      "name": "Projects",
+      "data": "This Data Resource describes a Table Schema for a relational database. Therefore, the Data Resource data and path properties are empty.",
+      "schema": {
+        "fields": [
+          {
+            "name": "project_uid",
+            "type": "string",
+            "constraints": {
+              "unique": true
+            }
+          },
+          {
+            "name": "crs_wkt",
+            "title": "WKT string describing the Coordinate Reference System",
+            "description": "The Coordinate Reference System used on this project as a WKT string",
+            "type": "string",
+            "format": "wkt",
+            "constraints": {
+              "required": true
+            }
+          }
+        ],
+        "primaryKey": ["project_uid"]
+      }
+    },
+    {
+      "name": "Locations",
+      "data": "This Data Resource describes a Table Schema for a relational database. Therefore, the Data Resource data and path properties are empty.",
+      "schema": {
+        "fields": [
+          {
+            "name": "location_uid",
+            "type": "string",
+            "constraints": {
+              "unique": true
+            }
+          },
+          {
+            "name": "project_uid",
+            "type": "string",
+            "constraints": {
+              "required": true
+            }
+          },
+          {
+            "name": "easting",
+            "type": "number",
+            "constraints": {
+              "required": true
+            },
+            "metadata": {
+              "unit": "m"
+            }
+          },
+          {
+            "name": "northing",
+            "type": "number",
+            "constraints": {
+              "required": true
+            },
+            "metadata": {
+              "unit": "m"
+            }
+          }
+        ],
+        "primaryKey": ["location_uid"],
+        "foreignKeys": [
+          {
+            "fields": ["project_uid"],
+            "reference": {
+              "resource": "Projects",
+              "fields": ["project_uid"]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Samples",
+      "data": "This Data Resource describes a Table Schema for a relational database. Therefore, the Data Resource data and path properties are empty.",
+      "schema": {
+        "fields": [
+          {
+            "name": "sample_uid",
+            "type": "string",
+            "constraints": {
+              "unique": true
+            }
+          },
+          {
+            "name": "project_uid",
+            "type": "string",
+            "constraints": {
+              "required": true
+            }
+          },
+          {
+            "name": "location_uid",
+            "type": "string",
+            "constraints": {
+              "required": true
+            }
+          },
+          {
+            "name": "sample_info",
+            "type": "string",
+            "constraints": {
+              "required": true
+            }
+          }
+        ],
+        "primaryKey": ["sample_uid"],
+        "foreignKeys": [
+          {
+            "fields": ["project_uid"],
+            "reference": {
+              "resource": "Projects",
+              "fields": ["project_uid"]
+            }
+          },
+          {
+            "fields": ["location_uid"],
+            "reference": {
+              "resource": "Locations",
+              "fields": ["location_uid"]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "RockStrengthAndDeformabilityTests",
+      "data": "This Data Resource describes a Table Schema for a relational database. Therefore, the Data Resource data and path properties are empty.",
+      "schema": {
+        "fields": [
+          {
+            "name": "id",
+            "type": "integer",
+            "constraints": {
+              "unique": true
+            }
+          },
+          {
+            "name": "project_uid",
+            "type": "string",
+            "constraints": {
+              "required": true
+            }
+          },
+          {
+            "name": "location_uid",
+            "type": "string",
+            "constraints": {
+              "required": true
+            }
+          },
+          {
+            "name": "sample_uid",
+            "type": "string",
+            "constraints": {
+              "required": true
+            }
+          },
+          {
+            "name": "ucs",
+            "type": "number",
+            "constraints": {
+              "exclusiveMinimum": 0
+            },
+            "metadata": {
+              "unit": "MPa"
+            }
+          },
+          {
+            "name": "youngs_modulus",
+            "type": "number",
+            "constraints": {
+              "exclusiveMinimum": 0
+            },
+            "metadata": {
+              "unit": "GPa",
+              "propertyURI": "https://identifier.buildingsmart.org/uri/buildingsmart/ifc/4.3/prop/YoungModulus"
+            }
+          }
+        ],
+        "primaryKey": ["id"],
+        "foreignKeys": [
+          {
+            "fields": ["project_uid"],
+            "reference": {
+              "resource": "Projects",
+              "fields": ["project_uid"]
+            }
+          },
+          {
+            "fields": ["location_uid"],
+            "reference": {
+              "resource": "Locations",
+              "fields": ["location_uid"]
+            }
+          },
+          {
+            "fields": ["sample_uid"],
+            "reference": {
+              "resource": "Samples",
+              "fields": ["sample_uid"]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
