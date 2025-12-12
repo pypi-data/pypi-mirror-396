@@ -1,0 +1,134 @@
+Metadata-Version: 2.1
+Name: logfy
+Version: 1.0.0
+Summary: Beautiful logs and encrypted, tamper-proof files
+Author: lynariksh
+License: Apache License 2.0
+Description-Content-Type: text/markdown
+Requires-Dist: logcrypt>=1.0.0
+Requires-Dist: colorlog>=3.0.0
+
+**Pretty colored console output**  
+**Fully encrypted & checksum-protected log files**  
+**One-line secure mode activation**  
+**Built-in `.success()` and `.fail()` methods**
+
+Perfect for production services, fintech, compliance-heavy apps, or anywhere you want readable logs in the terminal but encrypted storage on disk.
+
+```python
+from logfy import log, enable_secure_logging
+
+# Turn on secure logging (creates key automatically if missing)
+enable_secure_logging("myapp_secure.log")
+
+log.info("Application started")
+log.success("User authenticated")
+log.warning("Rate limit approaching")
+log.error("Payment gateway timeout")
+log.fail("Transaction rejected – insufficient funds")
+```
+
+## Installation
+
+```bash
+pip install logfy
+```
+
+Requirements:
+- `colorlog`
+- `logcrypt`
+
+## Quick Start
+
+```python
+from logfy import log, enable_secure_logging, decrypt_secure_log
+
+# 1. Enable secure logging (only once, usually at app startup)
+enable_secure_logging(
+    filename="myapp_secure.log",
+    key_file=".myapp_key",          # optional – defaults to .logfy_key
+    correlation_id="myapp-prod"
+)
+
+# 2. Use the global logger (or create your own)
+log.debug("Debugging session started")
+log.info("Processing order #12345")
+log.success("Payment confirmed")
+log.fail("Card declined")
+
+# 3. Later – decrypt the log file
+for line in decrypt_secure_log("myapp_secure.log"):
+    print(line)
+```
+
+Output in console:
+```
+14:28:15 myapp    INFO     │ Processing order #12345
+14:28:16 myapp SUCCESS   │ Payment confirmed
+14:28:17 myapp    FAIL     │ Card declined
+```
+
+The file `myapp_secure.log` contains only encrypted + signed entries.
+
+## Features
+
+| Feature                          | Description                                                                 |
+|----------------------------------|-----------------------------------------------------------------------------|
+| Gorgeous colored console         | Using `colorlog` with custom SUCCESS/FAIL levels                            |
+| Encrypted file logs              | via logcrypt                                                                |
+| Automatic key generation         | First run creates a secure key in `.logfy_key` (or custom path)       |
+| Smart key auto-detection         | `decrypt_secure_log()` finds the key automatically                          |
+| Global `log` auto-upgrade        | After `enable_secure_logging()`, `logfy.log` writes encrypted entries |
+| `.success()` & `.fail()` methods | Clean semantic logging without extra level numbers                          |
+| Async file writer                | Zero performance impact on your main thread                                 |
+| Tamper detection                 | Any modified line fails checksum verification on decryption                 |
+
+## Decrypting Logs
+
+```python
+from logfy import decrypt_secure_log
+
+# Works even without passing the key explicitly
+for line in decrypt_secure_log("myapp_secure.log"):
+    print(line)
+```
+
+Or from the command line (optional CLI coming soon):
+
+```bash
+python -c "from logfy import decrypt_secure_log as d; \
+           [print(l) for l in d('myapp_secure.log')]"
+```
+
+## Customizing
+
+```python
+from logfy import get_logger, enable_secure_logging
+
+# Custom logger name
+logger = get_logger("worker-07")
+logger.info("Starting background job")
+
+# Custom secure logger (won’t touch the global `log`)
+secure = enable_secure_logging(
+    filename="worker07_secure.log",
+    key_file=".worker07_key",
+    log_level="INFO"
+)
+secure.critical("Disk almost full!")
+```
+
+## Security Notes
+
+- The encryption key is never logged or exposed.
+- Keys are stored as raw base64 in a hidden file (`.logfy_key` by default).
+- Keep the key file safe! Anyone with the key can read the logs.
+- For extra safety, store the key outside the repository (e.g. secrets manager) and pass it explicitly.
+
+## Contributing
+
+Bug reports, feature requests, and pull requests are very welcome!  
+
+## License
+
+MIT © 2025
