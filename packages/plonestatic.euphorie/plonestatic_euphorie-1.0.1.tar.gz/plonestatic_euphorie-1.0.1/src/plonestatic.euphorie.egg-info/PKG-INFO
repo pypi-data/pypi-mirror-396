@@ -1,0 +1,194 @@
+Metadata-Version: 2.4
+Name: plonestatic.euphorie
+Version: 1.0.1
+Summary: Euphorie Risk Assessment tool static resources
+Home-page: https://github.com/euphorie/plonestatic.euphorie
+Author: Syslab.com
+Author-email: info@syslab.com
+License: GPL
+Project-URL: Homepage, https://github.com/euphorie
+Project-URL: Source, https://github.com/euphorie/plonestatic.euphorie
+Project-URL: Issues, https://github.com/euphorie/plonestatic.euphorie/issues
+Keywords: euphorie OiRA Interactive Risk Assessment static resources
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Environment :: Web Environment
+Classifier: Framework :: Plone
+Classifier: Framework :: Plone :: 6.0
+Classifier: License :: OSI Approved :: GNU General Public License (GPL)
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Topic :: Internet :: WWW/HTTP
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Requires-Python: >= 3.9
+Description-Content-Type: text/markdown
+Requires-Dist: Plone>=6.0
+Requires-Dist: plone.patternslib
+Provides-Extra: tests
+Requires-Dist: plone.app.testing; extra == "tests"
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: keywords
+Dynamic: license
+Dynamic: project-url
+Dynamic: provides-extra
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+# Static resources for the Euphorie project
+
+This repository contains static resources for the [Euphorie](https://github.com/euphorie/Euphorie) project.
+
+## Updating the package
+
+In order to properly update the package, you will need some development tools to be installed, i.e:
+
+- `git`
+- `make`
+- `rsync`
+- `Ruby`
+
+Optionally, you can install [`gitman`](https://gitman.readthedocs.io/en/latest/) to manage the checkouts.
+
+Updating the site is a three-step process.
+
+1. you need to fetch a fresh clone of the Euphorie prototype.
+2. you need to compile the resources.
+3. you need to install the resources in the Euphorie package.
+
+This can be done by running the following command:
+
+```bash
+make all
+```
+
+Run:
+
+```bash
+make help
+```
+
+to see all available commands and fine tune the build experience.
+
+### Fetching a fresh clone of the Euphorie prototype
+
+To update the repository, run the command:
+
+```bash
+make update-proto
+```
+
+The clone will be placed in the `var/prototype` directory.
+
+Running `make all` will take care of running this command for you.
+
+### Compiling the resources
+
+The resources are compiled using the static site generator `Jekyll`. The compiled site can be found in the `var/prototype/_site` directory.
+
+To compile the resources, run the command:
+
+```bash
+make jekyll
+```
+
+This command will also clone (but not update) the Euphorie prototype if it is not already present.
+
+Running `make all` will take care of running this command for you.
+
+### Installing the resources in the Euphorie package
+
+The compiled prototype in `var/prototype/_site` needs to be copied in this package. Only selected resources will be copied and they will end up in the `src/plonestatic/euphorie/resources` directory.
+
+The `resources` directory will be served by `Plone` as a static resource folder under the path `++resource++euphorie.resource`.
+
+While doing the copy, some references to the other resources in CSS and HTML files have to be rewritten to adjust to the new location, e.g. `/assets/...` will be rewritten to `/++resource++euphorie.resource/assets/...`.
+
+The command to install the resources is:
+
+```bash
+make resources-install
+```
+
+Running `make all` will take care of running this command for you.
+
+# Changelog
+
+<!--
+You should *NOT* be adding new change log entries to this file.
+You should create a file in the news directory instead.
+For helpful instructions, please see:
+https://github.com/plone/plone.releaser/blob/master/ADD-A-NEWS-ITEM.rst
+-->
+
+<!-- towncrier release notes start -->
+
+## 1.0.1 (2025-12-09)
+
+### Bug fixes:
+
+- Update Prototype to fix a problem with some previews not shown in help pages.
+
+  Note: This uses the submodule "\_includes/patterns" branch "reverse-sentinel"
+  from https://github.com/Patternslib/patterns-includes/pull/3
+
+  Ref: scrum-3430
+  [thet]
+
+### Internal:
+
+- Fix towncrier config.
+
+
+## 1.0.0 (2025-07-15)
+
+### Bug fixes:
+
+- Add missing example report images (used by `@@register_session`)
+  Also extend the Makefile to automatically include these images when building plonestatic.euphorie. (#3709)
+- Script replacement: Also support version/release-level specific subdirectories of the Patternslib script in prototype like alpha/, beta/, etc.
+  [thet]
+
+
+## 1.0.0a5 (2025-03-27)
+
+
+- Add a missing image used by the Euphorie package
+
+- Use gitman if it is available
+  [ale-rt]
+
+- major update of help, fixing broken links, missing images and pages, new illustration files
+  [pilz]
+
+
+## 1.0.0a4 (2025-02-20)
+
+
+- Update to the most recent markup
+
+
+## 1.0.0a3 (2025-02-04)
+
+
+- Fix link to patternslib
+
+
+## 1.0.0a2 (2025-02-04)
+
+
+- Add missing resources
+
+
+## 1.0.0a1 (2025-02-03)
+
+- Initial release
+
