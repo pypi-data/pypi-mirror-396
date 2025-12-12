@@ -1,0 +1,259 @@
+# complexipy
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/rohaquinlop/complexipy/refs/heads/main/docs/img/complexipy_icon.svg" alt="complexipy" width="120" height="120">
+
+  <p><em>Blazingly fast cognitive complexity analysis for Python, written in Rust.</em></p>
+
+  <p>
+    <a href="https://pypi.org/project/complexipy"><img src="https://img.shields.io/pypi/v/complexipy?color=blue&style=flat-square" alt="PyPI"></a>
+    <a href="https://pepy.tech/project/complexipy"><img src="https://static.pepy.tech/badge/complexipy" alt="Downloads"></a>
+    <a href="https://github.com/rohaquinlop/complexipy/blob/main/LICENSE"><img src="https://img.shields.io/github/license/rohaquinlop/complexipy?style=flat-square" alt="License"></a>
+  </p>
+
+  <p>
+    <a href="#installation">Installation</a> •
+    <a href="#quick-start">Quick Start</a> •
+    <a href="#integrations">Integrations</a> •
+    <a href="https://rohaquinlop.github.io/complexipy/">Documentation</a>
+  </p>
+</div>
+
+## What is Cognitive Complexity?
+
+> Cognitive complexity measures how hard code is to understand by humans, not machines.
+
+Unlike traditional metrics, cognitive complexity considers the mental effort required to read and comprehend code. It identifies truly complex code that needs refactoring, making it perfect for code reviews and maintaining clean codebases.
+
+**Key benefits:**
+- **Human-focused** — Aligns with developer intuition
+- **Actionable insights** — Pinpoints hard-to-understand code
+- **Better maintenance** — Improves long-term code quality
+
+## Installation
+
+```bash
+pip install complexipy
+# or
+uv add complexipy
+```
+
+## Quick Start
+
+### Command Line
+
+```bash
+# Analyze current directory
+complexipy .
+
+# Analyze specific file/directory
+complexipy path/to/code.py
+
+# Analyze with custom threshold
+complexipy . --max-complexity-allowed 10
+
+# Save results to JSON/CSV
+complexipy . --output-json --output-csv
+
+# Analyze current directory while excluding specific files
+complexipy . --exclude path/to/exclude.py --exclude path/to/other/exclude.py
+```
+
+### Python API
+
+```python
+from complexipy import file_complexity, code_complexity
+
+# Analyze a file
+result = file_complexity("app.py")
+print(f"File complexity: {result.complexity}")
+
+for func in result.functions:
+    print(f"{func.name}: {func.complexity}")
+
+# Analyze code string
+snippet = """
+def complex_function(data):
+    if data:
+        for item in data:
+            if item.is_valid():
+                process(item)
+"""
+
+result = code_complexity(snippet)
+print(f"Complexity: {result.complexity}")
+```
+
+## Integrations
+
+<details>
+<summary><strong>🔧 GitHub Actions</strong></summary>
+
+```yaml
+- uses: rohaquinlop/complexipy-action@v2
+  with:
+    paths: .
+    max_complexity_allowed: 10
+    output_json: true
+```
+
+</details>
+
+<details>
+<summary><strong>🪝 Pre-commit Hook</strong></summary>
+
+```yaml
+repos:
+- repo: https://github.com/rohaquinlop/complexipy-pre-commit
+  rev: v3.0.0
+  hooks:
+    - id: complexipy
+```
+
+</details>
+
+<details>
+<summary><strong>🔌 VS Code Extension</strong></summary>
+
+Install from the [marketplace](https://marketplace.visualstudio.com/items?itemName=rohaquinlop.complexipy) for real-time complexity analysis with visual indicators.
+
+</details>
+
+## Configuration
+
+### TOML Configuration Files
+
+complexipy supports configuration via TOML files. Configuration files are loaded in this order of precedence:
+
+1. `complexipy.toml` (project-specific config)
+2. `.complexipy.toml` (hidden config file)
+3. `pyproject.toml` (under `[tool.complexipy]` section)
+
+#### Example Configuration
+
+```toml
+# complexipy.toml or .complexipy.toml
+paths = ["src", "tests"]
+max-complexity-allowed = 10
+snapshot-create = false
+snapshot-ignore = false
+quiet = false
+ignore-complexity = false
+failed = false
+color = "auto"
+sort = "asc"
+exclude = []
+output-csv = false
+output-json = false
+```
+
+```toml
+# pyproject.toml
+[tool.complexipy]
+paths = ["src", "tests"]
+max-complexity-allowed = 10
+snapshot-create = false
+snapshot-ignore = false
+quiet = false
+ignore-complexity = false
+failed = false
+color = "auto"
+sort = "asc"
+exclude = []
+output-csv = false
+output-json = false
+```
+
+### CLI Options
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--exclude` | Exclude entries relative to each provided path. Entries resolve to existing directories (prefix match) or files (exact match). Non-existent entries are ignored. |  |
+| `--max-complexity-allowed` | Complexity threshold | `15` |
+| `--snapshot-create` | Save the current violations above the threshold into `complexipy-snapshot.json` | `false` |
+| `--snapshot-ignore` | Skip comparing against the snapshot even if it exists | `false` |
+| `--failed` | Show only functions above the complexity threshold | `false` |
+| `--color <auto\|yes\|no>` | Use color | `auto` |
+| `--sort <asc\|desc\|name>` | Sort results | `asc` |
+| `--quiet` | Suppress output | `false` |
+| `--ignore-complexity` | Don't exit with error on threshold breach | `false` |
+| `--version` | Show installed complexipy version and exit | - |
+| `--output-json` | Save results as JSON | `false` |
+| `--output-csv` | Save results as CSV | `false` |
+
+Example:
+
+```
+# Exclude only top-level 'tests' directory under the provided root
+complexipy . --exclude tests
+# This will not exclude './complexipy/utils.py' if you pass '--exclude utils' at repo root,
+# because there is no './utils' directory or file at that level.
+```
+
+### Snapshot Baselines
+
+Use snapshots to adopt complexipy in large, existing codebases without touching every legacy function at once.
+
+```bash
+# Record the current state (creates complexipy-snapshot.json in the working directory)
+complexipy . --snapshot-create --max-complexity-allowed 15
+
+# Block regressions while allowing previously-recorded functions
+complexipy . --max-complexity-allowed 15
+
+# Temporarily skip the snapshot gate
+complexipy . --snapshot-ignore
+```
+
+The snapshot file only stores functions whose complexity exceeds the configured threshold. When a snapshot file exists, complexipy will automatically:
+
+- fail if a new function crosses the threshold,
+- fail if a tracked function becomes more complex, and
+- pass (and update the snapshot) when everything is stable or improved, automatically removing entries that now meet the standard.
+
+Use `--snapshot-ignore` if you need to temporarily bypass the snapshot gate (for example during a refactor or while regenerating the baseline).
+
+### Inline Ignores
+
+You can explicitly ignore a known complex function inline, similar to Ruff's `C901` ignores:
+
+```python
+def legacy_adapter(x, y):  # noqa: complexipy (safe wrapper)
+    if x and y:
+        return x + y
+    return 0
+```
+
+Place `# noqa: complexipy` on the function definition line (or the line immediately above). An optional reason can be provided in parentheses or plain text, it’s ignored by the parser.
+
+## API Reference
+
+```python
+# Core functions
+file_complexity(path: str) -> FileComplexity
+code_complexity(source: str) -> CodeComplexity
+
+# Return types
+FileComplexity:
+  ├─ path: str
+  ├─ complexity: int
+  └─ functions: List[FunctionComplexity]
+
+FunctionComplexity:
+  ├─ name: str
+  ├─ complexity: int
+  ├─ line_start: int
+  └─ line_end: int
+```
+
+---
+
+<div align="center">
+
+<sub>Inspired by the <a href="https://www.sonarsource.com/resources/cognitive-complexity/">Cognitive Complexity</a> research by SonarSource, G. Ann Campbell</sub>
+
+**[Documentation](https://rohaquinlop.github.io/complexipy/) • [PyPI](https://pypi.org/project/complexipy/) • [GitHub](https://github.com/rohaquinlop/complexipy)**
+
+<sub>Built with ❤️ by <a href="https://github.com/rohaquinlop">@rohaquinlop</a> and <a href="https://github.com/rohaquinlop/complexipy/graphs/contributors">contributors</a></sub>
+
+</div>
