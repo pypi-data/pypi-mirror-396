@@ -1,0 +1,31 @@
+Metadata-Version: 2.4
+Name: openadr3-client-gac-compliance
+Version: 3.0.0
+Summary: 
+License-File: LICENSE.md
+Author: Nick van der Burgt
+Author-email: nick.van.der.burgt@elaad.nl
+Requires-Python: >=3.12, <4
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
+Requires-Dist: openadr3-client (>=1.0.0a1,<2.0.0)
+Requires-Dist: pycountry (>=24.6.1,<25.0.0)
+Requires-Dist: pydantic (>=2.11.2,<3.0.0)
+Description-Content-Type: text/markdown
+
+# OpenADR3 client
+
+This repository contains a plugin for the [OpenADR3-client](https://github.com/ElaadNL/openadr3-client) library that adds additional pydantic validators to the OpenADR3 domain models to ensure GAC compliance. Since GAC compliance is a superset of OpenADR3, adding validation rules on top of the OpenADR3 models is sufficient to ensure compliance.
+
+Registering the plugin is done using the global ValidatorPluginRegistry class:
+
+```python
+    from openadr3_client.plugin import ValidatorPluginRegistry, ValidatorPlugin
+    from openadr3_client_gac_compliance.gac20.plugin import Gac20ValidatorPlugin
+
+    ValidatorPluginRegistry.register_plugin(
+        Gac20ValidatorPlugin().setup()
+    )
+```
