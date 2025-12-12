@@ -1,0 +1,235 @@
+Metadata-Version: 2.4
+Name: htmlgen-mcp
+Version: 0.5.3
+Summary: AI-powered HTML website generator with auto-upload functionality via Model Context Protocol
+Author-email: HTML Generator Team <contact@htmlgen-mcp.com>
+License: MIT
+Project-URL: Homepage, https://github.com/your-username/htmlgen-mcp
+Project-URL: Repository, https://github.com/your-username/htmlgen-mcp
+Project-URL: Issues, https://github.com/your-username/htmlgen-mcp/issues
+Project-URL: Documentation, https://github.com/your-username/htmlgen-mcp/blob/main/README.md
+Keywords: mcp,html,website,generator,ai,auto-upload,web-development
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Internet :: WWW/HTTP :: Site Management
+Classifier: Topic :: Software Development :: Code Generators
+Classifier: Topic :: Text Processing :: Markup :: HTML
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: click>=8.2.1
+Requires-Dist: fastmcp>=2.12.3
+Requires-Dist: openai>=1.91.0
+Requires-Dist: python-dotenv>=1.1.1
+Requires-Dist: requests>=2.31.0
+Requires-Dist: cos-python-sdk-v5>=1.9.30
+Requires-Dist: aiohttp>=3.8.0
+Requires-Dist: uvloop>=0.19; platform_system != "Windows"
+Requires-Dist: google-generativeai>=0.8.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.21.0; extra == "dev"
+Requires-Dist: black>=23.0.0; extra == "dev"
+Requires-Dist: isort>=5.12.0; extra == "dev"
+Requires-Dist: flake8>=6.0.0; extra == "dev"
+Requires-Dist: mypy>=1.0.0; extra == "dev"
+Requires-Dist: hypothesis>=6.0.0; extra == "dev"
+
+# HTML Generator MCP
+
+一个基于 Model Context Protocol (MCP) 的智能网页生成服务，支持AI驱动的网站创建、实时进度追踪和自动部署功能。
+
+## ✨ 主要特性
+
+- 🤖 **AI驱动生成**: 使用大语言模型智能分析需求，生成个性化网站
+- ⚡ **Generative UI**: 基于 Google Research 论文，单次调用生成完整交互式应用
+- 📊 **实时进度追踪**: 支持任务状态监控和进度查询
+- 🚀 **自动部署上传**: 构建完成后自动打包上传到云端
+- 🎨 **现代化设计**: 响应式布局，支持移动端适配
+- 🔧 **灵活配置**: 支持多种模型和自定义配置
+
+## 🚀 快速开始
+
+### 安装
+
+```bash
+pip install agent-mcp
+```
+
+### 基本使用
+
+1. **创建网站计划**
+```python
+import asyncio
+from MCP.web_agent_server import create_simple_site
+
+async def main():
+    result = await create_simple_site(
+        description="创建一个现代化的咖啡店网站",
+        site_title="星巴克咖啡",
+        context_content="地址：北京市朝阳区，营业时间：7:00-22:00"
+    )
+    print(f"计划ID: {result['plan_id']}")
+
+asyncio.run(main())
+```
+
+2. **执行构建（含自动上传）**
+```python
+from MCP.web_agent_server import execute_plan
+
+result = await execute_plan(
+    plan_id="your_plan_id",
+    project_root="/path/to/project",
+    auto_upload=True,  # 🎯 构建完成后自动上传
+    save_output=True
+)
+```
+
+3. **查询进度**
+```python
+from MCP.web_agent_server import get_progress
+
+progress = await get_progress(job_id=result["job_id"])
+print(f"状态: {progress['job']['status']}")
+
+# 如果启用了自动上传
+if progress['job'].get('upload_status') == 'success':
+    if progress['job'].get('upload_url'):
+        print(f"部署包下载: {progress['job']['upload_url']}")
+    if progress['job'].get('web_url'):
+        print(f"网站地址: {progress['job']['web_url']}")
+```
+
+## 🛠️ MCP 工具
+
+### 传统多步骤生成
+- `create_simple_site()` - 生成网站计划
+- `execute_plan()` - 执行网站构建
+- `get_progress()` - 查询构建进度
+
+### Generative UI (推荐)
+- `generate_interactive_page()` - 单次生成完整交互式页面
+- `get_generative_ui_status()` - 查询 Generative UI 模块状态
+
+### 部署工具
+- `upload_project_to_mcp_server()` - 打包上传至 OSS 并部署到 EdgeOne Pages
+- `deploy_folder_or_zip()` - 部署到EdgeOne Pages
+
+## 🔧 环境配置
+
+创建 `.env` 文件：
+
+```env
+# AI模型配置（传统模式）
+OPENAI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+OPENAI_API_KEY=your_api_key
+WEB_AGENT_MODEL=qwen3-coder-plus-2025-09-23
+
+# Generative UI 配置（推荐）
+GOOGLE_API_KEY=your_google_api_key
+GENERATIVE_UI_MODEL=gemini-2.0-flash-exp
+GENERATIVE_UI_FALLBACK_MODEL=gemini-1.5-flash
+
+# 项目路径（可选）
+WEB_AGENT_PROJECT_ROOT=/path/to/projects
+
+# EdgeOne Pages 部署（可选）
+EDGEONE_PAGES_API_TOKEN=your_token
+EDGEONE_PAGES_PROJECT_NAME=your_project
+EDGEONE_AUTO_DEPLOY_ENV=Production  # 支持 Production / Preview
+KEEP_OSS_UPLOAD=true               # 保留 OSS 压缩包上传（false 则跳过）
+```
+
+## ⚡ Generative UI (推荐)
+
+基于 Google Research 论文的单次生成方法，一次 LLM 调用即可生成完整的交互式 HTML 应用。
+
+### 使用示例
+
+```python
+from MCP.web_agent_server import generate_interactive_page
+
+# 生成交互式时钟应用
+result = await generate_interactive_page(
+    prompt="创建一个实时时钟应用，支持多时区切换",
+    style="default",
+    auto_deploy=True
+)
+
+if result["status"] == "success":
+    print(f"页面ID: {result['page_id']}")
+    print(f"本地路径: {result['output_path']}")
+    print(f"生成耗时: {result['generation_time']:.2f}秒")
+    if result.get("web_url"):
+        print(f"访问地址: {result['web_url']}")
+```
+
+### 支持的应用类型
+
+| 请求类型 | 生成结果 |
+|---------|---------|
+| 时间查询 | 功能完整的时钟应用 |
+| 地点查询 | 交互式地图应用 |
+| 人物查询 | 丰富的个人资料页 |
+| 教育内容 | 交互式学习工具 |
+| 游戏请求 | 可玩的游戏应用 |
+| 数据展示 | 交互式图表 |
+
+### 风格选项
+
+- `default` - 现代默认风格
+- `classic` - 经典专业风格
+- `wizard_green` - 魔法绿色主题
+- `minimal` - 极简风格
+
+## 🎯 自动上传功能
+
+构建完成时自动部署到 EdgeOne Pages，同时保留 OSS 压缩包链接：
+
+```python
+# 启动带自动上传的构建
+result = await execute_plan(
+    plan_id="plan_id",
+    project_root="./my-website",
+    auto_upload=True  # 关键参数
+)
+
+# 监听进度变化
+while True:
+    progress = await get_progress(job_id=result["job_id"])
+
+    status = progress['job']['status']
+    if status == 'completed':
+        upload_status = progress['job'].get('upload_status')
+        if upload_status == 'success':
+            if progress['job'].get('upload_url'):
+                print(f"📦 部署包下载: {progress['job']['upload_url']}")
+            if progress['job'].get('web_url'):
+                print(f"🎉 网站已上线: {progress['job']['web_url']}")
+            break
+        elif upload_status == 'failed':
+            print("❌ 上传失败")
+            break
+
+    await asyncio.sleep(2)
+```
+
+## 📋 进度状态
+
+- **构建阶段**: `running` → `completed`
+- **上传阶段**: `uploading` → `success`/`failed`
+- **最终结果**: `upload_url` (OSS 压缩包下载地址，可选)、`web_url` (EdgeOne 访问地址)
+
+## 🤝 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+## 📄 许可证
+
+MIT License
