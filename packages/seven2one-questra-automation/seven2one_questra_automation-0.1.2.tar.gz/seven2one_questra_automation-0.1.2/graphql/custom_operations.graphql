@@ -1,0 +1,61 @@
+# Custom GraphQL Operations
+# Diese Datei wird NICHT überschrieben - hier eigene Queries/Mutations pflegen
+
+query ExecutionsWithoutOutput($first: Int, $after: String, $last: Int, $before: String, $where: AutomationExecutionViewFilterInput, $order: [AutomationExecutionViewSortInput!]) {
+  executions(
+    first: $first
+    after: $after
+    last: $last
+    before: $before
+    where: $where
+    order: $order
+  ) {
+    pageInfo {
+      hasNextPage
+      hasPreviousPage
+      startCursor
+      endCursor
+    }
+    edges {
+      cursor
+      node {
+        workspace {
+          name
+          repositoryName
+          buildStatus
+          buildBranch
+          buildCommit
+          buildStartedAt
+          buildFinishedAt
+          buildDuration
+          activeBranch
+          activeCommit
+          createdAt
+          changedAt
+        }
+        id
+        branch
+        commit
+        workspaceName
+        repositoryName
+        repositoryUrl
+        automationPath
+        environment
+        initiatorType
+        initiatorReference
+        argumentInstances {
+          name
+          value
+        }
+        status
+        domainStatus
+        domainStatusMessage
+        createdAt
+        startedAt
+        finishedAt
+        duration
+      }
+    }
+    totalCount
+  }
+}
