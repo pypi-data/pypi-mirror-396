@@ -1,0 +1,35 @@
+[project]
+name = "artificer-conversations"
+version = "0.1.1a1"
+description = "Queue-based conversation system for Artificer workflows"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "artificer-cli>=0.1.0a2",
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+workflows = [
+    "artificer-workflows>=0.1.0a9",
+]
+
+[dependency-groups]
+dev = [
+    "artificer-workflows>=0.1.0a9",
+    "pytest>=8.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["artificer"]
+
+[tool.artificer]
+features = ["workflows", "conversations"]
+
+[tool.artificer.workflows]
+entrypoint = ".mcp/server"
+# agent_command = "claude --print '{prompt}'"
