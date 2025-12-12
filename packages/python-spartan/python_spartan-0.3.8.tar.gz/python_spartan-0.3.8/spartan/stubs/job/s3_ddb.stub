@@ -1,0 +1,90 @@
+#!/usr/bin/env python3
+"""
+AWS Glue Job: S3 to DynamoDB
+This script transfers data from S3 to DynamoDB table.
+"""
+
+import sys
+
+import boto3
+from awsglue.context import GlueContext
+from awsglue.dynamicframe import DynamicFrame
+from awsglue.job import Job
+from awsglue.transforms import *
+from awsglue.utils import getResolvedOptions
+from pyspark.context import SparkContext
+
+# Parse job arguments
+args = getResolvedOptions(sys.argv, [
+    'JOB_NAME',
+    'source_s3_path',
+    'target_table_name',
+    'aws_region'
+])
+
+# Initialize Glue context
+sc = SparkContext()
+glueContext = GlueContext(sc)
+spark = glueContext.spark_session
+job = Job(glueContext)
+job.init(args['JOB_NAME'], args)
+
+try:
+    # Configuration
+    source_s3_path = args['source_s3_path']
+    target_table = args['target_table_name']
+    aws_region = args.get('aws_region', 'us-east-1')
+
+    print(f"Starting S3 to DynamoDB transfer...")
+    print(f"Source S3 Path: {source_s3_path}")
+    print(f"Target Table: {target_table}")
+
+    # Read from S3
+    s3_dyf = glueContext.create_dynamic_frame.from_options(
+        connection_type="s3",
+        connection_options={
+            "paths": [source_s3_path],
+            "recurse": True
+        },
+        format="parquet",  # Change format as needed: json, csv, parquet, orc
+        format_options={}
+    )
+
+    print(f"Records read from S3: {s3_dyf.count()}")
+
+    # Optional: Apply transformations here
+    # transformed_dyf = ApplyMapping.apply(
+    #     frame=s3_dyf,
+    #     mappings=[
+    #         ("id", "string", "id", "string"),
+    #         ("name", "string", "name", "string"),
+    #         # Add your field mappings here
+    #     ]
+    # )
+
+    # Optional: Filter data
+    # filtered_dyf = Filter.apply(
+    #     frame=s3_dyf,
+    #     f=lambda x: x["status"] == "active"
+    # )
+
+    # Write to DynamoDB
+    glueContext.write_dynamic_frame.from_options(
+        frame=s3_dyf,
+        connection_type="dynamodb",
+        connection_options={
+            "dynamodb.region": aws_region,
+            "dynamodb.output.tableName": target_table,
+            "dynamodb.throughput.write.percent": "0.5"
+        }
+    )
+
+    print("✅ Data transfer completed successfully!")
+    print(f"📍 Data imported to table: {target_table}")
+
+except Exception as e:
+    print(f"❌ Error during data transfer: {str(e)}")
+    raise e
+
+finally:
+    job.commit()

@@ -1,0 +1,306 @@
+from app.helpers.logger import get_logger
+from typing import List, Tuple
+
+from fastapi import HTTPException
+from sqlalchemy.exc import DatabaseError
+from sqlalchemy.orm import Session
+
+from app.models.{{class_name_lower_case_singular}} import {{class_name_title_case_singular}}
+from app.requests.{{class_name_lower_case_singular}} import {{class_name_title_case_singular}}CreateRequest, {{class_name_title_case_singular}}UpdateRequest
+from app.responses.{{class_name_lower_case_singular}} import {{class_name_title_case_singular}}CreateResponse, {{class_name_title_case_singular}}Response, {{class_name_title_case_singular}}UpdateResponse
+
+logger = get_logger("spartan-framework")
+
+class {{class_name_title_case_singular}}Service:
+    """
+    Service class for managing {{class_name_lower_case_singular}}-related operations.
+    """
+
+    def __init__(self, db: Session):
+        """
+        Initialize the {{class_name_title_case_singular}}Service class.
+
+        Args:
+            db (Session): The database session.
+        """
+        self.db = db
+
+    def get_by_id(self, id: int) -> {{class_name_title_case_singular}}:
+        """
+        Retrieve a {{class_name_lower_case_singular}} by their ID.
+
+        Args:
+            id (int): The ID of the {{class_name_lower_case_singular}}.
+
+        Returns:
+            {{class_name_title_case_singular}}: The {{class_name_lower_case_singular}} object.
+
+        Raises:
+            HTTPException: If the {{class_name_lower_case_singular}} is not found.
+        """
+        {{class_name_lower_case_singular}} = self.db.query({{class_name_title_case_singular}}).filter({{class_name_title_case_singular}}.id == id).first()
+        if not {{class_name_lower_case_singular}}:
+            raise HTTPException(status_code=404, detail="{{class_name_title_case_singular}} not found")
+        return {{class_name_lower_case_singular}}
+
+    def all(self, page: int, items_per_page: int, sort_type: str = 'asc', sort_by: str = 'id', start_date: str = None, end_date: str = None, first_field: str = None, second_field: str = None) -> Tuple[List[{{class_name_title_case_singular}}Response], int, int, int, int]:
+        """
+        Retrieve all {{class_name_lower_case_plural}} with pagination and optional date, first_field, and second field filters.
+
+        Args:
+            page (int): The page number.
+            items_per_page (int): The number of items per page.
+            sort_type (str): The sort type ('asc' or 'desc').
+            sort_by (str): The field to sort by ('created_at' or 'first_field').
+            start_date (str): The start date for the filter (YYYY-MM-DD).
+            end_date (str): The end date for the filter (YYYY-MM-DD).
+            first_field (str): The first field filter.
+            second_field (str): The second field filter.
+
+        Returns:
+            Tuple[List[{{class_name_title_case_singular}}Response], int, int, int, int]: A tuple containing the list of {{class_name_lower_case_singular}} responses, the total number of {{class_name_lower_case_plural}}, the last page number, the first item number, and the last item number.
+
+        Raises:
+            HTTPException: If there is an internal server error.
+        """
+        try:
+            offset = (page - 1) * items_per_page
+
+            sort_field = self.get_sort_field(sort_by)
+
+            query = self.build_query(sort_field, sort_type, start_date, end_date, first_field, second_field)
+
+            {{class_name_lower_case_plural}} = query.offset(offset).limit(items_per_page).all()
+
+            responses = [{{class_name_title_case_singular}}Response(
+                id={{class_name_lower_case_singular}}.id,
+                first_field={{class_name_lower_case_singular}}.first_field,
+                second_field={{class_name_lower_case_singular}}.second_field,
+                created_at={{class_name_lower_case_singular}}.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                updated_at={{class_name_lower_case_singular}}.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
+            ) for {{class_name_lower_case_singular}} in {{class_name_lower_case_plural}}]
+
+            total_{{class_name_lower_case_plural}} = query.count()
+            last_page = (total_{{class_name_lower_case_plural}} - 1) // items_per_page + 1
+            first_item = offset + 1
+            last_item = min(offset + items_per_page, total_{{class_name_lower_case_plural}})
+
+            return responses, total_{{class_name_lower_case_plural}}, last_page, first_item, last_item
+
+        except DatabaseError:
+            raise HTTPException(status_code=500, detail="Internal server error")
+
+    def get_sort_field(self, sort_by: str):
+            """
+            Returns the corresponding sort field based on the given sort_by parameter.
+
+            Args:
+                sort_by (str): The field to sort by.
+
+            Returns:
+                The sort field corresponding to the given sort_by parameter.
+
+            Raises:
+                HTTPException: If the sort_by field is invalid.
+            """
+            if sort_by == 'second_field':
+                return {{class_name_title_case_singular}}.second_field
+            elif sort_by == 'first_field':
+                return {{class_name_title_case_singular}}.first_field
+            elif sort_by == 'id':
+                return {{class_name_title_case_singular}}.id
+            else:
+                raise HTTPException(status_code=400, detail="Invalid sort_by field")
+
+    def build_query(self, sort_field, sort_type, start_date, end_date, first_field, second_field):
+        """
+        Builds a query to retrieve {{class_name_lower_case_plural}} based on the provided parameters.
+
+        Args:
+            sort_field (str): The field to sort the {{class_name_lower_case_plural}} by.
+            sort_type (str): The type of sorting, either 'asc' or 'desc'.
+            start_date (str): The start date for filtering {{class_name_lower_case_plural}}.
+            end_date (str): The end date for filtering {{class_name_lower_case_plural}}.
+            first_field (str): The first field to filter {{class_name_lower_case_plural}} by.
+            second_field (str): The second_field to filter {{class_name_lower_case_plural}} by.
+
+        Returns:
+            sqlalchemy.orm.query.Query: The query object for retrieving {{class_name_lower_case_plural}}.
+        """
+        query = self.db.query({{class_name_title_case_singular}})
+
+        if sort_type == 'asc':
+            query = query.order_by(sort_field.asc())
+        elif sort_type == 'desc':
+            query = query.order_by(sort_field.desc())
+        else:
+            raise HTTPException(status_code=400, detail="Invalid sort_type")
+
+        start_date = str(start_date) if start_date else ''
+        end_date = str(end_date) if end_date else ''
+
+        if start_date and end_date:
+            query = query.filter({{class_name_title_case_singular}}.created_at.between(start_date + ' 00:00:00', end_date + ' 23:59:59'))
+
+        if first_field:
+            query = query.filter({{class_name_title_case_singular}}.first_field.like(f'%{first_field}%'))
+
+        if second_field:
+            query = query.filter({{class_name_title_case_singular}}.second_field.like(f'%{second_field}%'))
+
+        return query
+
+    def total(self) -> int:
+            """
+            Get the total number of {{class_name_lower_case_plural}}.
+
+            Returns:
+                int: The total number of {{class_name_lower_case_plural}}.
+            """
+            return self.db.query({{class_name_title_case_singular}}).count()
+
+    def find(self, id: int) -> {{class_name_title_case_singular}}Response:
+        """
+        Find a {{class_name_lower_case_singular}} by their ID and return the {{class_name_lower_case_singular}} response.
+
+        Args:
+            id (int): The ID of the {{class_name_lower_case_singular}}.
+
+        Returns:
+            {{class_name_title_case_singular}}Response: The {{class_name_lower_case_singular}} response.
+
+        Raises:
+            HTTPException: If the {{class_name_lower_case_singular}} is not found.
+        """
+        {{class_name_lower_case_singular}} = self.get_by_id(id)
+        return {{class_name_title_case_singular}}Response(
+            id={{class_name_lower_case_singular}}.id,
+            first_field={{class_name_lower_case_singular}}.first_field,
+            second_field={{class_name_lower_case_singular}}.second_field,
+            created_at={{class_name_lower_case_singular}}.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            updated_at={{class_name_lower_case_singular}}.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
+        )
+
+    def save(self, {{class_name_lower_case_singular}}: {{class_name_title_case_singular}}CreateRequest) -> {{class_name_title_case_singular}}CreateResponse:
+        """
+        Save a new {{class_name_lower_case_singular}} to the database.
+
+        Args:
+            {{class_name_lower_case_singular}} ({{class_name_title_case_singular}}CreateRequest): The {{class_name_lower_case_singular}} create request object.
+
+        Returns:
+            {{class_name_title_case_singular}}CreateResponse: The response data of the created {{class_name_lower_case_singular}}.
+
+        Raises:
+            HTTPException: If a {{class_name_lower_case_singular}} with the same second_field already exists.
+        """
+        try:
+            existing = self.db.query({{class_name_title_case_singular}}).filter({{class_name_title_case_singular}}.second_field == {{class_name_lower_case_singular}}.second_field).first()
+            if existing:
+                raise HTTPException(
+                    status_code=422, detail="{{class_name_title_case_singular}} with this second_field already exists"
+                )
+            data = {{class_name_lower_case_singular}}.dict(exclude_unset=True)
+            item = {{class_name_title_case_singular}}(**data)
+            self.db.add(item)
+            self.db.commit()
+            self.db.refresh(item)
+
+            item = self.db.query({{class_name_title_case_singular}}).filter({{class_name_title_case_singular}}.id == item.id).first()
+            response_data = {
+                "id": item.id,
+                "first_field": item.first_field,
+                "second_field": item.second_field,
+                "created_at": item.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                "updated_at": item.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
+            }
+            return response_data
+        except DatabaseError as e:
+            logger.error(f"Error occurred while saving {{class_name_lower_case_singular}}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Internal server error")
+
+    def update(self, id: int, {{class_name_lower_case_singular}}: {{class_name_title_case_singular}}UpdateRequest) -> {{class_name_title_case_singular}}UpdateResponse:
+        """
+        Update a {{class_name_lower_case_singular}} in the database.
+
+        Args:
+            id (int): The ID of the {{class_name_lower_case_singular}}.
+            {{class_name_lower_case_singular}} ({{class_name_title_case_singular}}UpdateRequest): The {{class_name_lower_case_singular}} update request object.
+
+        Returns:
+            {{class_name_title_case_singular}}UpdateResponse: The response data of the updated {{class_name_lower_case_singular}}.
+        """
+        try:
+            item = self.get_by_id(id)
+            data = {{class_name_lower_case_singular}}.dict(exclude_unset=True)
+            if "password" in data:
+                for key, value in data.items():
+                    setattr(item, key, value)
+            self.db.commit()
+            self.db.refresh(item)
+            response_data = {
+                "id": item.id,
+                "first_field": item.first_field,
+                "second_field": item.second_field,
+                "created_at": item.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                "updated_at": item.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
+            }
+            return response_data
+        except DatabaseError as e:
+            logger.error(f"Error occurred while updating {{class_name_lower_case_singular}}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Internal server error")
+
+    def delete(self, id: int) -> {{class_name_title_case_singular}}Response:
+            """
+            Deletes a {{class_name_lower_case_singular}} by their ID.
+
+            Args:
+                id (int): The ID of the {{class_name_lower_case_singular}} to delete.
+
+            Returns:
+                dict: A dictionary containing the details of the deleted {{class_name_lower_case_singular}}.
+
+            Raises:
+                HTTPException: If an error occurs while deleting the {{class_name_lower_case_singular}}.
+            """
+            try:
+                item = self.get_by_id(id)
+                self.db.delete(item)
+                self.db.commit()
+                response_data = {
+                    "id": item.id,
+                    "first_field": item.first_field,
+                    "second_field": item.second_field,
+                    "created_at": item.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                    "updated_at": item.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
+                }
+                return response_data
+            except DatabaseError as e:
+                logger.error(f"Error occurred while deleting {{class_name_lower_case_singular}}: {str(e)}")
+                raise HTTPException(status_code=500, detail="Internal server error")
+
+
+    def bulk_delete(self, ids: Union[int, List[int]]):
+        if isinstance(ids, int):
+            ids = [ids]
+
+        deleted_{{class_name_lower_case_plural}} = []
+
+        for id in ids:
+            item = self.get_by_id(id)
+            if item:
+                self.db.delete(item)
+                response_data = {
+                    "id": item.id,
+                    "first_field": item.first_field,
+                    "second_field": item.second_field,
+                    "created_at": item.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                    "updated_at": item.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
+                }
+                deleted_{{class_name_lower_case_plural}}.append(response_data)
+
+        self.db.commit()
+
+        response_data = deleted_{{class_name_lower_case_plural}}
+
+        return response_data

@@ -1,0 +1,542 @@
+# Spartan
+
+[![Python Version](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://python.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Code Style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
+Spartan, often referred to as "The swiss army knife for serverless development," is a tool that simplifies the creation of serverless applications on popular cloud providers by generating Python code for classes and more. It streamlines your development process, saving you time and ensuring code consistency in your serverless projects.
+
+## 🚀 Quick Start
+
+### Installation
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd spartan-cli
+
+# Install dependencies
+make dev-install
+
+# Run the CLI
+poetry run spartan --help
+```
+
+### Basic Usage
+
+```bash
+# Show available commands
+spartan --help
+
+# S3 operations
+spartan s3 --help
+
+# Job operations
+spartan job --help
+
+# Parquet operations
+spartan parquet --help
+```
+
+## 📋 Table of Contents
+
+- [Development Setup](#-development-setup)
+- [Available Commands](#-available-commands)
+- [Code Quality Tools](#-code-quality-tools)
+- [Testing](#-testing)
+- [Multi-Environment Testing with Tox](#-multi-environment-testing-with-tox)
+- [Documentation](#-documentation)
+- [Configuration Details](#-configuration-details)
+- [Development Workflow](#-development-workflow)
+- [CI/CD Integration](#-cicd-integration)
+- [Contributing](#-contributing)
+
+## 🛠️ Development Setup
+
+### Prerequisites
+
+- Python 3.11+
+- Poetry (for dependency management)
+- Git (for version control)
+
+### Initial Setup
+
+```bash
+# 1. Install dependencies
+make dev-install
+
+# 2. Setup pre-commit hooks (recommended)
+make setup-hooks
+
+# 3. Verify installation
+make demo
+```
+
+### Environment Information
+
+```bash
+# Show environment details
+make env-info
+
+# Show dependency tree
+make deps-tree
+
+# Generate requirements.txt
+make requirements
+```
+
+## 🎯 Available Commands
+
+### Development Workflow
+
+| Command            | Description                                 |
+| ------------------ | ------------------------------------------- |
+| `make dev-install` | Install package in development mode         |
+| `make run`         | Run the CLI application                     |
+| `make demo`        | Run demo commands to showcase functionality |
+
+### Code Quality & Formatting
+
+| Command             | Description                      |
+| ------------------- | -------------------------------- |
+| `make format`       | Format code with black and isort |
+| `make lint`         | Run linting with flake8          |
+| `make check-format` | Check formatting without changes |
+| `make quality`      | Run all code quality checks      |
+
+### Testing
+
+| Command                                | Description                         |
+| -------------------------------------- | ----------------------------------- |
+| `make test`                            | Run tests with pytest               |
+| `make test-cov`                        | Run tests with coverage             |
+| `make test-fast`                       | Run tests without coverage (faster) |
+| `make test-watch`                      | Run tests in watch mode             |
+| `make test-specific FILE=test_file.py` | Run specific test file              |
+
+### Tox Multi-Environment Testing
+
+| Command               | Description                   |
+| --------------------- | ----------------------------- |
+| `make tox`            | Run all tox environments      |
+| `make tox-format`     | Format code via tox           |
+| `make tox-lint`       | Run linting via tox           |
+| `make tox-security`   | Run security checks via tox   |
+| `make tox-type-check` | Run type checking via tox     |
+| `make tox-docs`       | Build documentation via tox   |
+| `make tox-coverage`   | Run coverage analysis via tox |
+| `make tox-clean`      | Clean tox environments        |
+| `make tox-list`       | List all tox environments     |
+
+### Security & Audit
+
+| Command         | Description                            |
+| --------------- | -------------------------------------- |
+| `make security` | Run security checks                    |
+| `make audit`    | Audit dependencies for vulnerabilities |
+
+### Build & Install
+
+| Command              | Description             |
+| -------------------- | ----------------------- |
+| `make install-local` | Install package locally |
+
+### Git & CI/CD
+
+| Command               | Description                       |
+| --------------------- | --------------------------------- |
+| `make pre-commit`     | Run pre-commit checks             |
+| `make pre-commit-run` | Run pre-commit hooks on all files |
+| `make setup-hooks`    | Setup git pre-commit hooks        |
+| `make ci`             | Run full CI pipeline              |
+| `make ci-fast`        | Run fast CI pipeline              |
+
+### Cleanup
+
+| Command          | Description                                    |
+| ---------------- | ---------------------------------------------- |
+| `make clean`     | Clean build artifacts                          |
+| `make clean-all` | Clean everything including virtual environment |
+
+### Documentation
+
+| Command           | Description                   |
+| ----------------- | ----------------------------- |
+| `make docs`       | Build Sphinx documentation    |
+| `make docs-serve` | Serve documentation locally   |
+| `make docs-clean` | Clean generated documentation |
+
+### Utility & Info
+
+| Command           | Description                   |
+| ----------------- | ----------------------------- |
+| `make size`       | Show project size information |
+| `make list-todos` | List TODO items in code       |
+| `make help`       | Show all available commands   |
+
+## 🔧 Code Quality Tools
+
+The project uses comprehensive code quality tools configured in `pyproject.toml`:
+
+### Code Formatting
+
+- **Black**: Code formatting (88 character line length, Python 3.11 target)
+- **isort**: Import sorting (black-compatible profile)
+
+### Linting & Type Checking
+
+- **Flake8**: Style guide enforcement with plugins:
+  - `flake8-docstrings`: Documentation style
+  - `flake8-bugbear`: Bug detection
+  - `flake8-comprehensions`: Comprehension improvements
+- **MyPy**: Static type checking (lenient settings for gradual adoption)
+
+### Security & Documentation
+
+- **Bandit**: Security vulnerability scanning (practical exclusions for development)
+- **pydocstyle**: Documentation style (Google convention, lenient for gradual adoption)
+
+### Tool Configuration
+
+All tools are configured consistently in `pyproject.toml`:
+
+```toml
+[tool.black]
+line-length = 88
+target-version = ['py311']
+
+[tool.isort]
+profile = "black"
+known_first_party = ["spartan"]
+
+[tool.mypy]
+# Lenient settings for gradual adoption
+ignore_missing_imports = true
+disallow_untyped_defs = false
+
+[tool.bandit]
+# Security checks with practical exclusions
+exclude_dirs = ["tests", "docs"]
+skips = ["B101", "B110", "B311", "B324", "B404", "B603", "B607"]
+
+[tool.pydocstyle]
+convention = "google"
+# Missing docstrings allowed for gradual adoption
+add-ignore = ["D100", "D101", "D102", "D103", "D104", "D105", "D107"]
+```
+
+## 🧪 Testing
+
+### Test Configuration
+
+Tests are configured in `pyproject.toml` with pytest:
+
+```toml
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q --strict-markers"
+testpaths = ["tests"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+]
+```
+
+### Coverage Configuration
+
+Coverage is configured to focus on source code:
+
+```toml
+[tool.coverage.run]
+source = ["spartan"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__pycache__/*",
+    "*/venv/*",
+    "*/.venv/*",
+]
+```
+
+### Running Tests
+
+```bash
+# Quick test run
+make test-fast
+
+# Full tests with coverage
+make test-cov
+
+# Specific test file
+make test-specific FILE=test_example.py
+
+# Watch mode for development
+make test-watch
+```
+
+## 🏗️ Multi-Environment Testing with Tox
+
+Tox provides isolated testing environments for comprehensive validation:
+
+### Available Tox Environments
+
+```bash
+# List all environments
+make tox-list
+```
+
+**Testing Environments:**
+
+- `py311`, `py312`, `py313` - Python version testing
+- `lint` - Flake8 linting with all plugins
+- `format` - Black and isort formatting
+- `format-check` - Check formatting without changes
+- `security` - Bandit security scanning
+- `type-check` - MyPy static type checking
+- `coverage` - Test coverage reporting
+- `docs` - Sphinx documentation building
+- `pre-commit` - Run all pre-commit hooks
+- `clean` - Clean build artifacts
+
+### Directory Exclusions
+
+All tox environments properly exclude build and virtual environment directories:
+
+- `.venv`, `.tox`, `.git`
+- `__pycache__`, `build`, `dist`
+- `.eggs`, `*.egg-info`
+
+### Tox Usage Examples
+
+```bash
+# Run all environments
+make tox
+
+# Run specific environment
+poetry run tox -e lint
+
+# Run linting with proper exclusions
+make tox-lint
+
+# Check code formatting
+make tox-format-check
+
+# Run security scanning
+make tox-security
+```
+
+## 📚 Documentation
+
+### Building Documentation
+
+The project uses Sphinx for documentation generation:
+
+```bash
+# Build documentation
+make docs
+
+# Serve documentation locally (http://localhost:8000)
+make docs-serve
+
+# Clean documentation
+make docs-clean
+
+# Build via tox (isolated environment)
+make tox-docs
+```
+
+### Documentation Dependencies
+
+```toml
+# Documentation tools in pyproject.toml
+sphinx = "^8.1.3"
+sphinx-rtd-theme = "^3.0.2"
+sphinx-autoapi = "^3.3.3"
+myst-parser = "^4.0.0"
+```
+
+## ⚙️ Configuration Details
+
+### Project Structure
+
+```
+spartan/
+├── spartan/           # Main package
+│   ├── __init__.py
+│   ├── main.py        # CLI entry point
+│   └── services/      # Service modules
+├── tests/             # Test suite
+├── docs/              # Sphinx documentation
+├── pyproject.toml     # Main configuration
+├── tox.ini           # Multi-environment testing
+├── Makefile          # Development commands
+└── README.md         # This file
+```
+
+### Dependencies
+
+**Core Dependencies:**
+
+- `typer`: CLI framework
+- `rich`: Rich terminal output
+- `boto3`: AWS SDK
+- `pandas`: Data manipulation
+- `pyarrow`: Parquet support
+
+**Development Dependencies:**
+
+- Testing: `pytest`, `pytest-cov`, `pytest-mock`, `faker`
+- Code Quality: `black`, `isort`, `flake8`, `mypy`, `bandit`
+- Documentation: `sphinx`, `sphinx-rtd-theme`
+- Tools: `pre-commit`, `commitizen`, `tox`
+
+### Configuration Files Alignment
+
+All configuration files are aligned for consistency:
+
+| Tool           | Configuration File | Settings Source             |
+| -------------- | ------------------ | --------------------------- |
+| **Black**      | `pyproject.toml`   | `[tool.black]`              |
+| **isort**      | `pyproject.toml`   | `[tool.isort]`              |
+| **Flake8**     | `pyproject.toml`   | Via tox/make commands       |
+| **MyPy**       | `pyproject.toml`   | `[tool.mypy]`               |
+| **Bandit**     | `pyproject.toml`   | `[tool.bandit]`             |
+| **Pytest**     | `pyproject.toml`   | `[tool.pytest.ini_options]` |
+| **Coverage**   | `pyproject.toml`   | `[tool.coverage.*]`         |
+| **Commitizen** | `pyproject.toml`   | `[tool.commitizen]`         |
+
+## 🔄 Development Workflow
+
+### Daily Development
+
+1. **Initial Setup** (first time):
+
+   ```bash
+   make dev-install
+   make setup-hooks
+   ```
+
+2. **Code Development**:
+   - Write code in `spartan/`
+   - Write tests in `tests/`
+   - Pre-commit hooks run automatically on commit
+
+3. **Manual Quality Checks**:
+
+   ```bash
+   # Quick quality check
+   make quality
+
+   # Run tests
+   make test-fast
+
+   # Full quality + tests
+   make pre-commit
+   ```
+
+4. **Multi-Environment Validation**:
+
+   ```bash
+   # Test across Python versions
+   make tox
+
+   # Specific environment testing
+   make tox-lint
+   make tox-security
+   ```
+
+### Command Equivalence
+
+You can achieve the same results through different paths:
+
+```bash
+# Direct via Poetry
+poetry run black spartan tests
+poetry run flake8 spartan tests
+poetry run mypy spartan
+
+# Via tox (isolated environment)
+poetry run tox -e format
+poetry run tox -e lint
+poetry run tox -e type-check
+
+# Via make (convenient aliases)
+make format
+make lint
+make tox-type-check
+```
+
+## 🚀 CI/CD Integration
+
+### CI Pipeline Options
+
+```bash
+# Fast CI pipeline (for PRs)
+make ci-fast
+# Includes: dev-install + quality + test-fast
+
+# Full CI pipeline (for main branch)
+make ci
+# Includes: dev-install + quality + test-cov
+
+# Comprehensive testing (for releases)
+make tox
+# Tests across Python 3.11, 3.12, 3.13
+```
+
+### Pre-commit Integration
+
+All quality tools are integrated into pre-commit hooks:
+
+```bash
+# Setup hooks (run once)
+make setup-hooks
+
+# Manual run of all hooks
+make pre-commit-run
+
+# Hooks run automatically on commit
+git commit -m "Your commit message"
+```
+
+### Benefits of the Setup
+
+✅ **Consistency**: All tools use the same configuration
+✅ **Flexibility**: Run tools via Poetry, tox, or make
+✅ **Isolation**: Tox provides clean environments
+✅ **CI Integration**: Multiple testing strategies
+✅ **Developer Experience**: Simple, memorable commands
+✅ **Gradual Adoption**: Lenient settings for incremental improvement
+
+## 🤝 Contributing
+
+1. **Fork the repository**
+2. **Create a feature branch**: `git checkout -b feature-name`
+3. **Set up development environment**: `make dev-install && make setup-hooks`
+4. **Make your changes** with tests
+5. **Run quality checks**: `make quality`
+6. **Run tests**: `make test-cov`
+7. **Optional: Run tox for comprehensive testing**: `make tox`
+8. **Commit your changes** (pre-commit hooks will run automatically)
+9. **Push to your fork**: `git push origin feature-name`
+10. **Create a Pull Request**
+
+### Code Quality Requirements
+
+- All code must pass `make quality` (formatting + linting)
+- All tests must pass `make test-cov`
+- Coverage should be maintained or improved
+- Follow the existing code style and patterns
+- Add tests for new functionality
+- Update documentation as needed
+
+### Optional but Recommended
+
+- Run `make tox` for multi-environment testing
+- Check security with `make tox-security`
+- Validate types with `make tox-type-check`
+
+---
+
+**Note**: This project follows a comprehensive development workflow with multiple layers of quality assurance. The configuration is designed to be both strict enough to ensure quality and flexible enough to support gradual adoption of best practices.

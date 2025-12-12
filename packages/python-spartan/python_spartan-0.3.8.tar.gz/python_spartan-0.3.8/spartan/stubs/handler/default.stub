@@ -1,0 +1,30 @@
+from app.helpers.environment import env
+from app.middlewares.logging import standard_logger
+from app.helpers.logger import get_logger
+
+
+logger = get_logger("spartan-framework")
+
+@standard_logger
+def main(event, context):
+    logger.info(f"Start running in {env('APP_ENVIRONMENT').upper()} environment")
+
+    # Implement your code here...
+
+    return {
+        "statusCode": 200
+    }
+
+
+if __name__ == "__main__":
+    from app.helpers.context import MockLambdaContext
+
+    event = {
+        "firstname": "ding",
+        "lastname": "dong"
+    }
+    context = MockLambdaContext()
+
+    response = main(event, context)
+
+    print(response)

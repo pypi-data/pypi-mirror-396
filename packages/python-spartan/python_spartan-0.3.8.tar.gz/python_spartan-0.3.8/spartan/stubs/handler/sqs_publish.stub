@@ -1,0 +1,197 @@
+from typing import Dict, Any, Optional, Union
+import json
+from pydantic import BaseModel, Field, field_validator
+from app.helpers.environment import env
+from app.middlewares.logging import standard_logger
+from app.helpers.logger import get_logger
+from app.services.queue import QueueService
+import uuid
+
+# Constants
+ENVIRONMENT = env('APP_ENVIRONMENT')
+QUEUE_URL = env('QUEUE_URL')
+SQS_ENABLED = env('SQS_ENABLED')
+
+logger = get_logger("spartan-framework")
+sqs = QueueService()
+
+class Person(BaseModel):
+    firstname: str = Field(
+        ...,
+        min_length=1,
+        description="First name of the person"
+    )
+    lastname: str = Field(
+        ...,
+        min_length=1,
+        description="Last name of the person"
+    )
+
+    @field_validator('firstname', 'lastname')
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        """Validate and format name fields"""
+        value = value.strip()
+        if not value:
+            raise ValueError("Name cannot be empty")
+        if not value.replace(" ", "").isalpha():
+            raise ValueError("Name must contain only letters and spaces")
+        return value.title()
+
+    @classmethod
+    def from_event(cls, event: Dict[str, Any]) -> 'Person':
+        try:
+            return cls(**event)
+        except ValueError as e:
+            raise ValueError(f"Invalid input data: {str(e)}")
+
+    def to_queue_message(self) -> Dict[str, str]:
+        return self.model_dump()
+
+class MessageIds(BaseModel):
+    group_id: str
+    deduplication_id: str
+
+    @classmethod
+    def generate(cls) -> 'MessageIds':
+        return cls(
+            group_id=uuid.uuid4().hex,
+            deduplication_id=uuid.uuid4().hex
+        )
+
+class Response:
+    """Flexible response handler for API responses"""
+
+    def __init__(
+        self,
+        status_code: int,
+        body: Optional[Union[Dict, str, BaseModel]] = None,
+        headers: Optional[Dict] = None
+    ):
+        self.status_code = status_code
+        self.body = body
+        self.headers = headers or {}
+
+    def _process_body(self) -> str:
+        """Process the body into a string format"""
+        if self.body is None:
+            return ""
+        elif isinstance(self.body, str):
+            return self.body
+        elif isinstance(self.body, BaseModel):
+            return json.dumps(self.body.model_dump())
+        elif isinstance(self.body, dict):
+            return json.dumps(self.body)
+        else:
+            return str(self.body)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert response to dictionary format"""
+        response = {
+            "statusCode": self.status_code,
+            "body": self._process_body()
+        }
+
+        if self.headers:
+            response["headers"] = self.headers
+
+        return response
+
+    @classmethod
+    def success(
+        cls,
+        body: Optional[Union[Dict, str, BaseModel]] = None,
+        headers: Optional[Dict] = None
+    ) -> Dict[str, Any]:
+        """Create a success response"""
+        return cls(200, body, headers).to_dict()
+
+    @classmethod
+    def error(
+        cls,
+        status_code: int,
+        message: str,
+        headers: Optional[Dict] = None
+    ) -> Dict[str, Any]:
+        """Create an error response"""
+        return cls(status_code, {"error": message}, headers).to_dict()
+
+    @classmethod
+    def bad_request(cls, message: str) -> Dict[str, Any]:
+        """Create a 400 Bad Request response"""
+        return cls.error(400, message)
+
+    @classmethod
+    def not_found(cls, message: str = "Resource not found") -> Dict[str, Any]:
+        """Create a 404 Not Found response"""
+        return cls.error(404, message)
+
+    @classmethod
+    def server_error(
+        cls,
+        message: str = "Internal server error"
+    ) -> Dict[str, Any]:
+        """Create a 500 Internal Server Error response"""
+        return cls.error(500, message)
+
+def send_to_queue(person: Person) -> bool:
+    """Send message to SQS queue with error handling"""
+    try:
+        message_ids = MessageIds.generate()
+        sqs.send_message(
+            queue_url=QUEUE_URL,
+            message=person.to_queue_message(),
+            group_id=message_ids.group_id,
+            deduplication_id=message_ids.deduplication_id,
+        )
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send message to queue: {str(e)}")
+        return False
+
+@standard_logger
+def main(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+    """Main Lambda handler function"""
+    logger.info(f"Start running in {ENVIRONMENT.upper()} environment")
+
+    try:
+        # Validate and parse input
+        person = Person.from_event(event)
+
+        # Check if SQS is enabled
+        if not SQS_ENABLED:
+            logger.info("SQS is disabled, skipping message sending")
+            return Response.success({
+                "message": "SQS is disabled",
+                "status": "skipped"
+            })
+
+        # Send message to queue
+        logger.info("Sending message to queue")
+        if send_to_queue(person):
+            logger.info("Message sent to queue successfully")
+            return Response.success({
+                "message": "Message sent successfully",
+                "person": person.model_dump()
+            })
+        else:
+            return Response.server_error("Failed to send message to queue")
+
+    except ValueError as ve:
+        logger.error(f"Validation error: {str(ve)}")
+        return Response.bad_request(str(ve))
+    except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}")
+        return Response.server_error()
+
+if __name__ == "__main__":
+    from app.helpers.context import MockLambdaContext
+
+    test_event = {
+        "firstname": "ding",
+        "lastname": "dong"
+    }
+    test_context = MockLambdaContext()
+
+    response = main(test_event, test_context)
+    print(response)

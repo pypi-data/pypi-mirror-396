@@ -1,0 +1,149 @@
+#!/usr/bin/env python3
+"""
+AWS Glue Job: Database to Database
+This script transfers data from one relational database to another.
+"""
+
+import sys
+
+from awsglue.context import GlueContext
+from awsglue.dynamicframe import DynamicFrame
+from awsglue.job import Job
+from awsglue.transforms import *
+from awsglue.utils import getResolvedOptions
+from pyspark.context import SparkContext
+
+# Parse job arguments
+args = getResolvedOptions(sys.argv, [
+    'JOB_NAME',
+    'source_db_connection',
+    'source_table_schema',
+    'source_table_name',
+    'target_db_connection',
+    'target_table_schema',
+    'target_table_name'
+])
+
+# Initialize Glue context
+sc = SparkContext()
+glueContext = GlueContext(sc)
+spark = glueContext.spark_session
+job = Job(glueContext)
+job.init(args['JOB_NAME'], args)
+
+try:
+    # Configuration
+    source_db_connection = args['source_db_connection']
+    source_schema = args.get('source_table_schema', 'public')
+    source_table = args['source_table_name']
+    target_db_connection = args['target_db_connection']
+    target_schema = args.get('target_table_schema', 'public')
+    target_table = args['target_table_name']
+
+    print(f"Starting Database to Database transfer...")
+    print(f"Source: {source_db_connection} -> {source_schema}.{source_table}")
+    print(f"Target: {target_db_connection} -> {target_schema}.{target_table}")
+
+    # Read from source database using Glue catalog
+    source_dyf = glueContext.create_dynamic_frame.from_catalog(
+        database="source_glue_database",  # Replace with your source Glue catalog database
+        table_name=f"{source_schema}_{source_table}",
+        transformation_ctx="source_dyf"
+    )
+
+    # Alternative: Read directly from JDBC connection
+    # source_dyf = glueContext.create_dynamic_frame.from_options(
+    #     connection_type="postgresql",  # or "mysql", "oracle", "sqlserver"
+    #     connection_options={
+    #         "url": "jdbc:postgresql://source-host:5432/source-database",
+    #         "dbtable": f"{source_schema}.{source_table}",
+    #         "user": "source-username",
+    #         "password": "source-password"
+    #     }
+    # )
+
+    print(f"Records read from source database: {source_dyf.count()}")
+
+    # Optional: Apply transformations
+    # Example transformations:
+
+    # 1. Apply field mappings (handle schema differences)
+    # mapped_dyf = ApplyMapping.apply(
+    #     frame=source_dyf,
+    #     mappings=[
+    #         ("old_user_id", "long", "user_id", "long"),
+    #         ("old_user_name", "string", "user_name", "string"),
+    #         ("old_email", "string", "email_address", "string"),
+    #         ("created_timestamp", "timestamp", "created_at", "timestamp"),
+    #         # Add your field mappings here
+    #     ]
+    # )
+
+    # 2. Filter data (migrate only specific records)
+    # filtered_dyf = Filter.apply(
+    #     frame=source_dyf,
+    #     f=lambda x: x["status"] == "active" and x["created_at"] >= "2024-01-01"
+    # )
+
+    # 3. Resolve choice (handle data type conflicts)
+    # resolved_dyf = ResolveChoice.apply(
+    #     frame=source_dyf,
+    #     choice="make_cols",
+    #     transformation_ctx="resolved_dyf"
+    # )
+
+    # 4. Drop null fields
+    # clean_dyf = DropNullFields.apply(frame=source_dyf)
+
+    # 5. Add audit/migration tracking fields
+    # def add_migration_metadata(rec):
+    #     rec["migrated_at"] = "2024-01-01T00:00:00Z"
+    #     rec["migration_job"] = args['JOB_NAME']
+    #     rec["source_system"] = "legacy_db"
+    #     return rec
+    #
+    # enriched_dyf = Map.apply(frame=source_dyf, f=add_migration_metadata)
+
+    # 6. Data validation
+    # def validate_required_fields(rec):
+    #     required_fields = ["user_id", "email"]
+    #     for field in required_fields:
+    #         if field not in rec or rec[field] is None or rec[field] == "":
+    #             return False
+    #     return True
+    #
+    # validated_dyf = Filter.apply(frame=source_dyf, f=validate_required_fields)
+
+    # Use transformed data or original
+    final_dyf = source_dyf
+
+    # Write to target database using Glue catalog
+    glueContext.write_dynamic_frame.from_catalog(
+        frame=final_dyf,
+        database="target_glue_database",  # Replace with your target Glue catalog database
+        table_name=f"{target_schema}_{target_table}",
+        transformation_ctx="write_to_target_db"
+    )
+
+    # Alternative: Write directly to JDBC connection
+    # glueContext.write_dynamic_frame.from_options(
+    #     frame=final_dyf,
+    #     connection_type="postgresql",  # or "mysql", "oracle", "sqlserver"
+    #     connection_options={
+    #         "url": "jdbc:postgresql://target-host:5432/target-database",
+    #         "dbtable": f"{target_schema}.{target_table}",
+    #         "user": "target-username",
+    #         "password": "target-password"
+    #     }
+    # )
+
+    print("✅ Data transfer completed successfully!")
+    print(f"📍 Data migrated to: {target_schema}.{target_table}")
+    print(f"📊 Total records processed: {final_dyf.count()}")
+
+except Exception as e:
+    print(f"❌ Error during data transfer: {str(e)}")
+    raise e
+
+finally:
+    job.commit()

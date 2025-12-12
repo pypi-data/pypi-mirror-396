@@ -1,0 +1,114 @@
+#!/usr/bin/env python3
+"""
+AWS Glue Job: S3 to S3
+This script transfers and transforms data from one S3 location to another.
+"""
+
+import sys
+
+from awsglue.context import GlueContext
+from awsglue.dynamicframe import DynamicFrame
+from awsglue.job import Job
+from awsglue.transforms import *
+from awsglue.utils import getResolvedOptions
+from pyspark.context import SparkContext
+
+# Parse job arguments
+args = getResolvedOptions(sys.argv, [
+    'JOB_NAME',
+    'source_s3_path',
+    'target_s3_path',
+    'source_format',
+    'target_format'
+])
+
+# Initialize Glue context
+sc = SparkContext()
+glueContext = GlueContext(sc)
+spark = glueContext.spark_session
+job = Job(glueContext)
+job.init(args['JOB_NAME'], args)
+
+try:
+    # Configuration
+    source_s3_path = args['source_s3_path']
+    target_s3_path = args['target_s3_path']
+    source_format = args.get('source_format', 'parquet')
+    target_format = args.get('target_format', 'parquet')
+
+    print(f"Starting S3 to S3 transfer...")
+    print(f"Source S3 Path: {source_s3_path}")
+    print(f"Target S3 Path: {target_s3_path}")
+    print(f"Source Format: {source_format}")
+    print(f"Target Format: {target_format}")
+
+    # Read from source S3
+    source_dyf = glueContext.create_dynamic_frame.from_options(
+        connection_type="s3",
+        connection_options={
+            "paths": [source_s3_path],
+            "recurse": True
+        },
+        format=source_format,
+        format_options={}
+    )
+
+    print(f"Records read from source: {source_dyf.count()}")
+
+    # Optional: Apply transformations
+    # Example transformations:
+
+    # 1. Apply field mappings
+    # mapped_dyf = ApplyMapping.apply(
+    #     frame=source_dyf,
+    #     mappings=[
+    #         ("old_field_name", "string", "new_field_name", "string"),
+    #         ("id", "long", "id", "string"),
+    #         # Add your field mappings here
+    #     ]
+    # )
+
+    # 2. Filter data
+    # filtered_dyf = Filter.apply(
+    #     frame=source_dyf,
+    #     f=lambda x: x["status"] == "active"
+    # )
+
+    # 3. Drop null fields
+    # clean_dyf = DropNullFields.apply(frame=source_dyf)
+
+    # 4. Resolve choice (handle data type conflicts)
+    # resolved_dyf = ResolveChoice.apply(
+    #     frame=source_dyf,
+    #     choice="make_cols",
+    #     transformation_ctx="resolved_dyf"
+    # )
+
+    # Use transformed data or original
+    final_dyf = source_dyf
+
+    # Write to target S3
+    glueContext.write_dynamic_frame.from_options(
+        frame=final_dyf,
+        connection_type="s3",
+        connection_options={
+            "path": target_s3_path,
+            "partitionKeys": []  # Add partition keys if needed, e.g., ["year", "month"]
+        },
+        format=target_format,
+        format_options={
+            "writeHeader": True,
+            "compression": "snappy" if target_format == "parquet" else "gzip"
+        }
+    )
+
+    print("✅ Data transfer completed successfully!")
+    print(f"📍 Data exported to: {target_s3_path}")
+    print(f"📊 Total records processed: {final_dyf.count()}")
+
+except Exception as e:
+    print(f"❌ Error during data transfer: {str(e)}")
+    raise e
+
+finally:
+    job.commit()

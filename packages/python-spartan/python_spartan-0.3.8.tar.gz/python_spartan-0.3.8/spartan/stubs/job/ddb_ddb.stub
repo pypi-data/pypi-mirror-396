@@ -1,0 +1,106 @@
+#!/usr/bin/env python3
+"""
+AWS Glue Job: DynamoDB to DynamoDB
+This script transfers data from one DynamoDB table to another.
+"""
+
+import sys
+
+import boto3
+from awsglue.context import GlueContext
+from awsglue.dynamicframe import DynamicFrame
+from awsglue.job import Job
+from awsglue.transforms import *
+from awsglue.utils import getResolvedOptions
+from pyspark.context import SparkContext
+
+# Parse job arguments
+args = getResolvedOptions(sys.argv, [
+    'JOB_NAME',
+    'source_table_name',
+    'target_table_name',
+    'aws_region'
+])
+
+# Initialize Glue context
+sc = SparkContext()
+glueContext = GlueContext(sc)
+spark = glueContext.spark_session
+job = Job(glueContext)
+job.init(args['JOB_NAME'], args)
+
+try:
+    # Configuration
+    source_table = args['source_table_name']
+    target_table = args['target_table_name']
+    aws_region = args.get('aws_region', 'us-east-1')
+
+    print(f"Starting DynamoDB to DynamoDB transfer...")
+    print(f"Source Table: {source_table}")
+    print(f"Target Table: {target_table}")
+
+    # Read from source DynamoDB table
+    source_dyf = glueContext.create_dynamic_frame.from_options(
+        connection_type="dynamodb",
+        connection_options={
+            "dynamodb.region": aws_region,
+            "dynamodb.input.tableName": source_table,
+            "dynamodb.throughput.read.percent": "0.5"
+        }
+    )
+
+    print(f"Records read from source table: {source_dyf.count()}")
+
+    # Optional: Apply transformations
+    # Example transformations:
+
+    # 1. Apply field mappings
+    # mapped_dyf = ApplyMapping.apply(
+    #     frame=source_dyf,
+    #     mappings=[
+    #         ("old_field", "string", "new_field", "string"),
+    #         ("id", "string", "id", "string"),
+    #         # Add your field mappings here
+    #     ]
+    # )
+
+    # 2. Filter data
+    # filtered_dyf = Filter.apply(
+    #     frame=source_dyf,
+    #     f=lambda x: x["status"] == "active"
+    # )
+
+    # 3. Drop null fields
+    # clean_dyf = DropNullFields.apply(frame=source_dyf)
+
+    # 4. Add derived fields
+    # def add_timestamp(rec):
+    #     rec["migration_timestamp"] = "2024-01-01T00:00:00Z"
+    #     return rec
+    #
+    # enriched_dyf = Map.apply(frame=source_dyf, f=add_timestamp)
+
+    # Use transformed data or original
+    final_dyf = source_dyf
+
+    # Write to target DynamoDB table
+    glueContext.write_dynamic_frame.from_options(
+        frame=final_dyf,
+        connection_type="dynamodb",
+        connection_options={
+            "dynamodb.region": aws_region,
+            "dynamodb.output.tableName": target_table,
+            "dynamodb.throughput.write.percent": "0.5"
+        }
+    )
+
+    print("✅ Data transfer completed successfully!")
+    print(f"📍 Data migrated to table: {target_table}")
+    print(f"📊 Total records processed: {final_dyf.count()}")
+
+except Exception as e:
+    print(f"❌ Error during data transfer: {str(e)}")
+    raise e
+
+finally:
+    job.commit()
