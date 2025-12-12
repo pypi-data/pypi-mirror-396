@@ -1,0 +1,70 @@
+syntax = "proto3";
+package plm.v1;
+
+import "geometry/v1/pose.proto";
+import "geometry/v1/vector3.proto";
+
+option csharp_namespace = "Messages.Plm.V1";
+option go_package = "github.com/cobotar/protocol/messages/plm/v1";
+
+enum TaskState {
+  TASK_STATE_UNSPECIFIED = 0;
+  TASK_STATE_MISSING_PRECONDITION = 1;
+  TASK_STATE_WAITING = 2;
+  TASK_STATE_IN_PROGRESS = 3;
+  TASK_STATE_COMPLETED = 4;
+  TASK_STATE_ERROR = 6;
+}
+
+enum TaskType {
+  TASK_TYPE_UNSPECIFIED = 0;
+  TASK_TYPE_INSPECT = 1;
+  TASK_TYPE_FASTEN = 2;
+  TASK_TYPE_UNFASTEN = 3;
+  TASK_TYPE_MOUNT = 4;
+  TASK_TYPE_UNMOUNT = 5;
+  TASK_TYPE_MOVE = 6;
+  TASK_TYPE_REMOVE = 7;
+  TASK_TYPE_APPLY = 8;
+  TASK_TYPE_WIPE = 9;
+}
+
+enum TaskAssignmentPreference {
+  TASK_ASSIGNMENT_PREFERENCE_UNSPECIFIED = 0;
+  TASK_ASSIGNMENT_PREFERENCE_PREFER_HUMAN = 1;
+  TASK_ASSIGNMENT_PREFERENCE_ONLY_HUMAN = 2;
+  TASK_ASSIGNMENT_PREFERENCE_PREFER_ROBOT = 3;
+  TASK_ASSIGNMENT_PREFERENCE_ONLY_ROBOT = 4;
+}
+
+message TaskMessage {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  int64 sequence_number = 4;
+  string part_id = 5;
+  string model_id = 6;
+  TaskType task_type = 7;
+  geometry.v1.LocalizedPose target = 8;
+  geometry.v1.Vector3 approach = 9;
+  string parent_id = 10;
+  repeated string agents_ids = 11;
+  string assigned_to = 12;
+  TaskState state = 13;
+  repeated string preconditions = 14;
+  repeated string dependants = 15;
+  TaskAssignmentPreference assignment_preference = 19;
+  bool can_reassign = 16;
+  bool can_do = 17;
+  bool can_undo = 18;
+  // TODO: 'complete-importance': could be different levels of "this must be explicitly completed" or tie it together with user level, such that expertise level (expert, intermediate, novice) equal and above intermediate can {bulk, automatic, ... } complete and below must explicitly complete. This should potentially also be tied to the part and this field(s) can then be a custom override for this specific task.
+}
+
+message TaskUpdatedMessage {
+  string id = 1;
+  string assigned_to = 2;
+  TaskState state = 3;
+  bool can_reassign = 4;
+  bool can_do = 5;
+  bool can_undo = 6;
+}

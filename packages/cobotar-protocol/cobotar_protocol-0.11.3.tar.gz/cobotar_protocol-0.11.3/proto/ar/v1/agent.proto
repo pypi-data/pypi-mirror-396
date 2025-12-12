@@ -1,0 +1,54 @@
+syntax = "proto3";
+package ar.v1;
+
+import "ar/v1/property.proto";
+import "geometry/v1/pose.proto";
+
+option csharp_namespace = "Messages.AR.V1";
+option go_package = "github.com/cobotar/protocol/messages/ar/v1";
+
+enum AgentType {
+  AGENT_TYPE_UNSPECIFIED = 0;
+  AGENT_TYPE_OPERATOR = 1;
+  AGENT_TYPE_ROBOT = 2;
+}
+
+enum OperatorType {
+  OPERATOR_TYPE_UNSPECIFIED = 0;
+  OPERATOR_TYPE_NOVICE = 1;
+  OPERATOR_TYPE_INTERMEDIATE = 2;
+  OPERATOR_TYPE_EXPERT = 3;
+}
+
+enum OperatorPermission {
+  OPERATOR_PERMISSION_UNSPECIFIED = 0;
+  OPERATOR_PERMISSION_NONE = 1;
+  OPERATOR_PERMISSION_COSMETIC = 2;
+  OPERATOR_PERMISSION_FULL = 3;
+}
+
+enum RobotType {
+  ROBOT_TYPE_UNSPECIFIED = 0;
+  ROBOT_TYPE_UR3E = 10;
+  ROBOT_TYPE_UR5E = 11;
+  ROBOT_TYPE_UR10E = 12;
+  ROBOT_TYPE_KUKA_IIWA = 20;
+}
+
+enum EndEffectorType {
+  END_EFFECTOR_TYPE_UNSPECIFIED = 0;
+  END_EFFECTOR_TYPE_EMPTY = 1;
+  END_EFFECTOR_TYPE_ROBOTIQ_HAND_E = 10;
+  END_EFFECTOR_TYPE_CUSTOM_MOUNT = 20;
+}
+
+message AgentMessage {
+  string id = 1;
+  string name = 2;
+  AgentType type = 3;
+  OperatorType operator_type = 4;
+  RobotType robot_type = 5;
+  EndEffectorType end_effector_type = 6;
+  geometry.v1.LocalizedPose location = 7;
+  repeated ar.v1.Property properties = 8;
+}

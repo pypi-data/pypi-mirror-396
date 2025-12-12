@@ -1,0 +1,31 @@
+syntax = "proto3";
+package geometry.v1;
+
+import "geometry/v1/point.proto";
+import "geometry/v1/quad.proto";
+import "google/protobuf/timestamp.proto";
+
+option csharp_namespace = "Messages.Common.V1";
+option go_package = "github.com/cobotar/protocol/messages/geometry/v1";
+
+// A simple pose consisting of a position and orientation
+message Pose {
+  Point position = 1;
+  Quad orientation = 2;
+}
+
+enum LocalizedState {
+  LOCALIZED_STATE_UNSPECIFIED = 0;
+  LOCALIZED_STATE_FOUND = 1;
+  LOCALIZED_STATE_LOST = 2;
+  LOCALIZED_STATE_STATIC = 3;
+  LOCALIZED_STATE_UNKNOWN = 4;
+}
+
+// A localized pose with reference to an anchorId. The state and last updated time of the pose can be specified.
+message LocalizedPose {
+  Pose pose = 1;
+  string anchor_id = 2;
+  LocalizedState state = 3;
+  google.protobuf.Timestamp last_updated = 4;
+}

@@ -1,0 +1,30 @@
+syntax = "proto3";
+package ar.v1;
+
+import "ar/v1/environment.proto";
+
+option csharp_namespace = "Messages.AR.V1";
+option go_package = "github.com/cobotar/protocol/messages/ar/v1";
+
+message EnvironmentNewMessage {
+  string name = 1;
+  string icon = 2;
+  string description = 3;
+  ar.v1.EnvironmentType type = 4;
+}
+
+message EnvironmentUpdateMessage {
+  string id = 1; // Unique id of the environment (this won't be changed)
+  string name = 2; // Name of the environment
+  string icon = 3;
+  string description = 4; // Description of the environment
+  ar.v1.EnvironmentType type = 5;
+  repeated MarkerLocation markers = 6;
+  repeated AgentLocation agents = 7;
+  repeated PartLocation parts = 8;
+  repeated ToolLocation tools = 9;
+}
+
+message EnvironmentDeleteMessage {
+  string id = 1; // Id of the marker to be deleted
+}

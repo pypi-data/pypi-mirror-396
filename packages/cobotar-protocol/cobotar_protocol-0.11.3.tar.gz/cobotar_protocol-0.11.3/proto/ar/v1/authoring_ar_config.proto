@@ -1,0 +1,32 @@
+syntax = "proto3";
+package ar.v1;
+
+import "ar/v1/action.proto";
+import "ar/v1/feedback.proto";
+import "ar/v1/helper.proto";
+import "ar/v1/property.proto";
+
+option csharp_namespace = "Messages.AR.V1";
+option go_package = "github.com/cobotar/protocol/messages/ar/v1";
+
+message ARConfigNewMessage {
+  string name = 1;
+  string description = 2;
+  string template_id = 3; // Template id is used to pre-populate a configuration. Leave empty for a new fresh start.
+}
+
+message ARConfigUpdateMessage {
+  string id = 1;
+  string name = 2;
+  string icon = 3;
+  string description = 4;
+  repeated ar.v1.FeedbackMessage feedback = 5;
+  repeated ar.v1.ActionMessage actions = 6;
+  repeated ar.v1.HelperMessage helpers = 7;
+  repeated ar.v1.Property properties = 8;
+  int64 ar_disappear_distance = 9;
+}
+
+message ARConfigDeleteMessage {
+  string id = 1;
+}

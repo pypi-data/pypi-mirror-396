@@ -1,0 +1,46 @@
+syntax = "proto3";
+package plm.v1;
+
+import "geometry/v1/pose.proto";
+import "geometry/v1/vector3.proto";
+import "plm/v1/task.proto";
+
+option csharp_namespace = "Messages.Plm.V1";
+option go_package = "github.com/cobotar/protocol/messages/plm/v1";
+
+message StoredTaskMessage {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  int64 sequence_number = 4;
+  string part_id = 5;
+  string model_id = 6;
+  TaskType task_type = 7;
+  geometry.v1.LocalizedPose target = 8;
+  geometry.v1.Vector3 approach = 9;
+  TaskAssignmentPreference assignment_preference = 19;
+}
+
+message NewTaskMessage {
+  string name = 2;
+  string description = 3;
+  int64 sequence_number = 4;
+  string parent_sequence_id = 5;
+}
+
+message UpdateTaskMessage {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  int64 sequence_number = 4;
+  string part_id = 5;
+  string model_id = 6;
+  TaskType task_type = 7;
+  geometry.v1.LocalizedPose target = 8;
+  geometry.v1.Vector3 approach = 9;
+  TaskAssignmentPreference assignment_preference = 19;
+}
+
+message DeleteTaskMessage {
+  string task_id = 1;
+}

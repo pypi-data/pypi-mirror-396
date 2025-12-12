@@ -1,0 +1,47 @@
+syntax = "proto3";
+package ar.v1;
+
+option csharp_namespace = "Messages.AR.V1";
+option go_package = "github.com/cobotar/protocol/messages/ar/v1";
+
+// Used to specify the type of a property
+enum PropertyType {
+  PROPERTY_TYPE_UNSPECIFIED = 0;
+  PROPERTY_TYPE_BOOL = 1;
+  PROPERTY_TYPE_INT = 2;
+  PROPERTY_TYPE_FLOAT = 3;
+  PROPERTY_TYPE_DOUBLE = 4;
+  PROPERTY_TYPE_STRING = 5;
+  PROPERTY_TYPE_VECTOR3 = 6;
+  PROPERTY_TYPE_POSE = 7;
+  PROPERTY_TYPE_ANCHOR = 8;
+  PROPERTY_TYPE_COLOR = 9;
+  PROPERTY_TYPE_AGENT = 10;
+  PROPERTY_TYPE_ENUM = 11;
+  PROPERTY_TYPE_ENUM_MULTI = 12;
+}
+
+// Specifies where the value of a property originates from.
+enum PropertyOrigin {
+  PROPERTY_ORIGIN_UNSPECIFIED = 0;
+  PROPERTY_ORIGIN_FIXED = 1; // The value of the property is fixed and must be changed manually
+  PROPERTY_ORIGIN_MIRROR = 2; // The value of the property mirrors the value of another property
+}
+
+// Properties are used by various components to define them, such as: feedback, actions, and conditions.
+message Property {
+  string id = 1;
+  string name = 2;
+  string icon = 3;
+  string description = 4;
+  PropertyType type = 5;
+  string value = 6; // the current value of the property (JSON encoded)
+  string extras = 7; // JSON encoded extra values, e.g. {min: -0.1, max: 0.5, step: 0.1} for a double property.
+  bool user_editable = 8; // TODO: create different user permissions, this field should then set the "minimum required permission"
+  PropertyOrigin origin = 9;
+  repeated PropertyOrigin origins = 10;
+  string mirror_property_id = 11;
+  string group = 12;
+  int32 ordering = 13;
+  bool hide_group = 14;
+}

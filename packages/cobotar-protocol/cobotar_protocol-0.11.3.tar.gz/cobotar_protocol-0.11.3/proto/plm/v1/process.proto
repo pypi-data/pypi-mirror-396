@@ -1,0 +1,54 @@
+syntax = "proto3";
+package plm.v1;
+
+import "geometry/v1/pose.proto";
+import "google/protobuf/timestamp.proto";
+import "plm/v1/sequence.proto";
+import "plm/v1/task.proto";
+
+option csharp_namespace = "Messages.Plm.V1";
+option go_package = "github.com/cobotar/protocol/messages/plm/v1";
+
+enum ProcessType {
+  PROCESS_TYPE_UNSPECIFIED = 0;
+  PROCESS_TYPE_ASSEMBLY = 1;
+  PROCESS_TYPE_DISASSEMBLY = 2;
+  PROCESS_TYPE_INSPECTION = 3;
+}
+
+enum ProcessState {
+  PROCESS_STATE_UNSPECIFIED = 0;
+  PROCESS_STATE_WAITING = 1;
+  PROCESS_STATE_IN_PROGRESS = 2;
+  PROCESS_STATE_COMPLETED = 3;
+  PROCESS_STATE_ABORTED = 4;
+}
+
+message ProcessMessage {
+  string instance_id = 1;
+  string id = 2;
+  string name = 3;
+  string description = 4;
+  ProcessType type = 5;
+  geometry.v1.LocalizedPose frame = 6;
+  string root_sequence_id = 7;
+  repeated SequenceMessage sequences = 8;
+  repeated TaskMessage tasks = 9;
+  ProcessState state = 10;
+  google.protobuf.Timestamp initiated = 11;
+  google.protobuf.Timestamp ended = 12;
+  string order_id = 13;
+  string line_id = 14;
+}
+
+// Update published when the state of a process have changed
+message ProcessUpdatedMessage {
+  string instance_id = 1;
+  string id = 2;
+  ProcessState state = 10;
+  google.protobuf.Timestamp ended = 12;
+}
+
+message ProcessesMessage {
+  repeated ProcessMessage processes = 1;
+}

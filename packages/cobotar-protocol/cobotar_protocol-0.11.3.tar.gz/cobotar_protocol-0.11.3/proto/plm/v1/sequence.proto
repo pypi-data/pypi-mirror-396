@@ -1,0 +1,38 @@
+syntax = "proto3";
+package plm.v1;
+
+import "geometry/v1/pose.proto";
+
+option csharp_namespace = "Messages.Plm.V1";
+option go_package = "github.com/cobotar/protocol/messages/plm/v1";
+
+enum SequenceState {
+  SEQUENCE_STATE_UNSPECIFIED = 0;
+  SEQUENCE_STATE_MISSING_PRECONDITION = 1;
+  SEQUENCE_STATE_WAITING = 2;
+  SEQUENCE_STATE_IN_PROGRESS = 3;
+  SEQUENCE_STATE_COMPLETED = 4;
+}
+
+message SequenceMessage {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  int64 sequence_number = 4;
+  geometry.v1.LocalizedPose frame = 5;
+  string parent_id = 6;
+  repeated string sequence_ids = 7;
+  repeated string task_ids = 8;
+  repeated string assigned_to = 9;
+  SequenceState state = 10;
+  int64 completed_tasks = 11;
+  bool can_bulk_complete = 12;
+}
+
+// Update published when the state of a sequence have changed
+message SequenceUpdatedMessage {
+  string sequence_id = 1;
+  repeated string assigned_to = 2;
+  SequenceState state = 3;
+  int64 completed_tasks = 4;
+}
