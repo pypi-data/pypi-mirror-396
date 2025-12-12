@@ -1,0 +1,81 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hdxms-datasets"
+description = "Download and parse curated HDX-MS datasets"
+authors = [{ name = "Jochem Smit", email = "jhsmit@gmail.com" }]
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Intended Audience :: Science/Research",
+]
+
+dependencies = [
+    "narwhals>=2.7.0",
+    "PyYAML",
+    "requests",
+    'statsmodels',
+    'uncertainties',
+    'numpy',
+    'pydantic',
+    'typer>=0.9.0',
+]
+
+dynamic = ["version"]
+
+[project.optional-dependencies]
+plot = ['altair', 'numpy', 'polars', 'cmap']
+web = ['solara']
+docs = [
+    "mkdocs>=1.4.2",
+    "mkdocstrings[python]>=0.19.1",
+    "mkdocs-material>=8.5.11",
+    "pygments>=2.13.0",
+    "mkdocs-gen-files>=0.4.0",
+    "mkdocs-literate-nav>=0.5.0",
+    "mkdocs-jupyter>=0.22.0",
+    "jupyter>=1.0.0",
+]
+dev = ["black[jupyter]>=22.12.0"]
+
+test = ["pytest>=7.2.0", "polars", "biopython"]
+
+[project.urls]
+Source = "https://github.com/Jhsmit/hdxms-datasets/"
+Documentation = "https://jhsmit.github.io/hdxms-datasets/"
+
+[project.scripts]
+hdxms-datasets = "hdxms_datasets.__main__:main"
+
+[tool.hatch.build]
+exclude = ["_versioneer.py"]
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "hdxms_datasets/_version.py"
+
+[tool.flake8]
+max-line-length = 100
+ignore = "D203"
+exclude = [".git", "__pycache__", "build", "dist", "docs"]
+max-complexity = 10
+
+[tool.black]
+line-length = 100
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = [
+    "hdxms_datasets/stable", # exclude entire subtree
+]
