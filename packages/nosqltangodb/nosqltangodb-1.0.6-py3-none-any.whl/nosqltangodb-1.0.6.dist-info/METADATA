@@ -1,0 +1,101 @@
+Metadata-Version: 2.4
+Name: nosqltangodb
+Version: 1.0.6
+Summary: NoSQL in-memory Tango DB for project testing
+Author-email: BLISS team <bliss@esrf.fr>
+License: LGPLv3
+Project-URL: Homepage, https://gitlab.esrf.fr/bliss/nosql-tango-db
+Project-URL: Bug Tracker, https://gitlab.esrf.fr/bliss/nosql-tango-db/issues
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: pytango
+Requires-Dist: ruamel.yaml
+Requires-Dist: gevent
+Requires-Dist: psutil
+Provides-Extra: dev
+Requires-Dist: black; extra == "dev"
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: types-PyYAML; extra == "dev"
+Dynamic: license-file
+
+No SQL in-memory Tango database for testing.
+
+It provides
+
+- An human readable data structure based on Yaml to
+describe the content of a tango database;
+- Helpers to launch such database in python for testing.
+
+The code was previously at:
+
+- https://github.com/tango-controls/pytango/blob/a8f6a3bfbf547f5b1bb22772280f0eb6e655486f/tango/databaseds/db_access/beacon.py
+- https://gitlab.esrf.fr/bliss/bliss/-/commit/c17bcc328d337de856449e3826023dc9f7dac858
+
+# Connectors
+
+Two connectors are provided using the same data structure:
+
+- `beacon` using a Redis/Beacon infrastructure to store the database;
+- `yaml` using direct yaml files with in-memory only storage.
+
+
+# Command line
+
+The database can be launched the following ways.
+
+
+Using the actual Redis database:
+
+```
+NosqlTangoDB --port 10000 --db_access=beacon 2
+```
+
+Using a specifuc directory containing Yaml files:
+
+```
+NosqlTangoDB --port 10000 --db_access=yaml:tests/data/test1/ 2
+```
+
+# Python
+
+The following code can be used in Python projects.
+
+It spawns the database process with a context manager.
+
+The port is yield when the database is ready to be used.
+
+It finally terminates the database process.
+
+```
+from nosqltangodb import helper
+
+with helper.running_db(
+    name="2",
+    db_access="yaml",
+    yaml_root=yaml_root,
+    port="auto",
+    debug_protocol=True,
+    update_tango_host=True,
+    timeout=10,
+) as db:
+    print("Tango DB port:", db.port)
+```
+
+# Project release
+
+```
+# ~/.pypirc
+[nosql-tango-db]
+repository = https://upload.pypi.org/legacy/
+username = __token__
+password = pypi-...
+```
+
+```
+pip wheel . --wheel-dir=dist
+twine upload dist/nosqltangodb-*.whl -r nosqltangodb
+```
