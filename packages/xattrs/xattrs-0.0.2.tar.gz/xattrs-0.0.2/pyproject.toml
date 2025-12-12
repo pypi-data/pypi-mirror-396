@@ -1,0 +1,218 @@
+[build-system]
+requires = [
+    "pdm-backend",
+]
+build-backend = "pdm.backend"
+
+[project]
+name = "xattrs"
+version = "0.0.2"
+description = "An eXtensible serializing and deserializing toolkit for Python strucuted classes"
+readme = "README.md"
+requires-python = ">=3.9"
+keywords = [
+    "attrs",
+    "cattrs",
+    "serde",
+    "json",
+    "schema",
+]
+authors = [
+    { name = "Lanqing Huang", email = "lqhuang@outlook.com" },
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX",
+    "Typing :: Typed",
+]
+dependencies = [
+    "attrs",
+    "typing_extensions",
+    "datetype",
+]
+
+[project.license]
+text = "MIT"
+
+[project.optional-dependencies]
+yaml = [
+    "ruamel-yaml>=0.18.1",
+]
+toml = [
+    "tomlkit",
+]
+ujson = [
+    "ujson",
+]
+msgpack = [
+    "msgspec",
+]
+all = [
+    "xattrs[toml]",
+    "xattrs[yaml]",
+    "xattrs[ujson]",
+    "xattrs[msgpack]",
+]
+
+[project.urls]
+Documentation = "https://github.com/lqhuang/xattrs#readme"
+Issues = "https://github.com/lqhuang/xattrs/issues"
+Source = "https://github.com/lqhuang/xattrs"
+
+[dependency-groups]
+linter = [
+    "mypy",
+    "ruff",
+]
+test = [
+    "hypothesis",
+    "pympler",
+    "pytest",
+    "pytest-cov",
+    "mypy",
+    "pytest-mypy-plugins",
+    "coverage[toml]",
+]
+docs = [
+    "towncrier",
+    "furo",
+    "myst-parser",
+    "sphinx",
+    "sphinx-notfound-page",
+    "sphinx-copybutton",
+    "sphinx-autobuild",
+    "sphinxcontrib-towncrier",
+    "sphinx-autodoc-typehints",
+    "sphinxext-opengraph",
+]
+dev = [
+    "pre-commit",
+    "pip",
+    { include-group = "linter" },
+    { include-group = "test" },
+    { include-group = "docs" },
+]
+
+[tool.pdm.build]
+
+[tool.pytest.ini_options]
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+]
+xfail_strict = true
+testpaths = "tests"
+
+[tool.check-wheel-contents]
+toplevel = [
+    "xattrs",
+]
+
+[tool.mypy]
+strict = true
+check_untyped_defs = true
+warn_unused_configs = true
+show_column_numbers = true
+show_error_context = true
+show_error_codes = true
+cache_fine_grained = true
+warn_incomplete_stub = true
+disable_error_code = [
+    "empty-body",
+    "no-untyped-def",
+]
+
+[[tool.mypy.overrides]]
+module = [
+    "xattrs._compat.*",
+    "xattrs.typing",
+]
+disable_error_code = [
+    "empty-body",
+]
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disable_error_code = [
+    "no-untyped-def",
+    "arg-type",
+]
+
+[[tool.mypy.overrides]]
+module = "examples.*"
+disallow_untyped_defs = false
+
+[tool.pyright]
+typeCheckingMode = "basic"
+reportGeneralTypeIssues = false
+typing-modules = [
+    "xattrs._compat.typing",
+]
+
+[tool.ruff.lint]
+select = [
+    "F",
+    "E",
+    "W",
+    "UP",
+    "S",
+    "B",
+    "C4",
+    "DTZ",
+    "PT",
+]
+extend-select = [
+    "PLC",
+    "PLE",
+    "PLR",
+    "PLW",
+    "RUF",
+]
+ignore = [
+    "E501",
+    "S101",
+    "RUF100",
+    "PLR2004",
+    "PLR0913",
+    "C408",
+    "B027",
+    "PLC0414",
+]
+fixable = [
+    "F",
+    "E711",
+    "UP",
+    "B",
+]
+unfixable = [
+    "I",
+    "F401",
+]
+ignore-init-module-imports = true
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = [
+    "F401",
+]
+"tests/**/*" = [
+    "PLR2004",
+    "S101",
+    "TID252",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
