@@ -1,0 +1,146 @@
+# https://taskfile.dev
+# If not already done, install task with
+# sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b ~/.local/bin
+# windows: choco install go-task or download from https://github.com/go-task/task/releases
+version: '3'
+
+tasks:
+  install:package:
+    label: 'install:{{.PACKAGE_NAME}}'
+    vars:
+      PACKAGE_NAME: '{{.PACKAGE_NAME}}'
+      COMMAND_NAME: '{{default .PACKAGE_NAME .COMMAND_NAME}}'
+    cmds:
+      - "pip install {{.PACKAGE_NAME}}"
+    status:
+      - 'command -v {{.COMMAND_NAME}}'
+
+  install:pre-commit:
+    desc: Install pre-commit
+    cmds:
+      - task: install:package
+        vars:
+          PACKAGE_NAME: pre-commit
+
+  install:poetry:
+    desc: Install poetry
+    cmds:
+      - task: install:package
+        vars:
+          PACKAGE_NAME: poetry
+
+  install:jq:
+    desc: Install jq
+    cmds:
+      - cmd: sudo apt-get update && sudo apt-get install -y --no-install-recommends jq
+        platforms: ["linux"]
+      - cmd: chocolatey install jq
+        platforms: [ "windows" ]
+    status:
+      - command -v jq
+
+  init-pre-commit:
+    desc: Initialize the pre-commit environment
+    deps:
+      - install:pre-commit
+    cmds:
+      - pre-commit install
+
+  init:
+    desc: Initialize the poetry environment
+    deps:
+      - install:poetry
+    cmds:
+      - poetry install
+      - task: init-pre-commit
+
+  update:
+    desc: Update the dependencies
+    deps:
+      - install:poetry
+    cmds:
+      - poetry update
+
+  lint:
+    desc: Lint the code
+    deps:
+      - install:pre-commit
+    cmds:
+      - pre-commit run --all
+
+  security:
+    desc: Run security checks
+    deps:
+      - install:jq
+      - task: install:package
+        vars:
+          PACKAGE_NAME: yq
+      - task: install:package
+        vars:
+          PACKAGE_NAME: jake
+    platforms: ["linux"]
+    cmds:
+      - tomlq -t 'del(.package[] | select(.category != "main"))' poetry.lock | jake ddt -t POETRY
+
+  mypy:
+    desc: Run type checking
+    cmds:
+      - cmd: poetry install --with typing
+      - cmd: poetry run mypy pycivil
+
+  test:
+    desc: Run the tests
+    cmds:
+      - uv sync --group test
+      - uv run pytest -m "not needLatex and not codeaster" {{.CLI_ARGS}} --cov -v
+
+  test-with-latex:
+    desc: Run the tests with Latex
+    cmds:
+      - uv run pytest -m needLatex {{.CLI_ARGS}}  --cov -v
+
+  test-with-aster:
+    desc: Run the tests with code_aster
+    cmds:
+      - uv run pytest -m codeaster {{.CLI_ARGS}}  --cov -v
+
+  test-docker:
+    desc: Run the tests inside docker
+    cmds:
+      - docker compose up -d
+      - docker compose exec -ti pycivile /bin/bash -c 'pip install pytest pytest-mock mongomock httpx && pytest -v tests{{.CLI_ARGS}} --in-container'
+
+
+
+  default:
+    cmds:
+      - task: lint
+      - task: test
+      - task: security
+      - task: mypy
+
+  docs:
+    cmds:
+      - poetry install --without main --with docs
+      - poetry run mkdocs serve
+
+  build-dockers:
+    desc: Build the docker images
+    vars:
+      GIT_TAG:
+        sh: git describe --tags
+    cmds:
+      - docker build -t registry.gitlab.com/luigi_paone/pycivile/pycivile:latest -t registry.gitlab.com/luigi_paone/pycivile/pycivile:{{.GIT_TAG}} .
+
+  push-dockers:
+    desc: Push the docker images to the registry
+    deps:
+      - build-dockers
+    cmds:
+      - docker push --all-tags registry.gitlab.com/luigi_paone/pycivile/pycivile
+      - docker push --all-tags registry.gitlab.com/luigi_paone/pycivile/code-aster
+
+  kaniko:
+    desc: Simulate the building of the docker images using kaninko inside docker
+    cmds:
+      - docker run --rm -v $(pwd):/workspace gcr.io/kaniko-project/executor:v1.18.0-debug --dockerfile /workspace/Dockerfile --context dir:///workspace/ --no-push
