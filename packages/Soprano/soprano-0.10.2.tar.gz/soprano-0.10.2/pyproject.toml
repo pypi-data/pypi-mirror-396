@@ -1,0 +1,334 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "Soprano"
+dynamic = ["version"]
+description = "A Python library to crack crystals"
+readme = "README.md"
+license = "LGPL-3.0-or-later"
+requires-python = ">=3.10"
+authors = [
+    { name = "Simone Sturniolo", email = "simone.sturniolo@stfc.ac.uk" },
+    { name = "J. Kane Shenton", email = "kane.shenton@stfc.ac.uk" },
+]
+keywords = [
+    "ccpnc",
+    "computational chemistry",
+    "crystallography",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU Library or Lesser General Public License (LGPL)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+    "adjustText",
+    "ase>=3.26",
+    "bottleneck>=1.3.6",
+    "click>=8.2.1,<8.3",
+    "click_log",
+    "matplotlib",
+    "numpy>=1.18.5",
+    "pandas>=2.0",
+    "scipy",
+    "spglib>=2.4",
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black",
+    "flake8",
+    "pre-commit",
+    "pytest",
+    "pytest-cov"
+]
+docs = [
+    "jupyter-book~=1.0.2",
+    "sphinx-click",
+    "sphinxcontrib-bibtex",
+    "sphinxcontrib-mermaid",
+]
+# For compatibility with older numpy versions
+legacy = [
+    "numpy>=1.26.0,<2.0",
+]
+
+[project.scripts]
+extract_nmr = "soprano.scripts.extract_nmr:__main__"
+magresaverage = "soprano.scripts.msaverage:__main__"
+phylogen = "soprano.scripts.phylogen:__main__"
+soprano = "soprano.scripts.cli:soprano"
+soprano_submitter = "soprano.hpc.submitter:__main__"
+vasp2cell = "soprano.scripts.vasp2cell:__main__"
+
+[project.urls]
+Homepage = "https://ccp-nc.github.io/soprano/"
+
+[tool.hatch.version]
+path = "soprano/__init__.py"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build]
+include = ["soprano/**"]
+
+[tool.hatch.build.targets.sdist]
+include = ["/soprano"]
+
+# Environment management approach:
+# - Use 'dev' environment for standard development with stable ASE
+# - Use 'test' environment for CI/CD with development ASE
+# - Use 'dev:test-git' or 'docs:build-git' for development ASE when needed
+
+# Default environment - stable versions for end users
+[tool.hatch.envs.default]
+installer = "uv"
+description = "Default environment with stable package versions"
+
+# Development environment - includes dev tools
+[tool.hatch.envs.dev]
+description = "Development environment with testing and linting tools"
+features = ["dev"]
+
+[tool.hatch.envs.dev.scripts]
+# Install development ASE from git (run manually when needed)
+install-git-ase = "uv pip install --upgrade git+https://gitlab.com/ase/ase.git@master"
+# Standard test using stable ASE
+test = "pytest {args}"
+# Test with development ASE (run install-git-ase first)
+test-git = ["install-git-ase", "pytest {args}"]
+lint = "flake8 soprano tests"
+format = "black soprano tests"
+format-check = "black --check soprano tests"
+pre-commit-install = "pre-commit install"
+pre-commit-run = "pre-commit run --all-files"
+
+# Testing environment - specifically for CI/CD with stable ASE
+[tool.hatch.envs.test]
+description = "Testing environment"
+dependencies = [
+    "ase>=3.26",
+    "adjustText",
+    "bottleneck>=1.3.6",
+    "click>=8.2.1,<8.3",
+    "click_log",
+    "matplotlib",
+    "numpy",
+    "pandas>=2.0",
+    "scipy",
+    "spglib>=2.4",
+    "pydantic>=2.0",
+    "coverage[toml]>=6.5",
+    "pytest"
+]
+
+[tool.hatch.envs.test.scripts]
+test = "pytest {args}"
+coverage = "pytest --cov=soprano --cov-report=html --cov-report=term {args}"
+
+# Documentation environment
+[tool.hatch.envs.docs]
+description = "Documentation building environment"
+features = ["docs"]
+
+[tool.hatch.envs.docs.scripts]
+# Install development ASE from git (run manually when needed)
+install-git-ase = "uv pip install --upgrade git+https://gitlab.com/ase/ase.git@master"
+# Standard build using stable ASE
+build = "jupyter-book build docs"
+# Build with development ASE (run install-git-ase first)
+build-git = ["install-git-ase", "jupyter-book build docs"]
+serve = "python -m http.server -d docs/_build/html {args}"
+clean = "jupyter-book clean docs"
+
+# Legacy environment for older numpy compatibility
+[tool.hatch.envs.legacy]
+description = "Legacy environment for numpy 1.x compatibility testing"
+detached = true
+dependencies = [
+    "adjustText",
+    "ase>=3.22.0,<3.23",
+    "bottleneck>=1.3.6",
+    "click>=8.2.1,<8.3",
+    "click_log",
+    "matplotlib",
+    "numpy>=1.26.0,<2.0",
+    "pandas>=2.0",
+    "scipy",
+    "spglib>=2.4",
+    "pydantic>=2.0",
+    # Dev dependencies
+    "black",
+    "flake8",
+    "pytest",
+    "pytest-cov"
+]
+
+[tool.hatch.envs.legacy.scripts]
+test = "pytest {args}"
+format = "black soprano tests"
+lint = "flake8 soprano tests"
+
+# Python version compatibility testing matrix
+# Use with: hatch run py-compat:test
+[tool.hatch.envs.py-compat]
+description = "Python version compatibility testing"
+features = ["dev"]
+template = "py-compat"
+
+[[tool.hatch.envs.py-compat.matrix]]
+python = ["3.10", "3.11", "3.12", "3.13"]
+
+[tool.hatch.envs.py-compat.scripts]
+test = "pytest {args}"
+test-verbose = "pytest -v {args}"
+
+# Compatibility testing for different numpy versions
+# Use with: hatch run compat-1x:test, hatch run compat-2x:test, etc.
+
+[tool.hatch.envs.compat-1x]
+description = "Compatibility testing with numpy 1.x"
+detached = true
+dependencies = [
+    "adjustText",
+    "bottleneck>=1.3.6",
+    "click>=8.2.1,<8.3",
+    "click_log",
+    "matplotlib",
+    "numpy>=1.20,<2.0",
+    "pandas>=2.0",
+    "scipy",
+    "spglib>=2.4",
+    "pydantic>=2.0",
+    "ase>=3.26",
+    # Dev dependencies
+    "black",
+    "flake8",
+    "pytest",
+    "pytest-cov"
+]
+
+[tool.hatch.envs.compat-1x.scripts]
+test = "pytest {args}"
+test-verbose = "pytest -v {args}"
+
+[tool.hatch.envs.compat-2x]
+description = "Compatibility testing with numpy 2.x"
+detached = true
+dependencies = [
+    "adjustText",
+    "bottleneck>=1.3.6",
+    "click>=8.2.1,<8.3",
+    "click_log",
+    "matplotlib",
+    "numpy>=2.0,<3.0",
+    "pandas>=2.0",
+    "scipy",
+    "spglib>=2.4",
+    "pydantic>=2.0",
+    "ase>=3.26",
+    # Dev dependencies
+    "black",
+    "flake8",
+    "pytest",
+    "pytest-cov"
+]
+
+[tool.hatch.envs.compat-2x.scripts]
+test = "pytest {args}"
+test-verbose = "pytest -v {args}"
+
+[tool.hatch.envs.compat-latest]
+description = "Compatibility testing with latest package versions"
+detached = true
+dependencies = [
+    "adjustText",
+    "bottleneck>=1.3.6",
+    "click>=8.2.1,<8.3",
+    "click_log",
+    "matplotlib",
+    "numpy",
+    "pandas>=2.0",
+    "scipy",
+    "spglib>=2.4",
+    "pydantic>=2.0",
+    "ase>=3.26",
+    # Dev dependencies
+    "black",
+    "flake8",
+    "pytest",
+    "pytest-cov"
+]
+
+[tool.hatch.envs.compat-latest.scripts]
+test = "pytest {args}"
+test-verbose = "pytest -v {args}"
+
+# Benchmarking environment (optional)
+[tool.hatch.envs.bench]
+description = "Performance benchmarking environment"
+dependencies = [
+    "pytest-benchmark",
+    "memory_profiler",
+]
+features = ["dev"]
+
+[tool.hatch.envs.bench.scripts]
+bench = "pytest --benchmark-only {args}"
+profile = "python -m memory_profiler {args}"
+
+# Additional tool configurations
+[tool.black]
+line-length = 88
+target-version = ['py310']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+    \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[tool.coverage.run]
+source = ["soprano"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "setup.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+]
