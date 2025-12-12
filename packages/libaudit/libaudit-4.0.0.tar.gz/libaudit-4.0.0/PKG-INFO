@@ -1,0 +1,72 @@
+Metadata-Version: 2.4
+Name: libaudit
+Version: 4.0.0
+Summary: Общая библиотека логирования изменений данных в БД
+Home-page: https://stash.bars-open.ru/projects/EDUEO/repos/libaudit/
+Author: BARS Group
+Author-email: education_dev@bars-open.ru
+Classifier: Intended Audience :: Developers
+Classifier: Environment :: Web Environment
+Classifier: Natural Language :: Russian
+Classifier: Natural Language :: English
+Classifier: Operating System :: OS Independent
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Framework :: Django :: 3.2
+Classifier: Framework :: Django :: 4.0
+Classifier: Framework :: Django :: 4.1
+Classifier: Framework :: Django :: 4.2
+Classifier: Framework :: Django :: 5.0
+Description-Content-Type: text/markdown
+License-File: LICENCE
+Requires-Dist: Django
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: license-file
+Dynamic: requires-dist
+Dynamic: summary
+
+# Библиотека логирования изменений данных в БД
+## Подключение
+
+requirements:
+
+    libaudit>=2.0.0,<3.0
+
+settings:
+
+    INSTALLED_APPS = [
+        ...
+        'libaudit',
+        ...
+    ]
+
+    MIDDLEWARE = [
+        ...
+        'django.contrib.auth.middleware.AuthenticationMiddleware',
+        'libaudit.middleware.AuditLogMiddleware',
+        ...
+    ]
+
+    LIBAUDIT = {
+        'HANDLER': 'libaudit.handlers.database_table',  # или иной обработчик
+        'CONTEXT_RESOLVER_CLS': 'my_app.audit.MyAuditContextResolver',
+        'EXCLUDED_TABLES': (),  # опционально
+        'SETUP_AUDIT_CONTEXT_FOR_READONLY_REQUESTS': False,  # опционально
+	}
+
+Реализовано два обработчика: [хранение в таблице](src/libaudit/handlers/database_table/README.md) и [отправка в стандартный вывод СУБД](src/libaudit/handlers/stdout/README.md).
+
+Дополнения: [contrib](src/libaudit/contrib/README.md)
+
+## Запуск тестов
+    $ tox
