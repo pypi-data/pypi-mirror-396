@@ -1,0 +1,56 @@
+[build-system]
+requires = [
+    "setuptools>=61",
+    "wheel",
+    "cython>=3.0",
+    "numpy>=2.0.0"
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "phasepy"
+version = "0.0.56"
+description = "Multiphase multicomponent Equilibria"
+readme = "long_description.rst"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+    { name = "Gustavo Chaparro", email = "gchaparro@ethz.ch" },
+    { name = "Andres Mejia Matallana" }
+]
+keywords = [
+    "Phase Equilibrium", "Cubic EOS", "QMR", "MHV", "WS", "NRTL",
+    "Wilson", "UNIFAC", "UNIQUAC", "Flash", "VLE", "LLE", "VLLE", "SGT"
+]
+dependencies = [
+    "numpy>=2.0.0",
+    "scipy>=1.13",
+    "pandas>=2.2",
+    "openpyxl>=3.0.0"
+]
+
+[project.urls]
+Homepage = "https://github.com/gustavochm/phasepy"
+Download = "https://github.com/gustavochm/phasepy.git"
+
+[project.optional-dependencies]
+dev = [
+    "cython>=3.0",
+    "pytest>=6.0",
+    "build"
+]
+
+[tool.setuptools]
+# Explicitly tell setuptools to include extension modules
+py-modules = []
+
+[tool.setuptools.packages.find]
+include = ["phasepy*"]
+namespaces = false
+
+[tool.setuptools.package-data]
+phasepy = ["database/*"]
+
+[tool.cibuildwheel]
+build-verbosity = 3
+before-build = "pip install numpy cython"
