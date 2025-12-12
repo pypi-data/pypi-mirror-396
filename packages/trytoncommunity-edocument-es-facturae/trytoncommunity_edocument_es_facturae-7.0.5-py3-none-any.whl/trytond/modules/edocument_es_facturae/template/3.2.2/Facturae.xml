@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The COPYRIGHT file at the top level of this repository contains the full
+copyright notices and license terms. -->
+<fe:Facturae 
+    xmlns:fe="http://www.facturae.gob.es/formato/Versiones/Facturaev3_2_2.xml"
+    xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
+    xmlns:py="http://genshi.edgewall.org/">
+  <py:def function="TradeParty(party, address=None, tax_identifier=None, centers=None)">
+    <TaxIdentification py:if="tax_identifier">
+      <PersonTypeCode>${tax_identifier.facturae_person_type_code()}</PersonTypeCode>
+      <ResidenceTypeCode>${tax_identifier.facturae_residence_type_code()}</ResidenceTypeCode>
+      <TaxIdentificationNumber>${tax_identifier.es_code()}</TaxIdentificationNumber>
+    </TaxIdentification>
+    <AdministrativeCentres py:if="centers">
+        <AdministrativeCentre py:for="center in centers">
+        <CentreCode>${center.address.es_facturae_center_code[:10]}</CentreCode>
+        <RoleTypeCode>${center.role}</RoleTypeCode>
+        ${TradeAddress(center.address)}
+        <CentreDescription py:if="center.description">${center.description[:2500]}</CentreDescription>
+        </AdministrativeCentre>
+    </AdministrativeCentres>
+    <LegalEntity>
+        <CorporateName>${party.name[:80]}</CorporateName>
+        ${TradeAddress(address)}
+        <ContactDetails py:if="party.phone or party.email or party.fax or party.website">
+            <Telephone py:if="party.phone">${strip_spaces(party.phone)[:15]}</Telephone>
+            <TeleFax py:if="party.fax">${strip_spaces(party.fax)[:15]}</TeleFax>
+            <WebAddress py:if="party.website">${party.website[:60]}</WebAddress>
+            <ElectronicMail py:if="party.email">${party.email[:60]}</ElectronicMail>
+        </ContactDetails>
+    </LegalEntity>
+  </py:def>
+  <py:def function="TradeAddress(address)">
+    <AddressInSpain py:if="address and address.country and address.country.code == 'ES'">
+      <Address>${address.street[:80] if address.street else ''}</Address>
+      <PostCode>${address.postal_code if address.postal_code else ''}</PostCode>
+      <Town>${address.city[:50] if address.city else ''}</Town>
+      <Province>${address.subdivision.name[:20] if address.subdivision else ''}</Province>
+      <CountryCode>${address.country.code3 if address.country else ''}</CountryCode>
+    </AddressInSpain>
+    <OverseasAddress py:if="address and not address.country or address.country.code != 'ES'">
+      <Address>${address.street[:80]}</Address>
+      <PostCodeAndTown>${address.city[:50]}</PostCodeAndTown>
+      <Province>${address.subdivision.name[:20] if address.subdivision else ''}</Province>
+      <CountryCode>${address.country.code3 if address.country else ''}</CountryCode>
+    </OverseasAddress>
+  </py:def>
+  <py:def function="Tax(tax, amount, base)">
+    <Tax>
+      <TaxTypeCode>${tax.es_facturae_type or ''}</TaxTypeCode>
+      <TaxRate py:if="tax.rate">${tax.rate * 100}</TaxRate>
+      <TaxRate py:if="not tax.rate and base">${"{0:.8f}".format((amount / base).quantize(Decimal('0.00000001')) * 100)}</TaxRate>
+      <TaxableBase>
+        <TotalAmount>${base or 0}</TotalAmount>
+      </TaxableBase>
+      <TaxAmount>
+        <TotalAmount>${amount or 0}</TotalAmount>
+      </TaxAmount>
+    </Tax>
+  </py:def>
+  <FileHeader>
+    <SchemaVersion>3.2.2</SchemaVersion>
+    <Modality>I</Modality>
+    <InvoiceIssuerType>EM</InvoiceIssuerType>
+    <Batch>
+      <BatchIdentifier>${this.batch_identifier[:70]}</BatchIdentifier>
+      <InvoicesCount>1</InvoicesCount>
+      <TotalInvoicesAmount>
+        <TotalAmount>${this.invoice.total_amount}</TotalAmount>
+      </TotalInvoicesAmount>
+      <TotalOutstandingAmount>
+        <TotalAmount>${this.invoice.total_amount}</TotalAmount>
+      </TotalOutstandingAmount>
+      <TotalExecutableAmount>
+        <TotalAmount>${this.invoice.total_amount}</TotalAmount>
+      </TotalExecutableAmount>
+      <InvoiceCurrencyCode>${this.invoice.currency.code.upper()}</InvoiceCurrencyCode>
+    </Batch>
+  </FileHeader>
+  <Parties>
+    <SellerParty>
+        ${TradeParty(this.seller_party, this.seller_address, this.seller_tax_identifier, this.seller_administrative_centers)}
+    </SellerParty>
+    <BuyerParty>
+        ${TradeParty(this.buyer_party, this.buyer_address, this.buyer_tax_identifier, this.buyer_administrative_centers)}
+    </BuyerParty>
+  </Parties>
+  <Invoices>
+    <Invoice>
+      <InvoiceHeader>
+        <InvoiceNumber>${this.invoice_number}</InvoiceNumber>
+        <InvoiceSeriesCode py:if="this.invoice_series_code">${this.invoice_series_code}</InvoiceSeriesCode>
+        <InvoiceDocumentType>${this.invoice_document_type}</InvoiceDocumentType>
+        <InvoiceClass>${this.invoice_class}</InvoiceClass>
+        <Corrective py:for="corrective in this.invoice.es_facturae_corrective_invoices">
+          <InvoiceNumber>${corrective.invoice_number}</InvoiceNumber>
+          <InvoiceSeriesCode py:if="corrective.invoice_series_code">${corrective.invoice_series_code}</InvoiceSeriesCode>
+          <ReasonCode>${corrective.reason}</ReasonCode>
+          <ReasonDescription>${corrective.reason_description}</ReasonDescription>
+          <TaxPeriod py:if="corrective.tax_period_start_date and corrective.tax_period_end_date">
+              <StartDate>${this.format_date(corrective.tax_period_start_date, format='%Y-%m-%d')}</StartDate>
+              <EndDate>${this.format_date(corrective.tax_period_end_date, format='%Y-%m-%d')}</EndDate>
+          </TaxPeriod>
+          <CorrectionMethod>${corrective.method}</CorrectionMethod>
+          <CorrectionMethodDescription>${corrective.method_description}</CorrectionMethodDescription>
+          <InvoiceIssueDate>${this.format_date(corrective.corrective_invoice_issue_date, format='%Y-%m-%d')}</InvoiceIssueDate>
+        </Corrective>
+      </InvoiceHeader>
+      <InvoiceIssueData>
+        <IssueDate>${this.format_date(this.invoice.invoice_date, format='%Y-%m-%d')}</IssueDate>
+        <OperationDate py:if="this.operation_date and this.operation_date != this.invoice.invoice_date">${this.format_date(this.operation_date, format='%Y-%m-%d')}</OperationDate>
+        <PlaceOfIssue py:if="this.place_of_issue_post_code">
+            <PostCode>${this.place_of_issue_post_code}</PostCode>
+            <PlaceOfIssueDescription py:if="this.place_of_issue_description">${this.place_of_issue_description[:20]}</PlaceOfIssueDescription>
+        </PlaceOfIssue>
+        <InvoicingPeriod py:if="this.invoicing_start_date and this.invoicing_end_date">
+            <StartDate>${this.format_date(this.invoicing_start_date, format='%Y-%m-%d')}</StartDate>
+            <EndDate>${this.format_date(this.invoicing_end_date, format='%Y-%m-%d')}</EndDate>
+        </InvoicingPeriod>
+        <InvoiceCurrencyCode>${this.invoice.currency.code.upper()}</InvoiceCurrencyCode>
+        <ExchangeRateDetails py:if="this.exchange_rate and this.exchange_rate_date">
+            <ExchangeRate>${this.exchange_rate}</ExchangeRate>
+            <ExchangeRateDate>${this.format_date(this.exchange_rate_date, format='%Y-%m-%d')}</ExchangeRateDate>
+        </ExchangeRateDetails>
+        <TaxCurrencyCode>${this.invoice.currency.code.upper()}</TaxCurrencyCode>
+        <LanguageName>${this.lang.code}</LanguageName>
+        <InvoiceDescription py:if="this.invoice_description">${this.invoice_description[:2500]}</InvoiceDescription>
+        <ReceiverTransactionReference py:if="this.invoice_receiver_transaction_reference">${this.invoice_receiver_transaction_reference[:20]}</ReceiverTransactionReference>
+        <FileReference py:if="this.invoice_file_reference">${this.invoice_file_reference[:20]}</FileReference>
+      </InvoiceIssueData>
+      <TaxesOutputs>
+        <py:for each="tax in this.invoice.taxes">
+            ${Tax(tax.tax, tax.amount, tax.base)}
+        </py:for>
+      </TaxesOutputs>
+      <InvoiceTotals>
+        <TotalGrossAmount>${this.invoice.untaxed_amount}</TotalGrossAmount>
+        <TotalGeneralDiscounts>0.0</TotalGeneralDiscounts>
+        <TotalGeneralSurcharges>0.0</TotalGeneralSurcharges>
+        <TotalGrossAmountBeforeTaxes>${this.invoice.untaxed_amount}</TotalGrossAmountBeforeTaxes>
+        <TotalTaxOutputs>${this.invoice.tax_amount}</TotalTaxOutputs>
+        <TotalTaxesWithheld>0.0</TotalTaxesWithheld>
+        <InvoiceTotal>${this.invoice.total_amount}</InvoiceTotal>
+        <TotalOutstandingAmount>${this.invoice.total_amount}</TotalOutstandingAmount>
+        <TotalExecutableAmount>${this.invoice.total_amount}</TotalExecutableAmount>
+        <TotalReimbursableExpenses>0.0</TotalReimbursableExpenses>
+      </InvoiceTotals>
+      <Items>
+          <InvoiceLine py:for="line in this.lines">
+              <IssuerContractReference py:if="this.issuer_contract_reference(line)">${this.issuer_contract_reference(line)[:20]}</IssuerContractReference>
+              <IssuerContractDate py:if="this.issuer_contract_date(line)">${this.format_date(this.issuer_contract_date(line), format='%Y-%m-%d')}</IssuerContractDate>
+              <IssuerTransactionReference py:if="this.issuer_transaction_reference(line)">${this.issuer_transaction_reference(line)[:20]}</IssuerTransactionReference>
+              <IssuerTransactionDate py:if="this.issuer_transaction_date(line)">${this.format_date(this.issuer_transaction_date(line), format='%Y-%m-%d')}</IssuerTransactionDate>
+              <ReceiverContractReference py:if="this.receiver_contract_reference(line)">${this.receiver_contract_reference(line)[:20]}</ReceiverContractReference>
+              <ReceiverContractDate py:if="this.receiver_contract_date(line)">${this.format_date(this.receiver_contract_date(line), format='%Y-%m-%d')}</ReceiverContractDate>
+              <ReceiverTransactionReference py:if="this.receiver_transaction_reference(line)">${this.receiver_transaction_reference(line)[:20]}</ReceiverTransactionReference>
+              <ReceiverTransactionDate py:if="this.receiver_transaction_date(line)">${this.format_date(this.receiver_transaction_date(line), format='%Y-%m-%d')}</ReceiverTransactionDate>
+              <FileReference py:if="this.item_file_reference(line)">${this.item_file_reference(line)}</FileReference>
+              <FileDate py:if="this.item_file_date(line)">${this.format_date(this.item_file_date(line), format='%Y-%m-%d')}</FileDate>
+              <SequenceNumber py:if="this.sequence_number(line)">${this.sequence_number(line)}</SequenceNumber>
+              <DeliveryNotesReferences py:if="this.delivery_notes_references">
+                  <DeliveryNote py:for="note in this.delivery_notes_references">
+                      <DeliveryNoteNumber>${note[0]}</DeliveryNoteNumber>
+                      <DeliveryNoteDate py:if="note[1]">${this.format_date(note[1], format='%Y-%m-%d')}</DeliveryNoteDate>
+                  </DeliveryNote>
+              </DeliveryNotesReferences>
+              <ItemDescription>${this.item_description(line)[:2500]}</ItemDescription>
+              <LineItemPeriod py:if="this.item_start_period(line) and this.item_end_period(line)">
+                  <StartDate>${this.format_date(this.item_start_period(line), format='%Y-%m-%d')}</StartDate>
+                  <EndDate>${this.format_date(this.item_end_period(line), format='%Y-%m-%d')}</EndDate>
+              </LineItemPeriod>
+              <Quantity>${line.quantity}</Quantity>
+              <UnitOfMeasure>01</UnitOfMeasure>
+              <UnitPriceWithoutTax>${line.unit_price}</UnitPriceWithoutTax>
+          <TotalCost>${line.amount}</TotalCost>
+          <GrossAmount>${line.amount}</GrossAmount>
+          <TaxesOutputs>
+            <py:for each="tax in line.invoice_taxes">
+                ${Tax(tax.tax, tax.amount, line.amount)}
+            </py:for>
+          </TaxesOutputs>
+          <py:for each="tax in line.invoice_taxes">
+              <AdditionalLineItemInformation py:if="tax.tax and getattr(tax.tax, 'legal_notice', None) and tax.tax.es_facturae_type != '05'">${tax.tax.es_facturae_type} ${tax.tax.legal_notice}</AdditionalLineItemInformation>
+              <AdditionalLineItemInformation py:if="tax.tax and tax.tax.es_facturae_type == '05'">
+                05 ${tax.tax.rate * 100 if tax.tax.rate else '0.00'} ${line.amount or 0} ${tax.amount or 0} = ${tax.tax.name}
+              </AdditionalLineItemInformation>
+          </py:for>
+        </InvoiceLine>
+     </Items>
+     <PaymentDetails py:if="this.payment_means">
+       <Installment py:for="line in this.invoice.lines_to_pay">
+         <InstallmentDueDate>${this.format_date(line.maturity_date or this.invoice.date , format='%Y-%m-%d')}</InstallmentDueDate>
+         <InstallmentAmount>${line.amount}</InstallmentAmount>
+         <PaymentMeans>${this.payment_means}</PaymentMeans>
+         <AccountToBeCredited py:if="this.account_to_be_credited">
+             <IBAN>${this.account_to_be_credited}</IBAN>
+         </AccountToBeCredited>
+       </Installment>
+     </PaymentDetails>
+      <AdditionalData py:if="this.additional_information">
+        <InvoiceAdditionalInformation>${this.additional_information}</InvoiceAdditionalInformation>
+      </AdditionalData>
+    </Invoice>
+  </Invoices>
+</fe:Facturae>
