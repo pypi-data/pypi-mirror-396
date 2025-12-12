@@ -1,0 +1,428 @@
+# Claude Bedrock CLI
+
+A powerful command-line interface for Claude AI that uses AWS Bedrock instead of direct Anthropic API subscriptions. This is a full-featured implementation inspired by Claude Code, allowing you to interact with Claude, edit files, run commands, and manage complex tasks - all while using your existing AWS Bedrock subscription.
+
+## Features
+
+- **Full Claude Code Experience**: Replicates core Claude Code functionality using AWS Bedrock
+- **File Operations**: Read, write, and edit files with Claude's assistance
+- **Command Execution**: Run bash/shell commands directly from the CLI
+- **Code Search**: Search for patterns (grep) and find files (glob)
+- **Human-in-the-Loop**: Approve tool executions before they run, with feedback capability
+- **Task Management**: Built-in todo list for tracking complex tasks
+- **Rich Interface**: Beautiful terminal UI with markdown rendering
+- **Conversation History**: Persistent conversation across sessions
+- **Streaming Responses**: Real-time streaming of Claude's responses
+
+## Prerequisites
+
+- Python 3.8 or higher
+- AWS Account with Bedrock access
+- Claude model enabled in AWS Bedrock (e.g., Claude 3.5 Sonnet)
+- AWS credentials configured
+
+## Installation
+
+### Option 1: Install from PyPI (Recommended for Users)
+
+Simply install using pip:
+
+```bash
+pip install claude-bedrock-cli
+```
+
+That's it! The `claude-bedrock` command will be available globally.
+
+### Option 2: Install from Source (For Developers)
+
+If you want to modify the code:
+
+```bash
+
+# Install in development mode
+pip install -e .
+```
+
+## Configuration
+
+### 1. Configure AWS credentials
+
+Make sure your AWS credentials are configured. You can do this by:
+
+**Option A: AWS CLI Configuration**
+```bash
+aws configure
+```
+
+**Option B: Environment Variables**
+
+Create a `.env` file in your working directory:
+
+```env
+AWS_ACCESS_KEY_ID=your_access_key_here
+AWS_SECRET_ACCESS_KEY=your_secret_key_here
+AWS_REGION=us-east-1
+BEDROCK_MODEL_ID=anthropic.claude-3-5-sonnet-20241022-v2:0
+```
+
+The CLI will automatically load these when you run it from that directory.
+
+### 2. Enable Bedrock Model Access
+
+Make sure you have access to Claude models in AWS Bedrock:
+
+1. Go to AWS Console → Bedrock → Model access
+2. Request access to Anthropic Claude models if not already enabled
+3. Wait for approval (usually instant for Claude models)
+
+## Usage
+
+### Basic Usage
+
+Run the CLI from any directory:
+
+```bash
+python -m claude_cli.main
+```
+
+Or if installed via setup.py:
+
+```bash
+claude-bedrock
+```
+
+### Options
+
+```bash
+# Use a specific working directory
+claude-bedrock --working-dir /path/to/project
+
+# Use a different model
+claude-bedrock --model-id anthropic.claude-3-opus-20240229-v1:0
+
+# Continue from previous session (load conversation history)
+claude-bedrock --continue
+
+# Auto-approve all tool executions (skip confirmation prompts)
+claude-bedrock --yes
+
+# Combined
+claude-bedrock -d /path/to/project -m anthropic.claude-3-5-sonnet-20241022-v2:0 -c -y
+```
+
+**Notes:**
+- By default, each session starts fresh. Use `--continue` or `-c` to load your previous conversation history.
+- By default, you'll be prompted to approve tool executions (Write, Edit, Bash, etc.). Use `--yes` or `-y` to auto-approve all tools.
+
+### Interactive Commands
+
+Once in the CLI:
+
+- Type your questions or requests naturally
+- Type `/clear` to clear conversation history
+- Type `/todos` to view the current todo list
+- Type `exit` or `quit` to exit
+
+### Human-in-the-Loop Approval
+
+By default, Claude will ask for your approval before executing tools like Write, Edit, or Bash commands. This gives you control over what changes are made to your system.
+
+**When a tool is about to execute, you'll see:**
+
+```
+┌─ Tool Execution Request: Write ──────────┐
+│ Write                                     │
+│   File: login.html (new file)            │
+│   Lines: 45                               │
+│   Content preview:                        │
+│                                           │
+│ +   1 | <!DOCTYPE html>                  │
+│ +   2 | <html>...                        │
+└───────────────────────────────────────────┘
+
+Approve this action? (Use ↑↓ arrows, press Enter)
+> ✓ Approve - Execute this action
+  ✗ Reject - Provide feedback
+  ✓✓ Approve All - Auto-approve all remaining
+```
+
+**Navigation:**
+- **↑/↓ Arrow Keys** - Move between options
+- **Enter** - Confirm selection
+- **Ctrl+C** - Cancel
+
+**Options:**
+- **✓ Approve** - Execute this tool
+- **✗ Reject** - Provide feedback on what to do differently
+- **✓✓ Approve All** - Auto-approve this and all remaining tools in the session
+
+**Example workflow:**
+```
+> Create a login page
+
+[Shows diff preview with line numbers]
+Approve this action? (Use ↑↓ arrows, press Enter)
+> ✓ Approve - Execute this action
+  ✗ Reject - Provide feedback
+  ✓✓ Approve All - Auto-approve all remaining
+
+[Press ↓ to move to Reject]
+  ✓ Approve - Execute this action
+> ✗ Reject - Provide feedback
+  ✓✓ Approve All - Auto-approve all remaining
+
+[Press Enter]
+✗ Rejected
+
+Please provide feedback: Use a dark theme instead
+
+[Claude adjusts and shows new diff]
+[Press Enter on Approve]
+✓ Approved
+File created!
+```
+
+### Example Interactions
+
+**File Operations:**
+```
+> Read the README.md file and summarize it
+
+> Create a new Python file called hello.py with a hello world function
+
+> Find all Python files in this directory
+```
+
+**Code Search:**
+```
+> Search for the function definition of "calculate_total"
+
+> Find all files containing "TODO"
+
+> Show me all TypeScript files in the src directory
+```
+
+**Command Execution:**
+```
+> Run the tests using pytest
+
+> Show me the git status
+
+> Install the dependencies from requirements.txt
+```
+
+**Complex Tasks:**
+```
+> I need to refactor the authentication module to use JWT tokens instead of sessions
+
+> Help me debug this error: [paste error]
+
+> Create a REST API endpoint for user registration with proper validation
+```
+
+## Available Tools
+
+Claude has access to the following tools:
+
+### Read
+Read files from the filesystem with optional line ranges.
+
+### Write
+Create new files or overwrite existing ones.
+
+### Edit
+Edit existing files by replacing exact string matches.
+
+### Bash
+Execute shell commands and capture output.
+
+### Grep
+Search for regex patterns in files with filtering options.
+
+### Glob
+Find files matching glob patterns (e.g., `**/*.py`).
+
+## Project Structure
+
+```
+claude-bedrock-cli/
+├── claude_cli/
+│   ├── __init__.py
+│   ├── main.py              # CLI entry point
+│   ├── bedrock_client.py    # AWS Bedrock API wrapper
+│   ├── tools.py             # Tool implementations
+│   ├── conversation.py      # Conversation management
+│   └── todo_manager.py      # Todo list management
+├── requirements.txt
+├── setup.py
+├── .env.example
+├── .gitignore
+└── README.md
+```
+
+## Configuration
+
+### Environment Variables
+
+- `AWS_ACCESS_KEY_ID`: AWS access key (optional if using AWS CLI config)
+- `AWS_SECRET_ACCESS_KEY`: AWS secret key (optional if using AWS CLI config)
+- `AWS_REGION`: AWS region (default: us-east-1)
+- `BEDROCK_MODEL_ID`: Bedrock model ID (default: anthropic.claude-3-5-sonnet-20241022-v2:0)
+
+### Available Models
+
+Choose from these Bedrock model IDs:
+
+- `anthropic.claude-3-5-sonnet-20241022-v2:0` - Latest Sonnet (recommended)
+- `anthropic.claude-3-opus-20240229-v1:0` - Most capable
+- `anthropic.claude-3-sonnet-20240229-v1:0` - Balanced
+- `anthropic.claude-3-haiku-20240307-v1:0` - Fastest
+
+## Cost Considerations
+
+This CLI uses AWS Bedrock, which charges based on:
+- Input tokens (what you send to Claude)
+- Output tokens (what Claude generates)
+
+Pricing varies by model and region. Check [AWS Bedrock Pricing](https://aws.amazon.com/bedrock/pricing/) for current rates.
+
+**Tips to minimize costs:**
+- Use Claude 3.5 Sonnet for best balance of performance and cost
+- Clear conversation history (`/clear`) for unrelated tasks
+- Use Claude 3 Haiku for simple tasks
+
+## Troubleshooting
+
+### "Access Denied" Error
+
+**Solution:** Make sure you have:
+1. Valid AWS credentials configured
+2. Bedrock model access enabled in AWS Console
+3. Proper IAM permissions for Bedrock
+
+Required IAM permissions:
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:InvokeModel",
+        "bedrock:InvokeModelWithResponseStream"
+      ],
+      "Resource": "arn:aws:bedrock:*::foundation-model/anthropic.claude-*"
+    }
+  ]
+}
+```
+
+### "Model Not Found" Error
+
+**Solution:**
+1. Check that the model ID is correct
+2. Verify model access is enabled in AWS Bedrock Console
+3. Make sure you're using the correct region
+
+### Slow Response Times
+
+**Solution:**
+- Try a different AWS region closer to you
+- Use a faster model (Claude 3 Haiku)
+- Check your internet connection
+
+### Tool Execution Errors
+
+**Solution:**
+- Make sure you have proper file permissions
+- Check that required commands (git, npm, etc.) are installed
+- Verify the working directory is correct
+
+## Comparison with Claude Code
+
+| Feature | Claude Code | Claude Bedrock CLI |
+|---------|-------------|-------------------|
+| Claude API | Direct Anthropic | AWS Bedrock |
+| File Operations | ✅ | ✅ |
+| Command Execution | ✅ | ✅ |
+| Code Search | ✅ | ✅ |
+| Todo Management | ✅ | ✅ |
+| Streaming | ✅ | ✅ |
+| Multi-agent System | ✅ | ⚠️ (Basic) |
+| Plan Mode | ✅ | ❌ |
+| Git Integration | ✅ | ⚠️ (Via Bash) |
+
+## Hosting Options
+
+### Local Usage
+Simply run the CLI on your local machine.
+
+### Remote Server
+You can deploy this on a remote server and SSH into it:
+
+```bash
+ssh your-server
+cd ~/claude-bedrock-cli
+claude-bedrock
+```
+
+### Docker (Optional)
+Create a Dockerfile:
+
+```dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+COPY . .
+
+RUN pip install -e .
+
+CMD ["claude-bedrock"]
+```
+
+Build and run:
+```bash
+docker build -t claude-bedrock-cli .
+docker run -it --rm \
+  -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+  -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+  -v $(pwd):/workspace \
+  claude-bedrock-cli --working-dir /workspace
+```
+
+## Contributing
+
+This is a personal tool, but feel free to fork and modify it for your needs!
+
+## Security Notes
+
+- Never commit your `.env` file or AWS credentials
+- Use IAM roles when running on EC2/ECS instead of access keys
+- Consider using AWS SSO for better security
+- Limit IAM permissions to only what's needed
+
+## License
+
+MIT License - feel free to use and modify as needed.
+
+## Support
+
+For AWS Bedrock issues, refer to [AWS Bedrock Documentation](https://docs.aws.amazon.com/bedrock/).
+
+For Claude-specific questions, see [Anthropic's Documentation](https://docs.anthropic.com/).
+
+## Roadmap
+
+Potential future enhancements:
+- [ ] Multi-agent system (Plan, Explore agents)
+- [ ] Plan mode for complex tasks
+- [ ] Web search integration
+- [ ] Image analysis support
+- [ ] Custom slash commands
+- [ ] Plugin system
+- [ ] Configuration profiles
+- [ ] Better error recovery
+
+---
+
+**Enjoy using Claude with your AWS Bedrock subscription!** 🚀
