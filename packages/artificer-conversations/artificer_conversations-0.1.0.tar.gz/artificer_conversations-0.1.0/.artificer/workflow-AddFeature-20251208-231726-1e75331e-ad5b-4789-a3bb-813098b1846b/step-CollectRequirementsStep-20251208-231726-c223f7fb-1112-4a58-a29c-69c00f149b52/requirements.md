@@ -1,0 +1,173 @@
+# Artificer Conversations — Requirements Document (MVP)
+
+## 1. Overview
+
+`artificer-conversations` extends the Artificer ecosystem with a lightweight, queue-based conversation system. It enables:
+
+- Workflows to pause and request user interaction
+- Agents to pull pending conversations in FIFO order
+- Developers to manually inspect, list, start, or add conversations via CLI
+
+The system is intentionally minimal: conversations have one state (queued or not), and starting a conversation always works whether it's still queued or already popped.
+
+All storage is JSON-based using `.artificer/conversations/` inside the project root.
+
+## 2. Goals
+
+- Provide a dead-simple mechanism for workflows to trigger user conversations
+- Allow agents or humans to fetch the "next conversation request"
+- Provide CLI tools for user interaction and debugging
+- Maintain focus on workflow-driven control flow, not user-chat history
+- Avoid unnecessary state machines or complex resource models
+
+## 3. Non-Goals
+
+- Storing or managing conversation transcripts
+- Handling multi-message dialogues
+- Providing an active conversation registry
+- Resuming or replaying conversations
+- Implementing any UI
+
+## 4. Functional Requirements
+
+### FR1 — Provide an Artificer CLI Module
+
+`artificer-conversations` must expose a class:
+
+```python
+class ConversationsModule(ArtificerModule):
+    ...
+```
+
+The Artificer CLI must be able to auto-discover and register this module when:
+
+```toml
+[tool.artificer]
+features = ["conversations"]
+```
+
+is present in `pyproject.toml`.
+
+### FR2 — Support CLI Commands
+
+#### FR2.1 — `artificer conversations add <prompt>`
+- Create a conversation object (JSON file)
+- Assign a unique ID
+- Store metadata (timestamp, optional workflow reference)
+- Append ID to queue list in `index.json`
+- Print conversation ID
+
+#### FR2.2 — `artificer conversations list`
+- Load `index.json`
+- Print all queued conversation IDs + prompts
+- Only show queued conversations
+
+#### FR2.3 — `artificer conversations next`
+- Pop the first ID from the queue
+- Print prompt + ID
+- Return non-zero exit code if queue empty
+
+#### FR2.4 — `artificer conversations start <id>`
+- If `<id>` is in the queue → remove it
+- If `<id>` is not in the queue → do nothing
+- If `<id>` does not exist → error
+- Output the conversation prompt + metadata for agent use
+- This command is idempotent
+
+### FR3 — JSON Storage Format
+
+Directory structure:
+```
+.artificer/
+  conversations/
+    index.json
+    <id>.json
+```
+
+**index.json:**
+```json
+{
+  "queue": ["abc123", "def456"]
+}
+```
+
+**conversation file (`<id>.json`):**
+```json
+{
+  "conversation_id": "abc123",
+  "prompt": "Write unit tests for artificer-cli",
+  "created_at": "2025-12-08T22:00Z",
+  "workflow_id": "optional",
+  "metadata": {}
+}
+```
+
+### FR4 — Workflow Conversation Step
+
+`artificer-conversations` must provide:
+
+```python
+class ConversationStep(Workflow.Step):
+    ...
+```
+
+Behavior:
+- Generate conversation JSON file
+- Push ID to queue
+- Store the ID in the Workflow step output
+- Pause the workflow
+
+The next workflow step runs only when resumed externally.
+
+## 5. Non-Functional Requirements
+
+### NFR1 — No External Dependencies
+- Pure Python + Artificer modules
+- Click dependency only through `artificer-cli`
+
+### NFR2 — Deterministic & Durable
+- JSON storage must be safe for concurrent read/write with simple file locks (optional for MVP)
+- Queue operations must not corrupt `index.json`
+
+### NFR3 — Human-readable Storage
+- Users should be able to inspect queued conversation files easily
+
+### NFR4 — Small API Surface
+- The module should remain minimal to avoid future breaking changes
+
+## 6. Testing Requirements
+
+### TR1 — Adding Conversations
+- Creates JSON file
+- Adds ID to queue
+- ID is unique
+
+### TR2 — Listing Conversations
+- Only queued items shown
+- Order preserved
+
+### TR3 — Popping Next Conversation
+- FIFO behavior enforced
+- Queue updates correctly
+- Error on empty queue
+
+### TR4 — Starting Conversation
+- Removes from queue if present
+- Does not break if ID not in queue
+- Errors if ID invalid
+- Prints prompt
+
+### TR5 — Workflow Conversation Step
+- Queues conversation
+- Saves ID in workflow output
+- Pauses workflow
+
+## 7. Future Extensions (Not Required Now)
+
+- Support for conversation metadata (severity, type, tags)
+- Support for time-based auto-expiration
+- Full transcript persistence
+- Dedicated MCP "conversation provider"
+- Web UI integration
+
+MVP must not depend on these features.
