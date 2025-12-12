@@ -1,0 +1,113 @@
+[project]
+name = "mendevi"
+description = "Video encoding and decoding measures."
+dynamic = ["version"]
+requires-python = ">=3.12,<3.15"
+authors = [
+  {name = "Robin RICHARD (robinechuca)", email = "robin.richard@inria.fr"},
+]
+maintainers = [
+  {name = "Robin RICHARD (robinechuca)", email = "robin.richard@inria.fr"},
+]
+dependencies = [  # https://packaging.python.org/en/latest/specifications/dependency-specifiers/#dependency-specifiers
+  "click",
+  "context_verbose",
+  "cutcutcodec",
+  "flufl.lock",
+  "levenshtein",
+  "matplotlib",
+  "networkx",
+  "numpy",
+  "nvidia-ml-py",
+  "orjson",
+  "psutil",
+  "pygments",
+  "requests",
+  "tqdm",
+  "unidecode",
+]
+readme = "README.rst"
+license = {file = "LICENSE"}
+keywords = [
+  "av1",
+  "consumption",
+  "energy",
+  "h264",
+  "h265",
+  "h266",
+  "measure",
+  "power",
+  "psnr",
+  "ssim",
+  "video decoding",
+  "video encoding",
+  "video",
+  "vmaf",
+  "vp9",
+  "wattmeter",
+]
+classifiers = [  # all classifiers https://pypi.org/classifiers/
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Education",
+  "Intended Audience :: Science/Research",
+  "Natural Language :: English",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: SQL",
+  "Topic :: Database :: Database Engines/Servers",
+  "Topic :: File Formats :: JSON",
+  "Topic :: Multimedia :: Video :: Conversion",
+]
+
+[project.optional-dependencies]
+doc = [
+  "furo",  # sphinx theme
+  "mathjax",  # for sphinx latex math
+  "recommonmark",
+  "ruff",  # to format chart code
+  "sphinx",
+  "sphinx-copybutton",
+  "sphinx-inline-tabs",
+  "sphinxcontrib-video",
+  "sphinxext-opengraph",  # for web page tags
+]
+test = [
+  "enoslib",
+  "pytest",
+  "ruff",
+]
+
+[project.scripts]
+mendevi = "mendevi.__main__:main"
+
+[project.urls]
+Documentation = "https://mendevi.readthedocs.io/latest"
+Repository = "https://gitlab.inria.fr/rrichard/mendevi"
+
+[tool.setuptools.packages.find]
+where = [""]
+exclude = ["docs"]
+
+[tool.setuptools.package-data]
+"*" = ["*.json.xz"]
+
+[tool.setuptools.dynamic]
+version = {attr = "mendevi.__version__"}
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+  "D203",  # incorrect-blank-line-before-class (D203) and no-blank-line-before-class (D211) are incompatible
+  "D213",  # multi-line-summary-first-line (D212) and multi-line-summary-second-line (D213) are incompatible
+  "D411",  # Missing blank line before section: miss detection with \b
+  "D301",  # Use `r"""` if any backslashes in a docstring: miss detection with \b
+  "ERA001",  # commented-out-code
+  "S",  # all flake8-bandit
+  "T20",  # flake8-print
+]
+
+[tool.ruff.lint.pylint]
+allow-magic-value-types = ["int", "str", "bytes"]
