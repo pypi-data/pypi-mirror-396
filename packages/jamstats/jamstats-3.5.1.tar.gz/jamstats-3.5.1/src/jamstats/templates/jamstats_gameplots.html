@@ -1,0 +1,128 @@
+<html>
+    <head>
+        <title>Jamstats</title>
+        <link rel= "stylesheet" type= "text/css"
+              href= "{{ url_for('static',filename='styles/normalize.css') }}">
+        <link rel= "stylesheet" type= "text/css"
+              href= "{{ url_for('static',filename='styles/skeleton.css') }}">
+        <head title="Jamstats">
+    <script src="{{ url_for('static',filename='socket.io.js') }}"></script>
+    <script type="text/javascript">
+    var socket = io();
+    socket.on('game_state_changed', function(msg) {
+        console.log("game_state_changed");
+        document.getElementById('newdata_avail').style.visibility = 'visible'
+        setTimeout(function() {
+            location.reload();
+        }, {{min_refresh_secs}} * 1000);
+    });
+    socket.on('refresh', function(msg) {
+        console.log("refresh");
+        location.reload();
+    });
+    function showHideLeft() {
+        var x = document.getElementById("left");
+        if (x.style.display === "none") {
+            x.style.display = "block";
+            localStorage.setItem("left", "block");
+        } else {
+            x.style.display = "none";
+            localStorage.setItem("left", "none");
+        }
+    }
+    if (typeof(localStorage.getItem("left")) == "undefined") {
+        localStorage.setItem("left", "none");
+    }
+
+        </script>
+        <noscript>
+            <meta http-equiv="refresh" content="{app.autorefresh_seconds}" />
+        </noscript>
+        <style>
+td {
+  padding: 5px 10px;
+  border-top-width: 0;
+  border-left-width: 0;
+}
+        </style>
+    </head>
+    <body>
+    <div style="display: block; width: 100%; min-width: 900px">
+        <div style="display: inline-block; padding: 5px 10px; height: 80px; max-height: 50px; width: 100%">
+            <div  style="display: inline-block; width: 15%; float: left">
+                <button onclick="showHideLeft()" style="color: lightgray; padding: 0px 5px; max-height: 50px">-</button>
+            </div>
+            <div style="display: inline-block; background-color: lightgray; width: 85%; max-height: 50px">
+                Game Status: {{derby_game.game_status}}<br>
+                Jam Clock Running? {{"Yes" if derby_game.game_data_dict["jam_is_running"] else "No"}}<br>
+                <p id="newdata_avail" style="visibility: hidden; color: darkred; background-color: lightgray;">
+                    New game data available. Refreshing in {{min_refresh_secs}} seconds.
+                    <button onClick="window.location.reload();" style="color: darkred">Refresh Now</button>
+                </p>
+            </div>
+        </div>
+            <!--<div id="margin" style="float: left; width: 10; padding: 0 10px;"/>-->
+        <div>
+            <div id="left" style="float: left; padding: 0px 10px; width: 15%">
+                            <p>
+                            <a target="_blank" href="https://jamstats.net"><img src="logo" style="width: 100%; max-width: 200px"></a>
+                            <br>
+                            Jamstats version {{jamstats_version}}
+                            <br>
+                            by TheDM
+                            </p>
+                            {% for section in section_name_map %}
+                                <b>{{section}}</b><br/>
+                                {% for plot_name_forlink in section_name_map[section] %}
+                                    {% if plot_name_forlink == element_name %}
+                                        {{plotname_displayname_map[plot_name_forlink]}}
+                                    {% else %}
+                                        <a href='/?plot_name={{plot_name_forlink}}'>
+                                        {{plotname_displayname_map[plot_name_forlink]}}
+                                        </a>
+                                    {% endif %}
+                                    <br/>
+                                {% endfor %}
+                            <br/>
+                            {% endfor %}
+                        {% if can_dl_game_json %}
+                        <p><a href="download_game_json">Download Game JSON</a></p>
+                        {% endif %}
+                        <p>jamstats server/port:
+                                <br/>
+                                {{jamstats_ip}}:{{jamstats_port}}
+                        </p>
+                        <p>
+                           Developed with
+                           <br>
+                           <a target="_blank" href="https://www.seattlederbybrats.com/donations/">
+                               <img src="{{ url_for('static',filename='sdb_logo.png') }}"
+                                alt="Seattle Derby Brats" width="150" align="left" valign="top"/>
+                           </a>
+                        </p>
+            </div>
+                        
+            <div class="padding: 10px 10px; width: 85%">
+                <table>
+                    <tr>
+                        <td width="100%" valign="top">
+
+                            <p><b>{{plotname_displayname_map[element_name]}}</b></p>
+                            {% if element_name in plots_allowed %}
+                                {% if element.can_render_html %}
+                                    <p>{{element.build_html(derby_game) | safe}}</object></p>
+                                {% else %}
+                                    <p><iframe src="/fig/{{element_name}}" width="1000px", height="1000px" style="border:0"></p>
+                                {% endif %}
+                            {% else %}
+                                <p><H2>{{cant_display_message}}</H2></p>
+                            {% endif %}
+                        </td>
+                    </tr>
+                </table>
+        </div>
+        <script>
+                document.getElementById("left").style.display = localStorage.getItem("left");
+        </script>
+    </body>
+</html>
