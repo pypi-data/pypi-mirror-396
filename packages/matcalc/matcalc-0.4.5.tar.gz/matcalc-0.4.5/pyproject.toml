@@ -1,0 +1,239 @@
+[project]
+name = "matcalc"
+authors = [
+    { name = "Runze Liu", email = "rul048@ucsd.edu" },
+    { name = "Eliott Liu", email = "elliottliu17@gmail.com" },
+    { name = "Ji Qi", email = "j1qi@ucsd.edu" },
+    { name = "Shyue Ping Ong", email = "ongsp@ucsd.edu" },
+    { name = "Tsz Wai Ko", email = "t1ko@ucsd.edu" },
+]
+description = "Calculators for materials properties from the potential energy surface."
+readme = "README.md"
+requires-python = ">=3.10"
+keywords = [
+    "AI",
+    "deep learning",
+    "force field",
+    "graph",
+    "interatomic potential",
+    "machine learning",
+    "materials",
+    "property prediction",
+    "science",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "ase>=3.26.0",
+    "scikit-learn>=1.6.1",
+    "pymatgen>=2025.4.20",
+    "fsspec>=2025.3.0",
+    "joblib>=1.4.2",
+    "phonopy>=2.38.0",
+    "phono3py>=3.15.0",
+]
+version = "0.4.5"
+
+[project.optional-dependencies]
+phonon = ["seekpath"]
+benchmark = ["matminer>=0.9.3"]
+ace = [
+    "pyace>=0.1.1",
+]
+mace = [
+    "mace-torch>=0.3.12",
+]
+deepmd = [
+    "deepmd-kit>=3.0.2",
+]
+grace = [
+    "tensorpotential>=0.5.1",
+]
+maml = [
+    "maml>=2025.4.3",
+]
+orb = [
+    "orb-models>=0.4.2",
+    "pynanoflann>=0.10.0",
+]
+sevennet = [
+    "sevenn>=0.10.4",
+]
+matgl = [
+    "matgl>=2.0.2",
+]
+ci = [
+    "codecov-cli>=10.3.0",
+    "coverage>=7.7.1",
+    "coveralls>=4.0.1",
+    "ipython>=8.34.0",
+    "jupyter>=1.1.1",
+    "maml>=2025.4.3",
+    "matgl>=2.0.1",
+    "matminer>=0.9.3",
+    "mp-api>=0.45.3",
+    "nbmake>=1.5.5",
+    "pre-commit>=4.2.0",
+    "pytest>=8.3.5",
+    "pytest-cov>=6.0.0",
+    "seekpath>=2.1.0",
+]
+
+[project.scripts]
+matcalc = "matcalc._cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["matcalc", "matcalc.*"]
+
+[tool.setuptools.package-data]
+"matcalc" = ["elemental_refs/*.json.gz"]
+
+[build-system]
+requires = ["oldest-supported-numpy", "setuptools>=58.0.3"]
+build-backend = "setuptools.build_meta"
+
+[dependency-groups]
+dev = [
+    "codecov-cli>=10.3.0",
+    "coverage>=7.7.1",
+    "coveralls>=4.0.1",
+    "docutils>=0.21.2",
+    "invoke>=2.2.0",
+    "ipython>=8.34.0",
+    "jupyter>=1.1.1",
+    "maml>=2025.4.3",
+    "matgl>=1.2.5",
+    "matminer>=0.9.3",
+    "mp-api>=0.45.3",
+    "nbmake>=1.5.5",
+    "openai>=1.101.0",
+    "pre-commit>=4.2.0",
+    "pytest>=8.3.5",
+    "pytest-cov>=6.0.0",
+    "requests>=2.32.3",
+    "seekpath>=2.1.0",
+    "sphinx>=8.1.3",
+    "sphinx-markdown-builder>=0.6.8",
+    "sphinx-rtd-theme>=3.0.2",
+]
+lint = [
+    "mypy>=1.15.0",
+    "pyright>=1.1.398",
+    "ruff>=0.11.2",
+]
+test-models = [
+    "mace-torch>=0.3.12",
+    "nequip>=0.6.2",
+    "orb-models>=0.4.2",
+    "pynanoflann>=0.10.0",
+    "sevenn>=0.10.4",
+    "tensorpotential>=0.5.1",
+]
+
+[tool.uv]
+conflicts = [
+    [
+      { extra = "mace" },
+      { extra = "fairchem" },
+      { extra = "mattersim" },
+    ],
+]
+required-environments = [
+    "sys_platform == 'linux'",
+    "sys_platform == 'darwin' and platform_machine == 'x86_64'",
+    "sys_platform == 'darwin' and platform_machine == 'arm64'",
+]
+
+
+[tool.ruff]
+line-length = 120
+extend-include = ["*.ipynb"]
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "ANN401",
+    "COM812", # trailing comma missing
+    "D205", # 1 blank line required between summary line and description
+    "D212", # Multi-line docstring summary should start at the first line
+    "EM101",
+    "EM102",
+    "ISC001",
+    "PLR0913", # too many arguments
+    "PLW0603", # Using the global statement to update variables is discouraged
+    "PTH", # prefer Path to os.path
+    "SIM105", # Use contextlib.suppress(OSError) instead of try-except-pass
+    "TRY003",
+    "PLC0415"
+]
+exclude = ["docs/conf.py"]
+pydocstyle.convention = "google"
+isort.required-imports = ["from __future__ import annotations"]
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"tasks.py" = ["ANN", "D", "T203", "T201", "BLE001", "S"]
+"tests/*" = ["D", "INP001", "N802", "N803", "PLR2004", "S101"]
+"tests/test_cli.py" = ["S603", "S607"]
+
+[tool.pytest.ini_options]
+addopts = "--durations=30 --quiet -rXs --color=yes -p no:warnings"
+
+[tool.mypy]
+ignore_missing_imports = true
+explicit_package_bases = true
+no_implicit_optional = false
+exclude = ['examples', 'tests']
+
+[[tool.mypy.overrides]]
+module = ["requests.*", "tabulate.*"]
+ignore_missing_imports = true
+
+[tool.codespell]
+ignore-words-list = "mater,te,nd,Commun,ontop"
+check-filenames = true
+
+[tool.coverage.run]
+relative_files = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "@deprecated",
+    "def __repr__",
+    "except PackageNotFoundError:",
+    "except Exception:",
+    "except:",
+    "except FileNotFoundError:",
+    "if 0:",
+    "if TYPE_CHECKING:",
+    "if typing.TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "input",
+    "pragma: no cover",
+    "raise AssertionError",
+    "raise NotImplementedError",
+]
+
+[tool.pyright]
+reportMissingImports = false
+reportPossiblyUnboundVariable = true
+reportUnboundVariable = true
+exclude = ["tests"]
