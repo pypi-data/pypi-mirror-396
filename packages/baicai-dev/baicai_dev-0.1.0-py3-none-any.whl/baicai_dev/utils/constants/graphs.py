@@ -1,0 +1,2 @@
+NUM_ACTIONS = 10
+MAX_ITER = 3
