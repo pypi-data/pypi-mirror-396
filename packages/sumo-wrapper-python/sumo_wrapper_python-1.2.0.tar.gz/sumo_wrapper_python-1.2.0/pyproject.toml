@@ -1,0 +1,67 @@
+[build-system]
+requires = ["setuptools>=28", "setuptools_scm>=3.2.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+version_file = "src/sumo/wrapper/_version.py"
+
+[project]
+name = "sumo-wrapper-python"
+description = "Python wrapper for the Sumo API"
+license = { file = "LICENSE" }
+readme = { file = "README.md", content-type = "text/markdown" }
+classifiers = [
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python",
+]
+authors = [{ name = "Equinor" }]
+requires-python = ">=3.11"
+dynamic = ["version"]
+dependencies = [
+  "msal>=1.20.0",
+  "msal-extensions>=1.0.0",
+  "pyjwt>=2.4.0",
+  "httpx>=0.24.1",
+  "tenacity>=8.2.2, !=8.4.0",
+  "azure-identity>=1.13.0",
+]
+
+[project.optional-dependencies]
+test = ["pytest", "PyYAML"]
+docs = [
+  "sphinx==7.1.2",
+  "sphinx-rtd-theme",
+  "autoapi",
+  "sphinx-autodoc-typehints",
+  "sphinxcontrib-apidoc",
+]
+dev = ["ruff", "pre-commit"]
+
+[project.urls]
+Repository = "https://github.com/equinor/sumo-wrapper-python"
+
+[project.scripts]
+sumo_login = "sumo.wrapper.login:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+exclude = [".env", ".git", ".github", ".venv", "venv"]
+
+line-length = 79
+
+[tool.ruff.lint]
+ignore = ["E501", "N802"]
+
+extend-select = [
+  "C4",  # Flake8-comprehensions
+  "I",   # isort
+  "SIM", # Flake8-simplify
+  "TC",  # Flake8-type-checking
+  "TID", # Flake8-tidy-imports
+  "N",   # pep8-naming  
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
