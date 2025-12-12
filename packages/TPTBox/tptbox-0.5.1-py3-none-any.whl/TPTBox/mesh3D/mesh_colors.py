@@ -1,0 +1,281 @@
+from __future__ import annotations
+
+import random
+
+import numpy as np
+
+
+class RGB_Color:
+    def __init__(self, rgb: tuple[int, int, int]):
+        assert isinstance(rgb, tuple) and [isinstance(i, int) for i in rgb], "did not receive a tuple of 3 ints"
+        self.rgb = np.array(rgb)
+
+    @classmethod
+    def init_separate(cls, r: int, g: int, b: int):
+        return cls((r, g, b))
+
+    @classmethod
+    def init_list(cls, rgb: list[int] | np.ndarray):
+        assert len(rgb) == 3, "rgb requires exactly three integers"
+        if isinstance(rgb, np.ndarray):
+            assert rgb.dtype == int, "rgb numpy array not of type int!"
+        return cls(tuple(rgb))
+
+    def __repr__(self) -> str:
+        return str(self)
+
+    def __str__(self) -> str:
+        return "RGB_Color-" + str(self.rgb)
+
+    def __call__(self, normed: bool = False):
+        if normed:
+            return self.rgb / 255.0
+        return self.rgb
+
+    def __getitem__(self, item):
+        return self.rgb[item] / 255.0
+
+
+class Mesh_Color_List:
+    # General Colors
+    BEIGE = RGB_Color.init_list([255, 250, 200])
+    MAROON = RGB_Color.init_list([128, 0, 0])
+    YELLOW = RGB_Color.init_list([255, 255, 25])
+    ORANGE = RGB_Color.init_list([245, 130, 48])
+    BLUE = RGB_Color.init_list([30, 144, 255])
+    BLACK = RGB_Color.init_list([0, 0, 0])
+    WHITE = RGB_Color.init_list([255, 255, 255])
+    GREEN = RGB_Color.init_list([50, 250, 65])
+    MAGENTA = RGB_Color.init_list([240, 50, 250])
+    SPRINGGREEN = RGB_Color.init_list([0, 255, 128])
+    CYAN = RGB_Color.init_list([70, 240, 240])
+    PINK = RGB_Color.init_list([255, 105, 180])
+    BROWN = RGB_Color.init_list([160, 100, 30])
+    DARKGRAY = RGB_Color.init_list([95, 93, 68])
+    GRAY = RGB_Color.init_list([143, 140, 110])
+    NAVY = RGB_Color.init_list([0, 0, 128])
+    LIME = RGB_Color.init_list([210, 245, 60])
+
+    ITK_1 = RGB_Color.init_list([255, 0, 0])
+    ITK_2 = RGB_Color.init_list([0, 255, 0])
+    ITK_3 = RGB_Color.init_list([0, 0, 255])
+    ITK_4 = RGB_Color.init_list([255, 255, 0])
+    ITK_5 = RGB_Color.init_list([0, 255, 255])
+    ITK_6 = RGB_Color.init_list([255, 0, 255])
+    ITK_7 = RGB_Color.init_list([255, 239, 213])
+    ITK_8 = RGB_Color.init_list([0, 0, 205])
+    ITK_9 = RGB_Color.init_list([205, 133, 63])
+    ITK_10 = RGB_Color.init_list([210, 180, 140])
+    ITK_11 = RGB_Color.init_list([102, 205, 170])
+    ITK_12 = RGB_Color.init_list([0, 0, 128])
+    ITK_13 = RGB_Color.init_list([0, 139, 139])
+    ITK_14 = RGB_Color.init_list([46, 139, 87])
+    ITK_15 = RGB_Color.init_list([255, 228, 225])
+    ITK_16 = RGB_Color.init_list([106, 90, 205])
+    ITK_17 = RGB_Color.init_list([221, 160, 221])
+    ITK_18 = RGB_Color.init_list([233, 150, 122])
+    ITK_19 = RGB_Color.init_list([165, 42, 42])
+
+    ITK_20 = RGB_Color.init_list([255, 250, 250])
+    ITK_21 = RGB_Color.init_list([147, 112, 219])
+    ITK_22 = RGB_Color.init_list([218, 112, 214])
+    ITK_23 = RGB_Color.init_list([75, 0, 130])
+    ITK_24 = RGB_Color.init_list([255, 182, 193])
+    ITK_25 = RGB_Color.init_list([60, 179, 113])
+    ITK_26 = RGB_Color.init_list([255, 235, 205])
+    ITK_27 = RGB_Color.init_list([255, 228, 196])
+    ITK_28 = RGB_Color.init_list([218, 165, 32])
+    ITK_29 = RGB_Color.init_list([0, 128, 128])
+    ITK_30 = RGB_Color.init_list([188, 143, 143])
+    ITK_31 = RGB_Color.init_list([255, 105, 180])
+    ITK_32 = RGB_Color.init_list([255, 218, 185])
+    ITK_33 = RGB_Color.init_list([222, 184, 135])
+    ITK_34 = RGB_Color.init_list([127, 255, 0])
+    ITK_35 = RGB_Color.init_list([139, 69, 19])
+    ITK_36 = RGB_Color.init_list([124, 252, 0])
+    ITK_37 = RGB_Color.init_list([255, 255, 224])
+    ITK_38 = RGB_Color.init_list([70, 130, 180])
+    ITK_39 = RGB_Color.init_list([0, 100, 0])
+    ITK_40 = RGB_Color.init_list([238, 130, 238])
+    ## Subregions
+    ITK_41 = RGB_Color.init_list([238, 232, 170])
+    ITK_42 = RGB_Color.init_list([240, 255, 240])
+    ITK_43 = RGB_Color.init_list([245, 222, 179])
+    ITK_44 = RGB_Color.init_list([184, 134, 11])
+    ITK_45 = RGB_Color.init_list([32, 178, 170])
+    ITK_46 = RGB_Color.init_list([255, 20, 147])
+    ITK_47 = RGB_Color.init_list([25, 25, 112])
+    ITK_48 = RGB_Color.init_list([112, 128, 144])
+    ITK_49 = RGB_Color.init_list([34, 139, 34])
+    ITK_50 = RGB_Color.init_list([248, 248, 255])
+    ITK_51 = RGB_Color.init_list([145, 255, 150])
+    ITK_52 = RGB_Color.init_list([255, 160, 122])
+    ITK_53 = RGB_Color.init_list([144, 238, 144])
+    ITK_54 = RGB_Color.init_list([173, 255, 47])
+    ITK_55 = RGB_Color.init_list([65, 105, 225])
+    ITK_56 = RGB_Color.init_list([255, 99, 71])
+    ITK_57 = RGB_Color.init_list([250, 240, 230])
+    ITK_58 = RGB_Color.init_list([128, 0, 0])
+    ITK_59 = RGB_Color.init_list([50, 205, 50])
+    ITK_60 = RGB_Color.init_list([244, 164, 96])
+    ITK_61 = RGB_Color.init_list([255, 255, 240])
+    ITK_62 = RGB_Color.init_list([123, 104, 238])
+    ITK_63 = RGB_Color.init_list([255, 165, 0])
+    ITK_64 = RGB_Color.init_list([173, 216, 230])
+    ITK_65 = RGB_Color.init_list([255, 192, 203])
+    ITK_66 = RGB_Color.init_list([127, 255, 212])
+    ITK_67 = RGB_Color.init_list([255, 140, 0])
+    ITK_68 = RGB_Color.init_list([143, 188, 143])
+    ITK_69 = RGB_Color.init_list([220, 20, 60])
+    ITK_70 = RGB_Color.init_list([253, 245, 230])
+    ITK_71 = RGB_Color.init_list([255, 250, 240])
+    ITK_72 = RGB_Color.init_list([0, 206, 209])
+
+    ITK_73 = RGB_Color.init_list([0, 255, 127])
+    ITK_74 = RGB_Color.init_list([128, 0, 128])
+    ITK_75 = RGB_Color.init_list([255, 250, 205])
+    ITK_76 = RGB_Color.init_list([250, 128, 114])
+    ITK_77 = RGB_Color.init_list([148, 0, 211])
+    ITK_78 = RGB_Color.init_list([178, 34, 34])
+    ITK_79 = RGB_Color.init_list([255, 127, 80])
+    ITK_80 = RGB_Color.init_list([135, 206, 235])
+    ITK_81 = RGB_Color.init_list([100, 149, 237])
+    ITK_82 = RGB_Color.init_list([240, 230, 140])
+    ITK_83 = RGB_Color.init_list([250, 235, 215])
+    ITK_84 = RGB_Color.init_list([255, 245, 238])
+    ITK_85 = RGB_Color.init_list([107, 142, 35])
+    ITK_86 = RGB_Color.init_list([135, 206, 250])
+    ITK_87 = RGB_Color.init_list([0, 0, 139])
+    ITK_88 = RGB_Color.init_list([139, 0, 139])
+    ITK_89 = RGB_Color.init_list([245, 245, 220])
+    ITK_90 = RGB_Color.init_list([186, 85, 211])
+    ITK_91 = RGB_Color.init_list([255, 228, 181])
+    ITK_92 = RGB_Color.init_list([255, 222, 173])
+    ITK_93 = RGB_Color.init_list([0, 191, 255])
+    ITK_94 = RGB_Color.init_list([210, 105, 30])
+    ITK_95 = RGB_Color.init_list([255, 248, 220])
+    ITK_96 = RGB_Color.init_list([47, 79, 79])
+    ITK_97 = RGB_Color.init_list([72, 61, 139])
+    ITK_98 = RGB_Color.init_list([175, 238, 238])
+    ITK_99 = RGB_Color.init_list([128, 128, 0])
+    ITK_100 = RGB_Color.init_list([176, 224, 230])
+    ITK_101 = RGB_Color.init_list([255, 240, 245])
+    ITK_102 = RGB_Color.init_list([139, 0, 0])
+    ITK_103 = RGB_Color.init_list([240, 255, 255])
+    ITK_104 = RGB_Color.init_list([255, 215, 0])
+    ITK_105 = RGB_Color.init_list([216, 191, 216])
+    ITK_106 = RGB_Color.init_list([119, 136, 153])
+    ITK_107 = RGB_Color.init_list([219, 112, 147])
+    ITK_108 = RGB_Color.init_list([72, 209, 204])
+    ITK_109 = RGB_Color.init_list([255, 0, 255])
+    ITK_110 = RGB_Color.init_list([199, 21, 133])
+    ITK_111 = RGB_Color.init_list([154, 205, 50])
+    ITK_112 = RGB_Color.init_list([189, 183, 107])
+    ITK_113 = RGB_Color.init_list([240, 248, 255])
+    ITK_114 = RGB_Color.init_list([230, 230, 250])
+    ITK_115 = RGB_Color.init_list([0, 250, 154])
+    ITK_116 = RGB_Color.init_list([85, 107, 47])
+    ITK_117 = RGB_Color.init_list([64, 224, 208])
+    ITK_118 = RGB_Color.init_list([153, 50, 204])
+    ITK_119 = RGB_Color.init_list([205, 92, 92])
+    ITK_120 = RGB_Color.init_list([250, 250, 210])
+    ITK_121 = RGB_Color.init_list([95, 158, 160])
+    ITK_122 = RGB_Color.init_list([0, 128, 0])
+    ITK_123 = RGB_Color.init_list([255, 69, 0])
+    ITK_124 = RGB_Color.init_list([224, 255, 255])
+    ITK_125 = RGB_Color.init_list([176, 196, 222])
+    ITK_126 = RGB_Color.init_list([138, 43, 226])
+    ITK_127 = RGB_Color.init_list([30, 144, 255])
+    ITK_128 = RGB_Color.init_list([240, 128, 128])
+    ITK_129 = RGB_Color.init_list([152, 251, 152])
+    ITK_130 = RGB_Color.init_list([160, 82, 45])
+    ITK_131 = RGB_Color.init_list([255, 0, 0])
+    ITK_132 = RGB_Color.init_list([0, 255, 0])
+    ITK_133 = RGB_Color.init_list([0, 0, 255])
+    ITK_134 = RGB_Color.init_list([255, 255, 0])
+    ITK_135 = RGB_Color.init_list([0, 255, 255])
+    ITK_136 = RGB_Color.init_list([255, 0, 255])
+    ITK_137 = RGB_Color.init_list([255, 239, 213])
+    ITK_138 = RGB_Color.init_list([0, 0, 205])
+    ITK_139 = RGB_Color.init_list([205, 133, 63])
+    ITK_140 = RGB_Color.init_list([210, 180, 140])
+    ITK_141 = RGB_Color.init_list([102, 205, 170])
+    ITK_142 = RGB_Color.init_list([0, 0, 128])
+    ITK_143 = RGB_Color.init_list([0, 139, 139])
+    ITK_144 = RGB_Color.init_list([46, 139, 87])
+    ITK_145 = RGB_Color.init_list([255, 228, 225])
+    ITK_146 = RGB_Color.init_list([106, 90, 205])
+    ITK_147 = RGB_Color.init_list([221, 160, 221])
+    ITK_148 = RGB_Color.init_list([233, 150, 122])
+    ITK_149 = RGB_Color.init_list([165, 42, 42])
+    ITK_150 = RGB_Color.init_list([255, 250, 250])
+    ITK_151 = RGB_Color.init_list([147, 112, 219])
+    ITK_152 = RGB_Color.init_list([218, 112, 214])
+    ITK_153 = RGB_Color.init_list([75, 0, 130])
+    ITK_154 = RGB_Color.init_list([255, 182, 193])
+    ITK_155 = RGB_Color.init_list([60, 179, 113])
+    ITK_156 = RGB_Color.init_list([255, 235, 205])
+    ITK_157 = RGB_Color.init_list([255, 228, 196])
+    ITK_158 = RGB_Color.init_list([218, 165, 32])
+    ITK_159 = RGB_Color.init_list([0, 128, 128])
+    ITK_160 = RGB_Color.init_list([188, 143, 143])
+    ITK_161 = RGB_Color.init_list([255, 105, 180])
+    ITK_162 = RGB_Color.init_list([255, 218, 185])
+    ITK_163 = RGB_Color.init_list([222, 184, 135])
+    ITK_164 = RGB_Color.init_list([127, 255, 0])
+    ITK_165 = RGB_Color.init_list([139, 69, 19])
+    ITK_166 = RGB_Color.init_list([124, 252, 0])
+    ITK_167 = RGB_Color.init_list([255, 255, 224])
+    ITK_168 = RGB_Color.init_list([70, 130, 180])
+    ITK_169 = RGB_Color.init_list([0, 100, 0])
+    ITK_170 = RGB_Color.init_list([238, 130, 238])
+    ITK_171 = RGB_Color.init_list([238, 232, 170])
+    ITK_172 = RGB_Color.init_list([240, 255, 240])
+    ITK_173 = RGB_Color.init_list([245, 222, 179])
+    ITK_174 = RGB_Color.init_list([184, 134, 11])
+    ITK_175 = RGB_Color.init_list([32, 178, 170])
+    ITK_176 = RGB_Color.init_list([255, 20, 147])
+    ITK_177 = RGB_Color.init_list([25, 25, 112])
+    ITK_178 = RGB_Color.init_list([112, 128, 144])
+    ITK_179 = RGB_Color.init_list([34, 139, 34])
+    ITK_180 = RGB_Color.init_list([248, 248, 255])
+    ITK_181 = RGB_Color.init_list([245, 255, 250])
+    ITK_182 = RGB_Color.init_list([255, 160, 122])
+    ITK_183 = RGB_Color.init_list([144, 238, 144])
+    ITK_184 = RGB_Color.init_list([173, 255, 47])
+    ITK_185 = RGB_Color.init_list([65, 105, 225])
+    ITK_186 = RGB_Color.init_list([255, 99, 71])
+    ITK_187 = RGB_Color.init_list([250, 240, 230])
+    ITK_188 = RGB_Color.init_list([128, 0, 0])
+    ITK_189 = RGB_Color.init_list([50, 205, 50])
+    ITK_190 = RGB_Color.init_list([244, 164, 96])
+    ITK_191 = RGB_Color.init_list([255, 255, 240])
+    ITK_192 = RGB_Color.init_list([123, 104, 238])
+    ITK_193 = RGB_Color.init_list([255, 165, 0])
+    ITK_194 = RGB_Color.init_list([173, 216, 230])
+    ITK_195 = RGB_Color.init_list([255, 192, 203])
+    ITK_196 = RGB_Color.init_list([127, 255, 212])
+    ITK_197 = RGB_Color.init_list([255, 140, 0])
+    ITK_198 = RGB_Color.init_list([143, 188, 143])
+    ITK_199 = RGB_Color.init_list([220, 20, 60])
+    ITK_200 = RGB_Color.init_list([253, 245, 230])
+    ITK_201 = RGB_Color.init_list([255, 250, 240])
+
+
+_color_dict = {v: getattr(Mesh_Color_List, v) for v in vars(Mesh_Color_List) if not callable(v) and not v.startswith("__")}
+
+_color_mapping_by_label: dict[int, RGB_Color] = {
+    i: _color_dict.get(
+        f"ITK_{i}",
+        RGB_Color.init_list([random.randint(20, 245), random.randint(20, 245), random.randint(20, 245)]),
+    )
+    for i in range(1, 150)
+}
+
+_color_map_in_row = np.array([v.rgb for v in _color_mapping_by_label.values()])
+
+
+def get_color_by_label(label: int):
+    if label not in _color_mapping_by_label:
+        return _color_mapping_by_label[label % 50 + 1]
+    return _color_mapping_by_label[label]
