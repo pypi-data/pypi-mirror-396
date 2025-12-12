@@ -1,0 +1,40 @@
+{% include "ipas/template.yml" %}
+
+{% from 'navigation.tmpl' import match %}
+
+{% call(header) match('TradeMarkTransactionBody.TransactionContentDetails', Transaction) %}
+{% call(trademark) match('TransactionData.TradeMarkApplication.TradeMarkDetails.TradeMark', header) %}
+
+markImageDetails:
+  {% call(img) match('MarkImageDetails.MarkImage', trademark) %}
+    - name: {{ img.MarkImageFilename | image_filename_extension(img.MarkImageFileFormat) }}
+      {% call(cclaim) match('MarkImageColourClaimedText', img) %}
+      {% if not cclaim.__value  == 'N/A' %}
+      colourIndicator: {{ cclaim.__value | remove_trailing('-') | get_true_or_false }}
+      colourClaimed:
+        - text: {{ cclaim.__value | remove_trailing('-') }}
+          languageCode: {{  cclaim.__value | remove_trailing('-') | guess_language(cclaim._languageCode, trademark.ApplicationLanguageCode) }}
+      {% endif %}
+      {% endcall %}
+      {% call(category) match('MarkImageCategory', img) %}
+      classification:
+        kind: {{ category.CategoryKind }}
+        version: {{ category.CategoryVersion | parse_version }}
+        code:
+          {% call(vc) match('CategoryCodeDetails.CategoryCode', category) %}
+            - {{ vc }}
+          {% endcall %}
+      {% endcall %}
+  {% endcall %}
+
+publications:
+  {% call(publication) match('PublicationDetails.Publication', trademark) %}
+  - identifier: {{ publication.PublicationIdentifier }}
+    date: {{ publication.PublicationDate }}
+    section: {{ publication.PublicationSection }}
+  {% endcall %}
+
+publicationDate: {{ trademark.PublicationDetails | get_publication_date | convertdate('%Y-%m-%d')}}
+
+{% endcall %}
+{% endcall %}
