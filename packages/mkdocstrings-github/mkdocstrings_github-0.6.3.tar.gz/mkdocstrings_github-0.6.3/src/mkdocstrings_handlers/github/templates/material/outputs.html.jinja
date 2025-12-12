@@ -1,0 +1,78 @@
+{#- Template for outputs.
+
+Context:
+  outputs (list of mkdocstrings_handlers.github.objects.Output): The outputs to render.
+  data (mkdocstrings_handlers.github.objects.Action | Workflow): The object to render.
+  config (mkdocstrings_handlers.github.config.GitHubConfig): The global configuration
+  options (dict): The local options
+-#}
+
+{% from "_macros.html.jinja" import render_grouped_list %}
+
+{% block logs scoped %}
+  {{ log.debug("Rendering outputs of " + data.id) }}
+{% endblock logs %}
+
+{# If there are no outputs, do not render anything. #}
+{% if outputs | length > 0 %}
+
+{% set header_id -%}
+  outputs-{{ data.id | replace('/', '-') | replace('.', '') | lower }}
+{%- endset %}
+
+{% if options.parameters_section_style == "table" %}
+  {% block table_style scoped %}
+    <p>
+      <span class="doc-section-title">Outputs:</span>
+      <a class="headerlink" href="#{{ header_id }}" title="Link to {{ data.name }} outputs">¤</a>
+    </p>
+    <table data-gh-parameters>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      {% set grouped_outputs = outputs | group_parameters(options.parameters_groups) %}
+      {% for group, group_outputs in grouped_outputs.items() %}
+      <tbody>
+        {% if options.parameters_group_title_row and grouped_outputs | length > 1 and group != "" %}
+        <tr class="doc-section-item">
+          <td class="gh-group-title" colspan="2">{{ group }}</td>
+        </tr>
+        {% endif %}
+        {% for output in group_outputs %}
+          {% if options.parameters_anchors %}
+            {% set anchor_id = output.name | anchor_id("outputs", data.id) %}
+          {% else %}
+            {% set anchor_id = None %}
+          {% endif %}
+          <tr class="doc-section-item">
+            <td id="{{ anchor_id }}">
+              <code>{{ output.name }}</code>
+              {% if options.parameters_anchors %}
+                <a class="headerlink" href="#{{ anchor_id }}" title="Link to {{ output.name }}">¤</a>
+              {% endif %}
+            </td>
+            <td>
+              {{ output.description | convert_markdown(options.heading_level, data.id) }}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+      {% endfor %}
+    </table>
+  {% endblock table_style %}
+{% elif options.parameters_section_style == "list" %}
+  {% block list_style scoped %}
+    <p>
+      <span class="doc-section-title">Outputs:</span>
+      <a class="headerlink" href="#{{ header_id }}" title="Link to {{ data.name }} outputs">¤</a>
+    </p>
+    <ul>
+      {{ render_grouped_list(outputs, "outputs", options, data) }}
+    </ul>
+  {% endblock list_style %}
+{% endif %}
+
+{% endif %}
