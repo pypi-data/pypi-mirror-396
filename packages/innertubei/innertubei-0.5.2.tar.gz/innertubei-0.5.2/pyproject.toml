@@ -1,0 +1,102 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "innertubei"
+version = "0.5.2"
+description = "A fast, async-first Python library for accessing YouTube's internal API (Innertube) - search, videos, playlists, channels, transcripts, and more."
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "ohmyarthur", email = "ohmyarthurr@gmail.com"}
+]
+keywords = [
+    "youtube",
+    "youtube-api",
+    "innertube",
+    "video-search",
+    "playlist",
+    "channel",
+    "async",
+    "python",
+    "youtube-data"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Internet",
+    "Topic :: Multimedia :: Video",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "httpx[http2,brotli]>=0.28.1",
+    "orjson>=3.11.5",
+]
+
+[project.urls]
+Homepage = "https://github.com/ohmyarthur/innertubei"
+Source = "https://github.com/ohmyarthur/innertubei"
+Issues = "https://github.com/ohmyarthur/innertubei/issues"
+Download = "https://github.com/ohmyarthur/innertubei/releases/latest"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21.0",
+    "ruff>=0.8.0",
+    "pre-commit>=3.5.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21.0",
+    "ruff>=0.8.0",
+    "pre-commit>=3.5.0",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501", "E722", "F403", "E711"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+addopts = [
+    "--tb=short",
+    "--strict-markers",
+    "--disable-warnings",
+    "-v"
+]
+markers = [
+    "asyncio: marks tests as async",
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "network: marks tests that require network access"
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning"
+]
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv", "venv"]
+skips = ["B101", "B110", "B113"]  # B101: assert, B110: try/except/pass, B113: httpx timeout (handled in RequestCore)

@@ -1,0 +1,155 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (leave empty to use version from pyproject.toml)'
+        required: false
+        type: string
+
+jobs:
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get-version.outputs.version }}
+      release_id: ${{ steps.create-release.outputs.id }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Get version
+        id: get-version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            # Extract version from pyproject.toml
+            VERSION=$(grep '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+      
+      - name: Check if tag exists
+        id: check-tag
+        run: |
+          if git rev-parse "v${{ steps.get-version.outputs.version }}" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Create and push tag
+        if: steps.check-tag.outputs.exists == 'false'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v${{ steps.get-version.outputs.version }}" -m "Release v${{ steps.get-version.outputs.version }}"
+          git push origin "v${{ steps.get-version.outputs.version }}"
+      
+      - name: Generate changelog
+        id: changelog
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.get-version.outputs.version }}"
+          
+          # Check if CHANGELOG.md exists and has content for this version
+          if [ -f CHANGELOG.md ]; then
+            CHANGELOG=$(sed -n "/## \[${VERSION}\]/,/## \[/p" CHANGELOG.md | sed '$d' 2>/dev/null || echo "")
+          fi
+          
+          # If no changelog found, generate from commits
+          # Fix: Use GitHub API to ensure we tag the correct GitHub Username (@username)
+          if [ -z "$CHANGELOG" ] || [ "$CHANGELOG" = "" ]; then
+            
+            # Get previous tag for context
+            PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)
+            
+            gh api --method POST -H "Accept: application/vnd.github+json" \
+              /repos/${{ github.repository }}/releases/generate-notes \
+              -f tag_name="v$VERSION" \
+              -f target_commitish="${{ github.sha }}" \
+              -f previous_tag_name="$PREV_TAG" \
+              --jq .body > /tmp/changelog.md
+              
+          else
+            echo "$CHANGELOG" > /tmp/changelog.md
+          fi
+          
+          cat /tmp/changelog.md
+      
+      - name: Create Release
+        id: create-release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.get-version.outputs.version }}
+          name: Release v${{ steps.get-version.outputs.version }}
+          body_path: /tmp/changelog.md
+          draft: false
+          prerelease: false
+
+  build-artifacts:
+    name: Build artifacts
+    needs: create-release
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.create-release.outputs.version }}
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+      
+      - name: Build distribution
+        run: uv build
+      
+      - name: List built files
+        run: ls -lah dist/
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+      
+      - name: Upload artifacts to release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ needs.create-release.outputs.version }}
+          files: dist/*
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: [create-release, build-artifacts]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      
+      - name: List downloaded files
+        run: ls -lah dist/
+      
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
