@@ -1,0 +1,392 @@
+Metadata-Version: 2.4
+Name: mth5
+Version: 0.5.1
+Summary: Archivable and exchangeable format for magnetotelluric data
+Home-page: https://github.com/kujaku11/mth5
+Author: Jared Peacock
+Author-email: jpeacock@usgs.gov
+License: MIT license
+Keywords: mth5
+Classifier: Development Status :: 2 - Pre-Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Natural Language :: English
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENSE
+License-File: LICENSE.md
+License-File: AUTHORS.rst
+Requires-Dist: h5py
+Requires-Dist: pyyaml
+Requires-Dist: scipy
+Requires-Dist: mt_metadata
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: keywords
+Dynamic: license
+Dynamic: license-file
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+MTH5
+====
+
+[![PyPi Version](https://img.shields.io/pypi/v/mth5.svg)](https://pypi.python.org/pypi/mth5)
+[![Conda Version](https://img.shields.io/conda/v/conda-forge/mth5.svg)](https://anaconda.org/conda-forge/mth5)
+[![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://code.chs.usgs.gov/jpeacock/mth5/-/new/master/LICENSE)
+[![Documentation Status](https://readthedocs.org/projects/mth5/badge/?version=latest)](https://mth5.readthedocs.io/en/latest/?badge=latest)		
+[![](https://codecov.io/gh/kujaku11/mth5/branch/master/graph/badge.svg?token=XU5QSRM1ZO)](https://codecov.io/gh/kujaku11/mth5)\
+[![](https://zenodo.org/badge/283883448.svg)](https://zenodo.org/badge/latestdoi/283883448)
+[![](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/kujaku11/mth5/master)
+
+MTH5 is an HDF5 data container for magnetotelluric time series data, but could be extended to other data types.  This package provides tools for reading/writing/manipulating MTH5 files.
+
+MTH5 uses [h5py](https://www.h5py.org/) to interact with the HDF5 file, [xarray](http://xarray.pydata.org/en/stable/) to interact with the data in a nice way, and all metadata use [mt_metadata](https://github.com/kujaku11/mt_metadata). 
+This project is in cooperation with the Incorporated Research Institutes of Seismology, the U.S. Geological Survey, and other collaborators.  Facilities of the IRIS Consortium are supported by the National Science Foundationâ€™s Seismological Facilities for the Advancement of Geoscience (SAGE) Award under Cooperative Support Agreement EAR-1851048.  USGS is partially funded through the Community for Data Integration and IMAGe through the Minerals Resources Program.  
+
+
+* **Version**: 0.5.1
+* **Free software**: MIT license
+* **Documentation**: https://mth5.readthedocs.io.
+* **Examples**: Click the `Binder` badge above and Jupyter Notebook examples are in **docs/examples/notebooks**
+* **Suggested Citation**: Peacock, J. R., Kappler, K., Ronan, T., Heagy, L.,  Kelbert, A., Frassetto, A. (2022) MTH5: An archive and exchangeable data format for magnetotelluric time series data, *Computers & Geoscience*, **162**, doi:10.1016/j.cageo.2022.105102
+
+
+Features
+--------
+
+* Read and write HDF5 files formated for magnetotelluric time series, transefer functions, and Fourier Coefficients.
+* From MTH5 a user can create an MTH5 file, get/add/remove stations, transfer functions, Fourier Coefficients, runs, channels and filters and all associated metadata.
+* Data is contained as an [xarray](http://xarray.pydata.org/en/stable/index.html) which can house the data and metadata together, and data is indexed by time.
+* Readers for some data types are included as plugins, namely
+    - Z3D
+    - NIMS BIN
+    - USGS ASCII
+    - LEMI
+    - StationXML + miniseed
+    - Metronix (`atss` + `json`)
+    - Phoenix (MTU5C)
+
+Introduction
+-------------
+
+The goal of **MTH5** is to provide a self describing heirarchical data format for working, sharing, and archiving.  **MTH5** was cooperatively developed with community input and follows logically how magnetotelluric data are collected.  This module provides open-source tools to interact with an **MTH5** file.  
+
+
+The metadata follows the standards proposed by the [IRIS-PASSCAL MT Software working group](https://www.iris.edu/hq/about_iris/governance/mt_soft) and
+documented in [MT Metadata Standards](https://doi.org/10.5066/P9AXGKEV)
+**Note**: If you would like to comment or contribute checkout [Issues](https://github.com/kujaku11/mth5/issues) or [Slack](simpeg.slack.com).   
+
+MTH5 Format
+-----------
+
+-  The basic format of MTH5 is illustrated below, where metadata is attached at each level.
+
+MTH5 File Version 0.1.0
+------------------------
+
+![MTH5 Format version 0.1.0](docs/source/images/example_mt_file_structure.svg)
+
+   
+MTH5 file version **0.1.0** was the original file version where `Survey` was the highest level of the file.  This has some limitations in that only one `Survey` could be saved in a single file, but if you have mulitple `Surveys` that you would like to store we need to add a higher level `Experiment`.  
+
+**Important**: Some MTH5 **0.1.0** files have already been archived on [ScienceBase](https://www.sciencebase.gov/catalog/) and has been used as the working format for Aurora and is here for reference.  Moving forward the new format will be **0.2.0** as described below.
+   
+   
+MTH5 File Version 0.2.0
+-------------------------
+   
+![MTH5 Format version 0.2.0](docs/source/images/example_mt_file_structure_v2.svg)
+
+   
+MTH5 file version **0.2.0** has `Experiment` as the top level.  This allows for multiple `Surveys` to be included in a single file and therefore allows for more flexibility.  For example if you would like to remote reference stations in a local survey with stations from a different survey collected at the same time you can have all those surveys and stations in the same file and make it easier for processing.
+
+**Hint**: MTH5 is comprehensively logged, therefore if any problems arise you can always check the mth5_debug.log (if you are in debug mode, change the mode in the mth5.__init__) and the mth5_error.log, which will be written to your current working directory.
+
+Examples
+-----------
+
+Make a simple MTH5 with one station, 2 runs, and 2 channels, 1 transfer function, 1 set of Fourier Coefficients (version 0.2.0)
+
+```
+from mth5.mth5 import MTH5
+
+with MTH5() as mth5_object:
+    mth5_object.open_mth5(r"/home/mt/example_mth5.h5", "a")
+
+    # add a survey
+    survey_group = mth5_object.add_survey("example")
+
+    # add a station with metadata
+    station_group = mth5_object.add_station("mt001", survey="example")
+    station_group = survey_group.stations_group.add_station("mt002")
+    station_group.metadata.location.latitude = "40:05:01"
+    station_group.metadata.location.longitude = -122.3432
+    station_group.metadata.location.elevation = 403.1
+    station_group.metadata.acquired_by.author = "me"
+    station_group.metadata.orientation.reference_frame = "geomagnetic"
+
+    # IMPORTANT: Must always use the write_metadata method when metadata is updated.
+    station_group.write_metadata()
+
+    # add runs
+    run_01 = mth5_object.add_run("mt002", "001", survey="example")
+    run_02 = station_group.add_run("002")
+
+    # add channels
+    ex = mth5_object.add_channel("mt002", "001", "ex", "electric", None, survey="example")
+    hy = run_01.add_channel("hy", "magnetic", None)
+    
+    # add transfer functions
+    tf = station_group.transfer_functions_group.add_transfer_function("tf01")
+    
+    # add Fourier Coefficients
+    fcs = station_group.fourier_coefficients_group.add_fc_group("fc01")
+
+    print(mth5_object)
+
+    /:
+    ====================
+        |- Group: Experiment
+        --------------------
+            |- Group: Reports
+            -----------------
+            |- Group: Standards
+            -------------------
+                --> Dataset: summary
+                ......................
+            |- Group: Surveys
+            -----------------
+                |- Group: example
+                -----------------
+                    |- Group: Filters
+                    -----------------
+                        |- Group: coefficient
+                        ---------------------
+                        |- Group: fap
+                        -------------
+                        |- Group: fir
+                        -------------
+                        |- Group: time_delay
+                        --------------------
+                        |- Group: zpk
+                        -------------
+                    |- Group: Reports
+                    -----------------
+                    |- Group: Standards
+                    -------------------
+                        --> Dataset: summary
+                        ......................
+                    |- Group: Stations
+                    ------------------
+                        |- Group: mt001
+                        ---------------
+                            |- Group: Fourier_Coefficients
+                            ------------------------------
+                            |- Group: Transfer_Functions
+                            ----------------------------
+                        |- Group: mt002
+                        ---------------
+                            |- Group: 001
+                            -------------
+                                --> Dataset: ex
+                                .................
+                                --> Dataset: hy
+                                .................
+                            |- Group: 002
+                            -------------
+                            |- Group: Fourier_Coefficients
+                            ------------------------------
+                                |- Group: fc01
+                                --------------
+                            |- Group: Transfer_Functions
+                            ----------------------------
+                                |- Group: tf01
+                                --------------
+            --> Dataset: channel_summary
+            ..............................
+            --> Dataset: tf_summary
+            .........................
+```
+
+Credits
+-------
+
+This project is in cooperation with the Incorporated Research Institutes of Seismology, the U.S. Geological Survey, and other collaborators.  Facilities of the IRIS Consortium are supported by the National Science Foundationâ€™s Seismological Facilities for the Advancement of Geoscience (SAGE) Award under Cooperative Support Agreement EAR-1851048.  USGS is partially funded through the Community for Data Integration and IMAGe through the Minerals Resources Program. 
+
+
+History
+=========
+
+0.1.0 (2021-06-30)
+------------------
+
+* First release on PyPI.
+
+0.2.0 (2021-10-31)
+-------------------
+
+* Updated the structure of MTH5 to have ``Experiment`` as the top level
+* Updated tests
+* Backwards compatibility works
+* Updated Docs
+
+0.2.5 (2022-04-07)
+----------------------
+
+* fixed bugs
+* Added TransferFunctions and TransferFunction groups at the station level that can now hold transfer functions
+* Added channel_summary and tf_summary tables that are updated upon close if the file is in 'w' mode
+* Updated tests
+* Updated documentation
+* Note: tests for make_mth5 from IRIS are currently not working as there has been some reorganization with data at the DMC
+
+0.2.6 (2022-07-01)
+-----------------------
+
+* Added calibration functions
+* minor bug fixes
+* updated tests
+* updated documentation
+
+0.2.7 (2022-09-14)
+------------------------
+
+* Rebased IO module to make a module for each data logger type
+* Updated tests
+* Updated documentation
+* Factored `make_mth5`
+
+0.3.0 (2022-09-25)
+------------------------
+
+* change default initialize_mth5 to use append mode, issue #92 by @kkappler in #94
+* Fix issue 105 by @kkappler in PR #106
+* adding in parallel mth5 tutorial by @nre900 in #110
+* adding in new tutorial and modifications to mth5_in_parallel.ipynb by @nre900 in issue #112
+* Add phoenix reader by @kujaku11 in PR #103
+* Remove response by @kujaku11 in PR #100 
+
+0.3.1 (2023-01-18)
+------------------------
+
+* Speed up station and survey validataion by 
+* Tutorial updates by @nre900 
+* remove kwarg specifying default value 
+* update initialize_mth5 
+* Have a single metadata object for ChannelTS and RunTS 
+* Use h5 Paths to get groups and datasets
+* Bump wheel from 0.33.6 to 0.38.1
+
+0.4.0 (2023-09-29)
+------------------------
+
+* Adding __add__ and merge to ChannelTS in https://github.com/kujaku11/mth5/pull/136
+* Added Clients in https://github.com/kujaku11/mth5/pull/82 incuding USGS Geomagnetic client
+* Add Scipy filters to xarray in https://github.com/kujaku11/mth5/pull/139
+* Fix FDSN download with no channel filters in https://github.com/kujaku11/mth5/pull/137
+* Align Channels in RunTS in https://github.com/kujaku11/mth5/pull/141
+* Fix FDSN download without all runs in https://github.com/kujaku11/mth5/pull/154
+* Add ability to store Fouried Coefficients estimated by processing software
+* Updated Phoenix reader
+* Using Loguru now instead of built-in logging module
+* Fixed slicing of channel dataset
+
+0.4.1 (2023-11-08)
+-------------------------
+
+* minor bug fixes
+* removed restriction on pandas < 2
+
+0.4.3
+-------------------------
+
+* Fix issue 171 by @kkappler in https://github.com/kujaku11/mth5/pull/172
+* Add try except for runs with no channels by @kkappler in https://github.com/kujaku11/mth5/pull/176
+* remove references to filter correction operation by @kkappler in https://github.com/kujaku11/mth5/pull/177
+* Fix mt metadata issue 173 by @kkappler in https://github.com/kujaku11/mth5/pull/174
+* Notebook updates by @kujaku11 in https://github.com/kujaku11/mth5/pull/178
+* add (failing) test that fc_metadata updates as expected by @kkappler in https://github.com/kujaku11/mth5/pull/173
+* Add return self to open_mth5() by @kkappler in https://github.com/kujaku11/mth5/pull/183
+* Patches by @kkappler in https://github.com/kujaku11/mth5/pull/181
+* Patches by @kkappler in https://github.com/kujaku11/mth5/pull/184
+* Update how MTH5Tables handles dtype by @kujaku11 in https://github.com/kujaku11/mth5/pull/192
+* Patches by @kkappler in https://github.com/kujaku11/mth5/pull/190
+* add synthetic time series by @kkappler in https://github.com/kujaku11/mth5/pull/194
+* Patches by @kujaku11 in https://github.com/kujaku11/mth5/pull/195
+* Update tests.yml by @kujaku11 in https://github.com/kujaku11/mth5/pull/196
+* Run ipynb on tests by @kujaku11 in https://github.com/kujaku11/mth5/pull/200
+
+0.4.5
+------------------------
+
+* Wtf by @kujaku11 in https://github.com/kujaku11/mth5/pull/205
+* Fix issue 191 by @kkappler in https://github.com/kujaku11/mth5/pull/208
+* Fix issue 191 by @kkappler in https://github.com/kujaku11/mth5/pull/211
+* Fix issue 209 by @kkappler in https://github.com/kujaku11/mth5/pull/210
+* Update station.py by @kujaku11 in https://github.com/kujaku11/mth5/pull/215
+* Patches by @kkappler in https://github.com/kujaku11/mth5/pull/206
+* Fix issue 219 by @kkappler in https://github.com/kujaku11/mth5/pull/222
+* Fix issue 217 by @kkappler in https://github.com/kujaku11/mth5/pull/218
+* try fix #223 by @kkappler in https://github.com/kujaku11/mth5/pull/224
+* Add some more multivariate functionality by @kkappler in https://github.com/kujaku11/mth5/pull/228
+* Fix issue 209a by @kkappler in https://github.com/kujaku11/mth5/pull/231
+* Minor multivariate updates by @kkappler in https://github.com/kujaku11/mth5/pull/232
+* Updating bugs and Adding functionality by @kujaku11 in https://github.com/kujaku11/mth5/pull/226
+* bump v0.4.3 --> v0.4.4 by @kujaku11 in https://github.com/kujaku11/mth5/pull/216
+
+0.4.6 (2024-08-16)
+----------------------------
+
+* add aurora tools to mth5 by @kujaku11 in https://github.com/kujaku11/mth5/pull/229
+* Patches by @kkappler in https://github.com/kujaku11/mth5/pull/234
+* Fix issue 233 by @kkappler in https://github.com/kujaku11/mth5/pull/235
+* hotfix synthetic electric field polarity (#236) by @kkappler in https://github.com/kujaku11/mth5/pull/237
+
+0.4.7 (2024-09-30)
+---------------------------
+
+* Fix issue 191 by @kkappler in https://github.com/kujaku11/mth5/pull/239
+* Update synthetic data by @kkappler in https://github.com/kujaku11/mth5/pull/243
+* Optimize adding TF by @kujaku11 in https://github.com/kujaku11/mth5/pull/242
+* Patches by @kujaku11 in https://github.com/kujaku11/mth5/pull/244
+* bump v0.4.6 --> v0.4.7 by @kujaku11 in https://github.com/kujaku11/mth5/pull/245
+
+0.4.8 (2024-10-14)
+-------------------------
+
+* Fix Issue 241 by @dequiroga in https://github.com/kujaku11/mth5/pull/246
+* Updating clients by @kujaku11 in https://github.com/kujaku11/mth5/pull/249
+* Update MakeMTH5 and clients by @kujaku11 in https://github.com/kujaku11/mth5/pull/189
+* Updating Clients by @kujaku11 in https://github.com/kujaku11/mth5/pull/250
+* @dequiroga made their first contribution in https://github.com/kujaku11/mth5/pull/246
+
+**Full Changelog**: https://github.com/kujaku11/mth5/compare/v0.4.7...v0.4.8
+
+0.4.9
+-----------------------------
+
+* Update documentation by @kujaku11 in https://github.com/kujaku11/mth5/pull/251
+* Fix issue 252 by @kkappler in https://github.com/kujaku11/mth5/pull/253
+
+**Full Changelog**: https://github.com/kujaku11/mth5/compare/v0.4.8...v0.4.9
+
+0.4.10
+------------------------------
+
+* HOT FIX: importing scipy, to use scipy.stats by @dequiroga in https://github.com/kujaku11/mth5/pull/258
+* FC dataset end time consistency by @dequiroga in https://github.com/kujaku11/mth5/pull/264
+* Add Metronix reader by @kujaku11 in https://github.com/kujaku11/mth5/pull/261
+* Resolve SyntaxWarnings in Python 3.12 and above for invalid escape sequences by @jameswilburlewis in https://github.com/kujaku11/mth5/pull/256
+* Patches by @kujaku11 in https://github.com/kujaku11/mth5/pull/265
+* Update README.md by @kujaku11 in https://github.com/kujaku11/mth5/pull/266
