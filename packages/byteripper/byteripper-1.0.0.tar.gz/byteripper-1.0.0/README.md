@@ -1,0 +1,342 @@
+# byteripper
+
+[![python version](https://img.shields.io/badge/python-3.5%20%7C%203.6%20%7C%203.7%20%7C%203.8%20%7C%203.9%20%7C%203.10%20%7C%203.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue.svg)](https://www.python.org/)
+[![pypi version](https://img.shields.io/badge/pypi-v1.0.0-orange.svg)](https://pypi.org/project/byteripper/)
+[![license](https://img.shields.io/badge/license-mit-green.svg)](https://github.com/6x-u/byteripper/blob/main/LICENSE)
+[![telegram](https://img.shields.io/badge/telegram-qp4rm-blue.svg)](https://t.me/qp4rm)
+[![github](https://img.shields.io/badge/github-6x--u-black.svg)](https://github.com/6x-u)
+
+---
+
+**byteripper** is a powerful python bytecode decompiler that converts `.pyc` files back to readable `.py` source code. supports all python versions from 3.5 to 3.14 with automatic version detection.
+
+---
+
+## features
+
+| feature | description |
+|---------|-------------|
+| multi-version support | python 3.5 - 3.14 |
+| magic number detection | auto-detect python version from pyc header |
+| ast rebuilding | reconstruct abstract syntax tree from bytecode |
+| obfuscation detection | detect encrypted/packed pyc files |
+| error recovery | continue decompilation even if blocks fail |
+| ai code cleanup | optional ai-powered code formatting |
+| rich cli | 30+ command line options |
+| batch processing | process multiple files at once |
+| debug mode | detailed header and bytecode analysis |
+
+---
+
+## installation
+
+```bash
+pip install byteripper
+```
+
+with ai cleanup support:
+
+```bash
+pip install byteripper[ai]
+```
+
+---
+
+## quick start
+
+### command line
+
+```bash
+# decompile single file
+byteripper input.pyc
+
+# save to file
+byteripper input.pyc -o output.py
+
+# show bytecode instructions
+byteripper input.pyc --show-bytecode
+
+# show ast tree
+byteripper input.pyc --show-ast
+
+# debug mode
+byteripper input.pyc --debug
+
+# force decompilation
+byteripper input.pyc --force
+
+# ai cleanup
+byteripper input.pyc --ai-cleanup
+```
+
+### python api
+
+```python
+from byteripper import decompile_file, pycloader
+
+# decompile file
+result = decompile_file("example.pyc")
+print(result.source_code)
+
+# load and inspect pyc
+loader = pycloader("example.pyc")
+print(loader.debug_dump())
+print(loader.get_constants())
+print(loader.get_names())
+```
+
+---
+
+## cli options
+
+| option | description |
+|--------|-------------|
+| `-o, --output` | output file path |
+| `-v, --version` | show version |
+| `--show-bytecode` | show bytecode instructions |
+| `--show-ast` | show ast tree |
+| `--debug` | show debug information |
+| `--force` | force decompilation |
+| `--check-obfuscation` | check for obfuscation |
+| `--raw-bytecode` | dump raw bytecode |
+| `--ai-cleanup` | use ai to clean code |
+| `--ai-model` | ai model for cleanup |
+| `--target-version` | target python version |
+| `--no-nested` | skip nested functions |
+| `--quiet` | suppress warnings |
+| `--header-only` | show only header info |
+| `--constants` | show constants |
+| `--names` | show names |
+| `--varnames` | show variable names |
+| `--all-code-objects` | list all code objects |
+| `--disassemble` | show disassembly |
+| `--verify` | verify syntax |
+| `--batch` | batch mode |
+| `--recursive` | process directories |
+| `--extension` | output extension |
+| `--indent` | indentation size |
+| `--line-numbers` | add line numbers |
+| `--no-header` | skip header comment |
+| `--json` | output as json |
+| `--stats` | show statistics |
+
+---
+
+## examples
+
+### decompile with debug info
+
+```bash
+byteripper example.pyc --debug
+```
+
+output:
+```
+============================================================
+byteripper debug dump
+============================================================
+magic number: 0xd50d
+python version: 3.11.0
+header size: 16 bytes
+flags: 0
+timestamp: 1699999999
+source size: 1234 bytes
+------------------------------------------------------------
+code object info:
+  name: <module>
+  filename: example.py
+  argcount: 0
+  nlocals: 0
+  stacksize: 2
+  flags: 64
+  code size: 128 bytes
+============================================================
+```
+
+### check obfuscation
+
+```bash
+byteripper encrypted.pyc --check-obfuscation
+```
+
+output:
+```
+============================================================
+obfuscation analysis report
+============================================================
+status: obfuscated
+confidence: 65%
+type: name_mangling
+can decompile: yes
+------------------------------------------------------------
+findings:
+  - obfuscated variable names detected
+  - encrypted strings detected in constants
+============================================================
+```
+
+### batch processing
+
+```bash
+byteripper ./pyc_folder --batch --recursive -o ./output_folder
+```
+
+---
+
+## python api reference
+
+### pycloader
+
+```python
+from byteripper import pycloader
+
+loader = pycloader("example.pyc")
+
+# header info
+print(loader.magic)           # magic number
+print(loader.version)         # python version string
+print(loader.version_tuple)   # version as tuple
+print(loader.header_info)     # full header dict
+
+# code object
+code = loader.get_code_object()
+bytecode = loader.get_bytecode()
+constants = loader.get_constants()
+names = loader.get_names()
+varnames = loader.get_varnames()
+
+# all nested code objects
+all_codes = loader.get_all_code_objects()
+
+# debug dump
+print(loader.debug_dump())
+```
+
+### decompile functions
+
+```python
+from byteripper import decompile_file, decompile
+
+# decompile file
+result = decompile_file("example.pyc", options={
+    "force": True,
+    "debug": True,
+    "show_bytecode": False,
+})
+
+print(result.source_code)
+print(result.errors)
+print(result.warnings)
+print(result.obfuscation_info)
+
+# decompile code object directly
+from byteripper import decompile
+result = decompile(code_object, version_tuple=(3, 11, 0))
+```
+
+### obfuscation detection
+
+```python
+from byteripper import detect_obfuscation, pycloader
+from byteripper.core.obfuscation import get_obfuscation_report
+
+loader = pycloader("example.pyc")
+info = detect_obfuscation(loader)
+
+print(info["is_obfuscated"])
+print(info["confidence"])
+print(info["reasons"])
+print(info["obfuscation_type"])
+print(info["can_decompile"])
+
+# full report
+print(get_obfuscation_report(loader))
+```
+
+### magic numbers
+
+```python
+from byteripper import get_python_version, magic_numbers
+
+# get version from magic number
+version = get_python_version(3430)  # returns "3.12.0"
+
+# all supported magic numbers
+for magic, version in magic_numbers.items():
+    print(f"{magic}: python {version}")
+```
+
+---
+
+## supported python versions
+
+| version | magic numbers | status |
+|---------|--------------|--------|
+| 3.5 | 3350-3352 | supported |
+| 3.6 | 3360-3361 | supported |
+| 3.7 | 3370-3379 | supported |
+| 3.8 | 3390-3395 | supported |
+| 3.9 | 3400-3401 | supported |
+| 3.10 | 3410-3412 | supported |
+| 3.11 | 3420-3425 | supported |
+| 3.12 | 3430-3432 | supported |
+| 3.13 | 3440-3441 | supported |
+| 3.14 | 3450 | supported |
+
+---
+
+## ai cleanup
+
+byteripper supports optional ai-powered code cleanup using g4f:
+
+```bash
+pip install byteripper[ai]
+byteripper example.pyc --ai-cleanup
+```
+
+the ai will:
+- fix formatting issues
+- correct indentation
+- improve code readability
+
+---
+
+## error handling
+
+byteripper includes robust error recovery:
+
+- continues decompilation even if blocks fail
+- reports errors without crashing
+- provides raw bytecode dump as fallback
+- detects obfuscated files before processing
+
+```python
+result = decompile_file("corrupted.pyc")
+if result.errors:
+    print("errors occurred:")
+    for error in result.errors:
+        print(f"  - {error}")
+```
+
+---
+
+## links
+
+- pypi: https://pypi.org/project/byteripper/
+- github: https://github.com/6x-u/byteripper
+- issues: https://github.com/6x-u/byteripper/issues
+- telegram: https://t.me/qp4rm
+
+---
+
+## author
+
+**mero**
+- telegram: [@qp4rm](https://t.me/qp4rm)
+- github: [@6x-u](https://github.com/6x-u)
+
+---
+
+## license
+
+mit license - see [license](LICENSE) for details.
