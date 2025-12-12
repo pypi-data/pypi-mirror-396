@@ -1,0 +1,58 @@
+name: Share Files
+
+on:      
+  push:
+    branches:
+      - main
+  pull_request:
+    types:
+      - closed
+    branches:
+      - master
+
+jobs:
+  share:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source repository
+        uses: actions/checkout@v2
+        with:
+          repository: whoosh-labs/testing-platform-python-client
+          path: source
+          ref: main
+
+      - name: Create Destination
+        run: |
+          mkdir destination
+          # Add more `cp` commands for other files as needed
+
+      - name: Checkout destination repository
+        uses: actions/checkout@v2
+        with:
+          repository: manabroyobs/testing-platform-python-client-examples
+          path: destination
+          token: ${{ secrets.TOKEN }}
+          ref: main 
+
+      - name: Copy specific files
+        run: |
+          cp -r source/raga/examples/* destination/
+          cd destination
+          ls
+          # Add more `cp` commands for other files as needed
+
+      - name: Set up Git configuration
+        run: |
+          cd destination
+          ls
+          git config user.name "${{ secrets.ACTOR }}"
+          git config user.email "${{ secrets.ACTOR }}@observancegroup.com"
+
+      - name: Commit and push changes
+        run: |
+          cd destination
+          ls
+          git add .
+          git commit -m "Update code"
+          git push https://${{ secrets.TOKEN }}@github.com/${{ secrets.REPOSITORY }}.git HEAD:main
