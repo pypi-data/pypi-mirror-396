@@ -1,0 +1,148 @@
+{
+  "settings": {
+    "analysis": {
+      "char_filter": {
+        "email_domains": {
+          "type": "pattern_replace",
+          "pattern": ".*@(.*)",
+          "replacement": "$1"
+        }
+      },
+      "analyzer": {
+        "email_domains": {
+          "char_filter": [
+            "email_domains"
+          ],
+          "tokenizer": "uax_url_email",
+          "filter": [
+            "lowercase",
+            "asciifolding"
+          ]
+        },
+        "email": {
+          "type": "custom",
+          "tokenizer": "uax_url_email"
+        }
+      }
+    }
+  },
+  "mappings": {
+    "dynamic": "strict",
+    "dynamic_templates": [
+      {
+        "profile": {
+          "path_match": "profile.*",
+          "mapping": {
+            "type": "keyword"
+          }
+        }
+      },
+      {
+        "preferences": {
+          "path_match": "preferences.*",
+          "mapping": {
+            "type": "keyword"
+          }
+        }
+      }
+    ],
+    "properties": {
+      "$schema": {
+        "type": "keyword",
+        "index": "false"
+      },
+      "id": {
+        "type": "keyword"
+      },
+      "version_id": {
+        "type": "integer",
+        "index": "false"
+      },
+      "uuid": {
+        "type": "keyword",
+        "index": "false"
+      },
+      "created": {
+        "type": "date",
+        "index": "false"
+      },
+      "updated": {
+        "type": "date",
+        "index": "false"
+      },
+      "active": {
+        "type": "boolean"
+      },
+      "confirmed": {
+        "type": "boolean"
+      },
+      "blocked_at": {
+        "type": "date"
+      },
+      "verified_at": {
+        "type": "date"
+      },
+      "username": {
+        "type": "keyword"
+      },
+      "email": {
+        "type": "text",
+        "analyzer": "email",
+        "fielddata": true,
+        "fields": {
+          "domain": {
+            "type": "text",
+            "analyzer": "email_domains",
+            "fielddata": true
+          }
+        }
+      },
+      "email_hidden": {
+        "type": "keyword",
+        "index": "false"
+      },
+      "profile": {
+        "properties": {
+          "full_name": {
+            "type": "text"
+          },
+          "affiliations": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword"
+              }
+            }
+          }
+        },
+        "dynamic": "true"
+      },
+      "preferences": {
+        "properties": {
+          "visibility": {
+            "type": "keyword"
+          },
+          "email_visibility": {
+            "type": "keyword"
+          },
+          "locale": {
+            "type": "keyword",
+            "index": "false"
+          },
+          "timezone": {
+            "type": "keyword",
+            "index": "false"
+          },
+          "notifications": {
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "dynamic": "true"
+      }
+    }
+  }
+}
