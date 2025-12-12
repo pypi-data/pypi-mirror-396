@@ -1,0 +1,172 @@
+Metadata-Version: 2.4
+Name: seven2one-questra-automation
+Version: 0.1.2
+Summary: Questra Automation Python Package
+Author-email: Jürgen Talasch <juergen.talasch@seven2one.de>
+License: Proprietary
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: Other/Proprietary License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
+Requires-Python: >=3.10
+Requires-Dist: gql<4.0.0,>=3.5.0
+Requires-Dist: loguru<1.0.0,>=0.7.0
+Requires-Dist: requests-toolbelt<2.0.0,>=1.0.0
+Requires-Dist: seven2one-questra-authentication>=0.2.3
+Description-Content-Type: text/markdown
+
+# seven2one-questra-automation
+
+Type-safe Python client for the Questra Automation GraphQL API.
+
+## Features
+
+- **Type-safe**: All GraphQL types, queries, and mutations are fully typed with Python dataclasses
+- **Authentication**: Integrates with `questra-authentication` for seamless authentication
+- **Comprehensive**: Supports all Automation API operations (workspaces, repositories, schedules, executions)
+- **Modern**: Uses latest Python 3.10+ features (native type hints, dataclasses)
+- **Well-documented**: Extensive docstrings
+
+## Installation
+
+Using uv (recommended):
+
+```bash
+uv add seven2one-questra-automation
+```
+
+Using pip:
+
+```bash
+pip install seven2one-questra-automation
+```
+
+## Requirements
+
+- Python >= 3.10
+- seven2one-questra-authentication >= 0.2.1
+- gql[all] >= 3.5.0
+- loguru
+
+## Setup
+
+### Basic Client Initialization
+
+```python
+from questra_authentication import QuestraAuthentication
+from questra_automation import QuestraAutomation
+
+# Create authentication client
+auth_client = QuestraAuthentication(
+    url="https://authentik.dev.example.com",
+    username="ServiceUser",
+    password="secret_password",
+    oidc_discovery_paths=["/application/o/automation"],
+)
+
+# Initialize Automation client
+client = QuestraAutomation(
+    graphql_url="https://automation.dev.example.com/graphql",
+    auth_client=auth_client,
+)
+```
+
+### Available API Groups
+
+The client provides access to API operations through namespaces:
+
+- `client.queries`: GraphQL queries (get_workspaces, get_executions, get_service_info, etc.)
+- `client.mutations`: GraphQL mutations (create_workspace, execute_automation, create_schedule, etc.)
+- `client.execute_raw(query)`: Execute custom GraphQL queries
+
+### Available Models
+
+#### Enums
+
+- `ExecutionInitiator`: MANUAL, SCRIPT, SCHEDULE
+- `RepositoryAuthenticationMethod`: USERNAME_PASSWORD, SSH_KEY
+- `AutomationBuildStatus`: PENDING, RUNNING, FAILED, SUCCEEDED
+- `AutomationExecutionStatus`: PENDING, RUNNING, SUCCEEDED, FAILED
+- `AutomationExecutionDomainStatus`: SUCCEEDED, FAILED
+- `SortEnumType`: ASC, DESC
+
+#### Types
+
+- `WorkspaceView`: Workspace details
+- `AutomationView`: Automation details
+- `AutomationExecutionView`: Execution details
+- `RepositoryView`: Repository details
+- `ScheduleView`: Schedule details
+- `ScheduledExecutionView`: Scheduled execution details
+- `ServiceInfo`: Service information
+- `ErrorCodeView`: Error code details
+
+#### Connection Types
+
+All list queries return Connection types with pagination support:
+
+- `AutomationsConnection`
+- `ExecutionsConnection`
+- `WorkspacesConnection`
+- `RepositoriesConnection`
+- `SchedulesConnection`
+- `ScheduledExecutionsConnection`
+- `ErrorCodesConnection`
+
+Each Connection provides:
+
+- `page_info`: Pagination information
+- `edges`: List of edges with cursor
+- `nodes`: Flat list of items
+- `total_count`: Total count of items
+
+## Logging
+
+The client uses `loguru` for logging. Configure logging via environment variables:
+
+```bash
+# Set log level (default: WARNING)
+export QUESTRA_AUTOMATION_LOG_LEVEL=DEBUG
+
+# Optional: log to file
+export QUESTRA_AUTOMATION_LOG_FILE=/path/to/logfile.log
+```
+
+## Development
+
+Install development dependencies:
+
+```bash
+uv sync --all-groups
+```
+
+Run tests:
+
+```bash
+uv run pytest
+```
+
+Run linting:
+
+```bash
+uv run ruff check .
+```
+
+Format code:
+
+```bash
+uv run ruff format .
+```
+
+## Schema
+
+The client is based on the GraphQL schema in [schema/automation.sdl](schema/automation.sdl).
+
+## License
+
+Proprietary - Seven2one GmbH
