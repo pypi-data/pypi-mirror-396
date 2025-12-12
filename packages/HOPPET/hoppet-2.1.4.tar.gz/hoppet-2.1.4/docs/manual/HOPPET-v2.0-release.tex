@@ -1,0 +1,348 @@
+\documentclass[preprint,1p,a4paper,11pt]{elsarticle}
+
+\input{preamble.tex}
+\geometry{margin=25mm,
+    headheight=110pt,
+    footskip=30pt
+}
+\biboptions{sort&compress}
+
+% We need slightly different text in the manual and in the release note.
+\newif\ifreleasenote
+\releasenotetrue % comment out to hide answers
+
+%\journal{European Physical Journal C/ SciPost?}
+
+\begin{document}
+\begin{frontmatter}
+\begin{flushright}
+  CERN-TH-2023-237\\
+  MPP-2023-285\\
+  OUTP-23-15P
+\end{flushright}
+\title{\hoppet{} {\tt v2} release note}
+
+\author[1]{Alexander Karlberg}\ead{alexander.karlberg@cern.ch}
+\author[2]{Paolo Nason}\ead{paolo.nason@mib.infn.it}
+\author[3,4]{Gavin Salam}\ead{gavin.salam@physics.ox.ac.uk}
+\author[5,6]{Giulia Zanderighi}\ead{zanderi@mpp.mpg.de}
+\author[7]{Fr\'ed\'eric Dreyer}\ead{dreyer.frederic@gene.com}
+
+\affiliation[1]{organization={CERN, Theoretical Physics Department}, postcode={CH-1211} ,city={Geneva 23}, country={Switzerland}}
+\affiliation[2]{organization={INFN, Sezione di Milano-Bicocca, and Universita di Milano-Bicocca, \mbox{Piazza della Scienza 3}}, postcode={20126} ,city={Milano}, country={Italy}}
+\affiliation[3]{organization={Rudolf Peierls Centre for Theoretical Physics, Clarendon Laboratory, Parks Road}, postcode={OX1 3PU} ,city={Oxford}, country={UK}}
+\affiliation[4]{organization={All Souls College}, postcode={OX1 4AL} ,city={Oxford}, country={UK}}
+\affiliation[5]{organization={Max-Planck-Institut fur Physik, Boltzmannstr. 8}, postcode={85748} ,city={Garching}, country={Germany}}
+\affiliation[6]{organization={Physik-Department, Technische Universitat Munchen, James-Franck-Strasse 1}, postcode={85748} ,city={Garching}, country={Germany}}
+\affiliation[7]{organization={Prescient Design, Genentech, 149 5th Avenue},city={New York}, postcode={NY 10010}, country={USA}}
+
+\begin{abstract}
+  We document the three main new features in the v2 release series of the
+  \hoppet parton distribution function evolution code, specifically
+  support for N$^3$LO QCD evolution in the variable flavour number
+  scheme, for the determination of hadronic structure functions for
+  massless quarks up to N$^3$LO, and for QED evolution to an accuracy
+  phenomenologically equivalent to NNLO QCD.
+  %
+  Additionally we describe a new Python interface, CMake build option,
+  functionality to save a \hoppet table as an LHAPDF grid and update
+  our performance benchmarks, including optimisations in
+  interpolating PDF tables.
+\end{abstract}
+
+\begin{keyword}
+  Perturbative QCD \sep DIS \sep DGLAP \sep QED
+%% keywords here, in the form: keyword \sep keyword
+
+%% PACS codes here, in the form: \PACS code \sep code
+
+%% MSC codes here, in the form: \MSC code \sep code
+%% or \MSC[2008] code \sep code (2000 is the default)
+
+\end{keyword}
+  \begin{textblock*}{2cm}(0.11\textwidth,0.096\textheight)  % (width)(x,y position)
+    %\includegraphics[width=3cm]{logo/2025-09-logo-cropped.pdf}
+    \includegraphics[width=2cm]{logo/2025-09-logo.png}
+  \end{textblock*}
+\end{frontmatter}
+\newpage
+\tableofcontents
+\section{Introduction}
+
+
+\hoppet~\cite{Salam:2008qg} is a parton distribution function (PDF)
+evolution code written in modern Fortran,  with interfaces also for C/\CPP{} and
+earlier dialects of Fortran.
+%
+It offers both a high-level PDF evolution interface and user-access to
+lower-level functionality for operations such as convolutions of
+coefficient functions and PDFs.
+%
+It is designed to provide flexible, fast and accurate evolution.
+
+Since the first major release of \hoppet, the landscape of PDF
+evolution codes has evolved substantially, with a range of new
+open-source codes having been developed, for example the
+APFEL~\cite{Bertone:2013vaa}, \APFELPP{}~\cite{Bertone:2017gds} and
+EKO~\cite{Candido:2022tld} codes supplementing earlier widely-used
+public codes such as QCDNUM~\cite{Botje} and
+PEGASUS~\cite{Pegasus}.\footnote{Other codes such as 
+  ChiliPDF~\cite{Diehl:2021gvs} appear to not yet be public.}
+%
+Nevertheless, \hoppet remains a powerful tool, notably for its ability
+to reach high and quantifiable accuracies with competitive speed.
+%
+As a result it often provides a critical reference for benchmark
+studies, as those presented e.g.\ in
+Refs.~\cite{Dittmar:2005ed,Bertone:2024dpm}.
+%
+It also provides the option of fast (millisecond-scale) evolution with
+accuracies $\sim 10^{-4}$, which is more than sufficient for
+phenomenological applications.
+%
+%
+Furthermore \hoppet's exposition not just of full PDF
+evolution (as exploited in Refs.~\cite{Lai:2010vv,Gao:2013xoa,Butterworth:2015oua,Hou:2019efy,PDF4LHCWorkingGroup:2022cjn}),
+but also of low-level functionality though a stable, public API, has
+led to its use for a range of
+fixed-order~\cite{Caola:2019nzf,Asteriadis:2019dte,Bargiela:2022dla},
+all-order~\cite{Banfi:2010xy,Dasgupta:2014yra,Banfi:2015pju,Monni:2016ktx,Bizon:2017rah,Buonocore:2024xmy}
+and Monte
+Carlo~\cite{Monni:2019whf,vanBeekveld:2023ivn,Buonocore:2024pdv,vanBeekveld:2025lpz}
+applications.
+%
+With the advent of ever more precise data from the LHC at CERN, and
+future very high precision data at the forthcoming Electron-Ion
+Collider~\cite{AbdulKhalek:2021gbh} at Brookhaven National Laboratory,
+the continued development of tools such as \hoppet remains important
+for the field.
+
+This release note documents three major additions to \hoppet, made
+available as part of release~2.0.0: 
+%
+(1) support for QCD evolution at N$^3$LO in the (zero mass) variable
+flavour number scheme (VFNS)~\cite{Buza:1996wv} (Section~\ref{sec:n3lo-evolution});
+%
+(2) support for the
+determination of massless hadronic structure functions, as initially developed
+for calculations of vector-boson fusion, and later deep inelastic scattering, cross
+sections~\cite{Cacciari:2015jma,Dreyer:2016oyx,Dreyer:2018qbw,Dreyer:2018rfu,Karlberg:2024hnl}
+(Section~\ref{sec:structure-funcs});
+%
+(3) support for QED evolution (Section~\ref{sec:qed-evolution}),
+originally developed as part of the LuxQED project for the evaluation
+of the photon density inside a proton and its extension to lepton
+distributions in the
+proton~\cite{Manohar:2016nzj,Manohar:2017eqh,Buonocore:2020nai,Buonocore:2021bsf}.
+
+This release also includes a range of other additions relative
+to the original 1.1.0 release documented in \cite{Salam:2008qg}, in
+particular a Python interface
+(Section~\ref{sec:pyinterface}), a CMake-based build system
+(Section~\ref{sec:cmake}), and the ability to write LHAPDF grids
+(Section~\ref{sec:lhapdf}).
+%
+We have also updated the performance benchmarks and improved the speed
+for interpolating PDF tables also when loaded from LHAPDF (Section~\ref{sec:v2-performance}).
+%
+\hoppet can be obtained by executing
+\begin{lstlisting}
+  git clone https://github.com/hoppet-code/hoppet.git
+  cd hoppet
+  git switch -d hoppet-2.x.y  # to switch to a specific release tag, e.g. hoppet-2.1.0
+\end{lstlisting}
+Unified documentation of the whole \hoppet package is part of the
+distribution at \url{https://github.com/hoppet-code/hoppet} in the
+\masterlink{docs/manual} directory.
+%
+Details of the other changes since release 1.1.0 can be found in the
+\masterlink{NEWS.md} and \masterlink{ChangeLog} files from the
+repository.
+%
+\medskip
+
+\noindent \fbox{\parbox{\textwidth}{
+\textbf{Note that as of the 2.0.0 release, \hoppet's library name has been renamed
+from \texttt{hoppet\_v1} to \texttt{hoppet}, and similarly for the main
+module and \CPP include file.
+%
+Users with an existing installation of \hoppet (v1) should make sure
+that they link with the new library name.
+%
+Apart from this, v2 remains fully backwards compatible with code
+designed for v1.
+}
+}}
+
+%======================================================================
+\input{perturbative-evolution-in-qcd.tex}
+
+%======================================================================
+\section{Brief summary of \hoppet structure}
+\label{sec:hoppet-structure}
+
+\hoppet works in $x$-space.
+%
+It represents PDFs and splitting functions on grids, typically
+multiple nested grids, each uniform in $y= \ln 1/x$, with the nesting
+involving smaller spacings and smaller $y$ ranges so as to achieve
+good accuracy not just at small $x$ but also large $x$.
+%
+The underlying convolutions of splitting functions with PDFs
+effectively use piecewise polynomial interpolations of the PDFs.
+%
+The convolutions of the splitting functions with individual basis
+polynomials are pre-evaluated using adaptive Gaussian integration.
+%
+Evolution equations are solved using Runge-Kutta methods.
+
+\begin{table}[pt!]
+  \centering
+  \input{interface-tables/streamlined.tex}
+  \caption{Core methods of the streamlined interface in Fortran and \CPP.
+    %
+    In Python, \ttt{hoppetStart(...)} is to be replaced with
+    \ttt{hoppet.Start(...)}, and routines like \ttt{hoppet.Eval(...)}
+    and \ttt{LHAsub(x,Q)} return
+    \texttt{f} rather than taking \texttt{f} as an argument and
+    filling it.
+    %
+    \label{tab:streamlined-interface}
+  }
+\end{table}
+
+
+The code has two interfaces.
+%
+For simple usage, it provides a so-called ``streamlined''
+interface, giving high-level access to the functionality that is most
+widely needed.
+%
+It is available from Fortran, \CPP and, as of v2, Python
+(cf.\ Sec.~\ref{sec:pyinterface}).
+%
+Its main routines are listed in Table~\ref{tab:streamlined-interface}.
+%
+The functionality includes evolving to fill a PDF tabulation and then
+accessing that PDF tabulation at given $x,Q$ points.
+%
+For faster tabulation of many distinct initial conditions, one can
+pre-determine (cache) the evolution operators between the different
+$Q$ scales at which the PDF is tabulated, and then repeatedly apply
+that cached evolution.
+%
+The streamlined interface also provides access to convolutions of the
+various orders of splitting functions with the tabulated PDF.
+
+
+\begin{table}[pt!]
+  \centering
+  \input{interface-tables/general-objects.tex}
+  \caption{Core objects in the general interface.
+    %
+    \label{tab:general-interface}
+  }
+\end{table}
+
+
+For more advanced usage there is a ``general'' interface (sometimes
+called the object-oriented interface, though it is only partially so).
+%
+It gives access to the various low-level objects that are useful in
+DGLAP evolution, such as splitting functions, splitting matrices,
+tabulations of PDFs, etc.
+%
+The main objects are listed in Table~\ref{tab:general-interface}.
+%
+Up to v2.1, that interface is accessible only in modern Fortran,
+though in due course we expect to extend it to other languages.
+%
+We refer the reader to the original manual~\cite{Salam:2008qg} for an
+extended discussion of the general interface.
+%
+For some uses, it can be convenient to initialise \hoppet with the
+streamlined interface and then access the underlying objects in
+Fortran from the
+\repolink{src/streamlined_interface.f90}{streamlined\_interface}
+module. 
+
+Various examples are available with the two sets of interfaces, to be
+found in the \masterlink{examples/} directory of the repository.
+%
+This document will focus mostly on the streamlined interface, though
+in a places we will also discuss key additions to the general interface.
+
+%======================================================================
+\input{v2-updates.tex}
+
+%======================================================================
+\section{Conclusion}
+
+Version 2 of \hoppet brings major additions to its functionality.
+%
+These include evolution up to N$^3$LO, massless structure function
+evaluation, QED evolution, a Python interface, a modern build system,
+functionality for writing LHAPDF grids and significant speed
+improvements in the interpolation of its internal PDF tables.
+
+Overall \hoppet remains highly competitive in terms of speed and
+accuracy.
+%
+For example, repeated filling of a full PDF tabulation takes about a
+millisecond per initial condition, with a relative accuracy of
+$10^{-4}$ or better for $10^{-5} < x<0.9$.
+%
+It offers explicit handles to control the accuracy, allowing users to
+verify the precision of their results and choose the optimal trade-off
+between speed and precision.
+%
+Its modern Fortran interface also offers powerful and flexible access
+to a range of common PDF manipulations such as convolutions with
+arbitrary splitting and coefficient functions, features that are
+useful in a variety of contexts.
+
+We hope that this release of \hoppet can help provide solid
+foundations for a range of groups to contribute to the ongoing
+discussions~\cite{McGowan:2022nag,NNPDF:2024nan,Cooper-Sarkar:2024crx,Cridge:2024icl,Cooper-Sarkar:2025sqw}
+in the field concerning the impact of \ntlo and QED effects in PDF
+fits.
+%
+We also hope that the interfaces across computing languages will
+facilitate the practical aspects of integration with a range of other
+tools.
+
+
+\section*{Acknowledgements}
+
+We are grateful to Johannes Bl\"umlein for providing us with a
+pre-release version of an exact Fortran code corresponding
+Ref.~\cite{BlumleinCode} as well as a suitable license for its use,
+and to Arnd Behring for assistance with \ttt{libome}.
+%
+We also gratefully acknowledge Luca Buonocore for his implementation
+of the $P_{lq}$ splitting function in the QED code, Andrii Verbitskyi
+for contributing the initial version of the CMake build system,
+%
+and Melissa van Beekveld for collaboration on initial options for speed
+improvements in the evaluation of tabulated PDFs.
+%
+We thank Valerio Bertone for cross-checks of the  structure
+functions and PDF evolution with \APFELPP.
+%
+We also wish to thank Juan Rojo for useful discussions. 
+%
+GPS acknowledges funding from a Royal Society Research
+Professorship (grant RP$\backslash$R$\backslash$231001) and from the Science and
+Technology Facilities Council (STFC) under grant ST/X000761/1.
+%
+PN thanks the Humboldt Foundation for support. 
+%
+%\appendix
+
+
+\bibliographystyle{elsarticle-num}
+\bibliography{hoppet.bib}
+%\input{bibliography.tex}
+
+\end{document}
+
