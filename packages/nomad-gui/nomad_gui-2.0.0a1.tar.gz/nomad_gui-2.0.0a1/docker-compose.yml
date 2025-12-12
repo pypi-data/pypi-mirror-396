@@ -1,0 +1,188 @@
+#
+# Copyright (c) 2018-2020 The NOMAD Authors.
+#
+# This file is part of NOMAD.
+# See https://nomad-lab.eu for further info.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+name: nomad-gui-api
+services:
+  # broker for celery
+  rabbitmq:
+    restart: unless-stopped
+    image: rabbitmq:3.11.5
+    container_name: nomad_guiapi_rabbitmq
+    environment:
+      - RABBITMQ_ERLANG_COOKIE=SWQOKODSQALRPCLNMEQG
+      - RABBITMQ_DEFAULT_USER=rabbitmq
+      - RABBITMQ_DEFAULT_PASS=rabbitmq
+      - RABBITMQ_DEFAULT_VHOST=/
+    volumes:
+      - rabbitmq:/var/lib/rabbitmq
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', '--silent', '--quiet', 'ping']
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 10s
+
+  # the search engine
+  elastic:
+    restart: unless-stopped
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.24
+    container_name: nomad_guiapi_elastic
+    environment:
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - discovery.type=single-node
+    volumes:
+      - elastic:/usr/share/elasticsearch/data
+    healthcheck:
+      test:
+        - 'CMD'
+        - 'curl'
+        - '--fail'
+        - '--silent'
+        - 'http://elastic:9200/_cat/health'
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 60s
+
+  # the user data db
+  mongo:
+    restart: unless-stopped
+    image: mongo:5.0.6
+    container_name: nomad_guiapi_mongo
+    environment:
+      - MONGO_DATA_DIR=/data/db
+      - MONGO_LOG_DIR=/dev/null
+    volumes:
+      - mongo:/data/db
+      - ./.volumes/mongo:/backup
+    command: mongod --logpath=/dev/null # --quiet
+    healthcheck:
+      test:
+        - 'CMD'
+        - 'mongo'
+        - 'mongo:27017/test'
+        - '--quiet'
+        - '--eval'
+        - "'db.runCommand({ping:1}).ok'"
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 10s
+
+  keycloak:
+    image: gitlab-registry.mpcdf.mpg.de/nomad-lab/nomad-test-keycloak:v1.1
+    platform: linux/amd64
+    container_name: nomad_guiapi_keycloak
+    environment:
+      - KC_HTTP_PORT=8008
+      - KC_HOSTNAME=http://localhost:8008
+    volumes:
+      - ./import:/opt/keycloak/data/import
+    ports:
+      - 8008:8008
+      - 9000:9000
+
+  backend:
+    restart: unless-stopped
+    build:
+      context: .
+    platform: linux/amd64
+    container_name: nomad_guiapi_app
+    command:
+      [
+        'python',
+        '-m',
+        'nomad.cli',
+        'admin',
+        'run',
+        'appworker',
+      ]
+    environment:
+      NOMAD_SERVICE: nomad_guiapi_app
+      NOMAD_SERVICES_API_HOST: '0.0.0.0'
+      NOMAD_SERVICES_API_PORT: 8000
+      NOMAD_FS_EXTERNAL_WORKING_DIRECTORY: '$PWD'
+      NOMAD_RABBITMQ_HOST: rabbitmq
+      NOMAD_ELASTIC_HOST: elastic
+      NOMAD_MONGO_HOST: mongo
+      NOMAD_LOGSTASH_HOST: logtransfer
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      elastic:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    volumes:
+      - ./nomad.yaml:/app/nomad.yaml
+    ports:
+      - 8000:8000
+    healthcheck:
+      test:
+        - 'CMD'
+        - 'curl'
+        - '--fail'
+        - '--silent'
+        - 'http://localhost:8000/-/health'
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 10s
+  e2e_tests:
+    profiles: [e2e_tests]
+    network_mode: host
+    stdin_open: true  # -i
+    tty: true         # -t
+    working_dir: /app
+    image: mcr.microsoft.com/playwright:v1.52.0-noble
+    container_name: nomad_guiapi_e2e_tests
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      elastic:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      keycloak:
+       condition: service_healthy
+      backend:
+        condition: service_healthy
+    command: sh -c "bash scripts/generate_config_using_api.sh && npm ci && npx playwright install --with-deps && npm run build && tail -f /dev/null"
+    ports:
+      - 9323:9323
+    environment:
+      E2E_API_URL: 'http://localhost:8000/nomad-oasis/api/v1'
+    volumes:
+      - ..:/app
+      - /app/node_modules
+
+  # nomad remote tools hub (JupyterHUB, e.g. for AI Toolkit)
+volumes:
+  mongo:
+    name: 'nomad_guiapi_mongo'
+  elastic:
+    name: 'nomad_guiapi_elastic'
+  rabbitmq:
+    name: 'nomad_guiapi_rabbitmq'
+
+networks:
+  default:
+    name: nomad_guiapi_network

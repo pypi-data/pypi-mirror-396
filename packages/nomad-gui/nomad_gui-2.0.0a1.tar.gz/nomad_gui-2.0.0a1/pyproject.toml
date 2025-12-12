@@ -1,0 +1,85 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nomad-gui"
+description = "NOMAD plugin containing the default graphical user interface."
+authors = [
+  { name = "NOMAD Laboratory", email = 'markus.scheidgen@physik.hu-berlin.de' },
+]
+version = "2.0.0a1"
+requires-python = ">=3.9"
+dependencies = [
+  "nomad-lab[parsing,infrastructure]>=1.3.17.dev161",
+  "pydantic",
+]
+[project.optional-dependencies]
+dev = [
+  'ruff',
+  "pytest",
+  "nomad-schema-plugin-run>=1.0.1",
+  "mdanalysis>=2.8.0,<3.0.0 ; python_full_version >= '3.10'",
+  "mdanalysis<2.8 ; python_full_version < '3.10'",
+  "scipy>=1.7.1",
+  "networkx>=2.6.3",
+]
+
+[project.urls]
+"Homepage" = "https://gitlab.mpcdf.mpg.de/nomad-lab/nomad-gui"
+
+[tool.ruff]
+include = ["src/*.py", "tests/*.py"]
+lint.select = [
+  "E",  # pycodestyle
+  "W",  # pycodestyle
+  "PL", # pylint
+]
+lint.ignore = [
+  "E501",    # Line too long ({width} > {limit} characters)
+  "E701",    # Multiple statements on one line (colon)
+  "E731",    # Do not assign a lambda expression, use a def
+  "E402",    # Module level import not at top of file
+  "PLR0911", # Too many return statements
+  "PLR0912", # Too many branches
+  "PLR0913", # Too many arguments in function definition
+  "PLR0915", # Too many statements
+  "PLR2004", # Magic value used instead of constant
+  "PLW0603", # Using the global statement
+  "PLW2901", # redefined-loop-name
+  "PLR1714", # consider-using-in
+  "PLR5501", # else-if-used
+]
+lint.fixable = ["ALL"]
+
+# Same as Black.
+line-length = 88
+indent-width = 4
+
+[tool.ruff.format]
+# use single quotes for strings.
+quote-style = "single"
+
+# indent with spaces, rather than tabs.
+indent-style = "space"
+
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"
+
+[tool.uv]
+extra-index-url = [
+  "https://gitlab.mpcdf.mpg.de/api/v4/projects/2187/packages/pypi/simple",
+]
+prerelease = "allow"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools_scm]
+root = ".."
+
+[project.entry-points.'nomad.plugin']
+gui_api = "nomad_gui.apis:gui_api"

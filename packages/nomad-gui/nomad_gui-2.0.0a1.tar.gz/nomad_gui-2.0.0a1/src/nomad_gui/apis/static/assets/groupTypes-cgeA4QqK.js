@@ -1,0 +1,1 @@
+import{bY as e}from"./index-Bzcp6Isa.js";const r=e()({owner:{value:"owner",label:"Owner",disabled:!0},maintainer:{value:"maintainer",label:"Maintainer",disabled:!1},member:{value:"member",label:"Member",disabled:!1}});export{r as u};
