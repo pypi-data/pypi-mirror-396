@@ -1,0 +1,37 @@
+ci:
+  autofix_commit_msg: "chore: pre-commit autofix"
+  autofix_prs: true
+  autoupdate_branch: main
+  autoupdate_commit_msg: "chore: pre-commit autoupdate"
+  autoupdate_schedule: "monthly"
+  skip:
+    - uv-lock
+
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.7
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: https://github.com/tox-dev/pyproject-fmt
+    rev: v2.11.1
+    hooks:
+      - id: pyproject-fmt
+
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.9.13
+    hooks:
+      - id: uv-lock
+      - id: uv-sync
+
+  - repo: https://github.com/python-jsonschema/check-jsonschema
+    rev: 0.35.0
+    hooks:
+      - id: check-github-workflows
+      - id: check-meltano
+      - id: check-renovate
+        language: python
+        additional_dependencies:
+        - pyjson5==2.0.0
