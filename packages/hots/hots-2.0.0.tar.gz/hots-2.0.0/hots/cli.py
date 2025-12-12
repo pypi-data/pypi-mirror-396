@@ -1,0 +1,32 @@
+"""Command‑line interface for the HOTS application."""
+
+import click
+
+from hots.config.loader import load_config
+from hots.core.app import App
+from hots.utils.logging_config import setup_logging
+
+
+@click.command()
+@click.option(
+    '--config', '-c', 'config_path',
+    required=True,
+    type=click.Path(exists=True),
+    help='Path to the JSON config file'
+)
+def main(config_path):
+    """Load the configuration and run the HOTS application."""
+    cfg = load_config(config_path)
+
+    setup_logging(
+        level=cfg.logging.level,
+        filename=cfg.logging.filename,
+        fmt=cfg.logging.fmt,
+    )
+
+    app = App(cfg)
+    app.run()
+
+
+if __name__ == '__main__':
+    main()
