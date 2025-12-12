@@ -1,0 +1,145 @@
+Metadata-Version: 2.4
+Name: microbots
+Version: 0.0.12
+Summary: container-based autonomous agent framework
+Author-email: xxx <xxx@example.com>
+License: MIT License
+        
+        Copyright (c) 2025 Bala
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+        
+Project-URL: Source Repo, https://github.com/microsoft/minions
+Project-URL: Issues, https://github.com/microsoft/minions/issues
+Keywords: agent,bot,micro
+Classifier: Operating System :: OS Independent
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3.11
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: openai==1.107.3
+Requires-Dist: anthropic==0.75.0
+Requires-Dist: python-dotenv==1.1.1
+Requires-Dist: docker==7.1.0
+Requires-Dist: fastapi==0.116.1
+Requires-Dist: uvicorn==0.35.0
+Requires-Dist: pydantic==2.11.9
+Requires-Dist: swe-rex==1.4.0
+Requires-Dist: aiohttp==3.12.15
+Requires-Dist: pyyaml==6.0.2
+Dynamic: license-file
+
+# 🤖 Microbots
+
+MicroBots is a lightweight, extensible AI agent for code comprehension and controlled file edits. It integrates cleanly
+into automation pipelines, mounting a target directory with explicit read-only or read/write modes so LLMs can safely
+inspect, refactor, or generate files with least‑privilege access.
+
+
+```py
+from microbots import WritingBot
+
+myWritingBot = WritingBot(
+    model="azure-openai/my-gpt5", # model format : <provider/deployment_model_name>
+    folder_to_mount=str("myReactApp"),
+)
+
+data = myWritingBot.run("""when doing npm run build, I get an error.
+Fix the error and make sure the build is successful.""", timeout_in_seconds=600)
+print(data.results)
+```
+
+## ⚠️ Project Status: Under Fast Development
+
+This project is currently **under active development**. Features, APIs, and internal structures are subject to change across versions without notice, and unexpected behavior may occur. Please **use with caution** in production environments.
+
+## 🚀 How to install
+
+### Pre-requisites
+
+- Docker
+- AI LLM Provider and API Key
+
+### Install Microbots
+
+```bash
+pip install microbots
+```
+
+
+## ✨LLM Support
+
+Azure OpenAI Models - Add the below environment variables in a `.env` file in the root of your application
+
+```env
+OPEN_AI_END_POINT=XXXXXXXXXXXXXXXXXXXXXXXXXX
+OPEN_AI_KEY=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+```
+
+## 🤖 Bots & Usage Examples
+
+Pre-requisite for the below example code of Bots:
+From the root of your application, Create a folder called  `code` inside which clone the repo `https://github.com/swe-agent/test-repo/`. Now run the code
+
+
+### 📖 ReadingBot
+
+
+```py
+from microbots import ReadingBot
+
+myBot = ReadingBot(
+    model="azure-openai/my-gpt5",
+    folder_to_mount="code"
+)
+
+runResult = myBot.run("When I am running missing_colon.py I am getting SyntaxError: invalid syntax. Find the error and explain me what is the error", timeout_in_seconds=600)
+print(runResult)
+
+```
+
+The `ReadingBot` will read the files inside `code` folder and will extract information based on specific instructions given to the bot.
+
+
+### ✍️ WritingBot
+
+Pre-requisite for the example code:
+From the root the application, Create a folder called  `code` inside which clone the repo `https://github.com/swe-agent/test-repo/`. Now run the code
+
+```py
+from microbots import WritingBot
+
+myBot = WritingBot(
+    model="azure-openai/my-gpt5",
+    folder_to_mount="code"
+)
+
+myBot.run("When I am running missing_colon.py I am getting SyntaxError: invalid syntax. Fix the error and make sure the code runs without any errors.", timeout_in_seconds=600)
+```
+
+The `WritingBot` will read and write the files inside `code` folder based on specific instructions given to the bot.
+
+## ⚙️ How it works
+
+
+![Overall Architecture Image](./docs/images/overall_architecture.png)
+
+The MicroBots create a containerized environment and mount the specified directory with restricting the permissions to read-only or read/write based on Bot used. It ensures that the AI agents operate within defined boundaries which enhances security and control over code modifications as well as protecting the local environment.
