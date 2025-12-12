@@ -1,0 +1,240 @@
+# gladiator-arena
+
+CLI + Python client for interacting with the Arena PLM.
+
+## Install
+
+```bash
+pip install lr-gladiator
+```
+
+## Quick start
+
+### Login
+
+Interactive login (prompts for username/password):
+
+```bash
+gladiator login
+```
+
+Non-interactive (for CI/CD):
+
+```bash
+export GLADIATOR_USERNAME="<insert username>"
+export GLADIATOR_PASSWORD="<insert password>"
+gladiator login --ci
+```
+
+By default, this stores session details at:
+
+```
+~/.config/gladiator/login.json
+```
+
+### Commands
+
+Get the latest approved revision for an item:
+
+```bash
+gladiator latest-approved 890-1001
+```
+
+List all files on an item (defaults to the latest approved revision):
+
+```bash
+gladiator list-files 890-1001
+```
+
+Output JSON instead of a table:
+
+```bash
+gladiator list-files 890-1001 --format json
+```
+
+Display a quick summary for an item revision (number, name, description, category, lifecycle, etc.):
+
+```bash
+gladiator info 890-1001
+```
+
+Emit machine-readable JSON instead of the Rich table:
+
+```bash
+gladiator info 890-1001 --format json
+```
+
+The summary includes the Arena web URL (`Item URL`) so you can click straight into the item from the terminal output.
+
+Download the item's thumbnail (saved as `<item>.png`/`.jpg`) while fetching the summary:
+
+```bash
+gladiator info 890-1001 --picture --rev WORKING
+```
+
+List the Bill of Materials (BOM) for an item:
+
+```bash
+gladiator get-bom 890-1001
+```
+
+Recursively expand subassemblies up to two levels deep:
+
+```bash
+gladiator get-bom 890-1001 --recursive --max-depth 2
+```
+
+Add or update a BOM line on the working revision:
+
+```bash
+gladiator add-to-bom 890-1001 510-0005 --qty 2 --refdes R1
+```
+
+Target a different revision or inspect the raw API response:
+
+```bash
+gladiator add-to-bom 890-1001 510-0005 --parent-rev EFFECTIVE --format json
+```
+
+Download attached files to a directory named after the article:
+
+```bash
+gladiator get-files 890-1001
+```
+
+Specify a different output directory:
+
+```bash
+gladiator get-files 890-1001 --out downloads/
+```
+
+Recursively download all files in the full BOM tree:
+
+```bash
+gladiator get-files 890-1001 --recursive
+```
+
+Upload or update a file on the working revision:
+
+```bash
+gladiator upload-file 890-1001 ./datasheet.pdf --category "CAD Data" --title "Datasheet"
+```
+
+Inspect a change and see which views are affected (columns show `*` when the view is included in the change):
+
+```bash
+gladiator get-change CCO-0006
+```
+
+Show the raw change payload instead of the Rich table:
+
+```bash
+gladiator get-change CCO-0006 --format json
+```
+
+Add an item (WORKING revision by default) to an existing change:
+
+```bash
+gladiator add-to-change --change CCO-0003 510-0001
+```
+
+Create a new change order (effectivity and deadline flags optional):
+
+```bash
+gladiator create-change --title "Fan bracket update" --description "Replace bracket" --category "Engineering Change Order"
+```
+
+The command prints a summary table with the newly assigned change number. Use `--format json` to inspect the raw response payload.
+
+### 3) Output control
+
+Most commands support a JSON output mode.  
+Example:
+
+```bash
+gladiator get-bom 890-1001 --output json
+```
+
+### Example sessions
+
+#### Human-readable
+
+```bash
+$ gladiator list-files 101-1031
+         Files for 101-1031 rev (latest approved)         
+┏━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━┳━━━━━━┳━━━━━━━━━━┓
+┃ Name            ┃     Size ┃ Edition ┃ Type ┃ Location ┃
+┡━━━━━━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━╇━━━━━━╇━━━━━━━━━━┩
+│ 101-1907 E.PDF  │   171396 │ 1       │ FILE │          │
+└─────────────────┴──────────┴─────────┴──────┴──────────┘
+```
+
+#### JSON output
+
+```bash
+$ gladiator list-files 101-1031 --format json
+{
+  "article": "101-1031",
+  "revision": null,
+  "files": [
+    {
+      "id": "00000000000000000000",
+      "fileGuid": "11111111111111111111",
+      "name": "101-1907 E.PDF",
+      "filename": "101-1907 E.PDF",
+      "size": 171396,
+      "haveContent": true,
+      "downloadUrl": "https://api.arenasolutions.com/v1/files/11111111111111111111/content",
+      "edition": "1",
+      "updatedAt": "2016-12-06T12:31:33Z",
+      "attachmentGroupGuid": "22222222222222222222",
+      "storageMethodName": "FILE",
+      "location": null
+    }
+  ]
+}
+```
+
+Change inspections use a tabular view that highlights impacted areas. Example output for `gladiator get-change CCO-0006`:
+
+```bash
+                Affected items for CCO-0006
+┏━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━┳━━━━━━━┳━━━━━━━┳━━━━━━━━┳━━━━━━┓
+┃ Item Number ┃ Affected Rev ┃ New Rev ┃ Disposition   ┃ Notes  ┃ BOM ┃ Specs ┃ Files ┃ Source ┃ Cost ┃
+┡━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━╇━━━━━━━╇━━━━━━━╇━━━━━━━━╇━━━━━━┩
+│ 510-0001    │ A            │ B       │ In Stock: Use │ Review │  *  │       │   *   │        │   *  │
+└─────────────┴──────────────┴─────────┴───────────────┴────────┴─────┴───────┴───────┴────────┴──────┘
+```
+
+## Programmatic use
+
+```python
+from gladiator import ArenaClient, load_config
+
+client = ArenaClient(load_config())
+rev = client.get_latest_approved_revision("890-1001")
+files = client.list_files("890-1001", rev)
+```
+
+## Development
+
+```bash
+python -m pip install -e .[dev]
+python -m build
+```
+
+## FAQ
+
+- **Where is the config kept?**
+  `~/.config/gladiator/login.json` (override with `GLADIATOR_CONFIG`)
+
+- **How do I run non-interactively?**
+  Make sure to give all required arguments. Also pass `--ci` to stop output of sensitive information such as username or passwords.
+
+- **What does `--recursive` do?**
+  Expands subassemblies and downloads or lists all contained items up to the given `--max-depth`.
+
+- **How does Gladiator handle authentication?**
+  It performs a `/login` call and stores the resulting `arenaSessionId` for reuse. If it expires, re-run `gladiator login`.
+
+
