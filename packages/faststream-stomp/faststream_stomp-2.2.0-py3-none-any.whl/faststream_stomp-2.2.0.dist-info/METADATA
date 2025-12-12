@@ -1,0 +1,72 @@
+Metadata-Version: 2.4
+Name: faststream-stomp
+Version: 2.2.0
+Summary: FastStream STOMP broker
+Project-URL: repository, https://github.com/community-of-python/stompman
+Author-email: Lev Vereshchagin <mail@vrslev.com>
+License: MIT
+Keywords: activemq,artemis,faststream,jms,messaging,stomp
+Classifier: Development Status :: 4 - Beta
+Classifier: Natural Language :: English
+Classifier: Programming Language :: Python :: Implementation :: CPython
+Classifier: Topic :: System :: Networking
+Classifier: Typing :: Typed
+Requires-Python: >=3.11
+Requires-Dist: faststream~=0.6
+Requires-Dist: stompman>=2.0.1
+Description-Content-Type: text/markdown
+
+# FastStream STOMP broker
+
+## How To Use
+
+Install the package:
+
+```sh
+uv add faststream-stomp
+poetry add faststream-stomp
+```
+
+Basic usage:
+
+```python
+import asyncio
+
+import faststream
+import faststream_stomp
+import stompman
+
+server = stompman.ConnectionParameters(host="127.0.0.1", port=61616, login="admin", passcode="password")
+broker = faststream_stomp.StompBroker(stompman.Client([server]))
+
+
+@broker.subscriber("first")
+@broker.publisher("second")
+def _(message: str) -> str:
+    print(message)  # this will print message from startup
+    return "Hi from first handler!"
+
+
+@broker.subscriber("second")
+def _(message: str) -> None:
+    print(message)  # this will print message from first handler
+
+
+app = faststream.FastStream(broker)
+
+
+@app.after_startup
+async def send_first_message() -> None:
+    await broker.connect()
+    await broker.publish("Hi from startup!", "first")
+
+
+if __name__ == "__main__":
+    asyncio.run(app.run())
+```
+
+Also there are `StompRouter` and `TestStompBroker` for testing. It works similarly to built-in brokers from FastStream, I recommend to read the original [FastStream documentation](https://faststream.airt.ai/latest/getting-started).
+
+### Caveats
+
+- When exception is raised in consumer handler, the message will be nacked (FastStream doesn't do this by default)
