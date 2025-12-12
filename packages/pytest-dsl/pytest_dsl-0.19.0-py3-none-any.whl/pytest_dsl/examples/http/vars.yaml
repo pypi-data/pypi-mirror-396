@@ -1,0 +1,55 @@
+# HTTP客户端配置
+http_clients:
+  default:  # 默认客户端配置
+    base_url: https://httpbin.org
+    headers:
+      User-Agent: pytest-dsl-client/1.0
+      Accept: application/json
+    timeout: 30
+    verify_ssl: true
+    session: true
+  
+  jsonplaceholder:  # JSONPlaceholder API客户端
+    base_url: https://jsonplaceholder.typicode.com
+    headers:
+      User-Agent: pytest-dsl-client/1.0
+      Accept: application/json
+    timeout: 15
+    verify_ssl: true
+    session: true
+    retry:
+      max_retries: 2
+      retry_interval: 1
+      retry_on_status: [500, 502, 503, 504]
+
+# HTTP请求模板
+http_templates:
+  json_post:
+    method: POST
+    request:
+      headers:
+        Content-Type: application/json
+      json: {}
+    asserts:
+      - ["status", "in", [200, 201]]
+
+  api_auth:
+    method: POST
+    url: /auth/login
+    request:
+      headers:
+        Content-Type: application/json
+      json:
+        username: ""
+        password: ""
+    captures:
+      token: ["jsonpath", "$.token"]
+    asserts:
+      - ["status", "eq", 200]
+      - ["jsonpath", "$.token", "exists"]
+
+# 测试数据
+api_test_data:
+  username: test_user
+  password: password123
+  user_id: 10 
