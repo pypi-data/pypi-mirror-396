@@ -1,0 +1,34 @@
+summary: Session recording testcases
+
+discover+:
+  filter: tag:requre
+
+adjust:
+  - when: "initiator == packit"
+    because: "have the latest builds of ogr and specfile available for upstream test jobs"
+    prepare+:
+      # enable packit-dev Copr repo to get the latest builds of ogr and specfile
+      - how: install
+        copr: packit/packit-dev
+
+      # make sure the Copr repo has higher priority than TF Tag Repository
+      - how: shell
+        script: sed -i -n '/^priority=/!p;$apriority=5' /etc/yum.repos.d/*:packit:packit-dev.repo
+
+      # upgrade or install ‹ogr›, if needed
+      - how: shell
+        script: dnf -y upgrade python3-ogr || dnf -y install python3-ogr
+
+      # upgrade or install ‹specfile›, if needed
+      - how: shell
+        script: dnf -y upgrade python3-specfile || dnf -y install python3-specfile
+
+  - when: "distro <= rhel-9 or distro <= centos-9 or distro == centos-stream-8 or distro == centos-stream-9"
+    prepare+:
+      - how: install
+        name: Enable the Copr-repo for Requre
+        copr: packit/packit-dev
+
+  - when: "distro == rhel-10 or distro == centos-10 or distro == centos-stream-10"
+    because: "We are missing dependencies in EL10 that prohibit us from building."
+    enabled: false

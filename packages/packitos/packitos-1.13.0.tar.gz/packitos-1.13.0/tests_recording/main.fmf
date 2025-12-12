@@ -1,0 +1,30 @@
+require:
+  - python3-flexmock
+  - python3-requre
+  - python3-pytest
+  - packit
+  - python3-packit
+  - python3-specfile
+  - python3-requests-kerberos
+
+component:
+  - packit
+
+tier: 1
+tag:
+  - requre
+
+test: pytest-3 -v .
+duration: 10m
+
+adjust:
+  - when: initiator == human
+    because: "Install openSUSE deps that get pulled in on TF by installing Packit RPM"
+    require+:
+      - osc
+      - python3-opensuse-distro-aliases
+
+  - when: "distro == rhel-10 or distro == centos-10 or distro == centos-stream-10"
+    because: "flexmock is not in EPEL 10: https://bugzilla.redhat.com/show_bug.cgi?id=2351835"
+    require-:
+      - python3-flexmock
