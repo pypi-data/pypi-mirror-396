@@ -1,0 +1,338 @@
+#!/usr/bin/env python
+
+import argparse
+import os
+import sys
+import importlib
+import pkgutil
+import glob
+import shlex
+
+import deploy_config_generator.output as output_ns
+from deploy_config_generator.site_config import SiteConfig
+from deploy_config_generator.deploy_config import DeployConfig
+from deploy_config_generator.display import Display
+from deploy_config_generator.vars import Vars
+from deploy_config_generator.template import Template
+from deploy_config_generator.errors import DeployConfigError, DeployConfigGenerationError, ConfigError, VarsReplacementError
+from deploy_config_generator.utils import yaml_dump, show_traceback
+from deploy_config_generator.secrets import Secrets, SecretsException
+
+DISPLAY = None
+SITE_CONFIG = None
+
+
+def find_deploy_dir(path):
+    '''
+    Find directory with deploy config
+    '''
+    if not os.path.isdir(path):
+        DISPLAY.display('Path %s is not a directory' % path)
+        sys.exit(1)
+    deploy_dir = os.path.join(path, SITE_CONFIG.deploy_dir)
+    if not os.path.isdir(deploy_dir):
+        DISPLAY.display('Deploy dir could not be found in %s' % path)
+        sys.exit(1)
+    return deploy_dir
+
+
+def load_vars(varset, deploy_dir, env='BAD_VALUE_NO_MATCH', only_site_config=False):
+    # Used for replacing vars in file patterns
+    template = Template()
+    tmp_vars = dict(env=env)
+
+    # Load vars from site config
+    for key, value in list(SITE_CONFIG.default_vars.items()):
+        if not isinstance(value, str):
+            SITE_CONFIG.default_vars[key] = str(value)
+            DISPLAY.warn("implicitly converted non-string value for var '%s' from site config to string" % key)
+    varset.update(SITE_CONFIG.default_vars)
+
+    if not only_site_config:
+        vars_path = os.path.join(deploy_dir, SITE_CONFIG.vars_dir)
+
+        # Load env vars
+        if SITE_CONFIG.use_env_vars:
+            DISPLAY.v('Loading vars from environment')
+            varset.update(os.environ)
+
+        # Load "defaults" vars
+        load_vars_files(varset, vars_path, template.render_template(SITE_CONFIG.defaults_vars_file_patterns, tmp_vars))
+
+        # Load env-specific vars
+        load_vars_files(varset, vars_path, template.render_template(SITE_CONFIG.env_vars_file_patterns, tmp_vars))
+
+
+def load_vars_files(varset, vars_dir, patterns, allow_var_references=True):
+    '''
+    Find vars files that match configured patterns
+    '''
+    vars_files = []
+    # Find files matching list of patterns
+    for pattern in patterns:
+        matches = glob.glob(os.path.join(vars_dir, pattern))
+        for var_file in matches:
+            if os.path.isfile(var_file):
+                vars_files.append(var_file)
+    for vars_file in vars_files:
+        DISPLAY.v('Loading vars from %s' % vars_file)
+        varset.read_vars_file(vars_file, allow_var_references=allow_var_references)
+
+
+def load_output_plugins(varset, secrets, output_dir, config_version):
+    '''
+    Find, import, and instantiate all output plugins
+    '''
+    plugins = []
+    for plugin_dir in (output_ns.__path__ + SITE_CONFIG.plugin_dirs):
+        DISPLAY.vv('Looking in plugin dir %s' % plugin_dir)
+        sys.path.insert(0, plugin_dir)
+        for finder, name, ispkg in pkgutil.iter_modules([plugin_dir]):
+            try:
+                # Look through already loaded plugins for the same name
+                found_plugin = False
+                for idx, plugin in enumerate(plugins):
+                    if plugin.NAME == name:
+                        # Remove already loaded plugin in favor of the one we're about to load
+                        plugins.pop(idx)
+                        found_plugin = True
+                        break
+                # Import plugin
+                mod = importlib.import_module(name)
+                # Reload module if we had already loaded one of the same name
+                # This is necessary because import_module() returns the cached module
+                if found_plugin:
+                    mod = importlib.reload(mod)
+                # Get class object
+                cls = getattr(mod, 'OutputPlugin')
+                # Verify that output plugin NAME attribute matches file name
+                # We assume this is true in the code above, so we actually enforce
+                # that assumption here
+                if cls.NAME != name:
+                    raise Exception('name specified in OutputPlugin class (%s) does not match file name (%s)' % (cls.NAME, name))
+                DISPLAY.v('Loading plugin %s' % name)
+                # Instantiate plugin class
+                plugins.append(cls(varset, secrets, output_dir, config_version))
+            except ConfigError as e:
+                DISPLAY.display('Plugin configuration error: %s: %s' % (name, str(e)))
+                sys.exit(1)
+            except Exception as e:
+                show_traceback(DISPLAY.get_verbosity())
+                DISPLAY.display('Failed to load output plugin %s: %s' % (name, str(e)))
+                sys.exit(1)
+        sys.path.pop(0)
+    # Return list of plugins sorted by priority (highest to lowest) and name (Z-A, because
+    # we reverse the sort)
+    return sorted(plugins, reverse=True)
+
+
+def app_validate_fields(app, app_index, output_plugins):
+    try:
+        unmatched = {}
+        plugins_used = []
+        for plugin in output_plugins:
+            if plugin.is_needed(app):
+                plugins_used.append(plugin.NAME)
+                plugin_unmatched = plugin.validate_fields(app)
+                unmatched[plugin.NAME] = plugin_unmatched
+        # Compare unmatched from all plugins and compile final list
+        # We are looking for fields that were unmatched by all active plugins,
+        # with the added twist that we need to match what may be an unmatched
+        # sub-field in one plugin and a top-level field in another.
+        final_unmatched = []
+        for plugin in unmatched:
+            for entry in unmatched[plugin]:
+                entry_keep = True
+                # Check entry against unmatched entries from other plugins
+                for plugin2 in unmatched:
+                    if plugin2 == plugin:
+                        continue
+                    plugin2_matched = False
+                    for entry2 in unmatched[plugin2]:
+                        # Check for exact match or a parent/sub-field match
+                        if entry2 == entry or entry.startswith('%s.' % entry2):
+                            plugin2_matched = True
+                            break
+                    if not plugin2_matched:
+                        entry_keep = False
+                        break
+                # Add entry to final list if it existed for all plugins
+                if entry_keep and entry not in final_unmatched:
+                    final_unmatched.append(entry)
+        if final_unmatched:
+            raise DeployConfigError('found the following unknown fields: %s' % ', '.join(sorted(final_unmatched)))
+        if not plugins_used:
+            raise DeployConfigError('no output plugins were available for provided fields')
+    except DeployConfigError as e:
+        DISPLAY.display('Failed to validate fields in deploy config: %s' % str(e))
+        sys.exit(1)
+
+
+def main():
+    global DISPLAY, SITE_CONFIG
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        'path',
+        help='Path to service dir',
+    )
+    parser.add_argument(
+        '-v', '--verbose',
+        action='count',
+        help='Increase verbosity level',
+        default=0,
+    )
+    parser.add_argument(
+        '-c', '--config',
+        help='Path to config file',
+    )
+    parser.add_argument(
+        '-e', '--env',
+        help="Environment to generate deploy configs for",
+        default='local',
+    )
+    parser.add_argument(
+        '-o', '--output-dir',
+        help="Directory to output generated deploy configs to (defaults to '.')",
+        default='.'
+    )
+    parser.add_argument(
+        '--dump-vars',
+        help="Output all site config vars in shell format",
+        action='store_true',
+        default=False,
+    )
+    args = parser.parse_args()
+
+    DISPLAY = Display()
+    DISPLAY.set_verbosity(args.verbose)
+
+    DISPLAY.vv('Running with args:')
+    DISPLAY.vv()
+    for arg in dir(args):
+        if arg.startswith('_'):
+            continue
+        DISPLAY.vv('%s: %s' % (arg, getattr(args, arg)))
+    DISPLAY.vv()
+
+    SITE_CONFIG = SiteConfig(env=args.env)
+    if args.config is None:
+        # Possible config locations
+        config_paths = [
+            os.path.join(os.environ.get('HOME', None), '.deploy-config-generator-site.yml'),
+        ]
+        for path in config_paths:
+            if os.path.exists(path):
+                args.config = path
+                break
+    if args.config:
+        try:
+            SITE_CONFIG.load(args.config)
+        except ConfigError as e:
+            DISPLAY.display('Failed to load site config: %s' % str(e))
+            show_traceback(DISPLAY.get_verbosity())
+            sys.exit(1)
+
+    DISPLAY.vvvv('Site config:')
+    DISPLAY.vvvv()
+    DISPLAY.vvvv(yaml_dump(SITE_CONFIG.get_config()))
+    DISPLAY.vvvv()
+
+    varset = Vars()
+    varset['env'] = args.env
+
+    deploy_dir = None
+    if not args.dump_vars:
+        deploy_dir = find_deploy_dir(args.path)
+
+    try:
+        load_vars(varset, deploy_dir, args.env, only_site_config=(True if args.dump_vars else False))
+    except Exception as e:
+        DISPLAY.display('Error loading vars: %s' % str(e))
+        show_traceback(DISPLAY.get_verbosity())
+        sys.exit(1)
+
+    if args.dump_vars:
+        template = Template()
+        templated_vars = template.render_template(dict(varset), dict(VARS=dict(varset)))
+        for key in sorted(templated_vars.keys()):
+            print('%s=%s' % (key, shlex.quote(templated_vars[key])))
+        sys.exit(0)
+
+    DISPLAY.vvvv()
+    DISPLAY.vvvv('Vars:')
+    DISPLAY.vvvv()
+    DISPLAY.vvvv(yaml_dump(dict(varset), indent=2))
+
+    secrets = Secrets()
+
+    try:
+        for f in SITE_CONFIG.secrets_files:
+            if os.path.exists(f):
+                DISPLAY.v('Loading secrets from %s' % f)
+                secrets.load_secrets_file(f)
+    except SecretsException as e:
+        DISPLAY.display('Error loading secrets file %s' % (e.path,))
+        DISPLAY.v('Stderr:')
+        DISPLAY.v()
+        DISPLAY.v(e.stderr)
+        sys.exit(1)
+
+    DISPLAY.vvvv('Secrets:')
+    DISPLAY.vvvv()
+    DISPLAY.vvvv(yaml_dump(dict(secrets), indent=2))
+
+    try:
+        deploy_config = DeployConfig(os.path.join(deploy_dir, SITE_CONFIG.deploy_config_file), varset, secrets)
+        deploy_config.set_config(varset.replace_vars(deploy_config.get_config()))
+    except DeployConfigError as e:
+        DISPLAY.display('Error loading deploy config: %s' % str(e))
+        show_traceback(DISPLAY.get_verbosity())
+        sys.exit(1)
+    except VarsReplacementError as e:
+        DISPLAY.display('Error loading deploy config: variable replacement error: %s' % str(e))
+        show_traceback(DISPLAY.get_verbosity())
+        sys.exit(1)
+
+    DISPLAY.vvvv('Deploy config:')
+    DISPLAY.vvvv()
+    DISPLAY.vvvv(yaml_dump(deploy_config.get_config(), indent=2))
+
+    deploy_config_version = deploy_config.get_version() or SITE_CONFIG.default_config_version
+    output_plugins = load_output_plugins(varset, secrets, args.output_dir, deploy_config_version)
+
+    DISPLAY.vvv('Available output plugins:')
+    DISPLAY.vvv()
+    valid_sections = []
+    for plugin in output_plugins:
+        DISPLAY.vvv('- %s (%s)' % (plugin.NAME, plugin.DESCR or 'No description'))
+        valid_sections += plugin._fields.keys()
+    DISPLAY.vvv()
+
+    try:
+        deploy_config.apply_default_apps(SITE_CONFIG.default_apps)
+        deploy_config.validate_sections(valid_sections)
+    except DeployConfigError as e:
+        DISPLAY.display('Error validating deploy config: %s' % str(e))
+        sys.exit(1)
+
+    # TODO: do validation before running each plugin so that it doesn't complain about
+    # values populated by wrapper plugins. This is not straightforward, since it breaks
+    # the existing code that reports on unknown fields
+    for section in deploy_config.get_config():
+        for plugin in output_plugins:
+            plugin.set_section(section)
+        for app_idx, app in enumerate(deploy_config.get_config()[section]):
+            app_validate_fields(app, app_idx, output_plugins)
+
+    try:
+        for plugin in output_plugins:
+            DISPLAY.vvv('Generating output using %s plugin' % plugin.NAME)
+            plugin.generate(deploy_config.get_config())
+    except DeployConfigGenerationError as e:
+        DISPLAY.display('Failed to generate deploy config: %s' % str(e))
+        sys.exit(1)
+
+
+if __name__ == '__main__':
+    main()
