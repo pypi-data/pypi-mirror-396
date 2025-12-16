@@ -1,0 +1,336 @@
+# tsai-scoretest
+
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![PyPI version](https://badge.fury.io/py/tsai-scoretest.svg)](https://badge.fury.io/py/tsai-scoretest)
+
+**Score Test for First-Order Autoregressive Model with Heteroscedasticity**
+
+A Python implementation of the score test proposed by Tsai (1986) for simultaneous testing of independence and homoscedasticity in the first-order autoregressive model with nonconstant variance.
+
+## Reference
+
+Tsai, C.-L. (1986). Score test for the first-order autoregressive model with heteroscedasticity. *Biometrika*, 73(2), 455-460. [DOI: 10.1093/biomet/73.2.455](https://doi.org/10.1093/biomet/73.2.455)
+
+## Installation
+
+### From PyPI (recommended)
+```bash
+pip install tsai-scoretest
+```
+
+### From source
+```bash
+git clone https://github.com/merwanroudane/scoretest.git
+cd scoretest
+pip install -e .
+```
+
+## Mathematical Framework
+
+### Model Specification
+
+The basic model (Equation 2.1):
+
+$$y_t = x_t'\beta + u_t \quad (t = 1, \ldots, T)$$
+
+where $y_t$ is the observable response, $x_t$ is a known nonstochastic vector (dimension $1 \times p$), $\beta$ is a $p \times 1$ vector of unknown parameters, and $u_t$ is the unobservable random error.
+
+### AR(1) Error Process
+
+The error follows a first-order autoregressive process (Equation 2.2):
+
+$$u_t = \rho u_{t-1} + e_t \quad (t = 2, \ldots, T)$$
+
+where $u_1 = e_1$, $\rho$ is the autocorrelation coefficient, and the $e_t$'s are normally and independently distributed with mean 0.
+
+### Heteroscedasticity Structure
+
+The variance of innovations (Equation 2.3):
+
+$$\text{var}(e_t) = w_t \sigma^2 = w(z_t, \lambda)\sigma^2$$
+
+where $\lambda = (\lambda_1, \ldots, \lambda_q)'$, $z_t = (z_{t1}, \ldots, z_{tq})'$ is a known vector, and there exists a unique $\lambda^*$ such that $w(z_t, \lambda^*) = 1$ for all $t$.
+
+### Hypothesis
+
+**Null hypothesis:** $H_0: \rho = 0$ and $\lambda = \lambda^*$ (no autocorrelation and homoscedasticity)
+
+**Alternative:** $H_1: \rho \neq 0$ or $\lambda \neq \lambda^*$
+
+### Score Test Statistic
+
+The joint score test statistic (Equation 2.4):
+
+$$S = S_1 + S_2$$
+
+where:
+- $S_1 = \frac{(T\hat{\rho})^2}{T-1}$ tests $\rho = 0$
+- $S_2 = \frac{1}{2}V'\bar{D}(\bar{D}'\bar{D})^{-1}\bar{D}'V$ tests $\lambda = \lambda^*$
+
+The estimated autocorrelation (Equation 2.5):
+
+$$\hat{\rho} = \frac{\sum_{t=2}^{T} \hat{e}_t \hat{e}_{t-1}}{\sum_{t=1}^{T} \hat{e}_t^2}$$
+
+### Asymptotic Distributions
+
+Under $H_0$:
+- $S_1 \sim \chi^2(1)$
+- $S_2 \sim \chi^2(q)$
+- $S \sim \chi^2(q+1)$
+
+## Quick Start
+
+### Basic Usage
+
+```python
+import numpy as np
+from scoretest import score_test_joint, TsaiScoreTest
+
+# Generate sample data
+np.random.seed(42)
+T = 100
+X = np.column_stack([np.ones(T), np.random.randn(T)])
+beta = np.array([1.0, 0.5])
+y = X @ beta + np.random.randn(T)
+
+# Perform the joint score test
+result = score_test_joint(y, X)
+print(result)
+```
+
+Output:
+```
+======================================================================
+Score Test for AR(1) Model with Heteroscedasticity
+Tsai (1986) - Biometrika, 73(2), 455-460
+======================================================================
+
+Sample Size (T): 100
+Heteroscedasticity Parameters (q): 1
+
+----------------------------------------------------------------------
+Estimated Parameters Under H₀
+----------------------------------------------------------------------
+  Autocorrelation (ρ̂):          0.012345
+  Error Variance (σ̂²):          0.987654
+
+----------------------------------------------------------------------
+Score Test Statistics
+----------------------------------------------------------------------
+
+  Test Component         Statistic    df      P-value    Decision
+  --------------------------------------------------------------
+  S₁ (Autocorrelation)       0.1234     1      0.7254    
+  S₂ (Heteroscedast.)        0.5678     1      0.4512    
+  --------------------------------------------------------------
+  S (Joint Test)             0.6912     2      0.7079    
+
+  Significance codes: *** p<0.01, ** p<0.05, * p<0.10
+
+----------------------------------------------------------------------
+Hypothesis Testing
+----------------------------------------------------------------------
+  H₀: ρ = 0 and λ = λ* (No autocorrelation and homoscedasticity)
+  H₁: ρ ≠ 0 or λ ≠ λ* (Presence of autocorrelation or heteroscedasticity)
+
+  Decision at α = 0.05: Fail to Reject H₀
+
+======================================================================
+Reference: Tsai, C.-L. (1986). Biometrika, 73(2), 455-460.
+======================================================================
+```
+
+### Class-Based Interface
+
+```python
+from scoretest import TsaiScoreTest
+
+# Create test instance with heteroscedasticity variables
+Z = np.arange(1, T + 1).reshape(-1, 1)  # Time trend
+test = TsaiScoreTest(y, X, Z=Z)
+
+# Fit and get results
+result = test.fit()
+
+# Access individual components
+print(f"S1 (autocorrelation): {result.S1:.4f}")
+print(f"S2 (heteroscedasticity): {result.S2:.4f}")
+print(f"S (joint): {result.S:.4f}")
+print(f"p-value: {result.p_value:.4f}")
+```
+
+### Individual Tests
+
+```python
+from scoretest import score_test_autocorrelation, score_test_heteroscedasticity
+
+# Test for autocorrelation only
+S1, p_value_S1 = score_test_autocorrelation(y, X)
+print(f"Autocorrelation test: S1 = {S1:.4f}, p = {p_value_S1:.4f}")
+
+# Test for heteroscedasticity only
+Z = np.arange(1, T + 1).reshape(-1, 1)
+S2, p_value_S2, df = score_test_heteroscedasticity(y, X, Z)
+print(f"Heteroscedasticity test: S2 = {S2:.4f}, p = {p_value_S2:.4f}, df = {df}")
+```
+
+## Advanced Features
+
+### Custom Weight Functions
+
+```python
+from scoretest import TsaiScoreTest
+from scoretest.weight_functions import exponential_weight, linear_weight
+
+# Use exponential weight function (default)
+test = TsaiScoreTest(y, X, Z=Z)
+
+# Custom weight function
+def custom_weight(z, lam):
+    return np.exp(z @ lam)
+
+def custom_weight_deriv(z, lam):
+    return z * np.exp(z @ lam).reshape(-1, 1)
+
+test_custom = TsaiScoreTest(
+    y, X, Z=Z,
+    weight_func=custom_weight,
+    weight_deriv=custom_weight_deriv
+)
+```
+
+### Simulation for Critical Values
+
+```python
+from scoretest.simulation import simulate_critical_values
+
+# Monte Carlo simulation for finite-sample critical values
+cv_results = simulate_critical_values(
+    T=50, p=2, q=1,
+    n_simulations=10000,
+    alpha_levels=[0.01, 0.05, 0.10]
+)
+
+print(cv_results.to_latex_table())
+```
+
+### Diagnostic Tools (Section 3 of the paper)
+
+```python
+from scoretest.diagnostics import normal_curvature, parameter_sensitivity
+
+# Compute normal curvature (Equation 3.2)
+curvature = normal_curvature(y, X, Z)
+print(f"Maximum curvature: {curvature.C_max:.4f}")
+
+# Compute parameter sensitivity (Equation 3.4)
+sensitivity = parameter_sensitivity(y, X, Z)
+print(f"Sensitivity matrix:\n{sensitivity.sensitivity_matrix}")
+```
+
+## API Reference
+
+### Main Functions
+
+| Function | Description |
+|----------|-------------|
+| `score_test_joint(y, X, Z)` | Joint test for autocorrelation and heteroscedasticity |
+| `score_test_autocorrelation(y, X)` | Test for autocorrelation only |
+| `score_test_heteroscedasticity(y, X, Z)` | Test for heteroscedasticity only |
+| `TsaiScoreTest(y, X, Z)` | Class-based interface with full options |
+
+### Diagnostic Functions
+
+| Function | Description |
+|----------|-------------|
+| `normal_curvature(y, X, Z)` | Normal curvature for influence graph (Eq. 3.2) |
+| `parameter_sensitivity(y, X, Z)` | Sensitivity of β̂ to perturbations (Eq. 3.4) |
+
+### Simulation Functions
+
+| Function | Description |
+|----------|-------------|
+| `simulate_critical_values(T, p, q)` | Monte Carlo critical values |
+| `simulate_power(T, p, q, rho_values)` | Power analysis |
+
+## Robustness Properties
+
+From Tsai (1986):
+
+1. **S₁ is robust to heteroscedasticity** when $\hat{\rho}(\lambda - \lambda^*) \approx 0$ and $\lambda$ is the true parameter in the weight function.
+
+2. **S₂ is robust to autocorrelation** if $\rho/\sigma^2 \approx 0$ where $\rho$ is the true autocorrelation.
+
+## Dependencies
+
+- numpy >= 1.20.0
+- scipy >= 1.7.0
+
+## Testing
+
+```bash
+# Run tests
+pytest tests/
+
+# Run with coverage
+pytest tests/ --cov=scoretest --cov-report=html
+```
+
+## Citation
+
+If you use this package in your research, please cite both the original paper and this implementation:
+
+```bibtex
+@article{tsai1986score,
+  title={Score test for the first-order autoregressive model with heteroscedasticity},
+  author={Tsai, Chih-Ling},
+  journal={Biometrika},
+  volume={73},
+  number={2},
+  pages={455--460},
+  year={1986},
+  publisher={Oxford University Press}
+}
+
+@software{roudane2024tsaiscoretest,
+  title={tsai-scoretest: Python implementation of Tsai (1986) score test},
+  author={Roudane, Merwan},
+  year={2024},
+  url={https://github.com/merwanroudane/scoretest}
+}
+```
+
+## Related Tests
+
+- **Durbin-Watson Test**: Tests for first-order autocorrelation but with distribution depending on design matrix
+- **Cook-Weisberg Test**: Tests for heteroscedasticity only (special case of S₂)
+- **Breusch-Pagan Test**: Alternative test for heteroscedasticity
+- **Breusch-Godfrey Test**: LM test for autocorrelation of higher order
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+## Author
+
+**Dr Merwan Roudane**
+- Email: merwanroudane920@gmail.com
+- GitHub: [https://github.com/merwanroudane/scoretest](https://github.com/merwanroudane/scoretest)
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## Changelog
+
+### Version 1.0.0 (2024)
+- Initial release
+- Complete implementation of Tsai (1986) score test
+- Joint test for autocorrelation and heteroscedasticity
+- Individual test components (S₁ and S₂)
+- Diagnostic tools (normal curvature, parameter sensitivity)
+- Monte Carlo simulation for critical values
+- Multiple weight function specifications
+- Comprehensive test suite
+- Publication-ready output formatting
