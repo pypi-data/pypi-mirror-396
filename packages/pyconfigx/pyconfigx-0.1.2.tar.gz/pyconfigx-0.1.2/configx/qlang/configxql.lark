@@ -1,0 +1,51 @@
+// --------------------------------------------------
+// ConfigXQL v0.1 Grammar
+// --------------------------------------------------
+
+?start: statement
+
+// ----------------------
+// Statements
+// Can be a set/get/delete/safe_get expr
+// ----------------------
+
+?statement: set_stmt | delete_stmt | safe_get_stmt | get_stmt
+
+set_stmt: path "=" value
+
+delete_stmt: path "-"
+
+safe_get_stmt: path "!"
+
+get_stmt: path
+
+// ----------------------
+// Path 
+// Identifier followed by multiple of . & Identifier combination which is an expr
+// ----------------------
+
+path: IDENT ("." IDENT)*
+
+// ----------------------
+// Values (STRICT)
+// ----------------------
+
+?value: STRING -> string
+      | SIGNED_INT -> int
+      | SIGNED_FLOAT -> float
+      | BOOL -> bool
+
+// ----------------------
+// Tokens
+// ----------------------
+
+BOOL: /true|false/i
+
+IDENT: /[a-zA-Z_][a-zA-Z0-9_]*/
+
+%import common.ESCAPED_STRING -> STRING
+%import common.SIGNED_INT
+%import common.SIGNED_FLOAT
+%import common.WS
+
+%ignore WS
