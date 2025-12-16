@@ -1,0 +1,66 @@
+{% extends 'cmShoppingList/base.html' %}
+{% load i18n %}
+{% load humanize %}
+
+{% block header_nav_brand %}
+    {% translate "Shopping List" %}
+{% endblock %}
+
+{% block details %}
+
+    <div>
+        <div style="margin-left: 15px">
+            <p class="header-message">{{ HEADER_MESSAGE }}</p>
+        </div>
+    </div>
+    <div class="row main-body">
+        <div id="vue-app">
+            <shoppinglist-component></shoppinglist-component>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block extra_css %}
+
+    <link rel="stylesheet" href="/static/cmShoppingList/css/main.css?v={{ CM_VERSION }}">
+
+{% endblock %}
+
+{% block extra_javascript %}
+
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
+    <script type="text/javascript" src="/static/cmShoppingList/scripts/parse.js?v={{ CM_VERSION }}"></script>
+
+    {% autoescape off %}
+
+    {% include 'cmShoppingList/vue/shoppinglist-component.html' %}
+
+    {% endautoescape %}
+
+    <script type="module">
+
+        import { createApp } from '//unpkg.com/vue@3/dist/vue.esm-browser.prod.js';
+        import ShoppingList from '/static/cmShoppingList/components/ShoppingList.js?v={{ CM_VERSION }}'
+
+        var _vue = createApp({
+            data: function () {
+                return {
+                    token: document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    header: 'X-CSRFToken'
+                }
+            },
+        });
+
+        _vue.config.compilerOptions.delimiters = ['[[', ']]'];
+        _vue.component("shoppinglist-component", ShoppingList);       
+        _vue.mount('#vue-app');
+
+    </script>       
+
+
+{% endblock %}
+
+
+{% block extra_script %}
+{% endblock %}

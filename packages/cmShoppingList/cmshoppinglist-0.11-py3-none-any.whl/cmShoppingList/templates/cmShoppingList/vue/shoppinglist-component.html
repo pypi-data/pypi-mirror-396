@@ -1,0 +1,59 @@
+<script type="text/x-template" id="shoppinglist-component">
+    <div style="display:table; width: 100%">
+        <div style="display:table-cell; width: 30%; padding-left: 10px">
+            <div>
+                <h3 style="display:inline-block">Fit</h3>
+                <span style="display: inline-block; margin-left: 10px"><input type="text" v-model="fitMultiplier" class="form-control" style="width:40px; height:25px; padding-left:5px;padding-right:5px" /></span>
+            </div>
+            <div>
+                <textarea v-model="fitText" placeholder="Paste Fit Text Here. Supports Eve and FleetUp" v-on:input="onFitInput" style="width:100%; height: 500px"></textarea>
+            </div>
+            <div>
+                <div v-for="type in fitArr" class="market-item">
+                    [[ type.multiplier ]] - [[ type.name ]]
+                </div>
+            </div>
+        </div>
+        <div style="display:table-cell; width: 30%; padding-left: 10px">
+            <div>
+                <h3>Asset List</h3>
+            </div>
+            <div>
+                <textarea v-model="assetText" placeholder="Paste in Eve List of Assets..." v-on:input="onAssetInput" style="width:100%; height: 500px"></textarea>
+            </div>
+            <div>
+                <div v-for="type in assetArr" class="market-item">
+                    [[ type.multiplier ]] - [[ type.name ]]
+                </div>
+            </div>
+        </div>
+        <div style="display:table-cell; width: 30%; padding-left: 10px">
+            <div style="margin-bottom: 20px">
+                <div>
+                    <h3 style="display: inline-block">Items You Have</h3>
+                    <button v-if="coveredList.length > 0" @click="copyToClipboard(coveredListText)" style="float: right; border: none; background: none; cursor: pointer; font-size: 18px; margin-top: 5px" title="Copy to clipboard">📋</button>
+                </div>
+                <div>
+                    <textarea :value="coveredListText" readonly style="width:100%; height: 200px"></textarea>
+                </div>
+            </div>
+            <div style="margin-bottom: 20px">
+                <div>
+                    <h3 style="display: inline-block">Items You Still Need</h3>
+                    <button v-if="neededList.length > 0" @click="copyToClipboard(neededListText)" style="float: right; border: none; background: none; cursor: pointer; font-size: 18px; margin-top: 5px" title="Copy to clipboard">📋</button>
+                </div>
+                <div>
+                    <textarea :value="neededListText" readonly style="width:100%; height: 200px"></textarea>
+                </div>
+            </div>
+            <div v-if="formattedSubstitutionNotes.length > 0">
+                <div>
+                    <h3>Substitutions</h3>
+                </div>
+                <div>
+                    <div v-for="note in formattedSubstitutionNotes" class="market-item" v-html="note"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</script>
