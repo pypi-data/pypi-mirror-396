@@ -1,0 +1,422 @@
+# PACMAN - Handwerker Kategorisierungsregeln
+# Deutschland - Anlage G (Gewerbe)
+#
+# Handwerksbetriebe: Elektriker, Sanitaer, Maler, Tischler, etc.
+# IMMER gewerblich! (Handwerk = Gewerbe)
+#
+# Besonderheiten:
+# - Hohe Materialkosten
+# - Fahrzeugkosten
+# - Werkzeug und Maschinen
+# - Gewerbesteuer
+
+version: "1.0"
+profile: handwerker
+
+metadata:
+  description: "Handwerksbetrieb"
+  applicable_forms:
+    - "Anlage G (Gewerbe)"
+    - "EUeR"
+    - "Gewerbesteuererklaerung"
+  gewerke:
+    - "Elektriker"
+    - "Sanitaer/Heizung"
+    - "Maler/Lackierer"
+    - "Tischler/Schreiner"
+    - "Dachdecker"
+    - "Maurer"
+    - "KFZ"
+
+rules:
+  # === EINNAHMEN ===
+
+  - id: income_auftrag
+    name: "Auftragseinnahme"
+    priority: 10
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(rechnung|auftrag|leistung|arbeit)"
+      - field: counterparty
+        operator: in_list
+        value: "$config.kunden"
+    category: business_income
+    subcategory: auftraege
+    confidence: 0.9
+
+  - id: income_privatkunde
+    name: "Privatkundenauftrag"
+    priority: 12
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+      - field: amount
+        operator: lt
+        value: 5000
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(reparatur|montage|installation|einbau)"
+    category: business_income
+    subcategory: privatkunden
+    confidence: 0.8
+
+  - id: income_wartung
+    name: "Wartungsvertrag"
+    priority: 10
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(wartung|service|inspektion|pruefung)"
+    category: business_income
+    subcategory: wartung
+    confidence: 0.9
+
+  # === AUSGABEN - MATERIAL ===
+
+  - id: expense_material_baustoff
+    name: "Baustoffe"
+    priority: 10
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(bauhaus|obi|hornbach|hagebau|toom|baywa)"
+      - field: counterparty
+        operator: regex
+        value: "(baustoff|raab.*karcher|sgbdd)"
+    category: business_expense
+    subcategory: baustoffe
+    confidence: 0.95
+
+  - id: expense_material_elektro
+    name: "Elektromaterial"
+    priority: 10
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(sonepar|rexel|fega.*schmitt)"
+      - field: description
+        operator: regex
+        value: "(elektro.*material|kabel|schalter|steckdose)"
+    category: business_expense
+    subcategory: elektromaterial
+    confidence: 0.95
+
+  - id: expense_material_sanitaer
+    name: "Sanitaermaterial"
+    priority: 10
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(richter.*frenzel|bergmann.*franz|gienger|pietsch)"
+      - field: description
+        operator: regex
+        value: "(sanitaer|heizung|rohr|fitting|armatur)"
+    category: business_expense
+    subcategory: sanitaermaterial
+    confidence: 0.95
+
+  - id: expense_material_farbe
+    name: "Farben und Lacke"
+    priority: 10
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(caparol|brillux|sikkens|sto)"
+      - field: description
+        operator: regex
+        value: "(farbe|lack|putz|tapete)"
+    category: business_expense
+    subcategory: farben
+    confidence: 0.95
+
+  - id: expense_material_holz
+    name: "Holz und Platten"
+    priority: 10
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(holzland|holz.*mueller|holz.*union)"
+      - field: description
+        operator: regex
+        value: "(holz|platte|mdf|spanplatte|balken)"
+    category: business_expense
+    subcategory: holz
+    confidence: 0.9
+
+  # === AUSGABEN - WERKZEUG ===
+
+  - id: expense_werkzeug
+    name: "Werkzeug"
+    priority: 15
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(makita|bosch|hilti|festool|metabo|dewalt|milwaukee)"
+      - field: description
+        operator: regex
+        value: "(werkzeug|bohrmaschine|saege|akkuschrauber)"
+      - field: counterparty
+        operator: regex
+        value: "(contorion|toolineo|svh24)"
+    category: business_expense
+    subcategory: werkzeug
+    confidence: 0.95
+    notes: "GWG bis 800 EUR netto sofort absetzbar"
+
+  - id: expense_maschine
+    name: "Maschinen"
+    priority: 15
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(maschine|generator|kompressor|schweissgeraet)"
+    category: business_expense
+    subcategory: maschinen
+    confidence: 0.85
+    notes: "AfA bei > 800 EUR netto"
+
+  - id: expense_arbeitskleidung
+    name: "Arbeitskleidung"
+    priority: 18
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(engelbert.*strauss|uvex|bp|blaklaeder)"
+      - field: description
+        operator: regex
+        value: "(arbeitskleidung|sicherheitsschuh|helm|handschuh)"
+    category: business_expense
+    subcategory: arbeitskleidung
+    confidence: 1.0
+
+  # === AUSGABEN - FAHRZEUG ===
+
+  - id: expense_fahrzeug_leasing
+    name: "Fahrzeug-Leasing"
+    priority: 15
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(leaseplan|ald|arval|volkswagen.*leasing)"
+      - field: description
+        operator: regex
+        value: "(leasing.*rate|fahrzeug.*leasing)"
+    category: business_expense
+    subcategory: fahrzeug_leasing
+    confidence: 0.95
+
+  - id: expense_fahrzeug_kredit
+    name: "Fahrzeug-Finanzierung"
+    priority: 15
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(volkswagen.*bank|bmw.*bank|mercedes.*bank)"
+      - field: description
+        operator: regex
+        value: "(kfz.*rate|fahrzeug.*finanzierung)"
+    category: business_expense
+    subcategory: fahrzeug_finanzierung
+    confidence: 0.9
+    notes: "Nur Zinsen absetzbar, nicht Tilgung!"
+
+  - id: expense_kraftstoff
+    name: "Kraftstoff"
+    priority: 15
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(shell|aral|esso|total|jet|avia)"
+      - field: description
+        operator: regex
+        value: "(tanken|diesel|benzin|kraftstoff)"
+    category: business_expense
+    subcategory: kraftstoff
+    confidence: 0.95
+
+  - id: expense_kfz_versicherung
+    name: "KFZ-Versicherung"
+    priority: 15
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(kfz.*versicherung|haftpflicht.*auto)"
+    category: business_expense
+    subcategory: kfz_versicherung
+    confidence: 0.95
+
+  - id: expense_kfz_reparatur
+    name: "KFZ-Reparatur/Wartung"
+    priority: 18
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(werkstatt|autohaus|atu|pitstop)"
+      - field: description
+        operator: regex
+        value: "(reparatur|inspektion|tuev|reifenwechsel)"
+    category: business_expense
+    subcategory: kfz_reparatur
+    confidence: 0.9
+
+  # === AUSGABEN - VERSICHERUNGEN ===
+
+  - id: expense_betriebshaftpflicht
+    name: "Betriebshaftpflicht"
+    priority: 18
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(betriebshaftpflicht|gewerbehaftpflicht)"
+    category: deductible
+    subcategory: betriebshaftpflicht
+    confidence: 1.0
+
+  - id: expense_inhaltsversicherung
+    name: "Inhaltsversicherung"
+    priority: 18
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(inhaltsversicherung|inventarversicherung)"
+    category: deductible
+    subcategory: inhaltsversicherung
+    confidence: 1.0
+
+  - id: expense_bau_versicherung
+    name: "Bauversicherung"
+    priority: 18
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(bauherrenhaftpflicht|bauleistungsversicherung)"
+    category: deductible
+    subcategory: bauversicherung
+    confidence: 1.0
+
+  # === AUSGABEN - PERSONAL ===
+
+  - id: expense_lohn
+    name: "Loehne Mitarbeiter"
+    priority: 10
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(lohn|gehalt|arbeitnehmer)"
+    category: business_expense
+    subcategory: loehne
+    confidence: 0.85
+
+  - id: expense_sozialversicherung
+    name: "Sozialversicherung AG-Anteil"
+    priority: 12
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(krankenkasse|aok|tk|barmer|dak)"
+      - field: description
+        operator: regex
+        value: "(sozialversicherung|sv-beitrag)"
+    category: business_expense
+    subcategory: sozialversicherung
+    confidence: 0.9
+
+  - id: expense_berufsgenossenschaft
+    name: "Berufsgenossenschaft"
+    priority: 15
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(bau|holz.*metall|bgn|bghm)"
+      - field: counterparty
+        operator: contains
+        value: "berufsgenossenschaft"
+    category: business_expense
+    subcategory: berufsgenossenschaft
+    confidence: 1.0
+    notes: "Pflicht fuer alle Handwerksbetriebe"
+
+  - id: expense_handwerkskammer
+    name: "Handwerkskammer"
+    priority: 18
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "handwerkskammer"
+      - field: counterparty
+        operator: contains
+        value: "hwk"
+    category: business_expense
+    subcategory: kammerbeitrag
+    confidence: 1.0
+
+  - id: expense_innung
+    name: "Innungsbeitrag"
+    priority: 18
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "innung"
+      - field: description
+        operator: contains
+        value: "innungsbeitrag"
+    category: business_expense
+    subcategory: innungsbeitrag
+    confidence: 1.0
+
+  # === HOMEOFFICE-PAUSCHALE ===
+
+  - id: expense_homeoffice_pauschale
+    name: "Homeoffice-Pauschale"
+    priority: 15
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(?i)(homeoffice|home.?office|arbeitszimmer|heimarbeitsplatz)"
+    category: deductible
+    subcategory: homeoffice_pauschale
+    confidence: 0.85
+    notes: "6 EUR/Tag, max 1.260 EUR/Jahr - Fuer Bueroarbeit/Planung"
+
+  # === STEUERN ===
+
+  - id: tax_gewerbesteuer
+    name: "Gewerbesteuer"
+    priority: 10
+    conditions:
+      - field: counterparty
+        operator: regex
+        value: "(finanzamt|stadt|gemeinde)"
+    conditions_any:
+      - field: description
+        operator: contains
+        value: "gewerbesteuer"
+    category: business_expense
+    subcategory: gewerbesteuer
+    confidence: 1.0
+
+  - id: tax_ust_vorauszahlung
+    name: "USt-Vorauszahlung"
+    priority: 10
+    conditions:
+      - field: counterparty
+        operator: contains
+        value: "finanzamt"
+    conditions_any:
+      - field: description
+        operator: contains
+        value: "umsatzsteuer"
+    category: passthrough
+    subcategory: ust_vorauszahlung
+    confidence: 1.0

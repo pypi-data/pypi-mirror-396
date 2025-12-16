@@ -1,0 +1,515 @@
+# PACMAN - Einzelunternehmer Kategorisierungsregeln
+# Deutschland - Anlage G (Gewerbebetrieb) + EUeR
+#
+# Diese Regeln kategorisieren Transaktionen fuer Gewerbetreibende
+# mit Einnahmen-Ueberschuss-Rechnung.
+
+version: "1.0"
+profile: einzelunternehmer
+
+rules:
+  # === BETRIEBSEINNAHMEN ===
+
+  - id: income_invoice_keyword
+    name: "Einnahme aus Rechnung"
+    priority: 10
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(rechnung|invoice|honorar|vergütung|zahlung.*für)"
+    category: business_income
+    subcategory: rechnungen
+    confidence: 0.9
+
+  - id: income_known_client
+    name: "Einnahme von Kunden (config)"
+    priority: 10
+    conditions:
+      - field: counterparty
+        operator: in_list
+        value: "$config.clients"
+      - field: amount
+        operator: gt
+        value: 0
+    category: business_income
+    subcategory: kunden
+    confidence: 1.0
+
+  # === BETRIEBSAUSGABEN ===
+
+  - id: expense_steuerberater
+    name: "Steuerberater"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "steuerber"
+      - field: counterparty
+        operator: contains
+        value: "steuerberatung"
+      - field: description
+        operator: contains
+        value: "steuerber"
+      - field: counterparty
+        operator: contains
+        value: "datev"
+    category: business_expense
+    subcategory: steuerberater
+    confidence: 1.0
+
+  - id: expense_buerokosten
+    name: "Buerobedarf"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "viking"
+      - field: counterparty
+        operator: contains
+        value: "staples"
+      - field: counterparty
+        operator: contains
+        value: "buero"
+      - field: counterparty
+        operator: contains
+        value: "office"
+      - field: description
+        operator: contains
+        value: "bueromaterial"
+    category: business_expense
+    subcategory: buerobedarf
+    confidence: 0.95
+
+  - id: expense_hosting_cloud
+    name: "Hosting und Cloud Services"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "hetzner"
+      - field: counterparty
+        operator: contains
+        value: "aws"
+      - field: counterparty
+        operator: contains
+        value: "amazon web"
+      - field: counterparty
+        operator: contains
+        value: "google cloud"
+      - field: counterparty
+        operator: contains
+        value: "digitalocean"
+      - field: counterparty
+        operator: contains
+        value: "azure"
+      - field: counterparty
+        operator: contains
+        value: "ionos"
+      - field: counterparty
+        operator: contains
+        value: "strato"
+      - field: counterparty
+        operator: contains
+        value: "all-inkl"
+    category: business_expense
+    subcategory: hosting
+    confidence: 1.0
+
+  - id: expense_software_saas
+    name: "Software und SaaS"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "github"
+      - field: counterparty
+        operator: contains
+        value: "gitlab"
+      - field: counterparty
+        operator: contains
+        value: "jetbrains"
+      - field: counterparty
+        operator: contains
+        value: "microsoft"
+      - field: counterparty
+        operator: contains
+        value: "adobe"
+      - field: counterparty
+        operator: contains
+        value: "atlassian"
+      - field: counterparty
+        operator: contains
+        value: "slack"
+      - field: counterparty
+        operator: contains
+        value: "notion"
+      - field: counterparty
+        operator: contains
+        value: "figma"
+      - field: counterparty
+        operator: contains
+        value: "zoom"
+      - field: counterparty
+        operator: contains
+        value: "canva"
+    category: business_expense
+    subcategory: software
+    confidence: 1.0
+
+  - id: expense_software_buchhaltung
+    name: "Buchhaltungssoftware"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "lexware"
+      - field: counterparty
+        operator: contains
+        value: "sevdesk"
+      - field: counterparty
+        operator: contains
+        value: "lexoffice"
+      - field: counterparty
+        operator: contains
+        value: "fastbill"
+      - field: counterparty
+        operator: contains
+        value: "buchhaltungs"
+    category: business_expense
+    subcategory: buchhaltung
+    confidence: 1.0
+
+  - id: expense_werbung
+    name: "Werbung und Marketing"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "google ads"
+      - field: counterparty
+        operator: contains
+        value: "facebook"
+      - field: counterparty
+        operator: contains
+        value: "meta platforms"
+      - field: counterparty
+        operator: contains
+        value: "linkedin"
+      - field: counterparty
+        operator: contains
+        value: "xing"
+      - field: description
+        operator: regex
+        value: "(werbung|marketing|anzeige|ads)"
+    category: business_expense
+    subcategory: werbung
+    confidence: 0.95
+
+  - id: expense_fortbildung
+    name: "Fortbildung"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "udemy"
+      - field: counterparty
+        operator: contains
+        value: "coursera"
+      - field: counterparty
+        operator: contains
+        value: "linkedin learning"
+      - field: counterparty
+        operator: contains
+        value: "pluralsight"
+      - field: counterparty
+        operator: contains
+        value: "masterclass"
+      - field: description
+        operator: regex
+        value: "(kurs|seminar|fortbildung|schulung|workshop)"
+    category: business_expense
+    subcategory: fortbildung
+    confidence: 0.95
+
+  - id: expense_fachliteratur
+    name: "Fachliteratur"
+    priority: 25
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "oreilly"
+      - field: counterparty
+        operator: contains
+        value: "manning"
+      - field: counterparty
+        operator: contains
+        value: "packt"
+      - field: counterparty
+        operator: contains
+        value: "dpunkt"
+      - field: counterparty
+        operator: contains
+        value: "rheinwerk"
+      - field: description
+        operator: regex
+        value: "(buch|book|fachbuch|literatur)"
+    category: business_expense
+    subcategory: fachliteratur
+    confidence: 0.9
+
+  - id: expense_reisekosten
+    name: "Geschaeftsreisen"
+    priority: 25
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "deutsche bahn"
+      - field: counterparty
+        operator: contains
+        value: "lufthansa"
+      - field: counterparty
+        operator: contains
+        value: "booking"
+      - field: counterparty
+        operator: contains
+        value: "hrs"
+      - field: counterparty
+        operator: contains
+        value: "hotel"
+      - field: description
+        operator: regex
+        value: "(reise|fahrt|flug|hotel|unterkunft)"
+    category: business_expense
+    subcategory: reisekosten
+    confidence: 0.8
+
+  - id: expense_bankgebuehren
+    name: "Geschaeftskonto Gebuehren"
+    priority: 30
+    conditions_any:
+      - field: description
+        operator: contains
+        value: "kontofuehrung"
+      - field: description
+        operator: regex
+        value: "(gebuehr|entgelt).*(konto|buchung)"
+    category: business_expense
+    subcategory: bankgebuehren
+    confidence: 0.9
+
+  # === SONDERAUSGABEN ===
+
+  - id: deductible_health_insurance
+    name: "Krankenversicherung"
+    priority: 25
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "krankenversicherung"
+      - field: counterparty
+        operator: contains
+        value: "krankenkasse"
+      - field: counterparty
+        operator: regex
+        value: "(AOK|TK|Barmer|DAK|BKK|IKK)"
+      - field: description
+        operator: contains
+        value: "krankenvers"
+    category: deductible
+    subcategory: krankenversicherung
+    confidence: 1.0
+
+  - id: deductible_pension
+    name: "Rentenversicherung"
+    priority: 25
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "rentenversicherung"
+      - field: counterparty
+        operator: contains
+        value: "deutsche rentenvers"
+      - field: description
+        operator: contains
+        value: "rentenvers"
+    category: deductible
+    subcategory: rentenversicherung
+    confidence: 1.0
+
+  - id: deductible_professional_insurance
+    name: "Berufshaftpflicht"
+    priority: 25
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(berufshaftpflicht|betriebshaftpflicht|vermögensschaden)"
+      - field: counterparty
+        operator: regex
+        value: "(hiscox|exali|allianz|axa).*(haftpflicht|versicherung)"
+    category: deductible
+    subcategory: berufshaftpflicht
+    confidence: 0.95
+
+  # === GEMISCHTE NUTZUNG ===
+
+  - id: mixed_telecom
+    name: "Telekommunikation (50% betrieblich)"
+    priority: 30
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "telekom"
+      - field: counterparty
+        operator: contains
+        value: "vodafone"
+      - field: counterparty
+        operator: contains
+        value: "o2"
+      - field: counterparty
+        operator: contains
+        value: "1&1"
+    category: business_expense
+    subcategory: telekommunikation
+    split:
+      business: 50
+      private: 50
+    confidence: 0.9
+
+  - id: mixed_internet
+    name: "Internet (50% betrieblich)"
+    priority: 30
+    conditions:
+      - field: description
+        operator: regex
+        value: "(internet|dsl|glasfaser)"
+    category: business_expense
+    subcategory: internet
+    split:
+      business: 50
+      private: 50
+    confidence: 0.85
+
+  # === HOMEOFFICE-PAUSCHALE ===
+
+  - id: expense_homeoffice_pauschale
+    name: "Homeoffice-Pauschale"
+    priority: 15
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(?i)(homeoffice|home.?office|arbeitszimmer|heimarbeitsplatz)"
+    category: deductible
+    subcategory: homeoffice_pauschale
+    confidence: 0.85
+    notes: "6 EUR/Tag, max 1.260 EUR/Jahr (210 Tage) - §4 Abs. 5 Nr. 6c EStG"
+
+  # === PRIVAT ===
+
+  - id: private_streaming
+    name: "Streaming (privat)"
+    priority: 50
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "netflix"
+      - field: counterparty
+        operator: contains
+        value: "spotify"
+      - field: counterparty
+        operator: contains
+        value: "disney"
+      - field: counterparty
+        operator: contains
+        value: "amazon prime"
+    category: private
+    subcategory: streaming
+    confidence: 1.0
+
+  - id: private_food
+    name: "Lebensmittel und Essen"
+    priority: 50
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "rewe"
+      - field: counterparty
+        operator: contains
+        value: "edeka"
+      - field: counterparty
+        operator: contains
+        value: "aldi"
+      - field: counterparty
+        operator: contains
+        value: "lidl"
+      - field: counterparty
+        operator: contains
+        value: "lieferando"
+    category: private
+    subcategory: lebensmittel
+    confidence: 1.0
+
+  # === UMSATZSTEUER ===
+
+  - id: tax_ust_vorauszahlung
+    name: "USt-Vorauszahlung"
+    priority: 15
+    conditions:
+      - field: counterparty
+        operator: contains
+        value: "finanzamt"
+      - field: description
+        operator: contains
+        value: "umsatzsteuer"
+    category: passthrough
+    subcategory: ust_vorauszahlung
+    confidence: 1.0
+
+  - id: tax_gewerbesteuer
+    name: "Gewerbesteuer"
+    priority: 15
+    conditions:
+      - field: description
+        operator: regex
+        value: "(gewerbesteuer|gewerbe-steuer)"
+    category: business_expense
+    subcategory: gewerbesteuer
+    confidence: 1.0
+
+  # === FALLBACK ===
+
+  - id: fallback_paypal
+    name: "PayPal (pruefen)"
+    priority: 90
+    conditions:
+      - field: counterparty
+        operator: contains
+        value: "paypal"
+    category: uncategorized
+    subcategory: paypal_pruefen
+    confidence: 0.3
+
+  - id: fallback_large_income
+    name: "Grosse Einnahme (pruefen)"
+    priority: 95
+    conditions:
+      - field: amount
+        operator: gt
+        value: 10000
+    category: uncategorized
+    subcategory: grosse_einnahme_pruefen
+    confidence: 0.3
+
+  - id: fallback_large_expense
+    name: "Grosse Ausgabe (pruefen)"
+    priority: 95
+    conditions:
+      - field: amount
+        operator: lt
+        value: -5000
+    category: uncategorized
+    subcategory: grosse_ausgabe_pruefen
+    confidence: 0.3

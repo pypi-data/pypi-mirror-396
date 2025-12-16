@@ -1,0 +1,610 @@
+# PACMAN - Freiberufler Kategorisierungsregeln
+# Deutschland - Anlage S (Selbstaendige Arbeit) + EUeR
+#
+# Diese Regeln kategorisieren Transaktionen fuer Freiberufler
+# (IT-Berater, Designer, Aerzte, Anwaelte, etc.)
+# WICHTIG: Keine Gewerbesteuer fuer Freiberufler!
+
+version: "1.0"
+profile: freiberufler
+
+rules:
+  # === BETRIEBSEINNAHMEN ===
+
+  - id: income_honorar
+    name: "Honorare und Verguetungen"
+    priority: 10
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(honorar|verguetung|beratung|consulting|projekt)"
+      - field: description
+        operator: regex
+        value: "(rechnung|invoice|zahlung.*fuer)"
+    category: business_income
+    subcategory: honorare
+    confidence: 0.9
+
+  - id: income_known_client
+    name: "Einnahme von Kunden (config)"
+    priority: 10
+    conditions:
+      - field: counterparty
+        operator: in_list
+        value: "$config.clients"
+      - field: amount
+        operator: gt
+        value: 0
+    category: business_income
+    subcategory: kunden
+    confidence: 1.0
+
+  # === BETRIEBSAUSGABEN ===
+
+  - id: expense_steuerberater
+    name: "Steuerberater"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "steuerber"
+      - field: description
+        operator: contains
+        value: "steuerber"
+    category: business_expense
+    subcategory: steuerberater
+    confidence: 1.0
+
+  - id: expense_rechtsanwalt
+    name: "Rechtsanwalt"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(rechtsanw|anwalt|kanzlei|law)"
+      - field: description
+        operator: contains
+        value: "rechtsberatung"
+    category: business_expense
+    subcategory: rechtsberatung
+    confidence: 0.95
+
+  - id: expense_buerokosten
+    name: "Buerobedarf"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "viking"
+      - field: counterparty
+        operator: contains
+        value: "staples"
+      - field: counterparty
+        operator: contains
+        value: "buero"
+      - field: counterparty
+        operator: contains
+        value: "office"
+    category: business_expense
+    subcategory: buerobedarf
+    confidence: 0.95
+
+  - id: expense_coworking
+    name: "Coworking Space"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(coworking|wework|mindspace|spaces|rent24)"
+      - field: description
+        operator: contains
+        value: "coworking"
+      - field: description
+        operator: contains
+        value: "arbeitsplatz"
+    category: business_expense
+    subcategory: coworking
+    confidence: 1.0
+
+  - id: expense_software_dev
+    name: "Software Entwicklungstools"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "github"
+      - field: counterparty
+        operator: contains
+        value: "gitlab"
+      - field: counterparty
+        operator: contains
+        value: "jetbrains"
+      - field: counterparty
+        operator: contains
+        value: "anthropic"
+      - field: counterparty
+        operator: contains
+        value: "openai"
+      - field: counterparty
+        operator: contains
+        value: "cursor"
+      - field: counterparty
+        operator: contains
+        value: "vercel"
+      - field: counterparty
+        operator: contains
+        value: "netlify"
+    category: business_expense
+    subcategory: software_dev
+    confidence: 1.0
+
+  - id: expense_software_design
+    name: "Design Software"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "adobe"
+      - field: counterparty
+        operator: contains
+        value: "figma"
+      - field: counterparty
+        operator: contains
+        value: "sketch"
+      - field: counterparty
+        operator: contains
+        value: "canva"
+      - field: counterparty
+        operator: contains
+        value: "affinity"
+    category: business_expense
+    subcategory: software_design
+    confidence: 1.0
+
+  - id: expense_software_produktivitaet
+    name: "Produktivitaets-Software"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "notion"
+      - field: counterparty
+        operator: contains
+        value: "slack"
+      - field: counterparty
+        operator: contains
+        value: "zoom"
+      - field: counterparty
+        operator: contains
+        value: "microsoft"
+      - field: counterparty
+        operator: contains
+        value: "google workspace"
+      - field: counterparty
+        operator: contains
+        value: "dropbox"
+      - field: counterparty
+        operator: contains
+        value: "1password"
+      - field: counterparty
+        operator: contains
+        value: "todoist"
+    category: business_expense
+    subcategory: software_produktivitaet
+    confidence: 1.0
+
+  - id: expense_hosting
+    name: "Hosting und Cloud"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "hetzner"
+      - field: counterparty
+        operator: contains
+        value: "aws"
+      - field: counterparty
+        operator: contains
+        value: "digitalocean"
+      - field: counterparty
+        operator: contains
+        value: "azure"
+      - field: counterparty
+        operator: contains
+        value: "google cloud"
+      - field: counterparty
+        operator: contains
+        value: "cloudflare"
+    category: business_expense
+    subcategory: hosting
+    confidence: 1.0
+
+  - id: expense_buchhaltung
+    name: "Buchhaltungssoftware"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "lexoffice"
+      - field: counterparty
+        operator: contains
+        value: "sevdesk"
+      - field: counterparty
+        operator: contains
+        value: "fastbill"
+      - field: counterparty
+        operator: contains
+        value: "debitoor"
+      - field: counterparty
+        operator: contains
+        value: "billomat"
+    category: business_expense
+    subcategory: buchhaltung
+    confidence: 1.0
+
+  - id: expense_fortbildung
+    name: "Fortbildung und Kurse"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "udemy"
+      - field: counterparty
+        operator: contains
+        value: "coursera"
+      - field: counterparty
+        operator: contains
+        value: "pluralsight"
+      - field: counterparty
+        operator: contains
+        value: "egghead"
+      - field: counterparty
+        operator: contains
+        value: "frontendmasters"
+      - field: counterparty
+        operator: contains
+        value: "konferenz"
+      - field: description
+        operator: regex
+        value: "(kurs|seminar|fortbildung|workshop|konferenz|conference)"
+    category: business_expense
+    subcategory: fortbildung
+    confidence: 0.95
+
+  - id: expense_fachliteratur
+    name: "Fachliteratur und Buecher"
+    priority: 25
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "oreilly"
+      - field: counterparty
+        operator: contains
+        value: "manning"
+      - field: counterparty
+        operator: contains
+        value: "pragprog"
+      - field: counterparty
+        operator: contains
+        value: "apress"
+      - field: description
+        operator: regex
+        value: "(fachbuch|ebook|literatur)"
+    category: business_expense
+    subcategory: fachliteratur
+    confidence: 0.9
+
+  - id: expense_domain
+    name: "Domains"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "namecheap"
+      - field: counterparty
+        operator: contains
+        value: "gandi"
+      - field: counterparty
+        operator: contains
+        value: "denic"
+      - field: description
+        operator: regex
+        value: '(domain|\.de|\.com|\.io)'
+    category: business_expense
+    subcategory: domains
+    confidence: 0.95
+
+  - id: expense_hardware
+    name: "Hardware (Arbeitsmittel)"
+    priority: 25
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "apple"
+      - field: counterparty
+        operator: contains
+        value: "gravis"
+      - field: counterparty
+        operator: contains
+        value: "mediamarkt"
+      - field: counterparty
+        operator: contains
+        value: "saturn"
+      - field: counterparty
+        operator: contains
+        value: "alternate"
+      - field: description
+        operator: regex
+        value: "(macbook|ipad|monitor|tastatur|maus|laptop|computer)"
+    category: business_expense
+    subcategory: hardware
+    confidence: 0.8
+
+  # === HOMEOFFICE-PAUSCHALE ===
+
+  - id: expense_homeoffice_pauschale
+    name: "Homeoffice-Pauschale"
+    priority: 15
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(?i)(homeoffice|home.?office|arbeitszimmer|heimarbeitsplatz)"
+    category: deductible
+    subcategory: homeoffice_pauschale
+    confidence: 0.85
+    notes: "6 EUR/Tag, max 1.260 EUR/Jahr (210 Tage) - §4 Abs. 5 Nr. 6c EStG"
+
+  - id: expense_arbeitszimmer_anteilig
+    name: "Arbeitszimmer (anteilig)"
+    priority: 20
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(?i)(arbeitszimmer|bueroraum|home.?office.?miete)"
+    category: business_expense
+    subcategory: arbeitszimmer
+    split:
+      business: 100
+      private: 0
+    confidence: 0.7
+    notes: "Haeusliches Arbeitszimmer - nur bei Mittelpunkt der Taetigkeit voll absetzbar"
+
+  # === SONDERAUSGABEN ===
+
+  - id: deductible_health_insurance
+    name: "Krankenversicherung"
+    priority: 25
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "krankenversicherung"
+      - field: counterparty
+        operator: contains
+        value: "krankenkasse"
+      - field: counterparty
+        operator: regex
+        value: "(AOK|TK|Barmer|DAK|BKK|IKK|KKH)"
+      - field: description
+        operator: contains
+        value: "krankenvers"
+    category: deductible
+    subcategory: krankenversicherung
+    confidence: 1.0
+
+  - id: deductible_pension_freiwillig
+    name: "Freiwillige Rentenversicherung"
+    priority: 25
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "deutsche rentenvers"
+      - field: description
+        operator: regex
+        value: "(rentenvers|altersvorsorge)"
+    category: deductible
+    subcategory: rentenversicherung
+    confidence: 1.0
+
+  - id: deductible_versorgungswerk
+    name: "Berufsstaendisches Versorgungswerk"
+    priority: 25
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "versorgungswerk"
+      - field: counterparty
+        operator: contains
+        value: "aerzteversorgung"
+      - field: counterparty
+        operator: contains
+        value: "rechtsanwaltsversorgung"
+    category: deductible
+    subcategory: versorgungswerk
+    confidence: 1.0
+
+  - id: deductible_berufshaftpflicht
+    name: "Berufshaftpflichtversicherung"
+    priority: 25
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(berufshaftpflicht|vermögensschaden|it-haftpflicht)"
+      - field: counterparty
+        operator: regex
+        value: "(hiscox|exali)"
+    category: deductible
+    subcategory: berufshaftpflicht
+    confidence: 1.0
+
+  - id: deductible_berufsunfaehigkeit
+    name: "Berufsunfaehigkeitsversicherung"
+    priority: 25
+    conditions_any:
+      - field: description
+        operator: contains
+        value: "berufsunfaehigkeit"
+      - field: description
+        operator: contains
+        value: "bu-versicherung"
+    category: deductible
+    subcategory: berufsunfaehigkeit
+    confidence: 1.0
+
+  # === GEMISCHTE NUTZUNG ===
+
+  - id: mixed_telecom
+    name: "Telekommunikation (60% betrieblich)"
+    priority: 30
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "telekom"
+      - field: counterparty
+        operator: contains
+        value: "vodafone"
+      - field: counterparty
+        operator: contains
+        value: "o2"
+      - field: counterparty
+        operator: contains
+        value: "1&1"
+    category: business_expense
+    subcategory: telekommunikation
+    split:
+      business: 60
+      private: 40
+    confidence: 0.9
+
+  - id: mixed_internet
+    name: "Internet (60% betrieblich)"
+    priority: 30
+    conditions:
+      - field: description
+        operator: regex
+        value: "(internet|dsl|glasfaser|fiber)"
+    category: business_expense
+    subcategory: internet
+    split:
+      business: 60
+      private: 40
+    confidence: 0.85
+
+  # === PRIVAT ===
+
+  - id: private_streaming
+    name: "Streaming (privat)"
+    priority: 50
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "netflix"
+      - field: counterparty
+        operator: contains
+        value: "disney"
+      - field: counterparty
+        operator: contains
+        value: "amazon prime"
+      - field: counterparty
+        operator: contains
+        value: "spotify"
+    category: private
+    subcategory: streaming
+    confidence: 1.0
+
+  - id: private_lebensmittel
+    name: "Lebensmittel"
+    priority: 50
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "rewe"
+      - field: counterparty
+        operator: contains
+        value: "edeka"
+      - field: counterparty
+        operator: contains
+        value: "aldi"
+      - field: counterparty
+        operator: contains
+        value: "lidl"
+      - field: counterparty
+        operator: contains
+        value: "netto"
+      - field: counterparty
+        operator: contains
+        value: "penny"
+    category: private
+    subcategory: lebensmittel
+    confidence: 1.0
+
+  - id: private_rundfunk
+    name: "Rundfunkbeitrag"
+    priority: 50
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "rundfunk"
+      - field: counterparty
+        operator: contains
+        value: "beitragsservice"
+    category: private
+    subcategory: rundfunk
+    confidence: 1.0
+
+  # === UMSATZSTEUER ===
+
+  - id: tax_ust_vorauszahlung
+    name: "USt-Vorauszahlung"
+    priority: 15
+    conditions:
+      - field: counterparty
+        operator: contains
+        value: "finanzamt"
+      - field: description
+        operator: contains
+        value: "umsatzsteuer"
+    category: passthrough
+    subcategory: ust_vorauszahlung
+    confidence: 1.0
+
+  - id: tax_einkommensteuer
+    name: "Einkommensteuer-Vorauszahlung"
+    priority: 15
+    conditions:
+      - field: counterparty
+        operator: contains
+        value: "finanzamt"
+      - field: description
+        operator: contains
+        value: "einkommensteuer"
+    category: private
+    subcategory: einkommensteuer
+    confidence: 1.0
+
+  # === FALLBACK ===
+
+  - id: fallback_paypal
+    name: "PayPal (pruefen)"
+    priority: 90
+    conditions:
+      - field: counterparty
+        operator: contains
+        value: "paypal"
+    category: uncategorized
+    subcategory: paypal_pruefen
+    confidence: 0.3
+
+  - id: fallback_large_income
+    name: "Grosse Einnahme (pruefen)"
+    priority: 95
+    conditions:
+      - field: amount
+        operator: gt
+        value: 10000
+    category: uncategorized
+    subcategory: grosse_einnahme_pruefen
+    confidence: 0.3

@@ -1,0 +1,409 @@
+# PACMAN - Kuenstler Kategorisierungsregeln
+# Deutschland - Anlage S (Freiberufler)
+#
+# Kuenstler, Designer, Fotografen, Musiker, Autoren
+# Freiberuflich nach §18 EStG (kuenstlerische Taetigkeit)
+#
+# Besonderheiten:
+# - Kuenstlersozialkasse (KSK)
+# - Ermaessigter USt-Satz 7% fuer kuenstlerische Leistungen
+# - Gagenvertraege, Lizenzen, Tantiemen
+
+version: "1.0"
+profile: kuenstler
+extends: freiberufler
+
+metadata:
+  description: "Kuenstler, Designer, Fotograf, Musiker, Autor"
+  applicable_forms:
+    - "Anlage S"
+    - "EUeR"
+  besonderheiten:
+    - "Kuenstlersozialkasse (KSK) Pflicht"
+    - "7% USt auf kuenstlerische Leistungen"
+  branches:
+    - "Bildende Kunst"
+    - "Grafikdesign"
+    - "Fotografie"
+    - "Musik"
+    - "Schauspiel"
+    - "Literatur"
+
+rules:
+  # === EINNAHMEN ===
+
+  - id: income_honorar
+    name: "Kuenstlerhonorar"
+    priority: 10
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(honorar|gage|auftrittsgage|kuenstlergage)"
+      - field: counterparty
+        operator: in_list
+        value: "$config.auftraggeber"
+    category: business_income
+    subcategory: honorar
+    confidence: 0.95
+    notes: "7% USt wenn kuenstlerische Leistung"
+
+  - id: income_lizenz
+    name: "Lizenzeinnahmen"
+    priority: 10
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(lizenz|nutzungsrecht|verwertung)"
+    category: business_income
+    subcategory: lizenzen
+    confidence: 0.95
+
+  - id: income_tantieme
+    name: "Tantiemen"
+    priority: 10
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(tantieme|royalty|verguetung.*nutzung)"
+    category: business_income
+    subcategory: tantiemen
+    confidence: 0.95
+
+  - id: income_gema
+    name: "GEMA Ausschuettung"
+    priority: 8
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "gema"
+    category: business_income
+    subcategory: gema
+    confidence: 1.0
+
+  - id: income_vg_wort
+    name: "VG Wort Ausschuettung"
+    priority: 8
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "vg wort"
+    category: business_income
+    subcategory: vg_wort
+    confidence: 1.0
+
+  - id: income_vg_bild
+    name: "VG Bild-Kunst Ausschuettung"
+    priority: 8
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(vg.*bild|bild.*kunst)"
+    category: business_income
+    subcategory: vg_bild_kunst
+    confidence: 1.0
+
+  - id: income_verkauf_kunst
+    name: "Verkauf Kunstwerk"
+    priority: 10
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(kunstwerk|original|skulptur|gemaelde|bild)"
+    category: business_income
+    subcategory: kunstverkauf
+    confidence: 0.8
+    notes: "7% USt auf Originale des Urhebers"
+
+  - id: income_galerie
+    name: "Galerieverkauf"
+    priority: 10
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "galerie"
+      - field: description
+        operator: contains
+        value: "galerie"
+    category: business_income
+    subcategory: galerie
+    confidence: 0.9
+
+  - id: income_stock
+    name: "Stockfoto/-Video Einnahmen"
+    priority: 10
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(shutterstock|getty|adobe.*stock|istock)"
+    category: business_income
+    subcategory: stock
+    confidence: 1.0
+
+  # === AUSGABEN - KUENSTLERSOZIALKASSE ===
+
+  - id: expense_ksk
+    name: "Kuenstlersozialkasse (KSK)"
+    priority: 10
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "kuenstlersozialkasse"
+      - field: counterparty
+        operator: contains
+        value: "ksk"
+    category: deductible
+    subcategory: ksk
+    confidence: 1.0
+    notes: "Sozialversicherung ueber KSK"
+
+  # === AUSGABEN - EQUIPMENT ===
+
+  - id: expense_kamera_foto
+    name: "Fotoausruestung"
+    priority: 15
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(calumet|foto.*koch|foto.*meyer|wex)"
+      - field: counterparty
+        operator: regex
+        value: "(canon|nikon|sony|fuji|leica|hasselblad)"
+      - field: description
+        operator: regex
+        value: "(kamera|objektiv|blitz|stativ)"
+    category: business_expense
+    subcategory: fotoausruestung
+    confidence: 0.95
+
+  - id: expense_musikinstrument
+    name: "Musikinstrumente"
+    priority: 15
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(thomann|musicstore|session|just.*music)"
+      - field: description
+        operator: regex
+        value: "(instrument|gitarre|klavier|keyboard|drums)"
+    category: business_expense
+    subcategory: instrumente
+    confidence: 0.9
+
+  - id: expense_audio_profi
+    name: "Audio-Equipment"
+    priority: 15
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(neumann|sennheiser|shure|focusrite|universal.*audio)"
+      - field: description
+        operator: regex
+        value: "(mikrofon|audio.*interface|monitor|mischpult)"
+    category: business_expense
+    subcategory: audio_equipment
+    confidence: 0.95
+
+  - id: expense_kunst_material
+    name: "Kuenstlerbedarf"
+    priority: 15
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(gerstaecker|boesner|modulor|kunstpark)"
+      - field: description
+        operator: regex
+        value: "(leinwand|farbe|pinsel|staffelei)"
+    category: business_expense
+    subcategory: kunstmaterial
+    confidence: 1.0
+
+  - id: expense_design_software
+    name: "Design-Software"
+    priority: 18
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "adobe"
+      - field: counterparty
+        operator: contains
+        value: "affinity"
+      - field: counterparty
+        operator: contains
+        value: "figma"
+      - field: counterparty
+        operator: contains
+        value: "sketch"
+    category: business_expense
+    subcategory: design_software
+    confidence: 1.0
+
+  - id: expense_musik_software
+    name: "Musik-Software (DAW)"
+    priority: 18
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(ableton|native.*instruments|steinberg|avid)"
+      - field: description
+        operator: regex
+        value: "(logic|cubase|pro.*tools|ableton)"
+    category: business_expense
+    subcategory: musik_software
+    confidence: 1.0
+
+  # === AUSGABEN - STUDIO/ATELIER ===
+
+  - id: expense_atelier
+    name: "Atelier-/Studiomiete"
+    priority: 15
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(atelier|studio.*miete|werkstatt)"
+    category: business_expense
+    subcategory: atelier
+    confidence: 0.9
+
+  - id: expense_proberaum
+    name: "Proberaum"
+    priority: 18
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(proberaum|uebungsraum)"
+    category: business_expense
+    subcategory: proberaum
+    confidence: 0.95
+
+  # === AUSGABEN - VERBREITUNG ===
+
+  - id: expense_druckkosten
+    name: "Druck und Reproduktion"
+    priority: 18
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(whitewall|saal.*digital|pixartprinting)"
+      - field: description
+        operator: regex
+        value: "(druck|print|reproduktion|rahmen)"
+    category: business_expense
+    subcategory: druck
+    confidence: 0.9
+
+  - id: expense_verlag
+    name: "Verlagskosten"
+    priority: 18
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "verlag"
+      - field: description
+        operator: regex
+        value: "(selbstverlag|isbn|druckkosten.*buch)"
+    category: business_expense
+    subcategory: verlag
+    confidence: 0.85
+
+  - id: expense_distributor
+    name: "Musik-Distribution"
+    priority: 18
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(distrokid|tunecore|cdbaby|landr)"
+    category: business_expense
+    subcategory: distribution
+    confidence: 1.0
+
+  # === AUSGABEN - MARKETING ===
+
+  - id: expense_portfolio
+    name: "Portfolio-Website"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(squarespace|format|pixpa|cargo)"
+      - field: description
+        operator: regex
+        value: "(portfolio|kuenstler.*website)"
+    category: business_expense
+    subcategory: portfolio
+    confidence: 0.9
+
+  - id: expense_bewerbung
+    name: "Bewerbungsmaterial"
+    priority: 20
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(bewerbung|demoband|promo|presskit)"
+    category: business_expense
+    subcategory: bewerbung
+    confidence: 0.8
+
+  # === AUSGABEN - WEITERBILDUNG ===
+
+  - id: expense_workshop_kunst
+    name: "Workshops und Kurse"
+    priority: 18
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(workshop|meisterklasse|masterclass|kurs)"
+    category: business_expense
+    subcategory: weiterbildung
+    confidence: 0.85
+
+  # === VERBAENDE ===
+
+  - id: expense_verband_kunst
+    name: "Berufsverband"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(bbk|vgd|agd|freelens|bdg)"
+      - field: description
+        operator: regex
+        value: "(verband|berufsverband)"
+    category: business_expense
+    subcategory: berufsverband
+    confidence: 0.95

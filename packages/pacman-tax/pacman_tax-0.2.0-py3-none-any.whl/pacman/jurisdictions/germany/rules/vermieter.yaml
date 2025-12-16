@@ -1,0 +1,698 @@
+# PACMAN - Vermieter Kategorisierungsregeln
+# Deutschland - Anlage V (Vermietung und Verpachtung)
+#
+# Diese Regeln kategorisieren Transaktionen für Vermieter
+# mit Untervermietung / Langzeitvermietung.
+
+version: "2.0"
+profile: vermieter
+
+metadata:
+  description: "Vermieter - Vermietung und Verpachtung"
+  applicable_forms:
+    - "Anlage V"
+    - "EUeR (bei Gewerblichkeit)"
+  config_fields:
+    - tenants: "Liste der Mieter-Namen"
+    - properties: "Adressen der Mietobjekte"
+  hinweise:
+    afa: |
+      AfA fuer Gebaeude: 2% (Baujahr nach 1924) oder 2.5% (vor 1925)
+      Nur auf Gebaeudewert, nicht auf Grundstueckswert!
+    werbungskosten: |
+      Alle Kosten die mit der Vermietung zusammenhaengen
+      sind als Werbungskosten absetzbar (§9 EStG)
+
+rules:
+  # === MIETEINNAHMEN ===
+
+  - id: rental_income_tenant
+    name: "Mieteinnahmen von Mietern (config)"
+    priority: 5
+    conditions:
+      - field: counterparty
+        operator: in_list
+        value: "$config.tenants"
+    category: rental_income
+    subcategory: mieter
+    confidence: 1.0
+
+  - id: rental_income_miete_beschreibung
+    name: "Mieteinnahmen (Miete im Text)"
+    priority: 10
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(?i)(miete|mieteinnahme|monatsmiete|kaltmiete|warmmiete)"
+    category: rental_income
+    subcategory: miete
+    confidence: 0.95
+    notes: "Automatisch erkannt durch Beschreibung"
+
+  - id: rental_income_nebenkosten
+    name: "Nebenkostennachzahlung"
+    priority: 10
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(?i)(nebenkosten|nk.?nachzahlung|nk.?abrechnung|betriebskosten)"
+    category: rental_income
+    subcategory: nebenkosten
+    confidence: 0.9
+    notes: "NK-Nachzahlung vom Mieter"
+
+  - id: rental_income_kaution
+    name: "Kautionseinzahlung"
+    priority: 10
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(?i)(kaution|mietkaution|sicherheitsleistung)"
+    category: rental_income
+    subcategory: kaution
+    confidence: 0.95
+    notes: "Kaution - nicht steuerbar, aber dokumentieren!"
+
+  # === DURCHLAUFPOSTEN (Passthrough) ===
+
+  - id: passthrough_landlord
+    name: "Miete an Hauptvermieter (config)"
+    priority: 10
+    conditions:
+      - field: counterparty
+        operator: in_list
+        value: "$config.landlords"
+    category: passthrough
+    subcategory: hauptmiete
+    confidence: 1.0
+
+  - id: passthrough_stadt_land
+    name: "Stadt und Land"
+    priority: 15
+    conditions:
+      - field: counterparty
+        operator: contains
+        value: "Stadt und Land"
+    category: passthrough
+    subcategory: hauptmiete
+    confidence: 1.0
+
+  - id: passthrough_pro_potsdam
+    name: "Pro Potsdam"
+    priority: 15
+    conditions:
+      - field: counterparty
+        operator: contains
+        value: "Pro Potsdam"
+    category: passthrough
+    subcategory: hauptmiete
+    confidence: 1.0
+
+  # === WERBUNGSKOSTEN VERMIETUNG (§9 EStG) ===
+
+  - id: rental_expense_hausgeld
+    name: "Hausgeld / WEG-Umlage"
+    priority: 15
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(?i)(hausgeld|weg.?umlage|wohngeld)"
+      - field: counterparty
+        operator: regex
+        value: "(?i)(WEG|eigentuemergemeinschaft)"
+      - field: description
+        operator: regex
+        value: "(?i)\\bweg\\b"
+    category: rental_expense
+    subcategory: hausgeld
+    confidence: 1.0
+
+  - id: rental_expense_hausverwaltung
+    name: "Hausverwaltung"
+    priority: 15
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(?i)(hausverwaltung|HV |immobilienverwaltung)"
+      - field: description
+        operator: regex
+        value: "(?i)(hausverwaltung|verwaltung.?q[1-4]|HV.?q[1-4])"
+    category: rental_expense
+    subcategory: hausverwaltung
+    confidence: 0.95
+    notes: "Verwaltungskosten sind Werbungskosten"
+
+  - id: rental_expense_grundsteuer
+    name: "Grundsteuer"
+    priority: 15
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(?i)(grundsteuer|grundbesitzabgabe)"
+      - field: counterparty
+        operator: regex
+        value: "(?i)(gemeinde|stadt |finanzamt)"
+      - field: description
+        operator: regex
+        value: "(?i)(grundsteuer)"
+    category: rental_expense
+    subcategory: grundsteuer
+    confidence: 0.95
+    notes: "Grundsteuer ist auf Mieter umlegbar"
+
+  - id: rental_expense_reparatur
+    name: "Reparaturen / Instandhaltung"
+    priority: 15
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(?i)(reparatur|instandhaltung|sanierung|wartung)"
+      - field: counterparty
+        operator: regex
+        value: "(?i)(sanitaer|sanit.r|handwerker|bau.?service|installateur)"
+      - field: counterparty
+        operator: regex
+        value: "(?i)(heizung|klempner|rohrreinigung)"
+      - field: counterparty
+        operator: regex
+        value: "(?i)(elektrik|elektriker|elektro)"
+      - field: description
+        operator: regex
+        value: "(?i)(heizung|steckdose|wasserhahn|rohr|toilette)"
+    category: rental_expense
+    subcategory: reparaturen
+    confidence: 0.9
+    notes: "Erhaltungsaufwand - sofort absetzbar"
+
+  - id: rental_expense_gartenpflege
+    name: "Gartenpflege"
+    priority: 15
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(?i)(garten|gruenpflege|landschafts)"
+      - field: description
+        operator: regex
+        value: "(?i)(gartenpflege|rasenpflege|hecken|baumpflege)"
+    category: rental_expense
+    subcategory: gartenpflege
+    confidence: 0.9
+    notes: "Betriebskosten - auf Mieter umlegbar"
+
+  - id: rental_expense_winterdienst
+    name: "Winterdienst"
+    priority: 15
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(?i)(winterdienst|schneeraeumung|streudienst)"
+      - field: counterparty
+        operator: regex
+        value: "(?i)(winterdienst|raeumservice)"
+    category: rental_expense
+    subcategory: winterdienst
+    confidence: 0.95
+
+  - id: rental_expense_muellabfuhr
+    name: "Muellabfuhr"
+    priority: 15
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(?i)(bsr|entsorgung|abfallwirtschaft|stadtreinigung)"
+      - field: description
+        operator: regex
+        value: "(?i)(muellabfuhr|abfall|entsorgung|wertstoff)"
+    category: rental_expense
+    subcategory: muellabfuhr
+    confidence: 0.95
+
+  - id: rental_expense_wasser_abwasser
+    name: "Wasser/Abwasser"
+    priority: 15
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(?i)(wasserwerk|stadtwerke|wasserbetriebe)"
+      - field: description
+        operator: regex
+        value: "(?i)(wasser|abwasser|kanal)"
+    category: rental_expense
+    subcategory: wasser
+    confidence: 0.9
+
+  - id: rental_expense_schornsteinfeger
+    name: "Schornsteinfeger"
+    priority: 15
+    conditions_any:
+      - field: description
+        operator: contains
+        value: "schornstein"
+      - field: counterparty
+        operator: contains
+        value: "schornstein"
+    category: rental_expense
+    subcategory: schornsteinfeger
+    confidence: 1.0
+
+  - id: rental_expense_gebaeudeversicherung
+    name: "Gebaeudeversicherung"
+    priority: 15
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(?i)(gebaeudeversicherung|gebaudeversicherung|gebäudeversicherung)"
+      - field: description
+        operator: regex
+        value: "(?i)(wohngebaeudeversicherung|hausratversicherung)"
+      - field: description
+        operator: regex
+        value: "(?i)(elementarversicherung|feuerversicherung)"
+    category: rental_expense
+    subcategory: versicherung
+    confidence: 0.95
+    notes: "Werbungskosten - nicht auf Mieter umlegbar"
+
+  - id: rental_expense_haftpflicht
+    name: "Haus- und Grundbesitzerhaftpflicht"
+    priority: 15
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(?i)(grundbesitzerhaftpflicht|haus.?haftpflicht)"
+      - field: description
+        operator: regex
+        value: "(?i)(vermieter.?haftpflicht)"
+    category: rental_expense
+    subcategory: versicherung
+    confidence: 0.9
+
+  - id: rental_expense_versicherung_allgemein
+    name: "Versicherung (Immobilie)"
+    priority: 20
+    conditions:
+      - field: amount
+        operator: lt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(?i)(allianz|huk|ergo|axa|zurich|generali)"
+      - field: counterparty
+        operator: regex
+        value: "(?i)(versicherung|insurance)"
+    category: rental_expense
+    subcategory: versicherung
+    confidence: 0.7
+    notes: "Versicherung - manuell pruefen ob Immobilie-bezogen"
+
+  # === BETRIEBSAUSGABEN ===
+
+  - id: expense_steuerberater
+    name: "Steuerberater"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "steuerber"
+      - field: counterparty
+        operator: contains
+        value: "consulting gmbh"
+      - field: description
+        operator: contains
+        value: "steuerber"
+      - field: counterparty
+        operator: contains
+        value: "megatron"
+    category: business_expense
+    subcategory: steuerberater
+    split:
+      rental: 80
+      business: 20
+    confidence: 0.95
+
+  - id: expense_dropscan
+    name: "Dropscan Postservice"
+    priority: 20
+    conditions:
+      - field: counterparty
+        operator: contains
+        value: "dropscan"
+    category: business_expense
+    subcategory: buerokosten
+    confidence: 1.0
+
+  - id: expense_hosting
+    name: "Webhosting"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "all-inkl"
+      - field: counterparty
+        operator: contains
+        value: "hetzner"
+      - field: counterparty
+        operator: contains
+        value: "ionos"
+      - field: counterparty
+        operator: contains
+        value: "strato"
+    category: business_expense
+    subcategory: it_kosten
+    confidence: 1.0
+
+  - id: expense_software_buchhaltung
+    name: "Buchhaltungssoftware"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "lexware"
+      - field: counterparty
+        operator: contains
+        value: "haufe"
+      - field: counterparty
+        operator: contains
+        value: "sevdesk"
+      - field: counterparty
+        operator: contains
+        value: "lexoffice"
+      - field: counterparty
+        operator: contains
+        value: "datev"
+    category: business_expense
+    subcategory: software
+    confidence: 1.0
+
+  # === SONDERAUSGABEN / VORSORGEAUFWAND ===
+
+  - id: deductible_health_insurance
+    name: "Krankenversicherung"
+    priority: 25
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "krankenversicherung"
+      - field: counterparty
+        operator: contains
+        value: "krankenkasse"
+      - field: counterparty
+        operator: regex
+        value: "(AOK|TK|Barmer|DAK|ERGO|Allianz|HUK).*(krank|versicherung)"
+      - field: description
+        operator: contains
+        value: "krankenvers"
+    category: deductible
+    subcategory: krankenversicherung
+    confidence: 1.0
+
+  - id: deductible_donations
+    name: "Spenden"
+    priority: 25
+    conditions_any:
+      - field: description
+        operator: contains
+        value: "spende"
+      - field: counterparty
+        operator: contains
+        value: "save the children"
+      - field: counterparty
+        operator: contains
+        value: "rotes kreuz"
+      - field: counterparty
+        operator: contains
+        value: "unicef"
+      - field: counterparty
+        operator: contains
+        value: "wwf"
+      - field: counterparty
+        operator: contains
+        value: "aerzte ohne grenzen"
+    category: deductible
+    subcategory: spenden
+    confidence: 0.95
+
+  # === HOMEOFFICE REGELN ===
+
+  - id: expense_homeoffice_pauschale_vermieter
+    name: "Homeoffice-Pauschale (Vermieter)"
+    priority: 28
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(?i)(homeoffice|home.?office|arbeitszimmer|heimarbeitsplatz)"
+    category: deductible
+    subcategory: homeoffice_pauschale
+    confidence: 0.65
+    notes: |
+      WARNUNG: Fuer reine Vermieter oft NICHT absetzbar!
+      Nur bei zusaetzlicher wirtschaftlicher Taetigkeit (z.B. Selbstaendig).
+      6 EUR/Tag, max. 1.260 EUR/Jahr (210 Tage) - §4 Abs. 5 Nr. 6c EStG
+
+  # === GEMISCHTE NUTZUNG ===
+
+  - id: mixed_telecom
+    name: "Telekommunikation (25% betrieblich)"
+    priority: 30
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "telekom"
+      - field: counterparty
+        operator: contains
+        value: "telefonica"
+      - field: counterparty
+        operator: contains
+        value: "vodafone"
+      - field: counterparty
+        operator: contains
+        value: "o2"
+      - field: counterparty
+        operator: contains
+        value: "1&1"
+    category: business_expense
+    subcategory: telekommunikation
+    split:
+      business: 25
+      private: 75
+    confidence: 0.85
+    notes: "Internet/Telefon fuer Mieter-Kommunikation, Online-Banking, Buchhaltung"
+
+  - id: mixed_internet_vermieter
+    name: "Internet (25% betrieblich)"
+    priority: 32
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(?i)(internet|dsl|glasfaser|fiber|breitband)"
+    category: business_expense
+    subcategory: internet
+    split:
+      business: 25
+      private: 75
+    confidence: 0.80
+    notes: "Anteilig fuer Vermieterverwaltung, Mieterkommunikation"
+
+  # === PRIVAT ===
+
+  - id: private_supermarkt
+    name: "Supermarkt/Einzelhandel"
+    priority: 50
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "rewe"
+      - field: counterparty
+        operator: contains
+        value: "edeka"
+      - field: counterparty
+        operator: contains
+        value: "aldi"
+      - field: counterparty
+        operator: contains
+        value: "lidl"
+      - field: counterparty
+        operator: contains
+        value: "kaufland"
+      - field: counterparty
+        operator: contains
+        value: "rossmann"
+      - field: counterparty
+        operator: contains
+        value: "dm-drogerie"
+    category: private
+    subcategory: einkauf
+    confidence: 1.0
+
+  - id: private_amazon
+    name: "Amazon (privat)"
+    priority: 50
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "amazon"
+      - field: description
+        operator: contains
+        value: "amazon"
+    category: private
+    subcategory: amazon
+    confidence: 0.85
+
+  - id: private_rundfunk
+    name: "Rundfunkbeitrag"
+    priority: 50
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "rundfunk"
+      - field: counterparty
+        operator: contains
+        value: "beitragsservice"
+      - field: description
+        operator: contains
+        value: "rundfunk"
+    category: private
+    subcategory: rundfunk
+    confidence: 1.0
+
+  - id: private_streaming
+    name: "Streaming Services"
+    priority: 50
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "netflix"
+      - field: counterparty
+        operator: contains
+        value: "spotify"
+      - field: counterparty
+        operator: contains
+        value: "disney"
+      - field: counterparty
+        operator: contains
+        value: "amazon prime"
+      - field: counterparty
+        operator: contains
+        value: "youtube premium"
+      - field: counterparty
+        operator: contains
+        value: "apple music"
+    category: private
+    subcategory: streaming
+    confidence: 1.0
+
+  - id: private_food_delivery
+    name: "Essenslieferung"
+    priority: 50
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "lieferando"
+      - field: counterparty
+        operator: contains
+        value: "wolt"
+      - field: counterparty
+        operator: contains
+        value: "uber eats"
+      - field: counterparty
+        operator: contains
+        value: "flink"
+      - field: counterparty
+        operator: contains
+        value: "gorillas"
+    category: private
+    subcategory: essen
+    confidence: 1.0
+
+  - id: private_transport
+    name: "Transport (privat)"
+    priority: 50
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "bolt"
+      - field: counterparty
+        operator: contains
+        value: "uber"
+      - field: counterparty
+        operator: contains
+        value: "free now"
+      - field: counterparty
+        operator: contains
+        value: "deutsche bahn"
+      - field: counterparty
+        operator: contains
+        value: "flixbus"
+    category: private
+    subcategory: transport
+    confidence: 0.9
+
+  # === BANK ===
+
+  - id: bank_fees
+    name: "Bankgebühren"
+    priority: 55
+    conditions_any:
+      - field: description
+        operator: contains
+        value: "kontoführung"
+      - field: description
+        operator: contains
+        value: "rücklastschrift"
+      - field: description
+        operator: contains
+        value: "gebühr"
+      - field: description
+        operator: regex
+        value: "(ablehnung|zurück|mangels deckung)"
+    category: private
+    subcategory: bankgebuehren
+    confidence: 0.95
+
+  # === FALLBACK ===
+
+  - id: fallback_paypal
+    name: "PayPal (prüfen)"
+    priority: 90
+    conditions:
+      - field: counterparty
+        operator: contains
+        value: "paypal"
+    category: uncategorized
+    subcategory: paypal_pruefen
+    confidence: 0.3
+
+  - id: fallback_large_income
+    name: "Große Einnahme (prüfen)"
+    priority: 95
+    conditions:
+      - field: amount
+        operator: gt
+        value: 5000
+    category: uncategorized
+    subcategory: grosse_einnahme_pruefen
+    confidence: 0.3
+
+  - id: fallback_large_expense
+    name: "Große Ausgabe (prüfen)"
+    priority: 95
+    conditions:
+      - field: amount
+        operator: lt
+        value: -5000
+    category: uncategorized
+    subcategory: grosse_ausgabe_pruefen
+    confidence: 0.3

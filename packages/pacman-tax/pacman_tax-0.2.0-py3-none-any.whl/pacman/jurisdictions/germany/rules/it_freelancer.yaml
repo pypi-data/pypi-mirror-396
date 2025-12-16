@@ -1,0 +1,430 @@
+# PACMAN - IT-Freelancer Kategorisierungsregeln
+# Deutschland - Anlage S (Freiberufler) oder Anlage G (Gewerbe)
+#
+# IT-Freelancer: Software-Entwickler, DevOps, Data Scientists, etc.
+# Meist freiberuflich wenn: Entwicklung, Beratung, Training
+# Gewerblich wenn: Handel, Hosting-Reselling, Vermittlung
+#
+# Erweitert das Basis-Freiberufler-Profil mit IT-spezifischen Regeln
+
+version: "1.0"
+profile: it_freelancer
+extends: freiberufler
+
+metadata:
+  description: "IT-Freelancer (Entwickler, DevOps, Data Science)"
+  applicable_forms:
+    - "Anlage S (bei Freiberuflichkeit)"
+    - "Anlage G (bei Gewerbe)"
+    - "EUeR"
+  typical_clients:
+    - "Tech-Unternehmen"
+    - "Agenturen"
+    - "Personalvermittler"
+
+rules:
+  # === EINNAHMEN VON TYPISCHEN IT-KUNDEN ===
+
+  - id: income_personalvermittler
+    name: "Einnahme via Personalvermittler"
+    priority: 8
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(hays|modis|gulp|solcom|etengo|ferchau|westhouse|it-economics)"
+      - field: counterparty
+        operator: regex
+        value: "(freelancermap|malt|toptal|upwork)"
+    category: business_income
+    subcategory: vermittler_einnahmen
+    confidence: 1.0
+
+  - id: income_agentur
+    name: "Einnahme von Agentur"
+    priority: 10
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(agentur|agency|digital|media|marketing)"
+    category: business_income
+    subcategory: agentur_einnahmen
+    confidence: 0.8
+
+  # === ENTWICKLUNGSTOOLS (BETRIEBSAUSGABEN) ===
+
+  - id: expense_ide
+    name: "IDE und Entwicklungsumgebung"
+    priority: 15
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "jetbrains"
+      - field: counterparty
+        operator: contains
+        value: "sublime"
+      - field: counterparty
+        operator: contains
+        value: "cursor"
+      - field: description
+        operator: regex
+        value: "(intellij|webstorm|pycharm|phpstorm|rider)"
+    category: business_expense
+    subcategory: ide
+    confidence: 1.0
+
+  - id: expense_versioncontrol
+    name: "Version Control & CI/CD"
+    priority: 15
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "github"
+      - field: counterparty
+        operator: contains
+        value: "gitlab"
+      - field: counterparty
+        operator: contains
+        value: "bitbucket"
+      - field: counterparty
+        operator: contains
+        value: "atlassian"
+      - field: counterparty
+        operator: contains
+        value: "circleci"
+      - field: counterparty
+        operator: contains
+        value: "travis"
+    category: business_expense
+    subcategory: versioncontrol
+    confidence: 1.0
+
+  - id: expense_ai_tools
+    name: "AI/ML Tools und APIs"
+    priority: 15
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "openai"
+      - field: counterparty
+        operator: contains
+        value: "anthropic"
+      - field: counterparty
+        operator: contains
+        value: "huggingface"
+      - field: counterparty
+        operator: contains
+        value: "replicate"
+      - field: counterparty
+        operator: contains
+        value: "stability"
+      - field: counterparty
+        operator: contains
+        value: "midjourney"
+      - field: description
+        operator: regex
+        value: "(gpt|claude|api.*credits)"
+    category: business_expense
+    subcategory: ai_tools
+    confidence: 1.0
+
+  - id: expense_cloud_compute
+    name: "Cloud Computing"
+    priority: 15
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(aws|amazon web services)"
+      - field: counterparty
+        operator: contains
+        value: "google cloud"
+      - field: counterparty
+        operator: contains
+        value: "azure"
+      - field: counterparty
+        operator: contains
+        value: "digitalocean"
+      - field: counterparty
+        operator: contains
+        value: "linode"
+      - field: counterparty
+        operator: contains
+        value: "vultr"
+      - field: counterparty
+        operator: contains
+        value: "hetzner"
+    category: business_expense
+    subcategory: cloud_compute
+    confidence: 1.0
+
+  - id: expense_saas_dev
+    name: "SaaS Entwicklungstools"
+    priority: 15
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "vercel"
+      - field: counterparty
+        operator: contains
+        value: "netlify"
+      - field: counterparty
+        operator: contains
+        value: "railway"
+      - field: counterparty
+        operator: contains
+        value: "render"
+      - field: counterparty
+        operator: contains
+        value: "fly.io"
+      - field: counterparty
+        operator: contains
+        value: "supabase"
+      - field: counterparty
+        operator: contains
+        value: "planetscale"
+      - field: counterparty
+        operator: contains
+        value: "neon"
+    category: business_expense
+    subcategory: saas_dev
+    confidence: 1.0
+
+  - id: expense_testing_monitoring
+    name: "Testing und Monitoring"
+    priority: 15
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "browserstack"
+      - field: counterparty
+        operator: contains
+        value: "saucelabs"
+      - field: counterparty
+        operator: contains
+        value: "datadog"
+      - field: counterparty
+        operator: contains
+        value: "sentry"
+      - field: counterparty
+        operator: contains
+        value: "newrelic"
+      - field: counterparty
+        operator: contains
+        value: "grafana"
+      - field: counterparty
+        operator: contains
+        value: "pagerduty"
+    category: business_expense
+    subcategory: testing_monitoring
+    confidence: 1.0
+
+  - id: expense_database
+    name: "Datenbank-Services"
+    priority: 15
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "mongodb"
+      - field: counterparty
+        operator: contains
+        value: "redis"
+      - field: counterparty
+        operator: contains
+        value: "elastic"
+      - field: counterparty
+        operator: contains
+        value: "algolia"
+      - field: counterparty
+        operator: contains
+        value: "fauna"
+    category: business_expense
+    subcategory: database
+    confidence: 1.0
+
+  # === HARDWARE (IT-SPEZIFISCH) ===
+
+  - id: expense_hardware_apple
+    name: "Apple Hardware"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "apple"
+      - field: counterparty
+        operator: contains
+        value: "gravis"
+    conditions:
+      - field: amount
+        operator: lt
+        value: -100
+    category: business_expense
+    subcategory: hardware_apple
+    confidence: 0.85
+    notes: "Ggf. AfA ueber 3 Jahre bei > 800 EUR netto"
+
+  - id: expense_hardware_peripher
+    name: "Peripherie-Geraete"
+    priority: 20
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(monitor|tastatur|keyboard|maus|mouse|webcam|headset|mikrofon)"
+      - field: counterparty
+        operator: regex
+        value: "(logitech|razer|dell|lg|benq|elgato)"
+    category: business_expense
+    subcategory: hardware_peripher
+    confidence: 0.9
+
+  - id: expense_homelab
+    name: "Homelab/Server"
+    priority: 20
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(server|nas|raspberry|homelab)"
+      - field: counterparty
+        operator: contains
+        value: "synology"
+      - field: counterparty
+        operator: contains
+        value: "ubiquiti"
+    category: business_expense
+    subcategory: homelab
+    confidence: 0.8
+
+  # === KONFERENZEN UND WEITERBILDUNG ===
+
+  - id: expense_konferenz_it
+    name: "IT-Konferenzen"
+    priority: 18
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(devcon|jsconf|pycon|kubecon|awsconf|reinvent|gophercon)"
+      - field: description
+        operator: regex
+        value: "(konferenz|conference|summit|conf)"
+    category: business_expense
+    subcategory: konferenzen
+    confidence: 0.95
+
+  - id: expense_lernplattform_it
+    name: "IT-Lernplattformen"
+    priority: 18
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "egghead"
+      - field: counterparty
+        operator: contains
+        value: "frontendmasters"
+      - field: counterparty
+        operator: contains
+        value: "pluralsight"
+      - field: counterparty
+        operator: contains
+        value: "laracasts"
+      - field: counterparty
+        operator: contains
+        value: "testingjavascript"
+      - field: counterparty
+        operator: contains
+        value: "levelup"
+      - field: counterparty
+        operator: contains
+        value: "codecademy"
+    category: business_expense
+    subcategory: lernplattformen
+    confidence: 1.0
+
+  # === VERSICHERUNGEN (IT-SPEZIFISCH) ===
+
+  - id: expense_it_haftpflicht
+    name: "IT-Haftpflichtversicherung"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(hiscox|exali|markel)"
+      - field: description
+        operator: regex
+        value: "(it-haftpflicht|cyber|vermoegensschaden.*it)"
+    category: deductible
+    subcategory: it_haftpflicht
+    confidence: 1.0
+
+  - id: expense_cyber_versicherung
+    name: "Cyber-Versicherung"
+    priority: 20
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(cyber.*versicherung|daten.*schutz.*versicherung)"
+    category: deductible
+    subcategory: cyber_versicherung
+    confidence: 1.0
+
+  # === KOMMUNIKATION UND KOLLABORATION ===
+
+  - id: expense_kommunikation
+    name: "Kommunikationstools"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "slack"
+      - field: counterparty
+        operator: contains
+        value: "discord"
+      - field: counterparty
+        operator: contains
+        value: "zoom"
+      - field: counterparty
+        operator: contains
+        value: "loom"
+      - field: counterparty
+        operator: contains
+        value: "calendly"
+      - field: counterparty
+        operator: contains
+        value: "cal.com"
+    category: business_expense
+    subcategory: kommunikation
+    confidence: 1.0
+
+  - id: expense_projektmanagement
+    name: "Projektmanagement"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "notion"
+      - field: counterparty
+        operator: contains
+        value: "linear"
+      - field: counterparty
+        operator: contains
+        value: "jira"
+      - field: counterparty
+        operator: contains
+        value: "asana"
+      - field: counterparty
+        operator: contains
+        value: "monday"
+      - field: counterparty
+        operator: contains
+        value: "clickup"
+      - field: counterparty
+        operator: contains
+        value: "basecamp"
+    category: business_expense
+    subcategory: projektmanagement
+    confidence: 1.0
