@@ -1,0 +1,1 @@
+ModifiedUsfmTextBase is a modification of SIL's UsfmTextBase.  It allows a handler to be passed in and be used rather than the default handler.  This is done so that Psalm superscriptions can be obtained.  All other changes are in service of kathairo using the ModifiedUsfmTextCorpus
