@@ -1,0 +1,475 @@
+"""add partitionsz
+
+Revision ID: 9c7f6b5d5e80
+Revises:
+Create Date: 2024-10-14 17:39:50.417517
+
+"""
+
+from typing import Sequence, Union
+
+import sqlalchemy as sa
+from alembic import op
+from sqlalchemy.dialects import postgresql
+
+# revision identifiers, used by Alembic.
+revision: str = "9c7f6b5d5e80"
+down_revision: Union[str, None] = None
+branch_labels: Union[str, Sequence[str], None] = None
+depends_on: Union[str, Sequence[str], None] = None
+
+
+def upgrade() -> None:
+    # 1.  account.user_team
+    # 2.  [x] connect.team_connection (partition)
+    # 3.  [x] connect.table_connection (partition)
+    # 4.  account.client
+    # 5.  account.team
+    # 6.  account.user
+    # 7.  connect.connection
+    # 8.  connect.database
+    # 9.  connect.db_conn
+    # 10. connect.vector_db
+    # 11. [x] connect.database_tables (partition)
+    # 12. [x] connect.table_columns (partition)
+    # 13. [x] ai_model.user_chat_id  (partition)
+    # 14. [x] ai_model.prompt_history (partition)
+    # 15. [x] ai_model.chat_history (partition)
+    # 16. [x] ai_model.result_history (partition)
+    # 17. [x] ai_model.token_count (partition)
+    # 18. account.subscription
+    # 19. account.subscription_plan
+    # 20. [x] transaction.deposit_history (partition)
+    # 21. [x] transaction.withdraw_history (partition)
+    # 22. [x] transaction.basejump_credit_ledger (partition)
+
+    op.create_table(
+        "client",
+        sa.Column("client_id", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column("client_uuid", sa.UUID(), server_default=sa.text("gen_random_uuid()"), nullable=False),
+        sa.Column("client_name", sa.String(), nullable=False),
+        sa.Column("client_type", sa.Enum("DEMO", "TEST", "CLIENT", "INTERNAL", name="clienttype"), nullable=False),
+        sa.Column("hashed_client_secret", sa.String(), nullable=False),
+        sa.Column("timestamp", sa.TIMESTAMP(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.PrimaryKeyConstraint("client_id"),
+        sa.UniqueConstraint("client_uuid"),
+        schema="account",
+    )
+    op.create_table(
+        "subscription_plan",
+        sa.Column("sub_plan_id", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column("sub_plan_uuid", sa.UUID(), server_default=sa.text("gen_random_uuid()"), nullable=False),
+        sa.Column("sub_plan_name", sa.String(), nullable=False),
+        sa.Column("sub_plan_type", sa.String(), nullable=False),
+        sa.Column("active", sa.Boolean(), nullable=False),
+        sa.Column("time_interval", sa.String(), nullable=False),
+        sa.Column("users", sa.Integer(), nullable=False),
+        sa.Column("basejump_credits", sa.Integer(), nullable=False),
+        sa.Column("credit_price", sa.Numeric(), nullable=False),
+        sa.Column("credit_block_price", sa.Integer(), nullable=False),
+        sa.Column("sub_price", sa.Integer(), nullable=False),
+        sa.Column("plan_start", sa.TIMESTAMP(timezone=True), nullable=False),
+        sa.Column("plan_end", sa.TIMESTAMP(timezone=True), nullable=True),
+        sa.Column(
+            "timestamp", sa.TIMESTAMP(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False
+        ),
+        sa.PrimaryKeyConstraint("sub_plan_id"),
+        sa.UniqueConstraint("sub_plan_uuid"),
+        schema="account",
+    )
+    op.create_table(
+        "subscription",
+        sa.Column("client_id", sa.Integer(), nullable=False),
+        sa.Column("client_uuid", sa.UUID(), nullable=False),
+        sa.Column("sub_id", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column("sub_uuid", sa.UUID(), server_default=sa.text("gen_random_uuid()"), nullable=False),
+        sa.Column("vendor_sub_id", sa.String(), nullable=False),
+        sa.Column("vendor_sub_name", sa.String(), nullable=False),
+        sa.Column("subbed", sa.Boolean(), server_default=sa.text("false"), nullable=True),
+        sa.Column("sub_start_date", sa.TIMESTAMP(timezone=True), nullable=False),
+        sa.Column("sub_cancel_date", sa.TIMESTAMP(timezone=True), nullable=False),
+        sa.Column("sub_lockin_expiry", sa.TIMESTAMP(timezone=True), nullable=True),
+        sa.Column("sub_plan_uuid", sa.UUID(), nullable=False),
+        sa.Column("default_credit_overflow_block_ct", sa.Integer(), server_default="1", nullable=False),
+        sa.Column("default_credit_overflow_threshold", sa.Integer(), server_default="0", nullable=False),
+        sa.Column(
+            "timestamp", sa.TIMESTAMP(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False
+        ),
+        sa.ForeignKeyConstraint(["client_id"], ["account.client.client_id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["client_uuid"], ["account.client.client_uuid"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["sub_plan_uuid"],
+            ["account.subscription_plan.sub_plan_uuid"],
+        ),
+        sa.PrimaryKeyConstraint("sub_id"),
+        schema="account",
+    )
+    op.create_table(
+        "team",
+        sa.Column("client_id", sa.Integer(), nullable=False),
+        sa.Column("team_id", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column("team_uuid", sa.UUID(), server_default=sa.text("gen_random_uuid()"), nullable=False),
+        sa.Column("team_name", sa.String(), nullable=False),
+        sa.Column("timestamp", sa.TIMESTAMP(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.ForeignKeyConstraint(["client_id"], ["account.client.client_id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("team_id"),
+        schema="account",
+    )
+    op.create_table(
+        "user",
+        sa.Column("client_id", sa.Integer(), nullable=True),
+        sa.Column("user_id", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column("user_uuid", sa.UUID(), server_default=sa.text("gen_random_uuid()"), nullable=False),
+        sa.Column("username", sa.String(), nullable=False),
+        sa.Column("hashed_refresh_token", sa.String(), nullable=True),
+        sa.Column("timestamp", sa.TIMESTAMP(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.ForeignKeyConstraint(["client_id"], ["account.client.client_id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("user_id"),
+        schema="account",
+    )
+    op.execute(
+        """
+CREATE TABLE ai_model.prompt_history (
+    client_id INT NOT NULL,
+    prompt_id BIGINT GENERATED BY DEFAULT AS IDENTITY,
+    prompt_uuid UUID DEFAULT gen_random_uuid(),
+    PRIMARY KEY (client_id, prompt_id),
+    UNIQUE (client_id, prompt_uuid),
+    FOREIGN KEY (client_id) REFERENCES account.client(client_id) ON DELETE CASCADE
+) PARTITION BY LIST(client_id);
+    """
+    )
+    op.create_table(
+        "connection",
+        sa.Column("client_id", sa.Integer(), nullable=False),
+        sa.Column("conn_id", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column("conn_uuid", sa.UUID(), server_default=sa.text("gen_random_uuid()"), nullable=False),
+        sa.Column("conn_type", sa.String(), nullable=False),
+        sa.Column("data_source_desc", sa.String(), nullable=False),
+        sa.ForeignKeyConstraint(["client_id"], ["account.client.client_id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("conn_id"),
+        schema="connect",
+    )
+    op.create_table(
+        "vector_db",
+        sa.Column("client_id", sa.Integer(), nullable=False),
+        sa.Column("vector_conn_id", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column("vector_uuid", sa.UUID(), server_default=sa.text("gen_random_uuid()"), nullable=False),
+        sa.Column("vector_database_vendor", sa.String(), nullable=False),
+        sa.Column("vector_datasource_type", sa.String(), nullable=False),
+        sa.Column("api_key", sa.String(), nullable=True),
+        sa.Column("environment", sa.String(), nullable=True),
+        sa.Column("index_name", sa.String(), nullable=False),
+        sa.Column("vector_metadata", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+        sa.Column("timestamp", sa.TIMESTAMP(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.ForeignKeyConstraint(["client_id"], ["account.client.client_id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("vector_conn_id"),
+        schema="connect",
+    )
+    op.execute(
+        """
+CREATE TABLE transaction.deposit_history (
+    client_id INT NOT NULL,
+    deposit_id INT GENERATED BY DEFAULT AS IDENTITY,
+    deposit_uuid UUID DEFAULT gen_random_uuid(),
+    sub_plan_id INT,
+    transaction_item_description VARCHAR NOT NULL,
+    transaction_item_quantity INT NOT NULL,
+    transaction_item_cost DECIMAL NOT NULL,
+    transaction_description VARCHAR NOT NULL,
+    transaction_type VARCHAR NOT NULL,
+    transaction_total_cost DECIMAL NOT NULL,
+    deposited_credits INT NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (client_id, deposit_id),
+    UNIQUE (client_id, deposit_uuid),
+    FOREIGN KEY (client_id) REFERENCES account.client(client_id) ON DELETE CASCADE,
+    FOREIGN KEY (sub_plan_id) REFERENCES account.subscription_plan(sub_plan_id)
+) PARTITION BY LIST (client_id);
+    """
+    )
+    op.create_table(
+        "user_team",
+        sa.Column("user_id", sa.Integer(), nullable=False),
+        sa.Column("team_id", sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(["team_id"], ["account.team.team_id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["user_id"], ["account.user.user_id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("user_id", "team_id"),
+        schema="account",
+    )
+    op.execute(
+        """
+CREATE TABLE ai_model.result_history (
+    client_id INT NOT NULL,
+    result_id BIGINT GENERATED BY DEFAULT AS IDENTITY,
+    result_uuid UUID DEFAULT gen_random_uuid(),
+    result_conn_id INT NOT NULL,
+    result_exp_time TIMESTAMP NOT NULL,
+    result_deleted BOOLEAN DEFAULT FALSE,
+    result_file_path VARCHAR NOT NULL,
+    row_num_total INT NOT NULL,
+    preview_file_path VARCHAR NOT NULL,
+    row_num_preview INT NOT NULL,
+    result_type VARCHAR NOT NULL,
+    title VARCHAR NOT NULL,
+    description VARCHAR NOT NULL,
+    author_user_uuid UUID NOT NULL,
+    author_team_uuid UUID,
+    share_w_team BOOLEAN DEFAULT FALSE,
+    saved_result BOOLEAN DEFAULT FALSE,
+    refresh_result BOOLEAN DEFAULT FALSE,
+    sql_query VARCHAR NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (client_id, result_id),
+    FOREIGN KEY (client_id) REFERENCES account.client(client_id) ON DELETE CASCADE,
+    FOREIGN KEY (result_conn_id) REFERENCES connect.connection(conn_id) ON DELETE CASCADE
+) PARTITION BY LIST (client_id);
+    """
+    )
+    op.execute(
+        """
+CREATE TABLE ai_model.token_count (
+    client_id INT NOT NULL,
+    token_id BIGINT GENERATED BY DEFAULT AS IDENTITY,
+    token_uuid UUID DEFAULT gen_random_uuid(),
+    prompt_id INT,
+    prompt VARCHAR NOT NULL,
+    user_id INT NOT NULL,
+    team_id INT NOT NULL,
+    ai_model_provider VARCHAR NOT NULL,
+    ai_model_nm VARCHAR NOT NULL,  -- Consider changing this to an ENUM if applicable
+    cost_per_1k_tokens_input DECIMAL NOT NULL,
+    cost_per_1k_tokens_output DECIMAL NOT NULL,
+    total_embedding_token_count DECIMAL NOT NULL,
+    prompt_llm_token_count DECIMAL NOT NULL,
+    completion_llm_token_count DECIMAL NOT NULL,
+    total_llm_token_count DECIMAL NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (client_id, token_id),
+    FOREIGN KEY (client_id) REFERENCES account.client(client_id) ON DELETE CASCADE,
+    FOREIGN KEY (client_id, prompt_id) REFERENCES ai_model.prompt_history(client_id, prompt_id),
+    FOREIGN KEY (user_id) REFERENCES account.user(user_id),
+    FOREIGN KEY (team_id) REFERENCES account.team(team_id)
+) PARTITION BY LIST (client_id);
+    """
+    )
+    op.execute(
+        """
+CREATE TABLE ai_model.user_chat_id (
+    client_id INT NOT NULL,
+    chat_id SERIAL,
+    chat_uuid UUID DEFAULT gen_random_uuid(),
+    user_id INT NOT NULL,
+    team_id INT NOT NULL,
+    chat_name VARCHAR,
+    chat_description VARCHAR,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_updt_date TIMESTAMP,
+    PRIMARY KEY (client_id, chat_id),
+    FOREIGN KEY (client_id) REFERENCES account.client(client_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES account.user(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (team_id) REFERENCES account.team(team_id) ON DELETE CASCADE
+) PARTITION BY LIST (client_id);
+    """
+    )
+    op.create_table(
+        "database",
+        sa.Column("client_id", sa.Integer(), nullable=False),
+        sa.Column("db_id", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column("db_uuid", sa.UUID(), server_default=sa.text("gen_random_uuid()"), nullable=False),
+        sa.Column("vector_conn_id", sa.Integer(), nullable=False),
+        sa.Column("database_type", sa.LargeBinary(), nullable=False),
+        sa.Column("drivername", sa.LargeBinary(), nullable=False),
+        sa.Column("host", sa.LargeBinary(), nullable=False),
+        sa.Column("database_name", sa.LargeBinary(), nullable=False),
+        sa.Column("port", sa.LargeBinary(), nullable=False),
+        sa.Column("database_desc", sa.LargeBinary(), nullable=False),
+        sa.Column("query", sa.LargeBinary(), nullable=True),
+        sa.Column("schemas", sa.LargeBinary(), nullable=True),
+        sa.Column("include_non_schemas", sa.LargeBinary(), nullable=True),
+        sa.Column("timestamp", sa.TIMESTAMP(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.ForeignKeyConstraint(["client_id"], ["account.client.client_id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["vector_conn_id"], ["connect.vector_db.vector_conn_id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("db_id"),
+        schema="connect",
+    )
+    op.execute(
+        """
+CREATE TABLE connect.team_connection (
+    client_id INT NOT NULL,
+    conn_id INT NOT NULL,
+    team_id INT NOT NULL,
+    PRIMARY KEY (client_id, conn_id, team_id),
+    FOREIGN KEY (client_id) REFERENCES account.client(client_id) ON DELETE CASCADE,
+    FOREIGN KEY (conn_id) REFERENCES connect.connection(conn_id) ON DELETE CASCADE,
+    FOREIGN KEY (team_id) REFERENCES account.team(team_id) ON DELETE CASCADE
+) PARTITION BY LIST (client_id);
+    """
+    )
+    op.execute(
+        """
+CREATE TABLE transaction.withdraw_history (
+    client_id INT NOT NULL,
+    withdrawal_id BIGINT GENERATED BY DEFAULT AS IDENTITY,
+    withdrawal_uuid UUID DEFAULT gen_random_uuid(),
+    prompt_id BIGINT,
+    sub_plan_id INT,
+    transaction_amt DECIMAL NOT NULL,
+    transaction_description VARCHAR NOT NULL,
+    withdrawn_credits DECIMAL NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (client_id, withdrawal_id),
+    UNIQUE (client_id, withdrawal_uuid),
+    FOREIGN KEY (client_id) REFERENCES account.client(client_id) ON DELETE CASCADE,
+    FOREIGN KEY (client_id, prompt_id) REFERENCES ai_model.prompt_history(client_id, prompt_id),
+    FOREIGN KEY (sub_plan_id) REFERENCES account.subscription_plan(sub_plan_id)
+) PARTITION BY LIST (client_id);
+    """
+    )
+    op.execute(
+        """
+    CREATE TABLE ai_model.chat_history (
+    client_id INT NOT NULL,
+    msg_id BIGINT GENERATED BY DEFAULT AS IDENTITY,
+    msg_uuid UUID DEFAULT gen_random_uuid(),
+    parent_msg_uuid UUID,
+    result_uuid UUID,
+    chat_id INT NOT NULL,
+    prompt_uuid UUID NOT NULL,
+    initial_prompt VARCHAR NOT NULL,
+    prompt_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    content VARCHAR,
+    internal_content VARCHAR,
+    role VARCHAR,
+    msg_type VARCHAR,
+    sql_query VARCHAR,
+    result_type VARCHAR,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (client_id, msg_id),
+    UNIQUE (client_id, msg_uuid),
+    FOREIGN KEY (client_id) REFERENCES account.client(client_id) ON DELETE CASCADE,
+    FOREIGN KEY (client_id, chat_id) REFERENCES ai_model.user_chat_id(client_id, chat_id) ON DELETE CASCADE,
+    FOREIGN KEY (client_id, prompt_uuid) REFERENCES ai_model.prompt_history(client_id, prompt_uuid) ON DELETE CASCADE
+) PARTITION BY LIST (client_id);
+    """
+    )
+    op.create_table(
+        "db_conn",
+        sa.Column("client_id", sa.Integer(), nullable=False),
+        sa.Column("conn_id", sa.Integer(), nullable=False),
+        sa.Column("db_id", sa.Integer(), nullable=False),
+        sa.Column("vector_conn_id", sa.Integer(), nullable=False),
+        sa.Column("username", sa.LargeBinary(), nullable=False),
+        sa.Column("password", sa.LargeBinary(), nullable=False),
+        sa.Column("timestamp", sa.TIMESTAMP(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.ForeignKeyConstraint(["client_id"], ["account.client.client_id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["conn_id"], ["connect.connection.conn_id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["db_id"], ["connect.database.db_id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["vector_conn_id"], ["connect.vector_db.vector_conn_id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("conn_id"),
+        schema="connect",
+    )
+    op.execute(
+        """
+    CREATE TABLE transaction.basejump_credit_ledger (
+    client_id INT NOT NULL,
+    credit_id BIGINT GENERATED BY DEFAULT AS IDENTITY,
+    credit_uuid UUID DEFAULT gen_random_uuid(),
+    sub_id INT NOT NULL,
+    withdrawal_id BIGINT,
+    deposit_id INT,
+    allotted_credit_bal DECIMAL NOT NULL,
+    purchased_credit_bal DECIMAL DEFAULT 0,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (client_id, credit_id),
+    FOREIGN KEY (client_id) REFERENCES account.client(client_id) ON DELETE CASCADE,
+    FOREIGN KEY (sub_id) REFERENCES account.subscription(sub_id) ON DELETE CASCADE,
+    FOREIGN KEY (client_id, withdrawal_id) REFERENCES transaction.withdraw_history(client_id, withdrawal_id),
+    FOREIGN KEY (client_id, deposit_id) REFERENCES transaction.deposit_history(client_id, deposit_id) ON DELETE CASCADE
+    ) PARTITION BY LIST (client_id);
+    """
+    )
+    op.execute(
+        """
+CREATE TABLE connect.database_tables (
+    client_id INT NOT NULL,
+    tbl_id SERIAL,
+    tbl_uuid UUID DEFAULT gen_random_uuid(),
+    conn_id INT,
+    conn_uuid UUID,
+    db_id INT NOT NULL,
+    table_name VARCHAR NOT NULL,
+    context VARCHAR,
+    ignore BOOLEAN DEFAULT FALSE,
+    primary_keys TEXT[],  -- PostgreSQL array of strings
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (client_id, tbl_id),
+    FOREIGN KEY (client_id) REFERENCES account.client(client_id) ON DELETE CASCADE,
+    FOREIGN KEY (conn_id) REFERENCES connect.db_conn(conn_id) ON DELETE CASCADE,
+    FOREIGN KEY (db_id) REFERENCES connect.database(db_id) ON DELETE CASCADE
+) PARTITION BY LIST (client_id);
+    """
+    )
+    op.execute(
+        """
+CREATE TABLE connect.table_columns (
+    client_id INT NOT NULL,
+    col_id SERIAL,
+    col_uuid UUID DEFAULT gen_random_uuid(),
+    tbl_id INT NOT NULL,
+    column_name VARCHAR NOT NULL,
+    column_type VARCHAR NOT NULL,
+    description VARCHAR,
+    foreign_key_table_name VARCHAR,
+    foreign_key_column_name VARCHAR,
+    primary_key BOOLEAN,
+    distinct_values TEXT[],  -- PostgreSQL array of strings
+    ignore BOOLEAN DEFAULT FALSE,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (client_id, col_id),
+    FOREIGN KEY (client_id) REFERENCES account.client(client_id) ON DELETE CASCADE,
+    FOREIGN KEY (client_id, tbl_id) REFERENCES connect.database_tables(client_id, tbl_id) ON DELETE CASCADE
+) PARTITION BY LIST (client_id);
+    """
+    )
+    op.execute(
+        """
+CREATE TABLE connect.table_connection (
+    client_id INT NOT NULL,
+    conn_id INT NOT NULL,
+    tbl_id INT NOT NULL,
+    PRIMARY KEY (client_id, conn_id, tbl_id),
+    FOREIGN KEY (client_id) REFERENCES account.client(client_id) ON DELETE CASCADE,
+    FOREIGN KEY (conn_id) REFERENCES connect.db_conn(conn_id) ON DELETE CASCADE,
+    FOREIGN KEY (client_id, tbl_id) REFERENCES connect.database_tables(client_id, tbl_id) ON DELETE CASCADE
+) PARTITION BY LIST (client_id);
+    """
+    )
+    # ### end Alembic commands ###
+
+
+def downgrade() -> None:
+    # ### commands auto generated by Alembic - please adjust! ###
+    op.drop_table("table_connection", schema="connect")
+    op.drop_table("table_columns", schema="connect")
+    op.drop_table("database_tables", schema="connect")
+    op.drop_table("basejump_credit_ledger", schema="transaction")
+    op.drop_table("db_conn", schema="connect")
+    op.drop_table("chat_history", schema="ai_model")
+    op.drop_table("withdraw_history", schema="transaction")
+    op.drop_table("team_connection", schema="connect")
+    op.drop_table("database", schema="connect")
+    op.drop_table("user_chat_id", schema="ai_model")
+    op.drop_table("token_count", schema="ai_model")
+    op.drop_table("result_history", schema="ai_model")
+    op.drop_table("user_team", schema="account")
+    op.drop_table("deposit_history", schema="transaction")
+    op.drop_table("vector_db", schema="connect")
+    op.drop_table("connection", schema="connect")
+    op.drop_table("prompt_history", schema="ai_model")
+    op.drop_table("user", schema="account")
+    op.drop_table("team", schema="account")
+    op.drop_table("subscription", schema="account")
+    op.drop_table("subscription_plan", schema="account")
+    op.drop_table("client", schema="account")
+    # ### end Alembic commands ###
