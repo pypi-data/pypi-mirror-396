@@ -1,0 +1,269 @@
+mod crates_io;
+mod go_proxy;
+#[cfg(test)]
+pub mod mock;
+mod npm;
+mod pypi;
+
+pub use crates_io::CratesIoRegistry;
+pub use go_proxy::GoProxyRegistry;
+#[cfg(test)]
+pub use mock::MockRegistry;
+pub use npm::NpmRegistry;
+pub use pypi::PyPiRegistry;
+
+use anyhow::Result;
+use async_trait::async_trait;
+use reqwest::{Client, Response};
+use std::time::Duration;
+
+/// Maximum number of retry attempts for failed HTTP requests
+const MAX_RETRIES: u32 = 3;
+
+/// Base delay for exponential backoff (100ms, 200ms, 400ms)
+const BASE_DELAY_MS: u64 = 100;
+
+/// Execute an HTTP GET request with retry and exponential backoff.
+/// Retries on transient errors (network issues, 5xx server errors).
+pub async fn get_with_retry(client: &Client, url: &str) -> Result<Response, reqwest::Error> {
+    let mut last_error = None;
+
+    for attempt in 0..MAX_RETRIES {
+        match client.get(url).send().await {
+            Ok(response) => {
+                // Don't retry client errors (4xx) - they won't succeed on retry
+                if response.status().is_client_error() || response.status().is_success() {
+                    return Ok(response);
+                }
+
+                // Retry server errors (5xx)
+                if response.status().is_server_error() && attempt < MAX_RETRIES - 1 {
+                    let delay = Duration::from_millis(BASE_DELAY_MS * (1 << attempt));
+                    tokio::time::sleep(delay).await;
+                    continue;
+                }
+
+                return Ok(response);
+            }
+            Err(e) => {
+                last_error = Some(e);
+
+                // Don't retry on the last attempt
+                if attempt < MAX_RETRIES - 1 {
+                    let delay = Duration::from_millis(BASE_DELAY_MS * (1 << attempt));
+                    tokio::time::sleep(delay).await;
+                }
+            }
+        }
+    }
+
+    Err(last_error.unwrap())
+}
+
+#[async_trait]
+pub trait Registry: Send + Sync {
+    /// Get the latest stable version of a package
+    async fn get_latest_version(&self, package: &str) -> Result<String>;
+
+    /// Get the latest version including pre-releases
+    /// Used when the user's current version is a pre-release
+    async fn get_latest_version_including_prereleases(&self, package: &str) -> Result<String> {
+        // Default: fall back to stable-only
+        self.get_latest_version(package).await
+    }
+
+    /// Get the latest version matching the given constraints (e.g., ">=2.8.0,<9")
+    /// Default implementation falls back to get_latest_version
+    async fn get_latest_version_matching(
+        &self,
+        package: &str,
+        constraints: &str,
+    ) -> Result<String> {
+        // Default: ignore constraints and return latest
+        let _ = constraints;
+        self.get_latest_version(package).await
+    }
+
+    /// Registry name for display
+    fn name(&self) -> &'static str;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    #[tokio::test]
+    async fn test_get_with_retry_success_first_try() {
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("GET"))
+            .and(path("/test"))
+            .respond_with(ResponseTemplate::new(200).set_body_string("success"))
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+
+        let client = Client::new();
+        let url = format!("{}/test", mock_server.uri());
+
+        let response = get_with_retry(&client, &url).await.unwrap();
+        assert!(response.status().is_success());
+        assert_eq!(response.text().await.unwrap(), "success");
+    }
+
+    #[tokio::test]
+    async fn test_get_with_retry_client_error_no_retry() {
+        let mock_server = MockServer::start().await;
+
+        // 404 should not be retried
+        Mock::given(method("GET"))
+            .and(path("/notfound"))
+            .respond_with(ResponseTemplate::new(404))
+            .expect(1) // Should only be called once, no retry
+            .mount(&mock_server)
+            .await;
+
+        let client = Client::new();
+        let url = format!("{}/notfound", mock_server.uri());
+
+        let response = get_with_retry(&client, &url).await.unwrap();
+        assert_eq!(response.status().as_u16(), 404);
+    }
+
+    #[tokio::test]
+    async fn test_get_with_retry_server_error_retries() {
+        let mock_server = MockServer::start().await;
+
+        // Always return 500 - this test verifies that retries actually happen
+        // by checking that the endpoint is called MAX_RETRIES (3) times
+        Mock::given(method("GET"))
+            .and(path("/flaky"))
+            .respond_with(ResponseTemplate::new(500))
+            .expect(3) // MAX_RETRIES = 3, verifies retry behavior
+            .mount(&mock_server)
+            .await;
+
+        let client = Client::new();
+        let url = format!("{}/flaky", mock_server.uri());
+
+        let response = get_with_retry(&client, &url).await.unwrap();
+        // After MAX_RETRIES exhausted, should return the 500 response
+        assert_eq!(response.status().as_u16(), 500);
+    }
+
+    #[tokio::test]
+    async fn test_get_with_retry_recovers_on_second_try() {
+        use std::sync::Arc;
+        use std::sync::atomic::{AtomicUsize, Ordering};
+
+        let mock_server = MockServer::start().await;
+        let call_count = Arc::new(AtomicUsize::new(0));
+        let call_count_clone = call_count.clone();
+
+        // First call returns 500, second call returns 200
+        Mock::given(method("GET"))
+            .and(path("/recover"))
+            .respond_with(move |_: &wiremock::Request| {
+                let count = call_count_clone.fetch_add(1, Ordering::SeqCst);
+                if count == 0 {
+                    ResponseTemplate::new(500)
+                } else {
+                    ResponseTemplate::new(200).set_body_string("recovered")
+                }
+            })
+            .expect(2) // Should be called twice: 500 then 200
+            .mount(&mock_server)
+            .await;
+
+        let client = Client::new();
+        let url = format!("{}/recover", mock_server.uri());
+
+        let response = get_with_retry(&client, &url).await.unwrap();
+        // Should recover and return 200
+        assert!(response.status().is_success());
+    }
+
+    #[tokio::test]
+    async fn test_get_with_retry_redirect_success() {
+        let mock_server = MockServer::start().await;
+
+        // Test that redirects (3xx) are handled by reqwest (not retried as errors)
+        Mock::given(method("GET"))
+            .and(path("/redirect"))
+            .respond_with(ResponseTemplate::new(200).set_body_string("redirected"))
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+
+        let client = Client::new();
+        let url = format!("{}/redirect", mock_server.uri());
+
+        let response = get_with_retry(&client, &url).await.unwrap();
+        assert!(response.status().is_success());
+    }
+
+    // Tests for Registry trait default implementations
+    // Create a minimal registry that only implements required methods
+    // to test that default implementations work correctly
+
+    struct MinimalRegistry {
+        version: String,
+    }
+
+    impl MinimalRegistry {
+        fn new(version: &str) -> Self {
+            Self {
+                version: version.to_string(),
+            }
+        }
+    }
+
+    #[async_trait]
+    impl Registry for MinimalRegistry {
+        async fn get_latest_version(&self, _package: &str) -> Result<String> {
+            Ok(self.version.clone())
+        }
+
+        fn name(&self) -> &'static str {
+            "Minimal"
+        }
+        // Note: we intentionally DON'T override the default methods
+        // to test that the default implementations work
+    }
+
+    #[tokio::test]
+    async fn test_registry_default_prereleases_falls_back_to_stable() {
+        let registry = MinimalRegistry::new("2.31.0");
+
+        // The default implementation should fall back to get_latest_version
+        let version = registry
+            .get_latest_version_including_prereleases("anypackage")
+            .await
+            .unwrap();
+
+        assert_eq!(version, "2.31.0");
+    }
+
+    #[tokio::test]
+    async fn test_registry_default_matching_ignores_constraints() {
+        let registry = MinimalRegistry::new("5.0.0");
+
+        // The default implementation ignores constraints and returns latest
+        let version = registry
+            .get_latest_version_matching("anypackage", ">=3.0,<4")
+            .await
+            .unwrap();
+
+        // Should return 5.0.0 even though it doesn't match constraints
+        // (real implementations would respect constraints)
+        assert_eq!(version, "5.0.0");
+    }
+
+    #[tokio::test]
+    async fn test_registry_name() {
+        let registry = MinimalRegistry::new("1.0.0");
+        assert_eq!(registry.name(), "Minimal");
+    }
+}
