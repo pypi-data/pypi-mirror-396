@@ -1,0 +1,43 @@
+name: Pip
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        # TODO macos-latest removed as compiling .c files (zlib sources) fails
+        # with the following error message:
+        #
+        # error: invalid argument '-std=c++17' not allowed with 'C'
+        #
+        # Not sure how to avoid setting -std=c++17 with pybind11.
+        platform: [windows-latest, ubuntu-latest, macos-latest]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Add requirements
+        run: python -m pip install --upgrade wheel setuptools
+
+      - name: Build and install
+        run: pip install --verbose .
+
+      - name: Test deps
+        run: pip install pillow
+
+      - name: Test
+        run: python tests/test.py
