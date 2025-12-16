@@ -1,0 +1,140 @@
+Metadata-Version: 2.4
+Name: finstock
+Version: 0.1.0
+Summary: 中国期货股票数据获取库 - 通过API获取K线数据并转换为pandas DataFrame
+Project-URL: Homepage, https://github.com/finstock/finstock
+Project-URL: Repository, https://github.com/finstock/finstock.git
+Project-URL: Issues, https://github.com/finstock/finstock/issues
+Project-URL: Documentation, https://finstock.readthedocs.io
+Author-email: FinStock Team <contact@finstock.com>
+License: MIT
+License-File: LICENSE
+Keywords: china,data,futures,kline,pandas,stocks,trading
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Office/Business :: Financial
+Classifier: Topic :: Scientific/Engineering :: Information Analysis
+Requires-Python: >=3.10
+Requires-Dist: pandas>=2.3.3
+Requires-Dist: pydantic>=2.5.0
+Requires-Dist: requests>=2.32.5
+Requires-Dist: typing-extensions>=4.8.0
+Provides-Extra: dev
+Requires-Dist: black>=23.0.0; extra == 'dev'
+Requires-Dist: mypy>=1.7.0; extra == 'dev'
+Requires-Dist: pytest-asyncio>=0.21.0; extra == 'dev'
+Requires-Dist: pytest>=7.4.0; extra == 'dev'
+Requires-Dist: ruff>=0.1.0; extra == 'dev'
+Description-Content-Type: text/markdown
+
+# FinStock - 中国期货股票数据获取库
+
+[![PyPI version](https://badge.fury.io/py/finstock.svg)](https://badge.fury.io/py/finstock)
+[![Python versions](https://img.shields.io/pypi/pyversions/finstock.svg)](https://pypi.org/project/finstock/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+FinStock 是一个专为中国期货和股票市场设计的Python数据获取库，通过简单的API调用即可获取K线数据并自动转换为pandas DataFrame格式。
+
+## 特性
+
+- 简单易用：一行代码获取K线数据
+- Pandas集成：自动转换为DataFrame格式
+- 完整数据：支持OHLCV、持仓量、成交额等完整字段
+- 多时间框架：支持分钟、小时、日线、周线、月线
+- 多交易所：支持上期所、大商所、郑商所、中金所、能源中心
+- 类型安全：使用Pydantic进行数据验证
+
+## 安装
+
+```bash
+pip install finstock
+```
+
+## 快速开始
+
+```python
+from finstock import FinStockClient
+
+# 创建客户端
+client = FinStockClient("http://localhost:8000")
+
+# 获取K线数据
+kline_data = client.get_kline("CU2401.SHFE", "1d")
+
+# 转换为DataFrame
+df = kline_data.to_dataframe()
+print(df.head())
+```
+
+## 支持的数据
+
+### 时间间隔
+- 1m, 5m, 15m, 1h, 1d, 1w, 1M
+
+### 交易所
+- SHFE: 上海期货交易所
+- DCE: 大连商品交易所
+- CZCE: 郑州商品交易所
+- CFFEX: 中国金融期货交易所
+- INE: 上海国际能源交易中心
+
+## API参考
+
+### FinStockClient
+
+#### get_kline(symbol, interval, start_datetime=None, end_datetime=None)
+获取K线数据
+
+**参数:**
+- symbol: 期货合约代码，如 "CU2401.SHFE"
+- interval: 时间间隔，如 "1d"
+- start_datetime: 开始时间，可选
+- end_datetime: 结束时间，可选
+
+**返回:** KLineData对象
+
+#### get_kline_dataframe(symbol, interval, start_datetime=None, end_datetime=None)
+直接获取K线数据的DataFrame格式
+
+#### health_check()
+检查API服务状态
+
+## 开发
+
+```bash
+# 克隆仓库
+git clone https://github.com/finstock/finstock.git
+cd finstock
+
+# 安装开发依赖
+uv sync --dev
+
+# 运行测试
+uv run pytest
+
+# 代码格式化
+uv run black .
+uv run ruff check .
+
+# 类型检查
+uv run mypy finstock/
+```
+
+## 许可证
+
+MIT License - 查看 [LICENSE](LICENSE) 文件了解详情。
+
+## 支持
+
+- 邮箱: contact@finstock.com
+- 问题反馈: [GitHub Issues](https://github.com/finstock/finstock/issues)
+- 文档: [在线文档](https://finstock.readthedocs.io)
+
+---
+
+免责声明: 本库仅用于学习和研究目的。使用时请遵守相关法律法规和交易所规定。投资有风险，入市需谨慎。

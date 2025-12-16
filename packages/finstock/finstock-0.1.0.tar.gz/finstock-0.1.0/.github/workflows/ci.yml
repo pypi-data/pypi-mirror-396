@@ -1,0 +1,57 @@
+name: 持续集成
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: 设置Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: 安装uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+
+    - name: 缓存uv依赖
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/uv
+        key: ${{ runner.os }}-uv-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}
+
+    - name: 安装依赖
+      run: |
+        uv sync --dev
+
+    - name: 检查代码格式
+      run: |
+        uv run black --check .
+        uv run ruff check .
+
+    - name: 类型检查
+      run: |
+        uv run mypy finstock/
+
+    - name: 运行测试
+      run: |
+        uv run pytest tests/ -v --cov=finstock --cov-report=xml
+
+    - name: 上传覆盖率报告到Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
