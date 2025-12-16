@@ -1,0 +1,47 @@
+{% extends "site/base.html" %}
+
+{% load i18n %}
+{% load varanus %}
+
+{% block page %}
+<div id="results">
+<table class="table table-bordered">
+    <thead class="table-header">
+        <tr>
+            <th></th>
+            {% if not grouped %}
+                <th>{% trans "Context" %}</th>
+            {% endif %}
+            <th>{% trans "Message" %}</th>
+            <th>{% trans "Level" %}</th>
+            <th>{% trans "Name" %}</th>
+            <th>{% trans "File" %}</th>
+            <th>{% trans "Timestamp" %}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for log in results %}
+            <tr>
+                <td><a href="?fingerprint={{ log.fingerprint }}" class="link-underline link-underline-opacity-0"><i class="bi bi-search"></i>{% if grouped %} - {{ log.num }}{% endif %}</a></td>
+                {% if not grouped %}
+                    <td>
+                        <a href="{{ log.get_absolute_url }}" data-bs-toggle="offcanvas" data-bs-target="#inspector" hx-get="{{ log.get_absolute_url }}" hx-target="#inspector">{{ log.context }}</a>
+                    </td>
+                {% endif %}
+                <td>
+                    {% if grouped %}
+                        <a href="">{{ log.message }}</a>
+                    {% else %}
+                        {{ log.message }}
+                    {% endif %}
+                </td>
+                <td>{{ log.level|levelname }}</td>
+                <td>{{ log.name }}</td>
+                <td>{{ log.file }}:{{ log.lineno }}</td>
+                <td>{{ log.timestamp }}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock page %}

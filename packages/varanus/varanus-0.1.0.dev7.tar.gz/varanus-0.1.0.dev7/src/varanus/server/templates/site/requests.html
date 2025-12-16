@@ -1,0 +1,54 @@
+{% extends "site/base.html" %}
+
+{% load i18n %}
+
+{% block page %}
+<div id="results">
+<table class="table table-bordered">
+    <thead class="table-header">
+        <tr>
+            <th></th>
+            <th>{% trans "Request" %}</th>
+            <th>{% trans "Elapsed" %}</th>
+            {% if not grouped %}
+                <th>{% trans "Status" %}</th>
+                <th>{% trans "Size" %}</th>
+                <th>{% trans "IP" %}</th>
+            {% endif %}
+            <th>{% trans "Timestamp" %}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in results %}
+            <tr>
+                <td><a href="?fingerprint={{ r.fingerprint }}" class="link-underline link-underline-opacity-0"><i class="bi bi-search"></i>{% if grouped %} - {{ r.num }}{% endif %}</a></td>
+                <td>
+                    <a href="{{ r.get_absolute_url }}" data-bs-toggle="offcanvas" data-bs-target="#inspector" hx-get="{{ r.get_absolute_url }}" hx-target="#inspector">{{ r.method }} {{ r.path }}</a>
+                </td>
+                <td>
+                    {% if grouped %}
+                        {% if r.num > 1 %}
+                            {{ r.elapsed_min }}ms
+                            <span class="text-secondary">/</span>
+                            {{ r.elapsed_avg|floatformat:0 }}ms
+                            <span class="text-secondary">/</span>
+                            {{ r.elapsed_max }}ms
+                        {% else %}
+                            {{ r.elapsed_max }}ms
+                        {% endif %}
+                    {% else %}
+                        {{ r.context.elapsed_ms }}ms
+                    {% endif %}
+                </td>
+                {% if not grouped %}
+                    <td>{{ r.status }} {{ r.http_status.phrase }}</td>
+                    <td>{{ r.size|filesizeformat }}</td>
+                    <td>{{ r.ip }}</td>
+                {% endif %}
+                <td>{{ r.timestamp }}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock page %}

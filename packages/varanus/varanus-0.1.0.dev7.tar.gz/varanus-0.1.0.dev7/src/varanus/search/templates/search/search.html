@@ -1,0 +1,23 @@
+<script>
+    function setValues(pairs) {
+        pairs.forEach((p) => {
+            document.getElementById(p[0]).value = p[1];
+        });
+        htmx.trigger(document.getElementById('search'), "change");
+    }
+</script>
+
+<div class="accordion mb-3" id="search">
+    {% for field, default, rendered in fields %}
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button{% if not default %} collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#{{ field.id }}-item">{{ field.label }}</button>
+            </h2>
+            <div id="{{ field.id }}-item" class="accordion-collapse collapse{% if default %} show{% endif %}">
+                <div class="accordion-body" id="{{ field.id }}-body" hx-swap-oob="true">
+                    {{ rendered }}
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+</div>

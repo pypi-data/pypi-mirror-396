@@ -1,0 +1,44 @@
+{% load i18n %}
+
+<div class="offcanvas-header">
+    <h5 class="offcanvas-title">{{ node }} &ndash; {% trans "Packages" %}</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+</div>
+<div class="offcanvas-body">
+    <table class="table table-sm table-striped">
+        <thead class="table-header">
+            <tr>
+                <th>{% trans "Package" %}</th>
+                <th>{% trans "Version" %}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in node.packages.all %}
+                <tr>
+                    <td>{{ p.package }}</td>
+                    <td>{{ p.version }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% for update in node.updates.all %}
+        <h6><em>{{ update.timestamp }}</em></h6>
+        <dl>
+            {% if update.installed %}
+                <dt>{% trans "Installed" %}</dt>
+                <dd>{{ update.installed }}</dd>
+            {% endif %}
+
+            {% if update.updated %}
+                <dt>{% trans "Updated" %}</dt>
+                <dd>{{ update.updated }}</dd>
+            {% endif %}
+
+            {% if update.removed %}
+                <dt>{% trans "Removed" %}</dt>
+                <dd>{{ update.removed }}</dd>
+            {% endif %}
+        </dl>
+    {% endfor %}
+</div>
