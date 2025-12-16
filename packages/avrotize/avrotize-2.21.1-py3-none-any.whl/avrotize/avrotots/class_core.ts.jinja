@@ -1,0 +1,140 @@
+/** {{ class_name }} class. */
+{%- if typed_json_annotation %}
+import 'reflect-metadata';
+{%- if fields | selectattr("is_array") | list | length > 0 %}
+import { jsonObject, jsonMember, jsonArrayMember, TypedJSON } from 'typedjson';
+{%- else %}
+import { jsonObject, jsonMember, TypedJSON } from 'typedjson';
+{%- endif %}
+{%- endif %}
+{%- if avro_annotation %}
+import avro from 'avro-js';
+{%- endif %}
+{%- for import_type, import_path in imports.items() %}
+import { {{ import_type }} } from '{{ import_path }}';
+{%- endfor %}
+{%- if avro_annotation or typed_json_annotation %}
+import pako from 'pako';
+{%- endif %}
+
+{%- if typed_json_annotation %}
+@jsonObject
+{%- endif %}
+export class {{ class_name }} {
+    {%- if avro_annotation %}
+    public static AvroType: avro.Type = avro.parse({{ avro_schema_json }});
+    {%- endif %}
+
+    {%- for field in fields %}
+    /** {{ field.docstring }} */
+    {%- if typed_json_annotation %}
+    {%- set field_type = field.type_no_null if not field.is_primitive else (field.type_no_null | pascal ) %}
+    {% if field.is_union -%}
+    @jsonMember({serializer: {{ field_type }}.toJSON, deserializer: {{ field_type }}.fromJSON})
+    {%- elif field.is_array -%}@jsonArrayMember({{ field_type | replace('[]', '') }}) 
+    {%- else -%}@jsonMember({%-if not field.is_enum-%}{{ field_type }}{%-else-%}String{%-endif-%})
+    {%- endif %}
+    {%- endif %}
+    public {{ field.name }}{%- if field.type.endswith('?')-%}?{%-endif-%} : {{ field.type_no_null }};
+    {%- endfor %}
+
+    constructor({%- for field in fields %}{{ field.name }}: {{ field.type_no_null }}{% if not loop.last %}, {% endif %}{%- endfor %}) {
+        {%- for field in fields %}
+        {%- if field.is_enum %}
+        if ( typeof {{ field.name }} === 'number' ) {
+            this.{{ field.name }} = {{ field.type_no_null }}Utils.fromOrdinal({{ field.name }});
+        } else {
+            this.{{ field.name }} = {{ field.name }};
+        }
+        {%- else %}
+        this.{{ field.name }} = {{ field.name }};
+        {%- endif %}
+        {%- endfor %}
+    }
+
+    {%- if avro_annotation or typed_json_annotation %}
+    public toByteArray(contentTypeString: string): Uint8Array {
+        const contentType = contentTypeString.split(';')[0].trim();
+        let result: Uint8Array | null = null;
+
+        {%- if avro_annotation %}
+        if (contentType.startsWith('avro/binary') || contentType.startsWith('application/vnd.apache.avro+avro')) {
+            result = ({{ class_name }}.AvroType.toBuffer(this) as unknown) as Uint8Array;
+        }
+        {%- endif %}
+
+        {%- if typed_json_annotation %}
+        if (contentType.startsWith('application/json')) {
+            const serializer = new TypedJSON({{ class_name }});
+            const jsonString = serializer.stringify(this);
+            result = new TextEncoder().encode(jsonString);
+        }
+        {%- endif %}
+
+        if (result && contentTypeString.endsWith('+gzip')) {
+            result = pako.gzip(result);
+        }
+
+        if (result) {
+            return result;
+        } else {
+            throw new Error(`Unsupported media type: ${contentTypeString}`);
+        }
+    }
+
+    public static fromData(data: any, contentTypeString: string): {{ class_name }} {
+        const contentType = contentTypeString.split(';')[0].trim();
+
+        if (contentTypeString.endsWith('+gzip')) {
+            data = pako.ungzip(data);
+        }
+
+        {%- if avro_annotation %}
+        if (contentType.startsWith('avro/binary') || contentType.startsWith('application/vnd.apache.avro+avro')) {
+            return {{ class_name }}.AvroType.fromBuffer(data);
+        }
+        {%- endif %}
+
+        {%- if typed_json_annotation %}
+        if (contentType.startsWith('application/json')) {
+            const serializer = new TypedJSON({{ class_name }});
+            const retval = serializer.parse(new TextDecoder().decode(data));
+            if (!(retval instanceof {{ class_name }})) {
+                throw new Error(`Deserialized object is not an instance of {{ class_name }}`);
+            }
+            return retval;
+        }
+        {%- endif %}
+
+        throw new Error(`Unsupported media type: ${contentTypeString}`);
+    }
+
+
+    {%- if typed_json_annotation %}
+    public static isJsonMatch(element: any): boolean {
+        {%- if fields|length == 0 %}
+        return true;
+        {%- else %}
+        return (
+            {%- for field in fields %}
+            {{ get_is_json_match_clause(field.name, field.type_no_null, field.is_enum) }}{%- if not loop.last %} &&
+            {%- endif %}
+            {%- endfor %}
+        );
+        {%- endif %}
+    }
+    {%- endif %}
+    {%- endif %}
+
+    /**
+     * Creates an instance of {{ class_name }} with sample data for testing.
+     * @returns A new {{ class_name }} instance with sample values.
+     */
+    public static createInstance(): {{ class_name }} {
+        return new {{ class_name }}(
+            {%- for field in fields %}
+            {{ field.test_value }}{% if not loop.last %},{% endif %}  // {{ field.name }}
+            {%- endfor %}
+        );
+    }
+}
