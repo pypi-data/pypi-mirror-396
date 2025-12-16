@@ -1,0 +1,45 @@
+#!python
+import os, sys
+import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
+
+if __name__ == '__main__':
+    arguments = sys.argv[1:]
+    lr_file = arguments[0]
+
+    if not os.path.exists(lr_file):
+        print(f'{lr_file} not found')
+        exit(0)
+
+    lrs = {}
+    # [time] step: {self.cur_steps}, lr: {lr}
+    with open(lr_file, 'r') as f:
+        for line in f:
+            if not line:
+                continue
+
+            data = line.split('step: ')[-1]
+            data = data.split(', lr:')
+
+            step = int(data[0].strip())
+            lr = float(data[1].strip())
+
+            lrs[step] = lr
+
+    plt.title('lr')
+    plt.xlabel("Step")
+    plt.ylabel("Learning Rate")
+
+    y = lrs.values()
+    x = list(range(len(y)))
+
+    ax = plt.gca()
+    plt.plot(x, y)
+    ax.xaxis.set_major_locator(MaxNLocator(nbins=20))
+
+    plt.xticks(rotation=30)
+
+    plt.tight_layout()
+    plt.show()
+
+
