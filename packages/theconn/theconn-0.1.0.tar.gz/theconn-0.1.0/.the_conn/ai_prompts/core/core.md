@@ -1,0 +1,234 @@
+# AI 领航员的敏捷工作流
+
+## 引言
+
+本 playbook 为采用 AI 辅助开发的团队，提供了一套端到端的人机协作工作流。它将人类工程师的战略洞察与 AI 的编码执行能力相结合，通过结构化、版本化的项目管理流程，实现高效的开发协作。
+
+---
+
+## 第一部分：核心原则
+
+1. **意图与实现的分离**: 人类领航员定义"做什么"（意图），AI 编码引擎负责"怎么做"（实现）。
+
+2. **规划即代码 (Planning as Code)**: 所有规划（Epics, Features, Stories）都作为 Markdown 文件存放在代码库中，与源代码同步版本化管理。
+
+3. **上下文精准投喂**: 通过清单机制，为每个任务动态组合最相关的上下文，避免信息过载，提升 AI 输出的准确性。
+
+4. **双向同步**: 不仅从"意图"驱动"实现"，也要在"实现"完成后，将变更同步回"意图"，确保文档与代码的持续一致。
+
+---
+
+## 第二部分：项目目录结构
+
+```
+my_project/
+├── .the_conn/                  # [The Conn 框架完整工作区]
+│   ├── epics/                  # [规划层] 所有规划文档
+│   │   └── EPIC-01_Base_Init/
+│   │       ├── README.md
+│   │       └── features/
+│   │           └── FEAT-01_Init_Project/
+│   │               ├── README.md
+│   │               └── stories/
+│   │                   ├── STORY-01_Create_Structure.md
+│   │                   └── STORY-01.1_Fix_Bug.md
+│   │
+│   ├── context/                # [知识层] 项目上下文知识库
+│   │   ├── global/             # 公共 Context（全局共享）
+│   │   │   ├── Architecture.md
+│   │   │   ├── Tech_Stack.md
+│   │   │   ├── Coding_Standard_Go.md
+│   │   │   └── Testing_Strategy.md
+│   │   └── epics/              # Epic 专属 Context
+│   │       ├── EPIC-01/
+│   │       │   ├── Module_Design_Core.md
+│   │       │   └── Integration_Plan.md
+│   │       └── EPIC-02/
+│   │           └── Module_Design_DataStream.md
+│   │
+│   ├── ai_prompts/             # [工具层] AI Prompts 库
+│   │   ├── core/
+│   │   │   └── core.md
+│   │   └── prompts/
+│   │       ├── initialization/
+│   │       │   └── project_init.md
+│   │       ├── context/
+│   │       │   ├── extract.md
+│   │       │   ├── add.md
+│   │       │   └── update.md
+│   │       ├── planning/
+│   │       │   ├── epic.md
+│   │       │   ├── feature.md
+│   │       │   ├── story.md
+│   │       │   └── bug_story.md
+│   │       └── execution/
+│   │           ├── task_generation.md
+│   │           ├── story_sync.md
+│   │           └── change_summary.md
+│   │
+│   ├── ai_workspace/           # [执行层] AI 任务工作区（临时，可 .gitignore）
+│   │   └── EPIC-01/
+│   │       ├── TASK-01_STORY-01_Create_Structure/
+│   │       │   ├── task.md
+│   │       │   ├── context.manifest.json
+│   │       │   └── change_summary.md
+│   │       └── TASK-02_STORY-01_Add_Tests/
+│   │
+│   ├── README.md
+│   ├── GUIDE.md
+│   └── BUG_WORKFLOW_GUIDE.md
+│
+├── src/                        # [实现层] 项目源代码
+│
+└── tests/                      # [验证层] 所有测试代码
+    ├── bdd/
+    │   ├── features/           # BDD Gherkin 特性文件
+    │   └── step_defs/
+    └── unit/
+```
+
+---
+
+## 第三部分：四阶段工作流程
+
+### 阶段一：战略规划与意图定义
+
+在 `epics/` 目录下，将业务需求转化为结构化的 Markdown 文件。
+
+1. **定义 Epic 与 Feature**: 通过 `README.md` 文件定义高阶的目标和功能模块。
+2. **撰写 Story**: 在 `stories/` 目录下，为每个可开发任务创建详尽的 Story 文件。
+
+### 阶段二：任务执行准备
+
+为 AI 准备好所有执行材料。
+
+1. **生成工作区**: 在 `.the_conn/ai_workspace/{TASK-ID}/` 下创建任务目录。
+2. **准备上下文**: 创建 `context.manifest.json` 和 `task.md`。
+3. **组装 Prompt**: 加载模板，填充上下文和任务简报，发送给 AI。
+
+### 阶段三：代码实现与审查
+
+AI 根据指令执行开发任务。
+
+1. **AI 生成代码**: 根据 Story 中的 BDD 场景，创建测试和业务逻辑代码。
+2. **提交 PR**: AI 将变更提交为 Pull Request。
+3. **人类审查**: 领航员审查代码的逻辑、架构符合性。
+
+### 阶段四：同步与闭环
+
+PR 合并后，确保"意图"与"实现"的一致性。
+
+1. **合并 PR**: 领航员将通过审查的 PR 合并。
+2. **触发同步**: 使用同步模板更新 Story 文档。
+3. **确认提交**: 领航员确认并提交 Story 的更新。
+
+---
+
+## 第四部分：关键概念与约定
+
+### ID 命名规范
+
+| 类型    | 格式                    | 示例         | 说明                    |
+| ------- | ----------------------- | ------------ | ----------------------- |
+| Epic    | `EPIC-{序号}`           | `EPIC-01`    | 全局唯一，从 01 开始    |
+| Feature | `FEAT-{序号}`           | `FEAT-01`    | Epic 内唯一，从 01 开始 |
+| Story   | `STORY-{序号}`          | `STORY-01`   | Epic 内唯一，从 01 开始 |
+| Bug Fix | `STORY-{序号}.{子序号}` | `STORY-01.1` | Bug Fix 继承父 Story ID |
+| Task    | `TASK-{序号}`           | `TASK-01`    | Epic 内顺序编号         |
+
+### 文件命名规范
+
+**规则**: `{ID}_{PascalCaseName}.md`
+
+| 类型         | 示例                                 |
+| ------------ | ------------------------------------ |
+| Epic 目录    | `EPIC-01_Base_Init/`                 |
+| Feature 目录 | `FEAT-01_Init_Project/`              |
+| Story 文件   | `STORY-01_Create_Structure.md`       |
+| Bug Fix 文件 | `STORY-01.1_Fix_Permission.md`       |
+| Task 目录    | `TASK-01_STORY-01_Create_Structure/` |
+| Context 文件 | `Module_Design_DataStream.md`        |
+
+### Story 类型与状态
+
+**Type (类型)**:
+- `dev` - 新功能开发
+- `bug_fix` - 缺陷修复
+
+**Status (状态)**:
+- `pending` - 未完成
+- `done` - 已完成
+
+### Context 类型枚举
+
+**Global Context Types**:
+- `architecture` - 系统架构
+- `tech_stack` - 技术栈
+- `coding_standard` - 编码规范
+- `testing_strategy` - 测试策略
+- `deployment` - 部署方案
+- `api_convention` - API 约定
+- `domain_model` - 核心领域模型
+
+**Epic Context Types**:
+- `module_design` - 模块设计
+- `data_model` - 数据模型
+- `api_spec` - API 规范
+- `integration` - 集成方案
+- `algorithm` - 算法说明
+- `protocol` - 协议设计
+- `migration` - 迁移方案
+
+### Task 与 Story 关系
+
+**关系类型**:
+- **1:1** - 正常场景：一个 Story → 一个 Task（首次开发）
+- **1:N** - 迭代场景：一个 Story → 多个 Task（开发 + 优化 + Bug 修复）
+
+**示例**:
+```
+STORY-01 → TASK-01 (首次开发)
+        → TASK-02 (补充测试)
+        → TASK-04 (Bug 修复)
+STORY-02 → TASK-03 (首次开发)
+```
+
+---
+
+## 附录：模板索引
+
+### 初始化 Prompts
+
+| 用途       | Prompt 文件                              |
+| ---------- | ---------------------------------------- |
+| 项目初始化 | `prompts/initialization/project_init.md` |
+
+### 规划层 Prompts
+
+| 用途                 | Prompt 文件                                  |
+| -------------------- | -------------------------------------------- |
+| 需求与方案评审       | `prompts/planning/requirements_review.md`    |
+| 需求拆解（批量生成） | `prompts/planning/requirements_breakdown.md` |
+| 需求变更管理         | `prompts/planning/requirements_change.md`    |
+| 项目状态查看         | `prompts/planning/project_status.md`         |
+| 生成 Epic            | `prompts/planning/epic_planning.md`          |
+| 生成 Feature         | `prompts/planning/feature_planning.md`       |
+| 生成 Story           | `prompts/planning/story_writing.md`          |
+| 生成 Bug Fix Story   | `prompts/planning/bug_fix_story.md`          |
+
+### Context 管理 Prompts
+
+| 用途              | Prompt 文件                  |
+| ----------------- | ---------------------------- |
+| 提取 Context 文档 | `prompts/context/extract.md` |
+| 添加 Context 文档 | `prompts/context/add.md`     |
+| 更新 Context 文档 | `prompts/context/update.md`  |
+| 搜索 Context 文档 | `prompts/context/search.md`  |
+
+### 执行层 Prompts
+
+| 用途           | Prompt 文件                            |
+| -------------- | -------------------------------------- |
+| 生成 Task 简报 | `prompts/execution/task_generation.md` |
+| 同步 Story     | `prompts/execution/story_sync.md`      |
+| 生成变更摘要   | `prompts/execution/change_summary.md`  |
