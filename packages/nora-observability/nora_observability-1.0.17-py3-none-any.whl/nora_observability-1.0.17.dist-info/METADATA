@@ -1,0 +1,233 @@
+Metadata-Version: 2.4
+Name: nora-observability
+Version: 1.0.17
+Summary: AI Observability SDK - 자동으로 AI 라이브러리 호출을 trace합니다
+Author: Nora Team
+License: MIT
+Project-URL: Homepage, https://github.com/nora-ai/observability-sdk
+Project-URL: Documentation, https://docs.nora.ai
+Project-URL: Repository, https://github.com/nora-ai/observability-sdk
+Keywords: observability,ai,trace,monitoring,openai,anthropic
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: requests>=2.28.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.21.0; extra == "dev"
+Requires-Dist: black>=23.0.0; extra == "dev"
+Requires-Dist: ruff>=0.1.0; extra == "dev"
+Requires-Dist: google-genai>=1.47.0; extra == "dev"
+Requires-Dist: anthropic>=0.40.0; extra == "dev"
+Requires-Dist: openai>=1.0.0; extra == "dev"
+
+# Nora Observability SDK
+
+OpenAI, Anthropic 등 주요 AI 라이브러리 호출을 자동으로 추적하는 Python SDK입니다.
+
+## ✨ 주요 기능
+
+- 🚀 **2줄로 시작**: `import nora` + `nora.init()`만으로 자동 trace 활성화
+- 🔍 **자동 감지**: OpenAI Chat Completions API, Responses API 자동 패치
+- 🛠️ **Tool 실행 추적**: AI가 호출한 function tool 실행도 자동으로 추적
+- 📊 **상세한 메타데이터**: 프롬프트, 응답, 토큰 사용량, 실행 시간 모두 기록
+- 👥 **TraceGroup**: 여러 API 호출을 논리적으로 그룹화
+- ⚡ **비동기 지원**: 동기/비동기 모두 완벽 지원
+- 🛡️ **안전한 동작**: 에러 발생 시에도 사용자 코드에 영향 없음
+
+## 설치
+
+```bash
+pip install nora-observability
+```
+
+## 빠른 시작
+
+### 기본 사용
+
+```python
+import nora
+from openai import OpenAI
+
+# 1. Nora 초기화
+nora.init(api_key="YOUR_API_KEY")
+
+# 2. OpenAI 클라이언트 사용 (자동으로 trace됩니다!)
+client = OpenAI()
+response = client.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=[{"role": "user", "content": "Hello!"}]
+)
+
+print(response.choices[0].message.content)
+```
+
+### Tool Calling 추적
+
+```python
+import nora
+from openai import OpenAI
+
+nora.init(api_key="YOUR_API_KEY")
+
+client = OpenAI()
+tools = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_weather",
+            "description": "Get weather information",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "location": {"type": "string"}
+                }
+            }
+        }
+    }
+]
+
+# TraceGroup으로 여러 호출을 함께 추적
+with nora.trace_group(name="weather_query"):
+    # 1단계: Tool call 요청
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": "What's the weather in NYC?"}],
+        tools=tools
+    )
+    
+    # 2단계: Tool 실행
+    tool_call = response.choices[0].message.tool_calls[0]
+    if tool_call.function.name == "get_weather":
+        result = get_weather(location="NYC")
+    
+    # 3단계: 결과 포함해서 최종 답변 생성
+    final_response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "user", "content": "What's the weather in NYC?"},
+            {"role": "assistant", "content": response.choices[0].message.content},
+            {"role": "tool", "tool_call_id": tool_call.id, "content": result}
+        ]
+    )
+```
+
+전체 플로우(API 호출 3회, Tool 실행 1회)가 하나의 TraceGroup으로 묶여 추적됩니다.
+
+## 고급 설정
+
+```python
+import nora
+
+# 커스텀 설정
+nora.init(
+    api_key="YOUR_API_KEY",
+    api_url="https://custom-api.example.com/traces",  # 커스텀 엔드포인트
+    enabled=True,  # trace 활성화 여부
+    batch_size=10,  # 배치 크기
+    flush_interval=5.0  # 플러시 간격 (초)
+)
+
+# 프로그램 종료 전 남은 데이터 전송
+nora.flush()
+
+# 일시적으로 trace 비활성화
+nora.disable()
+
+# 다시 활성화
+nora.enable()
+
+# Trace 조회
+traces = nora.find_traces(model="gpt-4o-mini", limit=10)
+groups = nora.get_trace_groups()
+```
+
+## 지원하는 AI 라이브러리
+
+### OpenAI
+- ✅ Chat Completions API (gpt-4, gpt-3.5-turbo 등)
+- ✅ Responses API (gpt-4.1 등 최신 모델)
+- ✅ Tool/Function Calling
+- ✅ Streaming
+- ✅ 동기/비동기 (async)
+- ✅ Token 사용량 추적 (reasoning tokens, cached tokens 등)
+
+### Anthropic
+- ✅ Messages API
+- ✅ 동기/비동기 (async)
+
+## 프로젝트 구조
+
+```
+nora/
+├── __init__.py              # 메인 API (init, trace_group, find_traces 등)
+├── client.py                # 클라이언트 및 trace 저장소
+├── utils.py                 # 공통 유틸리티 함수
+├── openai/                  # 🆕 OpenAI 전용 모듈
+│   ├── __init__.py
+│   ├── types.py             # 타입 정의 (RequestParams, ResponseContent 등)
+│   ├── utils.py             # 응답 파싱, 파라미터 추출 유틸리티
+│   ├── metadata_builder.py  # Trace 메타데이터 구성
+│   ├── tool_tracer.py       # Tool 실행 자동 감지
+│   └── streaming.py         # 스트리밍 응답 처리
+└── patches/                 # AI 라이브러리 패치
+    ├── openai_patch.py      # OpenAI API 패치
+    └── anthropic_patch.py   # Anthropic API 패치
+```
+
+## 개발
+
+### 의존성 설치
+
+```bash
+pip install -e ".[dev]"
+```
+
+### 테스트 실행
+
+```bash
+pytest tests/ -v
+```
+
+### 코드 포맷팅
+
+```bash
+black nora/
+ruff check nora/
+```
+
+## 아키텍처
+
+### 자동 패치 메커니즘
+
+SDK는 OpenAI, Anthropic 라이브러리를 monkey-patch하여 모든 API 호출을 자동으로 가로챕니다:
+
+1. **요청 인터셉트**: API 호출 시점에 요청 파라미터 수집
+2. **응답 처리**: 응답에서 텍스트, tool calls, 토큰 사용량 추출
+3. **Tool 감지**: Messages API의 tool role 감지 및 자동 추적
+4. **배치 전송**: 수집된 trace를 배치로 서버에 전송
+
+### TraceGroup
+
+여러 API 호출과 tool 실행을 논리적으로 그룹화:
+
+```python
+with nora.trace_group(name="agent_loop", metadata={"session_id": "123"}):
+    # 이 블록 내의 모든 API 호출과 tool 실행이 하나의 그룹으로 추적됨
+    response1 = client.chat.completions.create(...)
+    result = execute_tool(...)
+    response2 = client.chat.completions.create(...)
+```
+
+## 라이선스
+
+MIT License
+
