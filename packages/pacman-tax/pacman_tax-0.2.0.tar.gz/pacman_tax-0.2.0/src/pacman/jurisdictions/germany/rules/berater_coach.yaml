@@ -1,0 +1,418 @@
+# PACMAN - Berater/Coach Kategorisierungsregeln
+# Deutschland - Anlage S (Freiberufler)
+#
+# Unternehmensberater, Business-Coaches, Trainer, Mentoren
+# Freiberuflich nach §18 EStG (lehrende/beratende Taetigkeit)
+#
+# Typische Einnahmen: Tagessaetze, Workshops, Online-Kurse, 1:1 Coaching
+
+version: "1.0"
+profile: berater_coach
+extends: freiberufler
+
+metadata:
+  description: "Berater, Coach, Trainer, Mentor"
+  applicable_forms:
+    - "Anlage S"
+    - "EUeR"
+  typical_services:
+    - "Unternehmensberatung"
+    - "Business Coaching"
+    - "Fuehrungskraefte-Training"
+    - "Workshops und Seminare"
+    - "Online-Kurse"
+
+rules:
+  # === EINNAHMEN ===
+
+  - id: income_tagessatz
+    name: "Beratungstag/Workshop"
+    priority: 10
+    conditions:
+      - field: amount
+        operator: gt
+        value: 500
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(beratung|consulting|workshop|seminar|training)"
+      - field: description
+        operator: regex
+        value: "(tagessatz|tagess\\.)"
+    category: business_income
+    subcategory: beratung_tagessatz
+    confidence: 0.95
+
+  - id: income_coaching
+    name: "Coaching-Session"
+    priority: 10
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(coaching|mentoring|session|sitzung)"
+    category: business_income
+    subcategory: coaching
+    confidence: 0.9
+
+  - id: income_online_kurs
+    name: "Online-Kurs Verkauf"
+    priority: 10
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(teachable|thinkific|kajabi|podia|gumroad|digistore)"
+      - field: description
+        operator: regex
+        value: "(kurs|course|programm)"
+    category: business_income
+    subcategory: online_kurse
+    confidence: 1.0
+
+  - id: income_membership
+    name: "Membership/Community"
+    priority: 10
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(patreon|memberful|circle|mighty networks)"
+      - field: description
+        operator: regex
+        value: "(membership|mitgliedschaft|community)"
+    category: business_income
+    subcategory: membership
+    confidence: 0.95
+
+  - id: income_vortrag
+    name: "Vortragshonorar"
+    priority: 10
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(vortrag|keynote|speaker|referent)"
+    category: business_income
+    subcategory: vortraege
+    confidence: 0.95
+
+  # === PLATTFORMEN UND TOOLS ===
+
+  - id: expense_kursplattform
+    name: "Kursplattform-Gebuehren"
+    priority: 18
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(teachable|thinkific|kajabi|podia)"
+      - field: counterparty
+        operator: contains
+        value: "elopage"
+      - field: counterparty
+        operator: contains
+        value: "coachy"
+    category: business_expense
+    subcategory: kursplattform
+    confidence: 1.0
+
+  - id: expense_booking
+    name: "Buchungs-/Termintools"
+    priority: 18
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "calendly"
+      - field: counterparty
+        operator: contains
+        value: "acuity"
+      - field: counterparty
+        operator: contains
+        value: "cal.com"
+      - field: counterparty
+        operator: contains
+        value: "tidycal"
+    category: business_expense
+    subcategory: buchungssystem
+    confidence: 1.0
+
+  - id: expense_videokonferenz
+    name: "Videokonferenz-Tools"
+    priority: 18
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "zoom"
+      - field: counterparty
+        operator: contains
+        value: "whereby"
+      - field: counterparty
+        operator: contains
+        value: "riverside"
+      - field: counterparty
+        operator: contains
+        value: "around"
+    category: business_expense
+    subcategory: videokonferenz
+    confidence: 1.0
+
+  - id: expense_community_platform
+    name: "Community-Plattform"
+    priority: 18
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "circle"
+      - field: counterparty
+        operator: contains
+        value: "mighty networks"
+      - field: counterparty
+        operator: contains
+        value: "discord"
+      - field: counterparty
+        operator: contains
+        value: "slack"
+    category: business_expense
+    subcategory: community
+    confidence: 0.9
+
+  # === MARKETING ===
+
+  - id: expense_email_marketing
+    name: "E-Mail-Marketing"
+    priority: 18
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(mailchimp|convertkit|activecampaign|klaviyo|mailerlite)"
+      - field: counterparty
+        operator: contains
+        value: "sendinblue"
+      - field: counterparty
+        operator: contains
+        value: "brevo"
+    category: business_expense
+    subcategory: email_marketing
+    confidence: 1.0
+
+  - id: expense_social_media
+    name: "Social Media Tools"
+    priority: 18
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(hootsuite|buffer|later|sproutsocial|publer)"
+      - field: counterparty
+        operator: contains
+        value: "linkedin premium"
+    category: business_expense
+    subcategory: social_media
+    confidence: 1.0
+
+  - id: expense_ads
+    name: "Online-Werbung"
+    priority: 18
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "meta"
+      - field: counterparty
+        operator: contains
+        value: "facebook"
+      - field: counterparty
+        operator: contains
+        value: "google ads"
+      - field: counterparty
+        operator: contains
+        value: "linkedin ads"
+      - field: description
+        operator: regex
+        value: "(ads|werbung|anzeigen|kampagne)"
+    category: business_expense
+    subcategory: online_werbung
+    confidence: 0.95
+
+  - id: expense_webinar
+    name: "Webinar-Tools"
+    priority: 18
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(webinarjam|demio|everwebinar|livestorm)"
+    category: business_expense
+    subcategory: webinar
+    confidence: 1.0
+
+  # === CONTENT CREATION ===
+
+  - id: expense_video_tools
+    name: "Video-Produktion"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "loom"
+      - field: counterparty
+        operator: contains
+        value: "descript"
+      - field: counterparty
+        operator: contains
+        value: "screenflow"
+      - field: counterparty
+        operator: contains
+        value: "camtasia"
+      - field: counterparty
+        operator: contains
+        value: "vimeo"
+    category: business_expense
+    subcategory: video_produktion
+    confidence: 1.0
+
+  - id: expense_podcast
+    name: "Podcast-Tools"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(anchor|buzzsprout|transistor|podbean|captivate)"
+      - field: counterparty
+        operator: contains
+        value: "riverside"
+      - field: counterparty
+        operator: contains
+        value: "squadcast"
+    category: business_expense
+    subcategory: podcast
+    confidence: 1.0
+
+  # === REISEKOSTEN (HAEUFIG BEI BERATERN) ===
+
+  - id: expense_bahn
+    name: "Bahnfahrten (Kunden)"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "deutsche bahn"
+      - field: counterparty
+        operator: contains
+        value: "db vertrieb"
+    category: business_expense
+    subcategory: reise_bahn
+    confidence: 0.9
+
+  - id: expense_flug
+    name: "Fluege (Kunden)"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(lufthansa|eurowings|ryanair|easyjet)"
+    category: business_expense
+    subcategory: reise_flug
+    confidence: 0.85
+
+  - id: expense_hotel
+    name: "Hotelkosten"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(booking|hotels\\.com|hrs|expedia)"
+      - field: counterparty
+        operator: regex
+        value: "(hotel|motel|pension|ibis|mercure|novotel)"
+    category: business_expense
+    subcategory: reise_hotel
+    confidence: 0.85
+
+  - id: expense_mietwagen
+    name: "Mietwagen"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(sixt|europcar|hertz|avis|enterprise)"
+    category: business_expense
+    subcategory: reise_mietwagen
+    confidence: 0.85
+
+  # === WEITERBILDUNG (WICHTIG FUER BERATER) ===
+
+  - id: expense_zertifizierung
+    name: "Zertifizierungen"
+    priority: 18
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(zertifizierung|certification|akkreditierung)"
+      - field: counterparty
+        operator: regex
+        value: "(icf|dvct|bdvt)"
+    category: business_expense
+    subcategory: zertifizierung
+    confidence: 0.95
+
+  - id: expense_supervision
+    name: "Supervision/Coaching fuer Coaches"
+    priority: 18
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(supervision|intervision|coaching.*ausbildung)"
+    category: business_expense
+    subcategory: supervision
+    confidence: 0.9
+
+  - id: expense_fachliteratur
+    name: "Fachbuecher und Materialien"
+    priority: 22
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(amazon|thalia|hugendubel|haufe|gabal)"
+      - field: description
+        operator: regex
+        value: "(fachbuch|literatur|management|coaching.*buch)"
+    category: business_expense
+    subcategory: fachliteratur
+    confidence: 0.75
+
+  # === NETZWERK UND VERBÄNDE ===
+
+  - id: expense_verband
+    name: "Berufsverband/Netzwerk"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(bdu|bdvt|dvct|icf|bvmw)"
+      - field: description
+        operator: regex
+        value: "(mitgliedschaft|jahresbeitrag|verband)"
+    category: business_expense
+    subcategory: verband
+    confidence: 0.95
+
+  - id: expense_coworking_event
+    name: "Coworking/Networking Events"
+    priority: 22
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(meetup|networking|stammtisch)"
+    category: business_expense
+    subcategory: networking
+    confidence: 0.7

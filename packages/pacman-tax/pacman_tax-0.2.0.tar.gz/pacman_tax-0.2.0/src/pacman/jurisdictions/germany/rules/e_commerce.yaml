@@ -1,0 +1,553 @@
+# PACMAN - E-Commerce Kategorisierungsregeln
+# Deutschland - Anlage G (Gewerbe)
+#
+# Online-Haendler, Amazon FBA, Dropshipping, eigener Shop
+# IMMER gewerblich! (Handel = Gewerbe)
+#
+# Besonderheiten:
+# - Wareneinsatz als Betriebsausgabe
+# - Gewerbesteuer ab 24.500 EUR Gewinn
+# - OSS (One-Stop-Shop) fuer EU-Verkaufe ab 10.000 EUR
+
+version: "1.0"
+profile: e_commerce
+
+metadata:
+  description: "E-Commerce (Online-Handel, Amazon FBA, Dropshipping)"
+  applicable_forms:
+    - "Anlage G (Gewerbe)"
+    - "EUeR"
+    - "Gewerbesteuererklaerung"
+    - "USt-Voranmeldung (monatlich/quartalsweise)"
+  gewerbesteuer_freibetrag: 24500
+  oss_grenze: 10000
+
+rules:
+  # === EINNAHMEN - MARKTPLAETZE ===
+
+  - id: income_amazon
+    name: "Amazon Verkaufserloes"
+    priority: 5
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "amazon"
+      - field: description
+        operator: regex
+        value: "(amazon.*auszahlung|seller.*central)"
+    category: business_income
+    subcategory: amazon
+    confidence: 1.0
+    notes: "Brutto inkl. USt"
+
+  - id: income_ebay
+    name: "eBay Verkaufserloes"
+    priority: 5
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "ebay"
+      - field: description
+        operator: regex
+        value: "(ebay.*auszahlung)"
+    category: business_income
+    subcategory: ebay
+    confidence: 1.0
+
+  - id: income_etsy
+    name: "Etsy Verkaufserloes"
+    priority: 5
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "etsy"
+    category: business_income
+    subcategory: etsy
+    confidence: 1.0
+
+  - id: income_shopify
+    name: "Shopify Shop Einnahmen"
+    priority: 5
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "shopify"
+      - field: description
+        operator: regex
+        value: "(shopify.*payout)"
+    category: business_income
+    subcategory: eigener_shop
+    confidence: 1.0
+
+  - id: income_stripe
+    name: "Stripe Auszahlung"
+    priority: 5
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "stripe"
+    category: business_income
+    subcategory: zahlungsdienstleister
+    confidence: 0.95
+
+  - id: income_paypal
+    name: "PayPal Eingang (pruefen)"
+    priority: 8
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "paypal"
+    category: business_income
+    subcategory: paypal_pruefen
+    confidence: 0.7
+    notes: "Einzeln pruefen: Verkauf oder Erstattung?"
+
+  # === AUSGABEN - WARENEINKAUF ===
+
+  - id: expense_wareneinkauf
+    name: "Wareneinkauf"
+    priority: 10
+    conditions:
+      - field: amount
+        operator: lt
+        value: 0
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(wareneinkauf|wholesale|einkauf|bestellung)"
+      - field: counterparty
+        operator: in_list
+        value: "$config.lieferanten"
+    category: business_expense
+    subcategory: wareneinkauf
+    confidence: 0.9
+    notes: "Wichtig: Bestandsveraenderung beachten!"
+
+  - id: expense_alibaba
+    name: "Alibaba/AliExpress Import"
+    priority: 10
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(alibaba|aliexpress|alipay)"
+    category: business_expense
+    subcategory: import_china
+    confidence: 0.95
+    notes: "Einfuhrumsatzsteuer beachten!"
+
+  - id: expense_grosshandel
+    name: "Grosshandel"
+    priority: 10
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(metro|selgros|handelshof)"
+      - field: description
+        operator: contains
+        value: "grosshandel"
+    category: business_expense
+    subcategory: grosshandel
+    confidence: 0.9
+
+  # === AUSGABEN - MARKTPLATZ-GEBUEHREN ===
+
+  - id: expense_amazon_fba
+    name: "Amazon FBA Gebuehren"
+    priority: 15
+    conditions:
+      - field: amount
+        operator: lt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "amazon"
+      - field: description
+        operator: regex
+        value: "(fba|fulfillment|lagergebuehr|verkaufsgebuehr)"
+    category: business_expense
+    subcategory: amazon_gebuehren
+    confidence: 1.0
+
+  - id: expense_ebay_gebuehr
+    name: "eBay Gebuehren"
+    priority: 15
+    conditions:
+      - field: amount
+        operator: lt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "ebay"
+    category: business_expense
+    subcategory: ebay_gebuehren
+    confidence: 0.95
+
+  - id: expense_etsy_gebuehr
+    name: "Etsy Gebuehren"
+    priority: 15
+    conditions:
+      - field: amount
+        operator: lt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "etsy"
+    category: business_expense
+    subcategory: etsy_gebuehren
+    confidence: 0.95
+
+  # === AUSGABEN - ZAHLUNGSDIENSTLEISTER ===
+
+  - id: expense_stripe_gebuehr
+    name: "Stripe Transaktionsgebuehren"
+    priority: 15
+    conditions:
+      - field: amount
+        operator: lt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "stripe"
+      - field: description
+        operator: regex
+        value: "(?i)(stripe.*fee|stripe.*charge|processing.*fee)"
+    category: business_expense
+    subcategory: zahlungsgebuehren
+    confidence: 0.95
+    notes: "Stripe Deutschland: 1,4% + 0,25 EUR pro Transaktion"
+
+  - id: expense_paypal_gebuehr
+    name: "PayPal Transaktionsgebuehren"
+    priority: 15
+    conditions:
+      - field: amount
+        operator: lt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "paypal"
+      - field: description
+        operator: regex
+        value: "(?i)(paypal.*gebuehr|paypal.*fee|paypal.*charge)"
+    category: business_expense
+    subcategory: zahlungsgebuehren
+    confidence: 0.95
+    notes: "PayPal Waren Deutschland: 1,49% + 0,35 EUR pro Transaktion"
+
+  - id: expense_klarna_gebuehr
+    name: "Klarna Zahlungsgebuehren"
+    priority: 15
+    conditions:
+      - field: amount
+        operator: lt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "klarna"
+      - field: description
+        operator: regex
+        value: "(?i)(klarna.*gebuehr|klarna.*fee)"
+    category: business_expense
+    subcategory: zahlungsgebuehren
+    confidence: 0.90
+    notes: "Klarna B2C: 1,5-2,5% je nach Partnerschaftsmodell"
+
+  - id: expense_sumup_gebuehr
+    name: "SumUp Gebuehren"
+    priority: 15
+    conditions:
+      - field: amount
+        operator: lt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "sumup"
+    category: business_expense
+    subcategory: zahlungsgebuehren
+    confidence: 0.95
+    notes: "SumUp: 1,69% pro Kartenzahlung"
+
+  # === AUSGABEN - VERSAND ===
+
+  - id: expense_versand_dhl
+    name: "DHL Versandkosten"
+    priority: 15
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "dhl"
+      - field: counterparty
+        operator: contains
+        value: "deutsche post"
+    category: business_expense
+    subcategory: versand_dhl
+    confidence: 1.0
+
+  - id: expense_versand_hermes
+    name: "Hermes Versandkosten"
+    priority: 15
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "hermes"
+    category: business_expense
+    subcategory: versand_hermes
+    confidence: 1.0
+
+  - id: expense_versand_dpd
+    name: "DPD Versandkosten"
+    priority: 15
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "dpd"
+    category: business_expense
+    subcategory: versand_dpd
+    confidence: 1.0
+
+  - id: expense_versand_gls
+    name: "GLS Versandkosten"
+    priority: 15
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "gls"
+    category: business_expense
+    subcategory: versand_gls
+    confidence: 1.0
+
+  - id: expense_fulfillment
+    name: "Fulfillment-Dienstleister"
+    priority: 15
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(fulfillment|versandabwicklung|lagerlogistik)"
+    category: business_expense
+    subcategory: fulfillment
+    confidence: 0.9
+
+  # === AUSGABEN - VERPACKUNG ===
+
+  - id: expense_verpackung
+    name: "Verpackungsmaterial"
+    priority: 18
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(packero|rajapack|verpackung)"
+      - field: description
+        operator: regex
+        value: "(karton|verpackung|klebeband|fuellmaterial)"
+    category: business_expense
+    subcategory: verpackung
+    confidence: 0.9
+
+  - id: expense_lucid
+    name: "Lucid/Verpackungslizenz"
+    priority: 18
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(lucid|interseroh|gruener.*punkt|reclay)"
+      - field: description
+        operator: regex
+        value: "(verpackungslizenz|verpackg)"
+    category: business_expense
+    subcategory: verpackungslizenz
+    confidence: 1.0
+    notes: "Pflicht fuer alle Erstinverkehrbringer!"
+
+  # === AUSGABEN - SHOP & TOOLS ===
+
+  - id: expense_shopify_abo
+    name: "Shopify Abo"
+    priority: 18
+    conditions:
+      - field: amount
+        operator: lt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "shopify"
+    category: business_expense
+    subcategory: shop_software
+    confidence: 1.0
+
+  - id: expense_woocommerce
+    name: "WooCommerce Plugins"
+    priority: 18
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(woocommerce|wordpress.*plugin)"
+    category: business_expense
+    subcategory: shop_software
+    confidence: 0.85
+
+  - id: expense_repricing
+    name: "Repricing-Tools"
+    priority: 18
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(sellerlogic|repricer|bqool)"
+    category: business_expense
+    subcategory: repricing
+    confidence: 1.0
+
+  - id: expense_inventory
+    name: "Warenwirtschaft"
+    priority: 18
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(billbee|jt|xentral|plentymarkets)"
+    category: business_expense
+    subcategory: warenwirtschaft
+    confidence: 1.0
+
+  # === AUSGABEN - MARKETING ===
+
+  - id: expense_ppc
+    name: "Amazon/Google Ads"
+    priority: 18
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(ppc|sponsored|ads|werbung)"
+      - field: counterparty
+        operator: contains
+        value: "google ads"
+    category: business_expense
+    subcategory: ppc_werbung
+    confidence: 0.95
+
+  - id: expense_produktfoto
+    name: "Produktfotografie"
+    priority: 20
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(produktfoto|fotoshooting|packshot)"
+    category: business_expense
+    subcategory: produktfotos
+    confidence: 0.9
+
+  # === AUSGABEN - SONSTIGES ===
+
+  - id: expense_retouren
+    name: "Retouren-Abwicklung"
+    priority: 20
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(retoure|ruecksendung|return)"
+    category: business_expense
+    subcategory: retouren
+    confidence: 0.8
+
+  - id: expense_zoll
+    name: "Zoll/Einfuhrabgaben"
+    priority: 15
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "zoll"
+      - field: description
+        operator: regex
+        value: "(zoll|einfuhr|customs|eust)"
+    category: business_expense
+    subcategory: zoll
+    confidence: 1.0
+    notes: "Einfuhrumsatzsteuer als Vorsteuer absetzbar!"
+
+  - id: expense_lager
+    name: "Lagermiete"
+    priority: 18
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(lager.*miete|self.*storage)"
+    category: business_expense
+    subcategory: lagermiete
+    confidence: 0.9
+
+  # === HOMEOFFICE-PAUSCHALE ===
+
+  - id: expense_homeoffice_pauschale
+    name: "Homeoffice-Pauschale"
+    priority: 15
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(?i)(homeoffice|home.?office|arbeitszimmer|heimarbeitsplatz)"
+    category: deductible
+    subcategory: homeoffice_pauschale
+    confidence: 0.85
+    notes: "6 EUR/Tag, max 1.260 EUR/Jahr (210 Tage) - §4 Abs. 5 Nr. 6c EStG"
+
+  # === STEUERN ===
+
+  - id: tax_gewerbesteuer
+    name: "Gewerbesteuer"
+    priority: 10
+    conditions:
+      - field: counterparty
+        operator: regex
+        value: "(finanzamt|stadt|gemeinde)"
+    conditions_any:
+      - field: description
+        operator: contains
+        value: "gewerbesteuer"
+    category: business_expense
+    subcategory: gewerbesteuer
+    confidence: 1.0
+    notes: "Gewerbesteuer ist Betriebsausgabe"
+
+  - id: tax_ust_vorauszahlung
+    name: "USt-Vorauszahlung"
+    priority: 10
+    conditions:
+      - field: counterparty
+        operator: contains
+        value: "finanzamt"
+    conditions_any:
+      - field: description
+        operator: contains
+        value: "umsatzsteuer"
+    category: passthrough
+    subcategory: ust_vorauszahlung
+    confidence: 1.0

@@ -1,0 +1,590 @@
+# PACMAN - Kleinunternehmer Kategorisierungsregeln
+# Deutschland - §19 UStG (Kleinunternehmerregelung)
+#
+# Kleinunternehmer: Umsatz im Vorjahr <= 25.000 EUR (bis 2024)
+#                   Umsatz im Vorjahr <= 50.000 EUR (ab 2025!)
+# und voraussichtlich <= 100.000 EUR im laufenden Jahr
+# WICHTIG: Keine Umsatzsteuer erheben oder abfuehren!
+
+version: "2.0"
+profile: kleinunternehmer
+extends: freiberufler
+
+metadata:
+  description: "Kleinunternehmer nach §19 UStG"
+  applicable_forms:
+    - "Anlage S oder G (je nach Taetigkeit)"
+    - "EUeR"
+  ust_befreit: true
+  grenzen:
+    bis_2024:
+      vorjahr: 22000
+      prognose: 50000
+    ab_2025:
+      vorjahr: 25000
+      prognose: 100000
+  hinweise:
+    rechnungsstellung: |
+      WICHTIG: Auf jeder Rechnung muss stehen:
+      "Kein Ausweis von Umsatzsteuer aufgrund der Anwendung
+      der Kleinunternehmerregelung gemaess §19 UStG"
+    grenzueberschreitung: |
+      Bei Ueberschreitung der Grenze: Ab dem Folgejahr
+      regulaere Umsatzsteuer-Pflicht!
+
+rules:
+  # === HINWEIS-REGELN ===
+
+  - id: info_keine_ust
+    name: "Hinweis: Keine USt als Kleinunternehmer"
+    priority: 1
+    conditions:
+      - field: description
+        operator: contains
+        value: "umsatzsteuer"
+    category: uncategorized
+    subcategory: ust_pruefen
+    confidence: 0.5
+    notes: "Kleinunternehmer nach §19 UStG - keine USt-Pflicht"
+
+  # === PLATTFORM-EINNAHMEN ===
+
+  - id: income_etsy
+    name: "Etsy Einnahmen"
+    priority: 8
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+      - field: counterparty
+        operator: contains
+        value: "etsy"
+    category: business_income
+    subcategory: plattform_einnahmen
+    confidence: 0.95
+    notes: "Handmade-Plattform - Brutto = Netto"
+
+  - id: income_ebay
+    name: "eBay Einnahmen"
+    priority: 8
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "ebay"
+      - field: description
+        operator: regex
+        value: "(ebay|paypal.*ebay)"
+    category: business_income
+    subcategory: plattform_einnahmen
+    confidence: 0.85
+    notes: "Online-Marktplatz"
+
+  - id: income_amazon_fba
+    name: "Amazon FBA/Marketplace Einnahmen"
+    priority: 8
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(amazon|amzn)"
+      - field: description
+        operator: regex
+        value: "(amazon|marketplace|fba)"
+    category: business_income
+    subcategory: plattform_einnahmen
+    confidence: 0.8
+    notes: "Amazon Auszahlung (ohne USt bei Kleinunternehmer)"
+
+  - id: income_kleinanzeigen
+    name: "Kleinanzeigen Einnahmen"
+    priority: 8
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(kleinanzeigen|ebay.?kleinanzeigen)"
+    category: business_income
+    subcategory: direktverkauf
+    confidence: 0.7
+    notes: "Lokaler Verkauf"
+
+  - id: income_shopify
+    name: "Shopify Einnahmen"
+    priority: 8
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+      - field: counterparty
+        operator: contains
+        value: "shopify"
+    category: business_income
+    subcategory: webshop_einnahmen
+    confidence: 0.95
+
+  - id: income_paypal
+    name: "PayPal Einnahmen"
+    priority: 10
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "paypal"
+      - field: description
+        operator: regex
+        value: "(paypal|pp\\*)"
+    category: business_income
+    subcategory: zahlungseingang
+    confidence: 0.7
+    notes: "PayPal-Zahlung - manuell pruefen ob Kunde oder privat"
+
+  - id: income_stripe
+    name: "Stripe Einnahmen"
+    priority: 8
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+      - field: counterparty
+        operator: contains
+        value: "stripe"
+    category: business_income
+    subcategory: zahlungseingang
+    confidence: 0.9
+
+  - id: income_klarna
+    name: "Klarna Einnahmen"
+    priority: 8
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+      - field: counterparty
+        operator: contains
+        value: "klarna"
+    category: business_income
+    subcategory: zahlungseingang
+    confidence: 0.85
+    notes: "Klarna Merchant Auszahlung"
+
+  # === GRENZEN-CHECK ===
+
+  - id: warn_umsatzgrenze
+    name: "Warnung: Hohe Einnahme"
+    priority: 5
+    conditions:
+      - field: amount
+        operator: gt
+        value: 5000
+      - field: amount
+        operator: gt
+        value: 0
+    category: business_income
+    subcategory: grosse_einnahme
+    confidence: 0.9
+    notes: "Umsatzgrenze beachten! 25k (2025) bzw. 50k Prognose"
+
+  # === PLATTFORM-GEBUEHREN ===
+
+  - id: expense_etsy_gebuehr
+    name: "Etsy Gebuehren"
+    priority: 20
+    conditions:
+      - field: amount
+        operator: lt
+        value: 0
+      - field: counterparty
+        operator: contains
+        value: "etsy"
+    category: business_expense
+    subcategory: plattform_gebuehren
+    confidence: 1.0
+    notes: "Listing-Gebuehren, Transaktionsgebuehren"
+
+  - id: expense_ebay_gebuehr
+    name: "eBay Gebuehren"
+    priority: 20
+    conditions:
+      - field: amount
+        operator: lt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "ebay"
+      - field: description
+        operator: regex
+        value: "(ebay.*gebuehr|verkaufsprovision)"
+    category: business_expense
+    subcategory: plattform_gebuehren
+    confidence: 0.95
+
+  - id: expense_amazon_gebuehr
+    name: "Amazon Gebuehren"
+    priority: 20
+    conditions:
+      - field: amount
+        operator: lt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(amazon|amzn)"
+      - field: description
+        operator: regex
+        value: "(amazon.*fee|fba.*gebuehr|lagergebuehr)"
+    category: business_expense
+    subcategory: plattform_gebuehren
+    confidence: 0.9
+    notes: "FBA-Gebuehren, Lagerkosten, Verkaufsgebuehren"
+
+  - id: expense_shopify_gebuehr
+    name: "Shopify Gebuehren"
+    priority: 20
+    conditions:
+      - field: amount
+        operator: lt
+        value: 0
+      - field: counterparty
+        operator: contains
+        value: "shopify"
+    category: business_expense
+    subcategory: shop_software
+    confidence: 0.95
+    notes: "Shop-Miete, Apps, Zahlungsgebuehren"
+
+  - id: expense_paypal_gebuehr
+    name: "PayPal Gebuehren"
+    priority: 20
+    conditions:
+      - field: amount
+        operator: lt
+        value: 0
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(paypal.*gebuehr|transaktionsgebuehr)"
+    category: business_expense
+    subcategory: zahlungsgebuehren
+    confidence: 0.95
+
+  # === WARENEINKAUF ===
+
+  - id: expense_wareneinkauf
+    name: "Wareneinkauf (Handelsware)"
+    priority: 15
+    conditions:
+      - field: amount
+        operator: lt
+        value: 0
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(wareneinkauf|handelsware|einkauf.*wiederverkauf)"
+      - field: counterparty
+        operator: regex
+        value: "(grosshandel|b2b|wholesale)"
+    category: business_expense
+    subcategory: wareneinkauf
+    confidence: 0.85
+    notes: "Wareneinsatz - wichtig fuer Gewinnermittlung"
+
+  - id: expense_material
+    name: "Material und Rohstoffe"
+    priority: 25
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(material|rohstoff|bastelbedarf|stoff|wolle|perlen|holz)"
+      - field: counterparty
+        operator: regex
+        value: "(buttinette|idee creativmarkt|bauhaus|obi|hornbach)"
+    category: business_expense
+    subcategory: material
+    confidence: 0.85
+    notes: "Herstellungskosten fuer Handmade-Produkte"
+
+  - id: expense_werkzeug
+    name: "Werkzeuge und Maschinen"
+    priority: 25
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(werkzeug|maschine|naehmaschine|plotter|drucker)"
+      - field: counterparty
+        operator: regex
+        value: "(bosch|makita|brother|silhouette)"
+    category: business_expense
+    subcategory: werkzeuge
+    confidence: 0.8
+    notes: "GWG bis 800 EUR netto sofort absetzbar"
+
+  # === VERSAND ===
+
+  - id: expense_versand
+    name: "Versandkosten"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(dhl|hermes|dpd|ups|gls|deutsche post)"
+      - field: description
+        operator: regex
+        value: "(porto|versand|paket|sendung)"
+    category: business_expense
+    subcategory: versandkosten
+    confidence: 0.9
+
+  - id: expense_versandmarken
+    name: "Online-Versandmarken"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(shipcloud|sendcloud|pirateship)"
+      - field: description
+        operator: regex
+        value: "(versandlabel|online.?porto|versandmarke)"
+    category: business_expense
+    subcategory: versandkosten
+    confidence: 0.95
+
+  - id: expense_verpackung
+    name: "Verpackungsmaterial"
+    priority: 25
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(verpackung|karton|klebeband|fuellmaterial|polster)"
+      - field: counterparty
+        operator: regex
+        value: "(rajapack|packlink|bb verpackungen)"
+    category: business_expense
+    subcategory: verpackung
+    confidence: 0.85
+
+  # === MARKETING ===
+
+  - id: expense_facebook_ads
+    name: "Facebook/Instagram Werbung"
+    priority: 20
+    conditions:
+      - field: amount
+        operator: lt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(facebook|meta|instagram)"
+      - field: description
+        operator: regex
+        value: "(ad|werbung|promotion)"
+    category: business_expense
+    subcategory: werbung
+    confidence: 0.9
+
+  - id: expense_google_ads
+    name: "Google Werbung"
+    priority: 20
+    conditions:
+      - field: amount
+        operator: lt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "google"
+      - field: description
+        operator: regex
+        value: "(google ads|adwords)"
+    category: business_expense
+    subcategory: werbung
+    confidence: 0.9
+
+  - id: expense_etsy_ads
+    name: "Etsy Werbung"
+    priority: 20
+    conditions:
+      - field: amount
+        operator: lt
+        value: 0
+      - field: description
+        operator: regex
+        value: "(etsy ads|offsite ads|promoted listing)"
+    category: business_expense
+    subcategory: werbung
+    confidence: 0.95
+
+  # === PRODUKTFOTOGRAFIE ===
+
+  - id: expense_fotografie
+    name: "Produktfotografie"
+    priority: 25
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(produktfoto|fotografie|shooting|lightbox)"
+      - field: counterparty
+        operator: regex
+        value: "(fotograf|studio)"
+    category: business_expense
+    subcategory: produktfotografie
+    confidence: 0.8
+    notes: "Wichtig fuer Online-Verkauf"
+
+  - id: expense_foto_equipment
+    name: "Foto-Equipment"
+    priority: 25
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(kamera|stativ|softbox|hintergrund|fotolampe)"
+    category: business_expense
+    subcategory: ausstattung
+    confidence: 0.75
+
+  # === SOFTWARE & TOOLS ===
+
+  - id: expense_buchhaltung
+    name: "Buchhaltungssoftware"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(lexoffice|sevdesk|debitoor|fastbill|papierkram)"
+    category: business_expense
+    subcategory: software
+    confidence: 0.95
+
+  - id: expense_bildbearbeitung
+    name: "Bildbearbeitung"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(adobe|canva|photoshop)"
+      - field: description
+        operator: regex
+        value: "(creative cloud|bildbearbeitung)"
+    category: business_expense
+    subcategory: software
+    confidence: 0.85
+
+  - id: expense_ecommerce_tools
+    name: "E-Commerce Tools"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(billbee|afterbuy|jtkitstools|plentymarkets)"
+    category: business_expense
+    subcategory: software
+    confidence: 0.95
+    notes: "Warenwirtschaft, Multichannel-Tools"
+
+  # === MESSEN & MAERKTE ===
+
+  - id: expense_markt_standgebuehr
+    name: "Markt-Standgebuehr"
+    priority: 25
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(standgebuehr|marktgebuehr|messestand|weihnachtsmarkt)"
+    category: business_expense
+    subcategory: standgebuehren
+    confidence: 0.9
+    notes: "Flohmarkt, Weihnachtsmarkt, Kunsthandwerkermarkt"
+
+  - id: expense_markt_ausstattung
+    name: "Markt-Ausstattung"
+    priority: 25
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(pavillon|marktzelt|tapeziertisch|preisschilder)"
+    category: business_expense
+    subcategory: ausstattung
+    confidence: 0.8
+
+  # === VERPACKUNGS-LIZENZ ===
+
+  - id: expense_verpackungslizenz
+    name: "Verpackungslizenz (VerpackG)"
+    priority: 15
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(lizenzero|interseroh|gruener punkt|landbell)"
+      - field: description
+        operator: regex
+        value: "(verpackungslizenz|lucid|VerpackG)"
+    category: business_expense
+    subcategory: lizenzen
+    confidence: 1.0
+    notes: "Pflicht fuer alle gewerblichen Verkaeufer seit 2019!"
+
+  # === PRIVATE AUSGABEN ===
+
+  - id: private_standard
+    name: "Private Ausgaben"
+    priority: 50
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(rewe|edeka|aldi|lidl|netflix|spotify)"
+    category: private
+    subcategory: lebenshaltung
+    confidence: 1.0
+
+  # === STEUERN ===
+
+  - id: tax_gewerbesteuer
+    name: "Gewerbesteuer"
+    priority: 10
+    conditions:
+      - field: counterparty
+        operator: contains
+        value: "finanzamt"
+      - field: amount
+        operator: lt
+        value: 0
+    conditions_any:
+      - field: description
+        operator: contains
+        value: "gewerbesteuer"
+    category: business_expense
+    subcategory: gewerbesteuer
+    confidence: 0.95
+    notes: "Freibetrag 24.500 EUR - bei Kleinunternehmer selten relevant"
+
+  - id: tax_est_vorauszahlung
+    name: "ESt-Vorauszahlung"
+    priority: 10
+    conditions:
+      - field: counterparty
+        operator: contains
+        value: "finanzamt"
+      - field: amount
+        operator: lt
+        value: 0
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(einkommensteuer|est|vorauszahlung)"
+    category: private
+    subcategory: einkommensteuer_vz
+    confidence: 0.95

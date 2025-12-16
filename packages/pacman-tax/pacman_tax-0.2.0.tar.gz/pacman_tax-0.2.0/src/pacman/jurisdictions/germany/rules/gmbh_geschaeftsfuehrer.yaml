@@ -1,0 +1,324 @@
+# PACMAN - GmbH-Geschaeftsfuehrer Kategorisierungsregeln
+# Deutschland - Angestellter GF mit/ohne Beteiligung
+#
+# GmbH-Geschaeftsfuehrer sind steuerlich Angestellte (Anlage N)
+# Bei Beteiligung >= 1%: Zusaetzlich Kapitalertraege (Anlage KAP)
+# Bei Beteiligung >= 25%: Sozialversicherungsfreiheit pruefen
+
+version: "1.0"
+profile: gmbh_geschaeftsfuehrer
+
+metadata:
+  description: "GmbH/UG Geschaeftsfuehrer"
+  applicable_forms:
+    - "Anlage N (Nichtselbstaendige Arbeit)"
+    - "Anlage KAP (bei Beteiligung/Ausschuettungen)"
+    - "Anlage G (bei weiterer selbstaendiger Taetigkeit)"
+  config_fields:
+    - gmbh_name: "Name der GmbH/UG"
+    - beteiligung_prozent: "Beteiligung in Prozent"
+    - geschaeftsfuehrer_gehalt: "Monatliches GF-Gehalt"
+
+rules:
+  # === GEHALT ===
+
+  - id: income_gf_gehalt
+    name: "GF-Gehalt"
+    priority: 5
+    conditions:
+      - field: counterparty
+        operator: in_list
+        value: "$config.gmbh_name"
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(gehalt|lohn|verguetung|bezuege)"
+    category: employment_income
+    subcategory: gf_gehalt
+    confidence: 1.0
+    notes: "Anlage N - Einkuenfte aus nichtselbstaendiger Arbeit"
+
+  - id: income_gf_bonus
+    name: "GF-Bonus/Tantieme"
+    priority: 5
+    conditions:
+      - field: counterparty
+        operator: in_list
+        value: "$config.gmbh_name"
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(bonus|tantieme|praemie|gratifikation)"
+    category: employment_income
+    subcategory: gf_bonus
+    confidence: 1.0
+
+  # === AUSSCHUETTUNGEN ===
+
+  - id: income_dividende
+    name: "Gewinnausschuettung/Dividende"
+    priority: 5
+    conditions:
+      - field: counterparty
+        operator: in_list
+        value: "$config.gmbh_name"
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(ausschuettung|dividende|gewinnanteil|kapitalertrag)"
+    category: capital_income
+    subcategory: dividende
+    confidence: 1.0
+    notes: "Anlage KAP - Kapitalertragsteuer 25% + Soli"
+
+  # === DARLEHEN AN GMBH ===
+
+  - id: loan_to_gmbh
+    name: "Darlehen an GmbH"
+    priority: 10
+    conditions:
+      - field: counterparty
+        operator: in_list
+        value: "$config.gmbh_name"
+      - field: amount
+        operator: lt
+        value: 0
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(darlehen|kredit|gesellschafterdarlehen)"
+    category: passthrough
+    subcategory: darlehen_gmbh
+    confidence: 0.9
+    notes: "Gesellschafterdarlehen - Rueckzahlung erwartet"
+
+  - id: loan_repayment_from_gmbh
+    name: "Darlehensrueckzahlung von GmbH"
+    priority: 10
+    conditions:
+      - field: counterparty
+        operator: in_list
+        value: "$config.gmbh_name"
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(darlehen|tilgung|rueckzahlung)"
+    category: passthrough
+    subcategory: darlehen_rueckzahlung
+    confidence: 0.9
+
+  - id: loan_interest_from_gmbh
+    name: "Darlehenszinsen von GmbH"
+    priority: 10
+    conditions:
+      - field: counterparty
+        operator: in_list
+        value: "$config.gmbh_name"
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(zinsen|zins)"
+    category: capital_income
+    subcategory: zinsen
+    confidence: 0.95
+    notes: "Anlage KAP - Zinseinkuenfte"
+
+  # === WERBUNGSKOSTEN (Anlage N) ===
+
+  - id: expense_arbeitsmittel
+    name: "Arbeitsmittel"
+    priority: 20
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(laptop|computer|monitor|buero|schreibtisch)"
+      - field: counterparty
+        operator: contains
+        value: "apple"
+      - field: counterparty
+        operator: contains
+        value: "mediamarkt"
+    category: employment_expense
+    subcategory: arbeitsmittel
+    confidence: 0.7
+    notes: "Werbungskosten Anlage N"
+
+  - id: expense_fachliteratur
+    name: "Fachliteratur"
+    priority: 25
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(fachbuch|fachliteratur|management|fuehrung)"
+    category: employment_expense
+    subcategory: fachliteratur
+    confidence: 0.8
+
+  - id: expense_fortbildung_gf
+    name: "Fortbildung als GF"
+    priority: 20
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(seminar|fortbildung|workshop|coaching|mba)"
+      - field: counterparty
+        operator: contains
+        value: "ihk"
+      - field: counterparty
+        operator: contains
+        value: "haufe"
+    category: employment_expense
+    subcategory: fortbildung
+    confidence: 0.85
+
+  - id: expense_pendlerpauschale
+    name: "Fahrtkosten Wohnung-Arbeit"
+    priority: 30
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(tankstelle|benzin|diesel|tanken)"
+      - field: counterparty
+        operator: regex
+        value: "(shell|aral|esso|total|jet)"
+    category: employment_expense
+    subcategory: pendlerpauschale
+    confidence: 0.6
+    notes: "Pendlerpauschale 0,30 EUR/km (ab 21. km: 0,38 EUR)"
+
+  - id: expense_dienstreise
+    name: "Dienstreise"
+    priority: 20
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(dienstreise|geschaeftsreise|flug|hotel|bahn)"
+      - field: counterparty
+        operator: contains
+        value: "deutsche bahn"
+      - field: counterparty
+        operator: contains
+        value: "lufthansa"
+      - field: counterparty
+        operator: contains
+        value: "booking"
+    category: employment_expense
+    subcategory: reisekosten
+    confidence: 0.7
+
+  # === PRIVATE VERMOEGENSBILDUNG ===
+
+  - id: private_depot
+    name: "Wertpapierdepot"
+    priority: 25
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(trade republic|scalable|comdirect|dkb|flatex|degiro)"
+      - field: description
+        operator: regex
+        value: "(depot|wertpapier|aktien|etf|fonds)"
+    category: capital_income
+    subcategory: depot
+    confidence: 0.8
+    notes: "Bei Verkaeufen: Anlage KAP"
+
+  # === VERSICHERUNGEN ===
+
+  - id: expense_d_o_versicherung
+    name: "D&O Versicherung"
+    priority: 20
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(d&o|directors|officers|organ|managerhaftpflicht)"
+    category: employment_expense
+    subcategory: d_o_versicherung
+    confidence: 1.0
+    notes: "Directors & Officers Haftpflicht"
+
+  - id: expense_rechtsschutz_beruflich
+    name: "Berufsrechtsschutz"
+    priority: 25
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(rechtsschutz.*beruf|arbeitsrechtsschutz)"
+    category: employment_expense
+    subcategory: rechtsschutz
+    confidence: 0.9
+
+  # === STEUER-ZAHLUNGEN ===
+
+  - id: tax_lohnsteuer
+    name: "Lohnsteuer (vom Gehalt)"
+    priority: 10
+    conditions:
+      - field: counterparty
+        operator: contains
+        value: "finanzamt"
+    conditions_any:
+      - field: description
+        operator: contains
+        value: "lohnsteuer"
+    category: private
+    subcategory: lohnsteuer
+    confidence: 1.0
+    notes: "Bereits vom Gehalt einbehalten"
+
+  - id: tax_kapitalertragsteuer
+    name: "Kapitalertragsteuer"
+    priority: 10
+    conditions:
+      - field: counterparty
+        operator: contains
+        value: "finanzamt"
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(kapitalertrag|abgeltung)"
+    category: private
+    subcategory: kapitalertragsteuer
+    confidence: 1.0
+
+  # === HOMEOFFICE-PAUSCHALE ===
+
+  - id: expense_homeoffice_pauschale
+    name: "Homeoffice-Pauschale"
+    priority: 15
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(?i)(homeoffice|home.?office|arbeitszimmer|heimarbeitsplatz)"
+    category: employment_expense
+    subcategory: homeoffice_pauschale
+    confidence: 0.85
+    notes: "6 EUR/Tag, max 1.260 EUR/Jahr - Werbungskosten Anlage N"
+
+  # === PRIVAT ===
+
+  - id: private_standard
+    name: "Private Ausgaben"
+    priority: 50
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(rewe|edeka|aldi|lidl|dm|rossmann)"
+    category: private
+    subcategory: lebenshaltung
+    confidence: 1.0

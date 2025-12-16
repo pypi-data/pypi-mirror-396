@@ -1,0 +1,449 @@
+# PACMAN - Heilberufler Kategorisierungsregeln
+# Deutschland - Anlage S (Freiberufler)
+#
+# Aerzte, Zahnaerzte, Therapeuten, Heilpraktiker, Psychologen
+# Freiberuflich nach §18 EStG
+#
+# Besonderheiten:
+# - UMSATZSTEUERBEFREIT nach §4 Nr. 14 UStG!
+# - Berufsstaendisches Versorgungswerk statt GRV
+# - Kammerbeitraege (Aerztekammer, Psychotherapeutenkammer, etc.)
+# - KV-Abrechnungen
+
+version: "1.0"
+profile: heilberufler
+extends: freiberufler
+
+metadata:
+  description: "Heilberufler (Arzt, Therapeut, Heilpraktiker)"
+  applicable_forms:
+    - "Anlage S"
+    - "EUeR"
+  besonderheiten:
+    - "Umsatzsteuerbefreit §4 Nr. 14 UStG"
+    - "Kein Vorsteuerabzug!"
+    - "Versorgungswerk statt GRV"
+  branches:
+    - "Arzt/Aerztin"
+    - "Zahnarzt"
+    - "Psychotherapeut"
+    - "Physiotherapeut"
+    - "Heilpraktiker"
+    - "Logopaedie"
+    - "Ergotherapie"
+
+rules:
+  # === EINNAHMEN ===
+
+  - id: income_kv_abrechnung
+    name: "KV-Abrechnung"
+    priority: 5
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(kv|kassenaerztliche.*vereinigung)"
+      - field: description
+        operator: regex
+        value: "(kv.*abrechnung|honorar.*kv)"
+    category: business_income
+    subcategory: kv_abrechnung
+    confidence: 1.0
+    notes: "Umsatzsteuerfrei §4 Nr. 14 UStG"
+
+  - id: income_privatpatient
+    name: "Privatpatient"
+    priority: 8
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(privat.*patient|goz|goae|privatrechnung)"
+      - field: counterparty
+        operator: in_list
+        value: "$config.patienten"
+    category: business_income
+    subcategory: privatpatienten
+    confidence: 0.9
+    notes: "Umsatzsteuerfrei §4 Nr. 14 UStG"
+
+  - id: income_igel
+    name: "IGeL-Leistungen"
+    priority: 8
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(igel|selbstzahler|wunschleistung)"
+    category: business_income
+    subcategory: igel
+    confidence: 0.85
+    notes: "Umsatzsteuerfrei wenn Heilbehandlung"
+
+  - id: income_pvs
+    name: "PVS-Abrechnung"
+    priority: 5
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(pvs|privatarzt.*service|abrechnungsstelle)"
+    category: business_income
+    subcategory: pvs_abrechnung
+    confidence: 1.0
+
+  - id: income_krankenkasse_heilmittel
+    name: "Krankenkassen-Abrechnung (Heilmittel)"
+    priority: 5
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(aok|tk|barmer|dak|bkk|ikk|knappschaft)"
+      - field: description
+        operator: regex
+        value: "(heilmittel|physio.*abrechnung|ergo.*abrechnung)"
+    category: business_income
+    subcategory: heilmittel_abrechnung
+    confidence: 0.95
+
+  - id: income_gutachten
+    name: "Gutachten"
+    priority: 10
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(gutachten|begutachtung|expertise)"
+    category: business_income
+    subcategory: gutachten
+    confidence: 0.9
+
+  # === AUSGABEN - PRAXIS ===
+
+  - id: expense_praxismiete
+    name: "Praxismiete"
+    priority: 10
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(praxis.*miete|miete.*praxis)"
+    category: business_expense
+    subcategory: praxismiete
+    confidence: 0.95
+
+  - id: expense_praxiseinrichtung
+    name: "Praxiseinrichtung"
+    priority: 15
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(behandlungsliege|praxis.*moebel|wartezimmer)"
+    category: business_expense
+    subcategory: praxiseinrichtung
+    confidence: 0.9
+
+  # === AUSGABEN - MEDIZINISCHES ===
+
+  - id: expense_medizinbedarf
+    name: "Medizinischer Bedarf"
+    priority: 15
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(medizin.*bedarf|sanitas|henry.*schein|dental)"
+      - field: description
+        operator: regex
+        value: "(verband|spritze|handschuh|desinfektion)"
+    category: business_expense
+    subcategory: medizinbedarf
+    confidence: 0.95
+    notes: "Kein Vorsteuerabzug!"
+
+  - id: expense_medizingeraete
+    name: "Medizinische Geraete"
+    priority: 15
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(ultraschall|ekg|roentgen|labor.*geraet)"
+    category: business_expense
+    subcategory: medizingeraete
+    confidence: 0.9
+    notes: "AfA beachten, kein Vorsteuerabzug!"
+
+  - id: expense_labor
+    name: "Laborkosten"
+    priority: 15
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "labor"
+      - field: description
+        operator: regex
+        value: "(labor.*untersuchung|blutbild)"
+    category: business_expense
+    subcategory: labor
+    confidence: 0.95
+
+  - id: expense_dental_labor
+    name: "Zahntechnisches Labor"
+    priority: 15
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(dental.*labor|zahntechnik)"
+      - field: description
+        operator: regex
+        value: "(zahntechnik|krone|bruecke|prothese)"
+    category: business_expense
+    subcategory: zahntechnik
+    confidence: 0.95
+
+  # === AUSGABEN - SOFTWARE ===
+
+  - id: expense_praxissoftware
+    name: "Praxisverwaltungssoftware"
+    priority: 18
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(medatixx|turbomed|medistar|tomedo|samedi)"
+      - field: counterparty
+        operator: regex
+        value: "(doctolib|jameda)"
+      - field: description
+        operator: regex
+        value: "(praxis.*software|pvs|arztsoftware)"
+    category: business_expense
+    subcategory: praxissoftware
+    confidence: 1.0
+
+  - id: expense_terminbuchung
+    name: "Online-Terminbuchung"
+    priority: 18
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(doctolib|samedi|doctena)"
+    category: business_expense
+    subcategory: terminbuchung
+    confidence: 1.0
+
+  # === AUSGABEN - PERSONAL ===
+
+  - id: expense_mfa_gehalt
+    name: "MFA-Gehalt"
+    priority: 10
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(mfa|medizinische.*fachangestellte|arzthelferin)"
+    category: business_expense
+    subcategory: mfa_gehalt
+    confidence: 0.9
+
+  - id: expense_vertretung
+    name: "Praxisvertretung"
+    priority: 15
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(vertretung|urlaubs.*vertretung)"
+    category: business_expense
+    subcategory: vertretung
+    confidence: 0.85
+
+  # === AUSGABEN - VERSICHERUNGEN ===
+
+  - id: expense_versorgungswerk
+    name: "Versorgungswerk"
+    priority: 10
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(versorgungswerk|aerztevs|zahnaerzetvs)"
+      - field: description
+        operator: contains
+        value: "versorgungswerk"
+    category: deductible
+    subcategory: versorgungswerk
+    confidence: 1.0
+    notes: "Altersvorsorge statt GRV"
+
+  - id: expense_berufshaftpflicht_arzt
+    name: "Berufshaftpflicht"
+    priority: 15
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(berufshaftpflicht|arzthaftpflicht|praxishaftpflicht)"
+    category: deductible
+    subcategory: berufshaftpflicht
+    confidence: 1.0
+
+  - id: expense_praxisausfallversicherung
+    name: "Praxisausfallversicherung"
+    priority: 18
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(praxisausfall|betriebsunterbrechung)"
+    category: deductible
+    subcategory: praxisausfall
+    confidence: 1.0
+
+  # === AUSGABEN - KAMMERN/VERBAENDE ===
+
+  - id: expense_aerztekammer
+    name: "Aerztekammer-Beitrag"
+    priority: 18
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(aerztekammer|landesaerztekammer)"
+    category: business_expense
+    subcategory: aerztekammer
+    confidence: 1.0
+
+  - id: expense_zahnaerztekammer
+    name: "Zahnaerztekammer-Beitrag"
+    priority: 18
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(zahnaerztekammer|lzk)"
+    category: business_expense
+    subcategory: zahnaerztekammer
+    confidence: 1.0
+
+  - id: expense_psychotherapeutenkammer
+    name: "Psychotherapeutenkammer-Beitrag"
+    priority: 18
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "psychotherapeutenkammer"
+    category: business_expense
+    subcategory: psychotherapeutenkammer
+    confidence: 1.0
+
+  - id: expense_heilpraktiker_verband
+    name: "Heilpraktikerverband"
+    priority: 18
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(fachverband.*heilpraktiker|bdh|vdh)"
+    category: business_expense
+    subcategory: heilpraktikerverband
+    confidence: 1.0
+
+  # === AUSGABEN - FORTBILDUNG ===
+
+  - id: expense_cme
+    name: "CME-Fortbildung"
+    priority: 18
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(cme|fortbildungspunkte|fobipunkte)"
+      - field: counterparty
+        operator: regex
+        value: "(aekno|baek|dgim)"
+    category: business_expense
+    subcategory: cme_fortbildung
+    confidence: 1.0
+    notes: "Pflichtfortbildung fuer Aerzte"
+
+  - id: expense_kongress
+    name: "Kongresse und Tagungen"
+    priority: 18
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(kongress|tagung|symposium|jahrestagung)"
+    category: business_expense
+    subcategory: kongresse
+    confidence: 0.9
+
+  - id: expense_fachliteratur_medizin
+    name: "Medizinische Fachliteratur"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(thieme|springer|elsevier|amboss)"
+      - field: description
+        operator: regex
+        value: "(fachbuch|journal|fachliteratur)"
+    category: business_expense
+    subcategory: fachliteratur
+    confidence: 0.9
+
+  # === AUSGABEN - SONSTIGES ===
+
+  - id: expense_hygiene
+    name: "Hygiene und Reinigung"
+    priority: 20
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(reinigung.*praxis|hygiene|sterilisation)"
+    category: business_expense
+    subcategory: hygiene
+    confidence: 0.9
+
+  - id: expense_entsorgung
+    name: "Medizinische Entsorgung"
+    priority: 20
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(entsorgung|kontaminiert|sondermuell)"
+    category: business_expense
+    subcategory: entsorgung
+    confidence: 0.95
+
+  - id: expense_qm
+    name: "Qualitaetsmanagement"
+    priority: 20
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(qm|qualitaetsmanagement|zertifizierung)"
+    category: business_expense
+    subcategory: qualitaetsmanagement
+    confidence: 0.9
+
+  # === PRIVAT (USt-befreit = kein Vorsteuerabzug) ===
+
+  - id: info_kein_vorsteuerabzug
+    name: "Hinweis: Kein Vorsteuerabzug"
+    priority: 1
+    conditions:
+      - field: description
+        operator: regex
+        value: "(vorsteuer|mwst|mehrwertsteuer)"
+    category: uncategorized
+    subcategory: vorsteuer_hinweis
+    confidence: 0.5
+    notes: "Als Heilberufler (§4 Nr. 14 UStG) kein Vorsteuerabzug!"

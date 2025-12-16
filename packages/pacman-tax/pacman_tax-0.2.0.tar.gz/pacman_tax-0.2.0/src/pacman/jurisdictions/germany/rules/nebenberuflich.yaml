@@ -1,0 +1,760 @@
+# PACMAN - Nebenberuflich Selbstaendig Kategorisierungsregeln
+# Deutschland - Angestellt + nebenberufliche Selbstaendigkeit
+#
+# Kombination aus:
+# - Anlage N (Hauptberuf als Angestellter)
+# - Anlage S oder G (Nebenberuf selbstaendig)
+# - EUeR fuer die Selbstaendigkeit
+#
+# Besonderheiten:
+# - Uebungsleiterpauschale: 3.000 EUR/Jahr steuerfrei (§3 Nr. 26 EStG)
+# - Ehrenamtspauschale: 840 EUR/Jahr steuerfrei (§3 Nr. 26a EStG)
+
+version: "2.0"
+profile: nebenberuflich
+
+metadata:
+  description: "Nebenberuflich Selbstaendig (Angestellt + Selbstaendig)"
+  applicable_forms:
+    - "Anlage N (Hauptberuf)"
+    - "Anlage S oder G (Nebenberuf)"
+    - "EUeR (fuer Nebenberuf)"
+  config_fields:
+    - arbeitgeber: "Name des Hauptarbeitgebers"
+    - nebenberuf_art: "Art der Nebentaetigkeit (freiberuflich/gewerblich)"
+    - uebungsleiter: "Uebungsleitertaetigkeit (ja/nein)"
+    - ehrenamt: "Ehrenamtliche Taetigkeit (ja/nein)"
+    - homeoffice_tage: "Anzahl Homeoffice-Tage pro Jahr"
+  pauschalen:
+    uebungsleiter: 3000
+    ehrenamt: 840
+    homeoffice_tag: 6
+    homeoffice_max: 1260
+    arbeitnehmer_pauschbetrag: 1230
+  hinweise:
+    progressionsvorbehalt: |
+      WICHTIG: Bei Kombination aus Anstellung und Selbstaendigkeit
+      greift der Progressionsvorbehalt. Das bedeutet:
+      - Nebenberuf-Einkuenfte erhoehen den Steuersatz fuer das Hauptgehalt
+      - Oft fuehrt dies zu Steuernachzahlungen
+      - Einkommensteuer-Vorauszahlungen pruefen!
+
+rules:
+  # === HAUPTBERUF (ANGESTELLT) ===
+
+  - id: income_gehalt_hauptberuf
+    name: "Gehalt Hauptberuf"
+    priority: 5
+    conditions:
+      - field: counterparty
+        operator: in_list
+        value: "$config.arbeitgeber"
+      - field: amount
+        operator: gt
+        value: 0
+    category: employment_income
+    subcategory: gehalt_hauptberuf
+    confidence: 1.0
+    notes: "Anlage N"
+
+  # === NEBENBERUF (SELBSTAENDIG) ===
+
+  - id: income_nebenberuf
+    name: "Einnahmen Nebenberuf"
+    priority: 10
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: in_list
+        value: "$config.clients"
+      - field: description
+        operator: regex
+        value: "(honorar|verguetung|rechnung)"
+    category: business_income
+    subcategory: nebenberuf_einnahmen
+    confidence: 0.9
+    notes: "Anlage S/G + EUeR"
+
+  # === UEBUNGSLEITERPAUSCHALE ===
+
+  - id: income_uebungsleiter
+    name: "Uebungsleitertaetigkeit"
+    priority: 8
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(volkshochschule|vhs|sportverein|musikschule|gemeinde)"
+      - field: description
+        operator: regex
+        value: "(uebungsleiter|trainer|dozent|kursleiter|ausbilder)"
+    category: business_income
+    subcategory: uebungsleiterpauschale
+    confidence: 0.95
+    notes: "Bis 3.000 EUR/Jahr steuerfrei (§3 Nr. 26 EStG)"
+
+  # === EHRENAMTSPAUSCHALE ===
+
+  - id: income_ehrenamt
+    name: "Ehrenamtspauschale"
+    priority: 8
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(verein|e\\.v\\.|gemeinnuetzig|stiftung)"
+      - field: description
+        operator: regex
+        value: "(ehrenamt|aufwandsentschaedigung|vereinsarbeit)"
+    category: business_income
+    subcategory: ehrenamtspauschale
+    confidence: 0.9
+    notes: "Bis 840 EUR/Jahr steuerfrei (§3 Nr. 26a EStG)"
+
+  # === WERBUNGSKOSTEN HAUPTBERUF ===
+
+  - id: expense_pendler
+    name: "Fahrtkosten Hauptberuf"
+    priority: 30
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(jobticket|monatsticket|bahncard)"
+      - field: counterparty
+        operator: contains
+        value: "deutsche bahn"
+      - field: counterparty
+        operator: regex
+        value: "(bvg|mvv|hvv|kvb|vrs|rmv)"
+    category: employment_expense
+    subcategory: fahrtkosten
+    confidence: 0.85
+    notes: "Werbungskosten Anlage N"
+
+  - id: expense_arbeitsmittel_hauptberuf
+    name: "Arbeitsmittel Hauptberuf"
+    priority: 30
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(arbeitskleidung|sicherheitsschuhe|kittel)"
+    category: employment_expense
+    subcategory: arbeitsmittel
+    confidence: 0.8
+
+  # === BETRIEBSAUSGABEN NEBENBERUF ===
+
+  - id: expense_nebenberuf_software
+    name: "Software Nebenberuf"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(github|adobe|canva|notion)"
+    category: business_expense
+    subcategory: software
+    confidence: 0.8
+    notes: "EUeR - nur anteilig wenn auch privat genutzt"
+
+  - id: expense_nebenberuf_material
+    name: "Material Nebenberuf"
+    priority: 25
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(kursmaterial|unterlagen|handout)"
+    category: business_expense
+    subcategory: material
+    confidence: 0.75
+
+  - id: expense_nebenberuf_fortbildung
+    name: "Fortbildung Nebenberuf"
+    priority: 20
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(fortbildung|zertifikat|weiterbildung)"
+      - field: counterparty
+        operator: contains
+        value: "udemy"
+      - field: counterparty
+        operator: contains
+        value: "coursera"
+    category: business_expense
+    subcategory: fortbildung
+    confidence: 0.8
+
+  - id: expense_nebenberuf_fahrt
+    name: "Fahrtkosten Nebenberuf"
+    priority: 25
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(fahrtkosten.*kurs|anfahrt.*kunde)"
+    category: business_expense
+    subcategory: fahrtkosten_nebenberuf
+    confidence: 0.7
+    notes: "0,30 EUR/km oder tatsaechliche Kosten"
+
+  # === GEMISCHTE NUTZUNG ===
+
+  - id: mixed_homeoffice
+    name: "Homeoffice (gemischt)"
+    priority: 35
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(homeoffice|arbeitszimmer)"
+    category: business_expense
+    subcategory: homeoffice
+    split:
+      business: 50
+      private: 50
+    confidence: 0.6
+    notes: "Aufteilung zwischen Haupt- und Nebenberuf beachten"
+
+  - id: mixed_internet_telefon
+    name: "Internet/Telefon (gemischt)"
+    priority: 35
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(telekom|vodafone|o2|1&1)"
+    category: business_expense
+    subcategory: telekommunikation
+    split:
+      business: 30
+      private: 70
+    confidence: 0.7
+    notes: "Bei Nebenberuf meist geringerer Anteil"
+
+  # === PRIVAT ===
+
+  - id: private_standard
+    name: "Private Ausgaben"
+    priority: 50
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(rewe|edeka|aldi|lidl|netflix|spotify)"
+    category: private
+    subcategory: lebenshaltung
+    confidence: 1.0
+
+  # === STEUERN ===
+
+  - id: tax_einkommensteuer_nachzahlung
+    name: "Einkommensteuer-Nachzahlung"
+    priority: 10
+    conditions:
+      - field: counterparty
+        operator: contains
+        value: "finanzamt"
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(einkommensteuer|nachzahlung)"
+    category: private
+    subcategory: einkommensteuer
+    confidence: 1.0
+    notes: "Haeufig bei Nebenberuf: Nachzahlung wegen Progressionsvorbehalt"
+
+  # === FREELANCE-PLATTFORMEN (NEBENBERUF) ===
+
+  - id: income_upwork
+    name: "Upwork Einnahmen"
+    priority: 8
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "upwork"
+      - field: description
+        operator: contains
+        value: "upwork"
+    category: business_income
+    subcategory: plattform_einnahmen
+    confidence: 0.95
+    notes: "Nebenberuf - Freelance-Plattform"
+
+  - id: income_fiverr
+    name: "Fiverr Einnahmen"
+    priority: 8
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "fiverr"
+      - field: description
+        operator: contains
+        value: "fiverr"
+    category: business_income
+    subcategory: plattform_einnahmen
+    confidence: 0.95
+
+  - id: income_malt
+    name: "Malt Einnahmen"
+    priority: 8
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "malt"
+    category: business_income
+    subcategory: plattform_einnahmen
+    confidence: 0.95
+
+  - id: income_toptal
+    name: "Toptal Einnahmen"
+    priority: 8
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+      - field: counterparty
+        operator: contains
+        value: "toptal"
+    category: business_income
+    subcategory: plattform_einnahmen
+    confidence: 0.95
+
+  - id: income_freelancermap
+    name: "Freelancermap Einnahmen"
+    priority: 8
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "freelancermap"
+      - field: counterparty
+        operator: contains
+        value: "gulp"
+    category: business_income
+    subcategory: vermittlung
+    confidence: 0.9
+
+  # === HAUPTBERUF ERWEITERUNGEN ===
+
+  - id: income_bonus_hauptberuf
+    name: "Bonus/Weihnachtsgeld"
+    priority: 6
+    conditions:
+      - field: counterparty
+        operator: in_list
+        value: "$config.arbeitgeber"
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(bonus|weihnachtsgeld|urlaubsgeld|praemie|sonderzahlung)"
+    category: employment_income
+    subcategory: bonus
+    confidence: 0.95
+    notes: "Anlage N - Sonderzahlungen"
+
+  - id: income_13_gehalt
+    name: "13. Gehalt"
+    priority: 6
+    conditions:
+      - field: counterparty
+        operator: in_list
+        value: "$config.arbeitgeber"
+      - field: amount
+        operator: gt
+        value: 0
+      - field: description
+        operator: regex
+        value: "(13\\. gehalt|jahressonderzahlung)"
+    category: employment_income
+    subcategory: gehalt_hauptberuf
+    confidence: 0.95
+
+  # === HOMEOFFICE-PAUSCHALE ===
+
+  - id: expense_homeoffice_pauschale
+    name: "Homeoffice-Pauschale"
+    priority: 15
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(homeoffice|home.?office|arbeitszimmer)"
+    category: deductible
+    subcategory: homeoffice_pauschale
+    confidence: 0.8
+    notes: "6 EUR/Tag, max 1.260 EUR/Jahr (210 Tage) - §4 Abs. 5 Nr. 6c EStG"
+
+  # === WERBUNGSKOSTEN HAUPTBERUF ERWEITERUNGEN ===
+
+  - id: expense_gewerkschaft
+    name: "Gewerkschaftsbeitrag"
+    priority: 25
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(ver\\.?di|ig metall|igm|gew|dgb)"
+      - field: description
+        operator: contains
+        value: "gewerkschaft"
+    category: employment_expense
+    subcategory: gewerkschaft
+    confidence: 0.95
+    notes: "Werbungskosten Anlage N"
+
+  - id: expense_berufsverband
+    name: "Berufsverband"
+    priority: 25
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(berufsverband|fachverband|kammer)"
+    category: employment_expense
+    subcategory: berufsverband
+    confidence: 0.85
+
+  - id: expense_fachliteratur
+    name: "Fachliteratur"
+    priority: 30
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(thalia|hugendubel|amazon.*buch)"
+      - field: description
+        operator: regex
+        value: "(fachbuch|fachliteratur|lehrbuch)"
+    category: employment_expense
+    subcategory: fachliteratur
+    confidence: 0.7
+    notes: "Nur berufsbezogene Literatur"
+
+  - id: expense_bewerbungskosten
+    name: "Bewerbungskosten"
+    priority: 30
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(bewerbung|lebenslauf|foto.*bewerbung)"
+    category: employment_expense
+    subcategory: bewerbung
+    confidence: 0.8
+
+  # === BETRIEBSAUSGABEN NEBENBERUF ERWEITERUNGEN ===
+
+  - id: expense_coworking
+    name: "Coworking Space"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(wework|spaces|mindspace|design offices|rent24)"
+      - field: description
+        operator: contains
+        value: "coworking"
+    category: business_expense
+    subcategory: miete_arbeitsplatz
+    confidence: 0.9
+
+  - id: expense_domain_hosting
+    name: "Domain & Hosting"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(strato|ionos|hetzner|all-inkl|hosteurope|namecheap)"
+    category: business_expense
+    subcategory: hosting
+    confidence: 0.9
+
+  - id: expense_cloud_tools
+    name: "Cloud & SaaS Tools"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(google workspace|microsoft 365|dropbox|zoom)"
+      - field: description
+        operator: regex
+        value: "(cloud|saas|subscription)"
+    category: business_expense
+    subcategory: cloud_software
+    confidence: 0.85
+
+  - id: expense_marketing
+    name: "Marketing & Werbung"
+    priority: 25
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(facebook ads|google ads|linkedin)"
+      - field: description
+        operator: regex
+        value: "(werbung|marketing|ads|anzeige)"
+    category: business_expense
+    subcategory: marketing
+    confidence: 0.85
+
+  - id: expense_buchhaltung
+    name: "Buchhaltungssoftware"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(lexoffice|sevdesk|debitoor|fastbill|papierkram)"
+    category: business_expense
+    subcategory: buchhaltung
+    confidence: 0.95
+
+  - id: expense_steuerberater
+    name: "Steuerberatung"
+    priority: 15
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(steuerberater|stb |steuerkanzlei)"
+      - field: description
+        operator: contains
+        value: "steuerberatung"
+    category: business_expense
+    subcategory: steuerberatung
+    confidence: 0.95
+    notes: "Nur anteilig fuer Nebenberuf absetzbar"
+
+  # === VERSICHERUNGEN ===
+
+  - id: expense_berufshaftpflicht
+    name: "Berufshaftpflicht"
+    priority: 20
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(berufshaftpflicht|vermogensschaden)"
+      - field: counterparty
+        operator: regex
+        value: "(hiscox|exali|markel)"
+    category: business_expense
+    subcategory: versicherung
+    confidence: 0.9
+
+  # === MINI-JOB ZUSAETZLICH ===
+
+  - id: income_minijob
+    name: "Mini-Job Einnahmen"
+    priority: 7
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+      - field: amount
+        operator: lte
+        value: 538
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(minijob|450.*euro|538.*euro|geringfuegig)"
+    category: employment_income
+    subcategory: minijob
+    confidence: 0.8
+    notes: "Bis 538 EUR/Monat (2024) - pauschal versteuert oder steuerfrei"
+
+  # === UST-VORAUSZAHLUNG ===
+
+  - id: tax_ust_vorauszahlung
+    name: "USt-Vorauszahlung"
+    priority: 10
+    conditions:
+      - field: counterparty
+        operator: contains
+        value: "finanzamt"
+      - field: amount
+        operator: lt
+        value: 0
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(umsatzsteuer|ust|mwst)"
+    category: business_expense
+    subcategory: umsatzsteuer
+    confidence: 0.95
+    notes: "Nur relevant wenn kein Kleinunternehmer"
+
+  - id: tax_est_vorauszahlung
+    name: "ESt-Vorauszahlung"
+    priority: 10
+    conditions:
+      - field: counterparty
+        operator: contains
+        value: "finanzamt"
+      - field: amount
+        operator: lt
+        value: 0
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(einkommensteuer|est|vorauszahlung)"
+    category: private
+    subcategory: einkommensteuer_vz
+    confidence: 0.95
+    notes: "Bei Nebenberuf oft erforderlich wegen Progressionsvorbehalt"
+
+  # === ZAHLUNGSDIENSTLEISTER ===
+
+  - id: income_paypal
+    name: "PayPal Einnahmen"
+    priority: 8
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "paypal"
+      - field: description
+        operator: regex
+        value: "(paypal|pp\\*)"
+    category: business_income
+    subcategory: zahlungseingang
+    confidence: 0.7
+    notes: "Nebenberuf - PayPal-Zahlung (manuell pruefen ob geschaeftlich)"
+
+  - id: income_stripe
+    name: "Stripe Einnahmen"
+    priority: 8
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+      - field: counterparty
+        operator: contains
+        value: "stripe"
+    category: business_income
+    subcategory: zahlungseingang
+    confidence: 0.85
+    notes: "Online-Zahlungen ueber Stripe"
+
+  # === REISEKOSTEN NEBENBERUF ===
+
+  - id: expense_reise_bahn
+    name: "Bahnfahrten Nebenberuf"
+    priority: 25
+    conditions:
+      - field: amount
+        operator: lt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "deutsche bahn"
+      - field: counterparty
+        operator: contains
+        value: "db vertrieb"
+      - field: description
+        operator: regex
+        value: "(ice|ic |ec |dienstreise)"
+    category: business_expense
+    subcategory: reisekosten
+    confidence: 0.75
+    notes: "Geschaeftsreisen Nebenberuf - Belege aufbewahren"
+
+  - id: expense_reise_flug
+    name: "Flugreisen Nebenberuf"
+    priority: 25
+    conditions:
+      - field: amount
+        operator: lt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(lufthansa|eurowings|ryanair|easyjet)"
+      - field: description
+        operator: regex
+        value: "(geschaeftsreise|dienstreise|kunde)"
+    category: business_expense
+    subcategory: reisekosten
+    confidence: 0.6
+    notes: "Nur geschaeftlich veranlasste Fluege - Nachweis erforderlich"
+
+  # === HARDWARE NEBENBERUF ===
+
+  - id: expense_hardware
+    name: "Hardware/IT-Ausstattung"
+    priority: 20
+    conditions:
+      - field: amount
+        operator: lt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(apple|dell|lenovo|mediamarkt|saturn|cyberport)"
+      - field: description
+        operator: regex
+        value: "(laptop|notebook|monitor|tastatur|maus|webcam)"
+    category: business_expense
+    subcategory: arbeitsmittel
+    split:
+      business: 50
+      private: 50
+    confidence: 0.7
+    notes: "Bei gemischter Nutzung nur anteilig - GWG bis 800 EUR netto sofort absetzbar"
+
+  # === WEITERE LERNPLATTFORMEN ===
+
+  - id: expense_lernplattformen
+    name: "Online-Lernplattformen"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(linkedin learning|skillshare|masterclass|pluralsight|egghead)"
+      - field: description
+        operator: regex
+        value: "(online.?kurs|e.?learning|weiterbildung)"
+    category: business_expense
+    subcategory: fortbildung
+    confidence: 0.8
+    notes: "Berufliche Weiterbildung fuer Nebenberuf"
+
+  # === KONTOGEBUEHREN GESCHAEFTSKONTO ===
+
+  - id: expense_geschaeftskonto
+    name: "Geschaeftskonto Gebuehren"
+    priority: 30
+    conditions:
+      - field: amount
+        operator: lt
+        value: 0
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(kontofuehrung|kontogebuehr|geschaeftskonto)"
+      - field: counterparty
+        operator: regex
+        value: "(n26 business|holvi|kontist|fidor|penta|qonto)"
+    category: business_expense
+    subcategory: kontogebuehren
+    confidence: 0.9
+    notes: "Separates Geschaeftskonto empfohlen"

@@ -1,0 +1,94 @@
+[project]
+name = "pacman-tax"
+version = "0.2.0"
+description = "PACMAN - Privacy-first Automated Calculation & Management of Numbers. Local-first tax automation for freelancers and landlords."
+readme = "README.md"
+license = "AGPL-3.0-or-later"
+requires-python = ">=3.10"
+authors = [
+    { name = "Manu", email = "noiion828@gmail.com" }
+]
+keywords = [
+    "tax",
+    "accounting",
+    "privacy",
+    "local-first",
+    "ELSTER",
+    "EÜR",
+    "Vermietung",
+    "freelancer",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business :: Financial :: Accounting",
+    "Typing :: Typed",
+]
+
+dependencies = [
+    "typer>=0.9.0",
+    "pydantic>=2.0.0",
+    "pyyaml>=6.0",
+    "pandas>=2.0.0",
+    "openpyxl>=3.1.0",
+    "rich>=13.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "hypothesis>=6.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+]
+dashboard = [
+    "streamlit>=1.30.0",
+    "plotly>=5.18.0",
+]
+crypto = [
+    "cryptography>=41.0.0",
+]
+all = [
+    "pacman-tax[dev,dashboard,crypto]",
+]
+
+[project.scripts]
+pacman = "pacman.cli:app"
+
+[project.urls]
+Homepage = "https://github.com/noiion/pacman-tax"
+Documentation = "https://github.com/noiion/pacman-tax#readme"
+Repository = "https://github.com/noiion/pacman-tax"
+Issues = "https://github.com/noiion/pacman-tax/issues"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pacman"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --cov=pacman --cov-report=term-missing"

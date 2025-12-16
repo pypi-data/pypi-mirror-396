@@ -1,0 +1,467 @@
+# PACMAN - Content Creator Kategorisierungsregeln
+# Deutschland - Anlage S (Freiberufler) oder Anlage G (Gewerbe)
+#
+# YouTuber, Influencer, Podcaster, Blogger, Streamer
+# Freiberuflich wenn: kuenstlerische/journalistische Taetigkeit
+# Gewerblich wenn: primaer Werbung/Affiliate/Produktverkauf
+#
+# Typische Einnahmen: AdSense, Sponsoring, Affiliate, Merch, Memberships
+
+version: "1.0"
+profile: content_creator
+extends: freiberufler
+
+metadata:
+  description: "Content Creator (YouTube, Influencer, Podcast, Streaming)"
+  applicable_forms:
+    - "Anlage S (kuenstlerisch/journalistisch)"
+    - "Anlage G (kommerziell)"
+    - "EUeR"
+  platforms:
+    - "YouTube"
+    - "Instagram"
+    - "TikTok"
+    - "Twitch"
+    - "Podcast"
+
+rules:
+  # === EINNAHMEN - PLATTFORMEN ===
+
+  - id: income_adsense
+    name: "Google AdSense (YouTube)"
+    priority: 8
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "google"
+      - field: description
+        operator: regex
+        value: "(adsense|youtube.*partner|creator.*fund)"
+    category: business_income
+    subcategory: adsense
+    confidence: 1.0
+    notes: "YouTube-Partner-Programm Auszahlung"
+
+  - id: income_twitch
+    name: "Twitch Einnahmen"
+    priority: 8
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "twitch"
+      - field: description
+        operator: regex
+        value: "(twitch|subs|bits)"
+    category: business_income
+    subcategory: twitch
+    confidence: 1.0
+
+  - id: income_tiktok
+    name: "TikTok Creator Fund"
+    priority: 8
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "tiktok"
+      - field: counterparty
+        operator: contains
+        value: "bytedance"
+    category: business_income
+    subcategory: tiktok
+    confidence: 1.0
+
+  - id: income_instagram
+    name: "Instagram/Meta Bonus"
+    priority: 8
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "meta"
+      - field: counterparty
+        operator: contains
+        value: "instagram"
+      - field: description
+        operator: regex
+        value: "(reels.*bonus|creator.*bonus)"
+    category: business_income
+    subcategory: instagram
+    confidence: 1.0
+
+  # === EINNAHMEN - SPONSORING ===
+
+  - id: income_sponsoring
+    name: "Sponsoring/Brand Deal"
+    priority: 10
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(sponsoring|brand.*deal|kooperation|werbung)"
+      - field: description
+        operator: regex
+        value: "(campaign|kampagne|integration)"
+    category: business_income
+    subcategory: sponsoring
+    confidence: 0.9
+
+  - id: income_influencer_agentur
+    name: "Influencer-Agentur"
+    priority: 10
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(influencer|creator.*agency|mgmt|management)"
+      - field: counterparty
+        operator: regex
+        value: "(nqyer|reachhero|hashtaglove|stylelink)"
+    category: business_income
+    subcategory: agentur
+    confidence: 0.95
+
+  # === EINNAHMEN - AFFILIATE ===
+
+  - id: income_amazon_affiliate
+    name: "Amazon Affiliate"
+    priority: 8
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "amazon"
+      - field: description
+        operator: regex
+        value: "(affiliate|associates|partnerprogramm)"
+    category: business_income
+    subcategory: affiliate_amazon
+    confidence: 0.95
+
+  - id: income_affiliate_network
+    name: "Affiliate-Netzwerk"
+    priority: 8
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(awin|tradedoubler|cj|adcell|digistore)"
+      - field: counterparty
+        operator: contains
+        value: "affilinet"
+    category: business_income
+    subcategory: affiliate_netzwerk
+    confidence: 1.0
+
+  # === EINNAHMEN - DIREKT ===
+
+  - id: income_patreon
+    name: "Patreon/Membership"
+    priority: 8
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "patreon"
+      - field: counterparty
+        operator: contains
+        value: "ko-fi"
+      - field: counterparty
+        operator: contains
+        value: "buy me a coffee"
+    category: business_income
+    subcategory: membership
+    confidence: 1.0
+
+  - id: income_merch
+    name: "Merchandise-Verkauf"
+    priority: 10
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(spreadshirt|teespring|printful|printify|redbubble)"
+      - field: description
+        operator: regex
+        value: "(merch|merchandise|t-shirt|hoodie)"
+    category: business_income
+    subcategory: merchandise
+    confidence: 0.95
+
+  - id: income_superchat
+    name: "Super Chat/Donations"
+    priority: 10
+    conditions:
+      - field: amount
+        operator: gt
+        value: 0
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(superchat|donation|spende|tip)"
+      - field: counterparty
+        operator: contains
+        value: "streamlabs"
+      - field: counterparty
+        operator: contains
+        value: "streamelements"
+    category: business_income
+    subcategory: donations
+    confidence: 0.9
+
+  # === AUSGABEN - EQUIPMENT ===
+
+  - id: expense_kamera
+    name: "Kamera und Objektive"
+    priority: 15
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(sony|canon|nikon|panasonic|fujifilm|calumet)"
+      - field: description
+        operator: regex
+        value: "(kamera|camera|objektiv|lens)"
+    category: business_expense
+    subcategory: kamera
+    confidence: 0.9
+    notes: "AfA bei > 800 EUR netto"
+
+  - id: expense_audio
+    name: "Audio-Equipment"
+    priority: 15
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(shure|rode|sennheiser|audio-technica|focusrite)"
+      - field: description
+        operator: regex
+        value: "(mikrofon|microphone|audio.*interface|kopfhoerer)"
+      - field: counterparty
+        operator: contains
+        value: "thomann"
+    category: business_expense
+    subcategory: audio
+    confidence: 0.95
+
+  - id: expense_licht
+    name: "Beleuchtung"
+    priority: 15
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(elgato|neewer|godox|aputure)"
+      - field: description
+        operator: regex
+        value: "(ring.*light|softbox|led.*panel|licht)"
+    category: business_expense
+    subcategory: beleuchtung
+    confidence: 0.9
+
+  - id: expense_streaming
+    name: "Streaming-Hardware"
+    priority: 15
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "elgato"
+      - field: description
+        operator: regex
+        value: "(stream.*deck|capture.*card|green.*screen)"
+    category: business_expense
+    subcategory: streaming_hardware
+    confidence: 0.95
+
+  # === AUSGABEN - SOFTWARE ===
+
+  - id: expense_video_edit
+    name: "Videobearbeitung"
+    priority: 18
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "adobe"
+      - field: counterparty
+        operator: contains
+        value: "davinci"
+      - field: counterparty
+        operator: contains
+        value: "final cut"
+      - field: description
+        operator: regex
+        value: "(premiere|after effects|davinci)"
+    category: business_expense
+    subcategory: video_software
+    confidence: 1.0
+
+  - id: expense_thumbnail
+    name: "Thumbnail/Grafik-Tools"
+    priority: 18
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "canva"
+      - field: counterparty
+        operator: contains
+        value: "figma"
+      - field: counterparty
+        operator: contains
+        value: "photoshop"
+    category: business_expense
+    subcategory: grafik_software
+    confidence: 0.95
+
+  - id: expense_audio_edit
+    name: "Audiobearbeitung"
+    priority: 18
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "descript"
+      - field: description
+        operator: regex
+        value: "(audition|logic|audacity)"
+    category: business_expense
+    subcategory: audio_software
+    confidence: 0.95
+
+  - id: expense_analytics
+    name: "Analytics-Tools"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(tubebuddy|vidiq|socialblade)"
+    category: business_expense
+    subcategory: analytics
+    confidence: 1.0
+
+  # === AUSGABEN - CONTENT ===
+
+  - id: expense_stockmedia
+    name: "Stock-Material"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(shutterstock|getty|adobe.*stock|envato|artlist|epidemic)"
+      - field: description
+        operator: regex
+        value: "(stock.*footage|musik.*lizenz|sound.*effects)"
+    category: business_expense
+    subcategory: stockmedia
+    confidence: 1.0
+
+  - id: expense_musik
+    name: "Musik-Lizenzen"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(epidemic.*sound|artlist|musicbed|audiojungle)"
+    category: business_expense
+    subcategory: musik_lizenzen
+    confidence: 1.0
+
+  # === AUSGABEN - PLATTFORMEN ===
+
+  - id: expense_hosting_video
+    name: "Video-Hosting"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: contains
+        value: "vimeo"
+      - field: counterparty
+        operator: contains
+        value: "wistia"
+    category: business_expense
+    subcategory: video_hosting
+    confidence: 1.0
+
+  - id: expense_podcast_hosting
+    name: "Podcast-Hosting"
+    priority: 20
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(anchor|buzzsprout|transistor|podbean|captivate|podigee)"
+    category: business_expense
+    subcategory: podcast_hosting
+    confidence: 1.0
+
+  # === AUSGABEN - SONSTIGE ===
+
+  - id: expense_merch_produktion
+    name: "Merch-Produktion"
+    priority: 18
+    conditions:
+      - field: amount
+        operator: lt
+        value: 0
+    conditions_any:
+      - field: counterparty
+        operator: regex
+        value: "(spreadshirt|printful|printify)"
+    category: business_expense
+    subcategory: merch_kosten
+    confidence: 1.0
+
+  - id: expense_studio
+    name: "Studio-Miete"
+    priority: 18
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(studio.*miete|ateliermiete)"
+    category: business_expense
+    subcategory: studio
+    confidence: 0.9
+
+  - id: expense_assistant
+    name: "Editor/VA/Assistant"
+    priority: 18
+    conditions_any:
+      - field: description
+        operator: regex
+        value: "(editor|schnitt|cutter|assistant|va)"
+      - field: counterparty
+        operator: contains
+        value: "fiverr"
+      - field: counterparty
+        operator: contains
+        value: "upwork"
+    category: business_expense
+    subcategory: freelancer
+    confidence: 0.8

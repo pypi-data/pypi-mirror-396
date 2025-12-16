@@ -1,0 +1,271 @@
+Metadata-Version: 2.4
+Name: pacman-tax
+Version: 0.2.0
+Summary: PACMAN - Privacy-first Automated Calculation & Management of Numbers. Local-first tax automation for freelancers and landlords.
+Project-URL: Homepage, https://github.com/noiion/pacman-tax
+Project-URL: Documentation, https://github.com/noiion/pacman-tax#readme
+Project-URL: Repository, https://github.com/noiion/pacman-tax
+Project-URL: Issues, https://github.com/noiion/pacman-tax/issues
+Author-email: Manu <noiion828@gmail.com>
+License-Expression: AGPL-3.0-or-later
+License-File: LICENSE
+Keywords: ELSTER,EÜR,Vermietung,accounting,freelancer,local-first,privacy,tax
+Classifier: Development Status :: 3 - Alpha
+Classifier: Environment :: Console
+Classifier: Intended Audience :: End Users/Desktop
+Classifier: License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Office/Business :: Financial :: Accounting
+Classifier: Typing :: Typed
+Requires-Python: >=3.10
+Requires-Dist: openpyxl>=3.1.0
+Requires-Dist: pandas>=2.0.0
+Requires-Dist: pydantic>=2.0.0
+Requires-Dist: pyyaml>=6.0
+Requires-Dist: rich>=13.0.0
+Requires-Dist: typer>=0.9.0
+Provides-Extra: all
+Requires-Dist: cryptography>=41.0.0; extra == 'all'
+Requires-Dist: hypothesis>=6.0.0; extra == 'all'
+Requires-Dist: mypy>=1.0.0; extra == 'all'
+Requires-Dist: plotly>=5.18.0; extra == 'all'
+Requires-Dist: pytest-cov>=4.0.0; extra == 'all'
+Requires-Dist: pytest>=7.0.0; extra == 'all'
+Requires-Dist: ruff>=0.1.0; extra == 'all'
+Requires-Dist: streamlit>=1.30.0; extra == 'all'
+Provides-Extra: crypto
+Requires-Dist: cryptography>=41.0.0; extra == 'crypto'
+Provides-Extra: dashboard
+Requires-Dist: plotly>=5.18.0; extra == 'dashboard'
+Requires-Dist: streamlit>=1.30.0; extra == 'dashboard'
+Provides-Extra: dev
+Requires-Dist: hypothesis>=6.0.0; extra == 'dev'
+Requires-Dist: mypy>=1.0.0; extra == 'dev'
+Requires-Dist: pytest-cov>=4.0.0; extra == 'dev'
+Requires-Dist: pytest>=7.0.0; extra == 'dev'
+Requires-Dist: ruff>=0.1.0; extra == 'dev'
+Description-Content-Type: text/markdown
+
+# PACMAN
+
+> **P**rivacy-first **A**utomated **C**alculation & **M**anagement of **N**umbers
+
+Lokales Steuer-Framework für alle Unternehmensklassen in Deutschland.
+**100% offline. Deine Daten verlassen niemals dein Gerät.**
+
+## Features
+
+- **100% Offline** - Keine Cloud, keine Telemetrie, keine externen APIs
+- **Alle Unternehmensformen** - Freiberufler, Einzelunternehmer, GmbH, UG, Vermietung
+- **Bank-Import** - Deutsche Bank, Sparkasse, ING, N26, DKB (+ generisches CSV)
+- **Automatische Kategorisierung** - YAML-basierte Regeln, individuell anpassbar
+- **ELSTER-ready Export** - Excel/CSV für EÜR, Anlage G, S, V und mehr
+- **Erweiterbar** - Eigene Profile und Regeln für jeden Use Case
+- **Dashboard** - Streamlit-basierte visuelle Übersicht
+
+## Unterstützte Banken
+
+| Bank | Format | Status |
+|------|--------|--------|
+| Deutsche Bank | CSV (Semikolon) | ✅ Stabil |
+| Sparkasse | CSV | ✅ Stabil |
+| ING-DiBa | CSV | ✅ Stabil |
+| N26 | CSV | ✅ Stabil |
+| DKB | CSV | ✅ Stabil |
+| Generic CSV | Konfigurierbar | ✅ Stabil |
+
+## Profile & Steuerformulare
+
+### Basis-Profile (Rechtsform)
+
+| Profil | Beschreibung | Formulare |
+|--------|--------------|-----------|
+| `freiberufler` | Freiberufler (§18 EStG) | Anlage S, EÜR |
+| `einzelunternehmer` | Gewerbetreibende | Anlage G, EÜR |
+| `kleinunternehmer` | §19 UStG (ohne USt) | Anlage G/S, EÜR |
+| `vermieter` | Vermietung & Verpachtung | Anlage V |
+| `gmbh_geschaeftsfuehrer` | GF mit GmbH-Beteiligung | Anlage N, KAP |
+| `nebenberuflich` | Angestellt + Selbständig | Anlage N + S/G |
+
+### Branchen-Profile (spezialisierte Regeln)
+
+| Profil | Beschreibung | Besonderheiten |
+|--------|--------------|----------------|
+| `it_freelancer` | Software-Entwickler, DevOps | GitHub, Cloud, AI-Tools |
+| `berater_coach` | Unternehmensberater, Trainer | Tagessätze, Reisekosten |
+| `content_creator` | YouTube, Influencer, Podcast | AdSense, Sponsoring, Equipment |
+| `e_commerce` | Online-Handel, Amazon FBA | Wareneinkauf, Versand, OSS |
+| `handwerker` | Handwerksbetrieb | Material, Fahrzeug, BG |
+| `kuenstler` | Designer, Fotograf, Musiker | KSK, 7% USt, VG Wort |
+| `heilberufler` | Arzt, Therapeut, HP | USt-befreit, Versorgungswerk |
+
+Eigene Profile können per YAML definiert werden - das Framework passt sich an deinen Use Case an.
+
+## Dokumentation
+
+- **[Getting Started Guide](docs/getting-started.md)** - Ausfuehrliche Schritt-fuer-Schritt Anleitung
+- **[CLI Referenz](#cli-referenz)** - Alle Befehle im Ueberblick
+
+## Installation
+
+```bash
+# Repository klonen
+git clone https://github.com/yourusername/pacman.git
+cd pacman
+
+# Virtual Environment
+python3 -m venv venv
+source venv/bin/activate  # Linux/Mac
+# venv\Scripts\activate   # Windows
+
+# Installieren
+pip install -e ".[dashboard]"
+
+# Prüfen
+pacman --version
+```
+
+## Schnellstart
+
+```bash
+# 1. Projekt erstellen (Profil wählen: freiberufler, einzelunternehmer, etc.)
+pacman init --profile freiberufler --year 2024 --path ~/steuer-2024
+
+# 2. Bank-Export kopieren & importieren
+cp ~/Downloads/umsaetze.csv ~/steuer-2024/import/
+pacman import ~/steuer-2024/import/ --project ~/steuer-2024
+
+# 3. Automatisch kategorisieren
+pacman categorize --project ~/steuer-2024
+
+# 4. Status prüfen
+pacman status --project ~/steuer-2024
+
+# 5. Berechnen & exportieren
+pacman calculate --project ~/steuer-2024
+pacman export --format xlsx --project ~/steuer-2024
+```
+
+### Für Vermieter (zusätzlich)
+
+```bash
+# Mieter für automatische Mieteinnahmen-Erkennung
+pacman tenants add "Max Müller" --project ~/steuer-2024
+```
+
+## Dashboard starten
+
+```bash
+pacman dashboard --project ~/steuer-2024
+```
+
+Öffnet automatisch im Browser unter `http://localhost:8501`
+
+## CLI Referenz
+
+```bash
+pacman --help                    # Hilfe anzeigen
+pacman --version                 # Version anzeigen
+pacman --privacy                 # Privacy-Garantien anzeigen
+
+pacman init                      # Neues Projekt erstellen
+pacman import <path>             # Transaktionen importieren
+pacman categorize                # Automatisch kategorisieren
+pacman tenants <add|remove|list> # Mieter verwalten
+pacman calculate                 # Steuer berechnen
+pacman export                    # ELSTER-Export erstellen
+pacman status                    # Projekt-Status anzeigen
+pacman dashboard                 # Web-Dashboard starten
+```
+
+## Privacy-Garantien
+
+PACMAN macht **niemals** Netzwerk-Requests:
+
+- ✅ Kein Internet-Zugriff
+- ✅ Keine Telemetrie
+- ✅ Keine Cloud-Speicherung
+- ✅ Keine externen APIs
+- ✅ Vollständig auditierbar (AGPL-3.0)
+
+```bash
+pacman --privacy  # Garantien anzeigen
+```
+
+## Projektstruktur
+
+```
+~/steuer-2024/
+├── config.yaml           # Projekt-Konfiguration
+├── transactions.json     # Kategorisierte Buchungen
+├── import/               # Bank-CSVs hier ablegen
+└── export/               # Generierte Exports
+    └── ELSTER_Werte_2024.xlsx
+```
+
+## Eigene Regeln
+
+Regeln in YAML erstellen:
+
+```yaml
+rules:
+  - id: my_client_income
+    name: "Einnahmen Hauptkunde"
+    priority: 10
+    conditions:
+      - field: counterparty
+        operator: contains
+        value: "Firma XYZ GmbH"
+    category: business_income
+    subcategory: kunde_xyz
+    confidence: 1.0
+```
+
+### Operatoren
+- `equals` - Exakte Übereinstimmung
+- `contains` - Enthält (case-insensitive)
+- `regex` - Regulärer Ausdruck
+- `gt`, `lt`, `gte`, `lte` - Numerisch
+- `in_list` - In Liste (z.B. `$config.tenants`)
+
+### Kategorien
+- `rental_income` / `rental_expense` - Vermietung
+- `business_income` / `business_expense` - Gewerblich
+- `deductible` - Sonderausgaben
+- `private` - Nicht steuerrelevant
+- `passthrough` - Durchlaufposten
+
+## Development
+
+```bash
+# Tests (342 Tests, 75% Coverage)
+PACMAN_TESTING=1 python -m pytest tests/ -v --cov=src/pacman
+
+# Linting
+ruff check src/
+mypy src/
+```
+
+### Test Coverage
+
+| Modul | Coverage |
+|-------|----------|
+| Core Models | 84% |
+| Germany Plugin | 99% |
+| CLI | 89% |
+| Tax Constants | 100% |
+| Utils | 100% |
+| Importers | 65-85% |
+| Dashboard | 14% |
+
+## Lizenz
+
+AGPL-3.0 - Siehe [LICENSE](LICENSE)
+
+---
+
+**Hinweis:** PACMAN ersetzt keine Steuerberatung. Für verbindliche Auskünfte wende dich an einen Steuerberater.
