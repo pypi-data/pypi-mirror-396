@@ -1,0 +1,88 @@
+Metadata-Version: 2.1
+Name: npac_calibration
+Version: 0.2.0
+Summary: Detector Calibration Package for NPAC
+Author-Email: Binh Nguyen <thi-yen-binh.nguyen@universite-paris-saclay.fr>
+License: MIT
+Requires-Python: >=3.11
+Requires-Dist: npac-validator>=1.0.0
+Requires-Dist: pandas>=2.3.3
+Requires-Dist: flake8>=7.3.0
+Requires-Dist: black>=25.12.0
+Requires-Dist: scipy>=1.16.3
+Requires-Dist: matplotlib>=3.10.7
+Requires-Dist: mypy>=1.19.0
+Description-Content-Type: text/markdown
+
+# NPAC Detector Calibration
+
+[![CI/CD](https://img.shields.io/badge/CI%2FCD-passing-brightgreen)](https://gitlab.in2p3.fr/informatique-des-deux-infinis/npac/2026/silver-wolf/calibration/-/pipelines)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python Version](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
+
+A suite of tools for the calibration of particle detectors using simulation data. This project is designed to process raw data, identify particle interaction peaks, perform Gaussian fits, and determine calibration constants.
+
+## Features
+
+- Read and process particle detector simulation data.
+- Identify particle interaction peaks in detector layers.
+- Perform Gaussian fits on identified peaks.
+- Determine calibration constants for energy calibration.
+- Command-line interface for running calibration on all layers.
+
+## Installation
+
+This project is managed with [PDM](https://pdm.fming.dev).
+
+1.  **Clone the repository:**
+    ```bash
+    git clone https://gitlab.in2p3.fr/informatique-des-deux-infinis/npac/2026/silver-wolf/calibration.git
+    cd calibration
+    ```
+
+2.  **Install dependencies:**
+    ```bash
+    pdm install
+    ```
+
+3. **Add NPAC validator**
+
+To use the validator, install the `npac_validator` package in your PDM environment, edit the `pyproject.toml` file, and add:
+   ```
+   [[tool.pdm.source]]
+   name = "npac_gitlab"
+   url = "https://gitlab.in2p3.fr/api/v4/projects/26344/packages/pypi/simple"
+   ```
+## Usage
+
+Here is a basic example of how to use the `npac_calibration` package to run the calibration on detector data.
+
+```python
+from detector_calibration import DetectorCalibration
+import pandas as pd
+
+# Get path to event files
+event_path = "data/electron_1GeV_Shower/event000000047-hits_digitised.csv"
+
+# Read events into a pandas DataFrame
+df = pd.read_csv(event_path)
+
+# Initialize the detector calibration
+calib = DetectorCalibration()
+
+# Run calibration for all layers
+all_results = calib.run_all_layers(df, save_csv=True)
+
+# Get peak information for a specific layer
+layer0_peaks = calib.get_peaks_info(layer=0)
+
+print("Peaks found in layer 0:", layer0_peaks["x_peak"])
+```
+
+## Contributing
+
+Contributions are welcome! Please feel free to open an issue or submit a merge request.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
