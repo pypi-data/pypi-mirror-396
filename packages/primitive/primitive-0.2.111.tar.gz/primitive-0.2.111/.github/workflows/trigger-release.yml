@@ -1,0 +1,86 @@
+name: Release on version bump
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/primitive/__about__.py"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # need history for HEAD^ and tags
+
+      - name: Get current and previous version
+        id: versions
+        run: |
+          python << 'EOF'
+          import pathlib, re, subprocess, os
+
+          path = pathlib.Path("src/primitive/__about__.py")
+          text = path.read_text(encoding="utf-8")
+          m = re.search(r'__version__\s*=\s*["\']([^"\']+)["\']', text)
+          if not m:
+            raise SystemExit("Could not find __version__ in __about__.py")
+          current = m.group(1)
+
+          try:
+              prev_text = subprocess.check_output(
+                  ["git", "show", "HEAD^:__about__.py"],
+                  text=True,
+              )
+              m2 = re.search(r'__version__\s*=\s*["\']([^"\']+)["\']', prev_text)
+              previous = m2.group(1) if m2 else ""
+          except Exception:
+              # file may not exist in previous commit (first release, rename, etc.)
+              previous = ""
+
+          bumped = "true" if current != previous else "false"
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
+              f.write(f"current={current}\n")
+              f.write(f"previous={previous}\n")
+              f.write(f"bumped={bumped}\n")
+          EOF
+
+      - name: Stop if version not bumped
+        if: steps.versions.outputs.bumped != 'true'
+        run: |
+          echo "Version not changed (__version__ stayed at ${{ steps.versions.outputs.current }})."
+          exit 0
+
+      - name: Check if tag already exists
+        id: check_tag
+        run: |
+          TAG="v${{ steps.versions.outputs.current }}"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create tag
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          TAG="v${{ steps.versions.outputs.current }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "$TAG"
+          git push origin "$TAG"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create GitHub Release
+        if: steps.check_tag.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.versions.outputs.current }}
+          name: v${{ steps.versions.outputs.current }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
