@@ -1,0 +1,28 @@
+[project]
+name = "{{project_name}}"
+dynamic = ["version"]
+description = "{{project_name}} - Python项目"
+requires-python = ">=3.10"
+license = "MIT"
+readme = "README.md"
+authors = [{name = "Admin", email = "admin@example.com"}]
+
+[project.urls]
+Homepage = "https://github.com/example/{{project_name}}"
+Issues = "https://github.com/example/{{project_name}}/issues"
+
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[maturin]
+manifest-path = "rust/Cargo.toml"
+module-name = "{{python_name}}.lib.{{rust_name}}"
+python-source = "src"
+include = ["src/{{python_name}}/**/*"]
+bindings = "pyo3"
+features = ["pyo3/extension-module"]
+
+[build-system.setuptools]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"

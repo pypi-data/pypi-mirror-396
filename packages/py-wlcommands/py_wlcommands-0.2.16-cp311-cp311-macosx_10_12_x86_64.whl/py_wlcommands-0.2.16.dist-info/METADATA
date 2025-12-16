@@ -1,0 +1,203 @@
+Metadata-Version: 2.4
+Name: py_wlcommands
+Version: 0.2.16
+Requires-Dist: toml>=0.10.2
+Requires-Dist: tomli>=2.3.0
+Requires-Dist: pytest>=9.0.1
+Requires-Dist: mypy>=1.18.2
+Requires-Dist: pytest-cov>=7.0.0
+Requires-Dist: pytest-asyncio>=1.3.0
+Requires-Dist: ruff>=0.14.0
+Requires-Dist: pathspec>=0.12.1
+Requires-Dist: aiohttp>=3.13.2
+Requires-Dist: types-toml>=0.10.8.20240310
+Requires-Dist: pre-commit>=4.5.0
+Requires-Dist: pytest-xdist>=3.8.0
+Requires-Dist: twine>=6.2.0
+License-File: LICENSE
+License-File: LICENSE
+Summary: py_wlcommands - Python项目
+Author-email: WL Admin <wl.admin@example.com>
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown; charset=UTF-8; variant=GFM
+Project-URL: Homepage, https://github.com/wl-commands/py_wlcommands
+Project-URL: Issues, https://github.com/wl-commands/py_wlcommands/issues
+
+# py_wlcommands
+
+[![CI](https://github.com/wl-commands/py_wlcommands/actions/workflows/ci.yml/badge.svg)](https://github.com/wl-commands/py_wlcommands/actions/workflows/ci.yml)
+[![PyPI version](https://badge.fury.io/py/py-wlcommands.svg)](https://badge.fury.io/py/py-wlcommands)
+[![Python Versions](https://img.shields.io/pypi/pyversions/py-wlcommands.svg)](https://pypi.org/project/py-wlcommands/)
+
+`py_wlcommands` is a command-line toolset based on Python that provides automated command support for project development, covering common development tasks such as environment initialization, building, testing, formatting, cleaning, and code checking. The project combines Python and Rust technology stacks, demonstrating attention to performance and scalability.
+
+## Features
+
+- **init**: Initialize project environment with Git, virtual environment, i18n, Rust submodule, etc.
+- **build**: Execute build tasks, support Python package building and distribution
+- **test**: Run project tests
+- **format**: Support Python and Rust code formatting (integrated with black, rustfmt, etc.)
+- **lint**: Execute code quality checks
+- **clean**: Clean build artifacts and temporary files
+- **self**: Self-management commands
+
+## Installation
+
+### From PyPI
+
+```bash
+pip install py-wlcommands
+```
+
+### From Source
+
+```bash
+# Clone the repository
+git clone https://github.com/wl-commands/py_wlcommands.git
+cd py_wlcommands
+
+# Install in development mode
+pip install -e .
+```
+
+## Usage
+
+After installation, you can use the `wl` command:
+
+```bash
+# Show help
+wl --help
+
+# Initialize a new project
+wl init
+
+# Build the project
+wl build
+
+# Run tests
+wl test
+
+# Format code
+wl format
+
+# Lint code
+wl lint
+
+# Clean build artifacts
+wl clean
+
+# Update the tool itself
+wl self update
+```
+
+### WorkspaceDetector
+
+The workspace detection used by `wl init` is provided as a reusable class `WorkspaceDetector` in `src/py_wlcommands/utils/workspace_detector.py`.
+
+- `detect(project_root: Path | None = None) -> bool`: Detects whether the given root is a uv workspace using configurable rules.
+- `validate(project_root: Path | None = None) -> ValidationResult`: Returns a simple validation result with key details about the workspace structure.
+- `getConfig() -> dict`: Returns the active detection rules.
+- `resolvePath(path: str | Path, project_root: Path | None = None) -> Path`: Resolves a path relative to the given workspace root.
+
+Default detection checks:
+- `pyproject.toml` contains `tool.uv.workspace`
+- presence of `uv.lock`
+- `uv init --dry-run` shows workspace membership message
+- `uv tree` shows at least two root packages
+
+Other commands can directly create and use `WorkspaceDetector` to query workspace state.
+
+## Project Structure
+
+The project follows a modular design to ensure maintainability and extensibility:
+
+```
+src/py_wlcommands/
+├── commands/           # Command implementations
+│   ├── init/          # Project initialization
+│   ├── build/         # Build functionality
+│   ├── test/          # Testing utilities
+│   ├── format/        # Code formatting
+│   ├── lint/          # Code quality checking
+│   ├── clean/         # Build artifact cleaning
+│   └── self/          # Self-management commands
+├── utils/             # Reusable utilities
+│   ├── cargo_sync.py  # Cargo synchronization
+│   ├── config_manager.py # Configuration management
+│   ├── git_utils.py   # Git operations
+│   ├── python_env_detector.py # Python environment detection
+│   ├── subprocess_utils.py # Subprocess utilities
+│   ├── uv_workspace.py # UV workspace detection
+│   ├── venv_detector.py # Virtual environment detection
+│   ├── workspace_detector.py # Workspace detection
+│   └── ...            # Other utility modules
+├── vendors/           # Third-party vendor libraries
+├── __init__.py
+├── __main__.py
+└── constants.py
+```
+
+### Key Modules
+
+- **WorkspaceDetector**: Reusable workspace detection class
+- **UVWorkspaceDetector**: Specialized UV workspace detection
+- **PythonEnvDetector**: Python environment detection utilities
+- **ConfigManager**: Configuration management
+- **SubprocessUtils**: Cross-platform subprocess execution
+
+## Development
+
+### Prerequisites
+
+- Python >= 3.10
+- Rust toolchain
+- Git
+
+### Setup Development Environment
+
+```bash
+# Clone the repository
+git clone https://github.com/wl-commands/py_wlcommands.git
+cd py_wlcommands
+
+# Install dependencies
+pip install -e .
+
+# Or if using uv
+uv pip install -e .
+```
+
+### Running Tests
+
+```bash
+# Run all tests
+pytest tests/
+
+# Or using the wl command
+wl test
+```
+
+### Building Distribution Packages
+
+```bash
+# Build with wl command
+wl build dist
+
+# Or directly with maturin
+maturin build --release --out dist --sdist
+```
+
+## CI/CD
+
+This project uses GitHub Actions for continuous integration and deployment:
+
+- **CI**: Runs tests on multiple platforms (Ubuntu, Windows, macOS) and Python versions (3.10, 3.11, 3.12)
+- **Code Quality**: Runs linting and type checking
+- **Publish**: Automatically publishes to PyPI when a new tag is pushed
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+<!-- Test publish trigger -->
+
