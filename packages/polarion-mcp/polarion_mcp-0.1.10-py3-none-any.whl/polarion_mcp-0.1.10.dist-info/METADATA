@@ -1,0 +1,242 @@
+Metadata-Version: 2.4
+Name: polarion-mcp
+Version: 0.1.10
+Summary: Polarion MCP Server - Model Context Protocol integration for Siemens Polarion ALM
+Project-URL: Homepage, https://github.com/Sdunga1/Polarion-MCP
+Project-URL: Documentation, https://github.com/Sdunga1/Polarion-MCP/blob/main/README.md
+Project-URL: Repository, https://github.com/Sdunga1/Polarion-MCP.git
+Project-URL: Issues, https://github.com/Sdunga1/Polarion-MCP/issues
+Author: ATOMS Team
+License: MIT
+License-File: LICENSE
+Keywords: mcp,model-context-protocol,polarion,requirements
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Requires-Python: >=3.10
+Requires-Dist: loguru>=0.7.0
+Requires-Dist: mcp>=0.1.0
+Requires-Dist: requests>=2.31.0
+Requires-Dist: selenium>=4.0.0
+Requires-Dist: webdriver-manager>=4.0.0
+Description-Content-Type: text/markdown
+
+# Polarion MCP Server
+
+A Model Context Protocol (MCP) server for interacting with Siemens Polarion requirements management system. No Docker required!
+
+## Features
+
+- 🔐 **Authentication** - Browser-based login with manual token generation
+- 📋 **Projects** - List and get detailed project information
+- 📝 **Work Items** - Query requirements, tasks, and other work items
+- 📄 **Documents** - Access Polarion documents and spaces
+- 🔍 **Flexible queries** - Filter work items with custom queries
+- ⚡ **Lightweight** - Optimized API calls with configurable field sets
+- 📦 **Easy Installation** - One command to get started
+
+## Quick Start (30 seconds)
+
+### Installation
+
+**Option A: Using `pip` (Recommended)**
+
+```bash
+pip install polarion-mcp
+```
+
+**Option B: Using `uvx` (No local Python needed)**
+Just use directly in mcp.json (see setup below).
+
+### Setup
+
+1. **Add to your Cursor mcp.json:**
+
+```json
+{
+  "mcpServers": {
+    "polarion": {
+      "command": "polarion-mcp"
+    }
+  }
+}
+```
+
+2. **Restart Cursor**
+
+3. **In Cursor chat, authenticate:**
+
+```
+Open Polarion login
+Set Polarion token: <your-token>
+```
+
+Done! 🎉
+
+## Configuration
+
+### For Claude Desktop (URL-based Server)
+
+If you're connecting to a URL-accessible server (like the GCP demo), Claude Desktop requires a proxy since it doesn't support SSE directly.
+
+**Step 1: Install `mcp-remote` (one-time setup)**
+
+```bash
+npm install -g mcp-remote
+```
+
+**Step 2: Configure Claude Desktop**
+
+Edit `claude_desktop_config.json` (location varies by OS):
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+- **Linux**: `~/.config/Claude/claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "polarion-demo": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "http://dev.polarion.atoms.tech:8080/sse"
+      ]
+    }
+  }
+}
+```
+
+**Step 3: Restart Claude Desktop**
+
+The server will connect via the proxy. Then authenticate:
+```
+Open Polarion login
+Set Polarion token: <your-token>
+```
+
+### Connect to Your Polarion Instance
+
+By default connects to `http://dev.polarion.atoms.tech/polarion`. To use your own instance:
+
+**Option 1: Environment Variable**
+
+```bash
+export POLARION_BASE_URL="https://your-polarion.com/polarion"
+polarion-mcp
+```
+
+**Option 2: In Cursor mcp.json**
+
+```json
+{
+  "mcpServers": {
+    "polarion": {
+      "command": "polarion-mcp",
+      "env": {
+        "POLARION_BASE_URL": "https://your-polarion.com/polarion"
+      }
+    }
+  }
+}
+```
+
+**Option 3: Using uvx with custom URL**
+
+```json
+{
+  "mcpServers": {
+    "polarion": {
+      "command": "uvx",
+      "args": ["polarion-mcp@latest"],
+      "env": {
+        "POLARION_BASE_URL": "https://your-polarion.com/polarion"
+      }
+    }
+  }
+}
+```
+
+## Available Tools
+
+Once authenticated, use these commands in Cursor:
+
+**Authentication**
+
+- `Open Polarion login` - Opens browser to Polarion login
+- `Set Polarion token: <token>` - Saves authentication token
+- `Check Polarion status` - Verify authentication
+
+**Projects**
+
+- `Get Polarion projects` - List all projects
+- `Get Polarion project: PROJECT_ID` - Get project details
+
+**Work Items**
+
+- `Get Polarion work items: PROJECT_ID` - List work items
+- `Get Polarion work items: PROJECT_ID (query: "HMI AND type:requirement")` - Filter results
+- `Get Polarion work item: PROJECT_ID ITEM_ID` - Get item details
+
+**Documents**
+
+- `Get Polarion document: PROJECT_ID SPACE_ID DOCUMENT_NAME` - Access documents
+
+**Analysis**
+
+- `polarion_github_requirements_coverage project_id="PROJECT" topic="HMI"` - Requirements coverage
+
+## Local Development
+
+### Prerequisites
+
+- Python 3.10+
+- Access to Polarion instance
+
+### Installation
+
+```bash
+git clone https://github.com/Sdunga1/Polarion-MCP.git
+cd Polarion-MCP
+pip install -e .
+```
+
+### Running
+
+```bash
+polarion-mcp
+```
+
+## Troubleshooting
+
+**Can't connect?**
+
+- Verify `POLARION_BASE_URL` is correct
+- Check if Polarion instance is accessible
+- Verify token hasn't expired
+
+**Authentication failed?**
+
+- Regenerate token in Polarion
+- Use: `Open Polarion login` → `Set Polarion token`
+- Check: `Check Polarion status`
+
+**Not finding projects?**
+
+- Verify user has access to projects in Polarion
+- Check authentication: `Check Polarion status`
+
+## Resources
+
+- **GitHub**: [Polarion-MCP](https://github.com/Sdunga1/Polarion-MCP)
+- **PyPI**: [polarion-mcp](https://pypi.org/project/polarion-mcp)
+- **Issues**: [Report a bug](https://github.com/Sdunga1/Polarion-MCP/issues)
+
+## License
+
+MIT
