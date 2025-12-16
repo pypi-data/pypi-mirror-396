@@ -1,0 +1,194 @@
+[project]
+name = "prob-conf-mat"
+version = "0.2.0"
+authors = [{ name = "Ivo Verhoeven", email = "mail@ivoverhoeven.nl" }]
+description = "Confusion matrices with uncertainty quantification, experiment aggregation and significance testing."
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Topic :: Scientific/Engineering :: Visualization",
+    "Typing :: Typed",
+]
+license = { file = "LICENSE" }
+keywords = [
+    "confusion matrices",
+    "classification",
+    "confusion matrix",
+    "statistics",
+    "probabilistic",
+]
+
+
+dependencies = [
+    "numpy",
+    "scipy>=1.10",
+    "tabulate>=0.9",
+    "matplotlib>=3.7",
+    "jaxtyping>=0.2.32",
+]
+
+[project.urls]
+Homepage = "https://www.ivoverhoeven.nl/prob_conf_mat/"
+Documentation = "https://www.ivoverhoeven.nl/prob_conf_mat/"
+Repository = "https://github.com/ioverho/prob_conf_mat"
+Issues = "https://github.com/ioverho/prob_conf_mat/issues"
+
+[build-system]
+requires = ["hatchling", "numpy>=2.0.0"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "griffe-inherited-docstrings>=1.1.2",
+    "mkdocs>=1.6.1",
+    "mkdocs-git-revision-date-localized-plugin>=1.5.0",
+    "mkdocs-jupyter>=0.25.1",
+    "mkdocs-material[imaging]>=9.7.0",
+    "mkdocstrings[python]>=1.0.0",
+    "nbconvert>=7.16.4",
+    "nbformat>=5.10.4",
+    "opt-einsum>=3.4.0",
+    "pandas>=2.3.3",
+    "pip>=25.3",
+    "pre-commit>=4.5.0",
+    "pyright>=1.1.407",
+    "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
+    "python-markdown-math>=0.9",
+    "pyyaml>=6.0.3",
+    "ruff>=0.14.9",
+    "scalene>=1.5.55",
+    "scikit-learn>=1.8.0",
+    "seaborn>=0.13.2",
+    "snakeviz>=2.2.2",
+    "toml>=0.10.2",
+    "tqdm>=4.67.1",
+]
+
+# Building
+# UV
+[[tool.uv.index]]
+name = "testpypi"
+url = "https://test.pypi.org/simple/"
+publish-url = "https://test.pypi.org/legacy/"
+explicit = true
+
+# Linting
+# Ruff
+[tool.ruff]
+extend-exclude = ['tests/*', '**/experimental*', '**/mkdocs.py']
+builtins = ["jtyping"]
+
+line-length = 88
+indent-width = 4
+respect-gitignore = true
+
+[tool.ruff.lint]
+ignore = [
+    "F722",   # Forward annotation error. Conflicts with jaxtyping
+    "TD002",  # Missing TODO author
+    "TD003",  # Missing TODO link
+    "C408",   # Unnecessary collection call
+    "SIM910", # dict.get with None default
+    "RET504", # Unecessary assign
+    "W505",   # Docstring too long
+    "D100",   # Undocumented public module
+    "D104",   # Undocumented public package
+    "D105",   # Undocumented magic method
+    "D107",   # Undocumented __init__ method
+    "ICN001", # Matplotlib should be imported as MPL
+    "UP037",  # Removes quotes in type annotations
+]
+extend-select = [
+    "F",   # Pyflakes rules
+    "E",   # PyCodeStyle errors
+    "W",   # PyCodeStyle warnings
+    "D",   # PyDocStyle
+    "UP",  # Warn if certain things can changed due to newer Python versions
+    "C4",  # Catch incorrect use of comprehensions, dict, list, etc
+    "FA",  # Enforce from __future__ import annotations
+    "ISC", # Good use of string concatenation
+    "ICN", # Use common import conventions
+    "RET", # Good return practices
+    "SIM", # Common simplification rules
+    "TID", # Some good import practices
+    "TC",  # Enforce importing certain types in a TYPE_CHECKING block
+    "PTH", # Use pathlib instead of os.path
+    "TD",  # Be diligent with TODO comments
+    "NPY", # Some numpy-specific things
+    "A",   # Shadowed builtins
+    "BLE", # Disallow catch-all exceptions
+    "COM", # Enforce trailing comma rules
+    "FBT", # Boolean traps
+    "N",   # Naming conventions
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Ignore `F401` (import violations) and `F403` (undefined names) in all `__init__.py` files
+"__init__.py" = ["F401", "F403"]
+# Ignore documentationin tests
+"tests/*" = ["D"]
+
+[tool.ruff.lint.pycodestyle]
+ignore-overlong-task-comments = true
+max-doc-length = 100
+max-line-length = 100
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+docstring-code-format = true
+
+# Typechecking
+# Pyright
+[tool.pyright]
+include = ["src"]
+exclude = [
+    '**/node_modules',
+    '**/__pycache__',
+    '**/.*',
+    '**/tests*',
+    '**/dev*',
+    '**/klad*',
+    '**/experimental*',
+]
+venvPath = "."
+venv = ".venv"
+pythonVersion = "3.11"
+pythonPlatform = "Linux"
+
+# Testing
+# Coverage
+[tool.coverage]
+[tool.coverage.run]
+omit = ["tests/*.py"]
+
+[tool.coverage.report]
+exclude_also = [
+    'def __repr__',
+    'raise AssertionError',
+    'raise NotImplementedError',
+    'if __name__ == .__main__.:',
+    'if TYPE_CHECKING:',
+    'class .*\bProtocol\):',
+    '@(abc\.)?abstractmethod',
+]
+
+format = "markdown"
+
+ignore_errors = true
+
+precision = 2
+
+sort = "cover"
+
+[tool.coverage.html]
+directory = "./tests/logs/coverage"
