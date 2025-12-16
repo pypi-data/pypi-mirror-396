@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+version_file = "src/fennol/version.py"
+local_scheme = "no-local-version"
+
+[project]
+name = "FeNNol"
+# version = "0.1.0"
+dynamic = ["version"]
+description = "FeNNol: Force-field-enhanced Neural Network optimized library"
+readme = "README.md"
+license-files = ["LICENSE"]
+authors = [{ name = "Thomas Plé", email = "thomas.ple@sorbonne-universite.fr" }]
+keywords = ["machine learning potential", "jax", "force field","molecular dynamics"]
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+   "jax",
+   "numpy",
+   "numba",
+   "h5py",
+   "scipy",
+   "sympy",
+   "flax[all]",
+   "tomlkit",
+   "optax",
+   "ase",
+   "pytest",
+]
+
+[project.optional-dependencies]
+cuda = ["jax[cuda12]"]
+e3nn = ["e3nn-jax"]
+deephp = ["cffi", "pydlpack", "pycuda"]
+
+[project.urls]
+Homepage = "https://github.com/FeNNol-tools/FeNNol"
+
+[project.scripts]
+fennol_md = "fennol.md.dynamic:main"
+fennol_train = "fennol.training.training:main"
+fennol_inspect = "fennol.models.inspect:main"
+fennol_analyze = "fennol.analyze:main"
