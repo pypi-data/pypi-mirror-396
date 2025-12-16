@@ -1,0 +1,30 @@
+{% load spellbook_tags %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        {% spellbook_styles %}
+        <link rel="stylesheet" href="{% static 'django_spellbook/css_modules/sidebar_left.css' %}">
+    </head>
+    <body class="sb-bg-background sb-text-text">
+        <div class="spellbook-container">
+            <div class="spellbook-layout">
+                <nav class="spellbook-toc">
+                    {% page_metadata %}
+
+                    {% include "django_spellbook/tocs/sidebar_toc.html" %}
+
+                    {% if user.is_staff %}
+                        {% page_metadata "for_dev" %}
+                    {% endif %}
+                </nav>
+                <main class="spellbook-content">
+                    {% page_header %}
+                    {% block spellbook_md %}{% endblock %}
+                </main>
+            </div>
+        </div>
+    </body>
+</html>
