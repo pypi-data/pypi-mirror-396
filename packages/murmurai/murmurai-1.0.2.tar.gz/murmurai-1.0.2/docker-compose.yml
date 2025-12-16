@@ -1,0 +1,22 @@
+services:
+  murmurai:
+    build: .
+    ports:
+      - "8880:8880"
+    environment:
+      - MURMURAI_API_KEY=${MURMURAI_API_KEY:-namastex888}
+      - MURMURAI_HF_TOKEN=${MURMURAI_HF_TOKEN:-}
+      - MURMURAI_LOG_FORMAT=${MURMURAI_LOG_FORMAT:-text}
+    volumes:
+      # Persist transcripts database
+      - ./data:/app/data
+      # Cache HuggingFace models (saves download time on restart)
+      - ~/.cache/huggingface:/root/.cache/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
