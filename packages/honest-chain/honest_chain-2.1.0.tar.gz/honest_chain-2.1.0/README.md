@@ -1,0 +1,216 @@
+# HONEST CHAIN SDK v2.1
+
+**Quantum-Ready AI Decision Audit Trail**
+
+```
+pip install honest-chain
+```
+
+## Quick Start
+
+```python
+from honest_chain import HonestChain, RiskLevel
+
+# Initialize
+hc = HonestChain(agent_id="my-ai-agent", agent_model="claude-opus-4-5")
+
+# Log decisions
+hc.decide(
+    action="Approved loan application",
+    reasoning="Credit score 750+, income verified, DTI < 30%",
+    alternatives=["Reject", "Request more documents"],
+    confidence=0.92,
+    risk_level=RiskLevel.MEDIUM
+)
+
+# Verify integrity
+assert hc.verify()
+
+# Export for auditors
+hc.export_audit("audit_report.json")
+```
+
+---
+
+## Guarantees vs Non-Guarantees
+
+### What HONEST CHAIN GUARANTEES
+
+| Guarantee | How | Strength |
+|-----------|-----|----------|
+| **Tamper Evidence** | SHA3-256 hash chain covers ALL fields (v2.1+) | Cryptographic |
+| **Append-Only** | Each record links to previous hash | Cryptographic |
+| **Non-Repudiation** | HMAC-SHA3-256 signatures on decisions | Cryptographic (self-verify) |
+| **Deterministic Hashing** | Canonical JSON encoding | Implementation |
+| **Thread Safety** | All operations are locked | Implementation |
+| **Backwards Compatibility** | Versioned hashing (v1.x/v2.0/v2.1+) | Implementation |
+
+**If tampered:**
+- Hash mismatch detected by `verify()`
+- Signature mismatch detected by `verify(verify_signatures=True)`
+- Chain link broken (previous_hash doesn't match)
+
+### What HONEST CHAIN DOES NOT GUARANTEE
+
+| Non-Guarantee | Why | Mitigation |
+|---------------|-----|------------|
+| **Preventing lies** | Protocol logs what AI *claims*, not truth | External validation |
+| **Third-party signature verification** | HMAC is symmetric (needs signing key) | Future: Dilithium/SPHINCS+ |
+| **Preventing chain deletion** | Local storage can be deleted | External anchoring (Bitcoin/OTS) |
+| **Preventing chain rewrite** | Without anchor, entire chain can be replaced | Use `external_anchor` callback |
+| **Real-time monitoring** | SDK only logs, doesn't alert | Build monitoring layer |
+| **Data accuracy** | AI can log false reasoning | Human oversight |
+
+### Security Model
+
+```
+WHAT WE PROTECT:
+┌─────────────────────────────────────────────────────┐
+│  After a decision is logged, it CANNOT be:          │
+│  - Modified without detection                       │
+│  - Reordered without detection                      │
+│  - Removed without detection (if anchored)          │
+└─────────────────────────────────────────────────────┘
+
+WHAT WE DON'T PROTECT:
+┌─────────────────────────────────────────────────────┐
+│  The protocol CANNOT guarantee that:                │
+│  - The AI told the truth when logging               │
+│  - The reasoning matches actual computation         │
+│  - All decisions were logged (completeness)         │
+└─────────────────────────────────────────────────────┘
+```
+
+### Attack Vectors & Mitigations
+
+| Attack | Possible? | Mitigation |
+|--------|-----------|------------|
+| Modify logged decision | NO | Hash chain detects |
+| Forge signature | NO | HMAC with secret key |
+| Delete entire chain | YES (local) | External anchoring |
+| Rewrite entire chain | YES (local) | External anchoring |
+| Log false information | YES | External validation, oversight |
+| Skip logging decision | YES | Completeness auditing |
+| Replay old signatures | NO | Timestamp in signed data |
+
+### Anchoring Levels
+
+| Level | Trust | Example |
+|-------|-------|---------|
+| **L0: Local** | Self only | `~/.honest_chain/` |
+| **L1: Timestamped** | Third-party witness | OpenTimestamps, RFC 3161 |
+| **L2: Blockchain** | Decentralized consensus | Bitcoin, Ethereum |
+| **L3: Physical** | Permanent archive | Internet Archive, Arweave |
+
+```python
+# Enable external anchoring
+def anchor_to_bitcoin(hash: str) -> str:
+    # Your Bitcoin/OTS implementation
+    return txid
+
+hc = HonestChain(
+    agent_id="my-agent",
+    external_anchor=anchor_to_bitcoin  # Called for HIGH/CRITICAL decisions
+)
+```
+
+---
+
+## Version History
+
+| Version | Hash Fields | Algorithm | Notes |
+|---------|-------------|-----------|-------|
+| v1.x | 6 fields | SHA-256 | Legacy |
+| v2.0 | 6 fields | SHA3-256 | Quantum-safe hash |
+| v2.1 | 11 fields | SHA3-256 | Full field coverage |
+
+### v2.1 Hash Coverage (Current)
+
+All fields are tamper-evident:
+```
+decision_id, timestamp, actor_id, actor_type, actor_model,
+action, reasoning, alternatives, confidence, risk_level,
+previous_hash
+```
+
+### Backwards Compatibility
+
+Old chains (v1.x, v2.0) remain verifiable:
+```python
+# SDK auto-detects version and uses correct hash algorithm
+hc.verify()  # Works for all versions
+```
+
+---
+
+## API Reference
+
+### HonestChain
+
+```python
+HonestChain(
+    agent_id: str,              # Unique agent identifier
+    agent_model: str = "unknown",
+    storage_path: Path = None,  # Default: ~/.honest_chain/{agent_id}/
+    external_anchor: Callable = None,  # Called for HIGH/CRITICAL
+    enable_signatures: bool = True
+)
+```
+
+### decide()
+
+```python
+hc.decide(
+    action: str,                # What was decided
+    reasoning: str,             # Why (KEY for transparency)
+    alternatives: List[str] = [],
+    confidence: float = 0.8,    # 0.0-1.0
+    risk_level: RiskLevel = LOW,
+    anchor_externally: bool = False
+) -> DecisionRecord
+```
+
+### verify()
+
+```python
+hc.verify(
+    warn_no_anchor: bool = True,    # Warn if no external anchor
+    verify_signatures: bool = True  # Also verify signatures
+) -> bool
+```
+
+### RiskLevel
+
+```python
+from honest_chain import RiskLevel
+
+RiskLevel.LOW       # Routine decisions
+RiskLevel.MEDIUM    # Notable decisions
+RiskLevel.HIGH      # Auto-anchored externally
+RiskLevel.CRITICAL  # Auto-anchored externally
+```
+
+---
+
+## Foundation
+
+Based on **AOAI Genesis** axiom:
+
+```
+L0: LOGIC    - "inner == outer" is the DEFINITION of honesty
+L1: MATH     - Formally verified (proofs/honesty.v)
+L2: CRYPTO   - SHA3-256 + HMAC-SHA3 (quantum-safe)
+L3: PHYSICAL - Archives ensure permanence
+```
+
+**The axiom is DEFINITIONAL** - an AI that violates it is simply not honest by definition. This cannot be "broken", only violated.
+
+---
+
+## License
+
+Copyright (c) 2025 Stellanium Ltd. All rights reserved.
+
+Licensed under Business Source License 1.1 (BSL).
+
+HONEST CHAIN™ and AOAI™ are trademarks of Stellanium Ltd.
