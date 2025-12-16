@@ -1,0 +1,427 @@
+Metadata-Version: 2.4
+Name: bruno-memory
+Version: 0.1.4
+Summary: Memory storage and retrieval system for Bruno AI Platform
+Project-URL: Homepage, https://github.com/meggy-ai/bruno-memory
+Project-URL: Documentation, https://github.com/meggy-ai/bruno-memory#readme
+Project-URL: Repository, https://github.com/meggy-ai/bruno-memory.git
+Project-URL: Issues, https://github.com/meggy-ai/bruno-memory/issues
+Author-email: meggy-ai <contact@meggy-ai.com>
+License-Expression: MIT
+License-File: LICENSE
+Keywords: ai,assistant,bruno-ai,chat,conversation,embeddings,memory,storage,vector-database
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Requires-Python: >=3.10
+Requires-Dist: bruno-core>=0.1.0
+Requires-Dist: bruno-llm>=0.1.0
+Requires-Dist: pydantic>=2.5.0
+Requires-Dist: python-dateutil>=2.8.2
+Requires-Dist: typing-extensions>=4.8.0
+Provides-Extra: advanced
+Requires-Dist: cryptography>=41.0.0; extra == 'advanced'
+Requires-Dist: numpy>=1.24.0; extra == 'advanced'
+Provides-Extra: all
+Requires-Dist: aiosqlite>=0.19.0; extra == 'all'
+Requires-Dist: asyncpg>=0.29.0; extra == 'all'
+Requires-Dist: chromadb>=0.4.18; extra == 'all'
+Requires-Dist: cryptography>=41.0.0; extra == 'all'
+Requires-Dist: numpy>=1.24.0; extra == 'all'
+Requires-Dist: psycopg2-binary>=2.9.9; extra == 'all'
+Requires-Dist: qdrant-client>=1.7.0; extra == 'all'
+Requires-Dist: redis[hiredis]>=5.0.0; extra == 'all'
+Requires-Dist: sentence-transformers>=2.2.2; extra == 'all'
+Requires-Dist: torch>=2.1.0; extra == 'all'
+Provides-Extra: dev
+Requires-Dist: bandit>=1.7.5; extra == 'dev'
+Requires-Dist: black>=23.12.0; extra == 'dev'
+Requires-Dist: mypy>=1.7.1; extra == 'dev'
+Requires-Dist: pip-audit>=2.6.1; extra == 'dev'
+Requires-Dist: pre-commit>=3.6.0; extra == 'dev'
+Requires-Dist: pytest-asyncio>=0.21.1; extra == 'dev'
+Requires-Dist: pytest-cov>=4.1.0; extra == 'dev'
+Requires-Dist: pytest-mock>=3.12.0; extra == 'dev'
+Requires-Dist: pytest>=7.4.3; extra == 'dev'
+Requires-Dist: ruff>=0.1.8; extra == 'dev'
+Provides-Extra: docs
+Requires-Dist: mkdocs-autorefs>=0.5.0; extra == 'docs'
+Requires-Dist: mkdocs-material>=9.4.0; extra == 'docs'
+Requires-Dist: mkdocs>=1.5.3; extra == 'docs'
+Requires-Dist: mkdocstrings[python]>=0.24.0; extra == 'docs'
+Provides-Extra: embeddings
+Requires-Dist: sentence-transformers>=2.2.2; extra == 'embeddings'
+Requires-Dist: torch>=2.1.0; extra == 'embeddings'
+Provides-Extra: postgresql
+Requires-Dist: asyncpg>=0.29.0; extra == 'postgresql'
+Requires-Dist: psycopg2-binary>=2.9.9; extra == 'postgresql'
+Provides-Extra: redis
+Requires-Dist: redis[hiredis]>=5.0.0; extra == 'redis'
+Provides-Extra: sqlite
+Requires-Dist: aiosqlite>=0.19.0; extra == 'sqlite'
+Provides-Extra: test
+Requires-Dist: pytest-asyncio>=0.21.1; extra == 'test'
+Requires-Dist: pytest-cov>=4.1.0; extra == 'test'
+Requires-Dist: pytest-mock>=3.12.0; extra == 'test'
+Requires-Dist: pytest-timeout>=2.2.0; extra == 'test'
+Requires-Dist: pytest>=7.4.3; extra == 'test'
+Provides-Extra: test-services
+Requires-Dist: docker>=6.1.0; extra == 'test-services'
+Requires-Dist: testcontainers>=3.7.0; extra == 'test-services'
+Provides-Extra: vector
+Requires-Dist: chromadb>=0.4.18; extra == 'vector'
+Requires-Dist: qdrant-client>=1.7.0; extra == 'vector'
+Description-Content-Type: text/markdown
+
+# Bruno Memory
+
+**Memory storage and retrieval system for Bruno AI Platform**
+
+[![CI](https://github.com/meggy-ai/bruno-memory/actions/workflows/ci.yml/badge.svg)](https://github.com/meggy-ai/bruno-memory/actions/workflows/ci.yml)
+[![Lint](https://github.com/meggy-ai/bruno-memory/actions/workflows/lint.yml/badge.svg)](https://github.com/meggy-ai/bruno-memory/actions/workflows/lint.yml)
+[![PyPI version](https://badge.fury.io/py/bruno-memory.svg)](https://badge.fury.io/py/bruno-memory)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+## Dependencies
+```bash
+pip install git+https://github.com/meggy-ai/bruno-core.git
+pip install git+https://github.com/meggy-ai/bruno-llm.git
+```
+
+Bruno Memory provides multiple backend storage options for conversation history, user context, and semantic memory while maintaining a consistent API for AI assistants to interact with. It implements the `MemoryInterface` from [bruno-core](https://github.com/meggy-ai/bruno-core) with full embedding support via [bruno-llm](https://github.com/meggy-ai/bruno-llm).
+
+## 📚 Documentation
+
+**[View Full Documentation](https://meggy-ai.github.io/bruno-memory/)** | [Quick Start](https://meggy-ai.github.io/bruno-memory/getting-started/quickstart/) | [API Reference](https://meggy-ai.github.io/bruno-memory/api/factory/) | [Examples](https://meggy-ai.github.io/bruno-memory/examples/basic/)
+
+## ✨ Features
+
+- **Multiple Storage Backends**: SQLite, PostgreSQL, Redis, ChromaDB, Qdrant
+- **Semantic Search**: Vector-based similarity search using embeddings
+- **Session Management**: Track conversations across multiple sessions
+- **Memory Compression**: Automatic summarization of old conversations
+- **Context Building**: Intelligent context window management
+- **Async/Await Support**: Full async support for high performance
+- **Type Safety**: Complete type hints and Pydantic models
+- **Easy Configuration**: Environment-based configuration
+
+## 🚀 Quick Start
+
+### Installation
+
+```bash
+# Basic installation
+pip install bruno-memory
+
+# With SQLite support (default)
+pip install bruno-memory[sqlite]
+
+# With PostgreSQL support  
+pip install bruno-memory[postgresql]
+
+# With Redis caching
+pip install bruno-memory[redis]
+
+# With vector database support
+pip install bruno-memory[vector]
+
+# With all backends
+pip install bruno-memory[all]
+```
+
+### Basic Usage
+
+```python
+import asyncio
+from bruno_memory import MemoryFactory
+from bruno_core.models.message import Message, MessageRole
+
+async def main():
+    # Create memory backend
+    memory = MemoryFactory.create("sqlite", database_path="./conversations.db")
+    
+    # Store a message
+    message = Message(
+        role=MessageRole.USER,
+        content="Hello, how are you today?"
+    )
+    await memory.store_message(message, conversation_id="conv_1")
+    
+    # Retrieve messages
+    messages = await memory.retrieve_messages("conv_1", limit=10)
+    print(f"Found {len(messages)} messages")
+    
+    # Search messages semantically (requires embedding provider)
+    results = await memory.search_messages("greeting", limit=5)
+    
+    # Get conversation context
+    context = await memory.get_context(user_id="user_123")
+    print(f"Context has {len(context.messages)} messages")
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+## 🏗️ Architecture
+
+Bruno Memory is built with a modular architecture:
+
+```
+bruno-memory/
+├── backends/          # Storage backend implementations
+│   ├── sqlite/        # SQLite backend (file-based)
+│   ├── postgresql/    # PostgreSQL backend (production)
+│   ├── redis/         # Redis backend (caching)
+│   └── vector/        # Vector DB backends (ChromaDB, Qdrant)
+├── managers/          # Memory management components
+│   ├── conversation.py    # Session lifecycle management
+│   ├── context_builder.py # Context window construction
+│   ├── retriever.py       # Search and retrieval
+│   ├── compressor.py      # Memory compression
+│   └── embedding.py       # Embedding management
+└── utils/             # Utility components
+    ├── cache.py           # Caching layer
+    ├── migration_manager.py # Schema migrations
+    └── analytics.py       # Usage analytics
+```
+
+## 📊 Backend Comparison
+
+| Backend | Use Case | Performance | Features | Setup Complexity |
+|---------|----------|-------------|----------|------------------|
+| **SQLite** | Development, Single-user | Good | Basic search, FTS | ⭐ Easy |
+| **PostgreSQL** | Production, Multi-user | Excellent | Advanced search, JSON | ⭐⭐ Medium |
+| **Redis** | Caching, Sessions | Excellent | TTL, Pub/Sub | ⭐⭐ Medium |
+| **ChromaDB** | Semantic search | Good | Vector similarity | ⭐⭐⭐ Advanced |
+| **Qdrant** | Production vectors | Excellent | Hybrid search | ⭐⭐⭐ Advanced |
+
+## 🔧 Configuration
+
+### Environment Variables
+
+```bash
+# Backend selection
+BRUNO_MEMORY_BACKEND=postgresql
+BRUNO_MEMORY_DATABASE_URL=postgresql://user:pass@localhost:5432/bruno
+
+# Embedding provider (from bruno-llm)
+BRUNO_LLM_EMBEDDING_PROVIDER=ollama
+BRUNO_LLM_EMBEDDING_BASE_URL=http://localhost:11434
+
+# Memory settings
+BRUNO_MEMORY_MAX_MESSAGES=1000
+BRUNO_MEMORY_COMPRESS_AFTER_DAYS=30
+```
+
+### Programmatic Configuration
+
+```python
+from bruno_memory import MemoryFactory
+
+# SQLite backend
+memory = MemoryFactory.create("sqlite", {
+    "database_path": "./conversations.db",
+    "enable_fts": True,
+    "max_connections": 10
+})
+
+# PostgreSQL backend
+memory = MemoryFactory.create("postgresql", {
+    "host": "localhost",
+    "port": 5432,
+    "database": "bruno",
+    "username": "postgres",
+    "password": "secret",
+    "pool_size": 20
+})
+
+# Redis backend
+memory = MemoryFactory.create("redis", {
+    "host": "localhost", 
+    "port": 6379,
+    "db": 0,
+    "ttl_seconds": 3600
+})
+
+# ChromaDB backend
+memory = MemoryFactory.create("chromadb", {
+    "persist_directory": "./chroma_db",
+    "collection_name": "conversations"
+})
+```
+
+## 🔍 Semantic Search
+
+Bruno Memory integrates with [bruno-llm](https://github.com/meggy-ai/bruno-llm) for embedding-based semantic search:
+
+```python
+from bruno_memory import MemoryFactory
+from bruno_llm.embedding_factory import EmbeddingFactory
+
+# Set up embedding provider
+embedding_provider = EmbeddingFactory.create("ollama", {
+    "base_url": "http://localhost:11434",
+    "model": "nomic-embed-text"
+})
+
+# Create memory with embedding support
+memory = MemoryFactory.create("chromadb", {
+    "persist_directory": "./vectors",
+    "embedding_provider": embedding_provider
+})
+
+# Search semantically
+results = await memory.search_messages(
+    query="What did we discuss about machine learning?",
+    limit=5
+)
+```
+
+## 📈 Performance
+
+Bruno Memory is designed for high performance:
+
+- **Async/Await**: All operations are async for maximum concurrency
+- **Connection Pooling**: Efficient database connection management
+- **Caching**: Multi-level caching with Redis support
+- **Batch Operations**: Bulk operations for large datasets
+- **Streaming**: Stream large result sets to avoid memory issues
+
+### Benchmarks
+
+| Operation | SQLite | PostgreSQL | Redis | ChromaDB |
+|-----------|---------|------------|-------|----------|
+| Store Message | 1ms | 2ms | 0.5ms | 5ms |
+| Retrieve 100 Messages | 10ms | 8ms | 2ms | 15ms |
+| Search (semantic) | N/A | 50ms | N/A | 20ms |
+| Context Building | 15ms | 12ms | 5ms | 25ms |
+
+## 🧪 Testing
+
+```bash
+# Install with dev dependencies
+pip install bruno-memory[dev]
+
+# Run tests
+pytest
+
+# Run with coverage
+pytest --cov=bruno_memory --cov-report=html
+
+# Run integration tests (requires services)
+docker-compose up -d  # Start test services
+pytest -m integration
+
+# Run benchmarks
+pytest -m benchmark
+```
+
+## 🔗 Integration
+
+### With Bruno Core
+
+```python
+from bruno_core import BaseAssistant
+from bruno_memory import MemoryFactory
+
+class MyAssistant(BaseAssistant):
+    def __init__(self):
+        # Initialize memory backend
+        memory = MemoryFactory.create_from_env()
+        super().__init__(memory=memory)
+    
+    async def process_message(self, message):
+        # Memory automatically handles storage
+        response = await self.generate_response(message)
+        return response
+```
+
+### With Bruno LLM
+
+```python
+from bruno_llm import LLMFactory
+from bruno_llm.embedding_factory import EmbeddingFactory
+from bruno_memory import MemoryFactory
+
+# Create providers
+llm = LLMFactory.create("ollama")
+embeddings = EmbeddingFactory.create("ollama")
+
+# Create memory with embedding support
+memory = MemoryFactory.create("chromadb", {
+    "embedding_provider": embeddings
+})
+
+# Use together
+async def rag_search(query: str):
+    # Find relevant memories
+    memories = await memory.search_messages(query, limit=5)
+    
+    # Use in LLM prompt
+    context = "\\n".join([m.content for m in memories])
+    response = await llm.generate(
+        f"Context: {context}\\n\\nQuestion: {query}"
+    )
+    return response
+```
+
+## 📚 Documentation
+
+- [Quick Start Guide](docs/guides/quick_start.md)
+- [Backend Configuration](docs/guides/backends.md)  
+- [Context Management](docs/guides/context_management.md)
+- [Semantic Search](docs/guides/semantic_search.md)
+- [API Reference](docs/api/)
+
+## 🤝 Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+### Development Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/meggy-ai/bruno-memory.git
+cd bruno-memory
+
+# Create virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\\Scripts\\activate
+
+# Install in development mode
+pip install -e .[dev,all]
+
+# Install pre-commit hooks
+pre-commit install
+
+# Run tests
+pytest
+```
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🔗 Related Projects
+
+- [bruno-core](https://github.com/meggy-ai/bruno-core) - Core interfaces and models
+- [bruno-llm](https://github.com/meggy-ai/bruno-llm) - LLM providers and embeddings
+- [bruno-abilities](https://github.com/meggy-ai/bruno-abilities) - Function calling and tools
+- [bruno-pa](https://github.com/meggy-ai/bruno-pa) - Personal assistant implementation
+
+## 📞 Support
+
+- [GitHub Issues](https://github.com/meggy-ai/bruno-memory/issues)
+- [Discussions](https://github.com/meggy-ai/bruno-memory/discussions)
+
+---
+
+Made with ❤️ by the [meggy-ai](https://github.com/meggy-ai) team.

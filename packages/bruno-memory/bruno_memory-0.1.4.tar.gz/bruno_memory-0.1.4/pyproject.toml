@@ -1,0 +1,253 @@
+[build-system]
+requires = ["hatchling>=1.8.0", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "bruno-memory"
+description = "Memory storage and retrieval system for Bruno AI Platform"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [
+    { name = "meggy-ai", email = "contact@meggy-ai.com" },
+]
+keywords = [
+    "ai",
+    "memory",
+    "storage", 
+    "conversation",
+    "embeddings",
+    "vector-database",
+    "chat",
+    "assistant",
+    "bruno-ai",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "bruno-core>=0.1.0",
+    "bruno-llm>=0.1.0", 
+    "pydantic>=2.5.0",
+    "python-dateutil>=2.8.2",
+    "typing-extensions>=4.8.0",
+]
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://github.com/meggy-ai/bruno-memory"
+Documentation = "https://github.com/meggy-ai/bruno-memory#readme"
+Repository = "https://github.com/meggy-ai/bruno-memory.git"
+Issues = "https://github.com/meggy-ai/bruno-memory/issues"
+
+[project.optional-dependencies]
+# Advanced features
+advanced = [
+    "cryptography>=41.0.0",
+    "numpy>=1.24.0",
+]
+
+# SQLite backend (uses built-in sqlite3 + aiosqlite for async)
+sqlite = [
+    "aiosqlite>=0.19.0",
+]
+
+# PostgreSQL backend with vector extensions
+postgresql = [
+    "asyncpg>=0.29.0",
+    "psycopg2-binary>=2.9.9",  # For pgvector support
+]
+
+# Redis backend for caching and session management
+redis = [
+    "redis[hiredis]>=5.0.0",
+]
+
+# Vector database backends for semantic search
+vector = [
+    "chromadb>=0.4.18",
+    "qdrant-client>=1.7.0",
+]
+
+# Local embedding support (alternative to API-based embeddings)
+embeddings = [
+    "sentence-transformers>=2.2.2",
+    "torch>=2.1.0",
+]
+
+# Full installation with all backends
+all = [
+    "bruno-memory[advanced,sqlite,postgresql,redis,vector,embeddings]",
+]
+
+# Development dependencies
+dev = [
+    "pytest>=7.4.3",
+    "pytest-asyncio>=0.21.1", 
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.12.0",
+    "black>=23.12.0",
+    "ruff>=0.1.8",
+    "mypy>=1.7.1",
+    "pre-commit>=3.6.0",
+    "bandit>=1.7.5",
+    "pip-audit>=2.6.1",
+]
+
+# Testing dependencies
+test = [
+    "pytest>=7.4.3",
+    "pytest-asyncio>=0.21.1", 
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.12.0",
+    "pytest-timeout>=2.2.0",
+]
+
+# Documentation dependencies
+docs = [
+    "mkdocs>=1.5.3",
+    "mkdocs-material>=9.4.0",
+    "mkdocstrings[python]>=0.24.0",
+    "mkdocs-autorefs>=0.5.0",
+]
+
+# Testing with external services (Docker required)
+test-services = [
+    "testcontainers>=3.7.0",
+    "docker>=6.1.0",
+]
+
+[project.entry-points."bruno_memory.backends"]
+sqlite = "bruno_memory.backends.sqlite:SQLiteBackend"
+postgresql = "bruno_memory.backends.postgresql:PostgreSQLBackend" 
+redis = "bruno_memory.backends.redis:RedisBackend"
+chromadb = "bruno_memory.backends.vector:ChromaDBBackend"
+qdrant = "bruno_memory.backends.vector:QdrantBackend"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "bruno_memory/__version__.py"
+
+[tool.black]
+line-length = 100
+target-version = ['py310', 'py311', 'py312']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # Directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by black)
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+]
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["F401"]  # Ignore unused imports in __init__.py files
+"tests/**/*" = ["F401", "F811"]  # Ignore unused imports and redefinitions in tests
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = [
+    "aiosqlite.*",
+    "asyncpg.*",
+    "redis.*",
+    "chromadb.*", 
+    "qdrant_client.*",
+    "sentence_transformers.*",
+    "torch.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--cov=bruno_memory",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+]
+testpaths = ["tests"]
+markers = [
+    "unit: marks tests as unit tests (deselect with '-m \"not unit\"')",
+    "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
+    "benchmark: marks tests as benchmark tests (deselect with '-m \"not benchmark\"')",
+    "requires_ollama: marks tests that require Ollama to be running",
+    "requires_postgres: marks tests that require PostgreSQL",
+    "requires_redis: marks tests that require Redis",
+    "requires_docker: marks tests that require Docker",
+]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["bruno_memory"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__version__.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]

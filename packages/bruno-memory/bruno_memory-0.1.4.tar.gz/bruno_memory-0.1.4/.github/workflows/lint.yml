@@ -1,0 +1,42 @@
+name: Lint
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: Code quality checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      
+      - name: Check code formatting with black
+        run: |
+          black --check bruno_memory/ tests/
+      
+      - name: Lint with ruff
+        run: |
+          ruff check bruno_memory/ tests/
+      
+      - name: Type check with mypy
+        run: |
+          mypy bruno_memory/
+        continue-on-error: true
