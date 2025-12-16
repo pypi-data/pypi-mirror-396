@@ -1,0 +1,27 @@
+<configure
+  xmlns="http://namespaces.zope.org/zope"
+  xmlns:plone="http://namespaces.plone.org/plone">
+
+  <include package="plone.restapi"  />
+
+  <adapter
+    factory=".controlpanel.Controlpanel"
+    name="geolocation" />
+
+  <plone:service
+    method="GET"
+    name="@geolocation"
+    for="Products.CMFCore.interfaces.ISiteRoot"
+    factory=".get.Get"
+    permission="eea.geolocation.settings.view"
+    />
+
+  <plone:service
+    method="GET"
+    name="@geodata"
+    for="Products.CMFCore.interfaces.ISiteRoot"
+    factory=".get.GetVocabularies"
+    permission="eea.geolocation.settings.view"
+    />
+
+</configure>
