@@ -1,0 +1,89 @@
+# Sarmadtec NeuroPort Driver (pip package)
+
+Python driver for Fascin8/Ultim8 neuro headstages with optional fake signal generation for offline testing. The code is packaged as `sarmadtec_neuroport` so it can be installed via pip and reused outside this GUI app.
+
+## Install locally
+
+- From PyPI: `pip install sarmadtec-neuroport`
+- From source checkout (if needed): `pip install .` or `pip install -e .`
+- Requires Python 3.8+ and `pyserial` (pulled in automatically).
+
+## Quickstart (faker mode)
+
+```python
+from time import sleep
+from sarmadtec_neuroport import Device
+
+def on_data(samples):
+    if samples:
+        first = samples[0]
+        print(f"{len(samples)} samples; seq={first[0]} channels={len(first)-1}")
+
+device = Device(
+    debug_mode=True,               # print driver logs
+    faker=True,                    # built-in signal generator instead of hardware
+    data_ready_callback=on_data,   # called when new samples arrive
+    data_chunk=0,                  # 0=flush everything each callback
+)
+
+device.sampling_rate = 500        # 250/500/1000/2000 Hz
+device.gain = 24                  # ADS1299 gain setting for primary channels
+device.exgain = 24                # gain for extra channels
+device.leadoffMode = True         # enable lead-off detection
+
+device.configure_settings()       # push settings to device (no-op for faker)
+device.start()                    # begin streaming
+sleep(3)
+device.stop()
+device.shutdown()                 # cleanly close worker threads/serial port
+```
+
+Run `python examples/basic_usage.py --faker --duration 3` for a ready-made script. Drop `--faker` to talk to real hardware over USB/serial.
+
+## Real hardware notes
+
+- Plug in the Fascin8/Ultim8 so the OS exposes a CDC/serial port (Mac: `/dev/tty.*`, Windows: `COMx`).
+- The driver auto-scans for descriptors containing “USB Serial Device” or “STM32 Virtual ComPort”.
+- You can observe connection changes by registering `connection_state_callback`:
+  ```python
+  Device(connection_state_callback=lambda connected, port, reason: print(connected, port, reason))
+  ```
+- Call `reset_device()` to force a reconnect/re-handshake without recreating the object.
+
+## API cheat sheet
+
+- `Device(debug_mode=False, data_ready_callback=None, settings_written_callback=None, data_chunk=0, faker=False, faker_data=None, connection_state_callback=None, connection_check_interval=1.0)`
+  - Instantiation starts internal I/O + watchdog threads and kicks off `connect_async()`.
+  - `faker=True` bypasses serial I/O and emits synthetic samples; optionally replay `faker_data` (list of channel-value lists).
+  - `data_chunk=0` flushes all buffered samples per callback; otherwise batches that many.
+- Core methods:
+  - `connect_async(force=False)` / `reset_device()` — handshake with the headstage.
+  - `configure_settings()` — send current sampling/gain/lead-off/channel flags.
+  - `start()` / `stop()` — start/stop streaming; parsed samples surface via callbacks or `get_data()`.
+  - `set_signal_generator_mode(enabled, faker_data=None)` — toggle faker mode on an existing instance.
+  - `set_data_ready_callback(cb)` / `set_connection_state_callback(cb)` — register runtime callbacks.
+  - `shutdown()` — close serial, stop worker threads/watchdog, and reset state.
+
+Samples are parsed as Python lists: `[sequence, ch1, ch2, ...]` (Fascin8 produces 21 primary + 3 extra channels; Ultim8 produces 8 primary).
+
+## Stimulus markers and epochs
+
+The driver can tag stimulus on/off with sample-accurate indexes and optionally capture the corresponding samples.
+
+```python
+device = Device(faker=True, debug_mode=False, epoch_buffer_size=20000)
+
+device.start()
+device.mark_stimulus_on("cue", {"color": "red"})
+sleep(1.0)
+device.mark_stimulus_off()  # closes the current epoch
+epochs = device.get_stimulus_epochs(reset=True)
+print(epochs[0]["onset_sample"], epochs[0]["offset_sample"], epochs[0]["length_samples"])
+# epochs[0]["data"] holds the samples if epoch_buffer_size was large enough to cover the window
+```
+
+- `mark_stimulus_on(label, metadata=None)` / `mark_stimulus_off(label=None, metadata=None)` — define epochs.
+- `mark_stimulus_event(label, metadata=None)` — instantaneous marker.
+- `get_stimulus_epochs(reset=False, include_open=False)` — returns dicts with onset/offset/length and optional sample data; set `reset=True` to drop closed epochs.
+- `set_stimulus_event_callback(cb)` — subscribe to marker events; callback receives `(event_type, epoch, sample_index)`.
+- `epoch_buffer_size` (Device init arg) controls how many recent samples are retained to attach data to epochs. Ensure it covers your longest stimulus window; set to 0 to disable data capture.
