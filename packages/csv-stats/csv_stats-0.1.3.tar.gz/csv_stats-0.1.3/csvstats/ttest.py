@@ -1,0 +1,153 @@
+from typing import Union
+from pathlib import Path
+
+import pandas as pd
+from scipy import stats
+
+from .anova import anova1way
+from .utils.load_data import load_data_from_path
+from .utils.save_stats import save_handler
+from .utils.summary_stats import calculate_summary_statistics
+from .utils.test_assumptions import test_normality_assumption, test_variance_homogeneity_assumption
+from .utils.run_all_columns import _run_all_columns
+
+def ttest_ind(data: Union[Path, str, pd.DataFrame], 
+              group_column: str, 
+              data_column: str, 
+              filename: Union[str, Path, None] = 'ttest_ind_results.pdf',
+              render_plot: bool = False,
+              popmean: float = 0) -> dict:
+    """Conduct a two-sample t-test (independent or paired) and save results to a PDF.
+
+    Args:
+        data (Union[Path, str, pd.DataFrame]): The input data, which can be a file path, string, or DataFrame.
+        group_column (str): The name of the column containing group labels. If this is a one sample t-test, this should be an empty string.
+        data_column (str): The name of the column containing the data values.
+        repeated_measures_column (str, optional): The name of the. Defaults to "".
+        filename (str, optional): The filename to save the results to. Defaults to 'ttest_ind_results.pdf'. If None, results are not saved to a file.
+    """
+
+    result = {} # Initialize result dictionary
+
+    # Load the data
+    data = load_data_from_path(data)
+
+    # "_" is the special character indicating to loop through all columns
+    if data_column == "_":
+        results = _run_all_columns(ttest_ind, 
+                                   data, 
+                                   group_column, 
+                                   filename=filename,
+                                   render_plot=render_plot,
+                                   popmean=popmean)
+        return results
+
+    # Make sure there is a 'group_column' even for one-sample t-tests    
+    if group_column is None:
+        group_column = ""
+    if group_column == "":
+        group_column = "one_sample"
+        data[group_column] = "all"
+
+    # Store metadata
+    result["group_column"] = group_column
+    result["data_column"] = data_column
+    result["popmean"] = popmean
+
+    groups = data[group_column].unique()
+    num_groups = len(groups)
+    if num_groups == 2:
+        result = anova1way(data, group_column, data_column, group_column, filename)
+        summary_stats = calculate_summary_statistics(data, group_column, data_column)
+        result["summary_statistics"] = summary_stats
+        result = save_handler(data, result, filename=filename, render_plot=render_plot)
+        return result
+    
+    if num_groups != 1:
+        raise ValueError("Data must contain exactly one or two groups for a t-test.")
+    
+    t_stat, p_value = stats.ttest_1samp(data[data_column], popmean=popmean)
+    result["t_statistic"] = round(t_stat, 4)
+    result["p_value"] = round(p_value, 4)
+
+    summary_stats = calculate_summary_statistics(data, group_column, data_column)
+    result["summary_statistics"] = summary_stats
+
+    # Test model assumptions
+    normality_test_result = test_normality_assumption(data[data_column])    
+    result["normality_test"] = normality_test_result
+    if num_groups == 2:
+        homogeneity_variances_result = test_variance_homogeneity_assumption(data, group_column, data_column)
+        result["homogeneity_of_variance_test"] = homogeneity_variances_result
+    else:
+        result['homogeneity_of_variance_test'] = 'Not applicable'
+
+    result = save_handler(data, result, filename=filename, render_plot=render_plot, group_column=group_column)
+
+    return result
+
+
+def ttest_dep(data: Union[Path, str, pd.DataFrame], 
+              group_column: str, 
+              data_column: str, 
+              repeated_measures_column: str, 
+              filename: Union[str, Path, None] = 'ttest_dep_results.pdf',
+              render_plot: bool = False) -> dict:
+    """Conduct a paired t-test and save results to a PDF.
+
+    Args:
+        data (Union[Path, str, pd.DataFrame]): The input data, which can be a file path, string, or DataFrame.
+        group_column (str): The name of the column containing group labels. If this is a one sample t-test, this should be an empty string.
+        data_column (str): The name of the column containing the data values.
+        repeated_measures_column (str, optional): The name of the column containing the repeated measures identifiers. Defaults to "".
+        filename (str, optional): The filename to save the results to. Defaults to 'ttest_dep_results.pdf'. If None, results are not saved to a file.
+    """
+
+    # Load the data
+    data = load_data_from_path(data)
+
+    # "_" is the special character indicating to loop through all columns
+    if data_column == "_":
+        results = _run_all_columns(ttest_dep, 
+                                   data, 
+                                   group_column, 
+                                   repeated_measures_column=repeated_measures_column, 
+                                   filename=filename
+                                )
+        return results
+
+    groups = data[group_column].unique()
+    num_groups = len(groups)
+    if num_groups != 2:
+        raise ValueError("Data must contain exactly two groups for a paired t-test.")
+
+    # Pivot the data to have one column per group
+    pivot_data = data.pivot(index=repeated_measures_column, columns=group_column, values=data_column)
+    pivot_data.columns.name = None # Fixes artifact from the pivot() operation
+    pivot_data = pivot_data.reset_index()
+    pivot_data = pivot_data.dropna()
+    delta_column_name = f"{data_column}_{groups[0]}_minus_{groups[1]}"
+    pivot_data[delta_column_name] = pivot_data[groups[0]] - pivot_data[groups[1]]
+    delta_group_column = "one_sample"
+    data[delta_group_column] = "all"
+
+    # Perform paired t-test on the difference column
+    ttest_ind_result = ttest_ind(pivot_data, "", delta_column_name, filename=None)
+    summary_stats_delta = ttest_ind_result["summary_statistics"]
+    del ttest_ind_result["summary_statistics"] # Delete so that it shows up next to the 2 groups' summary stats in the report
+
+    # Store summary statistics for the delta data (calculated in ttest_ind() )
+    ttest_ind_result["summary_statistics_delta"] = summary_stats_delta
+    
+    # Calculate summary statistics for the two groups
+    summary_stats = calculate_summary_statistics(data, group_column, data_column)
+    ttest_ind_result["summary_statistics"] = summary_stats
+
+    ttest_ind_result = save_handler(data, 
+                                    ttest_ind_result, 
+                                    filename=filename, 
+                                    render_plot=render_plot, 
+                                    group_column=group_column,
+                                    repeated_measures_column=repeated_measures_column)
+
+    return ttest_ind_result
