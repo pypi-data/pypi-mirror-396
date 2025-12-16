@@ -1,0 +1,231 @@
+Metadata-Version: 2.4
+Name: djb
+Version: 0.2.19
+Summary: Django + Bun deployment platform
+Author: kajicom
+License-Expression: MIT
+Project-URL: Homepage, https://github.com/kajicom/djb
+Project-URL: Repository, https://github.com/kajicom/djb
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: django>=6.0.0
+Requires-Dist: click>=8.1.8
+Requires-Dist: cryptography>=44.0.0
+Requires-Dist: pyyaml>=6.0.2
+Requires-Dist: requests>=2.32.0
+Dynamic: license-file
+
+# djb - Django + Bun Platform
+
+<a href="https://github.com/kajicom/djb">
+  <img src="./docs/djb.svg" alt="djb mascot" width="300px" align="right">
+</a>
+
+`djb` is a deployment platform for Django applications with modern frontend tooling (Bun). It provides utilities for secrets management, deployment, and development workflows.
+
+## Architecture
+
+djb is organized as a Python package within the beachresort25 project:
+
+```
+djb/
+├── __init__.py          # Package initialization
+├── secrets/             # Encrypted secrets management
+│   ├── __init__.py      # Public API exports
+│   └── core.py          # Encryption/decryption implementation
+└── cli/                 # Command-line interface
+    ├── __init__.py
+    ├── djb.py           # Main CLI entry point
+    ├── init.py          # Environment initialization
+    ├── secrets.py       # Secrets management
+    └── deploy.py        # Heroku deployment
+```
+
+## Features
+
+### Initialization
+
+One-command setup for development environment:
+
+```bash
+# Full initialization
+djb init
+
+# Initialize with options
+djb init --skip-brew          # Skip Homebrew dependencies
+djb init --skip-frontend      # Skip frontend setup
+djb init --skip-secrets       # Skip secrets initialization
+djb init --project-root /path # Specify project directory
+```
+
+This installs:
+- System dependencies via Homebrew (age, PostgreSQL, GDAL, Bun)
+- Python dependencies (`uv sync`)
+- Frontend dependencies (`bun install`)
+- Encrypted secrets management
+
+### Secrets Management
+
+Age-style encrypted secrets for secure configuration:
+
+```bash
+# Initialize secrets
+djb secrets init
+
+# Edit environment secrets
+djb secrets edit dev
+djb secrets edit production
+
+# View secrets
+djb secrets view dev
+djb secrets list
+```
+
+**Documentation**: See [docs/SECRETS_GUIDE.md](../docs/SECRETS_GUIDE.md)
+
+### Deployment
+
+Heroku deployment with frontend builds, secrets sync, and migrations:
+
+```bash
+# Deploy to Heroku (uses DJB_APP_NAME from Django settings)
+djb deploy heroku
+
+# Or specify app explicitly
+djb deploy heroku --app myapp
+
+# Deploy with options
+djb deploy heroku --skip-build --skip-secrets
+
+# Revert to previous deployment
+djb deploy revert
+
+# Revert to specific commit
+djb deploy revert abc1234
+```
+
+**App Name Auto-Detection**: If `DJB_APP_NAME` is set in your Django settings, deployment commands will use it automatically. You can still override with `--app`.
+
+```python
+# In settings.py
+DJB_APP_NAME = "myapp"
+```
+
+## Usage
+
+### Command Line
+
+djb provides two CLI interfaces:
+
+1. **Direct**: `djb <command>`
+2. **Via beachresort**: `br <command>` (convenience wrapper)
+
+Both are equivalent. The beachresort CLI delegates to djb internally.
+
+### Python API
+
+Import djb modules directly in Python code:
+
+```python
+from djb.secrets import load_secrets, AgeKey, SecretsManager
+
+# Load secrets for current environment
+secrets = load_secrets()
+api_key = secrets['api_keys']['stripe']
+
+# Encrypt/decrypt programmatically
+key = AgeKey.generate()
+manager = SecretsManager(secrets_dir=Path('secrets'), age_key=key)
+manager.save_secrets('dev', data, [key.to_public_string()], encrypt=True)
+```
+
+## Installation
+
+djb is included in the beachresort25 project. After cloning:
+
+```bash
+# One-command setup (installs all dependencies)
+djb init
+
+# Or install manually
+uv sync
+
+# Verify djb is available
+djb --help
+```
+
+## Development
+
+### Adding New Commands
+
+1. Create a new subcommand module in `djb/cli/`
+2. Define your Click command group
+3. Register it in `djb/cli/djb.py`:
+
+```python
+from djb.cli.mycommand import mycommand
+
+djb_cli.add_command(mycommand)
+```
+
+### Adding New Features
+
+1. Implement the feature in an appropriate module under `djb/`
+2. Export public API in `djb/__init__.py` if needed
+3. Add CLI commands if applicable
+4. Update documentation
+
+## Architecture Decisions
+
+### Why djb is in beachresort25
+
+djb started as a separate project but has been integrated into beachresort25 to:
+
+1. Simplify dependency management
+2. Allow rapid iteration on both the platform and application
+3. Enable project-specific customization
+4. Avoid version conflicts between djb and application dependencies
+
+The original external djb project will be deprecated in favor of this integrated approach.
+
+### Why Age Encryption
+
+- **Modern cryptography**: X25519 + ChaCha20-Poly1305
+- **Simple key management**: Single key file vs PGP keyring complexity
+- **Git-safe**: Encrypted values can be committed
+- **Future-proof**: Compatible with Kubernetes sealed secrets
+
+## Future Plans
+
+Planned djb features:
+
+- [x] Environment initialization - `djb init`
+- [x] Deployment commands (Heroku) - `djb deploy heroku`, `djb deploy revert`
+- [x] App name auto-detection from Django settings (`DJB_APP_NAME`)
+- [x] Git hooks setup via `djb init` (pre-commit hook for editable djb check)
+- [ ] Deployment commands (Kubernetes)
+- [ ] Development server management
+- [ ] Database migration utilities
+- [ ] Multi-recipient secret encryption
+- [ ] Secret rotation automation
+- [ ] Environment variable syncing
+
+## References
+
+- [Secrets Guide](../docs/SECRETS_GUIDE.md) - User guide for secrets management
+- [Age Encryption](https://age-encryption.org/) - Encryption specification
+- [Click](https://click.palletsprojects.com/) - CLI framework
+
+## License
+
+djb is licensed under the MIT License.
+
+## Mascot Attribution
+
+The djb mascot (dj_bun) was created for this project and is distributed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/deed.en).
+
+<br>
+
+---
+/**dj_bun**: playin' dev and deploy since 1984 🎶
