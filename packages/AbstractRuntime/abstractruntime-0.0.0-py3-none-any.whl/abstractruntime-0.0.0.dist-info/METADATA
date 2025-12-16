@@ -1,0 +1,89 @@
+Metadata-Version: 2.4
+Name: AbstractRuntime
+Version: 0.0.0
+Summary: Placeholder for AbstractRuntime: a durable graph runner designed to pair with AbstractCore.
+Project-URL: AbstractCore (website), https://www.abstractcore.ai/
+Project-URL: AbstractCore (GitHub), https://github.com/lpalbou/abstractcore
+Author: AbstractRuntime Contributors
+License: MIT
+License-File: LICENSE
+Keywords: agents,checkpoint,durable,graph,llm,resume,workflow
+Classifier: Development Status :: 1 - Planning
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+
+## AbstractRuntime
+
+**Status:** placeholder package (planning stage). **No runtime implementation yet.**
+
+AbstractRuntime is intended to be a **durable graph runner** designed to pair with **AbstractCore** (unified LLM interface: [website](https://www.abstractcore.ai/), [GitHub](https://github.com/lpalbou/abstractcore)).
+
+### Problem this package is meant to solve
+
+Agentic systems are inherently **multi-step** and frequently **interruptible**:
+
+- **External calls** (LLM providers, tools, jobs) can fail transiently, time out, or be rate-limited.
+- **Human-in-the-loop steps** require pausing, collecting input, and resuming later.
+- **Long-running workflows** must survive process restarts and redeploys.
+
+AbstractRuntime’s goal is to provide a **general-purpose execution substrate** that can:
+
+- **Interrupt → checkpoint → resume** at *any* step boundary
+- Support heterogeneous step types (LLM call, tool call, wait-until time, wait-job, ask-user, subgraph, etc.)
+- Maintain a durable **step ledger** (append-only history of attempts and outcomes)
+
+### Design targets (intended capabilities)
+
+- **Durable execution model**
+  - Steps are executed with **durable state transitions** persisted to storage.
+  - A run can be safely resumed after crash/restart without losing progress.
+  - Clear semantics for retries and backoff without “double-applying” effects.
+
+- **Interrupt / resume primitives**
+  - Explicit “pause points” for ask-user / wait steps.
+  - Resume via a stable run identifier + persisted checkpoint.
+
+- **Step ledger (audit + debugging)**
+  - Append-only records for: step identity, inputs, outputs, errors, timestamps, attempt numbers, and metadata.
+  - Designed to support observability, replay analysis, and compliance/audit needs.
+
+- **Step type extensibility**
+  - A common “step contract” that can represent:
+    - LLM calls (with AbstractCore)
+    - Tool calls (side-effecting or pure)
+    - Wait-until (time-based scheduling)
+    - Wait-job (external job orchestration)
+    - Ask-user (HITL)
+    - Subgraph / dynamic branching
+
+- **Storage backends (planned)**
+  - Pluggable persistence for checkpoints + ledgers (e.g., SQLite/Postgres/file).
+  - Strong focus on correctness and durability over early optimization.
+
+### Relationship to AbstractCore
+
+AbstractCore provides a **provider-agnostic LLM interface** and media/tooling primitives (see [AbstractCore website](https://www.abstractcore.ai/) and [AbstractCore GitHub](https://github.com/lpalbou/abstractcore)). AbstractRuntime is intended to orchestrate *when* and *how* those calls happen in larger workflows, with durability guarantees.
+
+### Non-goals (initially)
+
+- A full workflow DSL or UI.
+- A distributed queue system replacement.
+- A specific persistence backend mandate (storage will be abstracted).
+
+### Installation
+
+This package is currently a placeholder for PyPI name reservation and documentation.
+
+### License
+
+MIT (see `LICENSE`).
+
+
