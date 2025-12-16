@@ -1,0 +1,533 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+**hms-commander** is a Python library for automating HEC-HMS (Hydrologic Engineering Center's Hydrologic Modeling System) operations. It provides a comprehensive API for interacting with HEC-HMS project files, executing simulations, and processing results, following the architectural patterns established by ras-commander.
+
+## Development Environment
+
+### Build Commands
+- **Install locally**: `pip install -e .` (for development)
+- **Install from build**: `pip install hms-commander`
+- **Install with optional dependencies**: `pip install -e ".[all]"` (includes dev, gis, dss)
+
+### Dependencies
+- **Python**: Requires 3.10+
+- **Core packages**: pandas, numpy, pathlib, tqdm, requests
+- **Optional GIS**: geopandas, pyproj, shapely
+- **Optional DSS**: ras-commander, pyjnius
+
+### Environment Management
+- Supports both pip and uv for package management
+- Development pattern: Clone repo and use `sys.path.append()` method
+- Create virtual environment recommended: `python -m venv venv`
+
+## Architecture Overview
+
+### Core Classes and Execution Model
+
+**Project Management**: `HmsPrj` class and global `hms` object
+- Initialize projects: `init_hms_project(path, hms_exe_path=None, hms_object=None)`
+- Global `hms` object available for single-project workflows
+- Multiple project support via separate `HmsPrj` instances
+
+**File Operations Classes (ASCII text files)**:
+- `HmsBasin` - Basin model file operations (.basin)
+- `HmsMet` - Meteorologic model operations (.met)
+- `HmsControl` - Control specification operations (.control)
+- `HmsGage` - Time-series gage operations (.gage)
+- `HmsGeo` - GIS data extraction (GeoJSON export)
+
+**Execution Classes**:
+- `HmsCmdr` - HEC-HMS simulation execution
+- `HmsJython` - Jython script generation
+
+**Data Classes**:
+- `HmsDss` - DSS file operations (leverages ras-commander's RasDss)
+- `HmsResults` - Results extraction from DSS files
+
+**Utility Class**:
+- `HmsUtils` - Unit conversions, file operations, validation
+
+**Example Projects**:
+- `HmsExamples` - Manage HMS example projects from local installations
+
+## Complete API Reference
+
+### Internal Utilities (New in Session 3)
+
+#### HmsFileParser - Shared Parsing Utilities
+**Location:** `hms_commander/_parsing.py`
+
+Internal utility class used by HmsBasin, HmsMet, HmsControl, HmsGage. Not typically called directly by users, but available for advanced use cases.
+
+```python
+from hms_commander._parsing import HmsFileParser
+
+# Read HMS files with encoding fallback
+content = HmsFileParser.read_file("model.basin")
+
+# Parse named blocks (Subbasin:, Gage:, Reach:)
+blocks = HmsFileParser.parse_blocks(content, "Subbasin")
+# Returns: {'Sub1': {'Area': '100.0', 'Downstream': 'Junc1'}, ...}
+
+# Parse named sections (Meteorology:, Control:)
+name, params = HmsFileParser.parse_named_section(content, "Meteorology")
+
+# Update parameter values
+updated, changed = HmsFileParser.update_parameter(content, "Area", "150.0")
+
+# Find and replace blocks
+match, header, body, footer = HmsFileParser.find_block(content, "Subbasin", "Sub1")
+new_content = HmsFileParser.replace_block(content, match, modified_body)
+```
+
+#### Constants - Centralized Magic Numbers
+**Location:** `hms_commander/_constants.py`
+
+Centralized constants used across hms-commander. Import what you need:
+
+```python
+from hms_commander._constants import (
+    # Unit conversions
+    INCHES_TO_MM, FEET_TO_METERS, CFS_TO_CMS, ACFT_TO_M3,
+
+    # HMS method enumerations
+    LOSS_METHODS, TRANSFORM_METHODS, PRECIP_METHODS, ET_METHODS,
+
+    # Time intervals
+    TIME_INTERVALS, MINUTES_PER_HOUR,
+
+    # Acceptance criteria defaults
+    DEFAULT_PEAK_THRESHOLD_PCT, DEFAULT_VOLUME_THRESHOLD_PCT,
+
+    # HMS version support
+    MIN_HMS_3X_VERSION, MIN_HMS_4X_VERSION
+)
+
+# Example: Convert inches to millimeters
+precip_mm = precip_inches * INCHES_TO_MM
+
+# Example: Check if method is valid
+if method in LOSS_METHODS:
+    # Valid loss method
+    pass
+```
+
+**Available Constants:**
+- **Unit Conversions**: INCHES_TO_MM, FEET_TO_METERS, CFS_TO_CMS, ACFT_TO_M3, SQMI_TO_SQKM, etc.
+- **Time Constants**: MINUTES_PER_HOUR, MINUTES_PER_DAY, TIME_INTERVALS (dict)
+- **HMS Methods**: LOSS_METHODS, TRANSFORM_METHODS, BASEFLOW_METHODS, ROUTING_METHODS, PRECIP_METHODS, ET_METHODS, SNOWMELT_METHODS, GAGE_DATA_TYPES
+- **Version Support**: MIN_HMS_3X_VERSION, MIN_HMS_4X_VERSION, UNSUPPORTED_HMS_VERSIONS
+- **Acceptance Criteria**: DEFAULT_PEAK_THRESHOLD_PCT, DEFAULT_VOLUME_THRESHOLD_PCT, DEFAULT_TIMING_THRESHOLD_HOURS
+- **File Formats**: HMS_DATE_FORMAT, HMS_TIME_FORMAT, FILE_EXTENSIONS, PRIMARY_ENCODING, FALLBACK_ENCODING
+
+### HmsBasin - Basin Model Operations
+```python
+HmsBasin.get_subbasins(basin_path)              # DataFrame of subbasins
+HmsBasin.get_junctions(basin_path)              # DataFrame of junctions
+HmsBasin.get_reaches(basin_path)                # DataFrame of reaches
+HmsBasin.get_loss_parameters(basin_path, name)  # Loss method params
+HmsBasin.set_loss_parameters(basin_path, name, curve_number=80)
+HmsBasin.get_transform_parameters(basin_path, name)
+HmsBasin.get_baseflow_parameters(basin_path, name)
+HmsBasin.get_routing_parameters(basin_path, reach_name)
+
+# Clone functionality (CLB Engineering LLM Forward Approach)
+HmsBasin.clone_basin(template, new_name, description=None, hms_object=None)
+# - Non-destructive: Preserves original basin
+# - Traceable: Updates description with clone metadata
+# - GUI-verifiable: New basin appears in HEC-HMS GUI
+# - Project integration: Updates .hms project file
+```
+
+### HmsControl - Control Specification Operations
+```python
+HmsControl.get_time_window(control_path)        # {start_date, end_date}
+HmsControl.set_time_window(control_path, start, end)
+HmsControl.get_time_interval(control_path)      # "15 Minutes"
+HmsControl.set_time_interval(control_path, 15)  # Minutes or string
+HmsControl.create_control(path, name, start, end, interval)
+HmsControl.clone_control(template, new_name)
+```
+
+### HmsMet - Meteorologic Model Operations
+```python
+HmsMet.get_precipitation_method(met_path)
+HmsMet.set_precipitation_method(met_path, method)
+HmsMet.get_evapotranspiration_method(met_path)
+HmsMet.get_gage_assignments(met_path)           # DataFrame
+HmsMet.set_gage_assignment(met_path, subbasin, gage)
+HmsMet.get_dss_references(met_path)
+
+# Clone functionality (CLB Engineering LLM Forward Approach)
+HmsMet.clone_met(template, new_name, description=None, hms_object=None)
+# - Non-destructive: Preserves original met model
+# - Traceable: Updates description with clone metadata
+# - GUI-verifiable: New met model appears in HEC-HMS GUI
+# - Project integration: Updates .hms project file
+
+# Atlas 14 precipitation updates
+HmsMet.get_frequency_storm_params(met_path)     # TP40/Atlas 14 params
+HmsMet.get_precipitation_depths(met_path)       # List of depth values
+HmsMet.set_precipitation_depths(met_path, new_depths)  # Update depths
+HmsMet.update_tp40_to_atlas14(met_path, atlas14_depths)  # TP40→Atlas14
+```
+
+### HmsGage - Gage Operations
+```python
+HmsGage.get_gages(gage_path)                    # DataFrame of gages
+HmsGage.get_gage_info(name, gage_path)
+HmsGage.create_gage(path, name, dss_file, pathname)
+HmsGage.update_gage(path, name, dss_file=None)
+HmsGage.delete_gage(path, name)
+HmsGage.list_precip_gages(gage_path)
+HmsGage.list_discharge_gages(gage_path)
+```
+
+### HmsGeo - Geospatial Operations
+```python
+# Coordinate parsing and extraction
+HmsGeo.parse_geo_file(geo_path)                 # Extract subbasin coordinates
+HmsGeo.parse_basin_file(basin_path)             # Extract all basin elements
+HmsGeo.parse_map_file(map_path)                 # Extract boundary/river features
+
+# Project extent and centroid (following ras-commander pattern)
+HmsGeo.get_project_bounds(geo_path, crs_epsg="EPSG:2278")
+# Returns: (minx, miny, maxx, maxy) in project CRS
+
+HmsGeo.get_project_centroid_latlon(geo_path, crs_epsg="EPSG:2278")
+# Returns: (latitude, longitude) in WGS84 (EPSG:4326)
+# - Calculates from all subbasin coordinates in .geo file
+# - Transforms from project CRS to WGS84 using pyproj
+# - Use for web services like NOAA Atlas 14 API
+# - Requires: pip install pyproj
+
+# GeoJSON export
+HmsGeo.create_geojson_subbasins(subbasins, output_path, crs_epsg)
+HmsGeo.create_geojson_boundaries(boundaries, output_path, crs_epsg)
+HmsGeo.create_geojson_rivers(rivers, output_path, crs_epsg)
+HmsGeo.export_all_geojson(basin_path, output_dir, geo_path=None, map_path=None)
+
+# Example: Get project center for Atlas 14 download
+>>> lat, lon = HmsGeo.get_project_centroid_latlon("project.geo")
+>>> print(f"Project center: {lat:.4f}°N, {abs(lon):.4f}°W")
+>>> atlas14_data = downloader.download_from_coordinates(lat, lon)
+```
+
+### HmsRun - Run Configuration Operations
+```python
+HmsRun.get_dss_config(run_name, hms_object=None)        # DSS output configuration
+HmsRun.set_output_dss(run_name, dss_file, hms_object=None)
+HmsRun.list_all_outputs(hms_object=None)                # All run outputs
+HmsRun.get_run_names(hms_object=None)                   # List of run names
+HmsRun.verify_dss_outputs(hms_object=None)              # Verify DSS files exist
+
+# Clone functionality (CLB Engineering LLM Forward Approach)
+HmsRun.clone_run(
+    source_run, new_run_name,
+    new_basin=None, new_met=None, new_control=None,
+    output_dss=None, description=None, hms_object=None
+)
+# - Non-destructive: Creates new run, preserves original
+# - Traceable: Updates description with clone metadata
+# - GUI-verifiable: New run appears in HEC-HMS GUI with separate DSS output
+# - Critical for QAQC: Side-by-side comparison in GUI (baseline vs. updated)
+
+# Direct file operations (no project initialization required)
+HmsRun.set_dss_file_direct(run_file_path, run_name, dss_file)
+HmsRun.get_dss_file_direct(run_file_path, run_name)
+HmsRun.list_runs_direct(run_file_path)
+```
+
+### HmsCmdr - Execution Engine
+```python
+HmsCmdr.compute_run(run_name)                   # Single run
+HmsCmdr.compute_parallel(run_names, max_workers=2)  # Parallel
+HmsCmdr.compute_batch(run_names)                # Sequential batch
+HmsCmdr.compute_with_parameters(run, basin, mods)   # Modified params
+HmsCmdr.verify_hms_installation(hms_exe_path)
+```
+
+### HmsJython - Script Generation and Execution
+```python
+# Script generation
+HmsJython.generate_compute_script(project_path, run_name)
+HmsJython.generate_compute_script(project_path, run_name, python2_compatible=True)  # For HMS 3.x
+HmsJython.generate_batch_compute_script(project_path, run_names)
+HmsJython.generate_parameter_modification_script(path, basin, mods)
+
+# Execution (auto-detects HMS version)
+HmsJython.execute_script(script, hms_exe_path)
+HmsJython.execute_script(script, hms_exe_path, max_memory="8G")  # Custom memory
+
+# Utilities
+HmsJython.find_hms_executable(version=None)
+HmsJython.save_script(script, output_path)
+```
+
+### HmsDss - DSS Operations
+```python
+HmsDss.is_available()                           # Check if RasDss available
+HmsDss.get_catalog(dss_file)                    # List all paths
+HmsDss.read_timeseries(dss_file, pathname)      # DataFrame
+HmsDss.write_timeseries(dss_file, pathname, data, units)
+HmsDss.extract_hms_results(dss_file, result_type="flow")
+HmsDss.list_flow_results(dss_file)
+HmsDss.list_precipitation_data(dss_file)
+HmsDss.parse_dss_pathname(pathname)             # Dict of parts
+HmsDss.create_dss_pathname(basin, element, type, interval)
+```
+
+### HmsResults - Results Analysis
+```python
+HmsResults.get_outflow_timeseries(dss_file, element)
+HmsResults.get_precipitation_timeseries(dss_file, element)
+HmsResults.get_peak_flows(dss_file)             # Summary DataFrame
+HmsResults.get_volume_summary(dss_file)         # Acre-feet volumes
+HmsResults.get_hydrograph_statistics(dss_file, element)
+HmsResults.compare_runs(dss_files, element)     # Multi-run comparison
+HmsResults.get_precipitation_summary(dss_file)
+HmsResults.export_results_to_csv(dss_file, output_folder)
+```
+
+### HmsUtils - Utilities
+```python
+HmsUtils.parse_time_interval("15 Minutes")      # 15
+HmsUtils.minutes_to_interval_string(60)         # "1 Hour"
+HmsUtils.convert_units(1.0, "in", "mm")         # 25.4
+HmsUtils.parse_hms_date("01Jan2020", "00:00")   # datetime
+HmsUtils.format_hms_date(datetime)              # (date_str, time_str)
+HmsUtils.copy_project(source, dest)
+HmsUtils.validate_project(folder)               # Validation dict
+HmsUtils.calculate_cn_from_ia(initial_abstraction)
+HmsUtils.calculate_ia_from_cn(curve_number)
+
+# Clone utilities (used by clone_run, clone_basin, clone_met)
+HmsUtils.clone_file(template_path, new_path, modify_func=None)
+# - Core clone utility with callback modification pattern
+# - Used by all HMS clone operations (following ras-commander pattern)
+HmsUtils.update_project_file(hms_file, entry_type, entry_name)
+# - Updates .hms project file to register new components
+# - Ensures cloned components appear in HEC-HMS GUI
+```
+
+### HmsExamples - Example Project Management
+```python
+# Discovery - auto-detects installed HMS versions
+HmsExamples.list_versions()                     # ["4.13", "4.11", "3.5", ...]
+HmsExamples.detect_installed_versions()         # {version: Path}
+HmsExamples.get_install_path("4.13")            # Path to installation
+HmsExamples.get_hms_exe("4.13")                 # Path to HEC-HMS.cmd
+
+# Project Listing
+HmsExamples.list_projects()                     # {version: [projects]}
+HmsExamples.list_projects("4.13")               # ["castro", "river_bend", ...]
+HmsExamples.get_project_info("castro")          # Dict with file details
+
+# Extraction
+HmsExamples.extract_project("castro")                    # Uses latest version
+HmsExamples.extract_project("castro", version="4.11")    # Specific version
+HmsExamples.extract_project("castro", output_path="tests/")
+HmsExamples.extract_all("4.13")                          # Extract all projects
+HmsExamples.is_project_extracted("castro")
+HmsExamples.clean_projects_directory()
+
+# Cache Management
+HmsExamples.reset_cache()                       # Re-scan installations
+```
+
+### Project Initialization
+```python
+# Single project (uses global hms object)
+from hms_commander import init_hms_project, hms
+init_hms_project(r"/path/to/project")
+
+# Multiple projects
+project1 = HmsPrj()
+init_hms_project(r"/path/to/project1", hms_object=project1)
+```
+
+### Accessing Project Data
+- `hms.basin_df` - Basin models dataframe
+- `hms.met_df` - Meteorologic models dataframe
+- `hms.control_df` - Control specifications dataframe
+- `hms.run_df` - Simulation runs dataframe
+- `hms.gage_df` - Time-series gages dataframe
+
+## Key Development Patterns
+
+### Static Class Pattern
+- Most classes use static methods with `@log_call` decorators
+- No instantiation required: `HmsBasin.get_subbasins()` not `HmsBasin().get_subbasins()`
+- Pass `hms_object` parameter when working with multiple projects
+
+### Import Flexibility Pattern
+```python
+# Flexible imports for development vs installed package
+try:
+    from hms_commander import init_hms_project, HmsPrj, HmsBasin
+except ImportError:
+    current_file = Path(__file__).resolve()
+    parent_directory = current_file.parent.parent
+    sys.path.append(str(parent_directory))
+    from hms_commander import init_hms_project, HmsPrj, HmsBasin
+```
+
+### Path Handling
+- Use `pathlib.Path` objects consistently
+- Support both string paths and Path objects in function parameters
+- Handle Windows paths with proper escaping
+
+### Error Handling and Logging
+- Comprehensive logging using centralized `LoggingConfig`
+- Use `@log_call` decorator for automatic function call logging
+- Log levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
+
+### Naming Conventions
+- **Functions/Variables**: snake_case (`get_subbasins`, `basin_path`)
+- **Classes**: PascalCase (`HmsCmdr`, `HmsBasin`)
+- **Constants**: UPPER_CASE
+
+## HEC-HMS File Formats
+
+### Project File (.hms)
+```
+Project: ProjectName
+Version: 4.9
+BasinFile: ProjectName.basin
+MetFile: ProjectName.met
+ControlFile: ProjectName.control
+GageFile: ProjectName.gage
+```
+
+### Basin Model File (.basin) - Key Sections
+```
+Basin: BasinName
+     Description: ...
+End:
+
+Subbasin: SubbasinName
+     Area: 123.45
+     Downstream: JunctionName
+     Loss: Deficit and Constant
+     Percent Impervious: 10.0
+     Initial Deficit: 25.4
+     Maximum Deficit: 76.2
+     Constant Rate: 2.54
+End:
+
+Junction: JunctionName
+     Downstream: ...
+End:
+
+Reach: ReachName
+     Downstream: ...
+     Route: Muskingum
+End:
+```
+
+### Control Specification File (.control)
+```
+Control: ControlName
+     Start Date: 01Jan2020
+     Start Time: 00:00
+     End Date: 02Jan2020
+     End Time: 00:00
+     Time Interval: 15
+End:
+```
+
+### Run File (.run)
+```
+Run: RunName
+     Basin: BasinName
+     Meteorology: MetName
+     Control: ControlName
+     DSS File: results.dss
+End:
+```
+
+## HEC-HMS Version Support
+
+### Supported Versions
+
+| Version | Support | Notes |
+|---------|---------|-------|
+| **HMS 4.4.1+** | ✅ Full | 64-bit, recommended |
+| **HMS 3.3-3.5** | ✅ Full | 32-bit, requires `python2_compatible=True` |
+| HMS 4.0-4.3 | ❌ | Legacy classpath structure not supported |
+| HMS 3.0-3.2 | ❓ | Untested |
+
+### HMS 3.x Usage (Legacy Models)
+
+For HMS 3.x projects, generate Python 2 compatible scripts:
+
+```python
+from hms_commander import HmsJython
+
+# Generate Python 2 script (required for HMS 3.x)
+script = HmsJython.generate_compute_script(
+    project_path="C:/Projects/OldProject",
+    run_name="Run 1",
+    python2_compatible=True  # Important for HMS 3.x!
+)
+
+# Execute - version auto-detected from path
+success, stdout, stderr = HmsJython.execute_script(
+    script_content=script,
+    hms_exe_path="C:/Program Files (x86)/HEC/HEC-HMS/3.3"
+)
+```
+
+### Key Differences Between HMS 3.x and 4.x
+
+| Aspect | HMS 3.x | HMS 4.x |
+|--------|---------|---------|
+| Architecture | 32-bit | 64-bit |
+| Max memory | ~1.3 GB | 32+ GB |
+| Java location | `java/bin/` | `jre/bin/` |
+| Script syntax | Python 2 (`print "x"`) | Python 3 (`print("x")`) |
+| Install path | `Program Files (x86)` | `Program Files` |
+
+## HMS Command-Line Execution
+
+```bash
+# Execute Jython script (HMS 4.x)
+hec-hms.cmd -script path/to/script.py
+
+# Script template for compute_run()
+from hms.model import JythonHms
+JythonHms.OpenProject("ProjectName", "C:/path/to/project")
+JythonHms.OpenBasinModel("BasinName")
+JythonHms.Compute("RunName")
+JythonHms.SaveProject()
+JythonHms.Exit(0)
+```
+
+## Differences from ras-commander
+
+| Aspect | ras-commander | hms-commander |
+|--------|---------------|---------------|
+| Primary Files | .prj, .p##, .g##, .hdf | .hms, .basin, .met, .control |
+| Results Format | HDF5 | DSS |
+| Execution | Subprocess (Ras.exe) | Jython scripts (hec-hms.cmd) |
+| Project Discovery | .prj file | .hms file |
+| Data Storage | HDF groups/datasets | ASCII text sections |
+| Parsing Approach | h5py library | Regex/text parsing |
+
+## Documentation Standards
+- Comprehensive docstrings with Args, Returns, Raises, Examples sections
+- Include usage examples in all major functions
+- Document parameter types and optional parameters clearly
+
+## Common Pitfalls to Avoid
+
+- Don't instantiate static classes like `HmsBasin()`
+- Always specify `hms_object` parameter when working with multiple projects
+- Use pathlib.Path for all path operations
+- Don't forget `@log_call` decorator on new functions
+- Ensure HMS project is initialized before calling compute functions
+- Handle file encodings (UTF-8 with Latin-1 fallback) for HMS files
