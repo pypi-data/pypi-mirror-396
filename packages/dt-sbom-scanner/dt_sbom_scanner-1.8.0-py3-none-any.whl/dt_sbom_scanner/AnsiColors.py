@@ -1,0 +1,22 @@
+class AnsiColors:
+    BLACK = "\033[0;30m"
+    RED = "\033[0;31m"
+    GREEN = "\033[0;32m"
+    YELLOW = "\033[0;33m"
+    BLUE = "\033[0;34m"
+    PURPLE = "\033[0;35m"
+    CYAN = "\033[0;36m"
+    WHITE = "\033[0;37m"
+
+    HGRAY = "\033[90m"
+    HRED = "\033[91m"
+    HGREEN = "\033[92m"
+    HYELLOW = "\033[93m"
+    HBLUE = "\033[94m"
+    HPURPLE = "\033[95m"
+    HCYAN = "\033[96m"
+    HWHITE = "\033[97m"
+
+    RESET = "\033[0m"
+    BOLD = "\033[1m"
+    UNDERLINE = "\033[4m"
