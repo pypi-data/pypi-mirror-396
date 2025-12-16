@@ -1,0 +1,26 @@
+name: CI Testing
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: psf/black@stable
+      - uses: actions/setup-python@v1
+        with:
+          python-version: 3.9
+      - run: pip install uv
+      - run: uv sync
+      - run: uv run mypy src/
+      - run: cd tests; uv run pytest --cov=omni
+
+
