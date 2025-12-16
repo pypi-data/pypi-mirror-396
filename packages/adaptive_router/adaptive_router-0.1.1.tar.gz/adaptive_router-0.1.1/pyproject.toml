@@ -1,0 +1,116 @@
+[build-system]
+requires = ["uv_build>=0.9.16,<0.10.0"]
+build-backend = "uv_build"
+
+[project]
+name = "adaptive_router"
+version = "0.1.1"
+description = "Intelligent LLM Infrastructure with Smart Model Selection"
+authors = [{ name = "Botir Khaltaev", email = "botirkhaltaev@llmadaptive.uk" }]
+requires-python = ">=3.11,<4.0"
+readme = "README.md"
+license = "MIT"
+keywords = ["llm", "ai", "model-selection", "machine-learning", "adaptive"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Typing :: Typed",
+]
+dependencies = [
+  # Data Validation
+  "pydantic>=2.11.5,<3",
+  "sentence-transformers>=5.2.0,<6",
+  # S3 Storage
+  "boto3>=1.34.0,<2",
+  # Data Processing
+  "datasets>=4.4.1",
+  "polars>=1.35.2",
+  # Evaluation
+  "deepeval>=3.7.0",
+  "einops>=0.8.1",
+  "msgpack>=1.1.2,<2",
+]
+
+
+[project.urls]
+Homepage = "https://llmadaptive.uk"
+Repository = "https://github.com/Egham-7/adaptive"
+Documentation = "https://docs.llmadaptive.uk"
+"Bug Tracker" = "https://github.com/Egham-7/adaptive/issues"
+
+
+[project.optional-dependencies]
+cpu = ["adaptive-router-core>=0.1.0,<1"]
+cu12 = ["adaptive-router-core-cu12>=0.1.1,<1"]
+
+
+[tool.uv.sources]
+adaptive-router-core = { workspace = true }
+adaptive-router-core-cu12 = { workspace = true }
+
+
+[dependency-groups]
+
+dev = [
+  "mypy>=1.15.0,<2",
+  "ruff>=0.11.11,<0.14",
+  "types-pyyaml>=6.0.12.20250516,<7",
+  "types-pyjwt>=1.7.1",
+  "pytest>=8.4.1",
+  "pytest-cov>=6.2.1",
+  "pytest-asyncio>=0.26.0",
+]
+test = ["pytest>=8.4.1,<9", "pytest-cov>=6.2.1,<8", "pytest-asyncio>=0.24.0,<1"]
+
+[tool.uv-build]
+packages = ["adaptive_router"]
+
+[tool.mypy]
+plugins = ["pydantic.mypy"]
+exclude = ["tests/"]
+no_implicit_optional = true
+warn_return_any = false
+warn_unused_ignores = true
+disable_error_code = ["import-untyped"]
+
+[[tool.mypy.overrides]]
+module = [
+  "pydantic.*",
+  "torch.*",
+  "numpy.*",
+  "sentence_transformers.*",
+  "boto3.*",
+  "boto3",
+  "botocore.*",
+  "datasets.*",
+  "polars.*",
+  "deepeval.*",
+  "pytest.*",
+  "adaptive_core_ext.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+addopts = "-v --strict-markers"
+testpaths = ["tests"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "pragma: no cover",
+  "def __repr__",
+  "if self.debug:",
+  "if settings.DEBUG",
+  "raise AssertionError",
+  "raise NotImplementedError",
+  "if 0:",
+  "if __name__ == .__main__.:",
+  "class .*\\bProtocol\\):",
+  "@(abc\\.)?abstractmethod",
+]
