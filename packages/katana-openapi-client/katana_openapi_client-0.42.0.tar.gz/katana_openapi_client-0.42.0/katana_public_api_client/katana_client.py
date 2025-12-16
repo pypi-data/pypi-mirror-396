@@ -1,0 +1,1257 @@
+"""
+KatanaClient - The pythonic Katana API client with automatic resilience.
+
+This client uses httpx's native transport layer to provide automatic retries,
+rate limiting, error handling, and pagination for all API calls without any
+decorators or wrapper methods needed.
+"""
+
+import contextlib
+import json
+import logging
+import netrc
+import os
+from collections.abc import Awaitable, Callable
+from http import HTTPStatus
+from pathlib import Path
+from typing import Any, cast
+from urllib.parse import urlparse
+
+import httpx
+from dotenv import load_dotenv
+from httpx import AsyncHTTPTransport
+from httpx_retries import Retry, RetryTransport
+
+from .client import AuthenticatedClient
+from .client_types import Unset
+from .helpers.inventory import Inventory
+from .helpers.materials import Materials
+from .helpers.products import Products
+from .helpers.services import Services
+from .helpers.variants import Variants
+from .models.detailed_error_response import DetailedErrorResponse
+from .models.enum_validation_error import EnumValidationError
+from .models.error_response import ErrorResponse
+from .models.invalid_type_validation_error import InvalidTypeValidationError
+from .models.max_validation_error import MaxValidationError
+from .models.min_validation_error import MinValidationError
+from .models.pattern_validation_error import PatternValidationError
+from .models.required_validation_error import RequiredValidationError
+from .models.too_big_validation_error import TooBigValidationError
+from .models.too_small_validation_error import TooSmallValidationError
+from .models.unrecognized_keys_validation_error import UnrecognizedKeysValidationError
+
+
+class RateLimitAwareRetry(Retry):
+    """
+    Custom Retry class that allows non-idempotent methods (POST, PATCH) to be
+    retried ONLY when receiving a 429 (Too Many Requests) status code.
+
+    For all other retryable status codes (502, 503, 504), only idempotent methods
+    (HEAD, GET, PUT, DELETE, OPTIONS, TRACE) will be retried.
+
+    This ensures we don't accidentally retry non-idempotent operations after
+    server errors, but we DO retry them when we're being rate-limited.
+    """
+
+    # Idempotent methods that are always safe to retry
+    IDEMPOTENT_METHODS = frozenset(["HEAD", "GET", "PUT", "DELETE", "OPTIONS", "TRACE"])
+
+    def __init__(self, *args: Any, **kwargs: Any):
+        """Initialize and track the current request method."""
+        super().__init__(*args, **kwargs)
+        self._current_method: str | None = None
+
+    def is_retryable_method(self, method: str) -> bool:
+        """
+        Allow all methods to pass through the initial check.
+
+        Store the method for later use in is_retryable_status_code.
+        """
+        self._current_method = method.upper()
+        # Accept all methods - we'll filter in is_retryable_status_code
+        return self._current_method in self.allowed_methods
+
+    def is_retryable_status_code(self, status_code: int) -> bool:
+        """
+        Check if a status code is retryable for the current method.
+
+        For 429 (rate limiting), allow all methods.
+        For other errors (502, 503, 504), only allow idempotent methods.
+        """
+        # First check if the status code is in the allowed list at all
+        if status_code not in self.status_forcelist:
+            return False
+
+        # If we don't know the method, fall back to default behavior
+        if self._current_method is None:
+            return True
+
+        # Rate limiting (429) - retry all methods
+        if status_code == HTTPStatus.TOO_MANY_REQUESTS:
+            return True
+
+        # Other retryable errors - only retry idempotent methods
+        return self._current_method in self.IDEMPOTENT_METHODS
+
+    def increment(self) -> "RateLimitAwareRetry":
+        """Return a new retry instance with the attempt count incremented."""
+        # Call parent's increment which creates a new instance of our class
+        new_retry = cast(RateLimitAwareRetry, super().increment())
+        # Preserve the current method across retry attempts
+        new_retry._current_method = self._current_method
+        return new_retry
+
+
+class ErrorLoggingTransport(AsyncHTTPTransport):
+    """
+    Transport layer that adds detailed error logging for 4xx client errors.
+
+    This transport wraps another AsyncHTTPTransport and intercepts responses
+    to log detailed error information using the generated error models.
+    """
+
+    def __init__(
+        self,
+        wrapped_transport: AsyncHTTPTransport | None = None,
+        logger: logging.Logger | None = None,
+        **kwargs: Any,
+    ):
+        """
+        Initialize the error logging transport.
+
+        Args:
+            wrapped_transport: The transport to wrap. If None, creates a new AsyncHTTPTransport.
+            logger: Logger instance for capturing error details. If None, creates a default logger.
+            **kwargs: Additional arguments passed to AsyncHTTPTransport if wrapped_transport is None.
+        """
+        super().__init__()
+        if wrapped_transport is None:
+            wrapped_transport = AsyncHTTPTransport(**kwargs)
+        self._wrapped_transport = wrapped_transport
+        self.logger = logger or logging.getLogger(__name__)
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        """Handle request and log detailed error information for 4xx responses."""
+        response = await self._wrapped_transport.handle_async_request(request)
+
+        # Log detailed information for 400-level client errors
+        if 400 <= response.status_code < 500:
+            await self._log_client_error(response, request)
+
+        return response
+
+    async def _log_client_error(
+        self, response: httpx.Response, request: httpx.Request
+    ) -> None:
+        """
+        Log detailed information for 400-level client errors using generated models.
+        Assumes error responses are always typed (DetailedErrorResponse or ErrorResponse).
+        """
+        method = request.method
+        url = str(request.url)
+        status_code = response.status_code
+
+        # Capture request body for validation error context
+        request_body = None
+        if request.content:
+            with contextlib.suppress(
+                json.JSONDecodeError, UnicodeDecodeError, AttributeError, TypeError
+            ):
+                request_body = json.loads(request.content.decode("utf-8"))
+
+        # Read response content if it's streaming
+        if hasattr(response, "aread"):
+            with contextlib.suppress(TypeError, AttributeError):
+                await response.aread()
+
+        try:
+            error_data = response.json()
+        except (json.JSONDecodeError, TypeError, ValueError):
+            self.logger.error(
+                f"Client error {status_code} for {method} {url} - "
+                f"Response: {getattr(response, 'text', '')[:500]}..."
+            )
+            return
+
+        # Prefer DetailedErrorResponse for 422, else ErrorResponse
+        if status_code == 422:
+            try:
+                detailed_error = DetailedErrorResponse.from_dict(error_data)
+                # Debug log the parsed error structure
+                self.logger.debug(
+                    f"Parsed DetailedErrorResponse - "
+                    f"details type: {type(detailed_error.details)}, "
+                    f"details value: {detailed_error.details}, "
+                    f"is Unset: {isinstance(detailed_error.details, Unset)}, "
+                    f"raw error_data: {error_data}"
+                )
+                self._log_detailed_error(
+                    detailed_error, method, url, status_code, request_body
+                )
+                return
+            except (TypeError, ValueError, AttributeError) as e:
+                self.logger.debug(
+                    f"Failed to parse as DetailedErrorResponse: {type(e).__name__}: {e}"
+                )
+
+        try:
+            error_response = ErrorResponse.from_dict(error_data)
+            self._log_error(error_response, method, url, status_code)
+            return
+        except (TypeError, ValueError, AttributeError) as e:
+            self.logger.debug(
+                f"Failed to parse as ErrorResponse: {type(e).__name__}: {e}"
+            )
+
+        # Fallback: log raw error data if parsing failed
+        self.logger.error(
+            f"Client error {status_code} for {method} {url} - Raw error: {error_data}"
+        )
+
+    def _log_detailed_error(
+        self,
+        error: DetailedErrorResponse,
+        method: str,
+        url: str,
+        status_code: int,
+        request_body: dict[str, Any] | None = None,
+    ) -> None:
+        """Log detailed errors using the typed DetailedErrorResponse model."""
+
+        # Use the log prefix expected by tests for 422 errors
+        if status_code == 422:
+            log_message = f"Validation error 422 for {method} {url}"
+        else:
+            log_message = f"Detailed error {status_code} for {method} {url}"
+
+        # Check for Unset values before logging
+        error_name = error.name if not isinstance(error.name, Unset) else None
+        error_message = error.message if not isinstance(error.message, Unset) else None
+        error_code = error.code if not isinstance(error.code, Unset) else None
+
+        # If main fields are Unset, check additional_properties for nested error data
+        if (
+            error_name is None
+            and error_message is None
+            and hasattr(error, "additional_properties")
+        ):
+            nested = error.additional_properties
+            if isinstance(nested, dict) and "error" in nested:
+                nested_error = nested["error"]
+                if isinstance(nested_error, dict):
+                    error_name = nested_error.get("name", "(not provided)")
+                    error_message = nested_error.get("message", "(not provided)")
+                    if "statusCode" in nested_error and error_code is None:
+                        error_code = nested_error.get("statusCode")
+
+        # Use fallback if still not found
+        if error_name is None:
+            error_name = "(not provided)"
+        if error_message is None:
+            error_message = "(not provided)"
+
+        log_message += f"\n  Error: {error_name} - {error_message}"
+
+        if error_code is not None:
+            log_message += f"\n  Code: {error_code}"
+
+        # Log validation details if present
+        if not isinstance(error.details, Unset) and error.details:
+            log_message += f"\n  Validation details ({len(error.details)} errors):"
+            for i, detail in enumerate(error.details, 1):
+                log_message += f"\n    {i}. Path: {detail.path}"
+                log_message += f"\n       Code: {detail.code}"
+                log_message += f"\n       Message: {detail.message}"
+
+                # Type-safe extraction of sent value from request body
+                sent_value = None
+                if request_body and detail.path:
+                    field_path = detail.path.lstrip("/")
+                    if "/" not in field_path:
+                        sent_value = request_body.get(field_path)
+
+                # Use isinstance for type-safe error handling
+                if isinstance(detail, EnumValidationError):
+                    if sent_value is not None:
+                        log_message += f"\n       Sent value: {sent_value!r}"
+                    log_message += f"\n       Allowed values: {detail.allowed_values}"
+
+                elif isinstance(detail, MinValidationError):
+                    if sent_value is not None:
+                        log_message += f"\n       Sent value: {sent_value!r}"
+                    log_message += f"\n       Minimum allowed: {detail.minimum}"
+
+                elif isinstance(detail, MaxValidationError):
+                    if sent_value is not None:
+                        log_message += f"\n       Sent value: {sent_value!r}"
+                    log_message += f"\n       Maximum allowed: {detail.maximum}"
+
+                elif isinstance(detail, InvalidTypeValidationError):
+                    if sent_value is not None:
+                        sent_type = type(sent_value).__name__
+                        log_message += (
+                            f"\n       Sent value: {sent_value!r} (type: {sent_type})"
+                        )
+                    log_message += f"\n       Expected type: {detail.expected_type}"
+
+                elif isinstance(detail, TooSmallValidationError):
+                    if sent_value is not None and isinstance(sent_value, list | str):
+                        log_message += f"\n       Sent value length: {len(sent_value)}"
+                    if not isinstance(detail.min_length, Unset):
+                        log_message += f"\n       Minimum length: {detail.min_length}"
+                    if not isinstance(detail.min_items, Unset):
+                        log_message += f"\n       Minimum items: {detail.min_items}"
+
+                elif isinstance(detail, TooBigValidationError):
+                    if sent_value is not None and isinstance(sent_value, list | str):
+                        log_message += f"\n       Sent value length: {len(sent_value)}"
+                    if not isinstance(detail.max_length, Unset):
+                        log_message += f"\n       Maximum length: {detail.max_length}"
+                    if not isinstance(detail.max_items, Unset):
+                        log_message += f"\n       Maximum items: {detail.max_items}"
+
+                elif isinstance(detail, RequiredValidationError):
+                    log_message += (
+                        f"\n       Missing required field: {detail.missing_property}"
+                    )
+                    if request_body:
+                        provided_fields = list(request_body.keys())
+                        log_message += f"\n       Provided fields: {provided_fields}"
+
+                elif isinstance(detail, PatternValidationError):
+                    if sent_value is not None:
+                        log_message += f"\n       Sent value: {sent_value!r}"
+                    log_message += f"\n       Required pattern: {detail.pattern}"
+
+                elif isinstance(detail, UnrecognizedKeysValidationError):
+                    log_message += f"\n       Unrecognized fields: {detail.keys}"
+                    if not isinstance(detail.valid_keys, Unset):
+                        log_message += f"\n       Valid fields: {detail.valid_keys}"
+
+        # Also check additional_properties for nested error details
+        # The API might return details in a nested structure
+        if hasattr(error, "additional_properties") and error.additional_properties:
+            nested_error = error.additional_properties.get("error")
+            if isinstance(nested_error, dict):
+                nested_details = nested_error.get("details")
+                if nested_details and isinstance(nested_details, list):
+                    log_message += (
+                        f"\n  Nested validation details ({len(nested_details)} errors):"
+                    )
+                    for i, detail in enumerate(nested_details, 1):
+                        if isinstance(detail, dict):
+                            log_message += (
+                                f"\n    {i}. Path: {detail.get('path', 'unknown')}"
+                            )
+                            if "code" in detail:
+                                log_message += f"\n       Code: {detail['code']}"
+                            if "message" in detail:
+                                log_message += f"\n       Message: {detail['message']}"
+
+        self.logger.error(log_message)
+
+    def _log_error(
+        self, error: ErrorResponse, method: str, url: str, status_code: int
+    ) -> None:
+        """Log general errors using the typed ErrorResponse model."""
+        log_message = f"Client error {status_code} for {method} {url}"
+
+        # Check for Unset values before logging
+        error_name = error.name if not isinstance(error.name, Unset) else None
+        error_message = error.message if not isinstance(error.message, Unset) else None
+
+        # If main fields are Unset, check additional_properties for nested error data
+        if (
+            error_name is None
+            and error_message is None
+            and hasattr(error, "additional_properties")
+        ):
+            nested = error.additional_properties
+            if isinstance(nested, dict) and "error" in nested:
+                nested_error = nested["error"]
+                if isinstance(nested_error, dict):
+                    error_name = nested_error.get("name", "(not provided)")
+                    error_message = nested_error.get("message", "(not provided)")
+
+        # Use fallback values if still None
+        if error_name is None:
+            error_name = "(not provided)"
+        if error_message is None:
+            error_message = "(not provided)"
+
+        log_message += f"\n  Error: {error_name} - {error_message}"
+
+        if error.additional_properties:
+            formatted = ", ".join(
+                f"{k}: {v!r}" for k, v in error.additional_properties.items()
+            )
+            log_message += f"\n  Additional info: {formatted}"
+        self.logger.error(log_message)
+
+
+class PaginationTransport(AsyncHTTPTransport):
+    """
+    Transport layer that adds automatic pagination for GET requests.
+
+    This transport wraps another transport and automatically collects all pages
+    for GET requests by default.
+
+    Auto-pagination behavior:
+    - ON by default for all GET requests (will paginate if response has pagination info)
+    - Disabled when explicit `page` parameter is in URL (e.g., `?page=2`)
+    - Disabled when request has `extensions={"auto_pagination": False}`
+    - Only applies to GET requests (POST, PUT, etc. are never paginated)
+
+    Controlling pagination limits:
+    - `max_pages` (constructor): Maximum number of pages to fetch
+    - `max_items` (extension): Maximum total items to collect, e.g.,
+      `extensions={"max_items": 200}` stops after 200 items
+    """
+
+    def __init__(
+        self,
+        wrapped_transport: AsyncHTTPTransport | None = None,
+        max_pages: int = 100,
+        logger: logging.Logger | None = None,
+        **kwargs: Any,
+    ):
+        """
+        Initialize the pagination transport.
+
+        Args:
+            wrapped_transport: The transport to wrap. If None, creates a new AsyncHTTPTransport.
+            max_pages: Maximum number of pages to collect during auto-pagination. Defaults to 100.
+            logger: Logger instance for capturing pagination operations. If None, creates a default logger.
+            **kwargs: Additional arguments passed to AsyncHTTPTransport if wrapped_transport is None.
+        """
+        # If no wrapped transport provided, create a base one
+        if wrapped_transport is None:
+            wrapped_transport = AsyncHTTPTransport(**kwargs)
+            super().__init__()
+        else:
+            super().__init__()
+
+        self._wrapped_transport = wrapped_transport
+        self.max_pages = max_pages
+        self.logger = logger or logging.getLogger(__name__)
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        """Handle request with automatic pagination for GET requests.
+
+        Auto-pagination is ON by default for GET requests. It is disabled when:
+        - `extensions={"auto_pagination": False}` is set, OR
+        - An explicit `page` parameter is in the URL (e.g., `?page=2`)
+        """
+        # Check if auto-pagination is explicitly disabled via request extensions
+        auto_pagination = request.extensions.get("auto_pagination", True)
+
+        # Also disable if caller explicitly specified a page parameter
+        has_explicit_page = (
+            hasattr(request, "url")
+            and request.url
+            and request.url.params
+            and "page" in request.url.params
+        )
+
+        # Only paginate GET requests when auto_pagination is enabled and no explicit page
+        should_paginate = (
+            request.method == "GET" and auto_pagination and not has_explicit_page
+        )
+
+        if should_paginate:
+            return await self._handle_paginated_request(request)
+        else:
+            # For non-paginated requests, just pass through to wrapped transport
+            return await self._wrapped_transport.handle_async_request(request)
+
+    async def _handle_paginated_request(self, request: httpx.Request) -> httpx.Response:
+        """
+        Handle paginated requests by automatically collecting all pages.
+
+        This method detects paginated responses and automatically collects all available
+        pages up to the configured maximum. It preserves the original request structure
+        while combining data from multiple pages.
+
+        Args:
+            request: The HTTP request to handle (must be a GET request).
+
+        Returns:
+            A combined HTTP response containing data from all collected pages with
+            pagination metadata in the response body.
+
+        Note:
+            - Auto-pagination is ON by default for all GET requests
+            - If response has no pagination info, returns the single response as-is
+            - The response contains an 'auto_paginated' flag in the pagination metadata
+            - Data from all pages is combined into a single 'data' array
+            - Use `extensions={"max_items": N}` to limit total items collected
+        """
+        all_data: list[Any] = []
+        current_page = 1
+        total_pages: int | None = None
+        page_num = 1
+        response: httpx.Response | None = None
+
+        # Get max_items limit from extensions (None = unlimited)
+        max_items: int | None = request.extensions.get("max_items")
+
+        # Parse initial parameters
+        url_params = dict(request.url.params)
+
+        self.logger.info("Auto-paginating request: %s", request.url)
+
+        for page_num in range(1, self.max_pages + 1):
+            # Update the page parameter
+            url_params["page"] = str(page_num)
+
+            # Adjust limit if max_items is set and we're approaching the limit
+            if max_items is not None:
+                remaining = max_items - len(all_data)
+                if remaining <= 0:
+                    break
+                # Get original limit or use a sensible default (Katana API max is 250)
+                original_limit = request.url.params.get("limit")
+                default_page_size = 250
+                if original_limit:
+                    # Only reduce limit, never increase it
+                    url_params["limit"] = str(min(int(original_limit), remaining))
+                else:
+                    # No original limit, use min of default page size and remaining
+                    url_params["limit"] = str(min(default_page_size, remaining))
+
+            # Create a new request with updated parameters
+            paginated_request = httpx.Request(
+                method=request.method,
+                url=request.url.copy_with(params=url_params),
+                headers=request.headers,
+                content=request.content,
+                extensions=request.extensions,
+            )
+
+            # Make the request using the wrapped transport
+            response = await self._wrapped_transport.handle_async_request(
+                paginated_request
+            )
+
+            if response.status_code != 200:
+                # If we get an error, return the original response
+                return response
+
+            # Parse the response
+            try:
+                # Read the response content if it's streaming
+                if hasattr(response, "aread"):
+                    with contextlib.suppress(TypeError, AttributeError):
+                        # Skip aread if it's not async (e.g., in tests with mocks)
+                        await response.aread()
+
+                data = response.json()
+
+                # Extract pagination info from headers or response body
+                pagination_info = self._extract_pagination_info(response, data)
+
+                if pagination_info:
+                    current_page = pagination_info.get("page", page_num)
+                    total_pages = pagination_info.get("total_pages")
+
+                    # Extract the actual data items
+                    items = data.get("data", data if isinstance(data, list) else [])
+                    all_data.extend(items)
+
+                    # Check max_items limit
+                    if max_items is not None and len(all_data) >= max_items:
+                        all_data = all_data[:max_items]  # Truncate to exact limit
+                        self.logger.info(
+                            "Reached max_items limit (%d), stopping pagination",
+                            max_items,
+                        )
+                        break
+
+                    # Check if we're done
+                    # Break if we've reached the last known page or got an empty page
+                    if (total_pages and current_page >= total_pages) or len(items) == 0:
+                        break
+
+                    self.logger.debug(
+                        "Collected page %s/%s, items: %d, total so far: %d",
+                        current_page,
+                        total_pages or "?",
+                        len(items),
+                        len(all_data),
+                    )
+                else:
+                    # No pagination info found, treat as single page
+                    all_data = data.get("data", data if isinstance(data, list) else [])
+                    # Apply max_items limit even for single page
+                    if max_items is not None and len(all_data) > max_items:
+                        all_data = all_data[:max_items]
+                    break
+
+            except (json.JSONDecodeError, KeyError) as e:
+                self.logger.warning("Failed to parse paginated response: %s", e)
+                return response
+
+        # Ensure we have a response at this point
+        if response is None:
+            msg = "No response available after pagination"
+            raise RuntimeError(msg)
+
+        # Create a combined response
+        combined_data: dict[str, Any] = {"data": all_data}
+
+        # Add pagination metadata
+        if total_pages:
+            combined_data["pagination"] = {
+                "total_pages": total_pages,
+                "collected_pages": page_num,
+                "total_items": len(all_data),
+                "auto_paginated": True,
+            }
+
+        # Create a new response with the combined data
+        # Remove content-encoding headers to avoid compression issues
+        headers = dict(response.headers)
+        headers.pop("content-encoding", None)
+        headers.pop("content-length", None)  # Will be recalculated
+
+        combined_response = httpx.Response(
+            status_code=200,
+            headers=headers,
+            content=json.dumps(combined_data).encode(),
+            request=request,
+        )
+
+        self.logger.info(
+            "Auto-pagination complete: collected %d items from %d pages",
+            len(all_data),
+            page_num,
+        )
+
+        return combined_response
+
+    def _normalize_pagination_values(
+        self, pagination_info: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Convert pagination values from strings to appropriate Python types.
+
+        JSON parsing may return numeric values as strings (e.g., "41" instead of 41).
+        String comparison produces incorrect results: "5" >= "41" is True because
+        "5" > "4" lexicographically. This method ensures all numeric pagination
+        fields are proper integers for correct comparisons.
+
+        Additionally, boolean fields like first_page and last_page may come as
+        string values ("true"/"false") and are converted to Python booleans.
+
+        Args:
+            pagination_info: Dictionary containing pagination metadata.
+
+        Returns:
+            Dictionary with numeric fields converted to integers and boolean
+            fields converted to booleans.
+        """
+        # Fields that should be integers for pagination comparisons
+        numeric_fields = [
+            "page",
+            "total_pages",
+            "total_items",
+            "limit",
+            "offset",
+            "count",
+            "per_page",
+            "current_page",
+            "total_records",
+        ]
+
+        # Fields that should be booleans (API returns "true"/"false" strings)
+        boolean_fields = [
+            "first_page",
+            "last_page",
+        ]
+
+        result = pagination_info.copy()
+
+        # Convert numeric fields
+        for field in numeric_fields:
+            if field in result:
+                value = result[field]
+                # Convert string numbers to integers
+                if isinstance(value, str):
+                    try:
+                        result[field] = int(value)
+                    except ValueError:
+                        self.logger.warning(
+                            "Invalid pagination value for %s: %r, removing field",
+                            field,
+                            value,
+                        )
+                        # Remove invalid field so fallback values are used
+                        del result[field]
+                # Already an int or float - ensure it's int
+                elif isinstance(value, float):
+                    # Warn if float has a fractional part (unexpected for pagination)
+                    if value != int(value):
+                        self.logger.warning(
+                            "Pagination value %s has fractional part: %r, truncating to %d",
+                            field,
+                            value,
+                            int(value),
+                        )
+                    result[field] = int(value)
+                # If it's already an int, leave it as is
+
+        # Convert boolean fields ("true"/"false" strings to Python booleans)
+        for field in boolean_fields:
+            if field in result:
+                value = result[field]
+                if isinstance(value, str):
+                    lower_value = value.lower()
+                    if lower_value == "true":
+                        result[field] = True
+                    elif lower_value == "false":
+                        result[field] = False
+                    else:
+                        self.logger.warning(
+                            "Invalid boolean pagination value for %s: %r, removing field",
+                            field,
+                            value,
+                        )
+                        del result[field]
+                elif not isinstance(value, bool):
+                    # Unexpected type - convert truthy/falsy to bool
+                    result[field] = bool(value)
+
+        return result
+
+    def _extract_pagination_info(
+        self, response: httpx.Response, data: dict[str, Any]
+    ) -> dict[str, Any] | None:
+        """Extract pagination information from response headers or body.
+
+        Note:
+            All numeric pagination values (page, total_pages, total_items, etc.)
+            are converted to integers to ensure correct comparisons. This is important
+            because JSON parsing may return string values, and string comparison
+            (e.g., "5" >= "41") produces incorrect results.
+        """
+        pagination_info: dict[str, Any] = {}
+
+        # Check for X-Pagination header (JSON format)
+        if "X-Pagination" in response.headers:
+            try:
+                header_data = json.loads(response.headers["X-Pagination"])
+                # Validate that parsed JSON is a dictionary
+                if not isinstance(header_data, dict):
+                    self.logger.warning(
+                        "X-Pagination header is not a JSON object: %r", header_data
+                    )
+                else:
+                    # Convert numeric string values to integers to avoid string comparison bugs
+                    # (e.g., "5" >= "41" is True in string comparison but should be False)
+                    pagination_info = self._normalize_pagination_values(header_data)
+                    # Only return early if we got valid pagination data
+                    if pagination_info:
+                        return pagination_info
+            except json.JSONDecodeError:
+                pass
+
+        # Check for individual headers (with validation for malformed values)
+        if "X-Total-Pages" in response.headers:
+            try:
+                pagination_info["total_pages"] = int(response.headers["X-Total-Pages"])
+            except ValueError:
+                self.logger.warning(
+                    "Invalid X-Total-Pages header value: %s",
+                    response.headers["X-Total-Pages"],
+                )
+        if "X-Current-Page" in response.headers:
+            try:
+                pagination_info["page"] = int(response.headers["X-Current-Page"])
+            except ValueError:
+                self.logger.warning(
+                    "Invalid X-Current-Page header value: %s",
+                    response.headers["X-Current-Page"],
+                )
+
+        # Check for pagination in response body
+        if "pagination" in data:
+            page_data = data["pagination"]
+            if isinstance(page_data, dict):
+                pagination_info.update(cast(dict[str, Any], page_data))
+        elif (
+            "meta" in data
+            and isinstance(data["meta"], dict)
+            and "pagination" in data["meta"]
+        ):
+            meta_pagination = cast(Any, data["meta"]["pagination"])
+            if isinstance(meta_pagination, dict):
+                pagination_info.update(cast(dict[str, Any], meta_pagination))
+
+        # Normalize all numeric values to ensure correct comparisons
+        if pagination_info:
+            pagination_info = self._normalize_pagination_values(pagination_info)
+
+        return pagination_info if pagination_info else None
+
+
+def ResilientAsyncTransport(
+    max_retries: int = 5,
+    max_pages: int = 100,
+    logger: logging.Logger | None = None,
+    **kwargs: Any,
+) -> RetryTransport:
+    """
+    Factory function that creates a chained transport with error logging,
+    pagination, and retry capabilities.
+
+    This function chains multiple transport layers:
+    1. AsyncHTTPTransport (base HTTP transport)
+    2. ErrorLoggingTransport (logs detailed 4xx errors)
+    3. PaginationTransport (auto-collects paginated responses)
+    4. RetryTransport (handles retries with Retry-After header support)
+
+    Args:
+        max_retries: Maximum number of retry attempts for failed requests. Defaults to 5.
+        max_pages: Maximum number of pages to collect during auto-pagination. Defaults to 100.
+        logger: Logger instance for capturing operations. If None, creates a default logger.
+        **kwargs: Additional arguments passed to the base AsyncHTTPTransport.
+            Common parameters include:
+            - http2 (bool): Enable HTTP/2 support
+            - limits (httpx.Limits): Connection pool limits
+            - verify (bool | str | ssl.SSLContext): SSL certificate verification
+            - cert (str | tuple): Client-side certificates
+            - trust_env (bool): Trust environment variables for proxy configuration
+
+    Returns:
+        A RetryTransport instance wrapping all the layered transports.
+
+    Note:
+        When using a custom transport, parameters like http2, limits, and verify
+        must be passed to this factory function (which passes them to the base
+        AsyncHTTPTransport), not to the httpx.Client/AsyncClient constructor.
+
+    Example:
+        ```python
+        transport = ResilientAsyncTransport(max_retries=3, max_pages=50)
+        async with httpx.AsyncClient(transport=transport) as client:
+            response = await client.get("https://api.example.com/items")
+        ```
+    """
+    if logger is None:
+        logger = logging.getLogger(__name__)
+
+    # Build the transport chain from inside out:
+    # 1. Base AsyncHTTPTransport
+    base_transport = AsyncHTTPTransport(**kwargs)
+
+    # 2. Wrap with error logging
+    error_logging_transport = ErrorLoggingTransport(
+        wrapped_transport=base_transport,
+        logger=logger,
+    )
+
+    # 3. Wrap with pagination
+    pagination_transport = PaginationTransport(
+        wrapped_transport=error_logging_transport,
+        max_pages=max_pages,
+        logger=logger,
+    )
+
+    # Finally wrap with retry logic (outermost layer)
+    # Use RateLimitAwareRetry which:
+    # - Retries ALL methods (including POST/PATCH) for 429 rate limiting
+    # - Retries ONLY idempotent methods for server errors (502, 503, 504)
+    retry = RateLimitAwareRetry(
+        total=max_retries,
+        backoff_factor=1.0,  # Exponential backoff: 1, 2, 4, 8, 16 seconds
+        respect_retry_after_header=True,  # Honor server's Retry-After header
+        status_forcelist=[
+            429,
+            502,
+            503,
+            504,
+        ],  # Status codes that should trigger retries
+        allowed_methods=[
+            "HEAD",
+            "GET",
+            "PUT",
+            "DELETE",
+            "OPTIONS",
+            "TRACE",
+            "POST",
+            "PATCH",
+        ],
+    )
+    retry_transport = RetryTransport(
+        transport=pagination_transport,
+        retry=retry,
+    )
+
+    return retry_transport
+
+
+class KatanaClient(AuthenticatedClient):
+    """
+    The pythonic Katana API client with automatic resilience and pagination.
+
+    This client inherits from AuthenticatedClient and can be passed directly to
+    generated API methods without needing the .client property.
+
+    Features:
+    - Automatic retries on network errors and server errors (5xx)
+    - Automatic rate limit handling with Retry-After header support
+    - Auto-pagination ON by default for all GET requests (collects all pages automatically)
+    - Rich logging and observability
+    - Minimal configuration - just works out of the box
+
+    Auto-pagination behavior:
+    - ON by default for all GET requests
+    - Automatically detects paginated responses and collects all pages
+    - Disabled when ANY explicit `page` parameter is in URL (including `page=1`)
+    - Disabled per-request via extensions: `extensions={"auto_pagination": False}`
+    - Control max pages via `max_pages` constructor parameter
+    - Limit total items via extensions: `extensions={"max_items": 200}`
+
+    Usage:
+        async with KatanaClient() as client:
+            from katana_public_api_client.api.product import get_all_products
+
+            # Auto-pagination is ON by default - all pages collected automatically
+            response = await get_all_products.asyncio_detailed(
+                client=client,  # Pass client directly - no .client needed!
+                limit=50  # Page size (all pages still collected)
+            )
+
+            # Get a specific page only (ANY explicit page param disables auto-pagination)
+            response = await get_all_products.asyncio_detailed(
+                client=client,
+                page=2,      # Get page 2 only (page=1 also disables auto-pagination)
+                limit=50
+            )
+
+            # Limit total items collected (via httpx client)
+            httpx_client = client.get_async_httpx_client()
+            response = await httpx_client.get(
+                "/products",
+                params={"limit": 50},           # Page size
+                extensions={"max_items": 200}   # Stop after 200 items
+            )
+
+            # Control max pages globally
+            client_limited = KatanaClient(max_pages=5)  # Limit to 5 pages max
+    """
+
+    @staticmethod
+    def _read_from_netrc(base_url: str) -> str | None:
+        """
+        Read API key from ~/.netrc file.
+
+        Args:
+            base_url: The base URL to extract the hostname from.
+
+        Returns:
+            The API key (password field) from netrc, or None if not found.
+
+        Note:
+            The password field in netrc is used to store the API token since
+            Katana API uses bearer token authentication, not HTTP Basic Auth.
+        """
+        try:
+            # Extract hostname from base_url - handle both full URLs and bare hostnames
+            parsed = urlparse(base_url)
+            host: str | None = None
+
+            if parsed.hostname:
+                # URL with scheme (e.g., "https://api.katanamrp.com/v1")
+                host = parsed.hostname
+            else:
+                # Try parsing as URL without scheme (e.g., "api.katanamrp.com/v1")
+                parsed_with_scheme = urlparse(f"https://{base_url}")
+                if parsed_with_scheme.hostname:
+                    host = parsed_with_scheme.hostname
+                else:
+                    # Final fallback: treat as bare hostname (e.g., "api.example.com")
+                    # Extract just the hostname part before any path
+                    host = base_url.split("/")[0] if base_url else None
+
+            # If we couldn't extract a valid hostname, return None
+            if not host:
+                return None
+
+            netrc_path = Path.home() / ".netrc"
+            if not netrc_path.exists():
+                return None
+
+            auth = netrc.netrc(str(netrc_path))
+            authenticators = auth.authenticators(host)
+
+            if authenticators:
+                # Return password field (which contains our API token)
+                # netrc returns (login, account, password)
+                _login, _account, password = authenticators
+                return password
+        except (FileNotFoundError, netrc.NetrcParseError, OSError):
+            # Silently ignore netrc errors - it's an optional source
+            pass
+
+        return None
+
+    def __init__(
+        self,
+        api_key: str | None = None,
+        base_url: str | None = None,
+        timeout: float = 30.0,
+        max_retries: int = 5,
+        max_pages: int = 100,
+        logger: logging.Logger | None = None,
+        **httpx_kwargs: Any,
+    ):
+        """
+        Initialize the Katana API client with automatic resilience features.
+
+        Args:
+            api_key: Katana API key. If None, will try to load from KATANA_API_KEY env var,
+                .env file, or ~/.netrc file (in that order).
+            base_url: Base URL for the Katana API. Defaults to https://api.katanamrp.com/v1
+            timeout: Request timeout in seconds. Defaults to 30.0.
+            max_retries: Maximum number of retry attempts for failed requests. Defaults to 5.
+            max_pages: Maximum number of pages to collect during auto-pagination. Defaults to 100.
+            logger: Logger instance for capturing client operations. If None, creates a default logger.
+            **httpx_kwargs: Additional arguments passed to the base AsyncHTTPTransport.
+                Common parameters include:
+                - http2 (bool): Enable HTTP/2 support
+                - limits (httpx.Limits): Connection pool limits
+                - verify (bool | str | ssl.SSLContext): SSL certificate verification
+                - cert (str | tuple): Client-side certificates
+                - trust_env (bool): Trust environment variables for proxy configuration
+                - event_hooks (dict): Custom event hooks (will be merged with built-in hooks)
+
+        Raises:
+            ValueError: If no API key is provided via api_key param, KATANA_API_KEY env var,
+                .env file, or ~/.netrc file.
+
+        Note:
+            Transport-related parameters (http2, limits, verify, etc.) are correctly
+            passed to the innermost AsyncHTTPTransport layer, ensuring they take effect
+            even with the layered transport architecture.
+
+        Example:
+            >>> async with KatanaClient() as client:
+            ...     # All API calls through client get automatic resilience
+            ...     response = await some_api_method.asyncio_detailed(client=client)
+        """
+        load_dotenv()
+
+        # Handle backwards compatibility: accept 'token' kwarg as alias for 'api_key'
+        if "token" in httpx_kwargs:
+            if api_key is not None:
+                raise ValueError("Cannot specify both 'api_key' and 'token' parameters")
+            api_key = httpx_kwargs.pop("token")
+
+        # Determine base_url early so we can use it for netrc lookup
+        base_url = (
+            base_url or os.getenv("KATANA_BASE_URL") or "https://api.katanamrp.com/v1"
+        )
+
+        # Setup credentials with priority: param > env (including .env) > netrc
+        api_key = (
+            api_key or os.getenv("KATANA_API_KEY") or self._read_from_netrc(base_url)
+        )
+
+        if not api_key:
+            raise ValueError(
+                "API key required via: api_key param, KATANA_API_KEY env var, "
+                ".env file, or ~/.netrc"
+            )
+
+        self.logger = logger or logging.getLogger(__name__)
+        self.max_pages = max_pages
+
+        # Domain class instances (lazy-loaded)
+        self._products: Products | None = None
+        self._materials: Materials | None = None
+        self._variants: Variants | None = None
+        self._services: Services | None = None
+        self._inventory: Inventory | None = None
+
+        # Extract client-level parameters that shouldn't go to the transport
+        # Event hooks for observability - start with our defaults
+        event_hooks: dict[str, list[Callable[[httpx.Response], Awaitable[None]]]] = {
+            "response": [
+                self._capture_pagination_metadata,
+                self._log_response_metrics,
+            ]
+        }
+
+        # Extract and merge user hooks
+        user_hooks = httpx_kwargs.pop("event_hooks", {})
+        for event, hooks in user_hooks.items():
+            # Normalize to list and add to existing or create new event
+            hook_list = cast(
+                list[Callable[[httpx.Response], Awaitable[None]]],
+                hooks if isinstance(hooks, list) else [hooks],
+            )
+            if event in event_hooks:
+                event_hooks[event].extend(hook_list)
+            else:
+                event_hooks[event] = hook_list
+
+        # Check if user wants to override the transport entirely
+        custom_transport = httpx_kwargs.pop("transport", None) or httpx_kwargs.pop(
+            "async_transport", None
+        )
+
+        if custom_transport:
+            # User provided a custom transport, use it as-is
+            transport = custom_transport
+        else:
+            # Separate transport-specific kwargs from client-specific kwargs
+            # Client-specific params that should NOT go to the transport
+            client_only_params = ["headers", "cookies", "params", "auth"]
+            client_kwargs = {
+                k: httpx_kwargs.pop(k)
+                for k in list(httpx_kwargs.keys())
+                if k in client_only_params
+            }
+
+            # Create resilient transport with remaining transport-specific httpx_kwargs
+            # These will be passed to the base AsyncHTTPTransport (http2, limits, verify, etc.)
+            transport = ResilientAsyncTransport(
+                max_retries=max_retries,
+                max_pages=max_pages,
+                logger=self.logger,
+                **httpx_kwargs,  # Pass through http2, limits, verify, cert, trust_env, etc.
+            )
+
+            # Put client-specific params back into httpx_kwargs for the parent class
+            httpx_kwargs.update(client_kwargs)
+
+        # Initialize the parent AuthenticatedClient
+        super().__init__(
+            base_url=base_url,
+            token=api_key,
+            timeout=httpx.Timeout(timeout),
+            httpx_args={
+                "transport": transport,
+                "event_hooks": event_hooks,
+                **httpx_kwargs,  # Include any remaining client-level kwargs
+            },
+        )
+
+    # Remove the client property since we inherit from AuthenticatedClient
+    # Users can now pass the KatanaClient instance directly to API methods
+
+    # Domain properties for ergonomic access
+    @property
+    def products(self) -> Products:
+        """Access product catalog operations.
+
+        Returns:
+            Products instance for product CRUD and search operations.
+
+        Example:
+            >>> async with KatanaClient() as client:
+            ...     # Product CRUD
+            ...     products = await client.products.list(is_sellable=True)
+            ...     product = await client.products.get(123)
+            ...     results = await client.products.search("widget")
+        """
+        if self._products is None:
+            self._products = Products(self)
+        return self._products
+
+    @property
+    def materials(self) -> Materials:
+        """Access material catalog operations.
+
+        Returns:
+            Materials instance for material CRUD operations.
+
+        Example:
+            >>> async with KatanaClient() as client:
+            ...     materials = await client.materials.list()
+            ...     material = await client.materials.get(123)
+        """
+        if self._materials is None:
+            self._materials = Materials(self)
+        return self._materials
+
+    @property
+    def variants(self) -> Variants:
+        """Access variant catalog operations.
+
+        Returns:
+            Variants instance for variant CRUD operations.
+
+        Example:
+            >>> async with KatanaClient() as client:
+            ...     variants = await client.variants.list()
+            ...     variant = await client.variants.get(123)
+        """
+        if self._variants is None:
+            self._variants = Variants(self)
+        return self._variants
+
+    @property
+    def services(self) -> Services:
+        """Access service catalog operations.
+
+        Returns:
+            Services instance for service CRUD operations.
+
+        Example:
+            >>> async with KatanaClient() as client:
+            ...     services = await client.services.list()
+            ...     service = await client.services.get(123)
+        """
+        if self._services is None:
+            self._services = Services(self)
+        return self._services
+
+    @property
+    def inventory(self) -> Inventory:
+        """Access inventory and stock operations.
+
+        Returns:
+            Inventory instance for stock levels, movements, and adjustments.
+
+        Example:
+            >>> async with KatanaClient() as client:
+            ...     # Check stock levels
+            ...     stock = await client.inventory.check_stock("WIDGET-001")
+            ...     low_stock = await client.inventory.list_low_stock(threshold=10)
+        """
+        if self._inventory is None:
+            self._inventory = Inventory(self)
+        return self._inventory
+
+    # Event hooks for observability
+    async def _capture_pagination_metadata(self, response: httpx.Response) -> None:
+        """Capture and store pagination metadata from response headers."""
+        if response.status_code == 200:
+            x_pagination = response.headers.get("X-Pagination")
+            if x_pagination:
+                try:
+                    pagination_info = json.loads(x_pagination)
+                    self.logger.debug(f"Pagination metadata: {pagination_info}")
+                    # Store pagination info for easy access
+                    setattr(response, "pagination_info", pagination_info)  # noqa: B010
+                except json.JSONDecodeError:
+                    self.logger.warning(f"Invalid X-Pagination header: {x_pagination}")
+
+    async def _log_response_metrics(self, response: httpx.Response) -> None:
+        """Log response metrics for observability."""
+        # Extract timing info if available (after response is read)
+        try:
+            if hasattr(response, "elapsed"):
+                duration = response.elapsed.total_seconds()
+            else:
+                duration = 0.0
+        except RuntimeError:
+            # elapsed not available yet
+            duration = 0.0
+
+        self.logger.debug(
+            f"Response: {response.status_code} {response.request.method} "
+            f"{response.request.url!s} ({duration:.2f}s)"
+        )
