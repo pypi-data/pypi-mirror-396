@@ -1,0 +1,63 @@
+Metadata-Version: 2.4
+Name: libcalab
+Version: 0.0.9
+Summary: Library for character animation
+Author-email: Taesoo <taesoobear@gmail.com>
+License: MIT
+Requires-Python: ==3.11.*
+Description-Content-Type: text/markdown
+Dynamic: requires-python
+
+# example code 1 (fbx loading). 
+```
+import os,sys,pdb,math
+from libcalab import *
+
+this=RE.createMainWin() # this is necessary before using libcalab
+
+
+skelFile='../../Mixamo/fbx_withSkin/bigvegas_Walking.fbx' 
+skinScale=1
+
+fbx=RE.FBXloader(skelFile, skinScale=skinScale, useTexture=True, simplifyMesh=False)
+
+loader=fbx.loader
+motion=fbx.loader.mMotion
+
+print(loader)
+lua.out(loader) #  print skeleton using lua (see console).
+
+
+pdb.set_trace()
+```
+# example code 2 (bvh loading). 
+```
+import os, sys, pdb, math, random
+from libcalab import *
+import numpy as np
+import copy
+
+this=RE.createMainWin(sys.argv)
+
+loader1=RE.createMotionLoaderExt('../Resource/motion/woody/wd2_2foot_walk_turn2.bvh')
+mMotion=loader1.mMotion
+
+# pose editing using quaternions
+lua.out(loader1) #  print skeleton using lua (see console).
+ri1=loader1.getRotJointIndexByName('LeftForeArm')
+pose1.rotations(ri1).setRotation(m.vector3(0,1,0), math.radians(-90))
+
+
+# pose editing using euler angles
+loader1.setPose(pose2)
+dof2=loader1.getPoseDOF()
+
+print(dof2.array)
+# The two lines above set and get the quaternions (pose2) in the loader to convert them into Euler angles (dof).
+# In other words, pose2 and dof2 represent the same pose but in different representations.
+loader1_relbow=loader1.getTreeIndexByName('RightForeArm')
+rindex2_start=loader1.dofInfo.startR(loader1_relbow)
+rindex2_end=loader1.dofInfo.endR(loader1_relbow)
+
+print(loader1.bone(loader1_relbow).getRotationalChannels())
+```
