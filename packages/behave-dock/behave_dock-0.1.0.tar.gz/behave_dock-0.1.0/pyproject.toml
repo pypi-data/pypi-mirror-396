@@ -1,0 +1,116 @@
+[project]
+name = "behave-dock"
+version = "0.1.0"
+description = "A dead-simple end-to-end testing tool for containerized microservices and monoliths, based on the Python Behave library."
+authors = [
+    { name = "M. Hosseyn Najafi", email = "hosseynjf@icloud.com" }
+]
+readme = "README.md"
+license = "MIT"
+keywords = ["behave", "BDD", "docker", "orchestration"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Software Development :: Testing :: Acceptance",
+    "Topic :: Software Development :: Testing :: BDD",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "License :: OSI Approved :: MIT License",
+    "Typing :: Typed",
+]
+requires-python = ">=3.10,<4.0"
+dependencies = [
+    "testcontainers[redis,rabbitmq,postgresql,kafka] (>=4.0.0,<5.0.0)",
+    "behave (>=1.2.6,<2.0.0)",
+    "requests (>=2.31.0,<3.0.0)",
+    "requests-toolbelt (>=1.0.0,<2.0.0)",
+    "psycopg2-binary (>=2.9.6,<3.0.0)",
+    "kafka-python (>=2.0.0,<3.0.0)",
+    "kafka-schema-registry (>=0.1.0,<1.0.0)"
+]
+
+[project.urls]
+Homepage = "https://github.com/HosseyNJF/behave-dock"
+Repository = "https://github.com/HosseyNJF/behave-dock.git"
+Issues = "https://github.com/HosseyNJF/behave-dock/issues"
+Changelog = "https://github.com/HosseyNJF/behave-dock/blob/main/CHANGELOG.md"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.14.8"
+types-psycopg2 = "^2.9.21"
+types-docker = "^7.1.0"
+types-requests = "^2.32.4"
+mypy = "^1.17.1"
+pytest = "^9.0.1"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    # pycodestyle
+    "E",
+    # Pyflakes
+    "F",
+    # pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+    # flake8-bandit
+    "S",
+]
+ignore = [
+    "S101",
+]
+
+[tool.mypy]
+packages = ["behave_dock", "todo_app"]
+mypy_path = ["$MYPY_CONFIG_FILE_DIR/src", "$MYPY_CONFIG_FILE_DIR/tests", "$MYPY_CONFIG_FILE_DIR/examples"]
+warn_redundant_casts = true
+warn_unused_configs = true
+strict_bytes = true
+
+[[tool.mypy.overrides]]
+module = "behave_dock.*"
+# Strict flags
+disallow_any_generics = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+warn_unused_ignores = true
+warn_return_any = true
+implicit_reexport = false
+strict_equality = true
+extra_checks = true
+
+[[tool.mypy.overrides]]
+# testcontainers is typed, but it doesn't correctly declare itself as such.
+# https://github.com/testcontainers/testcontainers-python/issues/305
+module = "testcontainers.*"
+follow_untyped_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "testcontainers.*",
+    "behave.*",
+    "kafka.*",
+    "kafka_schema_registry.*",
+    "requests_toolbelt.*"
+]
+ignore_missing_imports = true
