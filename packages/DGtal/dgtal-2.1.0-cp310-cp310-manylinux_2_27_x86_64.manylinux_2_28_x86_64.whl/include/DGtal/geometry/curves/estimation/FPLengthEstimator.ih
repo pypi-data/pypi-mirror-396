@@ -1,0 +1,124 @@
+/**
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU Lesser General Public License as
+ *  published by the Free Software Foundation, either version 3 of the
+ *  License, or  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ **/
+
+/**
+ * @file FPLengthEstimator.ih
+ * @author Tristan Roussillon (\c
+ * tristan.roussillon@liris.cnrs.fr ) Laboratoire d'InfoRmatique en
+ * Image et Systèmes d'information - LIRIS (CNRS, UMR 5205), CNRS,
+ * France
+ *
+ *
+ * @date 2011/07/07
+ *
+ * Implementation of inline methods defined in FPLengthEstimator.h
+ *
+ * This file is part of the DGtal library.
+ */
+
+
+//////////////////////////////////////////////////////////////////////////////
+#include <cstdlib>
+//////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////
+// IMPLEMENTATION of inline methods.
+///////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////
+// Interface - public :
+
+template <typename T>
+inline
+typename DGtal::FPLengthEstimator<T>::Quantity
+DGtal::FPLengthEstimator<T>::eval(const ConstIterator& itb,
+    const ConstIterator& ite, const double h) const
+{
+  ASSERT(h > 0.);
+
+  Quantity val = 0.;
+  if ( isEmpty(itb,ite) )
+    return val;
+
+  FaithfulPolygon fp( itb, ite ); 
+  std::vector<Point> points(fp.size());
+  fp.copyFP( points.begin() );
+
+  typename std::vector<Point>::const_iterator i = points.begin();
+  typename std::vector<Point>::const_iterator j = i;
+  ++j; 
+  const typename std::vector<Point>::const_iterator end = points.end();
+
+  for ( ; j != end; ++i, ++j )
+  {
+    Vector v( *j - *i ); 
+    val += v.norm(Vector::L_2);
+  }
+  if ( IsCirculator<ConstIterator>::value )
+  {
+    Vector v( points.front() - *i ); 
+    val += v.norm(Vector::L_2);
+  }
+  
+  return val*h;
+}
+
+
+
+
+
+
+// ------------------------------------------------------------------------
+template <typename T>
+inline
+void
+DGtal::FPLengthEstimator<T>::selfDisplay ( std::ostream & out ) const
+{
+  out << "[FPLengthEstimator]";
+  if (isValid()) 
+    out <<" initialized";
+  else
+    out<< " not initialized";
+}
+
+// ------------------------------------------------------------------------
+template <typename T>
+inline
+bool
+DGtal::FPLengthEstimator<T>::isValid() const
+{
+    return true;
+}
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Implementation of inline functions                                        //
+
+template <typename T>
+inline
+std::ostream&
+DGtal::operator<< ( std::ostream & out, 
+      const FPLengthEstimator<T> & object )
+{
+  object.selfDisplay( out );
+  return out;
+}
+
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+
