@@ -1,0 +1,216 @@
+# KATERYNA
+
+**Epistemic Uncertainty Layer for LLMs**
+
+Stop your LLMs from hallucinating. Let them say "I don't know."
+
+[![PyPI version](https://badge.fury.io/py/kateryna.svg)](https://badge.fury.io/py/kateryna)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+---
+
+## The Problem
+
+```
+User: "What is the capital of Freedonia?"
+
+GPT-4 (binary): "The capital of Freedonia is Fredville."
+                 ^ Confident. Wrong. Freedonia is fictional.
+
+Kateryna Layer:  "I don't know. I found no grounded information
+                  about Freedonia in my knowledge base."
+                 ^ Abstained. Correct response.
+```
+
+LLMs hallucinate because binary architecture forces yes/no responses. There's no native way to represent "I don't know."
+
+**Kateryna adds that capability.**
+
+---
+
+## The Solution: Ternary Logic
+
+Based on Nikolai Brusentsov's 1958 **Setun computer** - the first (and only) balanced ternary computer ever mass-produced.
+
+| State | Value | Meaning | Action |
+|-------|-------|---------|--------|
+| **CONFIDENT** | +1 | Strong RAG evidence, response matches grounding | Return answer |
+| **UNCERTAIN** | 0 | Weak/no evidence, model hedging | Abstain |
+| **OVERCONFIDENT** | -1 | Confident language WITHOUT evidence | **DANGER FLAG** |
+
+### The Critical Insight
+
+The **-1 state** is the breakthrough.
+
+Traditional confidence scores miss this:
+- Binary: "Is the model confident?" Yes/No
+- Probability: "How confident?" 0-100%
+
+Neither asks: **"Is the confidence *justified*?"**
+
+Kateryna asks: Does the confidence level match the grounding evidence?
+
+```
+Confident response + Strong RAG grounding = +1 (Trust it)
+Uncertain response + Weak RAG grounding   =  0 (Appropriate uncertainty)
+Confident response + Weak RAG grounding   = -1 (HALLUCINATION RISK)
+```
+
+**The -1 state catches confident bullshit.**
+
+---
+
+## Installation
+
+```bash
+# Core package (works with any LLM)
+pip install kateryna
+
+# With OpenAI support
+pip install kateryna[openai]
+
+# With Anthropic support
+pip install kateryna[anthropic]
+
+# With local Ollama support
+pip install kateryna[ollama]
+
+# All adapters
+pip install kateryna[all]
+```
+
+---
+
+## Quick Start
+
+### Standalone Detector (Any LLM)
+
+```python
+from kateryna import EpistemicDetector, TernaryState
+
+detector = EpistemicDetector()
+
+# Analyze any LLM output
+state = detector.analyze(
+    text="The capital of Freedonia is definitely Fredville.",
+    question="What is the capital of Freedonia?",
+    retrieval_confidence=0.05,  # Low RAG score
+    chunks_found=0
+)
+
+if state.is_danger_zone:
+    print(f"DANGER: {state.reason}")
+    # "DANGER: Confident response without grounding (RAG: 5%)"
+
+# The -1 state catches hallucinations that LOOK confident
+print(state.state)  # TernaryState.OVERCONFIDENT
+```
+
+### With OpenAI
+
+```python
+from openai import OpenAI
+from kateryna.adapters.openai import OpenAISyncEpistemicAdapter
+
+client = OpenAISyncEpistemicAdapter(OpenAI(), model="gpt-4")
+
+response = client.generate_with_rag(
+    prompt="How does this function work?",
+    rag_chunks=[
+        {"content": "def add(a, b): return a + b", "distance": 0.1},
+        {"content": "# Adds two numbers together", "distance": 0.15},
+    ]
+)
+
+if response.epistemic_state.grounded:
+    print(f"Confident answer: {response.content}")
+elif response.epistemic_state.is_danger_zone:
+    print("WARNING: Potential hallucination detected")
+```
+
+### With Local Ollama
+
+```python
+from kateryna.adapters.ollama import OllamaSyncEpistemicAdapter
+
+client = OllamaSyncEpistemicAdapter(model="llama3.2")
+
+response = client.generate_with_rag(
+    prompt="Explain this COBOL code",
+    rag_chunks=my_retrieved_chunks
+)
+```
+
+### Pre-Question Filtering (Save Tokens!)
+
+```python
+detector = EpistemicDetector()
+
+# Don't even call the LLM for unanswerable questions
+should_abstain, reason = detector.should_abstain_on_question(
+    "What will Bitcoin be worth in 2030?"
+)
+
+if should_abstain:
+    print("Abstaining - question asks for prediction")
+```
+
+---
+
+## RAG Integration
+
+Kateryna works with any vector database. Just pass chunks with a score field:
+
+```python
+# Pinecone / ChromaDB (distance)
+chunks = [{"content": "...", "distance": 0.1}]
+
+# Weaviate (score)
+chunks = [{"text": "...", "score": 0.85}]
+
+# Custom (relevance or similarity)
+chunks = [{"content": "...", "relevance": 0.9}]
+chunks = [{"content": "...", "similarity": 0.88}]
+```
+
+---
+
+## Ternary State Mapping
+
+| RAG Confidence | LLM Response | State | Grounded | Action |
+|----------------|--------------|-------|----------|--------|
+| High (>0.7) | Confident | **+1** | Yes | Return |
+| High (>0.7) | Uncertain | **0** | Yes | Abstain |
+| Medium (0.3-0.7) | Confident | **+1** | Yes | Return |
+| Medium (0.3-0.7) | Uncertain | **0** | No | Abstain |
+| Low (<0.3) | Confident | **-1** | No | **DANGER** |
+| Low (<0.3) | Uncertain | **0** | No | Abstain |
+| None | Any | **0** | No | Abstain |
+
+**Key insight:** A confident response without evidence is MORE dangerous than an uncertain one.
+
+---
+
+## Named After
+
+**Kateryna Yushchenko (1919-2001)** - Ukrainian computer scientist who invented indirect addressing (pointers) in 1955, systematically erased from Western computing history.
+
+Her work on indirect addressing made modern programming possible. This work on epistemic addressing makes AI trustworthy.
+
+---
+
+## Research Foundation
+
+- **Setun Computer (1958)** - Nikolai Brusentsov, Moscow State University
+- **Three-Valued Logic** - Jan Lukasiewicz (1920s)
+- **Ternary Inference** - DOI: 10.5281/zenodo.17875182
+
+---
+
+## License
+
+MIT
+
+---
+
+*"AI that knows when it doesn't know."*
