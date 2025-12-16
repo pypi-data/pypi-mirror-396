@@ -1,0 +1,108 @@
+[project]
+name = "observabilipy"
+version = "1.1.0"
+description = "Framework-agnostic metrics and structured log collection with hexagonal architecture"
+readme = "README.md"
+license = "MIT"
+authors = [
+    { name = "PhilHem", email = "34508934+PhilHem@users.noreply.github.com" }
+]
+requires-python = ">=3.13"
+keywords = ["observability", "metrics", "logging", "prometheus", "grafana", "fastapi", "django"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Framework :: FastAPI",
+    "Framework :: Django",
+    "Topic :: System :: Logging",
+    "Topic :: System :: Monitoring",
+    "Typing :: Typed",
+]
+dependencies = [
+    "aiosqlite>=0.21.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/PhilHem/observabilipy"
+Repository = "https://github.com/PhilHem/observabilipy"
+Issues = "https://github.com/PhilHem/observabilipy/issues"
+
+[project.optional-dependencies]
+fastapi = [
+    "fastapi>=0.124.2",
+]
+django = [
+    "django>=4.2",
+]
+examples = [
+    "fastapi>=0.124.2",
+    "psutil>=5.9.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/observabilipy"]
+
+[dependency-groups]
+dev = [
+    "build>=1.3.0",
+    "django>=6.0",
+    "django-stubs>=5.2.8",
+    "flask>=3.1.2",
+    "httpx>=0.28.1",
+    "mypy>=1.19.0",
+    "pre-commit>=4.5.0",
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "ruff>=0.14.8",
+    "uvicorn>=0.38.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "src"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "--doctest-modules"
+doctest_optionflags = ["ELLIPSIS", "NORMALIZE_WHITESPACE"]
+markers = [
+    "core: Core models, ports, services",
+    "encoding: NDJSON, Prometheus encoders",
+    "storage: Storage adapters (sqlite, in_memory, ring_buffer)",
+    "fastapi: FastAPI framework adapter",
+    "django: Django framework adapter",
+    "asgi: ASGI generic adapter",
+    "wsgi: WSGI framework adapter",
+    "runtime: EmbeddedRuntime orchestrator",
+    "examples: Example file validation",
+    "e2e: End-to-end tests",
+]
+
+[tool.ruff]
+src = ["src"]
+line-length = 88
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["E402"]  # Allow imports after pytest.importorskip()
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+warn_return_any = true
+warn_unused_ignores = true
