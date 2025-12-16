@@ -1,0 +1,92 @@
+Metadata-Version: 2.4
+Name: selcraft
+Version: 0.1.0
+Summary: Python tool for generating selinux-policy packages to enable cross-environment communication
+Author-email: Michael Engel <mengel@redhat.com>
+Project-URL: Homepage, https://gitlab.com/mengel1/custom-qm-policy
+Project-URL: Documentation, https://gitlab.com/mengel1/custom-qm-policy
+Project-URL: Repository, https://gitlab.com/mengel1/custom-qm-policy
+Project-URL: Issues, https://gitlab.com/mengel1/custom-qm-policy
+Keywords: selinux,policy,generation,QM,ASIL
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: jinja2~=3.1.6
+Requires-Dist: jsonschema~=4.23.0
+Requires-Dist: pyyaml~=6.0.2
+Provides-Extra: dev
+Requires-Dist: black~=25.1.0; extra == "dev"
+Requires-Dist: isort~=6.0.1; extra == "dev"
+Dynamic: license-file
+
+# POC: Generating custom selinux-policies for QM
+
+Goal of this POC is to explore how templating can be used to enable users of QM write custom selinux-policies (without requiring any selinux knowledge) for IPC communication such as Unix Domain Sockets.
+
+## Background
+
+QM provides an isolated environment from the ASIL partition. In order to enable cross-environment communication, e.g. via Unix Domain Sockets (UDS), it is necessary to tweak the selinux-policy. Currently, this is done inside the policy of QM for UDS in a generalized way by the `/run/ipc/` directory. Any socket placed here can be mounted into the QM environment and will be assigned the proper selinux label so that it can be accessed from all ASIL applications as well as all QM applications as depicted in the following diagram.
+
+![overview](./assets/overview.drawio.png)
+
+However, there are cases where only specific applications - in ASIL and QM - should be able to access such a mounted socket. The `bluechi-agent` running inside the QM environment is such an example. 
+
+![overview](./assets/overview-2.drawio.png)
+
+In addition to UDS, there are also other scenarios where a custom selinux-policy is required to enable such cross-environment communication such as TCP sockets, vsomeip, shared memory, etc.. 
+
+## Idea
+
+In order to enable customized cross-environment communcation as described in the [Background section](#background) it is necessary to write a new selinux-policy from scratch at the moment. This requires knowledge of selinux, which is especially complex in the QM case, and its quite likely to break something.
+
+Therefore, a templating approach is suggested in this POC. Users of QM can generate a custom selinux-policy for their individual use case based on simple inputs, abstracting the complexity of writing a policy. The inputs for UDS can be
+
+- the path of the binaries
+- the path of the sockets
+- permissions of the binaries on the sockets
+
+See [spec.yaml](./selcraft/spec/sample/spec.yaml), for example. Here a .yaml format is used, but this could also be .toml, .json, etc.. This configuration file is then fed into a generator applying them to (jinja) templates, which will output the final, custom selinux-policy and all necessary files to easily build it. This can then be further integrated to other pipelines to fully automate building RPMs for these policies and using it in an image build with [automotive-image-builder](https://gitlab.com/CentOS/automotive/src/automotive-image-builder/).
+
+![overview](./assets/build.drawio.png)
+
+## Using the POC
+
+1. Create a virtual environment and install requirements:
+```bash
+$ python -m venv .venv
+$ source .venv/bin/activate
+$ pip install -r requirements.txt
+```
+
+2. Run the generator:
+```bash
+$ python generator.py
+```
+It uses the [spec.yaml](./selcraft/spec/sample/spec.yaml) and generates all selinux-policy as well as files to build in the `out/` directory:
+```
+- build.sh
+- Containerfile
+- Makefile
+- myapp.spec
+- qm_myapp.conf
+- qm_myapp.fc
+- qm_myapp.if
+- qm_myapp.te
+```
+
+3. Build the selinux-policy in a container:
+```bash
+$ cd out
+$ make container-build
+```
+It'll output the built RPM in `out/rpmbuild/RPMS/` directory.
+
+## Limitations
+
+This POC only explores how to generate the necessary files and does **not**:
+
+- provide a tested template for UDS communication
+- uses only UDS and binaries as an example - more research needed for containerized applications etc.
+- and probably more

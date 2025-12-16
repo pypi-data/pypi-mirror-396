@@ -1,0 +1,53 @@
+.PHONY: setup build install clean rpm
+
+VERSION={{ policy.version }}
+DESTDIR ?=
+PREFIX ?= /usr
+DATADIR ?= $(PREFIX)/share
+SYSCONFDIR ?= /etc
+BUILDDIR ?= $(PWD)/builddir
+RPM_TOPDIR ?= $(PWD)/rpmbuild
+
+setup:
+	mkdir -p $(BUILDDIR)
+
+build: setup
+	bash build.sh $(BUILDDIR)
+
+install:
+	install -D -pm 644 {{ policy.name }}.pp.bz2 ${DESTDIR}/${DATADIR}/selinux/packages/{{ policy.name }}.pp.bz2
+	install -D -pm 644 {{ output.files.if_file }} ${DESTDIR}/${DATADIR}/selinux/devel/include/services/{{ output.files.if_file }}
+	install -D -pm 644 {{ output.files.qm_dropin_file }} ${DESTDIR}/${SYSCONFDIR}/containers/systemd/qm.container.d/{{ output.files.qm_dropin_file }}
+
+clean:
+	rm -rf $(BUILDDIR)/
+	rm -rf $(RPM_TOPDIR)/
+
+rpm: clean build
+	mkdir -p $(BUILDDIR)/{{ policy.name }}-${VERSION}
+	cp -t $(BUILDDIR)/{{ policy.name }}-${VERSION} \
+		{{ output.files.te_file }} \
+		{{ output.files.fc_file }} \
+		{{ output.files.if_file }} \
+		{{ output.files.qm_dropin_file }} \
+		{{ output.files.build_script_file }} \
+		{{ output.files.make_file }} \
+		{{ output.files.spec_file }} \
+		$(BUILDDIR)/{{ policy.name }}.pp.bz2
+	mv $(BUILDDIR)/{{ policy.name }}-${VERSION} ./{{ policy.name }}-${VERSION}
+
+	tar cvz \
+		--exclude='.git' \
+		-f /tmp/{{ policy.name }}-${VERSION}.tar.gz ./{{ policy.name }}-${VERSION}
+	rm -rf ./{{ policy.name }}-${VERSION}
+	
+	mkdir -p ${RPM_TOPDIR}/{RPMS,SRPMS,BUILD,SOURCES}
+	mv /tmp/{{ policy.name }}-${VERSION}.tar.gz ${RPM_TOPDIR}/SOURCES
+	rpmbuild -ba \
+		--define="_topdir ${RPM_TOPDIR}" \
+		--define="version ${VERSION}" \
+		{{ output.files.spec_file }}
+
+container-build:
+	podman build -f {{ output.files.container_file }} -t {{ policy.name }}_build .
+	podman run --privileged -v ./:/var/{{ policy.name }} {{ policy.name }}_build:latest /bin/bash -c "cd /var/{{ policy.name }}; make rpm"

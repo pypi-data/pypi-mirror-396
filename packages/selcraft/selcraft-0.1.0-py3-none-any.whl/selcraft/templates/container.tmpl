@@ -1,0 +1,32 @@
+{%- if policy.distro == 'fedora42' -%}
+
+FROM quay.io/fedora/fedora:42
+
+RUN dnf upgrade --refresh --nodocs -y && \
+    dnf install --nodocs \
+        git \
+        make \
+        selinux-policy-devel \
+        rpm-build \
+        qm \
+    -y
+
+{%- elif policy.distro.startswith('autosd') -%}
+
+    {%- if policy.distro  == 'autosd9' -%}
+FROM quay.io/centos/centos:stream9
+    {%- elif policy.distro  == 'autosd10' -%}
+FROM quay.io/centos/centos:stream10
+    {%- endif %}
+
+RUN dnf install -y epel-release && \
+    dnf upgrade --refresh --nodocs -y && \
+    dnf install --nodocs \
+        git \
+        make \
+        selinux-policy-devel \
+        rpm-build \
+        qm \
+    -y
+
+{%- endif -%}

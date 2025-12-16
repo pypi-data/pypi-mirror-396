@@ -1,0 +1,67 @@
+Name:		{{ policy.name }}
+Version:	{{ policy.version }}
+Release:	1%{?dist}
+Summary:	SELinux policy for configuring the communication of {{ policy.name }} with QM
+License:	{{ policy.license }}
+URL:		https://github.com/eclipse-bluechi/bluechi
+Source0:	%{url}/releases/download/v%{version}/%{name}-%{version}.tar.gz
+
+BuildArch:	noarch
+BuildRequires:	checkpolicy
+BuildRequires:	selinux-policy-devel
+BuildRequires:	qm
+BuildRequires:	make
+
+Requires(post):	policycoreutils
+%if "%{_selinux_policy_version}" != ""
+Requires:	selinux-policy >= %{_selinux_policy_version}
+Requires(post): selinux-policy-base >= %_selinux_policy_version
+Requires(post): selinux-policy-any >= %_selinux_policy_version
+%endif
+
+%description
+{{ policy.description }}
+
+
+%prep
+%autosetup -S git_am
+
+%build
+
+%install
+%{__make} DESTDIR=%{buildroot} DATADIR=%{_datadir} SYSCONFDIR=%{_sysconfdir} install
+
+%post
+. %{_sysconfdir}/selinux/config
+%selinux_modules_install -s ${SELINUXTYPE} %{_datadir}/selinux/packages/{{ policy.name }}.pp.bz2
+{%- for app in apps.binaries %}
+restorecon -R {{ app.path }} &> /dev/null || :
+{%- endfor %}
+{%- for socket in ipc.uds %}
+restorecon -R {{ socket.dir }} &> /dev/null || :
+{%- endfor %}
+
+%preun
+
+%postun
+if [ $1 -eq 0 ]; then
+   . %{_sysconfdir}/selinux/config
+   %selinux_modules_uninstall -s ${SELINUXTYPE} {{ policy.name }}
+   {%- for app in apps.binaries %}
+   restorecon -R {{ app.path }} &> /dev/null || :
+   {%- endfor %}
+   {%- for socket in ipc.uds %}
+   restorecon -R {{ socket.dir }} &> /dev/null || :
+   {%- endfor %}
+fi
+
+%files
+%{_datadir}/selinux/devel/include/services/{{output.files.if_file}}
+%{_datadir}/selinux/packages/{{ policy.name }}.pp.bz2
+%{_sysconfdir}/containers/systemd/qm.container.d/{{ output.files.qm_dropin_file }}
+
+%changelog
+* {{ date }} Policy Joe <policyjoe@redhat.com> - {{ policy.version }}-1
+- Initial release
+
+

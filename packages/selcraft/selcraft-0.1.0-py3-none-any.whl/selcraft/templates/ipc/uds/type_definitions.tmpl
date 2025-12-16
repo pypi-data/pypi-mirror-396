@@ -1,0 +1,8 @@
+{% for socket in ipc.uds | unique(attribute="label") %}
+################################
+# Setup unix domain socket {{ socket.name }}
+type {{ socket.label }};
+files_pid_file({{ socket.label }})
+init_sock_file({{ socket.label }})
+mls_trusted_object({{ socket.label }})
+{% endfor %}

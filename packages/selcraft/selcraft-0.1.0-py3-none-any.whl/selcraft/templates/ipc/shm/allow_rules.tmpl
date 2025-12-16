@@ -1,0 +1,15 @@
+{%- if "READ" in permission.permissions -%}
+allow {{ permission.app.label }} {{ permission.ipc.label }}:file {open read map};
+{% endif -%}
+{%- if "WRITE" in permission.permissions -%}
+allow {{ permission.app.label }} {{ permission.ipc.label }}:file {open write map};
+{% endif -%}
+{%- if "CREATE" in permission.permissions -%}
+allow {{ permission.app.label }} tmpfs_t:dir {add_name write};
+allow {{ permission.app.label }} {{ permission.ipc.label }}:file {create};
+allow {{ permission.app.label }} {{ permission.ipc.label }}:dir {create add_name write};
+# 2. Allow {{ permission.app.label }} to create tmpfs files and transition them to {{ permission.ipc.label }}
+type_transition {{ permission.app.label }} tmpfs_t:file      {{ permission.ipc.label }};
+type_transition {{ permission.app.label }} tmpfs_t:dir       {{ permission.ipc.label }};
+type_transition {{ permission.app.label }} tmpfs_t:fifo_file {{ permission.ipc.label }};
+{% endif -%}

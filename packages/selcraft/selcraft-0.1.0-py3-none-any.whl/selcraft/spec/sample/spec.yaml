@@ -1,0 +1,61 @@
+schema_version: "1.0.0"
+info:
+  name: "shm-test-policy"
+  version: "1.0.0"
+  description: "SELinux policy for test using SHM and UDS"
+  license: "MIT"
+  distro: "autosd10"
+apps:
+  binaries:
+    - name: "shm_client"
+      path: "/usr/bin/client"
+      is_qm: true
+    - name: "shm_server"
+      path: "/usr/bin/server"
+  containers:
+    - name: "containerized-client"
+      label: "containerized_client_t"
+      is_qm: true
+    - name: "containerized-server"
+      label: "containerized_server_t"
+      is_qm: false
+ipc:
+  sockets:
+    uds:
+      - name: shm-socket
+        path: "/run/named_shm_demo/ipc_server.socket"
+      - name: mysecond-socket
+        path: "/run/mycontainerized/mysecond.socket"
+  shm:
+    - name: shm-custom
+      path: "/dev/shm/custom"
+permissions:
+  - app: shm_client
+    ipc: shm_socket
+    allow:
+      - READ
+      - WRITE
+  - app: shm_server
+    ipc: shm_socket
+    allow:
+      - READ
+      - WRITE
+      - CREATE
+  - app: shm_server
+    ipc: shm-custom
+    allow:
+      - READ
+      - WRITE
+      - CREATE
+  - app: containerized-client
+    ipc: mysecond-socket
+    allow:
+      - READ
+      - WRITE
+  - app: containerized-server
+    ipc: mysecond-socket
+    allow:
+      - READ
+      - WRITE
+      - CREATE
+

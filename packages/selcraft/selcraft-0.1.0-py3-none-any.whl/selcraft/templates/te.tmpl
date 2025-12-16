@@ -1,0 +1,28 @@
+policy_module({{ policy.name }}, {{ policy.version }})
+
+gen_require(`
+	type qm_t;
+	type qm_file_t;
+	type qm_container_file_t;
+	type container_file_t;
+	type container_runtime_t;
+	type tmpfs_t;
+')
+{% include "ipc/uds/type_definitions.tmpl" %}
+{% include "ipc/shm/type_definitions.tmpl" %}
+{% for permission in permissions | unique(attribute="app.label") %}
+################################
+# Type Extensions for {{ permission.app.name }}
+type {{ permission.app.label }};
+type {{ permission.app.label }}_exec_t;
+init_daemon_domain({{ permission.app.label }}, {{ permission.app.label }}_exec_t)
+{% endfor %}
+{% for permission in permissions %}
+################################
+# {{ permission.ipc.type }} permission mappings for {{ permission.app.name }}
+{% if permission.ipc.type == "uds" -%}
+{% include "ipc/uds/allow_rules.tmpl" %}
+{%elif permission.ipc.type == "shm" -%}
+{% include "ipc/shm/allow_rules.tmpl" %}
+{% endif -%}
+{% endfor %}

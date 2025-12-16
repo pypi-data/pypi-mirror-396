@@ -1,0 +1,72 @@
+{%- if permission.app.type == "binary" %}
+# QM domain permissions for binaries
+allow qm_t {{ permission.app.label }}:file { read open getattr ioctl };
+allow qm_t {{ permission.app.label }}:dir search;
+allow qm_t {{ permission.app.label }}:lnk_file read;
+allow qm_t {{ permission.app.label }}:process getattr;
+allow qm_t {{ permission.app.label }}_exec_t:file { getattr execute read open execute_no_trans map };
+    {% if "READ" in permission.permissions %}
+# read permissions
+allow {{ permission.app.label }} qm_file_t:chr_file read;
+allow {{ permission.app.label }} qm_file_t:lnk_file read;
+allow {{ permission.app.label }} qm_file_t:file { read open execute map getattr };
+allow {{ permission.app.label }} qm_file_t:dir search;
+allow {{ permission.app.label }} qm_t:unix_stream_socket getattr;
+        {%- if permission.creator and permission.app.label != permission.creator.label %}
+allow {{ permission.app.label }} {{ permission.creator.label }}:unix_stream_socket connectto;
+        {%- endif %}
+allow {{ permission.app.label }} {{ permission.ipc.label }}:sock_file unlink;
+allow {{ permission.app.label }} {{ permission.ipc.label }}:dir search;
+    {% endif %}
+    {%- if "WRITE" in permission.permissions %}
+# write permissions
+allow {{ permission.app.label }} {{ permission.ipc.label }}:sock_file write;
+    {% endif %}
+    {%- if "CREATE" in permission.permissions %}
+# create permissions
+allow {{ permission.app.label }} {{ permission.ipc.label }}:sock_file create;
+allow {{ permission.app.label }} {{ permission.ipc.label }}:dir { write add_name remove_name };
+    {% endif -%}
+{% elif permission.app.type == "container" %}
+# Allow container_runtime_t to transition into {{ permission.app.label }}
+allow container_runtime_t {{ permission.app.label }}:process transition;
+allow {{ permission.app.label }} {{ permission.ipc.label }}:dir search;
+# Explicit type transition if {{ permission.app.label }} is meant as entrypoint binary
+# type_transition container_runtime_t container_file_t:process {{ permission.app.label }};
+    {%- if permission.app.is_qm %}
+allow qm_t {{ permission.ipc.label }}:dir mounton;
+allow qm_t {{ permission.app.label }}:key create;
+    {% endif -%}
+    {%- if "READ" in permission.permissions %}
+        {%- if permission.creator and permission.app.label != permission.creator.label %}
+allow {{ permission.app.label }} {{ permission.creator.label }}:unix_stream_socket connectto;
+        {%- endif %}
+# Allow {{ permission.app.label }} to access container file content
+        {%- if permission.app.is_qm %}
+allow {{ permission.app.label }} qm_container_file_t:dir search;
+allow {{ permission.app.label }} qm_container_file_t:file { getattr open read execute map entrypoint };
+allow {{ permission.app.label }} qm_container_file_t:lnk_file read;
+allow {{ permission.app.label }} qm_container_file_t:chr_file read;
+allow {{ permission.app.label }} qm_file_t:file read;
+        {% else %}
+allow {{ permission.app.label }} container_file_t:dir search;
+allow {{ permission.app.label }} container_file_t:file { read open map execute entrypoint };
+allow {{ permission.app.label }} container_file_t:lnk_file read;
+allow {{ permission.app.label }} container_runtime_t:fifo_file getattr;
+        {%- endif -%}
+    {%- endif -%}
+{%- if "WRITE" in permission.permissions %}
+allow {{ permission.app.label }} {{ permission.ipc.label }}:sock_file write;
+        {%- if permission.app.is_qm %}
+allow {{ permission.app.label }} qm_container_file_t:chr_file write;
+        {% else %}
+# Allow {{ permission.app.label }} to write to FIFO files created by container_runtime_t
+allow {{ permission.app.label }} container_runtime_t:fifo_file write;
+        {%- endif -%}
+    {%- endif -%}
+    {%- if "CREATE" in permission.permissions %}
+allow {{ permission.app.label }} {{ permission.ipc.label }}:sock_file create;
+allow {{ permission.app.label }} {{ permission.ipc.label }}:dir { add_name write search };
+allow {{ permission.app.label }} container_file_t:dir search;
+    {% endif -%}
+{%- endif %}

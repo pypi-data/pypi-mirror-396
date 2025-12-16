@@ -1,0 +1,203 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "SELinux policy generation schema",
+    "type": "object",
+    "required": [
+        "schema_version",
+        "info",
+        "apps",
+        "ipc",
+        "permissions"
+    ],
+    "properties": {
+        "schema_version": {
+            "type": "string",
+            "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "info": {
+            "type": "object",
+            "required": [
+                "name",
+                "version",
+                "description",
+                "license",
+                "distro"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "license": {
+                    "type": "string"
+                },
+                "distro": {
+                    "type": "string",
+                    "enum": [
+                        "autosd9",
+                        "autosd10"
+                    ]
+                }
+            },
+            "additionalProperties": false
+        },
+        "apps": {
+            "type": "object",
+            "required": [],
+            "properties": {
+                "binaries": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": [
+                            "name",
+                            "path"
+                        ],
+                        "properties": {
+                            "name": {
+                                "type": "string"
+                            },
+                            "path": {
+                                "type": "string"
+                            },
+                            "is_qm": {
+                                "type": "boolean",
+                                "default": false
+                            }
+                        },
+                        "additionalProperties": false
+                    }
+                },
+                "containers": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": [
+                            "name",
+                            "label"
+                        ],
+                        "properties": {
+                            "name": {
+                                "type": "string"
+                            },
+                            "label": {
+                                "type": "string"
+                            },
+                            "is_qm": {
+                                "type": "boolean",
+                                "default": false
+                            }
+                        },
+                        "additionalProperties": false
+                    }
+                }
+            },
+            "additionalProperties": false
+        },
+        "ipc": {
+            "type": "object",
+            "required": [],
+            "properties": {
+                "sockets": {
+                    "type": "object",
+                    "required": [],
+                    "properties": {
+                        "uds": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "minProperties": 1,
+                                "required": [
+                                    "name",
+                                    "path"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "path": {
+                                        "type": "string"
+                                    }
+                                },
+                                "additionalProperties": false
+                            }
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                "shm": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "minProperties": 1,
+                        "required": [
+                            "name",
+                            "path"
+                        ],
+                        "properties": {
+                            "name": {
+                                "type": "string"
+                            },
+                            "path": {
+                                "type": "string"
+                            }
+                        },
+                        "additionalProperties": false
+                    }
+                }
+            },
+            "additionalProperties": false
+        },
+        "permissions": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": [
+                    "app",
+                    "ipc",
+                    "allow"
+                ],
+                "properties": {
+                    "app": {
+                        "type": "string"
+                    },
+                    "ipc": {
+                        "type": "string"
+                    },
+                    "allow": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "enum": [
+                                "READ",
+                                "WRITE",
+                                "CREATE"
+                            ]
+                        }
+                    }
+                },
+                "additionalProperties": false
+            }
+        },
+        "validation": {
+            "type": "object",
+            "required": [],
+            "properties": {
+                "disabled": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "List of validation rules to disable"
+                }
+            },
+            "additionalProperties": false
+        }
+    },
+    "additionalProperties": false
+}

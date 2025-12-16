@@ -1,0 +1,8 @@
+# File contexts for unix domain sockets
+{% for socket in ipc.uds -%}
+{{ socket.dir }}(/.*)?	gen_context(system_u:object_r:{{ socket.label }},s0)
+{% endfor %}
+# File contexts for apps
+{% for app in apps.binaries -%}
+{{ app.path }}	gen_context(system_u:object_r:{{ app.label }}_exec_t,s0)
+{% endfor -%}

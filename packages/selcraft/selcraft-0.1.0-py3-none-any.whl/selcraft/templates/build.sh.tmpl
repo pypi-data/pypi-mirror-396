@@ -1,0 +1,16 @@
+#!/bin/sh
+# Copyright 2019 Red Hat Inc.
+# Copyright 2022 Collabora Ltd.
+# SPDX-License-Identifier: LGPL-2.1-or-later
+
+set -eu
+
+output_dir=$1
+
+TMP=$(mktemp -d selinux-build-XXXXXX)
+cp -t "$TMP/" {{ output.files.te_file }} {{ output.files.fc_file }} {{ output.files.if_file }}
+
+make -C "$TMP" -f /usr/share/selinux/devel/Makefile {{ policy.name }}.pp
+bzip2 -9 "$TMP/{{ policy.name }}.pp"
+cp "$TMP/{{ policy.name }}.pp.bz2" "$output_dir"/{{ policy.name }}.pp.bz2
+rm -fr "$TMP"
