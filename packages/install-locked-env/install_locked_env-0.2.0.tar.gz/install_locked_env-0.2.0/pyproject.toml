@@ -1,0 +1,74 @@
+[project]
+name = "install-locked-env"
+version = "0.2.0"
+description = "Helper to install (web) locked environments"
+authors = [
+    { name = "pierre.augier", email = "pierre.augier@univ-grenoble-alpes.fr" },
+]
+dependencies = [
+    "typer>=0.9.0",
+    "httpx>=0.27.0",
+    "rich>=13.0.0",
+    "requests>=2.32.5",
+]
+requires-python = ">=3.11"
+readme = "README.md"
+license = "BSD-3-Clause"
+license-files = [
+    "LICENSE.txt",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+
+[project.scripts]
+install-locked-env = "install_locked_env:cli"
+
+[project.urls]
+Repository = "https://foss.heptapod.net/fluiddyn/install-locked-env"
+
+[build-system]
+requires = [
+    "pdm-backend",
+]
+build-backend = "pdm.backend"
+
+[tool.pdm]
+distribution = true
+package-dir = "src"
+
+[tool.pdm.dev-dependencies]
+test = [
+    "pytest",
+    "pytest-cov",
+    "responses",
+]
+dev = [
+    "ruff",
+    "ipython",
+    "ipdb",
+]
+
+[tool.pdm.options]
+lock = [
+    "-G",
+    ":all",
+]
+
+[tool.pdm.scripts]
+format = "ruff format src test"
+
+[tool.pytest]
+addopts = [
+    "--pdbcls=IPython.terminal.debugger:TerminalPdb",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
