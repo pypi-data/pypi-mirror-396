@@ -1,0 +1,81 @@
+# SPDX-FileCopyrightText: 2024 Dalibo
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pglift_cli"
+description = "Command-line interface for pglift"
+readme = "README.md"
+requires-python = ">=3.10, <4"
+license = { text = "GPLv3" }
+authors = [{ name = "Dalibo SCOP", email = "contact@dalibo.com" }]
+keywords = [
+    "postgresql",
+    "deployment",
+    "administration",
+    "command-line",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Topic :: System :: Systems Administration",
+    "Topic :: Database",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3 :: Only",
+    "Typing :: Typed",
+]
+dynamic = ["version"]
+
+dependencies = [
+    "PyYAML >= 6.0.1",
+    "click >= 8.2.0",
+    "filelock >= 3.9.0, != 3.12.1",
+    "pluggy",
+    "psycopg >= 3.1",
+    "pydantic >= 2.10.2",
+    "rich >= 11.0.0, != 13.9.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "anyio",
+    "patroni[etcd] >= 2.1.5",
+    "port-for",
+    "prysk[pytest-plugin] >= 0.14.0",
+    "pytest >= 8",
+    "pytest-cov",
+    "trustme",
+]
+typing = [
+    "mypy >= 1.10.0",
+    "types-PyYAML >= 6.0.12.10",
+]
+dev = [
+    "pglift_cli[test,typing]",
+]
+
+[project.urls]
+Documentation = "https://pglift.readthedocs.io/"
+Source = "https://gitlab.com/dalibo/pglift/"
+Tracker = "https://gitlab.com/dalibo/pglift/-/issues/"
+
+[project.entry-points.pglift]
+"pglift_cli.patroni" = "pglift_cli.patroni"
+"pglift_cli.pgbackrest" = "pglift_cli.pgbackrest"
+"pglift_cli.pgbackrest.repo_path" = "pglift_cli.pgbackrest.repo_path"
+"pglift_cli.prometheus" = "pglift_cli.prometheus"
+
+[project.scripts]
+pglift = "pglift_cli.main:cli"
