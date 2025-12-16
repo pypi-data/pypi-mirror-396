@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools >= 61.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "electrum-aionostr"
+authors = [
+    { name = "The Electrum developers" },
+]
+description = "asyncio nostr client"
+keywords = ["nostr", "asyncio"]
+readme = "README.md"
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+dependencies = [
+    "electrum_ecc",
+    "aiohttp>=3.11.0,<4.0.0",
+    "aiohttp_socks>=0.9.2",
+    "aiorpcx>=0.22.0,<0.26",  # for taskgroup. remove when we use python 3.11
+]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dynamic = ['version']
+
+[project.optional-dependencies]
+crypto = [
+    "cryptography>=2.8",
+]
+tests = [
+    "pytest-cov",
+    "Click>=8.2",
+]
+cli = [
+    "Click",
+]
+
+[project.urls]
+Homepage = "https://github.com/spesmilo/electrum-aionostr"
+Repository = "https://github.com/spesmilo/electrum-aionostr"
+
+[project.scripts]
+aionostr = "electrum_aionostr.cli:main"
+
+[tool.setuptools.dynamic]
+version = { attr = 'electrum_aionostr.__version__' }
