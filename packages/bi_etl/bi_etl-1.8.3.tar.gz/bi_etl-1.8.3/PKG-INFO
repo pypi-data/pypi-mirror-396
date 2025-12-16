@@ -1,0 +1,75 @@
+Metadata-Version: 2.4
+Name: bi_etl
+Version: 1.8.3
+Summary: Python ETL Framework
+Author-email: Derek Wood <bietl_info@bietl.dev>
+License-Expression: MIT
+License-File: license.txt
+Keywords: etl
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Topic :: Database
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Requires-Python: >=3.10
+Requires-Dist: btrees>=4.7.2
+Requires-Dist: config-wrangler[aws]>=1.3
+Requires-Dist: gevent>=21.8.0
+Requires-Dist: more-itertools>=9.0.0
+Requires-Dist: openpyxl>=3.0.5
+Requires-Dist: psutil>=5.7.2
+Requires-Dist: pydicti>=1.1.6
+Requires-Dist: semidbm>=0.5.1
+Requires-Dist: sqlalchemy>=1.4.49
+Requires-Dist: sqlparse>=0.4.2
+Provides-Extra: all
+Requires-Dist: dagster; extra == 'all'
+Requires-Dist: dagster-webserver; extra == 'all'
+Requires-Dist: jira; extra == 'all'
+Requires-Dist: keyring; extra == 'all'
+Requires-Dist: psycopg2; extra == 'all'
+Requires-Dist: pykeepass; extra == 'all'
+Requires-Dist: slack; extra == 'all'
+Provides-Extra: avro
+Requires-Dist: fastavro>=1.0.0; extra == 'avro'
+Provides-Extra: jira
+Requires-Dist: jira>=3.1.1; extra == 'jira'
+Provides-Extra: keyring
+Requires-Dist: keyring>=21.1.0; extra == 'keyring'
+Provides-Extra: pykeepass
+Requires-Dist: pykeepass>=4.0.6; extra == 'pykeepass'
+Provides-Extra: redshift
+Requires-Dist: psycopg2; extra == 'redshift'
+Requires-Dist: pyarrow>=10.0.1; extra == 'redshift'
+Provides-Extra: slack
+Requires-Dist: slack-sdk>=3.19.5; extra == 'slack'
+Provides-Extra: test
+Requires-Dist: psycopg2; extra == 'test'
+Requires-Dist: testcontainers; extra == 'test'
+Description-Content-Type: text/markdown
+
+# bi_etl Python ETL Framework for BI
+
+[![pypi](https://img.shields.io/pypi/v/bi-etl.svg)](https://pypi.org/project/bi-etl/)
+[![license](https://img.shields.io/github/license/arcann/config_wrangler.svg)](https://github.com/arcann/config_wrangler/blob/master/LICENSE)
+[![Python package](https://github.com/arcann/bi_etl/actions/workflows/unit_test.yml/badge.svg)](https://github.com/arcann/bi_etl/actions/workflows/unit_test.yml)
+
+## Docs
+
+[Please see the documentation site for detailed documentation.](https://bietl.dev/bi_etl/)
+
+Python based ETL (Extract Transform Load) framework geared towards BI databases in particular. 
+The goal of the project is to create reusable objects with typical technical transformations used in loading dimension tables.
+
+## Guiding Design Principles
+1. Don’t Repeat Yourself (DRY).
+
+1. The source or target of an ETL owns the metadata (list of columns and data types). The ETL generally has no reason to define those again unless the ETL requires a change. If a datatype must be changed, only that one column’s new type should be specified. If a column name must be changed, only the source & target column names that differ should be specified.
+
+1. Data Quality is King
+
+1. Data quality is more important than performance. For example, the process should fail before truncating data contents (i.e. loading 6 characters into a 5 character field) even if that means sacrificing some load performance.
+
+1. Give helpful error messages.
+
+1. Make it as easy as possible to create re-usable modules.
+
+1. SQL is a very powerful transformation language. The Transform Extract Load (TEL) model should be supported.

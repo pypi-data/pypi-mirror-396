@@ -1,0 +1,1 @@
+call poetry run python -m pip install -e ..\config_wrangler\
