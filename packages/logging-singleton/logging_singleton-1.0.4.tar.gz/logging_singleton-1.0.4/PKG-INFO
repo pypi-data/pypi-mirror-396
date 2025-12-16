@@ -1,0 +1,64 @@
+Metadata-Version: 2.4
+Name: logging-singleton
+Version: 1.0.4
+Summary: Logger shared by all modules in a program. Simplification of standard Python logging
+Author-email: Andreas Paepcke <paepcke@cs.stanford.edu>
+Maintainer-email: Andreas Paepcke <paepcke@cs.stanford.edu>
+License: MIT License
+Project-URL: Homepage, https://github.com/paepcke/logging_singleton
+Project-URL: Documentation, https://github.com/paepcke/logging_singleton
+Project-URL: Changelog, https://github.com/paepcke/logging_singleton/blob/master/CHANGELOG.md
+Project-URL: Repository, https://github.com/paepcke/logging_singleton
+Requires-Python: >=3.5
+Description-Content-Type: text/markdown
+Provides-Extra: test
+Requires-Dist: pytest>=9.0.2; extra == "test"
+
+# Singleton Logging Service
+
+Logging service that is guaranteed to be a singleton. Based on Python logging, but every instantiation of LoggingService from any of an application's modules returns the same logger instance.
+
+###Examples:
+
+        from logging_service import LoggingService
+
+        self.log = LoggingService()
+
+        self.log.info("Constructing output file names...")
+        self.log.err("Failed to construct output file names...")
+        self.log.warn("Output file names are unusual...")
+        self.log.debug("Constructing output file names foo.bar, fum.txt...")
+
+This API is more primitive than the hierarchical native logging module, but hopefully simple to use. One can:
+
+        - Log to a file,
+        - The console, or
+        - Both
+
+For convenience, the logging levels logging.DEBUG, logging.INFO, etc. are available in this 
+package as enums: LoggingLevel.DEBUG, LoggingLevel.INFO, etc. Just import LoggingLevel with LoggingService.
+        
+A single formatter is built in for info/debug/warn/err. Example:
+
+`my_module.py(290375): 2020-09-03 14:58:33,017;INFO: Start Epoch [1/50]`
+
+When first creating a LoggingService instance, the following options
+are available in the constructor; all are optional:
+
+    logging_level=LoggingLevel.INFO    # equivalent to the Python logging package's constants
+    logfile=None,                 # destination file; None implies console only
+    tee_to_console=True,          # if logfile is specified, also log to console
+    msg_identifier=None,          # shown at start of each msg; default is module name
+    rotating_logs=True,           # if logging to file, rotate log if size exceeded
+    log_size=1000000,             # max log size for rotation
+    max_num_logs=500,             # max number of full logs to retain
+    logger_name=None              # name for the logger instance
+
+After creation a logger instance may only be modified like this:
+
+    - my_logger.logging_level = LoginLevel.<NEW_LEVEL>
+    - my_logger.log_file      = '/tmp/new_logfile'
+
+where logging levels are the usual `logging.INFO,` `logging.WARN`, etc.
+
+
