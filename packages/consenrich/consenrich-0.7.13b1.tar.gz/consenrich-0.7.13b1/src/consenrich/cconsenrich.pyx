@@ -1,0 +1,1325 @@
+# -*- coding: utf-8 -*-
+# cython: boundscheck=False, wraparound=False, cdivision=True, nonecheck=False, initializedcheck=False, infer_types=True, language_level=3
+# distutils: language = c
+r"""Cython module for Consenrich core functions.
+
+This module contains Cython implementations of core functions used in Consenrich.
+"""
+
+cimport cython
+
+import os
+import numpy as np
+from scipy import ndimage
+import pysam
+
+cimport numpy as cnp
+from libc.stdint cimport int64_t, uint8_t, uint16_t, uint32_t, uint64_t
+from pysam.libcalignmentfile cimport AlignmentFile, AlignedSegment
+from libc.float cimport DBL_EPSILON
+from numpy.random import default_rng
+from cython.parallel import prange
+from libc.math cimport isfinite, fabs
+cnp.import_array()
+
+cpdef int stepAdjustment(int value, int stepSize, int pushForward=0):
+    r"""Adjusts a value to the nearest multiple of stepSize, optionally pushing it forward.
+
+    :param value: The value to adjust.
+    :type value: int
+    :param stepSize: The step size to adjust to.
+    :type stepSize: int
+    :param pushForward: If non-zero, pushes the value forward by stepSize
+    :type pushForward: int
+    :return: The adjusted value.
+    :rtype: int
+    """
+    return max(0, (value-(value % stepSize))) + pushForward*stepSize
+
+
+cpdef uint64_t cgetFirstChromRead(str bamFile, str chromosome, uint64_t chromLength, uint32_t samThreads, int samFlagExclude):
+    r"""Get the start position of the first read in a BAM file for a given chromosome.
+
+    :param bamFile: See :func:`consenrich.core.inputParams`.
+    :type bamFile: str
+    :param chromosome: Chromosome name.
+    :type chromosome: str
+    :param chromLength: Length of the chromosome in base pairs.
+    :type chromLength: uint64_t
+    :param samThreads: Number of threads to use for reading the BAM file.
+    :type samThreads: uint32_t
+    :param samFlagExclude: SAM flags to exclude reads (e.g., unmapped,
+    :type samFlagExclude: int
+    :return: Start position of the first read in the chromosome, or 0 if no reads are found.
+    :rtype: uint64_t
+    """
+
+    cdef AlignmentFile aln = AlignmentFile(bamFile, 'rb', threads=samThreads)
+    cdef AlignedSegment read
+    for read in aln.fetch(contig=chromosome, start=0, end=chromLength):
+        if not (read.flag & samFlagExclude):
+            aln.close()
+            return read.reference_start
+    aln.close()
+    return 0
+
+
+cpdef uint64_t cgetLastChromRead(str bamFile, str chromosome, uint64_t chromLength, uint32_t samThreads, int samFlagExclude):
+    r"""Get the end position of the last read in a BAM file for a given chromosome.
+
+    :param bamFile: See :func:`consenrich.core.inputParams`.
+    :type bamFile: str
+    :param chromosome: Chromosome name.
+    :type chromosome: str
+    :param chromLength: Length of the chromosome in base pairs.
+    :type chromLength: uint64_t
+    :param samThreads: Number of threads to use for reading the BAM file.
+    :type samThreads: uint32_t
+    :param samFlagExclude: See :class:`consenrich.core.samParams`.
+    :type samFlagExclude: int
+    :return: End position of the last read in the chromosome, or 0 if no reads are found.
+    :rtype: uint64_t
+    """
+
+    cdef uint64_t start_ = chromLength - min((chromLength // 2), 1_000_000)
+    cdef uint64_t lastPos = 0
+    cdef AlignmentFile aln = AlignmentFile(bamFile, 'rb', threads=samThreads)
+    cdef AlignedSegment read
+    for read in aln.fetch(contig=chromosome, start=start_, end=chromLength):
+        if not (read.flag & samFlagExclude):
+            lastPos = read.reference_end
+    aln.close()
+    return lastPos
+
+
+
+cpdef uint32_t cgetReadLength(str bamFile, uint32_t minReads, uint32_t samThreads, uint32_t maxIterations, int samFlagExclude):
+    r"""Get the median read length from a BAM file after fetching a specified number of reads.
+
+    :param bamFile: see :class:`consenrich.core.inputParams`.
+    :type bamFile: str
+    :param minReads: Minimum number of reads to consider for the median calculation.
+    :type minReads: uint32_t
+    :param samThreads: See :class:`consenrich.core.samParams`.
+    :type samThreads: uint32_t
+    :param maxIterations: Maximum number of reads to iterate over.
+    :type maxIterations: uint32_t
+    :param samFlagExclude: See :class:`consenrich.core.samParams`.
+    :type samFlagExclude: int
+    :return: Median read length from the BAM file.
+    :rtype: uint32_t
+    """
+    cdef uint32_t observedReads = 0
+    cdef uint32_t currentIterations = 0
+    cdef AlignmentFile aln = AlignmentFile(bamFile, 'rb', threads=samThreads)
+    cdef AlignedSegment read
+    cdef cnp.ndarray[cnp.uint32_t, ndim=1] readLengths = np.zeros(maxIterations, dtype=np.uint32)
+    cdef uint32_t i = 0
+    if <uint32_t>aln.mapped < minReads:
+        aln.close()
+        return 0
+    for read in aln.fetch():
+        if not (observedReads < minReads and currentIterations < maxIterations):
+            break
+        if not (read.flag & samFlagExclude):
+            # meets critera -> add it
+            readLengths[i] = read.query_length
+            observedReads += 1
+            i += 1
+        currentIterations += 1
+    aln.close()
+    if observedReads < minReads:
+        return 0
+    return <uint32_t>np.median(readLengths[:observedReads])
+
+
+cdef inline Py_ssize_t floordiv64(int64_t a, int64_t b) nogil:
+    if a >= 0:
+        return <Py_ssize_t>(a // b)
+    else:
+        return <Py_ssize_t>(- ((-a + b - 1) // b))
+
+
+cpdef cnp.float32_t[:] creadBamSegment(
+    str bamFile,
+    str chromosome,
+    uint32_t start,
+    uint32_t end,
+    uint32_t stepSize,
+    int64_t readLength,
+    uint8_t oneReadPerBin,
+    uint16_t samThreads,
+    uint16_t samFlagExclude,
+    int64_t shiftForwardStrand53 = 0,
+    int64_t shiftReverseStrand53 = 0,
+    int64_t extendBP = 0,
+    int64_t maxInsertSize=1000,
+    int64_t pairedEndMode=0,
+    int64_t inferFragmentLength=0,
+    int64_t minMappingQuality=0,
+    int64_t minTemplateLength=-1,
+    uint8_t weightByOverlap=1,
+    ):
+    r"""Count reads in a BAM file for a given chromosome"""
+
+    cdef Py_ssize_t numIntervals
+    cdef int64_t width = <int64_t>end - <int64_t>start
+
+    if stepSize <= 0 or width <= 0:
+        numIntervals = 0
+    else:
+        numIntervals = <Py_ssize_t>((width + stepSize - 1) // stepSize)
+
+    cdef cnp.ndarray[cnp.float32_t, ndim=1] values_np = np.zeros(numIntervals, dtype=np.float32)
+    cdef cnp.float32_t[::1] values = values_np
+
+    if numIntervals <= 0:
+        return values
+
+    cdef AlignmentFile aln = AlignmentFile(bamFile, 'rb', threads=samThreads)
+    cdef AlignedSegment read
+    cdef int64_t start64 = start
+    cdef int64_t end64 = end
+    cdef int64_t step64 = stepSize
+    cdef Py_ssize_t i, index0, index1, b_, midIndex
+    cdef Py_ssize_t lastIndex = numIntervals - 1
+    cdef bint readIsForward
+    cdef int64_t readStart, readEnd
+    cdef int64_t binStart, binEnd
+    cdef int64_t overlapStart, overlapEnd, overlap
+    cdef int64_t adjStart, adjEnd, fivePrime, mid, tlen, atlen
+    cdef uint16_t flag
+    cdef int64_t minTLEN = minTemplateLength
+    cdef int minMapQ = <int>minMappingQuality
+
+    if minTLEN < 0:
+        minTLEN = readLength
+
+    if inferFragmentLength > 0 and pairedEndMode <= 0 and extendBP <= 0:
+        extendBP = cgetFragmentLength(bamFile,
+         samThreads = samThreads,
+         samFlagExclude=samFlagExclude,
+         )
+    try:
+        with aln:
+            for read in aln.fetch(chromosome, start64, end64):
+                flag = <uint16_t>read.flag
+                if flag & samFlagExclude or read.mapping_quality < minMapQ:
+                    continue
+
+                readIsForward = (flag & 16) == 0
+                readStart = <int64_t>read.reference_start
+                readEnd = <int64_t>read.reference_end
+
+                if pairedEndMode > 0:
+                    if flag & 2 == 0: # not a properly paired read
+                        continue
+                    # use first in pair + fragment
+                    if flag & 128:
+                        continue
+                    if (flag & 8) or read.next_reference_id != read.reference_id:
+                        continue
+                    tlen = <int64_t>read.template_length
+                    atlen = tlen if tlen >= 0 else -tlen
+                    if atlen == 0 or atlen < minTLEN:
+                        continue
+                    if tlen >= 0:
+                        adjStart = readStart
+                        adjEnd = readStart + atlen
+                    else:
+                        adjEnd = readEnd
+                        adjStart = adjEnd - atlen
+                    if shiftForwardStrand53 != 0 or shiftReverseStrand53 != 0:
+                        if readIsForward:
+                            adjStart += shiftForwardStrand53
+                            adjEnd += shiftForwardStrand53
+                        else:
+                            adjStart -= shiftReverseStrand53
+                            adjEnd -= shiftReverseStrand53
+                else:
+                    # SE
+                    if readIsForward:
+                        fivePrime = readStart + shiftForwardStrand53
+                    else:
+                        fivePrime = (readEnd - 1) - shiftReverseStrand53
+
+                    if extendBP > 0:
+                        # from the cut 5' --> 3'
+                        if readIsForward:
+                            adjStart = fivePrime
+                            adjEnd = fivePrime + extendBP
+                        else:
+                            adjEnd = fivePrime + 1
+                            adjStart = adjEnd - extendBP
+                    elif shiftForwardStrand53 != 0 or shiftReverseStrand53 != 0:
+                        if readIsForward:
+                            adjStart = readStart + shiftForwardStrand53
+                            adjEnd = readEnd + shiftForwardStrand53
+                        else:
+                            adjStart = readStart - shiftReverseStrand53
+                            adjEnd = readEnd - shiftReverseStrand53
+                    else:
+                        adjStart = readStart
+                        adjEnd = readEnd
+
+                if adjEnd <= start64 or adjStart >= end64:
+                    continue
+                if adjStart < start64:
+                    adjStart = start64
+                if adjEnd > end64:
+                    adjEnd = end64
+
+                if oneReadPerBin:
+                    mid = (adjStart + adjEnd) // 2
+                    midIndex = <Py_ssize_t>((mid - start64) // step64)
+                    if 0 <= midIndex <= lastIndex:
+                        values[midIndex] += <cnp.float32_t>1.0
+
+                else:
+                    index0 = <Py_ssize_t>((adjStart - start64) // step64)
+                    index1 = <Py_ssize_t>(((adjEnd - 1) - start64) // step64)
+                    if index0 < 0:
+                        index0 = 0
+                    if index1 > lastIndex:
+                        index1 = lastIndex
+                    if index0 > lastIndex or index1 < 0 or index0 > index1:
+                        continue
+
+                    if weightByOverlap:
+                        for b_ in range(index0, index1 + 1):
+                            binStart = start64 + (<int64_t>b_) * step64
+                            binEnd = binStart + step64
+                            if binEnd > end64:
+                                binEnd = end64
+
+                            overlapStart = adjStart if adjStart > binStart else binStart
+                            overlapEnd = adjEnd if adjEnd < binEnd else binEnd
+                            overlap = overlapEnd - overlapStart
+                            if overlap > 0:
+                                values[b_] += (<cnp.float32_t>overlap / <cnp.float32_t>(binEnd - binStart))
+                    else:
+                        for b_ in range(index0, index1 + 1):
+                            values[b_] += <cnp.float32_t>1.0
+
+
+    finally:
+        aln.close()
+
+    return values
+
+
+cpdef cnp.ndarray[cnp.float32_t, ndim=2] cinvertMatrixE(
+        cnp.ndarray[cnp.float32_t, ndim=1] muncMatrixIter,
+        cnp.float32_t priorCovarianceOO,
+        cnp.float32_t innovationCovariancePadding=1.0e-2):
+    r"""Invert the residual covariance matrix during the forward pass.
+
+    :param muncMatrixIter: The diagonal elements of the covariance matrix at a given genomic interval.
+    :type muncMatrixIter: cnp.ndarray[cnp.float32_t, ndim=1]
+    :param priorCovarianceOO: The a priori 'primary' state variance :math:`P_{[i|i-1,00]} = \left(\mathbf{F}\mathbf{P}_{[i-1\,|\,i-1]}\mathbf{F}^{\top} + Q_[i]\right)_{[00]}`.
+    :type priorCovarianceOO: cnp.float32_t
+    :param innovationCovariancePadding: Small value added to the diagonal for numerical stability.
+    :type innovationCovariancePadding: cnp.float32_t
+    :return: The inverted covariance matrix.
+    :rtype: cnp.ndarray[cnp.float32_t, ndim=2]
+    """
+
+    cdef int m = muncMatrixIter.size
+    # we have to invert a P.D. covariance (diagonal) and rank-one (1*priorCovariance) matrix
+    cdef cnp.ndarray[cnp.float32_t, ndim=2] inverse = np.empty((m, m), dtype=np.float32)
+    # note, not actually an m-dim matrix, just the diagonal elements taken as input
+    cdef cnp.ndarray[cnp.float32_t, ndim=1] muncMatrixInverse = np.empty(m, dtype=np.float32)
+    cdef cnp.ndarray[cnp.float32_t, ndim=1] muncArr = np.ascontiguousarray(muncMatrixIter, dtype=np.float32, )
+
+    # (numpy) memoryviews for faster indexing + nogil safety
+    cdef cnp.float32_t[::1] munc = muncArr
+    cdef cnp.float32_t[::1] muncInv = muncMatrixInverse
+    cdef cnp.float32_t[:, ::1] inv = inverse
+
+
+    cdef float divisor = 1.0
+    cdef float scale, scaleTimesPrior
+    cdef float prior = priorCovarianceOO
+    cdef float pad = innovationCovariancePadding
+    cdef float inv_i
+    cdef float val
+    cdef Py_ssize_t i, j
+
+    for i in range(m):
+        # two birds: build up the trace while taking the reciprocals
+        muncInv[i] = 1.0/(munc[i] + pad)
+        divisor += prior*muncInv[i]
+
+    # precompute both scale, scale*prior
+    scale = 1.0 / divisor
+    scaleTimesPrior = scale * prior
+
+    # ----
+    # FFR (I): explore prange(...) options to quickly invoke openMP for both cases
+    # FFR (II: add nogil block for prange-less case, too?
+    # FFR (III): run prange(m, schedule='static', nogil=True)?
+    # ----
+
+    # unless sample size warrants it, no OMP here
+    if m < 512:
+        for i in range(m):
+            inv_i = muncInv[i]
+            inv[i, i] = inv_i-(scaleTimesPrior*inv_i*inv_i)
+            for j in range(i + 1, m):
+                val = -scaleTimesPrior*inv_i*muncInv[j]
+                inv[i, j] = val
+                inv[j, i] = val
+
+    # very large sample size --> prange
+    else:
+        with nogil:
+            for i in prange(m, schedule='static'):
+                inv_i = muncInv[i]
+                inv[i, i] = inv_i-(scaleTimesPrior*inv_i*inv_i)
+                for j in range(i + 1, m):
+                    val = -scaleTimesPrior * inv_i * muncInv[j]
+                    inv[i, j] = val
+                    inv[j, i] = val
+
+    return inverse
+
+
+cpdef cnp.ndarray[cnp.float32_t, ndim=1] cgetStateCovarTrace(
+    cnp.float32_t[:, :, ::1] stateCovarMatrices
+):
+    cdef Py_ssize_t n = stateCovarMatrices.shape[0]
+    cdef cnp.ndarray[cnp.float32_t, ndim=1] trace = np.empty(n, dtype=np.float32)
+    cdef cnp.float32_t[::1] traceView = trace
+    cdef Py_ssize_t i
+    for i in range(n):
+        traceView[i] = stateCovarMatrices[i, 0, 0] + stateCovarMatrices[i, 1, 1]
+
+    return trace
+
+
+cpdef cnp.ndarray[cnp.float32_t, ndim=1] cgetPrecisionWeightedResidual(
+    cnp.float32_t[:, ::1] postFitResiduals,
+    cnp.float32_t[:, ::1] matrixMunc,
+):
+    cdef Py_ssize_t n = postFitResiduals.shape[0]
+    cdef Py_ssize_t m = postFitResiduals.shape[1]
+    cdef cnp.ndarray[cnp.float32_t, ndim=1] out = np.empty(n, dtype=np.float32)
+    cdef cnp.float32_t[::1] outv = out
+    cdef Py_ssize_t i, j
+    cdef float wsum, rwsum, w
+    cdef float eps = 1e-12  # guard for zeros
+
+    for i in range(n):
+        wsum = 0.0
+        rwsum = 0.0
+        for j in range(m):
+            w = 1.0 / (<float>matrixMunc[j, i] + eps)   # weightsIter[j]
+            rwsum += (<float>postFitResiduals[i, j]) * w  # residualsIter[j] * w
+            wsum  += w
+        outv[i] = <cnp.float32_t>(rwsum / wsum) if wsum > 0.0 else <cnp.float32_t>0.0
+
+    return out
+
+
+
+cpdef tuple updateProcessNoiseCovariance(cnp.ndarray[cnp.float32_t, ndim=2] matrixQ,
+        cnp.ndarray[cnp.float32_t, ndim=2] matrixQCopy,
+        float dStat,
+        float dStatAlpha,
+        float dStatd,
+        float dStatPC,
+        bint inflatedQ,
+        float maxQ,
+        float minQ):
+    r"""Adjust process noise covariance matrix :math:`\mathbf{Q}_{[i]}`
+
+    :param matrixQ: Current process noise covariance
+    :param matrixQCopy: A copy of the initial original covariance matrix :math:`\mathbf{Q}_{[.]}`
+    :param inflatedQ: Flag indicating if the process noise covariance is inflated
+    :return: Updated process noise covariance matrix and inflated flag
+    :rtype: tuple
+    """
+
+    cdef float scaleQ, fac
+    if dStat > dStatAlpha:
+        scaleQ = np.sqrt(dStatd * np.abs(dStat-dStatAlpha) + dStatPC)
+        if matrixQ[0, 0] * scaleQ <= maxQ:
+            matrixQ[0, 0] *= scaleQ
+            matrixQ[0, 1] *= scaleQ
+            matrixQ[1, 0] *= scaleQ
+            matrixQ[1, 1] *= scaleQ
+        else:
+            fac = maxQ / matrixQCopy[0, 0]
+            matrixQ[0, 0] = maxQ
+            matrixQ[0, 1] = matrixQCopy[0, 1] * fac
+            matrixQ[1, 0] = matrixQCopy[1, 0] * fac
+            matrixQ[1, 1] = maxQ
+        inflatedQ = True
+
+    elif dStat < dStatAlpha and inflatedQ:
+        scaleQ = np.sqrt(dStatd * np.abs(dStat-dStatAlpha) + dStatPC)
+        if matrixQ[0, 0] / scaleQ >= minQ:
+            matrixQ[0, 0] /= scaleQ
+            matrixQ[0, 1] /= scaleQ
+            matrixQ[1, 0] /= scaleQ
+            matrixQ[1, 1] /= scaleQ
+        else:
+            # we've hit the minimum, no longer 'inflated'
+            fac = minQ / matrixQCopy[0, 0]
+            matrixQ[0, 0] = minQ
+            matrixQ[0, 1] = matrixQCopy[0, 1] * fac
+            matrixQ[1, 0] = matrixQCopy[1, 0] * fac
+            matrixQ[1, 1] = minQ
+            inflatedQ = False
+    return matrixQ, inflatedQ
+
+
+cdef void _blockMax(double[::1] valuesView,
+                    Py_ssize_t[::1] blockStartIndices,
+                    Py_ssize_t[::1] blockSizes,
+                    double[::1] outputView,
+                    double eps = 0.0) noexcept:
+    cdef Py_ssize_t iterIndex, elementIndex, startIndex, blockLength
+    cdef double currentMax, currentValue
+    cdef Py_ssize_t firstIdx, lastIdx, centerIdx
+
+    for iterIndex in range(outputView.shape[0]):
+        startIndex = blockStartIndices[iterIndex]
+        blockLength = blockSizes[iterIndex]
+
+        currentMax = valuesView[startIndex]
+        for elementIndex in range(1, blockLength):
+            currentValue = valuesView[startIndex + elementIndex]
+            if currentValue > currentMax:
+                currentMax = currentValue
+
+        firstIdx = -1
+        lastIdx = -1
+        if eps > 0.0:
+            # only run if eps tol is non-zero
+            for elementIndex in range(blockLength):
+                currentValue = valuesView[startIndex + elementIndex]
+                # NOTE: this is intended to mirror the +- eps tol
+                if currentValue >= currentMax - eps:
+                    if firstIdx == -1:
+                        firstIdx = elementIndex
+                    lastIdx = elementIndex
+
+        if firstIdx == -1:
+            # case: we didn't find a tie or eps == 0
+            outputView[iterIndex] = currentMax
+        else:
+            # case: there's a tie for eps > 0, pick center
+            centerIdx = (firstIdx + lastIdx) // 2
+            outputView[iterIndex] = valuesView[startIndex + centerIdx]
+
+
+cpdef double[::1] csampleBlockStats(cnp.ndarray[cnp.uint32_t, ndim=1] intervals,
+                        cnp.ndarray[cnp.float64_t, ndim=1] values,
+                        int expectedBlockSize,
+                        int iters,
+                        int randSeed,
+                        cnp.ndarray[cnp.uint8_t, ndim=1] excludeIdxMask,
+                        double eps = 0.0):
+    r"""Sample contiguous blocks in the response sequence (xCorr), record maxima, and repeat.
+
+    Used to build an empirical null distribution and determine significance of response outputs.
+    The size of blocks is drawn from a truncated geometric distribution, preserving rough equality
+    in expectation but allowing for variability to account for the sampling across different phases
+    in the response sequence.
+
+    :param values: The response sequence to sample from.
+    :type values: cnp.ndarray[cnp.float64_t, ndim=1]
+    :param expectedBlockSize: The expected size (geometric) of the blocks to sample.
+    :type expectedBlockSize: int
+    :param iters: The number of blocks to sample.
+    :type iters: int
+    :param randSeed: Random seed for reproducibility.
+    :type randSeed: int
+    :return: An array of sampled block maxima.
+    :rtype: cnp.ndarray[cnp.float64_t, ndim=1]
+    :seealso: :func:`consenrich.matching.matchWavelet`
+    """
+    np.random.seed(randSeed)
+    cdef cnp.ndarray[cnp.float64_t, ndim=1] valuesArr = np.ascontiguousarray(values, dtype=np.float64)
+    cdef double[::1] valuesView = valuesArr
+    cdef cnp.ndarray[cnp.intp_t, ndim=1] sizesArr
+    cdef cnp.ndarray[cnp.intp_t, ndim=1] startsArr
+    cdef cnp.ndarray[cnp.float64_t, ndim=1] out = np.empty(iters, dtype=np.float64)
+    cdef Py_ssize_t maxBlockLength, maxSize, minSize
+    cdef Py_ssize_t n = <Py_ssize_t>intervals.size
+    cdef double maxBlockScale = <double>3.0
+    cdef double minBlockScale = <double> (1.0 / 3.0)
+
+    minSize = <Py_ssize_t> max(3, expectedBlockSize * minBlockScale)
+    maxSize = <Py_ssize_t> min(maxBlockScale * expectedBlockSize, n)
+    sizesArr = np.random.geometric(1.0 / expectedBlockSize, size=iters).astype(np.intp, copy=False)
+    np.clip(sizesArr, minSize, maxSize, out=sizesArr)
+    maxBlockLength = sizesArr.max()
+    cdef list support = []
+    cdef cnp.intp_t i_ = 0
+    while i_ < n-maxBlockLength:
+        if excludeIdxMask[i_:i_ + maxBlockLength].any():
+            i_ = i_ + maxBlockLength + 1
+            continue
+        support.append(i_)
+        i_ = i_ + 1
+
+    cdef cnp.ndarray[cnp.intp_t, ndim=1] starts_ = np.random.choice(
+        support,
+        size=iters,
+        replace=True,
+        p=None
+        ).astype(np.intp)
+
+    cdef Py_ssize_t[::1] startsView = starts_
+    cdef Py_ssize_t[::1] sizesView = sizesArr
+    cdef double[::1] outView = out
+    _blockMax(valuesView, startsView, sizesView, outView, eps)
+    return out
+
+
+cpdef cSparseAvg(cnp.float32_t[::1] trackALV, dict sparseMap):
+    r"""Fast access and average of `numNearest` sparse elements.
+
+    See :func:`consenrich.core.getMuncTrack`
+
+    :param trackALV: See :func:`consenrich.core.getAverageLocalVarianceTrack`
+    :type trackALV: float[::1]
+    :param sparseMap: See :func:`consenrich.core.getSparseMap`
+    :type sparseMap: dict[int, np.ndarray]
+    :return: array of mena('nearest local variances') same length as `trackALV`
+    :rtype: cnp.ndarray[cnp.float32_t, ndim=1]
+    """
+    cdef Py_ssize_t n = <Py_ssize_t>trackALV.shape[0]
+    cdef cnp.ndarray[cnp.float32_t, ndim=1] out = np.empty(n, dtype=np.float32)
+    cdef Py_ssize_t i, j, m
+    cdef float sumNearestVariances = 0.0
+    cdef cnp.ndarray[cnp.intp_t, ndim=1] idxs
+    cdef cnp.intp_t[::1] idx_view
+    for i in range(n):
+        idxs = <cnp.ndarray[cnp.intp_t, ndim=1]> sparseMap[i] # FFR: to avoid the cast, create sparseMap as dict[intp, np.ndarray[intp]]
+        idx_view = idxs
+        m = idx_view.shape[0] # FFR: maybe enforce strict `m == numNearest` in future releases to avoid extra overhead
+        if m == 0:
+            # this case probably warrants an exception or np.nan
+            out[i] = 0.0
+            continue
+        sumNearestVariances = 0.0
+        with nogil:
+            for j in range(m):
+                sumNearestVariances += trackALV[idx_view[j]]
+        out[i] = sumNearestVariances/m
+
+    return out
+
+
+cpdef int64_t cgetFragmentLength(
+    str bamFile,
+    uint16_t samThreads=0,
+    uint16_t samFlagExclude=3844,
+    int64_t maxInsertSize=1000,
+    int64_t iters=1000,
+    int64_t blockSize=5000,
+    int64_t fallBack=147,
+    int64_t rollingChunkSize=250,
+    int64_t lagStep=10,
+    int64_t earlyExit=250,
+    int64_t randSeed=42,
+):
+
+    # FFR: standardize, across codebase, random seeding (e.g., np.random.seed vs default_rng)
+    cdef object rng = default_rng(randSeed)
+    cdef int64_t regionLen, numRollSteps
+    cdef int numChunks
+    cdef cnp.ndarray[cnp.float64_t, ndim=1] rawArr
+    cdef cnp.ndarray[cnp.float64_t, ndim=1] medArr
+    cdef AlignmentFile aln
+    cdef AlignedSegment readSeg
+    cdef list coverageIdxTopK
+    cdef list blockCenters
+    cdef list bestLags
+    cdef int i, j, k, idxVal
+    cdef int startIdx, endIdx
+    cdef int winSize, takeK
+    cdef int blockHalf, readFlag
+    cdef int chosenLag, lag, maxValidLag
+    cdef int strand
+    cdef int expandedLen
+    cdef int samThreadsInternal
+    cdef int cpuCount
+    cdef int64_t blockStartBP, blockEndBP, readStart, readEnd
+    cdef int64_t med
+    cdef double score
+    cdef cnp.ndarray[cnp.intp_t, ndim=1] unsortedIdx, sortedIdx, expandedIdx
+    cdef cnp.intp_t[::1] expandedIdxView
+    cdef cnp.ndarray[cnp.float64_t, ndim=1] unsortedVals
+    cdef cnp.ndarray[cnp.uint8_t, ndim=1] seen
+    cdef cnp.ndarray[cnp.float64_t, ndim=1] fwd
+    cdef cnp.ndarray[cnp.float64_t, ndim=1] rev
+    cdef cnp.ndarray[cnp.float64_t, ndim=1] fwdDiff
+    cdef cnp.ndarray[cnp.float64_t, ndim=1] revDiff
+    cdef int64_t diffS, diffE
+    cdef cnp.ndarray[cnp.uint32_t, ndim=1] bestLagsArr
+    cdef bint isPairedEnd = <bint>0
+    cdef double avgTemplateLen = <double>0.0
+    cdef int64_t templateLenSamples = <int64_t>0
+    cdef double avgReadLength = <double>0.0
+    cdef int64_t numReadLengthSamples = <int64_t>0
+    cdef int64_t minInsertSize
+    cdef int64_t requiredSamplesPE
+
+    # rather than taking `chromosome`, `start`, `end`
+    # ... we will just look at BAM contigs present and use
+    # ... the three largest to estimate the fragment length
+    cdef tuple contigs
+    cdef tuple lengths
+    cdef Py_ssize_t contigIdx
+    cdef str contig
+    cdef int64_t contigLen
+    cdef object top2ContigsIdx
+
+    cdef double[::1] fwdView
+    cdef double[::1] revView
+    cdef double[::1] fwdDiffView
+    cdef double[::1] revDiffView
+    cdef double runningSum
+    cdef double fwdSum
+    cdef double revSum
+    cdef double fwdMean
+    cdef double revMean
+    cdef double bestScore
+    cdef int bestLag
+    cdef int blockLen
+    cdef int localMinLag
+    cdef int localMaxLag
+    cdef int localLagStep
+
+    earlyExit = min(earlyExit, iters)
+
+    samThreadsInternal = <int>samThreads
+    cpuCount = <uint32_t>os.cpu_count()
+    if cpuCount is None:
+        cpuCount = 1
+    if samThreads < 1:
+        samThreadsInternal = <int>min(max(1,cpuCount // 2), 4)
+
+    aln = AlignmentFile(bamFile, "rb", threads=samThreadsInternal)
+    try:
+        contigs = aln.references
+        lengths = aln.lengths
+
+        if contigs is None or len(contigs) == 0:
+            return <int64_t>fallBack
+
+        top2ContigsIdx = np.argsort(lengths)[-min(2, len(contigs)):]
+
+        for contigIdx in top2ContigsIdx:
+            contig = contigs[contigIdx]
+            for readSeg in aln.fetch(contig):
+                if (readSeg.flag & samFlagExclude) != 0:
+                    continue
+                if numReadLengthSamples < iters:
+                    avgReadLength += readSeg.query_length
+                    numReadLengthSamples += 1
+                else:
+                    break
+
+        avgReadLength /= numReadLengthSamples if numReadLengthSamples > 0 else 1
+        minInsertSize = <int64_t>(avgReadLength + 0.5)
+        if minInsertSize < 1:
+            minInsertSize = 1
+        if minInsertSize > maxInsertSize:
+            minInsertSize = maxInsertSize
+
+        for contigIdx in top2ContigsIdx:
+            contig = contigs[contigIdx]
+            for readSeg in aln.fetch(contig):
+                if (readSeg.flag & samFlagExclude) != 0:
+                    continue
+                if readSeg.is_paired:
+                    # skip to the paired-end block below (no xCorr --> average template len)
+                    isPairedEnd = <bint>1
+                    break
+            if isPairedEnd:
+                break
+
+        if isPairedEnd:
+            requiredSamplesPE = max(iters, 1000)
+
+            for contigIdx in top2ContigsIdx:
+                if templateLenSamples >= requiredSamplesPE:
+                    break
+                contig = contigs[contigIdx]
+
+                for readSeg in aln.fetch(contig):
+                    if templateLenSamples >= requiredSamplesPE:
+                        break
+                    if (readSeg.flag & samFlagExclude) != 0 or (readSeg.flag & 2) == 0:
+                        # skip any excluded flags, only count proper pairs
+                        continue
+                    if readSeg.template_length > 0 and readSeg.is_read1:
+                        # read1 only: otherwise each pair contributes to the mean twice
+                        # ...which might reduce breadth of the estimate
+                        avgTemplateLen += abs(readSeg.template_length)
+                        templateLenSamples += 1
+
+            if templateLenSamples < requiredSamplesPE:
+                return <int64_t> fallBack
+
+            avgTemplateLen /= <double>templateLenSamples
+
+            if avgTemplateLen >= minInsertSize and avgTemplateLen <= maxInsertSize:
+                return <int64_t> (avgTemplateLen + 0.5)
+            else:
+                return <int64_t> fallBack
+
+        top2ContigsIdx = np.argsort(lengths)[-min(2, len(contigs)):]
+        bestLags = []
+        blockHalf = blockSize // 2
+
+        fwd = np.zeros(blockSize, dtype=np.float64, order='C')
+        rev = np.zeros(blockSize, dtype=np.float64, order='C')
+        fwdDiff = np.zeros(blockSize+1, dtype=np.float64, order='C')
+        revDiff = np.zeros(blockSize+1, dtype=np.float64, order='C')
+
+        fwdView = fwd
+        revView = rev
+        fwdDiffView = fwdDiff
+        revDiffView = revDiff
+
+        for contigIdx in top2ContigsIdx:
+            contig = contigs[contigIdx]
+            contigLen = <int64_t>lengths[contigIdx]
+            regionLen = contigLen
+
+            if regionLen < blockSize or regionLen <= 0:
+                continue
+
+            if maxInsertSize < 1:
+                maxInsertSize = 1
+
+            # first, we build a coarse read coverage track from `start` to `end`
+            numRollSteps = regionLen // rollingChunkSize
+            if numRollSteps <= 0:
+                numRollSteps = 1
+            numChunks = <int>numRollSteps
+
+            rawArr = np.zeros(numChunks, dtype=np.float64)
+            medArr = np.zeros(numChunks, dtype=np.float64)
+
+            for readSeg in aln.fetch(contig):
+                if (readSeg.flag & samFlagExclude) != 0:
+                    continue
+                j = <int>((readSeg.reference_start) // rollingChunkSize)
+                if 0 <= j < numChunks:
+                    rawArr[j] += 1.0
+
+            # second, we apply a rolling/moving/local/weywtci order-statistic filter (median)
+            # ...the size of the kernel is based on the blockSize -- we want high-coverage
+            # ...blocks as measured by their local median read count
+            winSize = <int>(blockSize // rollingChunkSize)
+            if winSize < 1:
+                winSize = 1
+            if (winSize & 1) == 0:
+                winSize += 1
+            medArr[:] = ndimage.median_filter(rawArr, size=winSize, mode="nearest")
+
+            # we pick the largest local-medians and form a block around each
+            takeK = iters if iters < numChunks else numChunks
+            unsortedIdx = np.argpartition(medArr, -takeK)[-takeK:]
+            unsortedVals = medArr[unsortedIdx]
+            sortedIdx = unsortedIdx[np.argsort(unsortedVals)[::-1]]
+            coverageIdxTopK = sortedIdx[:takeK].tolist()
+
+            expandedLen = takeK*winSize
+            expandedIdx = np.empty(expandedLen, dtype=np.intp)
+            expandedIdxView = expandedIdx
+            k = 0
+            for i in range(takeK):
+                idxVal = coverageIdxTopK[i]
+                startIdx = idxVal - (winSize // 2)
+                endIdx = startIdx + winSize
+                if startIdx < 0:
+                    startIdx = 0
+                    endIdx = winSize if winSize < numChunks else numChunks
+                if endIdx > numChunks:
+                    endIdx = numChunks
+                    startIdx = endIdx - winSize if winSize <= numChunks else 0
+                for j in range(startIdx, endIdx):
+                    expandedIdxView[k] = j
+                    k += 1
+            if k < expandedLen:
+                expandedIdx = expandedIdx[:k]
+                expandedIdxView = expandedIdx
+
+            seen = np.zeros(numChunks, dtype=np.uint8)
+            blockCenters = []
+            for i in range(expandedIdx.shape[0]):
+                j = <int>expandedIdxView[i]
+                if seen[j] == 0:
+                    seen[j] = 1
+                    blockCenters.append(j)
+
+            if len(blockCenters) > 1:
+                rng.shuffle(blockCenters)
+
+            for idxVal in blockCenters:
+                # this should map back to genomic coordinates
+                blockStartBP = idxVal * rollingChunkSize + (rollingChunkSize // 2) - blockHalf
+                if blockStartBP < 0:
+                    blockStartBP = 0
+                blockEndBP = blockStartBP + blockSize
+                if blockEndBP > contigLen:
+                    blockEndBP = contigLen
+                    blockStartBP = blockEndBP - blockSize
+                    if blockStartBP < 0:
+                        continue
+
+                # now we build strand-specific tracks
+                # ...avoid forward/reverse strand for loops in each block w/ a cumsum
+                fwd.fill(0.0)
+                fwdDiff.fill(0.0)
+                rev.fill(0.0)
+                revDiff.fill(0.0)
+                readFlag = -1
+
+                for readSeg in aln.fetch(contig, blockStartBP, blockEndBP):
+                    readFlag = readSeg.flag
+                    readStart = <int64_t>readSeg.reference_start
+                    readEnd = <int64_t>readSeg.reference_end
+                    if (readFlag & samFlagExclude) != 0:
+                        continue
+                    if readStart < blockStartBP or readEnd > blockEndBP:
+                        continue
+                    diffS = readStart - blockStartBP
+                    diffE = readEnd - blockStartBP
+                    strand = readFlag & 16
+                    if strand == 0:
+                        # forward
+                        # just mark offsets from block start/end
+                        fwdDiffView[<int>diffS] += 1.0
+                        fwdDiffView[<int>diffE] -= 1.0
+                    else:
+                        # reverse
+                        # ditto
+                        revDiffView[<int>diffS] += 1.0
+                        revDiffView[<int>diffE] -= 1.0
+
+                maxValidLag = maxInsertSize if (maxInsertSize < blockSize) else (blockSize - 1)
+                localMinLag = <int>minInsertSize
+                localMaxLag = <int>maxValidLag
+                if localMaxLag < localMinLag:
+                    continue
+                localLagStep = <int>lagStep
+                if localLagStep < 1:
+                    localLagStep = 1
+
+                # now we can get coverage track by summing over diffs
+                # maximizes the crossCovar(forward, reverse, lag) wrt lag.
+                with nogil:
+                    runningSum = 0.0
+                    for i from 0 <= i < blockSize:
+                        runningSum += fwdDiffView[i]
+                        fwdView[i] = runningSum
+
+                    runningSum = 0.0
+                    for i from 0 <= i < blockSize:
+                        runningSum += revDiffView[i]
+                        revView[i] = runningSum
+
+                    fwdSum = 0.0
+                    revSum = 0.0
+                    for i from 0 <= i < blockSize:
+                        fwdSum += fwdView[i]
+                        revSum += revView[i]
+
+                    fwdMean = fwdSum / blockSize
+                    revMean = revSum / blockSize
+
+                    for i from 0 <= i < blockSize:
+                        fwdView[i] = fwdView[i] - fwdMean
+                        revView[i] = revView[i] - revMean
+
+                    bestScore = -1e308
+                    bestLag = -1
+                    for lag from localMinLag <= lag <= localMaxLag by localLagStep:
+                        score = 0.0
+                        blockLen = blockSize - lag
+                        for i from 0 <= i < blockLen:
+                            score += fwdView[i] * revView[i + lag]
+                        if score > bestScore:
+                            bestScore = score
+                            bestLag = lag
+
+                chosenLag = bestLag
+
+                if chosenLag > 0 and bestScore != 0.0:
+                    bestLags.append(chosenLag)
+                if len(bestLags) >= earlyExit:
+                    break
+
+    finally:
+        aln.close()
+
+    if len(bestLags) < 3:
+        return fallBack
+
+    bestLagsArr = np.asarray(bestLags, dtype=np.uint32)
+    med = int(np.median(bestLagsArr) + avgReadLength + 0.5)
+    if med < minInsertSize:
+        med = <int>minInsertSize
+    elif med > maxInsertSize:
+        med = <int>maxInsertSize
+    return <int64_t>med
+
+
+
+cdef inline Py_ssize_t getInsertion(const uint32_t* array_, Py_ssize_t n, uint32_t x) nogil:
+    # helper: binary search to find insertion point into sorted `arrray_`
+    cdef Py_ssize_t low = 0
+    cdef Py_ssize_t high = n
+    cdef Py_ssize_t midpt
+    while low < high:
+        # [low,x1,x2,x3,...,(high-low)>>1,...,xn-2, high]
+        # ... --> [(high-low)>>1 + 1,...,xn-2, high]
+        midpt = low + ((high - low) >> 1)
+        if array_[midpt] <= x:
+            low = midpt + 1
+        # [low,x1,x2,x3,...,(high-low)>>1,...,xn-2, high]
+        # ... --> [low,x1,x2,x3,...,(high-low)>>1]
+        else:
+            high = midpt
+    # array_[low] <= x* < array_[low+1]
+    return low
+
+
+cdef inline int maskMembership(const uint32_t* pos, Py_ssize_t numIntervals, const uint32_t* mStarts, const uint32_t* mEnds, Py_ssize_t n, uint8_t* outMask) nogil:
+    cdef Py_ssize_t i = 0
+    cdef Py_ssize_t k
+    cdef uint32_t p
+    while i < numIntervals:
+        p = pos[i]
+        k = getInsertion(mStarts, n, p) - 1
+        if k >= 0 and p < mEnds[k]:
+            outMask[i] = <uint8_t>1
+        else:
+            outMask[i] = <uint8_t>0
+        i += 1
+    return 0
+
+
+cpdef cnp.ndarray[cnp.uint8_t, ndim=1] cbedMask(
+    str chromosome,
+    str bedFile,
+    cnp.ndarray[cnp.uint32_t, ndim=1] intervals,
+    int stepSize
+    ):
+    r"""Return a 1/0 mask for intervals overlapping a sorted and merged BED file.
+
+    :param chromosome: Chromosome name.
+    :type chromosome: str
+    :param bedFile: Path to a sorted and merged BED file.
+    :type bedFile: str
+    :param intervals: Array of sorted, non-overlapping start positions of genomic intervals.
+      Each interval is assumed `stepSize`.
+    :type intervals: cnp.ndarray[cnp.uint32_t, ndim=1]
+    :param stepSize: Step size between genomic positions in `intervals`.
+    :type stepSize: int32_t
+    :return: A mask s.t. `1` indicates the corresponding interval overlaps a BED region.
+    :rtype: cnp.ndarray[cnp.uint8_t, ndim=1]
+
+    """
+    cdef list startsList = []
+    cdef list endsList = []
+    cdef object f = open(bedFile, "r")
+    cdef str line
+    cdef list cols
+    try:
+        for line in f:
+            line = line.strip()
+            if not line or line[0] == '#':
+                continue
+            cols = line.split('\t')
+            if not cols or len(cols) < 3:
+                continue
+            if cols[0] != chromosome:
+                continue
+            startsList.append(int(cols[1]))
+            endsList.append(int(cols[2]))
+    finally:
+        f.close()
+    cdef Py_ssize_t numIntervals = intervals.size
+    cdef cnp.ndarray[cnp.uint8_t, ndim=1] mask = np.zeros(numIntervals, dtype=np.uint8)
+    if not startsList:
+        return mask
+    cdef cnp.ndarray[cnp.uint32_t, ndim=1] starts = np.asarray(startsList, dtype=np.uint32)
+    cdef cnp.ndarray[cnp.uint32_t, ndim=1] ends = np.asarray(endsList, dtype=np.uint32)
+    cdef cnp.uint32_t[:] startsView = starts
+    cdef cnp.uint32_t[:] endsView = ends
+    cdef cnp.uint32_t[:] posView = intervals
+    cdef cnp.uint8_t[:] outView = mask
+    cdef uint32_t* svPtr = &startsView[0] if starts.size > 0 else <uint32_t*>NULL
+    cdef uint32_t* evPtr = &endsView[0] if ends.size > 0 else <uint32_t*>NULL
+    cdef uint32_t* posPtr = &posView[0] if numIntervals > 0 else <uint32_t*>NULL
+    cdef uint8_t* outPtr = &outView[0] if numIntervals > 0 else <uint8_t*>NULL
+    cdef Py_ssize_t n = starts.size
+    with nogil:
+        if numIntervals > 0 and n > 0:
+            maskMembership(posPtr, numIntervals, svPtr, evPtr, n, outPtr)
+    return mask
+
+
+cdef inline bint _projectToBox(
+    cnp.float32_t[::1] vectorX,
+    cnp.float32_t[:, ::1] matrixP,
+    cnp.float32_t stateLowerBound,
+    cnp.float32_t stateUpperBound,
+    cnp.float32_t eps
+) nogil:
+    cdef cnp.float32_t initX_i0
+    cdef cnp.float32_t projectedX_i0
+    cdef cnp.float32_t P00
+    cdef cnp.float32_t P10
+    cdef cnp.float32_t P11
+    cdef cnp.float32_t padded_P00
+    cdef cnp.float32_t newP11
+
+    # Note, the following is straightforward algebraically, but some hand-waving here
+    # ... for future reference if I forget the intuition/context later on or somebody
+    # ... wants to change/debug. Essentially, finding a point in the feasible region
+    # ... that minimizes -weighted- distance to the unconstrained/infeasible solution.
+    # ... Weighting is determined by inverse state covariance P^{-1}_[i]
+    # ... So a WLS-like QP:
+    # ...   argmin (x^{*}_[i] - x^{unconstrained}_[i])^T (P^-1_{[i]}) (x^{*}_[i] - x^{unconstrained}_[i])
+    # ...   such that: lower <= x^{*}_[i,0] <= upper
+    # ... in our case (single-variable in box), solution is a simle truncation
+    # ... with a corresponding scaled-update to x_[i,1] based on their covariance
+    # ... REFERENCE: Simon, 2006 (IET survey paper on constrained linear filters)
+
+    initX_i0 = vectorX[0]
+
+    if initX_i0 >= stateLowerBound and initX_i0 <= stateUpperBound:
+        return <bint>0 # no change if in bounds
+
+    # projection in our case --> truncated box on first state variable
+    projectedX_i0 = 0.0
+    if projectedX_i0 < stateLowerBound:
+        projectedX_i0 = stateLowerBound
+    if projectedX_i0 > stateUpperBound:
+        projectedX_i0 = stateUpperBound
+
+    P00 = matrixP[0, 0]
+    P10 = matrixP[1, 0]
+    P11 = matrixP[1, 1]
+    padded_P00 = P00 if P00 > eps else eps
+
+    # FIRST, adjust second state according to its original value + an update
+    # ... given the covariance between first,second variables that
+    # ... is scaled by the size of projection in the first state
+    vectorX[1] = <cnp.float32_t>(vectorX[1] + (P10 / padded_P00) * (projectedX_i0 - initX_i0))
+
+    # SECOND, now we set the projected first state variable
+    # ...  and the second state's variance
+    vectorX[0] = projectedX_i0
+    newP11 = <cnp.float32_t>(P11 - (P10*P10) / padded_P00)
+
+    matrixP[0, 0] = eps
+    matrixP[0, 1] = <cnp.float32_t>0.0 # first state fixed --> covar = 0
+    matrixP[1, 0] = <cnp.float32_t>0.0
+    matrixP[1, 1] = newP11 if newP11 > eps else eps
+
+    return 1
+
+
+cpdef void projectToBox(
+    cnp.ndarray[cnp.float32_t, ndim=1, mode="c"] vectorX,
+    cnp.ndarray[cnp.float32_t, ndim=2, mode="c"] matrixP,
+    cnp.float32_t stateLowerBound,
+    cnp.float32_t stateUpperBound,
+    cnp.float32_t eps
+):
+    _projectToBox(vectorX, matrixP, stateLowerBound, stateUpperBound, eps)
+
+
+cdef inline void _regionMeanVar(double[::1] valuesView,
+                                Py_ssize_t[::1] blockStartIndices,
+                                Py_ssize_t[::1] blockSizes,
+                                double[::1] meanOutView,
+                                double[::1] varOutView,
+                                double zeroPenalty,
+                                double zeroThresh) noexcept nogil:
+
+    cdef Py_ssize_t regionIndex, elementIndex, startIndex, blockLength
+    cdef Py_ssize_t diffCount
+    cdef double value, previousValue, difference
+    cdef double meanValue, countValue, deltaValue
+    cdef double minValue, maxValue
+    cdef double sumInterval, sumInterval2, sumDiff, sumIntervalDiff
+    cdef double intervalValue
+    cdef double beta_0, beta_1
+    cdef double residual, sumSqRes
+    cdef double baseVar
+    cdef double zeroProp, scaleFactor
+    cdef double diffCountD
+
+    for regionIndex in range(meanOutView.shape[0]):
+        startIndex = blockStartIndices[regionIndex]
+        blockLength = blockSizes[regionIndex]
+
+        if blockLength <= 0:
+            meanOutView[regionIndex] = 0.0
+            varOutView[regionIndex] = 0.0
+            continue
+
+        meanValue = 0.0
+        countValue = 0.0
+        zeroProp = 0.0
+
+        minValue = valuesView[startIndex]
+        maxValue = minValue
+
+        # one loop min, max, mean, 'zero' proportion
+        # mean: new = old  + (obs - old)/n
+        for elementIndex in range(blockLength):
+            value = valuesView[startIndex + elementIndex]
+
+            if value < minValue:
+                minValue = value
+            elif value > maxValue:
+                maxValue = value
+
+            if fabs(value) < zeroThresh:
+                zeroProp += 1.0
+
+            countValue += 1.0
+            deltaValue = value - meanValue
+            meanValue += deltaValue / countValue
+
+        meanOutView[regionIndex] = meanValue
+        zeroProp /= <double>blockLength
+
+        # I: RSS from linear fit to first-order differences is our proxy for variance
+        diffCount = blockLength - 1
+        if diffCount <= 0:
+            varOutView[regionIndex] = 0.0
+            continue
+
+        diffCountD = <double>diffCount
+
+        sumInterval = 0.0
+        sumInterval2 = 0.0
+        sumDiff = 0.0
+        sumIntervalDiff = 0.0
+
+        previousValue = valuesView[startIndex]
+        for elementIndex in range(1, blockLength):
+            value = valuesView[startIndex + elementIndex]
+            difference = value - previousValue
+            previousValue = value
+            # FFR: utlize
+            # ... 1 + 2 + ... + (n-1) = (n-1)*n/2
+            # ... 1 + 4 + 9 + ... + (n-1)^2 = (n-1)*n*(2n-1)/6
+            intervalValue = <double>(elementIndex - 1)
+            sumInterval += intervalValue
+            sumInterval2 += intervalValue * intervalValue
+            sumDiff += difference
+            sumIntervalDiff += intervalValue * difference
+
+        beta_1 = (diffCountD * sumIntervalDiff - sumInterval * sumDiff) / ((diffCountD * sumInterval2 - sumInterval * sumInterval) + 1.0e-2)
+        beta_0 = (sumDiff - beta_1 * sumInterval) / diffCountD
+
+        sumSqRes = 0.0
+        previousValue = valuesView[startIndex]
+
+        for elementIndex in range(1, blockLength):
+            value = valuesView[startIndex + elementIndex]
+            difference = value - previousValue
+            previousValue = value
+
+            intervalValue = <double>(elementIndex - 1)
+            residual = difference - (beta_0 + beta_1 * intervalValue)
+            # rss
+            sumSqRes += (residual * residual)
+
+        if diffCount > 2:
+            baseVar = sumSqRes / (<double>(diffCount - 2))
+        else:
+            baseVar = sumSqRes / diffCountD
+
+        # II: inflate variance based on 'zero' proportion
+        scaleFactor = 1.0 + (zeroPenalty*zeroProp)
+        if scaleFactor < 0.0:
+            scaleFactor = 0.0
+
+        varOutView[regionIndex] = baseVar * scaleFactor
+
+
+cpdef tuple cmeanVarPairs(cnp.ndarray[cnp.uint32_t, ndim=1] intervals,
+                          cnp.ndarray[cnp.float64_t, ndim=1] values,
+                          int blockSize,
+                          int iters,
+                          int randSeed,
+                          cnp.ndarray[cnp.uint8_t, ndim=1] excludeIdxMask,
+                          double zeroPenalty=10.0,
+                          double zeroThresh=10.0e-2):
+
+    cdef cnp.ndarray[cnp.float64_t, ndim=1] valuesArray
+    cdef double[::1] valuesView
+    cdef cnp.ndarray[cnp.intp_t, ndim=1] sizesArray
+    cdef cnp.ndarray[cnp.float64_t, ndim=1] outMeans
+    cdef cnp.ndarray[cnp.float64_t, ndim=1] outVars
+    cdef Py_ssize_t valuesLength
+    cdef Py_ssize_t maxBlockLength
+    cdef list supportList
+    cdef cnp.intp_t scanIndex
+    cdef cnp.ndarray[cnp.intp_t, ndim=1] supportArr
+    cdef cnp.ndarray[cnp.intp_t, ndim=1] starts_
+    cdef cnp.ndarray[cnp.intp_t, ndim=1] ends
+    cdef Py_ssize_t[::1] startsView
+    cdef Py_ssize_t[::1] sizesView
+    cdef double[::1] meansView
+    cdef double[::1] varsView
+    cdef cnp.ndarray[cnp.intp_t, ndim=1] emptyStarts
+    cdef cnp.ndarray[cnp.intp_t, ndim=1] emptyEnds
+
+    np.random.seed(randSeed)
+    valuesArray = np.ascontiguousarray(values, dtype=np.float64)
+    valuesView = valuesArray
+    sizesArray = np.full(iters, blockSize, dtype=np.intp)
+    outMeans = np.empty(iters, dtype=np.float64)
+    outVars = np.empty(iters, dtype=np.float64)
+    valuesLength = <Py_ssize_t>valuesArray.size
+    maxBlockLength = <Py_ssize_t>blockSize
+
+    supportList = []
+    scanIndex = 0
+
+    while scanIndex <= valuesLength - maxBlockLength:
+        if excludeIdxMask[scanIndex:scanIndex + maxBlockLength].any():
+            scanIndex = scanIndex + maxBlockLength + 1
+            continue
+        supportList.append(scanIndex)
+        scanIndex = scanIndex + 1
+
+    # in case we want to put a distribution on block sizes later,
+    # ... e.g., `_blockMax`
+    if len(supportList) == 0:
+        outMeans[:] = 0.0
+        outVars[:] = 0.0
+        emptyStarts = np.empty(0, dtype=np.intp)
+        emptyEnds = np.empty(0, dtype=np.intp)
+        return outMeans, outVars, emptyStarts, emptyEnds
+
+    supportArr = np.asarray(supportList, dtype=np.intp)
+    starts_ = np.random.choice(supportArr, size=iters, replace=True).astype(np.intp)
+    ends = starts_ + maxBlockLength
+
+    startsView = starts_
+    sizesView = sizesArray
+    meansView = outMeans
+    varsView = outVars
+
+    _regionMeanVar(valuesView, startsView, sizesView, meansView, varsView, zeroPenalty, zeroThresh)
+
+    return outMeans, outVars, starts_, ends
