@@ -1,0 +1,236 @@
+Metadata-Version: 2.4
+Name: HOS-GREED
+Version: 3.0.1
+Summary: 轻量化AI安全赋能平台，适合中小型企业
+Home-page: http://localhost:50000
+Author: HOS Team
+Author-email: HOS Team <admin@example.com>
+Project-URL: Homepage, http://localhost:50000
+Project-URL: Documentation, http://localhost:50000/docs
+Keywords: AI,security,fastapi,deepseek,security-automation
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: System Administrators
+Classifier: Intended Audience :: Information Technology
+Classifier: Topic :: Security
+Classifier: Topic :: System :: Networking :: Monitoring
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE.txt
+Requires-Dist: fastapi>=0.104.0
+Requires-Dist: uvicorn>=0.24.0
+Requires-Dist: pydantic>=2.4.0
+Requires-Dist: pydantic-settings>=2.0.0
+Requires-Dist: requests>=2.31.0
+Requires-Dist: python-dotenv>=1.0.0
+Dynamic: author
+Dynamic: home-page
+Dynamic: license-file
+Dynamic: requires-python
+
+# 安全智能体系统
+
+全方位开箱即用的安全智能体系统，基于DeepSeek API实现，提供多种安全相关的智能分析功能。
+
+## 功能特性
+
+### 1. 降噪分诊优化
+- 优化AISECOPS降噪分诊模型，新增SQL注入检测模型、攻击检测小模型，降低误报
+- 优化降噪评分推荐机制，支持人工通过加减分配置调整推荐结果
+- 支持白名单事件不发送AI配置，降低AI大模型研判性能问题
+
+### 2. 智能体功能
+
+#### 事件运营智能体
+- 支持用户上传/输入的告警的降噪研判
+- 支持响应处置和报告总结
+- 可以自然语言方式输出研判结论、依据以及关联攻击过程解读
+- 支持溯源调查、响应处置策略以及策略下发
+
+#### 日志解析智能体
+- 支持对用户输入以及上传的日志内容进行分析和解读
+
+#### 解码智能体
+- 针对输入的告警等日志进行解码
+- 支持二进制-ASCII/GBK/UTF8字符解码
+- 支持HTTP请求报文协议解析
+- 支持GZip解压、Deflate解压缩
+- 支持文本-HTTP请求报文协议解析、Char反混淆
+- 支持十进制解码、十六进制解码、Base64解码、XML解码、URL解码、字符串转义解码
+
+#### 报告生成智能体
+- 支持单一事件报告生成
+- 支持指定时间周期内的统计报告生成
+
+#### 流量检测智能体
+- 支持针对上传的PCAP包进行检测
+- 检测是否存在攻击行为
+- 对攻击行为进行自然语言的解读
+
+#### 情报检索智能体
+- 支持自然语言的方式检索各类情报信息
+- 支持IP、域名、攻击组织等情报检索
+
+#### 安全知识问答智能体
+- 支持用户以自然语言方式提问安全领域相关的知识
+- 涵盖安全运营、工具、漏洞、政策等方面
+
+## 技术栈
+
+- Python 3.10+
+- FastAPI：提供RESTful API接口
+- DeepSeek API：AI模型调用
+- Pydantic：数据验证和模型定义
+- Uvicorn：ASGI服务器
+
+## 安装步骤
+
+### 1. 克隆项目
+
+```bash
+git clone https://your-repo-url.git
+cd HOS_GREED
+```
+
+### 2. 创建虚拟环境（可选）
+
+```bash
+python -m venv venv
+# Windows
+venv\Scripts\activate
+# Linux/Mac
+source venv/bin/activate
+```
+
+### 3. 安装依赖
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. 配置环境变量
+
+创建`.env`文件，配置DeepSeek API密钥：
+
+```
+DEEPSEEK_API_KEY=your-api-key-here
+```
+
+## 运行应用
+
+### 开发模式
+
+```bash
+python main.py
+```
+
+### 生产模式
+
+```bash
+uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
+```
+
+## API文档
+
+应用启动后，可以通过以下地址访问API文档：
+
+- Swagger UI：http://localhost:8000/docs
+- ReDoc：http://localhost:8000/redoc
+
+## 配置说明
+
+配置文件位于`config/config.py`，支持以下配置项：
+
+| 配置项 | 描述 | 默认值 |
+| --- | --- | --- |
+| deepseek_api_key | DeepSeek API密钥 | your-api-key-here |
+| deepseek_api_url | DeepSeek API地址 | https://api.deepseek.com/v1/chat/completions |
+| deepseek_model | 使用的DeepSeek模型 | deepseek-chat |
+| max_retries | API调用最大重试次数 | 3 |
+| timeout | API调用超时时间（秒） | 30 |
+| noise_reduction_threshold | 降噪评分阈值 | 0.5 |
+| allow_manual_adjustment | 是否允许人工调整评分 | True |
+| whitelist_events | 白名单事件列表 | [] |
+| skip_ai_for_whitelist | 白名单事件是否跳过AI研判 | True |
+| debug | 是否开启调试模式 | True |
+
+## 使用示例
+
+### 1. 分析安全事件
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/event/analyze" \
+  -H "Content-Type: application/json" \
+  -d '{"event_data": {"event_id": "123", "event_type": "SQL注入攻击", "source_ip": "192.168.1.1", "target_ip": "10.0.0.1", "timestamp": "2023-10-01T12:00:00Z"}}'
+```
+
+### 2. 解码Base64内容
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/decode" \
+  -H "Content-Type: application/json" \
+  -d '{"content": "SGVsbG8gV29ybGQ=", "decode_type": "base64"}'
+```
+
+### 3. 检索IP情报
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/intel/ip" \
+  -H "Content-Type: application/json" \
+  -d '{"ip_address": "8.8.8.8"}'
+```
+
+## 项目结构
+
+```
+├── config/              # 配置文件目录
+│   └── config.py        # 主配置文件
+├── core/                # 核心服务
+│   ├── deepseek_api.py  # DeepSeek API封装
+│   └── utils.py         # 工具函数
+├── agents/              # 智能体实现
+│   ├── __init__.py
+│   ├── event_agent.py   # 事件运营智能体
+│   ├── log_parser_agent.py  # 日志解析智能体
+│   ├── decoder_agent.py     # 解码智能体
+│   ├── report_agent.py      # 报告生成智能体
+│   ├── traffic_agent.py     # 流量检测智能体
+│   ├── intel_agent.py       # 情报检索智能体
+│   └── security_qa_agent.py # 安全知识问答智能体
+├── api/                 # API 接口
+│   ├── __init__.py
+│   └── routes.py        # FastAPI 路由定义
+├── main.py              # 应用入口
+├── requirements.txt     # 依赖声明
+├── README.md            # 项目说明
+└── .env                 # 环境变量配置
+```
+
+## 高可用性设计
+
+- 实现API调用重试机制
+- 加入超时处理
+- 实现错误日志记录
+- 支持配置多个API密钥（可选）
+- 实现请求缓存机制
+
+## 贡献指南
+
+1. Fork本项目
+2. 创建特性分支：`git checkout -b feature/AmazingFeature`
+3. 提交更改：`git commit -m 'Add some AmazingFeature'`
+4. 推送到分支：`git push origin feature/AmazingFeature`
+5. 提交Pull Request
+
+## 许可证
+
+MIT License
+
+## 联系方式
+
+如有问题或建议，请通过以下方式联系：
+
+- 项目地址：https://your-repo-url.git
+- 电子邮件：your-email@example.com
