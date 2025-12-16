@@ -1,0 +1,19 @@
+use adder16::{Adder16};
+
+component AddSub16(A[16], B[16], sub) -> (Result[16], Cout, Overflow) {
+    >i[16]{ bx{i}: XOR; }
+    add: Adder16;
+    ovx: XOR;
+
+    connect {
+        >i[16]{ B[{i}] -> bx{i}.A; sub -> bx{i}.B; }
+        >i[16]{ A[{i}] -> add.A[{i}]; bx{i}.O -> add.B[{i}]; }
+        sub -> add.Cin;
+
+        >i[16]{ add.Sum[{i}] -> Result[{i}]; }
+        add.Cout -> Cout;
+
+        # Overflow = carry_into_MSB XOR carry_out_MSB
+        add.Carry15 -> ovx.A; add.Cout -> ovx.B; ovx.O -> Overflow;
+    }
+}
