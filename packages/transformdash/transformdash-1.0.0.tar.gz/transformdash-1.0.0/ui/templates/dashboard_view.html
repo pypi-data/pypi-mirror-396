@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - TransformDash</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
+
+    <!-- External Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="/static/css/enhancements.css">
+
+    <style>
+        /* Full-page dashboard view styling */
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--color-bg-primary, #f5f7fa);
+        }
+
+        .dashboard-page {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding: 20px 24px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+        }
+
+        .dashboard-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1a202c;
+            margin: 0;
+        }
+
+        .dashboard-description {
+            font-size: 1rem;
+            color: #718096;
+            margin-top: 8px;
+        }
+
+        .dashboard-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .action-btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            background: white;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .action-btn:hover {
+            background: #f7fafc;
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        .back-btn {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .back-btn:hover {
+            background: #5568d3;
+            color: white;
+        }
+
+        .dashboard-filters {
+            padding: 20px 24px;
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .dashboard-tabs {
+            display: flex;
+            gap: 8px;
+            padding: 0 24px;
+            margin-bottom: 24px;
+            overflow-x: auto;
+        }
+
+        .dashboard-tab {
+            padding: 12px 24px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: #4a5568;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .dashboard-tab:hover {
+            background: #f7fafc;
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        .dashboard-tab.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+            box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .filter-label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .filter-select {
+            padding: 8px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            min-width: 150px;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+            transition: box-shadow 0.2s;
+        }
+
+        .chart-container:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Chart size classes */
+        .chart-size-small {
+            grid-column: span 1;
+        }
+
+        .chart-size-medium {
+            grid-column: span 2;
+        }
+
+        .chart-size-large {
+            grid-column: span 3;
+        }
+
+        .chart-size-full {
+            grid-column: span 4;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1200px) {
+            .charts-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .chart-size-small {
+                grid-column: span 1;
+            }
+            .chart-size-medium {
+                grid-column: span 1;
+            }
+            .chart-size-large {
+                grid-column: span 2;
+            }
+            .chart-size-full {
+                grid-column: span 2;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+            .chart-size-small,
+            .chart-size-medium,
+            .chart-size-large,
+            .chart-size-full {
+                grid-column: span 1;
+            }
+        }
+
+        .chart-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #1a202c;
+            margin: 0 0 16px 0;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 60px;
+            color: #718096;
+        }
+
+        /* Print styles */
+        @media print {
+            body {
+                background: white;
+            }
+
+            .dashboard-actions {
+                display: none !important;
+            }
+
+            .dashboard-filters {
+                display: none !important;
+            }
+
+            .back-btn {
+                display: none !important;
+            }
+
+            .chart-container {
+                page-break-inside: avoid;
+                box-shadow: none;
+                border: 1px solid #e2e8f0;
+            }
+
+            canvas {
+                max-width: 100% !important;
+                height: auto !important;
+            }
+        }
+
+        .error {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px;
+            color: #e53e3e;
+        }
+
+        /* Chart menu styles */
+        .chart-menu-btn:hover {
+            background: #f3f4f6 !important;
+        }
+
+        .chart-menu-dropdown button:hover {
+            background: #f3f4f6 !important;
+        }
+
+        body.dark-mode .chart-menu-dropdown {
+            background: #2d3748;
+            border-color: #4a5568;
+        }
+
+        body.dark-mode .chart-menu-dropdown button {
+            color: #e5e7eb !important;
+        }
+
+        body.dark-mode .chart-menu-dropdown button:hover {
+            background: #374151 !important;
+        }
+
+        /* Dark mode */
+        body.dark-mode {
+            background: #1a202c;
+        }
+
+        body.dark-mode .dashboard-header,
+        body.dark-mode .dashboard-filters,
+        body.dark-mode .chart-container {
+            background: #2d3748;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        body.dark-mode .dashboard-title,
+        body.dark-mode .chart-title {
+            color: #f7fafc;
+        }
+
+        body.dark-mode .dashboard-description,
+        body.dark-mode .filter-label {
+            color: #cbd5e0;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-page">
+        <!-- Dashboard Header -->
+        <div class="dashboard-header">
+            <div>
+                <h1 class="dashboard-title" id="dashboardName">Loading...</h1>
+                <p class="dashboard-description" id="dashboardDescription"></p>
+            </div>
+            <div class="dashboard-actions">
+                <button class="action-btn back-btn" onclick="window.close()">
+                    ← Back
+                </button>
+                <button class="action-btn" onclick="editDashboard()">
+                    ✏️ Edit Dashboard
+                </button>
+                <button class="action-btn" onclick="exportPDF()">
+                    📄 Export PDF
+                </button>
+                <button class="action-btn" onclick="exportData('csv')">
+                    📊 Export CSV
+                </button>
+                <button class="action-btn" onclick="exportData('excel')">
+                    📈 Export Excel
+                </button>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div id="filtersContainer" class="dashboard-filters" style="display: none;">
+            <!-- Filters will be loaded here -->
+        </div>
+
+        <!-- Tabs -->
+        <div id="tabsContainer" class="dashboard-tabs" style="display: none;">
+            <!-- Tabs will be loaded here -->
+        </div>
+
+        <!-- Charts Grid -->
+        <div id="chartsGrid" class="charts-grid">
+            <div class="loading">
+                <div>Loading dashboard...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const dashboardId = '{{ dashboard_id }}';
+        let currentFilters = {}; // Stores filter values: {field: value}
+        let filterExpressions = {}; // Stores filter expressions: {field: expression}
+        let currentDashboard = null; // Store current dashboard data
+        let currentTabId = null; // Currently active tab
+
+        // Load dashboard on page load
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadDashboard();
+        });
+
+        async function loadDashboard() {
+            try {
+                // Fetch dashboard config - use the specific dashboard endpoint
+                const response = await fetch(`/api/dashboards/${dashboardId}`);
+                const dashboard = await response.json();
+
+                if (!dashboard) {
+                    throw new Error('Dashboard not found');
+                }
+
+                // Store dashboard
+                currentDashboard = dashboard;
+
+                // Set dashboard info
+                document.getElementById('dashboardName').textContent = dashboard.name;
+                document.getElementById('dashboardDescription').textContent = dashboard.description || '';
+
+                // Load filters
+                await loadFilters(dashboard);
+
+                // Load tabs if they exist
+                if (dashboard.tabs && dashboard.tabs.length > 0) {
+                    await loadTabs(dashboard);
+                } else {
+                    // Legacy: Load charts directly (for backward compatibility)
+                    await loadCharts(dashboard);
+                }
+
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+                document.getElementById('chartsGrid').innerHTML = `
+                    <div class="error">
+                        <div style="font-size: 3em; margin-bottom: 16px;">❌</div>
+                        <h3>Failed to Load Dashboard</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function loadFilters(dashboard) {
+            if (!dashboard.filters || dashboard.filters.length === 0) {
+                return;
+            }
+
+            const container = document.getElementById('filtersContainer');
+            container.style.display = 'flex';
+
+            // Store filter expressions for later use
+            dashboard.filters.forEach(filter => {
+                if (filter.expression) {
+                    filterExpressions[filter.field] = filter.expression;
+                }
+            });
+
+            container.innerHTML = dashboard.filters.map((filter, index) => {
+                const filterKey = filter.field || `filter_${index}`;
+                const expression = filter.expression || '';
+                const expressionAttr = expression.replace(/'/g, '&apos;');
+
+                return `
+                    <div class="filter-group">
+                        <label class="filter-label">${filter.label}</label>
+                        <input type="text" class="filter-select"
+                               placeholder="Enter ${filter.label}..."
+                               onchange="applyFilter('${filterKey}', this.value, '${expressionAttr}')"
+                               style="min-width: 150px; padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.9rem;">
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function loadTabs(dashboard) {
+            const tabsContainer = document.getElementById('tabsContainer');
+            tabsContainer.style.display = 'flex';
+
+            // Create tab buttons
+            tabsContainer.innerHTML = dashboard.tabs.map((tab, index) => {
+                const isActive = index === 0 ? 'active' : '';
+                return `<button class="dashboard-tab ${isActive}" onclick="switchTab('${tab.id}', event)">${tab.name}</button>`;
+            }).join('');
+
+            // Load first tab by default
+            if (dashboard.tabs.length > 0) {
+                currentTabId = dashboard.tabs[0].id;
+                await loadTabCharts(dashboard.tabs[0]);
+            }
+        }
+
+        async function switchTab(tabId, event) {
+            if (!currentDashboard || !currentDashboard.tabs) return;
+
+            // Update active tab button
+            document.querySelectorAll('.dashboard-tab').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            if (event && event.target) {
+                event.target.classList.add('active');
+            }
+
+            // Find and load the tab
+            const tab = currentDashboard.tabs.find(t => t.id === tabId);
+            if (tab) {
+                currentTabId = tabId;
+                await loadTabCharts(tab);
+            }
+        }
+
+        async function loadTabCharts(tab) {
+            const grid = document.getElementById('chartsGrid');
+            grid.innerHTML = '';
+
+            if (!tab.charts || tab.charts.length === 0) {
+                grid.innerHTML = '<div class="loading"><div>No charts in this tab</div></div>';
+                return;
+            }
+
+            for (const chartConfig of tab.charts) {
+                // Store chart config for menu actions
+                currentChartConfigs[chartConfig.id] = chartConfig;
+
+                const chartDiv = document.createElement('div');
+                const chartSize = chartConfig.size || 'medium';
+                chartDiv.className = `chart-container chart-size-${chartSize}`;
+
+                // Build filter display HTML if chart has filters (skip invalid ones)
+                let filtersHTML = '';
+                if (chartConfig.filters && chartConfig.filters.length > 0) {
+                    const validFilters = chartConfig.filters.filter(f =>
+                        f.value !== 'CURRENT_YEAR' && f.value !== 'CURRENT_MONTH'
+                    );
+                    if (validFilters.length > 0) {
+                        const filterLabels = validFilters.map(f =>
+                            `<span style="display: inline-block; padding: 3px 8px; background: #e0e7ff; border-radius: 4px; font-size: 0.75rem; margin: 2px;">${f.field} ${f.operator} ${f.value}</span>`
+                        ).join(' ');
+                        filtersHTML = `<div style="margin-bottom: 8px; color: #6366f1; font-size: 0.85rem;">🔍 Filters: ${filterLabels}</div>`;
+                    }
+                }
+
+                // Add three-dot menu for chart actions
+                chartDiv.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                        <h3 class="chart-title" style="margin: 0;">${chartConfig.title}</h3>
+                        <div class="chart-menu" style="position: relative;">
+                            <button class="chart-menu-btn" onclick="toggleChartMenu('${chartConfig.id}')" style="background: none; border: none; cursor: pointer; font-size: 1.2rem; color: #6b7280; padding: 4px 8px; border-radius: 4px; transition: background 0.2s;">⋮</button>
+                            <div id="menu-${chartConfig.id}" class="chart-menu-dropdown" style="display: none; position: absolute; right: 0; top: 100%; background: white; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); min-width: 160px; z-index: 1000;">
+                                <button onclick="editChartFromDashboard('${chartConfig.id}')" style="width: 100%; text-align: left; padding: 10px 16px; border: none; background: none; cursor: pointer; font-size: 0.875rem; color: #374151; transition: background 0.2s; border-radius: 8px 8px 0 0;">✏️ Edit Chart</button>
+                                <button onclick="showChartQuery('${chartConfig.id}')" style="width: 100%; text-align: left; padding: 10px 16px; border: none; background: none; cursor: pointer; font-size: 0.875rem; color: #374151; transition: background 0.2s;">📋 View Query</button>
+                                <button onclick="refreshChart('${chartConfig.id}')" style="width: 100%; text-align: left; padding: 10px 16px; border: none; background: none; cursor: pointer; font-size: 0.875rem; color: #374151; transition: background 0.2s; border-radius: 0 0 8px 8px;">🔄 Refresh</button>
+                            </div>
+                        </div>
+                    </div>
+                    ${filtersHTML}
+                    <canvas id="chart-${chartConfig.id}"></canvas>
+                `;
+                grid.appendChild(chartDiv);
+
+                await renderChart(chartConfig);
+            }
+        }
+
+        async function loadCharts(dashboard) {
+            const grid = document.getElementById('chartsGrid');
+            grid.innerHTML = '';
+
+            for (const chartConfig of dashboard.charts) {
+                // Store chart config for menu actions
+                currentChartConfigs[chartConfig.id] = chartConfig;
+
+                const chartDiv = document.createElement('div');
+                const chartSize = chartConfig.size || 'medium';
+                chartDiv.className = `chart-container chart-size-${chartSize}`;
+
+                // Build filter display HTML if chart has filters (skip invalid ones)
+                let filtersHTML = '';
+                if (chartConfig.filters && chartConfig.filters.length > 0) {
+                    const validFilters = chartConfig.filters.filter(f =>
+                        f.value !== 'CURRENT_YEAR' && f.value !== 'CURRENT_MONTH'
+                    );
+                    if (validFilters.length > 0) {
+                        const filterLabels = validFilters.map(f =>
+                            `<span style="display: inline-block; padding: 3px 8px; background: #e0e7ff; border-radius: 4px; font-size: 0.75rem; margin: 2px;">${f.field} ${f.operator} ${f.value}</span>`
+                        ).join(' ');
+                        filtersHTML = `<div style="margin-bottom: 8px; color: #6366f1; font-size: 0.85rem;">🔍 Filters: ${filterLabels}</div>`;
+                    }
+                }
+
+                // Add three-dot menu for chart actions
+                chartDiv.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                        <h3 class="chart-title" style="margin: 0;">${chartConfig.title}</h3>
+                        <div class="chart-menu" style="position: relative;">
+                            <button class="chart-menu-btn" onclick="toggleChartMenu('${chartConfig.id}')" style="background: none; border: none; cursor: pointer; font-size: 1.2rem; color: #6b7280; padding: 4px 8px; border-radius: 4px; transition: background 0.2s;">⋮</button>
+                            <div id="menu-${chartConfig.id}" class="chart-menu-dropdown" style="display: none; position: absolute; right: 0; top: 100%; background: white; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); min-width: 160px; z-index: 1000;">
+                                <button onclick="editChartFromDashboard('${chartConfig.id}')" style="width: 100%; text-align: left; padding: 10px 16px; border: none; background: none; cursor: pointer; font-size: 0.875rem; color: #374151; transition: background 0.2s; border-radius: 8px 8px 0 0;">✏️ Edit Chart</button>
+                                <button onclick="showChartQuery('${chartConfig.id}')" style="width: 100%; text-align: left; padding: 10px 16px; border: none; background: none; cursor: pointer; font-size: 0.875rem; color: #374151; transition: background 0.2s;">📋 View Query</button>
+                                <button onclick="refreshChart('${chartConfig.id}')" style="width: 100%; text-align: left; padding: 10px 16px; border: none; background: none; cursor: pointer; font-size: 0.875rem; color: #374151; transition: background 0.2s; border-radius: 0 0 8px 8px;">🔄 Refresh</button>
+                            </div>
+                        </div>
+                    </div>
+                    ${filtersHTML}
+                    <canvas id="chart-${chartConfig.id}"></canvas>
+                `;
+                grid.appendChild(chartDiv);
+
+                await renderChart(chartConfig);
+            }
+        }
+
+        function getChartColors(chartConfig, dataLength) {
+            const colorSchemes = {
+                blue: '#3b82f6',
+                green: '#10b981',
+                red: '#ef4444',
+                purple: '#8b5cf6',
+                orange: '#f59e0b',
+                teal: '#14b8a6'
+            };
+
+            // Use custom colors if provided
+            if (chartConfig.colors && chartConfig.colors.length > 0) {
+                return {
+                    background: chartConfig.colors.map(c => c + 'cc'),
+                    border: chartConfig.colors
+                };
+            }
+
+            // Use color scheme
+            const baseColor = colorSchemes[chartConfig.color_scheme] || colorSchemes.blue;
+
+            if (['pie', 'doughnut'].includes(chartConfig.type)) {
+                // Generate multiple colors for pie/doughnut
+                const colors = [];
+                for (let i = 0; i < dataLength; i++) {
+                    const hue = (i * 360 / dataLength) % 360;
+                    colors.push(`hsl(${hue}, 70%, 60%)`);
+                }
+                return {
+                    background: colors.map(c => c.replace('60%', '60%, 0.8')),
+                    border: colors
+                };
+            }
+
+            // Single color for bar/line charts
+            return {
+                background: baseColor + 'cc',
+                border: baseColor
+            };
+        }
+
+        async function renderChart(chartConfig) {
+            try {
+                // Build filter structure with expressions
+                // Format: {filters: {field: value}, filter_expressions: {field: expression}}
+                const filterDict = {};
+                const filterExpressionsDict = {};
+
+                // Add user-selected filters with their expressions
+                Object.keys(currentFilters).forEach(key => {
+                    if (currentFilters[key]) {
+                        filterDict[key] = currentFilters[key];
+                        // Add expression if it exists for this filter
+                        if (filterExpressions[key]) {
+                            filterExpressionsDict[key] = filterExpressions[key];
+                        }
+                    }
+                });
+
+                // Build query payload based on chart type
+                let queryPayload;
+                const hasFilters = Object.keys(filterDict).length > 0;
+                const hasExpressions = Object.keys(filterExpressionsDict).length > 0;
+
+                if (chartConfig.type === 'metric') {
+                    // For metric charts, send x_axis and y_axis (NOT type: 'metric')
+                    // The backend will GROUP BY, and we'll sum the results on the frontend
+                    const metricField = chartConfig.metric || chartConfig.y_axis;
+                    queryPayload = {
+                        table: chartConfig.model,
+                        x_axis: metricField,
+                        y_axis: metricField,
+                        aggregation: chartConfig.aggregation || 'sum',
+                        filters: hasFilters ? filterDict : undefined,
+                        filter_expressions: hasExpressions ? filterExpressionsDict : undefined
+                    };
+                    console.log('Metric chart query payload:', queryPayload);
+                } else if (chartConfig.type === 'table') {
+                    // For table charts
+                    queryPayload = {
+                        type: 'table',
+                        table: chartConfig.model,
+                        columns: chartConfig.columns || [],
+                        filters: hasFilters ? filterDict : undefined,
+                        filter_expressions: hasExpressions ? filterExpressionsDict : undefined
+                    };
+                } else {
+                    // For regular charts
+                    queryPayload = {
+                        table: chartConfig.model,
+                        type: chartConfig.type,
+                        x_axis: chartConfig.x_axis,
+                        y_axis: chartConfig.y_axis,
+                        aggregation: chartConfig.aggregation || 'sum',
+                        filters: hasFilters ? filterDict : undefined,
+                        filter_expressions: hasExpressions ? filterExpressionsDict : undefined
+                    };
+
+                    // For stacked bar charts, add category field
+                    if (chartConfig.type === 'bar-stacked' && chartConfig.category) {
+                        queryPayload.category = chartConfig.category;
+                    }
+                }
+
+                const response = await fetch('/api/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(queryPayload)
+                });
+
+                const data = await response.json();
+                console.log('Response data:', data);
+
+                if (chartConfig.type === 'metric') {
+                    // Render metric - handle both direct value and values array
+                    const canvas = document.getElementById(`chart-${chartConfig.id}`);
+
+                    let value = 0;
+                    if (data.value !== undefined) {
+                        // Direct value from metric endpoint
+                        value = data.value;
+                        console.log('Using data.value:', value);
+                    } else if (data.values && data.values.length > 0) {
+                        // Sum values array
+                        value = data.values.reduce((a, b) => a + b, 0);
+                        console.log('Summing values array:', data.values, 'Total:', value);
+                    }
+
+                    canvas.style.display = 'none';
+                    const metricDiv = document.createElement('div');
+                    metricDiv.style.cssText = 'text-align: center; padding: 30px 0;';
+                    metricDiv.innerHTML = `
+                        <div style="font-size: 3rem; font-weight: 700; color: #667eea;">
+                            ${typeof value === 'number' ? value.toLocaleString() : value}
+                        </div>
+                        <div style="font-size: 0.9rem; color: #888; margin-top: 8px;">
+                            ${chartConfig.aggregation?.toUpperCase() || 'TOTAL'}
+                        </div>
+                    `;
+                    canvas.parentElement.appendChild(metricDiv);
+                } else if (chartConfig.type === 'table') {
+                    // Render table chart
+                    const canvas = document.getElementById(`chart-${chartConfig.id}`);
+                    canvas.style.display = 'none';
+
+                    // Create table element
+                    const tableDiv = document.createElement('div');
+                    tableDiv.style.cssText = 'overflow-x: auto; max-height: 400px;';
+
+                    let tableHTML = '<table style="width: 100%; border-collapse: collapse; font-size: 0.875rem;"><thead style="position: sticky; top: 0; background: #f9fafb;"><tr>';
+
+                    // Add headers - API returns 'data', not 'rows'
+                    const tableData = data.data || data.rows || [];
+                    if (tableData.length > 0) {
+                        // Use columns array if provided, otherwise get keys from first row
+                        const columns = data.columns || Object.keys(tableData[0]);
+                        columns.forEach(col => {
+                            tableHTML += `<th style="padding: 12px; text-align: left; border-bottom: 2px solid #e5e7eb; font-weight: 600; color: #374151;">${col}</th>`;
+                        });
+                        tableHTML += '</tr></thead><tbody>';
+
+                        // Add rows
+                        tableData.forEach((row, idx) => {
+                            tableHTML += '<tr style="border-bottom: 1px solid #f3f4f6;">';
+                            columns.forEach(col => {
+                                const val = row[col];
+                                tableHTML += `<td style="padding: 12px; color: #6b7280;">${val !== null && val !== undefined ? val : ''}</td>`;
+                            });
+                            tableHTML += '</tr>';
+                        });
+
+                        tableHTML += '</tbody></table>';
+                    } else {
+                        tableHTML = '<p style="padding: 20px; text-align: center; color: #9ca3af;">No data available</p>';
+                    }
+
+                    tableDiv.innerHTML = tableHTML;
+                    canvas.parentElement.appendChild(tableDiv);
+                } else {
+                    // Render chart with proper colors
+                    const canvas = document.getElementById(`chart-${chartConfig.id}`);
+                    const ctx = canvas.getContext('2d');
+
+                    const colors = getChartColors(chartConfig, (data.labels || []).length);
+
+                    // Handle bar-stacked -> bar conversion
+                    let chartType = chartConfig.type;
+                    let chartOptions = {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                display: ['pie', 'doughnut'].includes(chartConfig.type),
+                                labels: {
+                                    color: '#374151',
+                                    font: {
+                                        size: 12,
+                                        weight: '500'
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                titleColor: '#fff',
+                                bodyColor: '#fff',
+                                borderColor: '#667eea',
+                                borderWidth: 1
+                            }
+                        },
+                        scales: ['pie', 'doughnut'].includes(chartConfig.type) ? {} : {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    color: '#6b7280'
+                                },
+                                grid: {
+                                    color: '#e5e7eb'
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    color: '#6b7280'
+                                },
+                                grid: {
+                                    color: '#e5e7eb'
+                                }
+                            }
+                        }
+                    };
+
+                    // Convert bar-stacked to bar with stacking enabled
+                    if (chartConfig.type === 'bar-stacked') {
+                        chartType = 'bar';
+                        chartOptions.scales.x.stacked = true;
+                        chartOptions.scales.y.stacked = true;
+                        chartOptions.plugins.legend.display = true; // Show legend for stacked charts
+                    }
+
+                    // Prepare datasets - handle both single dataset and multiple datasets (for stacked charts)
+                    let datasets;
+                    if (data.datasets && Array.isArray(data.datasets)) {
+                        // Stacked chart with multiple datasets from backend
+                        const stackedColors = [
+                            { bg: 'rgba(102, 126, 234, 0.8)', border: 'rgba(102, 126, 234, 1)' },
+                            { bg: 'rgba(16, 185, 129, 0.8)', border: 'rgba(16, 185, 129, 1)' },
+                            { bg: 'rgba(245, 158, 11, 0.8)', border: 'rgba(245, 158, 11, 1)' },
+                            { bg: 'rgba(239, 68, 68, 0.8)', border: 'rgba(239, 68, 68, 1)' },
+                            { bg: 'rgba(139, 92, 246, 0.8)', border: 'rgba(139, 92, 246, 1)' },
+                            { bg: 'rgba(236, 72, 153, 0.8)', border: 'rgba(236, 72, 153, 1)' }
+                        ];
+                        datasets = data.datasets.map((ds, idx) => ({
+                            label: ds.label,
+                            data: ds.data,
+                            backgroundColor: stackedColors[idx % stackedColors.length].bg,
+                            borderColor: stackedColors[idx % stackedColors.length].border,
+                            borderWidth: 2
+                        }));
+                    } else {
+                        // Regular chart with single dataset
+                        datasets = [{
+                            label: chartConfig.title,
+                            data: data.values || [],
+                            backgroundColor: colors.background,
+                            borderColor: colors.border,
+                            borderWidth: 2,
+                            tension: 0.4
+                        }];
+                    }
+
+                    new Chart(ctx, {
+                        type: chartType,
+                        data: {
+                            labels: data.labels || [],
+                            datasets: datasets
+                        },
+                        options: chartOptions
+                    });
+                }
+            } catch (error) {
+                console.error(`Error rendering chart ${chartConfig.id}:`, error);
+            }
+        }
+
+        function applyFilter(field, value, expression) {
+            if (value) {
+                currentFilters[field] = value;
+                if (expression) {
+                    filterExpressions[field] = expression;
+                }
+            } else {
+                delete currentFilters[field];
+                delete filterExpressions[field];
+            }
+
+            // Reload dashboard with new filters
+            loadDashboard();
+        }
+
+        function editDashboard() {
+            // Navigate to the main app and open the dashboard editor
+            window.location.href = `/?edit=${dashboardId}`;
+        }
+
+        // Chart menu functions
+        let currentChartConfigs = {};
+
+        function toggleChartMenu(chartId) {
+            const menu = document.getElementById(`menu-${chartId}`);
+            // Close all other menus
+            document.querySelectorAll('.chart-menu-dropdown').forEach(m => {
+                if (m.id !== `menu-${chartId}`) m.style.display = 'none';
+            });
+            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Close menus when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.chart-menu')) {
+                document.querySelectorAll('.chart-menu-dropdown').forEach(m => {
+                    m.style.display = 'none';
+                });
+            }
+        });
+
+        function editChartFromDashboard(chartId) {
+            const chartConfig = currentChartConfigs[chartId];
+            if (chartConfig) {
+                // Store chart config in sessionStorage so main app can load it
+                sessionStorage.setItem('editChart', JSON.stringify(chartConfig));
+                // Navigate to main app with edit flag
+                window.location.href = `/?action=editChart`;
+            }
+        }
+
+        async function showChartQuery(chartId) {
+            const chartConfig = currentChartConfigs[chartId];
+            if (!chartConfig) return;
+
+            // Build the filters applied to this chart
+            const filterDict = {};
+            Object.keys(currentFilters).forEach(key => {
+                if (currentFilters[key]) filterDict[key] = currentFilters[key];
+            });
+
+            // Generate SQL query approximation
+            let sqlQuery = '';
+            const agg = (chartConfig.aggregation || 'sum').toUpperCase();
+            const table = chartConfig.model;
+
+            if (chartConfig.type === 'metric') {
+                // Metric chart: single aggregate value
+                const metricField = chartConfig.metric || chartConfig.y_axis;
+                sqlQuery = `SELECT ${agg}(${metricField}) AS value\nFROM public.${table}`;
+
+                if (Object.keys(filterDict).length > 0) {
+                    const whereClauses = Object.entries(filterDict).map(([field, value]) =>
+                        `  ${field} = '${value}'`
+                    ).join(' AND\n');
+                    sqlQuery += `\nWHERE\n${whereClauses}`;
+                }
+            } else {
+                // Regular chart: grouped data
+                const xAxis = chartConfig.x_axis;
+                const yAxis = chartConfig.y_axis;
+
+                sqlQuery = `SELECT\n  ${xAxis} AS label,\n  ${agg}(${yAxis}) AS value\nFROM public.${table}`;
+
+                const whereClauses = [`  ${xAxis} IS NOT NULL`];
+                Object.entries(filterDict).forEach(([field, value]) => {
+                    whereClauses.push(`  ${field} = '${value}'`);
+                });
+
+                sqlQuery += `\nWHERE\n${whereClauses.join(' AND\n')}`;
+                sqlQuery += `\nGROUP BY ${xAxis}\nORDER BY ${xAxis}\nLIMIT 50`;
+            }
+
+            // Show query in a better format
+            const queryInfo = `Chart: ${chartConfig.title}\n\n${sqlQuery}`;
+            alert(queryInfo);
+        }
+
+        async function refreshChart(chartId) {
+            const chartConfig = currentChartConfigs[chartId];
+            if (!chartConfig) return;
+
+            // Find the chart container and re-render
+            const canvas = document.getElementById(`chart-${chartId}`);
+            if (canvas) {
+                // Clear the canvas parent
+                const parent = canvas.parentElement;
+                const chartContent = parent.querySelector('canvas').parentElement;
+
+                // Remove old metric divs if any
+                parent.querySelectorAll('div').forEach(div => {
+                    if (div.style.textAlign === 'center' && div.style.padding) {
+                        div.remove();
+                    }
+                });
+
+                // Re-render
+                await renderChart(chartConfig);
+            }
+        }
+
+        async function exportPDF() {
+            // Use browser's print functionality
+            window.print();
+        }
+
+        async function exportData(format) {
+            try {
+                const dashboardId = new URLSearchParams(window.location.search).get('id') ||
+                                   window.location.pathname.split('/').pop();
+
+                const response = await fetch(`/api/dashboard/${dashboardId}/export`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ format: format })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Export failed: ${response.statusText}`);
+                }
+
+                // Get the filename from the response headers or use a default
+                const contentDisposition = response.headers.get('content-disposition');
+                let filename = `dashboard_${dashboardId}.${format === 'excel' ? 'xlsx' : 'csv'}`;
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+                    if (filenameMatch) filename = filenameMatch[1];
+                }
+
+                // Download the file
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+
+            } catch (error) {
+                console.error('Export error:', error);
+                alert('Failed to export data: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

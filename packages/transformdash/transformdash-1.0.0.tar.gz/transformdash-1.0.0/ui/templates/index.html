@@ -1,0 +1,1761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TransformDash - Data Transformation Platform</title>
+
+    <!-- Modern Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- External Libraries -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="/static/css/styles.css?v=20251029T">
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <span class="logo-icon">📊</span>
+                <span class="logo-text">TransformDash</span>
+            </div>
+            <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 12h18M3 6h18M3 18h18"/>
+                </svg>
+            </button>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="nav-section">
+                <div class="nav-section-title">Main</div>
+                <a href="#" class="nav-item active" data-view="overview" onclick="switchView('overview')">
+                    <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                        <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+                    </svg>
+                    <span class="nav-text">Overview</span>
+                </a>
+                <a href="#" class="nav-item" data-view="dashboards" onclick="switchView('dashboards')">
+                    <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+                    </svg>
+                    <span class="nav-text">Dashboards</span>
+                </a>
+                <a href="#" class="nav-item" data-view="models" onclick="switchView('models')">
+                    <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                    </svg>
+                    <span class="nav-text">Models</span>
+                </a>
+                <a href="#" class="nav-item" data-view="lineage" onclick="switchView('lineage')">
+                    <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                        <path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/>
+                    </svg>
+                    <span class="nav-text">Lineage</span>
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Analytics</div>
+                <a href="#" class="nav-item" data-view="query-lab" onclick="event.preventDefault(); event.stopPropagation(); switchView('query-lab'); return false;">
+                    <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                        <path d="M8 7h8M8 11h8M8 15h5"/>
+                    </svg>
+                    <span class="nav-text">SQL Query Lab</span>
+                </a>
+                <a href="#" class="nav-item" data-view="charts" onclick="event.preventDefault(); event.stopPropagation(); switchView('charts'); return false;">
+                    <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/>
+                    </svg>
+                    <span class="nav-text">Charts</span>
+                </a>
+                <a href="#" class="nav-item" data-view="ml-models" onclick="event.preventDefault(); event.stopPropagation(); switchView('ml-models'); return false;">
+                    <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M12 1v6m0 6v6"/>
+                        <circle cx="12" cy="12" r="10"/>
+                    </svg>
+                    <span class="nav-text">ML Models</span>
+                </a>
+                <a href="#" class="nav-item" data-view="datasets" onclick="event.preventDefault(); event.stopPropagation(); switchView('datasets'); return false;">
+                    <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                        <line x1="12" y1="22.08" x2="12" y2="12"/>
+                    </svg>
+                    <span class="nav-text">Datasets</span>
+                </a>
+                <a href="#" class="nav-item" data-view="assets" onclick="event.preventDefault(); event.stopPropagation(); switchView('assets'); return false;">
+                    <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+                        <polyline points="13 2 13 9 20 9"/>
+                    </svg>
+                    <span class="nav-text">Assets</span>
+                </a>
+                <a href="#" class="nav-item" data-view="runs" onclick="event.preventDefault(); event.stopPropagation(); switchView('runs'); return false;">
+                    <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                    </svg>
+                    <span class="nav-text">Run History</span>
+                </a>
+                <a href="#" class="nav-item" data-view="schedules" onclick="switchView('schedules')">
+                    <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                    <span class="nav-text">Schedules</span>
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">System</div>
+                <a href="#" class="nav-item" data-view="monitor" onclick="event.preventDefault(); event.stopPropagation(); switchView('monitor'); return false;">
+                    <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                        <line x1="8" y1="21" x2="16" y2="21"></line>
+                        <line x1="12" y1="17" x2="12" y2="21"></line>
+                    </svg>
+                    <span class="nav-text">System Monitor</span>
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Configuration</div>
+                <a href="#" class="nav-item" id="users-menu-item" data-view="users" onclick="switchView('users')" style="{% if not user.is_superuser %}{% set has_view_users = namespace(found=false) %}{% for role in user.roles %}{% for perm in role.permissions if perm.name == 'view_users' %}{% set has_view_users.found = true %}{% endfor %}{% endfor %}{% if not has_view_users.found %}display: none;{% endif %}{% endif %}">
+                    <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                    <span class="nav-text">Users & Permissions</span>
+                </a>
+                <a href="#" class="nav-item" data-view="settings" onclick="switchView('settings')">
+                    <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"/>
+                    </svg>
+                    <span class="nav-text">Settings</span>
+                </a>
+            </div>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-profile">
+                <div class="user-avatar">👤</div>
+                <div class="user-info">
+                    <div class="user-name" id="current-user-name">{{ user.full_name or user.username }}</div>
+                    <div class="user-role" id="current-user-role">
+                        {% if user.is_superuser %}
+                        Superuser
+                        {% elif user.roles %}
+                        {{ user.roles[0].name }}
+                        {% else %}
+                        No Role
+                        {% endif %}
+                    </div>
+                </div>
+                <button onclick="logout()" style="background: none; border: none; cursor: pointer; padding: 4px; color: #6b7280; margin-left: auto; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 6px; transition: background 0.15s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='none'" title="Logout">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                        <polyline points="16 17 21 12 16 7"/>
+                        <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Top Bar -->
+        <div class="topbar">
+            <div class="topbar-left">
+                <button class="mobile-menu-btn" onclick="toggleSidebar()">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 12h18M3 6h18M3 18h18"/>
+                    </svg>
+                </button>
+
+                <!-- Global Search -->
+                <div class="search-container">
+                    <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    <input type="text" id="globalSearch" class="search-input" placeholder="Search models, dashboards, charts..." onkeyup="handleGlobalSearch(event)">
+                    <div class="search-results" id="searchResults"></div>
+                </div>
+            </div>
+
+            <div class="topbar-right">
+                <!-- Status Indicator -->
+                <div class="status-widget">
+                    <div class="status-dot pulsing"></div>
+                    <span class="status-text">System Active</span>
+                </div>
+
+                <!-- Theme Toggle -->
+                <button class="icon-button" onclick="toggleDarkMode()" title="Toggle Theme">
+                    <svg id="theme-icon-light" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="5"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                    </svg>
+                    <svg id="theme-icon-dark" class="hidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                    </svg>
+                </button>
+
+                <!-- Notifications -->
+                <button class="icon-button" onclick="toggleNotifications()" title="Notifications">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                    </svg>
+                    <span class="notification-badge">3</span>
+                </button>
+
+                <!-- Settings -->
+                <button class="icon-button" onclick="openSettings()" title="Settings">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Content Area -->
+        <div class="content-wrapper">
+            <!-- Overview View -->
+            <div id="overview-view" class="view-content active">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Overview</h1>
+                        <p class="page-subtitle">Monitor your data transformation pipeline</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="runTransformations()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="5 3 19 12 5 21 5 3"/>
+                        </svg>
+                        Run Pipeline
+                    </button>
+                </div>
+
+                <!-- Metrics Cards -->
+                <div class="metrics-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));">
+                    <div class="metric-card" onclick="switchView('models')" style="cursor: pointer;" title="Click to view all models">
+                        <div class="metric-header">
+                            <div class="metric-icon bg-blue">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="metric-value" id="total-models">—</div>
+                        <div class="metric-label">Total Models</div>
+                    </div>
+
+                    <div class="metric-card" onclick="switchView('models'); filterModelsByLayer('bronze')" style="cursor: pointer;" title="Click to view Bronze models">
+                        <div class="metric-header">
+                            <div class="metric-icon bg-bronze">
+                                <span style="font-size: 20px;">🥉</span>
+                            </div>
+                        </div>
+                        <div class="metric-value" id="bronze-count">—</div>
+                        <div class="metric-label">Bronze Layer</div>
+                    </div>
+
+                    <div class="metric-card" onclick="switchView('models'); filterModelsByLayer('silver')" style="cursor: pointer;" title="Click to view Silver models">
+                        <div class="metric-header">
+                            <div class="metric-icon bg-silver">
+                                <span style="font-size: 20px;">🥈</span>
+                            </div>
+                        </div>
+                        <div class="metric-value" id="silver-count">—</div>
+                        <div class="metric-label">Silver Layer</div>
+                    </div>
+
+                    <div class="metric-card" onclick="switchView('models'); filterModelsByLayer('gold')" style="cursor: pointer;" title="Click to view Gold models">
+                        <div class="metric-header">
+                            <div class="metric-icon bg-gold">
+                                <span style="font-size: 20px;">🥇</span>
+                            </div>
+                        </div>
+                        <div class="metric-value" id="gold-count">—</div>
+                        <div class="metric-label">Gold Layer</div>
+                    </div>
+
+                    <div class="metric-card" onclick="switchView('dashboards')" style="cursor: pointer;" title="Click to view dashboards">
+                        <div class="metric-header">
+                            <div class="metric-icon" style="background: linear-gradient(135deg, #f093fb, #f5576c); color: white;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="7" height="7"/>
+                                    <rect x="14" y="3" width="7" height="7"/>
+                                    <rect x="14" y="14" width="7" height="7"/>
+                                    <rect x="3" y="14" width="7" height="7"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="metric-value" id="total-dashboards">—</div>
+                        <div class="metric-label">Dashboards</div>
+                    </div>
+
+                    <div class="metric-card" onclick="switchView('charts')" style="cursor: pointer;" title="Click to view charts">
+                        <div class="metric-header">
+                            <div class="metric-icon" style="background: linear-gradient(135deg, #4facfe, #00f2fe); color: white;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="12" y1="20" x2="12" y2="10"/>
+                                    <line x1="18" y1="20" x2="18" y2="4"/>
+                                    <line x1="6" y1="20" x2="6" y2="16"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="metric-value" id="total-charts">—</div>
+                        <div class="metric-label">Charts</div>
+                    </div>
+
+                    <div class="metric-card" style="cursor: default;" title="Last pipeline run">
+                        <div class="metric-header">
+                            <div class="metric-icon" style="background: linear-gradient(135deg, #43e97b, #38f9d7); color: white;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <polyline points="12 6 12 12 16 14"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="metric-value" id="last-run-time" style="font-size: 0.9rem;">—</div>
+                        <div class="metric-label">Last Run</div>
+                    </div>
+
+                    <div class="metric-card" style="cursor: default;" title="Total rows in database">
+                        <div class="metric-header">
+                            <div class="metric-icon" style="background: linear-gradient(135deg, #fa709a, #fee140); color: white;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <ellipse cx="12" cy="5" rx="9" ry="3"/>
+                                    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+                                    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="metric-value" id="total-rows">—</div>
+                        <div class="metric-label">Total Rows</div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="quick-actions">
+                    <h3 class="section-title">Quick Actions</h3>
+                    <div class="action-cards">
+                        <div class="action-card" onclick="switchView('models')">
+                            <div class="action-icon">📦</div>
+                            <div class="action-title">View Models</div>
+                            <div class="action-subtitle">Explore transformation models</div>
+                        </div>
+                        <div class="action-card" onclick="switchView('dashboards')">
+                            <div class="action-icon">📊</div>
+                            <div class="action-title">Dashboards</div>
+                            <div class="action-subtitle">View analytics dashboards</div>
+                        </div>
+                        <div class="action-card" onclick="switchView('lineage')">
+                            <div class="action-icon">🔗</div>
+                            <div class="action-title">Data Lineage</div>
+                            <div class="action-subtitle">Track dependencies</div>
+                        </div>
+                        <div class="action-card" onclick="switchView('charts')">
+                            <div class="action-icon">📈</div>
+                            <div class="action-title">Create Charts</div>
+                            <div class="action-subtitle">Build visualizations</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="recent-activity">
+                    <div class="section-header">
+                        <h3 class="section-title">Recent Activity</h3>
+                        <a href="#" class="text-link" onclick="switchView('runs')">View all →</a>
+                    </div>
+                    <div id="recent-runs-list"></div>
+                </div>
+            </div>
+
+            <!-- Dashboards View -->
+            <div id="dashboards-view" class="view-content">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Dashboards</h1>
+                        <p class="page-subtitle">Interactive analytics and reporting</p>
+                    </div>
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <!-- View Toggle -->
+                        <div class="view-toggle-group" style="display: flex; gap: 4px; background: #f3f4f6; padding: 4px; border-radius: 8px;">
+                            <button class="view-toggle-btn-dashboards active" data-view-dashboards="grid" onclick="toggleDashboardsView('grid')" title="Grid view">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                                    <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+                                </svg>
+                            </button>
+                            <button class="view-toggle-btn-dashboards" data-view-dashboards="table" onclick="toggleDashboardsView('table')" title="Table view">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+                                    <line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/>
+                                    <line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <button class="btn btn-primary" onclick="createNewDashboard()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 5v14M5 12h14"/>
+                            </svg>
+                            New Dashboard
+                        </button>
+                    </div>
+                </div>
+                <!-- Search Box -->
+                <div class="search-container" style="margin-bottom: 1rem; max-width: 400px;">
+                    <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    <input type="text" id="dashboards-search" class="search-input" placeholder="Search dashboards by name, description, creator..." oninput="handleDashboardsSearch(this.value)">
+                    <button onclick="clearDashboardsSearch()" style="position: absolute; right: 10px; background: none; border: none; color: #6b7280; cursor: pointer; display: none;" id="dashboards-search-clear">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 6L6 18M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <div id="dashboards-list"></div>
+            </div>
+
+            <!-- Dashboard Editor View -->
+            <div id="dashboard-editor-view" class="view-content" style="display: none;">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title" id="editor-dashboard-name">Edit Dashboard</h1>
+                        <p class="page-subtitle">Arrange charts and customize layout</p>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn btn-secondary" onclick="openDashboardSettingsModal()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="3"/>
+                                <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"/>
+                            </svg>
+                            Settings
+                        </button>
+                        <button class="btn btn-secondary" onclick="cancelDashboardEdit()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 6L6 18M6 6l12 12"/>
+                            </svg>
+                            Cancel
+                        </button>
+                        <button class="btn btn-primary" onclick="saveDashboardEdit()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                                <polyline points="17 21 17 13 7 13 7 21"/>
+                                <polyline points="7 3 7 8 15 8"/>
+                            </svg>
+                            Save Changes
+                        </button>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 300px; gap: var(--space-6); height: calc(100vh - 200px);">
+                    <!-- Main Content Area -->
+                    <div style="display: flex; flex-direction: column; gap: var(--space-6); overflow-y: auto;">
+                        <!-- Dashboard Filters Section -->
+                        <div class="card" style="padding: var(--space-6);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-4);">
+                                <h3 style="color: var(--text-secondary); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em;">Dashboard Filters</h3>
+                                <button class="btn btn-sm btn-primary" onclick="addDashboardFilter()">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    </svg>
+                                    Add Filter
+                                </button>
+                            </div>
+                            <div id="dashboard-filters-editor">
+                                <!-- Filters will be added here -->
+                                <div style="color: var(--text-tertiary); font-size: 0.875rem; padding: 20px; text-align: center;">
+                                    No filters configured. Click "Add Filter" to create interactive filters for your dashboard.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Chart Canvas -->
+                        <div class="card" style="padding: var(--space-6);">
+                            <h3 style="margin-bottom: var(--space-4); color: var(--text-secondary); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em;">Dashboard Layout</h3>
+                            <!-- Tabs container -->
+                            <div id="editor-tabs-container"></div>
+                            <div id="editor-chart-grid" class="dashboard-editor-grid">
+                                <!-- Charts will be added here dynamically -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Available Charts Sidebar -->
+                    <div class="card" style="padding: var(--space-6); overflow-y: auto;">
+                        <h3 style="margin-bottom: var(--space-4); color: var(--text-secondary); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em;">Available Charts</h3>
+                        <div id="available-charts-list">
+                            <!-- Available charts will be listed here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Models View -->
+            <div id="models-view" class="view-content">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Models</h1>
+                        <p class="page-subtitle">Data transformation models</p>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn btn-secondary" onclick="loadModels()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                            </svg>
+                            Refresh
+                        </button>
+                        <button class="btn btn-primary" id="runBtn" onclick="runTransformations()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polygon points="5 3 19 12 5 21 5 3"/>
+                            </svg>
+                            Run All
+                        </button>
+                    </div>
+                </div>
+                <div id="execution-status"></div>
+                <!-- Search Box -->
+                <div class="search-container" style="margin-bottom: 1rem; max-width: 400px;">
+                    <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    <input type="text" id="models-search" class="search-input" placeholder="Search models by name, description, layer..." oninput="handleModelsSearch(this.value)">
+                    <button onclick="clearModelsSearch()" style="position: absolute; right: 10px; background: none; border: none; color: #6b7280; cursor: pointer; display: none;" id="models-search-clear">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 6L6 18M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <div id="models-list"></div>
+            </div>
+
+            <!-- Lineage View -->
+            <div id="lineage-view" class="view-content">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Data Lineage</h1>
+                        <p class="page-subtitle">Dependency graph and execution flow</p>
+                    </div>
+                </div>
+                <div id="lineage-graph" class="lineage-container"></div>
+            </div>
+
+            <!-- Charts View -->
+            <div id="charts-view" class="view-content">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Charts</h1>
+                        <p class="page-subtitle">Create and manage visualizations</p>
+                    </div>
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <!-- View Toggle -->
+                        <div class="view-toggle-group" style="display: flex; gap: 4px; background: #f3f4f6; padding: 4px; border-radius: 8px;">
+                            <button class="view-toggle-btn-charts active" data-view-charts="grid" onclick="toggleChartsView('grid')" title="Grid view">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                                    <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+                                </svg>
+                            </button>
+                            <button class="view-toggle-btn-charts" data-view-charts="table" onclick="toggleChartsView('table')" title="Table view">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+                                    <line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/>
+                                    <line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <button onclick="switchView('chart-builder')" class="btn btn-primary" id="toggleChartBuilderBtn">
+                            ✨ Create New Chart
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Search Box -->
+                <div class="search-container" style="margin-bottom: 1rem; max-width: 400px;">
+                    <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    <input type="text" id="charts-search" class="search-input" placeholder="Search charts by title, type, model, dashboard..." oninput="handleChartsSearch(this.value)">
+                    <button onclick="clearChartsSearch()" style="position: absolute; right: 10px; background: none; border: none; color: #6b7280; cursor: pointer; display: none;" id="charts-search-clear">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 6L6 18M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- All Charts List -->
+                <div class="section-title">📊 All Charts</div>
+                <div id="all-charts-list" class="charts-grid" style="margin-bottom: 3rem;"></div>
+            </div>
+
+            <!-- Chart Builder View (New Full Page View) -->
+            <div id="chart-builder-view" class="view-content">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">✨ Create New Chart</h1>
+                        <p class="page-subtitle">Build custom visualizations from your data</p>
+                    </div>
+                    <button onclick="switchView('charts')" class="btn btn-secondary">
+                        ← Back to Charts
+                    </button>
+                </div>
+
+                <!-- Chart Builder Section -->
+                <div style="display: grid; grid-template-columns: 480px 1fr; gap: 1.5rem; height: calc(100vh - 180px);">
+                    <!-- Chart Builder Panel -->
+                    <div style="background: var(--color-bg-surface); border: 1px solid var(--color-border); padding: 1.5rem; border-radius: var(--radius-lg); overflow-y: auto; height: 100%;">
+                        <h3 style="margin-bottom: 1.25rem; color: var(--color-text-primary);">📈 Chart Builder</h3>
+
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--color-text-primary); font-size: 0.875rem;">Dashboard</label>
+                            <select id="chartDashboard" onchange="handleDashboardSelection()" class="input">
+                                <option value="">Select dashboard...</option>
+                                <option value="__new__">➕ Create New Dashboard</option>
+                                {% for dashboard in dashboards %}
+                                <option value="{{ dashboard.id }}">{{ dashboard.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div id="newDashboardFields" style="display: none; margin-bottom: 1rem; padding: 1rem; background: var(--color-bg-hover); border-radius: var(--radius-md); border: 1px dashed var(--color-border);">
+                            <div style="margin-bottom: 0.75rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--color-text-primary); font-size: 0.875rem;">New Dashboard Name</label>
+                                <input type="text" id="newDashboardName" placeholder="My Dashboard" class="input">
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--color-text-primary); font-size: 0.875rem;">Description</label>
+                                <input type="text" id="newDashboardDescription" placeholder="Dashboard description" class="input">
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--color-text-primary); font-size: 0.875rem;">Chart Title</label>
+                            <input type="text" id="chartTitle" placeholder="My Chart" class="input">
+                        </div>
+
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--color-text-primary); font-size: 0.875rem;">Description (Optional)</label>
+                            <textarea id="chartDescription" placeholder="Describe what this chart shows..." class="input" rows="2" style="resize: vertical;"></textarea>
+                        </div>
+
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--color-text-primary); font-size: 0.875rem;">Connection</label>
+                            <select id="chartConnection" onchange="loadChartSchemas()" class="input">
+                                <option value="">Select connection...</option>
+                            </select>
+                        </div>
+
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--color-text-primary); font-size: 0.875rem;">Schema</label>
+                            <select id="chartSchema" onchange="loadChartTables()" class="input">
+                                <option value="">Select schema...</option>
+                            </select>
+                        </div>
+
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--color-text-primary); font-size: 0.875rem;">Table</label>
+                            <select id="chartTable" onchange="loadTableColumns()" class="input">
+                                <option value="">Select table...</option>
+                            </select>
+                        </div>
+
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--color-text-primary); font-size: 0.875rem;">Chart Type</label>
+                            <select id="chartType" onchange="handleChartTypeChange()" class="input">
+                                <option value="bar">📊 Bar Chart</option>
+                                <option value="line">📈 Line Chart</option>
+                                <option value="bar-stacked">📊 Stacked Bar Chart</option>
+                                <option value="pie">🥧 Pie Chart</option>
+                                <option value="doughnut">🍩 Doughnut Chart</option>
+                                <option value="table">📋 Table</option>
+                            </select>
+                        </div>
+
+                        <!-- Regular Chart Fields (hidden for table type) -->
+                        <div id="regularChartFields">
+                            <div style="margin-bottom: 1rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--color-text-primary); font-size: 0.875rem;">
+                                    X-Axis (Labels)
+                                    <span style="font-size: 0.7rem; color: var(--color-text-muted); font-weight: normal;">Drop field here</span>
+                                </label>
+                                <select id="chartXAxis" class="input drop-zone" ondrop="handleFieldDrop(event, 'x')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                                    <option value="">Select column...</option>
+                                </select>
+                            </div>
+
+                            <div style="margin-bottom: 1rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--color-text-primary); font-size: 0.875rem;">
+                                    Y-Axis (Values)
+                                    <span style="font-size: 0.7rem; color: var(--color-text-muted); font-weight: normal;">Drop field here</span>
+                                </label>
+                                <select id="chartYAxis" class="input drop-zone" ondrop="handleFieldDrop(event, 'y')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                                    <option value="">Select column...</option>
+                                </select>
+                            </div>
+
+                            <div style="margin-bottom: 1rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--color-text-primary); font-size: 0.875rem;">Aggregation</label>
+                                <select id="chartAggregation" class="input">
+                                    <option value="sum">SUM</option>
+                                    <option value="avg">AVG</option>
+                                    <option value="count">COUNT</option>
+                                    <option value="min">MIN</option>
+                                    <option value="max">MAX</option>
+                                </select>
+                            </div>
+
+                            <!-- Stacked Chart Category Field (hidden by default) -->
+                            <div id="stackedCategoryField" style="display: none; margin-bottom: 1rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--color-text-primary); font-size: 0.875rem;">
+                                    Category/Series Field
+                                    <span style="font-size: 0.7rem; color: var(--color-text-muted); font-weight: normal;">For stacking bars</span>
+                                </label>
+                                <select id="chartCategory" class="input drop-zone" ondrop="handleFieldDrop(event, 'category')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                                    <option value="">Select column...</option>
+                                </select>
+                            </div>
+
+                            <!-- Filters Section -->
+                            <div style="margin-bottom: 1rem; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--color-border);">
+                                <label style="display: block; margin-bottom: 0.75rem; font-weight: 600; color: var(--color-text-primary); font-size: 0.875rem;">
+                                    🔍 Filters
+                                    <span style="font-weight: normal; color: var(--color-text-muted); font-size: 0.8rem;">(optional)</span>
+                                </label>
+                                <div id="filtersContainer" style="margin-bottom: 0.75rem;">
+                                    <p style="color: var(--color-text-muted); font-size: 0.8rem; margin: 0;">No filters added</p>
+                                </div>
+                                <button type="button" onclick="addFilter()" class="btn btn-secondary" style="width: 100%; font-size: 0.875rem;">
+                                    + Add Filter
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Table Chart Fields (hidden by default) -->
+                        <div id="tableChartFields" style="display: none;">
+                            <div style="margin-bottom: 1rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--color-text-primary); font-size: 0.875rem;">Select Columns</label>
+                                <div id="tableColumnsContainer" style="max-height: 300px; overflow-y: auto; border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0.5rem;">
+                                    <p style="color: var(--color-text-muted); font-size: 0.875rem; padding: 1rem;">Select a data source first</p>
+                                </div>
+                            </div>
+                            <button type="button" onclick="addTableColumn()" class="btn btn-secondary" style="width: 100%; margin-bottom: 1rem;">
+                                + Add Column
+                            </button>
+                        </div>
+
+                        <button onclick="createChart()" class="btn btn-primary" style="width: 100%;">
+                            ✨ Create Chart
+                        </button>
+
+                        <div id="chartError" style="margin-top: 1rem; padding: 0.75rem; background: var(--color-error-light); border-radius: var(--radius-md); color: var(--color-error-dark); display: none; font-size: 0.875rem;"></div>
+                    </div>
+
+                    <!-- Chart Preview Panel -->
+                    <div style="background: var(--color-bg-surface); border: 1px solid var(--color-border); padding: 1.5rem; border-radius: var(--radius-lg); display: flex; flex-direction: column; height: 100%;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h3 style="color: var(--color-text-primary);">Preview</h3>
+                            <button onclick="saveChart()" id="saveChartBtn" disabled class="btn btn-secondary">
+                                💾 Save Chart
+                            </button>
+                        </div>
+                        <div style="flex: 1; position: relative; display: flex; flex-direction: column; min-height: 0;">
+                            <canvas id="chartCanvas" style="display: none; width: 100%; height: 100%;"></canvas>
+                            <div id="chartTableContainer" style="display: none; flex: 1; overflow: auto;"></div>
+                            <div id="chartPlaceholder" style="display: flex; align-items: center; justify-content: center; flex: 1; color: var(--color-text-muted); text-align: center;">
+                                Select options and click "Create Chart" to see preview
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Datasets View -->
+            <div id="datasets-view" class="view-content">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Datasets</h1>
+                        <p class="page-subtitle">Manage reusable data sources</p>
+                    </div>
+                    <button onclick="openDatasetBuilder()" class="btn btn-primary">
+                        Create New Dataset
+                    </button>
+                </div>
+
+                <!-- Search and View Toggle -->
+                <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem;">
+                    <div class="search-container" style="flex: 1; max-width: 400px;">
+                        <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                        </svg>
+                        <input type="text" id="datasets-search" class="search-input" placeholder="Search datasets by name, source type, description..." oninput="handleDatasetsSearch(this.value)">
+                        <button onclick="clearDatasetsSearch()" style="position: absolute; right: 10px; background: none; border: none; color: #6b7280; cursor: pointer; display: none;" id="datasets-search-clear">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 6L6 18M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- View Toggle -->
+                    <div class="view-toggle">
+                        <button class="view-toggle-btn active" data-view="grid" onclick="toggleDatasetsView('grid')" title="Grid view">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="7" height="7"></rect>
+                                <rect x="14" y="3" width="7" height="7"></rect>
+                                <rect x="14" y="14" width="7" height="7"></rect>
+                                <rect x="3" y="14" width="7" height="7"></rect>
+                            </svg>
+                        </button>
+                        <button class="view-toggle-btn" data-view="list" onclick="toggleDatasetsView('list')" title="List view">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="8" y1="6" x2="21" y2="6"></line>
+                                <line x1="8" y1="12" x2="21" y2="12"></line>
+                                <line x1="8" y1="18" x2="21" y2="18"></line>
+                                <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                                <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                                <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="datasets-list" class="content-section">
+                    <div id="datasets-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
+                        <!-- Datasets will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- ML Models View -->
+            <div id="ml-models-view" class="view-content">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">ML Models</h1>
+                        <p class="page-subtitle">Train, manage, and deploy machine learning models</p>
+                    </div>
+                    <button onclick="openMLTrainingDialog()" class="btn btn-primary">
+                        Train New Model
+                    </button>
+                </div>
+
+                <!-- Models List -->
+                <div id="ml-models-list" class="content-section">
+                    <div id="ml-models-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px;">
+                        <!-- ML Models will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dataset Editor View -->
+            <div id="dataset-editor-view" class="view-content" style="display: none;">
+                <div class="page-header">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <button onclick="closeDatasetEditor()" class="btn btn-secondary" style="padding: 8px 12px;">
+                            ← Back
+                        </button>
+                        <div>
+                            <h1 class="page-title" id="dataset-editor-title">Dataset Editor</h1>
+                            <p class="page-subtitle" id="dataset-editor-subtitle">Loading...</p>
+                        </div>
+                    </div>
+                    <button onclick="saveDatasetChanges()" class="btn btn-primary">
+                        💾 Save Changes
+                    </button>
+                </div>
+
+                <div class="content-section">
+                    <!-- Tab Navigation -->
+                    <div style="border-bottom: 2px solid #e5e7eb; margin-bottom: 1.5rem;">
+                        <div style="display: flex; gap: 2rem;">
+                            <button id="editor-tab-overview" class="editor-tab active" onclick="switchEditorTab('overview')" style="padding: 12px 0; border: none; background: none; color: #667eea; font-weight: 600; border-bottom: 2px solid #667eea; margin-bottom: -2px; cursor: pointer;">
+                                Overview
+                            </button>
+                            <button id="editor-tab-columns" class="editor-tab" onclick="switchEditorTab('columns')" style="padding: 12px 0; border: none; background: none; color: #6b7280; font-weight: 500; cursor: pointer;">
+                                Columns
+                            </button>
+                            <button id="editor-tab-metrics" class="editor-tab" onclick="switchEditorTab('metrics')" style="padding: 12px 0; border: none; background: none; color: #6b7280; font-weight: 500; cursor: pointer;">
+                                Metrics
+                            </button>
+                            <button id="editor-tab-query" class="editor-tab" onclick="switchEditorTab('query')" style="padding: 12px 0; border: none; background: none; color: #6b7280; font-weight: 500; cursor: pointer;">
+                                Query
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Overview Tab -->
+                    <div id="editor-content-overview" class="editor-tab-content">
+                        <div style="max-width: 800px;">
+                            <div style="margin-bottom: 1.5rem;">
+                                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #374151;">Dataset Name</label>
+                                <input type="text" id="edit-dataset-name" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.95rem;" placeholder="My Dataset">
+                            </div>
+
+                            <div style="margin-bottom: 1.5rem;">
+                                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #374151;">Description</label>
+                                <textarea id="edit-dataset-description" rows="3" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.95rem; font-family: inherit;" placeholder="Describe this dataset..."></textarea>
+                            </div>
+
+                            <div style="margin-bottom: 1.5rem;">
+                                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #374151;">Connection</label>
+                                <div id="edit-dataset-connection" style="padding: 10px; background: #f3f4f6; border-radius: 8px; color: #6b7280; font-size: 0.95rem;">
+                                    Default Connection
+                                </div>
+                            </div>
+
+                            <div style="margin-bottom: 1.5rem;">
+                                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #374151;">Source Type</label>
+                                <div id="edit-dataset-source-type" style="display: inline-block; padding: 6px 12px; background: #e0e7ff; color: #667eea; border-radius: 6px; font-size: 0.875rem; font-weight: 500;">
+                                    Table
+                                </div>
+                            </div>
+
+                            <div id="edit-dataset-table-info" style="margin-bottom: 1.5rem; display: none;">
+                                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #374151;">Table Reference</label>
+                                <div style="padding: 10px; background: #f3f4f6; border-radius: 8px; color: #1f2937; font-family: monospace; font-size: 0.95rem;" id="edit-dataset-table-ref">
+                                    public.table_name
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Columns Tab -->
+                    <div id="editor-content-columns" class="editor-tab-content" style="display: none;">
+                        <div style="margin-bottom: 1rem;">
+                            <button onclick="refreshDatasetColumns()" class="btn btn-secondary" style="padding: 8px 16px;">
+                                🔄 Refresh Columns
+                            </button>
+                        </div>
+                        <div id="dataset-columns-list" style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="background: #f9fafb; border-bottom: 2px solid #e5e7eb;">
+                                        <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151;">Column Name</th>
+                                        <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151;">Data Type</th>
+                                        <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151;">Nullable</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dataset-columns-tbody">
+                                    <tr><td colspan="3" style="padding: 2rem; text-align: center; color: #9ca3af;">Loading columns...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Metrics Tab -->
+                    <div id="editor-content-metrics" class="editor-tab-content" style="display: none;">
+                        <div style="margin-bottom: 1rem;">
+                            <button onclick="addMetric()" class="btn btn-primary" style="padding: 8px 16px;">
+                                ➕ Add Metric
+                            </button>
+                        </div>
+                        <div id="dataset-metrics-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem;">
+                            <div style="grid-column: 1 / -1; padding: 3rem; text-align: center; color: #9ca3af;">
+                                <p>No metrics defined yet. Metrics are calculated fields like SUM, AVG, COUNT, etc.</p>
+                                <p style="font-size: 0.875rem; margin-top: 0.5rem;">Click "Add Metric" to create your first metric.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Query Tab -->
+                    <div id="editor-content-query" class="editor-tab-content" style="display: none;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h3 style="margin: 0; font-size: 1rem; font-weight: 600; color: #374151;">Source Query</h3>
+                            <button onclick="copyDatasetQuery()" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.875rem;">
+                                📋 Copy SQL
+                            </button>
+                        </div>
+                        <div style="background: #1e293b; border-radius: 8px; padding: 1rem; overflow-x: auto;">
+                            <pre id="dataset-query-display" style="margin: 0; color: #e2e8f0; font-family: 'Monaco', 'Menlo', monospace; font-size: 0.875rem; line-height: 1.6;">SELECT * FROM table_name;</pre>
+                        </div>
+                        <div id="dataset-query-editor" style="margin-top: 1rem; display: none;">
+                            <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #374151;">Edit SQL Query</label>
+                            <textarea id="dataset-query-textarea" rows="10" style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-family: 'Monaco', 'Menlo', monospace; font-size: 0.875rem; background: #f9fafb;"></textarea>
+                            <button onclick="updateDatasetQuery()" class="btn btn-primary" style="margin-top: 0.5rem;">
+                                Save Query
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SQL Query Lab View -->
+            <div id="query-lab-view" class="view-content">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">🔬 SQL Query Lab</h1>
+                        <p class="page-subtitle">Write and execute SQL queries against the database</p>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 0; height: calc(100vh - 200px);">
+                    <!-- Database Browser Sidebar -->
+                    <div id="sql-sidebar" style="width: 280px; min-width: 200px; max-width: 500px; background: white; border-radius: 12px; padding: 16px; overflow-y: auto; box-shadow: 0 1px 3px rgba(0,0,0,0.1); position: relative;">
+                        <h3 style="margin: 0 0 12px 0; font-size: 0.9rem; color: #667eea;">📚 Database Schema</h3>
+
+                        <!-- Connection Selector -->
+                        <div style="margin-bottom: 12px;">
+                            <label style="font-size: 0.75rem; color: #666; display: block; margin-bottom: 4px;">Connection:</label>
+                            <select id="connection-selector" onchange="onConnectionChange()" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.85rem; background: white;">
+                                <option value="">Loading...</option>
+                            </select>
+                        </div>
+
+                        <!-- Schema Selector -->
+                        <div style="margin-bottom: 12px;">
+                            <label style="font-size: 0.75rem; color: #666; display: block; margin-bottom: 4px;">Schema:</label>
+                            <select id="schema-selector" onchange="onSchemaChange()" style="width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.85rem; background: white;">
+                                <option value="">Loading...</option>
+                            </select>
+                        </div>
+
+                        <!-- Search Box for Tables -->
+                        <div style="position: relative; margin-bottom: 12px;">
+                            <svg style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: #9ca3af;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                            </svg>
+                            <input type="text" id="tables-search" placeholder="Search tables..." oninput="handleTablesSearch(this.value)" style="width: 100%; padding: 6px 8px 6px 28px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.8rem;">
+                            <button onclick="clearTablesSearch()" style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #6b7280; cursor: pointer; display: none; padding: 2px;" id="tables-search-clear">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M18 6L6 18M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div id="schema-browser">
+                            <p style="color: #888; font-size: 0.85rem;">Loading tables...</p>
+                        </div>
+                    </div>
+
+                    <!-- Horizontal Resizer -->
+                    <div id="h-resizer" style="width: 8px; cursor: col-resize; background: transparent; position: relative; flex-shrink: 0;">
+                        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 3px; height: 60px; background: #ddd; border-radius: 3px;"></div>
+                    </div>
+
+                    <!-- Query Editor and Results -->
+                    <div style="display: flex; flex-direction: column; gap: 12px; flex: 1; min-width: 400px;">
+                        <!-- Query History Panel -->
+                        <div style="background: white; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="toggleQueryHistory()">
+                                <h3 style="margin: 0; font-size: 0.9rem; color: #667eea;">📜 Query History</h3>
+                                <span id="history-toggle-icon" style="font-size: 0.9rem;">🔼</span>
+                            </div>
+                            <div id="query-history-panel" style="display: none; margin-top: 12px; max-height: 200px; overflow-y: auto; border: 1px solid #eee; border-radius: 6px;">
+                                <div id="query-history-list"></div>
+                            </div>
+                        </div>
+
+                        <!-- SQL Editor -->
+                        <div id="sql-editor-panel" style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); height: 280px; min-height: 150px; display: flex; flex-direction: column;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <h3 style="margin: 0; font-size: 0.9rem; color: #667eea;">✍️ SQL Editor</h3>
+                                <div style="display: flex; gap: 8px;">
+                                    <button onclick="clearQuery()" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.85rem;">Clear</button>
+                                    <button onclick="executeQuery()" class="btn btn-primary" style="padding: 6px 16px; font-size: 0.85rem;">▶️ Run Query</button>
+                                </div>
+                            </div>
+                            <textarea id="sql-editor" style="flex: 1; width: 100%; font-family: 'Monaco', 'Menlo', 'Consolas', monospace; font-size: 13px; padding: 12px; border: 1px solid #ddd; border-radius: 6px; resize: none;" placeholder="SELECT * FROM fct_orders LIMIT 10;"></textarea>
+                            <div id="query-error" style="display: none; margin-top: 12px; padding: 12px; background: #fee; border-left: 4px solid #f44; color: #c33; font-size: 0.85rem; border-radius: 4px;"></div>
+                        </div>
+
+                        <!-- Vertical Resizer -->
+                        <div id="v-resizer" style="height: 8px; cursor: row-resize; background: transparent; position: relative; flex-shrink: 0;">
+                            <div style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 60px; height: 3px; background: #ddd; border-radius: 3px;"></div>
+                        </div>
+
+                        <!-- Query Results -->
+                        <div style="background: white; border-radius: 12px; padding: 20px; flex: 1; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 1px 3px rgba(0,0,0,0.1); min-height: 200px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <h3 style="margin: 0; font-size: 0.9rem; color: #667eea;">📊 Results</h3>
+                                <div style="display: flex; gap: 12px; align-items: center;">
+                                    <div id="query-stats" style="font-size: 0.8rem; color: #888;"></div>
+                                    <div id="export-buttons" style="display: none; gap: 6px;">
+                                        <button onclick="saveQueryAsDataset()" class="btn btn-primary" style="padding: 4px 10px; font-size: 0.8rem;">💾 Save as Dataset</button>
+                                        <button onclick="saveAsView()" class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.8rem;">📊 Save as View</button>
+                                        <button onclick="exportToCSV()" class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.8rem;">📄 Export CSV</button>
+                                        <button onclick="exportToExcel()" class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.8rem;">📈 Export Excel</button>
+                                        <button onclick="printResults()" class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.8rem;">🖨️ Print</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="query-results" style="flex: 1; overflow: auto; border: 1px solid #eee; border-radius: 6px;">
+                                <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #999; font-size: 0.9rem;">
+                                    Execute a query to see results here
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Assets View -->
+            <div id="assets-view" class="view-content">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Assets</h1>
+                        <p class="page-subtitle">Manage files, scripts, and resources</p>
+                    </div>
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <input type="search" id="assets-search" placeholder="Search assets..."
+                               style="padding: 8px 12px; border: 1px solid var(--color-border); border-radius: 6px; width: 250px;"
+                               oninput="searchAssets(this.value)">
+                        <select id="assets-type-filter" onchange="filterAssets()"
+                                style="padding: 8px 12px; border: 1px solid var(--color-border); border-radius: 6px;">
+                            <option value="">All Types</option>
+                            <option value="csv">CSV</option>
+                            <option value="excel">Excel</option>
+                            <option value="sql">SQL</option>
+                            <option value="python">Python</option>
+                            <option value="json">JSON</option>
+                            <option value="yaml">YAML</option>
+                            <option value="markdown">Markdown</option>
+                            <option value="image">Image</option>
+                            <option value="pdf">PDF</option>
+                            <option value="other">Other</option>
+                        </select>
+                        <button class="btn-primary" onclick="showUploadAssetModal()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px;">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="17 8 12 3 7 8"/>
+                                <line x1="12" y1="3" x2="12" y2="15"/>
+                            </svg>
+                            Upload Asset
+                        </button>
+                    </div>
+                </div>
+
+                <div id="assets-list" style="padding: 24px;">
+                    <div style="text-align: center; padding: 60px 20px; color: #999;">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="margin: 0 auto 16px; opacity: 0.5;">
+                            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+                            <polyline points="13 2 13 9 20 9"/>
+                        </svg>
+                        <p>Loading assets...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Runs View -->
+            <div id="runs-view" class="view-content">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Run History</h1>
+                        <p class="page-subtitle">Execution logs and performance metrics</p>
+                    </div>
+                    <button class="btn btn-secondary" onclick="loadRuns()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                        </svg>
+                        Refresh
+                    </button>
+                </div>
+                <div class="filter-bar">
+                    <button class="filter-chip active" onclick="filterRuns('all')">All</button>
+                    <button class="filter-chip" onclick="filterRuns('success')">✓ Success</button>
+                    <button class="filter-chip" onclick="filterRuns('failed')">✕ Failed</button>
+                    <button class="filter-chip" onclick="filterRuns('partial')">⚠ Partial</button>
+                </div>
+                <div id="runs-list"></div>
+            </div>
+
+            <!-- Schedules View -->
+            <div id="schedules-view" class="view-content">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Model Schedules</h1>
+                        <p class="page-subtitle">Automate transformation model execution with cron schedules</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="showCreateScheduleModal()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 5v14M5 12h14"/>
+                        </svg>
+                        New Schedule
+                    </button>
+                </div>
+                <div id="schedules-list"></div>
+            </div>
+
+            <!-- System Monitor View -->
+            <div id="monitor-view" class="view-content">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">System Monitor</h1>
+                        <p class="page-subtitle">Server status, scheduled jobs, and system health</p>
+                    </div>
+                    <button class="btn btn-secondary" onclick="loadSystemStatus()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                        </svg>
+                        Refresh
+                    </button>
+                </div>
+
+                <!-- Server Status Cards -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                    <div class="metric-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                        <div class="metric-label">Server Status</div>
+                        <div class="metric-value" id="server-status">●●●</div>
+                        <div class="metric-subtitle" id="server-uptime">Loading...</div>
+                    </div>
+                    <div class="metric-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
+                        <div class="metric-label">Memory Usage</div>
+                        <div class="metric-value" id="memory-usage">-</div>
+                        <div class="metric-subtitle">MB RAM</div>
+                    </div>
+                    <div class="metric-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
+                        <div class="metric-label">CPU Usage</div>
+                        <div class="metric-value" id="cpu-usage">-</div>
+                        <div class="metric-subtitle">Percent</div>
+                    </div>
+                    <div class="metric-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white;">
+                        <div class="metric-label">Active Jobs</div>
+                        <div class="metric-value" id="active-jobs-count">-</div>
+                        <div class="metric-subtitle">Scheduled Tasks</div>
+                    </div>
+                </div>
+
+                <!-- Jobs Table -->
+                <div style="background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px;">
+                    <h3 style="margin: 0 0 20px 0; color: #1f2937; font-size: 1.25rem;">
+                        ⏰ Scheduled Jobs
+                    </h3>
+                    <div id="jobs-table-container">
+                        <div style="text-align: center; padding: 40px; color: #9ca3af;">
+                            Loading jobs...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Process Information -->
+                <div style="background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <h3 style="margin: 0 0 20px 0; color: #1f2937; font-size: 1.25rem;">
+                        📊 Process Information
+                    </h3>
+                    <div id="process-info" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                        <div style="padding: 16px; background: #f9fafb; border-radius: 8px;">
+                            <div style="color: #6b7280; font-size: 0.875rem; margin-bottom: 4px;">Process ID</div>
+                            <div id="process-pid" style="font-size: 1.5rem; font-weight: 600; color: #111827;">-</div>
+                        </div>
+                        <div style="padding: 16px; background: #f9fafb; border-radius: 8px;">
+                            <div style="color: #6b7280; font-size: 0.875rem; margin-bottom: 4px;">Threads</div>
+                            <div id="process-threads" style="font-size: 1.5rem; font-weight: 600; color: #111827;">-</div>
+                        </div>
+                        <div style="padding: 16px; background: #f9fafb; border-radius: 8px;">
+                            <div style="color: #6b7280; font-size: 0.875rem; margin-bottom: 4px;">Database Status</div>
+                            <div id="db-status" style="font-size: 1.5rem; font-weight: 600; color: #111827;">-</div>
+                        </div>
+                        <div style="padding: 16px; background: #f9fafb; border-radius: 8px;">
+                            <div style="color: #6b7280; font-size: 0.875rem; margin-bottom: 4px;">Scheduler Status</div>
+                            <div id="scheduler-status" style="font-size: 1.5rem; font-weight: 600; color: #111827;">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings View -->
+            <div id="settings-view" class="view-content">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Settings</h1>
+                        <p class="page-subtitle">Configure your workspace</p>
+                    </div>
+                </div>
+                <div class="settings-grid">
+                    <div class="settings-card">
+                        <h3>Branding</h3>
+                        <div class="setting-item">
+                            <label>Application Name</label>
+                            <input type="text" class="input" value="TransformDash" id="app-name">
+                        </div>
+                        <div class="setting-item">
+                            <label>Logo URL</label>
+                            <input type="text" class="input" placeholder="https://..." id="logo-url">
+                        </div>
+                        <div class="setting-item">
+                            <label>Primary Color</label>
+                            <input type="color" class="color-picker" value="#667eea" id="primary-color">
+                        </div>
+                        <button class="btn btn-primary" onclick="saveBranding()">Save Branding</button>
+                    </div>
+
+                    <div class="settings-card">
+                        <h3>Preferences</h3>
+                        <div class="setting-item">
+                            <label class="toggle-label">
+                                <input type="checkbox" class="toggle" id="auto-refresh">
+                                <span>Auto-refresh dashboards</span>
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <label class="toggle-label">
+                                <input type="checkbox" class="toggle" id="notifications">
+                                <span>Enable notifications</span>
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <label class="toggle-label">
+                                <input type="checkbox" class="toggle" id="animations">
+                                <span>Enable animations</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users & Permissions View -->
+            <div id="users-view" class="view-content">
+                <div class="page-header" style="margin-bottom: 32px;">
+                    <div>
+                        <h1 class="page-title">Users & Permissions</h1>
+                        <p class="page-subtitle">Manage users, roles, and access control</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="showCreateUserModal()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 5v14M5 12h14"/>
+                        </svg>
+                        Add User
+                    </button>
+                </div>
+
+                <!-- Users Section -->
+                <div style="background: white; border-radius: 16px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 32px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;">
+                        <div>
+                            <h3 style="margin: 0; color: #1f2937; font-size: 1.5rem; font-weight: 600; display: flex; align-items: center; gap: 12px;">
+                                <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px;">👥</span>
+                                Users
+                            </h3>
+                            <p style="margin: 8px 0 0 52px; color: #6b7280; font-size: 0.875rem;">Manage user accounts and their role assignments</p>
+                        </div>
+                    </div>
+                    <div id="users-table-container" style="margin-top: 24px;">
+                        <div style="text-align: center; padding: 60px 40px; color: #9ca3af;">
+                            <div style="font-size: 48px; margin-bottom: 16px;">👤</div>
+                            <div style="font-size: 1rem; font-weight: 500; color: #6b7280;">Loading users...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Roles Section -->
+                <div style="background: white; border-radius: 16px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;">
+                        <div>
+                            <h3 style="margin: 0; color: #1f2937; font-size: 1.5rem; font-weight: 600; display: flex; align-items: center; gap: 12px;">
+                                <span style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px;">🎭</span>
+                                Roles & Permissions
+                            </h3>
+                            <p style="margin: 8px 0 0 52px; color: #6b7280; font-size: 0.875rem;">Define roles and configure their access permissions</p>
+                        </div>
+                        <button class="btn btn-secondary" onclick="showCreateRoleModal()" style="display: flex; align-items: center; gap: 8px;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 5v14M5 12h14"/>
+                            </svg>
+                            Add Role
+                        </button>
+                    </div>
+                    <div id="roles-table-container" style="margin-top: 24px;">
+                        <div style="text-align: center; padding: 60px 40px; color: #9ca3af;">
+                            <div style="font-size: 48px; margin-bottom: 16px;">🎭</div>
+                            <div style="font-size: 1rem; font-weight: 500; color: #6b7280;">Loading roles...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modals -->
+    <div id="codeModal" class="modal">
+        <div class="modal-overlay" onclick="closeModal('codeModal')"></div>
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2 id="modalTitle">Model Code</h2>
+                <button class="modal-close" onclick="closeModal('codeModal')">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
+        </div>
+    </div>
+
+    <div id="logsModal" class="modal">
+        <div class="modal-overlay" onclick="closeModal('logsModal')"></div>
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2 id="logsModalTitle">Run Logs</h2>
+                <button class="modal-close" onclick="closeModal('logsModal')">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body" id="logsModalBody"></div>
+        </div>
+    </div>
+
+    <div id="sqlQueryModal" class="modal">
+        <div class="modal-overlay" onclick="closeModal('sqlQueryModal')"></div>
+        <div class="modal-container" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2 id="sqlQueryModalTitle">SQL Query</h2>
+                <button class="modal-close" onclick="closeModal('sqlQueryModal')">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body" style="padding: 1.5rem;">
+                <pre id="sqlQueryCode" style="background: var(--color-bg-secondary); padding: 1rem; border-radius: 8px; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 0.875rem; line-height: 1.5; color: var(--color-text-primary); margin: 0;"></pre>
+            </div>
+            <div class="modal-footer" style="padding: 1rem 1.5rem; border-top: 1px solid var(--color-border); display: flex; justify-content: flex-end; gap: 0.75rem;">
+                <button class="btn btn-secondary" onclick="closeModal('sqlQueryModal')">Close</button>
+                <button class="btn btn-primary" onclick="copySqlQuery()" id="copySqlButton">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.5rem;">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                    </svg>
+                    Copy SQL
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="chartModal" class="modal">
+        <div class="modal-overlay" onclick="closeModal('chartModal')"></div>
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2 id="chartModalTitle">Chart</h2>
+                <button class="modal-close" onclick="closeModal('chartModal')">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body" id="chartModalBody"></div>
+            <div class="modal-footer" style="padding: 1rem 1.5rem; border-top: 1px solid var(--color-border); display: flex; justify-content: flex-end; gap: 0.75rem;">
+                <button class="btn btn-secondary" onclick="closeModal('chartModal')">Close</button>
+                <button class="btn btn-primary" onclick="goToChartDashboard()">Go to Dashboard</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="editDashboardModal" class="modal">
+        <div class="modal-overlay" onclick="closeModal('editDashboardModal')"></div>
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2 id="editDashboardModalTitle">Edit Dashboard</h2>
+                <button class="modal-close" onclick="closeModal('editDashboardModal')">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 1rem; color: #6b7280;">Select charts to add to this dashboard:</p>
+                <div id="availableChartsList" style="max-height: 400px; overflow-y: auto;"></div>
+            </div>
+            <div class="modal-footer" style="padding: 1rem 1.5rem; border-top: 1px solid var(--color-border); display: flex; justify-content: flex-end; gap: 0.75rem;">
+                <button class="btn btn-secondary" onclick="closeModal('editDashboardModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard Settings Modal -->
+    <div id="dashboardSettingsModal" class="modal">
+        <div class="modal-overlay" onclick="closeModal('dashboardSettingsModal')"></div>
+        <div class="modal-container" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2>Dashboard Settings</h2>
+                <button class="modal-close" onclick="closeModal('dashboardSettingsModal')">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--color-text-primary);">
+                        Dashboard Name
+                    </label>
+                    <input
+                        type="text"
+                        id="dashboardSettingsName"
+                        placeholder="Enter dashboard name"
+                        style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: 6px; font-size: 0.9375rem;"
+                    />
+                </div>
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--color-text-primary);">
+                        Description
+                    </label>
+                    <textarea
+                        id="dashboardSettingsDescription"
+                        placeholder="Enter dashboard description (optional)"
+                        rows="4"
+                        style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: 6px; font-size: 0.9375rem; resize: vertical;"
+                    ></textarea>
+                </div>
+            </div>
+            <div class="modal-footer" style="padding: 1rem 1.5rem; border-top: 1px solid var(--color-border); display: flex; justify-content: flex-end; gap: 0.75rem;">
+                <button class="btn btn-secondary" onclick="closeModal('dashboardSettingsModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveDashboardSettings()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Schedule Modal -->
+    <div id="scheduleModal" class="modal">
+        <div class="modal-overlay" onclick="closeModal('scheduleModal')"></div>
+        <div class="modal-container" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2 id="scheduleModalTitle">Create Schedule</h2>
+                <button class="modal-close" onclick="closeModal('scheduleModal')">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body" style="padding: 1.5rem;">
+                <input type="hidden" id="schedule-id" value="">
+
+                <div style="margin-bottom: 1.25rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--color-text-primary);">Schedule Name</label>
+                    <input type="text" id="schedule-name" class="input" placeholder="e.g., Daily Product Refresh" required>
+                </div>
+
+                <div style="margin-bottom: 1.25rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--color-text-primary);">Models</label>
+                    <div id="schedule-models-container" style="border: 1px solid var(--color-border); border-radius: 8px; padding: 0.75rem; max-height: 200px; overflow-y: auto; background: var(--color-bg-primary);">
+                        <!-- Model checkboxes will be populated here -->
+                    </div>
+                    <small style="color: var(--color-text-secondary); display: block; margin-top: 0.25rem;">Select one or more models to run on this schedule</small>
+                </div>
+
+                <div style="margin-bottom: 1.25rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--color-text-primary);">Cron Expression</label>
+                    <input type="text" id="schedule-cron" class="input" placeholder="0 9 * * *" required>
+                    <small style="display: block; margin-top: 0.5rem; color: #6b7280;">
+                        Format: minute hour day month day_of_week<br>
+                        Examples:
+                        <span style="cursor: pointer; color: #667eea;" onclick="document.getElementById('schedule-cron').value='0 9 * * *'">0 9 * * *</span> (daily at 9am),
+                        <span style="cursor: pointer; color: #667eea;" onclick="document.getElementById('schedule-cron').value='0 */6 * * *'">0 */6 * * *</span> (every 6 hours),
+                        <span style="cursor: pointer; color: #667eea;" onclick="document.getElementById('schedule-cron').value='0 0 * * 1'">0 0 * * 1</span> (weekly Monday midnight)
+                    </small>
+                </div>
+
+                <div style="margin-bottom: 1.25rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--color-text-primary);">Timezone</label>
+                    <select id="schedule-timezone" class="input">
+                        <option value="UTC">UTC</option>
+                        <option value="America/New_York">America/New_York (EST/EDT)</option>
+                        <option value="America/Chicago">America/Chicago (CST/CDT)</option>
+                        <option value="America/Los_Angeles">America/Los_Angeles (PST/PDT)</option>
+                        <option value="Europe/London">Europe/London</option>
+                        <option value="Europe/Paris">Europe/Paris</option>
+                        <option value="Asia/Tokyo">Asia/Tokyo</option>
+                        <option value="Asia/Shanghai">Asia/Shanghai</option>
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 1.25rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--color-text-primary);">Description (Optional)</label>
+                    <textarea id="schedule-description" class="input" rows="3" placeholder="Describe the purpose of this schedule..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer" style="padding: 1rem 1.5rem; border-top: 1px solid var(--color-border); display: flex; justify-content: flex-end; gap: 0.75rem;">
+                <button class="btn btn-secondary" onclick="closeModal('scheduleModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveSchedule()">Save Schedule</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dataset Builder Modal -->
+    <div id="datasetBuilderModal" class="modal">
+        <div class="modal-overlay" onclick="closeModal('datasetBuilderModal')"></div>
+        <div class="modal-container" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2>Create New Dataset</h2>
+                <button class="modal-close" onclick="closeModal('datasetBuilderModal')">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body" style="padding: 1.5rem;">
+                <!-- Dataset Name and Description -->
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #374151;">Dataset Name*</label>
+                    <input type="text" id="datasetName" placeholder="Enter dataset name" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem;">
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #374151;">Description</label>
+                    <textarea id="datasetDescription" placeholder="Optional description" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; min-height: 80px; resize: vertical;"></textarea>
+                </div>
+
+                <!-- Source Type Tabs -->
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #374151;">Source Type</label>
+                    <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                        <button id="sourceTypeTable" class="btn btn-secondary" onclick="switchDatasetSourceType('table')" style="flex: 1; background: #667eea; color: white;">
+                            📊 Table
+                        </button>
+                        <button id="sourceTypeSQL" class="btn btn-secondary" onclick="switchDatasetSourceType('sql')" style="flex: 1;">
+                            💻 Custom SQL
+                        </button>
+                        <button id="sourceTypeCSV" class="btn btn-secondary" onclick="switchDatasetSourceType('csv')" style="flex: 1;">
+                            📁 CSV Upload
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Table Mode -->
+                <div id="tableModeConfig" style="display: block;">
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #374151;">Schema</label>
+                        <input type="text" id="datasetSchema" placeholder="public" value="public" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem;">
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #374151;">Table Name*</label>
+                        <input type="text" id="datasetTableName" placeholder="Enter table name" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem;">
+                    </div>
+                </div>
+
+                <!-- SQL Mode -->
+                <div id="sqlModeConfig" style="display: none;">
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #374151;">SQL Query*</label>
+                        <textarea id="datasetSQLQuery" placeholder="SELECT * FROM your_table WHERE..." style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; min-height: 150px; resize: vertical; font-family: 'JetBrains Mono', monospace;"></textarea>
+                        <p style="margin-top: 0.5rem; font-size: 0.75rem; color: #6b7280;">Write your custom SQL query. This will be the data source for your dataset.</p>
+                    </div>
+                </div>
+
+                <!-- CSV Upload Mode -->
+                <div id="csvModeConfig" style="display: none;">
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #374151;">Upload CSV File*</label>
+                        <input type="file" id="datasetCSVFile" accept=".csv" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem;">
+                        <p style="margin-top: 0.5rem; font-size: 0.75rem; color: #6b7280;">Select a CSV file to upload. The file will be stored and loaded as a dataset.</p>
+                        <div id="csvFileInfo" style="display: none; margin-top: 0.5rem; padding: 0.5rem; background: #f0f9ff; border: 1px solid #bfdbfe; border-radius: 4px; font-size: 0.75rem; color: #1e40af;">
+                            <strong>Selected file:</strong> <span id="csvFileName"></span><br>
+                            <strong>Size:</strong> <span id="csvFileSize"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preview Button -->
+                <div style="margin-bottom: 1rem;">
+                    <button class="btn btn-secondary" onclick="previewDataset()" style="width: 100%;">
+                        Preview Data
+                    </button>
+                </div>
+
+                <!-- Preview Results -->
+                <div id="datasetPreview" style="display: none; margin-top: 1rem; padding: 1rem; background: #f9fafb; border-radius: 8px; max-height: 300px; overflow: auto;">
+                    <h4 style="margin: 0 0 0.75rem 0; font-size: 0.875rem; font-weight: 600; color: #374151;">Preview (first 10 rows)</h4>
+                    <div id="datasetPreviewContent"></div>
+                </div>
+            </div>
+            <div class="modal-footer" style="padding: 1rem 1.5rem; border-top: 1px solid var(--color-border); display: flex; justify-content: space-between; gap: 0.75rem;">
+                <button class="btn btn-secondary" onclick="closeModal('datasetBuilderModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveDataset()">
+                    Save Dataset
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Upload Asset Modal -->
+    <div id="uploadAssetModal" class="modal">
+        <div class="modal-overlay" onclick="closeModal('uploadAssetModal')"></div>
+        <div class="modal-container" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2>Upload Asset</h2>
+                <button class="modal-close" onclick="closeModal('uploadAssetModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="uploadAssetForm" onsubmit="uploadAsset(event)">
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Asset Name*</label>
+                        <input type="text" id="assetName" required
+                               style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 8px;">
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Description</label>
+                        <textarea id="assetDescription" rows="3"
+                                  style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 8px;"></textarea>
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Asset Type*</label>
+                        <select id="assetType" required
+                                style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 8px;">
+                            <option value="">Select type...</option>
+                            <option value="csv">CSV</option>
+                            <option value="excel">Excel</option>
+                            <option value="sql">SQL Script</option>
+                            <option value="python">Python Script</option>
+                            <option value="json">JSON</option>
+                            <option value="yaml">YAML</option>
+                            <option value="markdown">Markdown</option>
+                            <option value="image">Image</option>
+                            <option value="pdf">PDF</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Tags (comma-separated)</label>
+                        <input type="text" id="assetTags" placeholder="data, reference, staging"
+                               style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 8px;">
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">File*</label>
+                        <input type="file" id="assetFile" required
+                               style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 8px;">
+                    </div>
+
+                    <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('uploadAssetModal')">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Upload</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/static/js/app.js?t={{ cache_bust }}"></script>
+    <script src="/static/js/datasets.js?t={{ cache_bust }}"></script>
+    <script src="/static/js/users_functions.js?t={{ cache_bust }}"></script>
+</body>
+</html>
