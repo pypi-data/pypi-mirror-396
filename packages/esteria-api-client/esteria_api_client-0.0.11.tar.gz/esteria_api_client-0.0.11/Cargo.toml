@@ -1,0 +1,46 @@
+[package]
+name = "esteria-api-client"
+version = "0.0.11"
+edition = "2024"
+description = "A Rust-based client library for sending SMS messages via the Esteria API"
+license = "GPL-3.0-only"
+readme = "README.md"
+
+[dependencies]
+chrono = "0.4.42"
+reqwest = { version = "0.12.25", features = ["json"] }
+thiserror = "2.0.17"
+bitflags = "2.10.0"
+log = "0.4.29"
+env_logger = "0.11.8"
+tokio = { version = "1.48.0", features = ["full"] }
+
+clap = { version = "4.5.53", features = ["derive", "env"], optional = true }
+
+pyo3 = { version = "0.27.2", features = ["extension-module"], optional = true }
+pyo3-async-runtimes = { version = "0.27.0", features = ["tokio-runtime"], optional = true }
+
+[lib]
+name = "esteria_api_client"
+crate-type = ["rlib", "cdylib"]
+
+[[bin]]
+name = "esteria-api-client"
+path = "src/main.rs"
+required-features = ["cli"]
+
+[features]
+default = []
+python = ["pyo3", "pyo3-async-runtimes"]
+cli = ["clap"]
+
+[dev-dependencies]
+httpmock = "0.8.2"
+
+
+[profile.release]
+codegen-units = 1
+debug = false
+lto = "fat"
+opt-level = "z"
+strip = true
