@@ -1,0 +1,113 @@
+image: python:3.13
+
+variables:
+  CONTAINER_IMAGE: ${CI_PROJECT_PATH}:${CI_COMMIT_SHORT_SHA}
+
+stages:
+  - test
+  - package
+  - publish
+
+.tox: &tox
+  script:
+    - pip install tox
+    - tox -e ${TOXENV:-$CI_JOB_NAME}
+  stage: test
+
+black:
+  <<: *tox
+
+flake8:
+  <<: *tox
+
+isort:
+  <<: *tox
+
+djlint:
+  <<: *tox
+
+py3:
+  <<: *tox
+  artifacts:
+    paths:
+      - coverage.xml
+      - xunit.xml
+
+selenium:
+  <<: *tox
+  before_script:
+    - apt update && apt -y --no-install-recommends install xvfb xauth chromium-driver
+  artifacts:
+    paths:
+      - coverage-selenium.xml
+      - xunit-selenium.xml
+
+trixie:
+  <<: *tox
+
+package:py3:
+  stage: package
+  needs: []
+  script:
+    - pip3 install wheel build
+    - python -m build
+  dependencies: []
+  artifacts:
+    paths:
+      - dist/*.whl
+      - dist/*.tar.gz
+    expire_in: 1 day
+
+package:deb:
+  stage: package
+  needs: []
+  image: buildpack-deps:$DIST
+  parallel:
+    matrix:
+      - DIST: [trixie]
+  script: |
+    set -x
+    set -e
+    apt update
+    apt -y --no-install-recommends install devscripts lintian
+    apt build-dep -y .
+    export DEBEMAIL=$CI_COMMIT_AUTHOR
+    dch -v "$(python3 -m setuptools_scm)" "automated build"
+    dpkg-buildpackage -b
+    lintian
+    mkdir -p ./dist/$DIST
+    mv ../*.deb ./dist/$DIST/
+  artifacts:
+    paths:
+      - ./dist/*
+
+publish:sonar:
+  allow_failure: true
+  image: sonarsource/sonar-scanner-cli
+  needs:
+    - py3
+    - selenium
+  script:
+    - sonar-scanner -X -Dsonar.python.coverage.reportPaths=coverage*.xml -Dsonar.python.xunit.reportPaths=xunit*.xml -Dsonar.host.url=$SONAR_URL -Dsonar.login=$SONAR_TOKEN -Dsonar.projectKey=$CI_PROJECT_NAME -Dsonar.projectVersion=$(git describe) -Dsonar.qualitygate.wait=true
+  stage: publish
+  variables:
+    SONAR_PROJECT_BASE_DIR: "${CI_PROJECT_DIR}"
+
+publish:wheel:
+  stage: publish
+  only:
+    variables:
+      - $NEXUS_USR
+      - $NEXUS_PWD
+      - $NEXUS_PYPI_URL
+  needs:
+    - package:py3
+  script: |
+    set -x
+    # Publish wheel
+    pip3 install wheel twine readme_renderer[md] --upgrade
+    LANG="C.UTF-8" python3 -m readme_renderer README.md -o /tmp/README.html
+    twine upload dist/*.whl dist/*.tar.gz -u $NEXUS_USR -p $NEXUS_PWD --repository-url $NEXUS_PYPI_URL
+    if [ ! -z "$CI_COMMIT_TAG" ]; then
+      twine upload dist/*.whl dist/*.tar.gz -u $PYPI_USR -p $PYPI_PWD
+    fi

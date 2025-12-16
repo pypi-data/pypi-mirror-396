@@ -1,0 +1,23 @@
+#!/usr/bin/make -f
+
+include /usr/share/dpkg/pkg-info.mk
+
+export SETUPTOOLS_SCM_PRETEND_VERSION_FOR_RDIFFWEB := $(DEB_VERSION_UPSTREAM)
+
+# Force use of pyproject.toml
+export PYBUILD_SYSTEM=pyproject
+
+# For testing, we need a timezone
+export TZ=UTC
+
+%:
+	dh $@ --buildsystem=pybuild --test-tox
+
+execute_before_dh_auto_clean:
+	rm -rf *.egg-info
+
+# Generate orig.tar.gz
+gentarball: SOURCE=cherrypy-foundation
+gentarball:
+	git archive --format=tar HEAD --prefix=$(SOURCE)-$(DEB_VERSION_UPSTREAM)/ | gzip -9 > ../$(SOURCE)_$(DEB_VERSION_UPSTREAM).orig.tar.gz
+	mk-origtargz --compression gzip ../$(SOURCE)_$(DEB_VERSION_UPSTREAM).orig.tar.gz
