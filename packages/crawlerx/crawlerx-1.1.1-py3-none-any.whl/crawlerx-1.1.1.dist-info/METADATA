@@ -1,0 +1,294 @@
+Metadata-Version: 2.4
+Name: crawlerx
+Version: 1.1.1
+Summary: CrawlerX - The Ultimate Web Crawler
+Home-page: https://github.com/IMApurbo/crawlerx
+Author: AKM Korishee Apurbo
+Author-email: bandinvisible8@gmail.com
+License: MIT
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: requests==2.32.3
+Requires-Dist: beautifulsoup4==4.12.3
+Requires-Dist: urllib3==2.2.3
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: license
+Dynamic: license-file
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+# CrawlerX – Advanced Web Reconnaissance Crawler
+
+**CrawlerX** is an advanced, multi-threaded **web reconnaissance crawler** built for **security researchers, bug bounty hunters, and penetration testers**.
+It focuses on **deep endpoint discovery**, **GET/POST parameter extraction**, **API detection**, **resource categorization**, and **intelligent URL validation**, with optional fuzzing and common path probing.
+
+> ✨ Developed by **[@IMApurbo](https://github.com/IMApurbo)**
+> 🛡️ Use only on systems you own or have explicit permission to test.
+
+---
+
+## 🚀 Core Capabilities
+
+### 🔍 Intelligent Crawling
+
+* Discovers **HTML**, **JavaScript**, **CSS**, **JSON**, and **XML** endpoints
+* Extracts URLs from:
+
+  * HTML attributes
+  * Inline JavaScript
+  * Event handlers
+  * CSS files
+  * JSON / API responses
+* Strong filtering to eliminate **JavaScript noise & false positives**
+
+---
+
+### 🔗 Endpoint Discovery
+
+* **All endpoints**
+* **Parameterized URLs**
+* **Non-parameterized URLs**
+* Automatic **domain + subdomain validation**
+
+Saved under:
+
+```
+endpoints/
+├── all_endpoints.txt
+├── all_endpoints.json
+├── parameterized.txt
+├── parameterized.json
+├── non_parameterized.txt
+```
+
+---
+
+### 🧪 GET & POST Parameter Extraction
+
+* Extracts parameters from **HTML forms**
+* Generates **realistic default values**
+* Saves:
+
+  * Parsed parameters (JSON)
+  * Raw `.req` files (Burp-ready)
+
+```
+get/
+├── get_urls.txt
+├── get_params.json
+├── *.req
+
+post/
+├── post_urls.txt
+├── post_params.json
+├── *.req
+```
+
+---
+
+### ⚙️ API Endpoint Detection
+
+Detects common API patterns:
+
+* `/api/`
+* `/v1/`, `/v2/`
+* `/rest/`
+* `/graphql`
+* `.json`, `.xml`
+
+```
+api/
+├── api_endpoints.txt
+├── api_endpoints.json
+```
+
+---
+
+### 📁 Resource Categorization
+
+Automatically classifies discovered resources:
+
+* Images
+* JavaScript
+* Stylesheets
+* Fonts
+* Media
+* Documents
+* Other
+
+```
+resources/
+├── images.txt / images.json
+├── scripts.txt / scripts.json
+├── stylesheets.txt / stylesheets.json
+├── fonts.txt / fonts.json
+├── media.txt / media.json
+├── documents.txt / documents.json
+├── other.txt / other.json
+```
+
+---
+
+### 🌳 Site Structure Mapping
+
+Optional **ASCII tree view** of the entire site:
+
+```
+example.com
+├── login
+├── dashboard
+│   ├── profile
+│   └── settings
+└── api
+    └── v1
+```
+
+Saved to:
+
+```
+structure/structure.txt
+```
+
+---
+
+### 🧠 Smart Features
+
+* **Robots.txt support** (optional)
+* **Resume interrupted crawls** using pickle state
+* **Incremental auto-save**
+* **Graceful Ctrl+C handling**
+* **Parameter fuzzing** (numeric params)
+* **Common path probing** (admin, api, backup, .env, etc.)
+* **Retry logic** with backoff
+* **Verbose mode** with interesting parameter highlighting
+
+---
+
+## 📦 Installation
+
+```bash
+pip install crawlerx
+```
+
+---
+
+## 🧑‍💻 Usage
+
+```bash
+crawlerx -u <url> [options]
+```
+
+---
+
+## 🧾 Command-Line Options
+
+| Flag               | Description                   | Default    |
+| ------------------ | ----------------------------- | ---------- |
+| `-u, --url`        | Target URL (required)         | —          |
+| `-o, --output`     | Output directory              | None       |
+| `--threads`        | Concurrent threads (1–20)     | 5          |
+| `--depth`          | Crawl depth                   | 2          |
+| `--delay`          | Delay between requests        | 0.1s       |
+| `--timeout`        | Request timeout               | 10s        |
+| `--ua`             | Custom User-Agent             | Browser UA |
+| `-H, --headers`    | Custom headers (`Key:Value;`) | None       |
+| `--proxy`          | HTTP/HTTPS proxy              | None       |
+| `--exclude`        | Excluded extensions           | None       |
+| `--sub`            | Include subdomains            | False      |
+| `--structure`      | Generate site structure       | False      |
+| `--respect-robots` | Respect robots.txt            | False      |
+| `--fuzz-params`    | Fuzz numeric parameters       | False      |
+| `--common-paths`   | Probe common paths            | False      |
+| `--cont`           | Resume from crawl state       | None       |
+| `--verbose`        | Verbose logging               | False      |
+
+---
+
+## 🧪 Examples
+
+### Basic Crawl
+
+```bash
+crawlerx -u https://example.com
+```
+
+### Save Output
+
+```bash
+crawlerx -u https://example.com -o results
+```
+
+### Deep Crawl with Threads
+
+```bash
+crawlerx -u https://example.com --depth 4 --threads 10
+```
+
+### Enable Fuzzing & Common Paths
+
+```bash
+crawlerx -u https://example.com --fuzz-params --common-paths
+```
+
+### Resume Interrupted Crawl
+
+```bash
+crawlerx -u https://example.com --cont results/crawlerx_example.com/crawl_state.pkl
+```
+
+### Generate Site Structure
+
+```bash
+crawlerx -u https://example.com --structure
+```
+
+---
+
+## 📂 Output Directory Layout
+
+```
+crawlerx_<domain>/
+├── endpoints/
+├── get/
+├── post/
+├── api/
+├── resources/
+├── structure/
+└── crawl_state.pkl
+```
+
+---
+
+## ⚠️ Legal Notice
+
+> 🚨 **Authorized use only**
+> This tool is intended for **legal security testing**.
+> Unauthorized scanning may violate laws and ethical guidelines.
+
+---
+
+## 👨‍💻 Author
+
+* **IMApurbo**
+
+---
+
+## 📜 License
+
+Licensed under the **MIT License**.
+See the [LICENSE](LICENSE) file for details.
