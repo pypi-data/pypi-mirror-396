@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    name: Ruff Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+          enable-cache: false
+
+      - name: Install Ruff
+        run: uv tool install ruff@latest
+
+      - name: Lint code
+        # Soi lỗi logic. Nếu fail thì job sẽ fail, nhưng workflow vẫn đi tiếp xuống dưới.
+        run: ruff check .
+
+      - name: Check format
+        # Magic line: Chạy ngay cả khi bước trên fail (nhưng không chạy nếu bị cancel)
+        if: success() || failure()
+        run: ruff format --check .
