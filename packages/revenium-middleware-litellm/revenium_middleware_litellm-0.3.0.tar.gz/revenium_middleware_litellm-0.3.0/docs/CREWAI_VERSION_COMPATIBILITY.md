@@ -1,0 +1,367 @@
+# CrewAI Version Compatibility
+
+## Supported CrewAI Versions
+
+**All CrewAI versions are supported** with automatic version detection and adaptive behavior.
+
+The integration automatically detects your installed CrewAI version and uses the appropriate approach:
+- **CrewAI < 0.203.0:** Uses monkey-patching (via `object.__setattr__`) for full task-level metadata injection
+- **CrewAI >= 0.203.0:** Uses callback approach (crew-level metadata only due to Pydantic constraints)
+
+**No manual configuration required** - the integration adapts automatically!
+
+**Note:** All CrewAI versions use Pydantic models, but the integration uses `object.__setattr__` to bypass Pydantic validation for older versions, enabling full metadata tracking.
+
+## Metadata Tracking Capabilities by Version
+
+### CrewAI < 0.203.0 (Automatic Monkey-Patching)
+
+| Metadata Type | ReveniumCrewWrapper | Decorators (`@track_*`) |
+|---------------|---------------------|-------------------------|
+| `organization_id` | ✅ Supported | ✅ Supported |
+| `subscription_id` | ✅ Supported | ✅ Supported |
+| `product_id` | ✅ Supported | ✅ Supported |
+| `trace_id` | ✅ Supported | ✅ Supported |
+| `agent` (role) | ✅ **Supported** | ✅ Supported |
+| `task_type` | ✅ **Supported** | ✅ Supported |
+
+**Full metadata tracking** is available with both approaches!
+
+### CrewAI >= 0.203.0 (Automatic Callback Approach)
+
+| Metadata Type | ReveniumCrewWrapper | Decorators (`@track_*`) |
+|---------------|---------------------|-------------------------|
+| `organization_id` | ✅ Supported | ✅ Supported |
+| `subscription_id` | ✅ Supported | ✅ Supported |
+| `product_id` | ✅ Supported | ✅ Supported |
+| `trace_id` | ✅ Supported | ✅ Supported |
+| `agent` (role) | ⚠️ **Not Supported** | ✅ Supported |
+| `task_type` | ⚠️ **Not Supported** | ✅ Supported |
+
+**Important:** Due to Pydantic model constraints in CrewAI 0.203.0+, the `ReveniumCrewWrapper` can only inject **crew-level metadata**. For task-level metadata, use decorators.
+
+### Recommended Approach
+
+**For all versions:**
+- ✅ **Use decorators** (`@track_agent`, `@track_task`) for maximum flexibility and full metadata tracking
+- ⚠️ **Use ReveniumCrewWrapper** for simple crew-level tracking (note: task-level metadata only works with CrewAI < 0.203.0)
+
+## Version-Specific Behavior
+
+### CrewAI < 0.203.0 (Automatic Monkey-Patching)
+
+✅ **Fully Supported** with both integration approaches:
+
+1. **ReveniumCrewWrapper** - Injects **all metadata** (crew-level + task-level) via automatic monkey-patching
+2. **Decorators** - Injects all metadata types (crew-level + task-level)
+
+**How it works:** The integration automatically detects that you're using CrewAI < 0.203.0 and uses monkey-patching to wrap `task.execute_sync`, injecting agent and task_type metadata during task execution.
+
+### CrewAI >= 0.203.0 (Automatic Callback Approach)
+
+✅ **Fully Supported** with both integration approaches:
+
+1. **ReveniumCrewWrapper** - Injects crew-level metadata only (Pydantic constraints prevent task-level injection)
+2. **Decorators** - Injects all metadata types (crew-level + task-level)
+
+**How it works:** The integration automatically detects that you're using CrewAI >= 0.203.0 and uses the callback approach, which cannot inject task-level metadata due to Pydantic model constraints.
+
+**Example: Full Metadata Tracking with Decorators**
+
+```python
+from revenium_middleware_litellm_client.decorators import (
+    track_agent, track_task, track_organization,
+    track_subscription, track_product, track_trace
+)
+from crewai import Agent, Task, Crew
+
+@track_organization("MyOrg")
+@track_subscription("sub-123")
+@track_product("my-product")
+@track_trace("trace-456")
+@track_agent(name_from_arg="agent_name")
+@track_task(type_from_arg="task_type")
+def run_crew_with_full_metadata(agent_name: str, task_type: str):
+    agent = Agent(role=agent_name, goal="...", backstory="...")
+    task = Task(description=task_type, agent=agent, expected_output="...")
+    crew = Crew(agents=[agent], tasks=[task])
+    return crew.kickoff()
+
+# All metadata will be tracked:
+# - organization_id: MyOrg
+# - subscription_id: sub-123
+# - product_id: my-product
+# - trace_id: trace-456
+# - agent: Research Analyst
+# - task_type: market_research
+result = run_crew_with_full_metadata("Research Analyst", "market_research")
+```
+
+**Example: Crew-Level Metadata Only with ReveniumCrewWrapper**
+
+```python
+from revenium_middleware_litellm_client.integrations.crewai import ReveniumCrewWrapper
+from crewai import Agent, Task
+
+agent = Agent(role="Research Analyst", goal="...", backstory="...")
+task = Task(description="market_research", agent=agent, expected_output="...")
+
+crew = ReveniumCrewWrapper(
+    agents=[agent],
+    tasks=[task],
+    organization_id="MyOrg",
+    subscription_id="sub-123",
+    product_id="my-product"
+)
+
+# Only crew-level metadata will be tracked:
+# - organization_id: MyOrg
+# - subscription_id: sub-123
+# - product_id: my-product
+# - trace_id: <auto-generated>
+# 
+# NOT tracked: agent, task_type
+result = crew.kickoff()
+```
+
+### Automatic Version Detection
+
+The integration automatically detects your CrewAI version at runtime and selects the appropriate approach:
+
+```python
+# You don't need to do anything - this happens automatically
+from revenium_middleware_litellm_client.integrations.crewai import ReveniumCrewWrapper
+
+# The wrapper automatically detects your CrewAI version and adapts
+crew = ReveniumCrewWrapper(
+    agents=[agent],
+    tasks=[task],
+    organization_id="MyOrg",
+    subscription_id="sub-123",
+    product_id="my-product"
+)
+
+# CrewAI < 0.203.0: Full metadata (crew + task level) via monkey-patching
+# CrewAI >= 0.203.0: Crew-level metadata only via callbacks
+result = crew.kickoff()
+```
+
+**Version Detection Log Messages:**
+
+When you run your code, you'll see log messages indicating which approach is being used:
+
+```
+# CrewAI < 0.203.0
+INFO - CrewAI 0.201.1 detected - using monkey-patching for task-level metadata
+
+# CrewAI >= 0.203.0
+INFO - CrewAI 0.203.0 detected - using callback approach (crew-level metadata only)
+```
+
+## Migration Guide
+
+### Upgrading from CrewAI < 0.203.0 to 0.203.0+
+
+**No code changes required** The integration automatically adapts to your CrewAI version.
+
+**What happens automatically:**
+
+1. **ReveniumCrewWrapper** - API remains identical, behavior adapts:
+   - **Before (< 0.203.0):** Injects crew-level + task-level metadata
+   - **After (>= 0.203.0):** Injects crew-level metadata only
+
+2. **Decorators** - Continue to work exactly as before with full metadata support across all versions
+
+### Recommended Action (Optional)
+
+If you upgrade to CrewAI 0.203.0+ and want to maintain task-level metadata tracking with `ReveniumCrewWrapper`, **switch to decorators**:
+
+```python
+# BEFORE: ReveniumCrewWrapper (loses agent/task metadata in 0.203.0+)
+crew = ReveniumCrewWrapper(
+    agents=[agent],
+    tasks=[task],
+    organization_id="MyOrg",
+    subscription_id="sub-123",
+    product_id="my-product"
+)
+result = crew.kickoff()
+
+# AFTER: Decorators (maintains full metadata in 0.203.0+)
+from revenium_middleware_litellm_client.decorators import (
+    track_agent, track_task, track_organization,
+    track_subscription, track_product
+)
+
+@track_organization("MyOrg")
+@track_subscription("sub-123")
+@track_product("my-product")
+@track_agent(name_from_arg="agent_name")
+@track_task(type_from_arg="task_type")
+def run_crew(agent_name: str, task_type: str):
+    agent = Agent(role=agent_name, goal="...", backstory="...")
+    task = Task(description=task_type, agent=agent, expected_output="...")
+    crew = Crew(agents=[agent], tasks=[task])
+    return crew.kickoff()
+
+result = run_crew("Research Analyst", "market_research")
+```
+
+## Technical Background
+
+### Pydantic Models Across All CrewAI Versions
+
+**Important:** All CrewAI versions (including 0.100.0+) use Pydantic-based Task objects that enforce strict field validation. Direct attribute assignment raises:
+
+```python
+task.execute_sync = wrapped_method  # Raises: "Task" object has no field "execute_sync"
+```
+
+### Monkey-Patching Solution (CrewAI < 0.203.0)
+
+For older CrewAI versions, the integration uses `object.__setattr__` to bypass Pydantic validation:
+
+```python
+# Bypass Pydantic validation
+object.__setattr__(task, 'execute_sync', wrapped_execute)
+```
+
+This allows full task-level metadata injection by wrapping the `execute_sync` method before task execution.
+
+### Callback Approach (CrewAI >= 0.203.0)
+
+For newer CrewAI versions, the integration uses CrewAI's native callback mechanism, which executes **after** task completion. Since callbacks run after LiteLLM calls are made, they cannot inject metadata into those calls.
+
+### Why Decorators Work
+
+Decorators set metadata in the context **before** function execution, ensuring all LiteLLM calls within the decorated function inherit the metadata. This approach:
+
+- ✅ Works with all CrewAI versions (including 0.203.0+)
+- ✅ Supports all metadata types (crew-level + task-level)
+- ✅ Respects Pydantic model constraints
+- ✅ Provides maximum flexibility and control
+
+## Backward Compatibility Analysis
+
+### ReveniumCrewWrapper API
+
+**API Compatibility:** ✅ **100% Backward Compatible**
+
+The `ReveniumCrewWrapper` API has not changed:
+
+```python
+# This code works identically in all CrewAI versions
+crew = ReveniumCrewWrapper(
+    agents=[agent],
+    tasks=[task],
+    organization_id="MyOrg",
+    subscription_id="sub-123",
+    product_id="my-product",
+    trace_id="optional-trace-id",  # Optional
+    verbose=True  # Optional
+)
+result = crew.kickoff(inputs={"key": "value"})  # Optional inputs
+```
+
+**Behavior:** ✅ **Automatic Adaptation**
+
+- **CrewAI < 0.203.0:** Injects crew-level + task-level metadata (via monkey-patching)
+- **CrewAI >= 0.203.0:** Injects crew-level metadata only (via callbacks)
+
+### Decorator API
+
+**API Compatibility:** ✅ **100% Backward Compatible**
+
+Decorators work identically across all CrewAI versions:
+
+```python
+# This code works in all CrewAI versions
+@track_agent("Research Analyst")
+@track_task("market_research")
+def my_function():
+    # Your code here
+    pass
+```
+
+**Behavior:** ✅ **No Changes**
+
+Decorators inject all metadata types consistently across all versions.
+
+## Recommendations
+
+### For New Projects
+
+✅ **Use decorators exclusively** for maximum flexibility and full metadata tracking:
+
+```python
+from revenium_middleware_litellm_client.decorators import (
+    track_agent, track_task, track_organization,
+    track_subscription, track_product
+)
+```
+
+### For Existing Projects Using ReveniumCrewWrapper
+
+**Option 1: Keep Using ReveniumCrewWrapper (Simple)**
+- ✅ No code changes required
+- ⚠️ Loses agent and task_type metadata
+- ✅ Still tracks organization, subscription, product, trace
+
+**Option 2: Migrate to Decorators (Recommended)**
+- ⚠️ Requires code refactoring
+- ✅ Maintains full metadata tracking
+- ✅ More flexible and powerful
+
+### Supported Versions
+
+**All CrewAI versions are supported** with automatic version detection and adaptation.
+
+**To check your CrewAI version:**
+
+```bash
+pip show crewai | grep Version
+```
+
+**To upgrade to the latest version:**
+
+```bash
+pip install --upgrade crewai
+```
+
+## Known Issues and Limitations
+
+### CrewAI 0.203.0+
+
+1. **ReveniumCrewWrapper cannot inject task-level metadata** (agent, task_type)
+   - **Workaround:** Use decorators instead
+   - **Status:** By design (Pydantic model constraints)
+
+2. **Callbacks execute after task completion**
+   - **Impact:** Cannot inject metadata into LiteLLM calls
+   - **Workaround:** Use decorators for task-level metadata
+   - **Status:** Limitation of CrewAI's callback mechanism
+
+### All Versions
+
+1. **Middleware must be imported before CrewAI**
+   - **Requirement:** `import revenium_middleware_litellm_client.middleware` must come first
+   - **Impact:** If imported after, LiteLLM calls won't be intercepted
+   - **Status:** By design (middleware initialization)
+
+## Summary
+
+| Aspect | ReveniumCrewWrapper | Decorators |
+|--------|---------------------|------------|
+| **Minimum CrewAI Version** | All versions supported | All versions supported |
+| **Crew-Level Metadata** | ✅ Supported (all versions) | ✅ Supported (all versions) |
+| **Task-Level Metadata (< 0.203.0)** | ✅ Supported (automatic) | ✅ Supported |
+| **Task-Level Metadata (>= 0.203.0)** | ❌ Not Supported | ✅ Supported |
+| **Version Detection** | ✅ Automatic | N/A |
+| **API Stability** | ✅ Stable | ✅ Stable |
+| **Backward Compatible** | ✅ Yes (100%) | ✅ Yes (100%) |
+| **Recommended for New Projects** | ⚠️ Limited use cases | ✅ Yes |
+| **Code Complexity** | Low | Medium |
+| **Flexibility** | Low | High |
+
+**Bottom Line:** Use **decorators** for full metadata tracking and maximum flexibility across all CrewAI versions. Use **ReveniumCrewWrapper** for simple crew-level tracking (note: task-level metadata only works with CrewAI < 0.203.0).
+

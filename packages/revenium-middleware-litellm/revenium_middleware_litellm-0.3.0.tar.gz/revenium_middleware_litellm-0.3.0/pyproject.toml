@@ -1,0 +1,109 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "revenium-middleware-litellm"
+version = "0.3.0"
+description = "A Python library that meters LiteLLM usage to Revenium with context-based metadata injection and framework integrations."
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+authors = [
+    { name = "Revenium", email = "info@revenium.io" }
+]
+dependencies = [
+    "wrapt",
+    "revenium_middleware>=0.4.0",
+    "litellm",
+]
+keywords = ["litellm", "middleware", "logging", "token-usage", "metering", "revenium"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries :: Python Modules"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/revenium/revenium-middleware-litellm-proxy-python"
+"Bug Tracker" = "https://github.com/revenium/revenium-middleware-litellm-proxy-python/issues"
+"Documentation" = "https://docs.revenium.io"
+"Repository" = "https://github.com/revenium/revenium-middleware-litellm-proxy-python"
+
+[project.optional-dependencies]
+# Test dependencies
+test = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=1.2.0",
+    "python-dotenv>=1.0.0"
+]
+
+# Development dependencies
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=1.2.0",
+    "python-dotenv>=1.0.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "mypy>=1.0.0"
+]
+
+# Validation support with Pydantic
+validation = [
+    "pydantic>=2.0.0"
+]
+
+# CrewAI framework integration
+crewai = [
+    "crewai>=0.1.0"
+]
+
+# Legacy optional dependencies
+litellm_proxy = [
+    "litellm[proxy]",
+    "revenium_middleware>=0.4.0"
+]
+litellm_client = [
+    "litellm",
+    "wrapt",
+    "revenium_middleware>=0.4.0"
+]
+
+# All optional dependencies
+litellm_all = [
+    "litellm[proxy]",
+    "litellm",
+    "wrapt",
+    "revenium_middleware>=0.4.0",
+    "pydantic>=2.0.0",
+    "crewai>=0.1.0"
+]
+
+# Add setuptools specific configuration here
+[tool.setuptools]
+packages = [
+    "revenium_middleware_litellm_client",
+    "revenium_middleware_litellm_client.integrations",
+    "revenium_middleware_litellm_proxy"
+]
+
+# Pytest configuration
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+filterwarnings = [
+    # Filter Pydantic serialization warnings from LiteLLM mock responses
+    # These occur because mock_response creates simplified response objects
+    "ignore:Pydantic serializer warnings:UserWarning",
+    # Filter LiteLLM async cleanup warnings - this is a known LiteLLM issue
+    "ignore:coroutine 'close_litellm_async_clients' was never awaited:RuntimeWarning",
+    # Filter pytest return warnings for integration tests that also work as standalone scripts
+    "ignore::pytest.PytestReturnNotNoneWarning",
+]
