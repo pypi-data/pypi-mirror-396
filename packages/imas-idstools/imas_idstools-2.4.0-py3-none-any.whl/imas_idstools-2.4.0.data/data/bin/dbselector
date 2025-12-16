@@ -1,0 +1,88 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+import argparse
+import sys
+
+try:
+    import imaspy as imas
+except ImportError:
+    import imas
+from rich.progress import track
+from rich_argparse import RichHelpFormatter
+
+from idstools.database import DBMaster
+from idstools.utils.clihelper import get_backend_id, imas_parser
+from idstools.utils.idshelper import get_available_ids_and_occurrences
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Check if specified ids is exists in the scenario database and returns shot and pulse",
+        parents=[imas_parser],
+        formatter_class=RichHelpFormatter,
+    )
+    parser.add_argument(
+        "ids",
+        type=str,
+        default=None,
+        help="Name of the comma separated IDSes to check if it is available in scenario",
+    )
+    parser.add_argument("--verbose", action="store_true", help="Verbose mode")
+    parser.add_argument(
+        "--status",
+        type=str,
+        help="Will list only data entries with specified status (if such metadata is available)",
+    )
+    parser.add_argument(
+        "--list-count",
+        type=int,
+        default=0,
+        help="Number of entries user needs to display",
+    )
+    args = parser.parse_args()
+    idsesto_search = args.ids.split(",")
+    backend = get_backend_id(args.backend)
+    dbmaster = DBMaster()
+    if args.verbose:
+        print(f"Database located in {dbmaster.get_database_dir(args.database,args.user)}")
+
+    pulses = None
+    if backend == imas.ids_defs.MDSPLUS_BACKEND:
+        pulses = dbmaster.get_mds_plus_pulses(args.user, args.database, args.version, status=args.status)
+    elif backend == imas.ids_defs.HDF5_BACKEND:
+        pulses = dbmaster.get_hdf5_pulses(args.user, args.database, args.version)
+    else:
+        print(f"Functionality not yet implemented for backend {args.backend}")
+        sys.exit()
+
+    list_count = args.list_count
+
+    if pulses is not None:
+        pulse_counter = 0
+        for pulse in track(pulses, description="[green]Analyzing DB..."):
+            connargs = argparse.Namespace()
+            connargs.backend = args.backend
+            connargs.pulse = pulse[0]
+            connargs.run = pulse[1]
+            connargs.user = args.user
+            connargs.database = args.database
+            connargs.version = args.version
+            connargs.uri = (
+                f"imas:{args.backend.lower()}?user={args.user};pulse={pulse[0]};"
+                f"run={pulse[1]};database={args.database};version={args.version}"
+            )
+            connection = DBMaster.get_connection(connargs)
+            if connection is None:
+                continue
+
+            ids_list = get_available_ids_and_occurrences(connection)
+            found_counter = 0
+            for ids_to_search in idsesto_search:
+                if any(ids_to_search == ids for ids, _ in ids_list):
+                    found_counter = found_counter + 1
+
+            if found_counter == len(idsesto_search):
+                print((pulse[0], pulse[1]))
+                pulse_counter = pulse_counter + 1
+            if list_count != 0:
+                if pulse_counter == list_count:
+                    break

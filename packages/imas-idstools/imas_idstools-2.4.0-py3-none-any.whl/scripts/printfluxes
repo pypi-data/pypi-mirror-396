@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+# migrated from print_fluxes by David.Coster@ipp.mpg.de
+
+import argparse
+import logging
+import sys
+
+try:
+    import imaspy as imas
+except ImportError:
+    import imas
+from rich_argparse import RichHelpFormatter
+
+from idstools.database import DBMaster
+from idstools.utils.clihelper import dbentry_parser, get_database_path
+from idstools.utils.idslogger import setup_logger
+from idstools.view.core_transport import CoreTransportView
+
+logger = setup_logger("module", stdout_level=logging.INFO)
+
+slicing_methods = {
+    "CLOSEST": imas.ids_defs.CLOSEST_INTERP,
+    "PREVIOUS": imas.ids_defs.PREVIOUS_INTERP,
+    "LINEAR": imas.ids_defs.LINEAR_INTERP,
+}
+if __name__ == "__main__":
+    # Management of input arguments
+    parser = argparse.ArgumentParser(
+        description="View information about fluxes [Previously known as print_fluxes]",
+        epilog="""
+    """,
+        formatter_class=RichHelpFormatter,
+        parents=[dbentry_parser],
+    )
+
+    parser.add_argument(
+        "-m",
+        "--slicingmethod",
+        type=str,
+        default="CLOSEST",
+        choices=["CLOSEST", "PREVIOUS", "LINEAR"],
+        help="Slicing method \t(default=%(default)s)",
+    )
+
+    parser.add_argument("-o", "--occurrence", type=int, default=0, help="occurrence")
+    parser.add_argument("-t", "--time", type=float, help="Time", default=-99)
+    args = parser.parse_args()
+
+    connection = DBMaster.get_connection(args)
+    if connection is None:
+        logger.critical("----> Aborted.")
+        exit(1)
+
+    ids_slice_core_transport = connection.get_slice(
+        "core_transport",
+        args.time,
+        slicing_methods[args.slicingmethod],
+        occurrence=args.occurrence,
+        autoconvert=False,
+    )
+    if args.dd_update:
+        ids_slice_core_transport = imas.convert_ids(ids_slice_core_transport, connection.factory.version)
+    if len(ids_slice_core_transport.time) == 0:
+        logger.critical("Time vector is empty! aborting")
+        sys.exit(1)
+
+    print(f"Showing details for {get_database_path(args, ids_slice_core_transport.time[0])}")
+
+    core_transport_view = CoreTransportView(ids_slice_core_transport)
+    core_transport_view.view_fluxes(time_slice=0)
