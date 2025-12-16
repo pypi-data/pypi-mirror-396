@@ -1,0 +1,569 @@
+Metadata-Version: 2.4
+Name: maquinaweb-shared-msg
+Version: 0.1.10
+Summary: Models and Functions for to send messages to contacts.
+Author-email: Seu Nome <seuemail@dominio.com>
+License: MIT
+Project-URL: Homepage, https://github.com/maquinaweb/maquinaweb-shared-msg
+Project-URL: Repository, https://github.com/maquinaweb/maquinaweb-shared-msg
+Project-URL: Issues, https://github.com/maquinaweb/maquinaweb-shared-msg/issues
+Keywords: django,msg,models,shared
+Classifier: Framework :: Django
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: django>=5
+Requires-Dist: django-storages>=1.14.6
+Requires-Dist: djangorestframework>=3
+Requires-Dist: pyyaml>=6.0.3
+Requires-Dist: setuptools>=70
+Requires-Dist: twilio>=9.8.8
+Requires-Dist: zappa>=0.61.2
+Dynamic: requires-python
+
+# 📨 Maquinaweb Shared Msg
+
+> Biblioteca Django para envio de mensagens (Email, SMS, WhatsApp) compartilhada entre múltiplos sistemas usando um banco de dados centralizado e integração com Twilio.
+
+[![Python](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
+[![Django](https://img.shields.io/badge/django-5.0+-green.svg)](https://www.djangoproject.com/)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+## 📋 Índice
+
+- [Visão Geral](#-visão-geral)
+- [Características](#-características)
+- [Arquitetura](#️-arquitetura)
+- [Instalação](#-instalação)
+- [Configuração](#️-configuração)
+- [Uso Básico](#-uso-básico)
+- [API Reference](#-api-reference)
+
+---
+
+## 🎯 Visão Geral
+
+A **Maquinaweb Shared Msg** permite que múltiplos sistemas Django enviem mensagens para contatos através de um banco de dados centralizado, com suporte a:
+
+- 📧 **Email** - Envio de emails HTML usando Django templates
+- 📱 **SMS** - Envio de SMS via Twilio
+- 💬 **WhatsApp** - Envio de mensagens WhatsApp via Twilio com suporte a templates
+
+### Problema Resolvido
+
+Ao invés de:
+- ❌ Configurar envio de mensagens em cada sistema separadamente
+- ❌ Duplicar lógica de integração com Twilio
+- ❌ Gerenciar contatos em múltiplos bancos
+
+Você pode:
+- ✅ Centralizar envio de mensagens em uma biblioteca
+- ✅ Compartilhar contatos entre sistemas
+- ✅ Usar templates Django para personalizar mensagens
+- ✅ Executar envios assíncronos com Zappa
+
+---
+
+## ✨ Características
+
+### Core Features
+
+- **📧 Email HTML**: Envio de emails com templates Django renderizados
+- **📱 SMS via Twilio**: Integração completa com Twilio para SMS
+- **💬 WhatsApp Templates**: Suporte a Twilio Content Templates para WhatsApp
+- **🔄 Envio Assíncrono**: Decorador `@task` do Zappa para execução em background
+- **🗄️ Banco Centralizado**: Models read-only para contatos compartilhados
+- **🧩 Mixins Reutilizáveis**: `ContactMixin` para integração fácil em seus models
+
+### Componentes Principais
+
+| Componente | Descrição |
+|------------|-----------|
+| **Models** | Contact, Email, Phone, Message |
+| **Services** | TwilioService para SMS e WhatsApp |
+| **Utils** | Builders para Email, SMS e WhatsApp |
+| **Mixins** | ContactMixin para models com contatos |
+| **Router** | SharedMsgRouter para roteamento de banco |
+
+---
+
+## 🏗️ Arquitetura
+
+```
+┌─────────────────────────────────────────┐
+│     Sistema de Mensagens Centralizado   │
+│                                         │
+│  ┌──────────┐  ┌────────┐  ┌─────────┐ │
+│  │ Contact  │  │ Email  │  │  Phone  │ │
+│  └────┬─────┘  └───┬────┘  └────┬────┘ │
+│       │            │            │       │
+│       └────────────┴────────────┘       │
+│                    │                    │
+│           ┌────────▼────────┐           │
+│           │     Message     │           │
+│           │  (status track) │           │
+│           └─────────────────┘           │
+└──────────────────┬──────────────────────┘
+                   │
+      ┌────────────┴────────────┐
+      │  PostgreSQL/MySQL       │
+      │  (auth_db)              │
+      └────────────┬────────────┘
+                   │
+      ┌────────────┼────────────┐
+      │            │            │
+┌─────▼─────┐ ┌────▼────┐ ┌────▼─────┐
+│ Sistema A │ │Sistema B│ │ Sistema C│
+│           │ │         │ │          │
+│ send_msg()│ │send_msg()││send_msg()│
+└───────────┘ └─────────┘ └──────────┘
+                   │
+      ┌────────────┴────────────┐
+      │                         │
+      ▼                         ▼
+┌──────────┐              ┌──────────┐
+│  Twilio  │              │  Django  │
+│ SMS/WA   │              │  Email   │
+└──────────┘              └──────────┘
+```
+
+**Fluxo de Envio:**
+
+1. Sistema cliente chama `send_message()` ou usa `ContactMixin`
+2. Mensagem é processada e enviada via canal apropriado (Email/Twilio)
+3. Status da mensagem é atualizado no model `Message`
+4. Execução pode ser síncrona ou assíncrona (via Zappa)
+
+---
+
+## 📦 Instalação
+
+### 1. Instalar a Biblioteca
+
+```bash
+# Via pip (quando publicado)
+pip install maquinaweb-shared-msg
+
+# Ou modo desenvolvimento
+pip install -e /path/to/maquinaweb-shared-msg
+```
+
+### 2. Adicionar ao requirements.txt
+
+```txt
+Django>=5.0
+djangorestframework>=3.0
+maquinaweb-shared-msg>=0.1.9
+twilio>=9.8.8
+zappa>=0.61.2
+```
+
+---
+
+## ⚙️ Configuração
+
+### 1. Settings do Django
+
+```python
+# settings.py
+
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'rest_framework',
+    
+    # Adicionar shared_msg
+    'shared_msg',
+    
+    # Suas apps
+    'myapp',
+]
+```
+
+### 2. Configurar Banco de Dados
+
+```python
+# settings.py
+
+DATABASES = {
+    'default': {
+        # Banco do sistema atual
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'meu_sistema_db',
+        'USER': 'meu_user',
+        'PASSWORD': 'senha',
+        'HOST': 'localhost',
+        'PORT': '5432',
+    },
+    'auth_db': {
+        # Banco centralizado de mensagens
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'sistema_msg_db',
+        'USER': 'msg_user',
+        'PASSWORD': 'senha',
+        'HOST': 'msg-server.example.com',
+        'PORT': '5432',
+    }
+}
+
+# Router para direcionar queries
+DATABASE_ROUTERS = ['shared_msg.router.SharedMsgRouter']
+```
+
+### 3. Configurar Twilio
+
+```python
+# settings.py
+
+# Credenciais Twilio
+TWILIO_ACCOUNT_SID = 'ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+TWILIO_AUTH_TOKEN = 'seu_auth_token_aqui'
+
+# Números de envio
+TWILIO_SMS_FROM = '+5511999999999'
+TWILIO_WHATSAPP_FROM = '+5511999999999'
+
+# Content SIDs para templates WhatsApp (opcional)
+TWILIO_CONTENT_SIDS = {
+    'whatsapp/welcome': {
+        'whatsapp': 'HXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+    },
+    'whatsapp/order_confirmation': {
+        'whatsapp': 'HXyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy',
+    },
+}
+```
+
+### 4. Configurar Email
+
+```python
+# settings.py
+
+# Configuração padrão do Django para email
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'seu@email.com'
+EMAIL_HOST_PASSWORD = 'sua_senha_app'
+DEFAULT_FROM_EMAIL = 'noreply@seudominio.com'
+```
+
+### 5. Configurar Tabelas (Opcional)
+
+```python
+# settings.py
+
+# Customizar nomes das tabelas (se necessário)
+SHARED_MSG_MESSAGE_TABLE = 'message_message'
+SHARED_MSG_CONTACT_TABLE = 'message_contact'
+SHARED_MSG_EMAIL_TABLE = 'message_email'
+SHARED_MSG_PHONE_TABLE = 'message_phone'
+
+# Banco de dados a utilizar
+SHARED_MSG_DEFAULT_DB = 'auth_db'
+```
+
+---
+
+## 🚀 Uso Básico
+
+### 1. Enviar Mensagem Diretamente
+
+```python
+from shared_msg.message.utils.send_message import send_message
+from shared_msg.message.utils import MessageTypes
+
+# Enviar Email
+send_message(
+    contacts_ids=[1, 2, 3],
+    type=MessageTypes.EMAIL,
+    template='emails/welcome.html',
+    context={'name': 'João', 'company': 'XYZ'},
+    from_email='noreply@empresa.com',
+    subject='Bem-vindo à nossa plataforma!',
+)
+
+# Enviar SMS
+send_message(
+    contacts_ids=1,
+    type=MessageTypes.SMS,
+    template='sms/verification_code.txt',
+    context={'code': '123456'},
+)
+
+# Enviar WhatsApp
+send_message(
+    contacts_ids=[1, 2],
+    type=MessageTypes.WHATSAPP,
+    template='whatsapp/order_confirmation.html',
+    context={
+        'order_number': 'PED-001',
+        'total': 'R$ 150,00',
+        'twilio_variables': {
+            '1': 'PED-001',
+            '2': 'R$ 150,00',
+        }
+    },
+)
+```
+
+### 2. Usando ContactMixin em Models
+
+```python
+# myapp/models.py
+from django.db import models
+from shared_msg.mixins.contact import ContactMixin
+
+class Cliente(ContactMixin, models.Model):
+    """Model que possui contato vinculado"""
+    
+    nome = models.CharField(max_length=200)
+    empresa = models.CharField(max_length=200)
+    
+    def __str__(self):
+        return self.nome
+
+# Uso
+cliente = Cliente.objects.get(id=1)
+
+# Enviar email para o contato do cliente
+cliente.send_message(
+    type=MessageTypes.EMAIL,
+    template='emails/invoice.html',
+    context={'cliente': cliente.nome, 'valor': 'R$ 500,00'},
+    subject='Sua fatura chegou!',
+)
+
+# Enviar SMS
+cliente.send_message(
+    type=MessageTypes.SMS,
+    template='sms/reminder.txt',
+    context={'nome': cliente.nome},
+)
+```
+
+### 3. Templates de Mensagem
+
+#### Email Template (HTML)
+```html
+<!-- templates/emails/welcome.html -->
+<!DOCTYPE html>
+<html>
+<body>
+    <h1>Olá, {{ name }}!</h1>
+    <p>Bem-vindo à {{ company }}.</p>
+    <p>Estamos felizes em tê-lo conosco!</p>
+</body>
+</html>
+```
+
+#### SMS Template (TXT)
+```
+{# templates/sms/verification_code.txt #}
+Seu código de verificação é: {{ code }}. Válido por 5 minutos.
+```
+
+#### WhatsApp Template (HTML)
+```html
+<!-- templates/whatsapp/order_confirmation.html -->
+Seu pedido {{ order_number }} foi confirmado! Total: {{ total }}
+```
+
+---
+
+## 🔍 API Reference
+
+### Models
+
+#### Contact
+```python
+from shared_msg.models import Contact
+
+# Campos
+contact.id
+contact.name
+```
+
+#### Email
+```python
+from shared_msg.models import Email
+
+# Campos
+email.id
+email.email        # Endereço de email
+email.contact_id   # FK para Contact
+```
+
+#### Phone
+```python
+from shared_msg.models import Phone
+
+# Campos
+phone.id
+phone.phone_type   # 'whatsapp' ou 'sms'
+phone.number       # Número do telefone
+phone.contact_id   # FK para Contact
+
+# Choices
+Phone.PhoneType.WHATSAPP
+Phone.PhoneType.SMS
+```
+
+#### Message
+```python
+from shared_msg.models import Message
+
+# Campos
+message.id
+message.contact_id   # FK para Contact
+message.status       # 'pending', 'sent', 'failed'
+message.type         # 'email', 'sms', 'whatsapp'
+message.template     # Nome do template usado
+message.related_to   # ID opcional para vincular a outro objeto
+
+# Choices
+Message.Types.EMAIL
+Message.Types.SMS
+Message.Types.WHATSAPP
+
+Message.Status.PENDING
+Message.Status.SENT
+Message.Status.FAILED
+```
+
+### MessageTypes
+
+```python
+from shared_msg.message.utils import MessageTypes
+
+MessageTypes.EMAIL     # 'email'
+MessageTypes.SMS       # 'sms'
+MessageTypes.WHATSAPP  # 'whatsapp'
+MessageTypes.TYPES     # ['email', 'sms', 'whatsapp']
+```
+
+### Services
+
+#### TwilioService
+
+```python
+from shared_msg.message.services.twilio_service import TwilioService
+
+service = TwilioService()
+
+# Enviar SMS texto
+service.send_sms_text(
+    phone='+5511999999999',
+    body='Sua mensagem aqui',
+)
+
+# Enviar WhatsApp com template
+service.send_whatsapp_template(
+    phone='+5511999999999',
+    content_sid='HXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+    variables={'1': 'valor1', '2': 'valor2'},
+    body='Texto fallback opcional',
+)
+```
+
+### Utils
+
+#### build_email_message
+
+```python
+from shared_msg.message.utils.build_email_message import build_email_message
+
+email_message = build_email_message(
+    emails=['user1@email.com', 'user2@email.com'],
+    from_email='noreply@empresa.com',
+    subject='Assunto do email',
+    context={'name': 'João'},
+    template='emails/template.html',
+)
+
+email_message.send()  # Envia o email
+```
+
+#### build_sms_message
+
+```python
+from shared_msg.message.utils.build_sms_message import build_sms_message
+
+body = build_sms_message(
+    template='sms/verification.txt',
+    context={'code': '123456'},
+)
+# Retorna: "Seu código é: 123456. Válido por 5 minutos."
+```
+
+#### build_whatsapp_message
+
+```python
+from shared_msg.message.utils.build_whatsapp_message import build_whatsapp_message
+
+content_sid, variables, fallback_body = build_whatsapp_message(
+    template='whatsapp/welcome.html',
+    message_type='whatsapp',
+    context={
+        'name': 'João',
+        'twilio_variables': {'1': 'João'},
+    },
+)
+```
+
+### Mixins
+
+#### ContactMixin
+
+```python
+from shared_msg.mixins.contact import ContactMixin
+
+class MeuModel(ContactMixin, models.Model):
+    # Adiciona campo contact_id ao model
+    pass
+
+# Uso
+obj = MeuModel.objects.get(id=1)
+obj.contact      # Acessa o Contact relacionado
+obj.send_message(...)  # Envia mensagem para o contato
+```
+
+### Router
+
+#### SharedMsgRouter
+
+```python
+# settings.py
+DATABASE_ROUTERS = ['shared_msg.router.SharedMsgRouter']
+```
+
+Direciona automaticamente todas as queries dos models `shared_msg` para o banco configurado em `SHARED_MSG_DEFAULT_DB`.
+
+---
+
+## 🔧 Configurações Disponíveis
+
+| Configuração | Padrão | Descrição |
+|--------------|--------|-----------|
+| `SHARED_MSG_DEFAULT_DB` | `'auth_db'` | Nome do banco para models shared_msg |
+| `SHARED_MSG_MESSAGE_TABLE` | `'message_message'` | Nome da tabela de mensagens |
+| `SHARED_MSG_CONTACT_TABLE` | `'message_contact'` | Nome da tabela de contatos |
+| `SHARED_MSG_EMAIL_TABLE` | `'message_email'` | Nome da tabela de emails |
+| `SHARED_MSG_PHONE_TABLE` | `'message_phone'` | Nome da tabela de telefones |
+| `TWILIO_ACCOUNT_SID` | - | Account SID do Twilio |
+| `TWILIO_AUTH_TOKEN` | - | Auth Token do Twilio |
+| `TWILIO_SMS_FROM` | - | Número de envio SMS |
+| `TWILIO_WHATSAPP_FROM` | - | Número de envio WhatsApp |
+| `TWILIO_CONTENT_SIDS` | `{}` | Mapa de templates → Content SIDs |
+| `DEFAULT_FROM_EMAIL` | - | Email padrão para envio |
+
+---
+
+## 📝 Licença
+
+Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
