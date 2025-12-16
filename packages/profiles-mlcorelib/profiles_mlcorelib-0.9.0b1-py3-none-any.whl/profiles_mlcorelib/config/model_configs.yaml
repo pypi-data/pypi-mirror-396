@@ -1,0 +1,95 @@
+data:
+  # Related to the data that is used to train the model
+  label_value: 1 # Value of the label_column when the entity does the event. Not required for regression tasks
+  entity_column: user_main_id # Name of the entity defined in the profiles project. Ex: user_id, user_main_id, rudder_id etc
+  entity_key: user # Name of the entity key defined in the profiles project. Ex: user, user_main, rudder etc
+  output_profiles_ml_model: 'ltv_test'
+  task: classification # classification or regression; Can support a few other tasks in the future, like ltv, churn etc which can be super classes of classification/regression.
+  index_timestamp: valid_at
+  eligible_users: # Can add an sql where condition to filter users. Ex: is_active = 1 and lower(country) = 'us'
+  user_preference_order_infra: 
+    - local
+    - rudderstack-infra
+    - native-warehouse
+  max_row_count: 30000
+  recall_to_precision_importance: 1.0 # Importance of recall to precision. If 1.0, then recall and precision are equally important.
+  new_materialisations_config:
+    strategy: "auto" # (auto|manual) Strategy for generating new materials
+    feature_data_min_date_diff: 14 # Required for auto strategy only. Ignored for manual strategy if given. Minimum number of days in the difference between new generated material and existing materials
+    max_no_of_dates: 3 # Required for auto strategy only. Ignored for manual strategy if given. Upper limit on how many new materials that can be generated.
+    dates: # Required for manual strategy only. Ignored for auto strategy if given
+      - '2024-01-01,2024-01-07' # (feature_date, label_date)
+      - '2024-01-02,2024-01-08'
+      - '2024-01-03,2024-01-09'
+  
+preprocessing:
+  # Refer to https://pycaret.readthedocs.io/en/stable/api/classification.html#pycaret.classification.setup for setting up preprocessing params for classification
+  # Refer to https://pycaret.readthedocs.io/en/stable/api/regression.html#pycaret.regression.setup for setting up preprocessing params for regression
+  top_k_array_categories: 2
+  timestamp_columns: [] # Timestamp columns get a datediff function applied with the index_timestamp to get days_since_<timestamp_column> features
+  
+  arraytype_columns: []
+
+  booleantype_columns: []
+
+  ignore_features: []
+  numeric_features: [] # List of numerical features. If empty, all numerical features are considered
+  categorical_features: [] # List of categorical features. If empty, all categorical features are considered
+
+  # Imputation Strategy
+  imputation_strategy : 
+    numeric_imputation : "median"
+    categorical_imputation : "mode"
+
+  # Train, test, val split ratios. They must be each between 0 and 1, and sum to 1
+  train_size: 0.6
+  val_size: 0.2
+  test_size: 0.2
+
+
+train:
+  data_path:
+    train_file: train.csv
+    test_file: test.csv
+    val_file: val.csv
+    label_col_name: label
+  model_params:
+    fold_strategy: "stratifiedkfold"
+    fold: 5
+    models:
+      include :
+        classifiers :
+          - xgboost # Xgboost Classifier
+          - rf      # Random Forest Classifier
+          - ada     # AdaBoost Classifier
+          - gbc     # Gradient Boosting Classifier
+        regressors :
+          - xgboost # Xgboost Classifier
+          - rf      # Random Forest Regressor
+          - ada     # AdaBoost Regressor
+          - gbr     # Gradient Boosting Regressor
+
+outputs:
+  # Related to the output of the data prep step
+  column_names:
+    percentile: &percentile_name percentile_score
+    score: probability_score
+    output_label_column: output_label
+  feature_meta_data: 
+    features:
+      - name: *percentile_name
+        description: 'Percentile of churn score. Higher the percentile, higher the probability of churn'
+
+validation:
+  model:
+    evaluation_metrics:
+      - average_precision
+      - recall
+      - accuracy
+    acceptance_criteria:
+      # Dev/Stagging model will get accepted if it meets the following criteria
+      # Ex.
+      #   - average_precision(Dev) > 0.9 * average_precision(Production)
+      #   - When above criteria is met, then dev model will be promoted to production
+      metric_name: average_precision
+      threshold: 0.9
