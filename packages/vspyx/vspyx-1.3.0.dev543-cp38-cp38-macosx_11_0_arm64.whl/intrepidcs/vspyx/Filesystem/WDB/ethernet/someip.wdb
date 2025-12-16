@@ -1,0 +1,174 @@
+[setup]
+	version = '2.1.0'
+
+	[[setup.hooks]]
+		expression = '( udp.dstport >= 30490 && udp.dstport <= 30491 ) || ( udp.dstport >= 30501 && udp.dstport <= 30504 )'
+		location = 'udp.payload'
+		protocol = '#SomeIP'
+
+	[[setup.hooks]]
+		expression = '( tcp.port >= 30490 && tcp.port <= 30491 ) || ( tcp.port >= 30501 && tcp.port <= 30504 )'
+		location = 'tcp.payload'
+		protocol = '#SomeIP'
+
+[SomeIP]
+	name = 'SOME/IP'
+	tag = 'someip'
+
+	[[SomeIP.fields]]
+		name = 'Message ID'
+		inherit = '#MessageID'
+
+	[[SomeIP.fields]]
+		name = 'Length'
+		length = 32
+		format = 'decimal'
+
+	[[SomeIP.fields]]
+		name = 'Request ID'
+		inherit = '#RequestID'
+
+	[[SomeIP.fields]]
+		name = 'Protocol Version'
+		format = 'decimal'
+		length = 8
+
+	[[SomeIP.fields]]
+		name = 'Interface Version'
+		format = 'decimal'
+		length = 8 
+
+	[[SomeIP.fields]]
+		name = 'Message Type'
+		short_name = 'Type'
+		length = 8
+		summary = true
+
+		[[SomeIP.fields.states]] 
+			name =  'REQUEST'
+			value = 0x00
+
+		[[SomeIP.fields.states]] 
+			name =  'REQUEST_NO_RETURN'
+			value = 0x01
+
+		[[SomeIP.fields.states]] 
+			name =  'NOTIFICATION'
+			value = 0x02
+
+		[[SomeIP.fields.states]] 
+			name =  'REQUEST_ACK'
+			value = 0x40
+
+		[[SomeIP.fields.states]] 
+			name =  'REQUEST_NO_RETURN_ACK'
+			value = 0x41
+
+		[[SomeIP.fields.states]] 
+			name =  'NOTIFICATION_ACK'
+			value = 0x42
+
+		[[SomeIP.fields.states]] 
+			name =  'RESPONSE'
+			value = 0x80
+
+		[[SomeIP.fields.states]] 
+			name =  'ERROR'
+			value = 0x81
+
+		[[SomeIP.fields.states]] 
+			name =  'RESPONSE_ACK'
+			value = 0xC0
+
+		[[SomeIP.fields.states]] 
+			name =  'ERROR_ACK'
+			value = 0xC1
+
+
+	[[SomeIP.fields]]
+		name = 'Return Code'
+		length = 8
+
+		[[SomeIP.fields.states]]
+			name = 'E_OK'
+			value = 0x00
+
+		[[SomeIP.fields.states]]
+			name = 'E_NOT_OK'
+			value = 0x01
+
+		[[SomeIP.fields.states]]
+			name = 'E_UNKNOWN_SERVICE'
+			value = 0x02
+
+		[[SomeIP.fields.states]]
+			name = 'E_UNKNOWN_METHOD'
+			value = 0x03
+	
+		[[SomeIP.fields.states]]
+			name = 'E_NOT_READY'
+			value = 0x04
+	
+		[[SomeIP.fields.states]]
+			name = 'E_NOT_REACHABLE'
+			value = 0x05
+	
+		[[SomeIP.fields.states]]
+			name = 'E_TIMEOUT'
+			value = 0x06
+	
+		[[SomeIP.fields.states]]
+			name = 'E_WRONG_PROTOCOL_VERSION'
+			value = 0x07
+	
+		[[SomeIP.fields.states]]
+			name = 'E_WRONG_INTERFACE_VERSION'
+			value = 0x08
+	
+		[[SomeIP.fields.states]]
+			name = 'E_MALFORMED_MESSAGE'
+			value = 0x09
+
+	[[SomeIP.fields]]
+		name = 'Payload'
+		length = '^.length * 8 - 8'
+
+[MessageID]
+	name = 'Message ID'
+	tag = 'id'
+	length = 32
+	format = 'hex'
+	summary = true
+
+	[[MessageID.fields]]
+		name = 'Service ID'
+		length = 16
+		format = 'hex'
+
+	[[MessageID.fields]]
+		name = 'Reserved'
+		length = 1
+
+	[[MessageID.fields]]
+		name = 'Method ID'
+		length = 15
+		format = 'hex'
+
+[RequestID]
+	name = 'Request ID'
+	tag = 'id'
+	length = 32
+	format = 'hex'
+	summary = true
+
+	[[RequestID.fields]]
+		name = 'Client ID'
+		length = 16
+		format = 'hex'
+
+	[[RequestID.fields]]
+		name = 'Session ID'
+		length = 16
+		format = 'hex'
+
+

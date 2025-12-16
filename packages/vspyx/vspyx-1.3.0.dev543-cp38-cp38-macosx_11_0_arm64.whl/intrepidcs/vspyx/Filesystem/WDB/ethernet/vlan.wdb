@@ -1,0 +1,53 @@
+[setup]
+	version = '2.1.0'
+	include = ['builtin://WDB/ethernet/ethernet.wdb']
+
+	[[setup.hooks]]
+		expression = 'eth.type == 0x8100 || eth.type == 0x88a8'
+		location = 'eth.payload'
+		protocol = '#VLAN'
+
+[VLAN]
+	tag = 'vlan'
+	long_name = '802.1Q Virtual LAN'
+	short_name = 'VLAN'
+	type = 'group'
+
+	[[VLAN.fields]]
+		name = 'Priority Code Point'
+		short_name = 'PCP'
+		tag = 'pcp'
+		length = 3
+		format = 'decimal'
+		summary = true
+
+	[[VLAN.fields]]
+		name = 'Drop Eligible Indicator'
+		short_name = 'DEI'
+		tag = 'dei'
+		length = 1
+		summary = true
+
+	[[VLAN.fields]]
+		name = 'VLAN ID'
+		short_name = 'VID'
+		tag = 'vid'
+		length = 12
+		summary = true
+		format = 'decimal'
+
+	[[VLAN.fields]]
+		name = 'Type'
+		tag = 'rawtype'
+		aliases = ['eth.type']
+		length = 16
+		states = '#Ethernet.$rawtype.states'
+	
+	[[VLAN.fields]]
+		name = 'Payload'
+		aliases = ['eth.payload']
+		length = '( frame.length * 8 ) - eth.type:end'
+		type = 'hook'
+
+
+
