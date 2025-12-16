@@ -1,0 +1,1473 @@
+{% extends "enap_designsystem/base.html" %}
+{% load static %}
+{% load wagtailcore_tags wagtailimages_tags %}
+
+{% block title %}
+    <title>{{ page.page_title }}</title>
+{% endblock %}
+
+{%block govnavbar %}
+        <div style="background-color: #071E41;">
+            <div class="menu">
+                <div class="logo">
+                    <img style="width: 51px; height: 18px;" src="{% static 'enap_designsystem/icons/logo-white.png' %}" alt="Logo GovBR" height="40">
+                </div>
+                <a href="https://www.gov.br/secom/pt-br/acesso-a-informacao/comunicabr">Comunica BR</a>
+                <div class="separator"></div>
+                <a href="https://www.gov.br/acessoainformacao/pt-br">Acesso à informação</a>
+                <div class="separator"></div>
+                <a href="https://www.gov.br/pt-br/participacao-social/">Participe</a>
+                <div class="separator"></div>
+                <a href="https://www4.planalto.gov.br/legislacao/">Legislação</a>
+                <div class="separator"></div>
+                <a href="https://www.gov.br/pt-br/orgaos-do-governo">Órgãos do Governo</a>
+            </div>
+        </div>
+    {% endblock %}
+
+{% block navbar %}
+    {% if page.navbar %}
+        {% include "enap_designsystem/blocks/navbar/navbar_block.html" with navbar=page.navbar %}
+    {% else %}
+        <p style="color: red;">DEBUG: Nenhuma Navbar foi definida.</p>
+    {% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-color: #024248;
+        --primary-light: rgba(2, 66, 72, 0.1);
+        --secondary-color: #1976D2;
+        --accent-color: #FF5722;
+        --light-bg: #F5F9FC;
+        --text-primary: #333333;
+        --text-secondary: #666666;
+        --border-radius: 12px;
+        --shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        --transition: all 0.3s ease;
+    }
+
+    body {
+        background-color: var(--light-bg);
+        color: var(--text-primary);
+        line-height: 1.6;
+    }
+
+
+    /* Estilo para o cabeçalho da rota */
+    .route-header {
+        background: linear-gradient(135deg, var(--primary-color), #035963);
+        color: white !important;
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: var(--shadow);
+    }
+
+    .route-header h2 {
+        font-size: 2.2rem;
+        margin-bottom: 1rem;
+        font-weight: 700;
+    }
+
+    .route-header p {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        max-width: 800px;
+    }
+
+    /* Estilo para os cartões de etapa */
+    .route-step {
+        background-color: white;
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: var(--shadow);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .route-step::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 6px;
+        height: 100%;
+        background-color: var(--primary-color);
+        border-radius: 3px;
+    }
+    
+    .step-counter {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        background-color: var(--primary-color);
+        color: white;
+        border-radius: 50%;
+        font-weight: bold;
+        font-size: 1.2rem;
+        margin-right: 1rem;
+        box-shadow: 0 2px 8px rgba(2, 66, 72, 0.3);
+        padding: 10px;
+    }
+    
+    .step-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+    
+    .step-title {
+        font-size: 1.5rem;
+        margin: 0;
+        font-weight: 600;
+    }
+
+    .step-subtitle {
+        color: var(--text-secondary);
+        margin: 0 0 1.5rem 3.5rem;
+        font-size: 1rem;
+    }
+
+    /* Estilo para a grade de opções */
+    .options-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1rem;
+        margin: 1rem 0 0.5rem;
+    }
+
+    .option-card {
+        background-color: white;
+        border: 2px solid #E0E0E0;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        cursor: pointer;
+        transition: var(--transition);
+        display: flex;
+        align-items: center;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .option-card:hover {
+        border-color: var(--primary-color);
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .option-card.selected {
+        border-color: var(--primary-color);
+        background-color: var(--primary-light);
+        box-shadow: 0 4px 12px rgba(2, 66, 72, 0.15);
+    }
+
+    .option-checkbox {
+        position: absolute;
+        opacity: 0;
+    }
+
+    .option-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        background-color: var(--primary-light);
+        color: var(--primary-color);
+        border-radius: 8px;
+        margin-right: 1rem;
+        font-size: 1rem;
+        transition: var(--transition);
+    }
+
+    .option-card.selected .option-icon {
+        background-color: var(--primary-color);
+        color: white;
+    }
+
+    .option-text {
+        font-weight: 500;
+        font-size: 1rem;
+    }
+
+    /* Estilo para os badges de filtros */
+    .badge-filtros {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 0 0 1.5rem 3.5rem;
+        min-height: 30px;
+    }
+    
+    .badge-filtro {
+        background-color: #E3F2FD;
+        border: 1px solid #2196F3;
+        border-radius: 20px;
+        padding: 6px 16px;
+        font-size: 0.9rem;
+        display: inline-flex;
+        align-items: center;
+        color: #0D47A1;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        animation: fadeIn 0.3s ease-in-out;
+    }
+    
+    .badge-filtro .remove-badge {
+        margin-left: 8px;
+        cursor: pointer;
+        font-size: 16px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background-color: rgba(13, 71, 161, 0.1);
+        transition: var(--transition);
+    }
+    
+    .badge-filtro .remove-badge:hover {
+        background-color: rgba(13, 71, 161, 0.2);
+    }
+
+    /* Estilo para os botões de ação */
+    .form-actions {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 2rem;
+        gap: 1rem;
+    }
+
+    .btn {
+        border: none;
+        border-radius: var(--border-radius);
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: var(--transition);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .btn.primary {
+        background-color: var(--primary-color);
+        color: white;
+    }
+
+    .btn.primary:hover {
+        background-color: #035e67;
+        box-shadow: 0 4px 12px rgba(2, 66, 72, 0.3);
+        transform: translateY(-2px);
+    }
+
+    .btn.secondary {
+        background-color: #E0E0E0;
+        color: var(--text-primary);
+    }
+
+    .btn.secondary:hover {
+        background-color: #D0D0D0;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+    }
+
+    .btn.large {
+        padding: 1rem 2rem;
+        font-size: 1.1rem;
+    }
+    
+    /* Estilos para o indicador de progresso */
+    .progress-container {
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        background-color: white;
+        padding: 1rem 0;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .progress-track {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 1rem;
+        position: relative;
+    }
+    
+    .progress-track::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background-color: #E0E0E0;
+        z-index: -1;
+        transform: translateY(-50%);
+    }
+    
+    .progress-step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+    }
+
+    
+    .progress-label {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+        text-align: center;
+        max-width: 100px;
+    }
+    
+    .progress-step.active .progress-dot {
+        background-color: var(--primary-color);
+        color: white;
+        box-shadow: 0 0 0 3px var(--primary-light);
+    }
+    
+    .progress-step.active .progress-label {
+        color: var(--primary-color);
+        font-weight: 600;
+    }
+    
+    .progress-step.complete .progress-dot {
+        background-color: #4CAF50;
+        color: white;
+    }
+    
+    .progress-fill {
+        position: absolute;
+        top: 50%;
+        left: 0;
+        height: 3px;
+        background-color: #4CAF50;
+        z-index: -1;
+        transform: translateY(-50%);
+        transition: width 0.5s ease;
+    }
+    
+    /* Estilos para a tela de resultado */
+    .mapa-personalizado {
+        background-color: white;
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        box-shadow: var(--shadow);
+    }
+    
+    .mapa-header {
+        text-align: center;
+        margin-bottom: 2.5rem;
+    }
+    
+    .mapa-header h1 {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        color: var(--primary-color);
+    }
+    
+    .categoria-badge {
+        background-color: var(--primary-light);
+        color: var(--primary-color);
+        display: inline-block;
+        padding: 0.5rem 1.5rem;
+        border-radius: 30px;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+    
+    .header-icon {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    
+    .icon-circle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 80px;
+        height: 80px;
+        background-color: var(--primary-color);
+        color: white;
+        border-radius: 50%;
+        font-size: 2rem;
+        box-shadow: 0 4px 20px rgba(2, 66, 72, 0.3);
+    }
+    
+    .capsula-principal {
+        margin-bottom: 3rem;
+    }
+    
+    .capsula-card-two {
+        background: linear-gradient(135deg, #FFF, #F5F9FC);
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        display: flex;
+        align-items: center;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .capsula-card-two::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 150px;
+        height: 150px;
+        background: radial-gradient(circle at top right, rgba(2, 66, 72, 0.1), transparent 70%);
+        z-index: 0;
+    }
+    
+    .card-icon {
+        margin-right: 2rem;
+    }
+    
+    .icon-target {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 60px;
+        height: 60px;
+        background-color: var(--primary-color);
+        color: white;
+        border-radius: 15px;
+        font-size: 1.5rem;
+        box-shadow: 0 5px 15px rgba(2, 66, 72, 0.3);
+    }
+    
+    .card-content {
+        flex: 1;
+        z-index: 1;
+    }
+    
+    .comece-aqui {
+        display: inline-block;
+        background-color: #FFF3E0;
+        color: #FF9800;
+        padding: 0.4rem 1rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+    
+    .capsula-title {
+        font-size: 1.8rem;
+        margin-bottom: 0.5rem;
+        color: var(--primary-color);
+    }
+    
+    .capsula-subtitle {
+        color: var(--text-secondary);
+        margin-bottom: 1.5rem;
+    }
+    
+    .action-button .btn {
+        padding: 0.8rem 1.8rem;
+    }
+    
+    .proximos-passos {
+        margin-bottom: 3rem;
+    }
+    
+    .section-title {
+        display: flex;
+        align-items: center;
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+        color: var(--primary-color);
+    }
+    
+    .section-icon-two {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        background-color: var(--primary-light);
+        color: var(--primary-color);
+        border-radius: 10px;
+        font-size: 1rem;
+        margin-right: 0.8rem;
+    }
+    
+    .section-subtitle {
+        color: var(--text-secondary);
+        margin-bottom: 1.5rem;
+    }
+    
+    .capsulas-complementares {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1rem;
+    }
+    
+    .capsula-item {
+        background-color: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        display: flex;
+        align-items: center;
+        text-decoration: none;
+        color: var(--text-primary);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        transition: var(--transition);
+    }
+    
+    .capsula-item:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    }
+    
+    .item-number {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        background-color: var(--primary-light);
+        color: var(--primary-color);
+        border-radius: 8px;
+        font-weight: 600;
+        margin-right: 1rem;
+    }
+    
+    .item-content {
+        flex: 1;
+    }
+    
+    .item-title {
+        font-size: 1.1rem;
+        margin: 0;
+    }
+    
+    .item-action {
+        margin-left: 1rem;
+    }
+    
+    .item-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        background-color: var(--primary-light);
+        color: var(--primary-color);
+        border-radius: 50%;
+        transition: var(--transition);
+    }
+    
+    .capsula-item:hover .item-link {
+        background-color: var(--primary-color);
+        color: white;
+    }
+    
+    .acoes-resultado {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+    }
+    
+    /* Animações */
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+    
+    .route-step {
+        animation: fadeIn 0.5s ease-out forwards;
+    }
+
+    /* Adiciona um atraso para cada etapa aparecer sequencialmente */
+    .route-step:nth-child(1) { animation-delay: 0.1s; }
+    .route-step:nth-child(2) { animation-delay: 0.2s; }
+    .route-step:nth-child(3) { animation-delay: 0.3s; }
+    
+    .btn.primary {
+        animation: pulse 2s infinite;
+        animation-delay: 3s;
+    }
+    
+    /* Responsividade */
+    @media (max-width: 768px) {
+        .options-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .form-actions {
+            flex-direction: column-reverse;
+        }
+        
+        .capsula-card-two {
+            flex-direction: column;
+            text-align: center;
+        }
+        
+        .card-icon {
+            margin-right: 0;
+            margin-bottom: 1rem;
+        }
+        
+        .badge-filtros {
+            margin-left: 0;
+        }
+        
+        .step-subtitle {
+            margin-left: 0;
+        }
+        
+        .progress-label {
+            display: none;
+        }
+        
+        .acoes-resultado {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if e_resultado %}
+<!-- TELA DE RESULTADO -->
+<div class="route-container">
+    <div class="mapa-personalizado">
+        <div class="header-icon">
+            <div class="icon-circle">
+                <i class="fas fa-star"></i>
+            </div>
+        </div>
+
+        <header class="mapa-header">
+            <h1>Seu Mapa Personalizado</h1>
+            
+            <div class="categoria-badge">
+                {% for chave, resposta in respostas.items %}
+                    {% if forloop.first %}
+                        {{ resposta.texto|upper }}
+                    {% endif %}
+                {% endfor %}
+            </div>
+            
+            {% if page.texto_resultado %}
+                <div class="texto-resultado">
+                    {{ page.texto_resultado|richtext }}
+                </div>
+            {% endif %}
+        </header>
+        
+        <div class="capsula-principal">
+            <div class="capsula-card-two">
+                <div class="card-icon">
+                    <div class="icon-target">
+                        <i class="fas fa-bullseye"></i>
+                    </div>
+                </div>
+                
+                <div class="card-content">
+                    <div class="comece-aqui">
+                        <span class="rocket-icon">🚀</span> COMECE AQUI
+                    </div>
+                    
+                    {% if capsulas_recomendadas.0 %}
+                        <h2 class="capsula-title">{{ capsulas_recomendadas.0.title }}</h2>
+                        <p class="capsula-subtitle">{{ capsulas_recomendadas.0.resumo_card }}</p>
+                        
+                        <div class="action-button">
+                            <a href="{{ capsulas_recomendadas.0.url }}" class="btn primary">
+                                <i class="fas fa-book-open"></i> Acessar Cápsula
+                            </a>
+                        </div>
+                    {% else %}
+                        <h2 class="capsula-title">Nenhuma cápsula encontrada</h2>
+                        <p class="capsula-subtitle">Não encontramos cápsulas para os critérios selecionados.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        {% if capsulas_recomendadas|length > 1 %}
+            <section class="proximos-passos">
+                <h2 class="section-title">
+                    <span class="section-icon-two"><i class="fas fa-route"></i></span> Seus próximos passos
+                </h2>
+                <p class="section-subtitle">Continue sua jornada com estas cápsulas complementares</p>
+                
+                <div class="capsulas-complementares">
+                    {% for capsula in capsulas_recomendadas %}
+                        {% if not forloop.first %}
+                            <a href="{{ capsula.url }}" class="capsula-item">
+                                <div class="item-number">{{ forloop.counter0 }}</div>
+                                <div class="item-content">
+                                    <h3 class="item-title">{{ capsula.title }}</h3>
+                                </div>
+                                <div class="item-action">
+                                    <div class="item-link">
+                                        <i class="fas fa-arrow-right"></i>
+                                    </div>
+                                </div>
+                            </a>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </section>
+        {% endif %}
+        
+        <div class="acoes-resultado">
+            <a href="{{ page.url }}" class="btn secondary"> 
+                <i class="fas fa-sync-alt"></i> Refazer quiz
+            </a>
+            
+            <button onclick="window.print()" class="btn primary">
+                <i class="fas fa-file-download"></i> Salvar PDF
+            </button>
+        </div>
+    </div>
+</div>
+{% else %}
+
+<!-- TELA DE PERGUNTAS COM NAVEGAÇÃO DE ROTA -->
+<div class="route-container">
+    <div class="progress-container">
+        <div class="progress-track">
+            <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+            
+            <div class="progress-step active" data-step="1">
+                <div class="progress-dot">1</div>
+                <div class="progress-label">Perfil Profissional</div>
+            </div>
+            
+            <div class="progress-step" data-step="2">
+                <div class="progress-dot">2</div>
+                <div class="progress-label">Formato da Ação</div>
+            </div>
+            
+            <div class="progress-step" data-step="3">
+                <div class="progress-dot">3</div>
+                <div class="progress-label">Tipo de Recurso</div>
+            </div>
+            
+            <div class="progress-step" data-step="4">
+                <div class="progress-dot">
+                    <i class="fas fa-check" style="font-size: 10px;"></i>
+                </div>
+                <div class="progress-label">Resultados</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="route-header">
+        <h1>Mapa de Aprendizagem Personalizado</h1>
+        {{ page.introducao|richtext }}
+    </div>
+    
+    <form id="quiz-form">
+        <!-- Pergunta 1 - Perfil Profissional (para todos) -->
+        <div class="route-step" id="pergunta1">
+            <div class="step-header">
+                <div class="step-counter">1</div>
+                <h2 class="step-title">Qual o seu perfil profissional?</h2>
+            </div>
+            <p class="step-subtitle">Selecione uma ou mais opções que mais se aproximam da sua atuação</p>
+            
+            <div class="badge-filtros" id="filtros-perfil"></div>
+            
+            <div class="options-grid">
+                <label class="option-card" onclick="selecionarOpcaoMultipla(this, 'pergunta1', 'designer_instrucional', 'Designer instrucional')">
+                    <input type="checkbox" class="option-checkbox" name="pergunta1" value="designer_instrucional">
+                    <div class="option-icon">
+                        <i class="fas fa-pencil-ruler"></i>
+                    </div>
+                    <span class="option-text">Designer instrucional</span>
+                </label>
+                
+                <label class="option-card" onclick="selecionarOpcaoMultipla(this, 'pergunta1', 'designer_grafico', 'Designer gráfico')">
+                    <input type="checkbox" class="option-checkbox" name="pergunta1" value="designer_grafico">
+                    <div class="option-icon">
+                        <i class="fas fa-pen-fancy"></i>
+                    </div>
+                    <span class="option-text">Designer gráfico</span>
+                </label>
+                
+                <label class="option-card" onclick="selecionarOpcaoMultipla(this, 'pergunta1', 'implementador_web', 'Implementador web')">
+                    <input type="checkbox" class="option-checkbox" name="pergunta1" value="implementador_web">
+                    <div class="option-icon">
+                        <i class="fas fa-code"></i>
+                    </div>
+                    <span class="option-text">Implementador web</span>
+                </label>
+                
+                <label class="option-card" onclick="selecionarOpcaoMultipla(this, 'pergunta1', 'editor_video', 'Editor de vídeo')">
+                    <input type="checkbox" class="option-checkbox" name="pergunta1" value="editor_video">
+                    <div class="option-icon">
+                        <i class="fas fa-film"></i>
+                    </div>
+                    <span class="option-text">Editor de vídeo</span>
+                </label>
+                
+                <label class="option-card" onclick="selecionarOpcaoMultipla(this, 'pergunta1', 'docente', 'Docente')">
+                    <input type="checkbox" class="option-checkbox" name="pergunta1" value="docente">
+                    <div class="option-icon">
+                        <i class="fas fa-chalkboard-teacher"></i>
+                    </div>
+                    <span class="option-text">Docente</span>
+                </label>
+                
+                <label class="option-card" onclick="selecionarOpcaoMultipla(this, 'pergunta1', 'curador_conteudo', 'Curador de conteúdo')">
+                    <input type="checkbox" class="option-checkbox" name="pergunta1" value="curador_conteudo">
+                    <div class="option-icon">
+                        <i class="fas fa-tasks"></i>
+                    </div>
+                    <span class="option-text">Curador de conteúdo</span>
+                </label>
+                
+                <label class="option-card" onclick="selecionarOpcaoMultipla(this, 'pergunta1', 'conteudista', 'Conteudista')">
+                    <input type="checkbox" class="option-checkbox" name="pergunta1" value="conteudista">
+                    <div class="option-icon">
+                        <i class="fas fa-feather-alt"></i>
+                    </div>
+                    <span class="option-text">Conteudista</span>
+                </label>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn secondary" onclick="limparEtapaAtual()">
+                    <i class="fas fa-undo"></i> Limpar seleções
+                </button>
+                <button type="button" class="btn primary" onclick="proximaEtapa()">
+                    Continuar <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Pergunta 2 - Formato de Ação (condicional, só aparece para docente, curador, conteudista) -->
+        <div class="route-step" id="pergunta2_formato" style="display: none;">
+            <div class="step-header">
+                <div class="step-counter">2</div>
+                <h2 class="step-title">Qual o formato da ação de desenvolvimento?</h2>
+            </div>
+            <p class="step-subtitle">Selecione uma ou mais opções que melhor descrevem seu contexto</p>
+            
+            <div class="badge-filtros" id="filtros-formato"></div>
+            
+            <div class="options-grid">
+                <label class="option-card" onclick="selecionarOpcaoMultipla(this, 'pergunta2_formato', 'distancia_sincrono', 'A distância síncrono')">
+                    <input type="checkbox" class="option-checkbox" name="pergunta2_formato" value="distancia_sincrono">
+                    <div class="option-icon">
+                        <i class="fas fa-satellite-dish"></i>
+                    </div>
+                    <span class="option-text">A distância síncrono</span>
+                </label>
+                
+                <label class="option-card" onclick="selecionarOpcaoMultipla(this, 'pergunta2_formato', 'distancia_assincrono', 'A distância assíncrono')">
+                    <input type="checkbox" class="option-checkbox" name="pergunta2_formato" value="distancia_assincrono">
+                    <div class="option-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <span class="option-text">A distância assíncrono</span>
+                </label>
+                
+                <label class="option-card" onclick="selecionarOpcaoMultipla(this, 'pergunta2_formato', 'presencial', 'Presencial')">
+                    <input type="checkbox" class="option-checkbox" name="pergunta2_formato" value="presencial">
+                    <div class="option-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <span class="option-text">Presencial</span>
+                </label>
+                
+                <label class="option-card" onclick="selecionarOpcaoMultipla(this, 'pergunta2_formato', 'semipresencial', 'Semipresencial')">
+                    <input type="checkbox" class="option-checkbox" name="pergunta2_formato" value="semipresencial">
+                    <div class="option-icon">
+                        <i class="fas fa-laptop-house"></i>
+                    </div>
+                    <span class="option-text">Semipresencial</span>
+                </label>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn secondary" onclick="voltarEtapa()">
+                    <i class="fas fa-arrow-left"></i> Voltar
+                </button>
+                <div>
+                    <button type="button" class="btn secondary" onclick="limparEtapaAtual()" style="margin-right: 0.5rem;">
+                        <i class="fas fa-undo"></i> Limpar seleções
+                    </button>
+                    <button type="button" class="btn primary" onclick="proximaEtapa()">
+                        Continuar <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Pergunta 3 - Tipo de Recurso (para todos) -->
+        <div class="route-step" id="pergunta3_recurso" style="display: none;">
+            <div class="step-header">
+                <div class="step-counter">3</div>
+                <h2 class="step-title">Qual tipo de recurso?</h2>
+            </div>
+            <p class="step-subtitle">Elemento prático a que se aplica</p>
+            
+            <div class="badge-filtros" id="filtros-recurso"></div>
+            
+            <div class="options-grid">
+                <label class="option-card" onclick="selecionarOpcaoMultipla(this, 'pergunta3_recurso', 'imagem', 'Imagem')">
+                    <input type="checkbox" class="option-checkbox" name="pergunta3_recurso" value="imagem">
+                    <div class="option-icon">
+                        <i class="fas fa-image"></i>
+                    </div>
+                    <span class="option-text">Imagem</span>
+                </label>
+                
+                <label class="option-card" onclick="selecionarOpcaoMultipla(this, 'pergunta3_recurso', 'video', 'Vídeo')">
+                    <input type="checkbox" class="option-checkbox" name="pergunta3_recurso" value="video">
+                    <div class="option-icon">
+                        <i class="fas fa-film"></i>
+                    </div>
+                    <span class="option-text">Vídeo</span>
+                </label>
+                
+                <label class="option-card" onclick="selecionarOpcaoMultipla(this, 'pergunta3_recurso', 'tabela', 'Tabela')">
+                    <input type="checkbox" class="option-checkbox" name="pergunta3_recurso" value="tabela">
+                    <div class="option-icon">
+                        <i class="fas fa-table"></i>
+                    </div>
+                    <span class="option-text">Tabela</span>
+                </label>
+                
+                <label class="option-card" onclick="selecionarOpcaoMultipla(this, 'pergunta3_recurso', 'grafico', 'Gráfico')">
+                    <input type="checkbox" class="option-checkbox" name="pergunta3_recurso" value="grafico">
+                    <div class="option-icon">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <span class="option-text">Gráfico</span>
+                </label>
+                
+                <label class="option-card" onclick="selecionarOpcaoMultipla(this, 'pergunta3_recurso', 'botao', 'Botão')">
+                    <input type="checkbox" class="option-checkbox" name="pergunta3_recurso" value="botao">
+                    <div class="option-icon">
+                        <i class="fas fa-toggle-on"></i>
+                    </div>
+                    <span class="option-text">Botão</span>
+                </label>
+                
+                <label class="option-card" onclick="selecionarOpcaoMultipla(this, 'pergunta3_recurso', 'texto', 'Texto')">
+                    <input type="checkbox" class="option-checkbox" name="pergunta3_recurso" value="texto">
+                    <div class="option-icon">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <span class="option-text">Texto</span>
+                </label>
+                
+                <label class="option-card" onclick="selecionarOpcaoMultipla(this, 'pergunta3_recurso', 'audio', 'Áudio')">
+                    <input type="checkbox" class="option-checkbox" name="pergunta3_recurso" value="audio">
+                    <div class="option-icon">
+                        <i class="fas fa-volume-up"></i>
+                    </div>
+                    <span class="option-text">Áudio</span>
+                </label>
+                
+                <label class="option-card" onclick="selecionarOpcaoMultipla(this, 'pergunta3_recurso', 'hiperlink', 'Hiperlink')">
+                    <input type="checkbox" class="option-checkbox" name="pergunta3_recurso" value="hiperlink">
+                    <div class="option-icon">
+                        <i class="fas fa-link"></i>
+                    </div>
+                    <span class="option-text">Hiperlink</span>
+                </label>
+                
+                <label class="option-card" onclick="selecionarOpcaoMultipla(this, 'pergunta3_recurso', 'videoconferencia', 'Videoconferência')">
+                    <input type="checkbox" class="option-checkbox" name="pergunta3_recurso" value="videoconferencia">
+                    <div class="option-icon">
+                        <i class="fas fa-video"></i>
+                    </div>
+                    <span class="option-text">Videoconferência</span>
+                </label>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn secondary" onclick="voltarEtapa()">
+                    <i class="fas fa-arrow-left"></i> Voltar
+                </button>
+                <div>
+                    <button type="button" class="btn secondary" onclick="limparEtapaAtual()" style="margin-right: 0.5rem;">
+                        <i class="fas fa-undo"></i> Limpar seleções
+                    </button>
+                    <button type="button" class="btn primary large" onclick="enviarFormulario()">
+                        <i class="fas fa-route"></i> Ver meu mapa personalizado
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endif %}
+
+<script>
+    // Objeto para armazenar as respostas (múltiplas seleções)
+    let respostas = {
+        perfil_profissional: [], // Array de objetos {valor, texto}
+        formato_acao: [],
+        tipo_recurso: []
+    };
+    
+    // Variáveis para controle de navegação
+    let etapaAtual = 1;
+    const totalEtapas = 4; // Inclui a etapa de resultados
+    
+    // Atualizar o indicador de progresso
+    function atualizarProgresso() {
+        // Atualizar largura da barra de progresso
+        const porcentagemProgresso = ((etapaAtual - 1) / (totalEtapas - 1)) * 100;
+        document.getElementById('progress-fill').style.width = porcentagemProgresso + '%';
+        
+        // Atualizar status dos passos no indicador de progresso
+        document.querySelectorAll('.progress-step').forEach((step, index) => {
+            const stepNum = index + 1;
+            
+            // Remover classes anteriores
+            step.classList.remove('active', 'complete');
+            
+            // Adicionar classes adequadas
+            if (stepNum < etapaAtual) {
+                step.classList.add('complete');
+                step.querySelector('.progress-dot').innerHTML = '<i class="fas fa-check" style="font-size: 10px;"></i>';
+            } else if (stepNum === etapaAtual) {
+                step.classList.add('active');
+                step.querySelector('.progress-dot').textContent = stepNum;
+            } else {
+                step.querySelector('.progress-dot').textContent = stepNum;
+            }
+        });
+    }
+    
+    // Função para avançar para a próxima etapa
+    function proximaEtapa() {
+        // Validar a etapa atual antes de avançar
+        if (!validarEtapaAtual()) {
+            return;
+        }
+        
+        // Se estamos na etapa 1, verificar se precisa mostrar a etapa 2
+        if (etapaAtual === 1) {
+            // Verificar se selecionou algum perfil que requer informação de formato
+            const temPerfisFormatados = respostas.perfil_profissional.some(
+                item => ['docente', 'curador_conteudo', 'conteudista'].includes(item.valor)
+            );
+            
+            // Se tem algum dos perfis que requer formato, mostrar etapa 2
+            if (temPerfisFormatados) {
+                document.getElementById('pergunta1').style.display = 'none';
+                document.getElementById('pergunta2_formato').style.display = 'block';
+                etapaAtual = 2;
+            } else {
+                // Se não, pular direto para a etapa 3
+                document.getElementById('pergunta1').style.display = 'none';
+                document.getElementById('pergunta3_recurso').style.display = 'block';
+                etapaAtual = 3;
+            }
+        } 
+        // Se estamos na etapa 2, avançar para a 3
+        else if (etapaAtual === 2) {
+            document.getElementById('pergunta2_formato').style.display = 'none';
+            document.getElementById('pergunta3_recurso').style.display = 'block';
+            etapaAtual = 3;
+        }
+        
+        // Rolar para o topo da página para melhor visualização
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        
+        // Atualizar o indicador de progresso
+        atualizarProgresso();
+    }
+    
+    // Função para voltar à etapa anterior
+    function voltarEtapa() {
+        if (etapaAtual === 2) {
+            document.getElementById('pergunta2_formato').style.display = 'none';
+            document.getElementById('pergunta1').style.display = 'block';
+            etapaAtual = 1;
+        } else if (etapaAtual === 3) {
+            document.getElementById('pergunta3_recurso').style.display = 'none';
+            
+            // Verificar se tem algum dos perfis que requer formato
+            const temPerfisFormatados = respostas.perfil_profissional.some(
+                item => ['docente', 'curador_conteudo', 'conteudista'].includes(item.valor)
+            );
+            
+            if (temPerfisFormatados) {
+                document.getElementById('pergunta2_formato').style.display = 'block';
+                etapaAtual = 2;
+            } else {
+                document.getElementById('pergunta1').style.display = 'block';
+                etapaAtual = 1;
+            }
+        }
+        
+        // Rolar para o topo da página para melhor visualização
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        
+        // Atualizar o indicador de progresso
+        atualizarProgresso();
+    }
+    
+    // Validar a etapa atual antes de avançar
+    function validarEtapaAtual() {
+        if (etapaAtual === 1) {
+            if (respostas.perfil_profissional.length === 0) {
+                mostrarNotificacao('Por favor, selecione pelo menos um perfil profissional.');
+                return false;
+            }
+        } else if (etapaAtual === 2) {
+            if (respostas.formato_acao.length === 0) {
+                mostrarNotificacao('Por favor, selecione pelo menos um formato de ação de desenvolvimento.');
+                return false;
+            }
+        } else if (etapaAtual === 3) {
+            if (respostas.tipo_recurso.length === 0) {
+                mostrarNotificacao('Por favor, selecione pelo menos um tipo de recurso.');
+                return false;
+            }
+        }
+        
+        return true;
+    }
+    
+    // Mostrar notificação de erro/alerta
+    function mostrarNotificacao(mensagem) {
+        // Verificar se já existe uma notificação e removê-la
+        const notificacaoExistente = document.querySelector('.notificacao');
+        if (notificacaoExistente) {
+            notificacaoExistente.remove();
+        }
+        
+        // Criar elemento de notificação
+        const notificacao = document.createElement('div');
+        notificacao.className = 'notificacao';
+        notificacao.style.position = 'fixed';
+        notificacao.style.bottom = '20px';
+        notificacao.style.right = '20px';
+        notificacao.style.backgroundColor = '#FEE2E2';
+        notificacao.style.color = '#B91C1C';
+        notificacao.style.padding = '12px 20px';
+        notificacao.style.borderRadius = '8px';
+        notificacao.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
+        notificacao.style.zIndex = '1000';
+        notificacao.style.display = 'flex';
+        notificacao.style.alignItems = 'center';
+        notificacao.style.gap = '10px';
+        notificacao.style.maxWidth = '300px';
+        notificacao.style.animation = 'fadeIn 0.3s ease-out forwards';
+        
+        // Ícone de alerta
+        notificacao.innerHTML = `
+            <i class="fas fa-exclamation-circle" style="font-size: 18px;"></i>
+            <span>${mensagem}</span>
+        `;
+        
+        // Adicionar ao DOM
+        document.body.appendChild(notificacao);
+        
+        // Remover após alguns segundos
+        setTimeout(() => {
+            notificacao.style.opacity = '0';
+            setTimeout(() => {
+                notificacao.remove();
+            }, 300);
+        }, 3000);
+    }
+    
+    // Função para selecionar uma opção (seleção múltipla)
+    function selecionarOpcaoMultipla(element, perguntaId, valor, texto) {
+        // Verifica se o checkbox está marcado
+        const checkbox = element.querySelector('input[type="checkbox"]');
+        const isSelected = element.classList.contains('selected');
+        
+        // Toggle da seleção
+        if (isSelected) {
+            // Remover seleção
+            element.classList.remove('selected');
+            checkbox.checked = false;
+            
+            // Remover do array de respostas
+            if (perguntaId === 'pergunta1') {
+                respostas.perfil_profissional = respostas.perfil_profissional.filter(item => item.valor !== valor);
+            } 
+            else if (perguntaId === 'pergunta2_formato') {
+                respostas.formato_acao = respostas.formato_acao.filter(item => item.valor !== valor);
+            } 
+            else if (perguntaId === 'pergunta3_recurso') {
+                respostas.tipo_recurso = respostas.tipo_recurso.filter(item => item.valor !== valor);
+            }
+        } else {
+            // Adicionar seleção
+            element.classList.add('selected');
+            checkbox.checked = true;
+            
+            // Adicionar ao array de respostas
+            if (perguntaId === 'pergunta1') {
+                respostas.perfil_profissional.push({
+                    valor: valor,
+                    texto: texto
+                });
+            } 
+            else if (perguntaId === 'pergunta2_formato') {
+                respostas.formato_acao.push({
+                    valor: valor,
+                    texto: texto
+                });
+            } 
+            else if (perguntaId === 'pergunta3_recurso') {
+                respostas.tipo_recurso.push({
+                    valor: valor,
+                    texto: texto
+                });
+            }
+        }
+        
+        // Atualizar badges
+        atualizarBadges();
+    }
+    
+    // Função para atualizar os badges de seleção
+    function atualizarBadges() {
+        // Atualizar badges de perfil
+        const badgesPerfil = document.getElementById('filtros-perfil');
+        badgesPerfil.innerHTML = '';
+        
+        respostas.perfil_profissional.forEach(item => {
+            const badge = document.createElement('div');
+            badge.className = 'badge-filtro';
+            badge.innerHTML = `
+                ${item.texto} 
+                <span class="remove-badge" onclick="removerFiltro('perfil_profissional', '${item.valor}')">&times;</span>
+            `;
+            badgesPerfil.appendChild(badge);
+        });
+        
+        // Atualizar badges de formato
+        const badgesFormato = document.getElementById('filtros-formato');
+        badgesFormato.innerHTML = '';
+        
+        respostas.formato_acao.forEach(item => {
+            const badge = document.createElement('div');
+            badge.className = 'badge-filtro';
+            badge.innerHTML = `
+                ${item.texto} 
+                <span class="remove-badge" onclick="removerFiltro('formato_acao', '${item.valor}')">&times;</span>
+            `;
+            badgesFormato.appendChild(badge);
+        });
+        
+        // Atualizar badges de recurso
+        const badgesRecurso = document.getElementById('filtros-recurso');
+        badgesRecurso.innerHTML = '';
+        
+        respostas.tipo_recurso.forEach(item => {
+            const badge = document.createElement('div');
+            badge.className = 'badge-filtro';
+            badge.innerHTML = `
+                ${item.texto} 
+                <span class="remove-badge" onclick="removerFiltro('tipo_recurso', '${item.valor}')">&times;</span>
+            `;
+            badgesRecurso.appendChild(badge);
+        });
+    }
+    
+    // Função para remover um filtro (chamada pelo X no badge)
+    function removerFiltro(tipo, valor) {
+        if (tipo === 'perfil_profissional') {
+            respostas.perfil_profissional = respostas.perfil_profissional.filter(item => item.valor !== valor);
+            
+            // Desmarcar card correspondente
+            const cards = document.querySelectorAll('#pergunta1 .option-card');
+            cards.forEach(card => {
+                const input = card.querySelector('input');
+                if (input && input.value === valor) {
+                    card.classList.remove('selected');
+                    input.checked = false;
+                }
+            });
+        } 
+        else if (tipo === 'formato_acao') {
+            respostas.formato_acao = respostas.formato_acao.filter(item => item.valor !== valor);
+            
+            // Desmarcar card correspondente
+            const cards = document.querySelectorAll('#pergunta2_formato .option-card');
+            cards.forEach(card => {
+                const input = card.querySelector('input');
+                if (input && input.value === valor) {
+                    card.classList.remove('selected');
+                    input.checked = false;
+                }
+            });
+        } 
+        else if (tipo === 'tipo_recurso') {
+            respostas.tipo_recurso = respostas.tipo_recurso.filter(item => item.valor !== valor);
+            
+            // Desmarcar card correspondente
+            const cards = document.querySelectorAll('#pergunta3_recurso .option-card');
+            cards.forEach(card => {
+                const input = card.querySelector('input');
+                if (input && input.value === valor) {
+                    card.classList.remove('selected');
+                    input.checked = false;
+                }
+            });
+        }
+        
+        // Atualizar os badges
+        atualizarBadges();
+    }
+    
+    // Função para limpar todas as respostas na etapa atual
+    function limparEtapaAtual() {
+        if (etapaAtual === 1) {
+            respostas.perfil_profissional = [];
+            
+            // Desmarcar todos os cards na etapa 1
+            document.querySelectorAll('#pergunta1 .option-card').forEach(card => {
+                card.classList.remove('selected');
+                card.querySelector('input[type="checkbox"]').checked = false;
+            });
+            
+            // Limpar badges de perfil
+            document.getElementById('filtros-perfil').innerHTML = '';
+        } 
+        else if (etapaAtual === 2) {
+            respostas.formato_acao = [];
+            
+            // Desmarcar todos os cards na etapa 2
+            document.querySelectorAll('#pergunta2_formato .option-card').forEach(card => {
+                card.classList.remove('selected');
+                card.querySelector('input[type="checkbox"]').checked = false;
+            });
+            
+            // Limpar badges de formato
+            document.getElementById('filtros-formato').innerHTML = '';
+        }
+        else if (etapaAtual === 3) {
+            respostas.tipo_recurso = [];
+            
+            // Desmarcar todos os cards na etapa 3
+            document.querySelectorAll('#pergunta3_recurso .option-card').forEach(card => {
+                card.classList.remove('selected');
+                card.querySelector('input[type="checkbox"]').checked = false;
+            });
+            
+            // Limpar badges de recurso
+            document.getElementById('filtros-recurso').innerHTML = '';
+        }
+    }
+    
+    // Função para limpar todo o formulário
+    function limparFormulario() {
+        // Limpa o objeto de respostas
+        respostas = {
+            perfil_profissional: [],
+            formato_acao: [],
+            tipo_recurso: []
+        };
+        
+        // Remove a classe 'selected' de todos os cards
+        document.querySelectorAll('.option-card').forEach(card => {
+            card.classList.remove('selected');
+        });
+        
+        // Desmarca todos os inputs de checkbox
+        document.querySelectorAll('input[type="checkbox"]').forEach(input => {
+            input.checked = false;
+        });
+        
+        // Limpa os badges
+        document.getElementById('filtros-perfil').innerHTML = '';
+        document.getElementById('filtros-formato').innerHTML = '';
+        document.getElementById('filtros-recurso').innerHTML = '';
+        
+        // Retornar à primeira etapa
+        document.getElementById('pergunta1').style.display = 'block';
+        document.getElementById('pergunta2_formato').style.display = 'none';
+        document.getElementById('pergunta3_recurso').style.display = 'none';
+        etapaAtual = 1;
+        
+        // Atualizar o indicador de progresso
+        atualizarProgresso();
+    }
+    
+    // Função para enviar o formulário
+    function enviarFormulario() {
+        // Validar a etapa final antes de enviar
+        if (!validarEtapaAtual()) {
+            return;
+        }
+        
+        // Constrói a URL para o resultado
+        let params = new URLSearchParams();
+        
+        // Adiciona os parâmetros da URL (arrays separados por vírgulas)
+        if (respostas.perfil_profissional.length > 0) {
+            const valores = respostas.perfil_profissional.map(item => item.valor).join(',');
+            const textos = respostas.perfil_profissional.map(item => item.texto).join(', ');
+            params.append('perfil', valores);
+            params.append('perfil_texto', textos);
+        }
+        
+        if (respostas.formato_acao.length > 0) {
+            const valores = respostas.formato_acao.map(item => item.valor).join(',');
+            const textos = respostas.formato_acao.map(item => item.texto).join(', ');
+            params.append('formato', valores);
+            params.append('formato_texto', textos);
+        }
+        
+        if (respostas.tipo_recurso.length > 0) {
+            const valores = respostas.tipo_recurso.map(item => item.valor).join(',');
+            const textos = respostas.tipo_recurso.map(item => item.texto).join(', ');
+            params.append('recurso', valores);
+            params.append('recurso_texto', textos);
+        }
+        
+        // Adiciona o parâmetro de resultado
+        params.append('resultado', '1');
+        
+        // Mostrar feedback visual enquanto carrega
+        document.body.classList.add('loading');
+        
+        // Redireciona para a página de resultados
+        window.location.href = '{{ page.url }}?' + params.toString();
+    }
+    
+    // Inicialização
+    document.addEventListener('DOMContentLoaded', function() {
+        // Configuração inicial da primeira etapa
+        etapaAtual = 1;
+        atualizarProgresso();
+        
+        // Carregar Font Awesome
+        if (!document.getElementById('font-awesome-css')) {
+            const fontAwesome = document.createElement('link');
+            fontAwesome.id = 'font-awesome-css';
+            fontAwesome.rel = 'stylesheet';
+            fontAwesome.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css';
+            document.head.appendChild(fontAwesome);
+        }
+    });
+</script>
+{% endblock %}
