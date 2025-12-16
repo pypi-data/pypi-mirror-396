@@ -1,0 +1,67 @@
+[build-system]
+requires = ["setuptools>=70", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wav2aug"
+version = "0.0.2"
+description = "A general speech augmentation policy"
+readme = "readme.md"
+requires-python = ">=3.10"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "gfdb"}
+]
+keywords = ["audio", "speech", "augmentation", "pytorch", "machine-learning", "deep-learning"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Multimedia :: Sound/Audio :: Analysis",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "torch>=2.0.0",
+    "torchaudio>=2.0.0",
+    "torchcodec>=0.7.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8",
+    "pytest-cov",
+]
+dev = [
+  "black>=23.1.0,<25",
+]
+
+[project.urls]
+Homepage = "https://github.com/gfdb/wav2aug"
+Repository = "https://github.com/gfdb/wav2aug"
+Issues = "https://github.com/gfdb/wav2aug/issues"
+Documentation = "https://github.com/gfdb/wav2aug#readme"
+
+
+[tool.setuptools]
+include-package-data = true
+packages = { find = { where = ["."], include = ["wav2aug*"], exclude = ["tests*"], namespaces = true } }
+
+[tool.setuptools.package-data]
+wav2aug = ["py.typed", "**/*.yaml", "assets/**"]
+
+
+[tool.black]
+line-length = 88
+target-version = ["py310"]
+# Include only python source files
+include = "\\.pyi?$"
+# Exclude common build, virtualenv and cache directories
+exclude = '''
+/(\.|build|dist|__pycache__|\.venv|venv|\.eggs|\.git|\.hg|\.mypy_cache|\.pytest_cache)/
+'''
