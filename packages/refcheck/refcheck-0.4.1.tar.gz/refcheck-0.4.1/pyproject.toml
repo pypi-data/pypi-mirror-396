@@ -1,0 +1,110 @@
+[tool.poetry]
+name = "refcheck"
+version = "0.4.1"
+description = "Tool for finding broken references and links in Markdown files."
+authors = ["Sebastian Flum <sebastian.flum.dev@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+requests = "^2.32.3"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.4"
+pytest-cov = "^6.0.0"
+commitizen = "^4.2.2"
+python-semantic-release = ">=9.20,<11.0"
+ruff = ">=0.9.7,<0.12.0"
+mypy = "^1.13.0"
+types-requests = "^2.32.0"
+vulture = "^2.13"
+deptry = "^0.22.0"
+pre-commit = "^4.0.0"
+
+[tool.poetry.scripts]
+refcheck = "refcheck.main:main"
+
+[tool.ruff]
+line-length = 100
+
+[tool.semantic_release]
+commit_parser = "angular"
+branch = "main"
+major_on_zero = true
+build_command = "pip install poetry && python -m poetry build"
+version_toml = ["pyproject.toml:tool.poetry.version"]
+version_variables = [
+    "pyproject.toml:tool.poetry.version",
+    "README.md:rev:tf",
+    "docs/CLI-Reference.md:rev:tf",
+    "docs/Development-Guide.md:rev:tf",
+    "docs/Examples.md:rev:tf",
+    "docs/Integration-Guide.md:rev:tf",
+    "CONTRIBUTING.md:rev:tf",
+]
+tag_format = "v{version}"
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.3.0"
+tag_format = "v$version"
+update_changelog_on_bump = true
+version_files = [
+    "pyproject.toml:tool.poetry.version",
+    "pyproject.toml:tool.commitizen.version"
+]
+
+[tool.vulture]
+min_confidence = 80
+exclude = ["*/__pycache__/*"]
+ignore_names = [
+    "_format_action_invocation",
+    "RAW_LINK_PATTERN",
+    "HTML_LINK_PATTERN",
+    "HTML_IMAGE_PATTERN",
+    "_process_inline_links",
+    "print_green_background",
+    "print_red_background",
+    "is_valid_remote_reference"
+]
+
+[tool.deptry.per_rule_ignores]
+DEP002 = ["mypy", "vulture", "deptry"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+
+[tool.coverage.run]
+source = ["refcheck"]
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/test_*",
+    "*/__init__.py",
+]
+
+[tool.coverage.report]
+fail_under = 80
+precision = 2
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
