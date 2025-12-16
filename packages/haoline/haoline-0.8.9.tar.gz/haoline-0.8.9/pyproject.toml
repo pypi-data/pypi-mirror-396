@@ -1,0 +1,214 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "haoline"
+version = "0.8.9"
+description = "HaoLine (皓线) - Universal Model Inspector. See what's really inside your models."
+readme = "README.md"
+license = "MIT"
+authors = [
+    { name = "Marcus Day", email = "marcusday3586@gmail.com" }
+]
+keywords = [
+    "machine-learning",
+    "deep-learning",
+    "neural-network",
+    "model-analysis",
+    "onnx",
+    "pytorch",
+    "tensorflow",
+    "tensorrt",
+    "model-inspector",
+    "flops",
+    "parameters",
+    "memory",
+    "profiling",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+    "Environment :: Console",
+    "Environment :: Web Environment",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "onnx>=1.14.0",
+    "numpy>=1.20.0",
+    "matplotlib>=3.5.0",
+    "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+runtime = [
+    "onnxruntime>=1.16.0",
+]
+viz = [
+    # Included in base now, kept for backwards compatibility
+    "matplotlib>=3.5.0",
+]
+llm = [
+    "openai>=1.0.0",
+    "anthropic>=0.20.0",
+    "google-generativeai>=0.3.0",
+    "python-dotenv>=1.0.0",
+]
+pdf = [
+    "playwright>=1.40.0",
+]
+gpu = [
+    "nvidia-ml-py>=12.0.0",
+]
+web = [
+    "streamlit>=1.28.0",
+]
+# Framework converters (for --from-pytorch, --from-tensorflow, etc.)
+pytorch = [
+    "torch>=2.0.0",
+]
+tensorflow = [
+    "tensorflow>=2.14.0",
+    "tf2onnx>=1.16.0",
+    # For TensorFlow/Keras -> ONNX conversion
+]
+ultralytics = [
+    "ultralytics>=8.0.0",
+    # YOLO models - includes torch as dependency
+]
+jax = [
+    "jax>=0.4.0",
+    "jaxlib>=0.4.0",
+    "flax>=0.7.0",
+    # For --from-jax conversion
+]
+# Format adapters (Epics 19-24)
+safetensors = [
+    "safetensors>=0.4.0",
+]
+tflite = [
+    "tflite-runtime>=2.14.0;platform_system!='Windows'",
+    # tflite-runtime not available on Windows
+    "tflite2onnx>=0.4.0",
+    # For TFLite -> ONNX conversion (works!)
+    # Note: ONNX -> TFLite is UNAVAILABLE due to TF 2.16+ / Keras 3.x compat issues
+    # Both onnx2tf and onnx-tf are broken with modern TensorFlow
+]
+coreml = [
+    "coremltools>=7.0",
+]
+openvino = [
+    "openvino>=2024.0.0",
+]
+tensorrt = [
+    "tensorrt>=10.0.0",
+    # Requires NVIDIA GPU + CUDA 12.x
+    # Engine files must match GPU architecture
+]
+# GGUF is pure Python, no deps needed
+formats = [
+    "haoline[safetensors]",
+    # tflite, coreml, openvino have platform-specific deps, install separately
+]
+full = [
+    "haoline[runtime,viz,llm,pdf,gpu,web,pytorch,tensorflow,ultralytics,jax,safetensors,coreml,openvino]",
+    # Note: tflite excluded from full because it's not available on Windows
+    # Install separately on Linux/Mac: pip install haoline[tflite]
+]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+]
+
+[project.scripts]
+haoline = "haoline.cli:run_inspect"
+haoline-compare = "haoline.compare:main"
+haoline-web = "haoline.web:main"
+haoline-import-eval = "haoline.eval.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/mdayku/HaoLine"
+Documentation = "https://github.com/mdayku/HaoLine#readme"
+Repository = "https://github.com/mdayku/HaoLine"
+Issues = "https://github.com/mdayku/HaoLine/issues"
+Changelog = "https://github.com/mdayku/HaoLine/blob/main/CHANGELOG.md"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/haoline"]
+
+[tool.hatch.build.targets.wheel.sources]
+"src" = ""
+
+# Include .streamlit config for dark theme
+[tool.hatch.build]
+include = [
+    "src/haoline/**/*.py",
+    "src/haoline/.streamlit/**/*",
+]
+# Exclude development-only files (memory bank, demos, scripts)
+exclude = [
+    "memory_bank/",
+    "demos/",
+    "scripts/",
+    "docs/",
+    "demo_outputs/",
+    "*.md",
+    "!README.md",
+    "test_format_readers.py",
+    ".cursorrules",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "UP",     # pyupgrade
+]
+ignore = [
+    "E501",   # line too long (handled by ruff format)
+]
+
+[tool.ruff.lint.per-file-ignores]
+# CLI has availability check imports that look unused
+"src/haoline/cli.py" = ["F401", "F841"]
+# Streamlit requires page config before imports
+"src/haoline/streamlit_app.py" = ["E402"]
+"streamlit_app.py" = ["E402"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["src/haoline/tests"]
+python_files = ["test_*.py"]
+addopts = "-v --tb=short"
