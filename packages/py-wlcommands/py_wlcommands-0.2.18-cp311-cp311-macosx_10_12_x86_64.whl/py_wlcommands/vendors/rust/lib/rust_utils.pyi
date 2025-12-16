@@ -1,0 +1,3 @@
+HAS_RUST_EXTENSION: bool
+
+def sum_as_string(a: int, b: int) -> str: ...
