@@ -1,0 +1,53 @@
+name: SimDB CI
+
+on: 
+    push:
+    pull_request:
+      types: [opened, synchronize, reopened]
+  
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ "3.11", "3.12", "3.13" ]
+
+    steps:
+      - name: Install OpenLDAP development libraries
+        run: sudo apt-get update && sudo apt-get install -y libldap2-dev libsasl2-dev
+      
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+            python-version: ${{ matrix.python-version }}
+            cache: pip
+
+      - name: Install build and test dependencies
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip setuptools wheel
+          python -m pip install python-ldap
+          pip install pytest-xdist
+          pip install .[build-test]
+
+      - name: Run tests
+        run: |
+          source venv/bin/activate
+          python -m pytest --cov=simdb --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:htmlcov --junit-xml=junit.xml -v --tb=short
+
+      - name: Upload coverage report ${{ matrix.python-version }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-${{ matrix.python-version }}
+          path: htmlcov
+
+      - name: Upload test report ${{ matrix.python-version }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report-${{ matrix.python-version }}
+          path: junit.xml
