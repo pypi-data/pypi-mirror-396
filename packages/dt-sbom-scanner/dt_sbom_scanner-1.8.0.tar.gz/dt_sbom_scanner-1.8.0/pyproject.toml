@@ -1,0 +1,100 @@
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[project]
+name = "dt-sbom-scanner"
+version = "1.8.0"
+description = "Dependency Track SBOM Scanner"
+authors = [{ name = "Pierre Smeyers", email = "pierre.smeyers@gmail.com" }]
+license = "MIT"
+license-files = ["LICENSE.txt"]
+readme = "README.md"
+requires-python = ">=3.12,<4.0"
+dependencies = ["requests (>=2.32.5,<4.0.0)", "urllib3 (>=2.6.0,<3.0.0)", "cyclonedx-python-lib (>=11.1.0,<12.0.0)"]
+keywords = ['tool', 'sbom', 'dependency track']
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3 :: Only",
+]
+
+
+[project.urls]
+Homepage = "https://gitlab.com/to-be-continuous/tools/dt-sbom-scanner"
+Issues = "https://gitlab.com/to-be-continuous/tools/dt-sbom-scanner/-/issues"
+
+[project.scripts]
+sbom-scanner = "dt_sbom_scanner.scan:run"
+
+[tool.poetry.group.dev.dependencies]
+# new development dependencies can be added with 'poetry add -D yyy'
+pytest = "^9.0.0"
+pytest-cov = "^7.0.0"
+pytest-env = "^1.0.0"
+mypy = "^1.0.0"
+ruff = "^0.14.0"
+
+[tool.pytest.ini_options]
+# this project uses "pytest" for unit testing
+# see: https://docs.pytest.org/en/6.2.x/customize.html#pyproject-toml
+testpaths = [
+    "tests",
+]
+
+[tool.ruff.lint]
+extend-select = ["I"] # isort
+ignore = ["F841"]
+
+[tool.ruff.format]
+# Like Black, use double quotes for strings.
+quote-style = "double"
+
+# Like Black, indent with spaces, rather than tabs.
+indent-style = "space"
+
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"
+
+[tool.mypy]
+# this project uses "mypy" as a static type checker
+# see: https://mypy.readthedocs.io/en/stable/config_file.html
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[[tool.mypy.overrides]]
+# loosen rules for tests
+module = "tests.*"
+warn_return_any = false
+disallow_untyped_defs = false
+
+[tool.pylint.messages_control]
+max-line-length = 120
+disable = [
+  "missing-docstring",
+#   "unused-argument",
+#   "no-value-for-parameter",
+#   "no-member",
+#   "no-else-return",
+#   "bad-whitespace",
+#   "bad-continuation",
+#   "line-too-long",
+#   "fixme",
+#   "protected-access",
+   "too-few-public-methods",
+#   "unspecified-encoding",
+#   "redefined-outer-name"
+]

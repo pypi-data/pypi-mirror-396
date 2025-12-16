@@ -1,0 +1,265 @@
+Metadata-Version: 2.3
+Name: dt-sbom-scanner
+Version: 1.8.0
+Summary: Dependency Track SBOM Scanner
+License: MIT
+Keywords: tool,sbom,dependency track
+Author: Pierre Smeyers
+Author-email: pierre.smeyers@gmail.com
+Requires-Python: >=3.12,<4.0
+Classifier: Development Status :: 4 - Beta
+Classifier: Environment :: Console
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
+Classifier: Programming Language :: Python :: 3 :: Only
+Requires-Dist: cyclonedx-python-lib (>=11.1.0,<12.0.0)
+Requires-Dist: requests (>=2.32.5,<4.0.0)
+Requires-Dist: urllib3 (>=2.6.0,<3.0.0)
+Project-URL: Homepage, https://gitlab.com/to-be-continuous/tools/dt-sbom-scanner
+Project-URL: Issues, https://gitlab.com/to-be-continuous/tools/dt-sbom-scanner/-/issues
+Description-Content-Type: text/markdown
+
+<img alt="Dependency Track SBOM Scanner logo" width="128px" src="https://gitlab.com/to-be-continuous/tools/dt-sbom-scanner/-/avatar">
+
+[![pypi](https://img.shields.io/pypi/v/dt-sbom-scanner.svg)](https://pypi.org/project/dt-sbom-scanner/)
+[![python](https://img.shields.io/pypi/pyversions/dt-sbom-scanner.svg)](https://pypi.org/project/dt-sbom-scanner/)
+
+# Dependency Track SBOM Scanner
+
+This project provides a CLI tool able to publish SBOM files to a [Dependency Track](https://docs.dependencytrack.org/) server.
+
+## Get started
+
+### Run SBOM Scanner as a Python program
+
+`dt-sbom-scanner` requires Python 3.12 or higher and can be installed using pip package manager:
+
+```bash
+pip install dt-sbom-scanner
+```
+
+Then it can be run as a Python program:
+
+```bash
+# obtain help
+sbom-scanner --help
+
+# run
+sbom-scanner \
+  --base-api-url http://localhost:8080/api \
+  --api-key "$DT_API_KEY" \
+  --project-path "my-group/my-project/sub-{file_prefix}" \
+  **/*.cyclonedx.json
+```
+
+### Run SBOM Scanner CLI as a container
+
+`dt-sbom-scanner` can also be run as a container image using Docker or Podman.
+
+```bash
+# run from GitLab Container Registry
+docker run \
+  --rm --volume $(pwd):/code --env DEPTRACK_API_KEY \
+  registry.gitlab.com/to-be-continuous/tools/dt-sbom-scanner:latest \
+  --base-api-url http://host.docker.internal:8080/api \
+  --api-key "$DT_API_KEY" \
+  --project-path "my-group/my-project/sub-{file_prefix}" \
+  **/*.cyclonedx.json
+```
+
+## Usage
+
+```bash
+usage: sbom-scanner [-h] [-u BASE_API_URL] [-k API_KEY] [-i] [-p PROJECT_PATH] [-s PATH_SEPARATOR] [-t TAGS] [--parent-collection-logic {NONE,ALL,TAG,LATEST}]
+                    [--parent-collection-logic-tag PARENT_COLLECTION_LOGIC_TAG] [-m] [-o MERGE_OUTPUT] [-l PURL_MAX_LEN] [-U] [-V MERGED_VEX_FILE] [-S] [-R RISK_SCORE_THRESHOLD]
+                    [sbom_patterns ...]
+
+This tool scans for SBOM files and publishes them to a Dependency Track server.
+
+positional arguments:
+  sbom_patterns         SBOM file patterns to publish (supports glob patterns). Default: '**/*.cyclonedx.json **/*.cyclonedx.xml'
+
+options:
+  -h, --help            show this help message and exit
+
+Connection to Dependency Track platform:
+  -u BASE_API_URL, --base-api-url BASE_API_URL
+                        Dependency Track server base API url (includes '/api')
+  -k API_KEY, --api-key API_KEY
+                        Dependency Track API key
+  -i, --insecure        Skip SSL verification
+
+Project settings:
+  -p PROJECT_PATH, --project-path PROJECT_PATH
+                        Dependency Track target project path to publish SBOM files to (see doc)
+  -s PATH_SEPARATOR, --path-separator PATH_SEPARATOR
+                        Separator to use in project path (default: '/')
+  -t TAGS, --tags TAGS  Comma separated list of tags to attach to the project
+  --parent-collection-logic {NONE,ALL,TAG,LATEST}
+                        Set up how the parent aggregates its direct children (ALL: all, TAG: with tag matching --parent-collection-logic-tag, LATEST: flagged as latest, NONE: disable), default is ALL (DT version >= 4.13.0)
+  --parent-collection-logic-tag PARENT_COLLECTION_LOGIC_TAG
+                        Tag for aggregation if --parent-collection-logic is set to TAG
+
+SBOM management:
+  -m, --merge           Merge all SBOM files into one
+  -o MERGE_OUTPUT, --merge-output MERGE_OUTPUT
+                        Output merged SBOM file (only used with merge enabled) - for debugging purpose
+  -l PURL_MAX_LEN, --purl-max-len PURL_MAX_LEN
+                        PURLs max length (-1: auto, 0: no trim, >0: trim to size - default: -1)
+
+VEX:
+  -U, --upload-vex      Upload VEX file after SBOM analysis (requires VULNERABILITY_ANALYSIS permission). The VEX file(s) are resolved based on the sbom pattern(s). The first part of the SBOM file name is used
+                        to match it with a VEX file (e.g. if there is an SBOM file 'example.cyclonedx.json', the corresponding VEX file name must be 'example.vex.json')
+  -V, --merged-vex-file MERGED_VEX_FILE
+                        The VEX file to upload if multiple SBOMS are merged (--merge). Can only be used with --upload-vex and --merge.
+
+Miscellaneous:
+  -S, --show-findings   Wait for analysis and display found vulnerabilities
+  -R RISK_SCORE_THRESHOLD, --risk-score-threshold RISK_SCORE_THRESHOLD
+                        Risk score threshold to fail the scan (<0: disabled - default: -1)
+
+```
+
+### Arguments
+
+`dt-sbom-scanner` accepts SBOM file patterns to publish (supports glob patterns) as multiple positional arguments.
+
+If none is specified, the program will look for SBOM files matching `**/*.cyclonedx.json` and `**/*.cyclonedx.xml`.
+
+### Options
+
+#### Dependency Track connection
+
+| CLI option                      | Env. Variable                           | Description                                                                    |
+| ------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------ |
+| `-u` / `--base-api-url`         | `$DEPTRACK_BASE_API_URL`                | Dependency Track server base API url (includes `/api`) (**mandatory**)         |
+| `-k` / `--api-key`              | `$DEPTRACK_API_KEY`                     | Dependency Track API key (**mandatory**)                                       |
+| `-i` / `--insecure`             | `$DEPTRACK_INSECURE`                    | Skip SSL verification                                                          |
+
+#### Project selection and settings
+
+| CLI option                      | Env. Variable                           | Description                                                                    |
+| ------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------ |
+| `-p` / `--project-path`         | `$DEPTRACK_PROJECT_PATH`                | Dependency Track target project path to publish SBOM files to (**mandatory**)  |
+| `-s` / `--path-separator`       | `$DEPTRACK_PATH_SEPARATOR`              | Separator to use in project path (default `/`)                                 |
+| `-t` / `--tags`                 | `$DEPTRACK_TAGS`                        | Comma separated list of tags to put in the project in `autoCreate` mode        |
+| `--parent-collection-logic`     | `$DEPTRACK_PARENT_COLLECTION_LOGIC`     | Set up how the parent aggregates its direct children (see doc), default is ALL |
+| `--parent-collection-logic-tag` | `$DEPTRACK_PARENT_COLLECTION_LOGIC_TAG` | Tag for aggregation if `--parent-collection-logic` is set to `TAG`             |
+
+#### SBOM options
+
+| CLI option                      | Env. Variable                           | Description                                                                     |
+| ------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------- |
+| `-m` / `--merge`                | `$DEPTRACK_MERGE`                       | Merge all SBOM files into one (default `false`)                                 |
+| `-o` / `--merge-output`         | `$DEPTRACK_MERGE_OUTPUT`                | Output merged SBOM file (only used with merge enabled) - for debugging purpose  |
+| `-l` / `--purl-max-len`         | `$DEPTRACK_PURL_MAX_LEN`                | PURLs max length (`-1`: auto, `0`: no trim, `>0`: trim to size - default: `-1`) |
+
+#### VEX
+
+| CLI option                 | Env. Variable               | Description                                                                                                                                                                                                                                                                                                                                |
+| -------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `-U` / `--upload-vex`      | `$DEPTRACK_UPLOAD_VEX`      | Upload VEX file after SBOM analysis (requires VULNERABILITY_ANALYSIS permission). The VEX file(s) are resolved based on the sbom pattern(s). The first part of the SBOM file name is used to match it with a VEX file (e.g. if there is an SBOM file 'example.cyclonedx.json', the corresponding VEX file name must be 'example.vex.json') |
+| `-V` / `--merged-vex-file` | `$DEPTRACK_MERGED_VEX_FILE` | The VEX file to upload if multiple SBOMS are merged (--merge). Can only be used with --upload-vex and --merge.                                                                                                                                                                                                                             |
+
+#### Miscellaneous
+
+| CLI option                      | Env. Variable                           | Description                                                                    |
+| ------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------ |
+| `-S` / `--show-findings`        | `$DEPTRACK_SHOW_FINDINGS`               | Wait for analysis and display found vulnerabilities                            |
+| `-R` / `--risk-score-threshold` | `$DEPTRACK_RISK_SCORE_THRESHOLD`        | Risk score threshold to fail the scan (`<0`: disabled - default: `-1`)         |
+
+## API Key permissions
+
+- In order to be able to publish SBOM files to the Dependency Track server, the `BOM_UPLOAD` permission is **mandatory**.
+- The extra `PROJECT_CREATION_UPLOAD` permission is required if you want to automatically create the project while uploading the SBOM files if the project does not exist (but the parent project must exist).
+- The extra `VIEW_VULNERABILITY` and `VIEW_PORTFOLIO` permissions are required if you want to display found vulnerabilities or compute risk score after SBOM analysis.<br/>
+  Granting those permissions without enabling [Portfolio ACLs](https://github.com/DependencyTrack/dependency-track/issues/1127) is not recommended in the general case as give a read access to all projects.
+- The extra `VIEW_PORTFOLIO` and `PORTFOLIO_MANAGEMENT` permissions are required if you want to automatically create one or several project ancestors prior to uploading the SBOM files.<br/>
+  Granting those permissions is not recommended in the general case as they virtually give administration rights to the API Key owner.
+- The extra `VULNERABILITY_ANALYSIS` permission is required if you want to upload VEX files after SBOM analysis.
+
+## Project Path
+
+Whenever a SBOM file is found, `dt-sbom-scanner` uploads it to the Dependency Track server under a certain project.
+The target project is determined by evaluating the `--project-path` CLI option (or `$DEPTRACK_PROJECT_PATH` variable).
+
+The project path is a sequence of elements separated by forward slashes `/` (although the separator is also configurable with the `--path-separator` CLI option).
+Each element is expected to be one of the following:
+
+1. `#11111111-1111-1111-1111-111111111111`: a project [Universally Unique Identifier (UUID)](https://en.wikipedia.org/wiki/Universally_unique_identifier) (starting with a hash `#`)
+2. `project-name@version`: a **project name** and a **version** (separated with a `@`)
+3. `project-name`: a **project name** only (empty version)
+
+Here is the project path regular grammar:
+
+```
+<path> -> <element> '/' <path> | element
+<element> -> <name> '@' <version> | <name> | '#' <UUID>
+<name> -> [a-zA-Z0-9_-.]+
+<version> -> [a-zA-Z0-9_-.]*
+<UUID> -> [a-fA-F0-9]{8} '-' [a-fA-F0-9]{4} '-' [a-fA-F0-9]{4} '-' [a-fA-F0-9]{4} '-' [a-fA-F0-9]{12}
+```
+
+Lastly, the project path supports some **expressions**, that will be dynamically replaced when being evaluated:
+
+| Expression       | Description                                                                                                                                                |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `{file_prefix}`  | SBOM filename prefix (before the first dot).<br/>Ex: when processing the file `reports/docker-sbom.cyclonedx.json`, `{file_prefix}` will be `docker-sbom`. |
+| `{sbom_name}`    | `Metadata > Component > Name` info extracted from the SBOM file (json or xml)                                                                              |
+| `{sbom_version}` | `Metadata > Component > Version` info extracted from the SBOM file (json or xml)                                                                           |
+| `{sbom_type}`    | `Metadata > Component > Type` info extracted from the SBOM file (json or xml)                                                                              |
+
+Project path examples:
+
+- `#550e8400-e29b-41d4-a716-446655440000`: every SBOM found will be published to the project with UUID `550e8400-e29b-41d4-a716-446655440000`<br/>
+  :information_source: as Dependency Track is only able to store one SBOM per project, this configuration is suitable only if exactly one SBOM file is found (otherwise each one will overwrite the previous one)
+- `my-project@v1.1.0`: every SBOM found will be published to the project with name `my-project` and version `v1.1.0`<br/>
+  :information_source: depending on your API key permissions, `dt-sbom-scanner` might try to automatically create the project if it doesn't exist<br/>
+  :information_source: as in the previous example, this configuration is suitable only if exactly one SBOM file is found
+- `#550e8400-e29b-41d4-a716-446655440000/my-project-{file_prefix}@{sbom_version}`: every SBOM found will be published to a project named `my-project-{file_prefix}` and version `{sbom_version}` (extracted from the SBOM file),
+  direct child of project with UUID `550e8400-e29b-41d4-a716-446655440000`<br/>
+  :information_source: depending on your API key permissions, `dt-sbom-scanner` might try to automatically create the project if it doesn't exist
+- `acme-program@v2/acme-services@v1.3/acme-user-api@v1.3/acme-user-api-{file_prefix}`: complete project path only defined by project names and versions<br/>
+  :information_source: depending on your API key permissions, `dt-sbom-scanner` might try to automatically create the project and its ancestors if they don't exist
+
+> :bulb: you may decide to overwrite the path separator (ex: double slash `//`) if you want your project names to contain slashes.
+
+### Project collection logic
+
+Since [4.13.0 version](https://docs.dependencytrack.org/changelog/#v4-13-0), Dependency Track supports the concept of [collection project](https://docs.dependencytrack.org/usage/collection-projects/).
+A collection project won't be able to host a SBOM, however it will display all vulnerabilities and policy violations of its children.
+`dt-sbom-scanner` will set the collection logic with the `--parent-collection-logic` optional argument (default value is `ALL`).
+
+| `--parent-collection-logic` value | Dependency Track API value | Explanation |
+| -------- | ------------------------------------ | --------------------- |
+| `ALL`    | `AGGREGATE_DIRECT_CHILDREN`          | Parent project will collect metrics from all its direct children |
+| `TAG`    | `AGGREGATE_DIRECT_CHILDREN_WITH_TAG` | Parent project will collect metrics from direct children specified by a tag (which can be different from tags on the parent project itself) |
+| `LATEST` | `AGGREGATE_LATEST_VERSION_CHILDREN`  | Parent project will collect metrics from direct children flagged as latest |
+| `NONE`   | `NONE`                               | Parent project will behave like a normal project |
+
+:information_source: since `dt-sbom-scanner` does not update existing projects, collection logic will only be configured on the parent project created by `dt-sbom-scanner`
+
+See [Dependency Track documentation about collection project](https://docs.dependencytrack.org/usage/collection-projects/) for more details.
+
+## Developers
+
+`dt-sbom-scanner` is implemented in Python and relies on [Poetry](https://python-poetry.org/) for its packaging and dependency management.
+
+```bash
+# install dependencies
+poetry install
+
+# run from code
+poetry run sbom-scanner \
+  --base-api-url http://localhost:8080/api \
+  --api-key "$DT_API_KEY" \
+  --project-path "my-group/my-project/sub-{file_prefix}" \
+  **/*.cyclonedx.json
+```
+
