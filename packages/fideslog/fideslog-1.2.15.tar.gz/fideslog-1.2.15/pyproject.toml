@@ -1,0 +1,91 @@
+[build-system]
+requires = ["setuptools", "wheel", "versioneer-518"]  # PEP 508 specifications.
+
+######
+# MyPy
+######
+[tool.mypy]
+show_error_codes = true
+check_untyped_defs = true
+disallow_any_explicit = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+no_implicit_reexport = true
+pretty = true
+warn_redundant_casts = true
+warn_unused_configs = true
+warn_unused_ignores = true
+files = "fideslog/"
+exclude = "fideslog/sdk/python/_version.py"
+
+#######
+# Black
+#######
+[tool.black]
+py39 = true
+line-length = 88
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | _build
+    | buck-out
+    | build
+    | dist
+
+    # The following are specific to Black, you probably don't want those.
+    | blib2to3
+)/
+'''
+
+#######
+# isort
+#######
+[tool.isort]
+known_first_party = ["versioneer"]
+line_length = 88
+profile = "black"
+src_paths = ["fideslog", "tests"]
+
+
+########
+# Pylint
+########
+[tool.pylint.messages_control]
+disable=[
+    "duplicate-code",
+    "import-error",
+    "invalid-name",
+    "line-too-long",
+    "missing-module-docstring",
+    "too-few-public-methods",
+    "unsubscriptable-object",
+]
+extension-pkg-whitelist = "pydantic"
+
+[tool.pylint.reports]
+reports="no"
+output-format="colorized"
+
+[tool.pylint.format]
+max-line-length="88"
+
+[tool.pylint.basic]
+good-names="_,i,setUp,tearDown,maxDiff,default_app_config"
+
+
+########
+# Pytest
+########
+[tool.pytest.ini_options]
+testpaths="tests"
+log_level = "DEBUG"
+addopts = ["--cov=fideslog",
+            "--cov-report=term-missing",
+            "-vv",
+            "--no-cov-on-fail",
+            "--disable-pytest-warnings"]
