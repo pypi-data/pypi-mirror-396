@@ -1,0 +1,114 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "serialcables-sphinx"
+version = "0.6.0"
+description = "MCTP and NVMe-MI protocol library for Serial Cables hardware"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.9"
+authors = [
+    {name = "Serial Cables, LLC"}
+]
+keywords = [
+    "nvme",
+    "nvme-mi",
+    "mctp",
+    "pcie",
+    "storage",
+    "ssd",
+    "management",
+    "smbus",
+    "i2c",
+    "i3c",
+    "compliance",
+    "testing",
+    "unh-iol"
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Manufacturing",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: System :: Hardware",
+    "Topic :: System :: Hardware :: Hardware Drivers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Testing",
+]
+dependencies = [
+    "serialcables-hydra>=1.3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "black>=23.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0",
+]
+docs = [
+    "sphinx>=7.0",
+    "sphinx-rtd-theme>=2.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/serialcables/serialcables-sphinx"
+Documentation = "https://serialcables-sphinx.readthedocs.io"
+Repository = "https://github.com/serialcables/serialcables-sphinx"
+Issues = "https://github.com/serialcables/serialcables-sphinx/issues"
+
+[project.scripts]
+sphinx-decode = "serialcables_sphinx.cli:main"
+sphinx-shortcuts = "serialcables_sphinx.shortcuts_cli:main"
+sphinx-profile = "serialcables_sphinx.profiler_cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+serialcables_sphinx = ["py.typed"]
+
+[tool.black]
+line-length = 100
+target-version = ["py39", "py310", "py311", "py312"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4"]
+ignore = [
+    "E501",  # Line too long (handled by formatter)
+]
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = false
+warn_unused_configs = true
+ignore_missing_imports = true
+check_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = [
+    "serialcables_sphinx.profiler.*",
+    "serialcables_sphinx.profiler_cli",
+    "serialcables_sphinx.transports.mock",
+    "serialcables_sphinx.transports.hydra",
+]
+ignore_errors = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v"
