@@ -1,0 +1,48 @@
+{% extends "site/base.html" %}
+
+{% load i18n %}
+
+{% block page %}
+<div id="results">
+<table class="table table-bordered">
+    <thead class="table-header">
+        <tr>
+            {% if not grouped %}
+                <th>{% trans "Context" %}</th>
+            {% endif %}
+            <th>{% trans "Name" %}</th>
+            <th>{% trans "Count" %}</th>
+            <th>{% trans "Sum" %}</th>
+            <th>{% trans "Min" %}</th>
+            <th>{% trans "Mean" %}</th>
+            <th>{% trans "Max" %}</th>
+            <th>{% trans "Timestamp" %}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for m in results %}
+            <tr>
+                {% if not grouped %}
+                    <td>
+                        <a href="{{ m.get_absolute_url }}" data-bs-toggle="offcanvas" data-bs-target="#inspector" hx-get="{{ m.get_absolute_url }}" hx-target="#inspector">{{ m.context }}</a>
+                    </td>
+                {% endif %}
+                <td>
+                    {% if grouped %}
+                        <a href="">{{ m.name }}</a>
+                    {% else %}
+                        {{ m.name }}
+                    {% endif %}
+                </td>
+                <td>{{ m.agg_count }}</td>
+                <td>{{ m.agg_sum }}</td>
+                <td>{{ m.agg_min }}</td>
+                <td>{{ m.agg_avg|floatformat:2 }}</td>
+                <td>{{ m.agg_max }}</td>
+                <td>{{ m.timestamp }}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock page %}

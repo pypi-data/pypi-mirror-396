@@ -1,0 +1,34 @@
+{% load i18n %}
+
+<div class="offcanvas-header">
+    {% if context.request %}
+        <a class="btn btn-outline-secondary text-truncate me-2" href="{{ context.request.get_absolute_url }}" data-bs-target="#inspector" hx-get="{{ context.request.get_absolute_url }}" hx-target="#inspector"><i class="bi bi-chevron-left"></i> {{ context }}</a>
+    {% endif %}
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+</div>
+<div class="offcanvas-body">
+    <table class="table table-sm">
+        <tbody>
+            <tr>
+                <th>{% trans "Name" %}</th>
+                <td>{{ object.name }}</td>
+            </tr>
+            <tr>
+                <th>{% trans "Level" %}</th>
+                <td>{{ object.get_level_display }}</td>
+            </tr>
+            <tr>
+                <th>{% trans "File" %}</th>
+                <td>{{ object.file }}:{{ object.lineno }}</td>
+            </tr>
+            <tr>
+                <th>{% trans "Message" %}</th>
+                <td>{{ object.message }}</td>
+            </tr>
+            <tr>
+                <th>{% trans "Error" %}</th>
+                <td>{{ object.error }}</td>
+            </tr>
+        </tbody>
+    </table>
+</div>

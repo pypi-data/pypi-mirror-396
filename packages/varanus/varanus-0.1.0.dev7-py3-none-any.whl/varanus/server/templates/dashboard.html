@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% load i18n %}
+
+{% block content %}
+{% for site, nodes in site_nodes.items %}
+    <div class="card mb-3">
+        <div class="card-header">
+            <a href="{{ site.get_absolute_url }}">{{ site }}</a>
+        </div>
+        <div class="card-body">
+            <table class="table table-borderless mb-0">
+                <thead>
+                    <tr>
+                        <th>{% trans "Environment" %}</th>
+                        <th>{% trans "Node" %}</th>
+                        <th>{% trans "Platform" %}</th>
+                        <th>{% trans "Language" %}</th>
+                        <th>{% trans "Framework" %}</th>
+                        <th>{% trans "First Seen" %}</th>
+                        <th>{% trans "Last Seen" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for node in nodes %}
+                        <tr>
+                            <td>{{ node.environment }}</td>
+                            <td>{{ node.name }}</td>
+                            <td>{{ node.platform }}</td>
+                            <td>{{ node.language }} {{ node.language_version }}</td>
+                            <td>{{ node.framework }} {{ node.framework_version }}</td>
+                            <td>{{ node.first_seen }}</td>
+                            <td>{{ node.last_seen }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endfor %}
+{% endblock content %}
