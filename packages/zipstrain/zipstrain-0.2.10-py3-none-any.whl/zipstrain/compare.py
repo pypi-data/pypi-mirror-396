@@ -1,0 +1,377 @@
+"""zipstrain.compare
+========================
+This module provides all comparison functions for zipstrain.
+
+"""
+
+import polars as pl
+
+class PolarsANIExpressions:
+    """ 
+    Any kind of ANI calculation based on two profiles should be implemented as a method of this class.
+    In defining this method, the following rules should be followed:
+    
+    -   The method returns a Polars expression (pl.Expr).
+    
+    -   When applied to a row, the method returns a zero if that position is a SNV. Otherwise it should return a number greater than zero.
+    
+    -   A, T, C, G columns in the first profile are named "A", "T", "C", "G" and in the second profile they are named "A_2", "T_2", "C_2", "G_2".
+    
+    1. popani: Population ANI based on the shared alleles between two profiles.
+    2. conani: Consensus ANI based on the consensus alleles between two profiles.
+    3. cosani_<threshold>: Generalized cosine similarity ANI where threshold is a float value between 0 and 1. Once the similarity is below the threshold, it is considered a SNV.
+    """
+    MPILE_1_BASES = ["A", "T", "C", "G"]
+    MPILE_2_BASES = ["A_2", "T_2", "C_2", "G_2"]
+
+    def popani(self):
+        return pl.col("A")*pl.col("A_2") + pl.col("C")*pl.col("C_2") + pl.col("G")*pl.col("G_2") + pl.col("T")*pl.col("T_2")
+    
+    def conani(self):
+        max_base_1=pl.max_horizontal(*[pl.col(base) for base in self.MPILE_1_BASES])
+        max_base_2=pl.max_horizontal(*[pl.col(base) for base in self.MPILE_2_BASES])
+        return pl.when((pl.col("A")==max_base_1) & (pl.col("A_2")==max_base_2) | 
+                       (pl.col("T")==max_base_1) & (pl.col("T_2")==max_base_2) | 
+                       (pl.col("C")==max_base_1) & (pl.col("C_2")==max_base_2) | 
+                       (pl.col("G")==max_base_1) & (pl.col("G_2")==max_base_2)).then(1).otherwise(0)
+    
+    def generalized_cos_ani(self,threshold:float=0.4):
+        dot_product = pl.col("A")*pl.col("A_2") + pl.col("C")*pl.col("C_2") + pl.col("G")*pl.col("G_2") + pl.col("T")*pl.col("T_2")
+        magnitude_1 = (pl.col("A")**2 + pl.col("C")**2 + pl.col("G")**2 + pl.col("T")**2)**0.5
+        magnitude_2 = (pl.col("A_2")**2 + pl.col("C_2")**2 + pl.col("G_2")**2 + pl.col("T_2")**2)**0.5
+        cos_sim = dot_product / (magnitude_1 * magnitude_2)
+        return pl.when(cos_sim >= threshold).then(1).otherwise(0)
+
+    def __getattribute__(self, name):
+        if name.startswith("cosani_"):
+            try:
+                threshold = float(name.split("_")[1])
+            except ValueError:
+                raise AttributeError(f"Invalid threshold in method name: {name}")
+            return lambda: self.generalized_cos_ani(threshold)
+        else:
+            return super().__getattribute__(name)
+
+def coverage_filter(mpile_frame:pl.LazyFrame, min_cov:int,engine:str)-> pl.LazyFrame:
+    """
+    Filter the mpile lazyframe based on minimum coverage at each loci.
+    
+    Args:
+        mpile_frame (pl.LazyFrame): The input LazyFrame containing coverage data.
+        min_cov (int): The minimum coverage threshold.
+    
+    Returns:
+        pl.LazyFrame: Filtered LazyFrame with positions having coverage >= min_cov.
+    """
+    mpile_frame = mpile_frame.with_columns(
+        (pl.col("A") + pl.col("C") + pl.col("G") + pl.col("T")).alias("cov")
+    )
+    return mpile_frame.filter(pl.col("cov") >= min_cov).collect(engine=engine).lazy()
+
+def adjust_for_sequence_errors(mpile_frame:pl.LazyFrame, null_model:pl.LazyFrame) -> pl.LazyFrame:
+    """
+    Adjust the mpile frame for sequence errors based on the null model.
+    
+    Args:
+        mpile_frame (pl.LazyFrame): The input LazyFrame containing coverage data.
+        null_model (pl.LazyFrame): The null model LazyFrame containing error counts.
+    
+    Returns:
+        pl.LazyFrame: Adjusted LazyFrame with sequence errors accounted for.
+    """
+    return mpile_frame.join(null_model, on="cov", how="left").with_columns([
+        pl.when(pl.col(base) >= pl.col("max_error_count"))
+        .then(pl.col(base))
+        .otherwise(0)
+        .alias(base)
+        for base in ["A", "T", "C", "G"]
+    ]).drop("max_error_count")
+
+def get_shared_locs(mpile_contig_1:pl.LazyFrame, mpile_contig_2:pl.LazyFrame,ani_method:str="popani") -> pl.LazyFrame:
+    """
+    Returns a lazyframe with ATCG information for shared scaffolds and positions between two mpileup files.
+
+    Args:
+        mpile_contig_1 (pl.LazyFrame): The first mpileup LazyFrame.
+        mpile_contig_2 (pl.LazyFrame): The second mpileup LazyFrame.
+        ani_method (str): The ANI calculation method to use. Default is "popani".
+    
+    Returns:
+        pl.LazyFrame: Merged LazyFrame containing shared scaffolds and positions with ATCG information.
+    """
+    ani_expr=getattr(PolarsANIExpressions(), ani_method)()
+
+    mpile_contig= mpile_contig_1.join(
+        mpile_contig_2,
+        on=["chrom", "pos"],
+        how="inner",
+        suffix="_2"  # To distinguish lf2 columns
+    ).with_columns(
+        ani_expr.alias("surr")
+    ).select(
+        pl.col("surr"),
+        scaffold=pl.col("chrom"),
+        pos=pl.col("pos"),
+        gene=pl.col("gene")
+    )
+    return mpile_contig
+
+def add_contiguity_info(mpile_contig:pl.LazyFrame) -> pl.LazyFrame:
+    """ Adds group id information to the lazy frame. If on the same scaffold and not popANI, then they are in the same group.
+    
+    Args:
+        mpile_contig (pl.LazyFrame): The input LazyFrame containing mpileup data.
+    
+    Returns:
+        pl.LazyFrame: Updated LazyFrame with group id information added.
+    """
+
+    mpile_contig= mpile_contig.sort(["scaffold", "pos"])
+    mpile_contig = mpile_contig.with_columns([
+        (pl.col("scaffold").shift(1).fill_null(pl.col("scaffold")).alias("prev_scaffold")),
+    ])
+    mpile_contig = mpile_contig.with_columns([
+        (((pl.col("scaffold") != pl.col("prev_scaffold")) | (pl.col("surr") == 0))).cum_sum().alias("group_id")
+    ])
+    return mpile_contig
+
+def add_genome_info(mpile_contig:pl.LazyFrame, scaffold_to_genome:pl.LazyFrame) -> pl.LazyFrame:
+    """
+    Adds genome information to the mpileup LazyFrame based on scaffold to genome mapping.
+    
+    Args:
+        mpile_contig (pl.LazyFrame): The input LazyFrame containing mpileup data.
+        scaffold_to_genome (pl.LazyFrame): The LazyFrame mapping scaffolds to genomes.
+    
+    Returns:
+        pl.LazyFrame: Updated LazyFrame with genome information added.
+    """
+    return mpile_contig.join(
+        scaffold_to_genome, on="scaffold", how="left"
+    ).fill_null("NA")
+
+def calculate_pop_ani(mpile_contig:pl.LazyFrame) -> pl.LazyFrame:
+    """
+    Calculates the population ANI (Average Nucleotide Identity) for the given mpileup LazyFrame.
+    NOTE: Remember that this function should be applied to the merged mpileup using get_shared_locs.
+
+    Args:
+        mpile_contig (pl.LazyFrame): The input LazyFrame containing mpileup data.
+    
+    Returns:
+        pl.LazyFrame: Updated LazyFrame with population ANI information added.
+    """
+    return mpile_contig.group_by("genome").agg(
+            total_positions=pl.len(),
+            share_allele_pos=(pl.col("surr") > 0 ).sum()
+        ).with_columns(
+            genome_pop_ani=pl.col("share_allele_pos")/pl.col("total_positions")*100,
+        )
+
+def get_longest_consecutive_blocks(mpile_contig:pl.LazyFrame) -> pl.LazyFrame:
+    """
+    Calculates the longest consecutive blocks for each genome in the mpileup LazyFrame for any genome.
+    
+    Args:
+        mpile_contig (pl.LazyFrame): The input LazyFrame containing mpileup data.
+    
+    Returns:
+        pl.LazyFrame: Updated LazyFrame with longest consecutive blocks information added.
+    """
+    block_lengths = (
+        mpile_contig.group_by(["genome", "scaffold", "group_id"])
+        .agg(pl.len().alias("length"))
+    ) 
+    return block_lengths.group_by("genome").agg(pl.col("length").max().alias("max_consecutive_length"))
+
+def get_gene_ani(mpile_contig:pl.LazyFrame, min_gene_compare_len:int) -> pl.LazyFrame:
+    """
+    Calculates gene ANI (Average Nucleotide Identity) for each gene in each genome.
+    
+    Args:
+        mpile_contig (pl.LazyFrame): The input LazyFrame containing mpileup data.
+        min_gene_compare_len (int): Minimum length of the gene to consider for comparison.
+    
+    Returns:
+        pl.LazyFrame: Updated LazyFrame with gene ANI information added.
+    """
+    return mpile_contig.group_by(["genome", "gene"]).agg(
+        total_positions=pl.len(),
+        share_allele_pos=(pl.col("surr") > 0).sum()
+    ).filter(pl.col("total_positions") >= min_gene_compare_len).with_columns(
+        identical=(pl.col("share_allele_pos") == pl.col("total_positions")),
+    ).filter(pl.col("gene") != "NA").group_by("genome").agg(
+        shared_genes_count=pl.len(),
+        identical_gene_count=pl.col("identical").sum()
+    ).with_columns(perc_id_genes=pl.col("identical_gene_count") / pl.col("shared_genes_count") * 100)
+
+def get_unique_scaffolds(mpile_contig:pl.LazyFrame,batch_size:int=10000) -> set:
+    """
+    Retrieves unique scaffolds from the mpileup LazyFrame.
+
+    Args:
+        mpile_contig (pl.LazyFrame): The input LazyFrame containing mpileup data.
+        batch_size (int): The number of rows to process in each batch. Default is 10000.
+    Returns:
+        set: A set of unique scaffold names.
+    """
+    scaffolds = set()
+    start_index = 0
+    while True:
+        batch = mpile_contig.slice(start_index, batch_size).select("chrom").collect()
+        if batch.height == 0:
+            break
+        scaffolds.update(batch["chrom"].to_list())
+        start_index += batch_size
+    return scaffolds 
+
+
+def compare_genomes(mpile_contig_1:pl.LazyFrame,
+              mpile_contig_2:pl.LazyFrame,
+              null_model:pl.LazyFrame,
+              scaffold_to_genome:pl.LazyFrame,
+              min_cov:int=5,
+              min_gene_compare_len:int=100,
+              memory_mode:str="heavy",
+              chrom_batch_size:int=10000,
+              shared_scaffolds:list=None,
+              scaffold_scope:list=None,
+              engine="streaming",
+              ani_method:str="popani"
+            )-> pl.LazyFrame:
+    """
+    Compares two profiles and generates genome-level comparison statistics.
+    The final output is a Polars LazyFrame with genome comparison statisticsin the following columns:
+    
+    - genome: The genome identifier.
+    
+    - total_positions: Total number of positions compared.
+    
+    - share_allele_pos: Number of positions with shared alleles.
+    
+    - genome_pop_ani: Population ANI percentage.
+    
+    - max_consecutive_length: Length of the longest consecutive block of shared alleles.
+    
+    - shared_genes_count: Number of genes compared.
+    
+    - identical_gene_count: Number of identical genes.
+    
+    - perc_id_genes: Percentage of identical genes.
+
+    Args:
+        mpile_contig_1 (pl.LazyFrame): The first profile as a LazyFrame.
+        mpile_contig_2 (pl.LazyFrame): The second profile as a LazyFrame.
+        null_model (pl.LazyFrame): The null model LazyFrame that contains the thresholds for sequence error adjustment.
+        scaffold_to_genome (pl.LazyFrame): A mapping LazyFrame from scaffolds to genomes.
+        min_cov (int): Minimum coverage threshold for filtering positions. Default is 5.
+        min_gene_compare_len (int): Minimum length of genes that needs to be covered to consider for comparison. Default is 100.
+        memory_mode (str): Memory mode for processing. Options are "heavy" or "light". Default is "heavy".
+        chrom_batch_size (int): Batch size for processing scaffolds in light memory mode. Default
+        shared_scaffolds (list): List of shared scaffolds between the two profiles. Required for light memory mode.
+        scaffold_scope (list): List of scaffolds to limit the comparison to. Default is None.
+        engine (str): The Polars engine to use for computation. Default is "streaming".
+        ani_method (str): The ANI calculation method to use. Default is "popani".
+    
+    Returns:
+        pl.LazyFrame: A LazyFrame containing genome-level comparison statistics.
+    """
+    if memory_mode == "heavy":
+        if scaffold_scope is not None:
+            mpile_contig_1 = mpile_contig_1.filter(pl.col("chrom").is_in(scaffold_scope)).collect(engine=engine).lazy()
+            mpile_contig_2 = mpile_contig_2.filter(pl.col("chrom").is_in(scaffold_scope)).collect(engine=engine).lazy()
+        lf1=coverage_filter(mpile_contig_1, min_cov,engine=engine)
+        lf1=adjust_for_sequence_errors(lf1, null_model)
+        lf2=coverage_filter(mpile_contig_2, min_cov,engine=engine)
+        lf2=adjust_for_sequence_errors(lf2, null_model)
+        ### Now we need to only keep (scaffold, pos) that are in both lf1 and lf2
+        lf = get_shared_locs(lf1, lf2, ani_method=ani_method)
+        ## Add Contiguity Information
+        lf = add_contiguity_info(lf)
+        ## Let's add genome information for all scaffolds and positions
+        lf = add_genome_info(lf, scaffold_to_genome)
+        ## Let's calculate popANI
+        genome_comp= calculate_pop_ani(lf)
+        ## Calculate longest consecutive blocks
+        max_consecutive_per_genome = get_longest_consecutive_blocks(lf)
+        ## Calculate gene ani for each gene in each genome
+        gene= get_gene_ani(lf, min_gene_compare_len)
+        genome_comp=genome_comp.join(max_consecutive_per_genome, on="genome", how="left")
+        genome_comp=genome_comp.join(gene, on="genome", how="left")
+    
+    elif memory_mode == "light":
+        shared_scaffolds_batches = [shared_scaffolds[i:i + chrom_batch_size] for i in range(0, len(shared_scaffolds), chrom_batch_size)]
+        lf_list=[]
+        for scaffold in shared_scaffolds_batches:
+            lf1= coverage_filter(mpile_contig_1.filter(pl.col("chrom").is_in(scaffold)), min_cov)
+            lf1=adjust_for_sequence_errors(lf1, null_model)
+            lf2= coverage_filter(mpile_contig_2.filter(pl.col("chrom").is_in(scaffold)), min_cov)
+            lf2=adjust_for_sequence_errors(lf2, null_model)
+            ### Now we need to only keep (scaffold, pos) that are in both lf1 and lf2
+            lf = get_shared_locs(lf1, lf2, ani_method=ani_method)
+            ## Lets add contiguity information
+            lf= add_contiguity_info(lf)
+            lf_list.append(lf)
+        lf= pl.concat(lf_list)
+        lf= add_genome_info(lf, scaffold_to_genome)
+        genome_comp= calculate_pop_ani(lf)
+        max_consecutive_per_genome = get_longest_consecutive_blocks(lf)
+        gene= get_gene_ani(lf, min_gene_compare_len)
+        genome_comp=genome_comp.join(max_consecutive_per_genome, on="genome", how="left")
+        genome_comp=genome_comp.join(gene, on="genome", how="left")
+    else:
+        raise ValueError("Invalid memory_mode. Choose either 'heavy' or 'light'.")
+    return genome_comp
+
+
+
+def compare_genes(mpile_contig_1:pl.LazyFrame,
+              mpile_contig_2:pl.LazyFrame,
+              null_model:pl.LazyFrame,
+              scaffold_to_genome:pl.LazyFrame,
+              min_cov:int=5,
+              min_gene_compare_len:int=100,
+              engine="streaming",
+              ani_method:str="popani"
+            )-> pl.LazyFrame:
+    """
+    Compares two profiles and generates gene-level comparison statistics.
+    The final output is a Polars LazyFrame with gene comparison statistics in the following columns:
+    - genome: The genome identifier.
+    - gene: The gene identifier.
+    - total_positions: Total number of positions compared in the gene.
+    - share_allele_pos: Number of positions with shared alleles in the gene.
+    - ani: Average Nucleotide Identity (ANI) percentage for the gene.
+    
+    Args:
+        mpile_contig_1 (pl.LazyFrame): The first profile as a LazyFrame.
+        mpile_contig_2 (pl.LazyFrame): The second profile as a LazyFrame.
+        null_model (pl.LazyFrame): The null model LazyFrame that contains the thresholds for sequence error adjustment.
+        scaffold_to_genome (pl.LazyFrame): A mapping LazyFrame from scaffolds to genomes.
+        min_cov (int): Minimum coverage threshold for filtering positions. Default is 5.
+        min_gene_compare_len (int): Minimum length of genes that needs to be covered to consider for comparison. Default is 100.
+        engine (str): The Polars engine to use for computation. Default is "streaming".
+        ani_method (str): The ANI calculation method to use. Default is "popani".
+    
+    Returns:
+        pl.LazyFrame: A LazyFrame containing gene-level comparison statistics.
+    """
+    lf1=coverage_filter(mpile_contig_1, min_cov,engine=engine)
+    lf1=adjust_for_sequence_errors(lf1, null_model)
+    lf2=coverage_filter(mpile_contig_2, min_cov,engine=engine)
+    lf2=adjust_for_sequence_errors(lf2, null_model)
+    ### Now we need to only keep (scaffold, pos) that are in both lf1 and lf2
+    lf = get_shared_locs(lf1, lf2, ani_method=ani_method)
+    ## Let's add genome information for all scaffolds and positions
+    lf = add_genome_info(lf, scaffold_to_genome)
+    ## Let's calculate gene ani for each gene in each genome
+    gene_comp = lf.group_by(["genome", "gene"]).agg(
+        total_positions=pl.len(),
+        share_allele_pos=(pl.col("surr") > 0).sum()
+    ).filter(pl.col("total_positions") >= min_gene_compare_len).with_columns(
+        ani=pl.col("share_allele_pos") / pl.col("total_positions") * 100,
+    )
+    return gene_comp
+
+
+
