@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "datasetsense"
+version = "0.1.1"
+description = "Automated EDA Narrator + Data Quality Scoring Tool"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+]
+
+authors = [
+  { name="Mark Oraño" },
+  { name="Jomar Ligas" },
+  { name="Lex Lumantas" },
+  { name="Philip Tupas" },
+  { name="Josh Ganhinhin" },
+]
+
+dependencies = [
+    "pandas>=1.5",       # Used in loader.py, eda_analyzer.py
+    "numpy",             # Used in quality_scorer.py
+    "tabulate",          # Used in report_builder.py
+    "python-dateutil",   # Used in preprocessor.py
+    "scipy",             # Listed in README
+]
+
+# This creates the terminal command 'datasetsense'
+# It points to src/cli.py -> main() function
+[project.scripts]
+datasetsense = "src.cli:main"
+
+[project.urls]
+"Homepage" = "https://github.com/Alan-Turing18this-Year/Automated-EDA-Narrator-Data-Quality-Scoring-Tool"
+
+# --- CRITICAL SECTION FOR YOUR FOLDER STRUCTURE ---
+# This tells the builder: "The package code is inside the folder named 'src'"
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
