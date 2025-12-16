@@ -1,0 +1,38 @@
+# Publish viadot images with a specified tag.
+name: "Publish Docker images"
+run-name: "Publish viadot-*:${{ github.event.inputs.tag }} images (@${{ github.actor }})"
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "The tag to use for the image."
+        required: true
+        default: "dev"
+      install_databricks:
+        description: "Whether to install Databricks source dependencies."
+        required: false
+        default: "false"
+
+jobs:
+  docker:
+    strategy:
+      matrix:
+        include:
+          - image: viadot-lite
+            build_args: ""
+          - image: viadot-aws
+            build_args: ""
+          - image: viadot-azure
+            build_args: "INSTALL_DATABRICKS=${{ github.event.inputs.install_databricks }}"
+    uses: ./.github/workflows/template_docker_build_and_push.yml
+    with:
+      image_name: ${{ matrix.image }}
+      image_tag: ${{ github.event.inputs.tag }}
+      repository_path: /viadot
+      dockerfile: docker/Dockerfile
+      platforms: linux/amd64
+      target: ${{ matrix.image }}
+      build-args: ${{ matrix.build_args }}
+    secrets:
+      token: ${{ secrets.GITHUB_TOKEN }}
