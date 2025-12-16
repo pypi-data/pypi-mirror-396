@@ -1,0 +1,245 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://gomask.ai/schemas/masking-routine/v1.0.0",
+  "title": "GoMask Data Masking Routine Configuration",
+  "description": "Schema for defining data masking routines - maps directly to database tables",
+  "type": "object",
+  "required": [
+    "routine",
+    "tables"
+  ],
+  "properties": {
+    "routine": {
+      "type": "object",
+      "description": "Maps to routines table",
+      "required": [
+        "name",
+        "type",
+        "connector_id"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the masking routine",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the routine"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "masking"
+          ],
+          "description": "Type of routine (must be 'masking')"
+        },
+        "connector_id": {
+          "type": "integer",
+          "description": "ID of the database connector",
+          "minimum": 1
+        }
+      }
+    },
+    "settings": {
+      "type": "object",
+      "description": "Maps to masking_settings table",
+      "properties": {
+        "batch_size": {
+          "type": "integer",
+          "description": "Number of records to process per batch",
+          "minimum": 1,
+          "default": 1000
+        },
+        "parallel_workers": {
+          "type": "integer",
+          "description": "Number of parallel workers",
+          "minimum": 1,
+          "default": 4
+        },
+        "audit_reporting_enabled": {
+          "type": "boolean",
+          "description": "Enable audit reporting",
+          "default": true
+        },
+        "localization_language": {
+          "type": "string",
+          "description": "Language code (e.g., 'en')",
+          "default": "en"
+        },
+        "localization_region": {
+          "type": "string",
+          "description": "Region code (e.g., 'US')",
+          "default": "US"
+        }
+      }
+    },
+    "tables": {
+      "type": "array",
+      "description": "Maps to routine_tables and routine_columns",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "table_name"
+        ],
+        "properties": {
+          "table_name": {
+            "type": "string",
+            "description": "Name of the table",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "schema_name": {
+            "type": "string",
+            "description": "Database schema name",
+            "minLength": 1,
+            "maxLength": 255,
+            "default": "public"
+          },
+          "columns": {
+            "type": "array",
+            "description": "Column configurations",
+            "items": {
+              "type": "object",
+              "required": [
+                "column_name"
+              ],
+              "properties": {
+                "column_name": {
+                  "type": "string",
+                  "description": "Column name",
+                  "minLength": 1,
+                  "maxLength": 255
+                },
+                "data_type": {
+                  "type": "string",
+                  "description": "Database data type"
+                },
+                "is_nullable": {
+                  "type": "boolean",
+                  "description": "Whether column is nullable",
+                  "default": true
+                },
+                "is_primary_key": {
+                  "type": "boolean",
+                  "description": "Is primary key",
+                  "default": false
+                },
+                "is_foreign_key": {
+                  "type": "boolean",
+                  "description": "Is foreign key",
+                  "default": false
+                },
+                "is_unique": {
+                  "type": "boolean",
+                  "description": "Has unique constraint",
+                  "default": false
+                },
+                "is_indexed": {
+                  "type": "boolean",
+                  "description": "Has index",
+                  "default": false
+                },
+                "max_length": {
+                  "type": "integer",
+                  "description": "Maximum length for varchar/char"
+                },
+                "precision": {
+                  "type": "integer",
+                  "description": "Precision for numeric columns"
+                },
+                "scale": {
+                  "type": "integer",
+                  "description": "Scale for numeric columns"
+                },
+                "default_value": {
+                  "type": "string",
+                  "description": "Default value for column"
+                },
+                "enum_values": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Allowed enum values"
+                },
+                "column_comment": {
+                  "type": "string",
+                  "description": "Column comment/description"
+                },
+                "referenced_table": {
+                  "type": "string",
+                  "description": "Referenced table for foreign keys"
+                },
+                "referenced_column": {
+                  "type": "string",
+                  "description": "Referenced column for foreign keys"
+                },
+                "sensitivity_level": {
+                  "type": "string",
+                  "description": "Data sensitivity classification",
+                  "default": "low"
+                },
+                "data_category": {
+                  "type": "string",
+                  "description": "Category of data",
+                  "default": "generic"
+                },
+                "masking_function": {
+                  "type": "string",
+                  "description": "Name of masking function"
+                },
+                "masking_config": {
+                  "type": "array",
+                  "description": "Masking function parameters - array of parameter configurations",
+                  "items": {
+                    "type": "object",
+                    "required": ["name"],
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "description": "Parameter name"
+                      },
+                      "value": {
+                        "description": "Parameter value (for simple values)"
+                      },
+                      "valueType": {
+                        "type": "string",
+                        "enum": ["static", "reference", "expression", "column"],
+                        "description": "Type of parameter value"
+                      },
+                      "columnReference": {
+                        "type": "string",
+                        "description": "Column to reference when valueType=reference or column"
+                      },
+                      "tableReference": {
+                        "type": "string",
+                        "description": "Table to reference when valueType=reference"
+                      },
+                      "mode": {
+                        "type": "string",
+                        "description": "Reference mode (e.g., random, sequential)"
+                      },
+                      "filter": {
+                        "type": "string",
+                        "description": "Filter condition for reference lookup"
+                      }
+                    },
+                    "additionalProperties": true
+                  }
+                },
+                "is_excluded": {
+                  "type": "boolean",
+                  "description": "Exclude from masking",
+                  "default": false
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

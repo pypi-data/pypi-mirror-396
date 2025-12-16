@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://gomask.ai/schemas/unified-routine/v1.0.0",
+  "title": "GoMask Unified Routine Configuration",
+  "description": "Unified schema for both data masking and synthetic data generation routines",
+  "type": "object",
+  "required": ["routine"],
+  "properties": {
+    "routine": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["masking", "synthetic", "ai_scenario"],
+          "description": "Type of routine"
+        }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "masking-routine-schema.json"
+    },
+    {
+      "$ref": "synthetic-routine-schema.json"
+    }
+  ],
+  "discriminator": {
+    "propertyName": "routine.type",
+    "mapping": {
+      "masking": "masking-routine-schema.json",
+      "synthetic": "synthetic-routine-schema.json"
+    }
+  }
+}
