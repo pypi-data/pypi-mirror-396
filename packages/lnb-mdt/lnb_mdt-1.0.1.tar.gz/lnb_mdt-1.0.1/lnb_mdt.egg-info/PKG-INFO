@@ -1,0 +1,170 @@
+Metadata-Version: 2.4
+Name: lnb-mdt
+Version: 1.0.1
+Summary: Lipid Nanobubble Molecular Dynamics Toolkit
+Home-page: https://github.com/xinyuren-bio/LNB-MDT
+Author: RenXinYU
+Author-email: liqianyanqin01@163.com
+Project-URL: Bug Reports, https://github.com/xinyuren-bio/LNB-MDT/issues
+Project-URL: Source, https://github.com/xinyuren-bio/LNB-MDT
+Project-URL: Documentation, https://lnb-mdt.readthedocs.io/
+Keywords: molecular-dynamics,lipid,nanobubble,simulation,analysis,mda-analysis
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Science/Research
+Classifier: Topic :: Scientific/Engineering :: Chemistry
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: cx_Freeze==8.3.0
+Requires-Dist: matplotlib==3.10.3
+Requires-Dist: MDAnalysis==2.9.0
+Requires-Dist: numpy==2.3.1
+Requires-Dist: pandas==2.3.0
+Requires-Dist: PySide6==6.9.1
+Requires-Dist: scipy==1.16.0
+Requires-Dist: seaborn==0.13.2
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: keywords
+Dynamic: license-file
+Dynamic: project-url
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+# LNB-MDT v1.0
+
+![LNB-MDT Logo](LNB-MDT.jpg)
+
+**LNB-MDT** (Lipid NanoBubble Molecular Dynamics Toolkit) is a comprehensive toolkit designed for molecular dynamics simulations of lipid nanobubbles.
+
+## Installation
+
+### Method 1: Install from PyPI (Recommended)
+
+The easiest way to install LNB-MDT is using pip:
+
+```bash
+pip install lnb-mdt
+```
+
+### Method 2: Install from Source
+
+If you want to install the latest development version or contribute to the project:
+
+```bash
+# Clone the repository
+git clone https://github.com/xinyuren-bio/LNB-MDT.git
+cd LNB-MDT
+
+# Install in editable mode
+pip install -e .
+```
+
+**Note:** For editable installation, you need Python 3.7+ and pip. It's recommended to use a virtual environment:
+
+```bash
+# Create virtual environment (using conda)
+conda create -n LNB-MDT python=3.11
+conda activate LNB-MDT
+
+# Or using venv
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install
+pip install -e .
+```
+
+### Verify Installation
+
+After installation, verify that LNB-MDT is correctly installed:
+
+```bash
+# Check if command is available
+LNB-MDT --help
+
+# Or test in Python
+python -c "import LNB_MDT; print('LNB-MDT installed successfully!')"
+```
+
+## Quick Start
+
+After installation, you can use LNB-MDT in two ways:
+
+### 1. Command Line Interface (CLI)
+
+```bash
+# Launch GUI
+LNB-MDT UI
+
+# Run area analysis
+LNB-MDT AREA --help
+
+# Run with test data
+LNB-MDT AREA -test
+
+# Configure VMD path
+LNB-MDT VMD --path /path/to/vmd
+```
+
+### 2. Python API
+
+```python
+from LNB_MDT.analysis import Area
+import MDAnalysis as mda
+
+# Load trajectory
+u = mda.Universe("system.gro", "trajectory.xtc")
+
+# Run analysis
+area_analysis = Area(u, {'DPPC': ['PO4'], 'CHOL': ['ROH']})
+area_analysis.run()
+```
+
+## Documentation
+
+For detailed documentation, including installation guide, quick start, user guide, and command line tools, please visit:
+
+📚 **[Read the Docs - LNB-MDT Documentation](https://lnb-mdt.readthedocs.io/en/latest/)**
+
+## File Structure
+
+```
+LNB-MDT/
+├── main.py                 # Main program entry
+├── requirements.txt        # Python dependencies
+├── analysis/              # Analysis modules
+│   ├── area.py           # Area analysis
+│   ├── height.py         # Height analysis
+│   ├── cluster.py        # Cluster analysis
+│   ├── anisotropy.py     # Anisotropy analysis
+│   ├── gyration.py       # Gyration analysis
+│   ├── sz.py             # Sz order parameter analysis
+│   └── density.py        # Density analysis (time and radius)
+├── preparation/            # Preparation module
+└── cases_lnb/             # Example lipid nanobubble data
+    ├── lnb.gro           # Example topology file (Martini 3.0, DPPC:DAPC:CHOL=5:3:2)
+    ├── lnb.xtc           # Example trajectory file (50-60 ns time window)
+    └── README.md         # Example data description
+```
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+**LNB-MDT v1.0** - Making lipid nanobubble simulations simpler and more efficient!
