@@ -1,0 +1,168 @@
+Metadata-Version: 2.4
+Name: physionet
+Version: 0.1.5
+Summary: A collection of tools for working with the PhysioNet repository.
+Project-URL: homepage, https://github.com/MIT-LCP/physionet
+Project-URL: repository, https://github.com/MIT-LCP/physionet
+Author-email: Tom Pollard <tpollard@mit.edu>
+License: The MIT License (MIT)
+        
+        Copyright (c) Tom Pollard
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+License-File: LICENSE
+Keywords: dataset,medical,mimic,physionet
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Requires-Python: >=3.9
+Requires-Dist: numpy
+Requires-Dist: openpyxl
+Requires-Dist: pandas
+Requires-Dist: requests
+Requires-Dist: tqdm
+Provides-Extra: build
+Requires-Dist: build>=0.10.0; extra == 'build'
+Requires-Dist: twine>=4.0.0; extra == 'build'
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == 'dev'
+Requires-Dist: requests-mock>=1.9.0; extra == 'dev'
+Description-Content-Type: text/markdown
+
+# PhysioNet
+
+A collection of tools for working with the [PhysioNet](http://physionet.org/) repository.
+
+## Installation
+
+```bash
+pip install physionet
+```
+
+## Usage
+
+### API Client
+
+Interact with the PhysioNet API to explore and search published projects:
+
+```python
+from physionet import PhysioNetClient
+
+# Create a client instance
+client = PhysioNetClient()
+
+# List all published projects
+projects = client.projects.list_published()
+print(f"Total projects: {len(projects)}")
+
+# Display first few projects
+for project in projects[:5]:
+    print(f"{project.slug} v{project.version}: {project.title}")
+
+# Search for projects
+ecg_projects = client.projects.search('ECG')
+print(f"Found {len(ecg_projects)} ECG-related projects")
+
+# Get all versions of a project
+versions = client.projects.list_versions('mimic-iv-demo')
+for version in versions:
+    print(f"Version {version.version}: {version.title}")
+
+# Get detailed information about a specific version
+details = client.projects.get_details('mimic-iv-demo', '2.2')
+print(f"Title: {details.title}")
+print(f"DOI: {details.doi}")
+print(f"Published: {details.publish_datetime}")
+print(f"Size: {details.main_storage_size} bytes")
+```
+
+### Authenticated Requests
+
+For endpoints that require authentication (e.g., downloading checksums):
+
+```python
+from physionet import PhysioNetClient
+
+# Create client with authentication
+client = PhysioNetClient(
+    username='your_username',
+    password='your_password'
+)
+
+# Download checksums file
+client.projects.download_checksums(
+    'mimic-iv-demo',
+    '2.2',
+    'checksums.txt'
+)
+
+# Or use environment variables
+# Set PHYSIONET_USERNAME and PHYSIONET_PASSWORD
+from physionet.api.utils import get_credentials_from_env
+
+username, password = get_credentials_from_env()
+client = PhysioNetClient(username=username, password=password)
+```
+
+### Using Context Manager
+
+```python
+from physionet import PhysioNetClient
+
+# Automatically close session when done
+with PhysioNetClient() as client:
+    projects = client.projects.list_published()
+    print(f"Found {len(projects)} projects")
+```
+
+### Utility Functions
+
+```python
+from physionet.api.utils import format_size
+
+# Format bytes to human-readable size
+size = format_size(16224447)
+print(size)  # "15.47 MB"
+```
+
+## Error Handling
+
+```python
+from physionet import PhysioNetClient
+from physionet.api.exceptions import NotFoundError, RateLimitError, ForbiddenError
+
+client = PhysioNetClient()
+
+try:
+    details = client.projects.get_details('nonexistent-project', '1.0')
+except NotFoundError:
+    print("Project not found")
+except RateLimitError:
+    print("Rate limit exceeded, please wait before retrying")
+except ForbiddenError:
+    print("Access denied - check credentials or project permissions")
+```
+
+## Contributing
+
+Contributions are welcome!
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
