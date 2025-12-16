@@ -1,0 +1,19 @@
+# Weather Latest Function
+::: src.sdk.python.rtdip_sdk.queries.weather.latest
+
+## Example get_point
+
+```python
+--8<-- "https://raw.githubusercontent.com/rtdip/samples/main/queries/WeatherQueryBuilder/Latest-Point/latest_point.py"
+```
+    
+## Example get_grid
+
+```python
+--8<-- "https://raw.githubusercontent.com/rtdip/samples/main/queries/WeatherQueryBuilder/Latest-Grid/latest_grid.py"
+```
+
+These examples are using [```DefaultAuth()```](../../../authentication/azure.md) and [```DatabricksSQLConnection()```](../../connectors/db-sql-connector.md) to authenticate and connect. You can find other ways to authenticate [here](../../../authentication/azure.md). The alternative built in connection methods are either by [```PYODBCSQLConnection()```](../../connectors/pyodbc-sql-connector.md), [```TURBODBCSQLConnection()```](../../connectors/turbodbc-sql-connector.md) or [```SparkConnection()```](../../connectors/spark-connector.md).
+
+!!! note "Note"
+    </b>```server_hostname``` and ```http_path``` can be found on the [SQL Warehouses Page](../../../../queries/databricks/sql-warehouses.md). <br />

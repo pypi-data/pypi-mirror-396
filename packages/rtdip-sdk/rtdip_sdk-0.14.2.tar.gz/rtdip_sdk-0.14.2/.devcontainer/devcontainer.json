@@ -1,0 +1,63 @@
+{
+	"name": "rtdip",
+	"image": "mcr.microsoft.com/azure-functions/python:4-python3.10-core-tools",
+	"forwardPorts": [ 7071, 9091 ],
+
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-azuretools.vscode-azurefunctions",
+				"ms-python.python",
+				"GitHub.vscode-pull-request-github",
+				"GitHub.copilot",
+				"GitHub.codespaces",
+				"ryanluker.vscode-coverage-gutters",
+				"ms-python.black-formatter",
+				"SonarSource.sonarlint-vscode"
+			],
+			"settings": {
+				"azureFunctions.scmDoBuildDuringDeployment": true,
+				"azureFunctions.pythonVenv": "${workspaceFolder}/src/api/.venv",
+				"azureFunctions.projectLanguage": "Python",
+				"azureFunctions.projectRuntime": "~4",				
+				"python.testing.pytestArgs": [
+					"--cov=.",
+					"--cov-report=xml:cov.xml",					
+					"tests"
+				],
+				"python.testing.unittestEnabled": false,
+				"python.testing.pytestEnabled": true,
+				"python.testing.cwd": "${workspaceFolder}",
+				"python.analysis.extraPaths": ["${workspaceFolder}"],
+				"terminal.integrated.env.linux":{
+					"PYTHONPATH": "${workspaceFolder}:${env:PYTHONPATH}"        
+				},				
+				"git.alwaysSignOff": true,
+				"git.pruneOnFetch": true,
+				"githubPullRequests.ignoredPullRequestBranches": [
+					"develop"
+				],
+				"[python]": {
+					"editor.defaultFormatter": "ms-python.black-formatter",
+					"editor.formatOnSave": true
+				},
+				"sonarlint.connectedMode.project": {
+					"connectionId": "rtdip",
+					"projectKey": "rtdip_core"
+				}
+			}			
+		}
+	},
+	
+	"postCreateCommand": "mamba env create -f environment.yml && python -m venv src/api/.venv",
+
+	"remoteUser": "vscode",
+	"features": {
+		"ghcr.io/devcontainers/features/git:1": {},
+		"ghcr.io/devcontainers/features/node:1": {},
+		"ghcr.io/devcontainers/features/terraform:1": {},
+		// "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+		"ghcr.io/devcontainers/features/java:1": {"version": "11"},
+		"ghcr.io/rocker-org/devcontainer-features/miniforge:1": {}
+	}
+}
