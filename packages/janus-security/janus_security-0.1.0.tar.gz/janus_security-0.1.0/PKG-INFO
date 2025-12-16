@@ -1,0 +1,105 @@
+Metadata-Version: 2.4
+Name: janus-security
+Version: 0.1.0
+Summary: Enterprise-grade BOLA and API Vulnerability Scanner
+Project-URL: Homepage, https://github.com/ksanjeev284/janus
+Project-URL: Issues, https://github.com/ksanjeev284/janus/issues
+Author-email: Janus Team <maintainers@janus-security.io>
+License-File: LICENSE
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: System Administrators
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Security
+Classifier: Topic :: Software Development :: Testing
+Requires-Python: >=3.10
+Requires-Dist: fake-useragent>=1.1.0
+Requires-Dist: fastapi>=0.100.0
+Requires-Dist: python-multipart>=0.0.6
+Requires-Dist: redis>=5.0.0
+Requires-Dist: requests>=2.31.0
+Requires-Dist: rich>=13.0.0
+Requires-Dist: typer>=0.9.0
+Requires-Dist: uvicorn>=0.23.0
+Description-Content-Type: text/markdown
+
+# Janus Security Scanner 🛡️
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Code Style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Docker Deploy](https://github.com/ksanjeev284/janus/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/ksanjeev284/janus/actions/workflows/docker-publish.yml)
+
+**Janus** is an enterprise-grade API security scanner designed for Red Teams and advanced security testing. Unlike traditional scanners, Janus uses a distinct approach for detecting **BOLA (Broken Object Level Authorization)**, **BFLA**, and **Race Conditions** without relying on external AI APIs.
+
+![Janus Dashboard](docs/dashboard-preview.png)
+
+## Features 🚀
+
+-   **BOLA/IDOR Detection**: Automatic analysis of resource access patterns.
+-   **Broken Function Level Authorization (BFLA)**: Vertical privilege escalation testing.
+-   **PII & Secrets Scanning**: Detect sensitive data leaks in API responses.
+-   **Race Condition Testing**: Multi-threaded exploitation of concurrency bugs.
+-   **Stealth Mode**: WAF evasion with header rotation, jitter, and proxies.
+-   **Team Collaboration**: Real-time finding synchronization via Redis/Hive-Mind.
+-   **CI/CD Integration**: Export findings to SARIF for GitHub Security tab.
+-   **Web Dashboard**: Modern UI for managing scans and viewing reports.
+
+## Installation 📦
+
+### From Source
+```bash
+git clone https://github.com/ksanjeev284/janus.git
+cd janus
+pip install .
+```
+
+## Quick Start 🏃‍♂️
+
+### 1. Web Dashboard (Recommended)
+
+**Option A: Using Docker (Fastest)**
+```bash
+# Pull and run the latest image
+docker run -p 8000:8000 ghcr.io/ksanjeev284/janus:latest
+```
+
+**Option B: From Source**
+Start the web server and dashboard:
+```bash
+python -m janus.interface.web.server
+# Access at http://localhost:8000
+```
+
+### 2. CLI Usage
+Janus provides a powerful CLI for automation testing.
+
+**Basic BOLA Scan:**
+```bash
+janus scan --victim <token> --attacker <token> --host <url>
+```
+
+**Stealth Test:**
+```bash
+janus stealth-test
+```
+
+**Vertical Escalation (BFLA):**
+```bash
+janus bfla --host https://api.example.com --low <user_token>
+```
+
+## Architecture 🏗️
+
+Janus operates by "learning" from legitimate traffic (via its proxy or provided tokens) to understand the structure of API resources. It then attempts to access those same resources using a different user's context (the attacker), analyzing the structural similarity of the responses to determine vulnerability.
+
+## Contributing 🤝
+
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+
+## License 📄
+
+MIT License - see [LICENSE](LICENSE) for details.
