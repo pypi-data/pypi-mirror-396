@@ -1,0 +1,50 @@
+module Map = struct
+  type Map.t = <logic_core_builtin>
+  (* The map type representing a key-value mapping where each key is associated with exactly one value
+     
+     Usage/Pattern: Creating dictionaries, lookup tables, or any data structure requiring key-value associations *)
+  
+  let Map.const: 'b -> ('a, 'b) Map.t =
+    <logic_core_builtin>
+  (* [Map.const v] creates a constant map that maps every key to the same value [v]
+     
+     Usage/Pattern: Initializing maps with a default value for all possible keys, useful for creating maps with a uniform base value *)
+  
+  let Map.add': ('a, 'b) Map.t -> 'a -> 'b -> ('a, 'b) Map.t =
+    <logic_core_builtin>
+  (* [Map.add' m k v] adds or updates the binding from key [k] to value [v] in map [m]
+     
+     Usage/Pattern: Adding or updating key-value pairs in a map with map-first argument order *)
+  
+  let Map.add (k : 'a) (v : 'b) (m : ('a, 'b) Map.t) : ('a, 'b) Map.t =
+    Map.add' m k v
+  (* [Map.add k v m] adds or updates the binding from key [k] to value [v] in map [m]
+     
+     Usage/Pattern: Adding or updating key-value pairs in a map with key-first argument order, similar to dictionary updates in other languages *)
+  
+  let Map.get_default: ('a, 'b) Map.t -> 'b =
+    <logic_core_builtin>
+  (* [Map.get_default m] returns the default value associated with map [m]
+     
+     Usage/Pattern: Retrieving the default value used for keys not explicitly set in the map *)
+  
+  let Map.get': ('a, 'b) Map.t -> 'a -> 'b =
+    <logic_core_builtin>
+  (* [Map.get' m k] retrieves the value associated with key [k] in map [m]
+     
+     Usage/Pattern: Looking up values by key in a map with map-first argument order *)
+  
+  let Map.get (k : 'a) (m : ('a, 'b) Map.t) : 'b =
+    Map.get' m k
+  (* [Map.get k m] retrieves the value associated with key [k] in map [m]
+     
+     Usage/Pattern: Looking up values by key in a map with key-first argument order, similar to dictionary lookups in other languages *)
+  
+  let rec Map.of_list (default : 'b) (l : ('a * 'b) list) : ('a, 'b) Map.t =
+    match l with
+    | [] -> Map.const default
+    | ((k, v) :: tail) -> Map.add k v (Map.of_list default tail)
+  (* [Map.of_list default l] creates a map from a list [l] of key-value pairs, using [default] as the value for keys not in the list
+     
+     Usage/Pattern: Converting a list of key-value pairs into a map, commonly used when initializing a map from existing data *)
+end

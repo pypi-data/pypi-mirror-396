@@ -1,0 +1,195 @@
+IML code:
+```iml
+{{ iml_code }}
+```
+
+Source code:
+```{{ src_lang }}
+{{ src_code }}
+```
+
+Provided above are a pair of source code and IML code. 
+
+Context on the correspondence between source code and IML code:
+{{ context_on_src_iml_correspondence }}
+
+<task>
+{% if description is none %}
+Your task is to extract structured verification statements based on the source code and IML code. The details about the verification will be provided in the comments of the source code.
+
+- Not all comments are related to the verification. Looking for comments that
+have the following keywords: `verify`, `check`, `assert`, `ensure`, `guarantee`.
+- Not all logical statements are user requests. Some are just descriptions of the code.
+- "decompose" is not a related keyword.
+- A single logical statement might involve multiple functions.
+- If description has to do with "solution finding", it is a type of verification that is equivalent to verifying that "there exists a solution satisfying some property".
+- Answer as per the provided JSON format.
+{% else %}
+Your task is to extract structured verification statements based on the source code and IML code.
+
+- A single logical statement might involve multiple functions.
+- If description has to do with "solution finding", it is a type of verification that is equivalent to verifying that "there exists a solution satisfying some property".
+- Answer as per the provided JSON format.
+{% endif %}
+</task>
+
+Examples:
+{% if description is none %}
+<example1>
+<input>
+</source_code>
+```python
+# verify that the function always returns a number no less than 10
+def f(x):
+    ...
+</source_code>
+</input>
+
+Output:
+<output>
+{
+    "src_func_names": ["f"],
+    "iml_func_names": ["f"],
+    "description": "Verify that the function always returns a number no less than 10",
+    "logical_statement": "for all x in f(x) >= 10",
+}
+```
+</example1>
+
+<example2>
+<input>
+<source_code>
+```python
+def check_legal(x) -> bool:
+    ...
+
+# check that if inputs are legal, then the property_1 always holds
+def property_1(x) -> bool:
+    ...
+```
+</source_code>
+</input>
+
+<output>
+{
+    "src_func_names": ["check_legal", "property_1"],
+    "iml_func_names": ["check_legal", "property_1"],
+    "description": "Check that if inputs are legal, then the property_1 always holds",
+    "logical_statement": "for all x in check_legal(x) ==> property_1(x)",
+}
+</output>
+</example2>
+
+<example3>
+<input>
+<source_code>
+```python
+def is_target_state(state) -> bool:
+    ...
+def apply_transition(state, action) -> State:
+    ...
+def apply_actions(state, actions) -> State:
+    ...
+
+# Find a solution that starts from the initial state and ends with the target state
+```
+</source_code>
+</input>
+
+<output>
+{
+    "src_func_names": ["is_target_state", "apply_transition", "apply_actions"],
+    "iml_func_names": ["is_target_state", "apply_transition", "apply_actions"],
+    "description": "Verify that there exists a solution, which is a sequence of actions, that leads from the initial state to the target state",
+    "logical_statement": "There exists a sequence of actions such that is_target_state(apply_actions(init_state, actions)) is true",
+}
+```
+</output>
+</example3>
+
+{% else %}
+<example1>
+<input>
+</source_code>
+```python
+def f(x):
+    ...
+</source_code>
+<description>
+verify that the function always returns a number no less than 10
+</description>
+</input>
+
+Output:
+<output>
+{
+    "src_func_names": ["f"],
+    "iml_func_names": ["f"],
+    "description": "Verify that the function always returns a number no less than 10",
+    "logical_statement": "for all x in f(x) >= 10",
+}
+```
+</example1>
+
+<example2>
+<input>
+<source_code>
+```python
+def check_legal(x) -> bool:
+    ...
+
+def property_1(x) -> bool:
+    ...
+```
+</source_code>
+<description>
+check that if inputs are legal, then the property_1 always holds
+</description>
+</input>
+
+<output>
+{
+    "src_func_names": ["check_legal", "property_1"],
+    "iml_func_names": ["check_legal", "property_1"],
+    "description": "Check that if inputs are legal, then the property_1 always holds",
+    "logical_statement": "for all x in check_legal(x) ==> property_1(x)",
+}
+</output>
+</example2>
+
+<example3>
+<input>
+<source_code>
+```python
+def is_target_state(state) -> bool:
+    ...
+def apply_transition(state, action) -> State:
+    ...
+def apply_actions(state, actions) -> State:
+    ...
+```
+</source_code>
+<description>
+Find a solution that starts from the initial state and ends with the target state
+</description>
+</input>
+
+<output>
+{
+    "src_func_names": ["is_target_state", "apply_transition", "apply_actions"],
+    "iml_func_names": ["is_target_state", "apply_transition", "apply_actions"],
+    "description": "Verify that there exists a solution, which is a sequence of actions, that leads from the initial state to the target state",
+    "logical_statement": "There exists a sequence of actions such that is_target_state(apply_actions(init_state, actions)) is true",
+}
+```
+</output>
+</example3>
+{% endif %}
+</task>
+
+
+{% if description is not none %}
+<description>
+{{ description }}
+</description>
+{% endif %}

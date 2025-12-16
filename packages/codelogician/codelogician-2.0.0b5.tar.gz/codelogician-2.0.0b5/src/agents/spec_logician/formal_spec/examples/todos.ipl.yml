@@ -1,0 +1,165 @@
+output: |
+  enum todo_editor_state {
+    not_adding
+    adding
+  }
+
+  internal state {
+    todo_editor : todo_editor_state = todo_editor_state.not_adding;
+    new_item_field : string = '';
+    active_items : string list = [];
+    completed_items : string list = [];
+  }
+
+  function drop(n: int, xs: string list): string list {
+    return rev(take(len(xs) - n, rev(xs)))
+  }
+  function delete_at(n: int, xs: string list): string list {
+    return app(take(n, xs), drop(n + 1, xs))
+  }
+  function nth(n: int, xs: string list): string {
+    return hd(drop(n, xs))
+  }
+  function initiate_add_precond_0(): bool {
+    return (state.todo_editor == todo_editor_state.not_adding)
+  }
+
+  action initiate_add {
+    validate {
+      initiate_add_precond_0()
+    }
+  }
+
+  receive (a: initiate_add){
+    if (initiate_add_precond_0()) then {
+      state.todo_editor = todo_editor_state.adding
+      state.new_item_field = ''
+    }
+  }
+
+  function type_characters_precond_0(input: string): bool {
+    return (state.todo_editor == todo_editor_state.adding)
+  }
+
+  action type_characters {
+    input: string
+    validate {
+      type_characters_precond_0(this.input)
+    }
+  }
+
+  receive (a: type_characters){
+    if (type_characters_precond_0(a.input)) then {
+      state.new_item_field = a.input
+    }
+  }
+
+  function commit_item_precond_0(): bool {
+    return (state.todo_editor == todo_editor_state.adding)
+  }
+
+  action commit_item {
+    validate {
+      commit_item_precond_0()
+    }
+  }
+
+  receive (a: commit_item){
+    if (commit_item_precond_0()) then {
+      state.todo_editor = todo_editor_state.not_adding
+      state.active_items = add(state.new_item_field, state.active_items)
+    }
+  }
+
+  function delete_item_precond_0(index: int, from_completed: bool): bool {
+    return (state.todo_editor == todo_editor_state.not_adding) && (from_completed == true) && (index >= 0 && index < len(state.completed_items))
+  }
+
+  function delete_item_precond_1(index: int, from_completed: bool): bool {
+    return (state.todo_editor == todo_editor_state.not_adding) && (from_completed == false) && (index >= 0 && index < len(state.active_items))
+  }
+
+  action delete_item {
+    index: int
+    from_completed: bool
+    validate {
+      delete_item_precond_0(this.index, this.from_completed) || delete_item_precond_1(this.index, this.from_completed)
+    }
+  }
+
+  receive (a: delete_item){
+    if (delete_item_precond_0(a.index, a.from_completed)) then {
+      state.completed_items = delete_at(a.index, state.completed_items)
+    }
+    if (delete_item_precond_1(a.index, a.from_completed)) then {
+      state.active_items = delete_at(a.index, state.active_items)
+    }
+  }
+
+  function mark_complete_precond_0(index: int): bool {
+    return (state.todo_editor == todo_editor_state.not_adding) && (index >= 0 && index < len(state.active_items))
+  }
+
+  action mark_complete {
+    index: int
+    validate {
+      mark_complete_precond_0(this.index)
+    }
+  }
+
+  receive (a: mark_complete){
+    if (mark_complete_precond_0(a.index)) then {
+      state.completed_items = add(nth(a.index, state.active_items), state.completed_items)
+      state.active_items = delete_at(a.index, state.active_items)
+    }
+  }
+
+  function mark_all_complete_precond_0(): bool {
+    return (state.todo_editor == todo_editor_state.not_adding) && (len(state.active_items) > 0)
+  }
+
+  action mark_all_complete {
+    validate {
+      mark_all_complete_precond_0()
+    }
+  }
+
+  receive (a: mark_all_complete){
+    if (mark_all_complete_precond_0()) then {
+      state.completed_items = app(state.active_items, state.completed_items)
+      state.active_items = []
+    }
+  }
+
+  function mark_all_active_precond_0(): bool {
+    return (state.todo_editor == todo_editor_state.not_adding) && (len(state.completed_items) > 0)
+  }
+
+  action mark_all_active {
+    validate {
+      mark_all_active_precond_0()
+    }
+  }
+
+  receive (a: mark_all_active){
+    if (mark_all_active_precond_0()) then {
+      state.active_items = app(state.completed_items, state.active_items)
+      state.completed_items = []
+    }
+  }
+
+  function clear_completed_precond_0(): bool {
+    return (state.todo_editor == todo_editor_state.not_adding) && (len(state.completed_items) > 0)
+  }
+
+  action clear_completed {
+    validate {
+      clear_completed_precond_0()
+    }
+  }
+
+  receive (a: clear_completed){
+    if (clear_completed_precond_0()) then {
+      state.completed_items = []
+    }
+  }

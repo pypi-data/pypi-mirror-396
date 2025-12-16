@@ -1,0 +1,378 @@
+{
+  "title": "Donut Making Machine Process",
+  "preamble": {
+    "entities": [
+      {
+        "name": "machine",
+        "states": [
+          {
+            "name": "fetching",
+            "is_initial": true
+          },
+          {
+            "name": "assembling",
+            "is_initial": false
+          },
+          {
+            "name": "frying",
+            "is_initial": false
+          },
+          {
+            "name": "flipping",
+            "is_initial": false
+          },
+          {
+            "name": "drying",
+            "is_initial": false
+          },
+          {
+            "name": "glazing",
+            "is_initial": false
+          },
+          {
+            "name": "serving",
+            "is_initial": false
+          }
+        ]
+      },
+      {
+        "name": "dough",
+        "states": [
+          {
+            "name": "not_started",
+            "is_initial": true
+          },
+          {
+            "name": "in_progress",
+            "is_initial": false
+          },
+          {
+            "name": "ready",
+            "is_initial": false
+          }
+        ]
+      },
+      {
+        "name": "mixing",
+        "states": [
+          {
+            "name": "not_started",
+            "is_initial": true
+          },
+          {
+            "name": "dry_mixing",
+            "is_initial": false
+          },
+          {
+            "name": "wet_mixing",
+            "is_initial": false
+          },
+          {
+            "name": "completed",
+            "is_initial": false
+          }
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "name": "fetch_complete",
+        "local_properties": []
+      },
+      {
+        "name": "dough_ready",
+        "local_properties": []
+      },
+      {
+        "name": "dry_mix_complete",
+        "local_properties": []
+      },
+      {
+        "name": "wet_mix_complete",
+        "local_properties": []
+      },
+      {
+        "name": "assembly_complete",
+        "local_properties": []
+      },
+      {
+        "name": "frying_complete",
+        "local_properties": []
+      },
+      {
+        "name": "flipping_complete",
+        "local_properties": []
+      },
+      {
+        "name": "drying_complete",
+        "local_properties": []
+      },
+      {
+        "name": "glazing_complete",
+        "local_properties": []
+      },
+      {
+        "name": "serving_complete",
+        "local_properties": []
+      }
+    ],
+    "global_properties": [
+      {
+        "name": "dry_mix_done",
+        "ipl_type": "bool",
+        "init_value": "false"
+      },
+      {
+        "name": "wet_mix_done",
+        "ipl_type": "bool",
+        "init_value": "false"
+      }
+    ],
+    "fun_defs": []
+  },
+  "scenarios": [
+    {
+      "title": "Start Assembly Process",
+      "given_clauses": [
+        {
+          "entity": "machine",
+          "state": "fetching"
+        }
+      ],
+      "when_clause": {
+        "action": "fetch_complete",
+        "local_properties": []
+      },
+      "such_that_clauses": [],
+      "then_clauses": [
+        {
+          "entity": "machine",
+          "state": "assembling"
+        },
+        {
+          "entity": "dough",
+          "state": "in_progress"
+        }
+      ]
+    },
+    {
+      "title": "Prepare Dough Mixing",
+      "given_clauses": [
+        {
+          "entity": "machine",
+          "state": "assembling"
+        },
+        {
+          "entity": "dough",
+          "state": "in_progress"
+        }
+      ],
+      "when_clause": {
+        "action": "dough_ready",
+        "local_properties": []
+      },
+      "such_that_clauses": [],
+      "then_clauses": [
+        {
+          "entity": "dough",
+          "state": "ready"
+        },
+        {
+          "entity": "mixing",
+          "state": "not_started"
+        }
+      ]
+    },
+    {
+      "title": "Complete Dry Mix",
+      "given_clauses": [
+        {
+          "entity": "machine",
+          "state": "assembling"
+        },
+        {
+          "entity": "mixing",
+          "state": "dry_mixing"
+        }
+      ],
+      "when_clause": {
+        "action": "dry_mix_complete",
+        "local_properties": []
+      },
+      "such_that_clauses": [],
+      "then_clauses": [
+        {
+          "property": "dry_mix_done",
+          "expression": "true"
+        }
+      ]
+    },
+    {
+      "title": "Complete Wet Mix",
+      "given_clauses": [
+        {
+          "entity": "machine",
+          "state": "assembling"
+        },
+        {
+          "entity": "mixing",
+          "state": "wet_mixing"
+        }
+      ],
+      "when_clause": {
+        "action": "wet_mix_complete",
+        "local_properties": []
+      },
+      "such_that_clauses": [],
+      "then_clauses": [
+        {
+          "property": "wet_mix_done",
+          "expression": "true"
+        }
+      ]
+    },
+    {
+      "title": "Finalize Assembly",
+      "given_clauses": [
+        {
+          "entity": "machine",
+          "state": "assembling"
+        },
+        {
+          "predicate": "dry_mix_done == true && wet_mix_done == true"
+        }
+      ],
+      "when_clause": {
+        "action": "assembly_complete",
+        "local_properties": []
+      },
+      "such_that_clauses": [],
+      "then_clauses": [
+        {
+          "entity": "machine",
+          "state": "frying"
+        },
+        {
+          "entity": "mixing",
+          "state": "completed"
+        }
+      ]
+    },
+    {
+      "title": "Begin Frying Process",
+      "given_clauses": [
+        {
+          "entity": "machine",
+          "state": "frying"
+        }
+      ],
+      "when_clause": {
+        "action": "frying_complete",
+        "local_properties": []
+      },
+      "such_that_clauses": [],
+      "then_clauses": [
+        {
+          "entity": "machine",
+          "state": "flipping"
+        }
+      ]
+    },
+    {
+      "title": "Flip Donut",
+      "given_clauses": [
+        {
+          "entity": "machine",
+          "state": "flipping"
+        }
+      ],
+      "when_clause": {
+        "action": "flipping_complete",
+        "local_properties": []
+      },
+      "such_that_clauses": [],
+      "then_clauses": [
+        {
+          "entity": "machine",
+          "state": "drying"
+        }
+      ]
+    },
+    {
+      "title": "Dry Donut",
+      "given_clauses": [
+        {
+          "entity": "machine",
+          "state": "drying"
+        }
+      ],
+      "when_clause": {
+        "action": "drying_complete",
+        "local_properties": []
+      },
+      "such_that_clauses": [],
+      "then_clauses": [
+        {
+          "entity": "machine",
+          "state": "glazing"
+        }
+      ]
+    },
+    {
+      "title": "Apply Glazing",
+      "given_clauses": [
+        {
+          "entity": "machine",
+          "state": "glazing"
+        }
+      ],
+      "when_clause": {
+        "action": "glazing_complete",
+        "local_properties": []
+      },
+      "such_that_clauses": [],
+      "then_clauses": [
+        {
+          "entity": "machine",
+          "state": "serving"
+        }
+      ]
+    },
+    {
+      "title": "Complete Serving Cycle",
+      "given_clauses": [
+        {
+          "entity": "machine",
+          "state": "serving"
+        }
+      ],
+      "when_clause": {
+        "action": "serving_complete",
+        "local_properties": []
+      },
+      "such_that_clauses": [],
+      "then_clauses": [
+        {
+          "entity": "machine",
+          "state": "fetching"
+        },
+        {
+          "entity": "dough",
+          "state": "not_started"
+        },
+        {
+          "entity": "mixing",
+          "state": "not_started"
+        },
+        {
+          "property": "dry_mix_done",
+          "expression": "false"
+        },
+        {
+          "property": "wet_mix_done",
+          "expression": "false"
+        }
+      ]
+    }
+  ]
+}

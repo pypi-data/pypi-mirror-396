@@ -1,0 +1,93 @@
+[@@@import Core_arithmetic, "core/arithmetic.iml"]
+
+
+(* Numerical integration methods - Level 4 *)
+
+(* Helper function to calculate function values at evenly spaced points *)
+let rec calculate_values_helper (func : real -> real) (a : real) (h : real) (i : int) (n : int) (acc : real list) : real list =
+  if i > n then
+    List.rev acc
+  else
+    let x = Core_arithmetic.add a (Core_arithmetic.multiply (Real.of_int i) h) in
+    let value = func x in
+    calculate_values_helper func a h (i + 1) n (value :: acc)
+[@@measure Ordinal.of_int (max 0 (n - i + 1))]
+
+let calculate_values (func : real -> real) (a : real) (h : real) (n : int) : real list =
+  calculate_values_helper func a h 0 n []
+
+(* Helper function to sum middle terms with coefficient 2 *)
+let rec sum_middle_helper (values : real list) (i : int) (n : int) (total : real) : real =
+  if i >= n then
+    total
+  else
+    match List.nth i values with
+    | None -> total
+    | Some value ->
+        let new_total = Core_arithmetic.add total (Core_arithmetic.multiply 2.0 value) in
+        sum_middle_helper values (i + 1) n new_total
+[@@measure Ordinal.of_int (max 0 (n - i))]
+
+let sum_middle (values : real list) (n : int) (initial_total : real) : real =
+  sum_middle_helper values 1 n initial_total
+
+(* Helper function to sum odd-indexed terms with coefficient 4 *)
+let rec sum_odd_helper (func : real -> real) (a : real) (h : real) (i : int) (n : int) (total : real) : real =
+  if i >= n then
+    total
+  else
+    let x = Core_arithmetic.add a (Core_arithmetic.multiply (Real.of_int i) h) in
+    let new_total = Core_arithmetic.add total (Core_arithmetic.multiply 4.0 (func x)) in
+    sum_odd_helper func a h (i + 2) n new_total
+[@@measure Ordinal.of_int (max 0 (n - i))]
+
+let sum_odd (func : real -> real) (a : real) (h : real) (n : int) (initial_total : real) : real =
+  sum_odd_helper func a h 1 n initial_total
+
+(* Helper function to sum even-indexed terms with coefficient 2 *)
+let rec sum_even_helper (func : real -> real) (a : real) (h : real) (i : int) (n : int) (total : real) : real =
+  if i >= n then
+    total
+  else
+    let x = Core_arithmetic.add a (Core_arithmetic.multiply (Real.of_int i) h) in
+    let new_total = Core_arithmetic.add total (Core_arithmetic.multiply 2.0 (func x)) in
+    sum_even_helper func a h (i + 2) n new_total
+[@@measure Ordinal.of_int (max 0 (n - i))]
+
+let sum_even (func : real -> real) (a : real) (h : real) (n : int) (initial_total : real) : real =
+  sum_even_helper func a h 2 n initial_total
+
+let trapezoidal_rule (func : real -> real) (a : real) (b : real) (n : int) : real option =
+  if n <= 0 then
+    None
+  else
+    let h_opt = Core_arithmetic.divide (Core_arithmetic.subtract b a) (Real.of_int n) in
+    match h_opt with
+    | None -> None
+    | Some h ->
+        let values = calculate_values func a h n in
+        let first_value = List.hd values in
+        let last_value_opt = List.nth n values in
+        match last_value_opt with
+        | None -> None
+        | Some last_value ->
+            let initial_total = Core_arithmetic.add first_value last_value in
+            let total = sum_middle values n initial_total in
+            let h_over_2_opt = Core_arithmetic.divide h 2.0 in
+            match h_over_2_opt with
+            | None -> None
+            | Some h_over_2 -> Some (Core_arithmetic.multiply h_over_2 total)
+
+let simpson_rule (func : real -> real) (a : real) (b : real) (n : int) : real option =
+  let n_even = if n mod 2 = 0 then n else n + 1 in
+  let h_opt = Core_arithmetic.divide (Core_arithmetic.subtract b a) (Real.of_int n_even) in
+  match h_opt with
+  | None -> None
+  | Some h ->
+      let total = Core_arithmetic.add (func a) (func b) in
+      let total = sum_odd func a h n_even total in
+      let total = sum_even func a h n_even total in
+      let h_over_3_opt = Core_arithmetic.divide h 3.0 in
+      match h_over_3_opt with
+      | None -> None
+      | Some h_over_3 -> Some (Core_arithmetic.multiply h_over_3 total)

@@ -1,0 +1,360 @@
+(* 
+  --------------------------------------------------------------------------
+  title: Book Lending Workflow IML model
+  description: XState Book Lending IML model
+  order: 2
+  --------------------------------------------------------------------------
+  
+  ========================================================================== *)
+(* ========================================= *)
+(* Book Lending Workflow - Invariant-Based Verification *)
+(* ========================================= *)
+
+open Option
+
+(* === Type Definitions === *)
+
+type book_status =
+  | OnLoan
+  | Available
+  | Unknown
+
+type book_record = {
+  title: string;
+  id: string;
+  status: book_status;
+}
+
+type lender_record = {
+  name: string;
+  address: string;
+  phone: string;
+}
+
+type context_record = {
+  book: book_record option;
+  lender: lender_record option;
+}
+
+type checkout_substate =
+  | CheckingOutBook
+  | NotifyingLender
+
+type state_node =
+  | BookLendingRequest
+  | GetBookStatus
+  | ReportStatusToLender
+  | WaitForLenderResponse
+  | RequestHold
+  | CancelRequest
+  | SleepTwoWeeks
+  | CheckOutBook of checkout_substate
+  | End
+
+type config = {
+  state: state_node;
+  ctx: context_record;
+}
+
+type event =
+  | BookLendingRequestEvent of (string * string * lender_record)
+  | HoldBook
+  | DeclineBookhold
+  | BookStatusFetched of book_status
+  | StatusSentToLender
+  | HoldRequested
+  | HoldCancelled
+  | CheckoutComplete
+  | LenderNotified
+  | TwoWeeksPassed
+
+(* === Initial State === *)
+
+let initial_context : context_record = {
+  book = None;
+  lender = None;
+}
+
+let init : config = {
+  state = BookLendingRequest;
+  ctx = initial_context;
+}
+
+(* === Transition Function === *)
+
+let step (c : config) (ev : event) : config =
+  match (c.state, ev) with
+  | (BookLendingRequest, BookLendingRequestEvent (id, title, lender)) ->
+      let new_book : book_record = {
+        id = id;
+        title = title;
+        status = Unknown;
+      } in
+      let new_ctx : context_record = {
+        book = Some new_book;
+        lender = Some lender;
+      } in
+      { state = GetBookStatus; ctx = new_ctx }
+
+  | (GetBookStatus, BookStatusFetched status) ->
+      (match c.ctx.book with
+       | Some book ->
+           let updated_book : book_record = { book with status = status } in
+           let updated_ctx : context_record = { c.ctx with book = Some updated_book } in
+           (match status with
+            | OnLoan -> { state = ReportStatusToLender; ctx = updated_ctx }
+            | Available -> { state = CheckOutBook CheckingOutBook; ctx = updated_ctx }
+            | Unknown -> { state = End; ctx = updated_ctx })
+       | None -> c)
+
+  | (ReportStatusToLender, StatusSentToLender) ->
+      { state = WaitForLenderResponse; ctx = c.ctx }
+
+  | (WaitForLenderResponse, HoldBook) ->
+      { state = RequestHold; ctx = c.ctx }
+
+  | (WaitForLenderResponse, DeclineBookhold) ->
+      { state = CancelRequest; ctx = c.ctx }
+
+  | (RequestHold, HoldRequested) ->
+      { state = SleepTwoWeeks; ctx = c.ctx }
+
+  | (CancelRequest, HoldCancelled) ->
+      { state = End; ctx = c.ctx }
+
+  | (SleepTwoWeeks, TwoWeeksPassed) ->
+      { state = GetBookStatus; ctx = c.ctx }
+
+  | (CheckOutBook CheckingOutBook, CheckoutComplete) ->
+      { state = CheckOutBook NotifyingLender; ctx = c.ctx }
+
+  | (CheckOutBook NotifyingLender, LenderNotified) ->
+      { state = End; ctx = c.ctx }
+
+  | (End, _) -> c
+
+  | _ -> c
+
+(* === Run Function === *)
+
+let run (c : config) (evs : event list) : config =
+  List.fold_left step c evs
+
+(* ========================================= *)
+(* ========= BOUNDED VERIFICATION ========== *)
+(* ========== PREFERRED APPROACH =========== *)
+(* ========================================= *)
+
+(* === Example Property === *)
+
+let property_a (c : config) : bool =
+  match c.state with
+  | CheckOutBook _ -> c.ctx.book <> None
+  | _ -> true
+
+verify (fun ev1 ev2 ev3 ev4 ev5 ev6 ev7 ev8 ev9 ev10 ->
+  let final = run init [ev1; ev2; ev3; ev4; ev5; ev6; ev7; ev8; ev9; ev10;] in
+  property_a final)
+
+
+(* ========================================= *)
+(* ===== INVARIANT-BASED VERIFICATION ====== *)
+(* ========================================= *)
+
+(* Define state invariants that should hold in ALL reachable states *)
+
+(* Invariant 1: CheckOutBook states must have book in context *)
+let inv_checkout_has_book (c : config) : bool =
+  match c.state with
+  | CheckOutBook _ -> c.ctx.book <> None
+  | _ -> true
+
+(* Invariant 2: After initial request, either both book and lender are set, or both are None *)
+let inv_book_lender_consistency (c : config) : bool =
+  match c.state with
+  | BookLendingRequest -> c.ctx.book = None && c.ctx.lender = None
+  | _ ->
+      match (c.ctx.book, c.ctx.lender) with
+      | (None, None) -> true
+      | (Some _, Some _) -> true
+      | _ -> false
+
+(* Invariant 3: OnLoan status never leads directly to CheckOut *)
+let inv_onloan_no_checkout (c : config) : bool =
+  match c.state with
+  | CheckOutBook _ ->
+      (match c.ctx.book with
+       | Some b -> b.status <> OnLoan
+       | None -> false)
+  | _ -> true
+
+(* Invariant 4: Final states are stable *)
+let inv_final_stable (c : config) : bool =
+  match c.state with
+  | End -> true
+  | _ -> true
+
+(* Combined invariant *)
+let invariant (c : config) : bool =
+  inv_checkout_has_book c &&
+  inv_book_lender_consistency c &&
+  inv_onloan_no_checkout c &&
+  inv_final_stable c
+
+(* ========================================= *)
+(* === INVARIANT PROOFS === *)
+(* ========================================= *)
+
+(* Prove initial state satisfies invariant *)
+theorem invariant_holds_initially () =
+  invariant init
+[@@by auto]
+
+(* Prove invariant is preserved by ALL transitions *)
+theorem invariant_preserved (c : config) (ev : event) =
+  invariant c ==> invariant (step c ev)
+[@@by auto]
+
+(* COROLLARY: Invariant holds for ALL reachable states! *)
+(* No need to reason about traces or use run function! *)
+
+(* ========================================= *)
+(* === SPECIFIC PROPERTY PROOFS === *)
+(* ========================================= *)
+
+(* These follow directly from the invariant *)
+
+(* Checkout always has book *)
+theorem checkout_always_has_book (c : config) (ev : event) =
+  invariant c ==>
+  (match (step c ev).state with
+   | CheckOutBook _ -> (step c ev).ctx.book <> None
+   | _ -> true)
+[@@by auto]
+
+(* OnLoan never leads to CheckOut *)
+theorem onloan_never_checkout (c : config) =
+  invariant c ==>
+  (match c.state with
+   | CheckOutBook _ ->
+       (match c.ctx.book with
+        | Some b -> b.status <> OnLoan
+        | None -> false)
+   | _ -> true)
+[@@by auto]
+
+(* Final state is stable *)
+theorem final_state_stable_inv (c : config) (ev : event) =
+  c.state = End ==> (step c ev).state = End
+[@@by auto]
+
+(* Checkout state unreachable if context has no book *)
+(* This property holds for all reachable states - follows from invariant *)
+theorem checkout_unreachable_without_book (c : config) =
+  invariant c ==>
+  (c.ctx.book = None ==>
+   (match c.state with
+    | CheckOutBook _ -> false
+    | _ -> true))
+[@@by auto]
+
+(* Contrapositive: If in CheckOutBook state, book must exist *)
+theorem checkout_requires_book (c : config) =
+  invariant c ==>
+  (match c.state with
+   | CheckOutBook _ -> c.ctx.book <> None
+   | _ -> true)
+[@@by auto]
+
+(* ========================================= *)
+(* ======== UNBOUNDED VERIFICATION ========= *)
+(* ========================================= *)
+
+theorem thm1_general c (events) =
+property_a c ==> property_a (run c events) [@@by auto] [@@disable step, property_a] [@@rewrite]
+
+verify (fun (events : event list) ->
+  let final = run init events in
+  property_a final) [@@by [%use thm1_general init events] @> auto]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(* ========================================= *)
+(* === HELPER LEMMAS FOR TRACE REASONING === *)
+(* ========================================= *)
+
+(* If we DO need to reason about traces, these lemmas help *)
+
+lemma run_empty c =
+  run c [] = c
+[@@by auto] [@@rewrite]
+
+lemma run_single c e =
+  run c [e] = step c e
+[@@by auto] [@@rewrite]
+
+lemma run_cons c e evs =
+  run c (e :: evs) = run (step c e) evs
+[@@by auto] [@@rewrite]
+
+(* ========================================= *)
+(* === MATHEMATICAL GUARANTEE === *)
+(* ========================================= *)
+
+(*
+   PROVEN ABOVE:
+   1. invariant_holds_initially: invariant(init) = true
+   2. invariant_preserved: invariant(c) ==> invariant(step c ev)
+
+   MATHEMATICAL CONSEQUENCE:
+   For ANY reachable state c, invariant(c) = true
+
+   Proof by induction on trace length:
+   - Base: init satisfies invariant (proven above)
+   - Step: If c satisfies invariant and c' = step c ev, then c' satisfies invariant (proven above)
+   - Therefore: All reachable states satisfy invariant
+
+   This is the standard invariant proof technique in formal verification!
+   No need to explicitly reason about run function or trace properties.
+*)
+
+(* ========================================= *)
+(* === REACHABILITY PROPERTIES === *)
+(* ========================================= *)
+
+(* Can still prove reachability with concrete examples *)
+
+(* Successful checkout is reachable *)
+instance (fun book_id book_title lender ->
+  let events = [
+    BookLendingRequestEvent (book_id, book_title, lender);
+    BookStatusFetched Available;
+    CheckoutComplete;
+    LenderNotified
+  ] in
+  (run init events).state = End)
+
+(* Wait-and-retry loop is reachable *)
+instance (fun book_id book_title lender ->
+  let events = [
+    BookLendingRequestEvent (book_id, book_title, lender);
+    BookStatusFetched OnLoan;
+    StatusSentToLender;
+    HoldBook;
+    HoldRequested;
+    TwoWeeksPassed
+  ] in
+  (run init events).state = GetBookStatus)

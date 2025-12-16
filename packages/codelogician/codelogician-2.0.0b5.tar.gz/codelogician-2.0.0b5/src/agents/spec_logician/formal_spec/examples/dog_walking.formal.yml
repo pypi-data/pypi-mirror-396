@@ -1,0 +1,54 @@
+output: |
+  entity dog { waiting on_walk walk_complete }
+
+  action leave_home { }
+  action speed_up { }
+  action slow_down { }
+  action start_wagging { }
+  action stop_wagging { }
+  action arrive_home { }
+
+  internal state {
+    is_running: bool = false;
+    is_walking: bool = false;
+    tail_wagging: bool = false;
+  }
+
+
+  Feature: Dog Walking States and Behaviors
+
+    Scenario: Start Walk
+      Given dog on waiting
+      When leave_home
+      Then dog on on_walk
+
+    Scenario: Speed Up Walk
+      Given dog on on_walk
+      Given is_walking == true
+      When speed_up
+      Then is_running is true
+      Then is_walking is false
+
+    Scenario: Slow Down Walk
+      Given dog on on_walk
+      Given is_running == true
+      When slow_down
+      Then is_running is false
+      Then is_walking is true
+
+    Scenario: Start Tail Wagging
+      Given dog on on_walk
+      Given tail_wagging == false
+      When start_wagging
+      Then tail_wagging is true
+
+    Scenario: Stop Tail Wagging
+      Given dog on on_walk
+      Given tail_wagging == true
+      When stop_wagging
+      Then tail_wagging is false
+
+    Scenario: Complete Walk
+      Given dog on on_walk
+      When arrive_home
+      Then dog on walk_complete

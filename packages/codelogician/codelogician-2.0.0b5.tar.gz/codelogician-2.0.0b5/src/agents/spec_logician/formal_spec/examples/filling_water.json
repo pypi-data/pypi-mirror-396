@@ -1,0 +1,130 @@
+{
+  "title": "Water Glass Filling System",
+  "preamble": {
+    "entities": [
+      {
+        "name": "glass_monitor",
+        "states": [
+          {
+            "name": "checking_level",
+            "is_initial": true
+          },
+          {
+            "name": "adding_water",
+            "is_initial": false
+          },
+          {
+            "name": "concluded_full",
+            "is_initial": false
+          }
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "name": "inspect_level",
+        "local_properties": []
+      },
+      {
+        "name": "add_water",
+        "local_properties": [
+          {
+            "name": "units",
+            "ipl_type": "int"
+          }
+        ]
+      }
+    ],
+    "global_properties": [
+      {
+        "name": "water_level",
+        "ipl_type": "int",
+        "init_value": "0"
+      },
+      {
+        "name": "max_level",
+        "ipl_type": "int",
+        "init_value": "0"
+      }
+    ],
+    "fun_defs": []
+  },
+  "scenarios": [
+    {
+      "title": "Initiate Water Addition",
+      "given_clauses": [
+        {
+          "entity": "glass_monitor",
+          "state": "checking_level"
+        },
+        {
+          "predicate": "water_level < max_level"
+        }
+      ],
+      "when_clause": {
+        "action": "inspect_level",
+        "local_properties": []
+      },
+      "such_that_clauses": [],
+      "then_clauses": [
+        {
+          "entity": "glass_monitor",
+          "state": "adding_water"
+        }
+      ]
+    },
+    {
+      "title": "Add Water Units",
+      "given_clauses": [
+        {
+          "entity": "glass_monitor",
+          "state": "adding_water"
+        }
+      ],
+      "when_clause": {
+        "action": "add_water",
+        "local_properties": [
+          "units"
+        ]
+      },
+      "such_that_clauses": [
+        {
+          "predicate": "units > 0"
+        }
+      ],
+      "then_clauses": [
+        {
+          "property": "water_level",
+          "expression": "water_level + units"
+        },
+        {
+          "entity": "glass_monitor",
+          "state": "checking_level"
+        }
+      ]
+    },
+    {
+      "title": "Confirm Full Capacity",
+      "given_clauses": [
+        {
+          "entity": "glass_monitor",
+          "state": "checking_level"
+        },
+        {
+          "predicate": "water_level == max_level"
+        }
+      ],
+      "when_clause": {
+        "action": "inspect_level",
+        "local_properties": []
+      },
+      "such_that_clauses": [],
+      "then_clauses": [
+        {
+          "entity": "glass_monitor",
+          "state": "concluded_full"
+        }
+      ]
+    }
+  ]
+}

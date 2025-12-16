@@ -1,0 +1,111 @@
+module Real = struct
+  type Real.t =  real
+  (* The real number type representing arbitrary precision real numbers
+     
+     Usage/Pattern: Representing exact decimal numbers without floating point imprecision *)
+  
+  let Real.of_int: int -> Real.t =
+    <logic_core_builtin>
+  (* [Real.of_int i] converts an integer [i] to a real number
+     
+     Usage/Pattern: Converting integer values to real numbers for exact decimal arithmetic *)
+  
+  let Real._to_int_round_down: Real.t -> int =
+    <logic_core_builtin>
+  (* [Real._to_int_round_down r] converts a real number [r] to an integer by rounding down.
+     Internal helper function.
+     
+     Usage/Pattern: Internal function for floor rounding in integer conversion *)
+  
+  let Real.to_int (r : real) : int =
+    if r >=. (Real.of_int 0)
+    then Real._to_int_round_down r
+    else ~- (Real._to_int_round_down (~-. r))
+  (* [Real.to_int r] converts a real number [r] to an integer by rounding towards zero
+     
+     Usage/Pattern: Converting real numbers to integers when decimal precision is no longer needed *)
+  
+  let Real.+ : real =
+    +.
+  (* [Real.+] adds two real numbers
+     
+     Usage/Pattern: Performing exact decimal addition without floating point errors *)
+  
+  let Real.- : real =
+    -.
+  (* [Real.-] subtracts two real numbers
+     
+     Usage/Pattern: Performing exact decimal subtraction without floating point errors *)
+  
+  let Real.~- : real =
+    ~-.
+  (* [Real.~-] negates a real number
+     
+     Usage/Pattern: Changing the sign of a real number while preserving its magnitude *)
+  
+  let Real.* : real =
+    *.
+  (* [Real.*] multiplies two real numbers
+     
+     Usage/Pattern: Performing exact decimal multiplication without floating point errors *)
+  
+  let Real./ : real =
+    /.
+  (* [Real./] divides two real numbers
+     
+     Usage/Pattern: Performing exact decimal division without floating point errors *)
+  
+  let Real.< : bool =
+    <.
+  (* [Real.<] tests if one real number is less than another
+     
+     Usage/Pattern: Comparing real numbers for strict ordering relationships *)
+  
+  let Real.<= : bool =
+    <=.
+  (* [Real.<=] tests if one real number is less than or equal to another
+     
+     Usage/Pattern: Comparing real numbers for non-strict ordering relationships *)
+  
+  let Real.> : bool =
+    >.
+  (* [Real.>] tests if one real number is greater than another
+     
+     Usage/Pattern: Comparing real numbers for strict ordering relationships *)
+  
+  let Real.>= : bool =
+    >=.
+  (* [Real.>=] tests if one real number is greater than or equal to another
+     
+     Usage/Pattern: Comparing real numbers for non-strict ordering relationships *)
+  
+  let Real.abs (r : real) : real =
+    if Real.>= r (Real.of_int 0) then r else Real.~- r
+  (* [Real.abs r] returns the absolute value of real number [r]
+     
+     Usage/Pattern: Getting the magnitude of a real number regardless of sign *)
+  
+  let Real.min : real =
+    min_r
+  (* [Real.min] returns the minimum of two real numbers
+     
+     Usage/Pattern: Finding the smaller of two real numbers in comparisons *)
+  
+  let Real.max : real =
+    max_r
+  (* [Real.max] returns the maximum of two real numbers
+     
+     Usage/Pattern: Finding the larger of two real numbers in comparisons *)
+  
+  let Real.of_float: float -> real =
+    <logic_core_builtin>
+  (* [Real.of_float f] converts a float [f] to a real number
+     
+     Usage/Pattern: Converting approximate floating point numbers to exact real numbers *)
+  
+  let Real.pow: Real.t -> Int.t -> Real.t =
+    <logic_core_builtin>
+  (* [Real.pow base exp] raises real number [base] to integer power [exp]
+     
+     Usage/Pattern: Computing exact integer powers of real numbers *)
+end

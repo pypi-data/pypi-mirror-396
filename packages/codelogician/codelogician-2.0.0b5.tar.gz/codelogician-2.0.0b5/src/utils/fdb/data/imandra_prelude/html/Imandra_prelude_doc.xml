@@ -1,0 +1,1746 @@
+<?xml version="1.0" ?>
+<document>
+  <file>
+    <name>Root</name>
+    <content>[Up](../index.html) – [imandra-base](../index.html) » Imandra_prelude
+
+# Module `Imandra_prelude`
+
+  * Bare minimum needed for ordinals and validation
+  * Ordinals
+  * Other builtin types
+  * Sets
+  * Logic-mode strings
+
+
+
+`type 'a printer = Stdlib.Format.formatter -&gt; 'a -&gt; unit`
+
+`module [Caml](Caml/index.html) : sig ... end`
+
+`module Imandra_caml = [Caml](Caml/index.html)`
+
+`module Caml_unix = Unix`
+
+`module Caml_sys = Stdlib.Sys`
+
+`module [Unix](Unix/index.html) : sig ... end`
+
+`module [Sys](Sys/index.html) : sig ... end`
+
+### Bare minimum needed for ordinals and validation
+
+`type nonrec int = Z.t`
+
+Builtin integer type, using arbitrary precision integers.
+
+This type is an alias to `Z`.t (using [Zarith](https://github.com/ocaml/Zarith)).
+
+**NOTE** : here Imandra diverges from normal OCaml, where integers width is bounded by native machine integers. &quot;Normal&quot; OCaml integers have type [`Caml.Int.t`](Caml/Int/index.html#type-t) and can be entered using the 'i' suffix: `0i`
+
+`val (=) : 'a -&gt; 'a -&gt; bool`
+
+Equality. Must be applied to non-function types.
+
+`val (&lt;&gt;) : 'a -&gt; 'a -&gt; bool`
+
+`val not : bool -&gt; bool`
+
+`val implies : bool -&gt; bool -&gt; bool`
+
+`val explies : bool -&gt; bool -&gt; bool`
+
+`val iff : bool -&gt; bool -&gt; bool`
+
+`val (+) : Z.t -&gt; Z.t -&gt; Z.t`
+
+`val const : 'a -&gt; 'b -&gt; 'a`
+
+`const x y` returns `x`. In other words, `const x` is the constant function that always returns `x`.
+
+`val (&gt;=) : int -&gt; int -&gt; bool`
+
+`type nonrec nativeint = nativeint`
+
+`val mk_nat : int -&gt; int`
+
+`type nonrec 'a option = 'a option = ``| None`  
+---  
+`| Some of 'a`  
+  
+`type 'a list = 'a [Caml.list](Caml/index.html#type-list) = ``| []`  
+---  
+`| :: of 'a * 'a list`  
+  
+`type nonrec float = float`
+
+`type nonrec real = Q.t`
+
+`type nonrec string = string`
+
+`val (&lt;) : int -&gt; int -&gt; bool`
+
+`val (&lt;=) : int -&gt; int -&gt; bool`
+
+`val (&gt;) : int -&gt; int -&gt; bool`
+
+`val min : int -&gt; int -&gt; int`
+
+`val max : int -&gt; int -&gt; int`
+
+`val (&lt;.) : real -&gt; real -&gt; bool`
+
+`val (&lt;=.) : real -&gt; real -&gt; bool`
+
+`val (&gt;.) : real -&gt; real -&gt; bool`
+
+`val (&gt;=.) : real -&gt; real -&gt; bool`
+
+`val min_r : real -&gt; real -&gt; real`
+
+`val max_r : real -&gt; real -&gt; real`
+
+`val (~-) : Z.t -&gt; Z.t`
+
+`val abs : int -&gt; int`
+
+`val (-) : Z.t -&gt; Z.t -&gt; Z.t`
+
+`val (~+) : Z.t -&gt; Z.t`
+
+`val (*) : Z.t -&gt; Z.t -&gt; Z.t`
+
+`val (/) : Z.t -&gt; Z.t -&gt; Z.t`
+
+Euclidian division on integers, see &lt;http://smtlib.cs.uiowa.edu/theories-Ints.shtml&gt;
+
+`val (mod) : Z.t -&gt; Z.t -&gt; Z.t`
+
+Euclidian remainder on integers
+
+`val compare : int -&gt; int -&gt; Z.t`
+
+Total order
+
+### Ordinals
+
+`module [Ordinal](Ordinal/index.html) : sig ... end`
+
+We need to define ordinals before any recursive function is defined, because ordinals are used for termination proofs.
+
+`module [Peano_nat](Peano_nat/index.html) : sig ... end`
+
+### Other builtin types
+
+`type nonrec unit = unit = ``| ()`  
+---  
+  
+`type ('a, 'b) result = ( 'a, 'b ) Stdlib.result = ``| Ok of 'a`  
+---  
+`| Error of 'b`  
+  
+Result type, representing either a successul result `Ok x` or an error `Error x`.
+
+`module [Result](Result/index.html) : sig ... end`
+
+`type ('a, 'b) either = ``| Left of 'a`  
+---  
+`| Right of 'b`  
+  
+A familiar type for Haskellers
+
+`val (|&gt;) : 'a -&gt; ( 'a -&gt; 'b ) -&gt; 'b`
+
+Pipeline operator.
+
+`x |&gt; f` is the same as `f x`, but it composes nicely: ` x |&gt; f |&gt; g |&gt; h` can be more readable than `h(g(f x))`.
+
+`val (@@) : ( 'a -&gt; 'b ) -&gt; 'a -&gt; 'b`
+
+Right-associative application operator.
+
+`f @@ x` is the same as `f x`, but it binds to the right: `f @@ g @@ h @@ x` is the same as `f (g (h x))` but with fewer parentheses.
+
+`val id : 'a -&gt; 'a`
+
+Identity function. `id x = x` always holds.
+
+`val (%&gt;) : ( 'a -&gt; 'b ) -&gt; ( 'b -&gt; 'c ) -&gt; 'a -&gt; 'c`
+
+Mathematical composition operator.
+
+`f %&gt; g` is `fun x -&gt; g (f x)`
+
+`val (==) : 'a -&gt; 'b -&gt; [Caml.use_normal_equality](Caml/index.html#type-use_normal_equality)`
+
+`val (!=) : 'a -&gt; 'b -&gt; [Caml.use_normal_equality](Caml/index.html#type-use_normal_equality)`
+
+`val (+.) : real -&gt; real -&gt; real`
+
+`val (-.) : real -&gt; real -&gt; real`
+
+`val (~-.) : Q.t -&gt; Q.t`
+
+`val (*.) : real -&gt; real -&gt; real`
+
+`val (/.) : real -&gt; real -&gt; real`
+
+`module [List](List/index.html) : sig ... end`
+
+`val (@) : 'a list -&gt; 'a list -&gt; 'a list`
+
+Infix alias to [`List.append`](List/index.html#val-append)
+
+`val (--) : int -&gt; int -&gt; int list`
+
+Alias to [`List.(--)`](List/index.html#val-\(--\))
+
+`module [Int](Int/index.html) : sig ... end`
+
+`module [Bool](Bool/index.html) : sig ... end`
+
+`module [Array](Array/index.html) : sig ... end`
+
+`module [Option](Option/index.html) : sig ... end`
+
+`module [Real](Real/index.html) : sig ... end`
+
+`module [Map](Map/index.html) : sig ... end`
+
+`module [Multiset](Multiset/index.html) : sig ... end`
+
+### Sets
+
+`module [Set](Set/index.html) : sig ... end`
+
+`module [String](String/index.html) : sig ... end`
+
+`val (^) : [String.t](String/index.html#type-t) -&gt; [String.t](String/index.html#type-t) -&gt; [String.t](String/index.html#type-t)`
+
+Alias to [`String.append`](String/index.html#val-append)
+
+`val succ : Z.t -&gt; Z.t`
+
+Next integer
+
+`val pred : Z.t -&gt; Z.t`
+
+Previous integer
+
+`val fst : ('a * 'b) -&gt; 'a`
+
+`val snd : ('a * 'b) -&gt; 'b`
+
+`module [Float](Float/index.html) : sig ... end`
+
+`module [LChar](LChar/index.html) : sig ... end`
+
+### Logic-mode strings
+
+Strings purely in Imandra.
+
+`module [LString](LString/index.html) : sig ... end`
+
+`module [Pervasives](Pervasives/index.html) : sig ... end`
+
+`module [Stdlib](Stdlib/index.html) : sig ... end`
+</content>
+  </file>
+  <file>
+    <name>Array</name>
+    <content>[Up](../index.html) – [imandra-base](../../index.html) » [Imandra_prelude](../index.html) » Array
+
+# Module `Imandra_prelude.Array`
+
+  * Arrays
+
+
+
+### Arrays
+
+Program mode only
+
+A program-mode imperative array, that can be mutated
+
+`include module type of struct include [Caml.Array](../Caml/Array/index.html) end`
+
+`type !'a t = 'a array`
+
+`val create : int -&gt; 'a -&gt; 'a array`
+
+`val create_float : int -&gt; float array`
+
+`val make_float : int -&gt; float array`
+
+`val make_matrix : int -&gt; int -&gt; 'a -&gt; 'a array array`
+
+`val create_matrix : int -&gt; int -&gt; 'a -&gt; 'a array array`
+
+`val append : 'a array -&gt; 'a array -&gt; 'a array`
+
+`val concat : 'a array list -&gt; 'a array`
+
+`val copy : 'a array -&gt; 'a array`
+
+`val to_list : 'a array -&gt; 'a list`
+
+`val of_list : 'a list -&gt; 'a array`
+
+`val iter : ( 'a -&gt; unit ) -&gt; 'a array -&gt; unit`
+
+`val map : ( 'a -&gt; 'b ) -&gt; 'a array -&gt; 'b array`
+
+`val fold_left : ( 'a -&gt; 'b -&gt; 'a ) -&gt; 'a -&gt; 'b array -&gt; 'a`
+
+`val fold_right : ( 'b -&gt; 'a -&gt; 'a ) -&gt; 'b array -&gt; 'a -&gt; 'a`
+
+`val iter2 : ( 'a -&gt; 'b -&gt; unit ) -&gt; 'a array -&gt; 'b array -&gt; unit`
+
+`val map2 : ( 'a -&gt; 'b -&gt; 'c ) -&gt; 'a array -&gt; 'b array -&gt; 'c array`
+
+`val for_all : ( 'a -&gt; bool ) -&gt; 'a array -&gt; bool`
+
+`val exists : ( 'a -&gt; bool ) -&gt; 'a array -&gt; bool`
+
+`val for_all2 : ( 'a -&gt; 'b -&gt; bool ) -&gt; 'a array -&gt; 'b array -&gt; bool`
+
+`val exists2 : ( 'a -&gt; 'b -&gt; bool ) -&gt; 'a array -&gt; 'b array -&gt; bool`
+
+`val mem : 'a -&gt; 'a array -&gt; bool`
+
+`val memq : 'a -&gt; 'a array -&gt; bool`
+
+`val sort : ( 'a -&gt; 'a -&gt; int ) -&gt; 'a array -&gt; unit`
+
+`val stable_sort : ( 'a -&gt; 'a -&gt; int ) -&gt; 'a array -&gt; unit`
+
+`val fast_sort : ( 'a -&gt; 'a -&gt; int ) -&gt; 'a array -&gt; unit`
+
+`val to_seq : 'a array -&gt; 'a Stdlib.Seq.t`
+
+`val to_seqi : 'a array -&gt; (int * 'a) Stdlib.Seq.t`
+
+`val of_seq : 'a Stdlib.Seq.t -&gt; 'a array`
+
+`val unsafe_get : 'a array -&gt; int -&gt; 'a`
+
+`val unsafe_set : 'a array -&gt; int -&gt; 'a -&gt; unit`
+
+`module Floatarray = Stdlib__array.Floatarray`
+
+`val get : 'a array -&gt; Z.t -&gt; 'a`
+
+`val set : 'a array -&gt; Z.t -&gt; 'a -&gt; unit`
+
+`val make : Z.t -&gt; 'a -&gt; 'a array`
+
+`val init : Z.t -&gt; ( Z.t -&gt; 'a ) -&gt; 'a array`
+
+`val sub : 'a array -&gt; Z.t -&gt; Z.t -&gt; 'a array`
+
+`val length : 'a array -&gt; Z.t`
+
+`val mapi : ( Z.t -&gt; 'a -&gt; 'b ) -&gt; 'a array -&gt; 'b array`
+
+`val iteri : ( Z.t -&gt; 'a -&gt; unit ) -&gt; 'a array -&gt; unit`
+
+`val fill : 'a array -&gt; Z.t -&gt; Z.t -&gt; 'a -&gt; unit`
+
+`val blit : 'a array -&gt; Z.t -&gt; 'a array -&gt; Z.t -&gt; Z.t -&gt; unit`
+</content>
+  </file>
+  <file>
+    <name>Bool</name>
+    <content>[Up](../index.html) – [imandra-base](../../index.html) » [Imandra_prelude](../index.html) » Bool
+
+# Module `Imandra_prelude.Bool`
+
+`type t = bool`
+</content>
+  </file>
+  <file>
+    <name>Caml</name>
+    <content>[Up](../index.html) – [imandra-base](../../index.html) » [Imandra_prelude](../index.html) » Caml
+
+# Module `Imandra_prelude.Caml`
+
+`include module type of struct include Stdlib end`
+
+`val raise : exn -&gt; 'a`
+
+`val raise_notrace : exn -&gt; 'a`
+
+`val invalid_arg : string -&gt; 'a`
+
+`val failwith : string -&gt; 'a`
+
+`exception Exit`
+
+`exception Match_failure of string * int * int`
+
+`exception Assert_failure of string * int * int`
+
+`exception Invalid_argument of string`
+
+`exception Failure of string`
+
+`exception Not_found`
+
+`exception Out_of_memory`
+
+`exception Stack_overflow`
+
+`exception Sys_error of string`
+
+`exception End_of_file`
+
+`exception Division_by_zero`
+
+`exception Sys_blocked_io`
+
+`exception Undefined_recursive_module of string * int * int`
+
+`val (=) : 'a -&gt; 'a -&gt; bool`
+
+`val (&lt;&gt;) : 'a -&gt; 'a -&gt; bool`
+
+`val (&lt;) : 'a -&gt; 'a -&gt; bool`
+
+`val (&gt;) : 'a -&gt; 'a -&gt; bool`
+
+`val (&lt;=) : 'a -&gt; 'a -&gt; bool`
+
+`val (&gt;=) : 'a -&gt; 'a -&gt; bool`
+
+`val compare : 'a -&gt; 'a -&gt; int`
+
+`val min : 'a -&gt; 'a -&gt; 'a`
+
+`val max : 'a -&gt; 'a -&gt; 'a`
+
+`val not : bool -&gt; bool`
+
+`val (&amp;&amp;) : bool -&gt; bool -&gt; bool`
+
+`val (&amp;) : bool -&gt; bool -&gt; bool`
+
+`val (||) : bool -&gt; bool -&gt; bool`
+
+`val or : bool -&gt; bool -&gt; bool`
+
+`val __LOC__ : string`
+
+`val __FILE__ : string`
+
+`val __LINE__ : int`
+
+`val __MODULE__ : string`
+
+`val __POS__ : string * int * int * int`
+
+`val __FUNCTION__ : string`
+
+`val __LOC_OF__ : 'a -&gt; string * 'a`
+
+`val __LINE_OF__ : 'a -&gt; int * 'a`
+
+`val __POS_OF__ : 'a -&gt; (string * int * int * int) * 'a`
+
+`val (|&gt;) : 'a -&gt; ( 'a -&gt; 'b ) -&gt; 'b`
+
+`val (@@) : ( 'a -&gt; 'b ) -&gt; 'a -&gt; 'b`
+
+`val (~-) : int -&gt; int`
+
+`val (~+) : int -&gt; int`
+
+`val succ : int -&gt; int`
+
+`val pred : int -&gt; int`
+
+`val (+) : int -&gt; int -&gt; int`
+
+`val (-) : int -&gt; int -&gt; int`
+
+`val (*) : int -&gt; int -&gt; int`
+
+`val (/) : int -&gt; int -&gt; int`
+
+`val (mod) : int -&gt; int -&gt; int`
+
+`val abs : int -&gt; int`
+
+`val max_int : int`
+
+`val min_int : int`
+
+`val (land) : int -&gt; int -&gt; int`
+
+`val (lor) : int -&gt; int -&gt; int`
+
+`val (lxor) : int -&gt; int -&gt; int`
+
+`val lnot : int -&gt; int`
+
+`val (lsl) : int -&gt; int -&gt; int`
+
+`val (lsr) : int -&gt; int -&gt; int`
+
+`val (asr) : int -&gt; int -&gt; int`
+
+`val (~-.) : float -&gt; float`
+
+`val (~+.) : float -&gt; float`
+
+`val (+.) : float -&gt; float -&gt; float`
+
+`val (-.) : float -&gt; float -&gt; float`
+
+`val (*.) : float -&gt; float -&gt; float`
+
+`val (/.) : float -&gt; float -&gt; float`
+
+`val (**) : float -&gt; float -&gt; float`
+
+`val sqrt : float -&gt; float`
+
+`val exp : float -&gt; float`
+
+`val log : float -&gt; float`
+
+`val log10 : float -&gt; float`
+
+`val expm1 : float -&gt; float`
+
+`val log1p : float -&gt; float`
+
+`val cos : float -&gt; float`
+
+`val sin : float -&gt; float`
+
+`val tan : float -&gt; float`
+
+`val acos : float -&gt; float`
+
+`val asin : float -&gt; float`
+
+`val atan : float -&gt; float`
+
+`val atan2 : float -&gt; float -&gt; float`
+
+`val hypot : float -&gt; float -&gt; float`
+
+`val cosh : float -&gt; float`
+
+`val sinh : float -&gt; float`
+
+`val tanh : float -&gt; float`
+
+`val ceil : float -&gt; float`
+
+`val floor : float -&gt; float`
+
+`val abs_float : float -&gt; float`
+
+`val copysign : float -&gt; float -&gt; float`
+
+`val mod_float : float -&gt; float -&gt; float`
+
+`val frexp : float -&gt; float * int`
+
+`val ldexp : float -&gt; int -&gt; float`
+
+`val modf : float -&gt; float * float`
+
+`val float : int -&gt; float`
+
+`val float_of_int : int -&gt; float`
+
+`val truncate : float -&gt; int`
+
+`val int_of_float : float -&gt; int`
+
+`val infinity : float`
+
+`val neg_infinity : float`
+
+`val nan : float`
+
+`val max_float : float`
+
+`val min_float : float`
+
+`val epsilon_float : float`
+
+`type fpclass = Stdlib.fpclass = ``| FP_normal`  
+---  
+`| FP_subnormal`  
+`| FP_zero`  
+`| FP_infinite`  
+`| FP_nan`  
+  
+`val classify_float : float -&gt; fpclass`
+
+`val (^) : string -&gt; string -&gt; string`
+
+`val int_of_char : char -&gt; int`
+
+`val char_of_int : int -&gt; char`
+
+`val ignore : 'a -&gt; unit`
+
+`val string_of_bool : bool -&gt; string`
+
+`val bool_of_string_opt : string -&gt; bool option`
+
+`val bool_of_string : string -&gt; bool`
+
+`val string_of_int : int -&gt; string`
+
+`val int_of_string_opt : string -&gt; int option`
+
+`val int_of_string : string -&gt; int`
+
+`val string_of_float : float -&gt; string`
+
+`val float_of_string_opt : string -&gt; float option`
+
+`val fst : ('a * 'b) -&gt; 'a`
+
+`val snd : ('a * 'b) -&gt; 'b`
+
+`val (@) : 'a list -&gt; 'a list -&gt; 'a list`
+
+`type in_channel = Stdlib.in_channel`
+
+`type out_channel = Stdlib.out_channel`
+
+`val stdin : in_channel`
+
+`val stdout : out_channel`
+
+`val stderr : out_channel`
+
+`val print_char : char -&gt; unit`
+
+`val print_string : string -&gt; unit`
+
+`val print_bytes : bytes -&gt; unit`
+
+`val print_int : int -&gt; unit`
+
+`val print_float : float -&gt; unit`
+
+`val print_endline : string -&gt; unit`
+
+`val print_newline : unit -&gt; unit`
+
+`val prerr_char : char -&gt; unit`
+
+`val prerr_string : string -&gt; unit`
+
+`val prerr_bytes : bytes -&gt; unit`
+
+`val prerr_int : int -&gt; unit`
+
+`val prerr_float : float -&gt; unit`
+
+`val prerr_endline : string -&gt; unit`
+
+`val prerr_newline : unit -&gt; unit`
+
+`val read_line : unit -&gt; string`
+
+`val read_int_opt : unit -&gt; int option`
+
+`val read_int : unit -&gt; int`
+
+`val read_float_opt : unit -&gt; float option`
+
+`val read_float : unit -&gt; float`
+
+`type open_flag = Stdlib.open_flag = ``| Open_rdonly`  
+---  
+`| Open_wronly`  
+`| Open_append`  
+`| Open_creat`  
+`| Open_trunc`  
+`| Open_excl`  
+`| Open_binary`  
+`| Open_text`  
+`| Open_nonblock`  
+  
+`val open_out : string -&gt; out_channel`
+
+`val open_out_bin : string -&gt; out_channel`
+
+`val open_out_gen : open_flag list -&gt; int -&gt; string -&gt; out_channel`
+
+`val flush : out_channel -&gt; unit`
+
+`val flush_all : unit -&gt; unit`
+
+`val output_char : out_channel -&gt; char -&gt; unit`
+
+`val output_string : out_channel -&gt; string -&gt; unit`
+
+`val output_bytes : out_channel -&gt; bytes -&gt; unit`
+
+`val output : out_channel -&gt; bytes -&gt; int -&gt; int -&gt; unit`
+
+`val output_substring : out_channel -&gt; string -&gt; int -&gt; int -&gt; unit`
+
+`val output_byte : out_channel -&gt; int -&gt; unit`
+
+`val output_binary_int : out_channel -&gt; int -&gt; unit`
+
+`val output_value : out_channel -&gt; 'a -&gt; unit`
+
+`val seek_out : out_channel -&gt; int -&gt; unit`
+
+`val pos_out : out_channel -&gt; int`
+
+`val out_channel_length : out_channel -&gt; int`
+
+`val close_out : out_channel -&gt; unit`
+
+`val close_out_noerr : out_channel -&gt; unit`
+
+`val set_binary_mode_out : out_channel -&gt; bool -&gt; unit`
+
+`val open_in : string -&gt; in_channel`
+
+`val open_in_bin : string -&gt; in_channel`
+
+`val open_in_gen : open_flag list -&gt; int -&gt; string -&gt; in_channel`
+
+`val input_char : in_channel -&gt; char`
+
+`val input_line : in_channel -&gt; string`
+
+`val input : in_channel -&gt; bytes -&gt; int -&gt; int -&gt; int`
+
+`val really_input : in_channel -&gt; bytes -&gt; int -&gt; int -&gt; unit`
+
+`val really_input_string : in_channel -&gt; int -&gt; string`
+
+`val input_byte : in_channel -&gt; int`
+
+`val input_binary_int : in_channel -&gt; int`
+
+`val input_value : in_channel -&gt; 'a`
+
+`val seek_in : in_channel -&gt; int -&gt; unit`
+
+`val pos_in : in_channel -&gt; int`
+
+`val in_channel_length : in_channel -&gt; int`
+
+`val close_in : in_channel -&gt; unit`
+
+`val close_in_noerr : in_channel -&gt; unit`
+
+`val set_binary_mode_in : in_channel -&gt; bool -&gt; unit`
+
+`module LargeFile = Stdlib.LargeFile`
+
+`type !'a ref = 'a Stdlib.ref = {``mutable contents : 'a;`  
+---  
+`}`
+
+`val ref : 'a -&gt; 'a ref`
+
+`val (!) : 'a ref -&gt; 'a`
+
+`val (:=) : 'a ref -&gt; 'a -&gt; unit`
+
+`val incr : int ref -&gt; unit`
+
+`val decr : int ref -&gt; unit`
+
+`type (!'a, !'b) result = ( 'a, 'b ) Stdlib.result = ``| Ok of 'a`  
+---  
+`| Error of 'b`  
+  
+`type (!'a, !'b, !'c, !'d, !'e, !'f) format6 = ( 'a, 'b, 'c, 'd, 'e, 'f ) CamlinternalFormatBasics.format6`
+
+`type (!'a, !'b, !'c, !'d) format4 = ( 'a, 'b, 'c, 'c, 'c, 'd ) format6`
+
+`type (!'a, !'b, !'c) format = ( 'a, 'b, 'c, 'c ) format4`
+
+`val string_of_format : ( 'a, 'b, 'c, 'd, 'e, 'f ) format6 -&gt; string`
+
+`val format_of_string : ( 'a, 'b, 'c, 'd, 'e, 'f ) format6 -&gt; ( 'a, 'b, 'c, 'd, 'e, 'f ) format6`
+
+`val (^^) : ( 'a, 'b, 'c, 'd, 'e, 'f ) format6 -&gt; ( 'f, 'b, 'c, 'e, 'g, 'h ) format6 -&gt; ( 'a, 'b, 'c, 'd, 'g, 'h ) format6`
+
+`val exit : int -&gt; 'a`
+
+`val at_exit : ( unit -&gt; unit ) -&gt; unit`
+
+`val valid_float_lexem : string -&gt; string`
+
+`val unsafe_really_input : in_channel -&gt; bytes -&gt; int -&gt; int -&gt; unit`
+
+`val do_at_exit : unit -&gt; unit`
+
+`module Arg = Stdlib__arg`
+
+`module ArrayLabels = Stdlib__arrayLabels`
+
+`module Atomic = Stdlib__atomic`
+
+`module Bigarray = Stdlib__bigarray`
+
+`module Bool = Stdlib__bool`
+
+`module Buffer = Stdlib__buffer`
+
+`module Bytes = Stdlib__bytes`
+
+`module BytesLabels = Stdlib__bytesLabels`
+
+`module Callback = Stdlib__callback`
+
+`module Complex = Stdlib__complex`
+
+`module Digest = Stdlib__digest`
+
+`module Either = Stdlib__either`
+
+`module Ephemeron = Stdlib__ephemeron`
+
+`module Filename = Stdlib__filename`
+
+`module Float = Stdlib__float`
+
+`module Fun = Stdlib__fun`
+
+`module Gc = Stdlib__gc`
+
+`module Genlex = Stdlib__genlex`
+
+`module Hashtbl = Stdlib__hashtbl`
+
+`module Int32 = Stdlib__int32`
+
+`module Int64 = Stdlib__int64`
+
+`module Lazy = Stdlib__lazy`
+
+`module Lexing = Stdlib__lexing`
+
+`module ListLabels = Stdlib__listLabels`
+
+`module Marshal = Stdlib__marshal`
+
+`module MoreLabels = Stdlib__moreLabels`
+
+`module Nativeint = Stdlib__nativeint`
+
+`module Obj = Stdlib__obj`
+
+`module Oo = Stdlib__oo`
+
+`module Option = Stdlib__option`
+
+`module Parsing = Stdlib__parsing`
+
+`module Pervasives = Stdlib__pervasives`
+
+`module Printexc = Stdlib__printexc`
+
+`module Queue = Stdlib__queue`
+
+`module Random = Stdlib__random`
+
+`module Result = Stdlib__result`
+
+`module Scanf = Stdlib__scanf`
+
+`module Seq = Stdlib__seq`
+
+`module Stack = Stdlib__stack`
+
+`module StdLabels = Stdlib__stdLabels`
+
+`module Stream = Stdlib__stream`
+
+`module StringLabels = Stdlib__stringLabels`
+
+`module Sys = Stdlib__sys`
+
+`module Uchar = Stdlib__uchar`
+
+`module Unit = Stdlib__unit`
+
+`module Weak = Stdlib__weak`
+
+`type use_normal_equality`
+
+`type nonrec 'a list = 'a list = ``| []`  
+---  
+`| :: of 'a * 'a list`  
+  
+`val (==) : 'a -&gt; 'b -&gt; use_normal_equality`
+
+`val (!=) : 'a -&gt; 'b -&gt; use_normal_equality`
+
+`module [String](String/index.html) : sig ... end`
+
+`module Char : sig ... end`
+
+`module List : sig ... end`
+
+`module Array : sig ... end`
+
+`module Set : sig ... end`
+
+`module Map : sig ... end`
+
+`module Printf : sig ... end`
+
+`module Format = CCFormat`
+
+`val float_of_string : string -&gt; float`
+
+`val count_function_actual_implem : 'a -&gt; 'b`
+
+`val sleep : int -&gt; unit`
+
+`module [Int](Int/index.html) : sig ... end`
+</content>
+  </file>
+  <file>
+    <name>Float</name>
+    <content>[Up](../index.html) – [imandra-base](../../index.html) » [Imandra_prelude](../index.html) » Float
+
+# Module `Imandra_prelude.Float`
+
+`type t = [float](../index.html#type-float)`
+
+`module [Round](Round/index.html) : sig ... end`
+
+`val of_int : Z.t -&gt; float`
+
+`val of_string : string -&gt; float`
+
+`val (~-) : t -&gt; t`
+
+`val (+) : t -&gt; t -&gt; t`
+
+`val (-) : t -&gt; t -&gt; t`
+
+`val (*) : t -&gt; t -&gt; t`
+
+`val (/) : t -&gt; t -&gt; t`
+
+`val nan : t`
+
+`val infinity : t`
+
+`val (&lt;) : t -&gt; t -&gt; bool`
+
+`val (&lt;=) : t -&gt; t -&gt; bool`
+
+`val (&gt;) : t -&gt; t -&gt; bool`
+
+`val (&gt;=) : t -&gt; t -&gt; bool`
+
+`val (=) : t -&gt; t -&gt; bool`
+
+`val (&lt;&gt;) : t -&gt; t -&gt; bool`
+
+`val neg : t -&gt; t`
+
+`val abs : t -&gt; t`
+
+`val is_zero : t -&gt; bool`
+
+`val is_nan : t -&gt; bool`
+
+`val is_infinite : t -&gt; bool`
+
+`val is_normal : t -&gt; bool`
+
+`val is_subnormal : t -&gt; bool`
+
+`val is_positive : t -&gt; bool`
+
+`val is_negative : t -&gt; bool`
+
+`val min : t -&gt; t -&gt; t`
+
+`val max : t -&gt; t -&gt; t`
+
+`val rem : t -&gt; t -&gt; t`
+
+`val sqrt : t -&gt; t`
+</content>
+  </file>
+  <file>
+    <name>Int</name>
+    <content>[Up](../index.html) – [imandra-base](../../index.html) » [Imandra_prelude](../index.html) » Int
+
+# Module `Imandra_prelude.Int`
+
+`type t = [int](../index.html#type-int)`
+
+`val (+) : Z.t -&gt; Z.t -&gt; Z.t`
+
+`val (-) : Z.t -&gt; Z.t -&gt; Z.t`
+
+`val (~-) : Z.t -&gt; Z.t`
+
+`val (*) : Z.t -&gt; Z.t -&gt; Z.t`
+
+`val (/) : Z.t -&gt; Z.t -&gt; Z.t`
+
+`val (mod) : Z.t -&gt; Z.t -&gt; Z.t`
+
+`val (&lt;) : [int](../index.html#type-int) -&gt; [int](../index.html#type-int) -&gt; bool`
+
+`val (&lt;=) : [int](../index.html#type-int) -&gt; [int](../index.html#type-int) -&gt; bool`
+
+`val (&gt;) : [int](../index.html#type-int) -&gt; [int](../index.html#type-int) -&gt; bool`
+
+`val (&gt;=) : [int](../index.html#type-int) -&gt; [int](../index.html#type-int) -&gt; bool`
+
+`val min : [int](../index.html#type-int) -&gt; [int](../index.html#type-int) -&gt; [int](../index.html#type-int)`
+
+`val max : [int](../index.html#type-int) -&gt; [int](../index.html#type-int) -&gt; [int](../index.html#type-int)`
+
+`val abs : [int](../index.html#type-int) -&gt; [int](../index.html#type-int)`
+
+`val to_string : t -&gt; [string](../index.html#type-string)`
+
+Conversion to a string. Only works for nonnegative numbers
+
+`val equal : 'a -&gt; 'a -&gt; bool`
+
+`val compare : 'a -&gt; 'a -&gt; int`
+
+`val pp : Stdlib.Format.formatter -&gt; Z.t -&gt; unit`
+
+`val of_caml_int : int -&gt; Z.t`
+
+`val for_ : [int](../index.html#type-int) -&gt; [int](../index.html#type-int) -&gt; ( [int](../index.html#type-int) -&gt; unit ) -&gt; [unit](../index.html#type-unit)`
+
+`val for_down_to : [int](../index.html#type-int) -&gt; [int](../index.html#type-int) -&gt; ( [int](../index.html#type-int) -&gt; unit ) -&gt; [unit](../index.html#type-unit)`
+</content>
+  </file>
+  <file>
+    <name>LChar</name>
+    <content>[Up](../index.html) – [imandra-base](../../index.html) » [Imandra_prelude](../index.html) » LChar
+
+# Module `Imandra_prelude.LChar`
+
+  * Logic mode char
+
+
+
+## Logic mode char
+
+An 8-bit char.
+
+`type t = ``| Char of bool * bool * bool * bool * bool * bool * bool * bool`  
+---  
+  
+`val zero : t`
+
+`val to_int : t -&gt; [Caml.Int.t](../Caml/Int/index.html#type-t)`
+
+`val of_int : [Caml.Int.t](../Caml/Int/index.html#type-t) -&gt; t`
+
+`val of_char : char -&gt; t`
+
+`val to_char : t -&gt; char`
+
+`val pp : Stdlib.Format.formatter -&gt; t -&gt; unit`
+
+`val explode : [string](../index.html#type-string) -&gt; t [list](../index.html#type-list)`
+
+`val is_printable : t -&gt; bool`
+</content>
+  </file>
+  <file>
+    <name>LString</name>
+    <content>[Up](../index.html) – [imandra-base](../../index.html) » [Imandra_prelude](../index.html) » LString
+
+# Module `Imandra_prelude.LString`
+
+`type t = [LChar.t](../LChar/index.html#type-t) [list](../index.html#type-list)`
+
+`val empty : t`
+
+`val of_list : 'a -&gt; 'a`
+
+`val to_string : t -&gt; string`
+
+`val of_string : [string](../index.html#type-string) -&gt; [LChar.t](../LChar/index.html#type-t) [list](../index.html#type-list)`
+
+`val length : t -&gt; Z.t`
+
+`val pp : Stdlib.Format.formatter -&gt; [LChar.t](../LChar/index.html#type-t) [list](../index.html#type-list) -&gt; unit`
+
+`val len_pos : t -&gt; bool`
+
+`val len_zero_inversion : t -&gt; bool`
+
+`val append : t -&gt; t -&gt; t`
+
+`val (^^) : t -&gt; t -&gt; t`
+
+`val for_all : ( [LChar.t](../LChar/index.html#type-t) -&gt; bool ) -&gt; t -&gt; bool`
+
+`val exists : ( [LChar.t](../LChar/index.html#type-t) -&gt; bool ) -&gt; t -&gt; bool`
+
+`val concat : t -&gt; [LChar.t](../LChar/index.html#type-t) [list](../index.html#type-list) [list](../index.html#type-list) -&gt; [LChar.t](../LChar/index.html#type-t) [list](../index.html#type-list)`
+
+`val is_printable : t -&gt; bool`
+
+`val sub : t -&gt; [int](../index.html#type-int) -&gt; [int](../index.html#type-int) -&gt; t`
+
+`val prefix : t -&gt; t -&gt; bool`
+
+`val suffix : t -&gt; t -&gt; bool`
+
+`val contains : sub:t -&gt; t -&gt; bool`
+
+`val take : [int](../index.html#type-int) -&gt; t -&gt; t`
+
+`val drop : [int](../index.html#type-int) -&gt; t -&gt; t`
+</content>
+  </file>
+  <file>
+    <name>List</name>
+    <content>[Up](../index.html) – [imandra-base](../../index.html) » [Imandra_prelude](../index.html) » List
+
+# Module `Imandra_prelude.List`
+
+  * List module
+
+
+
+### List module
+
+This module contains many safe functions for manipulating lists.
+
+`type 'a t = 'a [list](../index.html#type-list)`
+
+`val empty : 'a [list](../index.html#type-list)`
+
+`val is_empty : 'a [list](../index.html#type-list) -&gt; bool`
+
+Test whether a list is empty
+
+`val cons : 'a -&gt; 'a [list](../index.html#type-list) -&gt; 'a [list](../index.html#type-list)`
+
+`cons x l` prepends `x` to the beginning of `l`, returning a new list
+
+`val return : 'a -&gt; 'a [list](../index.html#type-list)`
+
+Singleton list
+
+`val hd : 'a list -&gt; 'a`
+
+Partial function to access the head of the list. This function will fail when applied to the empty list. **NOTE** it is recommended to rely on pattern matching instead
+
+`val tl : 'a list -&gt; 'a list`
+
+Partial function to access the tail of the list. This function will fail when applied to the empty list **NOTE** it is recommended to rely on pattern matching instead
+
+`val append : 'a [list](../index.html#type-list) -&gt; 'a [list](../index.html#type-list) -&gt; 'a [list](../index.html#type-list)`
+
+List append / concatenation. `append l1 l2` returns a list composed of all elements of `l1`, followed by all elements of `l2`
+
+`val append_to_nil : 'a [list](../index.html#type-list) -&gt; bool`
+
+`val append_single : 'a -&gt; 'a [list](../index.html#type-list) -&gt; 'a [list](../index.html#type-list) -&gt; bool`
+
+`val rev : 'a [list](../index.html#type-list) -&gt; 'a [list](../index.html#type-list)`
+
+Reverse a list
+
+`val length : 'a [list](../index.html#type-list) -&gt; Z.t`
+
+Compute the length of a list. Linear time.
+
+`val len_nonnegative : 'a [list](../index.html#type-list) -&gt; bool`
+
+`val len_zero_is_empty : 'a [list](../index.html#type-list) -&gt; bool`
+
+`val split : ('a * 'b) [list](../index.html#type-list) -&gt; 'a [list](../index.html#type-list) * 'b [list](../index.html#type-list)`
+
+Split a list of pairs into a pair of lists
+
+`val map : ( 'a -&gt; 'b ) -&gt; 'a [list](../index.html#type-list) -&gt; 'b [list](../index.html#type-list)`
+
+Map a function over a list.
+
+  * `map f [] = []`
+  * `map f [x] = [f x]`
+  * `map f (x :: tail) = f x :: map f tail`
+
+
+
+`val map2 : ( 'a -&gt; 'b -&gt; 'c ) -&gt; 'a [list](../index.html#type-list) -&gt; 'b [list](../index.html#type-list) -&gt; ( 'c [list](../index.html#type-list), string ) [result](../index.html#type-result)`
+
+`val for_all : ( 'a -&gt; bool ) -&gt; 'a [list](../index.html#type-list) -&gt; bool`
+
+`for_all f l` tests whether all elements of `l` satisfy the predicate `f`
+
+`val exists : ( 'a -&gt; bool ) -&gt; 'a [list](../index.html#type-list) -&gt; bool`
+
+`exists f l` tests whether there is an element of `l` that satisfies the predicate `f`
+
+`val fold_left : ( 'a -&gt; 'b -&gt; 'a ) -&gt; 'a -&gt; 'b [list](../index.html#type-list) -&gt; 'a`
+
+Fold-left, with an accumulator that makes induction more challenging
+
+`val fold_right : ( 'a -&gt; 'b -&gt; 'b ) -&gt; base:'b -&gt; 'a [list](../index.html#type-list) -&gt; 'b`
+
+Fold-right, without accumulator. This is generally more friendly for induction than `fold_left`.
+
+`val mapi_with : base:Z.t -&gt; ( Z.t -&gt; 'a -&gt; 'b ) -&gt; 'a [list](../index.html#type-list) -&gt; 'b [list](../index.html#type-list)`
+
+`val mapi : ( Z.t -&gt; 'a -&gt; 'b ) -&gt; 'a [list](../index.html#type-list) -&gt; 'b [list](../index.html#type-list)`
+
+`val filter : ( 'a -&gt; bool ) -&gt; 'a [list](../index.html#type-list) -&gt; 'a [list](../index.html#type-list)`
+
+`filter f l` keeps only the elements of `l` that satisfy `f`.
+
+`val filter_map : ( 'a -&gt; 'b [option](../index.html#type-option) ) -&gt; 'a [list](../index.html#type-list) -&gt; 'b [list](../index.html#type-list)`
+
+`val flat_map : ( 'a -&gt; 'b [list](../index.html#type-list) ) -&gt; 'a [list](../index.html#type-list) -&gt; 'b [list](../index.html#type-list)`
+
+`val find : ( 'a -&gt; bool ) -&gt; 'a [list](../index.html#type-list) -&gt; 'a [option](../index.html#type-option)`
+
+`find f l` returns `Some x` if `x` is the first element of `l` such that `f x` is true. Otherwise it returns `None`
+
+`val mem : 'a -&gt; 'a [list](../index.html#type-list) -&gt; bool`
+
+`mem x l` returns `true` iff `x` is an element of `l`
+
+`val mem_assoc : 'a -&gt; ('a * 'b) [list](../index.html#type-list) -&gt; bool`
+
+`val nth : Z.t -&gt; 'a [list](../index.html#type-list) -&gt; 'a [option](../index.html#type-option)`
+
+`val assoc : 'a -&gt; ('a * 'b) [list](../index.html#type-list) -&gt; 'b [option](../index.html#type-option)`
+
+`val take : [int](../index.html#type-int) -&gt; 'a [list](../index.html#type-list) -&gt; 'a [list](../index.html#type-list)`
+
+`take n l` returns a list composed of the first (at most) `n` elements of `l`. If `length l &lt;= n` then it returns `l`
+
+`val drop : [int](../index.html#type-int) -&gt; 'a [list](../index.html#type-list) -&gt; 'a [list](../index.html#type-list)`
+
+`drop n l` returns `l` where the first (at most) `n` elements have been removed. If `length l &lt;= n` then it returns `[]`
+
+`val (--) : [int](../index.html#type-int) -&gt; [int](../index.html#type-int) -&gt; [int](../index.html#type-int) [list](../index.html#type-list)`
+
+Integer range. `i -- j` is the list `[i; i+1; i+2; …; j-1]`. Returns the empty list if `i &gt;= j`.
+
+`val insert_sorted : leq:( 'a -&gt; 'a -&gt; bool ) -&gt; 'a -&gt; 'a [list](../index.html#type-list) -&gt; 'a [list](../index.html#type-list)`
+
+Insert `x` in `l`, keeping `l` sorted.
+
+`val sort : leq:( 'a -&gt; 'a -&gt; bool ) -&gt; 'a [list](../index.html#type-list) -&gt; 'a [list](../index.html#type-list)`
+
+Basic sorting function
+
+`val is_sorted : leq:( 'a -&gt; 'a -&gt; bool ) -&gt; 'a [list](../index.html#type-list) -&gt; bool`
+
+Check whether a list is sorted, using the `leq` small-or-equal-than predicatet
+
+`val monoid_product : 'a [list](../index.html#type-list) -&gt; 'b [list](../index.html#type-list) -&gt; ('a * 'b) [list](../index.html#type-list)`
+
+`val (&gt;|=) : 'a [list](../index.html#type-list) -&gt; ( 'a -&gt; 'b ) -&gt; 'b [list](../index.html#type-list)`
+
+`val (&gt;&gt;=) : 'a [list](../index.html#type-list) -&gt; ( 'a -&gt; 'b [list](../index.html#type-list) ) -&gt; 'b [list](../index.html#type-list)`
+
+`val let+ : 'a [list](../index.html#type-list) -&gt; ( 'a -&gt; 'b ) -&gt; 'b [list](../index.html#type-list)`
+
+`val and+ : 'a [list](../index.html#type-list) -&gt; 'b [list](../index.html#type-list) -&gt; ('a * 'b) [list](../index.html#type-list)`
+
+`val let* : 'a [list](../index.html#type-list) -&gt; ( 'a -&gt; 'b [list](../index.html#type-list) ) -&gt; 'b [list](../index.html#type-list)`
+
+`val and* : 'a [list](../index.html#type-list) -&gt; 'b [list](../index.html#type-list) -&gt; ('a * 'b) [list](../index.html#type-list)`
+</content>
+  </file>
+  <file>
+    <name>Map</name>
+    <content>[Up](../index.html) – [imandra-base](../../index.html) » [Imandra_prelude](../index.html) » Map
+
+# Module `Imandra_prelude.Map`
+
+`type (+'a, 'b) t`
+
+`val const : 'b -&gt; ( _, 'b ) t`
+
+`val add : 'a -&gt; 'b -&gt; ( 'a, 'b ) t -&gt; ( 'a, 'b ) t`
+
+`val add' : ( 'a, 'b ) t -&gt; 'a -&gt; 'b -&gt; ( 'a, 'b ) t`
+
+`val get : 'a -&gt; ( 'a, 'b ) t -&gt; 'b`
+
+`val get' : ( 'a, 'b ) t -&gt; 'a -&gt; 'b`
+
+`val get_default : ( _, 'b ) t -&gt; 'b`
+
+`val of_list : default:'b -&gt; ('a * 'b) [list](../index.html#type-list) -&gt; ( 'a, 'b ) t`
+
+`val filter_map : default:( 'b -&gt; 'c ) -&gt; f:( 'a -&gt; 'b -&gt; 'c [option](../index.html#type-option) ) -&gt; ( 'a, 'b ) t -&gt; ( 'a, 'c ) t`
+
+`val for_all : default:( 'b -&gt; bool ) -&gt; f:( 'a -&gt; 'b -&gt; bool ) -&gt; ( 'a, 'b ) t -&gt; bool`
+
+`val merge : default:( 'b -&gt; 'c -&gt; 'd ) -&gt; f_both:( 'a -&gt; 'b -&gt; 'c -&gt; 'd [option](../index.html#type-option) ) -&gt; f1:( 'a -&gt; 'b -&gt; 'd [option](../index.html#type-option) ) -&gt; f2:( 'a -&gt; 'c -&gt; 'd [option](../index.html#type-option) ) -&gt; ( 'a, 'b ) t -&gt; ( 'a, 'c ) t -&gt; ( 'a, 'd ) t`
+
+`val extract : ( 'a, 'b ) t -&gt; ('a * 'b) [list](../index.html#type-list) * 'b`
+
+`val pp : 'a [printer](../index.html#type-printer) -&gt; 'b [printer](../index.html#type-printer) -&gt; ( 'a, 'b ) t [printer](../index.html#type-printer)`
+</content>
+  </file>
+  <file>
+    <name>Multiset</name>
+    <content>[Up](../index.html) – [imandra-base](../../index.html) » [Imandra_prelude](../index.html) » Multiset
+
+# Module `Imandra_prelude.Multiset`
+
+  * Multiset
+
+
+
+### Multiset
+
+A multiset is a collection of elements that don't have any particular order, but can occur several times (unlike a regular set).
+
+`type +'a t = ( 'a, [int](../index.html#type-int) ) [Map.t](../Map/index.html#type-t)`
+
+`val empty : 'a t`
+
+`val add : 'a -&gt; 'a t -&gt; 'a t`
+
+`val remove : 'a -&gt; 'a t -&gt; 'a t`
+
+`val mem : 'a -&gt; 'a t -&gt; bool`
+
+`val find : 'a -&gt; 'a t -&gt; [int](../index.html#type-int)`
+
+`val of_list : 'a [list](../index.html#type-list) -&gt; 'a t`
+</content>
+  </file>
+  <file>
+    <name>Option</name>
+    <content>[Up](../index.html) – [imandra-base](../../index.html) » [Imandra_prelude](../index.html) » Option
+
+# Module `Imandra_prelude.Option`
+
+  * Option module
+
+
+
+### Option module
+
+The option type `type 'a option = None | Some of 'a` is useful for representing partial functions and optional values.
+
+`type 'a t = 'a [option](../index.html#type-option)`
+
+`val map : ( 'a -&gt; 'b ) -&gt; 'a [option](../index.html#type-option) -&gt; 'b [option](../index.html#type-option)`
+
+Map over the option.
+
+  * `map f None = None`
+  * `map f (Some x) = Some (f x)`
+
+
+
+`val map_or : default:'a -&gt; ( 'b -&gt; 'a ) -&gt; 'b [option](../index.html#type-option) -&gt; 'a`
+
+`val is_some : 'a [option](../index.html#type-option) -&gt; bool`
+
+Returns `true` iff the argument is of the form `Some x`
+
+`val is_none : 'a [option](../index.html#type-option) -&gt; bool`
+
+Returns `true` iff the argument is `None`
+
+`val return : 'a -&gt; 'a [option](../index.html#type-option)`
+
+Wrap a value into an option. `return x = Some x`
+
+`val (&gt;|=) : 'a [option](../index.html#type-option) -&gt; ( 'a -&gt; 'b ) -&gt; 'b [option](../index.html#type-option)`
+
+Infix alias to `map`
+
+`val flat_map : ( 'a -&gt; 'b [option](../index.html#type-option) ) -&gt; 'a [option](../index.html#type-option) -&gt; 'b [option](../index.html#type-option)`
+
+Monadic operator, useful for chaining multiple optional computations
+
+`val (&gt;&gt;=) : 'a [option](../index.html#type-option) -&gt; ( 'a -&gt; 'b [option](../index.html#type-option) ) -&gt; 'b [option](../index.html#type-option)`
+
+Infix monadic operator, useful for chaining multiple optional computations together. It holds that `(return x &gt;&gt;= f) = f x`
+
+`val or_ : else_:'a [option](../index.html#type-option) -&gt; 'a [option](../index.html#type-option) -&gt; 'a [option](../index.html#type-option)`
+
+Choice of a value
+
+  * `or_ ~else_:x None = x`
+  * `or_ ~else_:x (Some y) = Some y`
+
+
+
+`val (&lt;+&gt;) : 'a [option](../index.html#type-option) -&gt; 'a [option](../index.html#type-option) -&gt; 'a [option](../index.html#type-option)`
+
+`val exists : ( 'a -&gt; bool ) -&gt; 'a [option](../index.html#type-option) -&gt; bool`
+
+`val for_all : ( 'a -&gt; bool ) -&gt; 'a [option](../index.html#type-option) -&gt; bool`
+
+`val get_or : default:'a -&gt; 'a [option](../index.html#type-option) -&gt; 'a`
+
+`val fold : ( 'a -&gt; 'b -&gt; 'a ) -&gt; 'a -&gt; 'b [option](../index.html#type-option) -&gt; 'a`
+
+`val (&lt;$&gt;) : ( 'a -&gt; 'b ) -&gt; 'a [option](../index.html#type-option) -&gt; 'b [option](../index.html#type-option)`
+
+`f &lt;$&gt; x = map f x`
+
+`val monoid_product : 'a [option](../index.html#type-option) -&gt; 'b [option](../index.html#type-option) -&gt; ('a * 'b) [option](../index.html#type-option)`
+
+`val let+ : 'a [option](../index.html#type-option) -&gt; ( 'a -&gt; 'b ) -&gt; 'b [option](../index.html#type-option)`
+
+`val and+ : 'a [option](../index.html#type-option) -&gt; 'b [option](../index.html#type-option) -&gt; ('a * 'b) [option](../index.html#type-option)`
+
+`val let* : 'a [option](../index.html#type-option) -&gt; ( 'a -&gt; 'b [option](../index.html#type-option) ) -&gt; 'b [option](../index.html#type-option)`
+
+`val and* : 'a [option](../index.html#type-option) -&gt; 'b [option](../index.html#type-option) -&gt; ('a * 'b) [option](../index.html#type-option)`
+</content>
+  </file>
+  <file>
+    <name>Ordinal</name>
+    <content>[Up](../index.html) – [imandra-base](../../index.html) » [Imandra_prelude](../index.html) » Ordinal
+
+# Module `Imandra_prelude.Ordinal`
+
+We need to define ordinals before any recursive function is defined, because ordinals are used for termination proofs.
+
+`type t = ``| Int of [int](../index.html#type-int)`  
+---  
+`| Cons of t * [int](../index.html#type-int) * t`  
+  
+`val pp : Stdlib.Format.formatter -&gt; t -&gt; unit`
+
+`val of_int : [int](../index.html#type-int) -&gt; t`
+
+`val (~$) : [int](../index.html#type-int) -&gt; t`
+
+`val (&lt;&lt;) : t -&gt; t -&gt; bool`
+
+`val plus : t -&gt; t -&gt; t`
+
+`val simple_plus : t -&gt; t -&gt; t`
+
+`val (+) : t -&gt; t -&gt; t`
+
+`val of_list : t [list](../index.html#type-list) -&gt; t`
+
+`val pair : t -&gt; t -&gt; t`
+
+`val triple : t -&gt; t -&gt; t -&gt; t`
+
+`val quad : t -&gt; t -&gt; t -&gt; t -&gt; t`
+
+`val shift : t -&gt; by:t -&gt; t`
+
+`val is_valid : t -&gt; bool`
+
+`val is_valid_rec : t -&gt; bool`
+
+`val zero : t`
+
+`val one : t`
+
+`val omega : t`
+
+`val omega_omega : t`
+</content>
+  </file>
+  <file>
+    <name>Peano_nat</name>
+    <content>[Up](../index.html) – [imandra-base](../../index.html) » [Imandra_prelude](../index.html) » Peano_nat
+
+# Module `Imandra_prelude.Peano_nat`
+
+  * Natural numbers
+
+
+
+### Natural numbers
+
+`type t = ``| Z`  
+---  
+`| S of t`  
+  
+`val zero : t`
+
+`val succ : t -&gt; t`
+
+`val of_int : [int](../index.html#type-int) -&gt; t`
+
+Turn this integer into a natural number. Negative integers map to zero.
+
+`val to_int : t -&gt; [int](../index.html#type-int)`
+
+Turn this natural number into a native integer.
+
+`val plus : t -&gt; t -&gt; t`
+
+Peano addition
+
+`val leq : t -&gt; t -&gt; bool`
+
+Comparison
+
+`val (=) : 'a -&gt; 'a -&gt; bool`
+
+`val (&lt;=) : t -&gt; t -&gt; bool`
+
+`val (+) : t -&gt; t -&gt; t`
+</content>
+  </file>
+  <file>
+    <name>Pervasives</name>
+    <content>[Up](../index.html) – [imandra-base](../../index.html) » [Imandra_prelude](../index.html) » Pervasives
+
+# Module `Imandra_prelude.Pervasives`
+</content>
+  </file>
+  <file>
+    <name>Real</name>
+    <content>[Up](../index.html) – [imandra-base](../../index.html) » [Imandra_prelude](../index.html) » Real
+
+# Module `Imandra_prelude.Real`
+
+`type t = [real](../index.html#type-real)`
+
+`val of_int : [int](../index.html#type-int) -&gt; t`
+
+`val to_int : t -&gt; [int](../index.html#type-int)`
+
+`val (+) : t -&gt; t -&gt; t`
+
+`val (-) : t -&gt; t -&gt; t`
+
+`val (~-) : t -&gt; t`
+
+`val (*) : t -&gt; t -&gt; t`
+
+`val (/) : t -&gt; t -&gt; t`
+
+`val (&lt;) : t -&gt; t -&gt; bool`
+
+`val (&lt;=) : t -&gt; t -&gt; bool`
+
+`val (&gt;) : t -&gt; t -&gt; bool`
+
+`val (&gt;=) : t -&gt; t -&gt; bool`
+
+`val abs : t -&gt; t`
+
+`val min : t -&gt; t -&gt; t`
+
+`val max : t -&gt; t -&gt; t`
+
+`val mk_of_float : [float](../index.html#type-float) -&gt; t`
+
+`val mk_of_q : t -&gt; t`
+
+`val mk_of_string : [string](../index.html#type-string) -&gt; t`
+
+`val to_float : t -&gt; [float](../index.html#type-float)`
+
+`val of_float : [float](../index.html#type-float) -&gt; t`
+
+`val compare : t -&gt; t -&gt; [Caml.Int.t](../Caml/Int/index.html#type-t)`
+
+`val pp : Stdlib.Format.formatter -&gt; t -&gt; [unit](../index.html#type-unit)`
+
+`val to_string : t -&gt; [string](../index.html#type-string)`
+
+`val to_string_approx : t -&gt; [string](../index.html#type-string)`
+</content>
+  </file>
+  <file>
+    <name>Reflect</name>
+    <content>[Up](../index.html) – [imandra-base](../../index.html) » [Imandra_prelude](../index.html) » Reflect
+
+# Module `Imandra_prelude.Reflect`
+
+### Reflection
+
+`module [Uid](Uid/index.html) : sig ... end`
+
+`module [Type](Type/index.html) : sig ... end`
+
+`module [Var](Var/index.html) : sig ... end`
+
+`module [Term](Term/index.html) : sig ... end`
+</content>
+  </file>
+  <file>
+    <name>Result</name>
+    <content>[Up](../index.html) – [imandra-base](../../index.html) » [Imandra_prelude](../index.html) » Result
+
+# Module `Imandra_prelude.Result`
+
+`type ('a, 'b) t = ( 'a, 'b ) [result](../index.html#type-result)`
+
+`val return : 'a -&gt; ( 'a, 'b ) [result](../index.html#type-result)`
+
+`val fail : 'a -&gt; ( 'b, 'a ) [result](../index.html#type-result)`
+
+`val map : ( 'a -&gt; 'b ) -&gt; ( 'a, 'c ) [result](../index.html#type-result) -&gt; ( 'b, 'c ) [result](../index.html#type-result)`
+
+`val map_err : ( 'a -&gt; 'b ) -&gt; ( 'c, 'a ) [result](../index.html#type-result) -&gt; ( 'c, 'b ) [result](../index.html#type-result)`
+
+`val get_or : ( 'a, 'b ) [result](../index.html#type-result) -&gt; default:'a -&gt; 'a`
+
+`val map_or : ( 'a -&gt; 'b ) -&gt; ( 'a, 'c ) [result](../index.html#type-result) -&gt; default:'b -&gt; 'b`
+
+`val (&gt;|=) : ( 'a, 'b ) [result](../index.html#type-result) -&gt; ( 'a -&gt; 'c ) -&gt; ( 'c, 'b ) [result](../index.html#type-result)`
+
+`val flat_map : ( 'a -&gt; ( 'b, 'c ) [result](../index.html#type-result) ) -&gt; ( 'a, 'c ) [result](../index.html#type-result) -&gt; ( 'b, 'c ) [result](../index.html#type-result)`
+
+`val (&gt;&gt;=) : ( 'a, 'b ) [result](../index.html#type-result) -&gt; ( 'a -&gt; ( 'c, 'b ) [result](../index.html#type-result) ) -&gt; ( 'c, 'b ) [result](../index.html#type-result)`
+
+`val fold : ok:( 'a -&gt; 'b ) -&gt; error:( 'c -&gt; 'b ) -&gt; ( 'a, 'c ) [result](../index.html#type-result) -&gt; 'b`
+
+`val is_ok : ( 'a, 'b ) [result](../index.html#type-result) -&gt; bool`
+
+`val is_error : ( 'a, 'b ) [result](../index.html#type-result) -&gt; bool`
+
+`val monoid_product : ( 'a, 'b ) [result](../index.html#type-result) -&gt; ( 'c, 'b ) [result](../index.html#type-result) -&gt; ( 'a * 'c, 'b ) [result](../index.html#type-result)`
+
+`val let+ : ( 'a, 'b ) [result](../index.html#type-result) -&gt; ( 'a -&gt; 'c ) -&gt; ( 'c, 'b ) [result](../index.html#type-result)`
+
+`val and+ : ( 'a, 'b ) [result](../index.html#type-result) -&gt; ( 'c, 'b ) [result](../index.html#type-result) -&gt; ( 'a * 'c, 'b ) [result](../index.html#type-result)`
+
+`val let* : ( 'a, 'b ) [result](../index.html#type-result) -&gt; ( 'a -&gt; ( 'c, 'b ) [result](../index.html#type-result) ) -&gt; ( 'c, 'b ) [result](../index.html#type-result)`
+
+`val and* : ( 'a, 'b ) [result](../index.html#type-result) -&gt; ( 'c, 'b ) [result](../index.html#type-result) -&gt; ( 'a * 'c, 'b ) [result](../index.html#type-result)`
+</content>
+  </file>
+  <file>
+    <name>Set</name>
+    <content>[Up](../index.html) – [imandra-base](../../index.html) » [Imandra_prelude](../index.html) » Set
+
+# Module `Imandra_prelude.Set`
+
+`type +'a t = ( 'a, bool ) [Map.t](../Map/index.html#type-t)`
+
+`val empty : 'a t`
+
+`val is_valid : _ t -&gt; bool`
+
+`val is_empty : _ t -&gt; bool`
+
+`val mem : 'a -&gt; 'a t -&gt; bool`
+
+`val add : 'a -&gt; 'a t -&gt; 'a t`
+
+`val remove : 'a -&gt; 'a t -&gt; 'a t`
+
+`val subset : 'a t -&gt; 'a t -&gt; bool`
+
+`val union : 'a t -&gt; 'a t -&gt; 'a t`
+
+`val complement : 'a t -&gt; 'a t`
+
+`val inter : 'a t -&gt; 'a t -&gt; 'a t`
+
+`val diff : 'a t -&gt; 'a t -&gt; 'a t`
+
+`val (++) : 'a t -&gt; 'a t -&gt; 'a t`
+
+`val (--) : 'a t -&gt; 'a t -&gt; 'a t`
+
+`val of_list : 'a [list](../index.html#type-list) -&gt; 'a t`
+
+`val to_list : 'a t -&gt; 'a [list](../index.html#type-list)`
+
+`val pp : 'a [printer](../index.html#type-printer) -&gt; 'a t [printer](../index.html#type-printer)`
+</content>
+  </file>
+  <file>
+    <name>Stdlib</name>
+    <content>[Up](../index.html) – [imandra-base](../../index.html) » [Imandra_prelude](../index.html) » Stdlib
+
+# Module `Imandra_prelude.Stdlib`
+</content>
+  </file>
+  <file>
+    <name>String</name>
+    <content>[Up](../index.html) – [imandra-base](../../index.html) » [Imandra_prelude](../index.html) » String
+
+# Module `Imandra_prelude.String`
+
+  * Byte strings
+
+
+
+### Byte strings
+
+These strings correspond to OCaml native strings, and do not have a particular unicode encoding.
+
+Rather, they should be seen as sequences of bytes, and it is also this way that Imandra considers them.
+
+`type t = [string](../index.html#type-string)`
+
+`val empty : t`
+
+`val length : t -&gt; [int](../index.html#type-int)`
+
+`val make : [Caml.Int.t](../Caml/Int/index.html#type-t) -&gt; char -&gt; t`
+
+`val append : t -&gt; t -&gt; t`
+
+`val get : t -&gt; [Caml.Int.t](../Caml/Int/index.html#type-t) -&gt; char`
+
+`val concat : t -&gt; t [list](../index.html#type-list) -&gt; t`
+
+`val prefix : t -&gt; t -&gt; bool`
+
+`val suffix : t -&gt; t -&gt; bool`
+
+`val contains : t -&gt; sub:t -&gt; bool`
+
+`val unsafe_sub : t -&gt; [int](../index.html#type-int) -&gt; [int](../index.html#type-int) -&gt; t`
+
+`val sub : t -&gt; [int](../index.html#type-int) -&gt; [int](../index.html#type-int) -&gt; t [option](../index.html#type-option)`
+
+`val of_int : [int](../index.html#type-int) -&gt; t`
+
+`val to_int : t -&gt; [int](../index.html#type-int) [option](../index.html#type-option)`
+
+`val is_int : t -&gt; bool`
+
+`val is_nat : t -&gt; bool`
+
+`val to_nat : t -&gt; [int](../index.html#type-int) [option](../index.html#type-option)`
+</content>
+  </file>
+  <file>
+    <name>Sys</name>
+    <content>[Up](../index.html) – [imandra-base](../../index.html) » [Imandra_prelude](../index.html) » Sys
+
+# Module `Imandra_prelude.Sys`
+
+`val ocaml_version : string`
+</content>
+  </file>
+  <file>
+    <name>Unix</name>
+    <content>[Up](../index.html) – [imandra-base](../../index.html) » [Imandra_prelude](../index.html) » Unix
+
+# Module `Imandra_prelude.Unix`
+</content>
+  </file>
+</document>

@@ -1,0 +1,127 @@
+(* Root finding algorithms - Level 4 *)
+
+open Core_arithmetic
+open Core_comparison
+open Analysis_numerical_derivatives
+
+let bisection_method_helper 
+    (n : int)
+    (func : real -> real) 
+    (a : real) 
+    (b : real) 
+    (tolerance : real) : real option =
+  if n <= 0 then
+    divide (add a b) 2.0
+  else
+    let open Option in
+    let* c = divide (add a b) 2.0 in
+    let fc = func c in
+    
+    if absolute_value fc <. tolerance then
+      Some c
+    else
+      let fa = func a in
+      if fa *. fc <. 0.0 then
+        if absolute_value (subtract b c) <. tolerance then
+          divide (add a c) 2.0
+        else
+          bisection_method_helper (n - 1) func a c tolerance
+      else
+        if absolute_value (subtract c a) <. tolerance then
+          divide (add a c) 2.0
+        else
+          bisection_method_helper (n - 1) func c b tolerance
+[@@measure Ordinal.of_int n]
+
+let bisection_method 
+    (func : real -> real) 
+    (a : real) 
+    (b : real) 
+    (tolerance : real) : real option =
+  (* Find root using bisection method. *)
+  let fa = func a in
+  let fb = func b in
+  if fa *. fb >. 0.0 then
+    None
+  else
+    bisection_method_helper 100 func a b tolerance
+
+let newton_method_helper
+    (n : int)
+    (func : real -> real)
+    (x : real)
+    (tolerance : real) : real option =
+  if n <= 0 then
+    Some x
+  else
+    let open Option in
+    let fx = func x in
+    
+    if absolute_value fx <. tolerance then
+      Some x
+    else
+      let* fpx = numerical_derivative func x 0.00000001 in
+      
+      if absolute_value fpx <. tolerance then
+        None
+      else
+        let* x_new = divide fx fpx >|= (fun d -> subtract x d) in
+        
+        if absolute_value (subtract x_new x) <. tolerance then
+          Some x_new
+        else
+          newton_method_helper (n - 1) func x_new tolerance
+[@@measure Ordinal.of_int n]
+
+let newton_method 
+    (func : real -> real) 
+    (x0 : real) 
+    (tolerance : real) : real option =
+  (* Find root using Newton's method. *)
+  newton_method_helper 50 func x0 tolerance
+
+let find_minimum_golden_section_helper
+    (func : real -> real)
+    (a : real)
+    (b : real)
+    (x1 : real)
+    (x2 : real)
+    (f1 : real)
+    (f2 : real)
+    (tolerance : real)
+    (resphi : real) : real option =
+  if absolute_value (subtract b a) <=. tolerance then
+    divide (add a b) 2.0
+  else
+    if f1 <. f2 then
+      let new_b = x2 in
+      let new_x2 = x1 in
+      let new_f2 = f1 in
+      let new_x1 = add a (multiply resphi (subtract new_b a)) in
+      let new_f1 = func new_x1 in
+      find_minimum_golden_section_helper func a new_b new_x1 new_x2 new_f1 new_f2 tolerance resphi
+    else
+      let new_a = x1 in
+      let new_x1 = x2 in
+      let new_f1 = f2 in
+      let new_x2 = subtract b (multiply resphi (subtract b new_a)) in
+      let new_f2 = func new_x2 in
+      find_minimum_golden_section_helper func new_a b new_x1 new_x2 new_f1 new_f2 tolerance resphi
+[@@no_validate]
+
+let find_minimum_golden_section
+    (func : real -> real)
+    (a : real)
+    (b : real)
+    (tolerance : real) : real option =
+  (* Find minimum using golden section search. *)
+  let phi = 1.618033988749895 in
+  let resphi = subtract 2.0 phi in
+  
+  let x1 = add a (multiply resphi (subtract b a)) in
+  let x2 = subtract b (multiply resphi (subtract b a)) in
+  
+  let f1 = func x1 in
+  let f2 = func x2 in
+  
+  find_minimum_golden_section_helper func a b x1 x2 f1 f2 tolerance resphi

@@ -1,0 +1,35 @@
+[@@@import Basic, "basic.iml"]
+[@@@import Math_ops, "math_ops.iml"]
+[@@@import Utils_helpers, "utils/helpers.iml"]
+
+
+let rectangle_area (width : real) (height : real) : real =
+  (* Calculate area of rectangle. *)
+  Basic.multiply width height
+
+let rectangle_perimeter (width : real) (height : real) : real =
+  (* Calculate perimeter of rectangle. *)
+  Basic.multiply 2.0 (Basic.add width height)
+
+let square_area (side : real) : real =
+  (* Calculate area of square. *)
+  Basic.multiply side side
+
+let triangle_area (base : real) (height : real) : real =
+  (* Calculate area of triangle using base and height. *)
+  let half = 0.5 in
+  Basic.multiply half (Basic.multiply base height)
+
+let is_valid_triangle (a : real) (b : real) (c : real) : bool =
+  (* Check if three sides can form a valid triangle. *)
+  let all_positive = Basic.is_positive a && Basic.is_positive b && Basic.is_positive c in
+  let triangle_inequality =
+    Basic.add a b >. c &&
+    Basic.add b c >. a &&
+    Basic.add a c >. b
+  in
+  all_positive && triangle_inequality
+
+let max_side_length (a : real) (b : real) (c : real) : real =
+  (* Find the maximum side length among three sides. *)
+  Utils_helpers.max_of_three a b c

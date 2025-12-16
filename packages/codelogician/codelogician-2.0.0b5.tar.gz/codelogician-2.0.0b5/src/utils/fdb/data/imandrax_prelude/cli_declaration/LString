@@ -1,0 +1,149 @@
+module LString = struct
+  type LString.t =  LChar.t list
+  
+  let LString.empty : LChar.t list =
+    []
+  (* [LString.empty] returns an empty string (empty list of characters)
+     
+     Usage/Pattern: Creating an empty string, like "" or empty string literal in other languages *)
+  
+  let LString.of_list (l : 'a) : 'a =
+    l
+  (* [LString.of_list l] converts a list directly to an LString.t
+     
+     Usage/Pattern: Converting array/list of characters to string, like String.fromCharArray() or similar *)
+  
+  let rec LString.length (s : LChar.t list) : int =
+    match s with
+    | [] -> 0
+    | (_ :: tl) -> 1 + (LString.length tl)
+  (* [LString.length s] returns the number of characters in string [s]
+     
+     Usage/Pattern: Getting string length, like .length or len() in other languages *)
+  
+  theorem LString.len_pos (s : LChar.t list) : bool =
+    LString.length s (* trigger: anon *) >= 0
+  by ((((((Tactic.induct ?smt:None) ?on_fun:None)
+          ?on_vars:(Some [ "s"]))
+         ?otf:None)
+        ?max_induct:None)
+       ?do_not:None)
+      ()
+  
+  theorem LString.len_zero_inversion (s : LChar.t list) : bool =
+    (LString.length s (* trigger: anon *) = 0) ==> (s = [])
+  by ((((((Tactic.induct ?smt:None) ?on_fun:None)
+          ?on_vars:(Some [ "s"]))
+         ?otf:None)
+        ?max_induct:None)
+       ?do_not:None)
+      ()
+  
+  let rec LString.append (s1 : LChar.t list) (s2 : LChar.t list) : LChar.t list =
+    match s1 with
+    | [] -> s2
+    | (c :: s1') -> (c :: LString.append s1' s2)
+  (* [LString.append s1 s2] concatenates strings [s1] and [s2]
+     
+     Usage/Pattern: Joining two strings together, like + operator or concat() in other languages *)
+  
+  let LString.^^ : LChar.t list =
+    LString.append
+  (* [LString.^^] is an infix operator alias for LString.append
+     
+     Usage/Pattern: Infix string concatenation, like + or .. operators in other languages *)
+  
+  let rec LString.for_all (f : LChar.t -> bool) (s : LChar.t list) : bool =
+    match s with
+    | [] -> true
+    | (x :: tl) -> (f x) && (LString.for_all f tl)
+  (* [LString.for_all f s] tests if all characters in [s] satisfy predicate [f]
+     
+     Usage/Pattern: Checking if all characters match a condition, like every() or all() in other languages *)
+  
+  let rec LString.exists (f : LChar.t -> bool) (s : LChar.t list) : bool =
+    match s with
+    | [] -> false
+    | (x :: tl) -> (f x) || (LString.exists f tl)
+  (* [LString.exists f s] tests if any character in [s] satisfies predicate [f]
+     
+     Usage/Pattern: Checking if any character matches a condition, like some() or any() in other languages *)
+  
+  let rec LString.concat (sep : LChar.t list) (l : LChar.t list list) : LChar.t list =
+    match l with
+    | [] -> []
+    | [s] -> s
+    | (s1 :: tl) ->
+      LString.append s1 (LString.append sep (LString.concat sep tl))
+  (* [LString.concat sep l] concatenates all strings in list [l], placing [sep] between each
+     
+     Usage/Pattern: Joining array of strings with separator, like join() or String.join() in other languages *)
+  
+  let LString.is_printable (s : LChar.t list) : bool =
+    LString.for_all LChar.is_printable s
+  (* [LString.is_printable s] tests if all characters in [s] are printable
+     
+     Usage/Pattern: Checking if string contains only printable characters, like string validation *)
+  
+  let rec LString.sub (s : LChar.t list) (i : int) (len : int) : LChar.t list =
+    match s with
+    | [] -> []
+    | (c1 :: s') ->
+      if len <= 0
+      then []
+      else
+        if i <= 0
+        then (c1 :: LString.sub s' 0 (len - 1))
+        else LString.sub s' (i - 1) len
+  (* [LString.sub s i len] extracts substring of [s] starting at position [i] of length [len]
+     
+     Usage/Pattern: Extracting substring, like substring() or slice() in other languages *)
+  
+  let rec LString.prefix (s1 : LChar.t list) (s2 : LChar.t list) : bool =
+    match s1 with
+    | [] -> true
+    | (c1 :: s1') ->
+      match s2 with
+      | [] -> false
+      | (c2 :: s2') ->
+        (c1 = c2) && (LString.prefix s1' s2')
+  (* [LString.prefix s1 s2] tests if [s1] is a prefix of [s2]
+     
+     Usage/Pattern: Checking if string starts with another string, like startsWith() in other languages *)
+  
+  let rec LString.suffix (s1 : LChar.t list) (s2 : LChar.t list) : bool =
+    (s1 = s2)
+     ||
+     (match s2 with
+      | [] -> false
+      | (_ :: s2') -> LString.suffix s1 s2')
+  (* [LString.suffix s1 s2] tests if [s1] is a suffix of [s2]
+     
+     Usage/Pattern: Checking if string ends with another string, like endsWith() in other languages *)
+  
+  let rec LString.contains (s1 : LChar.t list) (s2 : LChar.t list) : bool =
+    match s2 with
+    | [] -> true
+    | (c2 :: s2') ->
+      match s1 with
+      | [] -> false
+      | (c1 :: s1') ->
+        ((c1 = c2) && (LString.contains s1' s2'))
+         ||
+         (LString.contains s1' s2)
+  (* [LString.contains s1 s2] tests if [s2] appears as a substring within [s1]
+     
+     Usage/Pattern: Checking if string contains substring, like includes() or contains() in other languages *)
+  
+  let LString.take : LString.t =
+    List.take
+  (* [LString.take n s] returns first [n] characters of string [s]
+     
+     Usage/Pattern: Taking first N characters from string, like slice(0,n) or substring(0,n) in other languages *)
+  
+  let LString.drop : LString.t =
+    List.drop
+  (* [LString.drop n s] removes first [n] characters from string [s]
+     
+     Usage/Pattern: Removing first N characters from string, like slice(n) or substring(n) in other languages *)
+end

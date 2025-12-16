@@ -1,0 +1,53 @@
+[@@@import Models, "models.iml"]
+[@@@import Storage, "storage.iml"]
+[@@@import Services, "services.iml"]
+
+
+open Models
+open Storage
+open Services
+
+let run_cli () : unit =
+  let storage = init_storage in
+  let service = init_task_service storage in
+
+  (* Setup demo data *)
+  let user = { id = 1; name = {l|Alice|l} } in
+  let project = { id = 1; name = {l|Sample Project|l}; tasks = [] } in
+  let storage = add_user user storage in
+  let storage = add_project project storage in
+  let service = { storage = storage } in
+
+  (* Add a few tasks *)
+  let now = 0 in
+  let _, service = create_task
+    1
+    {l|Finish report|l}
+    {l|Complete the quarterly report|l}
+    High
+    (now + 1)
+    1
+    (Some 1)
+    service
+  in
+  let _, service = create_task
+    2
+    {l|Email client|l}
+    {l|Send update to client|l}
+    Medium
+    (now - 2)
+    1
+    (Some 1)
+    service
+  in
+
+  (* All tasks *)
+  let all_tasks = get_all_tasks service.storage in
+  
+  (* Overdue tasks *)
+  let overdue = overdue_tasks now service in
+  
+  (* High priority tasks *)
+  let high_priority = high_priority_tasks service in
+  
+  ()

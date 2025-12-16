@@ -1,0 +1,97 @@
+output: |
+  enum small_jar_state {
+    ready
+  }
+
+  enum big_jar_state {
+    ready
+  }
+
+  internal state {
+    small_jar : small_jar_state = small_jar_state.ready;
+    big_jar : big_jar_state = big_jar_state.ready;
+    small_jar_contents : int = 0;
+    big_jar_contents : int = 0;
+  }
+
+  function get_jar_max_units(jar: string): int {
+    return if jar == 'small_jar' then 3 else 5
+  }
+  function compute_transfer_amount(source_contents: int, target_contents: int, target_max: int): int {
+    let space_in_target : int = target_max - target_contents
+    return if source_contents <= space_in_target then source_contents else space_in_target
+  }
+  function fill_from_faucet_precond_0(jar: string): bool {
+    return (state.small_jar == small_jar_state.ready) && (jar == 'small_jar')
+  }
+
+  function fill_from_faucet_precond_1(jar: string): bool {
+    return (state.big_jar == big_jar_state.ready) && (jar == 'big_jar')
+  }
+
+  action fill_from_faucet {
+    jar: string
+    validate {
+      fill_from_faucet_precond_0(this.jar) || fill_from_faucet_precond_1(this.jar)
+    }
+  }
+
+  receive (a: fill_from_faucet){
+    if (fill_from_faucet_precond_0(a.jar)) then {
+      state.small_jar_contents = get_jar_max_units('small_jar')
+    }
+    if (fill_from_faucet_precond_1(a.jar)) then {
+      state.big_jar_contents = get_jar_max_units('big_jar')
+    }
+  }
+
+  function empty_jar_precond_0(jar: string): bool {
+    return (state.small_jar == small_jar_state.ready) && (jar == 'small_jar')
+  }
+
+  function empty_jar_precond_1(jar: string): bool {
+    return (state.big_jar == big_jar_state.ready) && (jar == 'big_jar')
+  }
+
+  action empty_jar {
+    jar: string
+    validate {
+      empty_jar_precond_0(this.jar) || empty_jar_precond_1(this.jar)
+    }
+  }
+
+  receive (a: empty_jar){
+    if (empty_jar_precond_0(a.jar)) then {
+      state.small_jar_contents = 0
+    }
+    if (empty_jar_precond_1(a.jar)) then {
+      state.big_jar_contents = 0
+    }
+  }
+
+  function pour_between_jars_precond_0(source: string, target: string): bool {
+    return (state.small_jar == small_jar_state.ready) && (source == 'small_jar' && target == 'big_jar')
+  }
+
+  function pour_between_jars_precond_1(source: string, target: string): bool {
+    return (state.big_jar == big_jar_state.ready) && (source == 'big_jar' && target == 'small_jar')
+  }
+
+  action pour_between_jars {
+    source: string
+    target: string
+    validate {
+      pour_between_jars_precond_0(this.source, this.target) || pour_between_jars_precond_1(this.source, this.target)
+    }
+  }
+
+  receive (a: pour_between_jars){
+    if (pour_between_jars_precond_0(a.source, a.target)) then {
+      state.big_jar_contents = state.big_jar_contents + compute_transfer_amount(state.small_jar_contents, state.big_jar_contents, get_jar_max_units('big_jar'))
+      state.small_jar_contents = state.small_jar_contents - compute_transfer_amount(state.small_jar_contents, state.big_jar_contents, get_jar_max_units('big_jar'))
+    }
+    if (pour_between_jars_precond_1(a.source, a.target)) then {
+      state.small_jar_contents = state.small_jar_contents + compute_transfer_amount(state.big_jar_contents, state.small_jar_contents, get_jar_max_units('small_jar'))
+      state.big_jar_contents = state.big_jar_contents - compute_transfer_amount(state.big_jar_contents, state.small_jar_contents, get_jar_max_units('small_jar'))
+    }
+  }

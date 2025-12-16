@@ -1,0 +1,25 @@
+
+
+let rec bad_sum (s : int) (i : int) : int =
+  if i <= 0 then s
+  else bad_sum (s + i) (i + 1)
+[@@no_validate]
+
+let maximum (a : real) (b : real) : real =
+  if a >. b then a else b
+[@@decomp top ~prune:true ~ctx_simp:true ()]
+
+let minimum (a : real) (b : real) : real =
+  if a <. b then a else b
+[@@decomp top ~prune:true ~ctx_simp:true ()]
+
+let absolute_value (x : real) : real =
+  if x >=. 0.0 then x else Real.(~-) x
+[@@decomp top ~prune:true ~ctx_simp:true ()]
+
+let sign (x : real) : int =
+  if x >. 0.0 then 1
+  else if x <. 0.0 then -1
+  else 0
+[@@decomp top ~prune:true ~ctx_simp:true ()]
+

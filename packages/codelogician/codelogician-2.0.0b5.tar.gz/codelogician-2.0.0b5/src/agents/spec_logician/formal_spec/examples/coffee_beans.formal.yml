@@ -1,0 +1,45 @@
+output: |
+  entity can { ready }
+
+  action select_beans {
+    index1: int
+    index2: int
+  }
+
+  internal state {
+    beans: string list = [];
+  }
+
+  function drop(n: int, xs: string list): string list {
+    return rev(take(len(xs) - n, rev(xs)))
+  }
+  function get_at(n: int, xs: string list): string {
+    return hd(drop(n, xs))
+  }
+  function delete_at(n: int, xs: string list): string list {
+    return app(take(n, xs), drop(n + 1, xs))
+  }
+
+  Feature: Bean Selection Game
+
+    Scenario: Match Beans Removal
+      Given can on ready
+      Given len(beans) >= 2
+      When select_beans
+      SuchThat index1 != index2
+      SuchThat index1 >= 0 && index1 < len(beans)
+      SuchThat index2 >= 0 && index2 < len(beans)
+      SuchThat get_at(index1, beans) == get_at(index2, beans)
+      Then can on ready
+      Then beans is add('black', delete_at(if index1 > index2 then index1 else index2, delete_at(if index1 < index2 then index1 else index2, beans)))
+
+    Scenario: Mismatch Beans Handling
+      Given can on ready
+      Given len(beans) >= 2
+      When select_beans
+      SuchThat index1 != index2
+      SuchThat index1 >= 0 && index1 < len(beans)
+      SuchThat index2 >= 0 && index2 < len(beans)
+      SuchThat get_at(index1, beans) != get_at(index2, beans)
+      Then can on ready
+      Then beans is if get_at(index1, beans) == 'white' then delete_at(index2, beans) else if get_at(index2, beans) == 'white' then delete_at(index1, beans) else beans

@@ -1,0 +1,403 @@
+{
+  "title": "TODO List Management",
+  "preamble": {
+    "entities": [
+      {
+        "name": "todo_editor",
+        "states": [
+          {
+            "name": "not_adding",
+            "is_initial": true
+          },
+          {
+            "name": "adding",
+            "is_initial": false
+          }
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "name": "initiate_add",
+        "local_properties": []
+      },
+      {
+        "name": "type_characters",
+        "local_properties": [
+          {
+            "name": "input",
+            "ipl_type": "string"
+          }
+        ]
+      },
+      {
+        "name": "commit_item",
+        "local_properties": []
+      },
+      {
+        "name": "delete_item",
+        "local_properties": [
+          {
+            "name": "index",
+            "ipl_type": "int"
+          },
+          {
+            "name": "from_completed",
+            "ipl_type": "bool"
+          }
+        ]
+      },
+      {
+        "name": "mark_complete",
+        "local_properties": [
+          {
+            "name": "index",
+            "ipl_type": "int"
+          }
+        ]
+      },
+      {
+        "name": "mark_all_complete",
+        "local_properties": []
+      },
+      {
+        "name": "mark_all_active",
+        "local_properties": []
+      },
+      {
+        "name": "clear_completed",
+        "local_properties": []
+      }
+    ],
+    "global_properties": [
+      {
+        "name": "new_item_field",
+        "ipl_type": "string",
+        "init_value": "''"
+      },
+      {
+        "name": "active_items",
+        "ipl_type": {
+          "type_ctor": "list",
+          "base_type": "string"
+        },
+        "init_value": "[]"
+      },
+      {
+        "name": "completed_items",
+        "ipl_type": {
+          "type_ctor": "list",
+          "base_type": "string"
+        },
+        "init_value": "[]"
+      }
+    ],
+    "fun_defs": [
+      {
+        "name": "drop",
+        "parameters": [
+          {
+            "name": "n",
+            "ipl_type": "int"
+          },
+          {
+            "name": "xs",
+            "ipl_type": {
+              "type_ctor": "list",
+              "base_type": "string"
+            }
+          }
+        ],
+        "return_type": {
+          "type_ctor": "list",
+          "base_type": "string"
+        },
+        "statements": [
+          "return rev(take(len(xs) - n, rev(xs)))"
+        ]
+      },
+      {
+        "name": "delete_at",
+        "parameters": [
+          {
+            "name": "n",
+            "ipl_type": "int"
+          },
+          {
+            "name": "xs",
+            "ipl_type": {
+              "type_ctor": "list",
+              "base_type": "string"
+            }
+          }
+        ],
+        "return_type": {
+          "type_ctor": "list",
+          "base_type": "string"
+        },
+        "statements": [
+          "return app(take(n, xs), drop(n + 1, xs))"
+        ]
+      },
+      {
+        "name": "nth",
+        "parameters": [
+          {
+            "name": "n",
+            "ipl_type": "int"
+          },
+          {
+            "name": "xs",
+            "ipl_type": {
+              "type_ctor": "list",
+              "base_type": "string"
+            }
+          }
+        ],
+        "return_type": "string",
+        "statements": [
+          "return hd(drop(n, xs))"
+        ]
+      }
+    ]
+  },
+  "scenarios": [
+    {
+      "title": "Initiate New Item",
+      "given_clauses": [
+        {
+          "entity": "todo_editor",
+          "state": "not_adding"
+        }
+      ],
+      "when_clause": {
+        "action": "initiate_add",
+        "local_properties": []
+      },
+      "such_that_clauses": [],
+      "then_clauses": [
+        {
+          "property": "new_item_field",
+          "expression": "''"
+        },
+        {
+          "entity": "todo_editor",
+          "state": "adding"
+        }
+      ]
+    },
+    {
+      "title": "Type Characters",
+      "given_clauses": [
+        {
+          "entity": "todo_editor",
+          "state": "adding"
+        }
+      ],
+      "when_clause": {
+        "action": "type_characters",
+        "local_properties": [
+          "input"
+        ]
+      },
+      "such_that_clauses": [],
+      "then_clauses": [
+        {
+          "property": "new_item_field",
+          "expression": "input"
+        }
+      ]
+    },
+    {
+      "title": "Commit New Item",
+      "given_clauses": [
+        {
+          "entity": "todo_editor",
+          "state": "adding"
+        }
+      ],
+      "when_clause": {
+        "action": "commit_item",
+        "local_properties": []
+      },
+      "such_that_clauses": [],
+      "then_clauses": [
+        {
+          "property": "active_items",
+          "expression": "add(new_item_field, active_items)"
+        },
+        {
+          "entity": "todo_editor",
+          "state": "not_adding"
+        }
+      ]
+    },
+    {
+      "title": "Delete Completed Item",
+      "given_clauses": [
+        {
+          "entity": "todo_editor",
+          "state": "not_adding"
+        }
+      ],
+      "when_clause": {
+        "action": "delete_item",
+        "local_properties": [
+          "index",
+          "from_completed"
+        ]
+      },
+      "such_that_clauses": [
+        {
+          "predicate": "from_completed == true"
+        },
+        {
+          "predicate": "index >= 0 && index < len(completed_items)"
+        }
+      ],
+      "then_clauses": [
+        {
+          "property": "completed_items",
+          "expression": "delete_at(index, completed_items)"
+        }
+      ]
+    },
+    {
+      "title": "Delete Active Item",
+      "given_clauses": [
+        {
+          "entity": "todo_editor",
+          "state": "not_adding"
+        }
+      ],
+      "when_clause": {
+        "action": "delete_item",
+        "local_properties": [
+          "index",
+          "from_completed"
+        ]
+      },
+      "such_that_clauses": [
+        {
+          "predicate": "from_completed == false"
+        },
+        {
+          "predicate": "index >= 0 && index < len(active_items)"
+        }
+      ],
+      "then_clauses": [
+        {
+          "property": "active_items",
+          "expression": "delete_at(index, active_items)"
+        }
+      ]
+    },
+    {
+      "title": "Mark Item Complete",
+      "given_clauses": [
+        {
+          "entity": "todo_editor",
+          "state": "not_adding"
+        }
+      ],
+      "when_clause": {
+        "action": "mark_complete",
+        "local_properties": [
+          "index"
+        ]
+      },
+      "such_that_clauses": [
+        {
+          "predicate": "index >= 0 && index < len(active_items)"
+        }
+      ],
+      "then_clauses": [
+        {
+          "property": "completed_items",
+          "expression": "add(nth(index, active_items), completed_items)"
+        },
+        {
+          "property": "active_items",
+          "expression": "delete_at(index, active_items)"
+        }
+      ]
+    },
+    {
+      "title": "Mark All Complete",
+      "given_clauses": [
+        {
+          "entity": "todo_editor",
+          "state": "not_adding"
+        },
+        {
+          "predicate": "len(active_items) > 0"
+        }
+      ],
+      "when_clause": {
+        "action": "mark_all_complete",
+        "local_properties": []
+      },
+      "such_that_clauses": [],
+      "then_clauses": [
+        {
+          "property": "completed_items",
+          "expression": "app(active_items, completed_items)"
+        },
+        {
+          "property": "active_items",
+          "expression": "[]"
+        }
+      ]
+    },
+    {
+      "title": "Mark All Active",
+      "given_clauses": [
+        {
+          "entity": "todo_editor",
+          "state": "not_adding"
+        },
+        {
+          "predicate": "len(completed_items) > 0"
+        }
+      ],
+      "when_clause": {
+        "action": "mark_all_active",
+        "local_properties": []
+      },
+      "such_that_clauses": [],
+      "then_clauses": [
+        {
+          "property": "active_items",
+          "expression": "app(completed_items, active_items)"
+        },
+        {
+          "property": "completed_items",
+          "expression": "[]"
+        }
+      ]
+    },
+    {
+      "title": "Clear Completed Items",
+      "given_clauses": [
+        {
+          "entity": "todo_editor",
+          "state": "not_adding"
+        },
+        {
+          "predicate": "len(completed_items) > 0"
+        }
+      ],
+      "when_clause": {
+        "action": "clear_completed",
+        "local_properties": []
+      },
+      "such_that_clauses": [],
+      "then_clauses": [
+        {
+          "property": "completed_items",
+          "expression": "[]"
+        }
+      ]
+    }
+  ]
+}

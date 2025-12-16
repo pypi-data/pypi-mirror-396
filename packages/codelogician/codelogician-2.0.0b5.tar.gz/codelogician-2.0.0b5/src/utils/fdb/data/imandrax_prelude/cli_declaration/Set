@@ -1,0 +1,114 @@
+module Set = struct
+  type Set.t =  ('a, bool) Map.t
+  (* The set type, implemented as a map from elements to boolean values indicating membership
+     
+     Usage/Pattern: Representing collections of unique elements where order doesn't matter,
+     like tracking unique IDs or implementing mathematical sets *)
+  
+  let Set.empty : ('a, bool) Map.t =
+    Map.const false
+  (* [Set.empty] creates an empty set where all elements are mapped to false
+     
+     Usage/Pattern: Initializing a new set before adding elements, similar to
+     creating an empty HashSet or Set in other languages *)
+  
+  let Set.full : ('a, bool) Map.t =
+    Map.const true
+  (* [Set.full] creates a full set where all elements are mapped to true
+     
+     Usage/Pattern: Creating a universal set containing all possible elements,
+     often used as a starting point for set operations like complement *)
+  
+  let Set.is_empty (s : ('a, bool) Map.t) : bool =
+    s = Set.empty
+  (* [Set.is_empty s] tests if set [s] is empty by comparing it to the empty set
+     
+     Usage/Pattern: Checking if a collection contains any elements before
+     performing operations, like validating user input or checking search results *)
+  
+  let Set.is_valid (_s : ('a, bool) Map.t) : bool =
+    true
+  (* [Set.is_valid s] checks if set [s] is valid. Always returns true since all sets are valid
+     
+     Usage/Pattern: Validating set integrity, though in this implementation all
+     sets are considered valid by design *)
+  
+  let Set.mem: 'a -> 'a Set.t -> bool =
+    <logic_core_builtin>
+  (* [Set.mem x s] tests if element [x] is a member of set [s]
+     
+     Usage/Pattern: Testing element existence in a collection, like checking
+     if a user ID exists or if a value is allowed *)
+  
+  let Set.subset: 'a Set.t -> 'a Set.t -> bool =
+    <logic_core_builtin>
+  (* [Set.subset s1 s2] tests if set [s1] is a subset of set [s2]
+     
+     Usage/Pattern: Checking if one collection's elements are fully contained
+     within another, like validating permissions or category hierarchies *)
+  
+  let Set.add: 'a -> 'a Set.t -> 'a Set.t =
+    <logic_core_builtin>
+  (* [Set.add x s] adds element [x] to set [s]
+     
+     Usage/Pattern: Adding unique elements to a collection, ensuring no duplicates,
+     like building a set of unique identifiers or tags *)
+  
+  let Set.remove: 'a -> 'a Set.t -> 'a Set.t =
+    <logic_core_builtin>
+  (* [Set.remove x s] removes element [x] from set [s]
+     
+     Usage/Pattern: Removing elements from a collection while maintaining uniqueness,
+     like removing revoked permissions or deleted items *)
+  
+  let Set.inter: 'a Set.t -> 'a Set.t -> 'a Set.t =
+    <logic_core_builtin>
+  (* [Set.inter s1 s2] computes the intersection of sets [s1] and [s2]
+     
+     Usage/Pattern: Finding common elements between two collections, like identifying
+     shared permissions or matching criteria *)
+  
+  let Set.union: 'a Set.t -> 'a Set.t -> 'a Set.t =
+    <logic_core_builtin>
+  (* [Set.union s1 s2] computes the union of sets [s1] and [s2]
+     
+     Usage/Pattern: Combining two collections while eliminating duplicates,
+     like merging user groups or combining search results *)
+  
+  let Set.complement: 'a Set.t -> 'a Set.t =
+    <logic_core_builtin>
+  (* [Set.complement s] computes the complement of set [s]
+     
+     Usage/Pattern: Finding all elements not in a set, useful for implementing
+     negation or finding excluded items *)
+  
+  let Set.diff: 'a Set.t -> 'a Set.t -> 'a Set.t =
+    <logic_core_builtin>
+  (* [Set.diff s1 s2] computes the difference of sets [s1] and [s2]
+     
+     Usage/Pattern: Finding elements in one collection but not another,
+     like identifying unique permissions or filtering exclusions *)
+  
+  let rec Set.of_list (_x_1934_21 : 'a list) : ('a, bool) Map.t =
+    match _x_1934_21 with
+    | [] -> Set.empty
+    | (x :: tl) -> Set.add x (Set.of_list tl)
+  (* [Set.of_list l] creates a set from list [l] by recursively adding each element
+     
+     Usage/Pattern: Converting sequences or arrays to sets while eliminating duplicates,
+     like creating a set of unique values from user input or data import *)
+  
+  let Set.++ : 'a Set.t =
+    Set.union
+  (* [Set.++] is an infix operator alias for [Set.union]
+     
+     Usage/Pattern: Providing a more concise syntax for combining sets,
+     similar to overloaded operators in other languages *)
+  
+  let Set.-- : 'a Set.t =
+    Set.diff
+  (* [Set.--] is an infix operator alias for [Set.diff]
+     
+     Usage/Pattern: Providing a more concise syntax for set difference,
+     similar to overloaded operators in other languages *)
+end

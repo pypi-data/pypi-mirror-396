@@ -1,0 +1,51 @@
+[@@@import Currency, "currency.iml"]
+
+
+(* Liability type enumeration *)
+type liability_type =
+  | LOAN
+  | MORTGAGE
+  | CREDIT_CARD
+  | OTHER
+
+(* Convert liability type to string *)
+let liability_type_to_string (lt : liability_type) : LString.t =
+  match lt with
+  | LOAN -> {l|Loan|l}
+  | MORTGAGE -> {l|Mortgage|l}
+  | CREDIT_CARD -> {l|Credit Card|l}
+  | OTHER -> {l|Other|l}
+
+(* Liability record type *)
+type liability = {
+  amount: real
+}
+
+(* Create a liability with validation *)
+let create_liability (amount : real) : liability option =
+  if amount <. 0.0 then
+    None
+  else
+    Some { amount = amount }
+
+(* Check equality of two liabilities *)
+let liability_equal (l1 : liability) (l2 : liability) : bool =
+  l1.amount = l2.amount
+
+(* Convert liability to a tuple (for dictionary-like representation) *)
+let liability_to_dict (l : liability) : real =
+  l.amount
+
+(* Create liability from dictionary-like representation *)
+let liability_from_dict (amount : real) : liability option =
+  create_liability amount
+
+(* Main function demonstrating usage *)
+let main () : (liability option * bool * real * liability option) option =
+  let open Option in
+  let* liability = create_liability 5000.0 in
+  let* liability2 = create_liability 5000.0 in
+  let are_equal = liability_equal liability liability2 in
+  let liability_dict = liability_to_dict liability in
+  let* liability_from_dict_result = liability_from_dict liability_dict in
+  Some (Some liability, are_equal, liability_dict, Some liability_from_dict_result)

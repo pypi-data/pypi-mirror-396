@@ -1,0 +1,35 @@
+[@@@import Models, "models.iml"]
+
+
+open Models
+
+type in_memory_storage = {
+  users : (int, user option) Map.t;
+  projects : (int, project option) Map.t;
+  tasks : (int, task option) Map.t;
+}
+
+let init_storage : in_memory_storage = {
+  users = Map.const None;
+  projects = Map.const None;
+  tasks = Map.const None;
+}
+
+let add_user (user : user) (storage : in_memory_storage) : in_memory_storage =
+  { storage with users = Map.add user.id (Some user) storage.users }
+
+let add_project (project : project) (storage : in_memory_storage) : in_memory_storage =
+  { storage with projects = Map.add project.id (Some project) storage.projects }
+
+let add_task (task : task) (project_id : int) (storage : in_memory_storage) : in_memory_storage =
+  let new_tasks = Map.add task.id (Some task) storage.tasks in
+  let project_opt = Map.get project_id storage.projects in
+  let updated_projects =
+    match project_opt with
+    | Some project ->
+        Map.add project_id 
+          (Some { project with tasks = List.append project.tasks [task] })
+          storage.projects
+    | None -> storage.projects
+  in
+  { storage with tasks = new_tasks; projects = updated_projects }

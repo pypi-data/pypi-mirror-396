@@ -1,0 +1,94 @@
+output: |
+  entity todo_editor { not_adding adding }
+
+  action initiate_add { }
+  action type_characters {
+    input: string
+  }
+  action commit_item { }
+  action delete_item {
+    index: int
+    from_completed: bool
+  }
+  action mark_complete {
+    index: int
+  }
+  action mark_all_complete { }
+  action mark_all_active { }
+  action clear_completed { }
+
+  internal state {
+    new_item_field: string = '';
+    active_items: string list = [];
+    completed_items: string list = [];
+  }
+
+  function drop(n: int, xs: string list): string list {
+    return rev(take(len(xs) - n, rev(xs)))
+  }
+  function delete_at(n: int, xs: string list): string list {
+    return app(take(n, xs), drop(n + 1, xs))
+  }
+  function nth(n: int, xs: string list): string {
+    return hd(drop(n, xs))
+  }
+
+  Feature: TODO List Management
+
+    Scenario: Initiate New Item
+      Given todo_editor on not_adding
+      When initiate_add
+      Then new_item_field is ''
+      Then todo_editor on adding
+
+    Scenario: Type Characters
+      Given todo_editor on adding
+      When type_characters
+      Then new_item_field is input
+
+    Scenario: Commit New Item
+      Given todo_editor on adding
+      When commit_item
+      Then active_items is add(new_item_field, active_items)
+      Then todo_editor on not_adding
+
+    Scenario: Delete Completed Item
+      Given todo_editor on not_adding
+      When delete_item
+      SuchThat from_completed == true
+      SuchThat index >= 0 && index < len(completed_items)
+      Then completed_items is delete_at(index, completed_items)
+
+    Scenario: Delete Active Item
+      Given todo_editor on not_adding
+      When delete_item
+      SuchThat from_completed == false
+      SuchThat index >= 0 && index < len(active_items)
+      Then active_items is delete_at(index, active_items)
+
+    Scenario: Mark Item Complete
+      Given todo_editor on not_adding
+      When mark_complete
+      SuchThat index >= 0 && index < len(active_items)
+      Then completed_items is add(nth(index, active_items), completed_items)
+      Then active_items is delete_at(index, active_items)
+
+    Scenario: Mark All Complete
+      Given todo_editor on not_adding
+      Given len(active_items) > 0
+      When mark_all_complete
+      Then completed_items is app(active_items, completed_items)
+      Then active_items is []
+
+    Scenario: Mark All Active
+      Given todo_editor on not_adding
+      Given len(completed_items) > 0
+      When mark_all_active
+      Then active_items is app(completed_items, active_items)
+      Then completed_items is []
+
+    Scenario: Clear Completed Items
+      Given todo_editor on not_adding
+      Given len(completed_items) > 0
+      When clear_completed
+      Then completed_items is []

@@ -1,0 +1,84 @@
+output: |
+  entity machine { fetching assembling frying flipping drying glazing serving }
+  entity dough { not_started in_progress ready }
+  entity mixing { not_started dry_mixing wet_mixing completed }
+
+  action fetch_complete { }
+  action dough_ready { }
+  action dry_mix_complete { }
+  action wet_mix_complete { }
+  action assembly_complete { }
+  action frying_complete { }
+  action flipping_complete { }
+  action drying_complete { }
+  action glazing_complete { }
+  action serving_complete { }
+
+  internal state {
+    dry_mix_done: bool = false;
+    wet_mix_done: bool = false;
+  }
+
+
+  Feature: Donut Making Machine Process
+
+    Scenario: Start Assembly Process
+      Given machine on fetching
+      When fetch_complete
+      Then machine on assembling
+      Then dough on in_progress
+
+    Scenario: Prepare Dough Mixing
+      Given machine on assembling
+      Given dough on in_progress
+      When dough_ready
+      Then dough on ready
+      Then mixing on not_started
+
+    Scenario: Complete Dry Mix
+      Given machine on assembling
+      Given mixing on dry_mixing
+      When dry_mix_complete
+      Then dry_mix_done is true
+
+    Scenario: Complete Wet Mix
+      Given machine on assembling
+      Given mixing on wet_mixing
+      When wet_mix_complete
+      Then wet_mix_done is true
+
+    Scenario: Finalize Assembly
+      Given machine on assembling
+      Given dry_mix_done == true && wet_mix_done == true
+      When assembly_complete
+      Then machine on frying
+      Then mixing on completed
+
+    Scenario: Begin Frying Process
+      Given machine on frying
+      When frying_complete
+      Then machine on flipping
+
+    Scenario: Flip Donut
+      Given machine on flipping
+      When flipping_complete
+      Then machine on drying
+
+    Scenario: Dry Donut
+      Given machine on drying
+      When drying_complete
+      Then machine on glazing
+
+    Scenario: Apply Glazing
+      Given machine on glazing
+      When glazing_complete
+      Then machine on serving
+
+    Scenario: Complete Serving Cycle
+      Given machine on serving
+      When serving_complete
+      Then machine on fetching
+      Then dough on not_started
+      Then mixing on not_started
+      Then dry_mix_done is false
+      Then wet_mix_done is false

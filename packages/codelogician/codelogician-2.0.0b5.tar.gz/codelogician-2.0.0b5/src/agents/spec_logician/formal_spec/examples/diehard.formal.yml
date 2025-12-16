@@ -1,0 +1,67 @@
+output: |
+  entity small_jar { ready }
+  entity big_jar { ready }
+
+  action fill_from_faucet {
+    jar: string
+  }
+  action empty_jar {
+    jar: string
+  }
+  action pour_between_jars {
+    source: string
+    target: string
+  }
+
+  internal state {
+    small_jar_contents: int = 0;
+    big_jar_contents: int = 0;
+  }
+
+  function get_jar_max_units(jar: string): int {
+    return if jar == 'small_jar' then 3 else 5
+  }
+  function compute_transfer_amount(source_contents: int, target_contents: int, target_max: int): int {
+    let space_in_target : int = target_max - target_contents
+    return if source_contents <= space_in_target then source_contents else space_in_target
+  }
+
+  Feature: Water Transfer Between Jars
+
+    Scenario: Fill Small Jar
+      Given small_jar on ready
+      When fill_from_faucet
+      SuchThat jar == 'small_jar'
+      Then small_jar_contents is get_jar_max_units('small_jar')
+
+    Scenario: Fill Big Jar
+      Given big_jar on ready
+      When fill_from_faucet
+      SuchThat jar == 'big_jar'
+      Then big_jar_contents is get_jar_max_units('big_jar')
+
+    Scenario: Empty Small Jar
+      Given small_jar on ready
+      When empty_jar
+      SuchThat jar == 'small_jar'
+      Then small_jar_contents is 0
+
+    Scenario: Empty Big Jar
+      Given big_jar on ready
+      When empty_jar
+      SuchThat jar == 'big_jar'
+      Then big_jar_contents is 0
+
+    Scenario: Pour Small to Big
+      Given small_jar on ready
+      When pour_between_jars
+      SuchThat source == 'small_jar' && target == 'big_jar'
+      Then big_jar_contents is big_jar_contents + compute_transfer_amount(small_jar_contents, big_jar_contents, get_jar_max_units('big_jar'))
+      Then small_jar_contents is small_jar_contents - compute_transfer_amount(small_jar_contents, big_jar_contents, get_jar_max_units('big_jar'))
+
+    Scenario: Pour Big to Small
+      Given big_jar on ready
+      When pour_between_jars
+      SuchThat source == 'big_jar' && target == 'small_jar'
+      Then small_jar_contents is small_jar_contents + compute_transfer_amount(big_jar_contents, small_jar_contents, get_jar_max_units('small_jar'))
+      Then big_jar_contents is big_jar_contents - compute_transfer_amount(big_jar_contents, small_jar_contents, get_jar_max_units('small_jar'))

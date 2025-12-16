@@ -1,0 +1,31 @@
+(* Numerical derivative calculations - Level 4 *)
+
+open Core_arithmetic
+
+let numerical_derivative (func : real -> real) (x : real) (h : real) : real option =
+  (* Calculate numerical derivative using central difference. *)
+  let x_plus_h = add x h in
+  let x_minus_h = subtract x h in
+  
+  let f_plus = func x_plus_h in
+  let f_minus = func x_minus_h in
+  
+  let numerator = subtract f_plus f_minus in
+  let denominator = multiply 2.0 h in
+  
+  divide numerator denominator
+
+let second_derivative (func : real -> real) (x : real) (h : real) : real option =
+  (* Calculate second derivative. *)
+  let x_plus_h = add x h in
+  let x_minus_h = subtract x h in
+  
+  let f_center = func x in
+  let f_plus = func x_plus_h in
+  let f_minus = func x_minus_h in
+  
+  (* f''(x) ≈ (f(x+h) - 2f(x) + f(x-h)) / h² *)
+  let numerator = subtract (add f_plus f_minus) (multiply 2.0 f_center) in
+  let denominator = multiply h h in
+  
+  divide numerator denominator
