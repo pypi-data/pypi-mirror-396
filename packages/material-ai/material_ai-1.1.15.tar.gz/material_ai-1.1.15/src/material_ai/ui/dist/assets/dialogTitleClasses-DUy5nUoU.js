@@ -1,0 +1,1 @@
+import{Tr as e,wr as t}from"./index-DKkOXU2Y.js";function n(t){return e(`MuiDialogTitle`,t)}var r=t(`MuiDialogTitle`,[`root`]);export{n,r as t};

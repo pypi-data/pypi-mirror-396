@@ -1,0 +1,1 @@
+import{Fr as e,Ir as t}from"./index-DKkOXU2Y.js";var n=t(e()).createContext();export{n as t};

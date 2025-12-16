@@ -1,0 +1,1 @@
+import{ar as e,ir as t}from"./index-DKkOXU2Y.js";export{t as default,e as useDefaultProps};

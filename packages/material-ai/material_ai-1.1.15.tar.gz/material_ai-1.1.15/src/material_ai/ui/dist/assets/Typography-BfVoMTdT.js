@@ -1,0 +1,1 @@
+import{_n as e,vn as t,yn as n}from"./index-DKkOXU2Y.js";export{e as default,t as getTypographyUtilityClass,n as typographyClasses};

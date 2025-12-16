@@ -1,0 +1,1 @@
+import{wr as e}from"./index-DKkOXU2Y.js";var t=e(`MuiStack`,[`root`]);export{t};
