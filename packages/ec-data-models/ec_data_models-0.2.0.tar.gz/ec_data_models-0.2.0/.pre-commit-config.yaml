@@ -1,0 +1,33 @@
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Use the latest ruff version
+    rev: v0.13.1
+    hooks:
+      # 1. Run the formatter first to fix any style issues.
+      - id: ruff-format
+      # 2. Run the linter to catch potential bugs.
+      - id: ruff
+        # This prevents ruff from reporting formatting errors that it's about to fix.
+        args: [--fix, --exit-non-zero-on-fix]
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: "v1.10.1" # Use a recent version of mypy
+    hooks:
+      - id: mypy
+        # Provide all necessary dependencies for mypy to understand your code.
+        # pre-commit runs hooks in isolated environments, so we must install
+        # everything mypy needs to analyze your code and its dependencies.
+        additional_dependencies: [
+            # Core libraries for your package
+            "sqlalchemy>=1.4,<3.0",
+            "sqlmodel>=0.0.14",
+            "psycopg>=3.1,<4.0",
+          ]

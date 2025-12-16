@@ -1,0 +1,147 @@
+// Use DBML to define your database structure
+// Docs: https://dbml.dbdiagram.io/docs
+
+// Tradeoffs
+// - Sponsorship for the club in generel and for events is in one table; decided by eid = NULL
+
+Table person {
+  id integer [primary key]
+  email email [not null]
+  username varchar
+  first_name varchar
+  last_name varchar
+  birthdate date
+  created_at timestamp
+  // CV in here or generel "person has file" relation
+
+  github url
+  linkedin url
+  personal_website url
+  CV document
+
+  // voluntary disclosure information
+  nationality enum
+  work_permission_ch enum // yes, no, require visa sponshorship
+  work_permission_eu enum
+  gender enum
+}
+
+Table student_info {
+  id integer [primary key]
+  pid integer [not null]
+  role enum // e.g. bachelor, master, etc.
+  field_of_study enum
+  gpa integer
+  start_date date
+  end_date date // Graduation date
+}
+Ref: student_info.pid > person_organisation_association.primary
+
+Table job_info {
+  id integer [primary key]
+  role enum
+
+}
+Ref: job_info.id > person_organisation_association.primary
+
+Table member {
+  id integer [primary key]
+  ec_email email [not null]
+}
+Ref: member.id > person.id
+
+Table alumni {
+  id integer [primary key]
+}
+Ref: alumni.id > member.id
+
+// member can have multiple roles per semester
+Table member_semester_info {
+  id integer [primary key]
+  member_id integer [not null]
+  role varchar
+  semester varchar
+}
+Ref: member_semester_info.member_id > member.id
+Ref: member_semester_info.id > department.id
+
+Table department {
+  id integer [primary key]
+  name varchar [not null]
+  type enum [not null] // committee, initiative, ...
+}
+// view filter for type = committee / initiative [/ advisor]
+
+// ---------------------------------------------------
+
+Table event {
+  id integer [primary key]
+  type enum [not null] // internal, ACM, talk, Hackathon, Both, SDD, Launch, ..., other
+  start timestamp
+  end timestamp
+  parent_event integer
+  tags enum // "Multiselect" enum
+}
+Ref: event.parent_event > event.id
+
+// Add Luma feedback fields, e.g. x/5 rating & text field
+Table person_event {
+  pid integer
+  eid integer
+  primary key (pid, eid)
+  role enum [not null]
+  // description varchar
+  person_organisation_association integer
+  outreach_channel enum
+  attendet bool // default true
+  has_been_at_event_before bool // user input / question
+  dietary_preference enum
+}
+Ref: person_event.pid > person.id
+Ref: person_event.eid > event.id
+Ref: person_event.person_organisation_association > person_organisation_association.primary
+
+// tracking helpers, organizers, etc.
+Table helper_shift {
+  id integer [primary key]
+  pid integer
+  eid integer
+  role string // from luma multi-select; what role describes you best
+  start timestamp
+  end timestamp
+}
+Ref: helper_shift.eid > event.id
+Ref: helper_shift.pid > person.id
+
+
+// ---------------------------------------
+
+Table organisation {
+  id integer [primary key]
+  name string [not null]
+}
+
+Table organisation_event {
+  oid integer
+  eid integer
+  primary key (oid, eid)
+  role enum
+}
+Ref: organisation_event.oid > organisation.id
+Ref: organisation_event.eid > event.id
+
+Table sponsorship {
+  id integer [primary key]
+  type enum [not null] // in kind
+  eid integer // optional sponsor deal associated with event
+}
+Ref: sponsorship.id > organisation.id
+Ref: sponsorship.eid > event.id
+
+Table person_organisation_association {
+  oid integer
+  pid integer
+  primary key (oid, pid)
+}
+Ref: person_organisation_association.oid > organisation.id
+Ref: person_organisation_association.pid > person.id
