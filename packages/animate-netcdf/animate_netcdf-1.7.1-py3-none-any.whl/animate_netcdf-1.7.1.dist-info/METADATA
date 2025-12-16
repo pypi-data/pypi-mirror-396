@@ -1,0 +1,168 @@
+Metadata-Version: 2.4
+Name: animate-netcdf
+Version: 1.7.1
+Summary: A comprehensive tool for creating animations from NetCDF data files
+Home-page: https://github.com/floriancochard/animate-netcdf
+Author: Florian Cochard
+Author-email: Florian Cochard <florian@weatherwise.fr>
+Maintainer-email: Florian Cochard <florian@weatherwise.fr>
+License: MIT License
+        
+        Copyright (c) 2025 Florian Cochard
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+        
+Project-URL: Homepage, https://github.com/floriancochard/animate-netcdf
+Project-URL: Repository, https://github.com/floriancochard/animate-netcdf
+Project-URL: Documentation, https://github.com/floriancochard/animate-netcdf#readme
+Project-URL: Issues, https://github.com/floriancochard/animate-netcdf/issues
+Keywords: netcdf,animation,visualization,climate,weather,oceanography
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Science/Research
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Topic :: Scientific/Engineering :: Visualization
+Classifier: Topic :: Multimedia :: Video
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: xarray>=2023.1.0
+Requires-Dist: numpy>=1.21.0
+Requires-Dist: matplotlib>=3.5.0
+Requires-Dist: cartopy>=0.20.0
+Requires-Dist: psutil>=5.8.0
+Requires-Dist: netCDF4>=1.6.0
+Provides-Extra: dev
+Requires-Dist: pytest>=6.0; extra == "dev"
+Requires-Dist: pytest-cov>=2.0; extra == "dev"
+Requires-Dist: black>=21.0; extra == "dev"
+Requires-Dist: flake8>=3.8; extra == "dev"
+Dynamic: author
+Dynamic: home-page
+Dynamic: license-file
+Dynamic: requires-python
+
+# NetCDF Animation Creator
+
+Create beautiful animations from NetCDF files with support for both single files and multiple files without concatenation. **75-87% faster** than traditional concatenation methods.
+
+## 🚀 Quick Start
+
+### Installation
+
+```bash
+pip install -e .
+```
+
+### Basic Usage
+
+```bash
+# Interactive mode (recommended)
+anc
+
+# Single file
+anc your_file.nc
+# or
+anc your_file.nc --variable InstantaneousRainRate --type efficient --fps 15
+
+
+# Multiple files
+anc *.nc
+# or
+anc F4C_00.2.SEG01.OUT.*.nc --variable InstantaneousRainRate --type efficient --fps 15
+
+# Configuration (optional)
+anc config
+# or
+anc config *.nc --output my_config.json
+# or
+anc "*.nc" --config my_config.json
+
+```
+
+## ✅ Key Features
+
+- **Multi-File Support**: Process multiple NetCDF files directly (no concatenation needed)
+- **Smart Dimension Handling**: Auto-detects animation dimension (time, level, etc.)
+- **Three Animation Types**: `efficient` (fast), `contour` (detailed), `heatmap` (simple)
+- **Configuration Management**: Interactive setup and JSON-based configuration
+- **Zoom Functionality**: Crop domain by specified zoom factor
+
+## 🔧 Command Line Options
+
+| Option       | Description                                  | Default        |
+| ------------ | -------------------------------------------- | -------------- |
+| `--variable` | Variable name to animate                     | Required       |
+| `--type`     | Plot type: `efficient`, `contour`, `heatmap` | `efficient`    |
+| `--fps`      | Frames per second                            | `10`           |
+| `--output`   | Output filename                              | Auto-generated |
+| `--config`   | Load configuration from JSON file            | None           |
+| `--zoom`     | Zoom factor for cropping domain              | 1.0            |
+
+## 🧪 Testing
+
+```bash
+# Validate setup
+anc validate
+
+# Run tests
+anc test --full
+```
+
+## 🚀 Deployment
+
+This project uses automated deployment to PyPI via GitHub Actions. To release a new version:
+
+### Automatic Deployment
+
+1. **Create a new version tag:**
+
+   ```bash
+   python scripts/release.py patch    # for bug fixes
+   python scripts/release.py minor    # for new features
+   python scripts/release.py major    # for breaking changes
+   ```
+
+2. **Manual tag creation (alternative):**
+   ```bash
+   # Update version in pyproject.toml
+   git add pyproject.toml
+   git commit -m "Bump version to X.Y.Z"
+   git tag vX.Y.Z
+   git push origin main
+   git push origin vX.Y.Z
+   ```
+
+### Setup Requirements
+
+1. **PyPI API Token:** Create a PyPI API token at https://pypi.org/manage/account/token/
+2. **GitHub Secrets:** Add your PyPI token as a GitHub secret named `PYPI_API_TOKEN`
+   - Go to your GitHub repository → Settings → Secrets and variables → Actions
+   - Add new repository secret with name `PYPI_API_TOKEN` and your token as the value
+
+The GitHub Actions workflow will automatically:
+
+- Build the package when you push a version tag (e.g., `v1.0.3`)
+- Run tests on every push to main/develop branches
+- Publish to PyPI when tests pass
