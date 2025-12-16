@@ -1,0 +1,160 @@
+\documentclass[11pt, oneside]{article}   	% use "amsart" instead of "article" for AMSLaTeX format
+\usepackage{geometry}                		% See geometry.pdf to learn the layout options. There are lots.
+\geometry{letterpaper}                   		% ... or a4paper or a5paper or ... 
+%\geometry{landscape}                		% Activate for for rotated page geometry
+%\usepackage[parfill]{parskip}    		% Activate to begin paragraphs with an empty line rather than an indent
+\usepackage{graphicx}			
+							
+\usepackage{amssymb}
+
+\usepackage{hyperref} 
+\hypersetup{
+    colorlinks = true
+}
+
+\usepackage{cleveref}
+\crefformat{footnote}{#2\footnotemark[#1]#3}
+
+\title{Memo: UVBeam FITS Format}
+\author{Bryna Hazelton, and the pyuvdata team}
+\date{Jan 27, 2018}							% Activate to display a given date or no date
+
+\begin{document}
+\maketitle
+\section{Introduction}
+This memo introduces a new FITS file format for storing
+beam models associated with the UVBeam object in
+pyuvdata\footnote{\url{https://github.com/RadioAstronomySoftwareGroup/pyuvdata}}, a python package that
+provides an interface to interferometric data. Here, we describe the required and optional elements
+and the structure of a UVBeam FITS (hereafter \textit{beamfits}) file. 
+
+The contents of \textit{beamfits} files are explicitly mapped to attributes of the UVBeam object in 
+pyuvdata. For more details on these parameters, please see 
+\url{http://pyuvdata.readthedocs.io/en/latest/uvbeam_parameters.html}.
+For examples of how to interact with this format using pyuvdata, please see the
+pyuvdata tutorial: \url{http://pyuvdata.readthedocs.io/en/latest/tutorial.html}.
+
+\section{Overview}
+There are two main types of \textit{beamfits} files, depending on whether the beams are 
+pixelized in HEALPix\footnote{\url{https://healpix.jpl.nasa.gov/}} or a regular pixel grid. There are also two subtypes of files for power 
+and E-field beams for each pixelization scheme. So there are four primary flavors of 
+\textit{beamfits} files which have small differences in format. There are also several optional 
+metadata components that may or may not be present in any given file. These variations are 
+described in detail in the following sections.
+
+\section{Primary HDU}
+The primary HDU of \textit{beamfits} files is an Image HDU containing the beam model.
+
+\subsection{Primary Header}
+The following are required keywords in the primary header of a  \textit{beamfits} file. For more detailed explanations 
+of what these keywords mean, see the descriptions on pyuvdata's ReadTheDocs uvbeam\_parameters page. 
+The UVBeam parameter corresponding to each keyword is noted in parentheses.
+As with all FITS files, HISTORY and COMMENT cards are allowed.
+
+\begin{itemize}
+\item{\textbf{BTYPE}: \textit{string} should be set to either `power' or `efield' to designate a power or E-field beam type. (beam\_type)}
+\item{\textbf{NORMSTD}: \textit{string} should be set to one of `physical', `peak' or `solid\_angle'. (data\_normalization)}
+\item{\textbf{COORDSYS}: \textit{string} should be set to one of `az\_za' (for an azimuth, zenith angle regular grid), `orthoslant\_zenith' (for an orthoslant projection at zenith) or `healpix' (for an azimuth, zenith angle HEALPix map with zenith at the north pole). (pixel\_coordinate\_system)}
+\item{\textbf{TELESCOP}: \textit{string} Telescope name. (telescope\_name)}
+\item{\textbf{FEED}: \textit{string} Feed name (used to distinguish between different physical feed types on the same telescope). (feed\_name)}
+\item{\textbf{FEEDVER}: \textit{string} Feed version (used to distinguish between different versions of the same feed on the same telescope). (feed\_version)}
+\item{\textbf{MODEL}: \textit{string} Model name  (used to distinguish between different models of the same hardware). (model\_name)}
+\item{\textbf{MODELVER}: \textit{string} Model version (used to distinguish between different versions of the same models of the same hardware). (model\_version)}
+\item{\textbf{FEEDLIST}: \textit{string list} Only for E-field beams. The list of feeds orientations represented in the data. (feed\_array)}
+\item{\textbf{NSIDE}: \textit{integer} Only for HEALPix beams. The NSIDE of the HEALPix map. (nside)}
+\item{\textbf{ORDERING}: \textit{string} Only for HEALPix beams. The ordering parameter of the HEALPix map, allowed values are `nested' and `ring'. (ordering)}
+\end{itemize}
+
+\subsection{Beam Data}
+The axes of the data array in the primary HDU depends on the pixelization scheme.
+
+\subsubsection{HEALPix beam axes}
+For HEALPix beams, the data axes (values of the CTYPE\textit{m} keywords in order) are: 
+\begin{enumerate}
+\item{\textbf{PIX\_IND}: index into the HEALPix pixel array (in the HPX\_INDS extension) This is needed because partial sky maps are supported so pixels may be missing (full sky maps are not handled differently, they have the same required elements as partial maps). The corresponding CRVAL\textit{m}, CRPIX\textit{m}, and CDELT\textit{m} values should all be 1. (pixel\_array)}
+\item{\textbf{FREQ}: Frequency axis, the corresponding CRVAL\textit{m} shall have the reference frequency for the data set, both CRVAL\textit{m} and CDELT\textit{m} are given in units given by the CUNIT\textit{m} keyword, which is usually Hz. (freq\_array)}
+\item{\textbf{STOKES or FEEDIND (Polarization axis)}: STOKES for power beams give the polarization integer convention from uvfits: pseudo-stokes 1:4 (pI, pQ, pU, pV);  circular -1:-4 (RR, LL, RL, LR); linear -5:-8 (XX, YY, XY, YX). Note that while this is based on AIPS memo 117, this is never true Stokes, it's either instrumental polarization or pseudo-Stokes, the axis is named STOKES purely to be consistent with the uvfits convention.  FEEDIND for E-field beams give the index into the FEEDLIST. The corresponding CRPIX\textit{m} values should be 1 for both and for FEEDIND the CRVAL\textit{m} and CDELT\textit{m} keywords should 1. (polarization\_array or feed\_array)}
+\item{\textbf{IF}: The IF axis enumerates spectral windows (frequency bands). The corresponding CRVAL\textit{m}, CRPIX\textit{m}, and CDELT\textit{m} keywords should all have the value 1. Currently only one spectral window is supported so this can only have length 1. (spw\_array)}
+\item{\textbf{VECIND}: Basis vector index, the index into the dimensions of the basis vector array (stored in the BASISVEC extension). This is usually length 1 for power beams and length 2 for E-field beams. The corresponding CRVAL\textit{m}, CRPIX\textit{m}, and CDELT\textit{m} keywords should all have the value 1.}
+\item{\textbf{COMPLEX}: real and imaginary (axis length 2), the first entry on this axis contains the real part of the complex beam and the second contains the corresponding imaginary component. The corresponding CRVAL\textit{m}, CRPIX\textit{m}, and CDELT\textit{m} keywords should all have the value 1.}
+\end{enumerate}
+
+\subsubsection{regularly pixelized beam axes}
+For regularly pixelized beams, the data axes (values of the CTYPE\textit{m} keywords in order) are: 
+
+\begin{enumerate}
+\item{\textbf{AZIMUTH or ZENX-SIN (First Image Axis)}: The coordinates for the first image axis, either azimuth angle or the East/West axis of a zenith orthoslant projection, should match the coordinate system given by the COORDSYS keyword. The values of the coordinates are set by the CRVAL\textit{m}, CRPIX\textit{m}, and CDELT\textit{m} keywords and the CUNIT\textit{m} keyword gives the units (default is degrees).(axis1\_array)}
+\item{\textbf{ZENANGLE or ZENY-SIN (Second Image Axis)}: The coordinates for the second image axis, either zenith angle or the North/South axis of a zenith orthoslant projection, should match the coordinate system given by the COORDSYS keyword. The values of the coordinates are set by the CRVAL\textit{m}, CRPIX\textit{m}, and CDELT\textit{m} keywords and the CUNIT\textit{m} keyword gives the units (default is degrees).(axis1\_array)}
+\item{\textbf{FREQ}: Frequency axis, the corresponding CRVAL\textit{m} shall have the reference frequency for the data set, both CRVAL\textit{m} and CDELT\textit{m} are given in units given by the CUNIT\textit{m} keyword, which is usually Hz. (freq\_array)}
+\item{\textbf{STOKES or FEEDIND (Polarization axis)}: STOKES for power beams give the polarization integer convention from uvfits: pseudo-stokes 1:4 (pI, pQ, pU, pV);  circular -1:-4 (RR, LL, RL, LR); linear -5:-8 (XX, YY, XY, YX). Note that while this is based on AIPS memo 117, this is never true Stokes, it's either instrumental polarization or pseudo-Stokes, the axis is named STOKES purely to be consistent with the uvfits convention.  FEEDIND for E-field beams give the index into the FEEDLIST. The corresponding CRPIX\textit{m} values should be 1 for both and for FEEDIND the CRVAL\textit{m} and CDELT\textit{m} keywords should 1. (polarization\_array or feed\_array)}
+\item{\textbf{IF}: The IF axis enumerates spectral windows (frequency bands). The corresponding CRVAL\textit{m}, CRPIX\textit{m}, and CDELT\textit{m} keywords should all have the value 1. Currently only one spectral window is supported so this can only have length 1. (spw\_array)}
+\item{\textbf{VECIND}: Basis vector index, the index into the dimensions of the basis vector array (stored in the BASISVEC extension). This is usually length 1 for power beams and length 2 for E-field beams. The corresponding CRVAL\textit{m}, CRPIX\textit{m}, and CDELT\textit{m} keywords should all have the value 1.}
+\item{\textbf{COMPLEX}: real and imaginary (axis length 2), the first entry on this axis contains the real part of the complex beam and the second contains the corresponding imaginary component. The corresponding CRVAL\textit{m}, CRPIX\textit{m}, and CDELT\textit{m} keywords should all have the value 1.}
+\end{enumerate}
+
+\section{Basis Vector HDU}
+The basis vector HDU is a required element of E-field \textit{beamfits} files. It is allowed but not required for power beam files. It is an Image HDU containing the basis vector array.
+The \textbf{EXTNAME} keyword in the header must be set to BASISVEC. The only other required keyword in the header is:
+
+\begin{itemize}
+\item{\textbf{COORDSYS}: \textit{string} should be set to one of `az\_za' (for an azimuth, zenith angle regular grid), `orthoslant\_zenith' (for an orthoslant projection at zenith) or `healpix'  and must match the corresponding keyword in the primary header (this is used as a consistency check). (pixel\_coordinate\_system)}
+\end{itemize}
+
+\subsection{Basis Vector Data}
+The axes of the data array in the basis vector HDU depends on the pixelization scheme.
+
+\subsubsection{HEALPix basis vector axes}
+For HEALPix beams, the basis vector data axes (values of the CTYPE\textit{m} keywords in order) are: 
+
+\begin{enumerate}
+\item{\textbf{PIX\_IND}: index into the HEALPix pixel array (in the HPX\_INDS extension) This is needed because partial sky maps are supported so pixels may be missing (full sky maps are not handled differently, they have the same required elements as partial maps). The corresponding CRVAL\textit{m}, CRPIX\textit{m}, and CDELT\textit{m} values should all be 1. (pixel\_array)}
+\item{\textbf{AXISIND}: vector coordinate system axis index. For HEALPix beams, the two axes are azimuth and zenith angle in that order.  The corresponding CRVAL\textit{m}, CRPIX\textit{m}, and CDELT\textit{m} values should all be 1. }
+\item{\textbf{VECCOORD}: Basis vector index, the index into the dimensions of the basis vector array (stored in the BASISVEC extension). This is usually length 1 for power beams and length 2 for E-field beams. The corresponding CRVAL\textit{m}, CRPIX\textit{m}, and CDELT\textit{m} keywords should all have the value 1.}
+\end{enumerate}
+
+\subsubsection{regularly pixelized basis vector axes}
+For regularly pixelized beams, the basis vector data axes (values of the CTYPE\textit{m} keywords in order) are:
+
+\begin{enumerate}
+\item{\textbf{AZIMUTH or ZENX-SIN (First Image Axis)}: The coordinates for the first image axis, either azimuth angle or the East/West axis of a zenith orthoslant projection, should match the coordinate system given by the COORDSYS keyword. The values of the coordinates are set by the CRVAL\textit{m}, CRPIX\textit{m}, and CDELT\textit{m} keywords and the CUNIT\textit{m} keyword gives the units (default is degrees).(axis1\_array)}
+\item{\textbf{ZENANGLE or ZENY-SIN (Second Image Axis)}: The coordinates for the second image axis, either zenith angle or the North/South axis of a zenith orthoslant projection, should match the coordinate system given by the COORDSYS keyword. The values of the coordinates are set by the CRVAL\textit{m}, CRPIX\textit{m}, and CDELT\textit{m} keywords and the CUNIT\textit{m} keyword gives the units (default is degrees).(axis1\_array)}
+\item{\textbf{AXISIND}: vector coordinate system axis index. For regularly pixelized beams, the coordinate system matches the pixel coordinate system ([azimuth, zenith angle] or zenith orthoslant [x, y]). The corresponding CRVAL\textit{m}, CRPIX\textit{m}, and CDELT\textit{m} values should all be 1.}
+\item{\textbf{VECCOORD}: Basis vector index, the index into the dimensions of the basis vector array (stored in the BASISVEC extension). This is usually length 1 for power beams and length 2 for E-field beams. The corresponding CRVAL\textit{m}, CRPIX\textit{m}, and CDELT\textit{m} keywords should all have the value 1.}
+\end{enumerate}
+
+\section{HEALPix Index HDU}
+The HEALPix index HDU is a required element of HEALPix \textit{beamfits} files (regardless of whether the file includes all the pixels in the sky or not). It is a Binary Table HDU containing the HEALPix pixel numbers.
+The \textbf{EXTNAME} keyword in the header must be set to HPX\_INDS. There are no other required keywords in the header.
+
+\subsection{HEALPix Pixel Table}
+There is only one required column in the HPX\_INDS table:
+
+\begin{itemize}
+\item{\textbf{HPX\_INDS}: The HEALPix pixel numbers in the order that they are stored in the beam and basis vector arrays. (pixel\_array)}
+\end{itemize}
+
+\section{Band Parameter HDU}
+The band parameter HDU is an required element of \textit{beamfits} files. It is a Binary Table HDU containing the bandpass and other optional parameters that are functions of frequency only.
+The \textbf{EXTNAME} keyword in the header must be set to BANDPARM. There are no other required keywords in the header, but there are 2 optional header keywords:
+
+\begin{itemize}
+\item{\textbf{REFZIN}: \textit{float} Reference input impedance of the receiving chain (sets the reference for the S parameters), units: Ohms. (reference\_input\_impedance)}
+\item{\textbf{REFZOUT}: \textit{float} Reference output impedance of the receiving chain (sets the reference for the S parameters), units: Ohms. (reference\_output\_impedance)}
+\end{itemize}
+
+\subsection{BANDPARM Table}
+BANDPASS is the only required column in the BANDPARM table, but there are several optional columns that may be present. The number of rows in the table should equal the number of frequencies in the beam (primary HDU data array).
+
+\begin{itemize}
+\item{\textbf{BANDPASS}: \textit{float} Frequency dependence of the beam. Depending on the data\_normalization, this may contain only the frequency dependence of the receiving chain or all the frequency dependence (bandpass\_array).}
+\item{\textbf{RX\_TEMP}: \textit{float} Receiver temperatures. (receiver\_temperature\_array)}
+\item{\textbf{LOSS}: \textit{float} Antenna losses. (loss\_array)}
+\item{\textbf{MISMATCH}: \textit{float} Antenna-amplifier mismatch. (mismatch\_array)}
+\item{\textbf{S11}: \textit{float} S11\cref{first} parameter of the receiving chain. (s\_parameters)}
+\item{\textbf{S12}: \textit{float} S12\cref{first} parameter of the receiving chain. (s\_parameters)}
+\item{\textbf{S21}: \textit{float} S21\cref{first} parameter of the receiving chain. (s\_parameters)}
+\item{\textbf{S22}: \textit{float} S22\footnote{\label{first}\url{https://en.wikipedia.org/wiki/Scattering\_parameters\#Two-Port\_S-Parameters}} parameter of the receiving chain. (s\_parameters)}
+\end{itemize}
+
+
+\end{document}  

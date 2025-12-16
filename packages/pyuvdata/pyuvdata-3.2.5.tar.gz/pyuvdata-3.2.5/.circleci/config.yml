@@ -1,0 +1,147 @@
+version: 2.1
+executors:
+  uvdata-executor:
+      machine:
+        image: default
+      shell: /bin/bash -leo pipefail
+orbs:
+  codecov: codecov/codecov@3.2.4 # to get this to work, had to opt-in to using third party orbs in Organization Security settings.
+jobs:
+  pyuvdata:
+    executor: uvdata-executor
+    parameters:
+      python_version:
+        type: string
+      env_name:
+        type: string
+    environment:
+      PYTHON: << parameters.python_version >>
+      ENV_NAME: << parameters.env_name >>
+      OS: "linux"
+      # Circleci builds fail on forks because the version gets munged. (see #1029)
+      SETUPTOOLS_SCM_PRETEND_VERSION: "0.0.1"
+    steps:
+      - checkout
+      - restore_cache:
+          key: deps-{{ .Branch }}-{{ checksum "ci/pyuvdata_tests.yml" }}
+      - run:
+          name: Install Micromamba
+          command: wget -qO- https://micro.mamba.pm/api/micromamba/linux-64/latest | sudo tar -C / -xvj bin/micromamba
+      - run:
+          name: configure conda environment
+          command: |
+            micromamba info
+            # need these to add gxx and gcc to build novas and cython
+            micromamba create --name=${ENV_NAME}  python=$PYTHON gxx gcc -f ci/${ENV_NAME}.yml -yq
+      - run:
+          name: Verify Mamba Config
+          command: |
+            source ./ci/_activate_current_env.sh
+            micromamba list -n ${ENV_NAME}
+            # check that the python version matches the desired one; exit immediately if not
+            PYVER=`python -c "import sys; print('{:d}.{:d}'.format(sys.version_info.major, sys.version_info.minor))"`
+            if [[ $PYVER != $PYTHON ]]; then
+              exit 1;
+            fi
+      - run:
+          name: install
+          command: |
+            source ./ci/_activate_current_env.sh
+            CFLAGS="-DCYTHON_TRACE=1 -DCYTHON_TRACE_NOGIL=1" pip install --no-deps .
+      - run:
+          name: run pyuvdata tests
+          command: |
+            source ./ci/_activate_current_env.sh
+            mkdir test-reports
+            python -m pytest -n auto --dist=loadfile --cov=pyuvdata --cov-config=".coveragerc" --cov-report xml:"./coverage.xml" --junitxml="test-reports/xunit.xml"
+      - save_cache:
+          key: deps-{{ .Branch }}-{{ checksum "ci/pyuvdata_tests.yml" }}
+          paths:
+            - "/opt/conda/envs/${ENV_NAME}/"
+      - store_test_results:
+          path: test-reports
+      - store_artifacts:
+          path: test-reports
+      - codecov/upload:
+          file: ./coverage.xml
+
+  doctest:
+    executor: uvdata-executor
+    parameters:
+      python_version:
+        type: string
+      env_name:
+        type: string
+    environment:
+      PYTHON: << parameters.python_version >>
+      ENV_NAME: << parameters.env_name >>
+      OS: "linux"
+      # Circleci builds fail on forks because the version gets munged. (see #1029)
+      SETUPTOOLS_SCM_PRETEND_VERSION: "0.0.1"
+    steps:
+      - checkout
+      - restore_cache:
+          key: deps-{{ .Branch }}-{{ checksum "ci/pyuvdata_tests.yml" }}
+      - run:
+          name: Install Micromamba
+          command: wget -qO- https://micro.mamba.pm/api/micromamba/linux-64/latest | sudo tar -C / -xvj bin/micromamba
+      - run:
+          name: configure conda environment
+          command: |
+            micromamba info
+            # need these to add gxx and gcc to build novas and cython
+            micromamba create --name=${ENV_NAME}  python=$PYTHON gxx gcc -f ci/${ENV_NAME}.yml -yq
+      - run:
+          name: Verify Mamba Config
+          command: |
+            source ./ci/_activate_current_env.sh
+            micromamba list -n ${ENV_NAME}
+            # check that the python version matches the desired one; exit immediately if not
+            PYVER=`python -c "import sys; print('{:d}.{:d}'.format(sys.version_info.major, sys.version_info.minor))"`
+            if [[ $PYVER != $PYTHON ]]; then
+              exit 1;
+            fi
+      - run:
+          name: install
+          command: |
+            source ./ci/_activate_current_env.sh
+            pip install --no-deps -e .
+      - run:
+          name: run tutorial tests
+          command: |
+            source ./ci/_activate_current_env.sh
+            cd docs
+            python -m pytest -n auto --doctest-glob="*.rst" -W "error::DeprecationWarning"
+            cd ..
+      - save_cache:
+          key: deps-{{ .Branch }}-{{ checksum "ci/pyuvdata_tests.yml" }}
+          paths:
+            - "/opt/conda/envs/${ENV_NAME}/"
+
+workflows:
+  version: 2
+  build_and_test:
+    jobs:
+      - pyuvdata:
+          name: pyuvdata_3.11
+          python_version: "3.11"
+          env_name: "pyuvdata_tests"
+      - pyuvdata:
+          name: pyuvdata_3.12
+          python_version: "3.12"
+          env_name: "pyuvdata_tests"
+      - pyuvdata:
+          name: pyuvdata_3.13
+          python_version: "3.13"
+          env_name: "pyuvdata_tests"
+      - pyuvdata:
+          name: pyuvdata_min_deps
+          python_version: "3.13"
+          env_name: "pyuvdata_min_deps_tests"
+      - pyuvdata:
+          name: pyuvdata_min_versions
+          python_version: "3.11"
+          env_name: "pyuvdata_min_versions_tests"
+      - doctest:
+          python_version: "3.12"
+          env_name: "pyuvdata_tests"

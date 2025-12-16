@@ -1,0 +1,71 @@
+name: Run Tests
+
+on:
+  push:
+    # This should disable running the workflow on tags, according to the
+    # on.<push|pull_request>.<branches|tags> GitHub Actions docs.
+    branches:
+      - "*"
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Run Tests
+    env:
+      PYTHON: ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    defaults:
+     run:
+       # Adding -l {0} helps ensure conda can be found properly in windows.
+       shell: bash -l {0}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+        python-version: ["3.11", "3.12", "3.13"]
+        include:
+          - env_name: pyuvdata_tests_windows
+            os: windows-latest
+          - env_name: pyuvdata_tests_mac_arm
+            os: macos-latest
+    steps:
+      - uses: actions/checkout@main
+        with:
+          fetch-depth: 0
+
+      - name: Setup Miniforge
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniforge-version: latest
+          python-version: ${{ matrix.python-version }}
+          environment-file: ci/${{ matrix.env_name }}.yml
+          activate-environment: ${{ matrix.env_name }}
+          run-post: false
+          conda-remove-defaults: "true"
+
+      - name: Conda Info
+        run: |
+          conda info -a
+          conda list
+          PYVER=`python -c "import sys; print('{:d}.{:d}'.format(sys.version_info.major, sys.version_info.minor))"`
+          if [[ $PYVER != $PYTHON ]]; then
+            exit 1;
+          fi
+
+      - name: Install
+        run: |
+          CFLAGS="-DCYTHON_TRACE=1 -DCYTHON_TRACE_NOGIL=1" pip install .
+
+      - name: Run Tests
+        run: |
+          python -m pytest -n auto --dist=loadfile --cov=pyuvdata --cov-config=.coveragerc --cov-report xml:./coverage.xml
+
+      - uses: codecov/codecov-action@v5
+        if: success()
+        with:
+          token: ${{secrets.CODECOV_TOKEN}} #required
+          files: ./coverage.xml #optional
