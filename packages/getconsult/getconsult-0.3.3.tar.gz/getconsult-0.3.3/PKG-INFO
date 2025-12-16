@@ -1,0 +1,529 @@
+Metadata-Version: 2.4
+Name: getconsult
+Version: 0.3.3
+Summary: Consult a panel of LLM-based expert agents that deliberate and reach consensus
+Author: Consult
+License-Expression: LicenseRef-Proprietary
+Project-URL: Homepage, https://github.com/1x-eng/agentic-atlas
+Project-URL: Bug Tracker, https://github.com/1x-eng/agentic-atlas/issues
+Project-URL: Documentation, https://github.com/1x-eng/agentic-atlas#readme
+Keywords: ai,agents,autogen,llm,consensus,experts,panel
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: autogen-agentchat>=0.4.0
+Requires-Dist: autogen-ext[anthropic,openai]>=0.4.0
+Requires-Dist: python-dotenv>=1.0.0
+Requires-Dist: pydantic>=2.0.0
+Requires-Dist: rich>=13.0.0
+Requires-Dist: textual>=0.40.0
+Requires-Dist: Pillow>=10.0.0
+Requires-Dist: PyMuPDF>=1.23.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.21.0; extra == "dev"
+Requires-Dist: black>=23.0.0; extra == "dev"
+Requires-Dist: isort>=5.12.0; extra == "dev"
+Requires-Dist: flake8>=6.0.0; extra == "dev"
+Requires-Dist: mypy>=1.0.0; extra == "dev"
+Dynamic: license-file
+
+# Consult
+
+Consult a panel of LLM-based expert agents. They analyze your problem from different perspectives, review each other's work, and reach consensus. A separate review step catches cross-cutting issues, and an orchestrator resolves disagreements when needed.
+
+## How It Works
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           CONSENSUS WORKFLOW                                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  1. INITIAL ANALYSIS                                                        │
+│     ┌──────────┐  ┌──────────┐  ┌──────────┐                               │
+│     │ Database │  │ Backend  │  │  Infra   │  ← Parallel expert analysis   │
+│     │  Expert  │  │  Expert  │  │  Expert  │                               │
+│     └────┬─────┘  └────┬─────┘  └────┬─────┘                               │
+│          │             │             │                                      │
+│  2. PEER FEEDBACK      ▼             ▼                                      │
+│     Each expert reviews others' solutions with structured critique          │
+│                                                                             │
+│  3. META REVIEW                                                             │
+│     ┌─────────────────────────────────────┐                                │
+│     │  Reviews all expert outputs for     │                                │
+│     │  integration issues and gaps        │                                │
+│     └─────────────────────────────────────┘                                │
+│                                                                             │
+│  4. SOLUTION REFINEMENT                                                     │
+│     Experts incorporate peer + meta reviewer feedback                       │
+│                                                                             │
+│  5. CROSS-EXPERT APPROVAL                                                   │
+│     Each expert: "Would I sign off on THEIR solution for production?"       │
+│     ├─ Approval ≥ 80% → Format final output                                 │
+│     └─ Approval < 80% → Iterate or orchestrator resolves                    │
+│                                                                             │
+│  6. OUTPUT                                                                   │
+│     Combines recommendations with source attribution                        │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+## Features
+
+- **Consensus workflow**: Agents analyze independently, review each other's work, refine based on feedback
+- **Cross-cutting review**: Separate pass to catch integration issues that domain-focused agents miss
+- **Traceable output**: Final synthesis cites which agent contributed what
+- **Multi-provider**: Works with Anthropic, OpenAI, or Google; can run all three in parallel for comparison
+- **Session persistence**: Maintains conversation context across queries
+- **Multimodal**: Accepts images and PDFs as input
+- **Installable package**: `pip install` with `consult` CLI command
+
+## Quick Start
+
+### Installation
+
+```bash
+pip install getconsult
+```
+
+Then configure your API key:
+
+```bash
+# Create config directory
+mkdir -p ~/.consult
+
+# Add your API key
+echo 'ANTHROPIC_API_KEY=sk-ant-...' > ~/.consult/.env
+chmod 600 ~/.consult/.env
+```
+
+Or set environment variables directly:
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+```
+
+### Verify Installation
+
+```bash
+consult --version
+consult --status    # Check tier and quota
+consult --list-experts
+```
+
+### Run a Query
+
+```bash
+consult -p "Design a real-time chat application database"
+```
+
+### Interactive Mode (TUI)
+
+```bash
+consult-tui
+```
+
+## CLI Reference
+
+```
+consult [options]
+
+Options:
+  -p, --problem TEXT       Problem statement to analyze (required)
+  -v, --version            Show version
+  -s, --status             Show tier, limits, and usage
+  --list-experts           Show available expert types and sets
+  --explain-consensus      Explain how the consensus mechanism works
+
+Analysis Options:
+  -m, --mode [single|team] Provider mode (default: single)
+  --provider [anthropic|openai|google]
+                           Provider for single mode (default: anthropic)
+  -e, --experts TEXT       Expert set or comma-separated names
+  -i, --max-iterations N   Max consensus refinement cycles (default: 1)
+  -t, --consensus-threshold FLOAT
+                           Agreement threshold 0.0-1.0 (default: 0.8)
+
+Output Options:
+  --markdown               Save output to ~/.consult/outputs/
+  --markdown-filename TEXT Custom filename for markdown output
+
+Context Options:
+  --memory-session PATH    Session file for conversation continuity
+  -a, --attachments FILES  Image/PDF files to include in analysis
+```
+
+## Data Directory
+
+All Consult data lives in `~/.consult/`:
+
+```
+~/.consult/
+├── sessions/     # Conversation history (Pro tier)
+├── outputs/      # Markdown exports (Pro tier)
+├── cache/        # Quota tracking
+└── logs/         # Debug logs (never contains API keys)
+```
+
+Override with `CONSULT_HOME` environment variable.
+
+## Subscription Tiers
+
+Consult uses a BYOK (Bring Your Own Key) model. You provide your own API keys.
+
+| Feature | Free | Pro ($9/mo) |
+|---------|------|-------------|
+| Queries/day | 5 | 100 |
+| Queries/hour | 3 | 20 |
+| Max iterations | 1 | Unlimited |
+| Max experts | 2 | Unlimited |
+| Team mode | - | Yes |
+| TUI | - | Yes |
+| Sessions | - | Yes |
+| Attachments | - | Yes |
+| Markdown export | - | Yes |
+| Custom experts | - | Yes |
+
+### License Keys
+
+License keys are cryptographically signed tokens that enable Pro features. Format:
+
+```
+CSL1_pro_1765348985_1796884985_2e321833_b179a4f4bfc7
+```
+
+Set via environment variable or file:
+
+```bash
+# Environment variable
+export CONSULT_LICENSE_KEY="CSL1_pro_..."
+
+# Or save to file
+echo "CSL1_pro_..." > ~/.consult/license
+```
+
+Check your status anytime:
+
+```bash
+consult --status
+```
+
+## Architecture
+
+```
+src/
+├── agents/         # Expert agents, Meta Reviewer, Orchestrator
+├── workflows/      # Consensus workflow phases
+├── prompts/        # Centralized prompt management
+├── memory/         # Session persistence and compaction
+├── models/         # Data structures, multimodal handling
+├── config.py       # Provider configuration
+├── cli.py          # CLI entry point
+└── core/           # License, rate limiting, paths, security
+    ├── license.py      # Tier management
+    ├── rate_limiter.py # Quota enforcement
+    ├── paths.py        # ~/.consult directory structure
+    ├── identity.py     # User/session tracking
+    └── security.py     # API key redaction
+
+tui/
+├── app.py          # Main TUI application
+├── workers.py      # Async workflow execution
+├── event_handler.py # Real-time UI updates
+└── widgets/        # UI components
+```
+
+### Agents
+
+| Agent | Default Model | Purpose |
+|-------|---------------|---------|
+| **Expert Agents** | Haiku 4.5 / GPT-4o-mini / Gemini 2.5 Flash-Lite | Domain-specific analysis |
+| **Meta Reviewer** | Opus 4.5 | Integration issue detection |
+| **Orchestrator** | Opus 4.5 | Disagreement resolution |
+| **Presentation Agent** | Opus 4.5 | Final output formatting |
+
+Expert agent defaults are optimized for cost/quality. Override with `ANTHROPIC_MODEL`, `OPENAI_MODEL`, `GEMINI_MODEL` env vars for frontier models.
+
+## Experts
+
+### Available Expert Types
+
+| Expert | Focus Area |
+|--------|------------|
+| `database_expert` | Data systems, consistency, query optimization |
+| `backend_expert` | API design, service architecture, scalability |
+| `infrastructure_expert` | Deployment, monitoring, operations |
+| `security_expert` | Threat modeling, secure coding, compliance |
+| `performance_expert` | Profiling, caching, optimization |
+| `software_architect` | System design, architectural patterns |
+| `cloud_engineer` | Cloud platforms, DevOps, containerization |
+| `frontend_expert` | UI architecture, frontend performance |
+| `ml_expert` | ML systems, training pipelines, MLOps |
+| `data_expert` | Data pipelines, ETL, streaming |
+| `ux_expert` | User research, interaction design |
+
+### Predefined Sets
+
+```bash
+consult -p "..." --experts default           # database, backend, infrastructure
+consult -p "..." --experts architecture      # architect, database, cloud
+consult -p "..." --experts security_focused  # security, backend, infrastructure
+consult -p "..." --experts ai_system         # ml, backend, data, infrastructure
+consult -p "..." --experts full_stack        # backend, frontend, database, infrastructure
+consult -p "..." --experts performance       # performance, backend, database
+consult -p "..." --experts data_platform     # data, backend, infrastructure
+consult -p "..." --experts user_focused      # ux, frontend, backend
+```
+
+### Custom Selection (Pro tier)
+
+```bash
+consult -p "..." --experts "database_expert,security_expert,performance_expert"
+```
+
+## How Consensus Works
+
+The consensus mechanism measures whether experts would **approve each other's solutions for production** - not just whether they're similar.
+
+### Cross-Expert Approval
+
+Each expert reviews each OTHER expert's solution: "Would I sign off on this going to production?"
+
+```
+For 3 experts (A, B, C), we collect 6 pairwise approvals:
+
+Expert A reviews → Expert B's solution: APPROVE (1.0)
+Expert A reviews → Expert C's solution: CONCERNS (0.7)
+Expert B reviews → Expert A's solution: APPROVE (1.0)
+Expert B reviews → Expert C's solution: OBJECT (0.0)
+Expert C reviews → Expert A's solution: CONCERNS (0.7)
+Expert C reviews → Expert B's solution: APPROVE (1.0)
+
+Aggregate: (1.0 + 0.7 + 1.0 + 0.0 + 0.7 + 1.0) / 6 = 73%
+```
+
+### Verdicts
+
+| Verdict | Score | Meaning |
+|---------|-------|---------|
+| **APPROVE** | 1.0 | "I would sign off on this for production" |
+| **CONCERNS** | 0.7 | "Acceptable, but issues should be addressed" |
+| **OBJECT** | 0.0 | "Cannot endorse - fundamental problems" |
+
+### Evaluation Dimensions
+
+| Dimension | Weight | Rationale |
+|-----------|--------|-----------|
+| **Requirements** | 30% | Solving wrong problem = everything wasted |
+| **Approach** | 25% | Wrong foundation = hard to fix later |
+| **Trade-offs** | 20% | Bad trade-offs = real failures |
+| **Architecture** | 15% | Poor design = long-term debt |
+| **Implementation** | 10% | Can't build it = worthless design |
+
+### Outcomes
+
+```
+Approval ≥ 80% → Consensus reached → Final synthesis
+Approval < 80% AND iterations remaining → Another cycle
+Approval < 80% AND max iterations reached → Orchestrator resolves
+```
+
+## Configuration
+
+### Environment Variables
+
+```bash
+# ~/.consult/.env or project .env
+
+# Provider API keys (at least one required)
+ANTHROPIC_API_KEY=sk-ant-...
+OPENAI_API_KEY=sk-...
+GOOGLE_API_KEY=...
+
+# Expert model overrides (optional, defaults shown)
+# Defaults optimized for cost/quality as of Dec 2025
+ANTHROPIC_MODEL=claude-haiku-4-5-20251001    # $1/$5 per 1M tokens
+OPENAI_MODEL=gpt-4o-mini                      # $0.15/$0.60 per 1M tokens
+GEMINI_MODEL=gemini-2.5-flash-lite            # $0.10/$0.40 per 1M tokens
+
+# For frontier performance, use:
+# ANTHROPIC_MODEL=claude-sonnet-4-20250514
+# OPENAI_MODEL=gpt-4o
+# GEMINI_MODEL=gemini-2.5-flash
+
+# Meta Reviewer / Orchestrator / Presentation Agent
+SOTA_MODEL=claude-opus-4-5-20251101
+
+# Data directory (optional)
+CONSULT_HOME=~/.consult
+```
+
+Consult loads `.env` from both the project directory and `~/.consult/.env`.
+
+## Examples
+
+### System Design
+
+```bash
+consult -p "Design distributed caching layer for 10M daily active users" \
+  --experts performance --markdown
+```
+
+### Security Review
+
+```bash
+consult -p "Security analysis of JWT implementation" \
+  --experts security_focused
+```
+
+### Architecture Decision
+
+```bash
+consult -p "Microservices vs monolith for 50-person engineering org" \
+  --experts architecture
+```
+
+### With Attachments (Pro tier)
+
+```bash
+consult -p "Review this architecture diagram" \
+  --attachments diagram.png --experts architecture
+```
+
+### Team Mode (Pro tier)
+
+```bash
+consult -p "Compare approaches to real-time sync" \
+  --mode team --markdown
+```
+
+Runs same experts across multiple providers (OpenAI, Anthropic, Google) in parallel.
+
+## Programmatic Usage
+
+```python
+from src.workflows import ConsensusWorkflow
+from src.memory.memory_persistence import MemoryPersistence
+
+# Optional: conversation continuity
+memory = MemoryPersistence("project_session.json")
+memory.load_state()
+
+workflow = ConsensusWorkflow(
+    consensus_threshold=0.8,
+    memory_manager=memory.memory_manager,
+    expert_config="architecture"
+)
+
+result = await workflow.solve_problem("Design microservices architecture")
+
+print(f"Consensus: {result.consensus_achieved}")
+print(f"Method: {result.resolution_method}")
+print(result.final_solution)
+
+memory.save_state()
+```
+
+## Output Constraints
+
+The final synthesis follows these rules:
+
+1. **Traceable**: Claims cite which expert agent they came from
+2. **Complete**: Doesn't drop expert recommendations without explanation
+3. **Transparent**: Distinguishes expert-derived content from synthesis
+4. **No fake timelines**: Provides sequencing/dependencies, not arbitrary schedules
+
+## Performance
+
+| Operation | Time |
+|-----------|------|
+| Consensus (3 experts) | 120-180s |
+| Team mode (9 agents) | 180-300s |
+| Memory compaction | 5-10s |
+
+## Security
+
+- API keys are **never** written to logs, sessions, or output files
+- All sensitive data is redacted before persistence
+- Session files use user-specific identifiers (hashed, not raw keys)
+- `~/.consult/.env` should have `600` permissions
+
+## Contributing
+
+### Development Setup
+
+```bash
+git clone https://github.com/1x-eng/agentic-atlas.git
+cd agentic-atlas
+pip install -e ".[dev]"
+```
+
+### Commit Messages
+
+This project uses [Conventional Commits](https://www.conventionalcommits.org/) for automated versioning. Prefix your commits:
+
+| Prefix | Purpose | Version Bump |
+|--------|---------|--------------|
+| `fix:` | Bug fix | Patch (0.1.0 → 0.1.1) |
+| `feat:` | New feature | Minor (0.1.0 → 0.2.0) |
+| `feat!:` | Breaking change | Major (0.2.0 → 1.0.0) |
+| `docs:` | Documentation | No release |
+| `chore:` | Maintenance | No release |
+| `refactor:` | Code changes | No release |
+| `test:` | Test changes | No release |
+
+**Examples:**
+```bash
+git commit -m "fix: handle empty license key gracefully"
+git commit -m "feat: add CSV export option"
+git commit -m "feat!: rename --experts flag to --panel"
+```
+
+### CI/CD Pipeline
+
+- **On push/PR**: Lint, type check, smoke tests, build validation
+- **On merge to main**: Release Please opens a release PR with changelog
+- **On release PR merge**: Automatic PyPI publish via Trusted Publisher
+
+### Running Tests Locally
+
+```bash
+# Lint
+flake8 src/ tui/
+
+# Type check
+mypy src/core/
+
+# Smoke test
+consult --help
+consult --version
+consult --list-experts
+```
+
+## License
+
+This software is proprietary. See [LICENSE](LICENSE) for terms.
+
+**Permitted:**
+- Personal use and learning
+- Internal business use (not offered to third parties)
+- Contributing back to the project
+
+**Requires commercial license:**
+- SaaS/hosted offerings
+- Integration into commercial products
+- Resale or redistribution
+
+For commercial licensing, contact [Pruthvi](pruthvikumar.123@gmail.com).
+
+---
+
+Built with [AutoGen](https://github.com/microsoft/autogen).
