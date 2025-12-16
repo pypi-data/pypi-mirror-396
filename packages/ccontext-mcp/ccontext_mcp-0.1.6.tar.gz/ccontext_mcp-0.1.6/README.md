@@ -1,0 +1,219 @@
+# ccontext-mcp
+
+MCP server that helps AI agents maintain project execution context across sessions.
+
+## The Problem
+
+AI agents lose context between sessions. They forget:
+- What was the current goal?
+- What tasks were in progress?
+- What lessons were learned?
+- What decisions were made and why?
+
+## The Solution
+
+ccontext-mcp provides a simple MCP interface for agents to read and write execution context stored in local YAML files. The context persists across sessions and includes **automatic lifecycle management** - old information naturally fades away while important items persist.
+
+## Installation
+
+### Claude Code
+
+```bash
+# Using uvx (recommended, faster)
+claude mcp add ccontext -- uvx ccontext-mcp
+
+# Or using pipx (more universal)
+claude mcp add ccontext -- pipx run ccontext-mcp
+```
+
+That's it. The MCP server will auto-detect project root from your current working directory.
+
+### Claude Desktop
+
+Add to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "ccontext": {
+      "command": "uvx",
+      "args": ["ccontext-mcp"],
+      "env": {
+        "CCONTEXT_ROOT": "/path/to/your/project"
+      }
+    }
+  }
+}
+```
+
+### Manual / Other MCP Clients
+
+```bash
+pip install ccontext-mcp
+CCONTEXT_ROOT=/path/to/project python -m ccontext_mcp
+```
+
+## Tools
+
+| Category | Tool | Purpose |
+|----------|------|---------|
+| **Context** | `get_context()` | Your project memory - **call this FIRST** (now with version tracking) |
+| **Milestones** | `create_milestone()` | Start a new project phase |
+| | `update_milestone()` | Modify milestone details or status |
+| | `complete_milestone()` | Close milestone with outcomes |
+| | `remove_milestone()` | Delete cancelled milestone |
+| **Tasks** | `list_tasks()` | Find tasks by status or assignee |
+| | `create_task()` | Create task with trackable steps |
+| | `update_task()` | Update progress, mark steps done |
+| | `delete_task()` | Remove cancelled task |
+| **Notes** | `add_note()` | Preserve lessons, warnings, decisions |
+| | `update_note()` | Refresh score or update content |
+| | `remove_note()` | Delete obsolete note |
+| **References** | `add_reference()` | Bookmark files or URLs |
+| | `update_reference()` | Refresh score or update details |
+| | `remove_reference()` | Delete obsolete reference |
+
+## Version Tracking (New in v0.2.0)
+
+**Problem:** Agents don't know when context changed (by themselves or others).
+
+**Solution:** `get_context()` now returns with a `version` field:
+
+```python
+result = get_context()
+# {
+#   "version": "abc123def456",  # ← Content hash
+#   "context": {
+#     "milestones": [...],
+#     "notes": [...],
+#     ...
+#   }
+# }
+```
+
+**Usage Pattern:**
+
+```python
+# First call - cache version
+ctx = get_context()
+my_version = ctx["version"]
+
+# Work on task...
+update_task("T001", status="active")
+
+# Later - check if context changed
+new_ctx = get_context()
+if new_ctx["version"] != my_version:
+    print("Context changed! Reviewing updates...")
+    my_version = new_ctx["version"]
+else:
+    print("Context unchanged, continuing work")
+```
+
+**Benefits:**
+- ✅ Detect changes without re-reading all data
+- ✅ Works for single agent (session awareness) and multi-agent (collaboration)
+- ✅ Lightweight: version is just a 12-char hash
+- ✅ Standard pattern: same as HTTP ETag
+
+## Score-Based Lifecycle
+
+Every note and reference has a **score** (default: 10, range: 1-100).
+
+- Each `get_context()` call decrements all scores by 1
+- Items with `score <= 0` show `expiring: true` warning
+- Items with `score <= -5` are auto-archived
+
+**Why?** Old information naturally fades. Important items should be given high scores (50-100) so they persist longer. This prevents context from growing unbounded.
+
+```python
+# Important lesson - will persist ~50 get_context() calls
+add_note(content="Never use force push on main", score=50)
+
+# Temporary reference - will fade after ~10 calls  
+add_reference(url="https://api.example.com/docs", note="API docs", score=10)
+```
+
+## Directory Structure
+
+```
+your-project/
+└── context/
+    ├── context.yaml      # Goal, why, agents, notes, references
+    ├── tasks/
+    │   ├── T001.yaml     # Task definitions
+    │   └── T002.yaml
+    └── archive/          # Auto-archived items
+```
+
+## context.yaml Schema
+
+```yaml
+milestones:
+  - id: M1
+    name: "Phase 1: Core Implementation"
+    description: "Build foundation components"
+    status: done  # done | active | pending
+    started: "2024-12-01"
+    completed: "2024-12-07"
+    outcomes: "15 tools implemented, 42 tests passing"
+  - id: M2
+    name: "Phase 2: Integration"
+    description: "Integrate with orchestrators"
+    status: active
+    started: "2024-12-08"
+
+notes:
+  - id: N001
+    content: "API rate limit is 100/min - batch requests"
+    score: 45
+
+references:
+  - id: R001
+    url: "src/core/auth.py"
+    note: "OAuth implementation"
+    score: 30
+```
+
+## Task Schema
+
+```yaml
+id: T001
+name: "Implement feature X"
+goal: "User-visible outcome"
+status: active  # planned | active | complete
+steps:
+  - id: S1
+    name: "Design API"
+    done: "API spec reviewed"
+    status: complete
+  - id: S2
+    name: "Implement"
+    done: "Tests passing"
+    status: in_progress
+```
+
+## Use Cases
+
+### Single Agent
+One agent maintains its own context, picking up where it left off each session.
+
+### Multi-Agent Collaboration
+Multiple agents share the same `context/` directory:
+- Shared milestones show project progress
+- Shared notes preserve collective knowledge
+- Coordinated task management
+
+### Integration with Orchestrators
+Works well with agent orchestrators (like CCCC) that can:
+- Detect `context/` directory existence
+- Generate appropriate prompts based on context
+- Guide agents to use ccontext tools
+
+## Without MCP
+
+If your agent doesn't support MCP, it can directly read/write the YAML files following the schema above. The only difference: no automatic score decay (you'll need to manually clean up old entries).
+
+## License
+
+MIT
