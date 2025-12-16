@@ -1,0 +1,108 @@
+name: Release
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    branches: [main]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    outputs:
+      released: ${{ steps.release.outputs.released }}
+      tag: ${{ steps.release.outputs.tag }}
+    concurrency:
+      group: ${{ github.workflow }}-release-${{ github.ref_name }}
+      cancel-in-progress: false
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Python Semantic Release
+        id: release
+        uses: python-semantic-release/python-semantic-release@v10.5.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install uv
+        if: steps.release.outputs.released == 'true'
+        uses: astral-sh/setup-uv@v7
+
+      - name: Build package
+        if: steps.release.outputs.released == 'true'
+        run: uv build
+      - name: Upload | Artifacts
+        if: steps.release.outputs.released == 'true'
+        uses: actions/upload-artifact@v5
+        with:
+          name: distribution-artifacts
+          path: dist
+          if-no-files-found: error
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: release
+    if: needs.release.outputs.released == 'true'
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+
+      - name: Download | Artifacts
+        uses: actions/download-artifact@v6
+        with:
+          name: distribution-artifacts
+          path: dist
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@v1.13.0
+        with:
+          packages-dir: dist
+          print-hash: true
+          verbose: true
+
+      - name: Check PKGBUILD
+        run: ls -lah ./PKGBUILD
+
+      - name: Update PKGBUILD version
+        run: |
+          tag='${{ needs.release.outputs.tag }}'
+          # semantic-release typically prefixes with v (e.g., v1.2.3); strip it for pkgver
+          clean_tag="${tag#v}"
+          echo "Semantic-release tag: $tag -> pkgver: $clean_tag"
+          if [ -z "$clean_tag" ]; then
+            echo "Error: Clean tag is empty; aborting PKGBUILD update." >&2
+            exit 1
+          fi
+          # Update pkgver line
+          sed -i "s/^pkgver=.*/pkgver=${clean_tag}/" PKGBUILD
+          # Reset pkgrel on new upstream version
+          sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
+          # Ensure source line reflects new tag (still uses v prefix in the fetched tag URL)
+          # Use '|' as sed delimiter to avoid conflict with '#' in replacement (git source fragment '#tag=')
+          sed -i "s|^source=.*|source=(\"git+https://github.com/ayushjaipuriyar/animepahe-dl.git#tag=v${clean_tag}\")|" PKGBUILD
+          echo 'Updated PKGBUILD:'
+          grep -E '^(pkgver|pkgrel|source)=' PKGBUILD
+
+      - name: Publish AUR Package
+        uses: KSXGitHub/github-actions-deploy-aur@v4.1.1
+        with:
+          pkgname: animepahe-dl
+          pkgbuild: ./PKGBUILD
+          commit_username: ${{ secrets.AUR_USERNAME }}
+          commit_email: ${{ secrets.AUR_EMAIL }}
+          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          commit_message: Update AUR package
+          ssh_keyscan_types: rsa,ecdsa,ed25519
