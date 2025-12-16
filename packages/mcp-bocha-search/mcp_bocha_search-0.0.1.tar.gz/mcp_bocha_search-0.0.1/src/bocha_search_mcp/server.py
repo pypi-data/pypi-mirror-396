@@ -1,0 +1,184 @@
+import os
+import json
+
+import httpx
+from dotenv import load_dotenv
+from mcp.server.fastmcp import FastMCP
+
+load_dotenv()
+
+
+# Initialize FastMCP server
+server = FastMCP(
+    name="mcp-bocha-search",
+    instructions="""Bocha Search MCP Server - 博查搜索是面向AI的中文搜索引擎。
+
+可用工具:
+1. bocha_web_search: 网页搜索，从数十亿网页中获取标题、URL、摘要、站点名称、发布日期等信息
+2. bocha_ai_search: AI语义搜索，识别搜索词语义并返回垂直领域的结构化卡片内容
+
+使用场景:
+- 需要搜索中文网页内容时优先使用
+- 需要获取天气、新闻、百科、医疗、火车票、图片等信息时使用
+- bocha_ai_search 适合需要结构化数据的场景
+- bocha_web_search 适合通用网页搜索场景
+
+参数说明:
+- query: 搜索关键词（必填）
+- freshness: 时间范围（noLimit/oneDay/oneWeek/oneMonth/oneYear 或 YYYY-MM-DD 格式）
+- count: 返回结果数量（1-50）
+"""
+)
+
+
+@server.tool()
+async def bocha_web_search(
+    query: str, freshness: str = "noLimit", count: int = 10
+) -> str:
+    """Search with Bocha Web Search and get enhanced search details from billions of web documents,
+    including page titles, urls, summaries, site names, site icons, publication dates, image links, and more.
+
+    Args:
+        query: Search query (required)
+        freshness: The time range for the search results. (Available options YYYY-MM-DD, YYYY-MM-DD..YYYY-MM-DD, noLimit, oneYear, oneMonth, oneWeek, oneDay. Default is noLimit)
+        count: Number of results (1-50, default 10)
+    """
+    # Get API key from environment
+    boch_api_key = os.environ.get("BOCHA_API_KEY", "")
+
+    if not boch_api_key:
+        return (
+            "Error: Bocha API key is not configured. Please set the "
+            "BOCHA_API_KEY environment variable."
+        )
+
+    # Endpoint
+    endpoint = "https://api.bochaai.com/v1/web-search?utm_source=bocha-mcp-local"
+
+    try:
+        payload = {
+            "query": query,
+            "summary": True,
+            "freshness": freshness,
+            "count": count
+        }
+
+        headers = {
+            "Authorization": f"Bearer {boch_api_key}",
+            "Content-Type": "application/json",
+        }
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                endpoint, headers=headers, json=payload, timeout=10.0
+            )
+
+            response.raise_for_status()
+            resp = response.json()
+            if "data" not in resp:
+                return "Search error."
+            
+            data = resp["data"]
+
+            if "webPages" not in data:
+                return "No results found."
+
+            results = []
+            for result in data["webPages"]["value"]:
+                results.append(
+                    f"Title: {result['name']}\n"
+                    f"URL: {result['url']}\n"
+                    f"Description: {result['summary']}\n"
+                    f"Published date: {result['datePublished']}\n"
+                    f"Site name: {result['siteName']}"
+                )
+
+            return "\n\n".join(results)
+
+    except httpx.HTTPStatusError as e:
+        return f"Bocha Web Search API HTTP error occurred: {e.response.status_code} - {e.response.text}"
+    except httpx.RequestError as e:
+        return f"Error communicating with Bocha Web Search API: {str(e)}"
+    except Exception as e:
+        return f"Unexpected error: {str(e)}"
+
+
+@server.tool()
+async def bocha_ai_search(
+    query: str, freshness: str = "noLimit", count: int = 10
+) -> str:
+    """Search with Bocha AI Search, recognizes the semantics of search terms
+    and additionally returns structured modal cards with content from vertical domains.
+
+    Args:
+        query: Search query (required)
+        freshness: The time range for the search results. (Available options noLimit, oneYear, oneMonth, oneWeek, oneDay. Default is noLimit)
+        count: Number of results (1-50, default 10)
+    """
+    # Get API key from environment
+    boch_api_key = os.environ.get("BOCHA_API_KEY", "")
+
+    if not boch_api_key:
+        return (
+            "Error: Bocha API key is not configured. Please set the "
+            "BOCHA_API_KEY environment variable."
+        )
+
+    # Endpoint
+    endpoint = "https://api.bochaai.com/v1/ai-search?utm_source=bocha-mcp-local"
+
+    try:
+        payload = {
+            "query": query,
+            "freshness": freshness,
+            "count": count,
+            "answer": False,
+            "stream": False
+        }
+
+        headers = {
+            "Authorization": f"Bearer {boch_api_key}",
+            "Content-Type": "application/json",
+        }
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                endpoint, headers=headers, json=payload, timeout=10.0
+            )
+
+            response.raise_for_status()
+            response = response.json()
+            results = []
+            if "messages" in response:
+                for message in response["messages"]:
+                    content = {}
+                    try:
+                        content = json.loads(message["content"])
+                    except:
+                        content = {}
+                        
+                    # 网页
+                    if message["content_type"] == "webpage":
+                        if "value" in content:
+                            for item in content["value"]:
+                                results.append(
+                                    f"Title: {item['name']}\n"
+                                    f"URL: {item['url']}\n"
+                                    f"Description: {item['summary']}\n"
+                                    f"Published date: {item['datePublished']}\n"
+                                    f"Site name: {item['siteName']}"
+                                )
+                    elif message["content_type"] != "image" and message["content"] != "{}":
+                        results.append(message["content"])
+
+            if not results:
+                return "No results found."
+            
+            return "\n\n".join(results)
+
+    except httpx.HTTPStatusError as e:
+        return f"Bocha AI Search API HTTP error occurred: {e.response.status_code} - {e.response.text}"
+    except httpx.RequestError as e:
+        return f"Error communicating with Bocha AI Search API: {str(e)}"
+    except Exception as e:
+        return f"Unexpected error: {str(e)}"
