@@ -1,0 +1,204 @@
+import os
+import os.path
+from packaging.version import Version
+from pathlib import Path
+
+project = "{{project}}"
+module = "{{module}}"
+name = "{{project}}"
+description = """{{description}}"""
+author = """{{author}}"""
+copyright = """{{copyright}}"""
+title = """{{title}}"""
+version = "{{version}}"
+release = "{{version}}"
+html_title = """{{title}} <code style="""
+release = "{{version}}"
+html_title = """{{title}} <code style='font-size: var(--font-size--small--4);color: var(--sd-color-primary);'>v{{version}}</code>"""
+docs_host_root = "{{docs_root}}"
+root = "{{root}}"
+cname = "{{cname}}"
+pages = """
+{% for page in pages %}
+{{ page }}
+{% endfor %}
+"""
+use_autoapi = {{use_autoapi}}  # noqa: F821
+
+######################
+# Standardized below #
+######################
+extensions = [
+    "myst_nb",
+    "sphinx.ext.napoleon",
+    "sphinx_design",
+    "sphinx_copybutton",
+    "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.inheritance_diagram",
+    "sphinxcontrib.mermaid",
+    "sphinxcontrib.autodoc_pydantic",
+    "sphinx_reredirects",
+]
+if use_autoapi in (True, None):
+    # add if it is set to true or if it is set to None
+    # NOTE: bug in autoapi that requires
+    # viewcode to come after
+    extensions.extend([
+        "autoapi.extension",
+        "sphinx.ext.viewcode",
+    ])
+else:
+    # NOTE: bug in autoapi that requires
+    # viewcode to come after
+    extensions.append("sphinx.ext.viewcode")
+
+
+os.environ["SPHINX_BUILDING"] = "1"
+html_theme = "{{theme}}"
+html_theme_options = {{html_theme_options}}
+html_static_path = {{html_static_path}}
+html_css_files = [
+    "styles/custom.css",
+    *{{html_css_files}},
+]
+html_js_files = [
+    "js/custom.js",
+    *{{html_js_files}}
+]
+
+master_doc = "index"
+templates_path = ["_templates"]
+source_suffix = [".rst", ".md", *{{source_suffix}}]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "node_modules", "_skbuild", ".pytest_cache", "js/*", *{{exclude_patterns}}]
+language = "{{language}}"
+pygments_style = "{{pygments_style}}"
+
+# myst / myst-nb
+myst_enable_extensions = {{myst_enable_extensions}}
+myst_fence_as_directive = {{myst_fence_as_directive}}
+nb_execution_mode = "{{nb_execution_mode}}"
+nb_execution_excludepatterns = {{nb_execution_excludepatterns}}
+
+#sphinxcontrib.mermaid
+mermaid_d3_zoom = True
+mermaid_fullscreen = True
+mermaid_include_elk = True
+mermaid_include_zenuml = True
+
+# redirects
+redirects = {{redirects}}
+
+# autosummary
+autosummary_generate = True
+
+# autoapi
+autoapi_dirs = [module]
+autoapi_python_class_content = "both"
+autoapi_add_toctree_entry = use_autoapi is True
+
+# autodoc/autodoc-pydantic
+autodoc_default_options = {"show-inheritance": True}
+autodoc_pydantic_model_show_config_summary = {{autodoc_pydantic_model_show_config_summary}}  # noqa: F821
+autodoc_pydantic_model_show_validator_summary = {{autodoc_pydantic_model_show_validator_summary}}  # noqa: F821
+autodoc_pydantic_model_show_validator_members = {{autodoc_pydantic_model_show_validator_members}}  # noqa: F821
+autodoc_pydantic_field_list_validators = {{autodoc_pydantic_field_list_validators}}  # noqa: F821
+autodoc_pydantic_field_show_constraints = {{autodoc_pydantic_field_show_constraints}}  # noqa: F821
+autodoc_pydantic_model_member_order = "{{autodoc_pydantic_model_member_order}}"  # noqa: F821
+autodoc_pydantic_model_show_json = {{autodoc_pydantic_model_show_json}}  # noqa: F821
+autodoc_pydantic_settings_show_json = {{autodoc_pydantic_settings_show_json}}  # noqa: F821
+
+toctree_base = """{toctree}
+---
+caption: ""
+maxdepth: 2
+hidden: true
+---"""
+toctree_root = f"""```{toctree_base}
+{pages}
+```
+"""
+
+def run_copyreadme(_):
+    out = Path("{{source_dir}}") / "index.md"
+    readme = Path(root) if (root != "" and root != "None") else Path("{{source_dir}}") / "README.md"
+    if "index.md" not in pages:
+        out.write_text(toctree_root + "\n" + readme.read_text())
+
+def run_copycname(_):
+    out = Path("{{source_dir}}") / "docs" / "html" / "CNAME"
+    if cname:
+        out.write_text(cname)
+
+def run_create_previous_version_markdown(_):
+    versions_folder = Path("{{source_dir}}") / "docs" / "versions"
+    if not versions_folder.exists():
+        versions_folder.mkdir(parents=True, exist_ok=True)
+    version_file = versions_folder / "version.md"
+    version_file.write_text("# Previous Versions")
+
+def run_add_version_links_to_toctree(app, doctree):
+    from sphinx.addnodes import toctree
+    insert = True
+    if app.env.docname == "index":
+        all_docs = set()
+        nodes = list(doctree.traverse(toctree))
+        toc_entry = "docs/versions/versions"
+        if not nodes:
+            return
+        # Capture all existing toctree entries
+        for node in nodes:
+            for entry in node["entries"]:
+                all_docs.add(entry[1])
+        # Don't insert version links it's already present
+        for doc in all_docs:
+            if doc.find("versions") != -1:
+                insert = False
+        if insert:
+            # Insert index
+            nodes[-1]["entries"].append((None, toc_entry))
+            nodes[-1]["includefiles"].append(toc_entry)
+
+
+_GITHUB_ADMONITIONS = {
+    "> [!NOTE]": "note",
+    "> [!TIP]": "tip",
+    "> [!IMPORTANT]": "important",
+    "> [!WARNING]": "warning",
+    "> [!CAUTION]": "caution",
+}
+
+def run_convert_github_admonitions_to_rst(app, filename, lines):
+    # loop through lines, replace github admonitions
+    for i, orig_line in enumerate(lines):
+        orig_line_splits = orig_line.split("\n")
+        replacing = False
+        for j, line in enumerate(orig_line_splits):
+            # look for admonition key
+            for admonition_key in _GITHUB_ADMONITIONS:
+                if admonition_key in line:
+                    line = line.replace(admonition_key, ":::{" + _GITHUB_ADMONITIONS[admonition_key] + "}\n")
+                    # start replacing quotes in subsequent lines
+                    replacing = True
+                    break
+            else:
+                # replace indent to match directive
+                if replacing and "> " in line:
+                    line = line.replace("> ", "  ")
+                elif replacing:
+                    # missing "> ", so stop replacing and terminate directive
+                    line = f"\n:::\n{line}"
+                    replacing = False
+            # swap line back in splits
+            orig_line_splits[j] = line
+        # swap line back in original
+        lines[i] = "\n".join(orig_line_splits)
+
+
+def setup(app):
+    if {{previous_versions}}:
+        app.connect("builder-inited", run_create_previous_version_markdown)
+    app.connect("builder-inited", run_copyreadme)
+    app.connect("builder-inited", run_copycname)
+    app.connect("source-read", run_convert_github_admonitions_to_rst)
+    {# app.connect("doctree-read", run_add_version_links_to_toctree, priority=500) #}
