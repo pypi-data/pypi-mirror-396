@@ -1,0 +1,106 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      html_url: ${{ steps.create_release.outputs.html_url }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Create Release
+      id: create_release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ github.ref_name }}
+        name: Context42 ${{ github.ref_name }}
+        body: |
+          ## Context42 MCP RAG Server ${{ github.ref_name }}
+          
+          ### 🚀 Features
+          - FastMCP-based MCP server for local text search with intelligent compression
+          - Multi-format document support (.md, .txt, .rst, .json, .yaml, .yml, .toml, .csv, .log)
+          - Configurable compression chunking (1x-128x) with overlap
+          - Keyword relevance search with previews and scoring
+          - uvx-installable globally for easy setup
+          - Comprehensive MCP integration (15+ tools supported)
+          - Environment variable configuration support
+          - Windows compatibility and enterprise deployment ready
+          
+          ### 🛠️ Installation
+          ```bash
+          # Install globally
+          uvx install context42
+          
+          # Run directly
+          uvx context42
+          
+          # Or via uv
+          uv run context42
+          ```
+          
+          ### 🔧 MCP Integration
+          ```bash
+          # Claude Code (recommended)
+          claude mcp add --transport stdio context42 -- uvx context42
+          
+          # Or add to any MCP tool config:
+          {
+            "mcpServers": {
+              "context42": {
+                "command": "uvx",
+                "args": ["context42"]
+              }
+            }
+          }
+          ```
+          
+          ### 📊 Changes in ${{ github.ref_name }}
+          - **Documentation overhaul**: Removed outdated DESIGN.md, enhanced README with comprehensive MCP standards
+          - **MCP integration**: Added 15+ tool configurations, scope management, enterprise setup
+          - **Platform support**: Windows compatibility, environment variable expansion
+          - **Troubleshooting**: Comprehensive server, document, search, and client issue resolution
+          - **Security**: Enterprise-ready with managed configurations and allowlists
+          - **CLI tools**: Full Claude Code CLI command coverage and management
+          
+          ### 🧪 Quality
+          - ✅ Production-ready documentation
+          - ✅ Single source of truth (README.md)
+          - ✅ No documentation drift
+          - ✅ Comprehensive testing coverage
+          - ✅ Cross-platform compatibility
+          
+          ---  
+          📄 License: MIT
+          📧 Author: Aleksandr Beshkenadze
+          🔗 GitHub: https://github.com/beshkenadze/context42
+        draft: false
+        prerelease: false
+    
+    - name: Set up UV
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+    
+    - name: Build package
+      run: uv build
+    
+    - name: Get version
+      id: version
+      run: echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+    
+    - name: Upload Release Asset
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          ./dist/context42-${{ steps.version.outputs.version }}-py3-none-any.whl
+          ./dist/context42-${{ steps.version.outputs.version }}.tar.gz
