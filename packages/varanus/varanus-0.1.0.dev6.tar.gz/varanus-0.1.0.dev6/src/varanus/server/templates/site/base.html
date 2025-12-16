@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% load i18n %}
+
+{% block content %}
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item"><a class="nav-link disabled">{{ site }}</a></li>
+    <li class="nav-item">
+        <a class="nav-link{% if section == 'overview' %} active{% endif %}" href="{{ site.get_absolute_url }}">{% trans "Overview" %}</a>
+    </li>
+    {% if site.show_requests %}
+        <li class="nav-item">
+            <a class="nav-link{% if section == 'requests' %} active{% endif %}" href="{% url 'site-requests' slug=site.slug %}">{% trans "Requests" %}</a>
+        </li>
+    {% endif %}
+    {% if site.show_errors %}
+        <li class="nav-item">
+            <a class="nav-link{% if section == 'errors' %} active{% endif %}" href="{% url 'site-errors' slug=site.slug %}">{% trans "Errors" %}</a>
+        </li>
+    {% endif %}
+    {% if site.show_logs %}
+        <li class="nav-item">
+            <a class="nav-link{% if section == 'logs' %} active{% endif %}" href="{% url 'site-logs' slug=site.slug %}">{% trans "Logs" %}</a>
+        </li>
+    {% endif %}
+    {% if site.show_queries %}
+        <li class="nav-item">
+            <a class="nav-link{% if section == 'queries' %} active{% endif %}" href="{% url 'site-queries' slug=site.slug %}">{% trans "Queries" %}</a>
+        </li>
+    {% endif %}
+    {% if site.show_metrics %}
+        <li class="nav-item">
+            <a class="nav-link{% if section == 'metrics' %} active{% endif %}" href="{% url 'site-metrics' slug=site.slug %}">{% trans "Metrics" %}</a>
+        </li>
+    {% endif %}
+</ul>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-xl-3 col-lg-4 col-md-5 pb-3">
+            {% block search %}
+                <form action="{{ request.path }}" method="get" hx-get="{{ request.path }}" hx-replace-url="true" hx-trigger="change" hx-target="#results" hx-select="#results" hx-swap="outerHTML" id="searchForm">
+                    {{ search.render }}
+                    <div class="d-flex align-items-center justify-content-between">
+                        <span>
+                            <button class="btn btn-primary btn-sm">{% trans "Filter" %}</button>
+                            <a href="{{ request.path }}" class="btn btn-secondary btn-sm">{% trans "Clear" %}</a>
+                        </span>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="id_grouped" name="grouped"{% if grouped %} checked{% endif %} />
+                            <label class="form-check-label" for="id_grouped">{% trans "Grouped" %}</label>
+                        </div>
+                    </div>
+                </form>
+            {% endblock search %}
+        </div>
+        <div class="col-xl-9 col-lg-8 col-md-7">
+            {% block page %}{% endblock page %}
+        </div>
+    </div>
+</div>
+
+<div class="offcanvas offcanvas-end" style="width:40%;" tabindex="-1" id="inspector">
+</div>
+{% endblock content %}

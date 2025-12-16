@@ -1,0 +1,64 @@
+{% extends "site/base.html" %}
+
+{% load i18n %}
+
+{% block page %}
+<div id="results">
+<div class="table-responsive">
+<table class="table table-bordered">
+    <thead class="table-header">
+        <tr>
+            <th></th>
+            {% if not grouped %}
+                <th>{% trans "Context" %}</th>
+            {% endif %}
+            <th>{% trans "Query" %}</th>
+            {% if not grouped %}
+                <th>{% trans "DB" %}</th>
+            {% endif %}
+            <th>{% trans "Elapsed" %}</th>
+            <th>{% trans "Timestamp" %}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for q in results %}
+            <tr>
+                <td><a href="?fingerprint={{ q.fingerprint }}" class="link-underline link-underline-opacity-0"><i class="bi bi-search"></i>{% if grouped %} - {{ q.num }}{% endif %}</a></td>
+                {% if not grouped %}
+                    <td>
+                        <a href="{{ q.get_absolute_url }}" data-bs-toggle="offcanvas" data-bs-target="#inspector" hx-get="{{ q.get_absolute_url }}" hx-target="#inspector">{{ q.context }}</a>
+                    </td>
+                {% endif %}
+                <td>
+                    {% if grouped %}
+                        <a href="">{{ q.sql_summary }}</a>
+                    {% else %}
+                        {{ q.sql_summary }}
+                    {% endif %}
+                </td>
+                {% if not grouped %}
+                    <td>{{ q.db }}</td>
+                {% endif %}
+                <td>
+                    {% if grouped %}
+                        {% if q.num > 1 %}
+                            {{ q.elapsed_min }}ms
+                            <span class="text-secondary">/</span>
+                            {{ q.elapsed_avg|floatformat:0 }}ms
+                            <span class="text-secondary">/</span>
+                            {{ q.elapsed_max }}ms
+                        {% else %}
+                            {{ q.elapsed_max }}ms
+                        {% endif %}
+                    {% else %}
+                        {{ q.elapsed_ms }}ms
+                    {% endif %}
+                </td>
+                <td>{{ q.timestamp }}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+</div>
+{% endblock page %}

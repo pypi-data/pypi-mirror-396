@@ -1,0 +1,60 @@
+{% extends "site/base.html" %}
+
+{% load i18n %}
+
+{% block search %}
+    {% for key in site.keys.all %}
+        <div class="card">
+            <div class="card-header">Setup</div>
+            <div class="card-body"><code><pre>
+import varanus.client
+varanus.client.setup(
+    "{{ scheme }}://{{ key.access_key }}@{{ host }}</a>",
+    environment="local",
+    install=MIDDLEWARE,
+)
+</pre></code></div>
+        </div>
+    {% endfor %}
+{% endblock search %}
+
+{% block page %}
+<table class="table table-bordered">
+    <thead class="table-header">
+        <tr>
+            <th>{% trans "Environment" %}</th>
+            <th>{% trans "Node" %}</th>
+            <th>{% trans "Packages" %}</th>
+            <th>{% trans "Platform" %}</th>
+            <th>{% trans "Language" %}</th>
+            <th>{% trans "Framework" %}</th>
+            <th>{% trans "First Seen" %}</th>
+            <th>{% trans "Last Event" %}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for node in nodes %}
+            <tr>
+                <td>
+                    <a href="{% url 'environment-nodes' site.slug node.environment %}" data-bs-toggle="offcanvas" data-bs-target="#inspector" hx-get="{% url 'environment-nodes' site.slug node.environment %}" hx-target="#inspector">{{ node.environment }}</a>
+                </td>
+                <td>
+                    <a href="{% url 'node-environments' site.slug node.name %}" data-bs-toggle="offcanvas" data-bs-target="#inspector" hx-get="{% url 'node-environments' site.slug node.name %}" hx-target="#inspector">{{ node.name }}</a>
+                </td>
+                <td>
+                    <a href="{% url 'node-packages' site.slug node.pk %}" data-bs-toggle="offcanvas" data-bs-target="#inspector" hx-get="{% url 'node-packages' site.slug node.pk %}" hx-target="#inspector">{{ node.num_packages }}</a>
+                </td>
+                <td>
+                    <a href="{% url 'node-env' site.slug node.pk %}" data-bs-toggle="offcanvas" data-bs-target="#inspector" hx-get="{% url 'node-env' site.slug node.pk %}" hx-target="#inspector">{{ node.platform }}</a>
+                </td>
+                <td>{{ node.language }} {{ node.language_version }}</td>
+                <td>
+                    <a href="{% url 'node-settings' site.slug node.pk %}" data-bs-toggle="offcanvas" data-bs-target="#inspector" hx-get="{% url 'node-settings' site.slug node.pk %}" hx-target="#inspector">{{ node.framework }} {{ node.framework_version }}</a>
+                </td>
+                <td>{{ node.first_seen }}</td>
+                <td>{{ node.last_event }}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock page %}

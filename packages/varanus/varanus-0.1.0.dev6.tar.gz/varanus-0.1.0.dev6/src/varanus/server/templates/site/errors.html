@@ -1,0 +1,44 @@
+{% extends "site/base.html" %}
+
+{% load i18n %}
+
+{% block page %}
+<div id="results">
+<table class="table table-bordered">
+    <thead class="table-header">
+        <tr>
+            <th></th>
+            {% if not grouped %}
+                <th>{% trans "Context" %}</th>
+            {% endif %}
+            <th>{% trans "Message" %}</th>
+            <th>{% trans "Kind" %}</th>
+            <th>{% trans "Module" %}</th>
+            <th>{% trans "Timestamp" %}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for e in results %}
+            <tr>
+                <td><a href="?fingerprint={{ e.fingerprint }}" class="link-underline link-underline-opacity-0"><i class="bi bi-search"></i>{% if grouped %} - {{ e.num }}{% endif %}</a></td>
+                {% if not grouped %}
+                    <td>
+                        <a href="{{ e.get_absolute_url }}" data-bs-toggle="offcanvas" data-bs-target="#inspector" hx-get="{{ e.get_absolute_url }}" hx-target="#inspector">{{ e.context }}</a>
+                    </td>
+                {% endif %}
+                <td>
+                    {% if grouped %}
+                        <a href="">{{ e.message|default:"(no message)" }}</a>
+                    {% else %}
+                        {{ e.message|default:"(no message)" }}
+                    {% endif %}
+                </td>
+                <td>{{ e.kind }}</td>
+                <td>{{ e.module }}</td>
+                <td>{{ e.timestamp }}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock page %}
