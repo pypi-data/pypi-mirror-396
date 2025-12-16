@@ -1,0 +1,517 @@
+Metadata-Version: 2.4
+Name: git-json-changes
+Version: 0.2.8
+Summary: Extract structured JSON of Git changes with PR and issue tracker integration
+License: Proprietary
+License-File: LICENSE
+Requires-Python: >=3.10
+Requires-Dist: click>=8.0
+Requires-Dist: gitpython>=3.1
+Requires-Dist: loguru>=0.7
+Requires-Dist: requests>=2.28
+Description-Content-Type: text/markdown
+
+# git-json-changes
+
+Extract structured JSON of Git changes between two references (tags, branches, commits) with optional PR and issue tracker integration.
+
+---
+
+## Installation
+
+```bash
+uv install git-json-changes
+# or globally:
+uv tool install git-json-changes
+```
+
+### Optional: GitHub CLI
+
+For PR and GitHub Issues support, install and authenticate the GitHub CLI:
+
+```bash
+# Install gh (see https://cli.github.com/)
+gh auth login
+```
+
+---
+
+## Authentication Setup
+
+### GitHub Authentication
+
+For PR and GitHub Issues support, you need a GitHub personal access token:
+
+1. Go to https://github.com/settings/tokens
+2. Click **Generate new token** → **Generate new token (classic)**
+3. Name it (e.g., "git-json-changes")
+4. Select scopes:
+   - `repo` (for private repositories)
+   - `public_repo` (for public repositories only)
+5. Click **Generate token** and copy it immediately
+
+**Set the token as environment variable:**
+
+```bash
+export GITHUB_TOKEN="ghp_your_token_here"
+```
+
+Or pass it directly to the API:
+
+```python
+result = generate_changes(..., github_token="ghp_your_token_here")
+```
+
+### Jira Authentication
+
+#### A. Personal Access Token (Server/Data Center) - Recommended
+
+1. Go to your Jira profile (click avatar) → **Profile** → **Personal Access Tokens**
+2. Click **Create token**, name it (e.g., "git-json-changes")
+3. Set expiry date (optional)
+4. Copy the token immediately
+
+**Set as environment variables:**
+
+```bash
+export JIRA_URL="https://jira.company.com"
+export JIRA_PERSONAL_TOKEN="your_token_here"
+```
+
+#### B. API Token (Cloud)
+
+For Atlassian Cloud instances:
+
+1. Go to https://id.atlassian.com/manage-profile/security/api-tokens
+2. Click **Create API token**, name it
+3. Copy the token immediately
+4. Use your email as username with the token as password
+
+**Set as environment variables:**
+
+```bash
+export JIRA_URL="https://company.atlassian.net"
+export JIRA_PERSONAL_TOKEN="your_api_token_here"
+```
+
+**Note:** For Cloud API tokens, authentication uses Bearer token format automatically.
+
+---
+
+## Python API (Primary)
+
+```python
+from git_json_changes import generate_changes
+
+# Full output with all integrations
+result = generate_changes(
+    ref_from="v1.0.0",
+    ref_to="v2.0.0",
+    repo_path="/path/to/repo",      # local path, git URL, or None for cwd
+    github_token=None,               # uses $GITHUB_TOKEN
+    jira_url="https://jira.company.com",
+    jira_token="...",                # uses $JIRA_PERSONAL_TOKEN if None
+    fetch_prs=True,                  # fetch GitHub PRs
+    fetch_github_issues=False,       # fetch GitHub Issues
+    fetch_jira_from_prs=True,        # extract Jira refs from PR content
+    issue_regex=r"[A-Z]+-\d+",       # regex to match issue keys
+    diff_limit=50000,                # max bytes for diffs per commit
+    pr_comment_limit=50000,          # max bytes for PR comments
+    issue_limit=50000,               # max bytes for issue content
+)
+
+# result structure:
+# {
+#   "meta": {
+#     "ref_from": "v1.0.0",
+#     "ref_to": "v2.0.0",
+#     "repository": "https://github.com/...",
+#     "generated_at": "2025-12-11T...",
+#     "stats": {
+#       "commits": 42,
+#       "prs": 12,
+#       "pr_comments": 38,
+#       "jira_issues": 8,
+#       "jira_comments": 156,
+#       "github_issues": 3
+#     }
+#   },
+#   "pull_requests": [...],  # PRs with nested commits and issues
+#   "orphan_commits": [...]  # commits not in any PR
+# }
+```
+
+### Convenience Functions
+
+```python
+from git_json_changes import (
+    get_commits,
+    get_pull_requests,
+    get_jira_issues,
+    get_github_issues,
+)
+
+# Get commits only
+commits = get_commits(repo, "v1.0", "v2.0", diff_limit=50000)
+
+# Get Jira issues by keys
+issues = get_jira_issues(
+    ["PROJ-123", "PROJ-456"],
+    jira_url="https://company.atlassian.net",
+    jira_token="...",
+)
+```
+
+---
+
+## CLI
+
+```bash
+git-json-changes v1.0.0 v2.0.0 -o changes.json
+
+# With options
+git-json-changes v1.0.0 v2.0.0 -o changes.json \
+    --repo /path/to/repo \
+    --jira-url https://company.atlassian.net \
+    --jira-token $JIRA_TOKEN \
+    --github-issues \
+    --diff-limit 100000
+```
+
+### Options
+
+| Option               | Default         | Description                          |
+| -------------------- | --------------- | ------------------------------------ |
+| `-o, --output`       | Required        | Output JSON file                     |
+| `-r, --repo`         | Current dir     | Repository path or URL               |
+| `--github-token`     | `$GITHUB_TOKEN` | GitHub token                         |
+| `--jira-url`         | `$JIRA_URL`     | Jira instance URL                    |
+| `--jira-token`       | `$JIRA_TOKEN`   | Jira API token                       |
+| `--issue-regex`      | `[A-Z]+-\d+`    | Regex for issue keys                 |
+| `--github-issues`    | Off             | Enable GitHub Issues                 |
+| `--diff-limit`       | 50000           | Max bytes for diffs                  |
+| `--pr-comment-limit` | 50000           | Max bytes for PR comments            |
+| `--issue-limit`      | 50000           | Max bytes for issue content          |
+| `--no-prs`           | Off             | Skip PR fetching                     |
+| `--no-jira`          | Off             | Skip Jira integration                |
+| `--no-jira-from-prs` | Off             | Skip Jira extraction from PR content |
+
+### Using Git URLs
+
+You can pass a git URL to `-r/--repo` to clone and analyze remote repositories:
+
+```bash
+# SSH URL
+git-json-changes v1.0.0 v2.0.0 -o output.json \
+    -r git@github.com:owner/repo.git
+
+# HTTPS URL
+git-json-changes v1.0.0 v2.0.0 -o output.json \
+    -r https://github.com/owner/repo.git
+```
+
+The repository will be cloned to a temporary directory and automatically cleaned up after analysis.
+
+---
+
+## Output Structure
+
+### Top-Level Structure
+
+The output is structured as **dictionaries** (not arrays) for O(1) lookup performance and bidirectional navigation:
+
+```json
+{
+  "meta": {
+    "ref_from": "v1.0.0",
+    "ref_to": "v2.0.0",
+    "repository": "https://github.com/owner/repo.git",
+    "generated_at": "2025-12-11T10:30:45.123456+00:00",
+    "stats": {
+      "commits": 42,
+      "prs": 12,
+      "pr_comments": 38,
+      "jira_issues": 8,
+      "jira_comments": 156,
+      "github_issues": 3
+    }
+  },
+  "pull_requests": {
+    "123": {...},
+    "124": {...}
+  },
+  "commits": {
+    "abc123def456...": {...},
+    "def789abc012...": {...}
+  },
+  "issues": {
+    "PROJ-123": {...},
+    "PROJ-456": {...},
+    "gh-789": {...}
+  }
+}
+```
+
+### Direct Access by ID
+
+Access any entity directly by its ID:
+
+```python
+# Get specific PR
+pr = result['pull_requests'][123]
+
+# Get specific commit
+commit = result['commits']['abc123def456...']
+
+# Get Jira issue
+issue = result['issues']['PROJ-123']
+
+# Get GitHub issue (prefixed with 'gh-')
+gh_issue = result['issues']['gh-456']
+```
+
+### Bidirectional References
+
+The structure forms a **navigable graph** with bidirectional references:
+
+```
+Pull Request ←→ Commits ←→ Issues
+     ↕                         ↕
+  Commits                    PRs & Commits
+```
+
+**Example navigation:**
+
+```python
+# Start with an issue, find all related work
+issue = result['issues']['PROJ-123']
+print(f"Issue: {issue['summary']}")
+
+# Find commits
+print(f"\nCommits ({len(issue['commits'])}):")
+for commit_hash in issue['commits']:
+    commit = result['commits'][commit_hash]
+    print(f"  - {commit['short_hash']}: {commit['message'][:60]}")
+
+# Find PRs
+print(f"\nPull Requests ({len(issue['pull_requests'])}):")
+for pr_number in issue['pull_requests']:
+    pr = result['pull_requests'][pr_number]
+    print(f"  - #{pr['number']}: {pr['title']}")
+
+# Navigate from PR → commits → issues
+pr = result['pull_requests'][123]
+for commit_hash in pr['commits']:
+    commit = result['commits'][commit_hash]
+    for issue_id in commit['issues']:
+        issue = result['issues'][issue_id]
+        print(f"PR {pr['number']} → Commit {commit['short_hash']} → Issue {issue['key']}")
+```
+
+### Pull Request Structure
+
+Each PR is keyed by its number and contains **references** to related commits and issues:
+
+```json
+"pull_requests": {
+  "123": {
+    "number": 123,
+    "title": "Add new feature",
+    "author": "username",
+    "state": "merged",
+    "created_at": "2025-12-08T14:30:00Z",
+    "merged_at": "2025-12-10T09:15:22Z",
+    "url": "https://github.com/owner/repo/pull/123",
+    "body": "Description of the PR...",
+    "merge_commit": "abc123def456...",
+    "comments": [
+      {
+        "author": "reviewer",
+        "date": "2025-12-10T15:30:00Z",
+        "body": "LGTM!"
+      }
+    ],
+    "commits": [
+      "abc123def456...",
+      "def789abc012..."
+    ],
+    "issues": [
+      "PROJ-123",
+      "PROJ-456"
+    ]
+  }
+}
+```
+
+**Navigate to related entities:**
+
+```python
+pr = result['pull_requests'][123]
+
+# Get all commits in this PR
+for commit_hash in pr['commits']:
+    commit = result['commits'][commit_hash]
+    print(f"Commit: {commit['short_hash']} - {commit['message']}")
+
+# Get all issues referenced in this PR
+for issue_id in pr['issues']:
+    issue = result['issues'][issue_id]
+    print(f"Issue: {issue['key']} - {issue['summary']}")
+```
+
+### Commit Structure
+
+All commits are keyed by their full hash and contain **references** to their PR (if any) and related issues:
+
+```json
+"commits": {
+  "def456abc789...": {
+    "hash": "def456abc789...",
+    "short_hash": "def456a",
+    "author": "Alice <alice@example.com>",
+    "date": "2025-12-08T09:15:22+00:00",
+    "message": "fix: resolve bug in parser\n\nFixes PROJ-456",
+    "pr_number": 123,
+    "issues": [
+      "PROJ-456"
+    ],
+    "files": [
+      {
+        "path": "src/parser.py",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 1,
+        "diff": "@@ -45,1 +45,3 @@\n-    old_code()\n+    new_code()\n+    additional_line()"
+      },
+      {
+        "path": "tests/test_new.py",
+        "status": "added",
+        "additions": 120,
+        "deletions": 0,
+        "diff": "@@ -0,0 +1,120 @@\n+import unittest\n+..."
+      }
+    ]
+  }
+}
+```
+
+**Notes:**
+
+- `pr_number` is `null` for orphan commits (not in any PR), or contains the PR number if this commit is the merge commit for that PR
+- Currently, a commit can have at most one `pr_number` (we only track merge commits)
+- `issues` contains issue IDs (not full issue objects)
+- `files` array contains the full file change details
+
+**Navigate to related entities:**
+
+```python
+commit = result['commits']['def456abc789...']
+
+# Get the PR this commit belongs to
+if commit['pr_number']:
+    pr = result['pull_requests'][commit['pr_number']]
+    print(f"PR: #{pr['number']} - {pr['title']}")
+
+# Get all issues referenced
+for issue_id in commit['issues']:
+    issue = result['issues'][issue_id]
+    print(f"Issue: {issue['key']} - {issue['summary']}")
+```
+
+### File Change Types
+
+The `status` field in file objects can be:
+
+- `"added"` - New file created
+- `"deleted"` - File removed
+- `"modified"` - File changed
+- `"renamed"` - File moved/renamed
+
+### Issue Structure
+
+Issues are keyed by their unique ID and contain **reverse references** to all commits and PRs that mention them:
+
+**Jira Issues (keyed by Jira key):**
+
+```json
+"issues": {
+  "PROJ-123": {
+    "source": "jira",
+    "key": "PROJ-123",
+    "url": "https://jira.company.com/browse/PROJ-123",
+    "summary": "Issue title",
+    "status": "In Progress",
+    "created_at": "2025-12-05T10:00:00.000+0000",
+    "updated_at": "2025-12-08T14:30:00.000+0000",
+    "description": "Full description...",
+    "comments": [
+      {
+        "author": "Jane Smith",
+        "date": "2025-12-09T10:15:00.000+0000",
+        "body": "Comment text..."
+      }
+    ],
+    "commits": [
+      "abc123def456...",
+      "def789abc012..."
+    ],
+    "pull_requests": [
+      123,
+      124
+    ]
+  }
+}
+```
+
+**GitHub Issues (keyed with 'gh-' prefix):**
+
+```json
+"issues": {
+  "gh-456": {
+    "source": "github",
+    "number": 456,
+    "url": "https://github.com/owner/repo/issues/456",
+    "summary": "Bug report",
+    "status": "open",
+    "created_at": "2025-12-06T08:45:00Z",
+    "description": "Issue description...",
+    "comments": [...],
+    "commits": [
+      "xyz789..."
+    ],
+    "pull_requests": []
+  }
+}
+```
+
+**Navigate to related entities:**
+
+```python
+issue = result['issues']['PROJ-123']
+
+# Get all commits that reference this issue
+for commit_hash in issue['commits']:
+    commit = result['commits'][commit_hash]
+    print(f"Commit: {commit['short_hash']} - {commit['message']}")
+
+# Get all PRs that reference this issue
+for pr_number in issue['pull_requests']:
+    pr = result['pull_requests'][pr_number]
+    print(f"PR: #{pr['number']} - {pr['title']}")
+```
+
+### Data Limits
+
+To prevent excessive output size, byte limits are applied:
+
+- **Diffs**: 50KB per commit (smallest files first)
+- **PR Comments**: 50KB per PR (newest first)
+- **Issue Content**: 50KB per issue (description + newest comments first)
+
+If content exceeds limits, it's truncated while preserving the most relevant data.
+
+---
+
+## License
+
+Proprietary. See LICENSE file.
