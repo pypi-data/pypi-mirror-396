@@ -1,0 +1,142 @@
+[build-system]
+requires = ["setuptools >= 65.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nbxmpp-client"
+description = "XMPP Test Client"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+  {email = "philipp@hoerist.com"},
+  {name = "Philipp Hörist"}
+]
+classifiers = [
+  "Programming Language :: Python :: 3.10",
+]
+dependencies = [
+  "nbxmpp>=4.0.0,<7.0.0",
+]
+
+dynamic = ["version"]
+
+[project.optional-dependencies]
+dev = [
+  "isort",
+  "black",
+  "ruff",
+]
+
+[project.urls]
+repository = "https://dev.gajim.org/gajim/nbxmpp-client"
+
+[project.gui-scripts]
+nbxmpp_client = "nbxmpp_client.main:run"
+nbc = "nbxmpp_client.main:run"
+
+[tool.setuptools.dynamic]
+version = {attr = "nbxmpp_client.__version__"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"nbxmpp_client" = ["py.typed"]
+"nbxmpp_client.data" = ["**/*"]
+
+
+[tool.pyright]
+pythonVersion = "3.10"
+pythonPlatform = "All"
+typeCheckingMode = "strict"
+reportUnnecessaryTypeIgnoreComment = "error"
+reportPropertyTypeMismatch = "error"
+reportMissingModuleSource = "none"
+
+
+[tool.ruff]
+line-length = 88
+
+select = [
+  "A",      # flake8-builtins
+  # "ANN",  # flake8-annotations
+  # "ARG",  # flake8-unused-arguments
+  "B",      # flake8-bugbear
+  "BLE",    # flake8-blind-except
+  "C",      # flake8-comprehensions
+  "C901",   # mccabe
+  # "D",    # pydocstyle
+  "E",      # pycodestyle
+  "EM",     # flake8-errmsg
+  "ERA",    # eradicate
+  "F",      # pyflakes  
+  # "FBT",  # flake8-boolean-trap
+  # "I",    # flake8-tidy-imports, isort
+  "ICN",    # flake8-import-conventions
+  "N",      # pep8-naming
+  "PD",     # pandas-vet
+  "PGH",    # pygrep-hooks
+  "PLC",    # pylint
+  "PLE",    # pylint
+  "PLR",    # pylint
+  "PLW",    # pylint
+  "Q",      # flake8-quotes
+  "RUF",    # Ruff-specific rules
+  "RET",    # flake8-return
+  "S",      # flake8-bandit
+  "SIM",    # flake8-simplify
+  "T",      # flake8-debugger, flake8-print
+  "TID",    # flake8-tidy-imports
+  "UP",     # pyupgrade
+  "W",      # pycodestyle
+  "YTT",    # flake8-2020
+]
+
+ignore = [
+  "EM101",  # Exception must not use a string literal, assign to variable first
+  "PLR2004",  # Magic number used in comparison, consider replacing 'x' with a constant variable
+]
+
+exclude = [
+  ".eggs",
+  ".git",
+  ".ruff_cache",
+  ".venv",
+  "build",
+  "dist",
+  "venv",
+  "*.pyi",
+]
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+target-version = "py310"
+
+
+[tool.ruff.mccabe]
+max-complexity = 15
+
+[tool.ruff.flake8-quotes]
+inline-quotes = "double"
+docstring-quotes = "double"
+multiline-quotes = "double"
+
+
+[tool.isort]
+overwrite_in_place = true
+force_alphabetical_sort_within_sections = true
+force_single_line = true
+group_by_package = true
+known_typing = ["typing"]
+sections = ["FUTURE", "TYPING", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
+skip_gitignore = true
+
+
+[tool.black]
+line-length = 88
+target-version = ["py310"]
+
+
+[tool.codespell]
+skip = "*__pycache__*,*.egg-info,.git,*.sublime*"
