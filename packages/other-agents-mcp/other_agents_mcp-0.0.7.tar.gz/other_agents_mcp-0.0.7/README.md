@@ -1,0 +1,159 @@
+# Other Agents
+
+[![PyPI version](https://badge.fury.io/py/other-agents-mcp.svg)](https://pypi.org/project/other-agents-mcp/)
+[![CI](https://github.com/inchan/other-agents/actions/workflows/ci.yml/badge.svg)](https://github.com/inchan/other-agents/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/pypi/pyversions/other-agents-mcp.svg)](https://pypi.org/project/other-agents-mcp/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+> **A unified MCP server to orchestrate multiple AI CLI tools from a single interface.**
+
+Other Agents is an [MCP](https://modelcontextprotocol.io/) server that lets you communicate with multiple AI command-line tools—Claude, Gemini, Codex, and Qwen—through a single, standardized protocol.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      MCP Client                             │
+│                (Claude Desktop / Code)                      │
+└─────────────────────────┬───────────────────────────────────┘
+                          │ MCP Protocol (stdio)
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                 Other Agents MCP Server                     │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  • list_agents    • use_agent    • use_agents       │   │
+│  │  • get_task_status               • add_agent        │   │
+│  └─────────────────────────────────────────────────────┘   │
+└─────────────────────────┬───────────────────────────────────┘
+                          │ File-based I/O
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                     AI CLI Tools                            │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐       │
+│  │  Claude  │ │  Gemini  │ │  Codex   │ │   Qwen   │  ...  │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────┘       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Quick Start
+
+**1. Install**
+
+```bash
+pip install other-agents-mcp
+```
+
+**2. Configure** (`~/.config/claude/claude_desktop_config.json` on macOS)
+
+```json
+{
+  "mcpServers": {
+    "other-agents": {
+      "command": "uvx",
+      "args": ["other-agents-mcp"]
+    }
+  }
+}
+```
+
+**3. Use** in Claude Desktop:
+
+```
+"Ask Gemini to review this code"
+"Get Codex's opinion on this function"
+"Send this question to all AI tools"
+```
+
+---
+
+## Supported AI CLIs
+
+| CLI | Command | Notes |
+|-----|---------|-------|
+| [Claude Code](https://docs.anthropic.com/en/docs/claude-code) | `claude` | Anthropic's official CLI |
+| [Gemini CLI](https://github.com/google-gemini/gemini-cli) | `gemini` | Google's Gemini CLI |
+| [Codex](https://github.com/openai/codex) | `codex` | OpenAI Codex (via Cursor) |
+| [Qwen](https://github.com/QwenLM/Qwen) | `qwen` | Alibaba's Qwen CLI |
+
+> Each CLI tool must be installed separately on your system.
+
+---
+
+## MCP Tools
+
+### `list_agents`
+
+List available AI CLI tools and their installation status.
+
+### `use_agent`
+
+Send a prompt to a specific AI CLI.
+
+```json
+{
+  "cli_name": "gemini",
+  "message": "Explain this code"
+}
+```
+
+**Options:**
+- `run_async`: Run in background, returns `task_id`
+- `session_id` / `resume`: Maintain conversation context
+- `timeout`: Custom timeout in seconds
+
+### `use_agents`
+
+Broadcast a prompt to multiple AI CLIs simultaneously.
+
+```json
+{
+  "message": "Review this code for bugs",
+  "cli_names": ["claude", "gemini"]
+}
+```
+
+### `get_task_status`
+
+Check status of async tasks started with `run_async: true`.
+
+### `add_agent`
+
+Register a custom AI CLI at runtime.
+
+---
+
+## Installation Options
+
+```bash
+# PyPI (recommended)
+pip install other-agents-mcp
+
+# Or run directly with uvx
+uvx other-agents-mcp
+
+# Or via Smithery
+npx @smithery/cli install other-agents-mcp --client claude
+```
+
+---
+
+## Development
+
+```bash
+git clone https://github.com/inchan/other-agents.git
+cd other-agents
+python -m venv venv && source venv/bin/activate
+pip install -e ".[dev]"
+
+# Run tests
+pytest tests/ -v
+
+# Run server
+python -m other_agents_mcp.server
+```
+
+---
+
+## License
+
+MIT - see [LICENSE](LICENSE)
