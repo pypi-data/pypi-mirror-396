@@ -1,0 +1,217 @@
+###############################################################################
+#
+# The MIT License (MIT)
+#
+# Copyright (c) typedef int GmbH
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+#
+###############################################################################
+
+import sys
+import os
+import pytest
+import logging
+
+import txaio
+
+txaio.use_twisted()
+
+import zlmdb  # noqa
+
+try:
+    from tempfile import TemporaryDirectory
+except ImportError:
+    from backports.tempfile import TemporaryDirectory  # type:ignore
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+if sys.version_info >= (3, 6):
+    from _schema_py3 import User, Schema2
+else:
+    from _schema_py2 import User, Schema2
+
+
+@pytest.fixture(scope="module")
+def testset1():
+    users = []
+    for i in range(1000):
+        user = User.create_test_user(i)
+        users.append(user)
+    return users
+
+
+def test_open1():
+    with TemporaryDirectory() as dbpath:
+        with zlmdb.Database(dbpath) as db:
+            assert db.maxsize == 10485760
+            assert db.is_sync
+            assert db.is_open
+            assert not db.is_readonly
+            assert not db.is_writemap
+
+
+def test_open2():
+    with TemporaryDirectory() as dbpath:
+        with zlmdb.Database(dbpath) as db:
+            assert db.is_open
+        with zlmdb.Database(dbpath) as db:
+            assert db.is_open
+
+
+def test_open3():
+    with TemporaryDirectory() as dbpath:
+        db = zlmdb.Database(dbpath)
+        assert db.is_open
+        try:
+            zlmdb.Database(dbpath)
+            assert False, (
+                "opening same dbpath twice in same process did not throw an exception"
+            )
+        except RuntimeError as e:
+            # RuntimeError: tried to open same dbpath "/tmp/tmpwc1dw5c8" twice within same process
+            assert "twice within same process" in str(e), (
+                "exception did not contain text we excepted: {}".format(e)
+            )
+        except Exception as e:
+            assert False, "unexpected exception {} raised".format(e)
+
+
+def test_open4():
+    with TemporaryDirectory() as dbpath:
+        db1 = zlmdb.Database.open(dbpath)
+        assert db1.is_open
+
+        db2 = zlmdb.Database.open(dbpath)
+        assert db2.is_open
+
+        assert db1 == db2
+
+
+def test_transaction():
+    with TemporaryDirectory() as dbpath:
+        logging.info("Using temporary directory {} for database".format(dbpath))
+
+        with zlmdb.Database(dbpath) as db:
+            with db.begin() as txn:
+                logging.info("transaction open {}".format(txn.id()))
+            logging.info("transaction committed")
+        logging.info("database closed")
+
+
+def test_save_load():
+    with TemporaryDirectory() as dbpath:
+        logging.info("Using temporary directory {} for database".format(dbpath))
+
+        schema = Schema2()
+
+        user = User.create_test_user()
+
+        with zlmdb.Database(dbpath) as db:
+            with db.begin(write=True) as txn:
+                schema.users[txn, user.oid] = user
+                logging.info("user saved")
+
+                _user = schema.users[txn, user.oid]
+                assert _user
+                assert user == _user
+                logging.info("user loaded")
+
+            logging.info("transaction committed")
+
+        logging.info("database closed")
+
+
+def test_save_load_many_1(testset1):
+    with TemporaryDirectory() as dbpath:
+        logging.info("Using temporary directory {} for database".format(dbpath))
+
+        schema = Schema2()
+
+        with zlmdb.Database(dbpath) as db:
+            with db.begin(write=True) as txn:
+                for user in testset1:
+                    schema.users[txn, user.oid] = user
+
+                cnt = schema.users.count(txn)
+                logging.info("user saved: {}".format(cnt))
+                assert cnt == len(testset1)
+
+            with db.begin() as txn:
+                cnt = schema.users.count(txn)
+                assert cnt == len(testset1)
+
+        with zlmdb.Database(dbpath) as db:
+            with db.begin() as txn:
+                cnt = schema.users.count(txn)
+                assert cnt == len(testset1)
+
+
+def test_save_load_many_2(testset1):
+    with TemporaryDirectory() as dbpath:
+        logging.info("Using temporary directory {} for database".format(dbpath))
+
+        schema = Schema2()
+
+        oids = []
+
+        with zlmdb.Database(dbpath) as db:
+            # write records in a 1st transaction
+            with db.begin(write=True) as txn:
+                c = 0
+                for user in testset1:
+                    schema.users[txn, user.oid] = user
+                    oids.append(user.oid)
+                    c += 1
+                assert c == len(testset1)
+                logging.info("[1] successfully stored {} records".format(c))
+
+                # in the same transaction, read back records
+                c = 0
+                for oid in oids:
+                    user = schema.users[txn, oid]
+                    if user:
+                        c += 1
+                assert c == len(testset1)
+                logging.info("[1] successfully loaded {} records".format(c))
+
+            # in a new transaction, read back records
+            c = 0
+            with db.begin() as txn:
+                for oid in oids:
+                    user = schema.users[txn, oid]
+                    if user:
+                        c += 1
+            assert c == len(testset1)
+            logging.info("[2] successfully loaded {} records".format(c))
+
+        # in a new database environment (and hence new transaction), read back records
+        with zlmdb.Database(dbpath) as db:
+            with db.begin() as txn:
+                count = schema.users.count(txn)
+                assert count == len(testset1)
+                logging.info("total records: {}".format(count))
+
+                c = 0
+                for oid in oids:
+                    user = schema.users[txn, oid]
+                    if user:
+                        c += 1
+                assert c == len(testset1)
+                logging.info("[3] successfully loaded {} records".format(c))
