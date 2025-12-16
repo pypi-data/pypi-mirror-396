@@ -1,0 +1,34 @@
+# TODO
+
+- [ ] extra optimzation criteria for underconstrained problems (or posoptimization)
+- [x] analysis
+- [ ] multiprocessing (or maybe not, it did not seem to speed it up, maybe the optimizations themselves are already parallel enough)
+- [x] sensitivity plots
+- [x] docs with sphinx?
+  - [x] links in docs
+  - [x] provide links to foreign documentation with intersphinx
+- [ ] tests
+- [x] refactor solution/candidate/problem?
+- [x] more input validation, no region overlaps etc
+- [x] data structure with solutions that implements filtering and sorting methods
+- [ ] use sympy to build tracers and make optimized function
+- [ ] error estimates in fitting
+- [ ] propagate fit error to analysis plots to see if it is withing adjustment range
+- [ ] fit (with uncertainty?)
+- [ ] fit with lenses (including lest positions and focal length)
+- [ ] function to reverse optical setup
+- [ ] saving and loading of solution? or is this not required since you can just save the notebook?
+- [x] use proper gaussian beam transfer matrices
+- [x] only store complex beam parameter?
+- [ ] lens library
+- [ ] optimize coupling for solution list
+- [ ] wherever this is hosted, add a jupyterlite instance with the module installed?
+- [ ] propagate fit uncertainty and display in relevant plots
+- [ ] fix type annotations to use more general types like ArrayLike
+- [ ] fix links in notebooks, maybe with a custom converter?
+- [ ] thick lenses
+- [ ] limited quantity of specific lenses
+- [ ] extra docs on reachability and sensitivity analysis
+- [ ] add coupling axis, the major curvature eigenvector of the reduced sensitivity matrix (of the two least couple DOFs)
+- [ ] pipeline including check if notebooks are stripped
+- [ ] change default filter predicate to ~100% mode matching
