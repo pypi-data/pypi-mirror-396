@@ -1,0 +1,43 @@
+[package]
+name = "fast-decision"
+version = "0.1.0"
+edition = "2024"
+authors = ["AK <kolchta@gmail.com>"]
+license = "MIT OR Apache-2.0"
+description = "High-performance rule engine with MongoDB-style query syntax"
+repository = "https://github.com/almayce/fast-decision"
+homepage = "https://github.com/almayce/fast-decision"
+readme = "README.md"
+keywords = ["rules", "engine", "decision", "mongodb", "performance"]
+categories = ["algorithms", "data-structures"]
+
+[lib]
+name = "fast_decision"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+log = "0.4.29"
+env_logger = "0.11.8"
+pyo3 = { version = "0.22", features = ["extension-module"] }
+
+[build-dependencies]
+pyo3-build-config = "0.22"
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "engine_benchmark"
+harness = false
+
+[profile.release]
+opt-level = 3          # Maximum optimization
+lto = "fat"            # Link Time Optimization (aggressive)
+codegen-units = 1      # Better optimization, slower compile
+strip = true           # Remove symbols for smaller binary
+panic = "abort"        # Smaller binary, no unwinding
+
+[profile.bench]
+inherits = "release"
