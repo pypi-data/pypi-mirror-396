@@ -1,0 +1,104 @@
+[build-system]
+requires = ["setuptools>=68.0.0", "setuptools-scm>=8.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nsmbl-mcp"
+dynamic = ["version"]
+description = "MCP server for NSMBL API - enables LLMs to create systematic investment strategies and run backtests"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "NSMBL", email = "support@nsmbl.ai"}
+]
+keywords = [
+    "mcp",
+    "model-context-protocol",
+    "nsmbl",
+    "investment",
+    "backtest",
+    "backtesting",
+    "strategy",
+    "systematic-trading",
+    "algorithmic-trading",
+    "portfolio-management",
+    "llm",
+    "ai",
+    "claude",
+    "cursor",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Financial and Insurance Industry",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business :: Financial :: Investment",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+
+dependencies = [
+    "mcp>=0.9.0",
+    "httpx>=0.27.0",
+    "pydantic>=2.0.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-httpx>=0.30.0",
+    "black>=24.0.0",
+    "ruff>=0.3.0",
+    "mypy>=1.8.0",
+]
+
+[project.scripts]
+nsmbl-mcp = "nsmbl_mcp.server:run"
+
+[project.urls]
+Homepage = "https://github.com/nsmbl/nsmbl-mcp"
+Documentation = "https://docs.nsmbl.ai"
+Repository = "https://github.com/nsmbl/nsmbl-mcp"
+Issues = "https://github.com/nsmbl/nsmbl-mcp/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+select = ["E", "F", "I", "N", "W"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[tool.setuptools_scm]
+# Automatically derive version from git tags and commits
+write_to = "src/nsmbl_mcp/_version.py"
+version_scheme = "guess-next-dev"
+local_scheme = "no-local-version"
+

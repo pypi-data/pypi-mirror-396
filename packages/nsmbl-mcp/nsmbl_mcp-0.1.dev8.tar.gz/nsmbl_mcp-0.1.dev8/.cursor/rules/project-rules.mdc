@@ -1,0 +1,47 @@
+---
+description: NSMBL MCP Server development rules
+globs: src/**/*.py, tests/**/*.py, **/*
+alwaysApply: true
+---
+
+# NSMBL MCP Server Development Rules
+
+## Context Directory Protection
+
+```json
+{
+  "context_directory_readonly": {
+    "rule": "NEVER modify or delete files in context/ directory",
+    "action": "The context/ directory contains read-only reference code copied from the backend API project",
+    "rationale": "Context is for reference only and is updated manually when backend API changes",
+    "critical": "This directory must remain untouched - it's documentation, not part of the MCP server"
+  }
+}
+```
+
+## MCP Server Standards
+
+```json
+{
+  "async_first": {
+    "rule": "All MCP tools and HTTP operations must be async",
+    "action": "Use async/await patterns throughout, httpx for HTTP, asyncio for concurrency",
+    "rationale": "MCP protocol is async-first and requires non-blocking operations"
+  },
+  "tool_naming": {
+    "rule": "Use snake_case for tool names, clear and descriptive",
+    "action": "Tool names should be: list_assets, create_strategy, create_backtest_and_wait",
+    "rationale": "Consistent with Python conventions and easy for LLMs to understand"
+  },
+  "error_handling": {
+    "rule": "Always provide user-friendly error messages with actionable guidance",
+    "action": "Parse API errors, map status codes, provide clear next steps",
+    "rationale": "LLMs need clear error messages to help users troubleshoot"
+  },
+  "billing_transparency": {
+    "rule": "Document which operations cost money in tool descriptions",
+    "action": "Note 'Charged 1¢' or 'Free' in every tool description",
+    "rationale": "Users need to know cost implications before operations"
+  }
+}
+```
