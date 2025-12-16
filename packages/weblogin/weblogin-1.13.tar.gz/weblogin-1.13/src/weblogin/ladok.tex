@@ -1,0 +1,737 @@
+\section{Logging in to LADOK}% ===> this file was generated automatically by noweave --- better not edit it
+
+Here we provide the module {\Tt{}weblogin.ladok\nwendquote}, which serves as a more complex 
+example of how to write a login handler for use with 
+{\Tt{}weblogin.AutologinSession\nwendquote}.
+
+We will create a login handler for LADOK.
+As LADOK supports logging in using SSO from all Swedish universities, we will 
+use this handler in conjunction with a login handler for a university (for 
+instance the ones for KTH in \cref{KTHhandler,SAMLhandler}).
+
+However, it turns out, that most handlers for the university-specific login 
+services are quite similar.
+And they are all on domains different from LADOK.
+This allows us to actually write a very general login handler that should be 
+able to handle almost any university.
+If this general-purpose handler doesn't work for a particular university, we 
+can always write a handler for that university.
+That way, that handler will intercept the right requests and handle them, 
+before returning to this general-purpose code.
+
+We need a class for LADOK that detects logins to LADOK.
+Then we implement the missing methods in the {\Tt{}weblogin.AutologinHandler\nwendquote} 
+class.
+\nwfilename{ladok.nw}\nwbegincode{1}\sublabel{NW1qVjDS-18JGs2-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1qVjDS-18JGs2-1}}}\moddef{ladok.py~{\nwtagstyle{}\subpageref{NW1qVjDS-18JGs2-1}}}\endmoddef\nwstartdeflinemarkup\nwenddeflinemarkup
+from lxml import html
+from pprint import pprint
+import requests
+import weblogin
+import weblogin.seamlessaccess as sa
+import urllib.parse
+
+class SSOlogin(weblogin.AutologinHandler):
+  """
+  Login handler (weblogin.AutologinHandler) for LADOK logins.
+  """
+  
+  def __init__(self,
+      institution,
+      \LA{}SSOlogin args~{\nwtagstyle{}\subpageref{NW1qVjDS-1ElCMX-1}}\RA{}):
+    """
+    Creates a login handler that automates the LADOK part of authentication.
+
+    - Requires `institution`. A string identifying the instutution at 
+      SeamlessAccess.org.
+
+    \LA{}SSOlogin args docs~{\nwtagstyle{}\subpageref{NW1qVjDS-36cMg3-1}}\RA{}
+    """
+    super().__init__()
+    self.__institution = institution
+    self.__logging_in = False
+    \LA{}SSOlogin constructor~{\nwtagstyle{}\subpageref{NW1qVjDS-2TpnQ5-1}}\RA{}
+
+  def need_login(self, response):
+    """
+    Checks a response to determine if logging in is needed,
+    returns True if needed
+    """
+    if self.__logging_in:
+      return False
+
+    \LA{}check if we're redirected to login server~{\nwtagstyle{}\subpageref{NW1qVjDS-4detzc-1}}\RA{}
+
+  def login(self, session, response, args=None, kwargs=None):
+    """
+    Performs a login based on the response `response` from a request to session 
+    `session`.
+    `args` and `kwargs` are the options from the request triggering the login 
+    procedure, this is so that we can redo that request after logging in.
+
+    Raises an AuthenticationError exception if authentication fails.
+    """
+    self.__logging_in = True
+    \LA{}log in to login server~{\nwtagstyle{}\subpageref{NW1qVjDS-2cy0Yo-1}}\RA{}
+    self.__logging_in = False
+
+    if args and response.history:
+      return session.request(*args, **kwargs)
+    return ladok_response
+\nwnotused{ladok.py}\nwendcode{}\nwbegindocs{2}\nwdocspar
+
+We note that while we're logging in, we don't want those requests interrupted 
+by another login session.
+Hence, we block any new login procedures from starting by setting 
+{\Tt{}self.{\_}{\_}logging{\_}in\nwendquote}.
+
+\subsection{Tests and intended usage}
+
+We will test this by a simple API call to LADOK.
+We will get the record of the currently logged in user from LADOK.
+We will use author's institution for this test, which means only the author can 
+run this test.
+
+Now this illustrates that this login handler only fulfills a small part of the 
+login procedure.
+We need two more handlers in this case, one for the SAML implementation 
+({\Tt{}weblogin.kth.SAMLlogin\nwendquote} below) and one for the actual logging in at the 
+institution ({\Tt{}weblogin.kth.UGlogin\nwendquote} below).
+\nwenddocs{}\nwbegincode{3}\sublabel{NW1qVjDS-2pIv08-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1qVjDS-2pIv08-1}}}\moddef{test ladok.py~{\nwtagstyle{}\subpageref{NW1qVjDS-2pIv08-1}}}\endmoddef\nwstartdeflinemarkup\nwenddeflinemarkup
+import weblogin
+from weblogin import kth, ladok
+import os
+import requests
+
+def test_get_user_info():
+  ls = weblogin.AutologinSession([
+        ladok.SSOlogin("KTH Royal Institute of Technology"),
+        kth.SAMLlogin(),
+        kth.UGlogin(os.environ["KTH_LOGIN"], os.environ["KTH_PASSWD"])
+      ])
+
+  \LA{}make a request using ls~{\nwtagstyle{}\subpageref{NW1qVjDS-3WfXIm-1}}\RA{}
+  \LA{}assert correctness of response~{\nwtagstyle{}\subpageref{NW1qVjDS-2ssceU-1}}\RA{}
+
+def test_multiple_calls():
+  ls = weblogin.AutologinSession([
+        ladok.SSOlogin("KTH Royal Institute of Technology"),
+        kth.SAMLlogin(),
+        kth.UGlogin(os.environ["KTH_LOGIN"], os.environ["KTH_PASSWD"])
+      ])
+
+  \LA{}make a request using ls~{\nwtagstyle{}\subpageref{NW1qVjDS-3WfXIm-1}}\RA{}
+  \LA{}assert correctness of response~{\nwtagstyle{}\subpageref{NW1qVjDS-2ssceU-1}}\RA{}
+  \LA{}make a request using ls~{\nwtagstyle{}\subpageref{NW1qVjDS-3WfXIm-1}}\RA{}
+  \LA{}assert correctness of response~{\nwtagstyle{}\subpageref{NW1qVjDS-2ssceU-1}}\RA{}
+
+\LA{}more test functions~{\nwtagstyle{}\subpageref{NW1qVjDS-3N7spT-1}}\RA{}
+\nwnotused{test ladok.py}\nwendcode{}\nwbegindocs{4}\nwdocspar
+
+We will use an API request to test that this actually works.
+The API request in question is a request for data about the currently logged-in 
+user.
+This means that we must set up some headers and then make the request.
+\nwenddocs{}\nwbegincode{5}\sublabel{NW1qVjDS-3WfXIm-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1qVjDS-3WfXIm-1}}}\moddef{make a request using ls~{\nwtagstyle{}\subpageref{NW1qVjDS-3WfXIm-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1qVjDS-2pIv08-1}\\{NW1qVjDS-3N7spT-2}\\{NW1qVjDS-3N7spT-3}\\{NW1qVjDS-3N7spT-4}\\{NW1qVjDS-3N7spT-5}}\nwenddeflinemarkup
+\LA{}set up headers for API request~{\nwtagstyle{}\subpageref{NW1qVjDS-1UvLYF-1}}\RA{}
+
+response = ls.get(
+  "https://www.start.ladok.se/gui/proxy"
+    "/kataloginformation/internal/anvandare/anvandarinformation",
+  headers=headers
+)
+\nwused{\\{NW1qVjDS-2pIv08-1}\\{NW1qVjDS-3N7spT-2}\\{NW1qVjDS-3N7spT-3}\\{NW1qVjDS-3N7spT-4}\\{NW1qVjDS-3N7spT-5}}\nwendcode{}\nwbegindocs{6}\nwdocspar
+
+The headers are then:
+\nwenddocs{}\nwbegincode{7}\sublabel{NW1qVjDS-1UvLYF-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1qVjDS-1UvLYF-1}}}\moddef{set up headers for API request~{\nwtagstyle{}\subpageref{NW1qVjDS-1UvLYF-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1qVjDS-3WfXIm-1}\\{NW1qVjDS-3N7spT-1}\\{NW1qVjDS-3N7spT-2}}\nwenddeflinemarkup
+headers = \{\}
+headers["Accept"] =       "application/vnd.ladok-resultat+json"
+headers["Accept"] +=    ", application/vnd.ladok-kataloginformation+json"
+headers["Accept"] +=    ", application/vnd.ladok-extra+json"
+headers["Accept"] +=    ", application/json, text/plain"
+headers["Content-Type"] = "application/vnd.ladok-kataloginformation+json"
+\nwused{\\{NW1qVjDS-3WfXIm-1}\\{NW1qVjDS-3N7spT-1}\\{NW1qVjDS-3N7spT-2}}\nwendcode{}\nwbegindocs{8}\nwdocspar
+
+Once we've made the request, we must assert that the response is what is 
+expected.
+In this case, the email entry should be the same as the author's institution 
+email address.
+\nwenddocs{}\nwbegincode{9}\sublabel{NW1qVjDS-2ssceU-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1qVjDS-2ssceU-1}}}\moddef{assert correctness of response~{\nwtagstyle{}\subpageref{NW1qVjDS-2ssceU-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1qVjDS-2pIv08-1}\\{NW1qVjDS-3N7spT-1}\\{NW1qVjDS-3N7spT-2}}\nwenddeflinemarkup
+assert response.status_code == requests.codes.ok \\
+    and response.json()["Epost"] == "dbosk@kth.se"
+\nwused{\\{NW1qVjDS-2pIv08-1}\\{NW1qVjDS-3N7spT-1}\\{NW1qVjDS-3N7spT-2}}\nwendcode{}\nwbegindocs{10}\nwdocspar
+
+\subsection{Check if we need to log in to LADOK}
+
+There are two cases:
+\begin{enumerate}
+\item We get a 401 unauthorized for a {\Tt{}ladok.se\nwendquote} URL.
+\item We get redirected to the login server.
+\end{enumerate}
+Thus, we can detect this with either the return code or if the URL starts with 
+the URL to the login service, then we need to log in.
+However, as noted above, this only applies if we're not already underway with a 
+login.
+\nwenddocs{}\nwbegincode{11}\sublabel{NW1qVjDS-4detzc-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1qVjDS-4detzc-1}}}\moddef{check if we're redirected to login server~{\nwtagstyle{}\subpageref{NW1qVjDS-4detzc-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1qVjDS-18JGs2-1}}\nwenddeflinemarkup
+if response.status_code == requests.codes.unauthorized \\
+     and "ladok.se" in response.url:
+  return True
+elif response.url.startswith(self.__login_url):
+  return True
+
+return False
+\nwused{\\{NW1qVjDS-18JGs2-1}}\nwendcode{}\nwbegindocs{12}\nwdocspar
+
+The login URL\footnote{%
+  LADOK updated the URLs in December 2025.
+} is different for the test system and the production system.
+We want to be able to handle both.
+We add a default argument to the constructor, we default to the production 
+system URL.
+\nwenddocs{}\nwbegincode{13}\sublabel{NW1qVjDS-1ElCMX-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1qVjDS-1ElCMX-1}}}\moddef{SSOlogin args~{\nwtagstyle{}\subpageref{NW1qVjDS-1ElCMX-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1qVjDS-18JGs2-1}}\nwprevnextdefs{\relax}{NW1qVjDS-1ElCMX-2}\nwenddeflinemarkup
+test_environment=False,
+\nwalsodefined{\\{NW1qVjDS-1ElCMX-2}}\nwused{\\{NW1qVjDS-18JGs2-1}}\nwendcode{}\nwbegincode{14}\sublabel{NW1qVjDS-2TpnQ5-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1qVjDS-2TpnQ5-1}}}\moddef{SSOlogin constructor~{\nwtagstyle{}\subpageref{NW1qVjDS-2TpnQ5-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1qVjDS-18JGs2-1}}\nwprevnextdefs{\relax}{NW1qVjDS-2TpnQ5-2}\nwenddeflinemarkup
+if test_environment:
+  self.__base_url = "https://start.test.ladok.se"
+else:
+  self.__base_url = "https://start.ladok.se"
+
+self.__login_url = f"\{self.__base_url\}/gui/loggain"
+\nwalsodefined{\\{NW1qVjDS-2TpnQ5-2}}\nwused{\\{NW1qVjDS-18JGs2-1}}\nwendcode{}\nwbegindocs{15}\nwdocspar
+
+We test if this works.
+\nwenddocs{}\nwbegincode{16}\sublabel{NW1qVjDS-3N7spT-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1qVjDS-3N7spT-1}}}\moddef{more test functions~{\nwtagstyle{}\subpageref{NW1qVjDS-3N7spT-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1qVjDS-2pIv08-1}}\nwprevnextdefs{\relax}{NW1qVjDS-3N7spT-2}\nwenddeflinemarkup
+def test_test_environment():
+  ls = weblogin.AutologinSession([
+        ladok.SSOlogin("KTH Royal Institute of Technology",
+                       test_environment=True),
+        kth.SAMLlogin(),
+        kth.UGlogin(os.environ["KTH_LOGIN"], os.environ["KTH_PASSWD"])
+      ])
+
+  \LA{}set up headers for API request~{\nwtagstyle{}\subpageref{NW1qVjDS-1UvLYF-1}}\RA{}
+  \LA{}make a request to the test environment using ls~{\nwtagstyle{}\subpageref{NW1qVjDS-2gVphn-1}}\RA{}
+  \LA{}assert correctness of response~{\nwtagstyle{}\subpageref{NW1qVjDS-2ssceU-1}}\RA{}
+\nwalsodefined{\\{NW1qVjDS-3N7spT-2}\\{NW1qVjDS-3N7spT-3}\\{NW1qVjDS-3N7spT-4}\\{NW1qVjDS-3N7spT-5}}\nwused{\\{NW1qVjDS-2pIv08-1}}\nwendcode{}\nwbegindocs{17}\nwdocspar
+
+Now, this request is going to be very similar to
+{\Tt{}\LA{}make a request using ls~{\nwtagstyle{}\subpageref{NW1qVjDS-3WfXIm-1}}\RA{}\nwendquote} from above, we just change the URL.
+\nwenddocs{}\nwbegincode{18}\sublabel{NW1qVjDS-2gVphn-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1qVjDS-2gVphn-1}}}\moddef{make a request to the test environment using ls~{\nwtagstyle{}\subpageref{NW1qVjDS-2gVphn-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1qVjDS-3N7spT-1}\\{NW1qVjDS-3N7spT-2}}\nwenddeflinemarkup
+response = ls.get(
+  "https://www.test.ladok.se/gui/proxy"
+    "/kataloginformation/internal/anvandare/anvandarinformation",
+  headers=headers
+)
+\nwused{\\{NW1qVjDS-3N7spT-1}\\{NW1qVjDS-3N7spT-2}}\nwendcode{}\nwbegindocs{19}\nwdocspar
+
+
+\subsection{Log in to LADOK}\label{LogIntoLADOK}
+
+If we need to log in we have a few steps to do:
+\nwenddocs{}\nwbegincode{20}\sublabel{NW1qVjDS-2cy0Yo-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1qVjDS-2cy0Yo-1}}}\moddef{log in to login server~{\nwtagstyle{}\subpageref{NW1qVjDS-2cy0Yo-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1qVjDS-18JGs2-1}}\nwprevnextdefs{\relax}{NW1qVjDS-2cy0Yo-2}\nwenddeflinemarkup
+\LA{}start ladok login~{\nwtagstyle{}\subpageref{NW1qVjDS-dnfQz-1}}\RA{}
+\LA{}fetch return URL from LADOK's SeamlessAccess request~{\nwtagstyle{}\subpageref{NW1qVjDS-4bTH9i-1}}\RA{}
+\LA{}fetch institution SAML URL from SeamlessAccess~{\nwtagstyle{}\subpageref{NW1qVjDS-36u81K-1}}\RA{}
+\LA{}run return request with added institution SAML URL as entityID~{\nwtagstyle{}\subpageref{NW1qVjDS-Qf5bf-1}}\RA{}
+\nwalsodefined{\\{NW1qVjDS-2cy0Yo-2}}\nwused{\\{NW1qVjDS-18JGs2-1}}\nwendcode{}\nwbegindocs{21}Once these steps are completed, the institution SAML and login handler should 
+take over.
+(These steps are all inferred from logging into LADOK using the web browser.)
+
+This takes place in the body of
+\begin{center}
+{\Tt{}login(self,\ session,\ response,\ args=None,\ kwargs=None)\nwendquote}.
+\end{center}
+So those arguments are what we have to work with.
+
+We don't really need the {\Tt{}/gui/loggain\nwendquote} page, we simply start the login with 
+the following URL\footnote{%
+  This was changed by LADOK during October 2024.
+  Seems like they've constructed this SWAMID service that they're using 
+  instead.
+} and it will trigger the steps needed.
+\nwenddocs{}\nwbegincode{22}\sublabel{NW1qVjDS-dnfQz-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1qVjDS-dnfQz-1}}}\moddef{start ladok login~{\nwtagstyle{}\subpageref{NW1qVjDS-dnfQz-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1qVjDS-2cy0Yo-1}}\nwenddeflinemarkup
+response = session.get(f"\{self.__base_url\}/Shibboleth.sso/Logout"
+                       f"?return=\{self.__base_url\}/gui/auth/swamid/login")
+\nwused{\\{NW1qVjDS-2cy0Yo-1}}\nwendcode{}\nwbegindocs{23}\nwdocspar
+
+That URL will redirect to SeamlessAccess.org.
+But instead of using that page, we use the {\Tt{}weblogin.seamlessaccess\nwendquote} module.
+The aim is to find the URL to the institution's SAML server, which we do later.
+Since we don't use it, we want to extract the return URL, because that contains 
+some session information for the SAML request later.
+\nwenddocs{}\nwbegincode{24}\sublabel{NW1qVjDS-4bTH9i-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1qVjDS-4bTH9i-1}}}\moddef{fetch return URL from LADOK's SeamlessAccess request~{\nwtagstyle{}\subpageref{NW1qVjDS-4bTH9i-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1qVjDS-2cy0Yo-1}}\nwenddeflinemarkup
+parsed_url = urllib.parse.urlparse(response.url, allow_fragments=False)
+if "seamlessaccess.org" not in parsed_url.netloc:
+  raise weblogin.AuthenticationError(
+                  f"seamlessaccess.org not in \{parsed_url.netloc\}")
+
+return_url = urllib.parse.unquote(
+                        urllib.parse.parse_qs(parsed_url.query)["return"][0])
+\nwused{\\{NW1qVjDS-2cy0Yo-1}}\nwendcode{}\nwbegindocs{25}\nwdocspar
+
+Now we actually fetch the SAML server URL, which is called by {\Tt{}entityID\nwendquote}.
+If there is an error here, we'd like to know what caused the error.
+So we'd like the exceptions to contain the data that caused the error.
+\nwenddocs{}\nwbegincode{26}\sublabel{NW1qVjDS-36u81K-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1qVjDS-36u81K-1}}}\moddef{fetch institution SAML URL from SeamlessAccess~{\nwtagstyle{}\subpageref{NW1qVjDS-36u81K-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1qVjDS-2cy0Yo-1}}\nwenddeflinemarkup
+try:
+  if "\{sha1\}" in self.__institution:
+    sa_data = sa.get_entity_data_by_id(self.__institution)
+  else:
+    sa_data = sa.find_entity_data_by_name(self.__institution)
+    sa_data = sa_data[0]
+
+  entityID = sa_data["entityID"]
+except IndexError:
+  raise ValueError(f"\{self.__institution\} didn't give any match.")
+except KeyError:
+  raise Exception(f"SeamlessAccess.org returned unexpected result: \{sa_data\}")
+\nwused{\\{NW1qVjDS-2cy0Yo-1}}\nwendcode{}\nwbegindocs{27}\nwdocspar
+
+Finally, we append that to the return URL and make the request.
+We note that we can return the response to this last request.
+This response will be intercepted by the other login handlers and eventually 
+the real response will be returned to the original request.
+\nwenddocs{}\nwbegincode{28}\sublabel{NW1qVjDS-Qf5bf-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1qVjDS-Qf5bf-1}}}\moddef{run return request with added institution SAML URL as entityID~{\nwtagstyle{}\subpageref{NW1qVjDS-Qf5bf-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1qVjDS-2cy0Yo-1}}\nwenddeflinemarkup
+if "?" in return_url:
+  return_url += f"&entityID=\{entityID\}"
+else:
+  return_url += f"?entityID=\{entityID\}"
+
+ladok_response = session.get(return_url)
+\nwused{\\{NW1qVjDS-2cy0Yo-1}}\nwendcode{}\nwbegindocs{29}\nwdocspar
+
+\subsection{Log into any university}
+
+Now, here is the trick.
+If we don't have any other {\Tt{}AutologinHandler\nwendquote} objects handling the logins to 
+the specific university, the {\Tt{}ladok{\_}response\nwendquote} of
+{\Tt{}\LA{}run return request with added institution SAML URL as entityID~{\nwtagstyle{}\subpageref{NW1qVjDS-Qf5bf-1}}\RA{}\nwendquote} will 
+contain a page in the login process of the university.
+These pages just contain {\Tt{}<form>...<input>...</input>...</form>\nwendquote} elements 
+that need to be posted.
+In most cases, we just need the default values.
+The only time we need to add values, are for the username and password fields.
+Fortunately, those are most often called {\Tt{}username\nwendquote} and {\Tt{}password\nwendquote} by the 
+universities, so we can look for them and fill them when they show up.
+
+However, we can do better.
+We can take a dictionary where the keys match variable names in these forms, if 
+we have a match, we use the value as value when we post the form.
+This way, for most universities we can simply do:
+\begin{minted}{json}
+{
+  "username": "dbosk",
+  "password": "my secret password"
+}
+\end{minted}
+But for any university login portal that uses other variable names, we can 
+simply change the keys in the dictionary:
+\begin{minted}{json}
+{
+  "användarnamn": "dbosk",
+  "lösenord": "my secret password"
+}
+\end{minted}
+
+We can modify the test above to skip the KTH-specific handlers that we 
+added, otherwise it remains the same.
+\nwenddocs{}\nwbegincode{30}\sublabel{NW1qVjDS-3N7spT-2}\nwmargintag{{\nwtagstyle{}\subpageref{NW1qVjDS-3N7spT-2}}}\moddef{more test functions~{\nwtagstyle{}\subpageref{NW1qVjDS-3N7spT-1}}}\plusendmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1qVjDS-2pIv08-1}}\nwprevnextdefs{NW1qVjDS-3N7spT-1}{NW1qVjDS-3N7spT-3}\nwenddeflinemarkup
+def test_no_KTH_specific_handler():
+  ls = weblogin.AutologinSession([
+          ladok.SSOlogin("KTH Royal Institute of Technology",
+                         vars=\{
+                           "username": f"\{os.environ['KTH_LOGIN']\}@ug.kth.se",
+                           "password": os.environ["KTH_PASSWD"]
+                         \})
+        ])
+
+  \LA{}make a request using ls~{\nwtagstyle{}\subpageref{NW1qVjDS-3WfXIm-1}}\RA{}
+  \LA{}assert correctness of response~{\nwtagstyle{}\subpageref{NW1qVjDS-2ssceU-1}}\RA{}
+
+def test_SSOlogin_multiple_requests():
+  ls = weblogin.AutologinSession([
+          ladok.SSOlogin("KTH Royal Institute of Technology",
+                         vars=\{
+                           "username": f"\{os.environ['KTH_LOGIN']\}@ug.kth.se",
+                           "password": os.environ["KTH_PASSWD"]
+                         \})
+        ])
+
+  \LA{}make a request using ls~{\nwtagstyle{}\subpageref{NW1qVjDS-3WfXIm-1}}\RA{}
+  \LA{}assert correctness of response~{\nwtagstyle{}\subpageref{NW1qVjDS-2ssceU-1}}\RA{}
+  \LA{}make a request using ls~{\nwtagstyle{}\subpageref{NW1qVjDS-3WfXIm-1}}\RA{}
+  \LA{}assert correctness of response~{\nwtagstyle{}\subpageref{NW1qVjDS-2ssceU-1}}\RA{}
+
+def test_test_environment_SSOlogin():
+  ls = weblogin.AutologinSession([
+        ladok.SSOlogin("KTH Royal Institute of Technology",
+                       vars=\{
+                         "username": f"\{os.environ['KTH_LOGIN']\}@ug.kth.se",
+                         "password": os.environ["KTH_PASSWD"]
+                       \},
+                       test_environment=True)
+      ])
+
+  \LA{}set up headers for API request~{\nwtagstyle{}\subpageref{NW1qVjDS-1UvLYF-1}}\RA{}
+  \LA{}make a request to the test environment using ls~{\nwtagstyle{}\subpageref{NW1qVjDS-2gVphn-1}}\RA{}
+  \LA{}assert correctness of response~{\nwtagstyle{}\subpageref{NW1qVjDS-2ssceU-1}}\RA{}
+\nwused{\\{NW1qVjDS-2pIv08-1}}\nwendcode{}\nwbegindocs{31}\nwdocspar
+
+We would also like to test if we can detect failed authentication.
+\nwenddocs{}\nwbegincode{32}\sublabel{NW1qVjDS-3N7spT-3}\nwmargintag{{\nwtagstyle{}\subpageref{NW1qVjDS-3N7spT-3}}}\moddef{more test functions~{\nwtagstyle{}\subpageref{NW1qVjDS-3N7spT-1}}}\plusendmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1qVjDS-2pIv08-1}}\nwprevnextdefs{NW1qVjDS-3N7spT-2}{NW1qVjDS-3N7spT-4}\nwenddeflinemarkup
+def test_wrong_credentials():
+  ls = weblogin.AutologinSession([
+          ladok.SSOlogin("KTH Royal Institute of Technology",
+                         vars=\{
+                           "username": "invalid user",
+                           "password": "this is the wrong password"
+                         \})
+        ])
+
+  try:
+    \LA{}make a request using ls~{\nwtagstyle{}\subpageref{NW1qVjDS-3WfXIm-1}}\RA{}
+  except weblogin.AuthenticationError:
+    assert True
+  else:
+    assert False
+\nwused{\\{NW1qVjDS-2pIv08-1}}\nwendcode{}\nwbegindocs{33}\nwdocspar
+
+Now that design requires an additional argument (a default argument) to the 
+constructor.
+\nwenddocs{}\nwbegincode{34}\sublabel{NW1qVjDS-36cMg3-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1qVjDS-36cMg3-1}}}\moddef{SSOlogin args docs~{\nwtagstyle{}\subpageref{NW1qVjDS-36cMg3-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1qVjDS-18JGs2-1}}\nwenddeflinemarkup
+- An optional argument `vars` containing keys matching variables of the web 
+  page forms whose values should be substituted for the values in the `vars` 
+  dictionary. Note that the keys should be casefolded (lower case), since we 
+  use `.casefold` to match variable names.
+\nwused{\\{NW1qVjDS-18JGs2-1}}\nwendcode{}\nwbegindocs{35}\nwdocspar
+We use the default value of {\Tt{}None\nwendquote}, since an empty dictionary can cause 
+unintended consequences due to its mutability\footnote{%
+  See for instance 
+  \url{https://www.inspiredpython.com/article/watch-out-for-mutable-defaults-in-function-arguments}.
+}.
+\nwenddocs{}\nwbegincode{36}\sublabel{NW1qVjDS-1ElCMX-2}\nwmargintag{{\nwtagstyle{}\subpageref{NW1qVjDS-1ElCMX-2}}}\moddef{SSOlogin args~{\nwtagstyle{}\subpageref{NW1qVjDS-1ElCMX-1}}}\plusendmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1qVjDS-18JGs2-1}}\nwprevnextdefs{NW1qVjDS-1ElCMX-1}{\relax}\nwenddeflinemarkup
+vars=None,
+\nwused{\\{NW1qVjDS-18JGs2-1}}\nwendcode{}\nwbegincode{37}\sublabel{NW1qVjDS-2TpnQ5-2}\nwmargintag{{\nwtagstyle{}\subpageref{NW1qVjDS-2TpnQ5-2}}}\moddef{SSOlogin constructor~{\nwtagstyle{}\subpageref{NW1qVjDS-2TpnQ5-1}}}\plusendmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1qVjDS-18JGs2-1}}\nwprevnextdefs{NW1qVjDS-2TpnQ5-1}{\relax}\nwenddeflinemarkup
+self.__vars = vars or \{\}
+\nwused{\\{NW1qVjDS-18JGs2-1}}\nwendcode{}\nwbegindocs{38}\nwdocspar
+
+Now, if the other login handlers intercepted the requests, the final URL will 
+be one on the {\Tt{}ladok.se\nwendquote} domain.
+This means that we can just iterate until that happens.
+Whenever we encounter a form, we simply fill it and post it (or get, whatever 
+method is specified by the form).
+\nwenddocs{}\nwbegincode{39}\sublabel{NW1qVjDS-2cy0Yo-2}\nwmargintag{{\nwtagstyle{}\subpageref{NW1qVjDS-2cy0Yo-2}}}\moddef{log in to login server~{\nwtagstyle{}\subpageref{NW1qVjDS-2cy0Yo-1}}}\plusendmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1qVjDS-18JGs2-1}}\nwprevnextdefs{NW1qVjDS-2cy0Yo-1}{\relax}\nwenddeflinemarkup
+\LA{}init structure to detect infinite loops~{\nwtagstyle{}\subpageref{NW1qVjDS-116LmF-1}}\RA{}
+while "ladok.se" not in \\
+    urllib.parse.urlparse(ladok_response.url, allow_fragments=False).netloc:
+  \LA{}find form~{\nwtagstyle{}\subpageref{NW1qVjDS-26XY5A-1}}\RA{}
+  \LA{}extract data and substitute variables~{\nwtagstyle{}\subpageref{NW1qVjDS-111TSN-1}}\RA{}
+  \LA{}submit form~{\nwtagstyle{}\subpageref{NW1qVjDS-3jhc7a-1}}\RA{}
+\nwused{\\{NW1qVjDS-18JGs2-1}}\nwendcode{}\nwbegindocs{40}\nwdocspar
+
+There are a variety of forms that we might encounter.
+Consider the examples in
+\cref{LadokRedirectPost,LadokConfirmDatasharing}.
+
+\begin{figure}
+\centering
+\includegraphics[width=0.8\linewidth]{figs/LadokRedirectPost.png}
+\caption{\label{LadokRedirectPost}%
+  A form that redirects to another URL, usually executed automatically with 
+  JavaScript.%
+}
+\end{figure}
+
+\begin{figure}
+\centering
+\includegraphics[width=0.8\linewidth]{figs/LadokConfirmDatasharing.png}
+\caption{\label{LadokConfirmDatasharing}%
+  A form that asks the user to confirm data sharing.%
+}
+\end{figure}
+
+Now, to find the form we must parse it.
+Then we'll use XPath to find it.
+\nwenddocs{}\nwbegincode{41}\sublabel{NW1qVjDS-26XY5A-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1qVjDS-26XY5A-1}}}\moddef{find form~{\nwtagstyle{}\subpageref{NW1qVjDS-26XY5A-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1qVjDS-2cy0Yo-2}}\nwenddeflinemarkup
+doc_tree = html.fromstring(ladok_response.text)
+try:
+  form = doc_tree.xpath("//form")[0]
+except IndexError:
+  raise weblogin.AuthenticationError(f"Got page without any form and "
+                                     f"not on LADOK: \{ladok_response\}")
+\nwused{\\{NW1qVjDS-2cy0Yo-2}}\nwendcode{}\nwbegindocs{42}\nwdocspar
+
+Next, we want to extract default values from the forms variables and substitute 
+if needed.
+We get the form variables by iterating over the {\Tt{}<input>\nwendquote} elements, which we 
+do by the XPath expression {\Tt{}.//input\nwendquote}.
+Note the leadning period ({\Tt{}.\nwendquote}), which means that we start from the current 
+node.
+Without it, we would get all the {\Tt{}<input>\nwendquote} elements in the document.
+That would cause problems further down the line, we'll get back to that.
+\nwenddocs{}\nwbegincode{43}\sublabel{NW1qVjDS-111TSN-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1qVjDS-111TSN-1}}}\moddef{extract data and substitute variables~{\nwtagstyle{}\subpageref{NW1qVjDS-111TSN-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1qVjDS-2cy0Yo-2}}\nwprevnextdefs{\relax}{NW1qVjDS-111TSN-2}\nwenddeflinemarkup
+data = \{\}
+
+for var in form.xpath(".//input"):
+  if var.name:
+    varname_casefold = var.name.casefold()
+    if varname_casefold in self.__vars:
+      data[var.name] = self.__vars[varname_casefold]
+    else:
+      \LA{}set value in \code{}data\edoc{} for existing variables \code{}var\edoc{}~{\nwtagstyle{}\subpageref{NW1qVjDS-1vpuY1-1}}\RA{}
+\nwalsodefined{\\{NW1qVjDS-111TSN-2}}\nwused{\\{NW1qVjDS-2cy0Yo-2}}\nwendcode{}\nwbegindocs{44}\nwdocspar
+
+There are some things we need to consider about these variables.
+\begin{enumerate}
+\item If a variable is given a value several times, we should make a 
+list\footnote{%
+  This doesn't seem like standard behaviour, because the {\Tt{}lxml\nwendquote} library 
+  doesn't do this.
+  See
+  {\Tt{}\LA{}extract data and substitute variables, new attempt~{\nwtagstyle{}\subpageref{NW1qVjDS-3LxqBH-1}}\RA{}\nwendquote} below.
+}.
+This happens in \cref{LadokConfirmDatasharing}.
+Here the problem with the XPath {\Tt{}//input\nwendquote} (no leading period) mentioned above 
+arises.
+Without the period the username will occur twice (it's also in another form on 
+the same page), making it a list and triggering a 500 error from the server.
+\item If the {\Tt{}<input>\nwendquote} element is of the type radio button, we should check 
+which is checked (the default).
+If it's not checked, we ignore it and proceed to the next.
+This happens in \cref{LadokConfirmDatasharing}.
+\end{enumerate}
+\nwenddocs{}\nwbegincode{45}\sublabel{NW1qVjDS-1vpuY1-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1qVjDS-1vpuY1-1}}}\moddef{set value in \code{}data\edoc{} for existing variables \code{}var\edoc{}~{\nwtagstyle{}\subpageref{NW1qVjDS-1vpuY1-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1qVjDS-111TSN-1}}\nwenddeflinemarkup
+if var.type == "radio":
+  if var.checked:
+    data[var.name] = var.value
+elif var.name in data:
+  if isinstance(data[var.name], list):
+    data[var.name].append(var.value)
+  else:
+    data[var.name] = [data[var.name], var.value]
+else:
+  data[var.name] = var.value or ""
+\nwused{\\{NW1qVjDS-111TSN-1}}\nwendcode{}\nwbegindocs{46}\nwdocspar
+
+A better approach than the one above seems to be to use {\Tt{}form.inputs\nwendquote}, which 
+is a dictionary containing all input elements of the form.
+This also handles the radio buttons of \cref{LadokConfirmDatasharing} 
+correctly, so that we only need to do {\Tt{}element.value\nwendquote} even for that group.
+\nwenddocs{}\nwbegincode{47}\sublabel{NW1qVjDS-3LxqBH-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1qVjDS-3LxqBH-1}}}\moddef{extract data and substitute variables, new attempt~{\nwtagstyle{}\subpageref{NW1qVjDS-3LxqBH-1}}}\endmoddef\nwstartdeflinemarkup\nwenddeflinemarkup
+data = \{\}
+
+for name, element in form.inputs.items():
+  name_casefold = name.casefold()
+  if name_casefold in self.__vars:
+    data[name] = self.__vars[name_casefold]
+  else:
+    data[name] = element.value
+\nwnotused{extract data and substitute variables, new attempt}\nwendcode{}\nwbegindocs{48}But, unfortunately, this doesn't handle multiple {\Tt{}<input>\nwendquote} elements with 
+the same name.
+It just gives one of them, instead of making a list\footnote{%
+  This is why I think this might not be standard behaviour.
+}.
+This code would have otherwise been much better.
+
+In some cases, there is a named button (\cref{LadokConfirmDatasharing} has 
+\enquote{Proceed} and \enquote{Cancel}).
+We must include that in the data, that we selected to proceed instead of 
+cancel.
+\nwenddocs{}\nwbegincode{49}\sublabel{NW1qVjDS-111TSN-2}\nwmargintag{{\nwtagstyle{}\subpageref{NW1qVjDS-111TSN-2}}}\moddef{extract data and substitute variables~{\nwtagstyle{}\subpageref{NW1qVjDS-111TSN-1}}}\plusendmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1qVjDS-2cy0Yo-2}}\nwprevnextdefs{NW1qVjDS-111TSN-1}{\relax}\nwenddeflinemarkup
+for button in form.xpath("//button"):
+  name = button.get("name")
+  if button.get("type") == "submit" and "proceed" in name:
+    data[name] = ""
+\nwused{\\{NW1qVjDS-2cy0Yo-2}}\nwendcode{}\nwbegindocs{50}\nwdocspar
+
+Finally, we submit the form.
+We must extract the form method and the action to construct the URL for the 
+request.
+
+We also try to detect infinite loops, and in such cases, raise an exception.
+In that case, we include {\Tt{}data\nwendquote} in the exception, as that contains all 
+variables that must be set correctly, and can, thus, be used to discover which 
+variables to set.
+(See \cref{DiscoverVariables}.)
+\nwenddocs{}\nwbegincode{51}\sublabel{NW1qVjDS-3jhc7a-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1qVjDS-3jhc7a-1}}}\moddef{submit form~{\nwtagstyle{}\subpageref{NW1qVjDS-3jhc7a-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1qVjDS-2cy0Yo-2}}\nwenddeflinemarkup
+\LA{}store data to detect infinite loops~{\nwtagstyle{}\subpageref{NW1qVjDS-3uDinn-1}}\RA{}
+
+action_url = urllib.parse.urljoin(ladok_response.url, form.action)
+ladok_response = session.request(form.method, action_url, data=data)
+
+\LA{}if we're in a loop~{\nwtagstyle{}\subpageref{NW1qVjDS-35H9Ke-1}}\RA{}:
+  err = weblogin.AuthenticationError(f"infinite loop for "
+                                     f"URL: \{action_url\}\\n"
+                                     f"data: \{data\}")
+  err.variables = data
+  raise err
+\nwused{\\{NW1qVjDS-2cy0Yo-2}}\nwendcode{}\nwbegindocs{52}\nwdocspar
+
+To detect infinite loops, we check if the URL is the same as any previous URL.
+To be able to detect longer loops, rather than just the previous URL being the 
+same, we store the data in a dictionary with the URLs as keys.
+However, in some cases, the same URL will occur more than once,
+even if there is no infinite loop.
+For example, the page in \cref{LadokConfirmDatasharing} will be followed by the 
+page in \cref{LadokRedirectPost}---both will have the same URL.
+However, as we can see, the contents will differ, particularly the inputs in 
+the forms.
+Whereas when we have an infinite loop (for example, when we use the wrong 
+password), the contents will be the same.
+So we'll use this fact.
+\nwenddocs{}\nwbegincode{53}\sublabel{NW1qVjDS-116LmF-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1qVjDS-116LmF-1}}}\moddef{init structure to detect infinite loops~{\nwtagstyle{}\subpageref{NW1qVjDS-116LmF-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1qVjDS-2cy0Yo-2}}\nwenddeflinemarkup
+prev = \{\}
+\nwused{\\{NW1qVjDS-2cy0Yo-2}}\nwendcode{}\nwbegincode{54}\sublabel{NW1qVjDS-3uDinn-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1qVjDS-3uDinn-1}}}\moddef{store data to detect infinite loops~{\nwtagstyle{}\subpageref{NW1qVjDS-3uDinn-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1qVjDS-3jhc7a-1}}\nwenddeflinemarkup
+inputs = html.fromstring(ladok_response.text).xpath("//form")[0].inputs.keys()
+prev[ladok_response.url] = inputs
+\nwused{\\{NW1qVjDS-3jhc7a-1}}\nwendcode{}\nwbegindocs{55}Once we've made the request, we'll have a new response in {\Tt{}ladok{\_}response\nwendquote}.
+So we can extract the new forms and perform the check.
+Of course, some pages might not contain any form.
+\nwenddocs{}\nwbegincode{56}\sublabel{NW1qVjDS-35H9Ke-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1qVjDS-35H9Ke-1}}}\moddef{if we're in a loop~{\nwtagstyle{}\subpageref{NW1qVjDS-35H9Ke-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1qVjDS-3jhc7a-1}}\nwenddeflinemarkup
+try:
+  new_inputs = \\
+    html.fromstring(ladok_response.text).xpath("//form")[0].inputs.keys()
+except IndexError:
+  new_inputs = None
+if ladok_response.url in prev and new_inputs == prev[ladok_response.url]
+\nwused{\\{NW1qVjDS-3jhc7a-1}}\nwendcode{}\nwbegindocs{57}(Note that we don't want the ending colon in the {\Tt{}if\nwendquote} statement, because we 
+already have it in {\Tt{}\LA{}submit form~{\nwtagstyle{}\subpageref{NW1qVjDS-3jhc7a-1}}\RA{}\nwendquote}.)
+
+Let's test that this works.
+We'll start by providing a wrong password (username as well), so that the login 
+will fail.
+This way we'll get back to the same page over and over.
+\nwenddocs{}\nwbegincode{58}\sublabel{NW1qVjDS-3N7spT-4}\nwmargintag{{\nwtagstyle{}\subpageref{NW1qVjDS-3N7spT-4}}}\moddef{more test functions~{\nwtagstyle{}\subpageref{NW1qVjDS-3N7spT-1}}}\plusendmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1qVjDS-2pIv08-1}}\nwprevnextdefs{NW1qVjDS-3N7spT-3}{NW1qVjDS-3N7spT-5}\nwenddeflinemarkup
+def test_SSOlogin_infinite_loop():
+  ls = weblogin.AutologinSession([
+          ladok.SSOlogin("KTH Royal Institute of Technology",
+                         vars=\{
+                            "username": "invalid user",
+                            "password": "this is the wrong password"
+                          \})
+        ])
+
+  try:
+    \LA{}make a request using ls~{\nwtagstyle{}\subpageref{NW1qVjDS-3WfXIm-1}}\RA{}
+  except weblogin.AuthenticationError as err:
+    assert "infinite loop" in str(err)
+  else:
+    assert False
+\nwused{\\{NW1qVjDS-2pIv08-1}}\nwendcode{}\nwbegindocs{59}\nwdocspar
+
+We'll do the same test again, but this time, we don't provide any credentials 
+at all.
+This case returned a 500 error when we used {\Tt{}//input\nwendquote} instead of {\Tt{}.//input\nwendquote} 
+above.
+\nwenddocs{}\nwbegincode{60}\sublabel{NW1qVjDS-3N7spT-5}\nwmargintag{{\nwtagstyle{}\subpageref{NW1qVjDS-3N7spT-5}}}\moddef{more test functions~{\nwtagstyle{}\subpageref{NW1qVjDS-3N7spT-1}}}\plusendmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1qVjDS-2pIv08-1}}\nwprevnextdefs{NW1qVjDS-3N7spT-4}{\relax}\nwenddeflinemarkup
+def test_SSOlogin_infinite_loop_no_credentials():
+  ls = weblogin.AutologinSession([
+          ladok.SSOlogin("KTH Royal Institute of Technology")
+        ])
+
+  try:
+    \LA{}make a request using ls~{\nwtagstyle{}\subpageref{NW1qVjDS-3WfXIm-1}}\RA{}
+  except weblogin.AuthenticationError as err:
+    assert "infinite loop" in str(err)
+  else:
+    assert False
+\nwused{\\{NW1qVjDS-2pIv08-1}}\nwendcode{}
+
+\nwixlogsorted{c}{{assert correctness of response}{NW1qVjDS-2ssceU-1}{\nwixu{NW1qVjDS-2pIv08-1}\nwixd{NW1qVjDS-2ssceU-1}\nwixu{NW1qVjDS-3N7spT-1}\nwixu{NW1qVjDS-3N7spT-2}}}%
+\nwixlogsorted{c}{{check if we're redirected to login server}{NW1qVjDS-4detzc-1}{\nwixu{NW1qVjDS-18JGs2-1}\nwixd{NW1qVjDS-4detzc-1}}}%
+\nwixlogsorted{c}{{extract data and substitute variables}{NW1qVjDS-111TSN-1}{\nwixu{NW1qVjDS-2cy0Yo-2}\nwixd{NW1qVjDS-111TSN-1}\nwixd{NW1qVjDS-111TSN-2}}}%
+\nwixlogsorted{c}{{extract data and substitute variables, new attempt}{NW1qVjDS-3LxqBH-1}{\nwixd{NW1qVjDS-3LxqBH-1}}}%
+\nwixlogsorted{c}{{fetch institution SAML URL from SeamlessAccess}{NW1qVjDS-36u81K-1}{\nwixu{NW1qVjDS-2cy0Yo-1}\nwixd{NW1qVjDS-36u81K-1}}}%
+\nwixlogsorted{c}{{fetch return URL from LADOK's SeamlessAccess request}{NW1qVjDS-4bTH9i-1}{\nwixu{NW1qVjDS-2cy0Yo-1}\nwixd{NW1qVjDS-4bTH9i-1}}}%
+\nwixlogsorted{c}{{find form}{NW1qVjDS-26XY5A-1}{\nwixu{NW1qVjDS-2cy0Yo-2}\nwixd{NW1qVjDS-26XY5A-1}}}%
+\nwixlogsorted{c}{{if we're in a loop}{NW1qVjDS-35H9Ke-1}{\nwixu{NW1qVjDS-3jhc7a-1}\nwixd{NW1qVjDS-35H9Ke-1}}}%
+\nwixlogsorted{c}{{init structure to detect infinite loops}{NW1qVjDS-116LmF-1}{\nwixu{NW1qVjDS-2cy0Yo-2}\nwixd{NW1qVjDS-116LmF-1}}}%
+\nwixlogsorted{c}{{ladok.py}{NW1qVjDS-18JGs2-1}{\nwixd{NW1qVjDS-18JGs2-1}}}%
+\nwixlogsorted{c}{{log in to login server}{NW1qVjDS-2cy0Yo-1}{\nwixu{NW1qVjDS-18JGs2-1}\nwixd{NW1qVjDS-2cy0Yo-1}\nwixd{NW1qVjDS-2cy0Yo-2}}}%
+\nwixlogsorted{c}{{make a request to the test environment using ls}{NW1qVjDS-2gVphn-1}{\nwixu{NW1qVjDS-3N7spT-1}\nwixd{NW1qVjDS-2gVphn-1}\nwixu{NW1qVjDS-3N7spT-2}}}%
+\nwixlogsorted{c}{{make a request using ls}{NW1qVjDS-3WfXIm-1}{\nwixu{NW1qVjDS-2pIv08-1}\nwixd{NW1qVjDS-3WfXIm-1}\nwixu{NW1qVjDS-3N7spT-2}\nwixu{NW1qVjDS-3N7spT-3}\nwixu{NW1qVjDS-3N7spT-4}\nwixu{NW1qVjDS-3N7spT-5}}}%
+\nwixlogsorted{c}{{more test functions}{NW1qVjDS-3N7spT-1}{\nwixu{NW1qVjDS-2pIv08-1}\nwixd{NW1qVjDS-3N7spT-1}\nwixd{NW1qVjDS-3N7spT-2}\nwixd{NW1qVjDS-3N7spT-3}\nwixd{NW1qVjDS-3N7spT-4}\nwixd{NW1qVjDS-3N7spT-5}}}%
+\nwixlogsorted{c}{{run return request with added institution SAML URL as entityID}{NW1qVjDS-Qf5bf-1}{\nwixu{NW1qVjDS-2cy0Yo-1}\nwixd{NW1qVjDS-Qf5bf-1}}}%
+\nwixlogsorted{c}{{set up headers for API request}{NW1qVjDS-1UvLYF-1}{\nwixu{NW1qVjDS-3WfXIm-1}\nwixd{NW1qVjDS-1UvLYF-1}\nwixu{NW1qVjDS-3N7spT-1}\nwixu{NW1qVjDS-3N7spT-2}}}%
+\nwixlogsorted{c}{{set value in \code{}data\edoc{} for existing variables \code{}var\edoc{}}{NW1qVjDS-1vpuY1-1}{\nwixu{NW1qVjDS-111TSN-1}\nwixd{NW1qVjDS-1vpuY1-1}}}%
+\nwixlogsorted{c}{{SSOlogin args}{NW1qVjDS-1ElCMX-1}{\nwixu{NW1qVjDS-18JGs2-1}\nwixd{NW1qVjDS-1ElCMX-1}\nwixd{NW1qVjDS-1ElCMX-2}}}%
+\nwixlogsorted{c}{{SSOlogin args docs}{NW1qVjDS-36cMg3-1}{\nwixu{NW1qVjDS-18JGs2-1}\nwixd{NW1qVjDS-36cMg3-1}}}%
+\nwixlogsorted{c}{{SSOlogin constructor}{NW1qVjDS-2TpnQ5-1}{\nwixu{NW1qVjDS-18JGs2-1}\nwixd{NW1qVjDS-2TpnQ5-1}\nwixd{NW1qVjDS-2TpnQ5-2}}}%
+\nwixlogsorted{c}{{start ladok login}{NW1qVjDS-dnfQz-1}{\nwixu{NW1qVjDS-2cy0Yo-1}\nwixd{NW1qVjDS-dnfQz-1}}}%
+\nwixlogsorted{c}{{store data to detect infinite loops}{NW1qVjDS-3uDinn-1}{\nwixu{NW1qVjDS-3jhc7a-1}\nwixd{NW1qVjDS-3uDinn-1}}}%
+\nwixlogsorted{c}{{submit form}{NW1qVjDS-3jhc7a-1}{\nwixu{NW1qVjDS-2cy0Yo-2}\nwixd{NW1qVjDS-3jhc7a-1}}}%
+\nwixlogsorted{c}{{test ladok.py}{NW1qVjDS-2pIv08-1}{\nwixd{NW1qVjDS-2pIv08-1}}}%
+\nwbegindocs{61}\nwdocspar
+
+\subsection{Finding which variables to set}\label{DiscoverVariables}
+
+Since some universities might call the variables {\Tt{}username\nwendquote} and {\Tt{}password\nwendquote}, 
+but others call them {\Tt{}användarnamn\nwendquote} and {\Tt{}lösenord\nwendquote}, we need a way to 
+explore this.
+Fortunately, we get that from the exception in {\Tt{}\LA{}submit form~{\nwtagstyle{}\subpageref{NW1qVjDS-3jhc7a-1}}\RA{}\nwendquote}.
+
+We will now illustrate how to use it.
+We can use it like this for KTH.
+Note that we must make a request, but we don't care about the result of that 
+request (it will fail anyway).
+\begin{pyblock}
+from pprint import pprint
+import weblogin
+import weblogin.ladok
+
+ls = weblogin.AutologinSession([
+    weblogin.ladok.SSOlogin("KTH Royal Institute of Technology")
+  ])
+
+try:
+  ls.get("https://www.start.ladok.se/gui/proxy"
+         "/kataloginformation/internal/anvandare/anvandarinformation")
+except weblogin.AuthenticationError as err:
+  print("Authentication failed. These are the variables and values used: ")
+  pprint(err.variables)
+\end{pyblock}
+Then the output will be like this:
+\printpythontex[verbatim]
+
+We can redo this experiment for two more universities.
+First, Chalmers:
+\begin{pycode}
+import weblogin
+import weblogin.ladok
+
+print(r"\begin{verbatim}")
+
+ls = weblogin.AutologinSession([
+    weblogin.ladok.SSOlogin("Chalmers")
+  ])
+
+try:
+  ls.get("https://www.start.ladok.se/gui/proxy"
+        "/kataloginformation/internal/anvandare/anvandarinformation")
+except weblogin.AuthenticationError as err:
+  print("Authentication failed. These are the variables and values used: ")
+  pprint(err.variables)
+
+print(r"\end{verbatim}")
+\end{pycode}
+Second, Mid Sweden University:
+\begin{pycode}
+import weblogin
+import weblogin.ladok
+
+print(r"\begin{verbatim}")
+
+ls = weblogin.AutologinSession([
+    weblogin.ladok.SSOlogin("Mid Sweden University")
+  ])
+
+try:
+  ls.get("https://www.start.ladok.se/gui/proxy"
+        "/kataloginformation/internal/anvandare/anvandarinformation")
+except weblogin.AuthenticationError as err:
+  print("Authentication failed. These are the variables and values used: ")
+  pprint(err.variables)
+
+print(r"\end{verbatim}")
+\end{pycode}
+
+\nwenddocs{}

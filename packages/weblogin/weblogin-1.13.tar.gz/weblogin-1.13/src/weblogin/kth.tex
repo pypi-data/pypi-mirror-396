@@ -1,0 +1,437 @@
+\section{Logging in at KTH}% ===> this file was generated automatically by noweave --- better not edit it
+
+Here we provide the module {\Tt{}weblogin.kth\nwendquote}, which serves as an example of how 
+to write a login handler for use with {\Tt{}weblogin.AutologinSession\nwendquote}.
+
+There are two login handlers needed for KTH.
+\begin{enumerate}
+\item The SAML handler, which handles the SAML protocol at KTH.
+\item The UG handler, which is the actual password-based authentication server.
+  The SAML service forwards to UG for password authentication.
+\end{enumerate}
+
+The module looks like this.
+\nwfilename{kth.nw}\nwbegincode{1}\sublabel{NW3yGgPW-2NOHGY-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3yGgPW-2NOHGY-1}}}\moddef{kth.py~{\nwtagstyle{}\subpageref{NW3yGgPW-2NOHGY-1}}}\endmoddef\nwstartdeflinemarkup\nwenddeflinemarkup
+from lxml import html
+import requests
+import urllib.parse
+import weblogin
+import weblogin.seamlessaccess as sa
+
+\LA{}UG login handler~{\nwtagstyle{}\subpageref{NW3yGgPW-1s0IhZ-1}}\RA{}
+\LA{}SAML login handler~{\nwtagstyle{}\subpageref{NW3yGgPW-34IDEX-1}}\RA{}
+\nwnotused{kth.py}\nwendcode{}\nwbegindocs{2}See the documentation of the SeamlessAccess module 
+{\Tt{}weblogin.seamlessaccess\nwendquote} in \cref{SeamlessAccessAPI}.
+We need that to make the {\Tt{}weblogin.kth.SAMLlogin\nwendquote} handler 
+(\cref{SAMLhandler}) more robust.
+
+
+\section{The UG login handler for KTH}\label{KTHhandler}
+
+We need a class for KTH that detects logins at KTH.
+Then we implement the missing methods in the {\Tt{}weblogin.AutologinHandler\nwendquote} 
+class.
+\nwenddocs{}\nwbegincode{3}\sublabel{NW3yGgPW-1s0IhZ-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3yGgPW-1s0IhZ-1}}}\moddef{UG login handler~{\nwtagstyle{}\subpageref{NW3yGgPW-1s0IhZ-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3yGgPW-2NOHGY-1}}\nwenddeflinemarkup
+class UGlogin(weblogin.AutologinHandler):
+  """
+  Login handler (weblogin.AutologinHandler) for UG logins, i.e. through 
+  login.ug.kth.se.
+  """
+  LOGIN_URL = "https://login.ug.kth.se"
+  \LA{}class attributes~{\nwtagstyle{}\subpageref{NW3yGgPW-2RiwXR-1}}\RA{}
+  
+  def __init__(self, username, password, login_trigger_url=None,
+               rerun_requests=False):
+    """
+    Creates a login handler that automatically logs into KTH.
+    - Requires username and password.
+    - Optional `login_trigger_url` is a page that redirects to the login page,
+      for instance, the API URLs don't redirect, but the UI URLs do.
+    - Optional `rerun_requests` specifies whether we want to rerun the original 
+      request that triggered authentication failure.
+    """
+    super().__init__()
+    self.__username = username
+    self.__password = password
+    self.__login_trigger_url = login_trigger_url
+    self.__rerun_requests = rerun_requests
+    self.__logging_in = False
+
+  def need_login(self, response):
+    """
+    Checks a response to determine if logging in is needed,
+    returns True if needed
+    """
+    if self.__logging_in:
+      return False
+
+    \LA{}check if we're redirected to login server~{\nwtagstyle{}\subpageref{NW3yGgPW-4detzc-1}}\RA{}
+
+  def login(self, session, response, args=[], kwargs=\{\}):
+    """
+    Performs a login based on the response `response` from a request to session 
+    `session`.
+    `args` and `kwargs` are the options from the request triggering the login 
+    procedure, this is so that we can redo that request after logging in.
+
+    Raises an AuthenticationError exception if authentication fails.
+    """
+    self.__logging_in = True
+    \LA{}log in to login server, produce new response~{\nwtagstyle{}\subpageref{NW3yGgPW-1FevsG-1}}\RA{}
+    self.__logging_in = False
+
+    if self.__rerun_requests and args:
+      return session.request(*args, **kwargs)
+    return final_response
+\nwused{\\{NW3yGgPW-2NOHGY-1}}\nwendcode{}\nwbegindocs{4}\nwdocspar
+
+We note that while we're logging in, we don't want those requests interrupted 
+by another login session.
+Hence, we block any new login procedures from starting by setting 
+{\Tt{}self.{\_}{\_}logging{\_}in\nwendquote}.
+
+\subsection{Check if we need to log in at KTH}
+
+There are two cases:
+\begin{enumerate}
+\item We get a 401 unauthorized or 403 forbidden for a {\Tt{}kth.se\nwendquote} URL.
+\item We get redirected to the login server.
+\end{enumerate}
+Thus, we can detect this with either the return code or if the URL starts with 
+the URL to the login service, then we need to log in.
+However, as noted above, this only applies if we're not already underway with a 
+login.
+\nwenddocs{}\nwbegincode{5}\sublabel{NW3yGgPW-2RiwXR-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3yGgPW-2RiwXR-1}}}\moddef{class attributes~{\nwtagstyle{}\subpageref{NW3yGgPW-2RiwXR-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3yGgPW-1s0IhZ-1}}\nwenddeflinemarkup
+UNAUTH_STATUS_CODES = [
+  requests.codes.unauthorized,
+  requests.codes.forbidden
+]
+\nwused{\\{NW3yGgPW-1s0IhZ-1}}\nwendcode{}\nwbegincode{6}\sublabel{NW3yGgPW-4detzc-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3yGgPW-4detzc-1}}}\moddef{check if we're redirected to login server~{\nwtagstyle{}\subpageref{NW3yGgPW-4detzc-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3yGgPW-1s0IhZ-1}}\nwenddeflinemarkup
+if response.status_code in self.UNAUTH_STATUS_CODES and \\
+     "kth.se" in response.url:
+  self.__rerun_requests = True
+  return True
+elif response.url.startswith(self.LOGIN_URL):
+  return True
+
+return False
+\nwused{\\{NW3yGgPW-1s0IhZ-1}}\nwendcode{}\nwbegindocs{7}\nwdocspar
+
+\subsection{Log in at KTH}\label{LoginAtKTH}
+
+If we need to log in, we have three cases:
+\begin{enumerate}
+\item \label{UGunauthorized} Either we got a 401 or 403 response, because we 
+called an API URL without being authenticated.
+\item \label{UGloginPage} Or, we tried to access a UI URL which redirected to 
+the login page.
+\item \label{UGsaml} Or, we used SAML and were redirected to the login server 
+to handle a SAML request.
+(This will later result in \cref{UGloginPage}.)
+\end{enumerate}
+
+If we got the first case (\cref{UGunauthorized}), we called an API URL which 
+gave a 401 unauthorized or 403 forbidden response, we want to use the 
+{\Tt{}login{\_}trigger{\_}url\nwendquote} to get into the second case (\cref{UGloginPage}).
+In the second case, response will contain the login page.
+We just need to fill the login form and submit it.
+In the third case (\cref{UGsaml}), we just want to continue the redirect.
+\nwenddocs{}\nwbegincode{8}\sublabel{NW3yGgPW-1FevsG-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3yGgPW-1FevsG-1}}}\moddef{log in to login server, produce new response~{\nwtagstyle{}\subpageref{NW3yGgPW-1FevsG-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3yGgPW-1s0IhZ-1}}\nwenddeflinemarkup
+if response.status_code in self.UNAUTH_STATUS_CODES:
+  \LA{}trigger redirect to login page~{\nwtagstyle{}\subpageref{NW3yGgPW-3END82-1}}\RA{}
+else:
+  \LA{}parse login page, post login form, or handle SAML request~{\nwtagstyle{}\subpageref{NW3yGgPW-1VNEv8-1}}\RA{}
+\nwused{\\{NW3yGgPW-1s0IhZ-1}}\nwendcode{}\nwbegindocs{9}\nwdocspar
+
+In the case where we just get the unauthorized, we have to simulate a redirect.
+We do this using the {\Tt{}login{\_}trigger{\_}url\nwendquote}.
+We make a request to {\Tt{}login{\_}trigger{\_}url\nwendquote}, this will trigger a redirect and we 
+can log in using the method above.
+When we've done that, we must re-run the original request (the one that didn't 
+trigger a redirect) and return the reply from the new request.
+\nwenddocs{}\nwbegincode{10}\sublabel{NW3yGgPW-3END82-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3yGgPW-3END82-1}}}\moddef{trigger redirect to login page~{\nwtagstyle{}\subpageref{NW3yGgPW-3END82-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3yGgPW-1FevsG-1}}\nwenddeflinemarkup
+trigger_response = session.get(self.__login_trigger_url)
+login_response = self.login(session, trigger_response)
+\nwused{\\{NW3yGgPW-1FevsG-1}}\nwendcode{}\nwbegindocs{11}\nwdocspar
+
+Now, the remaining case, we must distinguish between two cases.
+Fortunately, this is quite simple:
+If the login form is present, we fill it.
+Otherwise we assume it's the SAML case.
+\nwenddocs{}\nwbegincode{12}\sublabel{NW3yGgPW-1VNEv8-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3yGgPW-1VNEv8-1}}}\moddef{parse login page, post login form, or handle SAML request~{\nwtagstyle{}\subpageref{NW3yGgPW-1VNEv8-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3yGgPW-1FevsG-1}}\nwenddeflinemarkup
+doc_tree = html.fromstring(response.text)
+login_form = doc_tree.xpath("//form[@id='loginForm']")
+if len(login_form) < 1:
+  \LA{}handle the SAML request to UG~{\nwtagstyle{}\subpageref{NW3yGgPW-3XT95R-1}}\RA{}
+else:
+  login_form = login_form[0]
+  \LA{}handle UG login procedure~{\nwtagstyle{}\subpageref{NW3yGgPW-3NnWc6-1}}\RA{}
+\nwused{\\{NW3yGgPW-1FevsG-1}}\nwendcode{}\nwbegindocs{13}\nwdocspar
+
+Let's start with the simple case: parsing the login page and posting the login 
+form.
+This will contain the necessary redirects, so we just have to do it and then 
+the final response will redirect to the original page we were after.
+This means that we can simply return the
+\nwenddocs{}\nwbegincode{14}\sublabel{NW3yGgPW-3NnWc6-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3yGgPW-3NnWc6-1}}}\moddef{handle UG login procedure~{\nwtagstyle{}\subpageref{NW3yGgPW-3NnWc6-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3yGgPW-1VNEv8-1}}\nwenddeflinemarkup
+data = \{\}
+
+for variable in login_form.xpath("//input"):
+  if variable.value:
+    data[variable.name] = variable.value
+
+data["UserName"] = self.__username if "@ug.kth.se" in self.__username \\
+                                   else self.__username + "@ug.kth.se"
+data["Password"] = self.__password
+data["Kmsi"] = True
+
+login_response = session.request(
+  login_form.method, f"\{self.LOGIN_URL\}/\{login_form.action\}",
+  data=data)
+
+if login_response.status_code != requests.codes.ok:
+  raise weblogin.AuthenticationError(
+    f"authentication as \{self.__username\} to \{login_response.url\} failed: "
+    f"\{login_response.text\}")
+
+login_doc_tree = html.fromstring(login_response.text)
+login_form = login_doc_tree.xpath("//form[@id='loginForm']")
+if len(login_form) > 0:
+  raise weblogin.AuthenticationError(
+    f"authentication as \{self.__username\} failed (redirect to same page), "
+    f"probably wrong username or password.")
+
+final_response = login_response
+\nwused{\\{NW3yGgPW-1VNEv8-1}}\nwendcode{}\nwbegindocs{15}\nwdocspar
+
+To handle the SAML request, we simply find the form, read all variables and 
+post the newly formed request.
+\nwenddocs{}\nwbegincode{16}\sublabel{NW3yGgPW-3XT95R-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3yGgPW-3XT95R-1}}}\moddef{handle the SAML request to UG~{\nwtagstyle{}\subpageref{NW3yGgPW-3XT95R-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3yGgPW-1VNEv8-1}}\nwenddeflinemarkup
+try:
+  form = doc_tree.xpath("//form")[0]
+except IndexError:
+  raise weblogin.AuthenticationError(
+    f"authentication failed, no form found: \{response.text\}")
+
+data = \{\}
+for variable in form.xpath("//input"):
+  if variable.name:
+    data[variable.name] = variable.value or ""
+
+action_url = urllib.parse.urljoin(response.url, form.action)
+
+saml_response = session.request(form.method, action_url, data=data)
+
+if saml_response.status_code != requests.codes.ok:
+  raise weblogin.AuthenticationError(
+                      f"SAML error: not OK response: \{saml_response.text\}")
+
+final_response = saml_response
+\nwused{\\{NW3yGgPW-1VNEv8-1}}\nwendcode{}\nwbegindocs{17}\nwdocspar
+
+\subsection{Tests}
+
+It's hard to test the functionality.
+We basically want to test if the API on the other side still works.
+We can use the {\Tt{}app.kth.se/ug-gruppeditor\nwendquote} to test the two different 
+behaviours.
+Then we'll use {\Tt{}kth.se/form/admin\nwendquote} to test another.
+
+The first requests the UI, which redirects automatically.
+The second tests the API, which doesn't redirect the request, but we must do 
+the redirect ourselves using the {\Tt{}login{\_}trigger{\_}url\nwendquote}.
+
+The two tests follow.
+\nwenddocs{}\nwbegincode{18}\sublabel{NW3yGgPW-31v4l9-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3yGgPW-31v4l9-1}}}\moddef{test kth.py~{\nwtagstyle{}\subpageref{NW3yGgPW-31v4l9-1}}}\endmoddef\nwstartdeflinemarkup\nwenddeflinemarkup
+import weblogin
+from weblogin.kth import UGlogin
+import os
+import requests
+
+def test_get_ui():
+  ug = weblogin.AutologinSession([
+      UGlogin(os.environ["KTH_LOGIN"], os.environ["KTH_PASSWD"],
+              "https://app.kth.se/ug-gruppeditor/")
+    ])
+  response = ug.get("https://app.kth.se/ug-gruppeditor/")
+  assert response.status_code == requests.codes.ok and \\
+    response.url.startswith("https://app.kth.se")
+
+def test_get_api():
+  ug = weblogin.AutologinSession([
+      UGlogin(os.environ["KTH_LOGIN"], os.environ["KTH_PASSWD"],
+              "https://app.kth.se/ug-gruppeditor/")
+    ])
+  response = ug.get("https://app.kth.se/ug-gruppeditor/api/ug/groups"
+                    "?editableBySelf=true")
+  assert response.status_code == requests.codes.ok and response.json()
+
+\LA{}more test functions~{\nwtagstyle{}\subpageref{NW3yGgPW-3N7spT-1}}\RA{}
+\nwnotused{test kth.py}\nwendcode{}\nwbegindocs{19}\nwdocspar
+
+Next, we'll do the same test using KTH Forms, since that gives forbidden 
+instead of unauthorized.
+\nwenddocs{}\nwbegincode{20}\sublabel{NW3yGgPW-3N7spT-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3yGgPW-3N7spT-1}}}\moddef{more test functions~{\nwtagstyle{}\subpageref{NW3yGgPW-3N7spT-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3yGgPW-31v4l9-1}}\nwprevnextdefs{\relax}{NW3yGgPW-3N7spT-2}\nwenddeflinemarkup
+def test_get_form_admin():
+  form = weblogin.AutologinSession([
+      UGlogin(os.environ["KTH_LOGIN"], os.environ["KTH_PASSWD"],
+              "https://www.kth.se/form/admin/")
+    ])
+  response = form.get("https://www.kth.se/form/admin/api/webform/"
+                      "65bbb936dcba25abb5f696da/answer/export")
+  assert response.status_code == requests.codes.ok and \\
+    "application/" in response.headers["Content-Type"]
+\nwalsodefined{\\{NW3yGgPW-3N7spT-2}}\nwused{\\{NW3yGgPW-31v4l9-1}}\nwendcode{}\nwbegindocs{21}\nwdocspar
+
+Now, we would also like to test authentication errors.
+\nwenddocs{}\nwbegincode{22}\sublabel{NW3yGgPW-3N7spT-2}\nwmargintag{{\nwtagstyle{}\subpageref{NW3yGgPW-3N7spT-2}}}\moddef{more test functions~{\nwtagstyle{}\subpageref{NW3yGgPW-3N7spT-1}}}\plusendmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3yGgPW-31v4l9-1}}\nwprevnextdefs{NW3yGgPW-3N7spT-1}{\relax}\nwenddeflinemarkup
+def test_auth_fail():
+  ug = weblogin.AutologinSession([
+      UGlogin("invalid user", "wrong password",
+              "https://app.kth.se/ug-gruppeditor/")
+    ])
+
+  try:
+    response = ug.get("https://app.kth.se/ug-gruppeditor/api/ug/groups"
+                      "?editableBySelf=true")
+  except weblogin.AuthenticationError:
+    assert True
+  else:
+    assert False
+\nwused{\\{NW3yGgPW-31v4l9-1}}\nwendcode{}\nwbegindocs{23}\nwdocspar
+
+
+\section{The SAML login handler for KTH}\label{SAMLhandler}
+
+The SAML handler is quite simple.
+It requires no login credentials, it just ensures that we forward requests 
+correctly.
+\nwenddocs{}\nwbegincode{24}\sublabel{NW3yGgPW-34IDEX-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3yGgPW-34IDEX-1}}}\moddef{SAML login handler~{\nwtagstyle{}\subpageref{NW3yGgPW-34IDEX-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3yGgPW-2NOHGY-1}}\nwenddeflinemarkup
+class SAMLlogin(weblogin.AutologinHandler):
+  """
+  Login handler (weblogin.AutologinHandler) for SAML at KTH. This will relay to 
+  UG (login.ug.kth.se) which handles the password-based authentication.
+  """
+
+  def __init__(self, rerun_requests=False):
+    """
+    Creates a login handler that automatically handles the SAML requests used 
+    at KTH.
+    """
+    super().__init__()
+    self.__rerun_requests = rerun_requests
+    self.__logging_in = False
+
+  def need_login(self, response, ignore_logging_in=False):
+    """
+    Checks a response to determine if we should handle a request.
+    Returns True if needed.
+    """
+    if self.__logging_in:
+      return False
+
+    \LA{}check if we're redirected to SAML server~{\nwtagstyle{}\subpageref{NW3yGgPW-3oM9MW-1}}\RA{}
+
+  def login(self, session, response, args=[], kwargs=\{\}):
+    """
+    - Performs an action based on the response `response` from a request to 
+      session `session`.
+    - `args` and `kwargs` are the options from the request triggering the login 
+      procedure, this is so that we can redo that request after logging in.
+    - Raises an AuthenticationError exception on fails.
+    """
+    self.__logging_in = True
+    \LA{}run SAML procedure, produce new response~{\nwtagstyle{}\subpageref{NW3yGgPW-2yiDWj-1}}\RA{}
+    self.__logging_in = False
+
+    if self.__rerun_requests and args:
+      return session.request(*args, **kwargs)
+    return saml_response
+\nwused{\\{NW3yGgPW-2NOHGY-1}}\nwendcode{}\nwbegindocs{25}\nwdocspar
+
+\subsection{Check if we're redirected to SAML server}
+
+The SAML URL gotten from SeamlessAccess.org is\footnote{%
+  As of 2022-11-30.
+} {\Tt{}saml.sys.kth.se\nwendquote}, but the reverse lookup resolves to 
+{\Tt{}saml-5.sys.kth.se\nwendquote}.
+So we will simply check if the domain contains both {\Tt{}saml\nwendquote} and 
+{\Tt{}sys.kth.se\nwendquote}.
+\nwenddocs{}\nwbegincode{26}\sublabel{NW3yGgPW-3oM9MW-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3yGgPW-3oM9MW-1}}}\moddef{check if we're redirected to SAML server~{\nwtagstyle{}\subpageref{NW3yGgPW-3oM9MW-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3yGgPW-34IDEX-1}}\nwenddeflinemarkup
+return "saml" in response.url and "sys.kth.se" in response.url
+\nwused{\\{NW3yGgPW-34IDEX-1}}\nwendcode{}\nwbegindocs{27}\nwdocspar
+
+\subsection{Run KTH's SAML procedure}
+
+On the first stop in the sequence (contained in {\Tt{}response\nwendquote}), there is a form 
+that must be posted.
+A browser uses JavaScript to do this, we must do it manually:
+Find the form, fetch all values from the input tags, then post the form.
+All in all, we want to produce a new response from the server, 
+{\Tt{}saml{\_}response\nwendquote} from above.
+
+We start by extracting any form.
+If there is no form, we simply proceed without doing anything.
+\nwenddocs{}\nwbegincode{28}\sublabel{NW3yGgPW-2yiDWj-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3yGgPW-2yiDWj-1}}}\moddef{run SAML procedure, produce new response~{\nwtagstyle{}\subpageref{NW3yGgPW-2yiDWj-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3yGgPW-34IDEX-1}}\nwenddeflinemarkup
+doc_tree = html.fromstring(response.text)
+try:
+  form = doc_tree.xpath("//form")[0]
+except IndexError:
+  \LA{}don't handle this request~{\nwtagstyle{}\subpageref{NW3yGgPW-1u7o9b-1}}\RA{}
+else:
+  \LA{}extract form data and action~{\nwtagstyle{}\subpageref{NW3yGgPW-1cOCDo-1}}\RA{}
+  \LA{}post form action~{\nwtagstyle{}\subpageref{NW3yGgPW-4CsBNZ-1}}\RA{}
+\nwused{\\{NW3yGgPW-34IDEX-1}}\nwendcode{}\nwbegindocs{29}\nwdocspar
+
+Now, it's easy to ignore this request.
+\nwenddocs{}\nwbegincode{30}\sublabel{NW3yGgPW-1u7o9b-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3yGgPW-1u7o9b-1}}}\moddef{don't handle this request~{\nwtagstyle{}\subpageref{NW3yGgPW-1u7o9b-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3yGgPW-2yiDWj-1}}\nwenddeflinemarkup
+pass
+\nwused{\\{NW3yGgPW-2yiDWj-1}}\nwendcode{}\nwbegindocs{31}\nwdocspar
+
+To extract the data, we simply traverse the inputs available in the form.
+\nwenddocs{}\nwbegincode{32}\sublabel{NW3yGgPW-1cOCDo-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3yGgPW-1cOCDo-1}}}\moddef{extract form data and action~{\nwtagstyle{}\subpageref{NW3yGgPW-1cOCDo-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3yGgPW-2yiDWj-1}}\nwenddeflinemarkup
+data = \{\}
+for variable in form.xpath("//input"):
+  if variable.name:
+    data[variable.name] = variable.value or ""
+
+action_url = urllib.parse.urljoin(response.url, form.action)
+\nwused{\\{NW3yGgPW-2yiDWj-1}}\nwendcode{}\nwbegindocs{33}\nwdocspar
+
+Now here is the trick:
+The form data extraction and submission above
+({\Tt{}\LA{}extract form data and action~{\nwtagstyle{}\subpageref{NW3yGgPW-1cOCDo-1}}\RA{}\nwendquote}) is so general, that it can handle each 
+of the several steps.
+However, we can't pretend that we are done and set
+{\Tt{}self.{\_}{\_}logging{\_}in\ =\ False\nwendquote}, this will result in infinite recursion.
+(The requests will be intercepted before they happen, so we will never 
+proceed.)
+But we can recursively call this handler again and again until done.
+\nwenddocs{}\nwbegincode{34}\sublabel{NW3yGgPW-4CsBNZ-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW3yGgPW-4CsBNZ-1}}}\moddef{post form action~{\nwtagstyle{}\subpageref{NW3yGgPW-4CsBNZ-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW3yGgPW-2yiDWj-1}}\nwenddeflinemarkup
+saml_response = session.request(form.method, action_url, data=data)
+
+if saml_response.status_code != requests.codes.ok:
+  raise weblogin.AuthenticationError(
+                      f"SAML error: not OK response: \{saml_response.text\}")
+\nwused{\\{NW3yGgPW-2yiDWj-1}}\nwendcode{}
+
+\nwixlogsorted{c}{{check if we're redirected to login server}{NW3yGgPW-4detzc-1}{\nwixu{NW3yGgPW-1s0IhZ-1}\nwixd{NW3yGgPW-4detzc-1}}}%
+\nwixlogsorted{c}{{check if we're redirected to SAML server}{NW3yGgPW-3oM9MW-1}{\nwixu{NW3yGgPW-34IDEX-1}\nwixd{NW3yGgPW-3oM9MW-1}}}%
+\nwixlogsorted{c}{{class attributes}{NW3yGgPW-2RiwXR-1}{\nwixu{NW3yGgPW-1s0IhZ-1}\nwixd{NW3yGgPW-2RiwXR-1}}}%
+\nwixlogsorted{c}{{don't handle this request}{NW3yGgPW-1u7o9b-1}{\nwixu{NW3yGgPW-2yiDWj-1}\nwixd{NW3yGgPW-1u7o9b-1}}}%
+\nwixlogsorted{c}{{extract form data and action}{NW3yGgPW-1cOCDo-1}{\nwixu{NW3yGgPW-2yiDWj-1}\nwixd{NW3yGgPW-1cOCDo-1}}}%
+\nwixlogsorted{c}{{handle the SAML request to UG}{NW3yGgPW-3XT95R-1}{\nwixu{NW3yGgPW-1VNEv8-1}\nwixd{NW3yGgPW-3XT95R-1}}}%
+\nwixlogsorted{c}{{handle UG login procedure}{NW3yGgPW-3NnWc6-1}{\nwixu{NW3yGgPW-1VNEv8-1}\nwixd{NW3yGgPW-3NnWc6-1}}}%
+\nwixlogsorted{c}{{kth.py}{NW3yGgPW-2NOHGY-1}{\nwixd{NW3yGgPW-2NOHGY-1}}}%
+\nwixlogsorted{c}{{log in to login server, produce new response}{NW3yGgPW-1FevsG-1}{\nwixu{NW3yGgPW-1s0IhZ-1}\nwixd{NW3yGgPW-1FevsG-1}}}%
+\nwixlogsorted{c}{{more test functions}{NW3yGgPW-3N7spT-1}{\nwixu{NW3yGgPW-31v4l9-1}\nwixd{NW3yGgPW-3N7spT-1}\nwixd{NW3yGgPW-3N7spT-2}}}%
+\nwixlogsorted{c}{{parse login page, post login form, or handle SAML request}{NW3yGgPW-1VNEv8-1}{\nwixu{NW3yGgPW-1FevsG-1}\nwixd{NW3yGgPW-1VNEv8-1}}}%
+\nwixlogsorted{c}{{post form action}{NW3yGgPW-4CsBNZ-1}{\nwixu{NW3yGgPW-2yiDWj-1}\nwixd{NW3yGgPW-4CsBNZ-1}}}%
+\nwixlogsorted{c}{{run SAML procedure, produce new response}{NW3yGgPW-2yiDWj-1}{\nwixu{NW3yGgPW-34IDEX-1}\nwixd{NW3yGgPW-2yiDWj-1}}}%
+\nwixlogsorted{c}{{SAML login handler}{NW3yGgPW-34IDEX-1}{\nwixu{NW3yGgPW-2NOHGY-1}\nwixd{NW3yGgPW-34IDEX-1}}}%
+\nwixlogsorted{c}{{test kth.py}{NW3yGgPW-31v4l9-1}{\nwixd{NW3yGgPW-31v4l9-1}}}%
+\nwixlogsorted{c}{{trigger redirect to login page}{NW3yGgPW-3END82-1}{\nwixu{NW3yGgPW-1FevsG-1}\nwixd{NW3yGgPW-3END82-1}}}%
+\nwixlogsorted{c}{{UG login handler}{NW3yGgPW-1s0IhZ-1}{\nwixu{NW3yGgPW-2NOHGY-1}\nwixd{NW3yGgPW-1s0IhZ-1}}}%
+\nwbegindocs{35}\nwdocspar
+
+\nwenddocs{}
