@@ -1,0 +1,140 @@
+
+[build-system]
+requires = ["uv_build>=0.8.4,<0.9.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "slingshot"
+
+[tool.pytest.ini_options]
+addopts = "--cov=slingshot --cov-fail-under=90"
+
+[tool.uv]
+resolution = "lowest"
+
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+tag_format = "v$version"
+version_scheme = "pep440"
+version_provider = "uv"
+changelog_file = "docs/CHANGELOG.md"
+update_changelog_on_bump = true
+version_files = ["pyproject.toml:version"]
+
+[tool.ruff]
+exclude = ["artifacts/*"]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ruff.lint]
+ignore = ["B903", "D100", "D104", "E501"]
+preview = true
+select = [
+    "ASYNC",
+    "B",
+    "C9",
+    "D",
+    "E",
+    "F",
+    "I",
+    "PLE",
+    "RUF",
+    "TID",
+    "UP",
+    "W",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.mccabe]
+max-complexity = 12
+
+
+[tool.pyright]
+pythonPlatform = "All"
+pythonVersion = "3.9"
+reportUnnecessaryTypeIgnoreComment = "error"
+typeCheckingMode = "standard"
+useLibraryCodeForTypes = true
+
+[project]
+authors = [{ "name" = "Capital One Software" }]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: System Administrators",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python",
+]
+dependencies = [
+    "backoff>=2.2.1",
+    "httpx>=0.23",
+    # TODO: do we still need typing_extensions since Python 3.9 is EOL?
+    "typing-extensions>=4.1.0", # For Python < 3.10 compatibility
+    # Pin critical transitive dependencies to ensure compatibility
+    "certifi>=2021.10.8", # httpx
+    "idna>=2.8",          # httpx
+    "sniffio>=1.2.0",     # httpx
+    "anyio>=2.0.0",       # httpx
+]
+description = "Slingshot SDK"
+name = "c1s-slingshot-sdk-py"
+readme = "README.md"
+requires-python = ">=3.9,<3.14"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+version = "1.2.1"
+
+[project.urls]
+Home = "https://github.com/capitalone/c1s-slingshot-sdk-py"
+Changelog = "https://github.com/capitalone/c1s-slingshot-sdk-py/blob/main/docs/CHANGELOG.md"
+
+[dependency-groups]
+dev = [
+    "gitlint>=0.19.1",
+    "openapi-spec-validator>=0.7.2",
+    "prance>=23.6.21.0",
+    "pre-commit>=4.2.0",
+    "pyright>=1.1.402",
+    "pytest>=8.3.5",
+    "ruff>=0.12.4",
+    "typing-extensions>=4.1.0",
+    # Pin dev-only transitive dependencies
+    "requests>=2.32.0,<3.0",        # prance
+    "ruamel.yaml>=0.17.21",         # prance
+    "jsonschema>=4.19.0",           # prance + openapi-spec-validator
+    "charset-normalizer>=3.2,<4.0", # requests
+    "urllib3>=2.0,<3.0",            # requests
+    "referencing>=0.30.0",          # jsonschema
+    "rpds-py>=0.13.0",              # jsonschema
+    "attrs>=21.3.0",                # jsonschema
+    "identify>=2.0.0",              # pre-commit
+    "colorama>=0.4.0",              # pytest
+    "iniconfig>=1.1.0",             # pytest
+    "packaging>=21.0",              # pytest
+    "pyparsing>=2.4.0",             # pytest
+    "pytest-httpx>=0.35.0",
+    "commitizen>=4.8.3",
+    "pytest-cov>=6",
+    "setuptools>=65.0.0",
+]
+docs = [
+    "sphinx>=7.0.0",
+    "furo>=2024.1.29",
+    "myst-parser>=3.0.0",
+    "sphinx-autodoc-typehints>=2.3.0",
+    "sphinx-autobuild>=2024.10.3",
+    "linkify-it-py>=2.0.0",
+    "beautifulsoup4>=4.13.4",          # furo
+    "wcwidth>=0.2.13",                 # sphinx
+    "sphinxcontrib-qthelp>=1.0.0",     # sphinx
+    "sphinxcontrib-devhelp>=1.0.0",    # sphinx
+]
