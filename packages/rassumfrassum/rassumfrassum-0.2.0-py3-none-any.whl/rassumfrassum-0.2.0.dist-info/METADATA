@@ -1,0 +1,281 @@
+Metadata-Version: 2.4
+Name: rassumfrassum
+Version: 0.2.0
+Summary: LSP/JSONRPC multiplexer for connecting one LSP client to multiple servers
+Author-email: João Távora <joaotavora@gmail.com>
+Project-URL: Homepage, https://github.com/joaotavora/rassumfrassum
+Project-URL: Issues, https://github.com/joaotavora/rassumfrassum/issues
+Keywords: lsp,language-server-protocol,multiplexer,jsonrpc
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)
+Classifier: Operating System :: OS Independent
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Dynamic: license-file
+
+[![Tests](https://github.com/joaotavora/rassumfrassum/actions/workflows/test.yml/badge.svg)][build-status]
+[![PyPI version](https://img.shields.io/pypi/v/rassumfrassum)](https://pypi.org/project/rassumfrassum/)
+
+# rassumfrassum
+
+Connect an LSP client to multiple LSP servers. 
+
+The `rass` program, the main entry point, behaves like an LSP stdio
+server, so clients think they are talking to single LSP server, even
+though they are secretly talking to many.  Behind the scenes more
+stdio [LSP][lsp] server subprocesses are spawned.
+
+![demo](./doc/demo.gif)
+
+## Setup
+
+Install the `rass` tool:
+
+```bash
+pip install rassumfrassum
+```
+
+Now install some language servers, say Python's [basedpyright][basedpyright] and [ruff][ruff]:
+
+```bash
+npm install -g basedpyright
+pip install ruff
+```
+
+Tell your LSP client to call `rass python`:
+
+* In Emacs's [Eglot][eglot], find a Python file in a project and `C-u
+M-x eglot RET rass python RET`.
+
+* In vanilla [Neovim][neovim], use this snippet (briefly tested with `nvim --clean -u snippet.lua`)
+
+```lua
+vim.lsp.config('rass-python', {
+   cmd = {'rass','python'},
+   filetypes = { 'python' },
+   root_markers = { '.git', },
+})
+vim.lsp.enable('rass-python')
+```
+
+## Presets
+
+Presets give you a uniform way to start typical sets of language
+servers for a given language, while being flexible enough for
+tweaking.  Most presets would be Python files with a `servers()`
+function that returns a list of server commands.  
+
+Advanced presets can hook into LSP messages to hide the typical
+initialization/configuration pains from clients, see
+[vue.py][vue-preset].
+
+### Using Presets
+
+The bundled `python` preset runs [basedpyright][basedpyright] and [ruff][ruff]:
+
+```bash
+rass python
+```
+
+You can add more servers on top of a preset using `--` separators.
+For example, to add [codebook][codebook] for spell checking:
+
+```bash
+rass python -- codebook-lsp server
+```
+
+### User Presets
+
+You can create your own presets or override bundled ones. Rass searches
+these locations in order:
+
+1. `$XDG_CONFIG_HOME/rassumfrassum/` (if XDG_CONFIG_HOME is set)
+2. `~/.config/rassumfrassum/` (default)
+3. `~/.rassumfrassum/` (legacy)
+4. Bundled presets directory (last resort)
+
+To use [ty][ty] instead of `basedpyright`, create `~/.config/rassumfrassum/python.py`:
+
+```python
+"""Python preset using ty instead of basedpyright."""
+
+def servers():
+    return [
+        ['ty', 'server'],
+        ['ruff', 'server']
+    ]
+```
+
+## Issues?
+
+[Read this first](#bugs_and_issues), please.
+
+## Features
+
+- Zero dependencies beyond Python standard library (3.10+)
+
+## Under the hood
+
+- Tries its best to merge server capabilities announcements into a
+  consistent aggregate capability set.  
+- Track which inferior server supports which capability.
+- Merges and synchronizes diagnostics from multiple servers into a
+  single `textDocument/publishDiagnostics` event.
+- Client requests for `textDocument/codeActions` and
+  `textDocument/completions` go to all servers supporting it, other
+  requests go to the first server that supports the corresponding
+  capability.
+- All server requests go to the client.  ID tweaking is necessary
+  because servers don't know about each other and they could clash.
+
+### Architecture
+
+The codebase lives in `src/rassumfrassum/` and is split into several modules:
+
+- `main.py` is the main entry point with command-line processing and
+  argument parsing. It calls `run_multiplexer` from `rassum.py` to
+  start the multiplexer.
+
+- `presets.py` handles preset discovery and loading, searching user
+  config directories (XDG-compliant) and bundled presets.
+
+- `rassum.py` contains `run_multiplexer` which starts a bunch of async
+  tasks to read from the clients and servers, and waits for all of
+  them.  The local lexical state in `run_multiplexer` tracks JSONRPC
+  requests, responses, and notifications, and crucially the progress
+  of ongoing aggregation attempts.  In as much as possible,
+  `rassum.py` should be just a JSONRPC-aggregator and not know
+  anything about particular custom handling of LSP message types.
+  There are a few violations of this principle, but whenever it needs
+  to know what to do, it asks/informs the upper layer in `frassum.py`
+  about in-transit messages.
+
+- `frassum.py` contains the business logic used by `rassum.py` facilities.
+  This one fully knows about LSP.  So it knows, for example, how to
+  merge `initialize` and `shutdown` responses, when to reject a stale
+  `textDocument/publishDiagnostics` and how to do the actual work for
+  aggregation.
+
+- `util.py` provides logging utilities and general-purpose helpers
+  like dict merging for debugging and monitoring the multiplexer's
+  operation.
+
+- `test.py` contains test utilities used by both client and server
+  test scripts.
+
+- `json.py` handles bare JSON-over-stdio logistics and is completely
+  ignorant of LSP. It deals with protocol framing and I/O operations.
+
+### Testing
+
+There are tests under `test/`. Each test is a subdir, usually with a
+`client.py`, a `server.py` (of which instances are spawned to emulate
+multiple servers) and a `run.sh`, which creates a FIFO special file to
+wire up the stdio connections and launches `client.py` connected to
+`rass`.  `client.py` has the test assertions.  Both `client.py` and
+`server.py` use common utils from `src/rassumfrassum/test.py`.
+
+To run all tests, use `test/run-all.sh`.
+
+### Logging
+
+The `stderr` output of rass is useful for peeking into the
+conversation between all entities and understanding how the
+multiplexer operates.
+
+### FAQ 
+
+_(...not really, noone's really asked anything yet...)_
+
+#### Related projects?
+
+There's [lspx][lspx]!  Never tried it, but some people are using it.
+Development started in this Eglot discussion thread:
+https://github.com/joaotavora/eglot/discussions/1429
+
+There's also this defunct [lsplex][lsplex] thing by myself in C++ that
+went nowhere.
+
+#### Project name?  
+
+I'm tired of fretting about names.  Kudos if you can guess where I
+stole this one from.  Used to be called dada, btw.
+
+<a name=bugs_and_issues></a>
+#### Bugs?
+
+Probably a million.  The LSP flora is hard enough to navigate, and
+maintaining the [Eglot][eglot] client is hard enough because of that.
+So this is fun and potentially useful but adds another failure point.
+A pretty big one at that, since of the hundreds (thousands?)  of LSP
+servers out there, there are uncountable combinations of them, and
+some will definitely trip you up.
+  
+#### Issue reports?
+
+Read the preceding section.  If you use this and want to report
+something, you can start discussions or create issues at will.  If you
+create an issue, I might just close it with a `cantmakesenseofthis`
+label which just means I can't make sense of it just yet.  Also I have
+very little time for OSS these days, so this is a totally NO WARRANTY,
+YMMV thing.  If I close your issue just like that, doesn't mean you're
+a bad person, so don't fret.  If you can provide an easy, simple, 100%
+idiot-proof recipe demonstrating the bug the chances that I'll address
+it are slightly higher.  Else, just fork this repo, this is just
+Python and you're probably a programmer right?
+
+#### Did I vibe code this junk?
+
+Yeah, a bit, with some heavy coaching, then I took over.  The boring
+bits are definitely an LLM's.
+
+#### Future/roadmap?
+
+I might rewrite this in Rust or C++ if it makes sense.  Having an LSP
+middleware opens up some possibilities for making JSON communication
+more efficient.
+  
+### Options to `rass`
+
+Use `--help` to see all options.
+
+The `--delay-ms N` option delays all JSONRPC messages sent to the
+client by N milliseconds. Each message gets its own independent timer,
+so if two messages arrive at `t=0.5s` and `t=1.5s` with a 3000ms
+delay, they'll be dispatched at `t=3.5s` and `t=4.5s`
+respectively. Useful for diagnostics and testing.
+
+The `--drop-tardy` option controls an aspect of the "aggregation".  If
+it's true and a server takes too long to respond to a request, or send
+a mergeworthy notification, any messages that arrive too late are
+simply dropped and the client sees whatever it got when the timeout
+expired.  If it's false, the most up-to-date state of the aggregation
+is simply retransmitted to the client.  The default is false.
+
+The `--logic-class CLASS` option specifies which routing logic class
+to use.  The default is `LspLogic`.  You can specify a simple class
+name (which will be looked up in the `rassumfrassum.frassum` module)
+or a fully qualified class name like `mymodule.MyCustomLogic`.  This
+is useful for extending rass with custom routing behavior by
+subclassing `LspLogic`.
+
+[eglot]: https://github.com/joaotavora/eglot
+[lsp]: https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/
+[build-status]: https://github.com/joaotavora/rassumfrassum/actions/workflows/test.yml
+[lspx]: https://github.com/thefrontside/lspx
+[lsplex]: https://github.com/joaotavora/lsplex
+[basedpyright]: https://github.com/detachhead/basedpyright
+[ty]: https://github.com/astral-sh/ty
+[ruff]: https://github.com/astral-sh/ruff
+[neovim]: https://neovim.io/
+[codebook]: https://github.com/blopker/codebook
+[typos]: https://github.com/tekumara/typos-lsp
+[vue-preset]: https://github.com/joaotavora/rassumfrassum/blob/master/presets/vue.py
