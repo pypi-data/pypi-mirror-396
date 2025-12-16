@@ -1,0 +1,110 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nexuscosmos"
+version = "0.1.0"
+description = "Lightweight, extensible library for JPL Horizons ephemeris parsing and astronomical data integration"
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+authors = [
+    {name = "Pancha Narayan Sahu", email = "panchanarayansahu452@gmail.com"},
+]
+keywords = [
+    "jpl",
+    "horizons",
+    "ephemeris",
+    "astronomy",
+    "orbital-mechanics",
+    "interstellar-objects",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Astronomy",
+]
+
+dependencies = [
+    "requests>=2.28.0",
+]
+
+[project.optional-dependencies]
+astropy = [
+    "astropy>=5.0",
+]
+pandas = [
+    "pandas>=1.5.0",
+]
+async = [
+    "aiohttp>=3.8.0",
+]
+progress = [
+    "tqdm>=4.64.0",
+]
+viz = [
+    "matplotlib>=3.5.0",
+    "plotly>=5.0.0",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "black>=22.0",
+    "isort>=5.10",
+    "flake8>=4.0",
+    "mypy>=0.990",
+]
+all = [
+    "nexuscosmos[astropy,pandas,async,progress,viz,dev]",
+]
+
+[project.urls]
+Homepage = "https://github.com/panchanarayansahu/nexuscosmos"
+Documentation = "https://nexuscosmos.readthedocs.io"
+Repository = "https://github.com/panchanarayansahu/nexuscosmos.git"
+Issues = "https://github.com/panchanarayansahu/nexuscosmos/issues"
+
+[tool.setuptools]
+packages = ["nexuscosmos", "nexuscosmos.datasets", "nexuscosmos.datasets.horizons"]
+
+[tool.black]
+line-length = 100
+target-version = ["py38", "py39", "py310", "py311", "py312"]
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 100
+skip_gitignore = true
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+addopts = "--cov=nexuscosmos --cov-report=html --cov-report=term-missing"
