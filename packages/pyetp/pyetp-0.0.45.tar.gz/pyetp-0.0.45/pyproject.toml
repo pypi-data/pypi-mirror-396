@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools >= 80", "setuptools_scm[simple] >= 8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyetp"
+dynamic = ["version"]
+description = "Interface with OSDU RDDMS using ETP protocol"
+authors = [
+    {name = "Adam Cheng", email = "52572642+adamchengtkc@users.noreply.github.com"}
+]
+requires-python = ">=3.10"
+readme = "README.md"
+license = "Apache-2.0"
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+    "numpy >= 1.26.0",
+    "websockets >= 15.0",
+    "lxml >=4.9.4",
+    "pydantic >= 1.10",
+    "async-timeout >= 5.0",
+    "xtgeo >= 4.0.0",
+    "xsdata >= 25.4",
+    "etpproto >= 1.0.7",
+]
+
+[project.urls]
+homepage = "https://github.com/equinor/pyetp"
+
+[dependency-groups]
+dev = [
+    "pytest >= 7.4.4",
+    "pytest-asyncio >= 0.23.4",
+    "pytest-cov >= 4.1.0",
+    "ipykernel >= 6.29.5",
+    "ruff>=0.13.2",
+]
+
+[tool.pytest.ini_options]
+addopts = "-ra -v --color=yes"
+testpaths = ["tests"]
+
+[tool.setuptools_scm]
+version_file = "src/pyetp/_version.py"
+
+[tool.ruff.lint]
+extend-select = [
+    "I", # isort
+]
+ignore = [
+    "E741", # Ignore ambigious variable name
+]
+
+[tool.ruff]
+exclude = ["*.ipynb", "venv", ".venv", "src/pyetp/types.py"]
