@@ -1,0 +1,150 @@
+__all__ = ["upload_data"]
+
+from typing import TYPE_CHECKING
+
+import httpx
+import pandas as pd
+
+if TYPE_CHECKING:
+    from dc_logger.client.base import Logger
+
+from ..auth import DomoAuth
+from ..base.exceptions import DomoError
+from ..classes import DomoDataset
+from ..utils.logging import get_colored_logger
+
+logger = get_colored_logger()
+
+
+async def loop_upload(
+    upload_df: pd.DataFrame,
+    consol_ds: DomoDataset,
+    partition_key: str,
+    upload_method: str,
+    logger: Logger,
+    debug_api: bool = False,
+    debug_prn: bool = False,
+    debug_fn: bool = True,
+    max_retry: int = 2,
+    is_index: bool = False,
+):
+    base_msg = (
+        f"{partition_key} in {consol_ds.auth.domo_instance}"
+        if partition_key
+        else f"in {consol_ds.auth.domo_instance}"
+    )
+
+    if debug_fn:
+        print(
+            f"starting upload of {len(upload_df)} rows to {base_msg} with {max_retry} attempts"
+        )
+
+    retry_attempt = 1
+
+    res = None
+
+    while retry_attempt <= max_retry and not res:
+        try:
+            if debug_fn:
+                print(f"attempt {retry_attempt}/{max_retry} for {base_msg}")
+
+            res = await consol_ds.upload_data(
+                upload_df=upload_df,
+                upload_method="REPLACE" if partition_key else upload_method,
+                partition_key=partition_key,
+                is_index=is_index,
+                debug_api=debug_api,
+                debug_prn=debug_prn,
+            )
+
+        except (DomoError, httpx.HTTPError, RuntimeError, ValueError) as e:
+            retry_attempt += 1
+
+            message = f"⚠️ upload_data : unexpected error: {e} in {partition_key} during retry_attempt {retry_attempt}/{max_retry}"
+            await logger.warning(message)
+            if debug_fn:
+                print(message)
+
+    if not res:
+        raise Exception(
+            f"💣 failed to upload data {len(upload_df)} rows to {base_msg} - {retry_attempt}/{max_retry} retries reached"
+        )
+
+    return res
+
+
+async def upload_data(
+    # instance where the data_fn function will execute against
+    data_fn,  # data function to execute
+    instance_auth: DomoAuth,  # instance to run the data function against
+    consol_ds: DomoDataset,  # dataset where data should be accumulated
+    # if partition key supplied, will replace existing partition
+    partition_key: str | None = None,
+    upload_method: str = "REPLACE",
+    is_index: bool = False,  # index dataset
+    debug_prn: bool = False,
+    debug_fn: bool = True,
+    debug_api: bool = False,
+    logger: Logger | None = None,
+    max_retry: int = 2,  # number of times to attempt upload
+):
+    try:
+        message = f"🏁 starting {instance_auth.domo_instance} - {data_fn.__name__}"
+        await logger.info(message)
+        print(message)
+
+        instance_session = httpx.AsyncClient()
+
+        upload_df = await data_fn(instance_auth, instance_session, debug_api=debug_api)
+
+        if upload_df is None or (
+            isinstance(upload_df, pd.DataFrame) and len(upload_df.index) == 0
+        ):
+            message = f"no data to upload for {partition_key}: {consol_ds.id} in {consol_ds.auth.domo_instance}"
+            await logger.info(message)
+            print(message)
+            return None
+
+        if debug_prn:
+            print(upload_df[0:5])
+
+        res = await loop_upload(
+            upload_df=upload_df,
+            consol_ds=consol_ds,
+            partition_key=partition_key or "",
+            upload_method=upload_method,
+            debug_api=debug_api,
+            debug_prn=debug_prn,
+            debug_fn=debug_fn,
+            max_retry=max_retry,
+            logger=logger,
+            is_index=False,
+        )
+
+        if res.is_success:
+            message = f"🚀 success upload of {partition_key} to {consol_ds.id} in {consol_ds.auth.domo_instance} in {data_fn.__name__}"
+            await logger.info(message)
+
+        else:
+            message = f"💣 upload_data successful status but failed to upload {partition_key} - {res.status} - {res.response} in {data_fn.__name__}"
+            await logger.error(message)
+
+        print(message)
+
+        return res
+
+    finally:
+        if is_index:
+            res = await consol_ds.index_dataset(
+                debug_api=debug_api, session=instance_session
+            )
+            if res.is_success:
+                message = f"🥫 successfully indexed {consol_ds.name} in {consol_ds.auth.domo_instance}"
+                await logger.info(message)
+            else:
+                message = f"💀⚠️ failure to index {consol_ds.name} in {consol_ds.auth.domo_instance}"
+                await logger.error(message)
+
+            print(message)
+
+        await instance_session.aclose()
