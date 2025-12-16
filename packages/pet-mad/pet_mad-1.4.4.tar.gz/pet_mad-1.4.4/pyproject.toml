@@ -1,0 +1,117 @@
+[project]
+name = "pet-mad"
+dynamic = ["version"]
+requires-python = ">=3.10"
+
+readme = "README.md"
+license = "BSD-3-Clause"
+description = "A universal interatomic potential for advanced materials modeling"
+authors = [
+  {name = "Arslan Mazitov", email = "arslan.mazitov@epfl.ch"},
+  {name = "Filippo Bigi"},
+  {name = "Matthias Kellner"},
+  {name = "Paolo Pegolo"},
+  {name = "Davide Tisi"},
+  {name = "Guillaume Fraux"},
+  {name = "Sergey Pozdnyakov"},
+  {name = "Philip Loche"},
+  {name = "Michele Ceriotti", email = "michele.ceriotti@epfl.ch"},
+]
+maintainers = [
+  {name = "Arslan Mazitov", email = "arslan.mazitov@epfl.ch"},
+]
+
+dependencies = [
+    "metatrain==2025.12",
+    "huggingface_hub",
+    "hf_xet",
+    "packaging",
+    "platformdirs",
+    "tqdm",
+    "scipy>=1.15.0",
+]
+
+keywords = ["machine learning", "molecular modeling"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Operating System :: POSIX",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.urls]
+repository = "https://github.com/lab-cosmo/pet-mad"
+
+
+### ======================================================================== ###
+
+[build-system]
+requires = [
+    "setuptools >= 68",
+    "wheel",
+]
+build-backend = "setuptools.build_meta"
+
+[project.optional-dependencies]
+deprecated = [
+    "pet-neighbors-convert",
+    "torch-geometric",
+    "matscipy",
+    "scikit-learn",
+    "pathos",
+    "scipy",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.dynamic]
+version = {attr = "pet_mad.__version__"}
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "I"]
+ignore = ["B018", "B904"]
+
+[tool.ruff.lint.isort]
+lines-after-imports = 2
+known-first-party = ["pet_mad"]
+known-third-party = ["torch"]
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.mypy]
+follow_imports = 'skip'
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+# ignore" a bunch of internal warnings with Python 3.13 and PyTorch
+filterwarnings = [
+    "error",
+    # PyTorch deprecation warnings
+    "ignore:ast.Str is deprecated and will be removed in Python 3.14:DeprecationWarning",
+    "ignore:Attribute s is deprecated and will be removed in Python 3.14:DeprecationWarning",
+    "ignore:ast.NameConstant is deprecated and will be removed in Python 3.14:DeprecationWarning",
+    # PyTorch does not want these, but mypy requires them
+    "ignore:The TorchScript type system doesn't support instance-level annotations on empty non-base types",
+    # Sphericart double backward warning
+    "ignore:Second derivatives of the spherical harmonics with respect to the Cartesian coordinates were not requested at class creation.",
+    # OldCompositionModel deprecation warning
+    "ignore:`OldCompositionModel` composition model is deprecated. Please use `CompositionModel` instead.",
+    # deprecation warnings from torch_geometric
+    "ignore:`torch_geometric.distributed` has been deprecated since 2.7.0 and will no longer be maintained",
+    # metatrain checkpoint upgrade warning
+    "ignore: trying to upgrade an old model checkpoint with unknown version, this might fail and require manual modifications"
+]
