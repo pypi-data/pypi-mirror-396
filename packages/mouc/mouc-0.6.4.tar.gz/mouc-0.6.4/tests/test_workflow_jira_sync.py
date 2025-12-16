@@ -1,0 +1,589 @@
+"""Tests for workflow phase write-back in Jira sync."""
+
+from __future__ import annotations
+
+from datetime import date, datetime, timezone
+from pathlib import Path
+from typing import Any
+from unittest.mock import Mock
+
+import pytest
+from ruamel.yaml import YAML
+
+from mouc.jira_cli import write_feature_map
+from mouc.jira_client import JiraIssueData
+from mouc.jira_config import FieldMapping, FieldMappings, JiraConfig, JiraConnection
+from mouc.jira_sync import JiraSynchronizer
+from mouc.loader import load_feature_map
+from mouc.models import Entity, FeatureMap, FeatureMapMetadata
+from mouc.unified_config import WorkflowsConfig
+
+
+def make_entity(
+    entity_id: str,
+    *,
+    entity_type: str = "capability",
+    meta: dict[str, Any] | None = None,
+    phase_of: tuple[str, str] | None = None,
+) -> Entity:
+    """Create an entity for testing."""
+    return Entity(
+        type=entity_type,
+        id=entity_id,
+        name=entity_id.replace("_", " ").title(),
+        description=f"Description for {entity_id}",
+        requires=set(),
+        enables=set(),
+        links=[],
+        tags=[],
+        meta=meta or {},
+        phase_of=phase_of,
+    )
+
+
+class TestPhaseWriteBack:
+    """Tests for writing phase entity updates to parent's phases section."""
+
+    def test_phase_meta_written_to_parent_phases(self, tmp_path: Path) -> None:
+        """Phase entity meta should be written to parent's phases section."""
+        yaml_file = tmp_path / "feature_map.yaml"
+        yaml_file.write_text("""
+metadata:
+  version: "1.0"
+
+entities:
+  auth_redesign:
+    type: capability
+    name: Auth Redesign
+    description: Test
+    workflow: design_impl
+    meta:
+      effort: "2w"
+""")
+
+        # Create feature map with phase entity
+        design_entity = make_entity(
+            "auth_redesign_design",
+            meta={"start_date": "2025-01-15", "status": "done"},
+            phase_of=("auth_redesign", "design"),
+        )
+        fm = FeatureMap(
+            metadata=FeatureMapMetadata(),
+            entities=[design_entity],
+        )
+
+        write_feature_map(yaml_file, fm)
+
+        # Verify the phases section was created and populated
+        yaml = YAML()
+        with yaml_file.open() as f:
+            data: Any = yaml.load(f)  # type: ignore[no-untyped-call]
+
+        assert "phases" in data["entities"]["auth_redesign"]
+        assert "design" in data["entities"]["auth_redesign"]["phases"]
+        assert (
+            data["entities"]["auth_redesign"]["phases"]["design"]["meta"]["start_date"]
+            == "2025-01-15"
+        )
+        assert data["entities"]["auth_redesign"]["phases"]["design"]["meta"]["status"] == "done"
+
+    def test_phases_section_created_if_missing(self, tmp_path: Path) -> None:
+        """Phases section should be auto-created if not present."""
+        yaml_file = tmp_path / "feature_map.yaml"
+        yaml_file.write_text("""
+metadata:
+  version: "1.0"
+
+entities:
+  feature:
+    type: capability
+    name: Feature
+    description: Test
+    workflow: design_impl
+""")
+
+        design_entity = make_entity(
+            "feature_design",
+            meta={"effort": "5d"},
+            phase_of=("feature", "design"),
+        )
+        fm = FeatureMap(metadata=FeatureMapMetadata(), entities=[design_entity])
+
+        write_feature_map(yaml_file, fm)
+
+        yaml = YAML()
+        with yaml_file.open() as f:
+            data: Any = yaml.load(f)  # type: ignore[no-untyped-call]
+
+        assert "phases" in data["entities"]["feature"]
+        assert "design" in data["entities"]["feature"]["phases"]
+        assert data["entities"]["feature"]["phases"]["design"]["meta"]["effort"] == "5d"
+
+    def test_phase_entry_created_if_missing(self, tmp_path: Path) -> None:
+        """Phase entry should be auto-created within existing phases section."""
+        yaml_file = tmp_path / "feature_map.yaml"
+        yaml_file.write_text("""
+metadata:
+  version: "1.0"
+
+entities:
+  auth:
+    type: capability
+    name: Auth
+    description: Test
+    workflow: design_impl
+    phases:
+      design:
+        meta:
+          effort: "3d"
+""")
+
+        # Write to impl phase (doesn't exist yet)
+        impl_entity = make_entity(
+            "auth_impl",
+            meta={"start_date": "2025-01-20"},
+            phase_of=("auth", "impl"),
+        )
+        fm = FeatureMap(metadata=FeatureMapMetadata(), entities=[impl_entity])
+
+        write_feature_map(yaml_file, fm)
+
+        yaml = YAML()
+        with yaml_file.open() as f:
+            data: Any = yaml.load(f)  # type: ignore[no-untyped-call]
+
+        # Design should still be there
+        assert data["entities"]["auth"]["phases"]["design"]["meta"]["effort"] == "3d"
+        # Impl should be created
+        assert "impl" in data["entities"]["auth"]["phases"]
+        assert data["entities"]["auth"]["phases"]["impl"]["meta"]["start_date"] == "2025-01-20"
+
+    def test_multiple_phases_written(self, tmp_path: Path) -> None:
+        """Multiple phase entities of same parent should all be written."""
+        yaml_file = tmp_path / "feature_map.yaml"
+        yaml_file.write_text("""
+metadata:
+  version: "1.0"
+
+entities:
+  feature:
+    type: capability
+    name: Feature
+    description: Test
+    workflow: design_impl
+""")
+
+        design = make_entity(
+            "feature_design",
+            meta={"status": "done", "effort": "3d"},
+            phase_of=("feature", "design"),
+        )
+        impl = make_entity(
+            "feature_impl",
+            meta={"status": "in_progress", "effort": "2w"},
+            phase_of=("feature", "impl"),
+        )
+        fm = FeatureMap(metadata=FeatureMapMetadata(), entities=[design, impl])
+
+        write_feature_map(yaml_file, fm)
+
+        yaml = YAML()
+        with yaml_file.open() as f:
+            data: Any = yaml.load(f)  # type: ignore[no-untyped-call]
+
+        phases = data["entities"]["feature"]["phases"]  # type: ignore[index]
+        assert phases["design"]["meta"]["status"] == "done"
+        assert phases["design"]["meta"]["effort"] == "3d"
+        assert phases["impl"]["meta"]["status"] == "in_progress"
+        assert phases["impl"]["meta"]["effort"] == "2w"
+
+    def test_non_phase_entity_written_normally(self, tmp_path: Path) -> None:
+        """Non-phase entities (phase_of=None) should be written normally."""
+        yaml_file = tmp_path / "feature_map.yaml"
+        yaml_file.write_text("""
+metadata:
+  version: "1.0"
+
+entities:
+  simple_task:
+    type: capability
+    name: Simple Task
+    description: Test
+    meta:
+      effort: "1d"
+""")
+
+        entity = make_entity(
+            "simple_task",
+            meta={"status": "done", "effort": "2d"},
+            phase_of=None,  # Not a phase entity
+        )
+        fm = FeatureMap(metadata=FeatureMapMetadata(), entities=[entity])
+
+        write_feature_map(yaml_file, fm)
+
+        yaml = YAML()
+        with yaml_file.open() as f:
+            data: Any = yaml.load(f)  # type: ignore[no-untyped-call]
+
+        assert data["entities"]["simple_task"]["meta"]["status"] == "done"
+        assert data["entities"]["simple_task"]["meta"]["effort"] == "2d"
+
+    def test_milestone_written_to_parent_meta(self, tmp_path: Path) -> None:
+        """Milestone entity (same ID as parent, no phase_of) should update parent's meta."""
+        yaml_file = tmp_path / "feature_map.yaml"
+        yaml_file.write_text("""
+metadata:
+  version: "1.0"
+
+entities:
+  auth_redesign:
+    type: capability
+    name: Auth Redesign
+    description: Test
+    workflow: design_impl
+    meta:
+      effort: "2w"
+""")
+
+        # Milestone has same ID as parent, phase_of is None
+        milestone = make_entity(
+            "auth_redesign",
+            meta={"effort": "0d", "status": "done"},
+            phase_of=None,
+        )
+        fm = FeatureMap(metadata=FeatureMapMetadata(), entities=[milestone])
+
+        write_feature_map(yaml_file, fm)
+
+        yaml = YAML()
+        with yaml_file.open() as f:
+            data: Any = yaml.load(f)  # type: ignore[no-untyped-call]
+
+        # Should update parent's meta directly (not in phases)
+        assert data["entities"]["auth_redesign"]["meta"]["effort"] == "0d"
+        assert data["entities"]["auth_redesign"]["meta"]["status"] == "done"
+
+    def test_parent_not_found_warning(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Should warn when phase entity's parent is not found in YAML."""
+        yaml_file = tmp_path / "feature_map.yaml"
+        yaml_file.write_text("""
+metadata:
+  version: "1.0"
+
+entities:
+  other_task:
+    type: capability
+    name: Other
+    description: Test
+""")
+
+        # Phase entity whose parent doesn't exist in YAML
+        orphan = make_entity(
+            "nonexistent_design",
+            meta={"status": "done"},
+            phase_of=("nonexistent", "design"),
+        )
+        fm = FeatureMap(metadata=FeatureMapMetadata(), entities=[orphan])
+
+        write_feature_map(yaml_file, fm)
+
+        captured = capsys.readouterr()
+        assert "nonexistent_design" in captured.err
+
+    def test_legacy_section_parent_lookup(self, tmp_path: Path) -> None:
+        """Phase write-back should work with legacy capability/user_story/outcome sections."""
+        yaml_file = tmp_path / "feature_map.yaml"
+        yaml_file.write_text("""
+metadata:
+  version: "1.0"
+
+capabilities:
+  auth:
+    name: Auth
+    description: Test
+    workflow: design_impl
+""")
+
+        design = make_entity(
+            "auth_design",
+            entity_type="capability",
+            meta={"status": "done"},
+            phase_of=("auth", "design"),
+        )
+        fm = FeatureMap(metadata=FeatureMapMetadata(), entities=[design])
+
+        write_feature_map(yaml_file, fm)
+
+        yaml = YAML()
+        with yaml_file.open() as f:
+            data: Any = yaml.load(f)  # type: ignore[no-untyped-call]
+
+        assert "phases" in data["capabilities"]["auth"]
+        assert data["capabilities"]["auth"]["phases"]["design"]["meta"]["status"] == "done"
+
+    def test_existing_phase_meta_updated(self, tmp_path: Path) -> None:
+        """Existing phase meta should be updated, not replaced entirely."""
+        yaml_file = tmp_path / "feature_map.yaml"
+        yaml_file.write_text("""
+metadata:
+  version: "1.0"
+
+entities:
+  feature:
+    type: capability
+    name: Feature
+    description: Test
+    workflow: design_impl
+    phases:
+      design:
+        name: Custom Design Name
+        meta:
+          effort: "3d"
+          custom_field: keep_me
+""")
+
+        # Update with new status (should merge, not replace)
+        design = make_entity(
+            "feature_design",
+            meta={"status": "done", "effort": "5d"},
+            phase_of=("feature", "design"),
+        )
+        fm = FeatureMap(metadata=FeatureMapMetadata(), entities=[design])
+
+        write_feature_map(yaml_file, fm)
+
+        yaml = YAML()
+        with yaml_file.open() as f:
+            data: Any = yaml.load(f)  # type: ignore[no-untyped-call]
+
+        phase_data = data["entities"]["feature"]["phases"]["design"]  # type: ignore[index]
+        # Custom name should be preserved
+        assert phase_data["name"] == "Custom Design Name"
+        # Meta should be updated
+        assert phase_data["meta"]["status"] == "done"
+        assert phase_data["meta"]["effort"] == "5d"
+        # Note: custom_field is removed because it's not in new_meta
+        # This matches the behavior of _update_meta_in_place
+
+
+class TestJiraSyncWithWorkflowPhases:
+    """Tests for Jira sync interaction with workflow-expanded phase entities.
+
+    BUG REPRODUCTION: Phase entities get meta.effort from workflow defaults.
+    When Jira sync runs, it should only write back fields that actually came
+    from Jira. Currently it writes back the entire entity.meta, which includes
+    workflow-assigned effort even when Jira didn't provide effort data.
+    """
+
+    @pytest.fixture
+    def jira_config(self) -> JiraConfig:
+        """Create Jira config with start_date mapping only (no effort mapping)."""
+        return JiraConfig(
+            jira=JiraConnection(base_url="https://example.atlassian.net"),
+            field_mappings=FieldMappings(
+                start_date=FieldMapping(transition_to_status="In Progress"),
+            ),
+        )
+
+    @pytest.fixture
+    def mock_client(self) -> Mock:
+        """Create mock Jira client that returns start_date but not effort."""
+        client = Mock()
+        client.get_custom_field_value = Mock(return_value=None)
+        return client
+
+    def test_jira_sync_only_writes_jira_sourced_fields_for_phases(
+        self,
+        tmp_path: Path,
+        jira_config: JiraConfig,
+        mock_client: Mock,
+    ) -> None:
+        """Jira sync should only write fields that came from Jira, not workflow defaults.
+
+        The workflow assigns effort: "3d" to the design phase.
+        Jira sync gets start_date from Jira but NOT effort.
+        When writing back with sync_updates, only start_date should be written,
+        NOT the workflow-assigned effort.
+        """
+        # Create feature map with entity that has a workflow
+        yaml_file = tmp_path / "feature_map.yaml"
+        yaml_file.write_text("""
+metadata:
+  version: "1.0"
+
+entities:
+  auth_redesign:
+    type: capability
+    name: Auth Redesign
+    description: Redesign authentication system
+    workflow: design_impl
+    meta:
+      effort: "2w"
+""")
+
+        # Load feature map with workflow expansion
+        # This will create auth_redesign_design with meta.effort = "3d" from workflow defaults
+        workflows_config = WorkflowsConfig(stdlib=True)
+        fm = load_feature_map(yaml_file, workflows_config=workflows_config)
+
+        # Verify workflow expansion worked and design phase has effort
+        design_entity = fm.get_entity_by_id("auth_redesign_design")
+        assert design_entity is not None
+        assert design_entity.phase_of == ("auth_redesign", "design")
+        assert design_entity.meta.get("effort") == "3d"  # From workflow defaults
+
+        # Add a Jira link to the design phase entity
+        design_entity.links = ["jira:TEST-123"]
+
+        # Mock Jira to return start_date but NOT effort
+        mock_client.fetch_issue = Mock(
+            return_value=JiraIssueData(
+                key="TEST-123",
+                summary="Auth Redesign - Design",
+                status="In Progress",
+                fields={},  # No effort field
+                status_transitions={"In Progress": [datetime(2025, 1, 15, tzinfo=timezone.utc)]},
+                assignee_email=None,
+            )
+        )
+
+        # Run sync
+        synchronizer = JiraSynchronizer(jira_config, fm, mock_client)
+        results = synchronizer.sync_all_entities()
+
+        # Verify sync got start_date from Jira but not effort
+        assert len(results) == 1
+        result = results[0]
+        assert result.entity_id == "auth_redesign_design"
+        assert "start_date" in result.updated_fields
+        assert "effort" not in result.updated_fields  # Jira didn't provide effort
+
+        # Apply updates (like jira_sync --apply does)
+        for field, value in result.updated_fields.items():
+            design_entity.meta[field] = value
+
+        # Build sync_updates like jira_sync command does
+        sync_updates = {result.entity_id: dict(result.updated_fields)}
+
+        # Write back to YAML with sync_updates
+        write_feature_map(yaml_file, fm, sync_updates=sync_updates)
+
+        # Read the file and check what was written
+        yaml = YAML()
+        with yaml_file.open() as f:
+            data: Any = yaml.load(f)  # type: ignore[no-untyped-call]
+
+        # Verify the phases section was created
+        assert "phases" in data["entities"]["auth_redesign"]
+        assert "design" in data["entities"]["auth_redesign"]["phases"]
+        phase_meta = data["entities"]["auth_redesign"]["phases"]["design"]["meta"]  # type: ignore[index]
+
+        # Only start_date should be written, NOT effort (which came from workflow, not Jira)
+        assert "start_date" in phase_meta
+        assert "effort" not in phase_meta, (
+            "effort should NOT be written - it came from workflow defaults, not Jira"
+        )
+
+    def test_jira_sync_preserves_existing_unchanged_phase_meta(
+        self,
+        tmp_path: Path,
+        jira_config: JiraConfig,
+        mock_client: Mock,
+    ) -> None:
+        """Jira sync should preserve existing phase meta fields that weren't changed.
+
+        If a phase already has meta fields (e.g., effort: "5d") in the YAML,
+        and Jira sync only updates start_date, the existing effort should be preserved.
+        """
+        # Create feature map with entity that has a workflow AND existing phase meta
+        yaml_file = tmp_path / "feature_map.yaml"
+        yaml_file.write_text("""
+metadata:
+  version: "1.0"
+
+entities:
+  auth_redesign:
+    type: capability
+    name: Auth Redesign
+    description: Redesign authentication system
+    workflow: design_impl
+    meta:
+      effort: "2w"
+    phases:
+      design:
+        meta:
+          effort: "5d"
+          custom_field: "preserve_me"
+""")
+
+        # Load feature map with workflow expansion
+        workflows_config = WorkflowsConfig(stdlib=True)
+        fm = load_feature_map(yaml_file, workflows_config=workflows_config)
+
+        # Verify the design phase entity exists and has the YAML-specified meta
+        design_entity = fm.get_entity_by_id("auth_redesign_design")
+        assert design_entity is not None
+        assert design_entity.phase_of == ("auth_redesign", "design")
+        # The effort should come from the phase override, not workflow defaults
+        assert design_entity.meta.get("effort") == "5d"
+        assert design_entity.meta.get("custom_field") == "preserve_me"
+
+        # Add a Jira link to the design phase entity
+        design_entity.links = ["jira:TEST-123"]
+
+        # Mock Jira to return only start_date
+        mock_client.fetch_issue = Mock(
+            return_value=JiraIssueData(
+                key="TEST-123",
+                summary="Auth Redesign - Design",
+                status="In Progress",
+                fields={},
+                status_transitions={"In Progress": [datetime(2025, 1, 15, tzinfo=timezone.utc)]},
+                assignee_email=None,
+            )
+        )
+
+        # Run sync
+        synchronizer = JiraSynchronizer(jira_config, fm, mock_client)
+        results = synchronizer.sync_all_entities()
+
+        # Verify sync only got start_date from Jira
+        assert len(results) == 1
+        result = results[0]
+        assert result.entity_id == "auth_redesign_design"
+        assert "start_date" in result.updated_fields
+        assert "effort" not in result.updated_fields
+        assert "custom_field" not in result.updated_fields
+
+        # Apply updates (like jira_sync --apply does)
+        for field, value in result.updated_fields.items():
+            design_entity.meta[field] = value
+
+        # Build sync_updates like jira_sync command does
+        sync_updates = {result.entity_id: dict(result.updated_fields)}
+
+        # Write back to YAML with sync_updates
+        write_feature_map(yaml_file, fm, sync_updates=sync_updates)
+
+        # Read the file and check what was written
+        yaml = YAML()
+        with yaml_file.open() as f:
+            data: Any = yaml.load(f)  # type: ignore[no-untyped-call]
+
+        # Verify the phases section still exists
+        assert "phases" in data["entities"]["auth_redesign"]
+        assert "design" in data["entities"]["auth_redesign"]["phases"]
+        phase_meta = data["entities"]["auth_redesign"]["phases"]["design"]["meta"]  # type: ignore[index]
+
+        # start_date should be added
+        assert phase_meta["start_date"] == date(2025, 1, 15)  # type: ignore[index]
+        # Existing fields should be PRESERVED
+        assert phase_meta["effort"] == "5d", (  # type: ignore[index]
+            "effort should be preserved - it was in the original YAML"
+        )
+        assert phase_meta["custom_field"] == "preserve_me", (  # type: ignore[index]
+            "custom_field should be preserved - it was in the original YAML"
+        )
