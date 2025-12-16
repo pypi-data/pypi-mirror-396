@@ -1,0 +1,30 @@
+![tokenizer.png](./assets/bitty-tokenizer.png)
+
+Bitty, clean code for the (byte-level) Byte Pair Encoding (BPE) algorithm commonly used in LLM tokenization. The BPE algorithm is "byte-level" because it runs on UTF-8 encoded strings.
+
+This algorithm was popularized for LLMs by the GPT-2 paper and the associated GPT-2 code release from OpenAI. Sennrich et al. 2015 is cited as the original reference for the use of BPE in NLP applications. Today, all modern LLMs (e.g. GPT, Llama, Mistral) use this algorithm to train their tokenizers.
+
+Tokenizers are the reason why Language models work so well, hallucinates other time, doesnt work well in finance industry, and can make or break a system 
+
+Find medium link explaining tokenization here : https://medium.com/@mohitdulani/train-a-tokenizer-from-scratch-4a33450d42ee
+
+To Download the data use these commands : 
+
+``` sh
+mkdir -p data
+cd data
+
+wget https://huggingface.co/datasets/roneneldan/TinyStories/resolve/main/TinyStoriesV2-GPT4-train.txt
+wget https://huggingface.co/datasets/roneneldan/TinyStories/resolve/main/TinyStoriesV2-GPT4-valid.txt
+```
+
+or simply run the `download.sh` script (works on Linux, Mac, or Windows with WSL/Git Bash):
+
+```sh
+bash data_download.sh
+```
+
+### Lecture 
+For more indepth video lecture refer to :
+
+[Andrej Karpathy on Tokenizer](https://youtu.be/zduSFxRajkE)
