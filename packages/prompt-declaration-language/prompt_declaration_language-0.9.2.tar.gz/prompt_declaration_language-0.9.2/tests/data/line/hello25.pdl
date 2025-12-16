@@ -1,0 +1,27 @@
+description: Hello world with model chaining
+text:
+- Hello,
+- model: watsonx_text/ibm/granite-34b-code-instruct
+  def: GEN
+  parameters:
+    stop:
+    - '!'
+    include_stop_sequence: true
+- def: translate
+  function:
+    sentence: string
+    language: string
+  return:
+    lastOf:
+    - "\nTranslate the sentence '${ sentence1 }' to ${ language }\n"
+    - model: watsonx_text/ibm/granite-20b-multilingual
+      parameters:
+        stop:
+        - "!"
+        - "\n"
+        include_stop_sequence: true
+- call: ${ translate }
+  spec: string
+  args:
+    sentence: Hello,${ GEN }
+    language: French

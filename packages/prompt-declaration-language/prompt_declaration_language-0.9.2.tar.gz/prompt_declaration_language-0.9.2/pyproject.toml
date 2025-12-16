@@ -1,0 +1,105 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "prompt-declaration-language"
+dynamic = ["version"]
+dependencies = [
+  "pydantic~=2.0",
+  "requests~=2.0",
+  "python-dotenv~=1.0",
+  "jinja2~=3.0",
+  "PyYAML~=6.0",
+  "jsonschema~=4.0",
+  "litellm>=1.66.0",
+  "openai>=1.66.1",
+  "termcolor>=2,<4",
+  "ipython>=8,<10",
+  "json-repair~=0.35",
+  "granite-io>=0.5,<0.6",
+]
+authors = [
+  { name="Mandana Vaziri", email="mvaziri@us.ibm.com" },
+  { name="Louis Mandel", email="lmandel@us.ibm.com"},
+  { name="Claudio Spiess", email="claudiosv@users.noreply.github.com" },
+  { name="Martin Hirzel", email="hirzel@us.ibm.com" }
+]
+description = "Prompt Declaration Language"
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pre-commit>=3,<5",
+  "pytest~=9.0",
+  "pydantic~=2.9"
+]
+examples = [
+  "pymilvus~=2.5",
+  "langchain~=0.3",
+  "langchain-community~=0.3",
+  "pypdf~=6.0",
+  "wikipedia~=1.0",
+  "textdistance~=4.0",
+  "datasets>3,<5",
+  "sympy~=1.0",
+  "scikit-learn>=1.6.1,<1.8.0",
+  "faiss-cpu>=1.13,<1.14",
+  "funcy>=2",
+  "evalplus>=0.3.1",
+]
+docs = [
+  "mkdocs~=1.0",
+  "mkdocstrings[python]~=0.0",
+  "mkdocs-material~=9.0",
+  "pymdown-extensions~=10.0"
+]
+optimizer = [
+  "rich>=14.0.0",
+  "evalplus>=0.3.1",
+  "duration_parser>=1.0.1",
+  "multiprocess~=0.70",
+]
+all = [ "prompt-declaration-language[dev,examples,docs,optimizer]" ]
+
+[project.urls]
+Homepage = "https://ibm.github.io/prompt-declaration-language/"
+Documentation = "https://ibm.github.io/prompt-declaration-language/tutorial/"
+Source = "https://github.com/IBM/prompt-declaration-language"
+Repository = "https://github.com/IBM/prompt-declaration-language"
+Issues = "https://github.com/IBM/prompt-declaration-language/issues"
+
+[project.scripts]
+pdl = "pdl.pdl:main"
+pdl-lint = "pdl.pdl_linter:run_linter"
+pdl-optimize = "pdl.optimize.pdl_optimizer:run_optimizer"
+
+[tool.setuptools_scm]
+version_file = "src/pdl/_version.py"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+pdl = ["pdl-schema.json", "pdl_stlib.pdl"]
+
+[tool.pyright]
+include = ["src", "tests", "examples", "docs"]
+
+[tool.pdl-lint]
+ignore = [
+  "tests/data/line/hello.pdl",
+  "tests/data/line/hello1.pdl",
+  "tests/data/line/hello10.pdl",
+  "tests/data/line/hello11.pdl",
+  "tests/data/line/hello31.pdl",
+  "tests/data/line/hello4.pdl",
+  "tests/data/line/hello7.pdl",
+  "tests/data/line/hello8.pdl",
+]

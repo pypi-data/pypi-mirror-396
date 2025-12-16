@@ -1,0 +1,30 @@
+---
+name: Run examples
+
+on:
+  schedule:
+    - cron:  '0 1 * * *'
+  workflow_dispatch:
+
+jobs:
+  tests:
+    name: Execution tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12', '3.14']
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.head_ref }}
+      - uses: ./.github/actions/run-examples
+        with:
+          python-version: ${{ matrix.python-version }}
+          runner-os: ${{ runner.os }}
+          repository: ${{ github.repository }}
+          head-ref: ${{ github.head_ref }}
+          token: ${{ github.token }}
+          update-results: 'false'
+          check: '[]'   # Empty list means run against all PDL programs
+          

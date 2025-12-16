@@ -1,0 +1,22 @@
+description: Function def and call
+text:
+- def: translate
+  function:
+    sentence: string
+    language: string
+  return:
+    lastOf:
+    - "\nTranslate the sentence '${ sentence }' to ${ language }.\n"
+    - model: ollama_chat/granite3.2:2b
+      parameters:
+        stop: ["\n"]
+        temperature: 0
+- call: ${ translate }
+  args:
+    sentence: I love Paris!
+    language: French
+- "\n"
+- call: ${ translate }
+  args:
+    sentence: I love Madrid!
+    language: Spanish

@@ -1,0 +1,28 @@
+# Expected not to type check
+description: Creating JSON Data
+defs:
+  data:
+    read: type_checking_data.yaml
+    parser: yaml
+    spec: { questions: [string], answers: [object] }
+text:
+  - model: ollama_chat/granite3.2:2b
+    def: model_output
+    input:
+      array:
+      - role: user
+        content:
+          text:
+          - for:
+              question: ${ data.questions }
+              answer: ${ data.answers }
+            repeat: |
+              ${ question }
+              ${ answer }
+          - >
+            Question: Generate only a JSON object with fields 'name' and 'age' and set them appropriately. Write the age all in letters. Only generate a single JSON object and nothing else.
+    parser: json
+    parameters:
+      stop: ["Question"]
+      temperature: 0
+
