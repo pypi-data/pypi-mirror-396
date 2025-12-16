@@ -1,0 +1,127 @@
+[![Build Status](https://travis-ci.org/netom/satispy.svg?branch=master)](https://travis-ci.org/netom/satispy)
+
+SATisPy
+=======
+
+Satispy is a Python library that aims to be an interface to various
+SAT (boolean satisfiability) solver applications.
+
+Supported solvers:
+
+ * [MiniSAT](http://minisat.se/)
+ * [PicoSAT](https://fmv.jku.at/picosat/)
+ * [Lingeling](https://fmv.jku.at/lingeling/)
+ * [Sat4j](http://www.sat4j.org/)
+
+Support for other solvers should be fairly easy to add as long as they accept
+the
+[DIMACS CNF SAT format](http://www.satcompetition.org/2009/format-benchmarks2009.html).
+
+Installing
+----------
+
+You can grab the current version from pypi:
+
+    $ sudo pip install satispy
+
+Or you can download a copy from https://github.com/netom/satispy, and
+run
+
+    pip install .
+
+in the directory.
+
+You can run the tests found in the test folder by
+
+    ./tests/run_tests.py.
+
+All the solvers need to be installed to be able to run the tests.
+
+How it works
+------------
+
+You need the minisat SAT solver to be installed on your machine for this to
+work.
+
+Let's see an example:
+
+    from satispy import Variable, Cnf
+    from satispy.solver import Minisat
+
+    v1 = Variable('v1')
+    v2 = Variable('v2')
+    v3 = Variable('v3')
+
+    exp = v1 & v2 | v3
+
+    solver = Minisat()
+
+    solution = solver.solve(exp)
+
+    if solution.success:
+        print "Found a solution:"
+        print v1, solution[v1]
+        print v2, solution[v2]
+        print v3, solution[v3]
+    else:
+        print "The expression cannot be satisfied"
+
+This program tries to satisfy the boolean expression
+
+v1 & v2 | v3
+
+You can make this true by assigning true to all variables for example,
+but there are other solutions too. This program finds a single arbitrary
+solution.
+
+First, the program imports the various classes so we can build an expression
+and try to solve it.
+
+SAT solvers expect their input to be in CNF, but we don't have to enter out
+expression as a CNF. The Cnf class takes care of the proper arranging of the
+boolean terms.
+
+Expressions can be built by creating variables and gluing them together
+arbitrarily with boolean operators:
+
+* NOT: - (unary)
+* AND: &
+* OR:  |
+* XOR: ^
+* IMPLICATION >>
+
+The solver class Minisat, Picosat, Sat4j, or Lingeling is used to solve the
+formula.
+
+Note: these classes create temporary files, so they need write access to the
+system's temporary directory
+
+The returned solution can be checked by reading the "success" boolean flag.
+
+Then, the solution can be queried for variable assignments by using it like a
+dictionary. Note that Variable objects are used, not strings.
+
+(This very example can be found in the examples directory)
+
+Parsing Boolean expressions
+---------------------------
+
+It is also possible to create a Cnf object directly, without first creating
+``Variable`` objects:
+
+    from satispy import CnfFromString
+    from satispy.solver import Minisat
+    
+    exp, symbols = CnfFromString.create("v1 & v2 | v3")
+
+    solver = Minisat()
+
+    solution = solver.solve(exp)
+
+    if solution.success:
+        print "Found a solution:"
+        for symbol_name in symbols.keys():
+            print "%s is %s" % (symbol_name, solution[symbols[symbol_name]])
+    else:
+        print "The expression cannot be satisfied"
+
