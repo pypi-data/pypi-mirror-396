@@ -1,0 +1,107 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "thulium-htr"
+version = "1.0.0"
+description = "Thulium - State-of-the-Art Multilingual Handwriting Text Recognition for Python"
+readme = "README.md"
+authors = [
+  { name = "Thulium Contributors", email = "opensource@thulium.ai" },
+]
+license = { file = "LICENSE" }
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Education",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Image Recognition",
+    "Topic :: Text Processing :: General",
+    "Topic :: Text Processing :: Linguistic",
+    "Operating System :: OS Independent",
+    "Natural Language :: English",
+    "Natural Language :: German",
+    "Natural Language :: French",
+    "Natural Language :: Russian",
+    "Natural Language :: Arabic",
+    "Natural Language :: Chinese (Simplified)",
+    "Natural Language :: Japanese",
+    "Natural Language :: Korean",
+]
+keywords = [
+    "handwriting", "ocr", "htr", "text-recognition",
+    "multilingual", "deep-learning", "pytorch",
+    "ctc", "transformer", "computer-vision",
+    "document-analysis", "historical-documents",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "torch>=2.0.0",
+    "torchvision>=0.15.0",
+    "numpy>=1.21.0",
+    "Pillow>=9.0.0",
+    "PyYAML>=6.0",
+    "pydantic>=2.0.0",
+    "tqdm>=4.60.0",
+    "typer>=0.9.0",
+    "rich>=13.0.0",
+    "opencv-python-headless>=4.0.0",
+    "scikit-learn>=1.0.0",
+    "structlog>=23.0.0",
+    "editdistance>=0.6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "ruff>=0.0.260",
+    "mypy>=1.0.0",
+    "pre-commit>=3.0.0",
+    "mkdocs-material>=9.0.0",
+]
+gpu = [
+    "torch>=2.0.0",  # Placeholder for actual GPU specific deps if differentiation needed
+]
+
+[project.scripts]
+thulium = "thulium.cli.main:app"
+
+[project.urls]
+"Homepage" = "https://github.com/olaflaitinen/Thulium"
+"Bug Tracker" = "https://github.com/olaflaitinen/Thulium/issues"
+"Documentation" = "https://thulium.readthedocs.io"
+
+[tool.setuptools.packages.find]
+include = ["thulium*"]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q --cov=thulium"
+testpaths = [
+    "tests",
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py310']
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+select = ["E", "F", "B", "I"]
+ignore = []
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
