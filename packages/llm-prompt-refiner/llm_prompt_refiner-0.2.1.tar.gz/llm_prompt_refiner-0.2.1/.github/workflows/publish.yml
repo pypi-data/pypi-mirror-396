@@ -1,0 +1,88 @@
+name: Publish to PyPI
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:  # Allow manual trigger
+
+permissions:
+  contents: read
+
+jobs:
+  # Pre-publish testing - must pass before publishing
+  pre-publish-test:
+    name: Pre-Publish E2E Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Build package
+        run: uv build
+
+      - name: Install package from wheel
+        run: |
+          WHEEL_FILE=$(ls dist/*.whl | head -n 1)
+          echo "Installing wheel: $WHEEL_FILE"
+          pip install "$WHEEL_FILE"
+
+      - name: Verify installation
+        run: |
+          python -c "import prompt_refiner; print(f'Pre-publish test: v{prompt_refiner.__version__}')"
+
+      - name: Run E2E tests
+        run: |
+          python tests/e2e/test_basic_usage.py
+
+  # Publish to PyPI - only runs if tests pass
+  publish:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    needs: pre-publish-test  # Wait for tests to pass
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Verify version matches tag
+        if: github.event_name == 'release'
+        run: |
+          TAG_VERSION=${GITHUB_REF#refs/tags/v}
+          PACKAGE_VERSION=$(grep '^version = ' pyproject.toml | cut -d'"' -f2)
+          if [ "$TAG_VERSION" != "$PACKAGE_VERSION" ]; then
+            echo "Error: Tag version ($TAG_VERSION) does not match package version ($PACKAGE_VERSION)"
+            exit 1
+          fi
+          echo "✓ Version check passed: $TAG_VERSION"
+
+      - name: Install dependencies
+        run: uv pip install --system twine
+
+      - name: Build package
+        run: uv build
+
+      - name: Check package
+        run: twine check dist/*
+
+      - name: Publish to PyPI
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: uv publish
