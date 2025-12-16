@@ -1,0 +1,1 @@
+Fast and clean alternative to JSON called ASON
