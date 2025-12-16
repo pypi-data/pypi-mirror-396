@@ -1,0 +1,47 @@
+[project]
+name = "asebytes"
+version = "0.1.7"
+description = "LMDB-based storage for ASE."
+authors = [
+    { name = "Fabian Zills", email = "fzills@icp.uni-stuttgart.de" },
+]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "ase>=3.26.0",
+    "lmdb>=1.7.5",
+    "msgpack>=1.1.2",
+    "msgpack-numpy>=0.4.8",
+]
+
+[build-system]
+requires = ["uv_build>=0.9.6,<0.10.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "ase-db-backends>=0.10.0",
+    "ipykernel>=7.1.0",
+    "matplotlib>=3.10.7",
+    "molify>=0.0.1a0",
+    "pandas>=2.3.3",
+    "pytest>=8.4.2",
+    "pytest-benchmark>=5.2.1",
+    "znh5md>=0.4.8",
+]
+
+[project.urls]
+Repository = "https://github.com/zincware/asebytes"
+Releases = "https://github.com/zincware/asebytes/releases"
+Discord = "https://discord.gg/7ncfwhsnm4"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = ["-v", "--strict-markers", "-m", "not benchmark"]
+
+markers = [
+    "benchmark: marks tests as benchmark tests (deselect with '-m \"not benchmark\"')",
+]
