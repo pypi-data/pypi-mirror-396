@@ -1,0 +1,85 @@
+# https://github.com/deepmancer/metabase-postgres-docker
+# Use ^^^ as the basis of a 'configurator' docker container (a la pragma) to 
+# auto-configure metabase.
+# OR...
+# Manually configure metabase and postgres, generate docker images from that configuration
+# AND/OR...
+# Use the metabase API to provision itself:
+# - https://www.metabase.com/learn/metabase-basics/administration/administration-and-operation/metabase-api
+# (
+#    need to generate an API key first, it looks like that might be what MB_SETUP_TOKEN: "" can do
+#    or use a session token like in the metabase-postgres-docker link above
+# )
+
+
+# Create multiple docker-compose files, a base one, then dev vs prod. have a `docker-up-dev` script for dev
+# and have the SDK use the base and prod compose files
+
+
+name: safehouse
+
+
+services:
+  safehouse:
+    container_name: safehouse_services
+    command:
+      - ./start-web-server
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+    healthcheck:
+      test: curl http://safehouse:8000/health_check/
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    image: tflecht/safehouse:latest
+    memswap_limit: 16G
+    ports:
+      - "9000:8000"
+  #metabase:
+  #  container_name: sh_metabase
+  #  image: metabase/metabase:latest
+  #  restart: always
+  #  environment:
+  #    MB_DB_TYPE: postgres
+  #    MB_DB_DBNAME: metabase
+  #    MB_DB_PORT: 5432
+  #    MB_DB_USER: safehouse
+  #    MB_DB_PASS: safehouse
+  #    MB_DB_HOST: postgres
+  #    MB_DB_FILE: /metabase_data/metabase.db
+  #    #MB_ADMIN_EMAIL: "tflecht@gmail.com"
+  #    #MB_USER_EMAIL: "tflecht@gmail.com"
+  #    #MB_USER_PASSWORD: "safehouse"
+  #    #MB_PASSWORD_COMPLEXITY: strong
+  #    #MB_PASSWORD_LENGTH: 10
+  #    #MB_ANON_TRACKING_ENABLED: "false"
+  #    #MB_SETUP_TOKEN: "8675309"
+  #    JAVA_TIMEZONE: "US/PACIFIC"
+  #  ports:
+  #    - "3000:3000"
+  #  depends_on:
+  #    postgres:
+  #      condition: service_healthy
+  #  volumes:
+  #    - metabase_data:/metabase-data
+  postgres:
+    container_name: safehouse_db 
+    environment:
+      #POSTGRES_DB: metabase
+      POSTGRES_PASSWORD: safehouse
+      POSTGRES_USER: safehouse
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U safehouse -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    image: 'postgres:18-alpine'
+    ports:
+      - "5432:5432"
