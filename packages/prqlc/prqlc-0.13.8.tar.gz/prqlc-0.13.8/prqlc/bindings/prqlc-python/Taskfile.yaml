@@ -1,0 +1,21 @@
+version: "3"
+
+vars:
+  build_dir: "../../../target/python"
+
+tasks:
+  build:
+    desc: Build
+    vars:
+      profile: "dev"
+    cmds:
+      - cmd: |
+          maturin build \
+            --profile={{.profile}} \
+            --out={{.build_dir}}
+
+  test:
+    desc: A fast test used for feedback during compiler development
+    cmds:
+      # uv run automatically includes dev dependencies from dependency-groups
+      - uv run pytest python/tests
