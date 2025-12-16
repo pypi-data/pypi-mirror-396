@@ -1,0 +1,263 @@
+    {%- if avro_annotation %}
+    /// <summary>
+    /// The Avro schema for this class
+    /// </summary>
+    private static readonly Avro.Schema AvroSchema = Avro.Schema.Parse("{{ avro_schema_json }}");
+    {%- endif %}
+
+    {%- if system_text_json_annotation or newtonsoft_json_annotation or system_xml_annotation or avro_annotation %}
+    /// <summary>
+    /// Creates an object from the data
+    /// </summary>
+    /// <param name="data">The input data to convert</param>
+    /// <param name="contentTypeString">The content type string of the desired encoding</param>
+    /// <returns>The converted object</returns>
+    public static {{ class_name }}? FromData(object? data, string? contentTypeString )
+    {
+        if ( data == null ) return null;
+        if ( data is {{ class_name }}) return ({{ class_name }})data;
+        if ( contentTypeString == null ) contentTypeString = System.Net.Mime.MediaTypeNames.Application.Octet;
+        var contentType = new System.Net.Mime.ContentType(contentTypeString);
+    {%- if system_text_json_annotation or newtonsoft_json_annotation or system_xml_annotation or avro_annotation %}
+        if ( contentType.MediaType.EndsWith("+gzip"))
+        {
+            var stream = data switch
+            {
+                System.IO.Stream s => s, System.BinaryData bd => bd.ToStream(), byte[] bytes => new System.IO.MemoryStream(bytes),
+                _ => throw new NotSupportedException("Data is not of a supported type for gzip decompression")
+            };
+            using (var gzip = new System.IO.Compression.GZipStream(stream, System.IO.Compression.CompressionMode.Decompress))
+            {
+                System.IO.MemoryStream memoryStream = new System.IO.MemoryStream();
+                gzip.CopyTo(memoryStream);
+                memoryStream.Position = 0;
+                data = memoryStream.ToArray();
+            }
+        }
+    {%- endif %}
+    {%- if system_text_json_annotation %}
+        if ( contentType.MediaType.StartsWith(System.Net.Mime.MediaTypeNames.Application.Json))
+        {
+            if (data is System.Text.Json.JsonElement)
+            {
+                return System.Text.Json.JsonSerializer.Deserialize<{{ class_name }}>((System.Text.Json.JsonElement)data);
+            }
+            else if ( data is string)
+            {
+                return System.Text.Json.JsonSerializer.Deserialize<{{ class_name }}>((string)data);
+            }
+            else if (data is System.BinaryData)
+            {
+                return ((System.BinaryData)data).ToObjectFromJson<{{ class_name }}>();
+            }
+            else if (data is byte[])
+            {
+                return System.Text.Json.JsonSerializer.Deserialize<{{ class_name }}>(new ReadOnlySpan<byte>((byte[])data));
+            }
+            else if (data is System.IO.Stream)
+            {
+                return System.Text.Json.JsonSerializer.DeserializeAsync<{{ class_name }}>((System.IO.Stream)data).Result;
+            }
+        }
+    {%- endif %}
+    {%- if newtonsoft_json_annotation %}
+        if ( contentType.MediaType.StartsWith(System.Net.Mime.MediaTypeNames.Application.Json))
+        {
+            if (data is string)
+            {
+                return Newtonsoft.Json.JsonConvert.DeserializeObject<{{ class_name }}>((string)data);
+            }
+            else if (data is System.BinaryData)
+            {
+                return ((System.BinaryData)data).ToObjectFromJson<{{ class_name }}>();
+            }
+        }
+    {%- endif %}
+    {%- if system_xml_annotation %}
+        if ( contentType.MediaType.StartsWith(System.Net.Mime.MediaTypeNames.Text.Xml) || contentType.MediaType.StartsWith(System.Net.Mime.MediaTypeNames.Application.Xml) || contentType.MediaType.EndsWith("+xml"))
+        {
+            var serializer = new System.Xml.Serialization.XmlSerializer(typeof({{ class_name }}));
+            if (data is string)
+            {
+                using (var reader = new System.IO.StringReader((string)data))
+                {
+                    return ({{ class_name }}?)serializer.Deserialize(reader);
+                }
+            }
+            else if (data is System.IO.Stream)
+            {
+                return ({{ class_name }}?)serializer.Deserialize((System.IO.Stream)data);
+            }
+            else if (data is System.BinaryData)
+            {
+                var memoryStream = new System.IO.MemoryStream(((System.BinaryData)data).ToArray());
+                return ({{ class_name }}?)serializer.Deserialize(memoryStream);
+            }
+            else if (data is byte[])
+            {
+                var memoryStream = new System.IO.MemoryStream((byte[])data);
+                return ({{ class_name }}?)serializer.Deserialize(memoryStream);
+            }
+        }
+    {%- endif %}
+    {%- if avro_annotation %}
+        if ( contentType.MediaType == "avro/binary" || contentType.MediaType == "application/vnd.apache.avro+avro")
+        {
+            if (data is byte[])
+            {
+                using (var stream = new System.IO.MemoryStream((byte[])data))
+                {
+                    var reader = new Avro.Generic.GenericDatumReader<Avro.Generic.GenericRecord>(AvroSchema, AvroSchema);
+                    var decoder = new Avro.IO.BinaryDecoder(stream);
+                    var record = reader.Read(null, decoder);
+                    return FromAvroRecord(record);
+                }
+            }
+            else if (data is System.IO.Stream)
+            {
+                var reader = new Avro.Generic.GenericDatumReader<Avro.Generic.GenericRecord>(AvroSchema, AvroSchema);
+                var decoder = new Avro.IO.BinaryDecoder((System.IO.Stream)data);
+                var record = reader.Read(null, decoder);
+                return FromAvroRecord(record);
+            }
+            else if (data is System.BinaryData)
+            {
+                using (var stream = new System.IO.MemoryStream(((System.BinaryData)data).ToArray()))
+                {
+                    var reader = new Avro.Generic.GenericDatumReader<Avro.Generic.GenericRecord>(AvroSchema, AvroSchema);
+                    var decoder = new Avro.IO.BinaryDecoder(stream);
+                    var record = reader.Read(null, decoder);
+                    return FromAvroRecord(record);
+                }
+            }
+        }
+    {%- endif %}
+        throw new System.NotSupportedException($"Unsupported media type {contentType.MediaType}");
+    }
+    {%- endif %}
+
+    {%- if avro_annotation %}
+    /// <summary>
+    /// Creates an instance from an Avro GenericRecord
+    /// </summary>
+    /// <param name="record">The Avro record</param>
+    /// <returns>The converted object</returns>
+    /// <remarks>
+    /// This method uses JSON as an intermediate format for conversion. This approach works well
+    /// for simple types but may have limitations with complex Avro union types that use 
+    /// different JSON encoding than System.Text.Json. For complex schemas with unions,
+    /// consider implementing custom mapping logic directly from GenericRecord properties.
+    /// </remarks>
+    private static {{ class_name }}? FromAvroRecord(Avro.Generic.GenericRecord record)
+    {
+        // Convert Avro record to JSON and then deserialize
+        // This approach works for simple cases; for complex types, you may need custom mapping
+        using (var jsonStream = new System.IO.MemoryStream())
+        {
+            var jsonEncoder = new Avro.IO.JsonEncoder(AvroSchema, jsonStream);
+            var writer = new Avro.Generic.GenericDatumWriter<Avro.Generic.GenericRecord>(AvroSchema);
+            writer.Write(record, jsonEncoder);
+            jsonEncoder.Flush();
+            jsonStream.Position = 0;
+            return System.Text.Json.JsonSerializer.Deserialize<{{ class_name }}>(jsonStream);
+        }
+    }
+    {%- endif %}
+
+    {%- if system_text_json_annotation or newtonsoft_json_annotation or system_xml_annotation or avro_annotation %}
+    /// <summary>
+    /// Converts the object to a byte array
+    /// </summary>
+    /// <param name="contentTypeString">The content type string of the desired encoding</param>
+    /// <returns>The encoded data</returns>
+    public byte[] ToByteArray(string contentTypeString)
+    {
+        var contentType = new System.Net.Mime.ContentType(contentTypeString);
+        byte[]? result = null;
+    {%- if system_text_json_annotation %}
+        if (contentType.MediaType.StartsWith(System.Net.Mime.MediaTypeNames.Application.Json))
+        {
+            // Use runtime type to ensure polymorphic serialization works correctly
+            result = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(this, this.GetType());
+        }
+    {%- endif %}
+    {%- if newtonsoft_json_annotation %}
+        {%- if system_text_json_annotation %}
+        else if (result == null && contentType.MediaType.StartsWith(System.Net.Mime.MediaTypeNames.Application.Json))
+        {%- else %}
+        if (contentType.MediaType.StartsWith(System.Net.Mime.MediaTypeNames.Application.Json))
+        {%- endif %}
+        {
+            result = System.Text.Encoding.GetEncoding(contentType.CharSet??"utf-8").GetBytes(Newtonsoft.Json.JsonConvert.SerializeObject(this));
+        }
+    {%- endif %}
+    {%- if system_xml_annotation %}
+        if (contentType.MediaType.StartsWith(System.Net.Mime.MediaTypeNames.Text.Xml) || contentType.MediaType.StartsWith(System.Net.Mime.MediaTypeNames.Application.Xml) || contentType.MediaType.EndsWith("+xml"))
+        {
+            var serializer = new System.Xml.Serialization.XmlSerializer(typeof({{ class_name }}));
+            using (var stream = new System.IO.MemoryStream())
+            {
+                using (var writer = new System.IO.StreamWriter(stream))
+                {
+                    serializer.Serialize(writer, this);
+                    writer.Flush();
+                    result = stream.ToArray();
+                }
+            }
+        }
+    {%- endif %}
+    {%- if avro_annotation %}
+        if (contentType.MediaType == "avro/binary" || contentType.MediaType == "application/vnd.apache.avro+avro")
+        {
+            using (var stream = new System.IO.MemoryStream())
+            {
+                var record = ToAvroRecord();
+                var writer = new Avro.Generic.GenericDatumWriter<Avro.Generic.GenericRecord>(AvroSchema);
+                var encoder = new Avro.IO.BinaryEncoder(stream);
+                writer.Write(record, encoder);
+                encoder.Flush();
+                result = stream.ToArray();
+            }
+        }
+    {%- endif %}
+        if ( result == null ) throw new System.NotSupportedException($"Unsupported media type {contentType.MediaType}");
+        if ( contentType.MediaType.EndsWith("+gzip"))
+        {
+            using (var output = new System.IO.MemoryStream())
+            {
+                using (var gzip = new System.IO.Compression.GZipStream(output, System.IO.Compression.CompressionMode.Compress))
+                {
+                    gzip.Write(result, 0, result.Length);
+                }
+                result = output.ToArray();
+            }
+        }
+        return result;
+    }
+    {%- endif %}
+
+    {%- if avro_annotation %}
+    /// <summary>
+    /// Converts this object to an Avro GenericRecord
+    /// </summary>
+    /// <returns>The Avro record</returns>
+    /// <remarks>
+    /// This method uses JSON as an intermediate format for conversion. This approach works well
+    /// for simple types but may have limitations with complex types containing unions, as
+    /// Avro's JSON encoding for unions differs from System.Text.Json's encoding. For complex
+    /// schemas with unions or other advanced Avro features, consider implementing custom
+    /// mapping logic directly to GenericRecord properties.
+    /// </remarks>
+    private Avro.Generic.GenericRecord ToAvroRecord()
+    {
+        // Convert to JSON first, then use Avro's JSON decoder
+        // This approach works for simple cases; for complex types, you may need custom mapping
+        var jsonBytes = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(this, this.GetType());
+        using (var jsonStream = new System.IO.MemoryStream(jsonBytes))
+        {
+            var decoder = new Avro.IO.JsonDecoder(AvroSchema, jsonStream);
+            var reader = new Avro.Generic.GenericDatumReader<Avro.Generic.GenericRecord>(AvroSchema, AvroSchema);
+            return reader.Read(reuse: null, decoder);
+        }
+    }
+    {%- endif %}
