@@ -1,0 +1,95 @@
+# Fastyr AI Pipeline
+
+A flexible and extensible Python library for building AI-powered conversational pipelines. Fastyr provides a clean interface between Speech-to-Text (STT), Language Model (LLM), and Text-to-Speech (TTS) services.
+
+## Features
+
+- Seamless integration of STT, LLM, and TTS services
+- Easy provider switching with consistent interfaces
+- Async/await support for optimal performance
+- Built-in error handling and retries
+- Flexible storage backend support
+
+## Installation
+
+```bash
+pip install fastyr-ai-pipeline
+```
+
+## Quick Start
+
+```python
+import os
+from fastyr.services.providers.pipeline_service import PipelineService
+from fastyr.services.providers.deepgram_provider import DeepgramProvider
+from fastyr.services.providers.openai_provider import OpenAIProvider
+from fastyr.services.providers.elevenlabs_provider import ElevenLabsProvider
+from fastyr.services.providers.local_storage_provider import LocalStorageProvider
+
+# Initialize providers
+storage = LocalStorageProvider(base_path="storage/audio")
+pipeline = PipelineService(
+    stt_provider=DeepgramProvider(api_key=os.getenv('DEEPGRAM_API_KEY')),
+    llm_provider=OpenAIProvider(api_key=os.getenv('OPENAI_API_KEY')),
+    tts_provider=ElevenLabsProvider(
+        api_key=os.getenv('ELEVENLABS_API_KEY'),
+        voice_id="your-voice-id"
+    ),
+    storage_provider=storage
+)
+
+# Process audio through the pipeline
+result = await pipeline.process(request)
+print(f"Processed audio available at: {result.audio_url}")
+```
+
+## Provider Interfaces
+
+The library defines three core interfaces:
+
+- **STTProvider**: `transcribe(audio_data: bytes, options: Dict) -> str`
+- **LLMProvider**: `generate_response(prompt: str, options: Dict) -> str`
+- **TTSProvider**: `synthesize(text: str, options: Dict) -> bytes`
+
+### Implemented Providers
+
+- **Deepgram** (STT): High-accuracy speech recognition with multi-language support
+- **OpenAI** (LLM): GPT-3.5/4 integration with customizable prompts
+- **ElevenLabs** (TTS): High-quality voice synthesis with multiple voice options
+
+## Configuration
+
+Set environment variables for your API keys:
+
+```env
+DEEPGRAM_API_KEY=your_deepgram_key
+OPENAI_API_KEY=your_openai_key
+ELEVENLABS_API_KEY=your_elevenlabs_key
+```
+
+## Custom Providers
+
+Implement your own provider by extending the relevant interface:
+
+```python
+from fastyr.services.interfaces.stt_provider import STTProvider
+from typing import Dict, Any
+
+class CustomSTTProvider(STTProvider):
+    async def transcribe(self, audio_data: bytes, options: Dict[str, Any] = None) -> str:
+        # Your implementation
+        pass
+```
+
+## Requirements
+
+- Python 3.7+
+- See `setup.py` for dependencies
+
+## License
+
+MIT License - see LICENSE file for details
+
+## Author
+
+William Jefferson Mensah - [GitHub](https://github.com/cuuj69)
