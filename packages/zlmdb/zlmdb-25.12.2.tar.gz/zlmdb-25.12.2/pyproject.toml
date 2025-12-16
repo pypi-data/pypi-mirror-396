@@ -1,0 +1,275 @@
+[build-system]
+requires = ["hatchling", "cffi>=1.15.1", "setuptools>=70.0.0", "patch-ng>=1.18.0; sys_platform == 'win32'"]
+build-backend = "hatchling.build"
+
+[project]
+name = "zlmdb"
+version = "25.12.2"
+description = "Object-relational zero-copy in-memory database layer for LMDB"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+# Twine 6.2 validator (via pkginfo) still flags license-files as "unrecognized or malformed",
+# because it only understands the old-style License: field (Core Metadata 2.3).
+# Rely on modern setuptools (80.9.0+) which automatically discovers LICENSE* files at the root.
+# license-files = ["LICENSE"]
+authors = [
+    {name = "typedef int GmbH", email = "contact@typedefint.eu"}
+]
+keywords = ["zlmdb", "lmdb", "database", "key-value", "embedded", "zero-copy", "flatbuffers", "cbor", "wamp", "crossbar"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+    "Topic :: Database",
+    "Topic :: Database :: Database Engines/Servers",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "cffi>=1.15.1",
+    "setuptools>=40.8.0",  # Required by CFFI's ffi.verify() on Python 3.12+
+    "cbor2>=5.4.6",
+    "click>=8.1.3",
+    # flatbuffers is now vendored - no external dependency needed
+    "pynacl>=1.5.0",
+    "pyyaml>=6.0",
+    "txaio>=25.12.2",
+    "numpy>=1.24.1",
+]
+
+[project.optional-dependencies]
+# Development dependencies
+dev = [
+    "build>=1.0.0",
+    "wheel>=0.36.2",
+    "pytest>=3.4.2",
+    "pytest-runner>=2.11.1",
+    "twisted>=20.3.0",  # Required for running tests that use txaio with Twisted
+    "sphinx>=1.7.1",
+    "sphinx-rtd-theme>=0.1.9",
+    "sphinxcontrib-spelling>=7.0.0",  # Spell checking for documentation
+    "sphinxcontrib-images>=0.9.0",  # Image directives for Sphinx
+    "sphinx-autoapi>=2.0.0",  # Automatic API documentation generation
+    "pyenchant>=3.0.0",  # Required by sphinxcontrib-spelling
+    "twine>=3.3.0",
+    "auditwheel>=5.0.0",  # Wheel verification and manylinux compliance checking
+    "ruff>=0.1.0",  # Fast Python linter and formatter (replaces flake8/black/yapf)
+    "scour>=0.38",  # SVG optimizer for documentation logos
+    # Note: ty (Astral type checker) is installed via `uv tool install ty`
+    # It's a standalone Rust binary, not a Python package dependency
+    "coverage>=5.0.0",
+]
+
+# Documentation tools (used by RTD via .readthedocs.yaml)
+docs = [
+    # Core Sphinx + MyST
+    "sphinx>=8.2.3",
+    "myst-parser>=2.0",
+
+    # Theme
+    "furo>=2024.7.0",
+
+    # API docs (no-import parsing)
+    "sphinx-autoapi>=2.1.0",
+
+    # UX Enhancements
+    "sphinx-copybutton>=0.5",
+    "sphinx-design>=0.5",
+    "sphinxcontrib-images>=0.9",
+
+    # Spell checking
+    "sphinxcontrib-spelling>=8.0",
+    "pyenchant>=3.2",
+
+    # Static asset optimization
+    "scour>=0.38",
+
+    # Social previews
+    "sphinxext-opengraph>=0.9",
+
+    # MyST auto-linking
+    "linkify-it-py>=2.0.0",
+]
+
+[project.scripts]
+zlmdb = "zlmdb.cli:main"
+flatc = "zlmdb._flatc:main"
+
+[project.urls]
+Homepage = "https://github.com/crossbario/zlmdb"
+Documentation = "https://zlmdb.readthedocs.io"
+Repository = "https://github.com/crossbario/zlmdb"
+Changelog = "https://github.com/crossbario/zlmdb/blob/master/docs/changelog.rst"
+
+# Hatchling build configuration
+[tool.hatch.build.targets.wheel]
+packages = ["src/zlmdb"]
+
+# Include non-Python files in the wheel
+[tool.hatch.build.targets.wheel.force-include]
+# Include py.typed marker
+"src/zlmdb/py.typed" = "zlmdb/py.typed"
+
+[tool.hatch.build.targets.sdist]
+# By default, hatchling includes all git-tracked files
+# We only use exclude to remove build artifacts and large submodule directories
+# Note: Do NOT use `include` - it overrides default git-tracked behavior
+exclude = [
+    "/.github",
+    "/docs/_build",
+    "/.venvs",
+    "/.uv-cache",
+    "/.coverage",
+    "/.pytest_cache",
+    "/.mypy_cache",
+    "/.ruff_cache",
+    "/build",
+    # Exclude large test/sample/doc files from flatbuffers submodule
+    # Keep: CMakeLists.txt, cmake/, src/, include/, reflection/, python/, grpc/
+    # Note: grpc/ is REQUIRED for building flatc - it contains schema_interface.h
+    "/deps/flatbuffers/tests",
+    "/deps/flatbuffers/samples",
+    "/deps/flatbuffers/docs",
+    "/deps/flatbuffers/android",
+    "/deps/flatbuffers/swift",
+    "/deps/flatbuffers/kotlin",
+    "/deps/flatbuffers/java",
+    "/deps/flatbuffers/dart",
+    "/deps/flatbuffers/lua",
+    "/deps/flatbuffers/lobster",
+    "/deps/flatbuffers/net",
+    "/deps/flatbuffers/php",
+    "/deps/flatbuffers/rust",
+    "/deps/flatbuffers/ts",
+    "/deps/flatbuffers/go",
+    # Note: grpc/ excluded from this list - it contains required source files
+    # for building flatc (schema_interface.h, cpp_generator.h, etc.)
+]
+
+# Custom build hook for CFFI extension modules (LMDB)
+[tool.hatch.build.hooks.custom]
+# Uses hatch_build.py by default
+# -----------------------------------------------------------------------------
+# Ruff Configuration
+# -----------------------------------------------------------------------------
+
+[tool.ruff]
+# Same as Black
+line-length = 88
+indent-width = 4
+
+target-version = "py311"  # Minimum supported Python version
+
+[tool.ruff.lint]
+
+# Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`) codes by default
+select = ["E4", "E7", "E9", "F"]
+
+# --- Files and Directories to Ignore ---
+exclude = [
+    ".tox",
+    ".git",
+    "__pycache__",
+    "src/zlmdb/flatbuffers/*",  # Vendored flatbuffers runtime
+    "src/zlmdb/_lmdb_vendor/*",  # Vendored LMDB bindings
+    "src/zlmdb/flatbuffers/*",  # Auto-generated flatbuffers reflection code
+    "src/zlmdb/tests/orm/MNodeLog.py",  # Auto-generated test file
+]
+
+# --- Violations to Ignore ---
+# Technical debt list - aim to remove codes over time
+ignore = [
+    "E275",  # missing whitespace after keyword
+    "F401",  # imported but unused
+    "E402",  # module level import not at top of file
+    "F403",  # unable to detect undefined names
+    "F405",  # may be undefined, or defined from star imports
+    "E501",  # line too long (handled by formatter)
+    "F706",  # return statement outside of a function/method
+    "E713",  # test for membership should be `not in`
+    "E721",  # do not compare types, use isinstance()
+    "E722",  # do not use bare except
+    "E741",  # ambiguous variable name
+    "F811",  # redefinition of unused
+    "F821",  # undefined name
+    "F841",  # local variable is assigned to but never used
+]
+
+# Allow fix for all enabled rules (when `--fix` is provided)
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.format]
+
+# Like Black, use double quotes for strings
+quote-style = "double"
+
+# Like Black, indent with spaces, rather than tabs
+indent-style = "space"
+
+# Like Black, respect magic trailing commas
+skip-magic-trailing-comma = false
+
+# Like Black, automatically detect the appropriate line ending
+line-ending = "auto"
+
+# Enable auto-formatting of code examples in docstrings
+docstring-code-format = false
+
+# -----------------------------------------------------------------------------
+# PyTest Configuration
+# -----------------------------------------------------------------------------
+
+[tool.pytest.ini_options]
+# Only search for tests in these directories (non-recursive into subdirs outside these)
+testpaths = [
+    "src/zlmdb/tests",
+]
+
+# Exclude patterns - these override testpaths if files match
+norecursedirs = [
+    ".*",           # Hidden directories (.git, .ai, .venvs, .uv-cache, etc.)
+    "build",        # Build artifacts
+    "dist",         # Distribution artifacts
+    "src/zlmdb/_lmdb_vendor",   # Vendored LMDB bindings
+    "src/zlmdb/flatbuffers",  # Vendored flatbuffers runtime
+    "lmdb-upstream", # LMDB upstream submodule
+    "lmdb-patches", # LMDB patches
+    "deps",         # Dependencies
+    "docs",         # Documentation
+    "*.egg-info",   # Egg info directories
+]
+
+# Additional ignores for specific problematic paths
+ignore = [
+    ".uv-cache",
+    ".venvs",
+    "build",
+    "dist",
+]
+
+# Ignore specific test files with known issues (API incompatibilities, missing optional deps)
+ignore_collect = [
+    "tests/test_fbs_reflection.py",      # Requires autobahn.xbr (XBR subpackage)
+    "tests/test_flatbuffers.py",         # FlatBuffers API incompatibility (Builder.EndVector signature)
+    "tests/test_new.py",                 # Code error: MySchema has no 'open' attribute
+    "tests/zdb/test_zdb_df.py",          # Requires pandas
+    "tests/zdb/test_zdb_etcd.py",        # Requires txaioetcd
+    "tests/zdb/test_zdb_fbs.py",         # Requires zlmdb.flatbuffers.demo (missing module)
+]
+
+# Python files to collect
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
