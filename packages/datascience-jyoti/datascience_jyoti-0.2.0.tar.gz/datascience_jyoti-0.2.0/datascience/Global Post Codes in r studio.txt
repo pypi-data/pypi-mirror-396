@@ -1,0 +1,56 @@
+Global Post Codes in r studio
+############################
+if u dont have he data mcrete dummy data . using this  run in r studio 
+library(data.table)
+
+# Create dummy data
+dummy_data <- data.table(
+  X1 = c("AD", "AD", "AD", "AD", "AD", "AD", "AD", "AR", "FR", "US"),
+  X2 = c("AD100", "AD200", "AD300", "AD400", "AD500", "AD600", "AD700", "3636", "FR100", "US900"),
+  X3 = c("Canillo", "Encamp", "Ordino", "La Massana", "Andorra la Vella", "Sant Julià de Lòria", 
+         "Escaldes-Engordany", "POZO CERCADO (EL CHORRO (F), DPTO. RIVADAVIA (S))", 
+         "Paris", "Los Angeles"),
+  X4 = c(NA, NA, NA, NA, NA, NA, NA, "Salta", NA, NA),
+  X5 = c(NA, NA, NA, NA, NA, NA, NA, "A", NA, NA),
+  X10 = c(42.5833, 42.5333, 42.6, 42.5667, 42.5, 42.4667, 42.5, -23.4933, 48.8566, 34.0522),
+  X11 = c(1.6667, 1.6333, 1.55, 1.4833, 1.5, 1.5, 1.5667, -61.9267, 2.3522, -118.2437)
+)
+
+# Define the file path (your input folder)
+file_path <- "C:/Users/JYOTI RAHATE/Downloads/DataScience/Inputfile/All_Countries_dummy.txt"
+
+# Save dummy data as tab-delimited file
+fwrite(dummy_data, file = file_path, sep = "\t")
+
+# Print confirmation
+cat("Dummy data saved to:", file_path, "\n")
+#########################################
+# Load necessary library
+library(readr)
+
+# Step 1: Read the tab-delimited mock file
+All_Countries <- read_delim(
+  "C:/Users/JYOTI RAHATE/Downloads/DataScience/Inputfile/All_Countries_mock.txt",  # Updated path
+  delim = "\t",                     # Tab-delimited
+  col_names = FALSE,                # File has no header
+  col_types = cols(
+    X6  = col_skip(),  # Skip column 6
+    X7  = col_skip(),  # Skip column 7
+    X8  = col_skip(),  # Skip column 8
+    X9  = col_skip(),  # Skip column 9
+    X12 = col_skip()   # Skip column 12
+  ),
+  na = "null",     # Treat "null" as NA
+  trim_ws = TRUE   # Remove leading/trailing spaces
+)
+
+# Step 2: Write the cleaned data to CSV
+write.csv(
+  All_Countries,
+  file = "C:/Users/JYOTI RAHATE/Downloads/DataScience/Inputfile/Retrieve_All_Countries.csv",
+  row.names = FALSE  # Exclude row numbers in CSV
+)
+
+# Step 3: Optional - View first few rows to check
+head(All_Countries)
+

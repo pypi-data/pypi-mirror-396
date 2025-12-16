@@ -1,0 +1,151 @@
+#Practicle 4 A. Perform the following data processing using R. 
+install.packages("readr")
+library(readr)
+ IP_DATA_ALL <- read_csv("C:/Users/JYOTI RAHATE/Downloads/DataScience/Inputfile/IP_DATA_ALL.csv")
+ View(IP_DATA_ALL)
+
+###completd######################################################################################
+
+ install.packages("janitor")
+library(readr)
+library(janitor)
+
+# Read the CSV file
+IP_DATA_ALL <- read_csv(
+  "C:/Users/JYOTI RAHATE/Downloads/DataScience/Inputfile/IP_DATA_ALL.csv",
+  show_col_types = FALSE
+)
+
+# Remove the extra index column (...1)
+IP_DATA_ALL <- IP_DATA_ALL[, -1]
+
+# Clean column names (snake_case)
+IP_DATA_ALL <- clean_names(IP_DATA_ALL, case = "snake")
+
+# View the data
+View(IP_DATA_ALL)
+
+# Check data types
+sapply(IP_DATA_ALL, typeof)
+
+#################completd#######################################
+install.packages("data.table")
+install.packages("dplyr")
+library(data.table) # no need to use here 
+library(dplyr)
+
+hist_country <- IP_DATA_ALL %>%
+  filter(!is.na(country)) %>%
+  distinct(country) %>%
+  arrange(country) %>%
+  mutate(RowIDCountry = row_number())
+
+View(hist_country)
+ 
+explaination : 
+filter(): Select rows based on a condition.
+
+!is.na(): Logical test to exclude missing values.
+
+distinct(): Keep only unique values of a column.
+
+arrange(): Sort rows by a column.
+
+mutate(): Add or modify columns.
+
+row_number(): Generates sequential row numbers.
+
+%>%: Pipe operator, passes the result of one function to the next.
+
+View(): Displays a dataset in a viewer.
+##########################completed##########################
+Country frequency table
+
+IP_DATA_COUNTRY_FREQ <- IP_DATA_ALL %>%
+  filter(!is.na(country)) %>%
+  count(country, name = "Frequency") %>%
+  arrange(country)
+
+View(IP_DATA_COUNTRY_FREQ)
+
+##Latitude summary statistics##
+latitude_stats <- IP_DATA_ALL %>%
+  summarise(
+    min_latitude = min(latitude, na.rm = TRUE),
+    max_latitude = max(latitude, na.rm = TRUE),
+    mean_latitude = mean(latitude, na.rm = TRUE),
+    median_latitude = median(latitude, na.rm = TRUE),
+    range_latitude = max(latitude, na.rm = TRUE) - min(latitude, na.rm = TRUE),
+    sd_latitude = sd(latitude, na.rm = TRUE),
+    quantiles = list(quantile(latitude, na.rm = TRUE))
+  )
+
+latitude_stats
+
+# Max of a character column (for example, country)
+sapply(IP_DATA_ALL[ , "country"], max, na.rm = TRUE)
+
+# Mean of Latitude
+sapply(IP_DATA_ALL[ , "latitude"], mean, na.rm = TRUE)
+
+# Median of Latitude
+sapply(IP_DATA_ALL[ , "latitude"], median, na.rm = TRUE)
+
+# Range of Latitude (min and max)
+sapply(IP_DATA_ALL[ , "latitude"], range, na.rm = TRUE)
+
+# Quantiles of Latitude
+sapply(IP_DATA_ALL[ , "latitude"], quantile, na.rm = TRUE)
+
+# Standard deviation of Latitude
+sapply(IP_DATA_ALL[ , "latitude"], sd, na.rm = TRUE)
+
+##################completed ######################
+
+*****transform the country names in your dataset into a “patterned” anonymized form.
+
+# Load required libraries
+library(readr)
+library(data.table)
+
+# Load the CSV file
+FileName <- 'c:/VKHCG/01-Vermeulen/00-RawData/IP_DATA_ALL.csv'
+IP_DATA_ALL <- read_csv(FileName)
+
+# Create a data.table of unique countries
+hist_country <- data.table(Country = unique(IP_DATA_ALL$Country))
+
+# Initialize pattern_country with the same countries
+pattern_country <- data.table(
+  Country = hist_country$Country,
+  PatternCountry = hist_country$Country
+)
+
+# Define old characters and new replacements
+oldchar <- c(letters, LETTERS)
+newchar <- rep("A", length(oldchar))  # Replace all letters with "A"
+
+# Loop over each row and replace characters
+for (r in seq_len(nrow(pattern_country))) {
+  s <- pattern_country[r, PatternCountry]
+  
+  # Replace letters
+  for (c in seq_along(oldchar)) {
+    s <- chartr(oldchar[c], newchar[c], s)
+  }
+  
+  # Replace digits 0-9 with "N"
+  for (n in 0:9) {
+    s <- chartr(as.character(n), "N", s)
+  }
+  
+  # Replace space with "b" and dot with "u"
+  s <- chartr(" ", "b", s)
+  s <- chartr(".", "u", s)
+  
+  # Update the PatternCountry column
+  pattern_country[r, PatternCountry := s]
+}
+
+# View the result
+View(pattern_country)
