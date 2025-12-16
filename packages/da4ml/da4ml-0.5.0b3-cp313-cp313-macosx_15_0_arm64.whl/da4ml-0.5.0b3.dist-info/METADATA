@@ -1,0 +1,85 @@
+Metadata-Version: 2.1
+Name: da4ml
+Version: 0.5.0b3
+Summary: Distributed Arithmetic for Machine Learning
+Keywords: CMVM,distributed arithmetic,high-level synthesis,machine learning,RTL/HLS compilation
+Author-Email: Chang Sun <chsun@cern.ch>
+License: GNU Lesser General Public License v3 (LGPLv3)
+Classifier: Development Status :: 4 - Beta
+Classifier: License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
+Project-URL: repository, https://github.com/calad0i/da4ml
+Requires-Python: >=3.10
+Requires-Dist: llvmlite>=0.44
+Requires-Dist: numba>=0.61
+Requires-Dist: quantizers<2,>=1
+Provides-Extra: docs
+Requires-Dist: hgq2; extra == "docs"
+Requires-Dist: myst-parser; extra == "docs"
+Requires-Dist: pyparsing; extra == "docs"
+Requires-Dist: sphinx; extra == "docs"
+Requires-Dist: sphinx-rtd-theme; extra == "docs"
+Description-Content-Type: text/markdown
+
+# da4ml: Distributed Arithmetic for Machine Learning
+
+[![LGPLv3](https://img.shields.io/badge/License-LGPLv3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
+[![Documentation](https://github.com/calad0i/da4ml/actions/workflows/sphinx-build.yml/badge.svg)](https://calad0i.github.io/da4ml/)
+[![PyPI version](https://badge.fury.io/py/da4ml.svg)](https://badge.fury.io/py/da4ml)
+[![ArXiv](https://img.shields.io/badge/arXiv-2507.04535-b31b1b.svg)](https://arxiv.org/abs/2507.04535)
+
+da4ml is a static computation graph to RTL/HLS design compiler targeting ultra-low latency applications on FPGAs. It as two major components:
+ - A fast and performant constant-matrix-vector multiplications (CMVM) optimizer to implement them as
+   efficient adder trees. Common sub-expressions elimination (CSE) with graph-based pre-optimization are
+   performed to reduce the firmware footprint and improve the performance.
+ - Low-level symbolic tracing frameworks for generating combinational/fully pipelined logics in HDL or HLS
+   code. da4ml can generate the firmware for almost all fully pipelined networks standalone.
+   Alternatively, da4ml also be used as a plugin in hls4ml to optimize the CMVM operations in the network.
+
+Key Features
+------------
+
+- **Optimized Algorithms**: Comparing to hls4ml's latency strategy, da4ml's CMVM implementation uses no DSO and consumes up to 50% less LUT usage.
+- **Fast code generation**: da4ml can generate HDL for a fully pipelined network in seconds. For the same models, high-level synthesis tools like Vivado/Vitis HLS can take up to days to generate the HDL code.
+- **Low-level symbolic tracing**: As long as the operation can be expressed by a combination of the low-level operations supported, adding new operations is straightforward by "replaying" the operation on the symbolic tensor provided. In most cases, adding support for a new operation/layer takes just a few lines of code in numpy flavor.
+- **Automatic model conversion**: da4ml can automatically convert models trained in `HGQ2 <https://github.com/calad0i/hgq2>`_.
+- **Bit-accurate Emulation**: All operation in da4ml is bit-accurate, meaning the generated HDL code will produce the same output as the original model. da4ml's computation is converted to a RISC-like, instruction set level intermediate representation, distributed arithmetic instruction set (DAIS), which can be easily simulated in multiple ways. da4ml also provides a fast C++ based DAIS interpreter to run bit-exact inference on the traced models for verification and benchmarking.
+- **hls4ml integration**: da4ml can be used as a plugin in hls4ml to optimize the CMVM operations in the network by setting `strategy='distributed_arithmetic'` for the strategy of the Dense, EinsumDense, or Conv1/2D layers.
+
+Installation
+------------
+
+```bash
+pip install da4ml
+```
+
+Getting Started
+---------------
+
+- See the [Getting Started](https://calad0i.github.io/da4ml/getting_started.html) guide for a quick introduction to using da4ml.
+- See [JEDI-linear](https://github.com/calad0i/JEDI-linear) project which is based on da4ml
+
+# Citation
+
+If you use da4ml in a publication, please cite our [TRETS'25 paper](https://doi.org/10.1145/3777387) with the following bibtex entry:
+
+```bibtex
+@article{sun2025da4ml,
+    author = {Sun, Chang and Que, Zhiqiang and Loncar, Vladimir and Luk, Wayne and Spiropulu, Maria},
+    title = {da4ml: Distributed Arithmetic for Real-time Neural Networks on FPGAs},
+    year = {2025},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    issn = {1936-7406},
+    url = {https://doi.org/10.1145/3777387},
+    doi = {10.1145/3777387},
+    journal = {ACM Trans. Reconfigurable Technol. Syst.},
+    month = nov,
+}
+```
