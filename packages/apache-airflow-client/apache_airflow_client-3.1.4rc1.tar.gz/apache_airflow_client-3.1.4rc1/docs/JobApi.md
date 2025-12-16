@@ -1,0 +1,124 @@
+# airflow_client.client.JobApi
+
+All URIs are relative to *http://localhost*
+
+Method | HTTP request | Description
+------------- | ------------- | -------------
+[**get_jobs**](JobApi.md#get_jobs) | **GET** /api/v2/jobs | Get Jobs
+
+
+# **get_jobs**
+> JobCollectionResponse get_jobs(is_alive=is_alive, start_date_gte=start_date_gte, start_date_gt=start_date_gt, start_date_lte=start_date_lte, start_date_lt=start_date_lt, end_date_gte=end_date_gte, end_date_gt=end_date_gt, end_date_lte=end_date_lte, end_date_lt=end_date_lt, limit=limit, offset=offset, order_by=order_by, job_state=job_state, job_type=job_type, hostname=hostname, executor_class=executor_class)
+
+Get Jobs
+
+Get all jobs.
+
+### Example
+
+* OAuth Authentication (OAuth2PasswordBearer):
+* Bearer Authentication (HTTPBearer):
+
+```python
+import airflow_client.client
+from airflow_client.client.models.job_collection_response import JobCollectionResponse
+from airflow_client.client.rest import ApiException
+from pprint import pprint
+
+# Defining the host is optional and defaults to http://localhost
+# See configuration.py for a list of all supported configuration parameters.
+configuration = airflow_client.client.Configuration(
+    host = "http://localhost"
+)
+
+# The client must configure the authentication and authorization parameters
+# in accordance with the API server security policy.
+# Examples for each auth method are provided below, use the example that
+# satisfies your auth use case.
+
+configuration.access_token = os.environ["ACCESS_TOKEN"]
+
+# Configure Bearer authorization: HTTPBearer
+configuration = airflow_client.client.Configuration(
+    access_token = os.environ["BEARER_TOKEN"]
+)
+
+# Enter a context with an instance of the API client
+with airflow_client.client.ApiClient(configuration) as api_client:
+    # Create an instance of the API class
+    api_instance = airflow_client.client.JobApi(api_client)
+    is_alive = True # bool |  (optional)
+    start_date_gte = '2013-10-20T19:20:30+01:00' # datetime |  (optional)
+    start_date_gt = '2013-10-20T19:20:30+01:00' # datetime |  (optional)
+    start_date_lte = '2013-10-20T19:20:30+01:00' # datetime |  (optional)
+    start_date_lt = '2013-10-20T19:20:30+01:00' # datetime |  (optional)
+    end_date_gte = '2013-10-20T19:20:30+01:00' # datetime |  (optional)
+    end_date_gt = '2013-10-20T19:20:30+01:00' # datetime |  (optional)
+    end_date_lte = '2013-10-20T19:20:30+01:00' # datetime |  (optional)
+    end_date_lt = '2013-10-20T19:20:30+01:00' # datetime |  (optional)
+    limit = 50 # int |  (optional) (default to 50)
+    offset = 0 # int |  (optional) (default to 0)
+    order_by = ["id"] # List[str] | Attributes to order by, multi criteria sort is supported. Prefix with `-` for descending order. Supported attributes: `id, dag_id, state, job_type, start_date, end_date, latest_heartbeat, executor_class, hostname, unixname` (optional) (default to ["id"])
+    job_state = 'job_state_example' # str |  (optional)
+    job_type = 'job_type_example' # str |  (optional)
+    hostname = 'hostname_example' # str |  (optional)
+    executor_class = 'executor_class_example' # str |  (optional)
+
+    try:
+        # Get Jobs
+        api_response = api_instance.get_jobs(is_alive=is_alive, start_date_gte=start_date_gte, start_date_gt=start_date_gt, start_date_lte=start_date_lte, start_date_lt=start_date_lt, end_date_gte=end_date_gte, end_date_gt=end_date_gt, end_date_lte=end_date_lte, end_date_lt=end_date_lt, limit=limit, offset=offset, order_by=order_by, job_state=job_state, job_type=job_type, hostname=hostname, executor_class=executor_class)
+        print("The response of JobApi->get_jobs:\n")
+        pprint(api_response)
+    except Exception as e:
+        print("Exception when calling JobApi->get_jobs: %s\n" % e)
+```
+
+
+
+### Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **is_alive** | **bool**|  | [optional] 
+ **start_date_gte** | **datetime**|  | [optional] 
+ **start_date_gt** | **datetime**|  | [optional] 
+ **start_date_lte** | **datetime**|  | [optional] 
+ **start_date_lt** | **datetime**|  | [optional] 
+ **end_date_gte** | **datetime**|  | [optional] 
+ **end_date_gt** | **datetime**|  | [optional] 
+ **end_date_lte** | **datetime**|  | [optional] 
+ **end_date_lt** | **datetime**|  | [optional] 
+ **limit** | **int**|  | [optional] [default to 50]
+ **offset** | **int**|  | [optional] [default to 0]
+ **order_by** | [**List[str]**](str.md)| Attributes to order by, multi criteria sort is supported. Prefix with &#x60;-&#x60; for descending order. Supported attributes: &#x60;id, dag_id, state, job_type, start_date, end_date, latest_heartbeat, executor_class, hostname, unixname&#x60; | [optional] [default to [&quot;id&quot;]]
+ **job_state** | **str**|  | [optional] 
+ **job_type** | **str**|  | [optional] 
+ **hostname** | **str**|  | [optional] 
+ **executor_class** | **str**|  | [optional] 
+
+### Return type
+
+[**JobCollectionResponse**](JobCollectionResponse.md)
+
+### Authorization
+
+[OAuth2PasswordBearer](../README.md#OAuth2PasswordBearer), [HTTPBearer](../README.md#HTTPBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+### HTTP response details
+
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+**200** | Successful Response |  -  |
+**400** | Bad Request |  -  |
+**401** | Unauthorized |  -  |
+**403** | Forbidden |  -  |
+**422** | Validation Error |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
