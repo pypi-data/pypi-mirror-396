@@ -1,0 +1,65 @@
+from setuptools import setup, find_packages
+
+with open("README.md", "r", encoding="utf-8") as fh:
+    long_description = fh.read()
+
+setup(
+    name="dtbag",
+    version="0.1.0",
+    author="Abderrahmane Sakhi",
+    author_email="Abderrahmane.Sakhi@gmail.com",
+    description="Data Tool Bag (dtbag) - A Python library for text processing, data cleaning, and similarity-based clustering of textual data",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    url="https://github.com/yourusername/dtbag",
+    packages=find_packages(),
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+        "Intended Audience :: Developers",
+        "Topic :: Software Development :: Libraries :: Python Modules",
+        "Topic :: Text Processing",
+        "Topic :: Scientific/Engineering :: Information Analysis",
+    ],
+    python_requires=">=3.6",
+    install_requires=[
+        "numpy>=1.19.0",
+    ],
+    keywords=[
+    "categorical data unification",
+    "text processing",
+    "data cleaning",
+    "text normalization",
+    "string matching",
+    "similarity detection",
+    "data preprocessing",
+    "text unification",
+    "duplicate detection",
+    "data deduplication",
+    "text clustering",
+    "levenshtein distance",
+    "fuzzy matching",
+    "clustering algorithms",
+    "pattern recognition",
+    "natural language processing",
+    "text mining",
+    "similarity metrics",
+    "edit distance",
+    "string similarity",
+    "data science",
+    "machine learning",
+    "data analysis",
+    "ETL tools",
+    "data wrangling",
+    "information retrieval",
+    "python-library",
+    "open-source",
+    "text-utilities",
+    "data-tools"
+],
+    project_urls={
+        "Bug Reports": "https://github.com/yourusername/dtbag/issues",
+        "Source": "https://github.com/yourusername/dtbag",
+    },
+)
