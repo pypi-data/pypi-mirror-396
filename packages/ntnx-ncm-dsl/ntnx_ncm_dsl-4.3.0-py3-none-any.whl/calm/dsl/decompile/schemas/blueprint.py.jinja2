@@ -1,0 +1,19 @@
+{% macro blueprint(obj) %}
+class {{obj.name}}(Blueprint):
+    {% if obj.description -%}"""{{obj.description}}"""{% endif %}
+    {% if obj.services %}services = [{{obj.services}}]{% endif %}
+    {% if obj.packages %}packages = [{{obj.packages}}]{% endif %}
+    {% if obj.substrates %}substrates = [{{obj.substrates}}]{% endif %}
+    {% if obj.profiles %}profiles = [{{obj.profiles}}]{% endif %}
+    {% if obj.credentials %}credentials = [{{obj.credentials}}]{% endif %}
+    {%- if obj.global_variables %}
+    global_variables = [
+        {%- for var in obj.global_variables %}
+            Ref.GlobalVariable("{{ var }}"){{ ", " if not loop.last else "" }}
+        {%- endfor %}
+    ]
+    {% endif %}
+{% endmacro %}
+
+{{ blueprint(obj) }}
+    
