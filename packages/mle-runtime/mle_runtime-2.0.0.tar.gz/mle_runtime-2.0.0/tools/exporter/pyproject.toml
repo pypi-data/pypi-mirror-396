@@ -1,0 +1,88 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mle-exporter"
+version = "1.0.0"
+description = "Universal ML/DL model exporter to efficient .mle format"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "MLE Team", email = "team@mle.ai"}
+]
+keywords = ["machine-learning", "deep-learning", "model-export", "pytorch", "tensorflow", "scikit-learn", "xgboost"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    "numpy>=1.20.0",
+]
+
+[project.optional-dependencies]
+sklearn = ["scikit-learn>=1.0.0", "joblib>=1.0.0"]
+pytorch = ["torch>=1.10.0"]
+tensorflow = ["tensorflow>=2.8.0"]
+xgboost = ["xgboost>=1.5.0"]
+lightgbm = ["lightgbm>=3.3.0"]
+catboost = ["catboost>=1.0.0"]
+all = [
+    "scikit-learn>=1.0.0",
+    "joblib>=1.0.0",
+    "torch>=1.10.0",
+    "tensorflow>=2.8.0",
+    "xgboost>=1.5.0",
+    "lightgbm>=3.3.0",
+    "catboost>=1.0.0",
+]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=3.0.0",
+    "black>=22.0.0",
+    "flake8>=4.0.0",
+    "mypy>=0.950",
+]
+
+[project.scripts]
+mle-export = "universal_exporter:main"
+mle-export-sklearn = "sklearn_to_mle:main"
+mle-export-pytorch = "pytorch_to_mle:main"
+mle-export-tensorflow = "tensorflow_to_mle:main"
+mle-export-xgboost = "xgboost_to_mle:main"
+mle-test-exporters = "test_all_exporters:main"
+
+[project.urls]
+Homepage = "https://github.com/yourusername/mle"
+Documentation = "https://github.com/yourusername/mle/blob/main/tools/exporter/README.md"
+Repository = "https://github.com/yourusername/mle"
+"Bug Tracker" = "https://github.com/yourusername/mle/issues"
+
+[tool.setuptools]
+packages = ["mle_exporter"]
+
+[tool.black]
+line-length = 100
+target-version = ['py38', 'py39', 'py310', 'py311']
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
