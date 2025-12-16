@@ -1,0 +1,161 @@
+Metadata-Version: 2.1
+Name: ioddcombase
+Version: 1.8.4
+Summary: IoddCom base
+Home-page: https://siogeen.com
+Author: Reimund Renner
+Author-email: reimund@siogeen.com
+License: proprietary and confidential
+Project-URL: Documentation, https://siogeen.com/doc/
+Project-URL: Help Desk, https://siogeen.com/helpdesk/
+Project-URL: Knowledge Base, https://siogeen.com/helpdesk/knowledgebase
+Project-URL: News, https://news.siogeen.com/
+Keywords: IO-Link,IODD,development,test,production
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Manufacturing
+Classifier: Intended Audience :: Science/Research
+Classifier: Intended Audience :: Customer Service
+Classifier: Topic :: Software Development :: Embedded Systems
+Classifier: Topic :: Software Development :: Quality Assurance
+Classifier: Topic :: Software Development :: Testing
+Classifier: Operating System :: Microsoft :: Windows
+Classifier: Operating System :: POSIX :: Linux
+Classifier: Operating System :: MacOS :: MacOS X
+Classifier: License :: Other/Proprietary License
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Requires-Python: >=3.8
+Description-Content-Type: text/x-rst
+License-File: LICENSE.txt
+Requires-Dist: bitstring>=4.1.0
+Requires-Dist: psutil>=3.0.0
+Requires-Dist: urllib3>=2.0.0
+Requires-Dist: pyserial>=3.5
+Requires-Dist: prettytable>=3.9.0
+Requires-Dist: getmac>=0.9.5
+Requires-Dist: isodate>=0.6.0
+Requires-Dist: packaging>=23.2
+Requires-Dist: PyYAML>=6.0.1
+Requires-Dist: icmplib>=3.0.4
+Requires-Dist: case-insensitive-dictionary>=0.2.1
+Requires-Dist: cryptography>=3.4.6
+
+IoddComBase - base IoddCom package
+==================================
+
+This is the base package for Siogeen IoddCom.
+
+.. _IoddComChecker: /project/IoddComChecker
+.. _IoddComCheckerGui: /project/IoddComCheckerGui
+
+For checking your IO-Link masters working with Siogeen IoddCom, please see IoddComChecker_ or IoddComCheckerGui_
+
+For full package, requests and support go to https://siogeen.com
+
+**Copyright 2017-2025 Siogeen UG** (limited liability)
+
+.. _request: https://siogeen.com/#contact
+
+Supported Platforms
+~~~~~~~~~~~~~~~~~~~
+
+========================= ===================== ======================
+**OS**                    Python 2.7, 3.4-3.7   Python 3.8 - 3.13
+========================= ===================== ======================
+**Windows**                 [1]_                   x
+**Linux x86/x64**           [1]_                   x
+**Linux Arm (Raspberry)**   [1]_                   x
+**macOS**                   [1]_                   x
+========================= ===================== ======================
+
+.. [1] IoddCom for Python 2.7, 3.4 - 3.7 on request_.
+
+Support for other platforms on request_.
+
+Supported operating systems and IO-Link masters
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Table of supported IO-Link masters for specific operating systems (OS):
+
++-----------------------------------+---------------------------------------------------+
+| Master                            | supported OS                                      |
+|                                   +---------+----------+--------------+---------------+
+|                                   | Windows |  Linux   | Raspberry Pi | macOS 64 [3]_ |
++===================================+=========+==========+==============+===============+
+| TMG-USB based masters             |   x     |   x [4]_ |    x [4]_    |    x [4]_     |
++-----------------------------------+---------+----------+--------------+---------------+
+| TMG ethernet based masters [5]_   |   x     |    x     |    x         |    x          |
++-----------------------------------+---------+----------+--------------+---------------+
+| ifm ethernet based masters [6]_   |   x     |    x     |    x         |    x          |
++-----------------------------------+---------+----------+--------------+---------------+
+| ifm USB based masters [7]_        |   x     |    x     |    x         |    x          |
++-----------------------------------+---------+----------+--------------+---------------+
+| Turck Multi-Protocol masters [8]_ |   x     |    x     |    x         |    x          |
++-----------------------------------+---------+----------+--------------+---------------+
+| REST API based masters [9]_       |   x     |    x     |    x         |    x          |
++-----------------------------------+---------+----------+--------------+---------------+
+| IQ2 based masters [10]_           |   x     |    x     |    x         |    x          |
++-----------------------------------+---------+----------+--------------+---------------+
+
+For Windows, Linux and macOS are 64-bit and for Raspberry Pi are both, 32-bit and 64-bit versions available.
+
+.. [3] For macOS 11.0+
+
+.. [4] For example: Baumer, Leuze, Pepperl+Fuchs, SICK AG, Turck.
+       *Firmware v3.2+ only runs under Windows. For Linux/macOS/RasPi use FW < 3.2!*
+
+.. [5] For Example: Balluff, Belden, Murrelektronik, Pepperl+Fuchs, Wenglor
+
+.. [6] All ifm IO-Link masters AL1xxx should be supported. Functionality depends on master type
+
+.. [7] ifm USB IO-Link master AL1060
+
+.. [8] Turck Multi-Protocol masters (Modbus TCP, PROFINET, EtherNet/IP): TBEN-L, TBEN-S, FEN20, ...
+       Special functions missing: read/write SIO, functions not available: data storage
+
+.. [9] REST API based masters (Sick SIG200/SIG350, Belden Lion-X, MurrElectronik Impact67 Pro/MVK Pro, Baumer, **Beta:** Balluff)
+
+.. [10] **Experimental:** Iq2 based masters (iqLink, iqInterface and SensoPart SensoIO)
+
+Not supported masters:
+
+* iO-Fly masters (soon)
+* Baumer senscontrol masters (soon)
+* Baumer USB-C masters
+* RevolutionPi RevPi masters
+* Pepperl & Fuchs comtrol masters
+* Germbedded masters
+* TEConcept masters
+
+Support for them or other masters on request_.
+
+
+Supported functionality
+~~~~~~~~~~~~~~~~~~~~~~~
+All supported masters have the following functionality:
+
+read/write ISDUs, read/write process data, get/set port config.
+
+The following functionality is varying by master:
+
+====================  ============  =======================================  ============  ==================
+master                data storage  multi data / multi port                  PD streaming  special functions
+====================  ============  =======================================  ============  ==================
+Sim                   yes           read ISDU, read PD, read DI, multi-port  hw/sw         --
+ifm ethernet based    yes           read PD, read DI, multi-port             hw/sw         yes
+ifm USB based         yes           read PD, read DI, multi-port             sw            yes
+REST API based        yes           read ISDU [12]_                          sw            yes, Balluff, SICK
+TMG-USB based         yes [11]_     read PD, read DI, multi-port             hw/sw         yes
+TMG ethernet based    yes           read PD, read DI, multi-port             hw/sw         yes, Balluff
+Turck Multi-Protocol  --            read PD, read DI, multi-port             sw            yes
+Iq2 USB/ethernet      yes [13]_     --                                       sw            yes
+====================  ============  =======================================  ============  ==================
+
+.. [11] getConfig not supported, FW 3.2+: masterCommandDownloadFromMaster not supported anymore
+.. [12] REST API multi data write ISDU will be added in future
+.. [13] no read/write master DS supported (only config)
+
