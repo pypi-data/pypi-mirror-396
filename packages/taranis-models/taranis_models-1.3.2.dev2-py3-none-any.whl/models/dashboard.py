@@ -1,0 +1,66 @@
+from datetime import datetime
+
+from pydantic import Field
+
+from models.assess import StoryTag
+from models.base import TaranisBaseModel
+
+
+class Dashboard(TaranisBaseModel):
+    _core_endpoint = "/dashboard"
+    _model_name = "dashboard"
+    _pretty_name = "Dashboard"
+    _cache_timeout = 30
+    total_news_items: int = 0
+    total_story_items: int = 0
+    total_products: int = 0
+    report_items_completed: int = 0
+    report_items_in_progress: int = 0
+    latest_collected: datetime | None = None
+    schedule_length: int | None = None
+    conflict_count: int | None = None
+    worker_status: dict[str, dict[str, int]] | None = None
+
+
+class TrendingCluster(TaranisBaseModel):
+    _core_endpoint = "/dashboard/trending-clusters"
+    _model_name = "trending_clusters"
+    _pretty_name = "Trending Clusters"
+
+    name: str
+    tags: list[StoryTag] = Field(default_factory=list)
+    size: int | None = None
+
+
+class Cluster(TaranisBaseModel):
+    _core_endpoint = "/dashboard/cluster"
+    _model_name = "clusters"
+    _pretty_name = "Clusters"
+
+    name: str
+    size: int | None = None
+
+
+class StoryConflict(TaranisBaseModel):
+    _core_endpoint = "connectors/conflicts/story-conflicts"
+    _cache_timeout = 5
+    _model_name = "story_conflicts"
+    _pretty_name = "Story Conflicts"
+
+    story_id: str
+    existing_story: str
+    incoming_story: str
+    has_proposals: str | None = None
+
+
+class NewsItemConflict(TaranisBaseModel):
+    _core_endpoint = "/connectors/conflicts/news-items"
+    _cache_timeout = 5
+    _model_name = "news_item_conflict"
+    _pretty_name = "News Item Conflicts"
+
+    incoming_story_id: str
+    news_item_id: str
+    existing_story_id: str
+    incoming_story: dict
+    misp_address: str | None = None
