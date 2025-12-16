@@ -1,0 +1,38 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+
+default_install_hook_types: [pre-commit, pre-push]
+
+repos:
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: mixed-line-ending
+
+  # Python linting and formatting (runs on pre-commit)
+  - repo: local
+    hooks:
+      # Run lint via poe task for consistency with CI
+      - id: lint
+        name: lint (ruff + mypy)
+        entry: uv run poe lint
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+        types: [python]
+
+      # Run all tests (runs on pre-push)
+      - id: test-all
+        name: test-all (unit + integration)
+        entry: bash -c 'cd "$GIT_REPO_DIR" && ./poe test-all'
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+        always_run: true
