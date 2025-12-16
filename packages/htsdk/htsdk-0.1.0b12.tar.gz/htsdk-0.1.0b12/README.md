@@ -1,0 +1,266 @@
+## What is Heaptree?
+
+Heaptree lets you launch secure cloud instances with one line of code. Perfect for AI workloads, asynchronous tasks, or any application that needs on-demand compute.
+
+## Getting Started
+
+### 1. Install the SDK
+
+```bash
+pip install htsdk
+```
+
+### 2. Login from your terminal
+
+This opens your browser to sign in with GitHub/Google and automatically configures your API key.
+
+```bash
+heaptree login
+```
+
+This will:
+
+- Save your key to `~/.heaptree/config.json`
+- Add `HEAPTREE_API_KEY` to your shell profile (e.g. `~/.zshrc`)
+
+Open a new terminal (or run `source ~/.zshrc`) for the environment change to take effect.
+
+### 3. Create your first node
+
+```python
+import os
+from heaptree import Heaptree
+
+# Initialize the client
+client = Heaptree(api_key=os.getenv("HEAPTREE_API_KEY"))
+
+# Create a new node
+result = client.create_node(
+    num_nodes=1,
+    node_size="small"
+)
+
+print(f"Node created: {result.node_id}")
+```
+
+### 4. Use your node
+
+```python
+# Run a command on the node
+response = client.run_command(
+    node_id=result.node_id,
+    command="echo 'Hello from Heaptree!'"
+)
+
+# Clean up when done
+client.terminate_node(result.node_id)
+```
+
+## Local development (no PyPI)
+
+Use any of the following to test changes locally without publishing to PyPI.
+
+### Option A: Run the CLI directly from source (no install)
+
+```bash
+cd /Users/jordanhilado/projects/heaptree/sdk
+python -m heaptree.cli login
+```
+
+### Option B: Editable install into your environment
+
+```bash
+cd /Users/jordanhilado/projects/heaptree/sdk
+
+# (optional) create/activate a virtualenv or conda env
+python -m venv .venv
+source .venv/bin/activate
+# conda alternative: conda activate heaptree
+
+# ensure old installs don't shadow your local one
+python -m pip uninstall -y htsdk heaptree || true
+
+# install locally in editable mode
+python -m pip install -e .
+
+# run the CLI
+heaptree login
+```
+
+Verify the local package is being used:
+
+```bash
+which heaptree
+python -c "import heaptree, inspect; print(heaptree.__file__)"
+```
+
+Expected output paths should point inside `.../projects/heaptree/sdk/...`.
+
+### Optional: Override platform URL
+
+```bash
+export HEAPTREE_PLATFORM_URL="https://staging.heaptree.com"
+python -m heaptree.cli login
+```
+
+### Optional: Reset local login state
+
+```bash
+rm -f ~/.heaptree/config.json
+```
+
+After a successful login that updates your shell profile, reload your shell:
+
+```bash
+source ~/.zshrc
+echo "$HEAPTREE_API_KEY"
+```
+
+### Switch back to the PyPI build later
+
+```bash
+python -m pip uninstall -y htsdk heaptree
+python -m pip install htsdk
+```
+
+## Updating the SDK
+
+To update to the latest version of the SDK, run:
+
+```bash
+pip install --upgrade htsdk
+```
+
+Or use the shorthand:
+
+```bash
+pip install -U htsdk
+```
+
+To check your current SDK version:
+
+```bash
+pip show htsdk
+```
+
+## Features
+
+- **Node Management**: Create, terminate, and manage cloud instances
+- **File Operations**: Upload and download files to/from nodes
+- **Command Execution**: Run commands remotely on your nodes
+- **Multiple Node Support**: Create and manage multiple nodes simultaneously
+
+### Install Python packages in Firecracker sandboxes
+
+```python
+import os
+from heaptree import Heaptree
+
+client = Heaptree(api_key=os.getenv("HEAPTREE_API_KEY"))
+node = client.create(
+    lifetime_seconds=300,
+    pip_install=["numpy", "boto3", "requests"]
+)
+```
+
+### Git in Firecracker nodes
+
+```python
+from heaptree import Heaptree
+
+client = Heaptree(api_key=os.getenv("HEAPTREE_API_KEY"))
+node = client.create()
+
+# Clone a public repo
+node.git_clone(
+    url="https://github.com/user/repo.git",
+    path="workspace/repo"
+)
+
+# Clone with authentication (e.g., PAT)
+node.git_clone(
+    url="https://github.com/user/private-repo.git",
+    path="workspace/private-repo",
+    username="git",
+    password="personal_access_token"
+)
+
+# Clone a specific branch
+node.git_clone(
+    url="https://github.com/user/repo.git",
+    path="workspace/repo-branch",
+    branch="develop"
+)
+
+# Get repo status
+status = node.git_status("workspace/repo")
+print(status.current_branch, status.ahead, status.behind)
+for f in status.file_status:
+    print(f.name, f.status)
+
+# List branches
+branches = node.git_branches("workspace/repo")
+for b in branches.branches:
+    print(b)
+```
+
+### List files and directories in Firecracker nodes
+
+```python
+from heaptree import Heaptree
+import os
+
+client = Heaptree(api_key=os.getenv("HEAPTREE_API_KEY"))
+node = client.create()
+
+# List files in a directory
+files = node.list_files("workspace")
+
+for file in files:
+    print(f"Name: {file.name}")
+    print(f"Is directory: {file.is_dir}")
+    print(f"Size: {file.size}")
+    print(f"Modified: {file.mod_time}")
+```
+
+### Create directories with specific permissions
+
+```python
+from heaptree import Heaptree
+import os
+
+client = Heaptree(api_key=os.getenv("HEAPTREE_API_KEY"))
+node = client.create()
+
+node.create_folder("workspace/new-dir", "755")
+```
+
+### File permissions (set/get and recursive)
+
+```python
+from heaptree import Heaptree
+import os
+
+client = Heaptree(api_key=os.getenv("HEAPTREE_API_KEY"))
+node = client.create()
+
+# Set file permissions
+node.set_permissions("workspace/file.txt", "644")
+
+# Get file permissions
+file_info = node.get_permissions("workspace/file.txt")
+print(f"Permissions: {file_info.permissions}")
+
+# Set directory permissions recursively
+node.set_directory_permissions_recursive("workspace/new-dir", "755")
+```
+
+## API Reference
+
+For complete SDK documentation, including all available methods, parameters, and examples, visit the official documentation:
+
+**[📖 Heaptree Documentation](https://heaptree.com/docs)**
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
