@@ -1,0 +1,71 @@
+[project]
+name = "fraocme"
+version = "1.0.0b1"
+description = "A compact, testable framework for writing Advent of Code solutions in Python"
+readme = "README.md"
+requires-python = ">=3.13"
+license = {text = "MIT"}
+authors = [
+    {name = "MalikAza", email = "dakota.froissart@powaza.fr"},
+    {name = "Weyrd", email = "pierre.pinateau@gmail.com"}
+]
+keywords = ["advent-of-code", "aoc", "framework", "python", "testing"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Games/Entertainment :: Puzzle Games",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "pytest-cov>=4.0", "ruff>=0.1.0"]
+
+[project.urls]
+Homepage = "https://github.com/MalikAza/fraocme"
+Repository = "https://github.com/MalikAza/fraocme.git"
+Issues = "https://github.com/MalikAza/fraocme/issues"
+Documentation = "https://github.com/MalikAza/fraocme#readme"
+
+[project.scripts]
+fraocme = "fraocme.cli:main"
+tests = "fraocme.test_runner:run"
+
+[tool.uv]
+package = true
+
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages]
+find = {where = ["."], include = ["fraocme*"]}
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N"]  # pycodestyle, Pyflakes, warnings, isort, pep8-naming
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+[[tool.uv.index]]
+name = "testpypi"
+url = "https://test.pypi.org/simple/"
+publish-url = "https://test.pypi.org/legacy/"
+explicit = true
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple/"
+publish-url = "https://upload.pypi.org/legacy/"
+explicit = true
