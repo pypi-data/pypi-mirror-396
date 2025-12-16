@@ -1,0 +1,333 @@
+# VLM Fine-tuning Configuration Templates
+# Copy and customize these templates for your fine-tuning jobs
+
+# =============================================================================
+# TEMPLATE 1: Quick Test (Fast iteration, small dataset)
+# =============================================================================
+quick_test:
+  dataset_name: "sample-vlm-data"
+  output_model_name: "test-llava-quick"
+  base_model: "llava-hf/llava-1.5-7b-hf"
+  model_type: "llava"
+
+  # Minimal training for fast testing
+  num_epochs: 1
+  batch_size: 1
+  learning_rate: 0.00002
+  gradient_accumulation_steps: 2
+  max_seq_length: 1024
+
+  # LoRA settings - small for faster training
+  lora_r: 32
+  lora_alpha: 16
+  lora_dropout: 0.05
+
+  # Optimizations
+  use_flash_attention: true
+  deepspeed_config: ""
+  wandb_project: ""
+
+# =============================================================================
+# TEMPLATE 2: Standard Fine-tuning (Balanced performance)
+# =============================================================================
+standard:
+  dataset_name: "my-vlm-dataset"
+  output_model_name: "my-llava-model-v1"
+  base_model: "llava-hf/llava-1.5-7b-hf"
+  model_type: "llava"
+
+  # Standard training configuration
+  num_epochs: 3
+  batch_size: 2
+  learning_rate: 0.00002
+  gradient_accumulation_steps: 4
+  max_seq_length: 2048
+
+  # LoRA settings - balanced
+  lora_r: 64
+  lora_alpha: 16
+  lora_dropout: 0.05
+
+  # Optimizations
+  use_flash_attention: true
+  deepspeed_config: ""
+  wandb_project: "vlm-experiments"
+
+  # Dataset columns (adjust if needed)
+  image_column: "image_path"
+  prompt_column: "prompt"
+  response_column: "response"
+
+# =============================================================================
+# TEMPLATE 3: High Quality (Best results, longer training)
+# =============================================================================
+high_quality:
+  dataset_name: "large-vlm-dataset"
+  output_model_name: "premium-llava-model"
+  base_model: "llava-hf/llava-1.5-13b-hf"
+  model_type: "llava"
+
+  # Extended training for better quality
+  num_epochs: 5
+  batch_size: 4
+  learning_rate: 0.00001  # Lower LR for stability
+  gradient_accumulation_steps: 8
+  max_seq_length: 2048
+
+  # LoRA settings - higher capacity
+  lora_r: 128
+  lora_alpha: 32
+  lora_dropout: 0.05
+
+  # Optimizations
+  use_flash_attention: true
+  deepspeed_config: "zero2"
+  wandb_project: "production-vlm"
+
+  # Dataset columns
+  image_column: "image_path"
+  prompt_column: "prompt"
+  response_column: "response"
+
+# =============================================================================
+# TEMPLATE 4: Memory Efficient (24GB GPU)
+# =============================================================================
+memory_efficient:
+  dataset_name: "my-dataset"
+  output_model_name: "efficient-llava"
+  base_model: "llava-hf/llava-1.5-7b-hf"
+  model_type: "llava"
+
+  # Memory-optimized settings
+  num_epochs: 3
+  batch_size: 1
+  learning_rate: 0.00002
+  gradient_accumulation_steps: 16  # Compensate for small batch
+  max_seq_length: 1024  # Reduced sequence length
+
+  # LoRA settings - smaller to save memory
+  lora_r: 32
+  lora_alpha: 16
+  lora_dropout: 0.05
+
+  # Memory optimizations
+  use_flash_attention: true
+  deepspeed_config: "zero3"  # Aggressive memory optimization
+  wandb_project: ""
+
+# =============================================================================
+# TEMPLATE 5: Qwen2-VL (Latest vision-language model)
+# =============================================================================
+qwen2_vl:
+  dataset_name: "my-vlm-dataset"
+  output_model_name: "my-qwen2-vl"
+  base_model: "Qwen/Qwen2-VL-7B-Instruct"
+  model_type: "qwen2_vl"
+
+  # Qwen-optimized settings
+  num_epochs: 3
+  batch_size: 2
+  learning_rate: 0.00001  # Qwen benefits from lower LR
+  gradient_accumulation_steps: 4
+  max_seq_length: 2048
+
+  # LoRA settings
+  lora_r: 64
+  lora_alpha: 16
+  lora_dropout: 0.05
+
+  # Optimizations
+  use_flash_attention: true
+  deepspeed_config: "zero2"
+  wandb_project: "qwen-experiments"
+
+# =============================================================================
+# TEMPLATE 6: Phi-3-Vision (Microsoft's efficient model)
+# =============================================================================
+phi3_vision:
+  dataset_name: "my-dataset"
+  output_model_name: "my-phi3-vision"
+  base_model: "microsoft/Phi-3-vision-128k-instruct"
+  model_type: "phi3_v"
+
+  # Phi-3 optimized settings
+  num_epochs: 3
+  batch_size: 3
+  learning_rate: 0.00002
+  gradient_accumulation_steps: 4
+  max_seq_length: 2048
+
+  # LoRA settings
+  lora_r: 64
+  lora_alpha: 16
+  lora_dropout: 0.05
+
+  # Optimizations
+  use_flash_attention: true
+  deepspeed_config: ""
+  wandb_project: "phi3-experiments"
+
+# =============================================================================
+# TEMPLATE 7: Research / Experimentation
+# =============================================================================
+research:
+  dataset_name: "research-dataset"
+  output_model_name: "research-model-exp1"
+  base_model: "llava-hf/llava-1.5-7b-hf"
+  model_type: "llava"
+
+  # Flexible settings for research
+  num_epochs: 10
+  batch_size: 2
+  learning_rate: 0.00005  # Higher LR for experimentation
+  gradient_accumulation_steps: 4
+  max_seq_length: 2048
+
+  # LoRA settings - high capacity for research
+  lora_r: 256
+  lora_alpha: 64
+  lora_dropout: 0.1  # Higher dropout for regularization
+
+  # Full optimization stack
+  use_flash_attention: true
+  deepspeed_config: "zero2"
+  wandb_project: "research-vlm"  # Important for tracking experiments
+
+# =============================================================================
+# TEMPLATE 8: Production Deployment
+# =============================================================================
+production:
+  dataset_name: "production-training-data"
+  output_model_name: "prod-llava-v2"
+  base_model: "llava-hf/llava-1.5-13b-hf"
+  model_type: "llava"
+
+  # Production-grade settings
+  num_epochs: 5
+  batch_size: 4
+  learning_rate: 0.000015
+  gradient_accumulation_steps: 8
+  max_seq_length: 2048
+
+  # LoRA settings - balanced for inference speed
+  lora_r: 96
+  lora_alpha: 32
+  lora_dropout: 0.05
+
+  # Production optimizations
+  use_flash_attention: true
+  deepspeed_config: "zero2"
+  wandb_project: "production-models"
+
+# =============================================================================
+# TEMPLATE 9: Domain-Specific (e.g., Medical, OCR, Charts)
+# =============================================================================
+domain_specific:
+  dataset_name: "medical-images-dataset"
+  output_model_name: "medical-llava-specialist"
+  base_model: "llava-hf/llava-1.5-7b-hf"
+  model_type: "llava"
+
+  # Domain-specific may need more epochs
+  num_epochs: 7
+  batch_size: 2
+  learning_rate: 0.00001  # Lower LR for specialized domains
+  gradient_accumulation_steps: 8
+  max_seq_length: 2048
+
+  # Higher capacity for specialized knowledge
+  lora_r: 128
+  lora_alpha: 32
+  lora_dropout: 0.05
+
+  # Optimizations
+  use_flash_attention: true
+  deepspeed_config: "zero2"
+  wandb_project: "domain-specific-vlm"
+
+# =============================================================================
+# TEMPLATE 10: Multilingual VLM
+# =============================================================================
+multilingual:
+  dataset_name: "multilingual-vlm-data"
+  output_model_name: "multilingual-llava"
+  base_model: "Qwen/Qwen2-VL-7B-Instruct"  # Qwen supports many languages
+  model_type: "qwen2_vl"
+
+  # Multilingual requires more training
+  num_epochs: 5
+  batch_size: 3
+  learning_rate: 0.00001
+  gradient_accumulation_steps: 6
+  max_seq_length: 2048
+
+  # LoRA settings
+  lora_r: 96
+  lora_alpha: 24
+  lora_dropout: 0.05
+
+  # Optimizations
+  use_flash_attention: true
+  deepspeed_config: "zero2"
+  wandb_project: "multilingual-vlm"
+
+# =============================================================================
+# Usage Instructions
+# =============================================================================
+#
+# To use these templates with the workflow:
+#
+# 1. Command line (manual parameters):
+#    mixtrain workflow run vlm-finetune \
+#      --dataset_name my-dataset \
+#      --output_model_name my-model \
+#      --base_model llava-hf/llava-1.5-7b-hf \
+#      --num_epochs 3 \
+#      --batch_size 2 \
+#      ...
+#
+# 2. Python script (load from YAML):
+#    import yaml
+#    with open('vlm_config_templates.yaml') as f:
+#        configs = yaml.safe_load(f)
+#
+#    workflow = AxolotlVLMFinetune()
+#    workflow.setup(configs['standard'])
+#    workflow.run()
+#
+# 3. Create a custom config:
+#    - Copy one of these templates
+#    - Modify parameters for your use case
+#    - Save as a new YAML file
+#    - Load and use in your training script
+#
+# =============================================================================
+# Parameter Selection Guidelines
+# =============================================================================
+#
+# Learning Rate:
+#   - 2e-5 (0.00002): Standard, safe choice
+#   - 1e-5 (0.00001): More stable, for larger models or domain-specific
+#   - 5e-5 (0.00005): Aggressive, for quick convergence
+#
+# Batch Size & Accumulation:
+#   - Effective batch = batch_size × gradient_accumulation_steps
+#   - Target effective batch: 16-32 for most cases
+#   - Smaller batch_size if OOM, increase accumulation to compensate
+#
+# LoRA Rank (lora_r):
+#   - 32: Minimal, fastest training
+#   - 64: Standard, good balance
+#   - 128+: High capacity, slower but better quality
+#
+# Epochs:
+#   - 1-2: Quick testing
+#   - 3-5: Standard fine-tuning
+#   - 5-10: High quality or domain-specific
+#
+# DeepSpeed:
+#   - "": No DeepSpeed, fastest but most memory
+#   - "zero2": Good balance of speed and memory
+#   - "zero3": Maximum memory efficiency, slower
+#
+# =============================================================================
