@@ -1,0 +1,86 @@
+#!/usr/bin/env clitest --v0
+
+$ pi-captive reset --force
+*
+
+$ PS1=">> " pi-captive run /bin/sh
+! [pi] Started captive process with --pid %{NUMBER} and --tag sh
+! >> 
+
+$ pi-captive ls
+! [pi] --pid %{NUMBER} --tag sh (active)
+
+$ PS1=">> " pi-captive run /bin/sh
+! [pi] Started captive process with --pid %{NUMBER} and --tag sh-1
+! >> 
+
+$ PS1=">> " pi-captive run /bin/sh
+! [pi] Started captive process with --pid %{NUMBER} and --tag sh-2
+! >> 
+
+$ pi-captive resume --tag sh --text "echo 'hi'\n"
+! >> echo 'hi'
+! hi
+! >> 
+
+$ pi-captive resume --tag sh --text "read -p 'question? ' answer\n"
+! >> read -p 'question? ' answer
+! question? 
+
+$ pi-captive resume --tag sh --text "answer!!!\n"
+! question? answer!!!
+! >> 
+
+$ pi-captive resume --tag sh --text "echo \$answer\n"
+! >> echo $answer
+! answer!!!
+! >> 
+
+$ pi-captive dump-screen --tag sh
+! >> echo 'hi'
+! hi
+! >> read -p 'question? ' answer
+! question? answer!!!
+! >> echo $answer
+! answer!!!
+! >>
+
+$ PS1=">> " pi-captive run --kill /bin/sh
+! [pi] Killing existing process with tag: sh
+! [pi] Started captive process with --pid %{NUMBER} and --tag sh
+! >> 
+
+# Standard answer/response-type process
+$ pi-captive run --kill /bin/sh -c 'read -p "question 1? " answer1; read -p "question 2? " answer2; read -p "question 3? " answer3; echo Answers: $answer1 $answer2 $answer3;'
+! [pi] Killing existing process with tag: sh
+! [pi] Started captive process with --pid %{NUMBER} and --tag sh
+! question 1?
+
+$ pi-captive resume --tag sh --text "one\n"
+! question 1? one
+! question 2?
+
+$ pi-captive resume --tag sh --text "two\n"
+! question 2? two
+! question 3?
+
+$ pi-captive resume --tag sh --text "three\n"
+! question 3? three
+! Answers: one two three
+!
+! [pi] Process exited successfully
+
+# Run a process that dumps a lot of status output before a prompt
+$ pi-captive run --kill /bin/sh -c 'for i in 1 2 3; do echo "note $i"; sleep 0.5; done; read -p "prompt? " answer; echo "answer: $answer";'
+! [pi] Killing existing process with tag: sh
+! [pi] Started captive process with --pid %{NUMBER} and --tag sh
+! note 1
+! note 2
+! note 3
+! prompt?
+
+$ pi-captive resume --tag sh --text "ok\n"
+! prompt? ok
+! answer: ok
+!
+! [pi] Process exited successfully

@@ -1,0 +1,150 @@
+[build-system]
+requires = ["maturin~=1.10.1", "twine~=6.1", "pydantic~=2.11", "uv_build>=0.8.17,<0.9.0"]
+build-backend = "maturin"
+
+[tool.maturin]
+bindings = "bin"
+manifest-path = "crates/main/Cargo.toml"
+python-source = "."
+
+[project]
+name = "pi"
+version = "1.0.0.dev1"
+description = "Python Intelligence"
+readme = 'README.md'
+requires-python = "==3.13.*"
+authors = [
+    {name = "Yury Selivanov", email = "yury@geldata.com"},
+]
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+]
+
+dependencies = [
+    "pydantic-ai-slim[openai,anthropic,google,mistral]~=1.16.0",
+    "pi-tokenize~=0.0.1",
+    "textual==6.5.0",
+    "rapidfuzz~=3.14.3",
+    "pyperclip~=1.11.0",
+]
+
+[project.urls]
+Repository = "https://github.com/geldata/pi"
+
+
+[dependency-groups]
+dev = [
+    "maturin",
+    "pip-tools",
+    "textual-dev>=1.7.0",
+    "pre-commit>=4.3.0",
+    "logfire>=4.14.2",
+    "types-pyperclip>=1.9.0.20250801",
+]
+test = [
+    "pytest>=7.0",
+    "pytest-integration-mark==0.2.0",
+    "pytest-xdist",
+    "pytest-mock",
+    "pytest-asyncio",
+    "ruff",
+    "mypy==1.18.1",
+    "pyte",
+    "pexpect",
+    "pip-tools",
+    # Tests use `uv` to test different Python versions
+    "uv",
+    # Type stubs
+    "types-beautifulsoup4",
+    "types-pexpect",
+]
+
+[tool.uv]
+required-version = ">=0.8.0"
+upgrade = false
+cache-keys = [{ file = "pyproject.toml" }, { file = "Cargo.lock" }, { file = "crates/**/*" }]
+default-groups = ["dev", "test"]
+package = true
+
+[tool.uv.build-backend]
+module-root = ""
+
+[tool.ruff.lint]
+preview = true
+extend-select = [
+    # "ASYNC",  # flake8-async
+    "B", # flake8-bugbear
+    # "C4",     # flake8-comprehensions
+    # "C9",     # mccabe
+    # "COM",    # flake8-commas
+    # "D",      # pycodestyle
+    # "DTZ",    # flake8-datetimez
+    "E", # error
+    # "ERA",    # flake8-eradicate
+    "F", # pyflakes
+    # "FBT",    # flake8-boolean-trap
+    "G", # flake8-logging-format
+    # "I",      # isort
+    # "N",      # pep8-naming
+    # "PGH",    # pygrep-hooks
+    # "PIE",    # flake8-pie
+    # "RUF",    # ruff specific
+    # "SIM",    # flake8-simplify
+    # "T20",    # flake8-print
+    # "TC",       # flake8-type-checking
+    # "UP",       # pyupgrade
+    "W",        # warning
+]
+extend-ignore = [
+    "B018", # useless-expression
+    "B023", # function-uses-loop-variable
+    "B904", # raise-without-from-inside-except
+    "E402", # module-import-not-at-top-of-file
+    "E252", # missing-whitespace-around-parameter-equals
+    "F541", # f-string-missing-placeholders
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "B011",  # Do not assert False - OK in tests
+]
+
+[tool.ruff]
+line-length = 79
+indent-width = 4
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+ignore_errors = false
+explicit_package_bases = true
+
+[tool.pytest.ini_options]
+markers = [
+    "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
+]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "-ra",
+    "--capture=no",
+]
+asyncio_mode = "auto"
+
+[tool.ty.src]
+include = ["pi"]
+
+[tool.pyright]
+include = [
+    "pi/**",
+]
+pythonVersion = "3.13"
+typeCheckingMode = "standard"
+reportPrivateUsage = false
