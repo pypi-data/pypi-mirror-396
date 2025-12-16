@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Şifrelerim - SafePass{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/components/sidebar.css' %}">
+<link rel="stylesheet" href="{% static 'css/components/layout.css' %}">
+<link rel="stylesheet" href="{% static 'css/components/cards.css' %}">
+<link rel="stylesheet" href="{% static 'css/components/buttons.css' %}">
+<link rel="stylesheet" href="{% static 'css/components/forms.css' %}">
+{% endblock %}
+
+{% block body_class %}with-sidebar{% endblock %}
+
+{% block content %}
+{% include "partials/sidebar.html" %}
+
+<!-- Main Content -->
+<main class="main-content">
+    <div class="page-header">
+        <h1>🔐 Şifrelerim</h1>
+        <div class="header-actions">
+            <input type="text" id="search-input" class="search-input" placeholder="Ara...">
+            <a href="/passwords/add" class="btn btn-primary">➥ Yeni Şifre</a>
+        </div>
+    </div>
+    
+    <div class="cards-grid" id="cards-container">
+        {% for card in cards %}
+        <div class="password-card" data-id="{{ card.id }}">
+            <div class="card-header">
+                <div class="card-title">{{ card.app_name }}</div>
+                <div class="card-actions">
+                    <button class="btn-icon btn-edit" data-card-id="{{ card.id }}" title="Düzenle">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                    </button>
+                    <button class="btn-icon btn-delete" data-card-id="{{ card.id }}" title="Sil">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="card-field">
+                    <label>Kullanıcı Adı</label>
+                    <div class="field-value">{{ card.username }}</div>
+                </div>
+                <div class="card-field">
+                    <label>Şifre</label>
+                    <div class="field-value password-field">
+                        <span class="password-hidden">••••••••</span>
+                        <span class="password-visible" style="display:none;">{{ card.password }}</span>
+                        <button class="btn-icon btn-toggle-password" title="Göster/Gizle">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </button>
+                        <button class="btn-icon btn-copy-password" data-password="{{ card.password }}" title="Kopyala">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                {% if card.notes %}
+                <div class="card-field">
+                    <label>Notlar</label>
+                    <div class="field-value">{{ card.notes }}</div>
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-footer">
+                <span class="card-category">
+                    {% if card.category == "social" %}Sosyal Medya
+                    {% elif card.category == "work" %}İş
+                    {% elif card.category == "finance" %}Finans
+                    {% elif card.category == "email" %}E-posta
+                    {% elif card.category == "entertainment" %}Eğlence
+                    {% elif card.category == "shopping" %}Alışveriş
+                    {% else %}{{ card.category|default:"Genel" }}
+                    {% endif %}
+                </span>
+                <span class="card-date">{{ card.updated_at|date:"d.m.Y" }}</span>
+            </div>
+        </div>
+        {% empty %}
+        <div class="empty-state">
+            <p>Henüz şifre eklenmemiş</p>
+            <a href="/passwords/add" class="btn btn-primary">Şifre Ekle</a>
+        </div>
+        {% endfor %}
+    </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/modules/cards.js"></script>
+{% endblock %}
