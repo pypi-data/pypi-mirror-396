@@ -1,0 +1,82 @@
+[build-system]
+requires = ["setuptools>=61", "setuptools-scm>=8.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kaiserlift"
+dynamic = ["version"]
+description = "Science-based progressive overload system for weightlifting and running with Pareto optimization"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+keywords = ["fitness", "weightlifting", "progressive-overload", "workout-optimization", "running", "pareto", "1rm", "strength-training", "data-analysis"]
+authors = [{ name = "Douglas Kaiser", email = "douglastkaiser@gmail.com" }]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Visualization",
+    "Topic :: Utilities",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "pandas",
+    "numpy",
+    "matplotlib",
+    "plotly",
+    "ipython",
+]
+
+[project.urls]
+Homepage = "https://www.douglastkaiser.com/projects/#workoutPlanner"
+Documentation = "https://github.com/douglastkaiser/kaiserlift#readme"
+Repository = "https://github.com/douglastkaiser/kaiserlift"
+"Bug Tracker" = "https://github.com/douglastkaiser/kaiserlift/issues"
+
+[project.optional-dependencies]
+server = [
+    "fastapi",
+    "uvicorn",
+    "python-multipart",
+    "httpx",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "pytest-benchmark>=4.0",
+]
+
+[project.scripts]
+kaiserlift-cli = "kaiserlift.main:main"
+
+[tool.setuptools.packages.find]
+include = ["kaiserlift*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--strict-markers --tb=short"
+
+[tool.coverage.run]
+source = ["kaiserlift"]
+omit = ["*/tests/*", "*/test_*.py"]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+[tool.setuptools_scm]
+version_scheme = "post-release"
+local_scheme = "no-local-version"
