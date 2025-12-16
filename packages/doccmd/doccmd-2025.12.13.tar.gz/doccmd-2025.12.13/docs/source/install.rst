@@ -1,0 +1,49 @@
+Installation
+------------
+
+With ``pip``
+~~~~~~~~~~~~
+
+Requires Python |minimum-python-version|\+.
+
+.. code-block:: console
+
+   $ pip install doccmd
+
+With Homebrew (macOS, Linux, WSL)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Requires `Homebrew`_.
+
+.. code-block:: console
+
+   $ brew tap adamtheturtle/doccmd
+   $ brew install doccmd
+
+.. _Homebrew: https://docs.brew.sh/Installation
+
+Pre-built Linux (x86) binaries
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: console
+   :substitutions:
+
+   $ curl --fail -L "https://github.com/|github-owner|/|github-repository|/releases/download/|release|/doccmd-linux" -o /usr/local/bin/doccmd &&
+       chmod +x /usr/local/bin/doccmd
+
+Using ``doccmd`` as a pre-commit hook
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To run ``doccmd`` with `pre-commit`_, add hooks like the following to your ``.pre-commit-config.yaml``:
+
+.. code-block:: yaml
+   :substitutions:
+
+   -   repo: https://github.com/adamtheturtle/doccmd-pre-commit
+       rev: v|release|
+       hooks:
+       -   id: doccmd
+           args: ["--language", "shell", "--command", "shellcheck --shell=bash"]
+           additional_dependencies: ["shellcheck-py"]
+
+.. _pre-commit: https://pre-commit.com
