@@ -1,0 +1,147 @@
+Metadata-Version: 2.3
+Name: cmr-metadata-validator
+Version: 0.1.3
+Summary: CMR Metadata Validation scripts for NASA Earth Science collections
+Author: Ed Olivares
+Author-email: Ed Olivares <34591886+eudoroolivares2016@users.noreply.github.com>
+Requires-Dist: requests>=2.32.5
+Requires-Python: >=3.13
+Description-Content-Type: text/markdown
+
+# NASA Earth Science Collections Metadata Validator
+
+## Description
+
+This Python script automates the process of validating metadata for NASA Earth Science collections allowing users to set a collection date range between 2000-01-01 and present date. It fetches collection metadata from NASA's Common Metadata Repository (CMR) APIs, performs validation checks, assesses public accessibility, and retrieves granule counts for each collection. The results are compiled into a comprehensive CSV report with a calculated collection validation percentage.
+
+## Features
+
+- Fetches collection metadata using NASA's CMR API
+- Validates collection records using the CMR validation API
+- Checks public accessibility of each record
+- Retrieves granule counts for collections
+- Processes collections in parallel for improved efficiency
+- Generates a detailed CSV report with validation results
+  - Provides a calculated collection validation percentage in the CVS reports
+
+## Requirements
+
+- Script package was developed under Python 3.13.X
+- Required additional Python packages:
+  - requests
+  - jq
+- Launchpad token using a PEM certificate file
+- Permissions to CMR metadata providers' holdings
+
+## Installation
+
+1. Clone this repository or download the script.
+2. Install uv https://docs.astral.sh/uv/getting-started/installation/
+3. Run `uv init`
+4. Run `uv pip install -e .` to install all dependencies in the `pyproject.toml`
+5. Install the `jq` dependency using OS package manager such as `brew` for MacOs
+6. Ensure you have a valid `cert.pem` file in the same directory as the script for Launchpad authentication.
+7. If you have the uv env already you may need to use `uv venv` to initialize the virtual environment then source it `source .venv/bin/activate`
+
+## Usage
+
+Run the script from the command line, specifying either a provider or consortium:
+```
+uv run main.py -h, --help  (Show this help message and exit)
+```
+or
+```
+uv run main.py --provider [PROVIDER_NAME]
+```
+or
+```
+uv run main.py --consortium [CONSORTIUM_NAME]
+(note: under development.)
+```
+or
+```
+uv run main.py --provider [PROVIDER_NAME] --start_date [START_DATE]
+```
+or
+```
+uv run main.py --provider [PROVIDER_NAME] --end_date [END_DATE]
+```
+
+### Command-line Arguments
+
+- `--provider`: Specify a NASA data provider (ASF, ASIPS, CDDIS, ESDIS, GES_DISC, GESDISCCLD, GHRC, GHRC_DAAC, LAADS, LANCEAMSR2, LANCEMODIS, LARC_ASDC, LARC_CLOUD, LARC, LPCLOUD, LPDAAC_ECS, NSIDC_CPRD, NSIDC_ECS, NSIDCV0, OB_CLOUD, OB_DAAC, OMINRT, ORNL_CLOUD, POCLOUD, PODAAC, SEDAC)
+
+- `--consortium`: Specify a consortium (EOSDIS, CWIC, CEOS, GEOSS, FEDEO)
+
+- `--start_date`: START_DATE  Start date for the first metadata ingestion of collections (format: YYYY-MM-DD, default: 2000-01-01).
+- `--end_date`: END_DATE   End date for the last metadata ingestion of collections (format: YYYY-MM-DD, default: current date).
+
+## Authentication
+
+The script requires Launchpad authentication. Ensure your `cert.pem` file is up-to-date and properly configured. [What is a PEM certificate file?](https://en.wikipedia.org/wiki/Privacy-Enhanced_Mail).
+
+## Output
+
+The script generates a CSV file named `[PROVIDER/CONSORTIUM]_collections_[TIMESTAMP].csv` with the following columns:
+
+- Provider
+- Concept ID
+- Native ID
+- ShortName
+- Version
+- Collection Progress
+- Granule Count
+- Public/Private Status
+- Issue Type (Error/Warning)
+- Error/Warning Path
+- Error/Warning Message
+
+Adds the Provider's calculated collection validation percentage at the end of the file.
+
+## Running test suite
+
+`uv run pytest`
+
+To run a specific test use `uv run pytest path/to/your/test_file.py`
+
+To run a specific test in the test file use `uv run pytest tests/test_api_utils.py::MyTestClass::test_name` replace the class if there is one with the test class and the test_name with the name of the test module
+
+## Important Notes
+
+- This script interacts with NASA's CMR APIs. Ensure you have the necessary permissions.
+- Processing time may vary based on the number of collections and API response times.
+- Check console output for progress updates and any error messages.
+
+## Error Handling
+
+The script includes error handling for API requests and data processing. Errors are logged to stderr.
+
+## Customization
+
+You can modify the script to adjust:
+
+- The number of concurrent workers in the thread pool
+- The CMR query structure
+- CSV output format
+
+## Distribution
+
+1. uv build creates the distribution and wheel in the `/dist` directory
+2. You need to have an API token saved as an env var `UV_PUBLISH_TOKEN` to publish under the project
+3. For new versions use the `uv version --bump patch` at least depending on the extent of changes it may be a `minor` or `major`
+4. Use `uv publish` to publish the package on `https://pypi.org/`
+
+Note: You will want to likely use `uv build --clear` if you already have distribution files because the publish will publish all of them or target specific version
+
+## Contact
+
+Michael Morahan
+Email: michael.p.morahan@nasa.gov
+
+## License
+
+This work was supported by NASA/GSFC under Raytheon Technologies contract Earth Observing System Data and Information System (EOSDIS) Evolution and Development (EED-3) (contract number 80GSFC21CA001). All Rights Reserved.
+
+Creation Date: 2025-08-08
+Update date: 2025-11-14
+Version: 1.1
