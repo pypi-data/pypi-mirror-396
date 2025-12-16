@@ -1,0 +1,181 @@
+import os
+import logging
+from threading import Lock
+
+from pydantic import BaseModel, field_validator
+from pyaml.control.controlsystem import ControlSystem
+from .device_factory import DeviceFactory
+
+PYAMLCLASS : str = "TangoControlSystem"
+
+logger = logging.getLogger(__name__)
+
+
+
+class ConfigModel(BaseModel):
+    """
+    Configuration model for a Tango Control System.
+
+    Attributes
+    ----------
+    name : str
+        Name of the control system.
+    tango_host : str
+        Tango host URL.
+    debug_level : int
+        Debug verbosity level.
+    lazy_devices: bool
+        Construct DeviceProxy when needed 
+    scalar_aggregator : str
+        Aggregator module for scalar values. If none specified, writings and readings of sclar value are serialized. 
+    vector_aggregator : str
+        Aggregator module for vecrors. If none specified, writings and readings of vector are serialized. 
+    timeout_ms : int
+        Device timeout in milli seconds.
+    """
+    name: str
+    tango_host: str
+    debug_level: str=None
+    lazy_devices: bool = True
+    scalar_aggregator: str | None = "tango.pyaml.multi_attribute"
+    vector_aggregator: str | None = None
+    timeout_ms: int = 3000
+
+class TangoControlSystem(ControlSystem):
+    """
+    Tango-specific implementation of a Control System.
+
+    Parameters
+    ----------
+    cfg : ConfigModel
+        Configuration parameters including name, host and debug level.
+    """
+    _instance = None
+    _lock = Lock()
+
+    def __new__(cls, cfg: ConfigModel):
+        """
+        No matter how many times you call PyAMLFactory(), it will be created only once.
+        """
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = super().__new__(cls)
+                cls._instance._cfg = cfg
+                cls._instance._initializable_elements = []
+                cls._instance._initialized = False
+                cls._instance._lazy_devices = cfg.lazy_devices
+                DeviceFactory().set_timeout_ms(cfg.timeout_ms)
+            return cls._instance
+
+    @classmethod
+    def is_initialized(cls):
+        return cls._instance is not None and cls._instance.is_instance_initialized()
+
+
+    @classmethod
+    def get_instance(cls) -> "TangoControlSystem":
+        return cls._instance
+
+    def __init__(self, cfg: ConfigModel):
+        super().__init__()
+        self._cfg = cfg
+
+    def is_instance_initialized(self) -> bool:
+        return self._initialized
+
+
+    def name(self) -> str:
+        """
+        Return the name of the control system.
+
+        Returns
+        -------
+        str
+            Name of the control system.
+        """
+        return self._cfg.name
+    
+    def scalar_aggregator(self) -> str | None:
+        """
+        Returns the module name used for handling aggregator of DeviceAccess
+
+        Returns
+        -------
+        str
+            Aggregator module name
+        """
+        return self._cfg.scalar_aggregator
+
+    def vector_aggregator(self) -> str | None:
+        """
+        Returns the module name used for handling aggregator of DeviceVectorAccess
+        
+        Returns
+        -------
+        str
+            Aggregator module name
+        """
+        return self._cfg.vector_aggregator
+
+
+    def init_cs(self):
+        """
+        Initialize the control system.
+
+        This method is a placeholder and should be implemented as needed.
+        """
+        if self._initialized:
+            logger.log(logging.WARNING, f"Tango control system binding for PyAML was already initialized"
+                                        f" with name '{self._cfg.name}' and TANGO_HOST={os.environ['TANGO_HOST']}")
+            return
+
+        if self._cfg.tango_host:
+            os.environ["TANGO_HOST"] = self._cfg.tango_host
+        if self._cfg.debug_level:
+            log_level = getattr(logging, self._cfg.debug_level, logging.WARNING)
+            logger.parent.setLevel(log_level)
+            logger.setLevel(log_level)
+
+        """
+        Eagerly initializes registered elements only if *lazy_devices* is False.
+        When *lazy_devices* is True (default), initialization is deferred until
+        `warmup()` or first-use via `ensure_initialized()`.
+        """
+        if not self._cfg.lazy_devices:
+            self._do_initialize_all()
+        else:
+            logger.debug("init_cs(): lazy mode enabled; deferring initialization")
+
+        self._initialized = True
+
+        logger.log(logging.INFO, f"Tango control system binding for PyAML initialized with name '{self._cfg.name}'"
+                                 f" and TANGO_HOST={os.environ['TANGO_HOST']}")
+
+
+    def _do_initialize_all(self) -> None:
+        # Initialize all registered elements exactly once
+        for elem in self._initializable_elements:
+            try:
+                elem.initialize()
+            except Exception as exc:  # pragma: no cover
+                logger.exception("Failed to initialize %r: %s", elem, exc)
+                raise
+        self._initializable_elements.clear()
+
+
+    def add_initializable(self, initializable):
+        self._initializable_elements.append(initializable)
+
+
+    def warmup(self) -> None:
+        """Explicitly switch to eager behavior and initialize now."""
+        with self._lock:
+            self._lazy_devices = False
+            self._do_initialize_all()
+
+    @property
+    def lazy_devices(self) -> bool:
+        return self._lazy_devices
+
+    def __repr__(self):
+       return repr(self._cfg).replace("ConfigModel",self.__class__.__name__)
