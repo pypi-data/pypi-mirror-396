@@ -1,0 +1,345 @@
+# Genifai
+
+AI-powered test generator that creates test cases for target functions in C standalone programs.\
+Uses static analysis and call graphs, powered by Claude Anthropic.
+
+**Generate + Verify + AI = Genifai**
+
+
+
+## 🍏 **Free trial available!**
+
+**Currently in trial period** - you can use Genifai **without any registration**.  
+Only **`CLAUDE_API_KEY`** is required to get started (and **`AZURE_ENDPOINT`** if using Azure Databricks).
+
+## Installation
+```bash
+pip install genifai
+```
+
+## Commands
+- `genifai keys generate` - Generate a new Genifai API key for authentication
+- `genifai configure` - Set up API credentials and defaults
+- `genifai analyze` - Extract metadata from source code
+- `genifai graph` - Generate call graph from metadata
+- `genifai generate` - Generate test cases using AI
+
+
+## Command reference
+
+### Common options
+- `-d, --directory` - Source/target directory path
+- `-m, --metadata` - Metadata directory path  
+- `-o, --output` - Output directory path
+- `-l, --language` - Programming language (currently only `c` is supported)
+
+### analyze
+- `-b, --build-script` - Build script path
+
+### generate
+- `-t, --targets` - Target functions file path
+- `-i, --iterations` - Number of test generation iterations
+- `-c, --callgraph` - Call graph JSON file (optional)
+
+
+## Quick start
+
+### 1. Get Genifai API key
+```bash
+genifai keys generate
+```
+
+
+### 2. Configure API key
+```bash
+# Configuration
+genifai configure \
+  --api-type claude \
+  --genifai-api-key YOUR_GENIFAI_API_KEY \
+  --claude-api-key YOUR_CLAUDE_API_KEY
+
+echo 'source /home/ubuntu/.genifai/env' >> ~/.bashrc
+source ~/.bashrc
+```
+
+### 3. Prepare build script
+Create a build script named `build.sh` inside your source directory (the directory you'll pass to `-d` option).
+Your build script must satisfy the following:
+- The script filename must be exactly `build.sh`
+- Place it inside the source directory. For example, if your source is at /path/to/source, then the build script should be at /path/to/source/build.sh
+- Executable permission: `chmod +x build.sh`
+- Coverage instrumentation: Add `-fprofile-arcs -ftest-coverage` (or `--coverage`) to generate `.gcno` files
+- Compilation database: Use bear to generate `compile_commands.json`
+
+Example with Makefile:
+```bash
+#!/bin/bash
+# Ensure your Makefile includes: CFLAGS += -fprofile-arcs -ftest-coverage
+make clean
+bear -- make all
+```
+
+Example with direct compilation:
+```bash
+#!/bin/bash
+bear -- gcc --coverage -o myapp src/*.c -I./include
+```
+
+Example with CMake:
+```bash
+#!/bin/bash
+# Ensure CMakeLists.txt includes: set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage")
+cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -B build
+cmake --build build
+```
+
+### 4. Analyze your codebase
+```bash
+# Analyze directory and generate metadata
+genifai analyze \
+  -d /path/to/source \
+  -b /path/to/source/build_script \
+  -l c \
+  -m metadata_output \
+  -o instrumented_target
+```
+
+### 5. Prepare target functions file
+Create a file specifying the target functions you want to test.
+Format: one target per line as `relative_file_path:line_number`
+
+Example `targets.txt`:
+```
+src/parser.c:145
+src/parser.c:203
+lib/memory.c:89
+```
+
+
+### 6. Generate test cases for the target function(s)
+```bash
+# Generate tests using metadata and call graph
+genifai generate \
+  -d instrumented_target/source \
+  -l c \
+  -m metadata_output \
+  -t /path/to/source/targets.txt \
+  -i 5 \
+  -o test_output
+```
+
+
+
+
+## Quick start with sample project
+
+Want to try Genifai immediately? We provide a sample project based on [**libtiff** command-line tools](https://gitlab.com/libtiff/libtiff.git), a widely-used TIFF image processing library.
+
+
+### 1. Clone and navigate to sample
+```bash
+mkdir workspace
+cd workspace
+mkdir sample
+cd sample
+git clone https://gitlab.com/libtiff/libtiff.git
+```
+
+### 2. Prepare the build scrip
+```bash
+cd libtiff
+
+cat > build.sh << 'EOF'
+#!/bin/bash
+
+make clean
+
+# Set coverage instrumentation flags
+export CFLAGS="-fprofile-arcs -ftest-coverage -O0 -g"
+export CXXFLAGS="-fprofile-arcs -ftest-coverage -O0 -g"
+export LDFLAGS="-lgcov --coverage"
+
+# Run configure
+./autogen.sh
+./configure --prefix=$(pwd)/install --disable-shared --enable-static
+
+# Build while generating compile_commands.json
+bear -- make -j$(nproc)
+EOF
+
+chmod +x build.sh
+```
+
+Ensure the build script works correctly before proceeding, particularly verify that:
+- `compile_commands.json` is generated
+- `.gcno` files are generated
+```bash
+./build.sh
+```
+
+### 3. Prepare the target functions
+Specify targets in `targets.txt`:
+```bash
+cat > targets.txt << 'EOF'
+libtiff/tif_dirwrite.c:3033
+libtiff/tif_swab.c:120
+EOF
+```
+The target functions are `TIFFWriteDirectoryTagData` and `TIFFSwabArrayOfLong8`.
+
+
+### 4. Configure your API key
+```bash
+GENIFAI_KEY=$(genifai keys generate | tail -n 1)
+
+genifai configure \
+  --api-type claude \
+  --genifai-api-key $GENIFAI_KEY \
+  --claude-api-key YOUR_CLAUDE_API_KEY
+
+echo 'source /home/ubuntu/.genifai/env' >> ~/.bashrc
+source ~/.bashrc
+```
+
+### 5. Run the analysis workflow
+Before proceeding, make sure your sample project includes:
+  - Pre-configured `build.sh` with coverage flags
+  - `targets.txt` with example target functions
+
+
+Now, run the analysis:
+```bash
+cd ../.. # or cd /path/to/workspace
+# Analyze the codebase
+genifai analyze \
+  -d sample/libtiff \
+  -b sample/libtiff/build.sh \
+  -l c \
+  -m metadata_output \
+  -o instrumented_target
+```
+
+**Note:** The analysis process may take some time depending on the project size. For large projects like libtiff, it can take several minutes to complete.
+
+
+### 6. Run the test generation workflow
+```bash
+# Generate test cases
+genifai generate \
+  -d instrumented_target/libtiff \
+  -l c \
+  -m metadata_output \
+  -t sample/libtiff/targets.txt \
+  -i 5 \
+  -o test_output
+```
+
+After running `genifai generate`, test files are created in the output directory:
+```
+test_output/testcases/
+├── test.c              # Test source code
+└── {timestamp}.sh      # Build and run script
+```
+- **`.c` files**: Test programs ready to compile
+- **`.sh` files**: Build and run scripts
+
+### 7. Run the generated tests
+```bash
+# Copy test files to your source directory
+cp test_output/testcases/*.c sample/libtiff/
+cp test_output/testcases/*.sh sample/libtiff/
+
+# Navigate and run
+cd sample/libtiff
+chmod +x *.sh
+./{timestamp}.sh
+```
+
+## Option
+### Generate call graph
+```bash
+# Create call graph from metadata
+genifai graph \
+  -l c \
+  -m metadata_output \
+  -o graph_output
+```
+
+
+### Generate test cases
+```bash
+# Generate tests using metadata and call graph
+genifai generate \
+  -d /path/to/instrumented_target \
+  -l c \
+  -m metadata_output \
+  -c graph_output/callee.json \
+  -i 5 \
+  -o test_output
+```
+
+
+## Supported languages
+
+- C
+
+## LLM model
+
+- Genifai uses **Claude Sonnet 4.0** (the latest model from Anthropic) for test case generation. This ensures:
+  - High-quality test cases with deep code understanding
+  - Efficient and accurate static analysis integration
+- Genifai is exclusively powered by Claude (Anthropic), and we have no plans to integrate with other AI APIs. We believe Claude provides the best understanding of code structure and test generation quality.
+
+**Note**: We will update to **Claude Opus 4.5** soon.
+
+
+## LLM API type
+You can use one of the following interfaces.
+- `claude`: Direct Anthropic API
+  - Use your Claude API key from [console.anthropic.com](https://console.anthropic.com)
+- `claude_azure`: Azure Databricks Service with Claude
+  - Use Claude models deployed through Microsoft Azure
+  - Requires Azure subscription and Claude model deployment in your Azure Databricks resource
+  - See [Azure setup guide](https://devblogs.microsoft.com/all-things-azure/getting-started-with-claude-3-7-sonnet-on-azure-databricks/) for details
+
+
+## Environment variables
+```bash
+GENIFAI_API_TYPE      # LLM API type
+GENIFAI_API_KEY       # Your Genifai API key
+CLAUDE_API_KEY        # Your Claude API key
+AZURE_ENDPOINT        # Your Azure endpoint
+```
+
+
+## Requirements
+
+- Python 3.8+
+- Valid Claude API key
+
+
+## License
+
+MIT
+
+## Roadmap 🗺️
+- Genifai currently specializes in test case generation for C programming language.
+- We are planning to expand support to Rust test case generation, bringing the same AI-powered testing capabilities to the Rust ecosystem.
+- Genifai currently targets standalone programs with `main()` functions. Library-only projects (without main entry points) will be supported in future releases.
+- Currently, only the Genifai CLI tool is available. A function-based Genifai API is planned for future release.
+- Currently, test case generation focuses on reaching target functions. We plan to add an option for branch coverage-based test case generation in the future.
+- We are planning to implement C-to-Rust code translation via the `genifai translate` command, enabling automated migration of C codebases to Rust.
+
+
+## Feedback & support 💬 
+
+We're in early development and **your feedback is invaluable!**
+
+Help us improve Genifai! Share your thoughts:
+👉 Email us: genifai.dev@gmail.com
+
+## Contact 
+- Email: genifai.dev@gmail.com
+
+## Website
+- https://genifai-web.vercel.app
