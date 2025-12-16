@@ -1,0 +1,89 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "remina"
+version = "0.1.7"
+description = "Give your AI agents human-like memory. The pluggable memory layer for AI applications."
+readme = "README.md"
+license = {text = "Apache-2.0"}
+requires-python = ">=3.10"
+authors = [
+    {name = "@bikidsx"}
+]
+keywords = ["ai", "memory", "llm", "agents", "rag"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "pydantic",
+    "openai",
+    "anthropic",
+    "google-genai",
+    "pinecone",
+    "asyncpg",
+    "psycopg[binary]",
+    "motor",
+    "redis",
+    "qdrant-client",
+    "chromadb",
+    "pgvector",
+    "aiosqlite",
+]
+
+[project.optional-dependencies]
+
+# Local embeddings
+huggingface = ["sentence-transformers"]
+ollama = ["ollama"]
+
+# All providers
+all = [
+    "sentence-transformers",
+]
+
+# Development
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+    "black",
+    "ruff",
+    "mypy",
+]
+
+[project.urls]
+Homepage = "https://github.com/bikidsx/remina"
+Documentation = "https://docs.remina.dev"
+Repository = "https://github.com/bikidsx/remina"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["remina*"]
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312"]
+
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "I", "W"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true

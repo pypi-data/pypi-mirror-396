@@ -1,0 +1,343 @@
+Metadata-Version: 2.4
+Name: remina
+Version: 0.1.7
+Summary: Give your AI agents human-like memory. The pluggable memory layer for AI applications.
+Author: @bikidsx
+License: Apache-2.0
+Project-URL: Homepage, https://github.com/bikidsx/remina
+Project-URL: Documentation, https://docs.remina.dev
+Project-URL: Repository, https://github.com/bikidsx/remina
+Keywords: ai,memory,llm,agents,rag
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: pydantic
+Requires-Dist: openai
+Requires-Dist: anthropic
+Requires-Dist: google-genai
+Requires-Dist: pinecone
+Requires-Dist: asyncpg
+Requires-Dist: psycopg[binary]
+Requires-Dist: motor
+Requires-Dist: redis
+Requires-Dist: qdrant-client
+Requires-Dist: chromadb
+Requires-Dist: pgvector
+Requires-Dist: aiosqlite
+Provides-Extra: huggingface
+Requires-Dist: sentence-transformers; extra == "huggingface"
+Provides-Extra: ollama
+Requires-Dist: ollama; extra == "ollama"
+Provides-Extra: all
+Requires-Dist: sentence-transformers; extra == "all"
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: pytest-asyncio; extra == "dev"
+Requires-Dist: pytest-cov; extra == "dev"
+Requires-Dist: black; extra == "dev"
+Requires-Dist: ruff; extra == "dev"
+Requires-Dist: mypy; extra == "dev"
+Dynamic: license-file
+
+![Remina Logo](https://55tcr0vpgiqmtoym.public.blob.vercel-storage.com/banner-new.png)
+
+# Remina
+
+**All-in-One Agentic Memory Framework**
+
+Remina is the complete memory layer for AI agents and applications. Choose between **vector memory** for simple recall or **graph memory** for complex relationship reasoning — with pluggable infrastructure that fits your stack.
+
+```python
+from remina import Memory, GraphMemory
+
+# Vector Memory — flat facts with semantic search
+memory = Memory()
+memory.add("I'm John, I work at Google.", user_id="john")
+results = memory.search("Where does John work?", user_id="john")
+
+# Graph Memory — entities and relationships
+graph = GraphMemory({"graph_store": {"uri": "bolt://localhost:7687"}})
+graph.add("I'm John, I work at Google as a Python developer.", user_id="john")
+# Extracts: John (person) → works_at → Google (company)
+#           John (person) → uses → Python (technology)
+```
+
+## Why Remina
+
+AI agents without persistent memory accumulate technical debt: lost context, repeated user friction, degraded personalization. Remina addresses this at the infrastructure layer with **two memory paradigms**:
+
+| | Vector Memory | Graph Memory |
+|---|---|---|
+| **Data Model** | Flat facts + embeddings | Entities + Relationships |
+| **Storage** | Qdrant, Pinecone, Chroma | Neo4j |
+| **Search** | Semantic similarity | Graph traversal + semantic |
+| **Best For** | Simple Q&A, preferences | Complex relationships, reasoning |
+
+**Core capabilities:**
+
+- **Automatic fact extraction** — LLM-powered extraction from conversations
+- **Entity & relationship extraction** — Build knowledge graphs automatically
+- **Hybrid retrieval** — Vector similarity + temporal decay + importance weighting
+- **Graph traversal** — Find connected entities through relationships
+- **Deduplication** — Similarity-based duplicate prevention
+- **Pluggable architecture** — Swap storage, vectors, embeddings, and LLM providers
+
+## Installation
+
+### Python
+
+```bash
+pip install remina
+
+# With specific providers
+pip install remina[openai,qdrant,neo4j]
+```
+
+### TypeScript / JavaScript
+
+```bash
+npm install remina-ts
+```
+
+```typescript
+import { Memory, GraphMemory } from "remina";
+
+const memory = new Memory({
+  embedder: { provider: "openai" },
+  llm: { provider: "openai" },
+});
+
+await memory.add("I'm John, I work at Google.", "user_123");
+const results = await memory.search("Where does John work?", "user_123");
+```
+
+## Quick Start
+
+### Vector Memory
+
+Best for simple fact storage and retrieval.
+
+```python
+from remina import Memory
+
+memory = Memory()
+
+# Extract facts from conversation
+memory.add(
+    messages=[
+        {"role": "user", "content": "I just moved to Seattle"},
+        {"role": "assistant", "content": "How do you like it?"},
+        {"role": "user", "content": "Great city, but the rain takes adjustment"}
+    ],
+    user_id="user_123"
+)
+# Extracts: ["Lives in Seattle", "Likes Seattle", "Rain requires adjustment"]
+
+# Semantic search
+results = memory.search("Where does the user live?", user_id="user_123")
+
+memory.close()
+```
+
+### Graph Memory
+
+Best for complex relationships and multi-hop reasoning.
+
+```bash
+# Start Neo4j first
+docker compose up neo4j -d
+```
+
+```python
+from remina import GraphMemory
+
+graph = GraphMemory({
+    "graph_store": {
+        "uri": "bolt://localhost:7687",
+        "password": "remina123",
+    },
+    "embedder": {"provider": "openai"},
+    "llm": {"provider": "openai"},
+})
+
+# Extract entities and relationships
+result = graph.add(
+    messages="I'm Alex, I work at Google as a Python developer. Sarah is my colleague.",
+    user_id="user_123",
+)
+# Entities: Alex (person), Google (company), Python (technology), Sarah (person)
+# Relationships: Alex works_at Google, Alex uses Python, Sarah works_at Google
+
+# Search facts
+results = graph.search("Where does Alex work?", user_id="user_123")
+# → [{"fact": "Alex works at Google", "score": 0.95}]
+
+# Get entity with all relationships
+entity = graph.get_entity(entity_id="...")
+# → {"entity": {...}, "relationships": [...]}
+
+# Traverse the graph
+related = graph.get_related(entity_id="alex_id", hops=2)
+# → Connected entities within 2 hops
+
+graph.close()
+```
+
+## Async API
+
+Both memory types support async operations:
+
+```python
+from remina import AsyncMemory, AsyncGraphMemory
+import asyncio
+
+async def main():
+    # Vector memory
+    memory = AsyncMemory()
+    await memory.add("I prefer dark mode", user_id="user_123")
+    await memory.close()
+    
+    # Graph memory
+    graph = AsyncGraphMemory({...})
+    await graph.add("I'm John from Google", user_id="user_123")
+    await graph.close()
+
+asyncio.run(main())
+```
+
+## Configuration
+
+### Vector Memory
+
+```python
+config = {
+    "llm": {"provider": "openai", "config": {"model": "gpt-4o-mini"}},
+    "embedder": {"provider": "openai", "config": {"model": "text-embedding-3-small"}},
+    "vector_store": {"provider": "qdrant", "config": {"url": "http://localhost:6333"}},
+    "storage": {"provider": "postgres", "config": {"host": "localhost", "database": "remina"}},
+    "cache": {"redis_url": "redis://localhost:6379", "enabled": True},
+}
+memory = Memory(config)
+```
+
+### Graph Memory
+
+```python
+config = {
+    "graph_store": {
+        "provider": "neo4j",
+        "uri": "bolt://localhost:7687",
+        "user": "neo4j",
+        "password": "password",
+    },
+    "embedder": {"provider": "openai"},
+    "llm": {"provider": "openai"},
+    "max_entities_per_message": 10,
+    "max_relationships_per_message": 15,
+}
+graph = GraphMemory(config)
+```
+
+## Supported Providers
+
+| Category | Providers |
+|----------|-----------|
+| **LLMs** | OpenAI, Anthropic, Gemini, Ollama |
+| **Embeddings** | OpenAI, Gemini, Cohere, Ollama, HuggingFace |
+| **Vector Stores** | Pinecone, Qdrant, Chroma, pgvector |
+| **Graph Stores** | Neo4j |
+| **Storage** | PostgreSQL, MongoDB, SQLite |
+| **Cache** | Redis |
+
+## Docker Setup
+
+```yaml
+# docker-compose.yml
+services:
+  neo4j:
+    image: neo4j:5-community
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      NEO4J_AUTH: neo4j/remina123
+
+  qdrant:
+    image: qdrant/qdrant
+    ports:
+      - "6333:6333"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: remina
+```
+
+```bash
+docker compose up -d
+```
+
+## Documentation
+
+📚 **[Full Documentation](https://remina.dev)**
+
+- [Getting Started](https://remina.dev/getting-started)
+- [Core Concepts](https://remina.dev/core-concepts)
+- [Graph Memory](https://remina.dev/graph-memory)
+- [Configuration](https://remina.dev/configuration)
+- [API Reference](https://remina.dev/api-reference)
+- [Examples](https://remina.dev/examples)
+
+## Roadmap
+
+### ✅ v0.1 — Core Memory
+- [x] Vector memory with fact extraction
+- [x] Hybrid retrieval (semantic + importance)
+- [x] Pluggable providers
+- [x] Redis caching
+
+### ✅ v0.2 — Graph Memory
+- [x] Knowledge graph with entities & relationships
+- [x] Neo4j integration
+- [x] Graph traversal
+- [x] Entity/relationship extraction
+
+### ✅ v0.3 — TypeScript SDK
+- [x] Full TypeScript/JavaScript SDK
+- [x] All providers ported (OpenAI, Gemini, Neo4j, Qdrant, Pinecone, etc.)
+- [x] Redis caching
+- [x] Complete type definitions
+
+### 📋 v0.4 — Intelligence & Expansion
+- [ ] Contradiction detection
+- [ ] Memory consolidation
+- [ ] FalkorDB graph store
+- [ ] Weaviate, Milvus vector stores
+- [ ] REST API
+
+## Contributing
+
+```bash
+git clone https://github.com/bikidsx/remina
+cd remina
+pip install -e ".[dev]"
+pytest
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+
+## License
+
+Apache 2.0
