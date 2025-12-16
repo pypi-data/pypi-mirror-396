@@ -1,0 +1,94 @@
+      1.0.0      ___  ___ ___________ _____
+      CC-BY-4.0  |  \/  |/  ___|  ___|_   _|
+      _ __  _   _| .  . |\ `--.| |_    | |
+     | '_ \| | | | |\/| | `--. \  _|   | |
+     | |_) | |_| | |  | |/\__/ / |     | |
+     | .__/ \__, \_|  |_/\____/\_|     \_/
+     | |     __/ |        python Multi-Slice
+     |_|    |___/         Fourier-Transforms
+
+pyMSFT is a python toolbox for accurately and efficiently simulating wide-angle coherent diffractive imaging. 
+For details on the physics implemented in this code, please refer to the following preprint: https://doi.org/10.48550/arXiv.2507.22483
+
+## Installation
+We strongly recommend setting up a virtual environment for the installation, i.e. using [conda](https://docs.conda.io/en/latest/).
+This code has been tested for python 3.12.
+```
+git clone https://gitlab.uni-rostock.de/snp/pymsft.git
+cd pymsft
+conda create -n pymsft python=3.12
+conda activate pymsft
+```
+At this point you can install the package using pip with different options:
+- To install the basic package without GPU support and Mie scattering support, simply run:
+    ```
+    pip install .
+    ```
+- To take advantage of GPU acceleration we are using [CuPy](https://cupy.dev/). See the [installation instructions](https://docs.cupy.dev/en/stable/install.html) for more details. The simplest way to install it is currently via conda:
+    ```
+    conda install -c conda-forge cupy==13.6.0
+    ``` 
+    Note that an NVIDIA GPU with the corresponding driver installed is required.
+- To calculate the Mie solutions for spherical particles you must also install corresponding Mie solver (we are using [scattnlay](https://github.com/ovidiopr/scattnlay)). This can be installed with:
+    ```
+    pip install .[mie]
+    ```
+
+## Usage
+A simple example for a multislice simulation is shown below. Note that most of these examples require [matplotlib](https://matplotlib.org/) for visualization to be installed.
+
+```python
+import numpy as np
+from pyMSFT.shapes import Spindle
+from pyMSFT.simulation import PMSFTSimulation, SAXSSimulation
+
+import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
+
+wavelength = 13.5e-9            # wavelength of the light in meters
+Rsphere = 200e-9                # radius of the sphere in meters
+
+refIndex = 0.89 + 1j * 0.09     # complex refractive index of Silver at 13.5 nm (92 eV)
+
+npix_fft = 256  # number of pixels in the FFT (should be a power of 2)
+npix_real = 64  # number of pixels in the real space simulation box - this will be zero padded to num_pix_fft internally
+
+# setup the geometry and simulation
+geometry = Spindle(refractive_index=refIndex, npix=npix_real, x_rotation=45 * np.pi / 180, y_rotation=30 * np.pi / 180, z_rotation=0)
+simulation = PMSFTSimulation(npix_fft=npix_fft, npix_real=npix_real, wavelength=wavelength, box_size=2 * Rsphere, verbose=True)
+
+# run the simulation and get the diffraction image
+diff_image, (QX, QY) = simulation.get_diffraction_image(geometry, output_axes=True)
+
+# visualize the result
+_, axs = plt.subplots(1, 1, figsize=(6, 4))
+q_extent = QX[0, 0], QX[-1, 0], QY[0, 0], QY[0, -1]
+barn = 10 ** -28            # barn unit in m^2
+diff_image /= barn ** 2     # convert to barn^2
+
+img = axs.imshow(diff_image, extent=q_extent, cmap='turbo', norm=LogNorm(vmin=1e24, vmax=1e28))
+plt.colorbar(img)
+axs.set_title(r'differential cross section on Ewald sphere in [b$^2$]')
+
+axs.set_xlabel('QX [1/m]')
+axs.set_ylabel('QY [1/m]')
+axs.set_aspect('equal')
+plt.show()
+```
+This will create a diffraction pattern of a silver spindle illuminated with 13.5 nm light and should look like this:
+
+![Diffraction pattern of a silver spindle](/docs/readme_example.png)
+
+More examples can be found in the examples folder, e.g. for:
+- Comparing different simulation methods with an exact Mie solution for spheres: `examples/compare_simulation_methods.py`
+
+And more are planned and coming soon, e.g. for:
+- Visualizing the experimental setup regarding the internal orientations and axes: `examples/visualize_setup.py`
+- Comparing the performance of CPU and GPU simulations: `examples/compare_cpu_gpu.py`
+- Compare different detector geometries: `examples/compare_detectors.py`
+- Showcase the different available sample shapes: `examples/showcase_shapes.py`
+
+
+## Citation
+If you use this code for your research, please cite:
+https://doi.org/10.48550/arXiv.2507.22483
