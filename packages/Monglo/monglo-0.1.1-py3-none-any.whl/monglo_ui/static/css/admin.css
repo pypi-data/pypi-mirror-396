@@ -1,0 +1,978 @@
+/* Monglo Admin - Professional Design System */
+
+:root {
+  /* MongoDB Official Colors */
+  --mongodb-green: #00ED64;
+  --mongodb-green-dark: #00684A;
+  --mongodb-green-medium: #13AA52;
+  --mongodb-green-light: #E3FCF7;
+
+  /* Brand Colors - MongoDB Green Palette Only */
+  --brand-primary: var(--mongodb-green-medium);
+  --brand-primary-dark: var(--mongodb-green-dark);
+  --brand-primary-light: var(--mongodb-green);
+  --brand-accent: #f56400;
+  /* Orange - for warnings */
+  --brand-danger: #f05340;
+  /* Red - for errors/delete */
+
+  /* Neutrals - Light Mode */
+  --neutral-white: #FFFFFF;
+  --neutral-black: #1a1a1a;
+  --neutral-dark: #3F3E42;
+  --neutral-gray: #6b7280;
+  --neutral-light: #e5e7eb;
+  --neutral-lighter: #f3f4f6;
+
+  /* Semantic Colors */
+  --color-primary: var(--brand-primary);
+  --color-primary-hover: var(--brand-primary-dark);
+  --color-secondary: var(--mongodb-green-dark);
+  --color-accent: var(--brand-accent);
+  --color-danger: var(--brand-danger);
+  --color-success: var(--brand-primary);
+  --color-warning: var(--brand-accent);
+
+  /* Backgrounds - Light Mode */
+  --bg-primary: var(--neutral-white);
+  --bg-secondary: var(--neutral-white);
+  --bg-tertiary: var(--neutral-lighter);
+  --bg-sidebar: var(--mongodb-green-dark);
+  --bg-hover: rgba(19, 170, 82, 0.08);
+
+  /* Text - Light Mode */
+  --text-primary: var(--neutral-dark);
+  --text-secondary: var(--neutral-gray);
+  --text-light: #9ca3af;
+  --text-inverse: var(--neutral-white);
+
+  /* Borders - Light Mode */
+  --border-color: var(--neutral-light);
+  --border-color-strong: var(--neutral-gray);
+
+  /* Spacing */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+
+  /* Typography */
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+
+  /* Shadows - Neutral depth (no blue tints) */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.15);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.2);
+
+  /* Border radius */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-full: 9999px;
+
+  /* Transitions */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Dark Mode */
+body.dark-mode {
+  /* Backgrounds - Dark Mode */
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #1a1a1a;
+  --bg-tertiary: #2a2a2a;
+  --bg-sidebar: #0a0a0a;
+  --bg-hover: rgba(19, 170, 82, 0.12);
+
+  /* Text - Dark Mode */
+  --text-primary: #e5e7eb;
+  --text-secondary: #9ca3af;
+  --text-light: #6b7280;
+  --text-inverse: #1a1a1a;
+
+  /* Borders - Dark Mode */
+  --border-color: #374151;
+  --border-color-strong: #4b5563;
+
+  /* Shadows - Dark Mode (more prominent) */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.6);
+}
+
+/* Reset & Base */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  line-height: 1.6;
+  overflow: hidden;
+}
+
+/* Layout */
+.monglo-admin {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Sidebar - MongoDB Green Theme */
+.monglo-sidebar {
+  width: 280px;
+  background: linear-gradient(180deg, var(--bg-sidebar) 0%, #004030 100%);
+  border-right: 1px solid rgba(19, 170, 82, 0.15);
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+  position: relative;
+}
+
+.monglo-sidebar-header {
+  padding: var(--spacing-xl) var(--spacing-lg);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.monglo-logo {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--neutral-white);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  letter-spacing: -0.02em;
+}
+
+.monglo-logo svg {
+  color: var(--brand-primary);
+  filter: drop-shadow(0 2px 4px rgba(77, 179, 61, 0.4));
+}
+
+.monglo-collections {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-md);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.monglo-collections::-webkit-scrollbar {
+  width: 6px;
+}
+
+.monglo-collections::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.monglo-collections::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-full);
+}
+
+.monglo-collection-group-title {
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.5);
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin: var(--spacing-md) 0 var(--spacing-sm);
+  font-weight: 600;
+}
+
+.monglo-collection-item {
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+  margin-bottom: var(--spacing-xs);
+  position: relative;
+  overflow: hidden;
+}
+
+.monglo-collection-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--brand-primary);
+  transform: scaleY(0);
+  transition: transform var(--transition-base);
+}
+
+.monglo-collection-item:hover {
+  background: rgba(19, 170, 82, 0.15);
+  color: var(--neutral-white);
+  transform: translateX(2px);
+}
+
+.monglo-collection-item:hover::before {
+  transform: scaleY(1);
+}
+
+.monglo-collection-item.active {
+  background: rgba(19, 170, 82, 0.2);
+  color: var(--mongodb-green);
+  font-weight: 600;
+}
+
+.monglo-collection-item.active::before {
+  transform: scaleY(1);
+}
+
+.monglo-collection-icon {
+  width: 18px;
+  height: 18px;
+  margin-right: var(--spacing-sm);
+  opacity: 0.7;
+}
+
+.monglo-collection-item.active .monglo-collection-icon {
+  opacity: 1;
+  color: var(--brand-primary);
+}
+
+.monglo-collection-count {
+  margin-left: auto;
+  font-size: var(--font-size-xs);
+  color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.125rem var(--spacing-sm);
+  border-radius: var(--radius-full);
+  font-weight: 600;
+}
+
+/* Main Content */
+.monglo-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-secondary);
+}
+
+/* Top Bar - Professional header with logout */
+.monglo-topbar {
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow-sm);
+  z-index: 100;
+  min-height: 56px;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.sidebar-toggle {
+  background: var(--bg-hover);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+
+.sidebar-toggle:hover {
+  background: var(--bg-active);
+  color: var(--text-primary);
+}
+
+.topbar-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.topbar-btn {
+  background: var(--bg-hover);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+  font-size: 1rem;
+}
+
+.topbar-btn:hover {
+  background: var(--bg-active);
+  color: var(--text-primary);
+}
+
+.topbar-logout {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  text-decoration: none;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.topbar-logout:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+  transform: translateY(-1px);
+}
+
+.dark-mode .topbar-logout {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+.dark-mode .topbar-logout:hover {
+  background: rgba(239, 68, 68, 0.25);
+}
+
+/* Header - Professional with depth */
+.monglo-header {
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
+  padding: var(--spacing-md) var(--spacing-xl);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow-sm);
+  z-index: 50;
+}
+
+
+.monglo-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+}
+
+.monglo-breadcrumb a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.monglo-breadcrumb a:hover {
+  color: var(--color-primary);
+}
+
+.monglo-breadcrumb-separator {
+  color: var(--border-color-strong);
+}
+
+.monglo-breadcrumb .active {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.monglo-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+/* Content Area */
+.monglo-content {
+  flex: 1;
+  overflow: auto;
+  padding: var(--spacing-xl);
+}
+
+/* Buttons - Professional design */
+.monglo-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  border: 2px solid transparent;
+  text-decoration: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.monglo-btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width var(--transition-slow), height var(--transition-slow);
+}
+
+.monglo-btn:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+.monglo-btn-primary {
+  background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-dark) 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(77, 179, 61, 0.3);
+}
+
+.monglo-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(77, 179, 61, 0.4);
+}
+
+.monglo-btn-secondary {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border-color: var(--border-color-strong);
+}
+
+.monglo-btn-secondary:hover {
+  background: var(--bg-hover);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.monglo-btn-danger {
+  background: linear-gradient(135deg, var(--brand-danger) 0%, #e02020 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(240, 83, 64, 0.3);
+}
+
+.monglo-btn-danger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(240, 83, 64, 0.4);
+}
+
+.monglo-btn-accent {
+  background: linear-gradient(135deg, var(--brand-accent) 0%, #dc5000 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(245, 100, 0, 0.3);
+}
+
+/* Button sizes */
+.monglo-btn-sm {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+}
+
+.monglo-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.monglo-btn:disabled:hover {
+  box-shadow: none;
+  transform: none !important;
+}
+
+/* Toolbar */
+.monglo-toolbar {
+  background: var(--bg-primary);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--spacing-lg);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+  border: 1px solid var(--border-color);
+}
+
+.monglo-search {
+  flex: 1;
+  min-width: 300px;
+  position: relative;
+}
+
+.monglo-search::before {
+  content: '🔍';
+  position: absolute;
+  left: var(--spacing-md);
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.monglo-input {
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md) var(--spacing-sm) 2.5rem;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  transition: all var(--transition-base);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.monglo-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(77, 179, 61, 0.1);
+}
+
+.monglo-input-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+/* Table - Premium design with simple scrolling */
+.monglo-table-container {
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-color);
+  max-height: calc(100vh - 300px);
+  overflow-y: auto;
+}
+
+.monglo-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.monglo-table thead {
+  background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--neutral-cream) 100%);
+  border-bottom: 2px solid var(--color-primary);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.monglo-table tbody {
+  /* No specific display or overflow needed here, handled by container */
+}
+
+.monglo-table th {
+  padding: var(--spacing-md) var(--spacing-lg);
+  text-align: left;
+  font-weight: 700;
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--neutral-dark);
+  cursor: pointer;
+}
+
+.monglo-table th:hover {
+  background: rgba(77, 179, 61, 0.05);
+}
+
+.monglo-table td {
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 1px solid var(--border-color);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+}
+
+.monglo-table tbody tr {
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.monglo-table tbody tr:hover {
+  background: var(--bg-hover);
+  box-shadow: inset 3px 0 0 var(--color-primary);
+}
+
+/* Badges - Professional indicators */
+.monglo-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem var(--spacing-sm);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.monglo-badge-success {
+  background: rgba(77, 179, 61, 0.15);
+  color: var(--brand-primary-dark);
+  border: 1px solid rgba(77, 179, 61, 0.3);
+}
+
+.monglo-badge-warning {
+  background: rgba(245, 100, 0, 0.15);
+  color: #c04000;
+  border: 1px solid rgba(245, 100, 0, 0.3);
+}
+
+.monglo-badge-danger {
+  background: rgba(240, 83, 64, 0.15);
+  color: #c02020;
+  border: 1px solid rgba(240, 83, 64, 0.3);
+}
+
+.monglo-badge-info {
+  background: rgba(19, 170, 82, 0.12);
+  color: var(--mongodb-green-dark);
+  border: 1px solid rgba(19, 170, 82, 0.25);
+}
+
+/* Pagination - Compact Design */
+.monglo-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--bg-primary);
+  border-radius: var(--radius-md);
+  margin-top: var(--spacing-md);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+}
+
+.monglo-pagination-info {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+}
+
+.monglo-pagination-buttons {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.title {
+  font-size: 1.5rem;
+  margin: 0;
+  font-weight: 700;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.dark-mode-toggle {
+  background: var(--bg-hover);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 0.5rem;
+  cursor: pointer;
+  font-size: 1.25rem;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+}
+
+.dark-mode-toggle:hover {
+  background: var(--bg-active);
+}
+
+.logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  text-decoration: none;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.logout-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  transform: translateY(-1px);
+}
+
+.dark-mode .logout-btn {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+}
+
+.dark-mode .logout-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
+}
+
+.logout-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Loading States */
+.monglo-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2xl);
+  color: var(--text-secondary);
+}
+
+.monglo-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--border-color);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Document View */
+.monglo-document {
+  background: var(--bg-primary);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  padding: var(--spacing-2xl);
+  border: 1px solid var(--border-color);
+}
+
+.monglo-document-tree {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  line-height: 1.8;
+}
+
+.monglo-tree-key {
+  color: var(--brand-navy);
+  font-weight: 700;
+}
+
+.monglo-tree-value.string {
+  color: var(--brand-primary-dark);
+}
+
+.monglo-tree-value.number {
+  color: var(--brand-accent);
+}
+
+.monglo-tree-value.boolean {
+  color: var(--brand-danger);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.monglo-fade-in {
+  animation: fadeIn var(--transition-base) ease-out;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .monglo-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 1000;
+    transform: translateX(-100%);
+  }
+
+  .monglo-sidebar.open {
+    transform: translateX(0);
+    box-shadow: var(--shadow-xl);
+  }
+}
+
+/* Professional touches */
+::selection {
+  background: rgba(77, 179, 61, 0.2);
+  color: var(--text-primary);
+}
+
+.monglo-table-actions {
+  display: flex;
+  gap: var(--spacing-xs);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.monglo-table tbody tr:hover .monglo-table-actions {
+  opacity: 1;
+}
+
+/* Sidebar Resizer */
+.monglo-sidebar-resizer {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: ew-resize;
+  background: transparent;
+  z-index: 101;
+  transition: background var(--transition-fast);
+}
+
+.monglo-sidebar-resizer:hover,
+.monglo-sidebar-resizer.resizing {
+  background: var(--mongodb-green);
+}
+
+/* Dark Mode Transition */
+body {
+  transition: background-color var(--transition-base), color var(--transition-base);
+}
+
+* {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-duration: var(--transition-base);
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Modal Styles */
+.monglo-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.monglo-modal-content {
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.monglo-modal-header {
+  padding: var(--spacing-lg) var(--spacing-xl);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.monglo-modal-header h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--font-size-xl);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.monglo-modal-body {
+  padding: var(--spacing-xl);
+  overflow-y: auto;
+  flex: 1;
+}
+
+.monglo-modal-footer {
+  padding: var(--spacing-lg) var(--spacing-xl);
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  gap: var(--spacing-md);
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.monglo-form-group {
+  margin-bottom: var(--spacing-lg);
+}
+
+.monglo-form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: var(--spacing-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+}
+
+.monglo-hint {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--spacing-lg);
+}
+
+.field-name-input {
+  font-weight: 600 !important;
+}
