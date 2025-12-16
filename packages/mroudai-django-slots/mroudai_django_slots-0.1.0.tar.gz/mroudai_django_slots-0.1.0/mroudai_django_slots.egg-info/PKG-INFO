@@ -1,0 +1,102 @@
+Metadata-Version: 2.4
+Name: mroudai-django-slots
+Version: 0.1.0
+Summary: Generate bookable slot candidates for appointment booking systems.
+Author-email: Kevin Oudai <kevin@mroudai.com>
+License: MIT
+Project-URL: Homepage, https://github.com/Kevin-Oudai/django-slots
+Project-URL: Repository, https://github.com/Kevin-Oudai/django-slots
+Keywords: django,appointments,availability,booking,slots
+Classifier: Framework :: Django
+Classifier: Framework :: Django :: 4.2
+Classifier: Framework :: Django :: 5.0
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Office/Business :: Scheduling
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: Django>=4.2
+Provides-Extra: test
+Requires-Dist: pytest; extra == "test"
+Requires-Dist: pytest-django; extra == "test"
+Dynamic: license-file
+
+# django-slots
+
+Reusable Django app for generating bookable slot candidates for appointment booking systems. Given a service and provider, it returns slot start/end times within working windows while respecting buffers, minimum notice, and maximum advance rules.
+
+## What it does
+- Slices provider working windows into discrete slots using service rules.
+- Supports optional addons that extend duration.
+- Respects buffers, minimum notice, maximum advance, and fixed start intervals.
+- Provides hooks for custom working window and busy interval providers.
+
+## What it does **not** do
+- Does not create or store bookings.
+- Does not process payments or send notifications.
+- Does not persist slots by default (pure computation only).
+
+## Compatibility
+- Django 4.2+ (works on Django 5.x).
+- Python 3.10+.
+- Timezone-aware; expects aware datetimes (UTC internally, align to local rules via `tz` argument).
+- Works on SQLite for tests; production-friendly with PostgreSQL.
+
+## Settings
+```python
+SLOTS_TENANT_MODEL = None  # e.g. "tenants.Tenant" (optional)
+SLOTS_SERVICE_MODEL = "services.Service"
+SLOTS_PROVIDER_MODEL = "providers.Provider"
+SLOTS_GET_WORKING_WINDOWS_FUNC = "availability.logic.get_working_windows"
+SLOTS_GET_BUSY_INTERVALS_FUNC = None  # e.g. "bookings.selectors.get_busy_intervals"
+SLOTS_DEFAULT_INTERVAL_MINUTES = 15
+SLOTS_MAX_SLOTS_PER_DAY = 500
+```
+
+Provide callable paths as strings; functions are imported lazily. Override these in your Django settings.
+
+## Integration points
+- **Working windows**: By default imports `availability.logic.get_working_windows` from `django-availability` if installed. Override `SLOTS_GET_WORKING_WINDOWS_FUNC` to supply your own callable. The callable should return a list of `(start_dt, end_dt)` windows for a given provider and date.
+- **Busy intervals**: Set `SLOTS_GET_BUSY_INTERVALS_FUNC` to a callable that returns intervals to exclude (e.g., existing bookings).
+- **Service / Provider / Tenant models**: Set model paths via settings if you use custom apps.
+
+## Public API
+- `slots.engine.generate_slots(service, provider, start_date, end_date, *, tz=None, now_dt=None, addons=None, tenant=None) -> dict[date, list[Slot]]`
+- `slots.selectors.list_available_slots(...)` for a single provider.
+- `slots.selectors.list_available_slots_for_service(...)` to fan out across providers (requires the providers app; otherwise raises a helpful error).
+
+Slots are returned as lightweight dataclass instances with `start`, `end`, `provider_id`, `service_id`, `capacity_total`, `capacity_remaining`, and `meta`.
+
+## Running tests
+```bash
+python test django-slot
+```
+The runner defaults `DJANGO_SETTINGS_MODULE` to `slots.tests.settings` for local testing.
+
+## Publish to PyPI
+```bash
+set PYPI_TOKEN=your-token
+python upload project
+```
+The upload helper installs build tooling, builds the package, and uploads via Twine using `__token__` authentication.
+
+## Custom working windows example
+```python
+def my_working_windows(provider, date, tz=None, tenant=None, **kwargs):
+    # Return aware datetimes in the provider's timezone
+    start = tz.localize(datetime.datetime.combine(date, datetime.time(9, 0)))
+    end = tz.localize(datetime.datetime.combine(date, datetime.time(17, 0)))
+    return [(start, end)]
+
+# settings.py
+SLOTS_GET_WORKING_WINDOWS_FUNC = "path.to.my_working_windows"
+```
+
+## Licence
+MIT Licence. See `LICENSE`.
