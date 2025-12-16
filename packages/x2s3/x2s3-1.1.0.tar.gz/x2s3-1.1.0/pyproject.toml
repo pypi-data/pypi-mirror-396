@@ -1,0 +1,78 @@
+[project]
+name = "x2s3"
+version = "1.1.0"
+description = "RESTful web service which makes any storage system X available as an S3-compatible REST API"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Konrad Rokicki", email = "rokicki@janelia.hhmi.org" }
+]
+classifiers = [
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+requires-python = ">=3.12"
+dependencies = [
+    "aiobotocore >=2.22",
+    "boto3 >=1.37",
+    "botocore >=1.37",
+    "fastapi >=0.115",
+    "loguru >=0.7",
+    "pydantic >=2.11",
+    "pydantic-settings >=2.9",
+    "pydantic-settings-yaml >=0.2.0",
+    "python-dateutil >=2.9",
+    "pytest >=8.3",
+    "starlette >=0.46",
+    "uvicorn >=0.34",
+    "uvloop >=0.21",
+    "jinja2 >=3.1"
+]
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-cov",
+    "pytest-html",
+    "httpx >=0.28"
+]
+release = [
+    "build",
+    "twine"
+]
+
+[project.urls]
+Homepage = "https://github.com/JaneliaSciComp/x2s3"
+Repository = "https://github.com/JaneliaSciComp/x2s3"
+
+[tool.setuptools]
+packages = ["x2s3"] 
+
+[tool.pixi.project]
+channels = ["conda-forge"]
+platforms = ["osx-arm64", "osx-64", "linux-64"]
+
+[tool.pixi.tasks]
+dev-install = "pip install -e ."
+dev-launch = "uvicorn x2s3.app:app --port 8000 --reload"
+dev-launch-remote = "uvicorn x2s3.app:app --host 0.0.0.0 --port 8000 --reload --ssl-keyfile /opt/certs/cert.key --ssl-certfile /opt/certs/cert.crt"
+
+[tool.pixi.feature.test.tasks]
+test-install = "pip install -e ."
+test = { cmd = "python -m pytest --cov=x2s3 --cov-report html -W ignore::DeprecationWarning", depends-on = ["test-install"] }
+
+[tool.pixi.feature.release.tasks]
+pypi-build = "python -m build"
+pypi-upload = "twine upload dist/*"
+
+[tool.pixi.environments]
+default = {features = [], solve-group = "default"}
+test = {features = ["test"], solve-group = "default"}
+release = {features = ["release"], solve-group = "default"}
+
+[tool.pixi.dependencies]
+python = "3.12.*"
+pip = "*"
