@@ -1,0 +1,287 @@
+# Testing Engine Core
+
+[![PyPI version](https://badge.fury.io/py/testing-engine-core.svg)](https://pypi.org/project/testing-engine-core/)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+A reusable E2E testing framework for microservices architectures.
+
+## Features
+
+- 🎯 **Universal**: Works with any REST API microservices
+- 🔧 **Flexible**: Dynamic service registration - no hardcoded dependencies
+- 🧪 **Complete**: HTTP requests, database assertions, message queue monitoring
+- 📝 **Declarative**: Clean DSL for defining test scenarios
+- 🔌 **Extensible**: Custom clients and step handlers
+- ✅ **Production-Ready**: Battle-tested in real-world microservices environments
+
+## Installation
+
+### From PyPI (Recommended)
+
+```bash
+pip install testing-engine-core
+```
+
+### From Source (Development)
+
+```bash
+git clone https://github.com/MysticAladin/testing-engine-core.git
+cd testing-engine-core
+pip install -e .
+```
+
+## Quick Start
+
+### Basic Usage
+
+```python
+from engine.orchestrator import TestOrchestrator
+from engine.scenario import TestScenario
+from engine.config import EngineConfig, ServiceConfig
+
+# Configure for your services
+config = EngineConfig()
+config.services = ServiceConfig.from_dict({
+    "api": "http://localhost:8000"
+})
+
+orchestrator = TestOrchestrator(config)
+
+# Create test scenario
+scenario = TestScenario("User Registration")
+scenario.http_request(
+    service="api",
+    method="POST",
+    endpoint="/api/users/register",
+    json_data={
+        "username": "testuser",
+        "email": "test@example.com",
+        "password": "SecurePass123!"
+    },
+    expected_status=201
+)
+
+# Execute
+result = orchestrator.execute_scenario(scenario)
+print(f"Test status: {result['status']}")
+
+orchestrator.close()
+```
+
+### Custom Services (Any Architecture)
+
+```python
+from engine.config import EngineConfig, ServiceConfig
+
+# Configure for your services
+config = EngineConfig()
+config.services = ServiceConfig.from_dict({
+    "order": "http://order-api:8001",
+    "payment": "http://payment-api:8002",
+    "inventory": "http://inventory-api:8003"
+})
+
+orchestrator = TestOrchestrator(config)
+
+# Use your service names
+scenario = TestScenario("Order Flow")
+scenario.http_request("order", "POST", "/api/orders", json_data=order_data)
+scenario.http_request("payment", "POST", "/api/charge", json_data=payment_data)
+
+orchestrator.execute_scenario(scenario)
+```
+
+### Environment-Agnostic Configuration
+
+Use the built-in config loader to write tests that work across dev/staging/prod:
+
+```python
+from engine import get_test_config, get_service_url
+from engine.clients import GenericServiceClient
+
+# Load config from environment variables or config files
+config = get_test_config()  # Auto-loads from TEST_ENV or config files
+
+# Get service URLs
+api_url = get_service_url('api')
+client = GenericServiceClient(api_url)
+
+# Or use with orchestrator
+from engine.config import EngineConfig, ServiceConfig
+engine_config = EngineConfig()
+engine_config.services = ServiceConfig.from_dict(config['services'])
+orchestrator = TestOrchestrator(engine_config)
+```
+
+See [Configuration Guide](docs/CONFIGURATION.md) for details.
+
+### Custom Authentication
+
+```python
+from engine.clients import GenericServiceClient
+
+class AuthClient(GenericServiceClient):
+    def __init__(self, base_url, api_key):
+        super().__init__(
+            base_url,
+            default_headers={"Authorization": f"Bearer {api_key}"}
+        )
+
+# Register custom client
+orchestrator.register_service("secure_api", AuthClient(url, "your-api-key"))
+```
+
+## Core Components
+
+### TestOrchestrator
+
+Coordinates test execution across multiple services:
+
+- HTTP client management
+- Database inspection
+- Message queue monitoring
+- Test scenario execution
+
+### TestScenario
+
+Declarative test definition:
+
+- `http_request()` - Make HTTP calls
+- `wait_for_message()` - Wait for RabbitMQ messages
+- `assert_database()` - Verify database state
+- `custom_step()` - Add custom logic
+
+### GenericServiceClient
+
+Universal HTTP client for any REST API:
+
+- Automatic retries
+- Timeout handling
+- Convenience methods (`get_json`, `post_json`, etc.)
+- Custom headers support
+
+## Configuration
+
+### Environment Variables
+
+```bash
+# Services
+export USER_SERVICE_URL=http://localhost:8001
+export NOTIFICATION_SERVICE_URL=http://localhost:8002
+export ADMIN_SERVICE_URL=http://localhost:8003
+
+# Database
+export DB_HOST=localhost
+export DB_PORT=5432
+export DB_NAME=testdb
+export DB_USER=testuser
+export DB_PASSWORD=testpass
+
+# RabbitMQ
+export RABBITMQ_HOST=localhost
+export RABBITMQ_PORT=5672
+export RABBITMQ_USER=testuser
+export RABBITMQ_PASSWORD=testpass
+```
+
+### Programmatic Configuration
+
+```python
+config = EngineConfig()
+config.services = ServiceConfig.from_dict({"api": "http://api:8080"})
+config.database = DatabaseConfig(host="db.example.com", port=5432)
+config.rabbitmq = RabbitMQConfig(host="mq.example.com", port=5672)
+```
+
+## Advanced Features
+
+### Custom Step Handlers
+
+```python
+def kafka_handler(step):
+    kafka.publish(step.params['topic'], step.params['message'])
+
+orchestrator.register_step_handler("kafka_publish", kafka_handler)
+
+# Use in scenarios
+scenario.custom_step(
+    custom_type="kafka_publish",
+    params={"topic": "events", "message": {...}}
+)
+```
+
+### Context Manager
+
+```python
+with TestOrchestrator(config) as orchestrator:
+    # Test code
+    orchestrator.execute_scenario(scenario)
+# Automatically cleaned up
+```
+
+## Architecture Support
+
+Works with any microservices architecture:
+
+- ✅ E-Commerce (order, payment, inventory, shipping)
+- ✅ IoT (device, telemetry, alerts)
+- ✅ Banking (account, transaction, fraud detection)
+- ✅ SaaS (user, subscription, billing)
+- ✅ And more...
+
+## Documentation
+
+- [Reusability Guide](docs/REUSABILITY.md) - Complete guide for using with any services
+- [Examples](examples/reusability_examples.py) - 6 complete usage examples
+- [How-to Guide](how_to_use_engine.py) - Practical usage patterns
+
+## Requirements
+
+- Python 3.8+
+- PostgreSQL (for database assertions)
+- RabbitMQ (for message queue monitoring)
+- Your microservices
+
+## Testing
+
+Run API tests (no infrastructure needed):
+
+```bash
+python test_api_only.py
+```
+
+Run full integration tests (requires running services):
+
+```bash
+python test_refactored_engine.py
+## Real-World Usage
+
+This library is being used in production for:
+- ✅ Event enrollment systems
+- ✅ E-commerce platforms
+- ✅ Microservices architectures
+
+**Proven reusability:** Successfully integrated into multiple projects with different architectures, databases, and endpoints.
+
+## Links
+
+- **PyPI:** https://pypi.org/project/testing-engine-core/
+- **GitHub:** https://github.com/MysticAladin/testing-engine-core
+- **Issues:** https://github.com/MysticAladin/testing-engine-core/issues
+
+## License
+
+MIT License
+
+## Contributing
+
+Contributions welcome! This engine is designed to be universal and extensible.
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+Contributions welcome! This engine is designed to be universal and extensible.
+```
