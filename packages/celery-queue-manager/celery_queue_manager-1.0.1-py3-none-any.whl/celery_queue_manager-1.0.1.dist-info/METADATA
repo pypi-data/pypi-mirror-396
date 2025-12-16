@@ -1,0 +1,123 @@
+Metadata-Version: 2.4
+Name: celery-queue-manager
+Version: 1.0.1
+Summary: CLI tool to inspect and purge Celery Redis queues
+Author-email: Machiel Broekman <maddogbroekman@gmail.com>
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+Requires-Dist: redis
+
+# Celery Queue Manager
+
+![Python Version](https://img.shields.io/badge/python-3.7%2B-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+
+A powerful, interactive CLI tool to inspect, monitor, and clean up Celery queues backed by Redis.
+
+Designed for developers and DevOps engineers who need to "deep scan" Redis databases, inspect task payloads, and selectively delete tasks without direct access to workers or application code.
+
+## ✨ Features
+
+* **Deep Scan:** Automatically scans all Redis databases (0-15) to discover hidden Celery queues.
+* **Payload Inspection:** Decode and view the JSON content (args, task names, IDs) of queued items.
+* **Selective Delete:** Remove specific tasks based on wildcards (e.g., delete only `*.send_email` tasks).
+* **Total Purge:** Quickly empty an entire queue to reset the state.
+* **Safe:** Includes confirmation prompts before deleting any data.
+* **Zero Dependencies:** (On the server side) - Just requires Python and access to Redis.
+
+## 📦 Installation
+
+You can install this tool directly via `pip`.
+
+### Option 1: Install from Git (Recommended for Teams)
+If this repository is hosted on GitHub/GitLab:
+
+```bash
+pip install git+https://github.com/mbroekman/celery-queue-manager.git
+````
+
+### Option 2: Install Locally (For Development)
+
+Clone this folder and run:
+
+```bash
+pip install .
+```
+
+### Option 3: Install from PyPI (If published)
+
+```bash
+pip install celery-queue-manager
+```
+
+## ⚙️ Configuration
+
+By default, the tool connects to `redis://localhost:6379`.
+To connect to a different Redis server (e.g., in Docker or Production), set the `CELERY_REDIS_URL` environment variable before running the tool.
+
+**Linux/Mac:**
+
+```bash
+export CELERY_REDIS_URL="redis://user:password@192.168.1.50:6379/0"
+```
+
+**Windows (PowerShell):**
+
+```powershell
+$env:CELERY_REDIS_URL="redis://user:password@192.168.1.50:6379/0"
+```
+
+## 🚀 Usage
+
+After installation, the command `celery-manager` is available globally in your terminal.
+
+```bash
+celery-manager
+```
+
+### Interactive Menu
+
+The tool will scan your Redis instance and present a menu:
+
+```text
+--- Found Queues ---
+1. [DB 0] celery                (Items: 42)
+2. [DB 1] high_priority         (Items: 1500)
+
+Options:
+Type the queue NUMBER to select it.
+Type 'q' to quit.
+```
+
+### Actions
+
+Once a queue is selected, you can:
+
+1.  **INSPECT CONTENT:** Peeks at the top 5 tasks (shows Task Name, ID, and Args).
+2.  **PURGE ENTIRE QUEUE:** Removes ALL items from the list.
+3.  **DELETE SPECIFIC TASKS:** Prompts for a wildcard pattern (e.g., `*invoice*`) and removes only matching tasks.
+
+## 🛠 Development
+
+To build this package yourself (e.g., to create a `.whl` file):
+
+1.  Install build tools:
+    ```bash
+    pip install build
+    ```
+2.  Build the package:
+    ```bash
+    python -m build
+    ```
+3.  The artifacts will appear in the `dist/` directory.
+
+## 👨‍💻 Creator
+
+**Created by: [Jouw Naam]**
+
+  * **Email:** m.broekman@ises-softpack.nl
+  * **GitHub:** https://github.com/mbroekman
+
+## 📄 License
+
+This project is licensed under the MIT License.
