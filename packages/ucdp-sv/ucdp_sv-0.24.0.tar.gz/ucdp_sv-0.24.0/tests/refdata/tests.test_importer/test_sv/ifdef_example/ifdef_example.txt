@@ -1,0 +1,8 @@
+Param(IntegerType(), 'PARAM0', ifdefs=('MOD', 'BAR'))
+Param(IntegerType(), 'PARAM1', ifdefs=('MOD',))
+Port(BitType(), 'a_i', direction=IN, ifdefs=('MOD',))
+Port(BitType(), 'b_i', direction=IN, ifdefs=('MOD', 'FOO'))
+Port(BitType(), 'c_i', direction=IN, ifdefs=('MOD', 'FOO', 'BAZ'))
+Port(BitType(), 'd_i', direction=IN, ifdefs=('MOD', 'FOO'))
+Port(BitType(), 'e_i', direction=IN, ifdefs=('MOD',))
+Port(BitType(), 'x_o', direction=OUT, ifdefs=('MOD',))

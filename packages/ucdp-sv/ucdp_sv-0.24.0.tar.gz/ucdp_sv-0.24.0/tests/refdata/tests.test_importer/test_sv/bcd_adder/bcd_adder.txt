@@ -1,0 +1,5 @@
+Port(UintType(4), 'a', direction=IN)
+Port(UintType(4), 'b', direction=IN)
+Port(BitType(), 'cin', direction=IN)
+Port(UintType(4), 'sum', direction=OUT)
+Port(BitType(), 'cout', direction=OUT)
