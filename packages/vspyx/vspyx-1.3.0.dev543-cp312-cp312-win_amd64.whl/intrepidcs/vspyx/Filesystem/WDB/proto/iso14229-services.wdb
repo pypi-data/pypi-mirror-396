@@ -1,0 +1,2152 @@
+[setup]
+	version = '2.1.0'
+	include = ['builtin://WDB/core/frame.wdb']
+
+	[[setup.hooks]]
+		expression = 'frame.protocol == #FrameType.Unknown'
+		location = 'frame.payload'
+		protocol = '#UDS'
+
+[UDS]
+	short_name = 'UDS'
+	long_name = 'Unified Diagnostic Services (ISO-14229)'
+	tag = 'uds'
+
+	[[UDS.fields]]
+		short_name = 'SI'
+		long_name = 'Service Identifier'
+		tag = 'si'
+        length = 8
+
+	[[UDS.fields]]
+		tag = 'content'
+		type = 'switch'
+		switch = '^.si'
+
+		[[UDS.fields.fields]]
+			case = 0x7F
+			inherit = '#NegativeResponse'
+
+		[[UDS.fields.fields]]
+			case = 0x10
+			inherit = '#SessionControlReq'
+
+		[[UDS.fields.fields]]
+			case = 0x11
+			inherit = '#EcuResetReq'
+
+		[[UDS.fields.fields]]
+			case = 0x27
+			inherit = '#SecurityAccessReq'
+
+		[[UDS.fields.fields]]
+			case = 0x28
+			inherit = '#CommunicationControlReq'
+
+		[[UDS.fields.fields]]
+			case = 0x29
+			inherit = '#AuthenticationReq'
+
+		[[UDS.fields.fields]]
+			case = 0x3E
+			inherit = '#TesterPresentReq'
+
+		[[UDS.fields.fields]]
+			case = 0x83
+			inherit = '#AccessTimingParameterReq'
+
+		[[UDS.fields.fields]]
+			case = 0x84
+			inherit = '#SecuredDataTransmissionReq'
+
+		[[UDS.fields.fields]]
+			case = 0x85
+			inherit = '#ControlDtcSettingReq'
+
+		[[UDS.fields.fields]]
+			case = 0x86
+			inherit = '#ResponseOnEventReq'
+
+		[[UDS.fields.fields]]
+			case = 0x87
+			inherit = '#LinkControlReq'
+
+		[[UDS.fields.fields]]
+			case = 0x22
+			inherit = '#ReadDataByIdReq'
+
+		[[UDS.fields.fields]]
+			case = 0x23
+			inherit = '#ReadMemoryByAddressReq'
+
+		[[UDS.fields.fields]]
+			case = 0x24
+			inherit = '#ReadScalingDataByIdentifierReq'
+
+		[[UDS.fields.fields]]
+			case = 0x2A
+			inherit = '#ReadDataByPeriodicIdReq'
+
+		[[UDS.fields.fields]]
+			case = 0x2C
+			inherit = '#DynamicallyDefineDataIdReq'
+
+		[[UDS.fields.fields]]
+			case = 0x2E
+			inherit = '#WriteDataByIdReq'
+
+		[[UDS.fields.fields]]
+			case = 0x3D
+			inherit = '#WriteMemoryByAddressReq'
+
+		[[UDS.fields.fields]]
+			case = 0x14
+			inherit = '#ClearDtcsReq'
+
+		[[UDS.fields.fields]]
+			case = 0x19
+			inherit = '#ReadDtcsReq'
+
+		[[UDS.fields.fields]]
+			case = 0x2F
+			inherit = '#IoControlByIdReq'
+
+		[[UDS.fields.fields]]
+			case = 0x31
+			inherit = '#RoutineControlReq'
+
+		[[UDS.fields.fields]]
+			case = 0x34
+			inherit = '#RequestDownloadReq'
+
+		[[UDS.fields.fields]]
+			case = 0x35
+			inherit = '#RequestUploadReq'
+
+		[[UDS.fields.fields]]
+			case = 0x36
+			inherit = '#TransferDataReq'
+
+		[[UDS.fields.fields]]
+			case = 0x37
+			inherit = '#RequestTransferExitReq'
+
+		[[UDS.fields.fields]]
+			case = 0x38
+			inherit = '#RequestFileTransferReq'
+
+		[[UDS.fields.fields]]
+			case = 0x50
+			inherit = '#SessionControlRsp'
+
+		[[UDS.fields.fields]]
+			case = 0x51
+			inherit = '#EcuResetRsp'
+
+		[[UDS.fields.fields]]
+			case = 0x67
+			inherit = '#SecurityAccessRsp'
+
+		[[UDS.fields.fields]]
+			case = 0x68
+			inherit = '#CommunicationControlRsp'
+
+		[[UDS.fields.fields]]
+			case = 0x69
+			inherit = '#AuthenticationRsp'
+
+		[[UDS.fields.fields]]
+			case = 0x7E
+			inherit = '#TesterPresentRsp'
+
+		[[UDS.fields.fields]]
+			case = 0xC3
+			inherit = '#AccessTimingParameterRsp'
+
+		[[UDS.fields.fields]]
+			case = 0xC4
+			inherit = '#SecuredDataTransmissionRsp'
+
+		[[UDS.fields.fields]]
+			case = 0xC5
+			inherit = '#ControlDtcSettingRsp'
+
+		[[UDS.fields.fields]]
+			case = 0xC6
+			inherit = '#ResponseOnEventRsp'
+
+		[[UDS.fields.fields]]
+			case = 0xC7
+			inherit = '#LinkControlRsp'
+
+		[[UDS.fields.fields]]
+			case = 0x62
+			inherit = '#ReadDataByIdRsp'
+
+		[[UDS.fields.fields]]
+			case = 0x63
+			inherit = '#ReadMemoryByAddressRsp'
+
+		[[UDS.fields.fields]]
+			case = 0x64
+			inherit = '#ReadScalingDataByIdentifierRsp'
+
+		[[UDS.fields.fields]]
+			case = 0x6A
+			inherit = '#ReadDataByPeriodicIdRsp'
+
+		[[UDS.fields.fields]]
+			case = 0x6C
+			inherit = '#DynamicallyDefineDataIdRsp'
+
+		[[UDS.fields.fields]]
+			case = 0x6E
+			inherit = '#WriteDataByIdRsp'
+
+		[[UDS.fields.fields]]
+			case = 0x7D
+			inherit = '#WriteMemoryByAddressRsp'
+
+		[[UDS.fields.fields]]
+			case = 0x54
+			inherit = '#ClearDtcsRsp'
+
+		[[UDS.fields.fields]]
+			case = 0x59
+			inherit = '#ReadDtcsRsp'
+
+		[[UDS.fields.fields]]
+			case = 0x6F
+			inherit = '#IoControlByIdRsp'
+
+		[[UDS.fields.fields]]
+			case = 0x71
+			inherit = '#RoutineControlRsp'
+
+		[[UDS.fields.fields]]
+			case = 0x74
+			inherit = '#RequestDownloadRsp'
+
+		[[UDS.fields.fields]]
+			case = 0x75
+			inherit = '#RequestUploadRsp'
+
+		[[UDS.fields.fields]]
+			case = 0x76
+			inherit = '#TransferDataRsp'
+
+		[[UDS.fields.fields]]
+			case = 0x77
+			inherit = '#RequestTransferExitRsp'
+
+		[[UDS.fields.fields]]
+			case = 0x78
+			inherit = '#RequestFileTransferRsp'
+
+		[[UDS.fields.fields]]
+			inherit = '#UnknownService'
+
+[UnknownService]
+	short_name = 'UnknownService'
+	long_name = 'Unknown service'
+	tag = 'unknown'
+	length = '(frame.length * 8) - uds.si:end'
+
+[NegativeResponse]
+	short_name = 'NegativeResponse'
+	long_name = 'Negative response'
+	tag = 'nr'
+
+	[[NegativeResponse.fields]]
+		short_name = 'ServiceId'
+		long_name = 'Failed service id'
+		tag = 'si'
+		length = 8
+
+	[[NegativeResponse.fields]]
+		short_name = 'NRC'
+		long_name = 'Negative Response Code'
+		tag = 'nrc'
+		length = 8
+
+		[[NegativeResponse.fields.states]]
+			name = 'Positive Response'
+			tag = 'PR'
+			value = 0x00
+
+		[[NegativeResponse.fields.states]]
+			name = 'General Reject'
+			tag = 'GR'
+			value = 0x10
+
+		[[NegativeResponse.fields.states]]
+			name = 'Service Not Supported'
+			tag = 'SNS'
+			value = 0x11
+
+		[[NegativeResponse.fields.states]]
+			name = 'SubFunction Not Supported'
+			tag = 'SFNS'
+			value = 0x12
+
+		[[NegativeResponse.fields.states]]
+			name = 'Incorrect Message Length or Invalid Format'
+			tag = 'IMLOIF'
+			value = 0x13
+
+		[[NegativeResponse.fields.states]]
+			name = 'Response too Long'
+			tag = 'RTL'
+			value = 0x14
+
+		[[NegativeResponse.fields.states]]
+			name = 'Busy Repeat Request'
+			tag = 'BRR'
+			value = 0x21
+
+		[[NegativeResponse.fields.states]]
+			name = 'Conditions Not Correct'
+			tag = 'CNC'
+			value = 0x22
+
+		[[NegativeResponse.fields.states]]
+			name = 'Request Sequence Error'
+			tag = 'RSE'
+			value = 0x24
+
+		[[NegativeResponse.fields.states]]
+			name = 'No Response from Subnet Component'
+			tag = 'NRFSC'
+			value = 0x25
+
+		[[NegativeResponse.fields.states]]
+			name = 'Failure Prevents Execution of Requested Action'
+			tag = 'FPEORA'
+			value = 0x26
+
+		[[NegativeResponse.fields.states]]
+			name = 'Request Out of Range'
+			tag = 'ROOR'
+			value = 0x31
+
+		[[NegativeResponse.fields.states]]
+			name = 'Security Access Denied'
+			tag = 'SAD'
+			value = 0x33
+
+		[[NegativeResponse.fields.states]]
+			name = 'Invalid Key'
+			tag = 'IK'
+			value = 0x35
+
+		[[NegativeResponse.fields.states]]
+			name = 'Exceeded Number of Attempts'
+			tag = 'ENOA'
+			value = 0x36
+
+		[[NegativeResponse.fields.states]]
+			name = 'Required Time Delay Not Expired'
+			tag = 'RTDNE'
+			value = 0x37
+
+		[[NegativeResponse.fields.states]]
+			name = 'Upload/Download Not Accepted'
+			tag = 'UDNA'
+			value = 0x70
+
+		[[NegativeResponse.fields.states]]
+			name = 'Transfer Data Suspended'
+			tag = 'TDS'
+			value = 0x71
+
+		[[NegativeResponse.fields.states]]
+			name = 'General Programming Failure'
+			tag = 'GPF'
+			value = 0x72
+
+		[[NegativeResponse.fields.states]]
+			name = 'Wrong Block Sequence Counter'
+			tag = 'WBSC'
+			value = 0x73
+
+		[[NegativeResponse.fields.states]]
+			name = 'Request Correctly Received - Response Pending'
+			tag = 'RCRRP'
+			value = 0x78
+
+		[[NegativeResponse.fields.states]]
+			name = 'SubFunction Not Supported in Active Session'
+			tag = 'SFNSIAS'
+			value = 0x7E
+
+		[[NegativeResponse.fields.states]]
+			name = 'Service Not Supported in Active Session'
+			tag = 'SNSIAS'
+			value = 0x7F
+
+		[[NegativeResponse.fields.states]]
+			name = 'RPM Too High'
+			tag = 'RPMTH'
+			value = 0x81
+
+		[[NegativeResponse.fields.states]]
+			name = 'RPM Too Low'
+			tag = 'RPMTL'
+			value = 0x82
+
+		[[NegativeResponse.fields.states]]
+			name = 'Engine Is Running'
+			tag = 'EIR'
+			value = 0x83
+
+		[[NegativeResponse.fields.states]]
+			name = 'Engine Is Not Running'
+			tag = 'EINR'
+			value = 0x84
+
+		[[NegativeResponse.fields.states]]
+			name = 'Engine Runtime Too Low'
+			tag = 'ERTTL'
+			value = 0x85
+
+		[[NegativeResponse.fields.states]]
+			name = 'Temperature Too High'
+			tag = 'TEMPTH'
+			value = 0x86
+
+		[[NegativeResponse.fields.states]]
+			name = 'Temperature Too Low'
+			tag = 'TEMPTL'
+			value = 0x87
+
+		[[NegativeResponse.fields.states]]
+			name = 'Vehicle Speed Too High'
+			tag = 'VSTH'
+			value = 0x88
+
+		[[NegativeResponse.fields.states]]
+			name = 'Vehicle Speed Too Low'
+			tag = 'VSTL'
+			value = 0x89
+
+		[[NegativeResponse.fields.states]]
+			name = 'Throttle/Pedal Too High'
+			tag = 'TPTH'
+			value = 0x8A
+
+		[[NegativeResponse.fields.states]]
+			name = 'Throttle/Pedal Too Low'
+			tag = 'TPTL'
+			value = 0x8B
+
+		[[NegativeResponse.fields.states]]
+			name = 'Transmission Range Not in Neutral'
+			tag = 'TRNIN'
+			value = 0x8C
+
+		[[NegativeResponse.fields.states]]
+			name = 'Transmission Range Not in Gear'
+			tag = 'TRNIG'
+			value = 0x8D
+
+		[[NegativeResponse.fields.states]]
+			name = 'Brake Switch(es) Not Closed'
+			tag = 'BSNC'
+			value = 0x8F
+
+		[[NegativeResponse.fields.states]]
+			name = 'Shift Lever Not In Park'
+			tag = 'SLNIP'
+			value = 0x90
+
+		[[NegativeResponse.fields.states]]
+			name = 'Torque Converter Clutch Locked'
+			tag = 'TCCL'
+			value = 0x91
+
+		[[NegativeResponse.fields.states]]
+			name = 'VoltageTooHigh'
+			tag = 'VTH'
+			value = 0x92
+
+		[[NegativeResponse.fields.states]]
+			name = 'VoltageTooLow'
+			tag = 'VTL'
+			value = 0x93
+
+[SessionType]
+	tag = 'subfunction'
+
+	[[SessionType.fields]]
+		short_name = 'SuppressPositiveResponse'
+		long_name = 'Suppress Positive Response'
+		tag = 'suppressPosRspMsg'
+		length = 1
+
+	[[SessionType.fields]]
+		short_name = 'SessionType'
+		long_name = 'Session Type'
+		tag = 'sessionId'
+		length = 7
+
+		[[SessionType.fields.states]]
+			name = 'Invalid'
+			value = 0x00
+
+		[[SessionType.fields.states]]
+			name = 'Default'
+			value = 0x01
+
+		[[SessionType.fields.states]]
+			name = 'Programming'
+			value = 0x02
+
+		[[SessionType.fields.states]]
+			name = 'Extended'
+			value = 0x03
+
+		[[SessionType.fields.states]]
+			name = 'SafetySystem'
+			value = 0x04
+
+[SessionControlReq]
+	short_name = 'SessionControlReq'
+	long_name = 'Session Control Request'
+	tag = 'SessionControlReq'
+
+	[[SessionControlReq.fields]]
+		inherit = '#SessionType'
+
+[SessionControlRsp]
+	short_name = 'SessionControlRsp'
+	long_name = 'Session Control Response'
+	tag = 'SessionControlRsp'
+
+	[[SessionControlRsp.fields]]
+		inherit = '#SessionType'
+
+	[[SessionControlRsp.fields]]
+		short_name = 'P2server_max'
+		long_name = 'P2server_max'
+		tag = 'P2server_max'
+		length = 16
+
+	[[SessionControlRsp.fields]]
+		short_name = 'P2star_server_max'
+		long_name = 'P2*server_max'
+		tag = 'P2star_server_max'
+		length = 16
+
+[ResetType]
+	tag = 'subfunction'
+
+	[[ResetType.fields]]
+		short_name = 'SuppressPositiveResponse'
+		long_name = 'Suppress Positive Response'
+		tag = 'suppressPosRspMsg'
+		length = 1
+
+	[[ResetType.fields]]
+		short_name = 'ResetType'
+		long_name = 'Reset Type'
+		tag = 'resetType'
+		length = 7
+
+		[[ResetType.fields.states]]
+			name = 'Invalid'
+			value = 0x00
+
+		[[ResetType.fields.states]]
+			name = 'HardReset'
+			value = 0x01
+
+		[[ResetType.fields.states]]
+			name = 'KeyOnOffReset'
+			value = 0x02
+
+		[[ResetType.fields.states]]
+			name = 'SoftReset'
+			value = 0x03
+
+		[[ResetType.fields.states]]
+			name = 'EnableRapidPowerShutdown'
+			value = 0x04
+
+		[[ResetType.fields.states]]
+			name = 'DisableRapidPowerShutdown'
+			value = 0x05
+
+[EcuResetReq]
+	short_name = 'EcuResetReq'
+	long_name = 'ECU Reset Request'
+	tag = 'EcuResetReq'
+
+	[[EcuResetReq.fields]]
+		inherit = '#ResetType'
+
+[EcuResetRsp]
+	short_name = 'EcuResetRsp'
+	long_name = 'ECU Reset Response'
+	tag = 'EcuResetRsp'
+
+	[[EcuResetRsp.fields]]
+		inherit = '#ResetType'
+
+	[[EcuResetRsp.fields]]
+		short_name = 'PowerDownTime'
+		long_name = 'Power Down Time'
+		tag = 'powerDownTime'
+		length = 8
+
+[SecurityAccessType]
+	tag = 'subfunction'
+
+	[[SecurityAccessType.fields]]
+		short_name = 'SuppressPositiveResponse'
+		long_name = 'Suppress Positive Response'
+		tag = 'suppressPosRspMsg'
+		length = 1
+
+	[[SecurityAccessType.fields]]
+		short_name = 'SecurityAccessType'
+		long_name = 'Security Access Type'
+		tag = 'securityAccessType'
+		length = 7
+
+		[[SecurityAccessType.fields.states]]
+			name = 'Invalid'
+			value = 0x00
+
+		[[SecurityAccessType.fields.states]]
+			name = 'RequestSeed_01'
+			value = 0x01
+
+		[[SecurityAccessType.fields.states]]
+			name = 'SendKey_01'
+			value = 0x02
+
+		[[SecurityAccessType.fields.states]]
+			name = 'RequestSeed_02'
+			value = 0x03
+
+		[[SecurityAccessType.fields.states]]
+			name = 'SendKey_02'
+			value = 0x04
+
+[SecurityAccessReq]
+	short_name = 'SecurityAccessReq'
+	long_name = 'Security Access Request'
+	tag = 'SecurityAccessReq'
+
+	[[SecurityAccessReq.fields]]
+		inherit = '#SecurityAccessType'
+
+	[[SecurityAccessReq.fields]]
+		tag = 'parameter'
+		length = '(frame.length * 8) - ^.subfunction:end'
+
+[SecurityAccessRsp]
+	short_name = 'SecurityAccessRsp'
+	long_name = 'Security Access Response'
+	tag = 'SecurityAccessRsp'
+
+	[[SecurityAccessRsp.fields]]
+		inherit = '#SecurityAccessType'
+
+	[[SecurityAccessRsp.fields]]
+		tag = 'parameter'
+		length = '(frame.length * 8) - ^.subfunction:end'
+
+[CommControlType]
+	tag = 'subfunction'
+
+	[[CommControlType.fields]]
+		short_name = 'SuppressPositiveResponse'
+		long_name = 'Suppress Positive Response'
+		tag = 'suppressPosRspMsg'
+		length = 1
+
+	[[CommControlType.fields]]
+		short_name = 'CommControlType'
+		long_name = 'Communication Control Type'
+		tag = 'controlType'
+		length = 7
+
+		[[CommControlType.fields.states]]
+			name = 'EnableRxAndTx'
+			value = 0x00
+
+		[[CommControlType.fields.states]]
+			name = 'EnableRxAndDisableTx'
+			value = 0x01
+
+		[[CommControlType.fields.states]]
+			name = 'DisableRxAndEnableTx'
+			value = 0x02
+
+		[[CommControlType.fields.states]]
+			name = 'DisableRxAndTx'
+			value = 0x03
+
+		[[CommControlType.fields.states]]
+			name = 'EnableRxAndDisableTxWithEnhancedAddressInfo'
+			value = 0x04
+
+		[[CommControlType.fields.states]]
+			name = 'EnableRxAndTxWithEnhancedAddressInfo'
+			value = 0x05
+
+[CommType]
+	short_name = 'CommunicationType'
+	long_name = 'Communication Type'
+	tag = 'communicationType'
+
+	[[CommType.fields]]
+		tag = 'subnet'
+		length = 4
+
+	[[CommType.fields]]
+		tag = 'reserved'
+		length = 2
+
+	[[CommType.fields]]
+		tag = 'type'
+		length = 2
+
+[CommunicationControlReq]
+	short_name = 'CommunicationControlReq'
+	long_name = 'Communication Control Request'
+	tag = 'CommControlReq'
+
+	[[CommunicationControlReq.fields]]
+		inherit = '#CommControlType'
+
+	[[CommunicationControlReq.fields]]
+		inherit = '#CommType'
+
+	[[CommunicationControlReq.fields]]
+		short_name = 'NodeIdNr'
+		long_name = 'Node Id Number'
+		tag = 'nodeId'
+		length = 16
+
+	[[CommunicationControlReq.fields]]
+		tag = 'end'
+
+[CommunicationControlRsp]
+	short_name = 'CommunicationControlRsp'
+	long_name = 'Communication Control Response'
+	tag = 'CommControlRsp'
+
+	[[CommunicationControlRsp.fields]]
+		inherit = '#CommControlType'
+
+[AuthenticationTask]
+	tag = 'subfunction'
+
+	[[AuthenticationTask.fields]]
+		short_name = 'SuppressPositiveResponse'
+		long_name = 'Suppress Positive Response'
+		tag = 'suppressPosRspMsg'
+		length = 1
+
+	[[AuthenticationTask.fields]]
+		short_name = 'AuthenticationTask'
+		long_name = 'Authentication Task'
+		tag = 'authenticationTask'
+		length = 7
+
+		[[AuthenticationTask.fields.states]]
+			name = 'DeAuthenticate'
+			value = 0x00
+
+		[[AuthenticationTask.fields.states]]
+			name = 'VerifyCertificateUnidirectional'
+			value = 0x01
+
+		[[AuthenticationTask.fields.states]]
+			name = 'VerifyCertificateBidirectional'
+			value = 0x02
+
+		[[AuthenticationTask.fields.states]]
+			name = 'ProofOfOwnership'
+			value = 0x03
+
+		[[AuthenticationTask.fields.states]]
+			name = 'TransmitCertificate'
+			value = 0x04
+
+		[[AuthenticationTask.fields.states]]
+			name = 'RequestChallengeForAuthentication'
+			value = 0x05
+
+		[[AuthenticationTask.fields.states]]
+			name = 'VerifyProofOfOwnershipUnidirectional'
+			value = 0x06
+
+		[[AuthenticationTask.fields.states]]
+			name = 'VerifyProofOfOwnershipBidirectional'
+			value = 0x07
+
+		[[AuthenticationTask.fields.states]]
+			name = 'AuthenticationConfiguration'
+			value = 0x08
+
+[VariableLengthData]
+
+	[[VariableLengthData.fields]]
+		tag = 'dataLength'
+		length = 16
+
+	[[VariableLengthData.fields]]
+		tag = 'data'
+		length = '( ^.dataLength * 8 )'
+
+[AuthenticationReq]
+	short_name = 'AuthenticationReq'
+	long_name = 'Authentication Request'
+	tag = 'AuthenticationReq'
+
+	[[AuthenticationReq.fields]]
+		inherit = '#AuthenticationTask'
+
+	[[AuthenticationReq.fields]]
+		tag = 'data'
+		length = '(frame.length * 8) - ^.subfunction:end'
+
+	[[AuthenticationReq.fields]]
+		tag = 'end'
+
+[AuthenticationRsp]
+	short_name = 'AuthenticationRsp'
+	long_name = 'Authentication Response'
+	tag = 'AuthenticationRsp'
+
+	[[AuthenticationRsp.fields]]
+		tag = 'data'
+		length = '(frame.length * 8) - ^.subfunction:end'
+
+	[[AuthenticationRsp.fields]]
+		tag = 'end'
+
+
+[ZeroSubfunction]
+	tag = 'subfunction'
+
+	[[ZeroSubfunction.fields]]
+		short_name = 'SuppressPositiveResponse'
+		long_name = 'Suppress Positive Response'
+		tag = 'suppressPosRspMsg'
+		length = 1
+
+	[[ZeroSubfunction.fields]]
+		short_name = 'function'
+		long_name = 'function'
+		tag = 'function'
+		length = 7
+
+[TesterPresentReq]
+	short_name = 'TesterPresentReq'
+	long_name = 'Tester Present Request'
+	tag = 'TesterPresentReq'
+
+	[[TesterPresentReq.fields]]
+		inherit = '#ZeroSubfunction'
+
+[TesterPresentRsp]
+	short_name = 'TesterPresentRsp'
+	long_name = 'Tester Present Response'
+	tag = 'TesterPresentRsp'
+
+	[[TesterPresentRsp.fields]]
+		inherit = '#ZeroSubfunction'
+
+[AccessTimingParameterReq]
+	short_name = 'AccessTimingParameterReq'
+	long_name = 'AccessTimingParameterReq'
+	tag = 'AccessTimingParameterReq'
+
+[AccessTimingParameterRsp]
+	short_name = 'AccessTimingParameterRsp'
+	long_name = 'AccessTimingParameterRsp'
+	tag = 'AccessTimingParameterRsp'
+
+[SecuredDataTransmissionReq]
+	short_name = 'SecuredDataTransmissionReq'
+	long_name = 'SecuredDataTransmissionReq'
+	tag = 'SecuredDataTransmissionReq'
+
+[SecuredDataTransmissionRsp]
+	short_name = 'SecuredDataTransmissionRsp'
+	long_name = 'SecuredDataTransmissionRsp'
+	tag = 'SecuredDataTransmissionRsp'
+
+[DtcSettingType]
+	tag = 'subfunction'
+
+	[[DtcSettingType.fields]]
+		short_name = 'SuppressPositiveResponse'
+		long_name = 'Suppress Positive Response'
+		tag = 'suppressPosRspMsg'
+		length = 1
+
+	[[DtcSettingType.fields]]
+		short_name = 'DtcSettingType'
+		long_name = 'DTC Setting Type'
+		tag = 'dtcSettingType'
+		length = 7
+
+		[[DtcSettingType.fields.states]]
+			name = 'Invalid'
+			value = 0x00
+
+		[[DtcSettingType.fields.states]]
+			name = 'On'
+			value = 0x01
+
+		[[DtcSettingType.fields.states]]
+			name = 'Off'
+			value = 0x02
+
+[ControlDtcSettingReq]
+	short_name = 'ControlDtcSettingReq'
+	long_name = 'Control DTC Setting Request'
+	tag = 'ControlDtcSettingReq'
+
+	[[ControlDtcSettingReq.fields]]
+		inherit = '#DtcSettingType'
+
+	[[ControlDtcSettingReq.fields]]
+		tag = 'parameter'
+		length = '(frame.length * 8) - ^.subfunction:end'
+
+[ControlDtcSettingRsp]
+	short_name = 'ControlDtcSettingRsp'
+	long_name = 'Control DTC Setting Response'
+	tag = 'ControlDtcSettingRsp'
+
+	[[ControlDtcSettingRsp.fields]]
+		inherit = '#DtcSettingType'
+
+[ResponseOnEventReq]
+	short_name = 'ResponseOnEventReq'
+	long_name = 'ResponseOnEventReq'
+	tag = 'ResponseOnEventReq'
+
+[ResponseOnEventRsp]
+	short_name = 'ResponseOnEventRsp'
+	long_name = 'ResponseOnEventRsp'
+	tag = 'ResponseOnEventRsp'
+
+[LinkControlReq]
+	short_name = 'LinkControlReq'
+	long_name = 'LinkControlReq'
+	tag = 'LinkControlReq'
+
+[LinkControlRsp]
+	short_name = 'LinkControlRsp'
+	long_name = 'LinkControlRsp'
+	tag = 'LinkControlRsp'
+
+[ReadDataByIdReq]
+	short_name = 'ReadDataByIdReq'
+	long_name = 'ReadDataByIdReq'
+	tag = 'ReadDataByIdReq'
+	length = '(frame.length * 8) - uds.si:end'
+
+	[[ReadDataByIdReq.fields]]
+		tag = 'dids'
+		loop_type = 'loop'
+		loop = '((frame.length * 8) - uds.si:end) / 16'
+		length = '16'
+
+	[[ReadDataByIdReq.fields]]
+		tag = 'end'
+
+[ReadDataByIdRsp]
+	short_name = 'ReadDataByIdRsp'
+	long_name = 'ReadDataByIdRsp'
+	tag = 'ReadDataByIdRsp'
+
+	[[ReadDataByIdRsp.fields]]
+		tag = 'content'
+		length = '(frame.length * 8) - uds.si:end'
+
+[ReadMemoryByAddressReq]
+	short_name = 'ReadMemoryByAddressReq'
+	long_name = 'ReadMemoryByAddressReq'
+	tag = 'ReadMemoryByAddressReq'
+
+	[[ReadMemoryByAddressReq.fields]]
+		inherit = '#AddressAndLengthFormatId'
+
+	[[ReadMemoryByAddressReq.fields]]
+		tag = 'memoryAddress'
+		length = '( ^.addressAndLengthFormatIdentifier.memoryAddressLength * 8 )'
+
+	[[ReadMemoryByAddressReq.fields]]
+		tag = 'memorySize'
+		length = '( ^.addressAndLengthFormatIdentifier.memorySizeLength * 8 )'
+
+[ReadMemoryByAddressRsp]
+	short_name = 'ReadMemoryByAddressRsp'
+	long_name = 'ReadMemoryByAddressRsp'
+	tag = 'ReadMemoryByAddressRsp'
+
+	[[ReadMemoryByAddressRsp.fields]]
+		tag = 'dataRecord'
+		length = '(frame.length * 8) - uds.si:end'
+
+[ReadScalingDataByIdentifierReq]
+	short_name = 'ReadScalingDataByIdentifierReq'
+	long_name = 'ReadScalingDataByIdentifierReq'
+	tag = 'ReadScalingDataByIdentifierReq'
+
+[ReadScalingDataByIdentifierRsp]
+	short_name = 'ReadScalingDataByIdentifierRsp'
+	long_name = 'ReadScalingDataByIdentifierRsp'
+	tag = 'ReadScalingDataByIdentifierRsp'
+
+[ReadDataByPeriodicIdReq]
+	short_name = 'ReadDataByPeriodicIdReq'
+	long_name = 'ReadDataByPeriodicIdReq'
+	tag = 'ReadDataByPeriodicIdReq'
+
+	[[ReadDataByPeriodicIdReq.fields]]
+		short_name = 'TransmissionMode'
+		long_name = 'Transmission Mode'
+		tag = 'transmissionMode'
+		length = 8
+
+		[[ReadDataByPeriodicIdReq.fields.states]]
+			name = 'Invalid'
+			value = 0x00
+
+		[[ReadDataByPeriodicIdReq.fields.states]]
+			name = 'Slow'
+			value = 0x01
+
+		[[ReadDataByPeriodicIdReq.fields.states]]
+			name = 'Medium'
+			value = 0x02
+
+		[[ReadDataByPeriodicIdReq.fields.states]]
+			name = 'Fast'
+			value = 0x03
+
+	[[ReadDataByPeriodicIdReq.fields]]
+		tag = 'pids'
+		length = '(frame.length * 8) - ^.transmissionMode:end'
+
+	[[ReadDataByPeriodicIdReq.fields]]
+		tag = 'end'
+
+[ReadDataByPeriodicIdRsp]
+	short_name = 'ReadDataByPeriodicIdRsp'
+	long_name = 'ReadDataByPeriodicIdRsp'
+	tag = 'ReadDataByPeriodicIdRsp'
+
+[DynamicallyDefineDataIdReq]
+	short_name = 'DynamicallyDefineDataIdReq'
+	long_name = 'DynamicallyDefineDataIdReq'
+	tag = 'DynamicallyDefineDataIdReq'
+
+[DynamicallyDefineDataIdRsp]
+	short_name = 'DynamicallyDefineDataIdRsp'
+	long_name = 'DynamicallyDefineDataIdRsp'
+	tag = 'DynamicallyDefineDataIdRsp'
+
+[WriteDataByIdReq]
+	short_name = 'WriteDataByIdReq'
+	long_name = 'Write Data By Id Request'
+	tag = 'WriteDataByIdReq'
+
+	[[WriteDataByIdReq.fields]]
+		tag = 'did'
+		length = 16
+
+	[[WriteDataByIdReq.fields]]
+		tag = 'data'
+		length = '(frame.length * 8) - ^.did:end'
+
+[WriteDataByIdRsp]
+	short_name = 'WriteDataByIdRsp'
+	long_name = 'Write Data By Identifier Response'
+	tag = 'WriteDataByIdRsp'
+
+	[[WriteDataByIdRsp.fields]]
+		tag = 'did'
+		length = 16
+
+[WriteMemoryByAddressReq]
+	short_name = 'WriteMemoryByAddressReq'
+	long_name = 'WriteMemoryByAddressReq'
+	tag = 'WriteMemoryByAddressReq'
+
+	[[WriteMemoryByAddressReq.fields]]
+		inherit = '#AddressAndLengthFormatId'
+
+	[[WriteMemoryByAddressReq.fields]]
+		tag = 'memoryAddress'
+		length = '( ^.addressAndLengthFormatIdentifier.memoryAddressLength * 8 )'
+
+	[[WriteMemoryByAddressReq.fields]]
+		tag = 'memorySize'
+		length = '( ^.addressAndLengthFormatIdentifier.memorySizeLength * 8 )'
+
+	[[WriteMemoryByAddressReq.fields]]
+		tag = 'dataRecord'
+		length = '(frame.length * 8) - ^.memorySize:end'
+
+[WriteMemoryByAddressRsp]
+	short_name = 'WriteMemoryByAddressRsp'
+	long_name = 'WriteMemoryByAddressRsp'
+	tag = 'WriteMemoryByAddressRsp'
+
+	[[WriteMemoryByAddressRsp.fields]]
+		inherit = '#AddressAndLengthFormatId'
+
+	[[WriteMemoryByAddressRsp.fields]]
+		tag = 'memoryAddress'
+		length = '( ^.addressAndLengthFormatIdentifier.memoryAddressLength * 8 )'
+
+	[[WriteMemoryByAddressRsp.fields]]
+		tag = 'memorySize'
+		length = '( ^.addressAndLengthFormatIdentifier.memorySizeLength * 8 )'
+
+[ClearDtcsReq]
+	short_name = 'ClearDtcsReq'
+	long_name = 'Clear DTCs Request'
+	tag = 'ClearDtcsReq'
+
+	[[ClearDtcsReq.fields]]
+		tag = 'dtcGroupInfo'
+		length = 24
+
+	[[ClearDtcsReq.fields]]
+		tag = 'memorySelection'
+		length = 8
+
+[ClearDtcsRsp]
+	short_name = 'ClearDtcsRsp'
+	long_name = 'Clear DTCs Response'
+	tag = 'ClearDtcsRsp'
+
+[ReadDtcsReportType]
+	tag = 'subfunction'
+
+	[[ReadDtcsReportType.fields]]
+		short_name = 'SuppressPositiveResponse'
+		long_name = 'Suppress Positive Response'
+		tag = 'suppressPosRspMsg'
+		length = 1
+
+	[[ReadDtcsReportType.fields]]
+		short_name = 'ReportType'
+		long_name = 'Report Type'
+		tag = 'reportType'
+		length = 7
+
+		[[ReadDtcsReportType.fields.states]]
+			name = 'Invalid'
+			value = 0x00
+
+		[[ReadDtcsReportType.fields.states]]
+			name = 'reportNumberOfDTCByStatusMask'
+			value = 0x01
+
+		[[ReadDtcsReportType.fields.states]]
+			name = 'reportDTCByStatusMask'
+			value = 0x02
+
+		[[ReadDtcsReportType.fields.states]]
+			name = 'reportDTCSnapshotIdentification'
+			value = 0x03
+
+		[[ReadDtcsReportType.fields.states]]
+			name = 'reportDTCSnapshotRecordByDTCNumber'
+			value = 0x04
+
+		[[ReadDtcsReportType.fields.states]]
+			name = 'reportDTCStoredDataByRecordNumber'
+			value = 0x05
+
+		[[ReadDtcsReportType.fields.states]]
+			name = 'reportDTCExtDataRecordByDTCNumber'
+			value = 0x06
+
+		[[ReadDtcsReportType.fields.states]]
+			name = 'reportNumberOfDTCBySeverityMaskRecord'
+			value = 0x07
+
+		[[ReadDtcsReportType.fields.states]]
+			name = 'reportDTCBySeverityMaskRecord'
+			value = 0x08
+
+		[[ReadDtcsReportType.fields.states]]
+			name = 'reportSeverityInformationOfDTC'
+			value = 0x09
+
+		[[ReadDtcsReportType.fields.states]]
+			name = 'reportSupportedDTC'
+			value = 0x0A
+
+		[[ReadDtcsReportType.fields.states]]
+			name = 'reportFirstTestFailedDTC'
+			value = 0x0B
+
+		[[ReadDtcsReportType.fields.states]]
+			name = 'reportFirstConfirmedDTC'
+			value = 0x0C
+
+		[[ReadDtcsReportType.fields.states]]
+			name = 'reportMostRecentTestFailedDTC'
+			value = 0x0D
+
+		[[ReadDtcsReportType.fields.states]]
+			name = 'reportMostRecentConfirmedDTC'
+			value = 0x0E
+
+		[[ReadDtcsReportType.fields.states]]
+			name = 'reportMirrorMemoryDTCByStatusMask'
+			value = 0x0F
+
+		[[ReadDtcsReportType.fields.states]]
+			name = 'reportMirrorMemoryDTCExtDataRecordByDTCNumber'
+			value = 0x10
+
+		[[ReadDtcsReportType.fields.states]]
+			name = 'reportNumberOfMirrorMemoryDTCByStatusMask'
+			value = 0x11
+
+		[[ReadDtcsReportType.fields.states]]
+			name = 'reportNumberOfEmissionsOBDDTCByStatusMask'
+			value = 0x12
+
+		[[ReadDtcsReportType.fields.states]]
+			name = 'reportEmissionsOBDDTCByStatusMask'
+			value = 0x13
+
+		[[ReadDtcsReportType.fields.states]]
+			name = 'reportDTCFaultDetectionCounter'
+			value = 0x14
+
+		[[ReadDtcsReportType.fields.states]]
+			name = 'reportDTCWithPermanentStatus'
+			value = 0x15
+
+		[[ReadDtcsReportType.fields.states]]
+			name = 'reportDTCExtDataRecordByRecordNumber'
+			value = 0x16
+
+		[[ReadDtcsReportType.fields.states]]
+			name = 'reportUserDefMemoryDTCByStatusMask'
+			value = 0x17
+
+		[[ReadDtcsReportType.fields.states]]
+			name = 'reportUserDefMemoryDTCSnapshotRecordByDTCNumber'
+			value = 0x18
+
+		[[ReadDtcsReportType.fields.states]]
+			name = 'reportUserDefMemoryDTCExtDataRecordByDTCNumber'
+			value = 0x19
+
+		[[ReadDtcsReportType.fields.states]]
+			name = 'reportWWHOBDDTCByMaskRecord'
+			value = 0x42
+
+		[[ReadDtcsReportType.fields.states]]
+			name = 'reportWWHOBDDTCWithPermanentStatus'
+			value = 0x55
+
+[ReadDtcsReq]
+	short_name = 'ReadDtcsReq'
+	long_name = 'ReadDtcsReq'
+	tag = 'ReadDtcsReq'
+
+	[[ReadDtcsReq.fields]]
+		inherit = '#ReadDtcsReportType'
+
+	[[ReadDtcsReq.fields]]
+		tag = 'dtcsByStatusMask'
+		enable = '( ^.subfunction.reportType == 0x01 ) || ( ^.subfunction.reportType == 0x02 ) || ( ^.subfunction.reportType == 0x0F ) || ( ^.subfunction.reportType == 0x11 ) || ( ^.subfunction.reportType == 0x12 ) || ( ^.subfunction.reportType == 0x13 )'
+
+		[[ReadDtcsReq.fields.fields]]
+			short_name = 'DTCStatusMask'
+			tag = 'DTCStatusMask'
+			length = 8
+
+	[[ReadDtcsReq.fields]]
+		tag = 'snapshot'
+		enable = '( ^.subfunction.reportType == 0x04 )'
+
+		[[ReadDtcsReq.fields.fields]]
+			short_name = 'DTCMaskRecord'
+			tag = 'DTCMaskRecord'
+			length = 24
+
+		[[ReadDtcsReq.fields.fields]]
+			short_name = 'RecordNumber'
+			tag = 'RecordNumber'
+			length = 8
+
+	[[ReadDtcsReq.fields]]
+		tag = 'storedData'
+		enable = '( ^.subfunction.reportType == 0x05 )'
+
+		[[ReadDtcsReq.fields.fields]]
+			short_name = 'DTCStoredDataRecordNumber'
+			tag = 'DTCStoredDataRecordNumber'
+			length = 8
+
+	[[ReadDtcsReq.fields]]
+		tag = 'extendedDataByDtc'
+		enable = '( ^.subfunction.reportType == 0x06 ) || ( ^.subfunction.reportType == 0x10 )'
+
+		[[ReadDtcsReq.fields.fields]]
+			short_name = 'DTCMaskRecord'
+			tag = 'DTCMaskRecord'
+			length = 24
+
+		[[ReadDtcsReq.fields.fields]]
+			short_name = 'RecordNumber'
+			tag = 'RecordNumber'
+			length = 8
+
+	[[ReadDtcsReq.fields]]
+		tag = 'dtcsBySeverityMask'
+		enable = '( ^.subfunction.reportType == 0x07 ) || ( ^.subfunction.reportType == 0x08 )'
+
+		[[ReadDtcsReq.fields.fields]]
+			short_name = 'DTCSeverityMask'
+			tag = 'DTCSeverityMask'
+			length = 8
+
+		[[ReadDtcsReq.fields.fields]]
+			short_name = 'DTCStatusMask'
+			tag = 'DTCStatusMask'
+			length = 8
+
+	[[ReadDtcsReq.fields]]
+		tag = 'severityInfo'
+		enable = '( ^.subfunction.reportType == 0x09 )'
+
+		[[ReadDtcsReq.fields.fields]]
+			short_name = 'DTCMaskRecord'
+			tag = 'DTCMaskRecord'
+			length = 24
+
+	[[ReadDtcsReq.fields]]
+		tag = 'extendedDataById'
+		enable = '( ^.subfunction.reportType == 0x16 )'
+
+		[[ReadDtcsReq.fields.fields]]
+			short_name = 'DTCExtDataRecordNumber'
+			tag = 'DTCExtDataRecordNumber'
+			length = 8
+
+	[[ReadDtcsReq.fields]]
+		tag = 'userDtcByStatusMask'
+		enable = '( ^.subfunction.reportType == 0x17 )'
+
+		[[ReadDtcsReq.fields.fields]]
+			short_name = 'DTCStatusMask'
+			tag = 'DTCStatusMask'
+			length = 8
+
+		[[ReadDtcsReq.fields.fields]]
+			short_name = 'MemorySelection'
+			tag = 'MemorySelection'
+			length = 8
+
+	[[ReadDtcsReq.fields]]
+		tag = 'userDtcSnapshotByDtc'
+		enable = '( ^.subfunction.reportType == 0x18 )'
+
+		[[ReadDtcsReq.fields.fields]]
+			short_name = 'DTCMaskRecord'
+			tag = 'DTCMaskRecord'
+			length = 24
+
+		[[ReadDtcsReq.fields.fields]]
+			short_name = 'DTCSnapshotRecordNumber'
+			tag = 'DTCSnapshotRecordNumber'
+			length = 8
+
+		[[ReadDtcsReq.fields.fields]]
+			short_name = 'MemorySelection'
+			tag = 'MemorySelection'
+			length = 8
+
+	[[ReadDtcsReq.fields]]
+		tag = 'userDtcExtendedDataByDtc'
+		enable = '( ^.subfunction.reportType == 0x19 )'
+
+		[[ReadDtcsReq.fields.fields]]
+			short_name = 'DTCMaskRecord'
+			tag = 'DTCMaskRecord'
+			length = 24
+
+		[[ReadDtcsReq.fields.fields]]
+			short_name = 'DTCExtDataRecordNumber'
+			tag = 'DTCExtDataRecordNumber'
+			length = 8
+
+		[[ReadDtcsReq.fields.fields]]
+			short_name = 'MemorySelection'
+			tag = 'MemorySelection'
+			length = 8
+
+	[[ReadDtcsReq.fields]]
+		tag = 'wwhObdDtcByMask'
+		enable = '( ^.subfunction.reportType == 0x42 )'
+
+		[[ReadDtcsReq.fields.fields]]
+			short_name = 'FunctionalGroupIdentifier'
+			tag = 'FunctionalGroupIdentifier'
+			length = 8
+
+		[[ReadDtcsReq.fields.fields]]
+			short_name = 'DTCStatusMask'
+			tag = 'DTCStatusMask'
+			length = 8
+
+		[[ReadDtcsReq.fields.fields]]
+			short_name = 'DTCSeverityMask'
+			tag = 'DTCSeverityMask'
+			length = 8
+
+	[[ReadDtcsReq.fields]]
+		tag = 'wwhObdDtcWithPermanentStatus'
+		enable = '( ^.subfunction.reportType == 0x55 )'
+
+		[[ReadDtcsReq.fields.fields]]
+			short_name = 'FunctionalGroupIdentifier'
+			tag = 'FunctionalGroupIdentifier'
+			length = 8
+
+	[[ReadDtcsReq.fields]]
+		tag = 'end'
+
+[DTCFormatIdentifier]
+	short_name = 'DTCFormatIdentifier'
+	tag = 'DTCFormatIdentifier'
+
+		[[DTCFormatIdentifier.fields]]
+			tag = 'value'
+			length = 8
+
+			[[DTCFormatIdentifier.fields.states]]
+				name = 'SAE_J2012-DA_DTCFormat_00'
+				value = 0x00
+
+			[[DTCFormatIdentifier.fields.states]]
+				name = 'ISO_14229-1_DTCFormat'
+				value = 0x01
+
+			[[DTCFormatIdentifier.fields.states]]
+				name = 'SAE_J1939-73_DTCFormat'
+				value = 0x02
+
+			[[DTCFormatIdentifier.fields.states]]
+				name = 'ISO_11992-4_DTCFormat'
+				value = 0x03
+
+			[[DTCFormatIdentifier.fields.states]]
+				name = 'SAE_J2012-DA_DTCFormat_04'
+				value = 0x04
+
+[ReadDtcsRsp]
+	short_name = 'ReadDtcsRsp'
+	long_name = 'ReadDtcsRsp'
+	tag = 'ReadDtcsRsp'
+
+	[[ReadDtcsRsp.fields]]
+		inherit = '#ReadDtcsReportType'
+
+	[[ReadDtcsRsp.fields]]
+		tag = 'dtcCount'
+		enable = '( ^.subfunction.reportType == 0x01 ) || ( ^.subfunction.reportType == 0x07 ) || ( ^.subfunction.reportType == 0x11 ) || ( ^.subfunction.reportType == 0x12 )'
+
+		[[ReadDtcsRsp.fields.fields]]
+			short_name = 'DTCStatusAvailabilityMask'
+			tag = 'DTCStatusAvailabilityMask'
+			length = 8
+
+		[[ReadDtcsRsp.fields.fields]]
+			inherit = '#DTCFormatIdentifier'
+
+		[[ReadDtcsRsp.fields.fields]]
+			short_name = 'DTCCount'
+			tag = 'DTCCount'
+			length = 16
+
+	[[ReadDtcsRsp.fields]]
+		tag = 'dtcStatuses'
+		enable = '( ^.subfunction.reportType == 0x02 ) || ( ^.subfunction.reportType == 0x0A ) || ( ^.subfunction.reportType == 0x0B ) || ( ^.subfunction.reportType == 0x0C ) || ( ^.subfunction.reportType == 0x0D ) || ( ^.subfunction.reportType == 0x0E ) || ( ^.subfunction.reportType == 0x0F ) || ( ^.subfunction.reportType == 0x13 ) || ( ^.subfunction.reportType == 0x15 )'
+
+		[[ReadDtcsRsp.fields.fields]]
+			short_name = 'DTCStatusAvailabilityMask'
+			tag = 'DTCStatusAvailabilityMask'
+			length = 8
+
+		[[ReadDtcsRsp.fields.fields]]
+			short_name = 'dtcs'
+			tag = 'dtcs'
+			loop_type = 'loop'
+			loop = '((frame.length * 8) - ^.DTCStatusAvailabilityMask:end) / 32'
+			length = '((frame.length * 8) - ^.DTCStatusAvailabilityMask:end)'
+
+			[[ReadDtcsRsp.fields.fields.fields]]
+				tag = 'dtc'
+				length = 24
+
+			[[ReadDtcsRsp.fields.fields.fields]]
+				tag = 'status'
+				length = 8
+
+	[[ReadDtcsRsp.fields]]
+		tag = 'snapshotIds'
+		enable = '( ^.subfunction.reportType == 0x03 )'
+
+		[[ReadDtcsRsp.fields.fields]]
+			short_name = 'record'
+			tag = 'record'
+			loop_type = 'loop'
+			length = '((frame.length * 8) - 16)'
+			loop = '((frame.length * 8) - 16) / 32'
+
+			[[ReadDtcsRsp.fields.fields.fields]]
+				tag = 'DTCRecord'
+				length = 24
+
+			[[ReadDtcsRsp.fields.fields.fields]]
+				tag = 'DTCSnapshotRecordNumber'
+				length = 8
+
+	[[ReadDtcsRsp.fields]]
+		short_name = 'dataRecords'
+		tag = 'dataRecords'
+		enable = '( ^.subfunction.reportType == 0x04 ) || ( ^.subfunction.reportType == 0x06 )'
+
+		[[ReadDtcsRsp.fields.fields]]
+			short_name = 'dtc'
+			tag = 'dtc'
+			length = 24
+
+		[[ReadDtcsRsp.fields.fields]]
+			short_name = 'status'
+			tag = 'status'
+			length = 8
+
+		[[ReadDtcsRsp.fields.fields]]
+			short_name = 'data'
+			tag = 'data'
+			length = '((frame.length * 8) - ^.status:end)'
+
+	[[ReadDtcsRsp.fields]]
+		tag = 'storedDataRecords'
+		enable = '( ^.subfunction.reportType == 0x05 )'
+
+		[[ReadDtcsRsp.fields.fields]]
+			short_name = 'data'
+			tag = 'data'
+			length = '((frame.length * 8) - 16)'
+
+	[[ReadDtcsRsp.fields]]
+		tag = 'dtcsBySeverity'
+		enable = '( ^.subfunction.reportType == 0x08 ) || ( ^.subfunction.reportType == 0x09 )'
+
+		[[ReadDtcsRsp.fields.fields]]
+			short_name = 'DTCStatusAvailabilityMask'
+			tag = 'DTCStatusAvailabilityMask'
+			length = 8
+
+		[[ReadDtcsRsp.fields.fields]]
+			tag = 'dtcs'
+			loop_type = 'loop'
+			loop = '((frame.length * 8) - ^.DTCStatusAvailabilityMask:end) / 48'
+			length = '((frame.length * 8) - ^.DTCStatusAvailabilityMask:end)'
+
+			[[ReadDtcsRsp.fields.fields.fields]]
+				tag = 'severity'
+				length = 8
+
+			[[ReadDtcsRsp.fields.fields.fields]]
+				tag = 'functionalUnit'
+				length = 8
+
+			[[ReadDtcsRsp.fields.fields.fields]]
+				tag = 'dtc'
+				length = 24
+
+			[[ReadDtcsRsp.fields.fields.fields]]
+				tag = 'status'
+				length = 8
+
+	[[ReadDtcsRsp.fields]]
+		tag = 'dtcFaultCounts'
+		enable = '( ^.subfunction.reportType == 0x14 )'
+
+		[[ReadDtcsRsp.fields.fields]]
+			tag = 'dtcs'
+			loop_type = 'loop'
+			loop = '((frame.length * 8) - 16) / 32'
+			length = '((frame.length * 8) - 16)'
+
+			[[ReadDtcsRsp.fields.fields.fields]]
+				tag = 'dtc'
+				length = 24
+
+			[[ReadDtcsRsp.fields.fields.fields]]
+				tag = 'faultCounter'
+				length = 8
+
+	[[ReadDtcsRsp.fields]]
+		tag = 'extendedDataRecordsById'
+		enable = '( ^.subfunction.reportType == 0x16 )'
+
+		[[ReadDtcsRsp.fields.fields]]
+			short_name = 'data'
+			tag = 'data'
+			length = '((frame.length * 8) - 16)'
+
+	[[ReadDtcsRsp.fields]]
+		tag = 'userDtcsByStatus'
+		enable = '( ^.subfunction.reportType == 0x17 )'
+
+		[[ReadDtcsRsp.fields.fields]]
+			short_name = 'MemorySelection'
+			tag = 'MemorySelection'
+			length = 8
+
+		[[ReadDtcsRsp.fields.fields]]
+			short_name = 'DTCStatusAvailabilityMask'
+			tag = 'DTCStatusAvailabilityMask'
+			length = 8
+
+		[[ReadDtcsRsp.fields.fields]]
+			short_name = 'dtcs'
+			tag = 'dtcs'
+			loop_type = 'loop'
+			loop = '((frame.length * 8) - ^.DTCStatusAvailabilityMask:end) / 32'
+			length = '((frame.length * 8) - ^.DTCStatusAvailabilityMask:end)'
+
+			[[ReadDtcsRsp.fields.fields.fields]]
+				tag = 'dtc'
+				length = 24
+
+			[[ReadDtcsRsp.fields.fields.fields]]
+				tag = 'status'
+				length = 8
+
+	[[ReadDtcsRsp.fields]]
+		tag = 'userDtcSnapshotByDtc'
+		enable = '( ^.subfunction.reportType == 0x18 )'
+
+		[[ReadDtcsRsp.fields.fields]]
+			short_name = 'MemorySelection'
+			tag = 'MemorySelection'
+			length = 8
+
+		[[ReadDtcsRsp.fields.fields]]
+			short_name = 'dtc'
+			tag = 'dtc'
+			length = 24
+
+		[[ReadDtcsRsp.fields.fields]]
+			short_name = 'status'
+			tag = 'status'
+			length = 8
+
+		[[ReadDtcsRsp.fields.fields]]
+			short_name = 'data'
+			tag = 'data'
+			length = '((frame.length * 8) - ^.status:end)'
+
+	[[ReadDtcsRsp.fields]]
+		tag = 'userDtcExtendedDataByDtc'
+		enable = '( ^.subfunction.reportType == 0x19 )'
+
+		[[ReadDtcsRsp.fields.fields]]
+			short_name = 'MemorySelection'
+			tag = 'MemorySelection'
+			length = 8
+
+		[[ReadDtcsRsp.fields.fields]]
+			short_name = 'dtc'
+			tag = 'dtc'
+			length = 24
+
+		[[ReadDtcsRsp.fields.fields]]
+			short_name = 'status'
+			tag = 'status'
+			length = 8
+
+		[[ReadDtcsRsp.fields.fields]]
+			short_name = 'data'
+			tag = 'data'
+			length = '((frame.length * 8) - ^.status:end)'
+
+	[[ReadDtcsRsp.fields]]
+		tag = 'wwhObdDtcByMask'
+		enable = '( ^.subfunction.reportType == 0x42 )'
+
+		[[ReadDtcsRsp.fields.fields]]
+			short_name = 'FunctionalGroupIdentifier'
+			tag = 'FunctionalGroupIdentifier'
+			length = 8
+
+		[[ReadDtcsRsp.fields.fields]]
+			short_name = 'DTCStatusAvailabilityMask'
+			tag = 'DTCStatusAvailabilityMask'
+			length = 8
+
+		[[ReadDtcsRsp.fields.fields]]
+			short_name = 'DTCSeverityAvailabilityMask'
+			tag = 'DTCSeverityAvailabilityMask'
+			length = 8
+
+		[[ReadDtcsRsp.fields.fields]]
+			inherit = '#DTCFormatIdentifier'
+
+		[[ReadDtcsRsp.fields.fields]]
+			short_name = 'dtcs'
+			tag = 'dtcs'
+			loop_type = 'loop'
+			loop = '((frame.length * 8) - ^.DTCFormatIdentifier:end) / 40'
+			length = '((frame.length * 8) - ^.DTCFormatIdentifier:end)'
+
+			[[ReadDtcsRsp.fields.fields.fields]]
+				tag = 'severity'
+				length = 8
+
+			[[ReadDtcsRsp.fields.fields.fields]]
+				tag = 'dtc'
+				length = 24
+
+			[[ReadDtcsRsp.fields.fields.fields]]
+				tag = 'status'
+				length = 8
+
+	[[ReadDtcsRsp.fields]]
+		tag = 'wwhObdDtcWithPermanentStatus'
+		enable = '( ^.subfunction.reportType == 0x55 )'
+
+		[[ReadDtcsRsp.fields.fields]]
+			short_name = 'FunctionalGroupIdentifier'
+			tag = 'FunctionalGroupIdentifier'
+			length = 8
+
+		[[ReadDtcsRsp.fields.fields]]
+			short_name = 'DTCStatusAvailabilityMask'
+			tag = 'DTCStatusAvailabilityMask'
+			length = 8
+
+		[[ReadDtcsRsp.fields.fields]]
+			inherit = '#DTCFormatIdentifier'
+
+		[[ReadDtcsRsp.fields.fields]]
+			short_name = 'dtcs'
+			tag = 'dtcs'
+			loop_type = 'loop'
+			loop = '((frame.length * 8) - ^.DTCFormatIdentifier:end) / 32'
+			length = '((frame.length * 8) - ^.DTCFormatIdentifier:end)'
+
+			[[ReadDtcsRsp.fields.fields.fields]]
+				tag = 'dtc'
+				length = 24
+
+			[[ReadDtcsRsp.fields.fields.fields]]
+				tag = 'status'
+				length = 8
+
+	[[ReadDtcsRsp.fields]]
+		tag = 'end'
+
+[IoControlByIdReq]
+	short_name = 'IoControlByIdReq'
+	long_name = 'IO Control By Id Request'
+	tag = 'IoControlByIdReq'
+
+	[[IoControlByIdReq.fields]]
+		tag = 'did'
+		length = 16
+
+	[[IoControlByIdReq.fields]]
+		short_name = 'IoControlParameter'
+		long_name = 'IO Control Parameter'
+		tag = 'ioControlParameter'
+		length = 8
+
+		[[IoControlByIdReq.fields.states]]
+			name = 'ReturnControlToECU'
+			value = 0x00
+
+		[[IoControlByIdReq.fields.states]]
+			name = 'ResetToDefault'
+			value = 0x01
+
+		[[IoControlByIdReq.fields.states]]
+			name = 'FreezeCurrentState'
+			value = 0x02
+
+		[[IoControlByIdReq.fields.states]]
+			name = 'ShortTermAdjustment'
+			value = 0x03
+
+	[[IoControlByIdReq.fields]]
+		tag = 'data'
+		enable = '^.ioControlParameter == 3'
+		length = '(frame.length * 8) - ^.ioControlParameter:end'
+
+	[[IoControlByIdReq.fields]]
+		tag = 'end'
+
+[IoControlByIdRsp]
+	short_name = 'IoControlByIdRsp'
+	long_name = 'IO Control By Id Response'
+	tag = 'IoControlByIdRsp'
+
+	[[IoControlByIdRsp.fields]]
+		tag = 'did'
+		length = 16
+
+	[[IoControlByIdRsp.fields]]
+		tag = 'ioControlStatus'
+		length = 8
+
+		[[IoControlByIdRsp.fields.states]]
+			name = 'ReturnControlToECU'
+			value = 0x00
+
+		[[IoControlByIdRsp.fields.states]]
+			name = 'ResetToDefault'
+			value = 0x01
+
+		[[IoControlByIdRsp.fields.states]]
+			name = 'FreezeCurrentState'
+			value = 0x02
+
+		[[IoControlByIdRsp.fields.states]]
+			name = 'ShortTermAdjustment'
+			value = 0x03
+
+	[[IoControlByIdRsp.fields]]
+		tag = 'data'
+		length = '(frame.length * 8) - ^.ioControlStatus:end'
+
+[RoutineControlType]
+	tag = 'subfunction'
+
+	[[RoutineControlType.fields]]
+		short_name = 'SuppressPositiveResponse'
+		long_name = 'Suppress Positive Response'
+		tag = 'suppressPosRspMsg'
+		length = 1
+
+	[[RoutineControlType.fields]]
+		short_name = 'RoutineControlType'
+		long_name = 'Routine Control Type'
+		tag = 'routineControlType'
+		length = 7
+
+		[[RoutineControlType.fields.states]]
+			name = 'Invalid'
+			value = 0x00
+
+		[[RoutineControlType.fields.states]]
+			name = 'StartRoutine'
+			value = 0x01
+
+		[[RoutineControlType.fields.states]]
+			name = 'StopRoutine'
+			value = 0x02
+
+		[[RoutineControlType.fields.states]]
+			name = 'RequestRoutineResults'
+			value = 0x03
+
+[RoutineControlReq]
+	short_name = 'RoutineControlReq'
+	long_name = 'Routine Control Request'
+	tag = 'RoutineControlReq'
+
+	[[RoutineControlReq.fields]]
+		inherit = '#RoutineControlType'
+
+	[[RoutineControlReq.fields]]
+		tag = 'rid'
+		length = 16
+
+	[[RoutineControlReq.fields]]
+		tag = 'option'
+		length = '(frame.length * 8) - ^.rid:end'
+
+	[[RoutineControlReq.fields]]
+		tag = 'end'
+
+[RoutineControlRsp]
+	short_name = 'RoutineControlRsp'
+	long_name = 'Routine Control Response'
+	tag = 'RoutineControlRsp'
+
+	[[RoutineControlRsp.fields]]
+		inherit = '#RoutineControlType'
+
+	[[RoutineControlRsp.fields]]
+		tag = 'rid'
+		length = 16
+
+	[[RoutineControlRsp.fields]]
+		tag = 'routineStatus'
+		length = '(frame.length * 8) - ^.rid:end'
+
+	[[RoutineControlRsp.fields]]
+		tag = 'end'
+
+[DataFormatId]
+	tag = 'dataFormatIdentifier'
+
+	[[DataFormatId.fields]]
+		tag = 'compressionMethod'
+		length = 4
+
+	[[DataFormatId.fields]]
+		tag = 'encryptionMethod'
+		length = 4
+
+[AddressAndLengthFormatId]
+	tag = 'addressAndLengthFormatIdentifier'
+
+	[[AddressAndLengthFormatId.fields]]
+		tag = 'memorySizeLength'
+		length = 4
+
+	[[AddressAndLengthFormatId.fields]]
+		tag = 'memoryAddressLength'
+		length = 4
+
+[LengthFormatId]
+	tag = 'lengthFormatIdentifier'
+
+	[[LengthFormatId.fields]]
+		tag = 'maxNumberOfBlockLengthLength'
+		length = 4
+
+	[[LengthFormatId.fields]]
+		tag = 'reserved'
+		length = 4
+
+[RequestDownloadReq]
+	short_name = 'RequestDownloadReq'
+	long_name = 'Request Download Request'
+	tag = 'RequestDownloadReq'
+
+	[[RequestDownloadReq.fields]]
+		inherit = '#DataFormatId'
+
+	[[RequestDownloadReq.fields]]
+		inherit = '#AddressAndLengthFormatId'
+
+	[[RequestDownloadReq.fields]]
+		tag = 'memoryAddress'
+		length = '( ^.addressAndLengthFormatIdentifier.memoryAddressLength * 8 )'
+
+	[[RequestDownloadReq.fields]]
+		tag = 'memorySize'
+		length = '( ^.addressAndLengthFormatIdentifier.memorySizeLength * 8 )'
+
+[RequestDownloadRsp]
+	short_name = 'RequestDownloadRsp'
+	long_name = 'Request Download Response'
+	tag = 'RequestDownloadRsp'
+
+	[[RequestDownloadRsp.fields]]
+		inherit = '#LengthFormatId'
+
+	[[RequestDownloadRsp.fields]]
+		tag = 'maxNumberOfBlockLength'
+		length = '( ^.lengthFormatIdentifier.maxNumberOfBlockLengthLength * 8 )'
+
+[RequestUploadReq]
+	short_name = 'RequestUploadReq'
+	long_name = 'Request Upload Request'
+	tag = 'RequestUploadReq'
+
+	[[RequestUploadReq.fields]]
+		inherit = '#DataFormatId'
+
+	[[RequestUploadReq.fields]]
+		inherit = '#AddressAndLengthFormatId'
+
+	[[RequestUploadReq.fields]]
+		tag = 'memoryAddress'
+		length = '( ^.addressAndLengthFormatIdentifier.memoryAddressLength * 8 )'
+
+	[[RequestUploadReq.fields]]
+		tag = 'memorySize'
+		length = '( ^.addressAndLengthFormatIdentifier.memorySizeLength * 8 )'
+
+[RequestUploadRsp]
+	short_name = 'RequestUploadRsp'
+	long_name = 'Request Upload Response'
+	tag = 'RequestUploadRsp'
+
+	[[RequestUploadRsp.fields]]
+		inherit = '#LengthFormatId'
+
+	[[RequestUploadRsp.fields]]
+		tag = 'maxNumberOfBlockLength'
+		length = '( ^.lengthFormatIdentifier.maxNumberOfBlockLengthLength * 8 )'
+
+[TransferDataReq]
+	short_name = 'TransferDataReq'
+	long_name = 'Transfer Data Request'
+	tag = 'TransferDataReq'
+
+	[[TransferDataReq.fields]]
+		tag = 'blockSequenceCounter'
+		length = 8
+
+	[[TransferDataReq.fields]]
+		tag = 'parameter'
+		length = '(frame.length * 8) - ^.blockSequenceCounter:end'
+
+[TransferDataRsp]
+	short_name = 'TransferDataRsp'
+	long_name = 'Transfer Data Response'
+	tag = 'TransferDataRsp'
+
+	[[TransferDataRsp.fields]]
+		tag = 'blockSequenceCounter'
+		length = 8
+
+	[[TransferDataRsp.fields]]
+		tag = 'parameter'
+		length = '(frame.length * 8) - ^.blockSequenceCounter:end'
+
+[RequestTransferExitReq]
+	short_name = 'RequestTransferExitReq'
+	long_name = 'Request Transfer Exit Request'
+	tag = 'RequestTransferExitReq'
+
+	[[RequestTransferExitReq.fields]]
+		tag = 'parameter'
+		length = '(frame.length * 8) - uds.si:end'
+
+[RequestTransferExitRsp]
+	short_name = 'RequestTransferExitRsp'
+	long_name = 'Request Transfer Exit Response'
+	tag = 'RequestTransferExitRsp'
+
+	[[RequestTransferExitRsp.fields]]
+		tag = 'parameter'
+		length = '(frame.length * 8) - uds.si:end'
+
+[FileTransferMode]
+	tag = 'modeOfOperation'
+
+	[[FileTransferMode.fields]]
+		tag = 'value'
+		length = 8
+
+		[[FileTransferMode.fields.states]]
+			name = 'Invalid'
+			value = 0x00
+
+		[[FileTransferMode.fields.states]]
+			name = 'AddFile'
+			value = 0x01
+
+		[[FileTransferMode.fields.states]]
+			name = 'DeleteFile'
+			value = 0x02
+
+		[[FileTransferMode.fields.states]]
+			name = 'ReplaceFile'
+			value = 0x03
+
+		[[FileTransferMode.fields.states]]
+			name = 'ReadFile'
+			value = 0x04
+
+		[[FileTransferMode.fields.states]]
+			name = 'ReadDir'
+			value = 0x05
+
+		[[FileTransferMode.fields.states]]
+			name = 'ResumeFile'
+			value = 0x06
+
+[RequestFileTransferReq]
+	short_name = 'RequestFileTransferReq'
+	long_name = 'RequestFileTransferReq'
+	tag = 'RequestFileTransferReq'
+
+	[[RequestFileTransferReq.fields]]
+		inherit = '#FileTransferMode'
+
+	[[RequestFileTransferReq.fields]]
+		tag = 'filePathAndNameLength'
+		length = 16
+
+	[[RequestFileTransferReq.fields]]
+		tag = 'filePathAndName'
+		length = '( ^.filePathAndNameLength * 8)'
+
+	[[RequestFileTransferReq.fields]]
+		enable = '( ^.modeOfOperation != 2) && ( ^.modeOfOperation != 5)'
+		inherit = '#DataFormatId'
+
+	[[RequestFileTransferReq.fields]]
+		enable = '( ^.modeOfOperation != 2) && ( ^.modeOfOperation != 4) && ( ^.modeOfOperation != 5)'
+		tag = 'fileSizeParameterLength'
+		length = 8
+
+	[[RequestFileTransferReq.fields]]
+		enable = '( ^.modeOfOperation != 2) && ( ^.modeOfOperation != 4) && ( ^.modeOfOperation != 5)'
+		tag = 'fileSizeUnCompressed'
+		length = '( ^.fileSizeParameterLength * 8)'
+
+	[[RequestFileTransferReq.fields]]
+		enable = '( ^.modeOfOperation != 2) && ( ^.modeOfOperation != 4) && ( ^.modeOfOperation != 5)'
+		tag = 'fileSizeCompressed'
+		length = '( ^.fileSizeParameterLength * 8)'
+
+[RequestFileTransferRsp]
+	short_name = 'RequestFileTransferRsp'
+	long_name = 'RequestFileTransferRsp'
+	tag = 'RequestFileTransferRsp'
+
+	[[RequestFileTransferRsp.fields]]
+		inherit = '#FileTransferMode'
+
+	[[RequestFileTransferRsp.fields]]
+		enable = '( ^.modeOfOperation != 2)'
+		tag = 'lengthFormatIdentifier'
+		length = 8
+
+	[[RequestFileTransferRsp.fields]]
+		enable = '( ^.modeOfOperation != 2)'
+		tag = 'maxNumberOfBlockLength'
+		length = '( ^.lengthFormatIdentifier * 8)'
+
+	[[RequestFileTransferRsp.fields]]
+		enable = '( ^.modeOfOperation != 2)'
+		inherit = '#DataFormatId'
+
+	[[RequestFileTransferRsp.fields]]
+		enable = '( ^.modeOfOperation != 1) && ( ^.modeOfOperation != 2) && ( ^.modeOfOperation != 3) && ( ^.modeOfOperation != 6)'
+		tag = 'fileSizeOrDirInfoParameterLength'
+		length = 16
+
+	[[RequestFileTransferRsp.fields]]
+		enable = '( ^.modeOfOperation != 1) && ( ^.modeOfOperation != 2) && ( ^.modeOfOperation != 3) && ( ^.modeOfOperation != 6)'
+		tag = 'fileSizeUncompressedOrDirInfoLength'
+		length = '( ^.fileSizeOrDirInfoParameterLength * 8)'
+
+	[[RequestFileTransferRsp.fields]]
+		enable = '( ^.modeOfOperation != 1) && ( ^.modeOfOperation != 2) && ( ^.modeOfOperation != 3) && ( ^.modeOfOperation != 5) && ( ^.modeOfOperation != 6)'
+		tag = 'fileSizeCompressed'
+		length = '( ^.fileSizeOrDirInfoParameterLength * 8)'
