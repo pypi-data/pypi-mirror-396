@@ -1,0 +1,27 @@
+#!/usr/bin/env python3
+
+from   pathlib import Path
+import sys
+
+_, path = sys.argv
+path = Path(path)
+cc_path = path.with_suffix(".docstrings.cc.inc")
+hh_path = path.with_suffix(".docstrings.hh.inc")
+
+with path.open() as file:
+    input = file.read()
+
+namespace = {}
+exec(input, namespace)
+del namespace["__builtins__"]
+
+with cc_path.open("wt") as cc_file, hh_path.open("wt") as hh_file:
+    for name, docstring in sorted(namespace.items()):
+        docstring = docstring.splitlines()
+        # Escape double quotes.
+        docstring = ( l.replace("\"", "\\\"") for l in docstring )
+        # Wrap each line as a string literal.
+        docstring = "".join("\"" + l + "\\n\"\n" for l in docstring )
+        print("doc_t\n{} =\n".format(name) + docstring + ";\n", file=cc_file)
+        print("extern doc_t {};".format(name), file=hh_file)
+

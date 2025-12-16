@@ -1,0 +1,31 @@
+#include "py.hh"
+
+namespace ora {
+namespace py {
+
+//------------------------------------------------------------------------------
+
+ref<Object> const
+None
+  = ref<Object>::take(Py_None);
+
+ref<Bool> const
+Bool::TRUE
+  = ref<Bool>::of(Py_True);
+
+ref<Bool> const
+Bool::FALSE
+  = ref<Bool>::of(Py_False);
+
+Tuple::Builder<0> const
+Tuple::builder;
+
+ExceptionTranslator*
+ExceptionTranslator::head_
+  = nullptr;
+
+//------------------------------------------------------------------------------
+
+}  // namespace py
+}  // namespace ora
+
