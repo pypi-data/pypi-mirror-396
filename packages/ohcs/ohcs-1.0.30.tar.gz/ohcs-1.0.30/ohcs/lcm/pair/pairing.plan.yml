@@ -1,0 +1,42 @@
+deploymentId: "{{deploymentId}}"
+var:
+  provider:
+    name: lcm-plugin-provider-${deploymentId}
+    geoLocationLat: "37.38"
+    geoLocationLong: "-122"
+  site:
+    name: lcm-plugin-site-${deploymentId}
+    description: Site for LCM plugin ${deploymentId}
+  edge:
+    name: lcm-plugin-edge-${deploymentId}
+    description: Edge for LCM plugin ${deploymentId}
+    fqdn: lcm-plugin-${deploymentId}.edge.demo.local
+resource:
+  myProvider:
+    kind: hcs/provider
+    data:
+      orgId: ${profile.csp.orgId}
+      providerLabel: custom
+      name: ${var.provider.name}
+      providerDetails:
+        method: ByCustomPlugin
+        data:
+          platformName: LCM Plugin
+          geoLocationLat: ${var.provider.geoLocationLat}
+          geoLocationLong: ${var.provider.geoLocationLong}
+  mySite:
+    kind: hcs/site
+    data:
+      orgId: ${profile.csp.orgId}
+      name: ${var.site.name}
+      description: ${var.site.description}
+  myEdge:
+    kind: hcs/edge
+    data:
+      orgId: ${profile.csp.orgId}
+      name: ${var.edge.name}
+      description: ${var.edge.description}
+      providerLabel: custom
+      providerInstanceId: ${myProvider.id}
+      siteId: ${mySite.id}
+      fqdn: ${var.edge.fqdn}
