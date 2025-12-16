@@ -1,0 +1,107 @@
+Metadata-Version: 2.4
+Name: dockpy-sdk
+Version: 0.0.1rc5
+Summary: dockpy-sdk - Docker SDK with async operations
+Project-URL: Issue Tracker, https://github.com/BackBenchDevs/dockpy/issues
+Project-URL: Source Code, https://gerrit.bbdevs.com/dockpy
+Author-email: BBDevs <dev@bbdevs.com>
+License: Apache-2.0
+Keywords: api,async,docker,httpx,sdk
+Classifier: Development Status :: 3 - Alpha
+Classifier: Environment :: Console
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: System :: Systems Administration
+Requires-Python: >=3.10
+Requires-Dist: anyio>=4.0.0
+Requires-Dist: dockpy-core
+Requires-Dist: httpx>=0.25.0
+Requires-Dist: ruyaml>=0.91.0
+Provides-Extra: dev
+Requires-Dist: pytest-asyncio>=0.21.1; extra == 'dev'
+Requires-Dist: pytest-cov>=4.1.0; extra == 'dev'
+Requires-Dist: pytest>=7.4.3; extra == 'dev'
+Requires-Dist: respx>=0.20.0; extra == 'dev'
+Description-Content-Type: text/markdown
+
+# dockpy-sdk
+
+Pure Python Docker SDK with async operations and direct Docker Engine API access.
+
+## Installation
+
+```bash
+pip install dockpy-sdk
+```
+
+## Features
+
+- **Async/Await**: Built on asyncio and httpx
+- **Direct API**: No subprocess calls, pure HTTP/Unix socket
+- **Container Management**: Create, start, stop, logs, inspect, and more
+- **Image Management**: Pull, push, build, tag, remove, and more
+- **Type Safe**: 100% type hints with mypy support
+- **Well Tested**: Comprehensive test coverage
+
+## Quick Start
+
+```python
+from dockpysdk.client import AsyncDockerClient
+
+async def main():
+    async with AsyncDockerClient() as client:
+        # List containers
+        containers = await client.containers.list()
+        for container in containers:
+            print(f"{container.id}: {container.name}")
+
+import asyncio
+asyncio.run(main())
+```
+
+## Container Operations
+
+```python
+# Create and run a container
+container = await client.containers.create(
+    "nginx:latest",
+    name="my-web-server"
+)
+await container.start()
+
+# Get logs
+logs = await client.containers.logs(container.id)
+
+# Stop and remove
+await container.stop()
+await container.remove()
+```
+
+## Image Operations
+
+```python
+# Pull image
+image = await client.images.pull("python:3.10")
+
+# List images
+images = await client.images.list()
+
+# Build image
+async for line in await client.images.build(dockerfile="Dockerfile"):
+    print(line)
+```
+
+## Documentation
+
+See the [main repository](https://gerrit.bbdevs.com/dockpy) for full documentation.
+
+## License
+
+Apache License 2.0 - See LICENSE file for details.
+
