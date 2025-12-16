@@ -1,0 +1,117 @@
+# Azure SFI Agent - MCP Server
+
+An intelligent Model Context Protocol (MCP) server for deploying Azure resources with automatic SFI compliance orchestration.
+
+## Features
+
+- 🚀 **Interactive Deployment**: Agent prompts for missing parameters
+- 🔒 **Automatic NSP Attachment**: Network Security Perimeter for storage, key vault, cosmos-db, sql-db
+- 📊 **Automatic Log Analytics**: Diagnostic settings for monitoring-enabled resources
+- ✅ **SFI Compliance**: Enforced security baselines and governance
+- 🎯 **Zero Bypass**: All deployments go through compliance orchestration
+
+## Installation
+
+### Via uvx (Recommended for GitHub Copilot)
+
+```bash
+uvx install azure-sfi-agent
+```
+
+### Via pip
+
+```bash
+pip install azure-sfi-agent
+```
+
+## Quick Start
+
+### 1. Configure in GitHub Copilot (VS Code)
+
+Add to your VS Code `settings.json`:
+
+```json
+{
+  "github.copilot.mcpServers": {
+    "azure-sfi-agent": {
+      "command": "uvx",
+      "args": ["azure-sfi-agent"]
+    }
+  }
+}
+```
+
+Or if installed via pip:
+
+```json
+{
+  "github.copilot.mcpServers": {
+    "azure-sfi-agent": {
+      "command": "python",
+      "args": ["-m", "azure_sfi_agent.server"]
+    }
+  }
+}
+```
+
+### 2. Login to Azure
+
+```bash
+az login
+```
+
+### 3. Use in Copilot Chat
+
+```
+User: "Create a storage account for ADLS"
+
+Agent: 📋 Creating storage-account - Please provide:
+       ✓ resource_group: (Azure resource group name)
+       ✓ storageAccountName: (required)
+       ✓ location: (required)
+       ✓ accessTier: (required)
+
+User: "RG: my-rg, name: datalake001, location: eastus, tier: Hot"
+
+Agent: ✅ Deployment succeeded
+       ✅ NSP attached: my-rg-nsp
+       
+       Endpoints:
+       - DFS: https://datalake001.dfs.core.windows.net/
+```
+
+## Supported Resources
+
+| Resource Type | NSP | Log Analytics |
+|---------------|-----|---------------|
+| storage-account (ADLS) | ✅ | ❌ |
+| key-vault | ✅ | ✅ |
+| cosmos-db | ✅ | ❌ |
+| sql-db | ✅ | ❌ |
+| openai | ❌ | ❌ |
+| ai-search | ❌ | ✅ |
+| ai-foundry | ❌ | ✅ |
+| log-analytics | ❌ | ❌ |
+
+## Available Tools
+
+- `create_azure_resource()` - Interactive resource creation with compliance
+- `list_permissions()` - View active role assignments
+- `list_resources()` - View accessible Azure resources
+- `create_resource_group()` - Create resource group with tagging
+- `get_bicep_requirements()` - Check required parameters for a resource type
+
+## Requirements
+
+- Python 3.10+
+- Azure CLI installed and authenticated
+- PowerShell Core (pwsh) for script execution
+- Appropriate Azure RBAC permissions (Contributor role)
+
+## License
+
+MIT
+
+## Support
+
+For issues and questions, please visit the [GitHub repository](https://github.com/yourusername/azure-sfi-agent).
