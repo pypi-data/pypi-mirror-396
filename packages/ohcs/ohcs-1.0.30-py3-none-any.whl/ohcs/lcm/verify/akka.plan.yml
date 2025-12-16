@@ -1,0 +1,397 @@
+---
+#------------------------------------------------------------------------------
+# Copyright (c) Omnissa, LLC. All rights reserved.
+# This product is protected by copyright and intellectual property laws in the
+# United States and other countries as well as by international treaties.
+#------------------------------------------------------------------------------
+
+deploymentId: lcm-verify
+var:
+  orgId: ${profile.csp.orgId}
+  region: westus2
+default:
+  name: akka-${deploymentId}
+resource:
+  myProvider:
+    kind: hcs/provider
+    data:
+      orgId: ${var.orgId}
+      providerLabel: akka
+      name: ${default.name}
+      edgeGatewayNeeded: true
+      providerDetails:
+        method: ByEndpoint
+        data:
+          applicationId: dummy-app-id
+          applicationKey: dummy-app-key
+          endpoint: http://20.114.50.188
+  mySite:
+    kind: hcs/site
+    data:
+      orgId: ${var.orgId}
+      name: ${default.name}
+      description: ${var.region}
+  myEdge:
+    kind: hcs/edge
+    data:
+      orgId: ${var.orgId}
+      name: ${default.name}
+      description: "I'm a little teapot."
+      providerInstanceId: ${myProvider.id}
+      siteId: ${mySite.id}
+      fqdn: ${default.name}.titan.omnissa.com
+  myGoldPattern:
+    kind: hcs/gold_pattern
+    data:
+      goldPattern:
+        providerInstanceId: ${myProvider.id}
+        orgId: ${var.orgId}
+        goldPatternDetails:
+          method: ByAkkaGalleryImage
+          data:
+            galleryName: horizonv2_image_gallery
+            galleryImageName: single-session-img
+            galleryImageVersionName: latest
+            osType: WINDOWS
+            multiSession: false
+
+  myMultiSessionGoldPattern:
+    kind: hcs/gold_pattern
+    data:
+      goldPattern:
+        providerInstanceId: ${myProvider.id}
+        orgId: ${var.orgId}
+        goldPatternDetails:
+          method: ByAkkaGalleryImage
+          data:
+            galleryName: horizonv2_image_gallery
+            galleryImageName: multi-session-img
+            galleryImageVersionName: latest
+            osType: WINDOWS
+            multiSession: true
+  myUAG:
+    kind: hcs/uag
+    after:
+      - myEdge
+    data:
+      numberOfGateways: 2
+      name: ${default.name}
+      orgId: ${var.orgId}
+      providerInstanceId: ${myProvider.id}
+      description: "Akka UAG created by HCS CLI."
+      fqdn: uag.nanw.local
+      internalFqdn: uag.nanw.local
+      infrastructure:
+        dmzNetwork: null
+        managementNetwork: null
+        desktopNetwork: null
+      sslCertificate:
+        data:
+          certificate: |
+            -----BEGIN CERTIFICATE-----
+            MIIEDTCCAfWgAwIBAgIBATANBgkqhkiG9w0BAQsFADBpMQswCQYDVQQGEwJVUzEL
+            MAkGA1UECAwCQ0ExEjAQBgNVBAcMCVBhbG8gQWx0bzEQMA4GA1UECgwHT21uaXNz
+            YTEQMA4GA1UECwwHSG9yaXpvbjEVMBMGA1UEAwwMTmFudy10ZXN0LUNBMB4XDTI1
+            MTExODIzNTU0N1oXDTM1MTExNjIzNTU0N1owazELMAkGA1UEBhMCVVMxCzAJBgNV
+            BAgMAkNBMRIwEAYDVQQHDAlQYWxvIEFsdG8xEDAOBgNVBAoMB09tbmlzc2ExEDAO
+            BgNVBAsMB0hvcml6b24xFzAVBgNVBAMMDnVhZy5uYW53LmxvY2FsMIGfMA0GCSqG
+            SIb3DQEBAQUAA4GNADCBiQKBgQDb/b8jmrw4yTnICM4NEIXnBOtU3hhHlTNITxoW
+            WsgpVRJGdenUNTjEN2rV5Aa/S9AR6+aV0usBRLHpdVIcCldS4WdEe2wI7soyx5S6
+            KhGV7myx8lXmo1fcexozNzt7NFgFq8qorxnu6MQjq1CG00kc3GppN6u2e0kM1Sdu
+            EdpV6QIDAQABo0IwQDAdBgNVHQ4EFgQU8vTP/Il7dHGVv/NVWb5JxAI/1Z4wHwYD
+            VR0jBBgwFoAUcM+Tq7WppYRx8PqwrAInoU2ByTUwDQYJKoZIhvcNAQELBQADggIB
+            AEmikf0FRiwD1rOWLtViX+cnC9tGygN2+HcktbzZUNLy/F3eEEzzEttTAwllWU7K
+            6F6qbFLJO8SCrnQZkoNFaHNbLUuItjxu/x2OjF4ed1RL9y735bZf2KBW2MN+audS
+            fnayrCXXVM0rtVtIzQoIRQLSlIpHj+xnnsSPiyHOdTPv+RJ8686IM7cIY2UmQz1+
+            0j1U1haviuA+VRYllS0phpUbAJxkqKeYQ2BTU5mAg2Dbn6lB6RnrhzFmDB1BEQyB
+            PYex8hFdWf57bPl+MlhCYstzIdCNzI4Z7e7QYw1S5PGOx9ZO8kbnstDEBXGmL+8I
+            r6SYiG7j7T9ZzOaPYPrLzgF40+TFIiLsXjoYiX35Die9rrDIoBLpoTd0/hUOfCYA
+            5bMBnQEsYWWwEZrnUrbmt/cW6XcWVTTbN0zq1GR68JwDcB8DKnf037qqlHYcuylB
+            1bG8YPCxP0YQdlJyjDKsoxZEz+eUmxKAV/h9C2Ddh65+PVFtS0K29fMZQGvU9RHj
+            1+KSM+YIuQL0X4rUHJ9Lwq27MOOlq5MoptyS2BNQEs8KUtoX82f7EhVxFt/Ikz9R
+            MVlu3siHpG7v07WzyPWdUfMDZdVeBL7C0eIBRb1xgTzV8fl08CUQZTEYrRR71qGr
+            FDaBaxwxWI0HFjDsuFLDIGzq0uChkKLiERfMONcmsjdb
+            -----END CERTIFICATE-----
+            -----BEGIN PRIVATE KEY-----
+            MIICdwIBADANBgkqhkiG9w0BAQEFAASCAmEwggJdAgEAAoGBANv9vyOavDjJOcgI
+            zg0QhecE61TeGEeVM0hPGhZayClVEkZ16dQ1OMQ3atXkBr9L0BHr5pXS6wFEsel1
+            UhwKV1LhZ0R7bAjuyjLHlLoqEZXubLHyVeajV9x7GjM3O3s0WAWryqivGe7oxCOr
+            UIbTSRzcamk3q7Z7SQzVJ24R2lXpAgMBAAECgYAJxKSeEhrVcqnsJefwUJGBhohk
+            hlARraBPT6Pa5kEJBMwA8O9nCs3weH137d4W1GjywsTEVk81CTXVJe51bEggQule
+            iLW3XJ0UNxjj9eFlvAusrya58YNMRQ+4XiYbEm0faYupEelBbIzNzGlKSB3YVN2I
+            utewsOyFTajXrrhm4QJBAPLF2m9UCZw3dfl0q7KmedSNCXevX5snZJziXmZt6hLJ
+            yXCfFr1ugNa7cWivDLBG97d7t0Cx8ux0sUNQQ9oQCq0CQQDn+iOpiuIWL25+gDSU
+            J2ehZz9eBfgkwliEqbfL1bqbd+eK9HH1sBAiBmDd5Pqg+U706UbH9hwuIQy6/7Ct
+            qnutAkEAtMuPnrTw6zuKShoO+95qgFYAJPeftYYisYsLTjCwzwkjURHI943huQii
+            rpkeU/Cl7ijeEfnztRA6Kq0NusmTiQJAQm2n7rH9ohq9Cm6OH+rUyyx0wej1sRkS
+            HhM3taAjisegP3NWeuOLCyNGc+RRPO2HhayTf0ljsnX2Xko//ss2FQJBAJMKVLAu
+            OORPQI2EiAChbgEIJgQ69WaFzIMJyQEzlgb+X5oJEZxnJwCsP488i3gySLzJzxsk
+            hgyLt9srvV2cSOI=
+            -----END PRIVATE KEY-----
+
+          certificatePassword:
+        type: PEM
+      type: INTERNAL_AND_EXTERNAL
+
+  myAD:
+    kind: hcs/ad
+    data:
+      orgId: ${var.orgId}
+      name: ${default.name}
+      defaultOU: OU=HV2-Desktops
+      dnsDomainName: nanw.demo.local
+      netBIOSName: nanw
+      joinAccounts:
+        primary:
+          username: admin1
+          password:
+            - x
+        auxiliary:
+          username: admin2
+          password:
+            - x
+      bindAccounts:
+        primary:
+          username: admin1
+          password:
+            - x
+        auxiliary:
+          username: admin2
+          password:
+            - x
+      primaryDNS: 127.0.0.1
+      secondaryDNS: 127.0.0.2
+
+  myTemplateDedicated:
+    kind: hcs/pool-template
+    data:
+      orgId: ${var.orgId}
+      name: ${default.name}-dedicated
+      vmNamePattern: ${default.name}-d-
+      templateType: DEDICATED
+      providerInstanceId: ${myProvider.id}
+      uagDeploymentId: ${myUAG.id}
+      edgeDeploymentId: ${myEdge.id}
+      applicationProperties:
+        azureActiveDirectoryJoined: "false"
+        "new-task-engine": true
+      imageReference:
+        streamId: ${myGoldPattern.streamId}
+        versionId: ${myGoldPattern.versionId}
+      licenseProvided: true
+      desktopAdminUsername: hcsadmin
+      desktopAdminPassword: redacted
+      diskEncryption:
+        enabled: false
+      sparePolicy:
+        limit: 10
+        max: 4
+        min: 2
+      powerPolicy:
+        enabled: true
+        min: -1
+        minUnit: PERCENTAGE
+        occupancyPresetMode: DISABLED
+        powerSchedules: []
+        powerOffProtectTimeMins: 30
+      sessionsPerVm: 1
+      vmLicenseType: WINDOWS_CLIENT
+      diskSizeInGB: 127
+      infrastructure:
+        vmSkus:
+          - kind: vmSkus
+            id: Standard_D2_v4
+            data:
+              name: Standard_D2_v4
+              osVhdSizeMb: 1047552
+              maxDataDiskCount: 4
+              maxResourceVolumeMb: 51200
+              maxNetworkInterfaces: 2
+              memoryGb: 8
+              vCPUs: 2
+              premiumIO: false
+      networks:
+        - kind: networks
+          id: 00000000-0000-0000-0000-000000000000
+          data:
+            name: AkkaNetwork1
+      activeDirectoryId: ${myAD.id}
+      computerAccountOU: ${resource.myAD.data.defaultOU}
+  myTemplateFloating:
+    kind: hcs/pool-template
+    data:
+      orgId: ${var.orgId}
+      name: ${default.name}-floating
+      vmNamePattern: ${default.name}-f-
+      templateType: FLOATING
+      providerInstanceId: ${myProvider.id}
+      uagDeploymentId: ${myUAG.id}
+      edgeDeploymentId: ${myEdge.id}
+      applicationProperties:
+        azureActiveDirectoryJoined: "false"
+        "new-task-engine": true
+      # networks:
+      # - kind: subnets
+      #   id: ${mySubnet.id}
+      #   data:
+      #     parent: ${mySubnet.id}
+      #     name: ${mySubnet.name}
+      #     availableIpAddresses: 250
+      #     cidr: ${tenantPrep.cidr}
+      imageReference:
+        streamId: ${myGoldPattern.streamId}
+        versionId: ${myGoldPattern.versionId}
+      licenseProvided: true
+      desktopAdminUsername: hcsadmin
+      desktopAdminPassword: Thereisnosp00n
+      diskEncryption:
+        enabled: false
+      sparePolicy:
+        limit: 10
+        max: 4
+        min: 2
+      powerPolicy:
+        enabled: true
+        min: -1
+        minUnit: PERCENTAGE
+        occupancyPresetMode: DISABLED
+        powerSchedules: []
+        powerOffProtectTimeMins: 30
+      sessionsPerVm: 1
+      vmLicenseType: WINDOWS_CLIENT
+      diskSizeInGB: 127
+      infrastructure:
+        vmSkus:
+          - kind: vmSkus
+            id: Standard_D2_v4
+            data:
+              name: Standard_D2_v4
+              osVhdSizeMb: 1047552
+              maxDataDiskCount: 4
+              maxResourceVolumeMb: 51200
+              maxNetworkInterfaces: 2
+              memoryGb: 8
+              vCPUs: 2
+              premiumIO: false
+      networks:
+        - kind: networks
+          id: 00000000-0000-0000-0000-000000000000
+          data:
+            name: AkkaNetwork1
+      activeDirectoryId: ${myAD.id}
+      computerAccountOU: ${resource.myAD.data.defaultOU}
+
+  myTemplateMultisession:
+    kind: hcs/pool-template
+    data:
+      orgId: ${var.orgId}
+      name: ${default.name}-multisession
+      vmNamePattern: ${default.name}-m-
+      templateType: MULTI_SESSION
+      providerInstanceId: ${myProvider.id}
+      uagDeploymentId: ${myUAG.id}
+      edgeDeploymentId: ${myEdge.id}
+      applicationProperties:
+        azureActiveDirectoryJoined: "false"
+        "new-task-engine": true
+      # networks:
+      # - kind: subnets
+      #   id: ${mySubnet.id}
+      #   data:
+      #     parent: ${mySubnet.id}
+      #     name: ${mySubnet.name}
+      #     availableIpAddresses: 250
+      #     cidr: ${tenantPrep.cidr}
+      imageReference:
+        streamId: ${myMultiSessionGoldPattern.streamId}
+        versionId: ${myMultiSessionGoldPattern.versionId}
+      licenseProvided: true
+      desktopAdminUsername: hcsadmin
+      desktopAdminPassword: Thereisnosp00n
+      diskEncryption:
+        enabled: false
+      sparePolicy:
+        limit: 10
+        max: 4
+        min: 2
+      powerPolicy:
+        enabled: true
+        min: -1
+        minUnit: PERCENTAGE
+        occupancyPresetMode: DISABLED
+        powerSchedules: []
+        powerOffProtectTimeMins: 30
+      sessionsPerVm: 10
+      vmLicenseType: WINDOWS_CLIENT
+      diskSizeInGB: 127
+      infrastructure:
+        vmSkus:
+          - kind: vmSkus
+            id: Standard_D2_v4
+            data:
+              name: Standard_D2_v4
+              osVhdSizeMb: 1047552
+              maxDataDiskCount: 4
+              maxResourceVolumeMb: 51200
+              maxNetworkInterfaces: 2
+              memoryGb: 8
+              vCPUs: 2
+              premiumIO: false
+      networks:
+        - kind: networks
+          id: 00000000-0000-0000-0000-000000000000
+          data:
+            name: AkkaNetwork1
+      activeDirectoryId: ${myAD.id}
+      computerAccountOU: ${resource.myAD.data.defaultOU}
+
+  myPoolDedicated:
+    kind: hcs/pool-group
+    data:
+      orgId: ${var.orgId}
+      name: ${default.name}-dedicated
+      type: DESKTOP
+      templateType: DEDICATED
+      connectionAffinity: NEAREST_SITE
+      scope: ALL_SITES
+      enableSSO: false
+      preferredClientType: HORIZON_CLIENT
+      protocols:
+        - name: BLAST
+          defaultProtocol: true
+      templates:
+        - id: ${myTemplateDedicated.id}
+
+  myPoolFloating:
+    kind: hcs/pool-group
+    data:
+      orgId: ${var.orgId}
+      name: ${default.name}-floating
+      type: DESKTOP
+      templateType: FLOATING
+      connectionAffinity: NEAREST_SITE
+      scope: ALL_SITES
+      enableSSO: false
+      preferredClientType: HORIZON_CLIENT
+      protocols:
+        - name: BLAST
+          defaultProtocol: true
+      templates:
+        - id: ${myTemplateFloating.id}
+
+  myPoolMultisession:
+    kind: hcs/pool-group
+    data:
+      orgId: ${var.orgId}
+      name: ${default.name}-multisession
+      type: DESKTOP
+      templateType: MULTI_SESSION
+      connectionAffinity: NEAREST_SITE
+      scope: ALL_SITES
+      enableSSO: false
+      preferredClientType: HORIZON_CLIENT
+      protocols:
+        - name: BLAST
+          defaultProtocol: true
+      templates:
+        - id: ${myTemplateMultisession.id}
