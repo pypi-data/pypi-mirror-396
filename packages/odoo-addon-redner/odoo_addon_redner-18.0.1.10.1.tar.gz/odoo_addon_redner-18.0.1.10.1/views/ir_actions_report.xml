@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+    <!-- Inherit from base.act_report_xml_view to add redner-related settings. -->
+    <record id="redner_report_view" model="ir.ui.view">
+        <field name="name">redner_report_view</field>
+        <field name="model">ir.actions.report</field>
+        <field name="inherit_id" ref="base.act_report_xml_view" />
+        <field name="arch" type="xml">
+            <!-- overwrite paperformat attribute -->
+            <field name="paperformat_id" position="attributes">
+                <attribute
+                    name="invisible"
+                ><![CDATA[report_type not in ['qweb-pdf', 'redner']]]></attribute>
+            </field>
+
+            <!-- new tab: render template -->
+            <xpath expr="//page[@name='security']" position="before">
+                <page
+                    string="Redner Template"
+                    name="redner_tab"
+                    invisible="report_type!='redner'"
+                >
+                    <group name="redner_params">
+                        <field
+                            name="redner_filetype"
+                            required="report_type=='redner'"
+                        />
+                        <field name="redner_tmpl_id" required="report_type=='redner'" />
+                        <field
+                            name="redner_multi_in_one"
+                            invisible="report_type!='redner'"
+                        />
+                    </group>
+                    <button
+                        confirm="Keywords will be updated. Continue?"
+                        name="action_get_substitutions"
+                        string="Get Substitutions from Redner template"
+                        type="object"
+                        colspan="2"
+                    />
+                    <group string="Substitutions">
+                        <field name="substitution_ids" nolabel="1" colspan="2">
+                            <list editable="top" default_order="keyword asc">
+                                <field name="sequence" widget="handle" />
+                                <field name="keyword" />
+                                <field name="converter" />
+                                <field name="value_type" />
+                                <field name="render_model" column_invisible="1" />
+                                <field name="value_placeholder" column_invisible="1" />
+                                <field
+                                    name="hide_placeholder_button"
+                                    column_invisible="1"
+                                />
+                                <field
+                                    name="value"
+                                    class="text-break"
+                                    required="converter != False"
+                                    options="{
+                                        'dynamic_placeholder': true, 
+                                        'dynamic_placeholder_model_reference_field': 'render_model', 
+                                        'placeholder_field': 'value_placeholder',
+                                        'redner_dynamic_placeholder': true,
+                                        'button_visibility_field': 'hide_placeholder_button',
+                                        'converter_field': 'converter',
+                                    }"
+                                    default_focus="1"
+                                />
+                            </list>
+                        </field>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+    <record id="redner_template_view_search" model="ir.ui.view">
+        <field name="name">redner.template.search</field>
+        <field name="model">redner.template</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name" />
+                <field name="description" />
+                <filter
+                    string="Archived"
+                    name="inactive"
+                    domain="[('active','=',False)]"
+                />
+            </search>
+        </field>
+    </record>
+
+    <record id="redner_template_view_tree" model="ir.ui.view">
+        <field name="name">redner.template.list</field>
+        <field name="model">redner.template</field>
+        <field name="arch" type="xml">
+            <list decoration-info="source == 'odoo'" decoration-muted="not active">
+                <header>
+                    <button name="redner.action_import_template_wizard" type="action" string="Import" display="always" />
+                </header>
+                <field name="name" />
+                <field name="description" />
+                <field name="language" />
+                <field name="source" optional="hide" />
+                <field name="detected_keywords" />
+                <field name="active" column_invisible="True" />
+            </list>
+        </field>
+    </record>
+
+    <record id="redner_template_view_form" model="ir.ui.view">
+        <field name="name">redner.template.form</field>
+        <field name="model">redner.template</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <field name="id" invisible="1" />
+                    <field name="redner_id" invisible="1" />
+                    <field name="can_view_in_redner" invisible="1" />
+                    <button
+                        name="view_in_redner"
+                        type="object"
+                        string="View in Redner"
+                        class="oe_highlight"
+                        invisible="not can_view_in_redner"
+                    />
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button
+                            name="toggle_active"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-archive"
+                        >
+                            <field
+                                name="active"
+                                widget="boolean_button"
+                                options='{"terminology": "archive"}'
+                            />
+                        </button>
+                    </div>
+
+                    <div>
+                        <div class="oe_title">
+                            <label for="name" class="oe_edit_only" />
+                            <h1>
+                                <field
+                                    name="name"
+                                    readonly="not allow_modification_from_odoo or id != False"
+                                />
+                            </h1>
+                        </div>
+                        <group>
+                            <field
+                                name="description"
+                                required="allow_modification_from_odoo"
+                                readonly="not allow_modification_from_odoo"
+                            />
+                        </group>
+                        <group>
+                            <field
+                                name="language"
+                                readonly="not allow_modification_from_odoo"
+                            />
+                        </group>
+                        <group>
+                            <field name="source" readonly="1" invisible="id==False" />
+                        </group>
+                        <group>
+                            <field
+                                name="allow_modification_from_odoo"
+                                invisible="source=='odoo'"
+                            />
+                        </group>
+                    </div>
+
+                    <notebook>
+                        <page
+                            string="Template Body"
+                            invisible="language == 'application/vnd.oasis.opendocument.text|od+mustache'"
+                            readonly="not allow_modification_from_odoo"
+                        >
+                            <field name="body" widget="ace" />
+                        </page>
+                        <page
+                            string="Template Libreoffice"
+                            invisible="language != 'application/vnd.oasis.opendocument.text|od+mustache'"
+                            readonly="not allow_modification_from_odoo"
+                        >
+                            <group>
+                                <field name="template_data_filename" invisible="1" />
+                                <field
+                                    name="template_data"
+                                    filename="template_data_filename"
+                                    nolabel="1"
+                                    widget="binary"
+                                    readonly="not allow_modification_from_odoo"
+                                />
+                            </group>
+                        </page>
+                        <page string="Preview" invisible="redner_id==False">
+                            <group>
+                                <field name="preview" />
+                                <field
+                                    name="preview"
+                                    nolabel="1"
+                                    widget="image"
+                                    options="{'size': [300, 400]}"
+                                />
+                            </group>
+                        </page>
+
+                        <page string="Variables">
+                            <group>
+                                <field name="detected_keywords" />
+                            </group>
+                        </page>
+
+                        <page string="Settings">
+                            <group>
+                                <field
+                                    name="locale_id"
+                                    readonly="not allow_modification_from_odoo"
+                                />
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="redner_template_action" model="ir.actions.act_window">
+        <field name="name">Redner Templates</field>
+        <field name="res_model">redner.template</field>
+        <field name="view_mode">list,form</field>
+        <field name="path">redner-templates</field>
+    </record>
+</odoo>
