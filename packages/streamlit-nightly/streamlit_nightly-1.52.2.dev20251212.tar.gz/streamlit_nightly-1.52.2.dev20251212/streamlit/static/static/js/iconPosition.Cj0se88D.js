@@ -1,0 +1,1 @@
+import{s as o}from"./index.BN4Hj9cC.js";const i={[o.ButtonLikeIconPosition.LEFT]:"left",[o.ButtonLikeIconPosition.RIGHT]:"right"};function s(t){return i[t??o.ButtonLikeIconPosition.LEFT]}export{s as m};
