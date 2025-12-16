@@ -1,0 +1,36 @@
+{% load i18n %}
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand" href="{% url 'home' %}">{{ request.site.name }}</a>
+        <button
+            class="navbar-toggler" type="button"
+            data-bs-toggle="collapse" data-bs-target="#navbar-collapse">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbar-collapse">
+            <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+
+                {% if user.is_authenticated %}
+
+                <li class="nav-item dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        {{ user.profile.full_name }}<span class="caret"></span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
+                        {% include 'core/nav/account.html' %}
+                        {% include 'core/nav/management.html' %}
+                        {% include 'core/nav/admin.html' %}
+                        {% include 'core/nav/logout.html' %}
+                    </ul>
+                </li>
+
+                {% else %}
+
+                {% include 'core/nav/login.html' %}
+
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</nav>

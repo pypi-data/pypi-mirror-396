@@ -1,0 +1,48 @@
+{% load i18n %}
+{% load account %}
+{% load socialaccount %}
+
+{% get_providers as socialaccount_providers %}
+
+<form class="mb-3" method="post" action="{% url 'account_login' %}" novalidate>
+    {% csrf_token %}
+
+    {% if redirect_field_value %}
+    <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
+    {% endif %}
+
+    {{ form }}
+
+    <input type="submit" class="btn btn-primary" value="{% trans 'Login' %}" />
+</form>
+
+<p>
+    {% url 'account_signup' as signup_url %}
+    {% blocktrans %}If you have not created an account yet, then please <a href="{{ signup_url }}">sign up</a> first.{% endblocktrans %}
+</p>
+
+<p>
+    {% url 'account_reset_password' as reset_url %}
+    {% blocktrans %}If you forgot your password and want to reset it, click <a href="{{ reset_url }}">here</a>.{% endblocktrans %}
+</p>
+
+{% if socialaccount_providers %}
+
+<p>
+    {% blocktrans with site.name as site_name %}Alternatively, you can login using one of the following third party accounts:{% endblocktrans %}
+</p>
+
+<div class="socialaccount_ballot">
+    <ul class="list-inline">
+    {% include "socialaccount/snippets/provider_list.html" with process="login" %}
+    </ul>
+</div>
+
+{% include "socialaccount/snippets/login_extra.html" %}
+
+<p>
+    {% url 'socialaccount_connections' as account_connections_url %}
+    {% blocktrans %}If you already have an account, but did not connect a third party account yet, you can do so on the <a href="{{ account_connections_url }}">account connections page</a>.{% endblocktrans %}
+</p>
+
+{% endif %}

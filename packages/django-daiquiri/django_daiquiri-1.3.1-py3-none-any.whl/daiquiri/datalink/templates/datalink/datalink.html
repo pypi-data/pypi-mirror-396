@@ -1,0 +1,93 @@
+{% extends 'core/wide.html' %}
+{% load i18n %}
+
+<!-- Context
+
+ID
+
+datalinks: (array)
+  * ID
+  * access_url
+  * service_Def
+  * error_message
+  * description
+  * semantics
+  * content_type
+  * content_length
+
+query_job:
+  * jobID
+  * schema_name
+  * table_name
+
+-->
+
+{% block wide %}
+
+    <h1>{% blocktrans %}Datalinks for {{ ID }}{% endblocktrans %}</h1>
+
+    {% if datalinks %}
+
+        <h2>Data Links</h2>
+
+        <table class="table table-condensed table-striped">
+
+        <thead>
+            <tr>
+                <!-- <td><b>ID</b></td> -->
+                <td><b>access_url</b></td>
+                <!-- <td>service_def</td> -->
+                <!-- <td>error_message</td> -->
+                <td><b>description</b></td>
+                <td><b>semantics</b></td>
+                <td><b>content_type</b></td>
+                <td><b>content_length</b></td>
+            </tr>
+        </thead>
+
+        <tbody>
+
+        {% for datalink in datalinks %}
+
+            {% if not datalink.service_def %}
+
+            <tr>
+
+                <!-- <td>{{ datalink.ID }}</td> -->
+                <td><a href={{ datalink.access_url }}>{{ datalink.access_url }}</a></td>
+                <!-- <td>{{ datalink.service_def }}</td> -->
+                <!-- <td>{{ datalink.error_message }}</td> -->
+                <td>{{ datalink.description }}</td>
+                <td>
+                    {% if datalink.semantics in custom_semantics %}
+                    <a href="{{ settings.SITE_URL }}{% url 'datalink:datalink-semantics' %}{{ datalink.semantics }}">{{ datalink.semantics }}</a>
+                    {% else %}
+                    <a href="http://www.ivoa.net/rdf/datalink/core{{ datalink.semantics }}">{{ datalink.semantics }}</a>
+                    {% endif %}
+                </td>
+                <td>{{ datalink.content_type }}</td>
+                <td>
+                    {% if datalink.content_length > 0 %}
+                    {{ datalink.content_length | filesizeformat }}
+                    {% else %}
+                    {{ datalink.content_length }}
+                    {% endif %}
+                </td>
+
+            </tr>
+
+            {% endif %}
+
+        {% endfor %}
+
+        </tbody>
+
+        </table>
+
+    {% else %}
+
+        <p>No datalinks could be found for this ID.</p>
+
+    {% endif %}
+
+{% endblock %}
