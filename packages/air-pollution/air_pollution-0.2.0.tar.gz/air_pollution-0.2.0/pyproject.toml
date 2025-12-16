@@ -1,0 +1,60 @@
+[project]
+name = "air-pollution"
+version = "0.2.0"
+description = "Air pollution data collector"
+readme = "README.md"
+authors = [
+    { name = "Michael Blaß", email = "m.blass@uke.de" }
+]
+
+classifiers = [
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Framework :: Pydantic :: 2",
+    "Framework :: Pytest",
+    "Typing :: Typed",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Atmospheric Science",
+    "Intended Audience :: Healthcare Industry",
+    "Intended Audience :: Science/Research"
+]
+
+requires-python = ">=3.11"
+dependencies = [
+    "altair>=5.5.0",
+    "hishel>=0.1.2",
+    "httpx-limiter>=0.2.0",
+    "httpx>=0.28.1",
+    "polars>=1.28.1",
+    "pydantic>=2.11.3",
+    "ratelimit>=2.2.1",
+]
+
+[dependency-groups]
+dev = [
+    "ipykernel>=6.29.5",
+    "mypy>=1.15.0",
+    "polars>=1.28.1",
+    "pytest>=8.3.5",
+    "ruff>=0.11.5",
+    "vegafusion>=2.0.2",
+    "vl-convert-python>=1.7.0",
+]
+
+[build-system]
+requires = ["setuptools>=79"]
+build-backend = "setuptools.build_meta"
+
+
+[project.scripts]
+aq-downloader = "air_pollution.scripts.downloader:main"
+
+[[tool.mypy.overrides]]
+module = "ratelimit"
+ignore_missing_imports = true
+
+[tool.mypy]
+plugins = ["pydantic.mypy"]
