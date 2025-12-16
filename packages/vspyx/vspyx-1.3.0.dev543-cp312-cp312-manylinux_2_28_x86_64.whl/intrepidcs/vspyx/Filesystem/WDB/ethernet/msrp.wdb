@@ -1,0 +1,260 @@
+MRPDU_AttributeListType_Enabled = true
+MRPDU_FourPack_Enabled = '^.^.attributetype == #MRPDU_Messagess.states.$Listener.value'
+
+[setup]
+	version = '2.1.0'
+	include = ['builtin://WDB/ethernet/mrp.wdb', 'builtin://WDB/ethernet/ethernet.wdb']
+
+	[[setup.hooks]]
+		expression = 'eth.type == 0x22EA'
+		location = 'eth.protocol'
+		protocol = '#MSRP'
+
+# MSRP
+
+[MSRP]
+	name = 'Multiple Stream Registration Protocol'
+	tag = 'mrp_msrp'
+
+	[[MSRP.fields]]
+		name = 'MRP'
+		inherit = '#MRPDU'
+
+# MRP Parameters
+
+[[MRPDU_Messagess_States]]
+	name = 'Talker Advertise'
+	tag = 'TalkerAdvertise'
+	value = 1
+
+[[MRPDU_Messagess_States]]
+	name = 'Talker Failed'
+	tag = 'TalkerFailed'
+	value = 2
+
+[[MRPDU_Messagess_States]]
+	name = 'Listener'
+	value = 3
+
+[[MRPDU_Messagess_States]]
+	name = 'Domain'
+	value = 4
+
+
+[[MRPDU_FourPack_States]]
+	name = 'Ignore'
+	value = 0
+
+[[MRPDU_FourPack_States]]
+	name = 'Asking Failed'
+	value = 1
+
+[[MRPDU_FourPack_States]]
+	name = 'Ready'
+	value = 2
+
+[[MRPDU_FourPack_States]]
+	name = 'Ready Failed'
+	value = 3
+
+
+[MRPDU_FirstValue_Field]
+	type = 'switch'
+	switch = '^.^.attributetype'
+
+	[[MRPDU_FirstValue_Field.fields]]
+		case = 4
+		name = 'Domain'
+		inherit = '#Domain'
+
+	[[MRPDU_FirstValue_Field.fields]]
+		case = 3
+		name = 'Listener'
+		inherit = '#Listener'
+
+	[[MRPDU_FirstValue_Field.fields]]
+		case = 1
+		name = 'Talker Advertise'
+		inherit = '#TalkerAdvertise'
+
+	[[MRPDU_FirstValue_Field.fields]]
+		case = 2
+		name = 'Talker Failed'
+		inherit = '#TalkerFailed'
+
+
+# helpers
+
+[TalkerAdvertise]
+
+	[[TalkerAdvertise.fields]]
+		name = 'Stream ID'
+		inherit = '#StreamID'
+
+	[[TalkerAdvertise.fields]]
+		name = 'Data Frame Paramerters'
+		inherit = '#DataFrameParamerters'
+
+	[[TalkerAdvertise.fields]]
+		name = 'Max frame Size'
+		length = 16
+
+	[[TalkerAdvertise.fields]]
+		name = 'Max Interval Frames'
+		length = 16
+
+	[[TalkerAdvertise.fields]]
+		name = 'Priority And Rank'
+		tyinheritpe = '#PriorityAndRank'
+
+	[[TalkerAdvertise.fields]]
+		name = 'Accumulated Latency'
+		length = 32
+
+
+[TalkerFailed]
+
+	[[TalkerFailed.fields]]
+		name = 'Talker Advertise'
+		inherit = '#TalkerAdvertise'
+
+	[[TalkerFailed.fields]]
+		name = 'Bridge Id'
+		length = 64
+
+	[[TalkerFailed.fields]]
+		name = 'Failure Code'
+		length = 8
+
+		[[TalkerFailed.fields.states]]
+			name = 'Insufficient bandwidth'
+			value = 1
+	
+		[[TalkerFailed.fields.states]]
+			name = 'Insufficient Bridge resources'
+			value = 2
+	
+		[[TalkerFailed.fields.states]]
+			name = 'Insufficient bandwidth for traffic class.'
+			value = 3
+	
+		[[TalkerFailed.fields.states]]
+			name = 'StreamID in use by another Talker'
+			value = 4
+	
+		[[TalkerFailed.fields.states]]
+			name = 'Stream destination_address already in use'
+			value = 5
+	
+		[[TalkerFailed.fields.states]]
+			name = 'Stream preempted by higher rank'
+			value = 6
+	
+		[[TalkerFailed.fields.states]]
+			name = 'Reported latency has changed'
+			value = 7
+	
+		[[TalkerFailed.fields.states]]
+			name = 'Egress port is not AVB capable1'
+			value = 8
+	
+		[[TalkerFailed.fields.states]]
+			name = 'Use a different destination_address (i.e. MAC DA hash table full)'
+			value = 9
+	
+		[[TalkerFailed.fields.states]]
+			name = 'Out of MSRP resources'
+			value = 10
+	
+		[[TalkerFailed.fields.states]]
+			name = 'Out of MMRP resources'
+			value = 11
+	
+		[[TalkerFailed.fields.states]]
+			name = 'Cannot store destination_address (i.e. Bridge is out of MAC DA resources)'
+			value = 12
+	
+		[[TalkerFailed.fields.states]]
+			name = 'Requested priority is not an SR Class (3.175) priority'
+			value = 13
+	
+		[[TalkerFailed.fields.states]]
+			name = 'MaxFrameSize (35.2.2.8.4(a)) is too large for media'
+			value = 14
+	
+		[[TalkerFailed.fields.states]]
+			name = 'msrpMaxFanInPorts (35.2.1.4(f)) limit has been reached'
+			value = 15
+	
+		[[TalkerFailed.fields.states]]
+			name = 'Changes in FirstValue for a registered StreamID.'
+			value = 16
+	
+		[[TalkerFailed.fields.states]]
+			name = 'VLAN is blocked on this egress port (Registration Forbidden)2'
+			value = 17
+	
+		[[TalkerFailed.fields.states]]
+			name = 'VLAN tagging is disabled on this egress port (untagged set)'
+			value = 18
+	
+		[[TalkerFailed.fields.states]]
+			name = 'SR class priority mismatch'
+			value = 19
+
+[PriorityAndRank]
+
+	[[PriorityAndRank.fields]]
+		name = 'Data Frame Priority'
+		length = 3
+
+	[[PriorityAndRank.fields]]
+		name = 'Rank'
+		length = 1
+
+	[[PriorityAndRank.fields]]
+		name = 'Reserved'
+		length = 4
+
+[Listener]
+	visible = 'false'
+
+	[[Listener.fields]]
+		name = 'Stream ID'
+		inherit = '#StreamID'
+
+[StreamID]
+
+	[[StreamID.fields]]
+		name = 'MAC Address'
+		inherit = '#MACAddress'
+
+	[[StreamID.fields]]
+		name  = 'Unique Id'
+		length = 16
+
+[DataFrameParamerters]
+
+	[[DataFrameParamerters.fields]]
+		name = 'MAC Address'
+		inherit = '#MACAddress'
+
+	[[DataFrameParamerters.fields]]
+		name  = 'VLAN Id'
+		length = 16
+
+[Domain]
+	visible = 'false'
+
+	[[Domain.fields]]
+		name = 'SR Class Id'
+		length = 8
+
+
+	[[Domain.fields]]
+		name = 'SR Class Priority'
+		length = 8
+
+	[[Domain.fields]]
+		name = 'SR Class VID'
+		length = 16
