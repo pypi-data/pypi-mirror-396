@@ -1,0 +1,154 @@
+[build-system]
+requires = ["flit_core >=3.4,<4"]
+build-backend = "flit_core.buildapi"
+
+# Check https://flit.pypa.io/en/latest/pyproject_toml.html about this config file
+
+[project]
+name = "ansys-workbench-core"
+version = "0.10.0"
+description = "A python wrapper for Ansys Workbench"
+readme = "README.rst"
+requires-python = ">=3.10,<4.0"
+license = {file = "LICENSE"}
+authors = [{name = "ANSYS, Inc.", email = "pyansys.core@ansys.com"}]
+maintainers = [{name = "ANSYS, Inc.", email = "pyansys.core@ansys.com"}]
+
+classifiers = [
+    "Development Status :: 4 - Beta",
+    'Topic :: Scientific/Engineering',
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+
+dependencies = [
+    "ansys_api_workbench>=0.2.0",
+    "ansys-platform-instancemanagement>=1.0.1",
+    "ansys-pythonnet>=3.1.0rc1",
+    "ansys-tools-path>=0.3.1",
+    "ansys-tools-common>=0.3.0",
+    "tqdm>=4.65.0",
+    "WMI>=1.4.9; platform_system=='Windows'",
+]
+[project.optional-dependencies]
+doc = [
+    "ansys-sphinx-theme[autoapi]==1.6.4",
+    "numpydoc==1.10.0",
+    "Sphinx==8.2.3",
+    "sphinx-autodoc-typehints==3.1.0",
+    "sphinx-copybutton==0.5.2",
+    "jupyter==1.1.1",
+    "sphinx-jinja==2.0.2",
+]
+vulnerabilities = [
+    "bandit==1.9.2",
+    "safety==3.7.0",
+]
+tests = [
+    "pytest==9.0.2",
+    "pytest-cov==7.0.0",
+]
+
+[project.urls]
+Documentation = "https://workbench.docs.pyansys.com"
+Source = "https://github.com/ansys/pyworkbench"
+Homepage = "https://github.com/ansys/pyworkbench"
+Tracker = "https://github.com/ansys/pyworkbench/issues"
+
+[tool.flit.module]
+name = "ansys.workbench.core"
+
+[tool.coverage.run]
+source = ["ansys.workbench"]
+
+[tool.coverage.report]
+show_missing = true
+
+[tool.pytest.ini_options]
+minversion = "7.1"
+addopts = "-ra --cov=ansys.workbench --cov-report html:.cov/html --cov-report xml:.cov/xml --cov-report term -vv"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+extend-exclude = [
+    "examples/**/*.py", "tests/scripts/*.py"
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle, see https://beta.ruff.rs/docs/rules/#pycodestyle-e-w
+    "D",    # pydocstyle, see https://beta.ruff.rs/docs/rules/#pydocstyle-d
+    "F",    # pyflakes, see https://beta.ruff.rs/docs/rules/#pyflakes-f
+    "I",    # isort, see https://beta.ruff.rs/docs/rules/#isort-i
+    "N",    # pep8-naming, see https://beta.ruff.rs/docs/rules/#pep8-naming-n
+    #"PTH",  # flake8-use-pathlib, https://beta.ruff.rs/docs/rules/#flake8-use-pathlib-pth
+]
+
+#[tool.ruff.lint.extend-per-file-ignores]
+#"tests/*" = ["D100", "D101", "D102", "D103", "PTH"] # ignore docstring requirements in tests
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.isort]
+# Settings: https://docs.astral.sh/ruff/settings/#lintisort
+combine-as-imports = true
+force-sort-within-sections = true
+known-first-party = ["ansys"]
+
+[tool.towncrier]
+directory = "doc/changelog.d"
+filename = "doc/source/changelog.rst"
+template = "doc/changelog.d/changelog_template.jinja"
+start_string = ".. towncrier release notes start\n"
+title_format = "`{version} <https://github.com/ansys/pyworkbench/releases/tag/v{version}>`_ - {project_date}"
+issue_format = "`#{issue} <https://github.com/ansys/pyworkbench/pull/{issue}>`_"
+
+[[tool.towncrier.type]]
+directory = "added"
+name = "Added"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "changed"
+name = "Changed"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "fixed"
+name = "Fixed"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "dependencies"
+name = "Dependencies"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "miscellaneous"
+name = "Miscellaneous"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "documentation"
+name = "Documentation"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "maintenance"
+name = "Maintenance"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "test"
+name = "Test"
+showcontent = true
