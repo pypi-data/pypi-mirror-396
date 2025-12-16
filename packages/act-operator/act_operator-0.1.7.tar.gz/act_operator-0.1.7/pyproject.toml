@@ -1,0 +1,76 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "act-operator"
+dynamic = ["version"]
+description = "Proact0’s CLI for bootstrapping LangGraph-based “Act - AX Template” blueprints."
+requires-python = ">=3.11"
+authors = [
+    { name = "Joongheon Park" }
+]
+dependencies = [
+    "typer>=0.19.2",
+    "rich>=14.1.0",
+    "cookiecutter>=2.6.0",
+]
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+
+[dependency-groups]
+test = [
+    "pytest",
+    "pytest-mock",
+    "pytest-subprocess",
+]
+lint = [
+    "pre-commit",
+    "mypy",
+    "ruff",
+]
+dev = [
+    {include-group = "test"},
+    {include-group = "lint"},
+]
+
+[project.urls]
+Repository = "https://github.com/Proact0/act-operator"
+Homepage = "https://github.com/Proact0/Act-Operator"
+
+[project.scripts]
+act = "act_operator.cli:main"
+
+[tool.hatch.version]
+path = "act_operator/__init__.py"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+include = ["act_operator"]
+force-include = { "act_operator" = "act_operator" }
+
+[tool.hatch.build.targets.sdist]
+include = ["act_operator", "tests", "README.md", "LICENSE", ".gitignore"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]
+
+[tool.ruff]
+extend-exclude = [
+    "act_operator/scaffold",
+]
+lint.select = [
+    "E",
+    "F",
+    "I",
+    "B",
+]
+lint.ignore = [
+    "E501",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B905"]
