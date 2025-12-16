@@ -1,0 +1,67 @@
+# Massachusetts Localization Rules
+# Jurisdiction: US/MA
+# Parent: US
+#
+# Conventions:
+# - "jurisdiction" and "parent" are normalized by the loader (US-MA, us/ma, etc. accepted).
+# - abbreviations/agency_names/entity_types keys should be lowercase tokens.
+# - rules are applied in file order unless "order" is provided.
+# - stop_words are removed as final token filtering.
+
+jurisdiction: "us/ma"
+parent: "US"
+version: "0.0.1"
+updatedTimestamp: "2025-12-12T00:00:00Z"
+
+abbreviations:
+  dot: department of transportation
+  dcr: department of conservation and recreation
+  dmf: division of marine fisheries
+  dea: department of elder affairs
+  dph: department of public health
+  mrc: massachusetts rehabilitation commission
+  mcb: massachusetts commission for the blind
+  ps: public schools
+  hs: high school
+
+agency_names:
+  mbta: massachusetts bay transportation authority
+  mwra: massachusetts water resources authority
+  masstech: massachusetts technology collaborative
+  massport: massachusetts port authority
+  massdot: massachusetts department of transportation
+  bpd: boston police department
+  bfd: boston fire department
+  bps: boston public schools
+
+entity_types:
+  housing authority: housing authority
+  school district: school district
+  water district: water district
+  fire district: fire district
+
+rules:
+  # Replace commas with spaces so tokenization remains stable.
+  - pattern: ","
+    replacement: " "
+    is_regex: false
+
+  # Collapse whitespace (defensive; your pipeline also does this).
+  - pattern: "\\s+"
+    replacement: " "
+    is_regex: true
+
+  # Expand common shorthand.
+  - pattern: "\\bdept\\b"
+    replacement: "department"
+    is_regex: true
+
+stop_words:
+  - the
+  - of
+  - and
+  - town
+  - city
+  - village
+
+configHash: "TODO-fill"
