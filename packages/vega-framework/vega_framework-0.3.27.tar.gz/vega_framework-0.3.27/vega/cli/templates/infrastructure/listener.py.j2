@@ -1,0 +1,41 @@
+"""{{ class_name }} job listener"""
+from vega.listeners import JobListener, job_listener, Message{% if has_context %}, MessageContext{% endif %}
+from vega.di import bind
+
+
+@job_listener(
+    queue="{{ queue_name }}",
+    workers={{ workers }},
+    auto_ack={{ auto_ack }},
+    visibility_timeout={{ visibility_timeout }},{% if retry_on_error %}
+    retry_on_error=True,
+    max_retries={{ max_retries }},{% endif %}
+)
+class {{ class_name }}(JobListener):
+    """Process messages from {{ queue_name }} queue"""
+
+    @bind
+    async def handle(
+        self,
+        message: Message,{% if has_context %}
+        context: MessageContext,{% endif %}
+        # Add dependencies here (auto-injected)
+        # user_repo: UserRepository
+    ) -> None:
+        """Process a queue message"""
+        # Implement message processing logic
+        data = message.body
+        raise NotImplementedError("Implement {{ class_name }} handler")
+
+    async def on_startup(self) -> None:
+        """Hook called when the listener starts"""
+        pass
+
+    async def on_shutdown(self) -> None:
+        """Hook called when the listener stops"""
+        pass
+
+    async def on_error(self, message: Message, error: Exception) -> None:
+        """Hook called when message processing fails (after retries)"""
+        # Add error logging/monitoring
+        pass
