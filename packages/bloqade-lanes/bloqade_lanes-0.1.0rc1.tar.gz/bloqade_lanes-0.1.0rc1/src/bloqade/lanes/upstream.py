@@ -1,0 +1,113 @@
+from dataclasses import dataclass
+from itertools import chain
+from typing import Callable
+
+from bloqade.analysis import address
+from bloqade.native.dialects import gate as native_gate
+from bloqade.rewrite.passes import AggressiveUnroll
+from kirin import ir, passes, rewrite
+from kirin.ir.method import Method
+
+from bloqade.lanes.analysis import layout, placement
+from bloqade.lanes.dialects import move, place
+from bloqade.lanes.passes.canonicalize import CanonicalizeNative
+from bloqade.lanes.rewrite import circuit2place, place2move
+
+
+def default_merge_heuristic(region_a: ir.Region, region_b: ir.Region) -> bool:
+    return all(
+        isinstance(stmt, (place.R, place.Rz, place.Yield))
+        for stmt in chain(region_a.walk(), region_b.walk())
+    )
+
+
+@dataclass
+class NativeToPlace:
+    merge_heuristic: Callable[[ir.Region, ir.Region], bool] = default_merge_heuristic
+
+    def emit(self, mt: Method, no_raise: bool = True):
+        out = mt.similar(mt.dialects.add(place).discard(native_gate))
+        AggressiveUnroll(out.dialects, no_raise=no_raise).fixpoint(out)
+        CanonicalizeNative(out.dialects, no_raise=no_raise).fixpoint(out)
+        rewrite.Walk(
+            circuit2place.RewritePlaceOperations(),
+        ).rewrite(out.code)
+
+        rewrite.Fixpoint(
+            rewrite.Walk(circuit2place.MergePlacementRegions(self.merge_heuristic))
+        ).rewrite(out.code)
+        passes.TypeInfer(out.dialects)(out)
+
+        out.verify()
+        out.verify_type()
+
+        return out
+
+
+@dataclass
+class PlaceToMove:
+    layout_heristic: layout.LayoutHeuristicABC
+    placement_strategy: placement.PlacementStrategyABC
+    move_scheduler: place2move.MoveSchedulerABC
+    insert_palindrome_moves: bool = True
+
+    def emit(self, mt: Method, no_raise: bool = True):
+        out = mt.similar(mt.dialects.add(move))
+
+        if no_raise:
+            address_frame, _ = address.AddressAnalysis(out.dialects).run_no_raise(out)
+            initial_layout, init_locations, thetas, phis, lams = layout.LayoutAnalysis(
+                out.dialects, self.layout_heristic, address_frame.entries
+            ).get_layout_no_raise(out)
+
+            placement_frame, _ = placement.PlacementAnalysis(
+                out.dialects,
+                initial_layout,
+                address_frame.entries,
+                self.placement_strategy,
+            ).run_no_raise(out)
+        else:
+            address_frame, _ = address.AddressAnalysis(out.dialects).run(out)
+            initial_layout, init_locations, thetas, phis, lams = layout.LayoutAnalysis(
+                out.dialects, self.layout_heristic, address_frame.entries
+            ).get_layout(out)
+            placement_frame, _ = placement.PlacementAnalysis(
+                out.dialects,
+                initial_layout,
+                address_frame.entries,
+                self.placement_strategy,
+            ).run(out)
+
+        rule = rewrite.Chain(
+            place2move.InsertFill(initial_layout),
+            place2move.InsertInitialize(init_locations, thetas, phis, lams),
+            place2move.InsertMoves(self.move_scheduler, placement_frame.entries),
+            place2move.RewriteCZ(self.move_scheduler, placement_frame.entries),
+            place2move.RewriteR(self.move_scheduler, placement_frame.entries),
+            place2move.RewriteRz(self.move_scheduler, placement_frame.entries),
+            place2move.InsertMeasure(self.move_scheduler, placement_frame.entries),
+        )
+        rewrite.Walk(rule).rewrite(out.code)
+
+        if self.insert_palindrome_moves:
+            rewrite.Walk(place2move.InsertPalindromeMoves()).rewrite(out.code)
+
+        rewrite.Walk(
+            rewrite.Chain(
+                place2move.LiftMoveStatements(), place2move.RemoveNoOpStaticPlacements()
+            )
+        ).rewrite(out.code)
+
+        rewrite.Fixpoint(
+            rewrite.Walk(
+                rewrite.Chain(
+                    place2move.DeleteQubitNew(), rewrite.DeadCodeElimination()
+                )
+            )
+        ).rewrite(out.code)
+        passes.TypeInfer(out.dialects)(out)
+
+        out.verify()
+        out.verify_type()
+
+        return out
