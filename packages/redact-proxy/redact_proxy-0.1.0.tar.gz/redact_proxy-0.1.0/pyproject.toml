@@ -1,0 +1,91 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "redact-proxy"
+version = "0.1.0"
+description = "The ngrok for PHI. HIPAA-compliant wrappers for LLM APIs."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.9"
+authors = [
+    { name = "Redact Health", email = "hello@redact.health" }
+]
+keywords = [
+    "hipaa",
+    "phi",
+    "pii",
+    "de-identification",
+    "healthcare",
+    "llm",
+    "openai",
+    "anthropic",
+    "gemini",
+    "privacy",
+    "proxy",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Healthcare Industry",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+    "Topic :: Security",
+    "Topic :: Text Processing",
+]
+
+dependencies = [
+    "openai>=1.0.0",
+]
+
+[project.optional-dependencies]
+anthropic = [
+    "anthropic>=0.18.0",
+]
+gemini = [
+    "google-generativeai>=0.3.0",
+]
+balanced = [
+    "presidio-analyzer>=2.2.0",
+    "spacy>=3.0.0",
+]
+accurate = [
+    "transformers>=4.30.0",
+    "torch>=2.0.0",
+]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "ruff>=0.1.0",
+]
+all = [
+    "redact-proxy[anthropic,gemini,balanced,accurate]",
+]
+
+[project.urls]
+Homepage = "https://redact.health"
+Documentation = "https://docs.redact.health/proxy"
+Repository = "https://github.com/cspergel/redact-proxy"
+Issues = "https://github.com/cspergel/redact-proxy/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["redact_proxy"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
