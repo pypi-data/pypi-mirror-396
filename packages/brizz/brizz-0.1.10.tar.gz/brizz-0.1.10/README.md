@@ -1,0 +1,305 @@
+# Brizz SDK
+
+[![Python Version](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+
+Brizz observability SDK for AI applications.
+
+## Installation
+
+```bash
+pip install brizz
+# or
+uv add brizz
+# or
+poetry add brizz
+```
+
+## Quick Start
+
+```python
+from brizz import Brizz
+
+# Initialize
+Brizz.initialize(
+    api_key='your-brizzai-api-key',
+    app_name='my-app',
+)
+```
+
+> **Important**: Initialize Brizz before importing any libraries you want to instrument (e.g.,
+> OpenAI). If using `dotenv`, use `from dotenv import load_dotenv; load_dotenv()` before importing `brizz`.
+
+## Session Tracking
+
+Group related operations and traces under a session context. Brizz provides two approaches:
+
+### Context Manager Approach (Recommended)
+
+```python
+from brizz import start_session, astart_session
+
+# Basic usage - all telemetry tagged with session ID
+with start_session('session-123'):
+    # All traces, events, and spans within this block
+    # will be tagged with session.id = session-123
+    response = openai.chat.completions.create(
+        model='gpt-4',
+        messages=[{'role': 'user', 'content': 'Hello'}]
+    )
+    emit_event('user.action', {'action': 'chat'})
+
+# Enhanced usage - capture session object for custom properties
+with start_session('session-456') as session:
+    # Update properties using keyword arguments
+    session.update_properties(user_id='user-123', model='gpt-4')
+
+    # Or use a dictionary
+    session.update_properties({'retry_count': 3, 'success': True})
+
+    # Or combine both
+    session.update_properties({'version': '1.0'}, environment='production')
+
+    # Make LLM call
+    response = openai.chat.completions.create(
+        model='gpt-4',
+        messages=[{'role': 'user', 'content': 'Hello'}]
+    )
+
+# Optional: Manual input/output tracking
+# Use when you need to format or extract specific data for tracking
+with start_session('session-789') as session:
+    # Example: Extract user query from structured request
+    request_data = {"query": "What's the weather?", "context": {...}}
+    session.set_input(request_data["query"])  # Track just the query
+
+    # Send full structured data to LLM
+    response = openai.chat.completions.create(
+        model='gpt-4',
+        messages=[{'role': 'user', 'content': json.dumps(request_data)}]
+    )
+
+    # Example: Extract answer field from JSON response
+    response_json = json.loads(response.choices[0].message.content)
+    session.set_output(response_json["answer"])  # Track just the answer
+
+# Async version
+async def process_user_workflow():
+    async with astart_session('session-999') as session:
+        session.update_properties(user_id='user-456')
+
+        response = await openai.chat.completions.create(
+            model='gpt-4',
+            messages=[{'role': 'user', 'content': 'Hello'}]
+        )
+        return response
+
+# With additional properties
+with start_session('session-999', {'user_id': 'user-789', 'region': 'us-east'}):
+    # All telemetry includes session.id, user_id, and region
+    emit_event('purchase', {'amount': 99.99})
+```
+
+**Session Methods:**
+- `session.update_properties(**kwargs)` - Update custom properties on session span (stored as `brizz.{key}`)
+- `session.set_input(text)` - *Optional:* Manually record user input when you need to format or extract specific data (e.g., extracting a field from JSON sent to LLM)
+- `session.set_output(text)` - *Optional:* Manually record AI output when you need to format or extract specific data (e.g., extracting a field from JSON response)
+
+**Note:**
+- `set_input()` and `set_output()` are optional - use them only when you need manual formatting
+- Multiple calls to `set_input()`/`set_output()` are supported - values are accumulated in arrays and serialized as JSON strings
+- LLM calls are automatically traced; manual input/output tracking is for cases where the raw data needs formatting
+
+### Function Wrapper Approach
+
+```python
+from brizz import with_session_id, awith_session_id
+
+# Wrap synchronous functions
+def sync_workflow(chat_id: str, data: dict):
+    return with_session_id(chat_id, process_data, data)
+
+# Wrap async functions
+async def process_user_workflow(chat_id):
+    response = await awith_session_id(
+        chat_id,
+        openai.chat.completions.create,
+        model='gpt-4',
+        messages=[{'role': 'user', 'content': 'Hello'}]
+    )
+    return response
+```
+
+## Custom Properties
+
+Add custom properties to telemetry context. These properties will be attached to all traces, spans, and events within the scope:
+
+### Context Manager Approach (Recommended)
+
+```python
+from brizz import custom_properties, acustom_properties
+
+# Synchronous context manager
+with custom_properties({'user_id': '123', 'experiment': 'variant-a'}):
+    # All telemetry here includes user_id and experiment
+    emit_event('api.request', {'endpoint': '/users'})
+    response = call_external_api()
+
+# Async context manager
+async def process_with_context():
+    async with acustom_properties({'team_id': 'abc', 'region': 'us-east'}):
+        # All telemetry includes team_id and region
+        result = await async_operation()
+        return result
+
+# Nested contexts (properties are merged)
+with custom_properties({'tenant_id': 'tenant-1'}):
+    with custom_properties({'request_id': 'req-456'}):
+        # Both tenant_id and request_id are available
+        emit_event('data.access')
+```
+
+### Function Wrapper Approach
+
+```python
+from brizz import with_properties, awith_properties
+
+# Sync usage
+result = with_properties(
+    {'user_id': '123', 'experiment': 'variant-a'},
+    my_function,
+    arg1, arg2
+)
+
+# Async usage
+result = await awith_properties(
+    {'team_id': 'abc', 'region': 'us-east'},
+    my_async_function,
+    arg1, arg2
+)
+```
+
+## Event Examples
+
+```python
+from brizz import emit_event
+
+emit_event('user.signup', {'user_id': '123', 'plan': 'pro'})
+emit_event('user.payment', {'amount': 99, 'currency': 'USD'})
+```
+
+## Deployment Environment
+
+Optionally specify the deployment environment for better filtering and organization:
+
+```python
+Brizz.initialize(
+    api_key='your-api-key',
+    app_name='my-app',
+    environment='production',  # Optional: 'dev', 'staging', 'production', etc.
+)
+```
+
+## Environment Variables
+
+```bash
+BRIZZ_API_KEY=your-api-key                  # Required
+BRIZZ_BASE_URL=https://telemetry.brizz.dev  # Optional
+BRIZZ_APP_NAME=my-app                       # Optional
+BRIZZ_ENVIRONMENT=production                # Optional: deployment environment (dev, staging, production)
+```
+
+## PII Masking
+
+Automatically protects sensitive data in traces:
+
+```python
+# Option 1: Enable default masking (simple)
+Brizz.initialize(
+    api_key='your-api-key',
+    masking=True,  # Enables all built-in PII patterns
+)
+
+# Option 2: Custom masking configuration
+from brizz import Brizz, MaskingConfig, SpanMaskingConfig, AttributesMaskingRule
+
+Brizz.initialize(
+    api_key='your-api-key',
+    masking=MaskingConfig(
+        span_masking=SpanMaskingConfig(
+            rules=[
+                AttributesMaskingRule(
+                    attribute_pattern=r'gen_ai\.(prompt|completion)',
+                    mode='partial',  # 'partial' or 'full'
+                    patterns=[r'sk-[a-zA-Z0-9]{32}'],  # Custom regex patterns
+                ),
+            ],
+        ),
+    ),
+)
+```
+
+**Built-in patterns**: emails, phone numbers, SSNs, credit cards, API keys, crypto addresses, and
+more. Use `masking=True` for defaults or `MaskingConfig` for custom rules.
+
+## Instrumentation Control
+
+By default, Brizz automatically instruments AI libraries and blocks HTTP clients (`urllib`, `urllib3`, `requests`, `httpx`, `aiohttp_client`) to prevent noise. You can customize which instrumentations to block:
+
+```python
+Brizz.initialize(api_key="your-api-key")
+
+# Block specific instrumentations (replaces defaults)
+Brizz.initialize(
+    api_key="your-api-key",
+    blocked_instrumentations=["urllib", "requests", "httpx", "openai"]  # Custom list
+)
+
+# Enable all instrumentations (including HTTP clients)
+Brizz.initialize(
+    api_key="your-api-key",
+    blocked_instrumentations=[]  # Empty list = block nothing
+)
+```
+
+## Langfuse Integration
+
+Brizz runs alongside [Langfuse](https://langfuse.com/) without conflicts. However, if you want to avoid Brizz spans reaching Langfuse (or vice versa), you can disable Brizz instrumentation:
+
+```python
+from brizz import Brizz
+
+# Disable Brizz instrumentation to prevent spans from crossing between systems
+Brizz.initialize(api_key="your-api-key", allowed_instrumentations=[])
+
+# Now use Langfuse - only Langfuse will instrument your code
+from langfuse import Langfuse
+langfuse = Langfuse()
+```
+
+### Manual Input/Output in Langfuse
+
+When using Langfuse, you can add manual input/output at the trace level. Brizz automatically extracts and displays this data in the conversation view:
+
+```python
+from langfuse import Langfuse
+
+langfuse = Langfuse()
+
+# Create trace with manual input/output
+trace = langfuse.trace(
+    name="my-trace",
+    input={"question": "What is 2+2?"},  # {"question": "What is 2+2?"} Will be shown as user message
+    output={"answer": "The answer is 4"}  # {"answer": "The answer is 4"} Will be shown as assistant message
+)
+
+# Or use brizz.input / brizz.output keys for specific extraction
+trace = langfuse.trace(
+    name="my-trace",
+    input={"brizz.input": "What is 2+2?", "context": {...}},  # Only brizz.input shown
+    output={"brizz.output": "4", "metadata": {...}}  # Only brizz.output shown
+)
+```
+
+
+See `examples/langfuse_only_example.py` for complete examples.
