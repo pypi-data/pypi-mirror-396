@@ -1,0 +1,214 @@
+{
+    "format":{
+        "default": "ascii",
+        "set": ["ascii", "netcdf4"]
+    },
+    "opt":{
+        "adcirc":{
+            "grd":{"file_base":"fort.14"},
+            "minpr":{"file_base":"minpr.63"},
+            "maxele":{"file_base":"maxele.63"},
+            "maxwvel":{"file_base":"maxwvel.63"},
+            "maxvel":{"file_base":"maxvel.63"}
+        },
+        "swan":{
+            "swan_HS_max":{"file_base":"swan_HS_max.63"},
+            "swan_TPS_max":{"file_base":"swan_TPS_max.63"},
+            "swan_TM01_max":{"file_base":"swan_TM01_max.63"},
+            "swan_TM02_max":{"file_base":"swan_TM02_max.63"},
+            "swan_TMM10_max":{"file_base":"swan_TMM10_max.63"},
+            "swan_DIR_max":{"file_base":"swan_DIR_max.63"}
+        },
+        "stwave":{
+            "Tp.out_max":{},
+            "wave.out_max":{}
+        }
+    },
+    "plotters":{
+        "triplot":{
+            "mesh":true,
+            "sig":{"*meshdata":"vp:mesh"}
+        },
+        "contour":{
+            "mesh":true,
+            "sig":{"vals":"vp:vals","mesh":"vp:mesh"}
+        },
+        "tricontour":{
+            "mesh":true,
+            "sig":{"vals":"vp:vals","*meshdata":"vp:mesh"}
+        },
+        "hist":{
+            "sig":{"vals":"vp:vals","bins":"vp:bins"}
+        }
+    },
+    "universals":{
+        "grd":{
+            "ascii": {
+                "reader": "meshtools.file_io.readers.readmesh"
+            },
+            "netcdf4": {
+                "reader": "meshtools.file_io.readers.readmeshnc"
+            },
+            "plotter": {"name":"meshtools.pltdepth"},
+            "unit":"meter",
+            "titlepre": "ADCIRC Topo(-)/Bathy(+)",
+            "minimum": ["reader","plotter","path"],
+            "empty_value": -99999
+        },
+        "minmax63":{
+            "no_back":true,
+            "ascii": {
+                "reader": {
+                    "name":"meshtools.read_minmax63",
+                    "kwargs":{"extreme_only":true}
+                }
+            },
+            "netcdf4": {
+                "reader": "meshtools.file_io.readers.readvalnc"
+            },
+            "mesh": "grd",
+            "plotter":{ 
+                "name":"meshtools.pltminmax63",
+                "mesh":true,
+                "sig":{"vals":"vp:vals","*meshinfo":"vp:mesh","fig":"vp:fig","ax":"vp:ax"},
+                "kwargs": {
+                    "xlabel": "Longitude (deg)",
+                    "ylabel": "Latitude (deg)"
+                }
+            },
+            "minimum": ["reader","plotter","path"],
+            "empty_value": -99999,
+            "stattable":{
+                "name":"meshtools.plotters.plotters.stattable",
+                "kwargs":{"modeltype":"adcirc"},
+                "sig":{"vals":"vp:vals","ax":"vp:table_ax","mesh":"vp:mesh","*":null,"exclusive":true}
+            }
+        },
+        "maxvel": {
+            "base": "minmax63",
+            "netcdf4": {
+                "reader_args":["vel_max"]
+            },
+            "titlepre": "ADCIRC Maximum Water Speed",
+            "unit": "mps"
+        },
+        "maxele": {
+            "base": "minmax63",
+            "netcdf4": {
+                "reader_args":["zeta_max"]
+            },
+            "unit": "meter",
+            "plotter":{
+                "plotter_kwargs": {
+                    "defstdr": [-2.5,2.5]
+                }
+            },
+            "titlepre":"ADCIRC Maximum Water Height"
+        },
+        "minpr": {
+            "base": "minmax63",
+            "netcdf4": {
+                "reader_args":["pressure_min"]
+            },
+            "unit": "hcmH2O",
+            "titlepre": "ADCIRC Minimum Pressure",
+            "plotter_kwargs": {
+                "defstdr": [-2.5,2.5]
+            }
+        },
+        "maxwvel": {
+            "base": "minmax63",
+            "netcdf4": {
+                "reader_args":["wind_max"]
+            },
+            "titlepre": "ADCIRC Maximum Wind Speed",
+            "unit": "mps"
+        },
+        "swan_HS_max":{
+            "base": "minmax63",
+            "titlepre": "SWAN Maximum Wave Height",
+            "unit": "meter"
+        },
+        "swan_TPS_max":{
+            "base": "minmax63",
+            "titlepre": "SWAN Peak Period",
+            "unit": "sec"
+        },
+        "swan_TM01_max":{
+            "base": "minmax63",
+            "titlepre": "SWAN TM01",
+            "unit": "sec"
+        },
+        "swan_TM02_max":{
+            "base": "minmax63",
+            "titlepre": "SWAN TM02",
+            "unit": "sec"
+        },
+        "swan_TMM10_max":{
+            "base": "minmax63",
+            "titlepre": "SWAN TMM10",
+            "unit": "sec"
+        },
+        "swan_DIR_max":{
+            "base": "minmax63",
+            "titlepre": "SWAN Wave Direction",
+            "unit": "deg",
+            "crange": ["h",0,360]
+        },
+        "out_max": {
+            "reader": {"name":"meshtools.file_io.readers.read_stwave_vispipe"},
+            "plotter": {
+                "name":"meshtools.pltstwave",
+                "kwargs": {
+                    "xlabel": "Longitude (deg)",
+                    "ylabel": "Latitude (deg)"
+                }
+            },
+            "no_back":true,
+            "minimum": ["reader","plotter","path"],
+            "stattable":{
+                "name":"meshtools.plotters.plotters.stattable",
+                "kwargs":{"modeltype":"stwave"}
+            }
+        },
+        "wave.out_max":{
+            "base": "out_max",
+            
+            "plotter":{
+                "sig":{"rec":0,"mesh":1,"*":null}
+            },
+            "stattable":{
+                "sig":{"rec":0,"ax":"vp:table_ax","mesh":1,"*":null,"exclusive":true}
+            },
+            "file_records":{
+                "height":{
+                    "unit": "meter",
+                    "titlepre": "STWAVE Significant Wave Height",
+                    "crange": false
+                },
+                "period":{
+                    "unit": "sec",
+                    "titlepre": "STWAVE Associated Mean Wave Period",
+                    "crange": false
+                },
+                "direction":{
+                    "unit": "deg",
+                    "titlepre": "STWAVE Associated Mean Wave Direction",
+                    "crange": ["h",0,360]
+                }
+            }
+        },
+        "Tp.out_max": {
+            "plotter":{
+                "sig":{"vals":0,"mesh":1,"*":null}
+            },
+            "no_back":false,
+            "base": "out_max",
+            "unit": "sec",
+            "titlepre": "STWAVE Peak Wave Period",
+            "stattable":{
+                "sig":{"vals":0,"ax":"vp:table_ax","mesh":1,"*":null,"exclusive":true}
+            }
+        }
+    }
+}
