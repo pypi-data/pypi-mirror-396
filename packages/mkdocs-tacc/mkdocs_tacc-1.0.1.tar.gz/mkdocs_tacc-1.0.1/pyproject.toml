@@ -1,0 +1,58 @@
+[build-system]
+requires = ["poetry-core>=1.5.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+package-mode = true
+packages = [{include = "mkdocs_tacc"}]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Web Environment",
+    "Framework :: MkDocs",
+    "Intended Audience :: Information Technology",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Topic :: Documentation",
+]
+
+[project]
+name = "mkdocs-tacc"
+version = "1.0.1"
+description = "TACC-specific MkDocs theme"
+authors = [
+  { name = "TACC COA CMD", email = "coa-cmd@tacc.utexas.edu" }
+]
+maintainers = [
+  { name = "TACC COA CMD", email = "coa-cmd@tacc.utexas.edu" },
+  { name = "TACC ACI WMA", email = "wma-portals@tacc.utexas.edu" }
+]
+license = { file = "LICENSE" }
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+  "mkdocs==1.4.3"
+]
+
+[project.optional-dependencies]
+i18n = ["mkdocs[i18n]==1.4.3"]
+pymdown-extensions = ["pymdown-extensions>=10.4.0"]
+all = ["mkdocs[i18n]==1.4.3", "pymdown-extensions>=10.4.0"]
+
+# FAQ: for Poetry 1.x compatibility (Poetry 2+ should use above format)
+[tool.poetry.dependencies]
+mkdocs = "==1.4.3"
+pymdown-extensions = {version = ">=10.4.0", optional = true}
+[tool.poetry.extras]
+i18n = [] # empty cuz Poetry 1.x cannot handle nested extra; use pip for `i18n`
+pymdown-extensions = ["pymdown-extensions"]
+all = ["pymdown-extensions"] # for consistency with `all` offered for PIP users
+
+[project.urls]
+homepage = "https://tacc.github.io/mkdocs-tacc"
+documentation = "https://tacc.github.io/mkdocs-tacc"
+github = "https://github.com/TACC/mkdocs-tacc"
+issues = "https://github.com/TACC/mkdocs-tacc/issues"
+changelog = "https://github.com/TACC/mkdocs-tacc/releases"
+
+[project.entry-points."mkdocs.themes"]
+"tacc_readthedocs" = "mkdocs_tacc.tacc_readthedocs"

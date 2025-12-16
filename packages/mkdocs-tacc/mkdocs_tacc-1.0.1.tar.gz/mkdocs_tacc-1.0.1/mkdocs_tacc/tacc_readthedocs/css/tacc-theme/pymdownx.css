@@ -1,0 +1,78 @@
+/* ADMONITION */
+/* https://facelessuser.github.io/pymdown-extensions/extensions/blocks/plugins/admonition/ */
+
+/* to add space between plugin blocks */
+.admonition,
+.tabbed-set {
+  margin-block: 1em;
+}
+
+/* to add space between messages & content */
+/* to remove empty paragraphs */
+/* SEE: /docs/code-examples.md */
+/* HELP: What markdown would avoid these? */
+.admonition p:empty {
+  display: none;
+}
+
+/* to add admonition icons */
+.admonition::before {
+  /* copied from .fa (only the active rules not overwritten by TACC) */
+  font-family: FontAwesome;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1;
+  text-decoration: inherit;
+  text-rendering: auto;
+  -webkit-font-smoothing: antialiased;
+}
+.admonition:is(.caution)::before { content: "\f071"; }
+.admonition:is(.important, .attention)::before { content: "\f12a"; }
+.admonition:is(.warning)::before { content: "\f00d"; }
+.admonition:is(.tip)::before { content: "\f0eb"; }
+.admonition:is(.note)::before { content: "\f040"; }
+.admonition:is(.hint)::before { content: "\f00c"; }
+.admonition:is(.error, .danger)::before { content: "\f00d"; }
+.admonition:is(.warning)::before {
+  color: transparent;
+  -webkit-text-stroke: var(--global-color-primary--xx-light) 2px;
+}
+
+
+/* to remove admonition title icon */
+.admonition-title::before { display: none; }
+
+
+/* to give admonition block content a backgroud */
+.admonition       div.tabbed-set,
+.admonition.note  pre > code,
+.admonition       table {
+  background-color: var(--global-color-background--app);
+}
+
+
+
+
+/* BLOCKS: TAB */
+/* https://facelessuser.github.io/pymdown-extensions/extensions/blocks/plugins/tab/ */
+/* TABBED */
+/* https://facelessuser.github.io/pymdown-extensions/extensions/tabbed/ */
+/* https://github.com/TACC/Core-Styles/blob/main/src/lib/_imports/components/pymdownx--tabbed.css */
+
+/* to add Docs-specific styles */
+.tabbed-set {
+  border: var(--global-border-width--thick) solid var(--global-color-primary--dark);
+}
+
+/* to stretch tabs that just have a code block */
+.tabbed-content > pre:only-child {
+  margin-inline: calc( -1 * var(--buffer) );
+  margin-block: unset; /* overwrite core-style.docs */
+}
+.tabbed-content > pre:only-child > code {
+  border: unset; /* overwrite core-style.docs */
+  padding: var(--buffer); /* overwrite core-style.docs */
+
+  width: 100%; /* overwrite core-style.docs */
+  box-sizing: border-box; /* so `width: 100%` does not overflow */
+}
