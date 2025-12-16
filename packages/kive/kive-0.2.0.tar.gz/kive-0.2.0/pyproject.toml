@@ -1,0 +1,193 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kive"
+version = "0.2.0"
+description = "A lightweight memory service for AI applications with pluggable backends."
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "Your Name", email = "zhixiang.xzx@gmail.com"}
+]
+keywords = ["memory", "ai", "cognee", "graphiti", "llama-index"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+client = [
+    "httpx>=0.27.0",
+]
+
+server = [
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.29.0",
+    "llama-index-core>=0.10.0",
+    "loguru>=0.7.0",
+]
+
+# ========================================
+# Cloud Providers
+# ========================================
+zep-cloud = [
+    "zep-cloud>=1.0.0",
+]
+
+supermemory-cloud = [
+    "supermemory>=1.0.0",
+]
+
+cognee-cloud = [
+    "cogwit-sdk>=0.4.1",
+]
+
+memobase-cloud = [
+    "memobase>=1.0.0",
+]
+
+memos-cloud = [
+    "chonkie==0.3.0",
+    "MemoryOS>=1.1.3",
+]
+
+memu-cloud = [
+    "memu-py>=0.1.0",
+]
+
+mem0-cloud = [
+    "mem0ai==1.0.1",
+]
+
+# ========================================
+# Local Providers
+# ========================================
+cognee-local = [
+    "cognee==0.4.1",
+]
+
+graphiti-local = [
+    "graphiti-core==0.24.1",
+]
+
+mem0-local = [
+    "mem0ai==1.0.1",
+    "chromadb>=0.4.0",
+    "kuzu>=0.7.0",
+]
+
+memmachine-local = [
+    "pydantic>=2.11.7",
+    "neo4j>=5.28.2",
+    "asyncpg>=0.31.0",
+    "sqlalchemy>=2.0.43",
+    "openai>=1.104.2",
+    "sentence-transformers>=2.2.0",
+]
+
+# ========================================
+# 批量安装
+# ========================================
+cloud = [
+    "zep-cloud>=1.0.0",
+    "supermemory>=1.0.0",
+    "cogwit-sdk>=0.4.1",
+    "memobase>=1.0.0",
+    "memu-py>=0.1.0",
+    "chonkie==0.3.0",
+    "MemoryOS>=1.1.3",
+    "mem0ai==1.0.1",
+]
+
+local = [
+    "cognee==0.4.1",
+    "graphiti-core==0.24.1",
+    "mem0ai==1.0.1",
+    "chromadb>=0.4.0",
+    "kuzu>=0.7.0",
+    "pydantic>=2.11.7",
+    "neo4j>=5.28.2",
+    "asyncpg>=0.31.0",
+    "sqlalchemy>=2.0.43",
+    "openai>=1.104.2",
+    "sentence-transformers>=2.2.0",
+]
+
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+]
+
+all = [
+    # Client + Server
+    "httpx>=0.27.0",
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.29.0",
+    "llama-index-core>=0.10.0",
+    "loguru>=0.7.0",
+    
+    # Cloud Providers
+    "zep-cloud>=1.0.0",
+    "supermemory>=1.0.0",
+    "cogwit-sdk>=0.4.1",
+    "memobase>=1.0.0",
+    "memu-py>=0.1.0",
+    "chonkie==0.3.0",
+    "MemoryOS>=1.1.3",
+    
+    # Local Providers
+    "cognee==0.4.1",
+    "graphiti-core==0.24.1",
+    "chromadb>=0.4.0",
+    "kuzu>=0.7.0",
+    "neo4j>=5.28.2",
+    "asyncpg>=0.31.0",
+    "pgvector>=0.3.0",
+    "sqlalchemy>=2.0.43",
+    "sentence-transformers>=2.2.0",
+    
+    # Shared
+    "mem0ai==1.0.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/zhixiangxue/kive-ai"
+Documentation = "https://github.com/zhixiangxue/kive-ai#readme"
+Repository = "https://github.com/zhixiangxue/kive-ai"
+Issues = "https://github.com/zhixiangxue/kive-ai/issues"
+
+[tool.setuptools.packages.find]
+include = ["kive*"]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+
+[tool.ruff]
+line-length = 88
+target-version = "py38"
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
