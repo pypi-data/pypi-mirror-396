@@ -1,0 +1,91 @@
+Metadata-Version: 2.4
+Name: bgetech-modbus
+Version: 0.1.0b2
+Summary: Asynchronous Modbus library for B+G e-tech energy meters.
+Author-email: Bastian Schroll <info@schroll-it.de>
+Maintainer-email: Bastian Schroll <info@schroll-it.de>
+License: MIT License
+        
+        Copyright (c) 2025 Schroll IT-Solutions / Bastian Schroll
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+Project-URL: Homepage, https://github.com/Schrolli91/bgetech_modbus/
+Project-URL: Issues, https://github.com/Schrolli91/bgetech_modbus/issues
+Keywords: modbus,homeassistant,energy,b+g e-tech
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Intended Audience :: Developers
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: pymodbus>=3.11.2
+Dynamic: license-file
+
+# bgetech_modbus
+
+A asynchronous Modbus library for B+G e-tech energy meters.
+
+## Usage
+
+Here is a simple example, how to use this lib.
+In general there are only a few simple steps:
+
+- create an instance
+- connect
+- build a list with all parameters you want to read from the meter
+- call the `read_data()` method
+
+```python
+import asyncio
+
+from bgetech_modbus.client import BGEtechClient
+from bgetech_modbus.devices.ds100 import DS100
+
+
+async def main():
+    client = BGEtechClient(host="127.0.0.1", port=502, device_id=1)
+    await client.connect()
+
+    config = [DS100.active_energy_import, DS100.active_energy_export]
+    data = await client.read_data(config)
+
+    for entry in data:
+        print(f"{entry.name}: {entry.value} {entry.unit}")
+        print(f"Last received: {entry.last_received}")
+        print(f"[{entry.address}, {entry.count}, {entry.data_type.value}]")
+        print()
+
+    client.close()
+
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("\nExit!")
+
+```
+
+VS Code or any other IDE will show you the possible values that can be retrieved:
+
+![](docs/editor.png)
