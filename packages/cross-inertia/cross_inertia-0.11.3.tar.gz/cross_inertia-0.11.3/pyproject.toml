@@ -1,0 +1,56 @@
+[tool.uv.workspace]
+members = ["examples/*"]
+
+[project]
+name = "cross-inertia"
+version = "0.11.3"
+description = "Inertia.js adapter for Python web frameworks"
+readme = "README.md"
+authors = [
+    { name = "Patrick Arminio", email = "patrick.arminio@gmail.com" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "itsdangerous>=2.2.0",
+    "lia-web>=0.2.3",
+]
+
+[project.urls]
+Homepage = "https://github.com/patrick91/cross-inertia"
+Documentation = "https://inertia.patrick.wtf"
+Repository = "https://github.com/patrick91/cross-inertia"
+Issues = "https://github.com/patrick91/cross-inertia/issues"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/inertia"]
+
+[dependency-groups]
+dev = [
+    "fastapi[standard]>=0.116.1",
+    "pytest>=8.4.2",
+    "pytest-cov>=6.0.0",
+    "pytest-playwright>=0.6.2",
+    "playwright>=1.48.0",
+    "httpx>=0.28.0",
+    "nox>=2024.4.15",
+    "ruff>=0.8.0",
+    "mypy>=1.13.0",
+]
+
+[tool.autopub]
+plugins = ["autopub.plugins.github", "autopub.plugins.uv"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --strict-markers"
+markers = [
+    "e2e: End-to-end tests (slow, requires browser)",
+    "unit: Unit tests (fast)",
+]
