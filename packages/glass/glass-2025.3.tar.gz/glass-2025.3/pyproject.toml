@@ -1,0 +1,265 @@
+[build-system]
+build-backend = "hatchling.build"
+requires = [
+    "hatch-vcs",
+    "hatchling",
+]
+
+[dependency-groups]
+build = [
+    "build",
+]
+dev = [
+    "coverage[toml]",
+    "nox",
+    "nox-uv",
+    {include-group = "build"},
+    {include-group = "lint"},
+]
+docs = [
+    "array-api-strict",
+    "cosmology.api",
+    "furo",
+    "ipython",
+    "jax",
+    "jaxtyping",
+    "matplotlib",
+    "myst-parser",
+    "nbsphinx",
+    "sphinx-autodoc-typehints",
+    "sphinx-toolbox",
+    "sphinx<8.2.0",
+    "sphinxcontrib-katex",
+]
+doctest = [
+    "jax",
+    {include-group = "test"},
+]
+lint = [
+    "pre-commit",
+]
+test = [
+    "cosmology.api",
+    "fitsio",
+    "pytest",
+    "pytest-benchmark",
+    "pytest-cov",
+    "pytest-doctestplus",
+    "pytest-mock",
+    "pytest-rerunfailures",
+    "scipy",
+]
+
+[project]
+classifiers = [
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering :: Astronomy",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Typing :: Typed",
+]
+dependencies = [
+    "array-api-compat>=1.12.0",
+    "array-api-extra>=0.9.0",
+    "healpix>=2022.11.1",
+    "healpy>=1.15.0",
+    "transformcl>=2022.8.9",
+]
+description = "Generator for Large Scale Structure"
+dynamic = [
+    "version",
+]
+license = "MIT"
+license-files = [
+    "LICENSE",
+]
+maintainers = [
+    {email = "n.tessore@ucl.ac.uk", name = "Nicolas Tessore"},
+]
+name = "glass"
+optional-dependencies = {examples = [
+    "camb",
+    "cosmology.api",
+    "cosmology.compat.camb",
+    "glass.ext.camb",
+    "jupyter",
+    "matplotlib",
+]}
+readme = "README.md"
+requires-python = ">=3.10"
+
+[project.urls]
+Changelog = "https://glass.readthedocs.io/stable/manual/releases.html"
+Documentation = "https://glass.readthedocs.io/stable"
+Homepage = "https://github.com/glass-dev/glass"
+Issues = "https://github.com/glass-dev/glass/issues"
+
+[tool.coverage]
+report = {exclude_also = [
+    "class \\w+\\(Protocol(\\[(\\w+, )*\\w+\\])?\\):", # protocol classes
+    "if TYPE_CHECKING:", # type-checking imports
+], omit = [
+    "glass/_version.py",
+], skip_covered = true, sort = "cover"}
+run = {branch = true, parallel = true, source = [
+    "glass",
+]}
+paths.source = [
+    "src",
+    ".nox*/*/lib/python*/site-packages",
+]
+
+[tool.hatch]
+build.hooks.vcs.version-file = "glass/_version.py"
+build.targets.sdist.exclude = [
+    ".*",
+    "docs/*",
+    "examples/*",
+    "noxfile.py",
+    "tests/*",
+]
+version.source = "vcs"
+
+[tool.mypy]
+disallow_untyped_decorators = false
+enable_error_code = [
+    "ignore-without-code",
+    "redundant-expr",
+    "truthy-bool",
+]
+explicit_package_bases = true
+strict = true
+warn_unreachable = true
+
+[[tool.mypy.overrides]]
+disable_error_code = [
+    "arg-type",
+    "assignment",
+]
+module = "tests.core.*"
+
+[tool.pytest.ini_options]
+addopts = [
+    "--strict-config",
+    "--strict-markers",
+    "-ra",
+    "-v",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+log_cli_level = "DEBUG"
+markers = [
+    "stable: marks tests as expected to be stable (i.e. check regression using percentage)",
+    "unstable: mark tests as expected to be unstable (i.e. check regression using absolute time)",
+]
+minversion = "6.0"
+testpaths = [
+    "tests/core",
+]
+xfail_strict = true
+
+[tool.ruff]
+fix = true
+force-exclude = true
+show-fixes = true
+src = [
+    "glass",
+]
+lint.allowed-confusables = [
+    "α",
+    "γ",
+]
+lint.future-annotations = true
+lint.ignore = [
+    "COM812", # missing-trailing-comma (ruff-format recommended)
+    "D203", # one-blank-line-before-class
+    "D212", # blank-line-before-class
+    "ISC001", # single-line-implicit-string-concatenation (ruff-format recommended)
+    "RUF003", # ambiguous-unicode-character-comment
+]
+lint.isort = {known-first-party = [
+    "glass",
+    "tests",
+], known-third-party = [
+    "jax",
+], section-order = [
+    "future",
+    "standard-library",
+    "third-party",
+    "array-api",
+    "cosmo",
+    "first-party",
+    "local-folder",
+], sections = {"array-api" = [
+    "array_api_compat",
+    "array_api_extra",
+    "array_api_strict",
+], "cosmo" = [
+    "camb",
+    "cosmology",
+]}}
+lint.per-file-ignores = {"__init__.py" = [
+    "F401", # unused-import
+], "docs/*" = [
+    "D100", # undocumented-public-module
+    "INP001", # implicit-namespace-package,
+], "examples/*" = [
+    "ANN001", # missing-type-function-argument
+    "ANN002", # missing-type-args
+    "ANN201", # missing-return-type-undocumented-public-function
+    "D103", # undocumented-public-function
+    "PLR2004", # magic-value-comparison
+    "T201", # print
+], "glass/*" = [
+    "D205", # missing-blank-line-after-summary
+    "D401", # non-imperative-mood
+    "EM101", # raw-string-in-exception
+    "EM102", # f-string-in-exception
+    "PLR2004", # TODO: magic-value-comparison
+    "TRY003", # raise-vanilla-args
+], "glass/grf/_*" = [
+    "SLF001", # private-member-access
+], "tests/benchmarks/*" = [
+    "D100", # undocumented-public-module
+    "INP001", # implicit-namespace-package
+    "PLR2004", # magic-value-comparison
+    "S101", # assert
+    "S311", # suspicious-non-cryptographic-random-usage
+    "SLF001", # private-member-access
+], "tests/conftest.py" = [
+    "D100", # undocumented-public-module
+    "D103", # TODO: undocumented-public-function
+    "INP001", # implicit-namespace-package
+    "PLC0415", # import-outside-top-level
+], "tests/core/*" = [
+    "ANN001", # missing-type-function-argument
+    "ANN202", # missing-return-type-private-function
+    "D100", # undocumented-public-module
+    "D103", # TODO: undocumented-public-function
+    "INP001", # implicit-namespace-package
+    "PLC0415", # import-outside-top-level
+    "PLR2004", # magic-value-comparison
+    "S101", # assert
+    "SLF001", # private-member-access
+]}
+lint.select = [
+    "ALL",
+]
+lint.mccabe.max-complexity = 18
+lint.pydocstyle.convention = "numpy"
+
+[tool.tomlsort]
+all = true
+in_place = true
+spaces_indent_inline_array = 4
+trailing_comma_inline_array = true
+overrides."project.classifiers".inline_arrays = false
+overrides."tool.coverage.paths.source".inline_arrays = false
+overrides."tool.ruff.lint.isort.section-order".inline_arrays = false
