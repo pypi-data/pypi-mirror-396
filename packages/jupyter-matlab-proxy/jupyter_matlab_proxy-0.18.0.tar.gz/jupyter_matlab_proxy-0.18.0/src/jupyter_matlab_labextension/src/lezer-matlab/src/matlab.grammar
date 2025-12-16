@@ -1,0 +1,47 @@
+// Copyright 2024-2025 The MathWorks, Inc.
+
+@top Script { expression* }
+
+expression {
+  Identifier |
+  String |
+  MultilineComment |
+  keyword |
+  Symbol |
+  SystemCommand |
+  Magic
+}
+
+@external propSource matlabHighlighting from "./highlight.js"
+
+// Call out to comment parser. Since this is above the tokens block in this grammar, it takes precedence.
+@external tokens parseComments from "./parse_comments.js" { MultilineComment, LineComment, Magic }
+
+// See https://lezer.codemirror.net/docs/guide/ for documentation on syntax
+// specific to @tokens blocks, and how it differs from regular expression syntax.
+@tokens {
+  Identifier { $[a-zA-Z0-9_]+ $[a-zA-Z0-9_']* }
+  charVector { '"' (!["\n])* '"' }
+  stringArray { "'" (!['\n])* "'" }
+  SystemCommand { "!" (![\n])* }
+  Symbol { "+" | "-" | "*" | "=" | ";" | ":" | "(" | ")" | "{" | "}" | "[" | "]" | "," }
+  space { @whitespace+ }
+  @precedence { SystemCommand, Identifier }
+  @precedence { SystemCommand, space }
+  @precedence { Identifier, charVector }
+  @precedence { Identifier, stringArray }
+}
+
+String { charVector | stringArray }
+
+// Once a string has been parsed and found to be a Identifier, it will then
+// be tested against its specialize table, to test if it is a keyword.
+// The keyword node name is "Keyword".
+// https://lezer.codemirror.net/docs/guide/#token-specialization
+keyword {
+  @specialize[@name=Keyword]<Identifier, "break" | "case" | "classdef" | "continue" | "global" | "otherwise" | "persistent" | "return" | "spmd" | "arguments" | "enumeration" | "events" | "for" | "function" | "if" | "methods" | "parfor" | "properties" | "try" | "while" | "elseif" | "else" | "end" | "switch" | "catch">
+}
+
+@skip { space | LineComment }
+
+@detectDelim
