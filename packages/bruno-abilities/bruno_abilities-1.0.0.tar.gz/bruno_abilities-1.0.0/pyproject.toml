@@ -1,0 +1,168 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bruno-abilities"
+version = "1.0.0"
+description = "Action execution layer for Bruno Personal Assistant"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+    {name = "Meggy AI", email = "contact@meggy-ai.com"}
+]
+keywords = ["bruno", "ai", "assistant", "abilities", "automation"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "bruno-core>=0.1.0",
+    "bruno-llm>=0.1.0",
+    "bruno-memory>=0.1.0",
+    "pydantic>=2.0.0",
+    "structlog>=23.0.0",
+    "python-dateutil>=2.8.0",
+    "dateparser>=1.1.0",
+    "pytz>=2023.3",
+]
+
+[project.optional-dependencies]
+music = [
+    "pygame>=2.5.0",
+]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-mock>=3.11.0",
+    "pytest-cov>=4.1.0",
+    "ruff>=0.1.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "mypy>=1.5.0",
+    "bandit>=1.7.5",
+    "safety>=2.3.0",
+]
+docs = [
+    "sphinx>=7.0.0",
+    "sphinx-rtd-theme>=1.3.0",
+    "sphinx-autodoc-typehints>=1.24.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/meggy-ai/bruno-abilities"
+Documentation = "https://bruno-abilities.readthedocs.io"
+Repository = "https://github.com/meggy-ai/bruno-abilities"
+Issues = "https://github.com/meggy-ai/bruno-abilities/issues"
+
+[project.entry-points."bruno.abilities"]
+timer = "bruno_abilities.abilities.timer_ability:TimerAbility"
+alarm = "bruno_abilities.abilities.alarm_ability:AlarmAbility"
+reminder = "bruno_abilities.abilities.reminder_ability:ReminderAbility"
+notes = "bruno_abilities.abilities.notes_ability:NotesAbility"
+todo = "bruno_abilities.abilities.todo_ability:TodoAbility"
+music = "bruno_abilities.abilities.music_ability:MusicAbility"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["bruno_abilities*"]
+
+[tool.pytest.ini_options]
+minversion = "1.0.0"
+addopts = "-ra -q --strict-markers --cov=bruno_abilities --cov-report=term-missing --cov-report=html"
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+]
+
+[tool.coverage.run]
+source = ["bruno_abilities"]
+omit = ["tests/*", "*/test_*.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.black]
+line-length = 100
+target-version = ['py310', 'py311', 'py312']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 100
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+
+[tool.ruff]
+line-length = 100
+target-version = "1.0.0"
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+]
+ignore = [
+    "E501",  # line too long, handled by black
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+    "UP007", # Use X | Y for type annotations (keep Optional for Python 3.10+ compatibility)
+    "UP038", # Use X | Y in isinstance (not supported in Python 3.10)
+    "UP045", # Use X | None instead of Optional[X] (keep Optional for Python 3.10+ compatibility)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"bruno_abilities/abilities/notes_ability.py" = ["W291"]  # Intentional whitespace in templates
+"bruno_abilities/base/ability_base.py" = ["B027"]  # Empty hooks for subclass override
+
+[tool.mypy]
+python_version = "1.0.0"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = false
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+follow_imports = "normal"
+strict_optional = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+
+[tool.bandit]
+exclude_dirs = ["tests", "docs"]
+skips = ["B101", "B601"]
