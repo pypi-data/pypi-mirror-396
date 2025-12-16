@@ -1,0 +1,85 @@
+easyblock = "PythonBundle"
+
+name = "IDStools"
+version = "__VERSION__"
+
+local_commit = "__COMMITHASH__"
+
+homepage = (
+    "https://sharepoint.iter.org/departments/POP/CM/IMDesign/"
+    "Code%20Documentation/idstools-doc/devdocs/index.html"
+)
+description = """
+IDStools Version (__RAWVERSION__) is a collection of apps for modifying and 
+getting valuable information from Interface Data Structures (IDSs). It includes 
+a library of routines for retrieving relevant data from IDSes. It also offers 
+readily available various forms of visualizations. These tools were created in 
+conjunction with scientists and software developers from the fusion community. 
+The goal of having a common set of functions in the IDStools is to reduce the 
+work of reinventing the wheel by utilizing accessible functions.
+
+Git Repo: https://git.iter.org/projects/IMAS/repos/idstools
+"""
+
+toolchain = {"name": "__TOOLCHAIN_NAME__", "version": "__TOOLCHAIN_VERSION__"}
+
+builddependencies = [
+    ('hatchling', '1.18.0'),
+]
+
+checksums = [""]
+
+dependencies = [__EBRUN_MODULES__]
+
+exts_list = [
+    ('Cerberus', '1.3.5', {
+        'source_urls': ['https://pypi.python.org/packages/source/%(nameletterlower)s/%(namelower)s'],
+        'checksums': ['81011e10266ef71b6ec6d50e60171258a5b134d69f8fb387d16e4936d0d47642'],
+    }),
+    ('packaging', '24.1', {
+        'checksums': ['026ed72c8ed3fcce5bf8950572258698927fd1dbda10a5e981cdf0ac37f4f002'],
+    }),
+    ('pyparsing', '3.1.4', {
+        'checksums': ['f86ec8d1a83f11977c9a6ea7598e8c27fc5cddfa5b07ea2241edbbde1d7bc032'],
+    }),
+    ('rich_argparse', '1.5.2', {
+        'checksums': ['84d348d5b6dafe99fffe2c7ea1ca0afe14096c921693445b9eee65ee4fcbfd2c'],
+    }),
+    ('tabulate', '0.9.0', {
+        'checksums': ['0095b12bf5966de529c0feb1fa08671671b3368eec77d7ef7ab114be2c068b3c'],
+    }),
+    ('build', '1.0.3', {
+        'checksums': ['9f8f6a3b5e5f8c8e8f3b6e6f8c8e8f3b6e6f8c8e8f3b6e6f8c8e8f3b6e6f8c8e'],
+    }),
+    ('fortranformat', '2.0.0', {
+        'checksums': ['52473831d6f6bad7c2de0f26ad51856ea5d0ef097bcba5af3b855b871b815b0d'],
+    }),
+    ('pyproject_hooks', '1.2.0', {
+        'checksums': ['1e859bd5c40fae9448642dd871adf459e5e2084186e8d2c2a79a824c970da1f8'],
+    }),
+    (
+        name,
+        version,
+        {
+            "source_urls": [
+                "https://git.iter.org/rest/api/latest/projects/IMAS/repos/%(namelower)s/"
+                "archive?at=" + local_commit + "&filename=%(namelower)s-%(version)s.zip"
+            ],
+            "sources": [SOURCE_ZIP],
+            "modulename": "idstools",
+        },
+    ),
+]
+
+use_pip = True
+
+exts_download_dep_fail = True
+
+sanity_check_paths = {
+    "files": [],
+    "dirs": ["/work/imas/"],
+}
+
+sanity_check_commands = ["python3 -c 'import idstools.compute.common'"]
+
+moduleclass = "data"
