@@ -1,0 +1,105 @@
+Metadata-Version: 2.4
+Name: tt-df
+Version: 0.0.0a1
+Summary: Test time tooling for dataframes.
+Author: Carter Fendley
+License: MIT License
+        
+        Copyright (c) 2025 Carter Fendley
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+        
+Project-URL: Homepage, https://github.com/CarterFendley/test-time-dataframes
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: pytest-mock; extra == "dev"
+Requires-Dist: pytest-cov; extra == "dev"
+Requires-Dist: pre-commit; extra == "dev"
+Requires-Dist: ruff; extra == "dev"
+Provides-Extra: pandas
+Requires-Dist: pandas; extra == "pandas"
+Requires-Dist: pyarrow; extra == "pandas"
+Dynamic: license-file
+
+# test-time-dataframes
+
+Table with features across pandas and pyspark
+
+*DF Lib* | **Native Mocks** | **Pytest Fixture** | File IO Mocking | Call Comparison
+--- | --- | --- | --- | --- |
+pandas | ✅ | ✅ | ✅ | ✅
+pyspark | ⏳ | ⏳ | ⏳ | ⏳
+
+Note that there are good testing utilities inside of each of these data processing libraries, this is just an extension to make various things easier. Please make full use of these in addition to this library:
+
+- [pandas.testing](https://pandas.pydata.org/docs/reference/testing.html)
+
+## Development Setup
+
+Create and activate the Conda environment
+```bash
+conda create -n tt-df python=3.11
+conda activate tt-df
+```
+
+Install this package in editable mode
+```bash
+python -m pip install -e ".[dev,pandas]"
+```
+
+Install pre-commit hooks
+```bash
+pre-commit install
+```
+
+```bash
+python -m pytest tests
+```
+
+## Releasing
+
+Update the version in `pyproject.toml`
+```
+version='X.Y.Z'
+```
+
+Create a git tag and push
+```
+git tag vX.Y.Z
+git push --tags
+```
+
+Then create a release via github.
+
+#### If you mess up and need to edit things
+
+Remove old tag and re-tag
+```
+git tag -d vX.Y.Z
+git tag vX.Y.Z
+
+git push -f --tags
+```
+
+Delete previous github release and re-create.
