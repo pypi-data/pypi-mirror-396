@@ -1,0 +1,465 @@
+# Remote Development Workflow
+# Local-first workflow that uses task.md as source of truth
+# Checks for implementation plan before proceeding
+name: Remote Development
+description: |
+  Workflow for tasks in user's remote GitHub repositories.
+  Automatically clones the project repository, creates a task branch,
+  implements changes, and creates a pull request.
+
+  Key features:
+  - Uses local .anyt/tasks/{ID}/task.md as source of truth
+  - Checks for existing implementation plan - if approved, proceeds directly
+  - Creates implementation plan if none exists (auto-approved for autonomous execution)
+  - Syncs task.md changes back to server
+  - Verifies acceptance criteria during implementation
+
+  Prerequisites:
+  - Project must be linked to a GitHub repository
+  - User must have GitHub installation connected
+  - ANYT_API_KEY environment variable must be set
+
+  Usage: anyt worker start --workflow remote_dev
+
+# Workflow settings - enables automatic repo cloning
+settings:
+  clone_repo: true        # Clone project repository before execution
+  cleanup_workspace: true # Cleanup task workspace after execution
+  project_scope: workspace # Select/create projects at workspace level
+
+# Trigger: Any TODO tasks
+"on":
+  task_created: {}
+  task_updated:
+    status: ["todo"]
+
+# Workflow requirements
+requirements:
+  commands:
+    - name: git
+      required: true
+      check_command: "git --version"
+      install_instructions:
+        darwin: "brew install git"
+        linux: "sudo apt-get install git"
+        windows: "Download from https://git-scm.com/"
+    - name: coding-agent
+      required: true
+      check_type: coding_agent
+      install_instructions:
+        darwin: "Install a coding agent: claude, codex, or gemini"
+        linux: "Install a coding agent: claude, codex, or gemini"
+        windows: "Install a coding agent: claude, codex, or gemini"
+    - name: gh
+      required: true
+      check_command: "gh --version"
+      install_instructions:
+        darwin: "brew install gh"
+        linux: "sudo apt-get install gh"
+        windows: "Download from https://cli.github.com/"
+    - name: gh-auth
+      required: true
+      check_type: gh_auth
+      install_instructions:
+        darwin: "Run: gh auth login"
+        linux: "Run: gh auth login"
+        windows: "Run: gh auth login"
+
+jobs:
+  remote_task:
+    name: Remote Development Task
+    runs-on: local
+    timeout-minutes: 45
+
+    steps:
+      # ─────────────────────────────────────────────────────────────
+      # PHASE 1: FETCH & SYNC
+      # ─────────────────────────────────────────────────────────────
+
+      - name: Mark task as active
+        uses: anyt/task-update@v1
+        with:
+          status: active
+          note: |
+            🤖 Task claimed by worker
+
+            Syncing task locally and analyzing requirements...
+
+      - name: Pull task to local
+        uses: anyt/local-task-pull@v1
+        id: pull
+        with:
+          task_id: ${{ task.identifier }}
+
+      - name: Read local task
+        uses: anyt/local-task-read@v1
+        id: local
+        with:
+          task_id: ${{ task.identifier }}
+
+      # ─────────────────────────────────────────────────────────────
+      # PHASE 2: CHECK IMPLEMENTATION PLAN STATUS
+      # ─────────────────────────────────────────────────────────────
+
+      # Check if plan status is 'changes_requested' - block if so
+      - name: Check plan status
+        uses: anyt/check-condition@v1
+        id: plan_check
+        with:
+          condition: ${{ task.plan_review_status == 'changes_requested' }}
+          fail_message: |
+            ⏸️ **Plan Changes Requested**
+
+            The implementation plan has changes requested and cannot proceed.
+            Please review the feedback, update the plan, and resubmit.
+
+            Current plan status: ${{ task.plan_review_status }}
+
+      # Block task if plan has changes requested
+      - name: Block on plan changes requested
+        uses: anyt/task-update@v1
+        if: ${{ task.plan_review_status == 'changes_requested' }}
+        with:
+          status: blocked
+          note: |
+            ⏸️ **Blocked: Plan Changes Requested**
+
+            The implementation plan needs revision before implementation can proceed.
+            Please review feedback, update the plan, and resubmit for approval.
+
+      # Fail workflow if plan has changes requested
+      - name: Fail on plan changes requested
+        uses: anyt/fail@v1
+        if: ${{ task.plan_review_status == 'changes_requested' }}
+        with:
+          message: "Plan has changes_requested status - cannot proceed with implementation"
+
+      # ─────────────────────────────────────────────────────────────
+      # PHASE 3: PLAN APPROVED - PROCEED TO IMPLEMENTATION
+      # ─────────────────────────────────────────────────────────────
+
+      # If plan is approved, proceed directly to implementation
+      - name: Log approved plan - proceeding to implementation
+        uses: anyt/task-update@v1
+        if: ${{ task.plan_review_status == 'approved' }}
+        with:
+          note: |
+            📋 **Plan Already Approved**
+
+            Using existing approved implementation plan.
+            Proceeding with implementation...
+          timestamp: true
+
+      # ─────────────────────────────────────────────────────────────
+      # PHASE 3b: NO PLAN - CREATE IMPLEMENTATION PLAN
+      # ─────────────────────────────────────────────────────────────
+
+      # Create implementation plan if not approved yet
+      - name: Create implementation plan
+        uses: anyt/coding-agent@v1
+        id: create_plan
+        if: ${{ task.plan_review_status != 'approved' }}
+        with:
+          prompt: |
+            You need to analyze this task and create an implementation plan.
+
+            ## Current Task Content
+            ${{ steps.local.outputs.task_md }}
+
+            ## Context Files
+            ${{ steps.local.outputs.context_content }}
+
+            ## Instructions
+
+            Read the codebase to understand the project structure, then create files at:
+            - `.anyt/tasks/${{ task.identifier }}/task.md` - Implementation plan
+            - `.anyt/tasks/${{ task.identifier }}/checklist.md` - Acceptance criteria checklist
+
+            Create a comprehensive implementation plan in task.md:
+
+            ```markdown
+            # {Task Title}
+
+            ## Problem Statement
+            Clear description of what needs to be done and why.
+
+            ## Implementation Plan
+            1. Concrete step 1
+            2. Concrete step 2
+            3. Concrete step 3
+
+            ## Files to Modify
+            - `path/to/file1.ts` - What changes are needed
+            - `path/to/file2.ts` - What changes are needed
+            ```
+
+            Create checklist.md with acceptance criteria and testing checklist:
+
+            ```markdown
+            # Checklist
+
+            ## Acceptance Criteria
+            - [ ] Specific, testable criterion 1
+            - [ ] Specific, testable criterion 2
+            - [ ] Specific, testable criterion 3
+
+            ## Testing Checklist
+            - [ ] Unit tests added/updated
+            - [ ] Existing tests pass
+            - [ ] Manual testing completed
+            ```
+
+            IMPORTANT:
+            - Read existing code to understand patterns before planning
+            - Be specific about file paths and changes
+            - Make acceptance criteria testable and measurable
+            - Keep the original problem statement if it's clear
+            - Checklist items should be checkable with `- [x]` when completed
+
+            Update task.md and create checklist.md now.
+          stream: true
+          dangerously-skip-permissions: true
+
+      - name: Sync plan to server
+        uses: anyt/local-task-push@v1
+        id: sync_plan
+        if: ${{ task.plan_review_status != 'approved' }}
+        with:
+          task_id: ${{ task.identifier }}
+
+      # Re-read task after plan creation
+      - name: Read task with plan
+        uses: anyt/local-task-read@v1
+        id: planned
+        if: ${{ task.plan_review_status != 'approved' }}
+        with:
+          task_id: ${{ task.identifier }}
+
+      # Submit the plan for approval (auto-approved for autonomous execution)
+      - name: Submit implementation plan
+        uses: anyt/plan-submit@v1
+        id: submit_plan
+        if: ${{ task.plan_review_status != 'approved' }}
+        with:
+          plan: ${{ steps.planned.outputs.task_md }}
+          auto_approve: true
+
+      - name: Post plan submission note
+        uses: anyt/task-update@v1
+        if: ${{ task.plan_review_status != 'approved' }}
+        with:
+          note: |
+            📋 **Implementation Plan Created & Submitted**
+
+            Plan has been recorded and auto-approved for autonomous execution.
+            {% if steps.submit_plan.outputs.plan_status %}Status: {{ steps.submit_plan.outputs.plan_status }}{% endif %}
+
+            Proceeding with implementation...
+          timestamp: true
+
+      # ─────────────────────────────────────────────────────────────
+      # PHASE 4: IMPLEMENT
+      # ─────────────────────────────────────────────────────────────
+
+      - name: Implement task
+        uses: anyt/coding-agent@v1
+        id: implementation
+        with:
+          prompt: |
+            You are implementing a task in a cloned repository.
+
+            ## Task Specification
+            ${{ steps.planned.outputs.task_md || steps.local.outputs.task_md }}
+
+            ## Checklist
+            ${{ steps.planned.outputs.checklist_md || steps.local.outputs.checklist_md }}
+
+            ## Additional Context
+            ${{ steps.local.outputs.context_content }}
+
+            ## Instructions
+
+            1. **Read CLAUDE.md** if it exists for project guidelines
+
+            2. **Follow the Implementation Plan** from task.md exactly
+
+            3. **Update the checklist** at `.anyt/tasks/${{ task.identifier }}/checklist.md`:
+               - Change `- [ ]` to `- [x]` for each completed criterion
+               - Work through all acceptance criteria items
+
+            4. **Run the Testing Checklist**:
+               - Run any applicable tests (lint, typecheck, unit tests)
+               - Mark completed items in checklist.md
+
+            5. **Add Implementation Notes** to task.md:
+               ```markdown
+               ## Implementation Notes
+               - What was done
+               - Any deviations from plan
+               - Issues encountered
+               ```
+
+            6. **Code Quality**:
+               - Follow existing code patterns
+               - Keep changes minimal and focused
+               - Ensure code compiles/lints
+
+            IMPORTANT: Update checklist.md with checked items as you complete them!
+
+            Begin implementation now.
+          stream: true
+          dangerously-skip-permissions: true
+
+      # ─────────────────────────────────────────────────────────────
+      # PHASE 5: VERIFY CHECKLIST & SYNC
+      # ─────────────────────────────────────────────────────────────
+
+      - name: Read final task state
+        uses: anyt/local-task-read@v1
+        id: final
+        with:
+          task_id: ${{ task.identifier }}
+
+      - name: Verify checklist completion
+        uses: anyt/coding-agent@v1
+        id: verify_checklist
+        with:
+          prompt: |
+            Review and verify the checklist at `.anyt/tasks/${{ task.identifier }}/checklist.md`
+
+            ## Current Checklist
+            ${{ steps.final.outputs.checklist_md }}
+
+            ## Instructions
+
+            1. **Review each checklist item**:
+               - For items marked `- [ ]` (unchecked), determine if they're actually completed
+               - If completed, update to `- [x]`
+               - If not completable or blocked, add a note explaining why
+
+            2. **Run verification tests**:
+               - If there's a Testing Checklist, run any tests mentioned
+               - Check lint, typecheck, or build commands if applicable
+               - Update checklist items based on test results
+
+            3. **Update the checklist file** at `.anyt/tasks/${{ task.identifier }}/checklist.md`
+
+            4. **Report status**:
+               - Summarize which items are complete
+               - Note any items that couldn't be completed
+
+            Be thorough - this checklist will be synced to the server.
+          stream: true
+          dangerously-skip-permissions: true
+
+      - name: Sync implementation notes to server
+        uses: anyt/local-task-push@v1
+        id: sync_final
+        with:
+          task_id: ${{ task.identifier }}
+
+      # ─────────────────────────────────────────────────────────────
+      # PHASE 6: COMMIT & PR
+      # ─────────────────────────────────────────────────────────────
+
+      - name: Commit changes
+        uses: anyt/git-commit@v1
+        id: commit
+        with:
+          message: |
+            feat(${{ task.identifier }}): ${{ task.title }}
+
+            Task: ${{ task.identifier }}
+
+            ## Changes
+            ${{ steps.implementation.outputs.summary }}
+
+            ## Files Modified
+            ${{ steps.implementation.outputs.files_written }}
+
+            🤖 Generated with Claude Code
+            Co-Authored-By: Claude <noreply@anthropic.com>
+          add: all
+          push: true
+
+      - name: Create pull request
+        uses: anyt/github-pr-create@v1
+        id: pr
+        with:
+          title: "${{ task.identifier }}: ${{ task.title }}"
+          body: |
+            ## Summary
+
+            Implements: **${{ task.identifier }}** - ${{ task.title }}
+
+            ## Task Specification
+
+            ${{ steps.final.outputs.task_md }}
+
+            ## Changes Made
+
+            ${{ steps.implementation.outputs.summary }}
+
+            **Files Modified:**
+            ${{ steps.implementation.outputs.files_written }}
+
+            **Commit:** ${{ steps.commit.outputs.commit_hash }}
+
+            ---
+
+            🤖 Generated with [Claude Code](https://claude.ai/code)
+            Co-Authored-By: Claude <noreply@anthropic.com>
+
+            Closes: ${{ task.identifier }}
+          base: main
+          draft: false
+
+      - name: Register PR in backend
+        uses: anyt/pr-register@v1
+        id: register_pr
+        continue_on_error: true
+        with:
+          pr_number: ${{ steps.pr.outputs.pr_number }}
+          pr_url: ${{ steps.pr.outputs.pr_url }}
+          head_branch: ${{ task.identifier | lower }}
+          base_branch: main
+          head_sha: ${{ steps.commit.outputs.commit_hash }}
+
+      # ─────────────────────────────────────────────────────────────
+      # PHASE 7: COMPLETE
+      # ─────────────────────────────────────────────────────────────
+
+      - name: Mark task complete
+        uses: anyt/task-update@v1
+        with:
+          status: done
+          note: |
+            ✅ **Task Completed Successfully**
+
+            ## Pull Request
+            ${{ steps.pr.outputs.pr_url }}
+            {% if steps.register_pr.outputs.pr_id %}**Backend PR ID:** {{ steps.register_pr.outputs.pr_id }}{% endif %}
+
+            ## Summary
+            ${{ steps.implementation.outputs.summary }}
+
+            ## Details
+            **Branch:** ${{ task.identifier | lower }}
+            **Commit:** ${{ steps.commit.outputs.commit_hash }}
+            **Files Changed:** ${{ steps.implementation.outputs.files_written | length }}
+
+            Ready for review and merge!
+
+    # Handle failures
+    on-failure:
+      - name: Mark task as blocked
+        uses: anyt/task-update@v1
+        with:
+          status: blocked
+          note: |
+            ❌ **Task Failed**
+
+            **Failed Step:** ${{ failure.step }}
+            **Error:** ${{ failure.message }}
+
+            Please investigate and retry manually.
