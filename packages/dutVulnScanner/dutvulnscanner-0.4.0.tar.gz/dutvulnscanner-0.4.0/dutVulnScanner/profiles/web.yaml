@@ -1,0 +1,52 @@
+# Web Application Scanning Profile
+# Focuses on web vulnerabilities and technologies
+
+name: web
+description: Comprehensive web application security scanning profile
+
+metadata:
+  estimated_duration: "~1 hour"
+  risk_level: "Safe"
+
+# Tools to use for scanning
+tools:
+  - whatweb
+  - nuclei
+  - nmap
+
+# Tool-specific configurations
+tool_configs:
+  whatweb:
+    aggression: 3
+    follow_redirect: true
+    timeout: 30
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+  
+  nuclei:
+    severity: "critical,high"
+    templates_dir: null  # Use default templates
+    rate_limit: 100
+    timeout: 3
+    silent: true
+    tags:
+      - cve
+      - owasp
+  
+  nmap:
+    args:
+      - "-sV"
+      - "-F"  # Fast scan
+      - "-T4"
+      - "-p80,443,8080,8443"
+
+# Execution settings
+parallel: true
+timeout: 900  # 15 minutes for demo
+
+# Correlation settings
+enable_correlation: true
+
+# Additional metadata
+category: web
+risk_level: medium
+recommended_frequency: weekly

@@ -1,0 +1,45 @@
+# Infrastructure Scanning Profile
+# Focuses on network services and infrastructure vulnerabilities
+
+name: infra
+description: Network infrastructure and service security scanning profile
+
+metadata:
+  estimated_duration: "~2 hours"
+  risk_level: "Safe"
+
+# Tools to use for scanning
+tools:
+  - nmap
+  - nuclei
+
+# Tool-specific configurations
+tool_configs:
+  nmap:
+    args:
+      - "-sV"
+      - "-F"  # Fast scan (top 100 ports)
+      - "-T4"
+  
+  nuclei:
+    severity: "critical,high"
+    templates_dir: null
+    rate_limit: 100
+    timeout: 3
+    silent: true
+    tags:
+      - cve
+      - network
+      - default-login
+
+# Execution settings
+parallel: true
+timeout: 900  # 15 minutes for demo
+
+# Correlation settings
+enable_correlation: true
+
+# Additional metadata
+category: infrastructure
+risk_level: high
+recommended_frequency: daily

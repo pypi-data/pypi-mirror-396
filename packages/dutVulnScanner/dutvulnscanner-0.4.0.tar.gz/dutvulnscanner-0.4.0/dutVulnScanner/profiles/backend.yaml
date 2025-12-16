@@ -1,0 +1,64 @@
+# Backend & Database Security Profile
+# Fast scan focusing on backend services, databases, and APIs
+
+name: backend
+description: Quick backend and database security assessment
+
+metadata:
+  estimated_duration: "~5 minutes"
+  risk_level: "Safe"
+
+# Tools to use for scanning
+tools:
+  - nmap
+  - whatweb
+  - sqlmap
+  - sslscan
+
+# Tool-specific configurations
+tool_configs:
+  nmap:
+    args:
+      - "-sV"
+      - "-F"  # Fast scan (100 most common ports)
+      - "-T4"
+      - "-p3306,5432,1433,27017,6379,5984,9200,5000,8080"  # DB ports + common backend
+  
+  whatweb:
+    aggression: 1
+    follow_redirect: true
+    conn_timeout: 20
+    wait: 1
+  
+  sqlmap:
+    risk: 1  # Minimal risk for demo
+    level: 1  # Basic tests only
+    enumerate_dbs: false  # Don't enumerate DBs (too slow)
+    batch: true  # Non-interactive
+    threads: 3  # Fast parallel testing
+    timeout: 30  # Quick timeout per test
+    technique: "B"  # Only boolean-based blind (fastest)
+    skip_static: true  # Skip static content
+    crawl: 1  # Crawl only 1 level deep
+  
+  sslscan:
+    show_certificate: false
+    check_vulnerabilities: true
+    timeout: 30
+
+# Execution settings
+parallel: true
+timeout: 600  # 10 minutes total
+
+# Correlation settings
+enable_correlation: true
+
+# Additional metadata
+category: backend
+risk_level: low
+recommended_frequency: daily
+focus_areas:
+  - "Database security"
+  - "API endpoints"
+  - "Backend services"
+  - "SSL/TLS configuration"

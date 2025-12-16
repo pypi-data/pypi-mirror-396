@@ -1,0 +1,342 @@
+"""
+Discord webhook notification implementation
+"""
+
+import logging
+from datetime import datetime
+from typing import Optional, Dict, Any
+from .base import Notification
+
+try:
+    import requests
+
+    REQUESTS_AVAILABLE = True
+except ImportError:
+    REQUESTS_AVAILABLE = False
+    logging.warning("requests not available, Discord notifications will not work")
+
+logger = logging.getLogger(__name__)
+
+
+class DiscordNotification(Notification):
+    """Discord webhook notification"""
+
+    def __init__(self, webhook_url: str, app_name: str = "DUTVulnScanner", username: Optional[str] = None):
+        super().__init__(app_name)
+        self.webhook_url = webhook_url
+        self.username = username or app_name
+
+        if not REQUESTS_AVAILABLE:
+            logger.error("requests library is required for Discord notifications")
+            raise ImportError("requests library is required for Discord notifications")
+
+        if not self.webhook_url:
+            raise ValueError("Discord webhook URL is required")
+
+    def send(self, title: str, message: str, **kwargs) -> bool:
+        """
+        Send Discord webhook notification
+
+        Args:
+            title: Notification title
+            message: Notification message
+            **kwargs: Additional arguments (color, fields, etc.)
+
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            # Create embed
+            embed = {
+                "title": title,
+                "description": message,
+                "color": kwargs.get("color", 0xFF0000),  # Red color by default
+                "footer": {"text": self.app_name},
+            }
+
+            # Add custom fields if provided
+            if "fields" in kwargs:
+                embed["fields"] = kwargs["fields"]
+
+            # Add timestamp if provided
+            if "timestamp" in kwargs:
+                embed["timestamp"] = kwargs["timestamp"]
+
+            payload = {"username": self.username, "embeds": [embed]}
+
+            # Add avatar URL if provided
+            if "avatar_url" in kwargs:
+                payload["avatar_url"] = kwargs["avatar_url"]
+
+            response = requests.post(
+                self.webhook_url, json=payload, headers={"Content-Type": "application/json"}, timeout=10
+            )
+
+            if response.status_code == 204:
+                logger.info(f"Discord notification sent: {title}")
+                return True
+            else:
+                logger.error(f"Discord webhook failed with status {response.status_code}: {response.text}")
+                return False
+
+        except Exception as e:
+            logger.error(f"Failed to send Discord notification: {e}")
+            return False
+
+    def send_simple(self, message: str) -> bool:
+        """
+        Send simple text message to Discord
+
+        Args:
+            message: Message to send
+
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            payload = {"username": self.username, "content": message}
+
+            response = requests.post(
+                self.webhook_url, json=payload, headers={"Content-Type": "application/json"}, timeout=10
+            )
+
+            if response.status_code == 204:
+                logger.info(f"Discord message sent: {message[:50]}...")
+                return True
+            else:
+                logger.error(f"Discord webhook failed with status {response.status_code}: {response.text}")
+                return False
+
+        except Exception as e:
+            logger.error(f"Failed to send Discord message: {e}")
+            return False
+
+    def send_advanced_report(self, target: str, vuln_count: int, duration: str, **kwargs) -> bool:
+        """
+        Send an advanced, visually stunning scan report via Discord
+
+        Args:
+            target: Target that was scanned
+            vuln_count: Number of vulnerabilities found
+            duration: Scan duration
+            **kwargs: Additional arguments (vulnerabilities, stats, report_url, mention, simple_mode, etc.)
+
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        # Check if simple mode is requested for mobile compatibility
+        simple_mode = kwargs.get("simple_mode", False)
+
+        try:
+            color = 0xFF0000 if vuln_count > 0 else 0x00FF00
+
+            if simple_mode:
+                # Simple mode - mobile friendly
+                embed = {
+                    "title": f"🔒 Security Scan Report",
+                    "description": f"**Target:** `{target}`\n**Status:** {'⚠️ VULNERABLE' if vuln_count > 0 else '✅ SECURE'}\n**Duration:** `{duration}`\n**Issues Found:** `{vuln_count}`",
+                    "color": color,
+                    "fields": [],
+                    "footer": {
+                        "text": f"Generated by {self.app_name} • {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                    },
+                }
+            else:
+                # Full mode - with enhanced formatting
+                embed = {
+                    "title": f"🔒 Security Scan Report",
+                    "description": f"**🎯 Target:** `{target}`\n**📊 Status:** {'⚠️ VULNERABLE' if vuln_count > 0 else '✅ SECURE'}\n**⏱️ Duration:** `{duration}`\n**🔍 Issues Found:** `{vuln_count}`",
+                    "color": color,
+                    "fields": [],
+                    "author": {
+                        "name": "DUTVulnScanner Pro",
+                    },
+                    "footer": {
+                        "text": f"Generated by {self.app_name} • {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                        "icon_url": "https://cdn.discordapp.com/avatars/1441096022402007262/3b276d4a79c91694de0f73d2aa18a300.webp?size=160",
+                    },
+                }
+
+            # Add vulnerability breakdown if available
+            if "vulnerabilities" in kwargs and kwargs["vulnerabilities"]:
+                vuln_list = "**🚨 Vulnerabilities Found:**\n"
+                severity_emojis = {"critical": "🔴", "high": "🟠", "medium": "🟡", "low": "🟢", "info": "🔵"}
+
+                for vuln in kwargs["vulnerabilities"][: 10 if simple_mode else 8]:
+                    emoji = severity_emojis.get(vuln.get("severity", "").lower(), "⚪")
+                    vuln_list += f"{emoji} **{vuln.get('severity', 'Unknown')}**: {vuln.get('description', 'N/A')} (x{vuln.get('count', 1)})\n"
+
+                embed["fields"].append(
+                    {
+                        "name": f"🔍 Findings ({len(kwargs['vulnerabilities'])} issues)",
+                        "value": vuln_list[:1000],
+                        "inline": False,
+                    }
+                )
+
+            # Add risk assessment
+            risk_level = (
+                "🔴 CRITICAL"
+                if vuln_count >= 10
+                else "🟠 HIGH" if vuln_count >= 5 else "🟡 MEDIUM" if vuln_count >= 1 else "🟢 LOW"
+            )
+            risk_desc = {
+                "🔴 CRITICAL": "Immediate attention required! Multiple critical vulnerabilities detected.",
+                "🟠 HIGH": "High risk vulnerabilities found. Address promptly.",
+                "🟡 MEDIUM": "Moderate security concerns identified.",
+                "🟢 LOW": "System appears secure. Continue regular monitoring.",
+            }
+
+            embed["fields"].append(
+                {
+                    "name": f"⚠️ Risk Assessment: {risk_level}",
+                    "value": risk_desc[risk_level],
+                    "inline": False,
+                }
+            )
+
+            # Add quick stats
+            if "stats" in kwargs:
+                stats = kwargs["stats"]
+                stats_display = ""
+                for key, value in stats.items():
+                    icon = {
+                        "critical": "🔴",
+                        "high": "🟠",
+                        "medium": "🟡",
+                        "low": "🟢",
+                        "scanned": "🔍",
+                        "clean": "✅",
+                    }.get(key.lower(), "📊")
+                    stats_display += f"{icon} **{key.replace('_', ' ').title()}**: `{value}`\n"
+
+                embed["fields"].append({"name": "📈 Quick Statistics", "value": stats_display, "inline": True})
+
+            # Add next steps (only in full mode)
+            if not simple_mode and vuln_count > 0:
+                next_steps = """**🛠️ Recommended Actions:**
+• Review all findings in detail
+• Prioritize critical and high-severity issues
+• Apply security patches and updates
+• Implement additional security measures
+• Schedule follow-up security assessment"""
+
+                embed["fields"].append({"name": "🎯 Next Steps", "value": next_steps, "inline": False})
+
+            # Add report download link if provided and has valid URL
+            if "report_url" in kwargs and kwargs["report_url"]:
+                embed["fields"].append(
+                    {
+                        "name": "📄 Full Report",
+                        "value": f"[📥 Download Complete Report]({kwargs['report_url']})",
+                        "inline": False,
+                    }
+                )
+
+            payload = {
+                "username": kwargs.get("username", "🛡️ DUT Security Bot"),
+                "avatar_url": kwargs.get(
+                    "avatar_url",
+                    "https://cdn.discordapp.com/avatars/1441096022402007262/3b276d4a79c91694de0f73d2aa18a300.webp?size=160",
+                ),
+                "embeds": [embed],
+            }
+
+            # Add mention if specified
+            if "mention" in kwargs:
+                payload["content"] = kwargs["mention"]
+
+            webhook_url = kwargs.get("webhook_url", self.webhook_url)
+
+            response = requests.post(
+                webhook_url, json=payload, headers={"Content-Type": "application/json"}, timeout=15
+            )
+
+            if response.status_code == 204:
+                logger.info(f"Discord advanced scan report sent for target: {target}")
+                return True
+            else:
+                logger.error(f"Discord webhook failed with status {response.status_code}: {response.text}")
+                return False
+
+        except Exception as e:
+            logger.error(f"Failed to send Discord advanced scan report: {e}")
+            return False
+
+    def send_pdf_report_notification(self, target: str, pdf_path: str, creation_time: str = None, **kwargs) -> bool:
+        """
+        Send Discord notification for PDF report generation.
+
+        Args:
+            target: Target host/IP scanned
+            pdf_path: Path to generated PDF file
+            creation_time: When the PDF was created (ISO format)
+            **kwargs: Additional parameters
+
+        Returns:
+            bool: True if successful
+        """
+        try:
+            from datetime import datetime
+            from pathlib import Path
+
+            # Format creation time
+            if creation_time:
+                try:
+                    dt = datetime.fromisoformat(creation_time)
+                    time_str = dt.strftime("%Y-%m-%d %H:%M:%S")
+                except:
+                    time_str = creation_time
+            else:
+                time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+            # Get file size
+            pdf_file = Path(pdf_path)
+            if pdf_file.exists():
+                file_size = f"{pdf_file.stat().st_size / 1024:.2f} KB"
+            else:
+                file_size = "Unknown"
+
+            # Prepare file path/URL display
+            # If it's a URL (Firebase), create a clickable link; otherwise show path as code
+            if pdf_path.startswith("http://") or pdf_path.startswith("https://"):
+                file_display = f"[📥 Download Report]({pdf_path})"
+            else:
+                file_display = f"`{pdf_path}`"
+
+            # Create embed
+            embed = {
+                "title": "📄 PDF Report Generated",
+                "description": f"Vulnerability assessment report ready for **{target}**",
+                "color": 3066993,  # Green
+                "fields": [
+                    {"name": "Target", "value": target, "inline": True},
+                    {"name": "Report Size", "value": file_size, "inline": True},
+                    {"name": "Generated At", "value": time_str, "inline": False},
+                    {"name": "File Path", "value": file_display, "inline": False},
+                ],
+                "thumbnail": {"url": "https://cdn-icons-png.flaticon.com/512/3143/3143615.png"},
+                "footer": {
+                    "text": "DUT Vulnerability Scanner",
+                    "icon_url": "https://cdn-icons-png.flaticon.com/512/2103/2103658.png",
+                },
+            }
+
+            payload = {"username": self.username, "embeds": [embed]}
+
+            webhook_url = kwargs.get("webhook_url", self.webhook_url)
+
+            response = requests.post(
+                webhook_url, json=payload, headers={"Content-Type": "application/json"}, timeout=15
+            )
+
+            if response.status_code == 204:
+                logger.info(f"Discord PDF report notification sent for target: {target}")
+                return True
+            else:
+                logger.error(f"Discord webhook failed with status {response.status_code}: {response.text}")
+                return False
+
+        except Exception as e:
+            logger.error(f"Failed to send Discord PDF notification: {e}")
+            return False

@@ -1,0 +1,45 @@
+name: full_scan
+description: Comprehensive security assessment (recon + scanning + validation)
+
+metadata:
+  estimated_duration: "~6 hours"
+  risk_level: "Requires Authorization"
+
+tools:
+  - whois
+  - nmap
+  - whatweb
+  - nuclei
+  - sslscan
+  - sqlmap
+
+tool_configs:
+  whois:
+    # Domain information gathering
+  
+  nmap:
+    args:
+      - "-sV"
+      - "-F"  # Fast scan
+      - "-T4"
+  
+  whatweb:
+    aggression: 1
+    timeout: 15
+  
+  nuclei:
+    severity: "critical,high"
+    templates_dir: null
+  
+  sslscan:
+    show_certificate: false
+    check_vulnerabilities: true
+  
+  sqlmap:
+    risk: 1
+    level: 1
+    enumerate_dbs: false
+
+parallel: true
+timeout: 1200  # 20 minutes for demo
+enable_correlation: true
