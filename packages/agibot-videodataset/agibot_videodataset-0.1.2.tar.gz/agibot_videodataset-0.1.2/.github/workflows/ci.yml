@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  workflow_dispatch:
+
+  push:
+    branches:
+      - main
+
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_COLOR: 3
+
+jobs:
+  ci:
+    runs-on: self-hosted
+    if: github.repository == 'AgiBot-World/VideoDataset'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - run: make dev-test,doc,lint
+      - run: make pre-commit
+      - run: make test
+      - run: make doc
+      - run: make build
+
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+
+  pages:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-24.04
+    if: >
+      github.event_name == 'release' && github.event.action == 'published' ||
+      github.ref == 'refs/heads/main'
+    needs:
+      - ci
+    permissions:
+      id-token: write
+      pages: write
+
+    steps:
+      - id: deployment
+        name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
+
+  build_wheels:
+    uses: ./.github/workflows/reuseable_cibuildwheel.yml
+    secrets: inherit
+    with:
+      auto: true
+      extra: false
