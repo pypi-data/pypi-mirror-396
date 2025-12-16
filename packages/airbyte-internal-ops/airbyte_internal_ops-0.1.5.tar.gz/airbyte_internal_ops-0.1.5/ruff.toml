@@ -1,0 +1,76 @@
+# Ruff configuration
+# https://docs.astral.sh/ruff/
+
+target-version = "py38"
+line-length = 88
+indent-width = 4
+
+# Exclude legacy modules that are not yet functional.
+# Each subproject has a corresponding GitHub issue for tracking its migration.
+exclude = [
+    # Legacy airbyte_ci subprojects - see linked issues for each domain
+    "src/airbyte_ops_mcp/_legacy/airbyte_ci/connector_erd_generator/*",    # https://github.com/airbytehq/airbyte-ops-mcp/issues/49
+    "src/airbyte_ops_mcp/_legacy/airbyte_ci/connector_insights/*",         # https://github.com/airbytehq/airbyte-ops-mcp/issues/50
+    "src/airbyte_ops_mcp/_legacy/airbyte_ci/connector_live_tests/*",       # https://github.com/airbytehq/airbyte-ops-mcp/issues/51
+    "src/airbyte_ops_mcp/_legacy/airbyte_ci/connector_ops/*",              # https://github.com/airbytehq/airbyte-ops-mcp/issues/52
+    "src/airbyte_ops_mcp/_legacy/airbyte_ci/connector_pipelines/*",        # https://github.com/airbytehq/airbyte-ops-mcp/issues/53
+    "src/airbyte_ops_mcp/_legacy/airbyte_ci/connector_qa/*",               # https://github.com/airbytehq/airbyte-ops-mcp/issues/54
+    "src/airbyte_ops_mcp/_legacy/airbyte_ci/metadata_models/*",            # https://github.com/airbytehq/airbyte-ops-mcp/issues/55
+    "src/airbyte_ops_mcp/_legacy/airbyte_ci/metadata_service/*",           # https://github.com/airbytehq/airbyte-ops-mcp/issues/56
+    # Legacy tests for the above subprojects
+    "tests/legacy/airbyte_ci/connector_erd_generator/*",                   # https://github.com/airbytehq/airbyte-ops-mcp/issues/49
+    "tests/legacy/airbyte_ci/connector_live_tests/*",                      # https://github.com/airbytehq/airbyte-ops-mcp/issues/51
+    "tests/legacy/airbyte_ci/connector_ops/*",                             # https://github.com/airbytehq/airbyte-ops-mcp/issues/52
+    "tests/legacy/airbyte_ci/pipelines/*",                                 # https://github.com/airbytehq/airbyte-ops-mcp/issues/53
+]
+
+[lint]
+# Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default.
+# Unlike Flake8, Ruff doesn't enable pycodestyle warnings (`W`) or
+# McCabe complexity (`C901`) by default.
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings  
+    "F",   # Pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "N",   # pep8-naming
+    "SIM", # flake8-simplify
+    "RUF", # Ruff-specific rules
+]
+ignore = [
+    "E501",  # line too long, handled by black
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+    "W191",  # indentation contains tabs
+]
+
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[format]
+# Like Black, use double quotes for strings.
+quote-style = "double"
+
+# Like Black, indent with spaces, rather than tabs.
+indent-style = "space"
+
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"
+
+# Enable auto-formatting of code examples in docstrings. Markdown,
+# reStructuredText code/literal blocks and doctests are all supported.
+docstring-code-format = true
+
+# Set the line length limit used when formatting code snippets in
+# docstrings.
+docstring-code-line-length = "dynamic"
