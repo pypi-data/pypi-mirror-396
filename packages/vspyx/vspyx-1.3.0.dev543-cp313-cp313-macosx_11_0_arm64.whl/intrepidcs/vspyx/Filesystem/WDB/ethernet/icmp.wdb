@@ -1,0 +1,231 @@
+[setup]
+	version = '2.1.0'
+
+	[[setup.hooks]]
+		expression = 'ip.proto == 0x01'
+		location = 'ip.payload'
+		protocol = '#ICMP'
+
+[ICMP]
+	long_name = 'Internet Control Message Protocol'
+	name = 'ICMP'
+
+	[[ICMP.fields]]
+		name = 'Type'
+		length = 8
+		format = 'decimal'
+
+		[[ICMP.fields.states]]
+			name = 'Echo reply'
+			value = 0
+
+		[[ICMP.fields.states]]
+			name = 'Destination unreachable'
+			value = 3
+
+		[[ICMP.fields.states]]
+			name = 'Source quench'
+			value = 4
+
+		[[ICMP.fields.states]]
+			name = 'Redirect message'
+			value = 5
+
+		[[ICMP.fields.states]]
+			name = 'Echo request'
+			value = 8
+
+		[[ICMP.fields.states]]
+			name = 'Router advertisement'
+			value = 9
+
+		[[ICMP.fields.states]]
+			name = 'Rounter solicitation'
+			value = 10
+
+		[[ICMP.fields.states]]
+			name = 'Time exceeded'
+			value = 11
+
+		[[ICMP.fields.states]]
+			name = 'Parameter problem: Bad IP header'
+			value = 12
+
+		[[ICMP.fields.states]]
+			name = 'Timestamp'
+			value = 13
+
+		[[ICMP.fields.states]]
+			name = 'Timestamp reply'
+			value = 14
+
+		[[ICMP.fields.states]]
+			name = 'Information request'
+			value = 15
+
+		[[ICMP.fields.states]]
+			name = 'Information reply'
+			value = 16
+
+		[[ICMP.fields.states]]
+			name = 'Address mask request'
+			value = 17
+
+		[[ICMP.fields.states]]
+			name = 'Address mask reply'
+			value = 18
+
+		[[ICMP.fields.states]]
+			name = 'Traceroute'
+			value = 30
+
+	[[ICMP.fields]]
+		name = 'Code'
+		length = 8
+		format = 'decimal'
+		enable = '^.type == 3'
+
+		[[ICMP.fields.states]]
+			name = 'Destination network unreachable'
+			value = 0
+
+		[[ICMP.fields.states]]
+			name = 'Destination host unreachable'
+			value = 1
+
+		[[ICMP.fields.states]]
+			name = 'Destination protocol unreachable'
+			value = 2
+
+		[[ICMP.fields.states]]
+			name = 'Destination port unreachable'
+			value = 3
+
+		[[ICMP.fields.states]]
+			name = 'Fragmentation required, and DF flag set'
+			value = 4
+
+		[[ICMP.fields.states]]
+			name = 'Source route failed'
+			value = 5
+
+		[[ICMP.fields.states]]
+			name = 'Destination network unknown'
+			value = 6
+
+		[[ICMP.fields.states]]
+			name = 'Destination host unknown'
+			value = 7
+
+		[[ICMP.fields.states]]
+			name = 'Source host isolated'
+			value = 8
+
+		[[ICMP.fields.states]]
+			name = 'Network administratively prohibited'
+			value = 9
+
+		[[ICMP.fields.states]]
+			name = 'Host administratively prohibited'
+			value = 10
+
+		[[ICMP.fields.states]]
+			name = 'Network unreachable for ToS'
+			value = 11
+
+		[[ICMP.fields.states]]
+			name = 'Host unreachable for ToS'
+			value = 12
+
+		[[ICMP.fields.states]]
+			name = 'Communication administratively prohibited'
+			value = 13
+
+		[[ICMP.fields.states]]
+			name = 'Host Precedence Violation'
+			value = 14
+
+		[[ICMP.fields.states]]
+			name = 'Precedence cutoff in effect'
+			value = 15
+
+	[[ICMP.fields]]
+		name = 'Code'
+		length = 8
+		format = 'decimal'
+		enable = '^.type == 5'
+
+		[[ICMP.fields.states]]
+			name = 'Redirect datagram for the network'
+			value = 0
+
+		[[ICMP.fields.states]]
+			name = 'Redirect datagram for the host'
+			value = 1
+
+		[[ICMP.fields.states]]
+			name = 'Redirect datagram for the ToS & network'
+			value = 2
+
+		[[ICMP.fields.states]]
+			name = 'Redirect datagram for the ToS & host'
+			value = 3
+
+	[[ICMP.fields]]
+		name = 'Code'
+		length = 8
+		format = 'decimal'
+		enable = '^.type == 11'
+
+		[[ICMP.fields.states]]
+			value = 0
+			name = 'TTL expired in transit'
+
+		[[ICMP.fields.states]]
+			value = 1
+			name = 'Fragment reassembly time exceeded'
+
+	[[ICMP.fields]]
+		name = 'Code'
+		length = 8
+		format = 'decimal'
+		enable = '^.type == 12'
+
+		[[ICMP.fields.states]]
+			value = 0
+			name = 'Pointer indicates the error'
+
+		[[ICMP.fields.states]]
+			value = 1
+			name = 'Missing a required option' 
+
+		[[ICMP.fields.states]]
+			value = 2
+			name = 'Bad length'
+
+
+	[[ICMP.fields]]
+		name = 'Code'
+		length = 8
+		format = 'decimal'
+		enable = '^.type != 12 && ^.type != 11 && ^.type != 5 && ^.type != 3'
+
+	[[ICMP.fields]]
+		name = 'Checksum'
+		length = 16
+
+	[[ICMP.fields]]
+		name = 'Identifier'
+		tag = 'ident'
+		length = 16
+		format = 'hex_decimal'
+		enable = '^.type == 0 || ^.type == 8'
+
+	[[ICMP.fields]]
+		long_name = 'Sequence number'
+		tag = 'seq'
+		short_name = 'Seq. num'
+		length = 16
+		format = 'hex_decimal'
+		enable = '^.type == 0 || ^.type == 8'
+
