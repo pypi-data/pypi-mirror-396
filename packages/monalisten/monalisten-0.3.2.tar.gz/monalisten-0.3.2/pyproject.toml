@@ -1,0 +1,42 @@
+[build-system]
+requires = ["uv_build>=0.9.17,<0.10.0"]
+build-backend = "uv_build"
+
+[project]
+name = "monalisten"
+version = "0.3.2"
+description = "Monalisten is an async library for handling GitHub webhook events in an easy way"
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "trag1c", email = "dev@jakubr.me" }]
+requires-python = ">=3.10"
+dependencies = ["githubkit>=0.14.0", "httpx>=0.28.1", "httpx-sse>=0.4.3"]
+
+[project.urls]
+repository = "https://github.com/trag1c/monalisten"
+
+[dependency-groups]
+dev = [
+  "aiohttp==3.13.2",
+  "anyio==4.12.0",
+  "pyright==1.1.407",
+  "pytest==9.0.2",
+  "ruff==0.14.9",
+  "taplo==0.9.3",
+]
+
+[tool.pytest.ini_options]
+anyio_mode = "auto"
+
+[tool.ruff]
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = ["COM", "D", "FIX", "S", "ANN401", "PLR2004"]
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/codegen.py" = ["T201", "INP001"]
+"src/monalisten/__init__.py" = ["E402"]
+"src/monalisten/events.py" = ["E501", "TC004"]
+"tests/*" = ["FBT", "T201", "SLF001"]
