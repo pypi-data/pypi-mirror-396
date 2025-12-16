@@ -1,0 +1,188 @@
+"""Dali Gateway Types"""
+
+from enum import Enum
+from typing import Callable, List, Tuple, TypedDict, Union
+
+
+class CallbackEventType(Enum):
+    """Gateway callback event types for listener registration"""
+
+    ONLINE_STATUS = "online_status"
+    LIGHT_STATUS = "light_status"
+    MOTION_STATUS = "motion_status"
+    ILLUMINANCE_STATUS = "illuminance_status"
+    PANEL_STATUS = "panel_status"
+    ENERGY_REPORT = "energy_report"
+    ENERGY_DATA = "energy_data"
+    SENSOR_ON_OFF = "sensor_on_off"
+    DEV_PARAM = "dev_param"
+    SENSOR_PARAM = "sensor_param"
+
+
+class PanelEventType(Enum):
+    """Panel button event types"""
+
+    PRESS = "press"
+    HOLD = "hold"
+    DOUBLE_PRESS = "double_press"
+    ROTATE = "rotate"
+    RELEASE = "release"
+
+
+class MotionState(Enum):
+    """Motion sensor state types"""
+
+    NO_MOTION = "no_motion"
+    MOTION = "motion"
+    VACANT = "vacant"
+    OCCUPANCY = "occupancy"
+    PRESENCE = "presence"
+
+
+class DeviceProperty:
+    dpid: int
+    data_type: str
+
+
+class SceneDeviceProperty(TypedDict):
+    dpid: int
+    data_type: str
+    value: int
+
+
+class LightStatus(TypedDict):
+    """Status for lighting devices (Dimmer, CCT, RGB, RGBW, RGBWA)"""
+
+    is_on: bool | None
+    brightness: int | None  # 0-255
+    color_temp_kelvin: int | None
+    hs_color: Tuple[float, float] | None  # hue (0-360), saturation (0-100)
+    rgbw_color: Tuple[int, int, int, int] | None  # r,g,b,w (0-255 each)
+    white_level: int | None  # 0-255
+
+
+class SceneDeviceType(TypedDict):
+    unique_id: str
+    dev_type: str
+    channel: int
+    address: int
+    gw_sn_obj: str
+    property: LightStatus
+
+
+class GroupDeviceType(TypedDict):
+    """Device information within a group"""
+
+    unique_id: str
+    id: str
+    name: str
+    dev_type: str
+    channel: int
+    address: int
+    status: str
+    dev_sn: str
+    area_name: str
+    area_id: str
+    model: str
+    prop: List[str]
+
+
+class DeviceParamType(TypedDict, total=False):
+    """Device parameter configuration type.
+
+    All fields are optional. Values outside specified ranges may be rejected by the gateway.
+    """
+
+    address: int  # New device address (1-64)
+    fade_time: int  # Fade time setting (0-15)
+    fade_rate: int  # Fade rate setting (0-15)
+    power_status: int  # Power-on status value (10-1000)
+    system_failure_status: int  # System failure status (0-254)
+    max_brightness: int  # Maximum brightness value (0-1000)
+    min_brightness: int  # Minimum brightness value (0-1000)
+    standby_power: int  # Standby power (watts)
+    max_power: int  # Maximum power (watts)
+    cct_cool: int  # Cool color temperature (Kelvin)
+    cct_warm: int  # Warm color temperature (Kelvin)
+    phy_cct_cool: int  # Physical cool color temperature (Kelvin)
+    phy_cct_warm: int  # Physical warm color temperature (Kelvin)
+    step_cct: int  # Color temperature step value (1-100)
+    temp_thresholds: int  # Temperature alarm threshold (Celsius)
+    runtime_thresholds: int  # Runtime alarm threshold (hours)
+    waring_runtime_max: int  # Runtime warning maximum (hours)
+    waring_temperature_max: int  # Temperature warning maximum (Celsius)
+
+
+class DeviceParamCommand(TypedDict):
+    """Single item for a setDevParam command."""
+
+    dev_type: str
+    channel: int
+    address: int
+    param: DeviceParamType
+
+
+class SensorParamType(TypedDict, total=False):
+    """Sensor parameter configuration type.
+
+    All fields are optional. Used for configuring motion/occupancy sensor parameters.
+    """
+
+    enable: bool  # Enable/disable sensor
+    occpy_time: int  # Occupancy time (0-255, 0=disabled)
+    report_time: int  # Report timer - repeat report event (0-255, 0=disabled)
+    down_time: int  # Hold time - delay before turning off (0-255, 0=disabled)
+    coverage: int  # Detection range (0-100)
+    sensitivity: int  # Sensitivity level (0-100)
+
+
+class PanelConfig(TypedDict):
+    """Panel configuration type definition."""
+
+    button_count: int
+    events: List[str]
+
+
+class PanelStatus(TypedDict):
+    """Status for control panels (2-Key, 4-Key, 6-Key, 8-Key)"""
+
+    event_name: str  # button_{key_no}_{event_type}
+    key_no: int  # Button number
+    event_type: PanelEventType  # press, hold, double_press, rotate, release
+    rotate_value: int | None  # For rotate events (only for rotate event type)
+
+
+class MotionStatus(TypedDict):
+    """Status for motion sensor devices"""
+
+    motion_state: MotionState
+    dpid: int  # The original dpid that triggered this state
+
+
+class IlluminanceStatus(TypedDict):
+    """Status for illuminance sensor devices"""
+
+    illuminance_value: float  # Illuminance in lux
+    is_valid: bool  # Whether the value is within valid range (0-1000)
+
+
+class EnergyData(TypedDict):
+    """Energy consumption data with historical records"""
+
+    yearEnergy: dict  # Yearly energy consumption data
+    monthEnergy: dict  # Monthly energy consumption data
+    dayEnergy: dict  # Daily energy consumption data
+    hourEnergy: list  # Hourly energy consumption data
+
+
+ListenerCallback = Union[
+    Callable[[bool], None],
+    Callable[[LightStatus], None],
+    Callable[[MotionStatus], None],
+    Callable[[IlluminanceStatus], None],
+    Callable[[PanelStatus], None],
+    Callable[[float], None],
+    Callable[[EnergyData], None],
+    Callable[[DeviceParamType], None],
+    Callable[[SensorParamType], None],
+]
