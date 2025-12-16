@@ -1,0 +1,246 @@
+# Network Functions
+A group of network-related functions used for geospatial analysis.
+
+## Modules
+
+### `functions` (also accessed as pure `network_functions`)
+
+#### `inject_crossing`
+```
+inject_crossing(Graph: nx.MultiDiGraph, G: nx.MultiDiGraph, alternatives: gpd.GeoDataFrame, 
+                crossing, typedict={'normal': 1.0, 'bridge': 1.25, 'tunnel': 1.15}) -> list
+```
+
+Inject the new alternative into the graph
+
+Inputs:
+- Graph (nx.MultiDiGraph): The parent graph, which should *not* be modified
+- G (nx.MultiDiGraph): The child graph, which will be modified to produce the new graph
+- alternatives (gpd.GeoDataFrame): Shapefiles of alternative crossings
+- crossing (str): The name of the crossing, extracted from alternatives['name']
+- typedict (dict): Dictionary of scaling factor for elevated or submerged segments
+
+Outputs:
+- endpoint_ids (list): The list of the node ids of the two new endpoints of the injected segment
+
+#### `shortest_path`
+
+`path_dijkstra` redirects here. The function is still usable but depracated. Will be removed in future versions. 
+
+```
+def shortest_path(origins: int | list | np.ndarray, destinations: int | list,
+                  G: nx.MultiDiGraph, *, dist_param: str = 'length', pairs: bool = False, 
+                  verbose: bool = True) -> tuple[dict[tuple, float], dict[tuple, list]]:
+```
+
+A data-structure optimized algorithm for computing shortest paths between sets of points. Utilizes
+compressed sparse row (CSR) matricies for efficient adjacent-node searching across the graph. 
+Can compute between one origin and one destination, many origins and one destination, one origin
+and many destinations, or many origins and many destinations, which will compute pairwise if `pairs`
+is specified, and every possible combination otherwise. Note that unreachable paths will have a distance
+of 'inf' and a path list of length 1 (the origin node only).
+
+Parameters:
+
+origins: int | list | np.ndarray
+- The origin nodes to be used. Must correspond with nodes in `G`.
+
+destinations: int | list
+- The destination nodes to be used. Must correspond with nodes in `G`.
+
+G: nx.MultiDiGraph
+- The graph to be used in the calculation. If `G` is not strongly connected, many distances may 
+return 0 or infinity. This can be fixed beforehand with `nx.connected_components()`. 
+
+dist_param: str = 'length'
+- The distance parameter to be used for computing distance. Defaults to `length` (natively
+in OSM). Useful if passing uniquely weighted edges. Must be one of the edge attributes.
+
+pairs: bool = False
+- Whether the origins and destinations should be interpreted as OD pairs. Will perform single 
+routings between each pair
+
+verbose: bool = True
+- If passing multiorigin/multidestination, will add a `tqdm` wrapper and verbosity to the calculations,
+so the user can get a sense of how long it will take to run.
+
+Outputs:
+
+dists: dict
+- A dictionary of floating-point distances, indexed by OD tuple.
+
+paths: dict
+- A dictionary of paths, indexed by OD tuple. Each path is represented as a node list of ndoes
+in the path.
+
+#### `k_shortest`
+
+```
+def k_shortest( G: nx.DiGraph | nx.MultiDiGraph, pairs: list[tuple],                 
+    k: int = 3, weight_attr: str = "length", pct_disticnt: float = 0.15,
+    tol: float = 2.0) -> dict[tuple, dict]:
+```
+
+Optimized all-pairs K-shortest simple paths via (per-pair) Eppstein's algorithm. 
+Uses the same optimizations as `shortest_path`, but requires origins and destinations
+specified as a tuple instead of separate lists (to preserve all-pairs behavior). 
+
+Parameters
+
+G : nx.DiGraph | nx.MultiDiGraph
+- Graph to compute k-shortest paths on (nodes are SUMO edge IDs here).
+
+pairs : list[(o, d)]
+- Iterable of (origin_node, destination_node) pairs to compute KSP for.
+
+k : int
+- Max number of shortest paths per OD pair.
+
+weight_attr : str
+- Edge attribute for weights (e.g. "travel_time").
+
+pct_disticnt : float
+- Jaccard distinctness threshold for accepting alternative paths.
+
+tol : float
+- Max path length as multiplier of base shortest-path length.
+
+Returns
+
+result : dict
+{(o, d): {"dists": {rank: dist, ...},
+            "paths": {rank: [node0, node1, ...], ...}}, ...}
+
+
+#### `geomerge`
+
+```
+geomerge(df: gpd.GeoDataFrame, field: str, base_osm: gpd.GeoDataFrame,
+    *, name: str = None, categories: list = None, road_id: str = None,
+    area: gpd.GeoDataFrame | gpd.GeoSeries = None, type_join: str = 'range',
+    buffer_ft: float = 10, n_samples: int = 10, threshold: float = 0.85,
+    crs_ft: str = "EPSG:2236", verbose: bool = False,
+    ) -> gpd.GeoDataFrame
+```
+
+Approximate the n%-overlap of `df` with `base_osm` via interpolated point-sampling along each 
+    OSM segment. $n$ is set by `threshold`. Note that n_samples does not include the two endpoints,
+    so $n$% is mathematically $\lceil t\times\text{n samples} \rceil / (\text{n samples} + 2)$. Any
+    values computed as `NaN` will be imputed as -1, for convenience.
+    Parameters
+    - df: gpd.GeoDataFrame
+        Vendor GeoDataFrame containing the attribute `field`. This will be merged 
+        *onto* `base_osm`.
+    - field: str
+        column in df with the raw attribute values to be merged onto `base_osm`.
+    - base_osm: gpd.GeoDataFrame
+        OSM road GeoDataFrame. Output will have the same geometry and attributes.
+    - name: str 
+        name of the new categorical column to add. If not passed, will be inferred
+        from the `field` parameter.
+    - categories: list
+        list of thresholds (for "range") or exact values (for "exact"). If `categories`
+        is not passed, it will be inferred as a linspace or a logspace (if `mean >= 3x median`).
+    - road_id: str
+        column in `base_osm` GeoFrames that uniquely identifies roads. If not passed, will
+        default to a new column set as the index of `base_osm`. 
+    - area: gpd.GeoDataFrame | gpd.GeoSeries
+        polygon boundary of the study area. If not passed, defaults to a the minimum
+        bounding rectangle of `df`.
+    - type_join: str
+        "range" ⇒ bin by intervals; "exact" ⇒ only keep exact matches. Defaults to `range`
+    - buffer_ft: float
+        distance to buffer each line/point by to find its match. Defaults to 10 of CRS unit
+    - n_samples: int
+        number of points to interpolate along each segment. Defaults to 10 (meaning 12 total)
+    - threshold: float
+        percentage threshold used to "match" segments. Defaults to 0.85 (85%)
+    - crs_ft: str
+        projected CRS in feet for geometry ops. Defaults to `EPSG:2236` (Florida)
+    - verbose: bool
+        Whether to show print statements and progress bars. Default is False
+    Returns
+    - GeoDataFrame in the CRS of base_osm with the extra column `name`.
+
+#### `compute_area_access`
+
+```
+compute_area_access(G: nx.MultiDiGraph, endpoints: LineString | Point, *, 
+                    return_nodes: bool = False, return_edges: bool = False,
+                    return_graph: bool = False, step: int | float = 1609, 
+                    n_steps: int = 4, dist_param: str = 'length',
+                    etwork_type: str = 'all', edge_exclusions: dict = None) 
+                    -> gpd.GeoDataFrame | nx.MultiDiGraph
+```
+
+A function to compute consecutive ego graphs. It computes n ego graphs at each step to create a GeoDataFrame of edges in the access area with a new dist calculation classifying each edge into a 'distance band'. Useful for visualizations and is less complicated than `path_dijkstra`.
+
+Parameters:
+    G: nx.MultiDiGraph
+        The graph to be used for computation.
+    endpoints: LineString, MultiLineString, Point, MultiPoint
+        The points to be used for centering the ego graphs.
+    return_nodes: bool
+        Whether the function should return a nodes GeoDataFrame. Default is False.
+    return_edges: bool
+        Whether the function should return an edges GeoDataFrame. Default is False.
+    return_graph: bool
+        Whether the function should return a graph. Default is False. Exactly *one* of the returns must be true. 
+    step: int, float
+        The size of the distance steps the output will contain, in meters. Default is set at 1 mile (1609 meters).
+    n_steps: int
+        The number of distance steps the function will check. 
+    dist_param: str
+        The attribute in the graph's edges that will be used to compute distance. The function will raise a ValueError 
+        if it is not a valid attribute.
+    network_type: str - {"all", "all_public", "bike", "drive", "drive_service", "walk"} 
+        The network type to compute the distances on. Passing an invalid type will default to "all".
+    edge_exclusions: dict
+        A dictionary of the form {_field_: str | list}; exclude edge values in _field_ attribute
+Outputs:
+    output: geopandas.GeoDataFrame, nx.MultiDiGraph
+        Either the resulting graph, the nodes of the resulting graph, or the edges of the resulting graph, based on the user's inputs
+
+
+
+### `classifiers`
+
+#### `fill_holes_and_dissolve`
+
+```
+fill_holes_and_dissolve(geom)
+```
+
+Remove every interior ring, then dissolve overlaps.
+    • Polygon        → Polygon without holes
+    • MultiPolygon   → each part without holes, then unioned into a single valid geometry (islands kept)
+
+#### `classify_node`
+
+```
+classify_node(G, n)
+```
+Return number of edges in and out of each node.
+
+#### `find_bridges`
+
+```
+find_bridges(G, max_len_ft=100)
+```
+Find bridges between two sides of a dual carriageway, topologically
+
+#### `find_res_links` (DEPRECATED)
+
+```
+find_res_links(G, max_len_ft=300)
+```
+Currently in use to find misclassified slip lanes, but needs future modification. Avoid usage.
+
+#### `collapse_one_in_one_out`
+
+```
+collapse_one_in_one_out(G)
+```
+Collapses nodes with only one edge in and one edge out. Similar to `ox.simplify_graph`, but less greedy.
+
+
