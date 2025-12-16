@@ -1,0 +1,1587 @@
+---
+title: Changelog
+---
+
+## v0.15.1
+(2025-12-12)
+
+### Bug Fixes
+
+- Fixed random failures for when using plotnine in quarto == 1.8.26. {{< issue 1017 >}}
+
+### New
+
+- Added [](:class:`~plotnine.scale_stroke_identity`) which was conspicuously missing!
+
+- Added [](:class:`~plotnine.composition.Compose.show`), making it possible to output/show 
+  plot composition objects when they are not the last object in a cell.
+
+### Enhancements
+
+- In a jupyter environment, the output when the plot is the last in a cell is
+  now rendered without side effects. ({{< pr 969 >}})
+
+- When using the knitr engine in a Quarto document, you no longer need to
+  class `plot.show()` to get output if the `plot` is the last object in
+  the cell. ({{< issue 970 >}})
+
+### Bug Fixes
+
+- Fixed labels set with the `labs` call so that they are only ever overwritten
+  by a call to `labs` or setting the `name` of a scale. Previously, if a
+  global mapping was added after `labs`, it over-wrote the previously set labels.
+
+  ```python
+  ggplot(mtcars) + labs(x="x title", y="y title") + geom_point() + aes("wt", "mpg")
+  ```
+
+  The labels will be "x title" and "y title".
+
+- Fixed bug with plot compositions where if a `plot_spacer` is the last plot in the composition, one could not change the figure size or dpi of the composition. ({{< issue 960 >}})
+
+
+## v0.15.0
+
+(2025-06-15)
+
+### API Changes
+
+-  Themeables
+   `axis_ticks_pad`,
+   `axis_ticks_pad_minor`,
+   `axis_ticks_pad_major`,
+   `axis_ticks_pad_minor_x`,
+   `axis_ticks_pad_minor_y`,
+   `axis_ticks_pad_major_x` and
+   `axis_ticks_pad_major_y` have been deprecated. Use the `margin` parameter
+   of [](:class:`~plotnine.element_text`) with `axis_text`, `axis_text_x`
+   or `axis_text_y` to control the spacing between the axis text and the ticks.
+   ({{< issue 843 >}})
+
+- The `stat` class methods `stat.compute_layer`, `stat.compute_panel` and `stat.compute_group` are now instance methods and they no longer accept
+  `**params` arguments. Access to the parameters is through `self.params`.
+
+- The `geom` class methods `geom.draw_layer` and `geom.draw_panel` do no longer accept `**param` arguments. Access to the parameters is through `self.params`.
+
+- Method `geom.draw_group` now accepts the `params` argument as a dictionary and not `**params`.
+
+
+### New Features
+
+- Plot Composition is here. Using an intuitive algebra, you can
+  now put combine multiple plots into a single graphic.  e.g.
+
+  ```python
+  p1 = ggplot(...)
+  p2 = ggplot(...)
+  p3 = ggplot(...)
+
+  (p1 | p2) / p3
+  ```
+
+- Using
+  [](:class:`~plotnine.themes.themeables.plot_title_position`) and
+  [](:class:`~plotnine.themes.themeables.plot_caption_position`) e.g.
+
+  ```python
+  theme(
+     plot_title_position="plot",
+     plot_caption_position="plot",
+  )
+  ```
+
+  You can now position the `plot_title`, `plot_subtitle` and `plot_caption`
+  by alignment them with respect to the plot. ({{< issue 838 >}})
+
+- Gained new label `tag` to create a tag for a plot. You can set it with
+  [](:class:`~plotnine.labs`) e.g.
+
+  ```python
+  labs(tag="A")
+  ```
+  and customise it using these themeables
+
+  [](:class:`~plotnine.themes.themeables.plot_tag`) and
+  [](:class:`~plotnine.themes.themeables.plot_tag_position`) and
+  [](:class:`~plotnine.themes.themeables.plot_tag_location`)
+
+  e.g.
+
+  ```python
+  theme(
+     plot_tag="plot",
+     plot_tag_location="plot",
+     plot_tag_position="topright",
+  )
+  ```
+
+- Geoms [](:class:`~plotnine.geom_bar`) and [](:class:`~plotnine.geom_col`) have
+  gained new parameter `just` that controls how the bars align with the axis break point.
+
+- [](:class:`~plotnine.geom_sina`) has gained new parameter `style` just like
+  [](:class:`~plotnine.geom_violin`), which make one-sided (half) sina plots.
+
+- Gained the Anscombe Quartet dataset, [](:attr:`~plotnine.data.anscombe_quartet`).
+
+- Gained new module `plotnine.helpers` to be a place for some helper functions.
+
+- Gained new helper function [](:func:`~plotnine.helpers.get_aesthetic_limits`).
+
+- [](:class:`~plotnine.geom_point`) gained the ability to handle shapes of the form
+  `Sequence[tuple[float, float]]` e.g.
+
+   ```python 
+   ((-2, -4), (-2, -1), (0, 1), (2, -1), (2, -4), (-2, -4))
+   ```
+
+   Which declares the vertices of a polygon shape.
+   
+
+### Enhancements
+
+- Included datasets [](:attr:`~plotnine.data.mpg`), [](:attr:`~plotnine.data.msleep`) and
+  [](:attr:`~plotnine.data.midwest`) no longer have any of their columns as categoricals.
+  This matches the respective datasets in R. ({{< issue 913 >}})
+
+- When the `width` of the violins in [](:class:`~plotnine.geom_violin`) is wider than their
+  normal area, they now overlap with those closest to the origin on top. This makes it possible
+  to create overlapping ridge plots using half violins.
+
+- [](:class:`~plotnine.themes.themeable.legend_key`) now inherits from 
+  [](:class:`~plotnine.themes.themeable.panel_background`) and the default themes have been
+  adjusted to rely on this inheritance. So when using the default themes, altering `fill`
+  parameter of the `panel_background` will also affect the background of the `legend_key`.
+
+- The default value for the `guide` parameter for the identity scales (`scale_*_identity`)
+  has been reverted to `None`. This means by default using these scales will not generate
+  a legend.
+
+### Bug Fixes
+
+- Fixed bug in with the `legend_key_height` themeable where it wasn't applied.
+  ({{< issue 921 >}})
+
+- Fixed bug where justifying `axis_text_x` and `axis_text_y` using horizontal and vertical
+  alignment did not work as expected. ({{< issue 927 >}})
+
+- Fixed justifying strip_text within the strip_background. ({{< issue 867 >}})
+
+- Fixed bug where facetting along a column with unused categories could raise
+  an error. ({{< issue 930 >}})
+
+- Fixed bug where computed aesthetic from `after_scale` are were not applied to the legend.
+  ({{< issue 926 >}})
+
+- Fixed theming of minor x axis ticks.
+
+- Fixed theming of `axis_text`, `axis_text_x` and  `axis_text_y` so when they can be
+  overriden if previously set to `element_blank()`.
+
+- Fixed `strip_text_x_background`s to always have equal heights and `strip_text_y_background`s
+  to have equal widths. This applies to cases where the texts have unequal number of lines or
+  they are rotated but have different lengths.
+
+- Fixed the empty space below the plot title (or subtitle) when `strip_text_x_background`s are
+  partly or fully aligned within the panel. This space (hole), was not accounted for by any of
+  the themeables. This affected `theme_xkcd` and any `theme` settings that tried to slide the
+  text / background into the panel.
+
+- Fixed the empty space to the left the right margin when the `strip_text_y_background`s are
+  partly or fully aligned within the panel. This space (hole), was not accounted for by any of 
+  the themeables. This affected `theme_xkcd` and any `theme` settings that tried to slide the
+  text / background into the panel.
+
+- Fixed bug in [](:class:`~plotnine.geom_histogram`) where mapping to the `weight` aesthetic
+  lead to an error. ({{< issue 936 >}})
+
+- Fixed bug in [](:class:`~plotnine.geom_vline`) where you could not map the `xintercept`
+  aesthetic to a discrete variable.
+
+- Fixed bug in [](:class:`~plotnine.geom_hline`) where you could not map the `yintercept`
+  aesthetic to a discrete variable.
+
+- Fixed bug in all manual scales (`scale_*_manual`) where if you set `values`
+  to a `dict` then setting the breaks would lead to an error. ({{< issue 949 >}})
+
+- Fixed using [](:class:`~plotnine.theme_void`) with facetting so that the
+  strip text are always fully within the figure bounds.
+
+- Fixed the ordinal color scales [](:class:`~scale_color_ordinal`), [](:class:`~scale_color_cmap_d`)
+  [](:class:`~scale_fill_ordinal`) and [](:class:`~scale_fill_cmap_d`)
+  to handle missing (`NaN` or `None`) values. ({{< issue 953 >}})
+
+## v0.14.5
+(2025-01-02)
+[![](https://zenodo.org/badge/DOI/10.5281/zenodo.14587381.svg)](https://doi.org/10.5281/zenodo.14587381)
+
+- Fixed [](:class:`~plotnine.geom_text`) with `adjust_text` so that the
+  the arrows are drawn between layers with the text/label on top.
+
+## v0.14.4
+(2024-12-16)
+[![](https://zenodo.org/badge/DOI/10.5281/zenodo.14501317.svg)](https://doi.org/10.5281/zenodo.14501317)
+
+### Bug Fixes
+
+- Fixed [](:class:`~plotnine.geom_text`) with `adjust_text` so that the
+  the arrows are drawn at the same layer (zorder) as the text.
+
+- Fixed [](:class:`~plotnine.geom_text`) with `adjust_text` for some
+  cases where the text are placed outside the panels. ({{< issue 899 >}})
+
+- The default aesthetics and aesthetic parameters of geoms (and stats) are
+  now transformed. So you can now set date values as aesthetic parameters.
+  e.g.
+
+  ```python
+  geom_point(y=datetime(2024, 12, 11))
+  ```
+
+  if the `y` aesthetic is mapped to datetime column in another layer.
+
+- Fixed bug for matplotlib>3.10 where the `axis_ticks_length` for the x-axis
+  had no effect.
+
+## v0.14.3
+(2024-11-26)
+[![](https://zenodo.org/badge/DOI/10.5281/zenodo.14224336.svg)](https://doi.org/10.5281/zenodo.14224336)
+
+### Enhancements
+
+- Got rid of a logging information about the fontsize that is recorded for all
+  plots that have a legend. ({{< issue 889 >}})
+
+- When using [](:class:`~plotnine.geom_text`) with `adjust_text`, some sensible
+  default arrow properties will be applied.
+
+- Changed the threshold number of keys for when the legend is split into multiple
+  columns from 20 to 15. This only applies in the default case when the user does
+  not set the number of rows or columns i.e. `guide_legend(nrow=None, ncol=None)`.
+  ({{< issue 757 >}})
+
+## v0.14.2
+(2024-11-21)
+
+[![](https://zenodo.org/badge/DOI/10.5281/zenodo.14198479.svg)](https://doi.org/10.5281/zenodo.14198479)
+
+### Bug Fixes
+
+- Fixed bugs that affected [](:class:`~plotnine.geom_dotplot`) and
+  [](:class:`~plotnine.geom_sina`) where data with an index that
+  did not include 0 led to a crash. ({{< issue 888 >}})
+
+- Fixed `v0.14.0` regression that made [](:class:`~plotnine.scale_color_cmap_d`)
+  unusable. ({{< issue 890 >}})
+
+## v0.14.1
+(2024-11-05)
+
+[![](https://zenodo.org/badge/DOI/10.5281/zenodo.14041304.svg)](https://doi.org/10.5281/zenodo.14041304)
+
+### Bug Fixes
+
+- Fix expansion of datetime and timedelta scales when using both the lower
+  and upper addition constants.
+
+- In quarto documents make the output `retina` even if the `fig-format` is
+  `png`.
+
+- Fixed bug where you could not save as pdf if also specifying the
+  `aspect_ratio`. ({{< issue 885 >}})
+
+## v0.14.0
+(2024-10-28)
+
+[![](https://zenodo.org/badge/DOI/10.5281/zenodo.14006850.svg)](https://doi.org/10.5281/zenodo.14006850)
+
+### API Changes
+
+- You cannot call `print` on a ggplot object to show it. This was deprecated
+  in `v0.13.0` and it has now been removed.
+  Use [ggplot.show()](`plotnine.ggplot.show`)
+
+- The color_space parameter of [](:class:`~plotnine.scale_color_hue`) now
+  accepts the value `"hlsuv"` instead of `"husl"`. The meaning of has
+  not changed, and `"husl"` is silently accepted.
+
+- Themeables `axis_ticks_direction`, `axis_ticks_direction_x` and
+  `axis_ticks_direction_y` have be deprecated. In their place, the direction
+  of the ticks can be controlled by using +ve, -ve or complex values for
+  the `axis_ticks_length`, `axis_ticks_length_major`, `axis_ticks_length_major_x`,
+  `axis_ticks_length_major_y`, `axis_ticks_length_minor`, `axis_ticks_length_minor_x`,
+  or `axis_ticks_length_minor_y`.
+
+### Enhancements
+
+- The `family`, `fontstyle` and `fontweight` parameters of
+  [](:class:`~plotnine.geom_text`) are now aesthetics ({{< issue 790 >}}).
+
+- plotnine now responds to the `fig-width`, `fig-height` and `fig-format`
+  settings in the meta section of a quarto document.
+
+- [](:class:`~plotnine.ggtitle`) now accepts `title` and `subtitle` as
+  keyword arguments. ({{<issue 804 >}})
+
+- Gained the option [](:attr:`~plotnine.options.limitsize`) that makes
+  it possible to display plots of any size.
+
+  ```python
+  from plotnine.options import set_option
+
+  set_option("figure_format", False)
+  ```
+
+- For [](:class:`~plotnine.geom_boxplot`) when the outliers are made invisible
+  by giving them no shape, now they do not affect the limits of the plot.
+  ({{< issue 814 >}})
+
+- Made it possile to map an aesthetic value to `None`. ({{< issue 791 >}})
+
+- The signatures for the scale classes now list all the allowed parameters.
+
+
+### New Features
+
+- [](:class:`~plotnine.geom_text`) has gained new aesthetics
+  `fontvariant` and `fontstretch`.
+
+### Bug Fixes
+
+- Fix layers 3 and above not to overlap the axis lines if there are any
+  ({{< issue 798 >}}).
+
+- Fixed bug in [](:class:`~plotnine.geoms.geom_segment`) where the lineend
+  parameter was ignored. ({{< issue 727 >}})
+
+- Fixed [](:class:`~plotnine.stat_summary_bin`) to work with continuous `x`
+  aesthetic when specifying the `binwidth` or `breaks`. ({{< issue 824 >}})
+
+- Fixed [](:class:`~plotnine.PlotnineAnimation`) not to draw a second legend
+  at the bottom-left corner. ({{< issue 816 >}})
+
+- Fixed bug where setting `theme(text=element_blank())` would raise and exception.
+
+- Fixed `datetime` and `timedelta` scales so they can be expanded by
+  adding constant `timedelta` values.
+
+## v0.13.6
+(2024-05-09)
+
+[![](https://zenodo.org/badge/DOI/10.5281/zenodo.11172701.svg)](https://doi.org/10.5281/zenodo.11172701)
+
+### Bug Fixes
+
+- Fixed [](:class:`~plotnine.geom_label`) to work with a `boxstyle` of any
+  following `square`, `circle`, `darrow`, `larrow`, `rarrow`, `roundtooth`
+  or `sawtooth`.({{< issue 779 >}})
+
+### Enhancements
+
+- Stopped spurious warnings of the form ``PlotnineWarning: Failed to apply
+  `after_scale` modifications to the legend.`` when the `after_scale`
+  mapping is for another aestetic.
+
+- Added `width` and `height` as default aesthetics of [](:class:`~plotnine.geom_tile`).
+
+## v0.13.5
+(2024-04-26)
+
+[![](https://zenodo.org/badge/DOI/10.5281/zenodo.11075182.svg)](https://doi.org/10.5281/zenodo.11075182)
+
+### Bug Fixes
+
+- Fixed bug in [](:class:`~plotnine.stat_smooth`) where you could not set the
+  family when using a `glm`. ({{< issue 769 >}})
+
+- Fixed bug in [](:class:`~plotnine.position_dodge2`) the widths of the
+  dodged objects were mixed up. ({{< issue 772 >}})
+
+- Fixed [](:class:`~plotnine.geom_text`) to work better with
+  [adjustText](https://pypi.org/project/adjustText/) `v1.0.0` and above.
+
+- Fixed images generated in quarto so that they have the dimensions
+  (taking the dpi into account) that are specified in theme. ({{< issue 773 >}})
+
+### New
+
+- Added themeable [](:class:`~plotnine.themes.themeable.svg_usefonts`).
+  ({{< issue 756 >}})
+
+### Enhancements
+
+- Added _palmerpenguins_ dataset.
+
+## v0.13.4
+(2024-04-03)
+
+[![](https://zenodo.org/badge/DOI/10.5281/zenodo.10912461.svg)](https://doi.org/10.5281/zenodo.10912461)
+
+### Bug Fixes
+
+- Fixed regression in v0.13.3 where setting some text elements `element_blank` led to an
+  error. ({{< issue 764 >}})
+
+## v0.13.3
+(2024-03-27)
+[![](https://zenodo.org/badge/DOI/10.5281/zenodo.10887259.svg)](https://doi.org/10.5281/zenodo.10887259)
+
+
+### Bug Fixes
+
+- Fixed layout manager to make space for the `strip_text` when there is no
+  `strip_background`. ({{< issue 760 >}})
+
+- Made the default position of `guide_legend` text to be right. ({{< issue 761 >}})
+
+- Fixed aligning (`ha` & `va`) of `plot_title`, `plot_subtitle`, `plot_caption`,
+  `axis_title_x`, `axis_title_y` to work with float values in the range `[0, 1]`.
+
+## v0.13.2
+
+(2024-03-14)
+
+[![](https://zenodo.org/badge/DOI/10.5281/zenodo.10820452.svg)](https://doi.org/10.5281/zenodo.10820452)
+
+### Enhancements
+
+- Drawing the plot ensures that pandas Copy-on-Write is turned off. Plotnine
+  is not yet compatible with Copy-on-Write so this prevents errors for users
+  who have turned on the option.
+
+## v0.13.1
+(2024-03-06)
+
+[![](https://zenodo.org/badge/DOI/10.5281/zenodo.10790660.svg)](https://doi.org/10.5281/zenodo.10790660)
+
+### Bug Fixes
+
+- Fixed a bug where a legend with blank title or text could result in a
+  wrong justification.
+
+- Fixed a bug where setting legend justification to a string i.e one of
+  `left`, `right`, `top`, `bottom`, `center` had no effect.
+
+## v0.13.0
+(2024-02-20)
+
+[![](https://zenodo.org/badge/DOI/10.5281/zenodo.10684553.svg)](https://doi.org/10.5281/zenodo.10684553)
+
+### API Changes
+
+- Requires python >= 3.9
+
+- Using the `print` or `repr` functions to draw and show the plot has
+  been deprecated. Use [ggplot.show()](`plotnine.ggplot.show`).
+
+- The name of the calculated aesthetic of
+  [](:class:`~plotnine.stat_function`) changed from `y` to `fx`.
+
+- [](:class:`~plotnine.stat_ecdf`) has gained the `pad` parameter. The
+  default is set to `True`, which pads the domain with `-inf` and `inf` so
+  that the ECDF does not have discontinuities at the extremes. To get the
+  behaviour, set `pad` to `False`. ({{< issue 725 >}})
+
+- Removed the environment parameter from `ggplot`.
+
+- When a ggplot object is the last in a jupyter cell, the output image will
+  not be followed by string meta information about the figure/image.
+
+  This will happen even if the backend is set to an interactive one.
+
+  If you set the backend to an interactive one, use
+  [](:meth:`~plotnine.ggplot.show`) to draw the plot.
+
+- The default horizontal alignment for the plot title is center if it
+  there is no subtitle. When there is a subtitle, the default is to have
+  both aligned to the left.
+
+- Some parameters that control the look and feel of `guide_colorbar` and
+  `guide_legend` have been removed. For their place, the `theme` parameter
+  has been introduced and it gives better control of the look and feel.
+
+- Themeables `legend_entry_spacing`, `legend_entry_spacing_x` and
+  `legend_entry_spacing_y` have been renamed to `legend_key_spacing`,
+  `legend_key_spacing_x` and `legend_key_spacing_y` respectively
+
+- [](:class:`~plotnine.facet_grid`) now accepts two parameters,
+  `rows` and `cols`, to specify the variables along the two dimensions of
+  the panels.
+
+  The previous way of using a single parameter will still work if it is a
+  string. For cases where the value was a list, e.g.
+
+  ```python
+  facet_grid(facets=["col1", "col2"])
+  ```
+
+  can be rewritten as any one of;
+
+  ```python
+  facet_grid("col1", "col2")
+  facet_grid(["col1"], ["col2"])
+  facet_grid(rows="col1", cols="col2")
+  facet_grid(rows=["col1"], cols=["col2"])
+  ```
+
+- The `facets` parameter in [](:class:`~plotnine.facet_wrap`) has
+  also changed to a more straight forward specification for the column
+  variables. It expects a single string or a list/tuple of strings.
+  ({{< issue 545 >}})
+
+  However, the R-style formula strings are still silently accepted.
+
+### New
+
+- Added symmetric logarithm transformation scales
+  [](:class:`~plotnine.scale_x_symlog`) and
+  [](:class:`~plotnine.scale_y_symlog`)
+
+- Gained themeables
+
+  - [](:class:`~plotnine.themes.themeable.plot_margin_left`)
+  - [](:class:`~plotnine.themes.themeable.plot_margin_right`)
+  - [](:class:`~plotnine.themes.themeable.plot_margin_top`)
+  - [](:class:`~plotnine.themes.themeable.plot_margin_bottom`)
+
+  to set the plot margin on each side independently.
+
+- Gained themeables
+
+  - [](:class:`~plotnine.themes.themeable.axis_ticks_length_major_x`)
+  - [](:class:`~plotnine.themes.themeable.axis_ticks_length_major_y`)
+  - [](:class:`~plotnine.themes.themeable.axis_ticks_length_minor_x`)
+  - [](:class:`~plotnine.themes.themeable.axis_ticks_length_minor_y`)
+
+  to control the x & y axis ticks length.
+
+- Gained themeables
+
+  - [](:class:`~plotnine.themes.themeable.axis_ticks_pad_major_x`)
+  - [](:class:`~plotnine.themes.themeable.axis_ticks_pad_minor_y`)
+
+  to control the x & y tick padding.
+
+- Some parameters in [](:class:`~plotnine.element_text`) can now
+  accept lists/tuples to set the values on individual text objects.
+  ({{< issue 724 >}})
+
+- Gained the option [](:attr:`~plotnine.options.figure_format`) to set
+  the format of the inline figures in an interactive session. e.g.
+
+  ```python
+  from plotnine.options import set_option
+
+  set_option("figure_format", "svg")
+  ```
+
+  will output all subsequent figures in svg format.
+
+- Improved support for customizing guides/legends.
+
+  - You can now add a frame to the colobar
+  - You can now apply themes to individual guides, e.g.
+
+    ```py
+    + guides(color=guide_colorbar(theme=theme_xkcd()))
+    ```
+    or
+
+    ```py
+    + guides(color=guide_legend(theme=theme_minimal())
+    ```
+
+  - You can now place legends at more than one position
+    around the panels. e.g.
+
+    ```py
+    + guides(
+        color=guide_colorbar(position="left"),
+        fill=guide_legend(position="bottom"),
+        size=guide_legend(position="bottom")
+    )
+    ```
+
+    Puts the `fill` and `size` guides at the bottom, and the
+    `color` guide on the left.
+
+  - You can easily justify the legend along the four edges
+    of the space around the panel area.
+
+  - You can now place the legend inside the panels with easily
+    control its location.
+
+- The `space` parameter of [](:class:`~plotnine.facet_grid`) now
+  responds to the values `free`, `free_x` and `free_y` to have panels
+  whose relative width and/or height depends on the data range.
+  ({{< issue 545 >}})
+
+### Bug Fixes
+
+- Fixed handling of minor breaks in
+  [](:class:`~plotnine.scales.scale_continuous.scale_continuous`)
+  to accept numpy arrays and when the scale has a transform, that the
+  minor breaks are supplied in user space and not transform space. Just
+  like the major breaks. ({{< issue 685 >}})
+
+- Fixed theming of axis_ticks with the size parameter. ({{< issue 703 >}})
+
+- Fixed space handling around `axis_label`, `axis_text` and `axis_ticks` when
+  the ticks are turned off.
+
+- Fixed bug in [](:class:`~plotnine.geom_path`) where the lineend parameter
+  was ignored. ({{< issue 727 >}})
+
+- Fixed bug where `theme(legend_background=element_blank())`{.py} messed up
+  the position of the legend, instead of only removing the background.
+
+- Fixed using `facet_grid` with a column named `key`. ({{< issue 734 >}})
+
+- Fixed using legend when using an identity scale and reordering the
+  breaks. ({{< issue 735 >}})
+
+- Fixed drawing the upper outline of `geom_ribbon`. ({{< issue 728 >}})
+
+- Fixed issue where the gridlines overlap the panel border. ({{< issue 638 >}})
+
+### Enhancements
+
+- All `__all__` variables are explicitly assigned to help static typecheckers
+  infer module attributes. ({{< issue 685 >}})
+
+- You can now pickle the drawn matplotlib figures. ({{< issue 729 >}})
+
+- The facet titles in the `strip_text` are now better aligned are appear more
+  centered within the `strip_background`.
+
+
+## v0.12.4
+(2023-11-06)
+
+[![](https://zenodo.org/badge/DOI/10.5281/zenodo.2635624.svg)](https://doi.org/10.5281/zenodo.2635624)
+
+### Bug Fixes
+- Fixed [](`~plotnine.position_dodge`) to work with
+  to work for [](`~plotnine.geom_segment`).
+
+- Fixed the `x` limits when plotting [](`~plotnine.geom_sina`).
+
+- Fixed [](`~plotnine.stat_boxplot`) and
+  [](`~plotnine.stat_ydensity`) when there is no `x` aesthetic.
+
+### Enhancements
+- Return group counts for [](`~plotnine.stat_summary`).
+
+## v0.12.3
+(2023-09-01)
+
+[![](https://zenodo.org/badge/DOI/10.5281/zenodo.8309962.svg)](https://doi.org/10.5281/zenodo.8309962)
+
+### Enhancements
+
+- Resolved Future Warnings from pandas-2.1.0
+
+## v0.12.2
+(2023-07-21)
+
+[![](https://zenodo.org/badge/DOI/10.5281/zenodo.8171350.svg)](https://doi.org/10.5281/zenodo.8171350)
+
+- This is a maintenance release that prevents newer versions of
+  mizani from breaking plotnine. This version depends on `mizani<0.10.0`.
+
+## v0.12.1
+(2023-05-09)
+
+[![](https://zenodo.org/badge/DOI/10.5281/zenodo.7919297.svg)](https://doi.org/10.5281/zenodo.7919297)
+
+### New Features
+
+- A layout manager. Now you do not have to adjust spacing parameters
+  to prevent objects around the panels from overlapping.
+  Specifically, you can:
+
+  1. Set the legend position to "top", "left" or "bottom"
+  2. Use a large or multiline plot title
+  3. Use a large or multiline plot caption
+  4. Use [](:class:`~plotnine.facet_wrap`) with `scales="free"`{.py}
+     `scales="free_x"`{.py} or `scales="free_y"`{.py}
+
+  You can now also align the `plot_title`, `axis_title_x`, `axis_title_y`
+  and `plot_caption` with respect to the panels. Set these to "left",
+  "right" & "center" for the horizontal flowing text. And "top", "right"
+  & "center" for the vertical flowing text.
+
+  Also, the size of the figure is exactly determined by the theme setting.
+  For example, this:
+
+  ```py
+  theme(figure_size=(8, 6), dpi=100)
+  ```
+
+  will create an `800px x 600px` image.
+
+- You can create a `subtitle` using [](:class:`~plotnine.labs`) and
+  style it using the `plot_subtitle` parameter to [](:class:`~plotnine.theme`).
+
+  ```py
+  theme(plot_subtitle=element_text(size=8))
+
+### Enhancements
+
+- [](:class:`~plotnine.ggplot`) object gained a new method
+  [](:meth:`~plotnine.ggplot.save_helper`). It gives you access to the
+  matplotlib figure that will be saved to file.
+
+- When plotting with an ipython interactive backend (e.g. in a
+  jupyter notebook). The default image output is retina. You
+  do not need to run this command.
+
+  ```py
+  %config InlineBackend.figure_format = "retina"
+  ```
+
+  Plotnine still respects any values set the user.
+
+- In an interactive setting, after drawing an image. The size of the figure
+  (in pixels) is printed e.g. `<Figure Size: (640 x 480)>`. Previously,
+  something like `<ggplot: (336175301)>` was printed.
+
+### API Changes
+
+- [](:meth:`~plotnine.ggplot.__add__`) and [](:meth:`~plotnine.ggplot.__iadd__`)
+  now accept the same types of objects. In this change
+  [](:meth:`~plotnine.ggplot.__iadd__`) has gained the ability to accept a
+  list of objects.
+
+- [](:meth:`~plotnine.ggplot.draw`) no longer accepts the argument
+  `return_ggplot` and the return value is always a matplolib figure.
+
+- Themeables `strip_margin`, `strip_margin_x` and `strip_margin_y`) have been
+  renamed to
+  [](:class:`~plotnine.themes.themeable.strip_align`),
+  [](:class:`~plotnine.themes.themeable.strip_align_x`)
+  [](:class:`~plotnine.themes.themeable.strip_align_y`) respectively.
+
+- [](:class:`~plotnine.themes.themeable.subplots_adjust`) has been deprecated.
+  You no longer need to use `theme(subplots_adjust={"right": 0.85})`{.py} and
+  the like to make space for the legend or text around the panels.
+  In the future, this will through an error.
+
+- Changed default font-family (san-serif) from DejaVu Sans to Helvetica.
+
+### Bug Fixes
+
+- Fixed bug where a discrete position scale failed when mapping
+  an empty variable. ({{< issue 647 >}})
+
+- Fixed bug where [](:class:`~plotnine.facet_grid`) with a datetime
+  column run into an exception. ({{< issue 629 >}})
+
+- Fixed bug where [](:class:`~plotnine.geom_violin`) with facetting
+  and `"scales = free"` did not work. ({{< issue 655 >}})
+
+- Fixed bug in [](:class:`~plotnine.position_dodge2`) to work with
+  `preserve="single"` for [](:class:`~plotnine.geom_rect`) and any other
+  geoms that accept a min-max range along the x-axis.
+
+- Fixed legend for [](:class:`~plotnine.geom_point`) to accurately display
+  transparent fill colors that have been manually set. ({{< issue 665 >}})
+
+- Fix issue where infinite limits for the `x` or `y` scales lead to an
+  exception. ({{< issue 664 >}})
+
+- Fixed [](:class:`~plotnine.geom_text`) and
+  [](:class:`~plotnine.geom_label`) when used with string formatting so that
+  missing values are removed. ({{< issue 651 >}})
+
+## v0.10.1
+(2022-09-10)
+
+[![](https://zenodo.org/badge/DOI/10.5281/zenodo.7124917.svg)](https://doi.org/10.5281/zenodo.7124917)
+
+*This is a re-release of v0.10.0*.
+
+In the previous release the project description fileformat changed
+and not all references to it were corrected. PYPI read file that did
+not exist, got no description. This release is fixes error.
+
+## v0.10.0
+(2022-09-10)
+
+[![](https://zenodo.org/badge/DOI/10.5281/zenodo.7124912.svg)](https://doi.org/10.5281/zenodo.7124912)
+
+### Bug Fixes
+
+- Fixed bug in [](:class:`~plotnine.stat_bin_2d`) where bins whose edges
+  are zero or negative would yield the wrong plot. ({{< issue 604 >}})
+
+- Fixed bug [](:class:`~plotnine.stat_density_2d`) which had been broken
+  by Matplotlib 1.6.0. ({{< issue 619 >}})
+
+- Fixed [](:class:`~plotnine.geom_text`) when using `adjust_text` for
+  the arrows to have the same color as the text.
+
+### New Features
+
+- [](:class:`~plotnine.geom_ribbon`) acquired new parameter `where`
+  which can be used shade within given limits .
+
+- Added support for objects with a `to_pandas` method to convert them to
+  a pandas dataframe. You can now pass in [polars](https://pola.rs) dataframes.
+
+- [](:class:`~plotnine.geom_ribbon`) acquired new parameter `outline_type`
+  which controls how to stroke the boundaries of the shaded area. This parameter
+  is also available to [](:class:`~plotnine.geom_area`) and
+  [](:class:`~plotnine.geom_density`). ({{< issue 605 >}})
+
+### API Changes
+
+- The automatic groups generated by the system and depending on the aesthetic
+  mappings now only depend those aesthetics that have scales. This is more
+  strict than has been, should affect very few cases of code that has been
+  written and it should be less surprising to the users.
+
+- [](:class:`~plotnine.geom_area`) and [](:class:`~plotnine.geom_density`)
+  now default to showing only the upper outline/boundary of the area.
+  Use `outline_type="full"` for the old behaviour.
+
+## v0.9.0
+(2022-07-01)
+
+[![](https://zenodo.org/badge/DOI/10.5281/zenodo.7124918.svg)](https://doi.org/10.5281/zenodo.7124918)
+
+### API Changes
+
+- For the calls to `ggplot`, the order of the positional arguments is
+  `(data, mapping)` and for calls `geoms` and `stats` the order
+  is `(mapping, data)`. In practice, you can still provide one/two
+  positional arguments in any order. However, the are a few cases
+  where old code will breaks due to duplicate parameters.
+
+### New Features
+
+- Added [](:class:`~plotnine.geom_pointdensity`), a 2D density plot
+  that does not hide the distribution of the individual data points.
+
+- [](:class:`~plotnine.position_dodge2`) gained the ability to reverse
+  the order of the plotted groups. ({{< issue 515 >}})
+
+- Added [](:class:`~plotnine.theme_tufte`), a theme that reduces the
+  distractions around plot data.
+
+- [](:class:`~plotnine.labs`) can now be used to create a `caption`.
+  This caption can be styled using the `plot_caption` parameter to
+  [](:class:`~plotnine.theme`).
+
+  ```py
+  theme(plot_caption=element_text(size=13))
+  ```
+
+- You can now align the `plot_title` horizontally to the left or right.
+
+  ```py
+  theme(plot_title=element_text(ha="left"))
+  ```
+
+  Before, the title was always centered.
+
+### Bug Fixes
+
+- Fixed bug in [](:class:`~plotnine.facet_grid`) and
+  [](:class:`~plotnine.facet_wrap`) where the `drop` parameter was
+  ignored. ({{< issue 510 >}})
+
+- Fixed issue with [](:class:`~plotnine.annotation_logticks`) where the
+  wrong range was used for the x|y axis. ({{< issue 525 >}})
+
+- Fixed bug in [](:class:`~plotnine.geom_smooth`) where using a
+  coordinate transformation without computing the standard error
+  led to a crash. ({{< issue 526 >}})
+
+- Fixed bug where you could not specific the cap/end of a dashed line
+  when styling a plot with [](:class:`~plotnine.element_line`).
+
+- Fixed legend for [](:class:`~plotnine.geom_map`) so that the entries
+  have the same stroke and points on the map. ({{< issue 534 >}})
+
+- Fixed [](:class:`~plotnine.geom_histogram`) for some cases when it fails
+  to automatically determine the number of bins. ({{< issue 543 >}})
+
+- Fixed [](:class:`~plotnine.facet_grid`) and
+  [](:class:`~plotnine.facet_wrap`) when mapping to lists/arrays/series
+  so that the rows mapped this way are not mixed up. ({{< issue 548 >}})
+
+- Fixed [](:class:`~plotnine.stat_bin_2d`) not to error for
+  matplotlib >= 3.5.0 so that it does not throw a Numpy error.
+  ({{< issue 567 >}})
+
+- Fixed [](:class:`~plotnine.geom_map`) to be able to draw Polygons
+  with holes in them.
+
+- Fixed [](:class:`~plotnine.geom_map`) to be able to draw MultiPolygons.
+
+- Fixed [](:class:`~plotnine.scale_x_discrete`) and
+  [](:class:`~plotnine.scale_x_discrete`) to work properly with `None`
+  values. ({{< issue 523 >}})
+
+- Fixed [](:class:`~plotnine.geom_point`) to respect not to use the `fill`
+  mapping on unfilled shapes. ({{< issue 100 >}})
+
+- Fixed [](:class:`~plotnine.position_stack`) to work with scales that
+  have non-linear transformations. e.g.
+  [](:class:`~plotnine.scale_y_log10`). ({{< issue 580 >}})
+
+- Fixed scales to work with limits passed as a function.
+
+- Fixed [](:class:`~plotnine.themes.themeable.axis_ticks`) so you can change
+  the colour of the axis ticks. This was probably a regression due to changes
+  in Matplotlib.
+
+- Fixed [](:class:`~plotnine.themes.themeable.panel_ontop`) so that if is set to
+  `False`, then the data visualised below the grid-lines. ({{< issue 585 >}})
+
+- Fixed [](:class:`~plotnine.geom_ribbon`), [](:class:`~plotnine.geom_area`)
+  and [](:class:`~plotnine.geom_density`) to work with
+  [](:class:`~plotnine.coord_flip`). ({{< issue 596 >}})
+
+### Enhancements
+
+- [](:class:`~plotnine.stat_summary`) now has a default summary
+  function. ({{< issue 528 >}})
+
+- [](:class:`~plotnine.stat_density`) now uses a fast computation path
+  for gaussian densities with no weights. This was probably a regression.
+
+- [](:class:`~plotnine.geom_map`) can now draw MultiPoints,
+  MultiLineStrings and MultiPolygons.
+
+- [](:class:`~plotnine.geom_text`) with `adjust_text` can now be used
+  in more than one layer with good enough results.
+
+## v0.8.0
+(2021-03-24)
+
+[![](https://zenodo.org/badge/DOI/10.5281/zenodo.4636791.svg)](https://doi.org/10.5281/zenodo.4636791)
+
+### API Changes
+
+- How you map to calculated aesthetics has changed. Use the
+  [](:func:`~plotnine.after_stat`) function. The old
+  methods `'stat(name)'` and `'..name..'` have been deprecated.
+
+### New Features
+
+- You can now map to aesthetics at three different stages. See
+  [](:class:`~plotnine.aes`), [](:func:`~plotnine.after_stat`),
+  [](:func:`~plotnine.after_scale`) and [](:class:`~plotnine.stage`).
+
+- [](:class:`~plotnine.geom_violin`) gained the a new parameter `style`
+  with which you can draw half violin (density curve on one side and flat
+  on the other).
+
+- Added [](:class:`~plotnine.geom_raster`).
+
+- `geoms` gained new parameter `raster` for the
+  [](:class:`~plotnine.layer.layer`). You can use it to rasterize any layer
+  when the resulting plot is of vector format e.g. `pdf`.
+
+- Using the `space` parameter, [](:class:`~plotnine.facet_grid`)
+  gained the ability to have rows and columns of panels of different
+  sizes.
+
+### Bug Fixes
+
+- Fixed issue where some plots with a colorbar would fail for specific
+  themes. ({{< issue 424 >}})
+
+- Fixed [](:class:`~plotnine.geom_map`) to plot `MultiLineString` geom types.
+
+- Fixed [](:class:`~plotnine.geom_text`) to allow any order of `mapping` and
+  `data` positional arguments.
+
+- Fixed bug were the plotted image may have ignored theming that relied on
+  some Matplotlib rcParams. ({{< issue 451 >}})
+
+- Fixed the `weight` aesthetic in [](:class:`~plotnine.geom_boxplot`), previously
+  ignored it is now recognised. ({{< issue 438 >}})
+
+- Fixed [](:class:`~plotnine.annotation_logticks`) and
+  [](:class:`~plotnine.annotation_stripes`) to work without global data and
+  aesthetics. ({{< issue 469 >}})
+
+- Fix [](:class:`~plotnine.scale_shape_discrete`) when printing many unfilled shapes
+  not to assign the same shapes to more than one group. ({{< issue 473 >}})
+
+- Fixed bug in [](:class:`~plotnine.stat_ellipse`) where the center of the ellipse
+  assuming a multivariate t-distribution was incorrectly calculated. ({{< issue 493 >}})
+
+- Fixed calculation of `ndensity` in [](:class:`~plotnine.stat_bin`).
+  ({{< issue 494 >}})
+
+
+### Enhancements
+- Manual scales now match the values of the breaks if the breaks are given.
+  ({{< issue 445 >}})
+
+- Using `print` to show a ggplot object will not show the hash
+  (`<ggplot: ...>`) anymore. There is now a difference between
+  `repr(p)` and `str(p)`. ({{< issue 453 >}})
+
+- Added option to for the `base_family` of a theme, now you can set it
+  once with and have it be applied to all themes. ({{< issue 436 >}})
+
+  ```py
+  from plotnine.options import set_option
+  set_option('base_family', 'Comic Sans MS')
+  ```
+
+- You can now add `None` to a ggplot, doing so returns a copy of the
+  the ggplot object. ({{< issue 474 >}})
+
+- Better handling of multiline facet labels. ({{< issue 484 >}})
+
+## v0.7.1
+(2020-08-05)
+
+[![](https://zenodo.org/badge/DOI/10.5281/zenodo.3973626.svg)](https://doi.org/10.5281/zenodo.3973626)
+
+### Bug Fixes
+
+- Fixed issue where a plot has no data and the geoms have no data,
+  but the mappings are valid. ({{< issue 404 >}})
+
+- Fixed `preserve="single"` in [](:class:`~plotnine.position_dodge`)
+  and [](:class:`~plotnine.position_dodge2`) to work for geoms that
+  only have `x` aesthetic and not `xmin` and `xmax`
+  e.g [](:class:`~plotnine.geom_text`).
+
+- Fix regression in `v0.7.0` where plots with a colorbar
+  would fail if using [](:class:`~plotnine.theme_matplotlib`).
+
+## v0.7.0
+(2020-06-05)
+
+[![](https://zenodo.org/badge/DOI/10.5281/zenodo.3878645.svg)](https://doi.org/10.5281/zenodo.3878645)
+
+
+### API Changes
+
+- Changed the default method of calculating bandwidth for all stats that
+  use kernel density estimation. The affected stats are
+  [](:class:`~plotnine.stat_density`),
+  [](:class:`~plotnine.stat_ydensity`), and
+  [](:class:`~plotnine.stat_sina`). These stats can now work with groups
+  that have a single unique value.
+
+- Changed `scale_colour_continuous` to refer to the same
+  scale as [](:class:`~plotnine.scale_color_continuous`).
+
+- Changed [](:class:`~plotnine.scale_color_cmap`) so the parameter
+  `cmap_name` refers to the name of the color palette and `name` refers
+  to the name of the scale. ({{< issue 371 >}})
+
+### New Features
+
+- `aes` got an internal function `reorder` which
+  makes it easy to change the ordering of a discrete variable according
+  to some other variable/column.
+
+- [](:class:`~plotnine.stat_smooth`) can now use formulae for linear
+  models.
+
+
+### Bug Fixes
+
+- Fixed issue where a wrong warning could be issued about changing the
+  transform of a specialised scale. It mostly affected the *timedelta*
+  scale.
+
+- Fixed [](:class:`~plotnine.geom_violin`) and other geoms when used
+  with `position="dodge"` not to crash when if a layer has an empty
+  group of data.
+
+- Fixed bug in [](:class:`~plotnine.geom_path`) for some cases when groups
+  had less than 2 points. ({{< issue 319 >}})
+
+- Fixed all stats that compute kernel density estimates to work when all
+  the data points are the same. ({{< issue 317 >}})
+
+- Fixed issue where setting the group to a string value i.e. `group="string"`
+  outside `aes()` failed due to an error.
+
+- Fixed issue where discrete position scales could not deal with fewer limits
+  than those present in the data. ({{< issue 342 >}})
+
+- Fixed issue with using custom tuple linetypes~ with
+  [](:class:`~plotnine.scale_linetype_manual`). ({{< issue 352 >}})
+
+- Fixed [](:class:`~plotnine.geom_map`) to work with facets. ({{< issue 359 >}})
+
+- Fixed [](:class:`~plotnine.position_jitterdodge`) to work when `color` is
+  used as an aesthetic. ({{< issue 372 >}})
+
+- Fixed [](:class:`~plotnine.geom_qq`) to work with facets. ({{< issue 379 >}})
+
+- Fixed skewed head in [](:class:`~plotnine.arrow`) when drawn on
+  facetted plot. ({{< issue 388 >}})
+
+- Fixed issue with [](:class:`~plotnine.stat_density`) where weights could
+  not be used with a gaussian model. ({{< issue 392 >}})
+
+- Fixed bug where [](:class:`~plotnine.guide_colorbar`) width and height
+  could not be controlled by
+  [](:class:`~plotnine.themes.themeable.legend_key_width`) and
+  [](:class:`~plotnine.themes.themeable.legend_key_height`). ({{< issue 360 >}})
+
+### Enhancements
+
+- You can now set the bandwidth parameter `bw` of
+  [](:class:`~plotnine.stat_ydensity`).
+
+- Parameters `ha` and `va` of [](:class:`~plotnine.geom_text`) have been converted
+  to aesthetics. You can now map to them. ({{< issue 325 >}})
+
+- All themes (except `theme_matplotlib`) now do not show minor ticks. ({{< issue 348 >}})
+
+## v0.6.0
+(2019-08-21)
+
+[![](https://zenodo.org/badge/DOI/10.5281/zenodo.3373970.svg)](https://doi.org/10.5281/zenodo.3373970)
+
+### API Changes
+
+- The `draw` parameter of [](:class:`~plotnine.geom_map`) has been removed.
+  Shapefiles should contain only one type of geometry and that is the geometry
+  that is drawn.
+
+- Ordinal (Ordered categorical) columns are now mapped to ordinal scales. This
+  creates different plots.
+
+- The default mapping for the computed aesthetic *size* of
+  [](:class:`~plotnine.stat_sum`) has changed to `'stat(n)'`. This also
+  changes the default plot for [](:class:`~plotnine.geom_count`).
+
+### New Features
+
+- [](:class:`~plotnine.geom_text`) gained the `adjust_text` parameter,
+  and can now repel text.
+- Added [](:class:`~plotnine.annotation_logticks`).
+- Added [](:class:`~plotnine.geom_sina`)
+- Added scales for ordinal (ordered categorical) columns.
+- [](:class:`~plotnine.geom_step`) gained the option `mid` for the
+  direction parameter. The steps are taken mid-way between adjacent x values.
+- Added [](:class:`~plotnine.annotation_stripes`).
+
+### Bug Fixes
+
+- Fixed bug where facetting would fail if done on a plot with annotation(s)
+  and one of the facetting columns was also a variable in the environment.
+
+- Fixed bug where [](:class:`~plotnine.coord_flip`) would not flip
+  geoms created by [](:class:`~plotnine.geom_rug`). ({{< issue 216 >}})
+
+- Fixed bug where plots with [](:class:`~plotnine.theme_xkcd`) cannot be
+  saved twice. ({{< issue 199 >}})
+
+- Fixed bug that made it impossible to map to columns with the same name as
+  a calculated columns of the stat. ({{< issue 234 >}})
+
+- Fixed bug in [](:class:`~plotnine.geom_smooth`) that made it difficult
+  to use it with stats other than [](:class:`~plotnine.stat_smooth`).
+  ({{< issue 242 >}})
+
+- Fixed bug in [](:class:`~plotnine.position_dodge`) where by bar plot
+  could get thinner when facetting and using `preserve = 'single'`.
+  ({{< issue 224 >}})
+
+- Fixed bug in [](:class:`~plotnine.coord_trans`) where if the transformation
+  reversed the original limits, the order in which the data was laid out remained
+  unchanged. ({{< issue 253 >}})
+
+- Fixed bug in [](:class:`~plotnine.stat_count`) where `float` weights were
+  rounded and lead to a wrong plot. ({{< issue 260 >}})
+
+- Fixed bug where one could not use the British spelling `colour` to rename
+  a color scale. ({{< issue 264 >}})
+
+- Fixed bug in [](:class:`~plotnine.lims`), [](:class:`~plotnine.xlim`),
+  and [](:class:`~plotnine.ylim`) where `datetime` and `timedelta` limits
+  resulted in an error.
+
+- Fixed bug where [](:class:`~plotnine.geom_rect`) could not be used with
+  [](:class:`~plotnine.coord_trans`). ({{< issue 256 >}})
+
+- Fixed bug where using free scales with facetting and flipping the coordinate
+  axes could give unexpected results. ({{< issue 286 >}})
+
+- Fixed unwanted tick along the axis for versions of Matplotlib >= 3.1.0.
+
+- Fixed [](:class:`~plotnine.geom_text`) not to error when using `hjust`
+  and `vjust`. ({{< issue 287 >}})
+
+- Fixed bug where [](:class:`~plotnine.geom_abline`)
+  [](:class:`~plotnine.geom_hline`) and [](:class:`~plotnine.geom_vline`)
+  could give wrong results when used with [](:class:`~plotnine.coord_trans`).
+
+- Fixed bug where layers with only infinite values would lead to an exception
+  if they were the first layer encountered when choosing a scale.
+
+### Enhancements
+
+- Legends are now plotted in a predictable order which dedends on how the plot
+  is constructed.
+
+- The spokes drawn by [](:class:`~plotnine.geom_spoke`) can now have a fixed
+  angle.
+
+- Aesthetics that share a scale (e.g. color and fill can have the same scale) get
+  different guides if mapped to different columns.
+
+- When the transform of a specialised (one that is not and identity scale) continuous
+  scale is altered, the user is warned about a possible error in what they expect.
+  ({{< issue 254 >}}, {{< issue 255 >}})
+
+- The `method_args` parameter in [](:class:`~plotnine.stat_smooth`) can now
+  differentiate between arguments for initialising and those for fitting the
+  smoothing model.
+
+- [](:class:`~plotnine.position_nudge`) can now deal with more geoms e.g.
+  [](:class:`~plotnine.geom_boxplot`).
+
+- The `limits` parameter of [](:class:`~plotnine.scale_x_discrete`) and
+    [](:class:`~plotnine.scale_y_discrete`) can now be a function.
+
+- The `width` of the boxplot can now be set irrespective of the stat.
+
+- The mid-point color of [](:class:`~plotnine.scale_color_distiller`) now
+  matches that of the trained data.
+
+- The way in which layers are created has been refactored to give packages that
+  that extend plotnine more flexibility in manipulating the layers.
+
+- You can now specify one sided limits for coordinates. e.g.
+  `coord_cartesian(limits=(None, 10))`{.py}.
+
+- All the themeables have been lifted into the definition of
+  [](:class:`~plotnine.theme`) so they can be suggested autocomplete.
+
+## v0.5.1
+(2018-10-17)
+
+[![](https://zenodo.org/badge/DOI/10.5281/zenodo.1464803.svg)](https://doi.org/10.5281/zenodo.1464803)
+
+### Bug Fixes
+
+- Changed the dependency for mizani to `v0.5.2`. This fixes an issue
+  where facetting may create plots with missing items. ({{< issue 210 >}})
+
+## v0.5.0
+(2018-10-16)
+
+[![](https://zenodo.org/badge/DOI/10.5281/zenodo.1464204.svg)](https://doi.org/10.5281/zenodo.1464204)
+
+### API Changes
+
+- Plotnine 0.5.0 only supports Python 3.5 and higher
+- geopandas has been removed as a requirement for installation. Users of
+  [](:class:`~plotnine.geom_map`) will have to install it separately.
+  ({{< issue 178 >}})
+
+### Bug Fixes
+
+- Fixed issue where with the `subplots_adjust` themeable could not be used to
+  set the `wspace` and `hspace` Matplotlib subplot parameters. ({{< issue 185 >}})
+
+- Fixed in [](:class:`~plotnine.stat_bin`) where setting custom limits for the
+  scale leads to an error. ({{< issue 189 >}})
+
+- Fixed issue interactive plots where the x & y coordinates of the mouse do not
+  show. ({{< issue 187 >}})
+
+- Fixed bug in [](:class:`~plotnine.geom_abline`) where passing the mapping as
+  a keyword parameter lead to a wrong plot. ({{< issue 196 >}})
+
+- Fixed issue where `minor_breaks` for transformed scaled would have to be given
+  in the transformed coordinates. Know they are given the data coordinates just
+  like the major `breaks`.
+
+### Enhancements
+
+- For all geoms, with [](:class:`~plotnine.coord_cartesian`) `float('inf')`
+  or `np.inf` are interpreted as the boundary of the plot panel.
+
+- Discrete scales now show missing data (`None` and `nan`). This behaviour
+  is controlled by the new `na_translate` option.
+
+- The `minor_breaks` parameter for continuous scales can now be given as an
+  integer. An integer is taken to control the number of minor breaks between
+  any set of major breaks.
+
+## v0.4.0
+*2018-01-08*
+
+[![](https://zenodo.org/badge/DOI/10.5281/zenodo.1325309.svg)](https://doi.org/10.5281/zenodo.1325309)
+
+### API Changes
+
+- Calculated aesthetics are accessed using the `plotnine.aes.stat`
+  function. The old method (double dots `..name..`) still works.
+
+- [](:class:`~plotnine.stat_qq`) calculates slightly different points
+  for the theoretical quantiles.
+
+- The `scales` (when set to *free*, *free_x* or *free_y*) parameter of
+  [](:class:`~plotnine.facet_grid`) and [](:class:`~plotnine.facet_wrap`)
+  assigns the same scale across the rows and columns.
+
+
+### New Features
+
+- Added [](:class:`~plotnine.geom_qq_line`) and
+  [](:class:`~plotnine.stat_qq_line`), for lines through Q-Q plots.
+
+- Added [](:class:`~plotnine.geom_density_2d`) and
+  [](:class:`~plotnine.stat_density_2d`).
+
+- Added [](:class:`~plotnine.stat_ellipse`).
+
+- Added [](:class:`~plotnine.geom_map`).
+
+- Plotnine learned to respect plydata groups.
+
+- Added [](:class:`~plotnine.stat_hull`).
+
+- Added [](:meth:`~plotnine.ggplot.save_as_pdf_pages`).
+
+### Bug Fixes
+
+- Fixed issue where colorbars may chop off the colors at the limits
+  of a scale.
+
+- Fixed issue with creating fixed mappings to datetime and timedelta
+  type values. ({{< issue 88 >}})
+
+- Fixed [](:class:`~plotnine.scale_x_datetime`) and
+  [](:class:`~plotnine.scale_y_datetime`) to handle the intercepts
+  along the axes. ({{< issue 97 >}})
+
+- Fixed [](:class:`~plotnine.stat_bin`) and
+  [](:class:`~plotnine.stat_bin_2d`) to properly handle the
+  `breaks` parameter when used with a transforming scale.
+
+- Fixed issue with x and y scales where the `name` of the scale was
+  ignored when determining the axis titles. Now, the `name` parameter
+  is specified, it is used as the title. ({{< issue 105 >}})
+
+- Fixed bug in discrete scales where a column could not be mapped
+  to integer values. ({{< issue 108 >}})
+
+- Make it possible to hide the legend with `theme(legend_position="none")`.
+  ({{< issue 119 >}})
+
+- Fixed issue in [](:class:`~plotnine.stat_summary_bin`) where some input
+  values gave an error. ({{< issue 123 >}})
+
+- Fixed [](:class:`~plotnine.geom_ribbon`) to sort data before plotting.
+  ({{< issue 127 >}})
+
+- Fixed `IndexError` in [](:class:`~plotnine.facet_grid`) when row/column
+  variable has 1 unique value. ({{< issue 129 >}})
+
+- Fixed [](:class:`~plotnine.facet_grid`) when `scale="free"`,
+  `scale="free_x"` or `scale="free_y"`, the panels share axes
+  along the row or column.
+
+- Fixed [](:class:`~plotnine.geom_boxplot`) so that user can create a boxplot
+  by specifying all required aesthetics. ({{< issue 136 >}})
+
+- Fixed [](:class:`~plotnine.geom_violin`) to work when some groups are empty.
+  ({{< issue 131 >}})
+
+- Fixed continuous scales to accept `minor=None`. ({{< issue 120 >}})
+
+- Fixed bug for discrete position scales, where `drop=False` did not drop
+  unused categories. ({{< issue 139 >}})
+
+- Fixed bug in [](:class:`~plotnine.stat_ydensity`) that caused an exception
+  when a panel had no data. ({{< issue 147 >}})
+
+- Fixed bug in [](:class:`~plotnine.coord_trans`) where coordinate
+  transformation and facetting could fail with a `KeyError`. ({{< issue 151 >}})
+
+- Fixed bug that lead to a `TypeError` when aesthetic mappings to could be
+  recognised as being groupable. It was easy to stumble on this bug when using
+  [](:class:`~plotnine.geom_density`). ({{< issue 165 >}})
+
+- Fixed bug in [](:class:`~plotnine.facet_wrap`) where some combination of
+  parameters lead to unexpected panel arrangements. ({{< issue 163 >}})
+
+- Fixed bug where the legend text of colorbars could not be themed. ({{< issue 171 >}})
+
+## v0.3.0
+*(2017-11-08)*
+
+### API Changes
+
+- [](:class:`~plotnine.geom_smooth`) gained an extra parameter
+  `legend_fill_ratio` that control the area of the legend that is filled
+  to indicate confidence intervals. ({{< issue 32 >}})
+
+- [](:meth:`~plotnine.ggplot.save`) gained an extra parameter `verbose`.
+  It no longer guesses when to print information and when not to.
+
+- [](:meth:`~plotnine.ggplot.draw`) gained an extra parameter `return_ggplot`.
+
+- If the `minor_breaks` parameter of scales is a callable, it now
+  expects one argument, the `limits`. Previously it accepted
+  `breaks` and `limits`.
+
+### New Features
+
+- Added [](:class:`~plotnine.animation.PlotnineAnimation`) for animations.
+- Added [](:class:`~plotnine.watermark`) for watermarks.
+- Added datetime scales for `alpha`, `colour`, `fill` and `size`
+  aesthetics
+
+### Enhancements
+
+- Changed parameter settings for [](:class:`~plotnine.stat_smooth`).
+
+  #. Default `span=0.75` instead of `2/3`
+  #. When using loess smoothing, the control parameter `surface`
+     is only set to the value `'direct'` if predictions will
+     be made outside the data range.
+
+
+- Better control of scale limits. You can now specify individual limits of a scale.
+
+  ```py
+  scale_y_continuous(limits=(0, None))
+  xlim(None, 100)
+  ```
+
+  You can also use [](:func:`~plotnine.expand_limits`)
+
+- Low and high [](:class:`~plotnine.scales.scale.scale`) limits can now be expanded
+  separately with different factors multiplicative and additive factors.
+
+- The layer parameter `show_legend` can now accept a `dict` for finer
+  grained control of which aesthetics to exclude in the legend.
+
+- Infinite values are removed before statistical computations `stats`.
+  ({{< issue 40 >}}).
+
+  `stats` also gained new parameter `na_rm`, that controls whether
+  missing values are removed before statistical computations.
+
+- [](:func:`~plotnine.qplot`) can now use the name and a Pandas series to
+  label the scales of the aesthetics.
+
+- You can now put stuff to add to a ggplot object into a list and add that
+  that instead. No need to wrap the list around the internal class
+  `Layers`.
+
+  ```py
+  lst = [geom_point(), geom_line()]
+  g = ggplot(df, aes('x', 'y'))
+  print(g + lst)
+  ```
+
+  Using a list allows you to bundle up objects. It can be convenient when
+  creating some complicated plots. See the Periodic Table Example.
+
+- You can now use a `dict` (with manual scales) to map data values to
+  aesthetics. ({{< issue 169 >}})
+
+- You can now specify infinite coordinates with [](:class:`~plotnine.geom_rect`).
+  ({{< issue 166 >}})
+
+### Bug Fixes
+
+- Fixed bug where facetting led to a reordering of the data. This
+  would manifest as a bug for `geoms` where order was important.
+  ({{< issue 26 >}})
+
+- Fix bug where facetting by a column whose name (eg. `class`) is
+  a python keyword resulted in an exception. ({{< issue 28 >}})
+
+- Fix bug where y-axis scaling was calculated from the `xlim` argument.
+
+- Fix bug where initialising geoms from stats, and positions from geoms,
+  when passed as classes (e.g. `stat_smooth(geom=geom_point)`{.py}, would
+  fail.
+
+- Fixed bug in [](:meth:`~plotnine.ggplot.save`) where specifying the `width`
+  and `height` would mess up the `strip_text` and `spacing` for the
+  facetted plots. ({{< issue 44 >}}).
+
+- Fixed bug in [](:class:`~plotnine.geom_abline`),
+  [](:class:`~plotnine.geom_hline`) and [](:class:`~plotnine.geom_vline`)
+  where facetting on a column that is not mapped to an aesthetic fails.
+  ({{< issue 48 >}})
+
+- Fixed bug in [](:class:`~plotnine.geom_text`), the `fontstyle` parameter
+  was being ignored.
+
+- Fixed bug where boolean data was mapped to the same value on the coordinate
+  axis. ({{< issue 57 >}})
+
+- Fixed bug in [](:class:`~plotnine.facet_grid`) where the `scales`
+  sometimes has no effect. ({{< issue 58 >}})
+
+- Fixed bug in [](:class:`~plotnine.stat_boxplot`) where setting the
+  `width` parameter caused an exception.
+
+
+## v0.2.1
+*(2017-06-22)*
+
+- Fixed bug where manually setting the aesthetic `fill=None` or
+  `fill="None"` could lead to a black fill instead of an empty
+  fill.
+
+- Fixed bug where computed aesthetics could not be used in larger
+  statements. ({{< issue 7 >}})
+
+- Fixed bug in [](:class:`~plotnine.stat_summary`) where the you got
+  an exception for some types of the `x` aesthetic values.
+
+- Fixed bug where `ggplot(data=df)`{.py} resulted in an exception.
+
+- Fixed missing axis ticks and labels for [](:class:`~plotnine.facet_wrap`)
+  when the scales are allowed to vary (e.g `scales="free"`) between
+  the panels.
+
+- Fixed bug in [](:class:`~plotnine.stat_density`) where changing the
+  x limits lead to an exception. ({{< issue 22 >}})
+
+
+## v0.2.0
+*(2017-05-18)*
+
+- Fixed bug in [](:class:`~plotnine.scale_x_discrete`) and
+  [](:class:`~plotnine.scale_y_discrete`) where if they were
+  instantiated with parameter `limits` that is either a numpy
+  array or a pandas series, plotting would fail with a `ValueError`.
+
+- Fixed exceptions when using [](:func:`pandas.pivot_table`) for Pandas v0.20.0.
+  The API was [fixed](http://pandas.pydata.org/pandas-docs/version/0.20/whatsnew.html#pivot-table-always-returns-a-dataframe).
+
+- Fixed issues where lines/paths with segments that all belonged in the
+  same group had joins that in some cases were "butted".
+
+
+### API Changes
+
+- [](:class:`~plotnine.geom_text`) now uses `ha` and `va` as
+  parameter names for the horizontal and vertical alignment. This
+  is what matplotlib users expect. The previous names `hjust` and
+  `vjust` are silently accepted.
+
+- `plotnine.layer.Layers` can now be used to bundle up `geoms`
+  and `stats`. This makes it easy to reuse `geoms` and `stats` or
+  organise them in sensible bundles when making complex plots.
+
+## v0.1.0
+*(2017-04-25)*
+
+First public release
