@@ -1,0 +1,165 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["django_athm"]
+artifacts = ["django_athm/locale/*/LC_MESSAGES/*.mo"]
+
+[tool.hatch.build.targets.sdist]
+include = ["django_athm"]
+
+[project]
+name = "django-athm"
+version = "1.0.0b2"
+description = "Django + ATH Móvil"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Raúl Negrón-Otero", email = "raul@rnosoftware.com"},
+]
+maintainers = [
+    {name = "Raúl Negrón-Otero", email = "raul@rnosoftware.com"},
+]
+keywords = [
+    "Django",
+    "ATH Móvil",
+    "payments",
+    "athm"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Web Environment",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Office/Business :: Financial",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Framework :: Django",
+    "Framework :: Django :: 5.1",
+    "Framework :: Django :: 5.2",
+    "Framework :: Django :: 6.0",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "athm~=0.4.1",
+]
+
+
+[dependency-groups]
+dev = [
+    "commitizen>=4.10.0",
+    "Django>=5.1,<7.0",
+    "mkdocs>=1.3.1,<2.0",
+    "pre-commit>=2.10.1,<4.0",
+    "pytest>=7.4.0,<9.0",
+    "pytest-cov>=4.1.0,<6.0",
+    "pytest-django>=4.7.0,<5.0",
+    "pytest-mock>=3.12.0,<4.0",
+    "respx>=0.20.0,<1.0",
+    "ruff>=0.14.6",
+    "tox>=4.0,<5.0",
+]
+
+
+[project.urls]
+Homepage = "https://github.com/django-athm/django-athm"
+Repository = "https://github.com/django-athm/django-athm"
+Documentation = "https://django-athm.readthedocs.io"
+Issues = "https://github.com/django-athm/django-athm/issues"
+
+[tool.tox]
+legacy_tox_ini = """
+[tox]
+isolated_build = true
+envlist =
+    py{310,311,312,313}-django{51,52}
+    py{312,313,314}-django60
+    lint
+
+[gh-actions]
+python =
+    3.10: py310
+    3.11: py311
+    3.12: py312
+    3.13: py313
+    3.14: py314
+
+
+[testenv]
+setenv =
+    DJANGO_SETTINGS_MODULE = tests.settings
+    PYTHONWARNINGS = all
+    PYTEST_ADDOPTS = --cov django_athm --cov-append --cov-report=xml
+deps =
+    pytest>=7.4.0
+    pytest-cov>=4.1.0
+    pytest-mock>=3.12.0
+    pytest-django>=4.7.0
+    respx>=0.20.0
+    django51: Django>=5.1,<5.2
+    django52: Django>=5.2,<5.3
+    django60: Django>=6.0,<6.1
+commands =
+    pytest {posargs}
+
+[testenv:clean]
+deps = coverage
+skip_install = true
+commands = coverage erase
+
+[testenv:lint]
+skip_install = true
+deps = ruff>=0.4.0
+commands =
+    ruff check .
+    ruff format --check .
+
+"""
+
+# Ruff configuration
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+exclude = ["django_athm/migrations/*"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "C4", "RUF"]
+ignore = [
+    "E501",    # Line length (handled by formatter)
+    "RUF012",  # Mutable class attributes (Django admin pattern)
+    "RUF015",  # next(iter()) vs list()[0] (style preference)
+    "C401",    # Generator vs comprehension (style preference)
+    "C408",    # dict() vs literal (dict() readable for API calls)
+]
+
+[tool.ruff.format]
+quote-style = "double"
+
+# Pytest configuration
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "tests.settings"
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+testpaths = ["tests"]
+addopts = "-v --tb=short --strict-markers --strict-config"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+]
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "1.0.0b2"
+version_files = [
+    "django_athm/__init__.py:__version__",
+    "pyproject.toml:version"
+]
+tag_format = "$version"
+update_changelog_on_bump = true
+changelog_file = "CHANGELOG.md"
