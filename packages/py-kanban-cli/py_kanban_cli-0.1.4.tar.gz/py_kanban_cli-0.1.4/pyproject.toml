@@ -1,0 +1,72 @@
+[project]
+name = "py-kanban-cli"
+version = "0.1.4"
+description = "Personal kanban management in command line"
+authors = [{name = "Fillipe Goulart", email="fillipe.gsm@tutanota.com"}]
+readme = "README_PYPI.md"
+requires-python = ">=3.9"
+dependencies = [
+    "dynaconf>=3.2.11",
+    "peewee>=3.18.2",
+    "prompt-toolkit>=3.0.52",
+    "rich>=14.1.0",
+    "typer>=0.19.2",
+]
+
+[project.urls]
+Homepage = "https://github.com/fillipe-gsm/kanban-cli"
+Repository = "https://github.com/fillipe-gsm/kanban-cli"
+Issues = "https://github.com/fillipe-gsm/kanban-cli/issues"
+
+[project.scripts]
+kanban-cli = "kanban_cli.app.app:run_app"
+
+[dependency-groups]
+dev = [
+    "ipdb>=0.13.13",
+    "ipython>=8.18.1",
+    "pytest>=8.4.2",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.14.3",
+    "ty>=0.0.1a21",
+]
+
+[tool.ruff.lint]
+select = [
+    # pycodestyle
+    "E",
+    # Pyflakes
+    "F",
+    # pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+]
+
+[tool.ruff]
+line-length = 79
+target-version = "py39"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+
+[tool.coverage.report]
+omit = ["main.py"]
+exclude_also = [
+    # Don't need to test this everytime
+    "def __str__",
+]
+
+[tool.uv.build-backend]
+module-name = "kanban_cli"
+module-root = "src"
+
+[build-system]
+requires = ["uv_build >= 0.9.11, <0.10.0"]
+build-backend = "uv_build"
