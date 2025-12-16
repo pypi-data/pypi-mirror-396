@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title|default('Monglo Admin') }}</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="{{ prefix|default('/admin') }}/static/css/admin.css">
+
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body>
+    <!-- CRITICAL: Apply dark mode immediately -->
+    <script>
+        (function () {
+            const savedMode = localStorage.getItem('monglo-dark-mode');
+            if (savedMode === 'dark') {
+                document.body.classList.add('dark-mode');
+            }
+        })();
+    </script>
+
+    <div class="monglo-admin">
+
+        <!-- Sidebar -->
+        <aside class="monglo-sidebar">
+            <div class="monglo-sidebar-header">
+                <div class="monglo-logo">
+                    {% if logo %}
+                    <img src="{{ logo }}" alt="{{ title }}" style="height: 24px; width: auto; margin-right: 8px;">
+                    {% else %}
+                    <i class="fas fa-database"></i>
+                    {% endif %}
+                    {{ title|default('Monglo Admin') }}
+                </div>
+            </div>
+
+            <nav class="monglo-collections">
+                <h3 class="monglo-collection-group-title">
+                    <i class="fas fa-layer-group"></i> Collections
+                </h3>
+                {% for collection in collections %}
+                <a href="{{ prefix }}/{{ collection.name }}"
+                    class="monglo-collection-item {% if current_collection == collection.name %}active{% endif %}">
+                    <i class="fas fa-table"></i>
+                    <span>{{ collection.display_name }}</span>
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+                {% endfor %}
+
+                <div class="monglo-sidebar-divider"></div>
+
+                <a href="{{ prefix }}/relationships" class="monglo-collection-item">
+                    <i class="fas fa-project-diagram"></i>
+                    <span>Relationships</span>
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="monglo-main">
+            <!-- Top Header Bar with Logout -->
+            <header class="monglo-topbar">
+                <div class="topbar-left">
+                    <button class="sidebar-toggle" onclick="toggleSidebar()">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1 class="topbar-title">{% block page_title %}Dashboard{% endblock %}</h1>
+                </div>
+                <div class="topbar-right">
+                    <!-- Action buttons from child templates (Add New, etc.) -->
+                    {% block header_actions %}{% endblock %}
+
+                    <button class="topbar-btn" onclick="toggleDarkMode()" title="Toggle dark mode">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <a href="{{ prefix }}/logout" class="topbar-logout" title="Logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Logout</span>
+                    </a>
+                </div>
+            </header>
+
+            <!-- Page Content -->
+            <div class="monglo-content">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // Set global prefix for JavaScript
+        window.MONGLO_PREFIX = "{{ prefix|default('/admin') }}";
+
+        // Sidebar Toggle
+        function toggleSidebar() {
+            document.querySelector('.monglo-admin').classList.toggle('sidebar-collapsed');
+        }
+
+        // Simple global dark mode toggle for topbar button
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('monglo-dark-mode', isDark ? 'dark' : 'light');
+
+            // Update button icon if present
+            const topbarBtn = document.querySelector('.topbar-btn i');
+            if (topbarBtn) {
+                topbarBtn.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+            }
+        }
+    </script>
+
+    <script src="{{ prefix|default('/admin') }}/static/js/modals.js"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+
+</html>
