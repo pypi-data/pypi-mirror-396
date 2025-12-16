@@ -1,0 +1,45 @@
+Metadata-Version: 2.4
+Name: bd-wubi
+Version: 0.1.0
+Summary: bd-wubi 数据集的 Python SDK，提供五笔查询与猜码能力。
+Author: bd-wubi
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Provides-Extra: test
+Requires-Dist: pytest>=8.0; extra == "test"
+Provides-Extra: benchmark
+
+# bd-wubi Python SDK
+
+bd-wubi Python SDK 内置五笔数据集，提供线程安全的正向（文本 → 编码）、反向（编码 → 文本）以及长词猜码功能，接口设计与 .NET 版本保持一致。
+
+## 安装与使用
+
+```bash
+pip install bd-wubi
+```
+
+```python
+import bd_wubi
+
+bd_wubi.initialize()  # 可省略；首次调用其他函数会自动初始化
+
+entries = bd_wubi.get_by_text("信息")
+codes = bd_wubi.get_by_code("nt")
+guess = bd_wubi.guess_code("发展趋势")
+```
+
+`initialize` 可接受 `WubiDictionaryOptions`，用于配置缓存大小、是否缓存猜码结果、或指定自定义数据集路径。
+
+## 运行单元测试
+
+```bash
+pip install -e .[test]
+pytest
+```
+
+## 运行基准测试
+
+```bash
+python benchmarks/benchmark_wubi.py
+```
