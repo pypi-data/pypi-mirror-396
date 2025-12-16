@@ -1,0 +1,103 @@
+{
+  "name": "@mamba-org/gator-lab",
+  "version": "3.1.0",
+  "description": "Manage your conda environments from JupyterLab",
+  "keywords": [
+    "jupyter",
+    "jupyterlab",
+    "jupyterlab-extension",
+    "conda",
+    "mamba"
+  ],
+  "homepage": "https://github.com/mamba-org/gator",
+  "bugs": {
+    "url": "https://github.com/mamba-org/gator/issues"
+  },
+  "license": "BSD-3-Clause",
+  "author": "Jupyter Development Team",
+  "files": [
+    "lib/**/*.{d.ts,eot,gif,html,jpg,js,js.map,json,png,svg,woff2,ttf}",
+    "style/**/*.{css,eot,gif,html,jpg,json,png,svg,woff2,ttf}",
+    "schema/*.json"
+  ],
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "style": "style/index.css",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mamba-org/gator.git"
+  },
+  "scripts": {
+    "build": "jlpm run build:lib && jlpm run build:labextension:dev",
+    "build:dev": "tsc",
+    "build:labextension": "jupyter labextension build .",
+    "build:labextension:dev": "jupyter labextension build --development True .",
+    "build:lib": "tsc",
+    "build:prod": "jlpm run build:lib && jlpm run build:labextension",
+    "clean": "jlpm run clean:lib && yarn run clean:labextension",
+    "clean:dev": "rimraf lib tsconfig.tsbuildinfo",
+    "clean:labextension": "rimraf ../../mamba_gator/labextension",
+    "clean:lib": "rimraf lib tsconfig.tsbuildinfo",
+    "install:extension": "jupyter labextension develop --overwrite .",
+    "lab:link": "jupyter labextension link . --no-build",
+    "prepare": "jlpm run clean && jlpm run build:prod",
+    "test": "jest --coverage",
+    "watch": "run-p watch:src watch:labextension",
+    "watch:labextension": "jupyter labextension watch .",
+    "watch:src": "tsc -w"
+  },
+  "dependencies": {
+    "@jupyterlab/application": "^4.0.0",
+    "@jupyterlab/apputils": "^4.0.0",
+    "@jupyterlab/coreutils": "^6.0.0",
+    "@jupyterlab/launcher": "^4.0.0",
+    "@jupyterlab/mainmenu": "^4.0.0",
+    "@jupyterlab/services": "^7.0.0",
+    "@jupyterlab/settingregistry": "^4.0.0",
+    "@lumino/coreutils": "^2.0.0",
+    "@lumino/widgets": "^2.0.0",
+    "@mamba-org/gator-common": "^3.1.0",
+    "semver": "^7.0.0"
+  },
+  "devDependencies": {
+    "@jupyterlab/builder": "^4.0.0",
+    "@jupyterlab/testutils": "^4.0.0",
+    "@types/react": "^18.0.9",
+    "@types/react-dom": "^18.0.4",
+    "@types/semver": "^7.3.1",
+    "node-fetch": "^2.6.7",
+    "react": "^18.0.9",
+    "react-dom": "^18.0.4",
+    "typescript": "~5.0.2"
+  },
+  "peerDependencies": {
+    "react": "^18.0.9",
+    "react-dom": "^18.0.4"
+  },
+  "sideEffects": [
+    "style/*"
+  ],
+  "jupyterlab": {
+    "extension": true,
+    "schemaDir": "schema",
+    "discovery": {
+      "server": {
+        "base": {
+          "name": "mamba_gator"
+        },
+        "managers": [
+          "conda"
+        ]
+      }
+    },
+    "outputDir": "../../mamba_gator/labextension",
+    "_build": {
+      "load": "static/remoteEntry.8b1b038237bee918a79c.js",
+      "extension": "./extension",
+      "style": "./style"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
