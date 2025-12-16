@@ -1,0 +1,79 @@
+[build-system]
+requires = ["setuptools>=64.0.0", "setuptools_scm>=8"] 
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llms-wrapper"
+dynamic = ["version"]
+description = "Package for simple usage of diverse LLMs and configuring them using human readable config files"
+readme = "README.md"
+authors = [
+    { name = "Johann Petrak", email = "johann.petrak@gmail.com" },
+]
+license = { text = "Apache Software License" }
+requires-python = ">=3.11"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development :: Libraries",
+]
+dependencies = [
+    "litellm",
+    "tenacity",
+    "hjson",
+    "loguru",
+    "docstring_parser",
+    "python-dotenv",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pdoc3",
+    "pytest",
+    "pytest-cov",
+    "ipython",
+    "jupyter",
+    "jupyterlab",
+    "ipykernel",
+    "notebook",
+]
+webchat = [
+    "pyperclip",
+    "python-fasthtml",
+]
+phoenix = [
+    "openinference-instrumentation-litellm",
+    "arize-phoenix-otel",
+]
+all = [
+    "llms-wrapper[dev,webchat,phoenix]",
+]
+
+[project.urls]
+# Documentation = "" 
+# Source = "" 
+
+[project.scripts]
+llms_wrapper_test = "llms_wrapper.llms_wrapper_test:main"
+llms_wrapper_llminfo = "llms_wrapper.llms_wrapper_llminfo:main"
+llms_wrapper_webchat = "llms_wrapper.llms_wrapper_webchat:main"
+
+
+[tool.setuptools]
+packages = ["llms_wrapper"]
+
+[tool.setuptools.dynamic]
+version = {attr = "llms_wrapper.version.__version__"} 
+
+[tool.pytest.ini_options]
+log_cli = true
+log_cli_level = "WARN"
+addopts = "-r A"
+norecursedirs = [
+    "dist",
+    "build",
+    "docs",
+    "examples",
+]
