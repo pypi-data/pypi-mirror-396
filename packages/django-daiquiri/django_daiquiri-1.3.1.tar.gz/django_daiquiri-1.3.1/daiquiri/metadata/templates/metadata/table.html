@@ -1,0 +1,95 @@
+{% extends 'core/page.html' %}
+{% load i18n %}
+{% load static %}
+{% load core_tags %}
+{% load metadata_tags %}
+
+{% block heading %}
+
+    <h1 class="overflow-hidden">
+        {% if table.title %}
+        {{ table.title }} ({{ table }})
+        {% else %}
+        {{ table }}
+        {% endif %}
+    </h1>
+
+{% endblock %}
+
+{% block page %}
+
+    {% if table.nrows %}
+
+    <p>The table has {{ table.nrows }} rows, {{ table.columns.all | length }} columns.</p>
+    {% endif %}
+
+    {% if table.long_description %}
+
+    <h2>Description</h2>
+
+    {{ table.long_description | markdown }}
+
+    {% elif table.description %}
+
+    <h2>Description</h2>
+
+    {{ table.description | markdown }}
+
+    {% endif %}
+
+    {% if table.attribution %}
+    <h2>Attribution</h2>
+
+    {{ table.attribution | markdown }}
+    {% endif %}
+
+    <h2>{% trans 'Columns' %}</h2>
+
+    <div class="table-responsive mb-3">
+        <table class="table">
+            <thead>
+                <th style="width: 15%;">{% trans 'Name' %}</th>
+                <th style="width: 15%;">{% trans 'Type' %}</th>
+                <th style="width: 15%;">{% trans 'UCD' %}</th>
+                <th style="width: 15%;">{% trans 'Unit' %}</th>
+                <th style="width: 40%;">{% trans 'Description' %}</th>
+            </thead>
+            <tbody>
+                {% for column in table.columns.all %}
+                <tr>
+                    <td>
+                        {{ column.name }}
+                    </td>
+                    <td>
+                        {{ column.datatype }}
+                    </td>
+                    <td>
+                        {{ column.ucd|default_if_none:''|semicolonbr }}
+                    </td>
+                    <td>
+                        {{ column.unit|default_if_none:'' }}
+                    </td>
+                    <td>
+                        {{ column.description | markdown }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+{% endblock %}
+
+{% block sidebar %}
+
+    {% access_panel table _('table') %}
+
+    {% if table.doi %}
+    {% doi_panel table.doi _('table') %}
+    {% endif %}
+
+    {% if table.license %}
+    {% license_panel table.license %}
+    {% endif %}
+
+{% endblock %}

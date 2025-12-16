@@ -1,0 +1,192 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools", "wheel"]
+
+[project]
+name = "django-daiquiri"
+description = "Daiquiri is a framework for the publication of scientific databases."
+readme = "README.md"
+keywords = []
+license = {text = "Apache-2.0"}
+authors = [
+  {name = "Jochen Klar", email = "mail@jochenklar.de"},
+  {name = "Anastasia Galkin", email = "agalkin@aip.de"},
+  {name = "Yori Fournier", email = "y.fournier@aip.de"},
+  {name = "Kirill Makan", email = "kmakan@aip.de"},
+  {name = "Simeon Reusch", email = "sreusch@aip.de"},
+]
+requires-python = ">=3.13"
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Web Environment",
+  "Framework :: Django :: 5.2",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.13",
+]
+dynamic = [
+  "version",
+]
+dependencies = [
+  "astropy~=7.1.0",
+  "celery~=5.5.3",
+  "Django~=5.2.5",
+  "django-allauth[openid,socialaccount]~=65.11.0",
+  "python-dotenv>=1.1.1,<1.3.0",
+  "django-extensions~=4.1",
+  "django-filter~=25.1",
+  "django-honeypot~=1.3.0",
+  "django-ipware~=7.0.1",
+  "django-sendfile2~=0.7.2",
+  "django-settings-export~=1.2.1",
+  "django-user-agents~=0.4.0",
+  "django-widget-tweaks~=1.5.0",
+  "djangorestframework~=3.16.1",
+  "dj-database-url~=3.0.1",
+  "drf-extensions~=0.8.0",
+  "ipaddress~=1.0.23",
+  "iso8601~=2.1.0",
+  "jsonfield~=3.2.0",
+  "lunr~=0.8.0",
+  "Markdown>=3.8.2,<3.11.0",
+  "pandas~=2.3.2",
+  "passlib>=1.7.4",
+  "pyarrow>=21.0.0",
+  "Pygments~=2.19.2",
+  "PyJWT~=2.10.1",
+  "queryparser-python3~=0.7.4",
+  "rules~=3.5",
+  "sqlalchemy~=2.0.43",
+  "XlsxWriter==3.2.9",
+]
+
+[project.optional-dependencies]
+ci = [
+  "coveralls",
+  "django-daiquiri[postgres]",
+  "django-daiquiri[pytest]",
+]
+dev = [
+  "build",
+  "pre-commit",
+  "ruff",
+  "twine",
+  "django-daiquiri[pytest]",
+]
+gunicorn = [
+  "gunicorn>=23.0",
+]
+postgres = [
+  "psycopg[binary]~=3.2.9",
+]
+pytest = [
+  "coverage~=7.10.5",
+  "pytest>=8.4.1,<9.1.0",
+  "pytest-cov~=6.2.0",
+  "pytest-django~=4.11.1",
+  "pytest-dotenv~=0.5.2",
+  "pytest-mock>=3.14.1,<3.16.0",
+]
+
+[project.urls]
+documentation = "https://django-daiquiri.github.io"
+homepage = "https://django-daiquiri.github.io"
+issues = "https://github.com/django-daiquiri/daiquiri/issues"
+repository = "https://github.com/django-daiquiri/daiquiri.git"
+
+[project.scripts]
+daiquiri-admin = "daiquiri.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["daiquiri*"]
+exclude = ["*assets*", "*tests*"]
+
+[tool.setuptools.package-data]
+"*" = ["*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "daiquiri.__version__"}
+
+[tool.ruff]
+indent-width = 4
+line-length = 100
+
+[tool.ruff.format]
+quote-style = "single"
+exclude = ["settings.py"]
+
+[tool.ruff.lint]
+select = [
+  "B",    # flake8-bugbear
+  "C4",   # flake8-comprehensions
+  "DJ",   # flake8-django
+  "E",    # pycodestyle
+  "F",    # pyflakes
+  "I",    # isort
+  "PGH",  # pygrep-hooks
+  "PT",   # flake8-pytest-style
+  "RUF",  # ruff
+  "UP",   # pyupgrade
+  "W",    # pycodestyle
+  "YTT",  # flake8-2020
+  "G",    # flake8-logging-format
+  "INT"   # flake8-gettext
+]
+ignore = [
+  "B006",   # mutable-argument-default
+  "B007",   # unused-loop-control-variable
+  "B018",   # useless-expression
+  "RUF012"  # mutable-class-default
+]
+
+[tool.ruff.per-file-ignores]
+"*/migrations/*.py" = ["E", "F", "I", "F401", "F841"]
+"testing/config/settings/*.py" = [
+  "I001",
+  "F401", # unused-import
+  "F403", # undefined-names
+  "F405", # undefined-names
+  "F821"  # undefined-names
+]
+
+[tool.ruff.isort]
+known-first-party = ["daiquiri"]
+section-order = [
+  "future",
+  "standard-library",
+  "pytest",
+  "django",
+  "rest_framework",
+  "third-party",
+  "first-party",
+  "local-folder"
+]
+
+[tool.ruff.isort.sections]
+pytest = ["pytest"]
+django = ["django"]
+rest_framework = ["rest_framework"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "testing.config.settings"
+python_files = "test_*.py"
+addopts = '--reuse-db'
+
+[tool.coverage.run]
+source = ["daiquiri"]
+branch = true
+parallel = true
+
+[tool.coverage.report]
+omit = [
+    "*/management/*",
+    "*/migrations/*",
+    "*/tests/*",
+]
+exclude_lines = [
+    "raise Exception",
+    "except ImportError:"
+]
