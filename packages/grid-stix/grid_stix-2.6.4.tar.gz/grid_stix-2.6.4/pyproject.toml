@@ -1,0 +1,85 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "grid-stix"
+version = "2.6.4"
+description = "Grid-STIX Electrical Grid Cybersecurity Ontology - STIX extension for critical infrastructure"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "GPL-3.0-or-later"
+authors = [
+    {name = "CITADEL Project"},
+]
+keywords = [
+    "stix",
+    "cybersecurity",
+    "electrical-grid",
+    "critical-infrastructure",
+    "ontology",
+    "threat-intelligence",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+    "Topic :: Scientific/Engineering",
+]
+
+dependencies = [
+    "stix2~=3.0.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "bandit>=1.8",
+    "black>=25.1",
+    "mypy>=1.17",
+    "pytest>=8.4",
+    "pytest-asyncio>=1.0",
+    "pytest-cov>=6.1",
+    "pytest-mock>=3.14",
+]
+ontology = [
+    "rdflib>=7.1",
+    "owlready2>=0.48",
+    "networkx>=3.4",
+    "plotly>=6.1",
+    "pygraphviz>=1.14",
+    "scipy>=1.15",
+    "numpy>=2.2",
+    "jinja2>=3.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/argonne-citadel/grid-stix"
+Repository = "https://github.com/argonne-citadel/grid-stix.git"
+
+[tool.setuptools]
+packages = ["grid_stix"]
+package-dir = {"" = "python"}
+
+[tool.setuptools.package-data]
+grid_stix = ["py.typed"]
+
+[tool.black]
+line-length = 88
+target-version = ['py312']
+include = '\.pyi?$'
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --cov=grid_stix --cov-report=term-missing"
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
