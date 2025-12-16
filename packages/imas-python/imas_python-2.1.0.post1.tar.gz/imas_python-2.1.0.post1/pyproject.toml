@@ -1,0 +1,137 @@
+[build-system]
+# Minimum requirements for the build system to execute.
+# Keep this on a single line for the grep magic of build scripts to work
+requires = ["setuptools>=61", "wheel", "numpy", "packaging", "tomli;python_version<'3.11'", "setuptools_scm>8"]
+
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "imas-python"
+authors = [
+  {name = "Karel Lucas van de Plassche", email = "karelvandeplassche@gmail.com"},
+  {name = "Daan van Vugt", email = "dvanvugt@ignitioncomputing.com"},
+  {name = "Maarten Sebregts", email = "msebregts@ignitioncomputing.com"},
+  {name = "ITER Organization"},
+  {email = "imas-support@iter.org"},
+]
+description = "Pythonic wrappers for the IMAS Access Layer"
+readme = {file = "README.md", content-type = "text/markdown"}
+requires-python = ">=3.7"
+license = {file = "LICENSE.txt"}
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Environment :: Plugins",
+    "Environment :: X11 Applications",
+    "Framework :: Flake8",
+    "Framework :: IPython",
+    "Framework :: Matplotlib",
+    "Framework :: Pytest",
+    "Framework :: Sphinx",
+# Custom trove classifiers are not allowed, and newer versions of python setuptools will fail to build
+# when classifiers other than those listed on: https://pypi.org/classifiers/ are included
+#    "Framework :: IMAS",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
+    "Natural Language :: English",
+    "Operating System :: POSIX",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Unix Shell",
+    "Topic :: Database",
+    "Topic :: Database :: Front-Ends",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering :: Visualization",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System",
+    "Topic :: System :: Software Distribution",
+    "Topic :: Utilities",
+]
+dynamic = ["version"]
+dependencies = [
+    "numpy>=1.15.4",
+    "rich",
+    "scipy",
+    "click",
+    "importlib_resources;python_version<'3.9'",
+    "packaging",
+    "xxhash >= 2",
+    "imas_data_dictionaries",
+    "imas_core"
+]
+
+[project.optional-dependencies]
+# these self-dependencies are available since pip 21.2
+all = [
+    "imas-python[test,docs]" 
+]
+docs = [
+    "sphinx>=6.0.0,<7.0.0",
+    "sphinx-autosummary-accessors>=0.1.2",
+    "sphinx-immaterial>=0.11.0,<0.12",
+    "sphinx-click",
+]
+
+# TODO enable when imas-core is available on pypi
+# imas-core = [ "imas-core@git+https://github.com/iterorganization/imas-core.git@main" ]
+
+netcdf = [
+    "netCDF4>=1.4.1",
+]
+h5py = [
+    "h5py",
+]
+xarray = [
+    "xarray",
+]
+saxonche = [
+    "saxonche",
+]
+test = [
+    "pytest>=5.4.1",
+    "pytest-cov>=0.6",
+    "pytest-xdist",
+    "pytest-randomly",
+    "matplotlib",
+    "asv == 0.6.1",
+    # virtualenv is a dependency of asv
+    "virtualenv",
+    # Pint is used in training snippets
+    "pint",
+    # Optional dependencies
+    # TODO add imas-core when it is available on pypi
+    "imas-python[netcdf,h5py,xarray,saxonche]",
+]
+
+[project.scripts]
+imas = "imas.command.cli:cli"
+
+[project.urls]
+homepage = "https://github.com/iterorganization/imas-python"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["imas*"]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "--strict-markers"
+markers = [
+    "cli: Tests for the command line interface.",
+    "slow: Slow tests.",
+]
+testpaths = "imas"
+
+[tool.setuptools_scm]
+write_to = "imas/_version.py"
+local_scheme = "no-local-version"
+
+[tool.isort]
+profile = "black"
