@@ -1,0 +1,107 @@
+[project]
+name = "mcp-replay-dota2"
+version = "1.0.6"
+description = "Model Context Protocol server for Dota 2 match analysis using replay files"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12,<3.13"
+keywords = [
+    "dota2",
+    "mcp",
+    "model-context-protocol",
+    "replay",
+    "analysis",
+    "esports",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Games/Entertainment",
+]
+
+dependencies = [
+    "fastmcp>=2.12.3",
+    "python-opendota-sdk>=7.39.5.2",
+    "requests>=2.32.5",
+    "python-manta>=1.4.5.2",
+    "aiohttp>=3.13.2",
+    "diskcache>=5.6.3",
+    "anthropic>=0.75.0",
+]
+
+[project.scripts]
+dota-match-mcp-server = "dota_match_mcp_server:main"
+
+[project.urls]
+Homepage = "https://github.com/DeepBlueCoding/mcp-replay-dota2"
+Documentation = "https://deepbluecoding.github.io/mcp-replay-dota2/"
+Repository = "https://github.com/DeepBlueCoding/mcp-replay-dota2"
+"Bug Tracker" = "https://github.com/DeepBlueCoding/mcp-replay-dota2/issues"
+
+[project.optional-dependencies]
+dev = [
+    "ipykernel>=6.30.1",
+    "jupyter>=1.1.1",
+    "pip>=25.0",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.3.0",
+]
+
+[dependency-groups]
+dev = [
+    "commitizen>=4.8.0",
+    "mypy>=1.14.0",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.3.0",
+    "ruff>=0.13.0",
+]
+docs = [
+    "mkdocs-material>=9.5.0",
+    "mike>=2.0.0",
+    "mkdocstrings[python]>=0.24.0",
+]
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "1.0.6"
+version_files = [
+    "pyproject.toml:^version",
+]
+tag_format = "v$version"
+bump_message = "bump: version $current_version → $new_version"
+update_changelog_on_bump = true
+changelog_file = "CHANGELOG.md"
+changelog_incremental = true
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = false
+warn_unused_configs = true
+ignore_missing_imports = true
+check_untyped_defs = false
+disable_error_code = ["var-annotated", "arg-type", "union-attr", "import-untyped"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short --strict-markers"
+filterwarnings = ["ignore::DeprecationWarning"]
+markers = [
+    "fast: marks tests that don't require replay parsing (run with '-m fast')",
+    "slow: marks tests that parse replays, take 1+ minutes (deselect with '-m \"not slow\"')",
+    "integration: marks tests requiring external resources (replays, network)",
+    "core: marks essential functionality tests",
+    "use_case: marks tests validating documented use cases",
+]
