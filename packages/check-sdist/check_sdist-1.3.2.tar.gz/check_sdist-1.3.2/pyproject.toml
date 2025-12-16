@@ -1,0 +1,139 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "check-sdist"
+authors = [
+  { name = "Henry Schreiner", email = "henryschreineriii@gmail.com" },
+]
+description = "Check the contents of an SDist vs. git"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "BSD-3-Clause"
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Typing :: Typed",
+]
+dynamic = ["version"]
+dependencies = [
+  "build >=1.2",
+  "pathspec",
+  "tomli; python_version<'3.11'",
+]
+keywords = ["sdist", "packaging", "lint"]
+
+[project.optional-dependencies]
+uv = [
+  "uv",
+]
+
+[project.urls]
+Homepage = "https://github.com/henryiii/check-sdist"
+"Bug Tracker" = "https://github.com/henryiii/check-sdist/issues"
+Changelog = "https://github.com/henryiii/check-sdist/releases"
+
+[project.scripts]
+check-sdist = "check_sdist.__main__:main"
+
+[project.entry-points."validate_pyproject.tool_schema"]
+check-sdist = "check_sdist.schema:get_schema"
+
+[dependency-groups]
+test = [
+  "pytest >=7",
+  "pytest-cov >=3",
+  "pytest-xdist",
+  "pyproject-hooks !=1.1.0",
+  "validate-pyproject >=0.16",
+]
+dev = [{ include-group = "test" }]
+
+
+[tool.hatch]
+version.path = "src/check_sdist/__init__.py"
+envs.default.features = ["test"]
+envs.hatch-test.features = ["test"]
+
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config"]
+xfail_strict = true
+filterwarnings = [
+  "error",
+]
+log_level = "INFO"
+testpaths = [
+  "tests",
+]
+
+
+[tool.coverage]
+run.source = ["check_sdist"]
+run.disable_warnings = ["no-sysmon"]
+report.exclude_also = [
+    "return __all__",
+]
+
+
+[tool.mypy]
+files = ["src", "tests"]
+python_version = "3.9"
+warn_unused_configs = true
+strict = true
+enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
+warn_unreachable = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+[[tool.mypy.overrides]]
+module = "check_sdist.*"
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+  "PLR09",  # Design related pylint codes
+  "E501",   # Line too long
+  "COM",    # Trailing commas teach the formatter
+  "S",      # Security related checks go too far (no assert, for example)
+  "D",      # Too many docstring warnings
+  "T20",    # Print is intentional here
+]
+flake8-unused-arguments.ignore-variadic-names = true
+isort.required-imports = ["from __future__ import annotations"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ANN201", "INP"]
+
+
+[tool.pylint]
+py-version = "3.9"
+reports.output-format = "colorized"
+similarities.ignore-imports = "yes"
+messages_control.disable = [
+  "design",
+  "fixme",
+  "line-too-long",
+  "missing-module-docstring",
+  "wrong-import-position",
+  "invalid-name",
+]
+
+
+[tool.repo-review]
+ignore = ["PY004", "PC111", "RTD"]
