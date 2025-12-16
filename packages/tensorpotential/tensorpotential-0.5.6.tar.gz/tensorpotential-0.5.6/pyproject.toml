@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tensorpotential"
+version = "0.5.6"
+authors = [
+    { name = "Anton Bochkarev", email = "anton.bochkarev@rub.de" },
+    { name = "Yury Lysogorskiy", email = "yury.lysogorskiy@rub.de" },
+]
+description = "Graph Atomic Cluster Expansion (GRACE)"
+readme = "README.md"
+requires-python = ">=3.9,<3.13" # Update if needed
+license = { text = "Academic Software License (ASL)" }
+classifiers = [
+    "License :: OSI Approved :: Academic Free License (AFL)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    # for windows and macos
+    "tensorflow<2.20; sys_platform == 'win32' or sys_platform == 'darwin'",
+    # for linux
+    "tensorflow[and-cuda]<2.20; sys_platform == 'linux'",
+    "tf_keras",  # Required for legacy Keras API. Users may need to set TF_USE_LEGACY_KERAS=1
+    "scipy",
+    "matscipy",
+    "numpy<3.0.0",
+    "sympy",
+    "pandas<3.0.0",
+    "ase",
+    "pyyaml>=6.0.2",
+    "tqdm",
+]
+[project.urls]
+"Homepage" = "https://github.com/ICAMS/grace-tensorpotential"
+
+[project.scripts]
+gracemaker = "tensorpotential.scripts.gracemaker:main"
+grace_models = "tensorpotential.scripts.grace_models:main"
+grace_collect = "tensorpotential.scripts.grace_collect:main"
+extxyz2df = "tensorpotential.scripts.extxyz2df:main"
+df2extxyz = "tensorpotential.scripts.df2extxyz:main"
+grace_preprocess = "tensorpotential.scripts.grace_preprocess:main"
+grace_predict = "tensorpotential.scripts.grace_predict:main"
+grace_utils = "tensorpotential.scripts.grace_utils:main"
