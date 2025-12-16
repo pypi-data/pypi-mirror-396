@@ -1,0 +1,42 @@
+[build-system]
+requires = ["maturin>=1.8"]
+build-backend = "maturin"
+
+[project]
+name = "hprm"
+description = "High Powered Rocketry Modeling library"
+readme = "README.md"
+license = { text = "MIT" }
+
+# Require Python 3.14 and newer
+requires-python = ">=3.14"
+
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: Implementation :: CPython",
+]
+
+# maturin will pull version dynamically from Cargo.toml if needed
+dynamic = ["version"]
+
+[dependency-groups]
+dev = [
+    "maturin>=1.8,<2.0",
+    "pytest",
+    "ziglang"
+]
+
+examples = [
+    "numpy",
+    "matplotlib",
+]
+
+[tool.uv]
+cache-keys = [
+    { file = "pyproject.toml" },
+    { file = "Cargo.toml" },
+    { file = "**/*.rs" },
+]
+config-settings = { build-args = "--profile=dev" }
