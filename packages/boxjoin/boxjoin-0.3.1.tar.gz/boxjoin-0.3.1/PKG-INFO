@@ -1,0 +1,94 @@
+Metadata-Version: 2.4
+Name: boxjoin
+Version: 0.3.1
+Summary: Bounding box clustering: group overlapped box into a large box
+Author-email: Duken Marga <dukenmarga@gmail.com>
+License-Expression: MIT
+Project-URL: Homepage, https://github.com/dukenmarga/boxjoin
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Science/Research
+Classifier: Topic :: Scientific/Engineering
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Classifier: Topic :: Software Development
+Classifier: Topic :: Software Development :: Libraries
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: opencv-python>=4.5.5
+Dynamic: license-file
+
+## boxjoin
+
+### Install
+
+```shell
+pip install boxjoin
+````
+
+### How it works
+
+It works by detecting overlapped bounding box. Overlapped box will be grouped as one large bouding box.
+It is useful for grouping some bounding box (from YOLO, etc).
+But, currently it is not label aware and working based on coordinate.
+
+### Showcase
+
+![Inference](https://raw.githubusercontent.com/dukenmarga/boxjoin/main/images/people.jpg)
+![Grouped](https://raw.githubusercontent.com/dukenmarga/boxjoin/main/images/people-grouped.jpg)
+
+
+![Inference](https://raw.githubusercontent.com/dukenmarga/boxjoin/main/images/people-walking.jpg)
+![Grouped](https://raw.githubusercontent.com/dukenmarga/boxjoin/main/images/people-walking-grouped.jpg)
+
+### Example
+
+```python
+import boxjoin
+import cv2
+
+filename = "people-walking-original.jpg"
+save_path = "people-walking-original-grouped.jpg"
+
+img = cv2.imread(filename)
+
+# Each box is in the format of [x1, y1, x2, y2]
+# They can be extracted from YOLO output.
+# This example is simply for demonstration
+boxes = [
+    [143, 91, 174, 118],
+    [142, 98, 164, 123],
+    [143, 87, 204, 165],
+    [127, 118, 225, 181],
+    [371, 195, 386, 220],
+    [334, 152, 380, 243],
+    [293, 193, 335, 301],
+    [470, 136, 494, 167],
+    [464, 123, 500, 214],
+    [565, 234, 586, 260],
+    [554, 178, 582, 261],
+    [219, 313, 261, 405],
+    [182, 297, 223, 387],
+    [151, 315, 196, 421]
+]
+
+clusters = boxjoin.BoxClustering(boxes=boxes, img=img, save_path=save_path)
+
+for i, cluster in enumerate(clusters):
+    print(f"Cluster {i}: {cluster}")
+    # The output should look like this:
+    # Cluster 0: [[143, 91, 174, 118], [142, 98, 164, 123], [143, 87, 204, 165], [127, 118, 225, 181]]
+    # Cluster 1: [[371, 195, 386, 220], [334, 152, 380, 243], [293, 193, 335, 301]]
+    # Cluster 2: [[470, 136, 494, 167], [464, 123, 500, 214]]
+    # Cluster 3: [[565, 234, 586, 260], [554, 178, 582, 261]]
+    # Cluster 4: [[219, 313, 261, 405], [182, 297, 223, 387], [151, 315, 196, 421]]
+```
+
+Full example can be found in `example` directory
