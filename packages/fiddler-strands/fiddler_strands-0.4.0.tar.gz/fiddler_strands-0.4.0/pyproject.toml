@@ -1,0 +1,136 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "fiddler-strands"
+dynamic = ["version"]
+description = "Fiddler SDK for Strands Agent instrumentation with OpenTelemetry"
+readme = "PUBLIC.md"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "Fiddler AI", email = "support@fiddler.ai"},
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "opentelemetry-api>=1.20.0",
+    "opentelemetry-sdk>=1.20.0",
+    "opentelemetry-instrumentation>=0.41b0",
+    "opentelemetry-exporter-otlp>=1.20.0",
+    "strands-agents>=1.10.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.5",
+    "pytest-cov>=6.1.1",
+    "pytest-asyncio>=0.24.0",
+    "black>=25.1.0",
+    "isort>=6.0",
+    "flake8>=7.2.0",
+    "pre-commit>=4.2.0",
+    "bandit>=1.8.5",
+    "pylint>=3.3.7",
+    "mypy>=1.16.1",
+    "pre-commit>=4.2.0",
+    "ipython>=8.12.3",
+    "nox>=2025.5.1",
+    "ruff>=0.13.3",
+    "tomli==2.2.1",  # Required for Python 3.10 compatibility (tomllib was added in 3.11)
+    "strands-agents[openai]==1.12.0"
+]
+examples = [
+    "python-dotenv>=1.0.0",
+    "openai>=1.0.0",
+    "strands-agents-tools>=0.2.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/fiddler-labs/fiddler-strands-sdk"
+Repository = "https://github.com/fiddler-labs/fiddler-strands-sdk"
+Documentation = "https://docs.fiddler.ai/strands-sdk"
+Issues = "https://github.com/fiddler-labs/fiddler-strands-sdk/issues"
+
+[tool.hatch.version]
+path = "fiddler_strandsagents/VERSION"
+pattern = "(?P<version>.+)"
+
+[tool.hatch.build.targets.wheel]
+packages = ["fiddler_strandsagents"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/fiddler_strandsagents",
+    "/tests",
+    "/README.md",
+    "/LICENSE",
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py310']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+
+[tool.ruff]
+extend-exclude = ["tests", "examples", "scripts"]
+
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--cov=fiddler_strandsagents",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+]
+asyncio_mode = "auto"
