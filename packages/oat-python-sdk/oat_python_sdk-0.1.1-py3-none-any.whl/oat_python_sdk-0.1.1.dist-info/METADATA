@@ -1,0 +1,258 @@
+Metadata-Version: 2.1
+Name: oat-python-sdk
+Version: 0.1.1
+Summary: Python client for OAT (Optimization and Analysis Tooling) database
+License: MIT
+Keywords: optimization,constraint-solving,database
+Author: Rikard Olsson
+Requires-Python: >=3.10,<4.0
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Requires-Dist: requests (>=2.31.0,<3.0.0)
+Description-Content-Type: text/markdown
+
+# OatClient - Python Client for OAT Database
+
+A Python client library for interacting with the OAT (Optimization and Analysis Tooling) database backend.
+
+## Features
+
+- ✅ Full support for logical operations (AND, OR, XOR, NOT, IMPLY, EQUIV)
+- ✅ Cardinality constraints (AtLeast, AtMost, Equal)
+- ✅ Linear inequality constraints (GeLineq)
+- ✅ Property management with filtering
+- ✅ Advanced query system with Filter helpers
+- ✅ Optimization solver integration
+- ✅ Buffered compilation modes (Instant/OnDemand)
+- ✅ Type hints for better IDE support
+
+## Installation
+
+```bash
+pip install oat
+```
+
+## Quick Start
+
+```python
+from OatClient import OatClient, CompilationSettings
+
+# Initialize client
+client = OatClient(
+    base_url="http://localhost:7062",
+    compilation_settings=CompilationSettings.INSTANT
+)
+
+# Create primitives
+x = client.set_primitive("x", bound=complex(0, 1))
+y = client.set_primitive("y", bound=complex(0, 1))
+z = client.set_primitive("z", bound=complex(0, 1))
+
+# Add properties
+client.set_property(x, "name", "Variable X")
+
+# Create constraints
+at_least_2 = client.set_atleast([x, y, z], 2)
+
+# Solve
+solutions = client.solve(
+    roots=[at_least_2],
+    objectives=[{x: -1, y: -2}],
+    assume={at_least_2: complex(1, 1)},
+    maximize=True
+)
+
+if solutions:
+    solution = solutions[0]
+    print(f"x = {solution[x]}")  # complex(lower, upper)
+```
+
+## Available Methods
+
+### Primitive Operations
+- `set_primitive(id: str, bound: complex = complex(0, 1)) -> str` - Create a single primitive
+- `set_primitives(ids: List[str], bound: complex = complex(0, 1)) -> List[str]` - Create multiple primitives
+- `set_property(id: str, property: str, value: Any) -> None` - Set node property
+
+### Logical Operations
+- `set_and(references: List[str]) -> str` - AND operation
+- `set_or(references: List[str]) -> str` - OR operation
+- `set_xor(references: List[str]) -> str` - XOR operation
+- `set_not(references: List[str]) -> str` - NOT operation
+- `set_imply(lhs: str, rhs: str) -> str` - Implication (lhs → rhs)
+- `set_equiv(lhs: str, rhs: str) -> str` - Equivalence (lhs ↔ rhs)
+
+### Cardinality Constraints
+- `set_atleast(references: List[str], value: int) -> str` - At least N must be true
+- `set_atmost(references: List[str], value: int) -> str` - At most N must be true
+- `set_equal(references: List[str], value: Union[int, str]) -> str` - Exactly N must be true
+
+### Linear Constraints
+- `set_gelineq(coefficients: Dict[str, int], bias: int) -> str` - Greater-or-equal linear inequality
+
+### Query Operations
+- `get_node_ids(filter: Optional[dict] = None) -> List[str]` - Get node IDs with optional filtering
+- `get_properties(id: str) -> Dict[str, Any]` - Get all properties for a node
+- `get_many_properties(ids: List[str]) -> Dict[str, Dict[str, Any]]` - Get properties for multiple nodes
+
+### Solver
+- `solve(roots: List[str], objectives: List[Dict[str, int]], assume: Dict[str, complex] = {}, maximize: bool = True) -> List[dict]` - Solve optimization problem
+
+### Utility
+- `health_check() -> bool` - Check server health
+- `compile() -> None` - Manually compile buffered operations
+- `delete_node(id: str) -> None` - Delete a node
+
+## Bounds
+
+In OatClient, bounds are represented as complex numbers where:
+- `real` part = lower bound
+- `imag` part = upper bound
+
+```python
+# Bound representing [0, 1]
+bound = complex(0, 1)
+
+# Bound representing [5, 10]
+bound = complex(5, 10)
+
+# Access bounds
+lower = bound.real  # 5
+upper = bound.imag  # 10
+```
+
+## Filter Helpers
+
+Use the `Filter` class to build complex queries:
+
+```python
+from OatClient import Filter
+
+# Simple property filter
+nodes = client.get_node_ids(Filter.property_equals("type", "constraint"))
+
+# Property exists
+nodes = client.get_node_ids(Filter.property_exists("name"))
+
+# Numeric comparisons
+nodes = client.get_node_ids(Filter.property_gt("priority", 5))
+
+# Complex filters
+nodes = client.get_node_ids(Filter.and_(
+    Filter.property_exists("name"),
+    Filter.property_gt("priority", 5),
+    Filter.node_id_starts_with("task_")
+))
+
+# OR and NOT
+nodes = client.get_node_ids(Filter.or_(
+    Filter.property_equals("status", "active"),
+    Filter.not_(Filter.property_exists("archived"))
+))
+```
+
+### Available Filter Methods
+
+- `Filter.property_equals(key: str, value: Any)` - Property equals value
+- `Filter.property_exists(key: str)` - Property exists
+- `Filter.property_contains(key: str, substring: str)` - Property contains substring
+- `Filter.property_gt(key: str, value: float)` - Property greater than
+- `Filter.property_gte(key: str, value: float)` - Property greater than or equal
+- `Filter.property_lt(key: str, value: float)` - Property less than
+- `Filter.property_lte(key: str, value: float)` - Property less than or equal
+- `Filter.node_id_equals(node_id: str)` - Node ID equals
+- `Filter.node_id_starts_with(prefix: str)` - Node ID starts with prefix
+- `Filter.and_(*expressions)` - Combine with AND
+- `Filter.or_(*expressions)` - Combine with OR
+- `Filter.not_(expression)` - Negate expression
+
+## Compilation Modes
+
+### Instant Compilation (Default)
+Operations are compiled immediately:
+
+```python
+client = OatClient(base_url, CompilationSettings.INSTANT)
+x = client.set_primitive("x")  # Compiled immediately
+```
+
+### On-Demand Compilation
+Operations are buffered and compiled in batch:
+
+```python
+client = OatClient(base_url, CompilationSettings.ON_DEMAND)
+x = client.set_primitive("x")  # Buffered
+y = client.set_primitive("y")  # Buffered
+client.compile()  # Compile all buffered operations
+```
+
+## Complete Example
+
+```python
+from OatClient import OatClient, CompilationSettings, Filter
+
+# Initialize
+client = OatClient("http://localhost:7062", CompilationSettings.INSTANT)
+
+# Create primitives
+a = client.set_primitive("a")
+b = client.set_primitive("b")
+c = client.set_primitive("c")
+
+# Add metadata
+client.set_property(a, "type", "task")
+client.set_property(b, "type", "task")
+client.set_property(c, "type", "resource")
+client.set_property(a, "priority", 10)
+
+# Create logical constraints
+and_constraint = client.set_and([a, b])
+or_constraint = client.set_or([b, c])
+imply_constraint = client.set_imply(a, b)  # a → b
+
+# Create cardinality constraint
+atleast_2 = client.set_atleast([a, b, c], 2)
+
+# Query nodes
+tasks = client.get_node_ids(Filter.property_equals("type", "task"))
+print(f"Tasks: {tasks}")
+
+high_priority = client.get_node_ids(Filter.property_gt("priority", 5))
+print(f"High priority: {high_priority}")
+
+# Solve with objectives
+solutions = client.solve(
+    roots=[atleast_2],
+    objectives=[{a: -1, b: -2}],  # Minimize weighted sum
+    assume={atleast_2: complex(1, 1)},  # Force constraint to be true
+    maximize=True
+)
+
+if solutions:
+    for i, sol in enumerate(solutions):
+        print(f"\nSolution {i + 1}:")
+        for var, bound in sol.items():
+            print(f"  {var}: [{int(bound.real)}, {int(bound.imag)}]")
+```
+
+## Requirements
+
+- Python >= 3.10
+- requests
+
+## License
+
+[Your License Here]
+
+## Links
+
+- [GitHub Repository](https://github.com/yourusername/oat-db-rust-v2)
+- [Documentation](https://github.com/yourusername/oat-db-rust-v2/tree/main/clients/Python)
+- [.NET Client](https://github.com/yourusername/oat-db-rust-v2/tree/main/clients/Oat.Net)
+
