@@ -1,0 +1,73 @@
+Metadata-Version: 2.3
+Name: tschm
+Version: 4.0.3
+Summary: windows定时任务管理器 即使电脑睡眠也能运行的定时任务管理器
+Author: lipanpan
+Author-email: lipanpan <lipanpanmail@163.com>
+Requires-Dist: fire>=0.7.1
+Requires-Dist: pywin32>=311
+Requires-Dist: toml>=0.10.2
+Requires-Python: >=3.13
+Description-Content-Type: text/markdown
+
+# TSCHM - Windows 任务计划管理器
+
+一个强大的 Windows 任务计划管理工具，即使在计算机处于睡眠模式时也能执行计划任务。
+
+## 功能特性
+- ✅ 在系统睡眠模式下执行计划任务
+- ✅ 通过 `tsm` 命令提供简洁的命令行界面
+- ✅ 轻松管理隐藏任务
+- ✅ 按需终止正在运行的计划任务
+
+## 为什么选择 TSCHM？
+大多数 Windows 任务管理工具在系统处于睡眠模式时无法执行任务。TSCHM 专门设计用于解决这一关键限制。
+
+## 安装
+通过 pip 安装：
+```bash
+pip install tschm -U
+# 确保 scripts 文件夹已经加入path 
+```
+
+或使用 uv：
+```bash
+uv tool install tschm -U
+```
+
+安装完成后，您可以在终端中使用 `tsm` 命令。
+
+## 系统要求
+- Windows 操作系统
+- Python 3.13+
+
+
+## 使用方法
+安装完成后，您可以使用 `tsm` 命令来管理计划任务：
+
+```bash
+tsm 
+tsm --help 
+tsm xxx --help 
+tsm config xxx --help 
+
+
+# 第一次运行 需要先执行 init 进行初始化
+tsm config init 
+# 然后就能添加任务了
+tsm add-task test xxx.ps1 DAILY --time=21:00 # 添加一个名为test的任务 每天21点执行 xxx.ps1 脚本 
+# 默认提供了4个可以用的脚本 
+tsm config list
+配置目录内容 (C:\Users\lppx\.tschm):
+--------------------------------------------------
+ 1. [文件] 休眠脚本.ps1                       大小:       18 字节  修改时间: 2025-11-12 09:52:52
+ 2. [文件] 倒计时休眠脚本.ps1                    大小:     2126 字节  修改时间: 2025-11-12 09:52:52
+ 3. [文件] 倒计时关机脚本.ps1                    大小:     2099 字节  修改时间: 2025-11-12 09:52:52
+ 4. [文件] 关机脚本.ps1                       大小:       62 字节  修改时间: 2025-11-12 09:52:52
+--------------------------------------------------
+
+# 可以方便的设置倒计时关机 (电脑必须支持执行PS脚本)
+tsm add-task shutdown 倒计时关机脚本.ps1 DAILY  --time=21:00
+
+```
+
