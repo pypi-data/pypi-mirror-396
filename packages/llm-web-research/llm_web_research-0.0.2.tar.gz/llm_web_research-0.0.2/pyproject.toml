@@ -1,0 +1,78 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "llm-web-research"
+dynamic = ["version"]
+description = 'A precision-focused LLM-powered web research tool that prioritizes accuracy over quantity'
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+keywords = ["llm", "web research", "fact checking", "information retrieval", "search", "accuracy", "precision"]
+authors = [
+  { name = "Chris Soria", email = "chrissoria@berkeley.edu" },
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = [
+  "pandas",
+  "tqdm",
+  "requests",
+  "anthropic",
+  "regex",
+]
+
+[project.urls]
+Documentation = "https://github.com/chrissoria/llm-web-research#readme"
+Issues = "https://github.com/chrissoria/llm-web-research/issues"
+Source = "https://github.com/chrissoria/llm-web-research"
+
+[tool.hatch.version]
+path = "src/llm_web_research/__about__.py"
+
+[tool.hatch.envs.types]
+extra-dependencies = [
+  "mypy>=1.0.0",
+]
+[tool.hatch.envs.types.scripts]
+check = "mypy --install-types --non-interactive {args:src/llm_web_research tests}"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/llm_web_research"]
+include = [
+    "src/llm_web_research/**/*.py",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/llm_web_research/**/*.py",
+]
+
+[tool.coverage.run]
+source_pkgs = ["llm_web_research", "tests"]
+branch = true
+parallel = true
+omit = [
+  "src/llm_web_research/__about__.py",
+]
+
+[tool.coverage.paths]
+llm_web_research = ["src/llm_web_research", "*/llm-web-research/src/llm_web_research"]
+tests = ["tests", "*/llm-web-research/tests"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
