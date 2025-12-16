@@ -1,0 +1,78 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[project]
+name = "pytest-ampel-core"
+description = "A plugin to provide AmpelContext fixtures in pytest"
+version = "0.10.0a5"
+readme = "README.rst"
+requires-python = ">=3.10, <4"
+authors = [
+    { name = "Jakob van Santen", email = "jakob.van.santen@desy.de" },
+]
+maintainers = [
+    { name = "Jakob van Santen", email = "jakob.van.santen@desy.de" },
+]
+license-files = ["LICENSE"]
+license = "BSD-3-Clause"
+classifiers = [
+    "Framework :: Pytest",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Testing",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = [
+    "ampel-core>=0.10.6a17,<0.11",
+    "pytest>=6.2.0",
+    "mongomock (>=4.3.0,<5.0.0)",
+]
+
+[project.urls]
+Repository = "https://github.com/AmpelProject/pytest-ampel-core"
+[project.entry-points.pytest11]
+ampel-core = "pytest_ampel.plugin"
+
+[packages]
+include = ["src.pytest_ampel"]
+
+[dependency-groups]
+dev = [
+    "mypy (>=1.19.0,<2.0.0)",
+    "types-pyyaml (>=6.0.12.20250915,<7.0.0.0)"
+]
+
+[tool.poetry]
+packages = [{ include = "pytest_ampel", from = "src" }]
+
+[tool.mypy]
+packages = ["src.pytest_ampel"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle
+    "F",    # pyflakes
+    "I",    # isort
+    "UP",   # pyupgrade
+    "B",    # bugbear
+    "DTZ",  # datetimez
+    "T20",  # print
+    "PT",   # pytest-style
+    "RET",  # return
+    "SLF",  # self
+    "SIM",  # simplify
+    "ARG",  # unused-arguments
+    "PL",   # pylint
+    "PERF", # perflint
+    "RUF",  # ruff
+]
