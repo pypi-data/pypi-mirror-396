@@ -1,0 +1,61 @@
+name: Integration Tests
+
+on:
+  push:
+    branches:
+      - "*"
+  pull_request:
+    branches:
+      - "*"
+  workflow_dispatch:
+    logLevel:
+      options:
+        - info
+        - warning
+        - debug
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build (${{ matrix.python-version }} | ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest"]
+        python-version: ["3.12"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+      - name: Create conda environment
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          cache-downloads: true
+          cache-environment: true
+          micromamba-version: "latest"
+          environment-file: environment.yaml
+          create-args: python=${{ matrix.python-version }}
+          init-shell: bash
+      - name: Install ufs2arco & Check Versions
+        shell: bash -l {0}
+        run: |
+          python -V
+          python -c "from importlib.metadata import version; print(version('setuptools'))"
+          python -m pip install -e . --no-deps --force-reinstall
+          python -c "from importlib.metadata import version; print('xarray ', version('xarray'))"
+          python -c "from importlib.metadata import version; print('zarr', version('zarr'))"
+          python -c "from importlib.metadata import version; print('ufs2arco', version('ufs2arco'))"
+      - name: Run Integration Tests
+        shell: bash -l {0}
+        run: |
+          python -V
+          coverage run --rcfile=coverage.toml -m pytest tests/integration --verbose
+      - name: Get coverage report
+        shell: bash -l {0}
+        run: |
+          coverage report -m ; coverage xml

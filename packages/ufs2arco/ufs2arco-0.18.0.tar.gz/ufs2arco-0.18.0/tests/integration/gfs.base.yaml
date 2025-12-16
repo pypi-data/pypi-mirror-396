@@ -1,0 +1,77 @@
+# Features tested
+# Datamover:
+# - serial
+# Source:
+# - deterministic forecast template
+# - level selection
+# - latitude .sel slicing
+# - static variables
+# Transforms:
+# - conservative horizontal regridding
+# Target:
+# - base workflow for ensemble forecast
+# - rename
+# Driver:
+# - pass attrs at end like description
+mover:
+  name: datamover
+  batch_size: 2
+
+directories:
+  zarr: dataset.zarr
+  cache: cache
+  logs: logs
+
+source:
+  name: gfs_archive
+  t0:
+    start: 2015-08-02T00
+    end: 2015-08-03T18
+    freq: 12h
+
+  fhr:
+    start: 0
+    end: 6
+    step: 6
+
+  variables:
+    - lsm
+    - orog
+    - sp
+    - t2m
+    - t
+    - gh
+    - q
+    - prmsl
+
+  levels:
+    - 100
+    - 500
+    - 1000
+
+  slices:
+    sel:
+      latitude: [89.9, -89.9]
+
+transforms:
+  horizontal_regrid:
+    target_grid_path: global_one_degree.nc
+    regridder_kwargs:
+      method: conservative
+      reuse_weights: True
+
+
+target:
+  name: forecast
+  rename:
+    level: pressure
+
+  chunks:
+    t0: 1
+    fhr: 1
+    pressure: -1
+    latitude: -1
+    longitude: -1
+
+attrs:
+  description: "This is a test dataset"
