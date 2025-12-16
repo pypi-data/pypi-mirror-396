@@ -1,0 +1,192 @@
+# musicxml-to-pcs
+
+Extract **pitch class sets** and **interval vectors** from MusicXML files, automatically segmented by chord symbols.
+
+Designed for computational musicology, jazz analysis, and anyone studying the relationship between melody and harmony using set theory.
+
+## Features
+
+- Parse MusicXML files with embedded chord symbols
+- Segment melodies by chord changes automatically
+- Compute for each segment:
+  - Pitch class set
+  - Interval vector
+  - Forte class (set class name)
+  - Prime form
+- Export to JSON or CSV
+- Command-line interface included
+
+## Installation
+
+```bash
+pip install musicxml-to-pcs
+```
+
+## Quick Start
+
+### Python API
+
+```python
+from musicxml_to_pcs import PCSExtractor
+
+# Parse and extract
+extractor = PCSExtractor('music.xml')
+segments = extractor.extract()
+
+# Iterate over segments
+for seg in segments:
+    print(f"{seg.chord_symbol}: {seg.forte_class} {seg.interval_vector_string}")
+
+# Export
+extractor.to_json('output.json')
+extractor.to_csv('output.csv')
+```
+
+### Command Line
+
+```bash
+# Print analysis to console
+musicxml-to-pcs music.xml
+
+# Export to JSON
+musicxml-to-pcs music.xml --json output.json
+
+# Export to CSV
+musicxml-to-pcs music.xml --csv output.csv
+
+# Limit output
+musicxml-to-pcs music.xml --limit 20
+
+# Relative to chord root (root = 0)
+musicxml-to-pcs music.xml --relative-to chord_root
+
+# Relative to key (Bb = 10 as tonic = 0)
+musicxml-to-pcs music.xml --relative-to key --key-root 10
+```
+
+## Pitch Class Reference Modes
+
+By default, pitch classes use absolute values where C=0. For harmonic analysis, relative modes are often more useful:
+
+### Absolute (default)
+```python
+extractor.extract()  # C=0, C#=1, D=2, ... B=11
+```
+
+### Relative to Chord Root
+```python
+extractor.extract(relative_to='chord_root')
+```
+Each segment's pitch classes are calculated relative to its chord root. Over a Bb chord, Bb=0, C=2, D=4, etc. This lets you compare melodic choices across the same chord type in different keys.
+
+### Relative to Key
+```python
+extractor.extract(relative_to='key', key_root=10)  # Bb=0
+```
+All pitch classes are relative to the tonic. Useful for analyzing scale degrees throughout a piece.
+
+## Output Format
+
+Each `HarmonicSegment` contains:
+
+| Field | Description | Example |
+|-------|-------------|---------|
+| `measure` | Measure number | `2` |
+| `beat` | Beat position within measure | `0.0` |
+| `chord_symbol` | Chord symbol from score | `"Bb"` |
+| `chord_root` | Pitch class of chord root | `10` |
+| `chord_kind` | Chord quality | `"maj"` |
+| `pitch_classes` | List of pitch classes in melody | `[0, 1, 2, 3, 5, 10]` |
+| `interval_vector` | Interval class content | `[3, 4, 3, 2, 3, 0]` |
+| `forte_class` | Forte set class name | `"6-8"` |
+| `prime_form` | Prime form of the set | `[0, 2, 3, 4, 5, 7]` |
+| `note_count` | Number of notes in segment | `8` |
+
+### Convenience Properties
+
+```python
+seg.interval_vector_string  # "(343230)"
+seg.pitch_class_set_string  # "{0,1,2,3,5,10}"
+seg.prime_form_string       # "<0,2,3,4,5,7>"
+```
+
+## Example Analysis
+
+Using Charlie Parker's "Anthropology" (available in the [Charlie Parker Omnibook MusicXML dataset](https://zenodo.org/records/14628467)):
+
+```
+M  2 beat 0.0 | B-       | PC: {0,1,2,3,5,10}  | IV: (343230) | Forte: 6-8
+M  3 beat 0.0 | Cm       | PC: {3}             | IV: (000000) | Forte: 1-1
+M  3 beat 2.0 | F7       | PC: {3,5}           | IV: (010000) | Forte: 2-2
+M  4 beat 0.0 | Dm       | PC: {2,3}           | IV: (100000) | Forte: 2-1
+M  4 beat 2.0 | G7       | PC: {0,2,9,10}      | IV: (121110) | Forte: 4-11A
+```
+
+## Summary Statistics
+
+```python
+summary = extractor.summary()
+print(summary['unique_forte_classes'])    # Number of unique set classes
+print(summary['top_forte_classes'])       # Most common set classes
+print(summary['top_interval_vectors'])    # Most common interval vectors
+```
+
+## Requirements
+
+- Python 3.9+
+- music21 >= 9.1.0
+
+## Background
+
+### What is a Pitch Class Set?
+
+A pitch class set abstracts pitches to integers 0-11 (C=0, C#=1, ... B=11), ignoring octave. The set `{0, 4, 7}` represents any C major triad in any voicing.
+
+### What is an Interval Vector?
+
+The interval vector counts all intervals between pairs of notes in a set:
+
+```
+Position: [1,  2,  3,  4,  5,  6]
+Meaning:  [m2, M2, m3, M3, P4, TT]
+```
+
+For example, a minor triad `{0, 3, 7}` has interval vector `(001110)` — one minor third, one major third, one perfect fourth.
+
+### What is a Forte Class?
+
+Allen Forte's classification system assigns a unique identifier to each set class. `3-11` is the minor/major triad class, `4-27` is the dominant seventh class, etc.
+
+## Use Cases
+
+- **Jazz Analysis**: Study how improvisers navigate chord changes
+- **Computational Musicology**: Extract features for machine learning
+- **Composition**: Analyze intervallic content of melodic material
+- **Music Theory Research**: Corpus studies of pitch class usage
+
+## License
+
+MIT
+
+## Citation
+
+If you use this tool in research, please cite:
+
+```bibtex
+@software{musicxml_to_pcs,
+  author = {Rubini, Mike},
+  title = {musicxml-to-pcs: Pitch Class Set Extraction from MusicXML},
+  url = {https://github.com/code91/musicxml-to-pcs},
+  year = {2025}
+}
+```
+
+## Contributing
+
+Contributions welcome! Please open an issue or submit a pull request.
+
+## Related Resources
+
+- [music21](https://web.mit.edu/music21/) - The underlying music analysis library
+- [Charlie Parker Omnibook Dataset](https://zenodo.org/records/14628467) - MusicXML transcriptions for testing
+- [Forte Set Class List](https://en.wikipedia.org/wiki/List_of_pitch-class_sets) - Reference for set class names
