@@ -1,0 +1,185 @@
+Metadata-Version: 2.1
+Name: JHFDRONE
+Version: 0.0.4
+Summary: A python package for JHF Drone control
+Author-email: chenghao <chenghao.wang@uphf.fr>
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: strenum
+Requires-Dist: pyserial
+
+# Description 
+A python package for UAV control designed by JHFDRONE
+# JHFDRONE库 函数列表
+# 打开串口
+> start() 
+# 关闭串口
+> stop()
+# 颜色判断 前方颜色 
+> get_current_color()
+# 获取电压 飞机电压
+> get_current_vcc()
+# 获取高度 当前高度
+> get_current_height()
+# 获取二维码编号 二维码ID 
+> get_id_qr_code()
+# 获取版本号 固件版本
+> get_version()
+# 获取信号强度 无线信号强度 
+> get_wifi_strength()
+# 获取前方距离 TOF测距（前）cm
+> get_data_ultrason_front()
+# 获取后方距离 TOF测距（后）cm
+> get_data_ultrason_back()
+# 获取左方距离 TOF测距（左）cm
+> get_data_ultrason_left()
+# 获取右方距离 TOF测距（右）cm
+> get_data_ultrason_right()
+# 获取下方距离 TOF测距（下）cm
+> get_data_ultrason_down()
+# 获取长
+> parsedotx()
+# 获取宽
+> parsedoty()
+# 获取面积
+> parsedot_MJ()
+# 相对于[distance]号标签清除误差 位置值清零
+> current_location(distance)
+# 解锁怠速 无人机怠速
+> Unlock_uav() 
+# 初始化  无人机初-始化
+> init_uav()  
+# 起飞[distance]cm
+> take_off(distance) 
+
+# 设置飞行速度[speed]
+> set_speed(speed) 
+
+# 移动 向 [direction] 飞[distance]厘米,速度[SPEED]档
+> move_Ctrl_cm(direction, distance) 
+
+# 时间移动 向 [mangtion] 飞[distance]*0.01(秒)
+> move_Ctrl_time(direction, time) 
+
+# 斜线移动 --- 向[QH][qh_num][ZY][zy_num][SX][sx_num](厘米)
+> move_slash(qh, qh_num, zy, zy_num, sx, sx_num) 
+
+# 旋转 --- [rotate]旋转[degree]度
+> rotate(rotate, degree) 
+
+# 环绕 ---  以无人机[QH][distance]cm  [ZY][distance2]cm为中心 [rotate_direction]环绕[degree]°  用时[time]秒
+> fly_surround(qh, distance, zy, distance2, rotate_direction, degree,  time) 
+
+# 灯光控制 --- 设置飞机大灯[color]色[mode]
+> set_light(color, mode) 
+# 翻滚 4D翻滚[direction]
+> flip(direction)
+# [mode]降落——[distance]速度
+> landing(mode, distance)
+
+# 拍一张照片照
+> take_photo()
+# 激光定高[status]
+> set_laser(status)
+# 定位模式[status]
+> set_relocation(status)
+# 红外发射 --- 发射红外数据[status]
+> emit_appoint_data(status)
+
+# 红外发射 --- 发射红外数据[data]
+> emit_data(data)
+
+# 发射红外点阵 --- 红外点阵显示[color]色单个字符[nb_characters]
+> display_lattice(color, nb_characters) 
+
+# 数据回传[status]
+> DATA_return(status)
+# 电磁铁[status]
+> set_BM(status) 
+
+# 舵机[degree]°
+> set_Servo(degree) 
+
+# 机械手[degree]°
+> set_hand(degree)
+
+# 激光 --- 发射激光
+> emit_laser()
+
+# 循线方向 --- 向[direction]循线飞行
+> Traverse_uav(direction)
+
+# 颜色定位 --- 定位颜色[color]
+> point_color(color)
+# 二维码模式 --- 切换为[mode]模式
+> change_mode(mode):
+
+# 标签间距，根据实际场地调整，单位cm --- 二维码标签间距[distance]cm
+> set_spacing(distance)
+
+# 期望标签 --- 飞向[distance]标签，高度[height]
+> fly_ID(distance, height) 
+
+# 定点当前标签，高度[height]cm
+> fly_now_id(height)
+
+# 定点当前颜色块，高度[height]cm
+> fly_now_color(height) 
+
+# 颜色偏差---默认定位在[color][qh]方[nb_pixels]像素
+> point_location(color, qh, nb_pixels) 
+
+# 角度校准---机航向校准
+> calibration() 
+
+# 编队怠速---[distance]无人机怠速 
+> BD_Unlock_uav(distance)
+# 环绕速度---环绕速度[distance]cm/s
+> BD_around_SPEED
+# 编队起飞---[distance]无人机起飞[distance2]厘米
+> BD_take_off(distance, distance)
+# 旋转---[distance]无人机,[Rotate]旋转[distance2]度
+> BD_rotate(distance, rotate, distance2)
+# 灯光控制---[distance]无人机灯光[clour]色[state]
+> BD_set_light(distance, color, mode)
+# 斜线移动---[direction]无人机向[QH][qh_num][ZY][zy_num][SX][sx_num](厘米)
+> BD_move_slash(distance, qh, qh_num, zy, zy_num, sx, sx_num)
+# 匀速斜线移动---[distance]无人机匀速向[QH][qh_num][ZY][zy_num](厘米)用时[distance4]秒
+> BD_move_slash2(distance, qh, qh_num, zy, zy_num, distance4)
+# 环绕---[distance]号无人机以自身[QH][distance5]cm  [ZY][distance2]cm为中心 [Rotate]环绕[distance3]°  用时[distance4]秒
+> BD_fly_surround(distance, qh, distance5, zy, distance2, rotate_direction, distance3, distance4)
+# 环绕---[distance]号无人机以自身[SX][distance5]cm  [ZY][distance2]cm为中心 [Rotate]环绕[distance3]°  用时[distance4]秒
+> BD_fly_surround2(distance, sx, distance5, zy, distance2, rotate_direction, distance3, distance4)
+# 编队降落---TX230[direction]降落
+> BD_landing(distance, mode, distance2)
+# 期望标签---TX230[distance]飞到[distance2]标签，高度[distance3]厘米[clour]
+> BD_fly_ID(distance, distance2, distance3, color)
+# 编队起飞---所有无人机以 X[distance]Y[distance2]为中心 [Rotate]环绕[distance3]°[clour]
+> BD_around(distance, distance2, distance3, rotate, color)
+# 编队结束
+> BD_end()
+# 举个例子
+```
+# 罗列所有串口
+port_name = find_serial_port()
+if len(port_name) > 0:
+    # 创建串口设备
+    peripheral = Peripheral(port_name[0])
+    # 创建一个 JHFDRONE 对象 
+    drone = JHFDRONE(peripheral)
+    # 打开串口
+    drone.start()
+    # 发送命令初始化无人机
+    drone.init_uav()
+    # 退出程序前关闭串口
+    drone.stop()
+```
