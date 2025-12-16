@@ -1,0 +1,64 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pyproject-toml-format"
+description = "Add your description here"
+requires-python = ">=3.9"
+authors = [{ name = "Zeev Rotshtein", email = "zeevro@gmail.com" }]
+license = { file = "LICENSE" }
+dependencies = [
+    "packaging",
+    "tomlkit",
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+ruff = ["ruff"]
+
+[project.urls]
+Source = "https://github.com/zeevro/pyproject-toml-format"
+
+[project.scripts]
+pyproject-toml-format = "pyproject_toml_format.__main__:main"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.ruff]
+line-length = 250
+output-format = "concise"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "W191", # tab-indentation - conflicts with formatter
+    "E111", # indentation-with-invalid-multiple - conflicts with formatter
+    "E114", # indentation-with-invalid-multiple-comment - conflicts with formatter
+    "E117", # over-indented - conflicts with formatter
+    "D206", # indent-with-spaces - conflicts with formatter
+    "D300", # triple-single-quotes - conflicts with formatter
+    "Q000", # bad-quotes-inline-string - conflicts with formatter
+    "Q001", # bad-quotes-multiline-string - conflicts with formatter
+    "Q002", # bad-quotes-docstring - conflicts with formatter
+    "Q003", # avoidable-escaped-quote - conflicts with formatter
+    "COM812", # missing-trailing-comma - conflicts with formatter
+    "COM819", # prohibited-trailing-comma - conflicts with formatter
+    "E501", # line-too-long - see formatter documentation
+
+    "ERA", # linter: eradicate
+    "C90", # linter: mccabe
+    "D", # linter: pydocstyle
+
+    "T201", # print
+    "SLF001", # private-member-access
+    "PLR0912", # too-many-branches
+]
+
+[tool.ruff.lint.isort]
+force-sort-within-sections = true
+lines-after-imports = 2
+
+[tool.ruff.format]
+quote-style = "single"
