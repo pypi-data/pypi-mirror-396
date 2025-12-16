@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=64.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name="wordslab-notebooks-lib"
+requires-python=">=3.10"
+classifiers = [
+    "Framework :: Jupyter",
+    "Framework :: Jupyter :: JupyterLab",
+    "Framework :: Jupyter :: JupyterLab :: 4",
+    "Framework :: Jupyter :: JupyterLab :: Extensions",
+    "Framework :: Jupyter :: JupyterLab :: Extensions :: Prebuilt",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14"
+]
+dynamic = [ "keywords", "description", "version", "dependencies", "optional-dependencies", "readme", "license", "authors", "entry-points", "scripts", "urls"]
+
+[tool.setuptools]
+include-package-data = true 
+
+[tool.setuptools.data-files]
+"share/jupyter/labextensions/wordslab-notebooks-lib" = [
+  "wordslab_notebooks_lib/labextension/package.json",
+  "install.json"
+]
+"share/jupyter/labextensions/wordslab-notebooks-lib/static" = [
+  "wordslab_notebooks_lib/labextension/static/*"
+]
+
+[tool.uv]
+cache-keys = [{ file = "pyproject.toml" }, { file = "settings.ini" }, { file = "setup.py" }]
+
+[tool.uv.workspace]
+members = [
+    ".",
+]
+
+[tool.uv.sources]
+wordslab-notebooks-lib = { workspace = true, editable = true }
+
+[dependency-groups]
+dev = [
+    "nbdev>=2.4.6",
+    "twine>=6.2.0",
+    "wordslab-notebooks-lib",
+]
