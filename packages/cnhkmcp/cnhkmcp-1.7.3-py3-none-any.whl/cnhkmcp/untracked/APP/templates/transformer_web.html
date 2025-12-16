@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BRAIN Transformer - Web Interface</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        .simulator-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .simulator-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .simulator-panel {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        
+        .form-group input[type="number"] {
+            width: 120px;
+        }
+        
+        .log-viewer {
+            background: #1e1e1e;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            height: 500px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-top: 10px;
+        }
+        
+        .btn-block {
+            width: 100%;
+            margin-top: 10px;
+            display: block;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .header-flex {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="simulator-container">
+        <div class="header-flex">
+            <h1>BRAIN Transformer (72变)</h1>
+            <a href="/" class="btn btn-outline">Back to Home</a>
+        </div>
+
+        <div class="simulator-grid">
+            <div class="simulator-panel">
+                <h3>Configuration</h3>
+                <form id="transformerForm">
+                    <div class="form-group">
+                        <label for="llm_model">LLM Model Name</label>
+                        <input type="text" id="llm_model" name="LLM_model_name" value="kimi-k2-turbo-preview">
+                    </div>
+                    <div class="form-group">
+                        <label for="llm_api_key">LLM API Key</label>
+                        <input type="password" id="llm_api_key" name="LLM_API_KEY" placeholder="Enter your API Key">
+                    </div>
+                    <div class="form-group">
+                        <label for="llm_base_url">LLM Base URL</label>
+                        <input type="text" id="llm_base_url" name="llm_base_url" value="https://api.moonshot.cn/v1">
+                    </div>
+                    <button type="button" id="testConnectionBtn" class="btn btn-secondary btn-block">Test LLM Connection</button>
+                    <div id="connectionStatus" style="margin-top: 5px; font-size: 0.9em;"></div>
+                    <hr>
+                    <div class="form-group">
+                        <label for="username">BRAIN Username</label>
+                        <input type="text" id="username" name="username" placeholder="Email or Username">
+                    </div>
+                    <div class="form-group">
+                        <label for="password">BRAIN Password</label>
+                        <input type="password" id="password" name="password">
+                    </div>
+                    <hr>
+                    <div class="form-group">
+                        <label for="template_summary_content">Template Summary</label>
+                        <div style="display: flex; gap: 10px; margin-bottom: 5px;">
+                            <button type="button" class="btn btn-small btn-outline" onclick="document.getElementById('templateFile').click()">📂 Load from File</button>
+                            <input type="file" id="templateFile" accept=".txt,.md" style="display: none;" onchange="loadTemplateFile(event)">
+                        </div>
+                        <textarea id="template_summary_content" name="template_summary_content" style="height: 150px; font-family: monospace; font-size: 12px;" placeholder="Loading default template summary..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="alpha_id">Alpha ID</label>
+                        <input type="text" id="alpha_id" name="alpha_id" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="top_n">Datafield Top N (数值越大变种数量越多,建议低于50)</label>
+                        <input type="number" id="top_n" name="top_n_datafield" value="50">
+                    </div>
+                    
+                    <button type="submit" id="runBtn" class="btn btn-primary btn-block">Run Transformer</button>
+                </form>
+            </div>
+            
+            <div class="simulator-panel">
+                <h3>Output Log</h3>
+                <div id="logViewer" class="log-viewer">Waiting to start...</div>
+                <div id="downloadSection" class="hidden" style="margin-top: 20px; text-align: center;">
+                    <p>Generation Complete!</p>
+                    <a id="downloadBtn" href="#" class="btn btn-success" download>Download Alpha_candidates.json</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('transformerForm');
+        const logViewer = document.getElementById('logViewer');
+        const runBtn = document.getElementById('runBtn');
+        const testConnectionBtn = document.getElementById('testConnectionBtn');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const downloadSection = document.getElementById('downloadSection');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const templateSummaryTextarea = document.getElementById('template_summary_content');
+        
+        let eventSource = null;
+
+        // Load default template summary on page load
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const response = await fetch('/api/get-default-template-summary');
+                const result = await response.json();
+                if (result.success) {
+                    templateSummaryTextarea.value = result.summary;
+                } else {
+                    templateSummaryTextarea.value = "Error loading default template summary: " + result.error;
+                }
+            } catch (error) {
+                templateSummaryTextarea.value = "Error loading default template summary: " + error.message;
+            }
+        });
+
+        function loadTemplateFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                templateSummaryTextarea.value = e.target.result;
+            };
+            reader.readAsText(file);
+        }
+
+        testConnectionBtn.addEventListener('click', async () => {
+            const apiKey = document.getElementById('llm_api_key').value;
+            const baseUrl = document.getElementById('llm_base_url').value;
+            const model = document.getElementById('llm_model').value;
+            
+            if (!apiKey) {
+                connectionStatus.textContent = 'Please enter API Key';
+                connectionStatus.style.color = 'red';
+                return;
+            }
+            
+            connectionStatus.textContent = 'Testing connection...';
+            connectionStatus.style.color = 'blue';
+            
+            try {
+                const response = await fetch('/api/test-llm-connection', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ apiKey, baseUrl, model })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    connectionStatus.textContent = 'Connection Successful!';
+                    connectionStatus.style.color = 'green';
+                } else {
+                    connectionStatus.textContent = 'Connection Failed: ' + result.error;
+                    connectionStatus.style.color = 'red';
+                }
+            } catch (error) {
+                connectionStatus.textContent = 'Error: ' + error.message;
+                connectionStatus.style.color = 'red';
+            }
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (eventSource) {
+                eventSource.close();
+            }
+            
+            logViewer.textContent = 'Starting Transformer（此步骤稍久）...\n';
+            runBtn.disabled = true;
+            downloadSection.classList.add('hidden');
+            
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            try {
+                const response = await fetch('/api/run-transformer-web', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    const taskId = result.taskId;
+                    startLogStreaming(taskId);
+                } else {
+                    logViewer.textContent += 'Error starting: ' + result.error;
+                    runBtn.disabled = false;
+                }
+            } catch (error) {
+                logViewer.textContent += 'Error: ' + error.message;
+                runBtn.disabled = false;
+            }
+        });
+        
+        function startLogStreaming(taskId) {
+            eventSource = new EventSource(`/api/stream-transformer-logs/${taskId}`);
+            
+            eventSource.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.log) {
+                    logViewer.textContent += data.log; // + '\n';
+                    logViewer.scrollTop = logViewer.scrollHeight;
+                }
+                
+                if (data.status === 'completed') {
+                    eventSource.close();
+                    runBtn.disabled = false;
+                    logViewer.textContent += '\nProcess Completed Successfully!';
+                    
+                    // Enable download
+                    downloadBtn.href = `/api/download-transformer-result/${taskId}`;
+                    downloadSection.classList.remove('hidden');
+                } else if (data.status === 'error') {
+                    eventSource.close();
+                    runBtn.disabled = false;
+                    logViewer.textContent += '\nProcess Failed!';
+                }
+            };
+            
+            eventSource.onerror = () => {
+                eventSource.close();
+                runBtn.disabled = false;
+                logViewer.textContent += '\nConnection lost.';
+            };
+        }
+    </script>
+</body>
+</html>
