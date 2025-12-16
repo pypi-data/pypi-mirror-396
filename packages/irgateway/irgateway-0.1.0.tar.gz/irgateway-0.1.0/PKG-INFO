@@ -1,0 +1,191 @@
+Metadata-Version: 2.4
+Name: irgateway
+Version: 0.1.0
+Summary: Python SDK for Zarinpal Payment Gateway with sync and async support.
+Author-email: Javad Dalirani <jdalirani82@gmail.com>
+Description-Content-Type: text/markdown
+License-Expression: MIT
+License-File: LICENSE
+Project-URL: Homepage, https://github.com/javad2nd/irgateway
+
+# Zarinpal Python SDK
+
+A modern, type-safe Python SDK for Zarinpal Payment Gateway with both synchronous and asynchronous support.
+
+## Features
+
+- ✅ Sync and async client support
+- ✅ Type hints and full IDE autocomplete
+- ✅ Comprehensive error handling
+- ✅ Support for all Zarinpal API endpoints
+- ✅ Sandbox environment for testing
+- ✅ Custom StartPay endpoint configuration
+- ✅ Wage splitting for shared settlements
+- ✅ Fee calculation utilities
+
+## Installation
+
+```
+pip install irgateway
+```
+
+## Quick Start
+
+### Synchronous Usage
+
+```
+from irgateway.zarinpal import ZarinpalClient
+from irgateway.zarinpal.enums import Environment, Currency
+
+# Initialize client
+client = ZarinpalClient(
+    merchant_id="YOUR-MERCHANT-ID",
+    environment=Environment.SANDBOX  # Use PRODUCTION for live
+)
+
+# Create payment request
+payment = client.request(
+    amount=10000,
+    callback_url="https://yoursite.com/callback",
+    description="خرید محصول"
+)
+
+print(f"Payment URL: {payment.payment_url}")
+
+# Verify payment after callback
+verification = client.verify(
+    authority="A00000000000000000000000000123456789",
+    amount=10000
+)
+
+print(f"Reference ID: {verification.ref_id}")
+```
+
+### Asynchronous Usage
+
+```
+from irgateway.zarinpal import ZarinpalClient
+from irgateway.zarinpal.enums import Environment, Currency
+
+async def process_payment():
+    async with AsyncZarinpalClient(
+        merchant_id="YOUR-MERCHANT-ID",
+        environment=Environment.SANDBOX
+    ) as client:
+        payment = await client.request(
+            amount=10000,
+            callback_url="https://yoursite.com/callback",
+            description="خرید محصول"
+        )
+        return payment.payment_url
+
+# In your async function
+url = await process_payment()
+```
+
+## API Methods
+
+| Method | Description |
+|--------|-------------|
+| `request()` | Create new payment request |
+| `verify()` | Verify payment after user returns |
+| `unverified()` | Get list of unverified transactions |
+| `reverse()` | Request refund (requires permission) |
+| `inquiry()` | Check payment status |
+| `calculate_fee()` | Calculate gateway fees |
+
+## Advanced Features
+
+### Payment Metadata
+
+```
+from irgateway.types import PaymentMetadata
+
+metadata = PaymentMetadata(
+    mobile="09123456789",
+    email="user@example.com"
+)
+
+payment = client.request(
+    amount=10000,
+    callback_url="https://yoursite.com/callback",
+    description="خرید محصول",
+    metadata=metadata
+)
+```
+
+### Wage Splitting
+
+```
+from irgateway.zarinpal.types import Wage
+
+wages = [
+    Wage(iban="IR123456789012345678901234", amount=5000),
+    Wage(iban="IR987654321098765432109876", amount=3000)
+]
+
+payment = client.request(
+    amount=10000,
+    callback_url="https://yoursite.com/callback",
+    description="خرید مشترک",
+    wages=wages
+)
+```
+
+## Configuration
+
+```
+from irgateway.zarinpal import ZarinpalClient, ZarinpalConfig
+
+config = ZarinpalConfig(
+    timeout=30,  # Request timeout in seconds
+    startpay_endpoint="https://custom-gateway.com/"  # Optional custom gateway
+)
+
+client = ZarinpalClient(
+    merchant_id="YOUR-MERCHANT-ID",
+    config=config
+)
+```
+
+## Error Handling
+
+```
+from irgateway.zarinpal.errors import ZarinpalException, InvalidMerchantError
+
+try:
+    payment = client.request(...)
+except InvalidMerchantError:
+    print("Merchant ID is invalid")
+except ZarinpalException as e:
+    print(f"Error {e.code}: {e.message}")
+```
+
+## Requirements
+
+- Python 3.7+
+- requests (for sync client)
+- aiohttp (for async client)
+
+## Development
+
+```
+# Clone repository
+git clone https://github.com/javad2nd/irgateway.git
+cd irgateway
+
+# Install dependencies
+pip install -e ".[dev]"
+
+# Run tests
+pytest
+```
+
+## License
+
+MIT License - see LICENSE file for details
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
