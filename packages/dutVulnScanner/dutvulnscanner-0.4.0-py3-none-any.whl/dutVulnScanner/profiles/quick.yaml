@@ -1,0 +1,46 @@
+# Quick Scan Profile
+# Fast, basic security check for rapid assessment
+
+name: quick
+description: Fast security scan with minimal checks
+
+metadata:
+  estimated_duration: "~3 minutes"
+  risk_level: "Safe"
+
+# Tools to use for scanning
+tools:
+  - nmap
+  - whatweb
+  - sslscan
+
+# Tool-specific configurations
+tool_configs:
+  nmap:
+    args:
+      - "-sV"
+      - "-F"  # Fast scan (100 most common ports)
+      - "-T4"
+  
+  whatweb:
+    aggression: 1
+    follow_redirect: true
+    conn_timeout: 30  # Connection timeout per request
+    wait: 1  # Wait time between requests
+  
+  sslscan:
+    show_certificate: false
+    check_vulnerabilities: true
+    timeout: 30
+
+# Execution settings
+parallel: true
+timeout: 600  # 10 minutes
+
+# Correlation settings
+enable_correlation: false  # Skip correlation for speed
+
+# Additional metadata
+category: quick
+risk_level: low
+recommended_frequency: hourly

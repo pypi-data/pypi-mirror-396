@@ -1,0 +1,44 @@
+name: vuln_scan
+description: Vulnerability scanning phase - nuclei templates, SSL/TLS testing, web server checks
+
+metadata:
+  estimated_duration: "~3 hours"
+  risk_level: "Safe"
+
+tools:
+  - nuclei
+  - testssl
+  - nikto
+  - sslscan
+
+tool_configs:
+  nuclei:
+    severity: "critical,high"
+    templates_dir: null  # Use default templates
+    tags:
+      - cve
+    exclude_tags: null
+    rate_limit: 100
+    bulk_size: 25
+    timeout: 3
+  
+  testssl:
+    vulnerabilities: true
+    protocols: false
+    ciphers: false
+    server_defaults: false
+    server_preference: false
+    severity: "OK"
+  
+  nikto:
+    port: 80
+    ssl: false  # Auto-detect
+    timeout: 5
+  
+  sslscan:
+    show_certificate: false
+    check_vulnerabilities: true
+
+parallel: true   # Can run in parallel
+timeout: 900   # 15 minutes for demo
+enable_correlation: true

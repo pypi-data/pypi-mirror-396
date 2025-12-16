@@ -1,0 +1,51 @@
+name: discovery_full
+description: Comprehensive discovery phase - subdomain enumeration, port scanning, and HTTP probing
+
+metadata:
+  estimated_duration: "~2 hours"
+  risk_level: "Safe"
+
+tools:
+  - subfinder
+  - naabu
+  - httpx
+  - whois
+  - nmap
+
+tool_configs:
+  subfinder:
+    all: false
+    recursive: false
+    timeout: 10
+    max_time: 3
+    threads: 10
+  
+  naabu:
+    ports: "top-100"
+    rate: 500
+    timeout: 500
+    retries: 2
+    exclude_cdn: true
+  
+  httpx:
+    ports: "80,443,8080,8443"
+    threads: 30
+    timeout: 5
+    follow_redirects: true
+    tech_detect: true
+    status_code: true
+    title: true
+    web_server: true
+  
+  whois:
+    # Domain registration info
+  
+  nmap:
+    args:
+      - "-sV"    # Service version detection
+      - "-F"     # Fast scan
+      - "-T4"
+
+parallel: false  # Run sequentially for pipeline: subfinder -> naabu -> httpx -> nmap
+timeout: 600    # 10 minutes for demo
+enable_correlation: true
