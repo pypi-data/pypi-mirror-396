@@ -1,0 +1,23 @@
+name: Jnkn Check
+on: [pull_request]
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # Explicitly fetch the base branch
+          ref: ${{ github.head_ref }}
+      
+      # Fetch the base branch so origin/main exists
+      - name: Fetch base branch
+        run: git fetch origin ${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}
+      
+      - uses: bordumb/jnkn@main
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
