@@ -1,0 +1,100 @@
+Metadata-Version: 2.4
+Name: jaxFMM
+Version: 0.1.0
+Summary: Adaptive Fast Multipole Method with Laplace kernel in JAX.
+Project-URL: Homepage, https://gitlab.com/jaxfmm/jaxfmm
+Author-email: Robert Kraft <robert.kraft@univie.ac.at>
+License: MIT License
+        
+        Copyright (c) 2025 Robert Kraft
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+License-File: LICENSE
+Keywords: FMM,N-body,jax,potential,treecode
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Topic :: Scientific/Engineering :: Physics
+Requires-Python: >=3.9
+Requires-Dist: jax
+Provides-Extra: cuda
+Requires-Dist: jax[cuda]; extra == 'cuda'
+Provides-Extra: dev
+Requires-Dist: numpy; extra == 'dev'
+Requires-Dist: pytest; extra == 'dev'
+Requires-Dist: pyvista; extra == 'dev'
+Description-Content-Type: text/markdown
+
+# jaxFMM
+
+jaxFMM is an open source implementation of the Fast Multipole Method in JAX. The goal is to offer an easily readable/maintainable FMM implementation with good performance that runs on CPU/GPU and supports autodiff. This is enabled through JAX's just-in-time compiler.
+
+## Installation and Usage
+
+jaxFMM depends only on JAX and can be installed from pypi or by downloading the source as follows:
+
+    pip install jaxfmm
+
+If you want to run jaxFMM on GPUs, the easiest way is to use NVIDIA CUDA and cuDNN from pip wheels by instead typing:
+
+    pip install jaxfmm[cuda]
+
+Using a custom, self-installed CUDA with jax is [described in the JAX documentation](https://docs.jax.dev/en/latest/installation.html).
+
+The [unitcube demo](/demos/unitcube.py) is a short and simple example demonstrating how to use jaxFMM.
+
+## Features
+
+There are many flavors of FMM implementations. In short, jaxFMM currently:
+
+- only supports point charges and the Laplacian kernel.
+- uses real basis functions computed via recurrence relations.
+- uses rotation-based O(p^3) M2M/M2L/L2L transformations by computing rotation matrices on-the-fly with fast recursions.
+- uses a non-uniform 2^N-ary tree hierarchy (directly inspired by [a work of A. Goude and S. Engblom](https://link.springer.com/article/10.1007/s11227-012-0836-0)), allowing arbitrary shape of the boxes in the hierarchy and guaranteeing balanced trees but requiring storage of interaction lists.
+- has jit-compiled functions and autodiff for every substep of the algorithm except for the generation of interaction lists.
+
+In summary, jaxFMM in its current state can do adaptive point charge FMM for Laplace kernels with good performance for constant particle positions and reasonably homogenous distributions. For more details, consider reading the [preprint on arXiv](https://arxiv.org/abs/2511.15269).
+
+## Citing
+
+A preprint describing jaxFMM is [available on arXiv](https://arxiv.org/abs/2511.15269), which can be cited with the following BibTeX entry:
+
+    @misc{kraft2025jaxfmmadaptivegpuparallelimplementation,
+        title={jaxFMM: An Adaptive, GPU-Parallel Implementation of the Fast Multipole Method in JAX}, 
+        author={Robert Kraft and Florian Bruckner and Dieter Suess and Claas Abert},
+        year={2025},
+        eprint={2511.15269},
+        archivePrefix={arXiv},
+        primaryClass={physics.comp-ph},
+        url={https://arxiv.org/abs/2511.15269}, 
+    }
+
+## TODOs
+
+jaxFMM is primarily developed for my PhD project, where I am working on a GPU FMM stray field evaluation routine for finite-element micromagnetics. This explains the feature set and design decisions mentioned above.
+
+Contributions are always welcome however and improvements to jaxFMM are in development, such as:
+
+- distributed parallelism via jax.sharding.
+- varying parameters locally for better performance (particularly the number of splits per axis and level).
+- investigating kernel-independent/volume FMM.
+
+## Stray Field Evaluation
+
+As mentioned above, jaxFMM is developed for rapid stray field evaluation in finite-element micromagnetics. The [strayfield branch](https://gitlab.com/jaxfmm/jaxfmm/-/tree/strayfield) features stray field evaluation functions for P1-FEM meshes and the corresponding [strayfield unitcube demo](https://gitlab.com/jaxfmm/jaxfmm/-/blob/strayfield/demos/strayfield_unitcube.py) shows how they are used. Note that this is still work in progress and currently only gives accurate results for meshes of good quality (i.e. all tetrahedra have low aspect ratio).
