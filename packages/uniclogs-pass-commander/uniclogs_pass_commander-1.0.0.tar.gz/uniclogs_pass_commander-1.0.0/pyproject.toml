@@ -1,0 +1,125 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "uniclogs-pass-commander"
+description = "The controller for local UniClOGS functions."
+requires-python = ">=3.11"
+license = {text = "GPL-3.0"}
+dynamic = ["version"]
+
+dependencies = [
+    "jeepney >= 0.8.0",
+    "linuxfd >= 1.5",
+    "pyserial >= 3.5",
+    "requests >= 2.32.0",
+    "rot2prog >= 0.0.9",
+    "tomlkit >= 0.13.2",
+    "sgp4 >= 2.23",
+    "skyfield >= 1.51",
+]
+
+[project.optional-dependencies]
+dev = [
+    "build >= 1.2.2",
+    "mypy >= 1.17.0",
+    "pytest >= 9.0.0",
+    "types-requests >= 2.25",
+    "responses >= 0.25.6",
+    "ruff >= 0.8.0",
+    "pytest-cov>=7.0.0",
+    "setuptools>=80",
+    "setuptools-scm>=9",
+]
+
+[project.scripts]
+pass-commander = "pass_commander.main:main"
+
+[tool.pytest.ini_options]
+addopts = [
+    "--cov=pass_commander",
+    "--cov-report=term-missing",
+]
+
+[tool.coverage.run]
+omit = [
+    "pass_commander/mock/*"
+]
+
+[tool.mypy]
+ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.format]
+quote-style = "preserve"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    # See https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
+    "Q000",  # bad-quotes-inline-string
+    "Q002",  # bad-quotes-docstring
+    "D300",  # triple-single-quotes
+    "COM812",  # prohibited-trailing-comma
+    "ISC001",  # single-line-implicit-string-concatenation
+    # FIXME: These should be turned back on but :effort:
+    "D100",  # undocumented-public-module
+    "D101",  # undocumented-public-class
+    "D102",  # undocumented-public-method
+    # might leave off always. Does the user need to know __str__ makes a str?
+    "D105",  # undocumented-magic-method
+    # D203, and D213 conflict with D211 and D212, prefer the latter which
+    # follow PEP257
+    "D203",  # one-blank-line-before-class
+    "D213",  # multi-line-summary-second-line
+    # Allow FIXMEs etc, but don't be too rigid about formatting. Consider not
+    # ignoring FIX here so local runs point them out but ignoring them in CI
+    # runs so they don't block commits.
+    "FIX",  # flake8-fixme
+    "TD001",  # invalid-todo-tag
+    "TD002",  # missing-todo-author
+    "TD003",  # missing-todo-link
+    "TD004",  # missing-todo-colon
+    # These are the opposite of what I want, more info in exceptions is better
+    "EM101",  # raw-string-in-exception
+    "EM102",  # f-string-in-exception
+    # Blank line at the end of docstrings? nothanks
+    "D413",  # blank-line-after-last-section
+    # This might be good to turn on later, right now I'm on the fence about it
+    "TRY003",  # raise-vanilla-args
+    # Another one that might be good later but for now is too argessive. Many of
+    # the numbers it flags are obvious from context.
+    "PLR2004",  # magic value used in comparison
+    # This discourages things like returning early on errors which I think is a
+    # good idea, not a bad one
+    "PLR0911",  # too many return statements
+
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Test specific lint ignores. These files are not part of the main
+# pass-commander application
+"tests/**/test_*.py" = [
+    "S101",  # assert - pytest prefers plain assert
+]
+"!{pass_commander/**,tests/**/test_*.py}" = [
+    # Small testing scripts don't need a full blown logger. Regular unit tests
+    # should still avoid print() though.
+    "T201",  # print
+]
+
+[tool.ruff.lint.flake8-bugbear]
+# Workaround for B008 being a bit limited. AzEl is a tuple, immutable, but this
+# lint can't see it yet. See https://github.com/astral-sh/ruff/issues/12717
+# Remove this line when resolved.
+extend-immutable-calls = [
+    "pass_commander.config.AzEl",  # a tuple, immutable
+    # This produces a GeographicPosition which is hashable so probably immutable
+    "skyfield.api.wgs84.latlon",
+]
+
+[tool.setuptools_scm]
+# This page intentionally left blank

@@ -1,0 +1,290 @@
+from dataclasses import InitVar, dataclass, field
+from ipaddress import AddressValueError, IPv4Address
+from numbers import Real
+from pathlib import Path, PosixPath
+from socket import gaierror, gethostbyname
+from typing import Any, NamedTuple, TypeAlias
+
+import tomlkit
+from sgp4 import earth_gravity, io
+from skyfield.api import E, N, wgs84
+from skyfield.toposlib import GeographicPosition
+from skyfield.units import Angle
+from tomlkit.items import Table
+from tomlkit.toml_document import TOMLDocument
+
+
+class ConfigError(Exception):
+    pass
+
+
+class TleValidationError(ConfigError):
+    def __init__(self, name: str, tle: list[str]) -> None:  # noqa: D107
+        super().__init__(f'TLE for {name}')
+        self.name = name
+        self.tle = tle
+
+
+class IpValidationError(ConfigError):
+    def __init__(self, table: str | None, key: str, value: Any) -> None:  # noqa: D107 ANN401
+        super().__init__(f"'{table}.{key}'")
+        self.table = table
+        self.key = key
+        self.value = value
+
+
+class KeyValidationError(ConfigError):
+    def __init__(self, table: str | None, key: str, expect: str, actual: str) -> None:  # noqa: D107
+        super().__init__(f"'{key}' invalid type {actual}")
+        self.table = table
+        self.key = key
+        self.expect = expect
+        self.actual = actual
+
+
+class AngleValidationError(ConfigError):
+    def __init__(self, table: str | None, key: str, value: Any) -> None:  # noqa: D107 ANN401
+        super().__init__(f"'{table}.{key}'")
+        self.table = table
+        self.key = key
+        self.value = value
+
+
+class TemplateTextError(ConfigError):
+    def __init__(self, table: str | None, key: str) -> None:  # noqa: D107
+        super().__init__(f'{table}.{key}')
+        self.table = table
+        self.key = key
+
+
+class UnknownKeyError(ConfigError):
+    def __init__(self, keys: list[str]) -> None:  # noqa: D107
+        super().__init__(' '.join(keys))
+        self.keys = keys
+
+
+class MissingKeyError(ConfigError):
+    def __init__(self, table: str | None, key: str) -> None:  # noqa: D107
+        super().__init__(f'{table}.{key}')
+        self.table = table
+        self.key = key
+
+
+class MissingTableError(ConfigError):
+    def __init__(self, table: str) -> None:  # noqa: D107
+        super().__init__(table)
+        self.table = table
+
+
+class InvalidTomlError(ConfigError):
+    pass
+
+
+class ConfigNotFoundError(ConfigError):
+    pass
+
+
+class AzEl(NamedTuple):
+    az: Any
+    el: Any
+
+
+TleCache: TypeAlias = dict[str, list[str]]
+_marker = object()  # marks no default value, in case we want None as default
+
+
+def _pop_table(cfg: TOMLDocument, table: str, default: Any = _marker) -> Any:  # noqa: ANN401
+    try:
+        entry = cfg.pop(table)
+        if not isinstance(entry, Table):
+            raise UnknownKeyError([table])
+    except tomlkit.exceptions.NonExistentKey as e:
+        if default is _marker:
+            raise MissingTableError(table) from e
+        entry = default
+    return entry
+
+
+def _pop(table: Table, key: str, valtype: type, default: Any = _marker) -> Any:  # noqa: ANN401
+    try:
+        val = table.pop(key)
+    except tomlkit.exceptions.NonExistentKey as e:
+        if default is _marker:
+            raise MissingKeyError(table.display_name, key) from e
+        val = default
+    if not isinstance(val, valtype):
+        raise KeyValidationError(table.display_name, key, valtype.__name__, type(val).__name__)
+    return val
+
+
+def _pop_ip(table: Table, key: str, valtype: type, default: Any = _marker) -> IPv4Address:  # noqa: ANN401
+    value = _pop(table, key, valtype, default)
+    try:
+        return IPv4Address(gethostbyname(value))
+    except (AddressValueError, gaierror) as e:
+        raise IpValidationError(table.display_name, key, value) from e
+
+
+def _check_template_text(config: TOMLDocument) -> None:
+    '''Ensure all template text has been removed.'''
+    for name, table in config.items():
+        if not isinstance(table, Table):
+            continue
+        for key, value in table.items():
+            if isinstance(value, str) and '<' in value:
+                raise TemplateTextError(name, key)
+
+
+@dataclass
+class Config:
+    path: InitVar[Path]
+
+    # Main
+    sat_id: str = ''
+    min_el: Angle = Angle(degrees=15.0)  # noqa: RUF009 __post_init__ will create a copy
+    owmid: str = ''
+    edl: tuple[str, int] = ('', 10025)
+    txgain: int = 2
+
+    # Hosts
+    edl_dest: tuple[str, int] = ('127.0.0.1', 10025)
+    flowgraph: tuple[str, int] = ('127.0.0.1', 10080)
+    station: tuple[str, int] = ('127.0.0.1', 5005)
+    rotator: PosixPath = PosixPath('/dev/null')  # noqa: RUF009
+
+    # Observer
+    # lat, lon, alt TOML fields. Default value here is Portland ebv1 station.
+    observer: GeographicPosition = wgs84.latlon(45.509054 * N, -122.681394 * E, 50)
+    name: str = ''
+    cal: AzEl = AzEl(0, 0)
+    slew: AzEl | None = None
+    beam_width: float | None = None
+    # FIXME: the limit should be retrieved from stationd instead of our toml but that feature
+    #        doesn't exist.
+    temp_limit: float = 40.0
+
+    # Satellite
+    tle_cache: TleCache = field(default_factory=dict)
+
+    # Command line only
+    mock: set[str] = field(default_factory=set)
+    pass_count: int = 9999
+
+    def __post_init__(self, path: Path) -> None:
+        '''Load a config from a given file.
+
+        Checks:
+        - File exists and is valid toml
+        - All template text removed
+        - Mandatory tables exist and are Tables
+        - Optional tables, if they exist, are Tables
+        - Mandatory keys exist and have values are the expected toml type
+        - Optional keys, if they exist, have values that are the expected toml type
+        - Values convert to the expected Config type
+        - No unexpected keys/all keys consumed
+
+        Parameters
+        ----------
+        path
+            Path to the config file, usually pass_commander.toml
+        '''
+        try:
+            config = tomlkit.parse(path.expanduser().read_text())
+        except tomlkit.exceptions.ParseError as e:
+            raise InvalidTomlError(*e.args) from e
+        except FileNotFoundError as e:
+            raise ConfigNotFoundError from e
+        except IsADirectoryError as e:
+            raise ConfigNotFoundError from e
+
+        _check_template_text(config)
+
+        main = _pop_table(config, 'Main')
+        self.sat_id = str(_pop(main, 'satellite', str, self.sat_id))
+        self.min_el = Angle(degrees=_pop(main, 'minimum-pass-elevation', Real, self.min_el.degrees))
+        self.owmid = str(_pop(main, 'owmid', str, self.owmid))
+        self.edl = ('', int(_pop(main, 'edl_port', int, self.edl[1])))
+        self.txgain = int(_pop(main, 'txgain', int))
+
+        hosts = _pop_table(config, 'Hosts')
+        radio = _pop_ip(hosts, 'radio', str)
+        station = _pop_ip(hosts, 'station', str)
+        self.edl_dest = (str(radio), self.edl_dest[1])
+        self.flowgraph = (str(radio), self.flowgraph[1])
+        self.station = (str(station), self.station[1])
+        self.rotator = PosixPath(_pop(hosts, 'rotator', str))
+
+        observer = _pop_table(config, 'Observer')
+        self.observer = wgs84.latlon(
+            _pop(observer, 'lat', Real) * N,
+            _pop(observer, 'lon', Real) * E,
+            _pop(observer, 'alt', int),
+        )
+        if not -90 <= self.observer.latitude.degrees <= 90:
+            raise AngleValidationError(observer.display_name, 'lat', self.observer.latitude.degrees)
+        if not -180 <= self.observer.longitude.degrees <= 180:
+            raise AngleValidationError(
+                observer.display_name, 'lon', self.observer.longitude.degrees
+            )
+        self.name = str(_pop(observer, 'name', str))  # XMLRPC can't handle toml subclass
+        self.temp_limit = float(_pop(observer, 'temperature-limit', Real, self.temp_limit))
+
+        self.tle_cache = dict(_pop_table(config, 'TleCache', {}))
+        # validate TLEs
+        for key, tle in self.tle_cache.items():
+            try:
+                io.twoline2rv(tle[1], tle[2], earth_gravity.wgs84)
+            except (IndexError, ValueError) as e:
+                raise TleValidationError(key, tle) from e
+
+        # Ensure there's no extra keys
+        extra = ['Main.' + k for k in main]
+        extra.extend('Hosts.' + k for k in hosts)
+        extra.extend('Observer.' + k for k in observer)
+        extra.extend(k for k in config)
+        if extra:
+            raise UnknownKeyError(extra)
+
+    @classmethod
+    def template(cls, path: Path) -> None:
+        config = tomlkit.document()
+        config.add(tomlkit.comment("Be sure to replace all <hint text> including angle brackets"))
+        config.add(tomlkit.comment("Optional fields are commented out, uncomment to set"))
+
+        main = tomlkit.table()
+        main.add(tomlkit.comment('satellite = "<Index to TleCache, Gpredict, or NORAD ID>"'))
+        main.add(tomlkit.comment('owmid = "<OpenWeatherMap API key>"'))
+        main['edl_port'] = cls.edl[1]
+        main['txgain'] = cls.txgain
+
+        hosts = tomlkit.table()
+        hosts['radio'] = str(cls.flowgraph[0])
+        hosts['station'] = str(cls.station)
+        hosts['rotator'] = str(cls.rotator)
+
+        observer = tomlkit.table()
+        observer.add(tomlkit.comment("Change lat, lon, and alt to your specific station."))
+        observer.add(tomlkit.comment("These values are for the Portland evb1 station"))
+        observer['lat'] = cls.observer.latitude.degrees
+        observer['lon'] = cls.observer.longitude.degrees
+        observer['alt'] = int(cls.observer.elevation.m)
+        observer['name'] = '<station name or callsign>'
+
+        config['Main'] = main
+        config['Hosts'] = hosts
+        config['Observer'] = observer
+
+        config.add(tomlkit.nl())
+        config.add(tomlkit.comment("[TleCache]"))
+        config.add(tomlkit.comment("<name> = ["))
+        config.add(tomlkit.comment('    "<TLE Title>",'))
+        config.add(tomlkit.comment('    "<TLE line 1>",'))
+        config.add(tomlkit.comment('    "<TLE line 2>",'))
+        config.add(tomlkit.comment("]"))
+
+        path = path.expanduser()
+        if path.exists():
+            raise FileExistsError
+
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(tomlkit.dumps(config))
