@@ -1,0 +1,104 @@
+# flatiron-cleaner
+
+`flatiron-cleaner` is a Python package that cleans Flatiron Health cancer datasets into analysis-ready formats, specifically designed with predictive modeling and survival analysis in mind. By automating complex and tedious data processing workflows, it helps researchers extract meaningful insights and ensure reproducible results while reducing preparation time.
+
+Key features of the package include:
+- Providing a modular architecture that allows researchers to select which Flatiron files to process
+- Converting long-format dataframes into wide-format dataframes with unique PatientIDs per row
+- Ensuring appropriate data types for predictive modeling and statistical analysis
+- Standardizing data cleaning around a user-specified index date, such as metastatic diagnosis or treatment initiation
+- Engineering clinically relevant variables for analysis
+
+**Note:** This package is under active development and serves as a starting framework for cleaning Flatiron Health datasets. Users are encouraged to review and customize the processing logic for their specific research needs.
+
+## Installation
+
+Built and tested in python 3.13 on Flatiron datacuts prior to 2021. 
+
+```python
+pip install flatiron-cleaner 
+
+```
+
+## Available Processors
+
+### Cancer-Specific Processors
+
+The following cancers have their own dedicated data processor class:
+
+| Cancer Type | Processor Name | 
+|-------------|-----------------|
+| Advanced Urothelial Cancer | `DataProcessorUrothelial` |
+| Advanced NSCLC | `DataProcessorNSCLC` |
+| Metastatic Colorectal Cancer | `DataProcessorColorectal` |
+| Metastatic Breast Cancer | `DataProcessorBreast` |
+| Metastatic Prostate Cancer | `DataProcessorProstate` |
+| Metastatic Renal Cell Cancer | `DataProcessorRenal` |
+| Advanced Melanoma | `DataProcessorMelanoma` |
+| Advanced Head and Neck | `DataProcessorHeadNeck`|
+
+### General Processor 
+
+For cancer types without a dedicated processor, `DataProcessorGeneral` is available with standard methods. 
+
+## Processing Methods
+
+### Standard Methods
+
+The following methods are available across all processor classes, including the general processor:
+
+| Method | Description | File Processed |
+|--------|-------------|----------------|
+| `process_demographics()` | Processes patient demographic information | Demographics.csv |
+| `process_mortality()` | Processes mortality data | Enhanced_Mortality_V2.csv |
+| `process_ecog()` | Processes performance status data | ECOG.csv |
+| `process_medications()` | Processes medication administration records | MedicationAdministration.csv |
+| `process_diagnosis()` | Processes ICD coding information | Diagnosis.csv |
+| `process_labs()` | Processes laboratory test results | Lab.csv |
+| `process_vitals()` | Processes vital signs data | Vitals.csv |
+| `process_insurance()` | Processes insurance information | Insurance.csv |
+| `process_practice()` | Processes practice type data | Practice.csv |
+
+### Cancer-Specific Methods
+
+Cancer-specific classes contain additional methods (e.g., `process_enhanced()` and `process_biomarkers()`). For a complete list of available methods for each cancer type, refer to the source code or use Python's built-in help functionality:
+
+```python
+from flatiron_cleaner import DataProcessorUrothelial
+
+```
+
+## Usage Example
+
+```python
+from flatiron_cleaner import DataProcessorUrothelial
+from flatiron_cleaner import merge_dataframes
+
+# Initialize class
+processor = DataProcessorUrothelial()
+
+# Import dataframe with PatientIDs and index date of interest
+df = pd.read_csv('path/to/your/data')
+
+# Load and clean data
+cleaned_ecog_df = processor.process_ecog('path/to/your/ECOG.csv',
+                                         index_date_df=df,
+                                         index_date_column='AdvancedDiagnosisDate',
+                                         days_before=30,
+                                         days_after=0)                  
+
+cleaned_medication_df = processor.process_medications('path/to/your/MedicationAdmninistration.csv',
+                                                      index_date_df=df,
+                                                      index_date_column='AdvancedDiagnosisDate',
+                                                      days_before=180,
+                                                      days_after=0)
+
+# Merge dataframes 
+merged_data = merge_dataframes(cleaned_ecog_df, cleaned_medication_df)
+```
+
+For a more detailed usage demonstration, see the notebook titled "tutorial" in the `example/` directory.
+
+## Contact
+
+Contributions and feedback are welcome. Contact: xavierorcutt@gmail.com
