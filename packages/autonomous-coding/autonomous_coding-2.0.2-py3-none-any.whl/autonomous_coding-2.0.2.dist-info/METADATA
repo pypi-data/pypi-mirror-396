@@ -1,0 +1,1018 @@
+Metadata-Version: 2.4
+Name: autonomous-coding
+Version: 2.0.2
+Summary: Multi-agent autonomous coding system with Claude AI
+Project-URL: Homepage, https://github.com/anthropics/claude-quickstarts
+Project-URL: Documentation, https://github.com/anthropics/claude-quickstarts/tree/main/autonomous-coding
+Project-URL: Repository, https://github.com/anthropics/claude-quickstarts
+Author-email: Anthropic <support@anthropic.com>
+License: MIT
+Keywords: agents,ai,autonomous,claude,coding
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Software Development :: Code Generators
+Requires-Python: >=3.10
+Requires-Dist: claude-code-sdk>=0.0.25
+Requires-Dist: python-dotenv>=1.0.0
+Provides-Extra: all
+Requires-Dist: mypy>=1.7.0; extra == 'all'
+Requires-Dist: playwright>=1.40.0; extra == 'all'
+Requires-Dist: pytest-asyncio>=0.21.0; extra == 'all'
+Requires-Dist: pytest-cov>=4.1.0; extra == 'all'
+Requires-Dist: pytest>=7.4.0; extra == 'all'
+Requires-Dist: ruff>=0.1.0; extra == 'all'
+Requires-Dist: types-requests>=2.31.0; extra == 'all'
+Provides-Extra: dev
+Requires-Dist: pytest-asyncio>=0.21.0; extra == 'dev'
+Requires-Dist: pytest-cov>=4.1.0; extra == 'dev'
+Requires-Dist: pytest>=7.4.0; extra == 'dev'
+Provides-Extra: qa
+Requires-Dist: mypy>=1.7.0; extra == 'qa'
+Requires-Dist: playwright>=1.40.0; extra == 'qa'
+Requires-Dist: ruff>=0.1.0; extra == 'qa'
+Requires-Dist: types-requests>=2.31.0; extra == 'qa'
+Description-Content-Type: text/markdown
+
+# Autonomous Coding Agent Demo
+
+A minimal harness demonstrating long-running autonomous coding with the Claude Agent SDK. This demo implements a two-agent pattern (initializer + coding agent) that can build complete applications over multiple sessions.
+
+## Prerequisites
+
+**Required:** Install the latest versions of Claude Code CLI and uv (Python package manager):
+
+```bash
+# Install Claude Code CLI (latest version required)
+npm install -g @anthropic-ai/claude-code
+
+# Install uv (fast Python package manager)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install Python dependencies with uv
+uv sync
+```
+
+Verify your installations:
+```bash
+claude --version  # Should be latest version
+uv --version      # Check uv is installed
+```
+
+**API Key:** Set your Anthropic API key:
+```bash
+export ANTHROPIC_API_KEY='your-api-key-here'
+```
+
+## Project Structure
+
+```
+autonomous-coding/
+├── src/                       # Main package
+│   ├── core/                  # Core components (orchestrator, client, security)
+│   ├── quality/               # QA agent and quality gates
+│   ├── agents/                # Agent session management
+│   ├── utils/                 # Utilities (API rotation)
+│   └── cli.py                 # CLI entry points
+├── tests/                     # Test suite
+├── prompts/                   # Agent prompts and app specs
+├── scripts/                   # Helper scripts
+├── templates/                 # Application templates
+├── docs/                      # Documentation (systemd service, etc.)
+├── pyproject.toml             # Python project configuration (uv)
+└── README.md
+```
+
+## 📚 Documentation
+
+| Document | Description |
+|----------|-------------|
+| [**TUTORIAL.md**](docs/TUTORIAL.md) | Complete tutorial covering CLI, sessions, API rotation, custom templates, and remote execution |
+| [PUBLISHING.md](PUBLISHING.md) | Guide for publishing the package to PyPI |
+| [constitution.md](docs/constitution.md) | Agent behavior guidelines and principles |
+| [orchestrator.service](docs/orchestrator.service) | Systemd service configuration for production |
+
+## Quick Start
+
+### Option 1: Using Helper Scripts (Recommended)
+
+```bash
+# Run the setup script first
+./scripts/setup.sh
+
+# Quick demo (3 iterations)
+./scripts/run_demo.sh
+
+# Build a task manager application
+./scripts/run_demo.sh --spec task_manager --project my_task_app
+
+# Build an e-commerce platform
+./scripts/run_demo.sh --spec ecommerce --project my_shop
+
+# Full autonomous build (unlimited iterations)
+./scripts/run_demo.sh --full --project my_project
+```
+
+### Option 2: Direct Commands (with uv)
+
+```bash
+# Using CLI entry point (recommended)
+uv run autonomous-coding --project-dir ./my_project
+
+# For testing with limited iterations
+uv run autonomous-coding --project-dir ./my_project --max-iterations 3
+
+# Using the demo shortcut
+uv run ac-demo --project-dir ./my_project --max-iterations 3
+```
+
+### Available Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `scripts/setup.sh` | Set up environment, install dependencies, check prerequisites |
+| `scripts/run_demo.sh` | Run autonomous agent with various options |
+| `scripts/run_orchestrator.sh` | Run full orchestrated workflow (Initializer → Dev → QA) |
+| `scripts/review_qa.sh` | Review QA reports and feature progress |
+
+### Application Templates
+
+Pre-built specifications are available in `templates/`:
+
+| Template | Description |
+|----------|-------------|
+| `task_manager_spec.txt` | Full-featured task management app (like Todoist) |
+| `ecommerce_spec.txt` | E-commerce platform with cart, checkout, admin |
+
+To use a template:
+```bash
+# Recommended: Use --spec flag (automatically syncs template)
+uv run autonomous-coding --project-dir ./my_shop --spec ecommerce
+
+# Build a task manager
+uv run autonomous-coding --project-dir ./my_tasks --spec task_manager
+
+# Force update spec if template changed
+uv run autonomous-coding --project-dir ./my_shop --spec ecommerce --force-spec
+
+# Via script
+./scripts/run_demo.sh --spec task_manager
+
+# Or manually copy
+cp templates/task_manager_spec.txt prompts/app_spec.txt
+```
+
+**Note:** Using `--spec` directly references the template, so changes to templates are automatically used. Use `--force-spec` to update an existing project's `app_spec.txt` with the latest template.
+
+## Important Timing Expectations
+
+> **Warning: This demo takes a long time to run!**
+
+- **First session (initialization):** The agent generates a `feature_list.json` with 200 test cases. This takes several minutes and may appear to hang - this is normal. The agent is writing out all the features.
+
+- **Subsequent sessions:** Each coding iteration can take **5-15 minutes** depending on complexity.
+
+- **Full app:** Building all 200 features typically requires **many hours** of total runtime across multiple sessions.
+
+**Tip:** The 200 features parameter in the prompts is designed for comprehensive coverage. If you want faster demos, you can modify `prompts/initializer_prompt.md` to reduce the feature count (e.g., 20-50 features for a quicker demo).
+
+## How It Works
+
+### Two-Agent Pattern
+
+1. **Initializer Agent (Session 1):** Reads `app_spec.txt`, creates `feature_list.json` with 200 test cases, sets up project structure, and initializes git.
+
+2. **Coding Agent (Sessions 2+):** Picks up where the previous session left off, implements features one by one, and marks them as passing in `feature_list.json`.
+
+### Session Management
+
+- Each session runs with a fresh context window
+- Progress is persisted via `feature_list.json` and git commits
+- The agent auto-continues between sessions (3 second delay)
+- Press `Ctrl+C` to pause; run the same command to resume
+
+## Security Model
+
+This demo uses a defense-in-depth security approach (see `src/core/security.py` and `src/core/client.py`):
+
+1. **OS-level Sandbox:** Bash commands run in an isolated environment
+2. **Filesystem Restrictions:** File operations restricted to the project directory only
+3. **Bash Allowlist:** Only specific commands are permitted:
+   - File inspection: `ls`, `cat`, `head`, `tail`, `wc`, `grep`
+   - Node.js: `npm`, `node`
+   - Version control: `git`
+   - Process management: `ps`, `lsof`, `sleep`, `pkill` (dev processes only)
+
+Commands not in the allowlist are blocked by the security hook.
+
+## Source Code Structure
+
+```
+src/
+├── cli.py                    # CLI entry points (main, demo, orchestrator, qa_agent)
+├── __init__.py               # Package exports
+├── core/
+│   ├── orchestrator.py       # Workflow state machine
+│   ├── client.py             # Claude SDK client configuration
+│   ├── security.py           # Bash command allowlist and validation
+│   ├── progress.py           # Progress tracking utilities
+│   └── prompts.py            # Prompt loading utilities
+├── agents/
+│   └── session.py            # Agent session management
+├── quality/
+│   ├── qa_agent.py           # QA validation agent
+│   └── gates.py              # 5 quality gates implementation
+└── utils/
+    └── api_rotation.py       # API key rotation for rate limits
+```
+
+## Generated Project Structure
+
+After running, your project directory will contain:
+
+```
+my_project/
+├── feature_list.json         # Test cases (source of truth)
+├── app_spec.txt              # Copied specification
+├── init.sh                   # Environment setup script
+├── claude-progress.txt       # Session progress notes
+├── .claude_settings.json     # Security settings
+└── [application files]       # Generated application code
+```
+
+## Running the Generated Application
+
+After the agent completes (or pauses), you can run the generated application:
+
+```bash
+cd generations/my_project
+
+# Run the setup script created by the agent
+./init.sh
+
+# Or manually (typical for Node.js apps):
+npm install
+npm run dev
+```
+
+The application will typically be available at `http://localhost:3000` or similar (check the agent's output or `init.sh` for the exact URL).
+
+## Command Line Options
+
+### Main Command: `autonomous-coding`
+
+The primary CLI for running the autonomous coding agent.
+
+```bash
+autonomous-coding [OPTIONS]
+```
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--project-dir PATH` | Directory for the project | `./autonomous_demo_project` |
+| `--max-iterations N` | Maximum number of agent iterations (sessions) | Unlimited |
+| `--model MODEL` | Claude model to use | `claude-sonnet-4-5-20250929` |
+| `--spec TEMPLATE` | Template name (e.g., `ecommerce`, `task_manager`) | None |
+| `--force-spec` | Force update `app_spec.txt` from template even if it exists | False |
+| `--version` | Show version and exit | - |
+
+**Examples:**
+
+```bash
+# Quick demo (3 sessions only)
+uv run autonomous-coding --project-dir ./my_project --max-iterations 3
+
+# Build e-commerce app with unlimited sessions
+uv run autonomous-coding --project-dir ./my_shop --spec ecommerce
+
+# Use a specific model
+uv run autonomous-coding --project-dir ./my_project --model claude-sonnet-4-20250514
+
+# Force refresh the spec file from template
+uv run autonomous-coding --project-dir ./my_shop --spec ecommerce --force-spec
+```
+
+### Other CLI Commands
+
+| Command | Description |
+|---------|-------------|
+| `ac-demo` | Alias for `autonomous-coding` |
+| `ac-orchestrator` | Run the multi-agent orchestrator workflow |
+| `ac-qa` | Run QA agent for feature validation |
+| `ac-spec-validator` | Validate app specification before coding |
+
+```bash
+# Run orchestrator
+uv run ac-orchestrator --project-dir ./my_project
+
+# Run QA on specific feature
+uv run ac-qa --project-dir ./my_project --feature-id 1
+
+# Validate specification
+uv run ac-spec-validator --project-dir ./my_project
+```
+
+## Pause and Resume
+
+The autonomous coding agent is designed to be **interruptible and resumable**. All progress is persisted to disk, so you can stop and restart at any time.
+
+### How to Pause
+
+**Method 1: Keyboard Interrupt (Recommended)**
+```bash
+# While the agent is running, press:
+Ctrl+C
+```
+
+This gracefully stops the current session. The agent will:
+- Complete any in-progress file writes
+- Save the current state to `feature_list.json`
+- Exit cleanly
+
+**Method 2: Limited Iterations**
+```bash
+# Run only 3 sessions, then automatically stop
+uv run autonomous-coding --project-dir ./my_project --max-iterations 3
+```
+
+**Method 3: Terminal Close**
+If you close the terminal or the process is killed, the agent's progress is still preserved because:
+- `feature_list.json` is updated after each feature completion
+- Git commits are made regularly
+- `claude-progress.txt` tracks session notes
+
+### How to Resume
+
+Simply run the **same command** again:
+
+```bash
+# Resume from where you left off
+uv run autonomous-coding --project-dir ./my_project --spec ecommerce
+```
+
+**What happens on resume:**
+1. The agent detects `feature_list.json` exists → **not a fresh start**
+2. Loads the existing feature list and progress
+3. Reads `claude-progress.txt` for context from previous sessions
+4. Continues implementing the next failing feature
+
+### State Persistence
+
+The following files maintain state between sessions:
+
+| File | Purpose |
+|------|---------|
+| `feature_list.json` | Master list of all features with pass/fail status |
+| `claude-progress.txt` | Session notes and implementation history |
+| `.git/` | Git history of all changes |
+| `token-consumption-*.json` | Token usage tracking per session |
+
+### Example Workflow
+
+```bash
+# Day 1: Start building (runs 10 sessions, then you press Ctrl+C)
+uv run autonomous-coding --project-dir ./my_shop --spec ecommerce
+# Progress: 15/203 features complete
+
+# Day 2: Resume (picks up where it left off)
+uv run autonomous-coding --project-dir ./my_shop --spec ecommerce
+# Progress: 45/203 features complete
+
+# Day 3: Run overnight with monitoring
+nohup uv run autonomous-coding --project-dir ./my_shop --spec ecommerce > output.log 2>&1 &
+
+# Check progress anytime
+tail -f output.log
+grep "Progress:" output.log | tail -1
+```
+
+### Session Flow Diagram
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                    SESSION LIFECYCLE                          │
+└──────────────────────────────────────────────────────────────┘
+
+  Start Command
+       │
+       ▼
+  ┌─────────────────┐
+  │ Load State      │◄──── Reads feature_list.json
+  │ (Fresh or       │      and claude-progress.txt
+  │  Resume?)       │
+  └────────┬────────┘
+           │
+           ▼
+  ┌─────────────────┐
+  │ Session N       │──── Implements 1 feature
+  │ (5-30 min)      │     Updates feature_list.json
+  └────────┬────────┘     Git commits changes
+           │
+           ▼
+  ┌─────────────────┐
+  │ Auto-continue?  │
+  │                 │
+  │  Yes: Wait 3s   │────► Next Session
+  │  Ctrl+C: Exit   │────► PAUSE (state saved)
+  │  Error: Retry   │────► Retry with fresh context
+  │  Quota: Rotate  │────► Switch API key, retry
+  └─────────────────┘
+
+  Resume Command (same as start)
+       │
+       ▼
+  Detects existing state → Continues from last position
+```
+
+### API Rotation on Resume
+
+If you have multiple API keys configured in `.env`, the agent will automatically rotate through them when quota limits are hit:
+
+```bash
+# .env file
+ANTHROPIC_API_KEY_1="sk-ant-..."        # Anthropic API
+ANTHROPIC_BASE_URL_1="https://api.anthropic.com"
+
+ANTHROPIC_API_KEY_2="..."               # Third-party API
+ANTHROPIC_BASE_URL_2="https://api.example.com/v1"
+ANTHROPIC_MODEL_2="custom-model-name"   # Model override for this endpoint
+```
+
+When you resume:
+- If the previous API key was exhausted, the next available key is used
+- Cooling periods are tracked (rate limit: 60s, daily quota: next day)
+- Model overrides are applied automatically per endpoint
+
+## Customization
+
+### Changing the Application
+
+Edit `prompts/app_spec.txt` to specify a different application to build.
+
+### Adjusting Feature Count
+
+Edit `prompts/initializer_prompt.md` and change the "200 features" requirement to a smaller number for faster demos.
+
+### Modifying Allowed Commands
+
+Edit `src/core/security.py` to add or remove commands from `ALLOWED_COMMANDS`.
+
+## Troubleshooting
+
+**"Appears to hang on first run"**
+This is normal. The initializer agent is generating 200 detailed test cases, which takes significant time. Watch for `[Tool: ...]` output to confirm the agent is working.
+
+**"Command blocked by security hook"**
+The agent tried to run a command not in the allowlist. This is the security system working as intended. If needed, add the command to `ALLOWED_COMMANDS` in `src/core/security.py`.
+
+**"API key not set"**
+Ensure `ANTHROPIC_API_KEY` is exported in your shell environment.
+
+---
+
+## QA Agent & Orchestrator
+
+The QA Agent system provides independent quality validation for the autonomous coding workflow through automated quality gates, regression detection, and comprehensive reporting.
+
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                          ORCHESTRATOR                               │
+│   Manages workflow state machine and coordinates agent execution    │
+└─────────────────────────────────────────────────────────────────────┘
+                                 │
+         ┌───────────────────────┼───────────────────────┐
+         ▼                       ▼                       ▼
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   INITIALIZER   │     │    DEV AGENT    │     │    QA AGENT     │
+│                 │     │                 │     │                 │
+│ - Setup project │     │ - Implement     │     │ - 5 Quality     │
+│ - Create specs  │     │   features      │     │   Gates         │
+│ - Generate      │     │ - Mark passes   │     │ - Regression    │
+│   feature_list  │     │   in list       │     │   Detection     │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+```
+
+### Workflow State Machine
+
+```
+START → INITIALIZER → DEV_READY → DEV → QA_READY → QA → QA_PASSED → COMPLETE
+                                   ▲              │
+                                   │              ▼
+                                   └───── DEV_FEEDBACK
+                                         (if QA fails)
+```
+
+### Quick Start
+
+#### 1. Install Dependencies
+
+```bash
+# Python dependencies
+pip install playwright pytest ruff mypy
+
+# Install Playwright browser
+python -m playwright install chromium
+
+# (Optional) JavaScript/TypeScript dependencies
+pnpm add -D @biomejs/biome typescript vitest
+```
+
+#### 2. Set Environment Variables
+
+```bash
+# Required: Anthropic API key
+export ANTHROPIC_API_KEY='your-api-key'
+
+# Required for QA Agent: Set agent type for RBAC
+export AGENT_TYPE=QA
+```
+
+#### 3. Create Feature List
+
+Create a `feature_list.json` in your project:
+
+```json
+[
+  {
+    "id": 1,
+    "description": "User login page with email/password",
+    "test_steps": [
+      "Navigate to /login",
+      "Enter valid credentials",
+      "Click login button",
+      "Verify redirect to dashboard"
+    ],
+    "passes": false,
+    "qa_validated": false,
+    "timeout_minutes": 10
+  }
+]
+```
+
+### Running the QA Agent
+
+#### Validate a Single Feature
+
+```bash
+# Using CLI entry point (recommended)
+export AGENT_TYPE=QA
+uv run ac-qa --project-dir ./my_project --feature-id 1
+
+# Or using the review script
+./scripts/review_qa.sh ./my_project
+```
+
+#### Programmatic Usage
+
+```python
+from quality.qa_agent import QAAgent
+from pathlib import Path
+
+# Initialize QA Agent
+qa = QAAgent(Path("./my_project"))
+
+# Run all 5 quality gates on a feature
+report = qa.run_quality_gates(
+    feature_id=1,
+    feature_description="User login page"
+)
+
+# Save the detailed report
+qa.save_report(report)
+
+# Update feature status in feature_list.json
+qa.update_feature_status(
+    feature_id=1,
+    passed=report["overall_status"] == "PASSED",
+    qa_report_path="qa-reports/feature-1-2024-01-15.json"
+)
+```
+
+### The 5 Quality Gates
+
+| Gate | Tool | What It Checks |
+|------|------|----------------|
+| **Lint** | Biome/Ruff | Code style, formatting, anti-patterns |
+| **Type Check** | TypeScript/Mypy | Type safety and type annotations |
+| **Unit Tests** | Vitest/Pytest | Unit test pass/fail status |
+| **Browser Automation** | Playwright | E2E tests, UI interactions |
+| **Story Validation** | Playwright | User acceptance criteria from test_steps |
+
+Each gate produces:
+- `passed`: Boolean status
+- `duration_seconds`: Execution time
+- `errors[]`: Detailed error list with file:line:column
+- `tool_version`: Version of the tool used
+
+### Regression Detection
+
+Detect regressions in previously passing features:
+
+```python
+# Run regression suite on all passing features
+qa = QAAgent(Path("./my_project"))
+suite_report = qa.run_regression_suite()
+
+# Check results
+print(f"Features tested: {suite_report['features_tested']}")
+print(f"Regressions found: {suite_report['regressions_found']}")
+
+# Regressions include git blame info
+for result in suite_report['features']:
+    if result['regression_analysis']['is_regression']:
+        print(f"Regression in Feature #{result['feature_id']}")
+        for failure in result['regression_analysis']['new_failures']:
+            for error in failure.get('errors', []):
+                blame = error.get('git_blame', {})
+                print(f"  Introduced by: {blame.get('author')} in {blame.get('commit')}")
+```
+
+### Summary Reports
+
+Generate comprehensive reports with metrics and trends:
+
+```python
+qa = QAAgent(Path("./my_project"))
+summary = qa.generate_summary_report()
+
+# Produces both JSON and Markdown reports in qa-reports/
+# - summary-YYYY-MM-DD-HH-MM-SS.json
+# - summary-YYYY-MM-DD-HH-MM-SS.md
+```
+
+Example Markdown output:
+
+```markdown
+# QA Summary Report
+
+## Overview
+- **Total Features:** 50
+- **Passing:** 45
+- **Failing:** 5
+- **QA Validated:** 48
+
+## Coverage Metrics
+- **Pass Rate:** 90.0%
+
+### Pass Rate Progress
+[████████████████████████████████████░░░░] 90.0%
+
+## Gate Statistics
+| Gate | Passed | Failed | Errors |
+|------|--------|--------|--------|
+| lint | 48 | 2 | 15 |
+| type_check | 50 | 0 | 0 |
+...
+```
+
+### Running the Orchestrator
+
+The Orchestrator manages the full workflow:
+
+```bash
+# Using CLI entry point (recommended)
+uv run ac-orchestrator --project-dir ./my_project
+
+# Or using the script
+./scripts/run_orchestrator.sh ./my_project
+```
+
+**Key Features:**
+- Signal file polling (checks `.agent-signals/` directory)
+- Automatic state transitions
+- Sequential agent execution
+- Timeout handling per feature
+- Graceful shutdown (Ctrl+C)
+
+#### Orchestrator Configuration
+
+```bash
+# Optional: Override default settings
+uv run ac-orchestrator \
+  --project-dir ./my_project \
+  --poll-interval 5 \
+  --timeout-minutes 30
+```
+
+### Token Consumption Tracking
+
+The autonomous agent automatically tracks API token consumption for each project:
+
+**Automatic Features:**
+- Tracks input/output tokens per API call
+- Records usage per session and endpoint
+- Estimates costs based on Claude pricing
+- Generates JSON report in project directory
+
+**Report Location:**
+```
+my_project/
+├── token-consumption-report.json   # Full consumption report
+└── logs/
+    └── token-usage.log             # Session log
+```
+
+**Report Contents:**
+```json
+{
+  "summary": {
+    "total_sessions": 5,
+    "total_api_calls": 150,
+    "total_input_tokens": 500000,
+    "total_output_tokens": 200000,
+    "total_tokens": 700000,
+    "estimated_cost_usd": 4.50
+  },
+  "endpoint_breakdown": {
+    "https://api.anthropic.com": { "calls": 50, "total_tokens": 200000 },
+    "https://other-endpoint.com": { "calls": 100, "total_tokens": 500000 }
+  }
+}
+```
+
+**End of Session Summary:**
+```
+============================================================
+  API TOKEN CONSUMPTION REPORT
+============================================================
+  Project: my_project
+  Sessions: 5
+  API Calls: 150
+
+  Token Usage:
+    Input:  500,000 tokens
+    Output: 200,000 tokens
+    Total:  700,000 tokens
+
+  Estimated Cost: $4.5000 USD
+============================================================
+```
+
+### API Key Rotation
+
+For long-running sessions, configure multiple API keys:
+
+```bash
+export ANTHROPIC_API_KEY_1="sk-ant-key-1"
+export ANTHROPIC_API_KEY_2="sk-ant-key-2"
+export ANTHROPIC_API_KEY_3="sk-ant-key-3"
+```
+
+Or create a `.env` file in your project root:
+```bash
+# .env
+ANTHROPIC_API_KEY_1="sk-ant-key-1"
+ANTHROPIC_BASE_URL_1="https://api.anthropic.com"
+ANTHROPIC_API_KEY_2="sk-ant-key-2"
+ANTHROPIC_BASE_URL_2="https://api.anthropic.com"
+```
+
+The system automatically:
+- Rotates on rate limit errors
+- Applies differential cooling (longer wait for repeated errors)
+- Tracks usage per key
+
+### Local Testing
+
+#### Running the Orchestrator Locally
+
+The orchestrator manages the full Init → Dev → QA workflow. For local testing:
+
+```bash
+# Option 1: Using the CLI entry point (recommended)
+uv run ac-orchestrator --project-dir ./my_project
+
+# Option 2: Using the script
+./scripts/run_orchestrator.sh ./my_project
+
+# Option 3: Direct Python invocation
+PYTHONPATH=src uv run python -c "
+from core.orchestrator import Orchestrator
+from pathlib import Path
+import asyncio
+
+orchestrator = Orchestrator(Path('./my_project'))
+asyncio.run(orchestrator.run())
+"
+```
+
+#### Testing Individual Components
+
+```bash
+# Run the demo agent
+uv run ac-demo --project-dir ./my_project --max-iterations 3
+
+# Run QA validation on a feature
+export AGENT_TYPE=QA
+uv run ac-qa --project-dir ./my_project --feature-id 1
+
+# Run all tests
+uv run pytest
+
+# Run tests with coverage
+uv run pytest --cov=src --cov-report=html
+
+# Lint the codebase
+uv run ruff check src/ tests/
+
+# Type check
+uv run mypy src/
+```
+
+#### Production Deployment (Linux)
+
+For production environments, use the systemd service file:
+
+```bash
+# Copy the service file
+sudo cp docs/orchestrator.service /etc/systemd/system/
+
+# Edit to configure your paths and API keys
+sudo nano /etc/systemd/system/orchestrator.service
+
+# Enable and start
+sudo systemctl daemon-reload
+sudo systemctl enable orchestrator
+sudo systemctl start orchestrator
+
+# Monitor logs
+sudo journalctl -u orchestrator -f
+```
+
+See `docs/orchestrator.service` for full configuration options.
+
+### Publishing as a Python Package
+
+#### Building the Package
+
+```bash
+# Build both wheel and source distribution
+uv build
+
+# Output will be in dist/
+ls dist/
+# autonomous_coding-2.0.0-py3-none-any.whl
+# autonomous_coding-2.0.0.tar.gz
+```
+
+#### Publishing to PyPI
+
+```bash
+# First, set your PyPI credentials
+export UV_PUBLISH_TOKEN="pypi-your-token-here"
+
+# Or use username/password
+export UV_PUBLISH_USERNAME="__token__"
+export UV_PUBLISH_PASSWORD="pypi-your-token-here"
+
+# Publish to PyPI
+uv publish
+
+# Or publish to TestPyPI first
+uv publish --publish-url https://test.pypi.org/legacy/
+```
+
+#### Installing from PyPI (after publishing)
+
+```bash
+# Install the package
+uv pip install autonomous-coding
+
+# Or with optional dependencies
+uv pip install autonomous-coding[qa]       # QA tools (playwright, ruff, mypy)
+uv pip install autonomous-coding[dev]      # Development tools (pytest, etc.)
+uv pip install autonomous-coding[all]      # Everything
+
+# Use the CLI commands
+autonomous-coding --project-dir ./my_project
+ac-demo --project-dir ./my_project --max-iterations 3
+ac-orchestrator --project-dir ./my_project
+ac-qa --project-dir ./my_project --feature-id 1
+```
+
+#### Local Development Installation
+
+```bash
+# Install in development mode with all dependencies
+uv sync --all-extras
+
+# Or install specific extras
+uv sync --extra qa --extra dev
+
+# Run from source
+uv run autonomous-coding --help
+```
+
+### RBAC Enforcement
+
+Role-based access control prevents accidental status changes:
+
+| Agent | Can Modify |
+|-------|-----------|
+| **QA** | `passes`, `qa_validated`, `last_qa_run`, `qa_notes`, `qa_report_path` |
+| **DEV** | All fields except QA-protected fields |
+
+**Install the pre-commit hook:**
+
+```bash
+cp hooks/pre-commit .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+```
+
+### QA Report Structure
+
+Reports are saved to `qa-reports/feature-{id}-{timestamp}.json`:
+
+```json
+{
+  "feature_id": 1,
+  "overall_status": "FAILED",
+  "gates": {
+    "lint": { "passed": true, "duration_seconds": 2.5, "errors": [] },
+    "type_check": { "passed": true, "duration_seconds": 8.3, "errors": [] },
+    "unit_tests": { "passed": false, "duration_seconds": 15.2, "errors": [...] },
+    "browser_automation": { "passed": true, "duration_seconds": 25.8, "errors": [] },
+    "story_validation": { "passed": true, "duration_seconds": 18.4, "errors": [] }
+  },
+  "priority_fixes": [
+    {
+      "priority": 3,
+      "gate": "unit_tests",
+      "message": "Fix failing test 'should save profile' in src/Profile.test.tsx:45",
+      "file": "src/Profile.test.tsx",
+      "line": 45
+    }
+  ],
+  "summary": {
+    "gates_passed": 4,
+    "gates_failed": 1,
+    "total_errors": 2
+  }
+}
+```
+
+### Project Files
+
+After running with QA Agent, your project will contain:
+
+```
+my_project/
+├── feature_list.json       # Feature list with QA metadata
+├── qa-reports/             # QA validation reports
+│   ├── feature-1-2024-01-15-10-30-00.json
+│   ├── regression-suite-2024-01-15.json
+│   └── summary-2024-01-15.md
+├── screenshots/            # Story validation screenshots
+│   └── feature-1-step-1-*.png
+├── .agent-signals/         # Agent completion signals (orchestrator)
+│   └── QA-session-123.json
+└── workflow-state.json     # Current workflow state (orchestrator)
+```
+
+### Troubleshooting
+
+**"RBAC VIOLATION" on commit**
+- Set the correct `AGENT_TYPE` environment variable
+- Only QA Agent can modify protected fields (`passes`, `qa_validated`, etc.)
+
+**"Playwright browser not found"**
+```bash
+python -m playwright install chromium
+```
+
+**"feature_list.json not found"**
+- Create the file in your project root with at least one feature
+
+**"API rate limit"**
+- Configure multiple API keys for rotation
+- The system will automatically rotate and apply cooling periods
+
+### Example Workflow
+
+1. **Initialize project** with Initializer Agent
+2. **Dev Agent implements** features, marks `passes: true`
+3. **Orchestrator detects** completion, transitions to QA_READY
+4. **QA Agent validates** with 5 quality gates
+5. If **PASSED**: Feature is complete
+6. If **FAILED**: Transitions to DEV_FEEDBACK with priority_fixes
+
+```bash
+# Full autonomous workflow
+uv run ac-orchestrator --project-dir ./my_project
+
+# Or manual QA validation
+export AGENT_TYPE=QA
+uv run ac-qa --project-dir ./my_project --feature-id 1
+```
+
+---
+
+## License
+
+Internal Anthropic use.

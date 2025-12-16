@@ -1,0 +1,745 @@
+<project_specification>
+  <project_name>TaskFlow - Modern Task Management Application</project_name>
+
+  <overview>
+    Build a comprehensive task management and productivity application inspired by tools like Todoist
+    and Linear. The application should provide an intuitive interface for managing personal and team
+    tasks with features like project organization, due dates, priorities, recurring tasks, and
+    productivity analytics. Focus on a clean, modern UI with excellent keyboard navigation and
+    real-time collaboration capabilities.
+  </overview>
+
+  <technology_stack>
+    <language_preference>
+      IMPORTANT: Use TypeScript (.ts, .tsx) for ALL code. Do NOT use JavaScript (.js, .jsx).
+      All files must have proper type annotations and strict type checking enabled.
+    </language_preference>
+    <api_key>
+        You can use an API key located at /tmp/api-key for testing. You will not be allowed to read this file, but you can reference it in code.
+    </api_key>
+    <frontend>
+      <framework>React 18+ with Vite and TypeScript</framework>
+      <language>TypeScript (strict mode) - use .tsx for components, .ts for utilities</language>
+      <styling>Tailwind CSS (via CDN or PostCSS)</styling>
+      <state_management>React hooks with typed state, Context API, and Zustand with TypeScript</state_management>
+      <routing>React Router v6 with typed routes</routing>
+      <drag_drop>@dnd-kit for drag and drop functionality (with TypeScript types)</drag_drop>
+      <date_handling>date-fns for date manipulation (excellent TypeScript support)</date_handling>
+      <type_safety>Enable strict mode in tsconfig.json, no implicit any</type_safety>
+      <port>Only launch on port {frontend_port}</port>
+    </frontend>
+    <backend>
+      <runtime>Node.js with Express and TypeScript</runtime>
+      <language>TypeScript - compile with tsc or ts-node for development</language>
+      <database>SQLite with better-sqlite3 (with typed queries)</database>
+      <authentication>JWT-based authentication with refresh tokens (typed middleware)</authentication>
+      <real_time>WebSocket for real-time updates (typed events)</real_time>
+      <type_safety>Use interfaces for all API request/response types</type_safety>
+    </backend>
+    <communication>
+      <api>RESTful endpoints with typed request/response interfaces</api>
+      <websocket>Socket.io with TypeScript for real-time collaboration</websocket>
+      <shared_types>Create shared type definitions for frontend and backend</shared_types>
+    </communication>
+  </technology_stack>
+
+  <prerequisites>
+    <environment_setup>
+      - Repository includes .env with JWT_SECRET configured
+      - Frontend dependencies pre-installed via pnpm
+      - Backend code goes in /server directory
+      - Install backend dependencies as needed
+    </environment_setup>
+  </prerequisites>
+
+  <core_features>
+    <task_management>
+      - Create tasks with title, description, and rich text support
+      - Set due dates with date picker and natural language input
+      - Assign priority levels (P1: Urgent, P2: High, P3: Medium, P4: Low)
+      - Add labels/tags for categorization
+      - Set task status (Todo, In Progress, Done, Blocked)
+      - Create subtasks and checklists
+      - Task comments and activity log
+      - File attachments on tasks
+      - Task duplication and templates
+      - Bulk task operations (select multiple, archive, delete, move)
+      - Task dependencies (blocked by, blocking)
+      - Estimated time and time tracking
+    </task_management>
+
+    <project_organization>
+      - Create projects with name, description, and color
+      - Project templates for quick setup
+      - Archive and delete projects
+      - Project-level settings and permissions
+      - Project progress tracking (% complete)
+      - Project due dates and milestones
+      - Favorite/star projects for quick access
+      - Project views: List, Board (Kanban), Calendar, Timeline
+    </project_organization>
+
+    <inbox_and_quick_add>
+      - Inbox for uncategorized tasks
+      - Quick add with keyboard shortcut (Q)
+      - Natural language parsing for dates ("tomorrow", "next Monday")
+      - Quick add supports project assignment
+      - Smart suggestions based on patterns
+    </inbox_and_quick_add>
+
+    <views_and_filters>
+      - Today view (tasks due today + overdue)
+      - Upcoming view (next 7 days, next 30 days)
+      - Project-specific views
+      - Custom filtered views (save filters)
+      - Sort by due date, priority, created date, alphabetical
+      - Filter by label, project, priority, status
+      - Search across all tasks with instant results
+      - Kanban board view with drag-and-drop
+      - Calendar view with drag-to-reschedule
+    </views_and_filters>
+
+    <recurring_tasks>
+      - Daily, weekly, monthly, yearly recurrence
+      - Custom recurrence patterns
+      - Skip or reschedule occurrence
+      - View recurring task history
+      - End date for recurring series
+    </recurring_tasks>
+
+    <collaboration>
+      - Share projects with team members
+      - Assign tasks to users
+      - Real-time updates via WebSocket
+      - @mentions in comments
+      - Activity feed per project
+      - Role-based permissions (Admin, Editor, Viewer)
+      - Email notifications for assignments
+    </collaboration>
+
+    <productivity_features>
+      - Productivity stats dashboard
+      - Tasks completed today/this week/this month
+      - Streak tracking (consecutive days with completions)
+      - Focus mode (hide everything except current task)
+      - Pomodoro timer integration
+      - Daily/weekly review prompts
+      - Goals and targets setting
+    </productivity_features>
+
+    <settings_preferences>
+      - Theme selection (Light, Dark, System)
+      - Default project and view settings
+      - Notification preferences
+      - Keyboard shortcuts customization
+      - Date and time format preferences
+      - Language selection
+      - Data export (JSON, CSV)
+      - Account deletion
+    </settings_preferences>
+
+    <keyboard_navigation>
+      - Full keyboard navigation support
+      - Command palette (Cmd/Ctrl+K)
+      - Quick actions: Q (quick add), T (today), U (upcoming)
+      - Navigation: J/K (up/down), Enter (open), Esc (close)
+      - Task actions: C (complete), E (edit), D (delete)
+      - Vim-style navigation option
+    </keyboard_navigation>
+
+    <accessibility>
+      - ARIA labels on all interactive elements
+      - Screen reader support
+      - High contrast mode
+      - Reduced motion support
+      - Focus indicators
+      - Skip to main content link
+    </accessibility>
+
+    <responsive_design>
+      - Mobile-first responsive layout
+      - Touch-optimized for tablets
+      - Swipe gestures for task completion
+      - Collapsible sidebar on mobile
+      - Bottom navigation on mobile
+      - PWA support with offline capability
+    </responsive_design>
+  </core_features>
+
+  <database_schema>
+    <tables>
+      <users>
+        - id (UUID, primary key)
+        - email (unique, not null)
+        - password_hash (not null)
+        - name
+        - avatar_url
+        - preferences (JSON: theme, default_project, notifications)
+        - timezone
+        - created_at
+        - updated_at
+        - last_login_at
+      </users>
+
+      <projects>
+        - id (UUID, primary key)
+        - user_id (foreign key to users)
+        - name (not null)
+        - description
+        - color (hex code)
+        - icon
+        - is_favorite (boolean, default false)
+        - is_archived (boolean, default false)
+        - view_preference (list, board, calendar)
+        - sort_order (integer)
+        - created_at
+        - updated_at
+      </projects>
+
+      <tasks>
+        - id (UUID, primary key)
+        - project_id (foreign key to projects, nullable for inbox)
+        - parent_task_id (foreign key to tasks, nullable for subtasks)
+        - title (not null)
+        - description (rich text/markdown)
+        - status (enum: todo, in_progress, done, blocked)
+        - priority (enum: p1, p2, p3, p4)
+        - due_date (date, nullable)
+        - due_time (time, nullable)
+        - completed_at (timestamp, nullable)
+        - position (integer for ordering)
+        - estimated_minutes (integer, nullable)
+        - actual_minutes (integer, nullable)
+        - created_by (foreign key to users)
+        - assigned_to (foreign key to users, nullable)
+        - created_at
+        - updated_at
+      </tasks>
+
+      <labels>
+        - id (UUID, primary key)
+        - user_id (foreign key to users)
+        - name (not null)
+        - color (hex code)
+        - created_at
+      </labels>
+
+      <task_labels>
+        - task_id (foreign key to tasks)
+        - label_id (foreign key to labels)
+        - PRIMARY KEY (task_id, label_id)
+      </task_labels>
+
+      <recurring_rules>
+        - id (UUID, primary key)
+        - task_id (foreign key to tasks)
+        - frequency (enum: daily, weekly, monthly, yearly, custom)
+        - interval (integer, default 1)
+        - days_of_week (JSON array, for weekly)
+        - day_of_month (integer, for monthly)
+        - end_date (date, nullable)
+        - created_at
+      </recurring_rules>
+
+      <comments>
+        - id (UUID, primary key)
+        - task_id (foreign key to tasks)
+        - user_id (foreign key to users)
+        - content (text, not null)
+        - created_at
+        - updated_at
+      </comments>
+
+      <attachments>
+        - id (UUID, primary key)
+        - task_id (foreign key to tasks)
+        - filename (not null)
+        - file_path (not null)
+        - file_size (integer)
+        - mime_type
+        - uploaded_by (foreign key to users)
+        - created_at
+      </attachments>
+
+      <activity_log>
+        - id (UUID, primary key)
+        - task_id (foreign key to tasks, nullable)
+        - project_id (foreign key to projects, nullable)
+        - user_id (foreign key to users)
+        - action (enum: created, updated, completed, commented, etc.)
+        - details (JSON)
+        - created_at
+      </activity_log>
+
+      <project_members>
+        - project_id (foreign key to projects)
+        - user_id (foreign key to users)
+        - role (enum: owner, admin, editor, viewer)
+        - invited_at
+        - accepted_at
+        - PRIMARY KEY (project_id, user_id)
+      </project_members>
+
+      <saved_filters>
+        - id (UUID, primary key)
+        - user_id (foreign key to users)
+        - name (not null)
+        - filters (JSON: project, labels, priority, status, date_range)
+        - is_favorite (boolean)
+        - created_at
+      </saved_filters>
+    </tables>
+  </database_schema>
+
+  <api_endpoints_summary>
+    <authentication>
+      - POST /api/auth/register
+      - POST /api/auth/login
+      - POST /api/auth/logout
+      - POST /api/auth/refresh
+      - GET /api/auth/me
+      - PUT /api/auth/profile
+      - PUT /api/auth/password
+      - DELETE /api/auth/account
+    </authentication>
+
+    <tasks>
+      - GET /api/tasks (with query params for filters)
+      - POST /api/tasks
+      - GET /api/tasks/:id
+      - PUT /api/tasks/:id
+      - DELETE /api/tasks/:id
+      - POST /api/tasks/:id/complete
+      - POST /api/tasks/:id/uncomplete
+      - POST /api/tasks/:id/duplicate
+      - PUT /api/tasks/:id/move (change project)
+      - PUT /api/tasks/reorder (batch position update)
+      - GET /api/tasks/search?q=query
+    </tasks>
+
+    <subtasks>
+      - GET /api/tasks/:id/subtasks
+      - POST /api/tasks/:id/subtasks
+      - PUT /api/subtasks/:id
+      - DELETE /api/subtasks/:id
+    </subtasks>
+
+    <projects>
+      - GET /api/projects
+      - POST /api/projects
+      - GET /api/projects/:id
+      - PUT /api/projects/:id
+      - DELETE /api/projects/:id
+      - POST /api/projects/:id/archive
+      - POST /api/projects/:id/unarchive
+      - PUT /api/projects/:id/favorite
+      - GET /api/projects/:id/tasks
+      - GET /api/projects/:id/activity
+    </projects>
+
+    <labels>
+      - GET /api/labels
+      - POST /api/labels
+      - PUT /api/labels/:id
+      - DELETE /api/labels/:id
+    </labels>
+
+    <comments>
+      - GET /api/tasks/:id/comments
+      - POST /api/tasks/:id/comments
+      - PUT /api/comments/:id
+      - DELETE /api/comments/:id
+    </comments>
+
+    <recurring>
+      - GET /api/tasks/:id/recurring
+      - POST /api/tasks/:id/recurring
+      - PUT /api/recurring/:id
+      - DELETE /api/recurring/:id
+    </recurring>
+
+    <collaboration>
+      - GET /api/projects/:id/members
+      - POST /api/projects/:id/members
+      - PUT /api/projects/:id/members/:userId
+      - DELETE /api/projects/:id/members/:userId
+    </collaboration>
+
+    <views>
+      - GET /api/views/today
+      - GET /api/views/upcoming
+      - GET /api/views/inbox
+      - GET /api/filters
+      - POST /api/filters
+      - PUT /api/filters/:id
+      - DELETE /api/filters/:id
+    </views>
+
+    <stats>
+      - GET /api/stats/productivity
+      - GET /api/stats/streak
+      - GET /api/stats/completed
+    </stats>
+
+    <settings>
+      - GET /api/settings
+      - PUT /api/settings
+      - GET /api/export
+    </settings>
+  </api_endpoints_summary>
+
+  <ui_layout>
+    <main_structure>
+      - Three-column layout: sidebar (navigation), main (task list), detail (task panel)
+      - Collapsible sidebar with resize handle
+      - Responsive: single column on mobile, adaptive on tablet
+      - Persistent header with quick add and search
+      - Command palette overlay (Cmd/Ctrl+K)
+    </main_structure>
+
+    <sidebar_left>
+      - User avatar and name at top
+      - Quick add button (prominent)
+      - Navigation items:
+        - Inbox (with count badge)
+        - Today (with count badge)
+        - Upcoming
+        - Filters & Labels
+      - Projects section (collapsible)
+        - Favorite projects first
+        - Add project button
+        - Project list with color indicators
+      - Settings gear at bottom
+    </sidebar_left>
+
+    <main_content_area>
+      - View title and actions bar
+      - View switcher (List, Board, Calendar)
+      - Sort and filter dropdowns
+      - Task list with:
+        - Checkbox for completion
+        - Task title (click to expand)
+        - Due date badge
+        - Priority indicator
+        - Labels as colored pills
+        - Assignee avatar
+        - Subtask count
+        - Comment count
+      - Empty state with illustration
+      - Load more / infinite scroll
+    </main_content_area>
+
+    <task_detail_panel>
+      - Task title (editable inline)
+      - Status selector dropdown
+      - Project selector
+      - Due date picker
+      - Priority selector
+      - Labels multi-select
+      - Assignee selector
+      - Description editor (rich text)
+      - Subtasks checklist
+      - Comments section
+      - Activity log
+      - Attachments
+      - Delete/archive actions
+      - Close panel button
+    </task_detail_panel>
+
+    <modals_overlays>
+      - Quick add modal (centered)
+      - Command palette (top-center)
+      - Project settings modal
+      - Share project modal
+      - Label manager modal
+      - Keyboard shortcuts reference
+      - Confirmation dialogs
+    </modals_overlays>
+  </ui_layout>
+
+  <design_system>
+    <color_palette>
+      - Primary: Indigo (#6366F1)
+      - Primary hover: (#4F46E5)
+      - Background: White (#FFFFFF) light, Dark gray (#0F172A) dark
+      - Surface: Light gray (#F8FAFC) light, Slate (#1E293B) dark
+      - Text: Slate 900 (#0F172A) light, Slate 100 (#F1F5F9) dark
+      - Text muted: Slate 500 (#64748B)
+      - Border: Slate 200 (#E2E8F0) light, Slate 700 (#334155) dark
+      - Success: Green 500 (#22C55E)
+      - Warning: Amber 500 (#F59E0B)
+      - Error: Red 500 (#EF4444)
+      - Priority colors:
+        - P1 (Urgent): Red (#EF4444)
+        - P2 (High): Orange (#F97316)
+        - P3 (Medium): Yellow (#EAB308)
+        - P4 (Low): Blue (#3B82F6)
+    </color_palette>
+
+    <typography>
+      - Font family: Inter, system-ui, sans-serif
+      - Headings: font-semibold
+      - Body: font-normal, text-sm (14px) base
+      - Small text: text-xs (12px)
+      - Monospace: JetBrains Mono for code
+      - Line height: relaxed (1.5)
+    </typography>
+
+    <components>
+      <buttons>
+        - Primary: Indigo bg, white text, rounded-lg, hover darken
+        - Secondary: Border style, transparent bg, hover bg-slate-100
+        - Ghost: No border, hover bg-slate-100
+        - Icon buttons: Square, rounded-md, hover bg-slate-100
+        - Sizes: sm (h-8), md (h-10), lg (h-12)
+      </buttons>
+
+      <inputs>
+        - Rounded-lg borders
+        - Focus ring with primary color
+        - Placeholder text in slate-400
+        - Error state with red border
+        - Disabled state with reduced opacity
+      </inputs>
+
+      <task_item>
+        - Hover background highlight
+        - Checkbox with animation on complete
+        - Strikethrough completed tasks
+        - Compact and comfortable density options
+      </task_item>
+
+      <badges>
+        - Rounded-full for labels
+        - Small text size
+        - Color customizable
+        - Close button on hover (for removal)
+      </badges>
+
+      <dropdown>
+        - Rounded-lg with shadow
+        - Animated entrance
+        - Dividers for sections
+        - Keyboard navigable
+      </dropdown>
+    </components>
+
+    <animations>
+      - Smooth transitions (150ms ease)
+      - Task completion: checkbox check animation
+      - List item: fade in on add, fade out on delete
+      - Panel: slide in from right
+      - Modal: fade + scale entrance
+      - Loading: skeleton pulse animation
+      - Drag and drop: lift and shadow effect
+    </animations>
+
+    <spacing>
+      - Base unit: 4px
+      - Common padding: p-4 (16px), p-6 (24px)
+      - Task item padding: py-2 px-4
+      - Section gaps: gap-4, gap-6
+      - Sidebar width: 240px (collapsible to 60px)
+      - Detail panel width: 400px
+    </spacing>
+  </design_system>
+
+  <key_interactions>
+    <task_creation>
+      1. Press Q or click Quick Add
+      2. Type task title
+      3. Use natural language for date ("tomorrow at 3pm")
+      4. Use # to assign project
+      5. Use ! to set priority (!1 for P1)
+      6. Use @ to assign to user
+      7. Press Enter to create
+    </task_creation>
+
+    <task_completion>
+      1. Click checkbox or press C with task selected
+      2. Checkbox animates with checkmark
+      3. Task title gets strikethrough
+      4. Confetti animation (optional)
+      5. Task moves to completed section or disappears
+      6. Streak counter updates
+    </task_completion>
+
+    <drag_and_drop>
+      1. Hover over task, grab handle appears
+      2. Drag lifts task with shadow
+      3. Drop zones highlight
+      4. Drop to reorder, change project, or change status
+      5. Kanban board: drag between columns
+      6. Calendar: drag to reschedule
+    </drag_and_drop>
+
+    <keyboard_navigation>
+      1. J/K to move up/down in list
+      2. Enter to open task detail
+      3. Esc to close detail panel
+      4. C to toggle complete
+      5. E to edit task title
+      6. D to delete (with confirmation)
+      7. Cmd/Ctrl+K for command palette
+    </keyboard_navigation>
+  </key_interactions>
+
+  <implementation_steps>
+    <step number="1">
+      <title>Setup Project Foundation</title>
+      <tasks>
+        - Initialize Vite React project with TypeScript template (npm create vite@latest client -- --template react-ts)
+        - Initialize Express backend with TypeScript (tsconfig.json with strict: true)
+        - Create shared types directory for frontend/backend type sharing
+        - Set up SQLite with better-sqlite3 and typed query helpers
+        - Create database schema with TypeScript interfaces
+        - Implement typed JWT authentication middleware
+        - Set up WebSocket server with typed events
+        - Create health check endpoint
+        - Configure CORS
+      </tasks>
+    </step>
+
+    <step number="2">
+      <title>Core Task Management API</title>
+      <tasks>
+        - Implement task CRUD endpoints
+        - Add subtask support
+        - Implement task status transitions
+        - Add priority and due date handling
+        - Create task search functionality
+        - Add task reordering
+      </tasks>
+    </step>
+
+    <step number="3">
+      <title>Project and Label Management</title>
+      <tasks>
+        - Implement project CRUD
+        - Add label management
+        - Create task-label associations
+        - Implement project favorites
+        - Add archive functionality
+      </tasks>
+    </step>
+
+    <step number="4">
+      <title>Frontend Core UI</title>
+      <tasks>
+        - Create main layout with sidebar
+        - Build task list component
+        - Implement task item with interactions
+        - Create task detail panel
+        - Add quick add modal
+        - Implement empty states
+      </tasks>
+    </step>
+
+    <step number="5">
+      <title>Views and Filtering</title>
+      <tasks>
+        - Implement Today view
+        - Create Upcoming view
+        - Build Inbox view
+        - Add sort and filter UI
+        - Implement saved filters
+        - Create search interface
+      </tasks>
+    </step>
+
+    <step number="6">
+      <title>Advanced Task Features</title>
+      <tasks>
+        - Add recurring tasks support
+        - Implement comments system
+        - Add file attachments
+        - Create activity log
+        - Build task templates
+      </tasks>
+    </step>
+
+    <step number="7">
+      <title>Board and Calendar Views</title>
+      <tasks>
+        - Build Kanban board view
+        - Implement drag-and-drop
+        - Create calendar view
+        - Add drag-to-reschedule
+        - View switching UI
+      </tasks>
+    </step>
+
+    <step number="8">
+      <title>Collaboration Features</title>
+      <tasks>
+        - Implement project sharing
+        - Add user assignment
+        - Create real-time updates
+        - Build @mention support
+        - Add notification system
+      </tasks>
+    </step>
+
+    <step number="9">
+      <title>Productivity Features</title>
+      <tasks>
+        - Build productivity dashboard
+        - Implement streak tracking
+        - Add focus mode
+        - Create daily review
+        - Build goals system
+      </tasks>
+    </step>
+
+    <step number="10">
+      <title>Polish and Optimization</title>
+      <tasks>
+        - Implement keyboard shortcuts
+        - Add command palette
+        - Create onboarding flow
+        - Optimize performance
+        - Add PWA support
+        - Accessibility audit
+      </tasks>
+    </step>
+  </implementation_steps>
+
+  <success_criteria>
+    <functionality>
+      - All CRUD operations work correctly
+      - Real-time updates function across clients
+      - Search returns accurate results
+      - Drag-and-drop works smoothly
+      - Recurring tasks create on schedule
+      - All views display correct data
+    </functionality>
+
+    <user_experience>
+      - Task creation under 2 seconds
+      - Intuitive navigation
+      - Keyboard shortcuts work reliably
+      - Mobile experience is smooth
+      - Animations feel polished
+      - Error states are clear
+    </user_experience>
+
+    <technical_quality>
+      - Zero critical bugs
+      - Type-safe code throughout
+      - All tests passing
+      - Lighthouse score > 90
+      - Accessible (WCAG 2.1 AA)
+      - Clean code architecture
+    </technical_quality>
+
+    <design_polish>
+      - Consistent with design system
+      - Beautiful typography
+      - Smooth animations
+      - Dark mode fully implemented
+      - Responsive at all breakpoints
+      - Professional appearance
+    </design_polish>
+  </success_criteria>
+</project_specification>
+
