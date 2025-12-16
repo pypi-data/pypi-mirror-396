@@ -1,0 +1,238 @@
+# UNDER CONSTRUCTION
+
+This package is still being developed and only just entering alpha stage of development.
+
+TODO: Create GitHub issues from all to-dos, and tag the to-dos to those tickets. Add policy to CONTRIBUTING doc that no TODOs may be merged to main without being tagged to an open issue. Make a ticket to build a workflow that checks for that condition on PR.
+
+TODO: Build tests. Much/most/all of this code is untested, sometimes not even by quick tests in the terminal as writing, so it essentially functions as runnable pseudocode in places and should be put under test coverage.
+
+# Stormwater Monitoring datasheet extraction tool
+
+This package extracts stormwater monitoring field observations from datasheet PDFs. See the docs: https://crickets-and-comb.github.io/stormwater_monitoring_datasheet_extraction/.
+
+[Friends of Salish Sea](https://friendsofsalishsea.org) and [RE Sources](https://www.re-sources.org) have been monitoring the quality of stormwater outfalls in the Salish Sea for a few years. They use a somewhat labor-intensive data entry process that [Cascade STEAM](https://cascadesteam.org) has offered to automate. This tool, `stormwater_monitoring_datasheet_extraction` aims to do that.
+
+Currently, data collectors in the field handwrite observations in a printed PDF, and then periodically someone manually enters these observations into the database. It takes quite a bit of time to do, so they batch it out, and so it can be a while before it gets done, costing volunteer and paid hours along with creating a lag in the availability of research data for analysis and reporting.
+
+Ultimately, we might like to create a mobile app for data collectors to enter observations into directly, or further instrument existing instruments to upload directly. But, for now, we've decided to start with their existing habits and build something smaller and perhaps more managable. So, leaving a human in the loop for verification, we're using computer vision to read the hand-filled forms and extract the observations. This allows the users to continue to use pen and paper while shortening the time and labor needed to enter the data from the froms into the database.
+
+The intended workflow, then, is to pass the tool a path to the directory with images of the datasheets, and for each datasheet, the image will pop up along with the extracted data for the user to confirm or edit via a prompt. The first iteration will be a simple CLI, but a GUI may be more conducive to the task on future interations.
+
+That said, producing and supporting the CLI may serve to gain enough user trust to allow us to take bigger strides to a mobile solution.
+
+This is a [Crickets and Comb](https://cricketsandcomb.org) resource.
+
+## Structure
+
+```
+    .github/workflows                                       GitHub Actions CI/CD workflows.
+    docs                                                    RST docs and doc build staging.
+    Makefile                                                Dev tools and params. (includes shared/Makefile)
+    setup.cfg                                               Metadata and dependencies.
+    shared                                                  Shared dev tools Git submodule.
+    src/stormwater_monitoring_datasheet_extraction/api      Public and internal API.
+    src/stormwater_monitoring_datasheet_extraction/cli      Command-line-interface.
+    src/stormwater_monitoring_datasheet_extraction/lib      Implementation.
+    tests/e2e                                               End-to-end tests.
+    test/integration                                        Integration tests.
+    tests/unit                                              Unit tests.
+```
+
+## Installation
+
+To install the package, run:
+
+  $ pip install stormwater_monitoring_datasheet_extraction
+
+See https://pypi.org/project/stormwater-monitoring-datasheet-extraction/.
+
+## CLI
+
+The user interface for running the ETL process is available as a command-line interface (CLI). See the docs: [https://cricketsandcomb.org/stormwater_monitoring_datasheet_extraction/CLI.html](https://cricketsandcomb.org/stormwater_monitoring_datasheet_extraction/CLI.html)
+
+## Library functions
+
+`stormwater_monitoring_datasheet_extraction` is a library from which you can import functions. Import the main public function like this: `from stormwater_monitoring_datasheet_extraction import run_etl`. Or, import the internal version like a power user like this: `from stormwater_monitoring_datasheet_extraction.api.internal import run_etl`.
+
+Unless you're developing, avoid importing directly from library, like `from stormwater_monitoring_datasheet_extraction.lib.load_datasheets import run_etl`.
+
+## Dev workflow
+
+There are a number of dev tools in the `Makefile`. Once you set up the shared tools (below), you can list all the make tools you might want to use:
+
+    $ make list-makes
+
+Go check them out in `Makefile`.
+
+*Note: The dev tools are built around developing on a Mac, so they may not all work on Windows without some modifications.*
+
+### Shared tools setup
+
+When you first clone this repo, you'll need to set up the shared tools Git submodule. Follow the setup directions on that repo's README: https://github.com/crickets-and-comb/shared
+
+*Note: There is a lot of overlap in the documentation for this package and the shared tools. This will likely be consolidated at some point, but for now I've stopped updating this package with documentation about using `shared`, so this part may have fallen out of date. Please see documentation for `shared`.*
+
+See also https://git-scm.com/book/en/v2/Git-Tools-Submodules. And, take a look at the `.gitmodules` file in this repo.
+
+The shared repo contains dev tools that this repo depends on, namely reusable workflows (for running QC/tests and CI/CD on GitHub) and make recipes/targets for running QC/tests locally while developing.
+
+While the Makefile points to the shared Makefile via the Git submodule as a subdirectory, the workflows point to the shared reusable workflows via GitHub. You can point workflows at the shared workflows in the submodule directory (say for trying out uncommitted changes to a shared workflow) and run the workflows from `act` (see the `run-act` in the shared Makefile), but they will not run on the GitHub runners unless they point via GitHub.
+
+You can override shared make targets or add new targets that aren't in the shared Makefile by adding them to this repo's top-level Makefile.
+
+#### Updating shared tools
+
+Once you've set up the shared dev tools submodule, you'll want to periodically update it to get updates to the shared tools:
+
+  $ git submodule update --remote --merge
+
+This will update all Git submodules. To be more specific to shared, and perhaps more easy to remember, simple navigate into the shared subdirectory and pull:
+
+  $ cd shared
+  $ git checkout main
+  $ git pull
+
+Either way will pull the latest commit on the submodule's remote. Note that, while you'll be able to run with this updated shared submodule, you'll still want to commit that update to your consuming repo to track that update. After updating, you'll see an unstaged change in the submodule's commit hash that the consuming repo tracks:
+
+```bash
+$ git submodule update --remote --merge
+remote: Enumerating objects: 3, done.
+remote: Counting objects: 100% (3/3), done.
+remote: Total 3 (delta 2), reused 3 (delta 2), pack-reused 0 (from 0)
+Unpacking objects: 100% (3/3), 1.49 KiB | 761.00 KiB/s, done.
+From github.com:crickets-and-comb/shared
+   c5be642..b8cc5aa  my/shared/branch -> origin/my/shared/branch
+Updating c5be642..b8cc5aa
+Fast-forward
+ Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+Submodule path 'shared': merged in 'b8cc5aa3881af14404a491624c9251f4f774cefb'
+$ 
+$ 
+$ git diff
+diff --git a/shared b/shared
+index c5be642..b8cc5aa 160000
+--- a/shared
++++ b/shared
+@@ -1 +1 @@
+-Subproject commit c5be6421082ec103687282c1a12cf16d7968384a
++Subproject commit b8cc5aa3881af14404a491624c9251f4f774cefb
+$ 
+```
+
+#### Setting Personal Access Token
+
+The shared workflows rely on a Personal Access Token (PAT) (to checkout the submodule so they can use the make targets). You need to create a PAT with repo access and add it to the consuming repo's (`stormwater_monitoring_datasheet_extraction` in this case) action secrets as `CHECKOUT_SHARED`. See GitHub for how to set up PATs (hint: check the developer settings on your personal account) and how to add secrets to a repo's actions (hint: check the repo's settings).
+
+Note: Using a PAT tied to a single user like this is less than ideal. Figuring out how to get around this is a welcome security upgrade.
+
+### Dev installation
+
+You'll want this package's site-package files to be the source files in this repo so you can test your changes without having to reinstall. We've got some tools for that.
+
+First build and activate the env before installing this package:
+
+    $ make build-env
+    $ conda activate reference_package_py3.12
+
+Note, if you don't have Python installed, you need to pass the package name directly when you build the env: `make build-env PACKAGE_NAME=stormwater_monitoring_datasheet_extraction`. If you have Python installed (e.g., this conda env already activated), then you don't need to because it uses Python to grab the package name from the `setup.cfg` file.
+
+Then, install this package and its dev dependencies:
+
+    $ make install
+
+This installs all the dependencies in your conda env site-packages, but the files for this package's installation are now your source files in this repo.
+
+Note: Running `make install` is equivalent to running `make install INSTALL_EXTRAS=[dev]`. If you want to install 
+
+### QC and testing
+
+Before pushing commits, you'll usually want to rebuild the env and run all the QC and testing:
+
+    $ make clean format full
+
+When making smaller commits, you might just want to run some of the smaller commands:
+
+    $ make clean format full-qc full-test
+
+### Workflows: usage and limitations
+
+Using the workflows found in `.github/workflows`, QC, tests, builds, and deployment run on GitHub on certain events (e.g., pull requests, pushes to main, manual dispatches).
+
+The shared workflows (in the shared submodule at `shared/.github/workflows`) are reusable workflows, meaning they can can be called from within other workflows. See https://docs.github.com/en/actions/sharing-automations/reusing-workflows.
+
+See also `.github/workflows/test_install_dispatch.yml` workflow for an example. Here we've wrapped a single reusable workflow in another so we can dispatch it manually from the consuming repo.
+
+While wrapping a single workflow for manual dispatch is handy, we've wrapped these shared workflows into a single workflow calling them in the desired order (QC/test, build, publish, test installation, deploy docs). See `.github/workflows/CI_CD.yml`.
+
+#### Publishing to PyPi
+
+Shared workflows are split into different aspects of CI/CD, but they don't cover all of them. Specifically, they don't cover publishing packages to PyPi. This is because PyPi doesn't allow trusted publishing from reusable workflows. In `.github/workflows/CI_CD.yml`, we've defined publishing jobs within the same workflow that calls shared workflows to create a full CI/CD pipeline.
+
+#### TEST_OR_PROD
+
+Some of the workflows have a `TEST_OR_PROD` parameter. This is to control which aspects run. Some jobs and steps only run on `TEST_OR_PROD=test`, some only on `TEST_OR_PROD=prod`, some only on both, some no matter what. While the parameter defaults to "dev", this value does not enable anything in particular; it's just an unambiguous way to say neither "test" nor "prod". This is useful for avoiding deployment during development. For example, passing "dev" (or not "test" or "prod") skips uploading build artifacts to GitHub for later use, since attempting this locally with the `run-act` make target will fail (see `shared/.github/workflows/build_dist.yml` and `shared/Makefile`).
+
+Int `.github/workflows/CI_CD.yml`, we've set up the CI/CD pipeline to run on all pull requests (PRs), on pushes to main, and on manual dispatch. For pull requests, we only run QC, pre-publishing testing, and building (`TEST_OR_PROD=dev`). We don't want to publish any packages or documentation until the pull request has been approved and merged to main. On pushes to main (approved PRs), we run the same bits as PRs, and if those pass again, we run a test release to TestPyPi followed by a test installation (`TEST_OR_PROD=test`). The manual workflow_dispatch allows you to run from GitHub Actions with any parameters on any branch at any time. For instance, once you see that the test deployment succeeded and you're ready to release to PyPi and publish documentation to GitHub Pages, you then manually dispatch the workflow again with `TEST_OR_PROD=prod`.
+
+#### Developing workflows
+
+When developing the workflows themselves, you'll want to try them out locally before trying them on GitHub (which costs $ for every second of runtime). We use `act` and Docker to run workflows locally. Since `act` doesn't work with Mac and Windows architecture, it skips/fails them, but it is a good test of the Linux build.
+
+You can use a make target for that:
+
+  $ make run-act
+
+That will run `.github/workflows/CI_CD.yml`. But, you can also run any workflow you'd like by using `act` directly. See https://nektosact.com.
+
+To use this tool, you'll need to have Docker installed and running on your machine: https://www.docker.com/. You'll also need to install `act` in your terminal:
+
+  $ brew install act
+
+Additionally, you'll need to change the URLs in the calling workflows that refer to the shared workflows. `act` looks at your local files and does not follow the GitHub URL. It will fail when it tries to find the shared workflow. So, you need to point it to the local submodule. For instance, if you're calling this:
+
+```YML
+jobs:
+  CI:
+    name: QC and Tests
+    uses: crickets-and-comb/shared/.github/workflows/CI.yml@main
+    secrets: inherit
+```
+
+Change it to:
+
+```YML
+jobs:
+  CI:
+    name: QC and Tests
+    uses: ./shared/.github/workflows/CI.yml
+    secrets: inherit
+```
+
+Incidentally, you don't need to worry about the branch name with `act` as it will just run what's in your directory. GitHub, on the other hand, does need a branch reference, so you'll need to change that to test changes to workflows on GitHub. So, change the branch like this:
+
+```YML
+jobs:
+  CI:
+    name: QC and Tests
+    uses: crickets-and-comb/shared/.github/workflows/CI.yml@dev/me/my-shared-dev-branch
+    secrets: inherit
+```
+
+Further, in order to checkout the right commit of the submodule when testing a workflow on GitHub, you'll need to check a couple of things. First, make sure you have the branch set in the `.gitmodules` file. Second, make sure you've committed, in this repo, the commit hash you're testing of the shared repo submodule.
+
+It's tricky developing shared workflows, but if you're just developing this package itself, you shouldn't need to do any of this. The `full*` make targets in `Makefile` should suffice. They will run on your local machine without Docker and will look in your shared submodule without any special direction.
+
+## Matrix build and support window
+
+The shared workflows run a matrix of Python versions and OS versions. See https://github.com/crickets-and-comb/shared.
+
+While we run installation tests on Ubuntu, macOS, and Windows to ensure published packages work on all three, we run pre-publishing QC only on Ubuntu and macOS. The reason for this is that QC uses our dev tools and we don't yet support dev on Windows. Supporting Windows dev tools may only require a simple set of changes (e.g., conditionally setting filepath syntax), and is a welcome upgrade on the list of TODOs.
+
+We run QC and installation tests on a Python matrix as well (3.11 - 3.13 at time of writing). We set this matrix based on the Scientific Python SPEC 0 support window https://scientific-python.org/specs/spec-0000/#support-window. This support window includes common packages for scientific computing (e.g., `numpy` and `pandas`), and we recommend keeping relevant dependencies pinned within this support window when consuming shared tools.
+
+See https://github.com/crickets-and-comb/shared `.github/workflows/CI.yml` and `.github/workflows/test_install.yml`. See also the workflows within this repo that call them.
+
+## Acknowledgments
+
+This package is made from the Crickets and Comb `reference_package` template repo: https://github.com/crickets-and-comb/reference_package.
