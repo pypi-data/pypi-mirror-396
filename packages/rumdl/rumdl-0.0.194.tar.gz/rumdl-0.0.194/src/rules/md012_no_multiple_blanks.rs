@@ -1,0 +1,596 @@
+use crate::filtered_lines::FilteredLinesExt;
+use crate::utils::LineIndex;
+use crate::utils::range_utils::calculate_line_range;
+use std::collections::HashSet;
+use toml;
+
+use crate::rule::{Fix, LintError, LintResult, LintWarning, Rule, Severity};
+use crate::rule_config_serde::RuleConfig;
+
+mod md012_config;
+use md012_config::MD012Config;
+
+/// Rule MD012: No multiple consecutive blank lines
+///
+/// See [docs/md012.md](../../docs/md012.md) for full documentation, configuration, and examples.
+
+#[derive(Debug, Clone, Default)]
+pub struct MD012NoMultipleBlanks {
+    config: MD012Config,
+}
+
+impl MD012NoMultipleBlanks {
+    pub fn new(maximum: usize) -> Self {
+        use crate::types::PositiveUsize;
+        Self {
+            config: MD012Config {
+                maximum: PositiveUsize::new(maximum).unwrap_or(PositiveUsize::from_const(1)),
+            },
+        }
+    }
+
+    pub const fn from_config_struct(config: MD012Config) -> Self {
+        Self { config }
+    }
+
+    /// Generate warnings for excess blank lines, handling common logic for all contexts
+    fn generate_excess_warnings(
+        &self,
+        blank_start: usize,
+        blank_count: usize,
+        lines: &[&str],
+        lines_to_check: &HashSet<usize>,
+        line_index: &LineIndex,
+    ) -> Vec<LintWarning> {
+        let mut warnings = Vec::new();
+
+        let location = if blank_start == 0 {
+            "at start of file"
+        } else {
+            "between content"
+        };
+
+        for i in self.config.maximum.get()..blank_count {
+            let excess_line_num = blank_start + i;
+            if lines_to_check.contains(&excess_line_num) {
+                let excess_line = excess_line_num + 1;
+                let excess_line_content = lines.get(excess_line_num).unwrap_or(&"");
+                let (start_line, start_col, end_line, end_col) = calculate_line_range(excess_line, excess_line_content);
+                warnings.push(LintWarning {
+                    rule_name: Some(self.name().to_string()),
+                    severity: Severity::Warning,
+                    message: format!("Multiple consecutive blank lines {location}"),
+                    line: start_line,
+                    column: start_col,
+                    end_line,
+                    end_column: end_col,
+                    fix: Some(Fix {
+                        range: {
+                            let line_start = line_index.get_line_start_byte(excess_line).unwrap_or(0);
+                            let line_end = line_index
+                                .get_line_start_byte(excess_line + 1)
+                                .unwrap_or(line_start + 1);
+                            line_start..line_end
+                        },
+                        replacement: String::new(),
+                    }),
+                });
+            }
+        }
+
+        warnings
+    }
+}
+
+impl Rule for MD012NoMultipleBlanks {
+    fn name(&self) -> &'static str {
+        "MD012"
+    }
+
+    fn description(&self) -> &'static str {
+        "Multiple consecutive blank lines"
+    }
+
+    fn check(&self, ctx: &crate::lint_context::LintContext) -> LintResult {
+        let content = ctx.content;
+
+        // Early return for empty content
+        if content.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        // Quick check for consecutive newlines or potential whitespace-only lines before processing
+        // Look for multiple consecutive lines that could be blank (empty or whitespace-only)
+        let lines: Vec<&str> = content.lines().collect();
+        let has_potential_blanks = lines
+            .windows(2)
+            .any(|pair| pair[0].trim().is_empty() && pair[1].trim().is_empty());
+
+        // Also check for blanks at EOF (markdownlint behavior)
+        // Content is normalized to LF at I/O boundary
+        let ends_with_multiple_newlines = content.ends_with("\n\n");
+
+        if !has_potential_blanks && !ends_with_multiple_newlines {
+            return Ok(Vec::new());
+        }
+
+        let line_index = &ctx.line_index;
+
+        let mut warnings = Vec::new();
+
+        // Single-pass algorithm with immediate counter reset
+        let mut blank_count = 0;
+        let mut blank_start = 0;
+
+        // Use HashSet for O(1) lookups of lines that need to be checked
+        let mut lines_to_check: HashSet<usize> = HashSet::new();
+
+        // Use filtered_lines to automatically skip front-matter and code blocks
+        // The in_code_block field in LineInfo is pre-computed using pulldown-cmark
+        // and correctly handles both fenced code blocks and indented code blocks
+        for filtered_line in ctx.filtered_lines().skip_front_matter().skip_code_blocks() {
+            let line_num = filtered_line.line_num - 1; // Convert 1-based to 0-based for internal tracking
+            let line = filtered_line.content;
+
+            if line.trim().is_empty() {
+                if blank_count == 0 {
+                    blank_start = line_num;
+                }
+                blank_count += 1;
+                // Store line numbers that exceed the limit
+                if blank_count > self.config.maximum.get() {
+                    lines_to_check.insert(line_num);
+                }
+            } else {
+                if blank_count > self.config.maximum.get() {
+                    warnings.extend(self.generate_excess_warnings(
+                        blank_start,
+                        blank_count,
+                        &lines,
+                        &lines_to_check,
+                        line_index,
+                    ));
+                }
+                blank_count = 0;
+                lines_to_check.clear();
+            }
+        }
+
+        // Check for trailing blank lines
+        // Special handling: lines() doesn't create an empty string for a final trailing newline
+        // So we need to check the raw content for multiple trailing newlines
+
+        // Count consecutive newlines at the end of the file
+        let mut consecutive_newlines_at_end: usize = 0;
+        for ch in content.chars().rev() {
+            if ch == '\n' {
+                consecutive_newlines_at_end += 1;
+            } else if ch == '\r' {
+                // Skip carriage returns in CRLF
+                continue;
+            } else {
+                break;
+            }
+        }
+
+        // To have N blank lines at EOF, you need N+1 trailing newlines
+        // For example: "content\n\n" has 1 blank line (2 newlines)
+        let blank_lines_at_eof = consecutive_newlines_at_end.saturating_sub(1);
+
+        // At EOF, blank lines are always enforced to be 0 (POSIX/Prettier standard)
+        // The `maximum` config only applies to in-document blank lines
+        if blank_lines_at_eof > 0 {
+            let location = "at end of file";
+
+            // Report on the last line (which is blank)
+            let report_line = lines.len();
+
+            // Calculate how many newlines to remove
+            // Always keep exactly 1 newline at EOF (0 blank lines)
+            let target_newlines = 1;
+            let excess_newlines = consecutive_newlines_at_end - target_newlines;
+
+            // Report one warning for the excess blank lines at EOF
+            warnings.push(LintWarning {
+                rule_name: Some(self.name().to_string()),
+                severity: Severity::Warning,
+                message: format!("Multiple consecutive blank lines {location}"),
+                line: report_line,
+                column: 1,
+                end_line: report_line,
+                end_column: 1,
+                fix: Some(Fix {
+                    range: {
+                        // Remove excess trailing newlines
+                        let keep_chars = content.len() - excess_newlines;
+                        log::debug!(
+                            "MD012 EOF: consecutive_newlines_at_end={}, blank_lines_at_eof={}, target_newlines={}, excess_newlines={}, content_len={}, keep_chars={}, range={}..{}",
+                            consecutive_newlines_at_end,
+                            blank_lines_at_eof,
+                            target_newlines,
+                            excess_newlines,
+                            content.len(),
+                            keep_chars,
+                            keep_chars,
+                            content.len()
+                        );
+                        keep_chars..content.len()
+                    },
+                    replacement: String::new(),
+                }),
+            });
+        }
+
+        Ok(warnings)
+    }
+
+    fn fix(&self, ctx: &crate::lint_context::LintContext) -> Result<String, LintError> {
+        let content = ctx.content;
+
+        let mut result = Vec::new();
+        let mut blank_count = 0;
+
+        let mut in_code_block = false;
+        let mut code_block_blanks = Vec::new();
+        let mut in_front_matter = false;
+
+        // Process ALL lines (don't skip front-matter in fix mode)
+        for filtered_line in ctx.filtered_lines() {
+            let line = filtered_line.content;
+
+            // Pass through front-matter lines unchanged
+            if filtered_line.line_info.in_front_matter {
+                if !in_front_matter {
+                    // Entering front-matter: flush any accumulated blanks
+                    let allowed_blanks = blank_count.min(self.config.maximum.get());
+                    if allowed_blanks > 0 {
+                        result.extend(vec![""; allowed_blanks]);
+                    }
+                    blank_count = 0;
+                    in_front_matter = true;
+                }
+                result.push(line);
+                continue;
+            } else if in_front_matter {
+                // Exiting front-matter
+                in_front_matter = false;
+            }
+
+            // Track code blocks
+            if line.trim_start().starts_with("```") || line.trim_start().starts_with("~~~") {
+                // Handle accumulated blank lines before code block
+                if !in_code_block {
+                    let allowed_blanks = blank_count.min(self.config.maximum.get());
+                    if allowed_blanks > 0 {
+                        result.extend(vec![""; allowed_blanks]);
+                    }
+                    blank_count = 0;
+                } else {
+                    // Add accumulated blank lines inside code block
+                    result.append(&mut code_block_blanks);
+                }
+                in_code_block = !in_code_block;
+                result.push(line);
+                continue;
+            }
+
+            if in_code_block {
+                if line.trim().is_empty() {
+                    code_block_blanks.push(line);
+                } else {
+                    result.append(&mut code_block_blanks);
+                    result.push(line);
+                }
+            } else if line.trim().is_empty() {
+                blank_count += 1;
+            } else {
+                // Add allowed blank lines before content
+                let allowed_blanks = blank_count.min(self.config.maximum.get());
+                if allowed_blanks > 0 {
+                    result.extend(vec![""; allowed_blanks]);
+                }
+                blank_count = 0;
+                result.push(line);
+            }
+        }
+
+        // Handle trailing blank lines
+        // After the loop, blank_count contains the number of trailing blank lines
+        // Add up to maximum allowed trailing blank lines
+        let allowed_trailing_blanks = blank_count.min(self.config.maximum.get());
+        if allowed_trailing_blanks > 0 {
+            result.extend(vec![""; allowed_trailing_blanks]);
+        }
+
+        // Join lines and handle final newline
+        let mut output = result.join("\n");
+        if content.ends_with('\n') {
+            output.push('\n');
+        }
+
+        Ok(output)
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn should_skip(&self, ctx: &crate::lint_context::LintContext) -> bool {
+        // Skip if content is empty or doesn't have newlines (single line can't have multiple blanks)
+        ctx.content.is_empty() || !ctx.has_char('\n')
+    }
+
+    fn default_config_section(&self) -> Option<(String, toml::Value)> {
+        let default_config = MD012Config::default();
+        let json_value = serde_json::to_value(&default_config).ok()?;
+        let toml_value = crate::rule_config_serde::json_to_toml_value(&json_value)?;
+
+        if let toml::Value::Table(table) = toml_value {
+            if !table.is_empty() {
+                Some((MD012Config::RULE_NAME.to_string(), toml::Value::Table(table)))
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    fn from_config(config: &crate::config::Config) -> Box<dyn Rule>
+    where
+        Self: Sized,
+    {
+        let rule_config = crate::rule_config_serde::load_rule_config::<MD012Config>(config);
+        Box::new(Self::from_config_struct(rule_config))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::lint_context::LintContext;
+
+    #[test]
+    fn test_single_blank_line_allowed() {
+        let rule = MD012NoMultipleBlanks::default();
+        let content = "Line 1\n\nLine 2\n\nLine 3";
+        let ctx = LintContext::new(content, crate::config::MarkdownFlavor::Standard, None);
+        let result = rule.check(&ctx).unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_multiple_blank_lines_flagged() {
+        let rule = MD012NoMultipleBlanks::default();
+        let content = "Line 1\n\n\nLine 2\n\n\n\nLine 3";
+        let ctx = LintContext::new(content, crate::config::MarkdownFlavor::Standard, None);
+        let result = rule.check(&ctx).unwrap();
+        assert_eq!(result.len(), 3); // 1 extra in first gap, 2 extra in second gap
+        assert_eq!(result[0].line, 3);
+        assert_eq!(result[1].line, 6);
+        assert_eq!(result[2].line, 7);
+    }
+
+    #[test]
+    fn test_custom_maximum() {
+        let rule = MD012NoMultipleBlanks::new(2);
+        let content = "Line 1\n\n\nLine 2\n\n\n\nLine 3";
+        let ctx = LintContext::new(content, crate::config::MarkdownFlavor::Standard, None);
+        let result = rule.check(&ctx).unwrap();
+        assert_eq!(result.len(), 1); // Only the fourth blank line is excessive
+        assert_eq!(result[0].line, 7);
+    }
+
+    #[test]
+    fn test_fix_multiple_blank_lines() {
+        let rule = MD012NoMultipleBlanks::default();
+        let content = "Line 1\n\n\nLine 2\n\n\n\nLine 3";
+        let ctx = LintContext::new(content, crate::config::MarkdownFlavor::Standard, None);
+        let fixed = rule.fix(&ctx).unwrap();
+        assert_eq!(fixed, "Line 1\n\nLine 2\n\nLine 3");
+    }
+
+    #[test]
+    fn test_blank_lines_in_code_block() {
+        let rule = MD012NoMultipleBlanks::default();
+        let content = "Before\n\n```\ncode\n\n\n\nmore code\n```\n\nAfter";
+        let ctx = LintContext::new(content, crate::config::MarkdownFlavor::Standard, None);
+        let result = rule.check(&ctx).unwrap();
+        assert!(result.is_empty()); // Blank lines inside code blocks are ignored
+    }
+
+    #[test]
+    fn test_fix_preserves_code_block_blanks() {
+        let rule = MD012NoMultipleBlanks::default();
+        let content = "Before\n\n\n```\ncode\n\n\n\nmore code\n```\n\n\nAfter";
+        let ctx = LintContext::new(content, crate::config::MarkdownFlavor::Standard, None);
+        let fixed = rule.fix(&ctx).unwrap();
+        assert_eq!(fixed, "Before\n\n```\ncode\n\n\n\nmore code\n```\n\nAfter");
+    }
+
+    #[test]
+    fn test_blank_lines_in_front_matter() {
+        let rule = MD012NoMultipleBlanks::default();
+        let content = "---\ntitle: Test\n\n\nauthor: Me\n---\n\nContent";
+        let ctx = LintContext::new(content, crate::config::MarkdownFlavor::Standard, None);
+        let result = rule.check(&ctx).unwrap();
+        assert!(result.is_empty()); // Blank lines in front matter are ignored
+    }
+
+    #[test]
+    fn test_blank_lines_at_start() {
+        let rule = MD012NoMultipleBlanks::default();
+        let content = "\n\n\nContent";
+        let ctx = LintContext::new(content, crate::config::MarkdownFlavor::Standard, None);
+        let result = rule.check(&ctx).unwrap();
+        assert_eq!(result.len(), 2);
+        assert!(result[0].message.contains("at start of file"));
+    }
+
+    #[test]
+    fn test_blank_lines_at_end() {
+        let rule = MD012NoMultipleBlanks::default();
+        let content = "Content\n\n\n";
+        let ctx = LintContext::new(content, crate::config::MarkdownFlavor::Standard, None);
+        let result = rule.check(&ctx).unwrap();
+        assert_eq!(result.len(), 1);
+        assert!(result[0].message.contains("at end of file"));
+    }
+
+    #[test]
+    fn test_single_blank_at_eof_flagged() {
+        // Markdownlint behavior: ANY blank lines at EOF are flagged
+        let rule = MD012NoMultipleBlanks::default();
+        let content = "Content\n\n";
+        let ctx = LintContext::new(content, crate::config::MarkdownFlavor::Standard, None);
+        let result = rule.check(&ctx).unwrap();
+        assert_eq!(result.len(), 1);
+        assert!(result[0].message.contains("at end of file"));
+    }
+
+    #[test]
+    fn test_whitespace_only_lines() {
+        let rule = MD012NoMultipleBlanks::default();
+        let content = "Line 1\n  \n\t\nLine 2";
+        let ctx = LintContext::new(content, crate::config::MarkdownFlavor::Standard, None);
+        let result = rule.check(&ctx).unwrap();
+        assert_eq!(result.len(), 1); // Whitespace-only lines count as blank
+    }
+
+    #[test]
+    fn test_indented_code_blocks() {
+        // Per markdownlint-cli reference: blank lines inside indented code blocks are valid
+        let rule = MD012NoMultipleBlanks::default();
+        let content = "Text\n\n    code\n    \n    \n    more code\n\nText";
+        let ctx = LintContext::new(content, crate::config::MarkdownFlavor::Standard, None);
+        let result = rule.check(&ctx).unwrap();
+        assert!(result.is_empty(), "Should not flag blanks inside indented code blocks");
+    }
+
+    #[test]
+    fn test_blanks_in_indented_code_block() {
+        // Per markdownlint-cli reference: blank lines inside indented code blocks are valid
+        let content = "    code line 1\n\n\n    code line 2\n";
+        let ctx = LintContext::new(content, crate::config::MarkdownFlavor::Standard, None);
+        let rule = MD012NoMultipleBlanks::default();
+        let warnings = rule.check(&ctx).unwrap();
+        assert!(warnings.is_empty(), "Should not flag blanks in indented code");
+    }
+
+    #[test]
+    fn test_blanks_in_indented_code_block_with_heading() {
+        // Per markdownlint-cli reference: blank lines inside indented code blocks are valid
+        let content = "# Heading\n\n    code line 1\n\n\n    code line 2\n\nMore text\n";
+        let ctx = LintContext::new(content, crate::config::MarkdownFlavor::Standard, None);
+        let rule = MD012NoMultipleBlanks::default();
+        let warnings = rule.check(&ctx).unwrap();
+        assert!(
+            warnings.is_empty(),
+            "Should not flag blanks in indented code after heading"
+        );
+    }
+
+    #[test]
+    fn test_blanks_after_indented_code_block_flagged() {
+        // Blanks AFTER an indented code block end should still be flagged
+        let content = "# Heading\n\n    code line\n\n\n\nMore text\n";
+        let ctx = LintContext::new(content, crate::config::MarkdownFlavor::Standard, None);
+        let rule = MD012NoMultipleBlanks::default();
+        let warnings = rule.check(&ctx).unwrap();
+        // There are 3 blank lines after the code block, so 2 extra should be flagged
+        assert_eq!(warnings.len(), 2, "Should flag blanks after indented code block ends");
+    }
+
+    #[test]
+    fn test_fix_with_final_newline() {
+        let rule = MD012NoMultipleBlanks::default();
+        let content = "Line 1\n\n\nLine 2\n";
+        let ctx = LintContext::new(content, crate::config::MarkdownFlavor::Standard, None);
+        let fixed = rule.fix(&ctx).unwrap();
+        assert_eq!(fixed, "Line 1\n\nLine 2\n");
+        assert!(fixed.ends_with('\n'));
+    }
+
+    #[test]
+    fn test_empty_content() {
+        let rule = MD012NoMultipleBlanks::default();
+        let content = "";
+        let ctx = LintContext::new(content, crate::config::MarkdownFlavor::Standard, None);
+        let result = rule.check(&ctx).unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_nested_code_blocks() {
+        let rule = MD012NoMultipleBlanks::default();
+        let content = "Before\n\n~~~\nouter\n\n```\ninner\n\n\n```\n\n~~~\n\nAfter";
+        let ctx = LintContext::new(content, crate::config::MarkdownFlavor::Standard, None);
+        let result = rule.check(&ctx).unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_unclosed_code_block() {
+        let rule = MD012NoMultipleBlanks::default();
+        let content = "Before\n\n```\ncode\n\n\n\nno closing fence";
+        let ctx = LintContext::new(content, crate::config::MarkdownFlavor::Standard, None);
+        let result = rule.check(&ctx).unwrap();
+        assert!(result.is_empty()); // Unclosed code blocks still preserve blank lines
+    }
+
+    #[test]
+    fn test_mixed_fence_styles() {
+        let rule = MD012NoMultipleBlanks::default();
+        let content = "Before\n\n```\ncode\n\n\n~~~\n\nAfter";
+        let ctx = LintContext::new(content, crate::config::MarkdownFlavor::Standard, None);
+        let result = rule.check(&ctx).unwrap();
+        assert!(result.is_empty()); // Mixed fence styles should work
+    }
+
+    #[test]
+    fn test_config_from_toml() {
+        let mut config = crate::config::Config::default();
+        let mut rule_config = crate::config::RuleConfig::default();
+        rule_config
+            .values
+            .insert("maximum".to_string(), toml::Value::Integer(3));
+        config.rules.insert("MD012".to_string(), rule_config);
+
+        let rule = MD012NoMultipleBlanks::from_config(&config);
+        let content = "Line 1\n\n\n\nLine 2"; // 3 blank lines
+        let ctx = LintContext::new(content, crate::config::MarkdownFlavor::Standard, None);
+        let result = rule.check(&ctx).unwrap();
+        assert!(result.is_empty()); // 3 blank lines allowed with maximum=3
+    }
+
+    #[test]
+    fn test_blank_lines_between_sections() {
+        let rule = MD012NoMultipleBlanks::default();
+        let content = "# Section 1\n\nContent\n\n\n# Section 2\n\nContent";
+        let ctx = LintContext::new(content, crate::config::MarkdownFlavor::Standard, None);
+        let result = rule.check(&ctx).unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].line, 5);
+    }
+
+    #[test]
+    fn test_fix_preserves_indented_code() {
+        let rule = MD012NoMultipleBlanks::default();
+        let content = "Text\n\n\n    code\n    \n    more code\n\n\nText";
+        let ctx = LintContext::new(content, crate::config::MarkdownFlavor::Standard, None);
+        let fixed = rule.fix(&ctx).unwrap();
+        // The fix removes the extra blank line, but this is expected behavior
+        assert_eq!(fixed, "Text\n\n    code\n\n    more code\n\nText");
+    }
+
+    #[test]
+    fn test_edge_case_only_blanks() {
+        let rule = MD012NoMultipleBlanks::default();
+        let content = "\n\n\n";
+        let ctx = LintContext::new(content, crate::config::MarkdownFlavor::Standard, None);
+        let result = rule.check(&ctx).unwrap();
+        // With the new EOF handling, we report once at EOF
+        assert_eq!(result.len(), 1);
+        assert!(result[0].message.contains("at end of file"));
+    }
+}
