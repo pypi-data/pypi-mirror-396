@@ -1,0 +1,66 @@
+[project]
+name = "local-brain"
+dynamic = ["version"]
+description = "Chat with local Ollama models that can explore your codebase"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10,<3.14"
+authors = [
+    {name = "Ismael Martinez", email = "ismaelmartinez@gmail.com"}
+]
+keywords = ["ollama", "llm", "cli", "tool-calling", "ai", "smolagents"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Quality Assurance",
+]
+dependencies = [
+    "ollama>=0.6.1",
+    "click>=8.0.0",
+    "smolagents>=1.0.0",
+    "litellm>=1.0.0",
+    "grep-ast>=0.9.0",
+    "tree-sitter>=0.25.0",
+    "tree-sitter-language-pack>=0.13.0",
+    # Pin grpcio to a version with pre-built macOS wheels (avoids compilation issues)
+    "grpcio>=1.67.0,<1.68.0",
+]
+
+[project.scripts]
+local-brain = "local_brain.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/IsmaelMartinez/local-brain"
+Repository = "https://github.com/IsmaelMartinez/local-brain"
+Documentation = "https://github.com/IsmaelMartinez/local-brain#readme"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+]
+tracing = [
+    "openinference-instrumentation-smolagents>=0.1.20",
+    "opentelemetry-sdk>=1.39.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "local_brain/__init__.py"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14.8",
+]
