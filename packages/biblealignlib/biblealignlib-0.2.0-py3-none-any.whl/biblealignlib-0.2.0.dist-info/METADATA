@@ -1,0 +1,64 @@
+Metadata-Version: 2.4
+Name: biblealignlib
+Version: 0.2.0
+Summary: Code for managing Word-level alignments for Bibles, including both automatic alignments and manually corrected alignments.
+License: MIT
+License-File: LICENSE
+License-File: LICENSE.md
+Keywords: Bible,alignment,Bible alignment
+Author: Sean Boisen
+Author-email: sean.boisen@biblica.com
+Requires-Python: >=3.10,<3.14
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Religion
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Topic :: Religion
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Requires-Dist: altair (>=5.5.0,<6.0.0)
+Requires-Dist: biblelib (==0.3.28)
+Requires-Dist: jupyter-ai (>=2.31.6,<3.0.0)
+Requires-Dist: jupyter-server-ydoc (>=1.1.0,<2.0.0)
+Requires-Dist: jupyterlab (>=4.3.3,<5.0.0)
+Requires-Dist: langchain-openai (>=0.3.33,<0.4.0)
+Requires-Dist: pandas (>=2.2.3,<3.0.0)
+Requires-Dist: python-dotenv (>=1.0.1,<2.0.0)
+Requires-Dist: regex (>=2024.11.6,<2025.0.0)
+Requires-Dist: unicodecsv (>=0.14.1,<0.15.0)
+Project-URL: Repository, https://github.com/Clear-Bible/biblealignlib
+Description-Content-Type: text/markdown
+
+# biblealignlib
+
+Biblica's code for working with Bible alignment data from
+https://github.com/Clear-Bible/Alignments .
+
+Currently private but we should move toward a future where it's
+public. 
+
+## Installing extra dependencies
+
+### eflomal
+`eflomal` is specified as an extra, so it is not installed with `poetry install`.
+
+On macOS, you may need to install additional dependencies before installing:
+
+```
+brew install llvm libomp
+```
+
+You'll need to override the `CFLAGS` and `LDFLAGS` environment variables before installing `eflomal`.
+
+```
+poetry shell
+export CFLAGS="-Xpreprocessor -fopenmp -I${HOMEBREW_PREFIX}/opt/libomp/include -Ofast -march=native -Wall --std=gnu99 -Wno-unused-function -g"
+export LDFLAGS="-Xpreprocessor -fopenmp -L${HOMEBREW_PREFIX}/opt/libomp/lib -lm -lomp"
+poetry install -E eflomal
+```
+
+
