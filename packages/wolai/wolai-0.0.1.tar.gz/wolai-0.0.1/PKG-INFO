@@ -1,0 +1,263 @@
+Metadata-Version: 2.1
+Name: wolai
+Version: 0.0.1
+Summary: Wolai API Python SDK
+Home-page: https://github.com/NoyeArk/wolai_python_sdk
+Author: NoyeArk
+Author-email: qilei.email6@gmail.com
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: requests>=2.25.0
+
+# Wolai Python SDK
+
+Wolai API 的 Python 客户端库，提供完整的 Wolai API 接口封装。
+
+## 安装
+
+```bash
+pip install wolai
+```
+
+或者从源码安装：
+
+```bash
+git clone https://github.com/yourusername/wolai-python.git
+cd wolai-python
+pip install -e .
+```
+
+## 快速开始
+
+```python
+from wolai import WolaiClient
+
+# 初始化客户端
+# Token 格式：直接使用从 Wolai 获取的 API Token
+client = WolaiClient(token="your_api_token")
+# 注意：Token 会直接添加到 authorization 请求头中（不需要 Bearer 前缀）
+
+# 获取页面信息
+page = client.get_page("page_id")
+
+# 获取块信息
+block = client.get_block("block_id")
+
+# 创建块
+new_block = client.create_block(
+    parent_id="parent_block_id",
+    blocks=[
+        {
+            "type": "text",
+            "content": "Hello, Wolai!"
+        }
+    ]
+)
+
+# 获取数据库数据
+database = client.get_database("database_id")
+
+# 添加数据库记录
+client.add_database_rows("database_id", rows=[...])
+```
+
+## 功能特性
+
+- ✅ 完整的块操作（查询、创建）
+- ✅ 数据库操作（查询、添加记录）
+- ✅ 支持所有块类型
+- ✅ 类型安全的 Python 对象模型
+
+## API 接口列表
+
+### 块操作接口
+
+#### 1. 查询块详情
+```python
+block = client.get_block(block_id="block_id")
+```
+
+#### 2. 创建块
+```python
+# 注意：parent_id 必须是有效的 UUID 格式
+# 可以通过 client.get_page() 或 client.get_block() 获取有效的块ID
+parent_page = client.get_page("有效的页面UUID")
+blocks = client.create_block(
+    parent_id=parent_page.id,  # 使用有效的 UUID
+    blocks=[
+        {
+            "type": "text",
+            "content": "文本内容",
+            "text_alignment": "center"  # 可选: left, center, right
+        },
+        {
+            "type": "heading",
+            "level": 1,
+            "content": {
+                "title": "标题",
+                "front_color": "red"
+            },
+            "text_alignment": "center"
+        }
+    ]
+)
+```
+
+参考文档: [创建块 API](https://www.wolai.com/wolai/oyKuZbAmufkA3r7ocrBxW2)
+
+**注意：** `parent_id` 必须是有效的 UUID 格式，不能使用占位符如 "parent_block_id_here"
+
+#### 3. 创建文本块
+```python
+text_block = client.create_text_block(
+    parent_id="parent_block_id",
+    content="文本内容",
+    text_alignment="left"  # left, center, right
+)
+```
+
+#### 4. 创建标题块
+```python
+heading_block = client.create_heading_block(
+    parent_id="parent_block_id",
+    content="标题内容",
+    level=1,  # 1-6
+    text_alignment="left"
+)
+
+# 或使用带样式的标题
+styled_heading = client.create_heading_block(
+    parent_id="parent_block_id",
+    content={
+        "title": "标题",
+        "front_color": "red"
+    },
+    level=1
+)
+```
+
+#### 5. 创建待办块
+```python
+todo_block = client.create_todo_block(
+    parent_id="parent_block_id",
+    content="待办事项",
+    checked=False
+)
+```
+
+#### 6. 创建无序列表块
+```python
+bull_list = client.create_bull_list_block(
+    parent_id="parent_block_id",
+    content="列表项"
+)
+```
+
+#### 7. 创建有序列表块
+```python
+enum_list = client.create_enum_list_block(
+    parent_id="parent_block_id",
+    content="列表项"
+)
+```
+
+#### 8. 创建代码块
+```python
+code_block = client.create_code_block(
+    parent_id="parent_block_id",
+    content="print('Hello')",
+    language="python"
+)
+```
+
+#### 9. 创建页面块
+```python
+# 创建简单页面
+page_block = client.create_page_block(
+    parent_id="parent_block_id",
+    content="页面标题"
+)
+
+# 创建带图标和封面的页面
+page_block = client.create_page_block(
+    parent_id="parent_block_id",
+    content="页面标题",
+    icon={"type": "emoji", "emoji": "📄"},
+    page_cover={"type": "external", "url": "https://example.com/image.jpg"}
+)
+```
+
+### 数据库操作接口
+
+#### 1. 获取数据库数据
+```python
+database = client.get_database(database_id="database_id")
+column_order = database.get("column_order", [])
+rows = database.get("rows", [])
+```
+
+#### 2. 获取数据库行数据
+```python
+rows = client.get_database_rows(database_id="database_id")
+for row in rows:
+    page_id = row.get("page_id")
+    data = row.get("data", {})
+```
+
+#### 3. 添加数据库记录
+```python
+result = client.add_database_rows(
+    database_id="database_id",
+    rows=[
+        {
+            "标题": {
+                "type": "primary",
+                "value": "新任务"
+            },
+            "标签": {
+                "type": "select",
+                "value": "待完成"
+            }
+        }
+    ]
+)
+```
+
+## 块类型说明
+
+本库支持以下块类型：
+
+| 块类型 | 类型标识 | 说明 |
+|--------|---------|------|
+| 文本 | `text` | 普通文本块 |
+| 标题 | `heading` | 标题块，支持1-6级，可设置颜色和对齐方式 |
+| 无序列表 | `bull_list` | 无序列表项 |
+| 有序列表 | `enum_list` | 有序列表项 |
+| 待办 | `todo_list` | 待办事项，可设置完成状态 |
+| 代码 | `code` | 代码块，可指定编程语言 |
+| 图片 | `image` | 图片块 |
+| 页面 | `page` | 页面块，支持图标、封面、页面设置等属性 |
+| 数据库 | `database` | 数据库块 |
+
+## 示例代码
+
+更多示例代码请查看 `examples/basic_usage.py` 文件。
+
+## API 文档
+
+详细的 API 文档请参考 [Wolai 开发者文档](https://www.wolai.com/wolai/7FB9PLeqZ1ni9FfD11WuUi)
+
+## 许可证
+
+MIT License
