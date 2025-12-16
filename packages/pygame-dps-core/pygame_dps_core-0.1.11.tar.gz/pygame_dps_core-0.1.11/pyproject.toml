@@ -1,0 +1,56 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pygame-dps-core"
+authors = [
+  { name = "Duncan Sommerville", email = "duncan.sommerville@gmail.com" },
+]
+description = "Core modules for Pygame extension library"
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Operating System :: OS Independent",
+]
+license = "MIT"
+license-files = ["LICEN[CS]E*"]
+dynamic = ["version"]
+dependencies = ["pygame==2.6.0", "pyyaml==6.0.3"]
+
+[project.optional-dependencies]
+2d = ["pygame-dps-2d"]
+
+[project.urls]
+Homepage = "https://github.com/dpsommer/pygame-dps-core"
+Issues = "https://github.com/dpsommer/pygame-dps-core/issues"
+
+[dependency-groups]
+docs = ["sphinx"]
+test = ["pytest", "coverage", "tox"]
+dev = [{ include-group = "docs" }, { include-group = "test" }]
+
+[tool.hatch]
+version.source = "vcs"
+build.hooks.vcs.version-file = "src/pygame_dps_core/version.py"
+
+[tool.hatch.version.raw-options]
+local_scheme = "no-local-version"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pygame_dps_core"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/**/*.py", "/tests"]
+exclude = ["/.trunk"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra -q -p no:warnings"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+
+[tool.bandit.assert_used]
+skips = ["**/*_test.py", "**/test_*.py"]
