@@ -1,0 +1,148 @@
+# Configuration file for the Sphinx documentation builder.
+#
+# For the full list of built-in configuration values, see the documentation:
+# https://www.sphinx-doc.org/en/master/usage/configuration.html
+
+from contextlib import suppress
+from importlib.metadata import version as get_version
+from pathlib import Path
+
+from sdf_xarray.download import fetch_dataset
+
+with suppress(ImportError):
+    import matplotlib as mpl
+
+    mpl.use("Agg")
+# -- Project information -----------------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
+
+project = "sdf-xarray"
+copyright = "2024-2025, Peter Hill, Joel Adams"
+author = "Peter Hill, Joel Adams, Shaun Doherty"
+
+# The full version, including alpha/beta/rc tags
+release = get_version("sdf_xarray")
+# Strip the git release identifier
+if "+" in release:
+    release = release.split("+")[0]
+
+# Major.minor version
+version = ".".join(release.split(".")[:2])
+
+main_release = ".".join(release.split(".")[:3])
+dev_release = release.split(".")[-1]
+
+# Set html title manually for nicer formatting
+html_title = f"{project} {main_release} [{dev_release}] documentation"
+
+# -- General configuration ---------------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
+
+extensions = [
+    "sphinx.ext.napoleon",
+    "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.viewcode",
+    "sphinx.ext.coverage",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.todo",
+    "sphinx_autodoc_typehints",
+    "myst_parser",
+    "jupyter_sphinx",
+    "sphinx_copybutton",
+]
+
+autosummary_generate = True
+
+# Add any paths that contain templates here, relative to this directory.
+templates_path = ["_templates"]
+
+# List of patterns, relative to source directory, that match files and
+# directories to ignore when looking for source files.
+# This pattern also affects html_static_path and html_extra_path.
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+
+# Numpy-doc config
+napoleon_google_docstring = False
+napoleon_numpy_docstring = True
+napoleon_attr_annotations = True
+napoleon_preprocess_types = True
+
+# Enable numbered references
+numfig = True
+
+autodoc_type_aliases = {
+    "ArrayLike": "numpy.typing.ArrayLike",
+}
+
+autodoc_default_options = {"ignore-module-all": True}
+autodoc_typehints = "description"
+autodoc_class_signature = "mixed"
+
+# The default role for text marked up `like this`
+default_role = "any"
+
+# Tell sphinx what the primary language being documented is.
+primary_domain = "py"
+
+# Tell sphinx what the pygments highlight language should be.
+highlight_language = "python"
+
+# Include "todo" directives in output
+todo_include_todos = True
+
+# -- Options for HTML output -------------------------------------------------
+
+# The theme to use for HTML and HTML Help pages.  See the documentation for
+# a list of builtin themes.
+#
+html_theme = "sphinx_book_theme"
+
+# Add any paths that contain custom static files (such as style sheets) here,
+# relative to this directory. They are copied after the builtin static files,
+# so a file named "default.css" will overwrite the builtin "default.css".
+html_static_path = ["_static"]
+html_css_files = [
+    "force_render_dark_xarray_objects.css",
+]
+
+html_theme_options = {
+    "repository_url": "https://github.com/epochpic/sdf-xarray",
+    "repository_branch": "main",
+    "path_to_docs": "docs",
+    "use_edit_page_button": True,
+    "use_repository_button": True,
+    "use_issues_button": True,
+    "home_page_in_toc": False,
+}
+
+pygments_style = "sphinx"
+
+# -- Options for intersphinx extension ---------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html#configuration
+
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
+    "numpy": ("https://numpy.org/doc/stable", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy", None),
+    "xarray": ("https://docs.xarray.dev/en/latest", None),
+    "pint": ("https://pint.readthedocs.io/en/stable", None),
+    "pint-xarray": ("https://pint-xarray.readthedocs.io/en/stable", None),
+    "pooch": ("https://www.fatiando.org/pooch/latest", None),
+    "matplotlib": ("https://matplotlib.org/stable", None),
+}
+
+datasets = [
+    "tutorial_dataset_1d",
+    "tutorial_dataset_2d",
+    "tutorial_dataset_2d_moving_window",
+    "tutorial_dataset_3d",
+]
+
+cwd = Path(__file__).parent.resolve()
+for dataset in datasets:
+    # If the dataset already exists then don't download it again
+    if (cwd / dataset).exists():
+        continue
+    else:
+        fetch_dataset(dataset, save_path=cwd)
