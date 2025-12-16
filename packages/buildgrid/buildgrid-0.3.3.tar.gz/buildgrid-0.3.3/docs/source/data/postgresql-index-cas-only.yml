@@ -1,0 +1,40 @@
+server:
+  - !channel
+    address: localhost:50051
+    insecure-mode: true
+
+authorization:
+  method: none
+
+monitoring:
+  enabled: false
+
+
+connections:
+  - !sql-connection &sql
+    connection-string: postgresql://bgd:insecure@database/bgdindex
+    pool-size: 5
+    pool-timeout: 30
+    max-overflow: 10
+
+storages:
+  - !disk-storage &disk-store
+    path: example-cas/
+
+  - !sql-index &cas-index
+    sql: *sql
+    storage: *disk-store
+
+instances:
+  - name: ''
+    description: |
+      The unique '' instance.
+
+    services:
+      - !cas
+        storage: *cas-index
+
+      - !bytestream
+        storage: *cas-index
+
+thread-pool-size: 100

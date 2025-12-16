@@ -1,0 +1,70 @@
+server:
+  - !channel
+    address: "[::]:50051"
+    insecure-mode: true
+
+grpc-server-options:
+  grpc.max_connection_age_ms: 300000
+
+description: >
+  BuildGrid's default configuration:
+    - Unauthenticated plain HTTP at :50051
+    - Single instance: [unnamed]
+    - DataStore: postgresql://bgd:insecure@database/bgd
+    - Hosted services:
+       - ActionCache
+       - Execute
+       - ContentAddressableStorage
+       - ByteStream
+
+authorization:
+  method: none
+
+monitoring:
+  enabled: false
+
+connections:
+  - !sql-connection &sql
+    connection-string: postgresql://bgd:insecure@database/bgd
+    pool-size: 5
+    pool-timeout: 30
+    max-overflow: 10
+
+storages:
+  - !lru-storage &cas-storage
+    size: 2048M
+
+caches:
+  - !lru-action-cache &build-cache
+    storage: *cas-storage
+    max-cached-refs: 256
+    cache-failed-actions: true
+    allow-updates: true
+
+schedulers:
+  - !sql-scheduler &state-database
+    sql: *sql
+    storage: *cas-storage
+    action-cache: *build-cache
+    max-execution-timeout: 7200
+    poll-interval: 0.5
+
+instances:
+  - name: ''
+    description: |
+      The unique '' instance.
+
+    services:
+      - !action-cache
+        cache: *build-cache
+
+      - !execution
+        scheduler: *state-database
+
+      - !cas
+        storage: *cas-storage
+
+      - !bytestream
+        storage: *cas-storage
+
+thread-pool-size: 100
