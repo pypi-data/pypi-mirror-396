@@ -1,0 +1,71 @@
+[tool.poetry]
+name = "quickscale-core"
+version = "0.73.0"
+description = "Core scaffolding and utilities for QuickScale Django project generator"
+authors = ["Experto AI <victor@experto.ai>"]
+license = "Apache-2.0"
+keywords = ["django", "scaffolding", "project-generator", "saas"]
+homepage = "https://github.com/Experto-AI/quickscale"
+repository = "https://github.com/Experto-AI/quickscale"
+documentation = "https://github.com/Experto-AI/quickscale/tree/main/docs"
+readme = "README.md"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Framework :: Django",
+    "Framework :: Django :: 6.0",
+]
+packages = [{include = "quickscale_core", from = "src"}]
+include = [
+    "src/quickscale_core/generator/templates/**/*",
+]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+Jinja2 = "^3.1.6"
+pyyaml = "^6.0.0"
+
+[tool.poetry.group.dev.dependencies]
+# Dev dependencies centralized in root pyproject.toml
+# Use: poetry install from repository root
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--cov=quickscale_core",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "-m", "not e2e",  # Skip E2E tests by default (run with: pytest -m e2e)
+]
+markers = [
+    "integration: integration tests (slower, require external dependencies)",
+    "slow: slow tests that take significant time to run",
+    "e2e: end-to-end tests",
+]
+# Note: Playwright base_url is configured via --base-url flag when running E2E tests
+# Example: pytest -m e2e --base-url http://localhost:8000
+
+[tool.coverage.run]
+omit = [
+    "*/templates/*.j2",
+    "*/templates/**/*.j2",
+]
+
+# Ruff and mypy configurations centralized in root ruff.toml and mypy.ini
+# Package-specific isort override
+[tool.ruff.lint.isort]
+known-first-party = ["quickscale_core"]
