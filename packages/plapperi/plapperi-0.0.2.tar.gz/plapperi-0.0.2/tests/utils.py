@@ -1,0 +1,3 @@
+DEFAULT_TEXT = "Hallo"
+DEFAULT_DIALECT = "vs"
+DEFAULT_VOICE = "aragon"
