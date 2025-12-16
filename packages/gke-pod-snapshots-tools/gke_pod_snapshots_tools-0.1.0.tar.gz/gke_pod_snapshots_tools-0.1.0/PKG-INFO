@@ -1,0 +1,95 @@
+Metadata-Version: 2.4
+Name: gke-pod-snapshots-tools
+Version: 0.1.0
+Summary: A lightweight utility to integrate with GKE Pod snapshots for fast startup.
+License: Apache-2.0
+Project-URL: Homepage, https://github.com/codersherlock/gke-pod-snapshots-tools
+Project-URL: Bug Tracker, https://github.com/codersherlock/gke-pod-snapshots-tools/issues
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Operating System :: OS Independent
+Classifier: Topic :: System :: Distributed Computing
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Dynamic: license-file
+
+# gke-pod-snapshots-tools
+
+A lightweight Python utility to integrate with **[Google Kubernetes Engine (GKE) Pod snapshots](https://docs.cloud.google.com/kubernetes-engine/docs/concepts/pod-snapshots)**.
+
+## Overview
+
+GKE Pod snapshots allow you to save the entire state of a running Pod—including memory and file system changes—and restore new replicas from that exact point.
+This is particularly valuable for **AI/ML workloads** or **heavy applications** that suffer from long initialization times (e.g., loading large models into GPU memory or compiling JIT code).
+
+Instead of starting from scratch every time, your application can "checkpoint" itself after initialization.
+Future Pods will bypass the startup phase and resume immediately from the snapshot, significantly reducing startup latency.
+
+This package provides a simple Python interface to trigger this checkpointing process from within your application.
+
+## Documentation
+
+For a deep dive into the underlying technology, architecture, and limitations, please refer to the official Google documentation:
+
+* **[About GKE Pod snapshots](https://docs.cloud.google.com/kubernetes-engine/docs/concepts/pod-snapshots)**
+* **[Trigger a snapshot from a workload](https://docs.cloud.google.com/kubernetes-engine/docs/how-to/pod-snapshots#trigger-snapshot-workload)**
+
+## Installation
+
+Install the package via pip:
+
+```bash
+pip install gke-pod-snapshots-tools
+```
+
+## How to Use
+
+The ideal place to call this function is immediately after your heavy initialization logic but before your application starts serving traffic.
+
+```python
+import logging
+from gke_pod_snapshots_tools import maybe_snapshot_on_gke
+
+def main():
+    logging.info("Starting application...")
+
+    # 1. Perform heavy initialization
+    # (e.g., download weights, load ML models, warm up caches)
+    load_heavy_models()
+    
+    # 2. Trigger the Snapshot
+    # If on GKE with checkpointing, this will FREEZE execution here.
+    # The pod state is saved to disk.
+    # When a new pod starts from this snapshot, execution RESUMES here instantly.
+    maybe_snapshot_on_gke()
+
+    # 3. Start serving
+    logging.info("Ready to serve traffic!")
+    start_server()
+
+if __name__ == "__main__":
+    main()
+```
+
+## What to Expect
+
+When `maybe_snapshot_on_gke()` is called, the following sequence occurs:
+
+1.  **Detection:** The tool checks if the environment supports application-driven checkpointing (specifically looking for the GKE Sandbox/gVisor interface). If not supported, it logs a message and returns immediately (safe for local development).
+2.  **Snapshot Trigger:** If supported, the tool writes to the checkpoint interface, signaling the runtime to pause the container.
+3.  **Execution Pause:** Your Python process will effectively "hang" or block at this line. This is normal. The runtime is serializing your memory and state to disk.
+4.  **Restoration:** When a new Pod is created from this snapshot, execution resumes on the very next line of code.
+5.  **State Reset:** The tool automatically re-seeds the Python `random` module to ensure that restored replicas do not produce identical random sequences.
+
+## Important Considerations for Restored Pods
+
+Because the application state is frozen and then restored later, certain environment properties change. You must account for these:
+
+* **Network Connections:** Active network connections (like database sessions) are closed upon restore. You should initialize database connections or bind listening ports *after* the snapshot function returns.
+* **Time:** The wall-clock time will "jump" forward from the time the snapshot was taken to the current time of restoration.
+* **Uniqueness:** While this tool handles `random` reseeding, you must manually handle other unique identifiers (like UUIDs generated during init) if your application logic requires them to be unique per replica.
+
+## License
+
+Apache 2.0
