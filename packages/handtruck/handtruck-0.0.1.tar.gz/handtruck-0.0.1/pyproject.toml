@@ -1,0 +1,89 @@
+[tool.poetry]
+name = "handtruck"
+# Dummy version which will be rewritten with poem-plugins
+version = "0.0.1"
+description = "Async S3 client using httpx & anyio"
+authors = [
+    "Vladimir Morugin <vamorugin@gmail.com>",
+    "Dmitry Orlov <me@mosquito.su>",
+    "Yuri Shikanov <dizballanze@gmail.com>",
+    "Alexander Vasin <hi@alvass.in>",
+]
+maintainers = [
+    "Jamie Bliss <jamie@teahouse.cafe>",
+]
+license = "Apache Software License"
+readme = "README.md"
+homepage = "https://codeberg.org/teahouse/handtruck"
+packages = [{include = "handtruck", from = "src"}]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: Apache Software License",
+    "Topic :: Internet",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Libraries",
+    "Intended Audience :: Developers",
+    "Natural Language :: English",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX",
+    "Operating System :: Microsoft",
+    "Programming Language :: Python :: Implementation :: PyPy",
+    "Programming Language :: Python :: Implementation :: CPython",
+]
+
+[tool.poetry.urls]
+"Source" = "https://codeberg.org/teahouse/handtruck"
+
+[tool.poetry.dependencies]
+aws-request-signer = "1.2.0"
+python = "^3.11"
+# Only need httpx this new for 3.14
+httpx = ">=0.28.1"
+anyio = ">=3.7.1"
+# Transitive dependency with 3.14 bugfix
+httpcore = {version = ">=1.0.8", python = ">=3.14"}
+
+
+[tool.poetry.group.dev.dependencies]
+coverage = "!=4.3"
+coveralls = "^3.3.1"
+# 1.5.0 dropped typed-ast
+mypy = ">=1.5.0"
+pytest = ">=7.2.1"
+pytest-cov = "^4.0.0"
+pytest-timeout = "^2.1.0"
+tox = "^4.4.6"
+# pytest-httpx pins fairly precisely
+pytest-httpx = "*"
+pytest-ephemeral-container = "^0.2.2"
+trio = "*"
+uvloop = "*"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poem-plugins.version]
+provider = "git"
+update_pyproject = true
+write_version_file = true
+
+[tool.mypy]
+check_untyped_defs = true
+follow_imports = "silent"
+ignore_missing_imports = true
+no_implicit_reexport = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_unused_configs = true
+files = ["src", "tests"]
+
+[tool.pylama]
+max_line_length = 80
+skip = ".venv*,.*cache,dist"
+
+[tool.pylama.linter.mccabe]
+max-complexity = 15
+
+[tool.pytest.ini_options]
+anyio_mode = "auto"
