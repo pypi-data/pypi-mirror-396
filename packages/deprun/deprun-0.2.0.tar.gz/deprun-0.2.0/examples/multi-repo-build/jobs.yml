@@ -1,0 +1,73 @@
+# Multi-repository build example
+
+variables:
+  workspace: ~/projects
+  build_type: release
+
+templates:
+  cpp-project:
+    script:
+      - mkdir -p build
+      - cd build
+      - cmake .. -DCMAKE_BUILD_TYPE={build_type}
+      - make -j$(nproc)
+  
+  node-project:
+    env:
+      NODE_ENV: production
+    script:
+      - npm ci
+      - npm run build
+
+jobs:
+  # Shared library
+  common-lib:
+    type: build
+    template: cpp-project
+    repo:
+      server: https://github.com/
+      group: myorg/
+      name: common-lib
+    directory: "{workspace}"
+
+  # Backend service
+  backend:
+    type: build
+    template: cpp-project
+    dependencies:
+      - common-lib
+    repo:
+      server: https://github.com/
+      group: myorg/
+      name: backend-service
+    directory: "{workspace}"
+
+  # Frontend application
+  frontend:
+    type: build
+    template: node-project
+    repo:
+      server: https://github.com/
+      group: myorg/
+      name: frontend-app
+    directory: "{workspace}"
+
+  # Database migrations
+  database:
+    type: build
+    repo:
+      server: https://github.com/
+      group: myorg/
+      name: database-migrations
+    directory: "{workspace}"
+    script:
+      - psql -f migrations/001_initial.sql
+
+  # Build everything
+  build-all:
+    type: alias
+    dependencies:
+      - common-lib
+      - backend
+      - frontend
+      - database

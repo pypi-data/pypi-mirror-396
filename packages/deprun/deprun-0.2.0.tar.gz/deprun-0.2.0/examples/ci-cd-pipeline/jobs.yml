@@ -1,0 +1,64 @@
+# CI/CD Pipeline example
+
+variables:
+  workspace: ~/ci-workspace
+  docker_registry: registry.example.com
+  app_version: "1.0.0"
+
+templates:
+  docker-build:
+    script:
+      - docker build -t {docker_registry}/{name}:{app_version} .
+      - docker push {docker_registry}/{name}:{app_version}
+
+jobs:
+  lint:
+    type: run
+    script:
+      - ruff check .
+      - mypy .
+
+  test:
+    type: run
+    dependencies:
+      - lint
+    script:
+      - pytest --cov=src tests/
+
+  build:
+    type: build
+    template: docker-build
+    dependencies:
+      - test
+    repo:
+      server: https://github.com/
+      group: myorg/
+      name: myapp
+    directory: "{workspace}"
+
+  deploy-staging:
+    type: run
+    dependencies:
+      - build
+    env:
+      ENVIRONMENT: staging
+    script:
+      - kubectl set image deployment/myapp myapp={docker_registry}/myapp:{app_version}
+      - kubectl rollout status deployment/myapp
+
+  smoke-test:
+    type: run
+    dependencies:
+      - deploy-staging
+    script:
+      - curl -f https://staging.example.com/health || exit 1
+
+  deploy-production:
+    type: run
+    dependencies:
+      - smoke-test
+    env:
+      ENVIRONMENT: production
+    script:
+      - kubectl set image deployment/myapp myapp={docker_registry}/myapp:{app_version} --namespace=production
+      - kubectl rollout status deployment/myapp --namespace=production

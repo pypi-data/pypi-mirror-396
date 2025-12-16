@@ -1,0 +1,36 @@
+# Simple single-project example
+
+variables:
+  workspace: ~/workspace
+  python_version: "3.11"
+
+jobs:
+  setup:
+    type: run
+    script:
+      - python{python_version} -m venv venv
+      - source venv/bin/activate
+      - pip install -r requirements.txt
+
+  test:
+    type: run
+    dependencies:
+      - setup
+    script:
+      - source venv/bin/activate
+      - pytest tests/
+
+  lint:
+    type: run
+    dependencies:
+      - setup
+    script:
+      - source venv/bin/activate
+      - ruff check .
+      - mypy .
+
+  ci:
+    type: alias
+    dependencies:
+      - test
+      - lint
