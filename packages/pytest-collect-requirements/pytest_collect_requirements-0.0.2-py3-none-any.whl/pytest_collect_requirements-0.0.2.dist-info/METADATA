@@ -1,0 +1,144 @@
+Metadata-Version: 2.4
+Name: pytest-collect-requirements
+Version: 0.0.2
+Summary: A pytest plugin to collect test requirements from requirements marker.
+Author: Avi Zaguri
+License: MIT
+Project-URL: Homepage, https://github.com/aviz92/pytest-collect-requirements
+Project-URL: Repository, https://github.com/aviz92/pytest-collect-requirements
+Project-URL: Issues, https://github.com/aviz92/pytest-collect-requirements/issues
+Keywords: development,pytest,plugin,testing,automation,collect,requirements
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: Developers
+Classifier: Framework :: Pytest
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: colorlog>=6.10.1
+Requires-Dist: custom-python-logger>=2.0.10
+Requires-Dist: pre-commit>=4.5.0
+Requires-Dist: pytest>=9.0.1
+Requires-Dist: python-dotenv>=1.2.1
+Requires-Dist: setuptools>=80.9.0
+Requires-Dist: wheel>=0.45.1
+Dynamic: license-file
+
+# pytest-collect-requirements
+
+A pytest plugin to collect test requirements from tests marked with the `@pytest.mark.requirements(...)` marker. <br>
+This plugin allows you to specify requirements for your tests and collect them without executing the tests themselves.
+
+---
+
+## Features
+- ✅ addoption `--collect-requirements` to collect requirements without running tests
+- ✅ addoption `--save-to` to specify the output file path for collected requirements (default: `logs/test_requirements.json`)
+- ✅ Collect requirements from tests using the `@requirements()` marker
+- ✅ Flexible keyword arguments support for any requirement metadata (e.g., cloud instances, regions, resources)
+- ✅ Automatic collection and store the requirements in json file
+- ✅ Seamless integration with pytest's marker system
+
+---
+
+## Installation
+```bash
+pip install pytest-collect-requirements
+```
+
+---
+
+## Usage Examples
+
+### Basic Usage
+
+Mark your tests with the `@requirements()` marker to specify infrastructure requirements:
+
+```python
+import pytest
+
+@pytest.mark.requirements(cloud_instance="c5.large", region="eu-west-1")
+def test_my_feature():
+    assert 1 == 1
+```
+
+### Collecting Requirements
+
+Run pytest with the `--collect-requirements` flag to collect all requirements without executing tests:
+
+```bash
+pytest --collect-requirements
+```
+
+This will collect all requirements from tests marked with `@requirements()` and store them in the pytest config for later use.
+
+### Multiple Requirements
+
+You can mark multiple tests with different requirements:
+
+```python
+import pytest
+
+@pytest.mark.requirements(cloud_instance="c5.large", region="eu-west-1")
+def test_requirements():
+    assert 1 == 1
+
+@pytest.mark.requirements(cloud_instance="c5.small", region="eu-west-2")
+def test_requirements2():
+    assert 1 == 1
+```
+
+### Custom Requirement Parameters
+
+The `@pytest.mark.requirements()` marker accepts any keyword arguments, allowing you to define custom requirement metadata:
+
+```python
+import pytest
+
+@pytest.mark.requirements(
+    cloud_instance="c5.large",
+    region="eu-west-1",
+    storage="100GB",
+    network="high-speed"
+)
+def test_with_custom_requirements():
+    assert 1 == 1
+```
+
+```python
+import pytest
+from _pytest.fixtures import FixtureRequest
+
+def requirements(cloud_instance: str, region: str) -> pytest.MarkDecorator:
+    return pytest.mark.requirements(
+        cloud_instance=cloud_instance,
+        region=region,
+    )
+
+
+@requirements(
+    cloud_instance="c5.large",
+    region="eu-west-1",
+)
+def test_requirements_with_static_parameters(request: FixtureRequest):
+    assert request.config._selected_requirements[request.node.nodeid]['region'] == "eu-west-1"
+
+```
+
+---
+
+## 🤝 Contributing
+
+If you have a helpful tool, pattern, or improvement to suggest:
+Fork the repo <br>
+Create a new branch <br>
+Submit a pull request <br>
+I welcome additions that promote clean, productive, and maintainable development. <br>
+
+---
+
+## 🙏 Thanks
+
+Thanks for exploring this repository! <br>
+Happy coding! <br>
