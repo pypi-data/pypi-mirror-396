@@ -1,0 +1,352 @@
+# JustStorage Python SDK
+
+Python client for the JustStorage object storage service.
+
+## Features
+
+- Type hints for all methods and models
+- API key and JWT token authentication
+- Streaming support for large files
+- Exception hierarchy for error handling
+- Automatic retries for transient failures
+
+## Installation
+
+```bash
+pip install just-storage
+```
+
+Or from source:
+
+```bash
+git clone https://github.com/yourorg/just_storage.git
+cd just_storage/python-sdk
+pip install -e .
+```
+
+## Quick Start
+
+```python
+from just_storage import JustStorageClient, StorageClass
+
+# Initialize client
+client = JustStorageClient(
+    base_url="http://localhost:8080",
+    api_key="your-api-key"
+)
+
+# Upload a file
+with open("model.bin", "rb") as f:
+    obj = client.upload(
+        file_obj=f,
+        namespace="models",
+        tenant_id="550e8400-e29b-41d4-a716-446655440000",
+        key="llama-3.1-8b",
+        storage_class=StorageClass.HOT
+    )
+print(f"Uploaded: {obj.id}")
+
+# Download a file
+with open("downloaded.bin", "wb") as f:
+    client.download(obj.id, "550e8400-e29b-41d4-a716-446655440000", output_file=f)
+
+# List objects
+response = client.list(
+    namespace="models",
+    tenant_id="550e8400-e29b-41d4-a716-446655440000",
+    limit=50
+)
+print(f"Found {response.total} objects")
+
+# Delete object
+client.delete(obj.id, "550e8400-e29b-41d4-a716-446655440000")
+```
+
+## Authentication
+
+The SDK supports two authentication methods:
+
+### API Key
+
+```python
+client = JustStorageClient(
+    base_url="http://localhost:8080",
+    api_key="your-api-key"
+)
+```
+
+### JWT Token
+
+```python
+client = JustStorageClient(
+    base_url="http://localhost:8080",
+    jwt_token="eyJ0eXAiOiJKV1QiLCJhbGc..."
+)
+```
+
+## API Reference
+
+### Client Initialization
+
+```python
+JustStorageClient(
+    base_url: str,
+    api_key: Optional[str] = None,
+    jwt_token: Optional[str] = None,
+    timeout: int = 30,
+    max_retries: int = 3,
+)
+```
+
+### Methods
+
+#### `health() -> HealthStatus`
+
+Check service health (no authentication required).
+
+```python
+status = client.health()
+print(f"Status: {status.status}")
+```
+
+#### `readiness() -> HealthStatus`
+
+Check service readiness including database connectivity.
+
+```python
+status = client.readiness()
+if status.status == "ready":
+    print("Service is ready")
+```
+
+#### `upload(...) -> ObjectInfo`
+
+Upload an object to storage.
+
+```python
+obj = client.upload(
+    file_obj: BinaryIO,
+    namespace: str,
+    tenant_id: str,
+    key: Optional[str] = None,
+    storage_class: StorageClass = StorageClass.HOT,
+)
+```
+
+**Parameters:**
+- `file_obj`: File-like object opened in binary mode
+- `namespace`: Object namespace (e.g., 'models', 'kb', 'uploads')
+- `tenant_id`: Tenant identifier (UUID string)
+- `key`: Optional human-readable key for retrieval
+- `storage_class`: Storage class (`StorageClass.HOT` or `StorageClass.COLD`)
+
+**Returns:** `ObjectInfo` with uploaded object metadata
+
+#### `download(...) -> Union[bytes, ObjectInfo]`
+
+Download an object by ID.
+
+```python
+# Download to file
+obj = client.download(
+    object_id: str,
+    tenant_id: str,
+    output_file: Optional[BinaryIO] = None,
+    verify_hash: bool = False,
+)
+
+# Download to memory
+data = client.download(
+    object_id: str,
+    tenant_id: str,
+)
+```
+
+**Parameters:**
+- `object_id`: Object UUID
+- `tenant_id`: Tenant identifier (UUID string)
+- `output_file`: Optional file-like object to write to. If None, returns bytes.
+- `verify_hash`: If True, verify content hash matches
+
+**Returns:** Bytes if `output_file` is None, otherwise `ObjectInfo`.
+
+#### `delete(...) -> None`
+
+Delete an object.
+
+```python
+client.delete(
+    object_id: str,
+    tenant_id: str,
+)
+```
+
+**Parameters:**
+- `object_id`: Object UUID
+- `tenant_id`: Tenant identifier (UUID string)
+
+#### `list(...) -> ListResponse`
+
+List objects with pagination.
+
+```python
+response = client.list(
+    namespace: str,
+    tenant_id: str,
+    limit: int = 50,
+    offset: int = 0,
+)
+```
+
+**Parameters:**
+- `namespace`: Filter by namespace
+- `tenant_id`: Filter by tenant
+- `limit`: Results per page (default: 50, max: 1000)
+- `offset`: Pagination offset (default: 0)
+
+**Returns:** `ListResponse` with objects and pagination metadata
+
+## Error Handling
+
+Exception hierarchy:
+
+```python
+from just_storage import (
+    JustStorageError,
+    JustStorageAPIError,
+    JustStorageNotFoundError,
+    JustStorageUnauthorizedError,
+    JustStorageConflictError,
+    JustStorageBadRequestError,
+)
+
+try:
+    obj = client.upload(...)
+except JustStorageNotFoundError:
+    print("Object not found")
+except JustStorageUnauthorizedError:
+    print("Authentication failed")
+except JustStorageConflictError:
+    print("Key already exists")
+except JustStorageAPIError as e:
+    print(f"API error: {e.message} (status: {e.status_code})")
+except JustStorageError as e:
+    print(f"Error: {e.message}")
+```
+
+## Advanced Usage
+
+### Context Manager
+
+```python
+with JustStorageClient(base_url="...", api_key="...") as client:
+    obj = client.upload(...)
+```
+
+### Streaming Large Files
+
+Streaming is handled automatically:
+
+```python
+# Upload large file
+with open("large_model.bin", "rb") as f:
+    obj = client.upload(f, namespace="models", tenant_id="...")
+
+# Download large file
+with open("downloaded.bin", "wb") as f:
+    client.download(obj.id, tenant_id="...", output_file=f)
+```
+
+### Content Hash Verification
+
+```python
+data = client.download(
+    object_id="...",
+    tenant_id="...",
+    verify_hash=True
+)
+```
+
+### Pagination
+
+```python
+offset = 0
+limit = 50
+
+while True:
+    response = client.list(
+        namespace="models",
+        tenant_id="...",
+        limit=limit,
+        offset=offset
+    )
+    
+    for obj in response.objects:
+        print(f"Object: {obj.id}")
+    
+    if offset + limit >= response.total:
+        break
+    
+    offset += limit
+```
+
+## Data Models
+
+### ObjectInfo
+
+```python
+@dataclass
+class ObjectInfo:
+    id: str
+    namespace: str
+    tenant_id: str
+    key: Optional[str]
+    status: ObjectStatus
+    storage_class: StorageClass
+    content_hash: Optional[str]
+    size_bytes: Optional[int]
+    content_type: Optional[str]
+    metadata: Dict[str, Any]
+    created_at: datetime
+    updated_at: datetime
+```
+
+### ListResponse
+
+```python
+@dataclass
+class ListResponse:
+    objects: list[ObjectInfo]
+    total: int
+    limit: int
+    offset: int
+```
+
+### Enums
+
+```python
+class StorageClass(str, Enum):
+    HOT = "hot"
+    COLD = "cold"
+
+class ObjectStatus(str, Enum):
+    WRITING = "WRITING"
+    COMMITTED = "COMMITTED"
+    DELETING = "DELETING"
+    DELETED = "DELETED"
+```
+
+## Examples
+
+See the `examples/` directory:
+
+- `basic_usage.py` - Upload, download, delete operations
+- `pagination.py` - Listing with pagination
+- `error_handling.py` - Error handling
+
+## Requirements
+
+- Python 3.9+
+- requests >= 2.31.0
+- urllib3 >= 2.0.0
+
