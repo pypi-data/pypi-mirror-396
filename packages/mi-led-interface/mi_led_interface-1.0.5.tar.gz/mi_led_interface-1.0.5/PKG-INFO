@@ -1,0 +1,118 @@
+Metadata-Version: 2.4
+Name: mi-led-interface
+Version: 1.0.5
+Summary: Modular interface for controlling the Merkury Innovations LED Matrix Display via BLE.
+License: MIT
+Keywords: ble,bluetooth,led,matrix,hardware
+Author: scooglat
+Author-email: scooglat@gmail.com
+Requires-Python: >=3.10,<4.0
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
+Requires-Dist: bleak (>=2.0.0,<3.0.0)
+Requires-Dist: filetype (>=1.2.0,<2.0.0)
+Requires-Dist: pillow (>=12.0.0,<13.0.0)
+Project-URL: Homepage, https://github.com/the-sluggiest-cat/mi-led-interface/tree/main?tab=readme-ov-file
+Project-URL: Repository, https://github.com/the-sluggiest-cat/mi-led-interface/tree/main?tab=readme-ov-file
+Description-Content-Type: text/markdown
+
+# **M**erkury **I**nnovations Multicolor Matrix **L**ED Display **I**nterfacing Library
+---
+
+Whew, what a mouthful, huh? MILI for short, provides automatic, high-level interfacing with the Merkury Innovation's Multicolor Matrix LED Display.
+
+## Why?
+
+I went to Walmart one day, and picked up [this LED panel](https://www.walmart.com/ip/Merkury-innovations-Matrix-LED-Pixel-Display-Color-Changing-LED-Display/5150283693). Naturally, it had an app, and every API developer's worst nightmare is other people's apps to control their technology. So, I started looking into alternatives.
+
+I had come across this [reverse-engineering](https://www.github.com/offe/mi-led-display?tab=readme-ov-file) of the model, specifically how it interfaces over BLE. Out of curiosity, I decided to start tinkering with it too.
+
+While the reverse-engineering was perfect, and the protocol worked as expected, what *didn't* work as expected was trying to interface it like a library... because it wasn't a library. It's a toolkit. So, I decided to use the effort that was already there, and develop a library that plays nicer with developers who want to get things done their way, with their product.
+
+Because of the nature of libraries, I felt it was best to provide an open-source, `pip install` ready iteration, versus the toolkit of scripts that was provided by the initial developer, **offe**. Without them, this project would not be possible. Thank you.
+
+## Download
+
+You can install it from PyPi, using pip:
+
+`pip install mi-led-interface`
+
+...or download it, and built it yourself.
+
+```
+git clone https://github.com/the-sluggiest-cat/mi-led-interface.git
+cd mi-led-interface
+python3 -m venv venv
+python3 -m pip install bleak
+python3 -m pip install pil
+```
+
+## Examples:
+
+```py
+from mili.client import PanelClient
+from mili.pixels import PixelGrid
+
+# Until the script is stopped, if you have a model of the Matrix LED display close by,
+# it will display a 16x16 rendition of "silly_picture.png" in the directory with the running script.
+client = PanelClient()
+pixel_grid = PixelGrid.from_image("silly_picture.png")
+client.show_image(pixel_grid)
+```
+
+```py
+from mili.client import PanelClient
+from mili.pixels import PixelGrid
+
+# This works with animated images, too!
+client = PanelClient()
+pixel_grid = PixelGrid.from_image("silly_animation.gif")
+client.show_image(pixel_grid)
+```
+
+```py
+from mili.client import PanelClient
+from mili.pixels import PixelGrid
+from PIL import Image
+
+# You can also use PILlow's images...
+client = PanelClient()
+image = Image.open("a_pillow.png")
+pixel_grid = PixelGrid.from_image(image)
+client.show_image(pixel_grid)
+```
+
+```py
+from mili.client import PanelClient
+from mili.pixels import PixelGrid, Pixel
+from asyncio import run
+
+# ...or go a little deeper, and represent individual bits and bytes!
+def binary_representation(number: int):
+    if isinstance(number, int) is False: return "0"*256
+    string = bin(number).split("0b")[-1]
+    if len(string) >= 256: return "0"*256
+    iterations = 256 - len(string)
+    returned_string = ""
+    for _ in range(iterations):
+        returned_string += "0"
+    returned_string += string
+    return returned_string
+
+async def __main():
+    panel_client = PanelClient()
+
+    while True:
+        pixel_grid = PixelGrid()
+        b_r = binary_representation(floor(time()))
+        for index, i in enumerate(b_r):
+            pixel_grid.set_pixel(index%16, index//16, Pixel.from_bool(int(i)))
+        await panel_client.draw_to_panel(pixel_grid)
+
+run(__main())
+```
