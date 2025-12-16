@@ -1,0 +1,100 @@
+# Base Localization Rules (United States)
+# Jurisdiction: US
+# Parent: null
+#
+# Notes:
+# - "abbreviations" is token-based expansion (single-token keys only).
+# - Use "agency_names" for aliases that should match across word boundaries.
+# - Use "rules" for regex/literal cleanup and edge-case rewrites.
+# - This file should remain conservative; jurisdiction-specific rules live in child configs.
+
+jurisdiction: "US"
+parent: null
+version: "1.0.0"
+updated_timestamp: "2025-12-11T12:00:00Z"
+
+# Federal / generic abbreviations
+abbreviations:
+  # Federal agencies
+  doj: department of justice
+  dod: department of defense
+  hhs: department of health and human services
+  hud: department of housing and urban development
+  doe: department of energy
+  ed: department of education
+  dot: department of transportation
+  dhs: department of homeland security
+  usda: united states department of agriculture
+  epa: environmental protection agency
+  fda: food and drug administration
+  fcc: federal communications commission
+  ftc: federal trade commission
+  sec: securities and exchange commission
+  irs: internal revenue service
+  ssa: social security administration
+  va: veterans administration
+  nasa: national aeronautics and space administration
+  fbi: federal bureau of investigation
+  cia: central intelligence agency
+  nsa: national security agency
+
+  # Very generic org abbreviations that show up everywhere
+  co: company
+  co.: company
+  corp: corporation
+  corp.: corporation
+  inc: incorporated
+  inc.: incorporated
+  llc: limited liability company
+  llc.: limited liability company
+  llp: limited liability partnership
+  llp.: limited liability partnership
+  lp: limited partnership
+  lp.: limited partnership
+  assoc: associates
+  assoc.: associates
+
+entity_types:
+  k-12: kindergarten through twelfth grade
+  k12: kindergarten through twelfth grade
+  "501c3": five oh one c three
+  "501(c)(3)": five oh one c three
+  "501c4": five oh one c four
+  "501(c)(4)": five oh one c four
+
+agency_names: {}
+
+rules:
+  # 1. Replace commas with spaces so "company,llc" tokenizes correctly
+  - pattern: ","
+    replacement: " "
+    is_regex: false
+
+  # 2. Strip trailing punctuation at end of name: commas, periods, semicolons
+  #    Examples: "acs," -> "acs"; "fence masters," -> "fence masters"
+  - pattern: "[,.;]+\\s*$"
+    replacement: ""
+    is_regex: true
+
+  # 3. Strip dataset-style trailing 1-2 digit codes (01, 02, 06, etc.)
+  #    This is the "NN rule at the end" in generic form.
+  #    Examples: "national league of cities 01" -> "national league of cities"
+  - pattern: "\\s0?[0-9]{1,2}\\s*$"
+    replacement: ""
+    is_regex: true
+
+  # 4. Normalize "limited" punctuation variants at the end
+  #    Examples: "limited." / "limited," -> "limited"
+  - pattern: "\\blimited[.,]\\s*$"
+    replacement: "limited"
+    is_regex: true
+
+  # 5. Drop country tag "(usa)" at the end of a name
+  #    Example: "g4s secure solutions (usa)" -> "g4s secure solutions"
+  - pattern: "\\s*\\(usa\\)\\s*$"
+    replacement: ""
+    is_regex: true
+
+stop_words: []
+
+config_hash: "TODO-fill-for-US-base"

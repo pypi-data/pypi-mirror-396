@@ -1,0 +1,73 @@
+# CEP Localization Rules
+# Jurisdiction: EU
+# Parent: BASE
+#
+# Scope:
+# - Conservative, cross-country normalization for Europe-wide datasets.
+# - Avoid language-specific or country-specific aggressive rewrites.
+# - Prefer “make tokenization stable” over “guess meaning”.
+#
+# Design principles:
+# - Never remove content unless it is clearly non-semantic (wrappers, trailing boilerplate, formatting noise).
+# - Avoid expansions that could change meaning across languages.
+# - Keep rules deterministic and idempotent.
+
+jurisdiction: "eu"
+parent: "base"
+version: "0.0.1"
+updated_timestamp: "2025-12-05T12:46:28Z"
+
+# Keep abbreviations conservative at EU level.
+# Country- or language-specific abbreviations should live in eu/de, eu/fr, etc.
+abbreviations:
+  eu: european union
+
+agency_names: {}
+
+entity_types:
+  # Extremely common organizational categories across EU contexts.
+  # Keep these as identity-stable labels rather than expansions that remove signal.
+  ngo: non-governmental organization
+
+rules:
+  # 1) Normalize common punctuation that breaks tokenization
+  - pattern: ","
+    replacement: " "
+    is_regex: false
+
+  # 2) Strip trailing punctuation (often present in vendor lists)
+  - pattern: "[,.;:]+\\s*$"
+    replacement: ""
+    is_regex: true
+
+  # 3) Collapse whitespace
+  - pattern: "\\s+"
+    replacement: " "
+    is_regex: true
+
+  # 4) Trim leading/trailing whitespace (post-processing usually handles this, but keep it explicit)
+  - pattern: "^\\s+|\\s+$"
+    replacement: ""
+    is_regex: true
+
+  # 5) Normalize common bracketed country markers when they are clearly wrappers
+  #    Examples: "acme (eu)" / "acme [eu]" -> "acme"
+  - pattern: "\\s*[\\(\\[]\\s*eu\\s*[\\)\\]]\\s*$"
+    replacement: ""
+    is_regex: true
+
+  # 6) Remove repeated hyphen/underscore noise used as separators in some exports
+  #    Example: "acme --- partners" -> "acme partners"
+  - pattern: "[-_]{2,}"
+    replacement: " "
+    is_regex: true
+
+  # 7) Normalize ampersand spacing only (do not remove & at EU base)
+  #    Example: "a&b" -> "a & b"
+  - pattern: "\\s*&\\s*"
+    replacement: " & "
+    is_regex: true
+
+stop_words: []
+
+config_hash: "2fbcd8f8c1415b94244c3ade1e2cbae34853de58f7d0e38d97cfd4d52df140d5"
