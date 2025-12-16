@@ -1,0 +1,130 @@
+[project]
+name = "coremusic"
+version = "0.1.11"
+authors = [
+  { name="Shakeeb Alireza", email="author@example.com" },
+]
+description = "Python bindings for Apple CoreAudio"
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: MacOS :: MacOS X",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Cython",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Topic :: Multimedia :: Sound/Audio :: Analysis",
+    "Topic :: Multimedia :: Sound/Audio :: Capture/Recording",
+    "Topic :: Multimedia :: Sound/Audio :: MIDI",
+    "Topic :: Multimedia :: Sound/Audio :: Players",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/shakfu/coremusic"
+Issues = "https://github.com/shakfu/coremusic/issues"
+
+[project.scripts]
+coremusic = "coremusic.cli:main"
+
+[dependency-groups]
+dev = [
+    "numpy>=2.3.4",
+    "scipy>=1.16.2",
+    "sphinx>=8.2.3",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "twine>=6.2.0",
+    "mypy>=1.13.0",
+    "matplotlib>=3.10.7",
+    "ruff>=0.14.8",
+    "isort>=7.0.0",
+]
+
+[build-system]
+requires = ["setuptools >= 61", "cython >= 3.1.4"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+include-package-data = false
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
+
+[tool.coverage.run]
+source = ["src/coremusic"]
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/site-packages/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = true
+disallow_untyped_decorators = false
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+show_error_codes = true
+mypy_path = "src"
+packages = ["coremusic"]
+namespace_packages = true
+
+[[tool.mypy.overrides]]
+module = "coremusic.capi"
+ignore_missing_imports = false
+follow_imports = "skip"
+
+[[tool.mypy.overrides]]
+module = [
+    "scipy.*",
+    "numpy.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "coremusic.async_io"
+# Stub file inconsistencies - actual code has proper type hints
+warn_unused_ignores = false
+disable_error_code = ["arg-type", "attr-defined"]
