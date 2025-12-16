@@ -1,0 +1,50 @@
+[project]
+name = "ipyannote"
+description = "Interactive pyannote widgets"
+readme = "README.md"
+authors = [
+    { name = "Hervé BREDIN", email = "herve@pyannote.ai" }
+]
+requires-python = ">=3.10"
+
+dynamic = [
+  "version",
+]
+
+dependencies = [
+    "anywidget>=0.9.13",
+    "numpy>=2.2.0",
+    "pyannote-core>=5.0.0",
+    "pyannote-metrics>=3.2.1",
+    "scipy>=1.14.1",
+]
+# Dependency groups (recognized by `uv`). For more details, visit:
+# https://peps.python.org/pep-0735/
+[dependency-groups]
+dev = [
+    "watchfiles",
+    "jupyterlab",
+    "ipykernel>=6.29.5",
+]
+
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build]
+only-packages = true
+artifacts = ["src/ipyannote/static/*"]
+
+[tool.hatch.build.hooks.jupyter-builder]
+build-function = "hatch_jupyter_builder.npm_builder"
+ensured-targets = ["src/ipyannote/static/controls.js", "src/ipyannote/static/labels.js", "src/ipyannote/static/waveform.js", "src/ipyannote/static/transcript.js", "src/ipyannote/static/horizontal_transcript.js"]
+skip-if-exists = ["src/ipyannote/static/controls.js", "src/ipyannote/static/labels.js", "src/ipyannote/static/waveform.js", "src/ipyannote/static/transcript.js", "src/ipyannote/static/horizontal_transcript.js"]
+dependencies = ["hatch-jupyter-builder>=0.5.0"]
+
+[tool.hatch.build.hooks.jupyter-builder.build-kwargs]
+npm = "npm"
+build_cmd = "build"
+
