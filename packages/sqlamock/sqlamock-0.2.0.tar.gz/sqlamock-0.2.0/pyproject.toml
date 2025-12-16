@@ -1,0 +1,61 @@
+[tool.poetry]
+name = "sqlamock"
+version = "0.2.0"
+description = "Provides mocks for SQLAlchemy using in-memory / on-file sqlite databases with growing support for PostgreSQL"
+authors = ["Chris Lee <chris@cosmosnexus.co>"]
+
+[tool.poetry.dependencies]
+python = ">=3.10,<4"
+sqlalchemy = "^2.0.36"
+aiosqlite = { version = "^0.20.0", optional = true }
+
+[tool.poetry.extras]
+async = ["aiosqlite"]
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.3"
+ipdb = "^0.13.13"
+mypy = "^1.13.0"
+ruff = "^0.7.2"
+pytest-cov = "^6.0.0"
+pytest-asyncio = "^0.25.2"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+addopts = "-ra -q"
+testpaths = [
+    "tests"
+]
+
+[tool.poetry.scripts]
+test = 'pytest:main'
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["B", "ASYNC", "I"]
+
+[tool.mypy]
+files = ["sqlamock/"]
+exclude = ["^tests/"]
+python_executable = ".venv/bin/python"
+ignore_missing_imports = true
+explicit_package_bases = true
+namespace_packages = true
+warn_unused_configs = true
+
+[tool.semantic_release]
+version_toml = [
+    "pyproject.toml:tool.poetry.version"
+]
+major_on_zero = false
+branch = "main"
+upload_to_PyPI = true
+upload_to_release = true
+build_command = "pip install poetry && poetry build"
