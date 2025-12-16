@@ -1,0 +1,128 @@
+# Copyright (c) 2024, RTE (https://www.rte-france.com)
+#
+# See AUTHORS.txt
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# SPDX-License-Identifier: MPL-2.0
+#
+# This file is part of the Antares project.
+import copy
+
+from pathlib import Path
+from typing import Any
+
+import pandas as pd
+
+from typing_extensions import override
+
+from antares.craft.config.local_configuration import LocalConfiguration
+from antares.craft.exceptions.exceptions import ThermalPropertiesUpdateError
+from antares.craft.model.thermal import (
+    ThermalCluster,
+    ThermalClusterMatrixName,
+    ThermalClusterProperties,
+    ThermalClusterPropertiesUpdate,
+)
+from antares.craft.service.base_services import BaseThermalService
+from antares.craft.service.local_services.models.thermal import (
+    parse_thermal_cluster_local,
+    serialize_thermal_cluster_local,
+)
+from antares.craft.service.local_services.services.utils import checks_matrix_dimensions
+from antares.craft.tools.matrix_tool import read_timeseries, write_timeseries
+from antares.craft.tools.serde_local.ini_reader import IniReader
+from antares.craft.tools.serde_local.ini_writer import IniWriter
+from antares.craft.tools.time_series_tool import TimeSeriesFileType
+from antares.study.version import StudyVersion
+
+MAPPING = {
+    ThermalClusterMatrixName.PREPRO_DATA: TimeSeriesFileType.THERMAL_DATA,
+    ThermalClusterMatrixName.PREPRO_MODULATION: TimeSeriesFileType.THERMAL_MODULATION,
+    ThermalClusterMatrixName.SERIES: TimeSeriesFileType.THERMAL_SERIES,
+    ThermalClusterMatrixName.SERIES_CO2_COST: TimeSeriesFileType.THERMAL_CO2,
+    ThermalClusterMatrixName.SERIES_FUEL_COST: TimeSeriesFileType.THERMAL_FUEL,
+}
+
+
+class ThermalLocalService(BaseThermalService):
+    def __init__(self, config: LocalConfiguration, study_name: str, study_version: StudyVersion) -> None:
+        super().__init__()
+        self.config = config
+        self.study_name = study_name
+        self.study_version = study_version
+
+    def _get_ini_path(self, area_id: str) -> Path:
+        return self.config.study_path / "input" / "thermal" / "clusters" / area_id / "list.ini"
+
+    def read_ini(self, area_id: str) -> dict[str, Any]:
+        return IniReader().read(self._get_ini_path(area_id))
+
+    def save_ini(self, content: dict[str, Any], area_id: str) -> None:
+        IniWriter().write(content, self._get_ini_path(area_id))
+
+    @override
+    def get_thermal_matrix(self, thermal_cluster: ThermalCluster, ts_name: ThermalClusterMatrixName) -> pd.DataFrame:
+        return read_timeseries(
+            MAPPING[ts_name],
+            self.config.study_path,
+            area_id=thermal_cluster.area_id,
+            cluster_id=thermal_cluster.id,
+        )
+
+    @override
+    def set_thermal_matrix(
+        self, thermal_cluster: ThermalCluster, matrix: pd.DataFrame, ts_name: ThermalClusterMatrixName
+    ) -> None:
+        checks_matrix_dimensions(matrix, f"thermal/{thermal_cluster.area_id}/{thermal_cluster.id}", ts_name.value)
+        write_timeseries(self.config.study_path, matrix, MAPPING[ts_name], thermal_cluster.area_id, thermal_cluster.id)
+
+    @override
+    def update_thermal_clusters_properties(
+        self, new_properties: dict[ThermalCluster, ThermalClusterPropertiesUpdate]
+    ) -> dict[ThermalCluster, ThermalClusterProperties]:
+        """
+        We validate ALL objects before saving them.
+        This way, if some data is invalid, we're not modifying the study partially only.
+        """
+        memory_mapping = {}
+
+        new_properties_dict: dict[ThermalCluster, ThermalClusterProperties] = {}
+        cluster_name_to_object: dict[str, ThermalCluster] = {}
+
+        properties_by_areas: dict[str, dict[str, ThermalClusterPropertiesUpdate]] = {}
+        for thermal_cluster, properties in new_properties.items():
+            properties_by_areas.setdefault(thermal_cluster.area_id, {})[thermal_cluster.name] = properties
+            cluster_name_to_object[thermal_cluster.name] = thermal_cluster
+
+        for area_id, value in properties_by_areas.items():
+            all_thermal_names = set(value.keys())  # used to raise an Exception if a cluster doesn't exist
+            thermal_dict = self.read_ini(area_id)
+            for thermal in thermal_dict.values():
+                thermal_name = thermal["name"]
+                if thermal_name in value:
+                    all_thermal_names.remove(thermal_name)
+
+                    # Update properties
+                    upd_props_as_dict = serialize_thermal_cluster_local(self.study_version, value[thermal_name])
+                    thermal.update(upd_props_as_dict)
+
+                    # Prepare the object to return
+                    local_dict = copy.deepcopy(thermal)
+                    del local_dict["name"]
+                    new_properties_dict[cluster_name_to_object[thermal_name]] = parse_thermal_cluster_local(
+                        self.study_version, local_dict
+                    )
+
+            if len(all_thermal_names) > 0:
+                raise ThermalPropertiesUpdateError(next(iter(all_thermal_names)), area_id, "The cluster does not exist")
+
+            memory_mapping[area_id] = thermal_dict
+
+        # Update ini files
+        for area_id, ini_content in memory_mapping.items():
+            self.save_ini(ini_content, area_id)
+
+        return new_properties_dict
