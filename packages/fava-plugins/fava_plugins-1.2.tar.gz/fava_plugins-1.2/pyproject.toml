@@ -1,0 +1,86 @@
+[project]
+name = "fava-plugins"
+version = "1.2"
+description = "A collection of Beancount plugins."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+  {name = "Jakob Schnitzer", email = "mail@jakobschnitzer.de"}
+]
+keywords = ["fava", "beancount", "accounting",]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Education",
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: Financial and Insurance Industry",
+    "Intended Audience :: Information Technology",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Office/Business :: Financial :: Accounting",
+    "Topic :: Office/Business :: Financial :: Investment",
+]
+dependencies = [
+    "beancount>=2,<4",
+]
+
+[project.urls]
+Homepage = "https://github.com/beancount/fava-plugins"
+Source = "https://github.com/beancount/fava-plugins"
+Issues = "https://github.com/beancount/fava-plugins/issues"
+
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[dependency-groups]
+# Type-checking with mypy.
+mypy = [
+    "mypy>=1.14",
+    "pytest>=8",
+]
+# Running pre-commit hooks.
+pre-commit = [
+    "pre-commit>=4",
+]
+# Dependencies for tests.
+test = [
+    "pytest>=8",
+]
+# Stuff for the dev environment.
+dev = [
+    { include-group = "mypy" },
+    { include-group = "pre-commit" },
+    { include-group = "test" },
+    "ruff>=0.11",
+]
+
+[tool.mypy]
+strict = true
+files = [
+    "fava_plugins",
+    "tests",
+]
+
+[tool.ruff]
+line-length = 79
+
+[tool.ruff.lint]
+extend-select = [
+    "I",
+    "TC",
+]
+
+[tool.ruff.lint.flake8-type-checking]
+strict = true
+
+[tool.ruff.lint.isort]
+force-single-line = true
+order-by-type = false
+known-first-party = ["fava_plugins"]
+required-imports = ["from __future__ import annotations"]
