@@ -1,0 +1,128 @@
+# Copyright 2021 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+# !! WARNING !!
+# Do not modify this file directly!
+# !! WARNING !!
+#
+# It is generated from: ../../tests/workflows/actions-ifexpands.yml
+# using the script from https://github.com/mithro/actions-includes@main
+
+on:
+  push:
+  pull_request:
+jobs:
+  docker-image-build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: ⏰ 📝 - Get source code
+      uses: actions/checkout@v2
+    - name: ⏰ 📝 - Setting up Python for local docker build
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+    - name: ⏰ 📝 - Setting up remaining bit for local docker build
+      uses: ./.github/includes/actions/prepare-for-docker-build
+    - name: ⏰ 🛂 📖 - Checking workflow expansion is up to date (local)
+      uses: ./.github/includes/actions/local
+      if: runner.os == 'Linux'
+      continue-on-error: false
+      with:
+        workflow: .github/workflows/test.actions-ifexpands.yml
+    - id: wait
+      name: Wait for Docker Image build
+      uses: fountainhead/action-wait-for-check@v1.0.0
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        checkName: Push Docker image to GitHub Packages
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+    - name: Docker Image Check
+      env:
+        STATUS: ${{ steps.wait.outputs.conclusion }}
+      run: |
+        if [[ "$STATUS" != "success" ]]; then
+          echo "::error {{ $STATUS }}"
+          exit 1
+        fi
+  test-setting-default-false-to-true:
+    needs: docker-image-build
+    strategy:
+      matrix:
+        use-first: [true, false]
+        use-last: [true, false]
+    runs-on: ubuntu-latest
+    steps:
+    - name: ⏰ 📝 - Get source code
+      uses: actions/checkout@v2
+    - name: ⏰ 📝 - Setting up Python for local docker build
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+    - name: ⏰ 📝 - Setting up remaining bit for local docker build
+      uses: ./.github/includes/actions/prepare-for-docker-build
+    - name: ⏰ 🛂 📖 - Checking workflow expansion is up to date (local)
+      uses: ./.github/includes/actions/local
+      if: runner.os == 'Linux'
+      continue-on-error: false
+      with:
+        workflow: .github/workflows/test.actions-ifexpands.yml
+    - name: First step
+      if: ${{ matrix.use-first }}
+      run: |
+        echo "First step!"
+    - name: Middle step
+      run: |
+        echo "Hello World"
+    - name: First step
+      if: ${{ matrix.use-first }}
+      run: |
+        echo "First step!"
+    - name: Middle step
+      run: |
+        echo "Hello World"
+    - name: Last step
+      if: ${{ matrix.use-first }}
+      run: |
+        echo "Last step!"
+    - name: First step
+      if: ${{ matrix.use-last }}
+      run: |
+        echo "First step!"
+    - name: Middle step
+      run: |
+        echo "Hello World"
+    - name: Last step
+      if: ${{ matrix.use-last }}
+      run: |
+        echo "Last step!"
+    - name: First step
+      run: |
+        echo "First step!"
+    - name: Middle step
+      run: |
+        echo "Hello World"
+    - name: Last step
+      if: ${{ matrix.use-last }}
+      run: |
+        echo "Last step!"
+    - name: Step
+      if: ${{ matrix.use-first && matrix.use-last }}
+      run: |
+        echo "Hello world!"
+    - name: Step
+      if: ${{ matrix.use-last }}
+      run: |
+        echo "Hello world!"
