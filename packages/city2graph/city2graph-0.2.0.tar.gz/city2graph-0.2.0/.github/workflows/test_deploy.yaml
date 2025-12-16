@@ -1,0 +1,25 @@
+name: Build and Deploy Python Package (Test)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          cache-dependency-glob: uv.lock
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Build distributions
+        run: uv build --sdist --wheel --out-dir dist
+
+      - name: Publish to TestPyPI
+        run: uv publish --index testpypi dist/*

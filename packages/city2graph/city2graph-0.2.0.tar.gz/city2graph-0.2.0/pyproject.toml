@@ -1,0 +1,278 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "city2graph"
+version = "0.2.0"
+description = "A Python library for Geospatial Graph Neural Networks and GeoAI for Urban Analytics with PyTorch Geometric. Convert geospatial data to graphs for spatiotemporal analysis, urban mobility studies, and more."
+authors = [
+    {name = "Yuta Sato", email = "y.sato@liverpool.ac.uk"}
+]
+readme = "README.md"
+license = {text = "BSD-3-Clause"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Scientific/Engineering :: GIS",
+]
+keywords = ["GeoAI", "Graph Neural Networks", "GNNs", "PyTorch Geometric", "Geospatial Analysis", "Urban Analytics", "Spatial Data Science", "Urban Mobility", "Transportation Networks", "Spatial Knowledge Graphs", "Spatiotemporal Analysis", "Geospatial Foundation Models", "Digital Twin", "Urban Informatics", "Geographic Data Science", "Graph Representation Learning", "Urban Planning and Design"]
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "networkx >=2.8",
+    "osmnx >=2.0.3",
+    "shapely >=2.1.0",
+    "geopandas >=1.1.1",
+    "libpysal >=4.12.1",
+    "momepy",
+    "overturemaps>=0.17.0",
+    "rustworkx >=0.17.1",
+    "scipy >=1.10.0",
+]
+
+[project.optional-dependencies]
+cpu = [
+    "torch>=2.9.0",
+    "torchvision>=0.24.0",
+    "torch_geometric>=2.6.1",
+]
+cu118 = [
+    "torch>=2.6.0",
+    "torchvision>=0.21.0",
+    "torch_geometric>=2.6.1",
+]
+cu124 = [
+    "torch>=2.6.0",
+    "torchvision>=0.21.0",
+    "torch_geometric>=2.6.1",
+]
+cu126 = [
+    "torch>=2.7.0",
+    "torchvision>=0.22.0",
+    "torch_geometric>=2.6.1",
+]
+cu128 = [
+    "torch>=2.9.0",
+    "torchvision>=0.24.0",
+    "torch_geometric>=2.6.1",
+]
+cu130 = [
+    "torch>=2.9.0",
+    "torchvision>=0.24.0",
+    "torch_geometric>=2.6.1",
+]
+
+[tool.uv]
+default-groups = []
+# Prevent selecting more than one variant at once
+conflicts = [
+  [ { extra = "cpu" },
+    { extra = "cu118" },
+    { extra = "cu124" },
+    { extra = "cu126" },
+    { extra = "cu128" },
+    { extra = "cu130" } ]
+]
+
+[tool.uv.sources]
+# torch index by extra
+torch = [
+  { index = "pytorch-cpu", extra = "cpu" },
+  { index = "pytorch-cu118", extra = "cu118", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+  { index = "pytorch-cu124", extra = "cu124", marker = "sys_platform == 'linux' or sys_platform == 'win32'"  },
+  { index = "pytorch-cu126", extra = "cu126", marker = "sys_platform == 'linux' or sys_platform == 'win32'"  },
+  { index = "pytorch-cu128", extra = "cu128", marker = "sys_platform == 'linux' or sys_platform == 'win32'"  },
+  { index = "pytorch-cu130", extra = "cu130", marker = "sys_platform == 'linux' or sys_platform == 'win32'"  },
+]
+overturemaps = { git = "https://github.com/OvertureMaps/overturemaps-py.git" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu118"
+url = "https://download.pytorch.org/whl/cu118"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true
+
+[[tool.uv.index]]
+name = "testpypi"
+url = "https://test.pypi.org/simple/"
+publish-url = "https://test.pypi.org/legacy/"
+explicit = true
+
+[dependency-groups]
+docs = [
+    "mkdocs",
+    "mkdocs-material",
+    "mkdocstrings[python]",
+    "mkdocs-jupyter",
+    "mkdocs-gen-files",
+    "mkdocs-literate-nav",
+    "pillow",
+    "cairosvg",
+    "toml",
+    "mike",
+    "sphinx",
+    "pydata-sphinx-theme",
+    "myst-parser",
+    "nbsphinx",
+    "numpydoc",
+    "sphinx-autodoc-typehints",
+    "sphinxext-opengraph[social-cards] >=0.10.0",
+    "sphinx-plotly-directive",
+    "sphinx-sitemap",
+    "black",
+]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "mypy",
+    "pre-commit",
+    "ipython >=8.14.0",
+    "jupyter >=1.0.0",
+    "notebook >=7.0.0",
+    "isort >=5.12.0",
+    "ipykernel >=6.29.5",
+    "matplotlib >=3.10.3",
+    "folium >=0.19.6",
+    "mapclassify >=2.8.1",
+    "contextily>=1.6.2",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/c2g-dev/city2graph"
+"Documentation" = "https://city2graph.net"
+"Bug Tracker" = "https://github.com/c2g-dev/city2graph/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["city2graph"]
+
+[tool.coverage.report]
+exclude_also = ["@overload", "if TYPE_CHECKING:"]
+
+[tool.mypy]
+python_version = 3.12
+cache_dir = "~/.cache/pre-commit/mypy"
+ignore_missing_imports = true
+strict = true
+warn_no_return = true
+warn_unreachable = true
+warn_return_any = true
+warn_unused_configs = true
+disable_error_code = ["unreachable"]
+exclude = [
+    "activate/",
+    "deactivate/",
+    ".venv/",
+    "__pycache__/",
+    "build/",
+    "dist/",
+]
+
+[tool.ruff]
+cache-dir = "~/.cache/pre-commit/ruff"
+exclude = [
+    "docs/*",
+    "dev/*",
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+]
+
+line-length = 100
+
+[tool.ruff.lint]
+extend-ignore = [
+    "C416",
+    "COM812",
+    "DTZ001",
+    "DTZ007",
+    "FBT001",
+    "FBT002",
+    "N803",
+    "N806",
+    "PLR2004",
+    "SLF001",
+    "S101",
+    "S603",
+    "TRY300",
+    ]
+extend-select = ["ALL"]
+
+[tool.ruff.lint.isort]
+force-single-line = true
+
+[tool.ruff.lint.mccabe]
+max-complexity = 16
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 140
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.pylint]
+max-args = 11
+max-branches = 15
+
+[tool.pytest.ini_options]
+addopts = "--cov=city2graph --cov-report term-missing"
+pythonpath = "."
+
+[tool.numpydoc_validation]
+checks = [
+    "all",   # report on all checks, except the below
+    "EX01",  # No examples section found
+    "SA01",  # See Also section not found
+]
