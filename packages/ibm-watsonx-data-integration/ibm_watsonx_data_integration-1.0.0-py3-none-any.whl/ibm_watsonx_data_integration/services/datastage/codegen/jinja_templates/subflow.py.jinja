@@ -1,0 +1,32 @@
+def get_{{ var_name }}():
+    {{ composer }} = project.create_subflow("{{ name }}")
+
+    {% for parameter in local_params %}
+    {% if parameter.param_type == "int64" %}
+    {{ composer }}.add_local_parameter("integer", "{{parameter.name}}", "{{parameter.value}}", "{{parameter.description}}")
+    {% else %}
+    {{ composer }}.add_local_parameter("{{parameter.param_type}}", "{{parameter.name}}", "{{parameter.value}}", "{{parameter.description}}")
+    {% endif %}
+    {% endfor %}
+
+{{ nodes_code }}
+
+    {% for paramset in parameter_sets %}
+    {{ composer }}.use_parameter_set({{ paramset }})
+    {% endfor %}
+
+    project.update_subflow({{ composer }})
+
+    return {{ composer }}
+{% if zip_structure -%}
+{{ var_name }} = get_{{ var_name }}()
+{%- else -%}
+{% if rcp -%}
+{{ var_name }} = {{ parent_composer }}.add_subflow(get_{{ var_name }}(), "{{ label }}").with_runtime_column_propagation({{rcp}})
+{%- else -%}
+{{ var_name }} = {{ parent_composer }}.add_subflow(get_{{ var_name }}(), "{{ label }}")
+{%- endif %}
+{%- endif %}
+{%- for parameter in local_params %}
+{{ var_name }}.set_local_parameter("{{parameter.name}}", "{{local_parameter_values[parameter.name]}}")
+{% endfor %}

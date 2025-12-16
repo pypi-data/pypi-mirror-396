@@ -1,0 +1,126 @@
+"""Module for varchar schema field."""
+
+import ibm_watsonx_data_integration.services.datastage.models.flow_json_model as models
+from ibm_watsonx_data_integration.services.datastage.models.enums import FIELD
+from ibm_watsonx_data_integration.services.datastage.models.schema.field.base_field import BaseField
+from typing import TypeVar
+
+T = TypeVar("T", bound="VarChar")
+
+
+class VarChar(BaseField):
+    """Class for varchar schema field."""
+
+    def __init__(self, name: str) -> None:
+        """Initializes a schema field."""
+        super().__init__(name)
+        self._set_model_type("string")
+        self._set_app_type_code("STRING")
+        self._set_app_odbc_type("VARCHAR")
+        self.configuration.metadata.min_length = 0
+        self.configuration.metadata.max_length = 100
+
+    def _create_from_model(self, model: models.FieldModelComplex) -> T:
+        field = VarChar(model.name)
+        field.configuration = model
+        return field
+
+    def length(self, length: int) -> "BaseField":
+        """Set the length of this field.
+
+        Args:
+            length: The length to set for this field.
+
+        Returns:
+            A new instance of the field with the updated length.
+
+        """
+        return self._length(length)._max_length(length)
+
+    def unicode(self) -> "BaseField":
+        """Sets unicode."""
+        return self._unicode()
+
+    def byte_to_skip(self, num_bytes: int) -> "BaseField":
+        """Sets bytes to skip."""
+        return self._byte_to_skip(num_bytes)
+
+    def delimiter(self, delim: FIELD.Delim) -> "BaseField":
+        """Sets delimiter."""
+        return self._delim(delim)
+
+    def delimiter_string(self, delimiter_string: str) -> "BaseField":
+        """Sets delimiter string."""
+        return self._delim_string(delimiter_string)
+
+    def generate_on_output(self) -> "BaseField":
+        """Sets generate on output."""
+        return self._generate_on_output()
+
+    def prefix_bytes(self, prefix_bytes: FIELD.Prefix) -> "BaseField":
+        """Sets prefix bytes."""
+        return self._prefix_bytes(prefix_bytes)
+
+    def quote(self, quote_type: FIELD.Quote) -> "BaseField":
+        """Sets quote type."""
+        return self._quote(quote_type)
+
+    def start_position(self, position: int) -> "BaseField":
+        """Sets start position."""
+        return self._start_position(position)
+
+    def tag_case_value(self, tag_case_value: int) -> "BaseField":
+        """Sets tag case value."""
+        return self._tagcase(tag_case_value)
+
+    def charset(self, charset: FIELD.CharSet) -> "BaseField":
+        """Sets charset."""
+        return self._charset(charset)
+
+    def default(self, default: str) -> "BaseField":
+        """Sets default."""
+        return self._default(default)
+
+    def export_ebcdic_as_ascii(self) -> "BaseField":
+        """Sets export abcdic as ascii."""
+        return self._export_ebcdic_as_ascii()
+
+    def field_max_width(self, max_width: int) -> "BaseField":
+        """Sets field max width."""
+        return self._max_width(max_width)
+
+    def field_width(self, width: int) -> "BaseField":
+        """Sets field width."""
+        return self._width(width)
+
+    def is_link_field(self) -> "BaseField":
+        """Sets is link field."""
+        return self._link_keep()
+
+    def padchar(self, padchar: FIELD.PadChar) -> "BaseField":
+        """Sets pad char."""
+        return self._padchar(padchar)
+
+    def generate_algorithm(self, generate_algorithm: FIELD.GenerateAlgorithm) -> "BaseField":
+        """Sets generate algorithm."""
+        return self._generate_algorithm(generate_algorithm)
+
+    def cycle_values(self, cycle_values: list[str]) -> "BaseField":
+        """Sets cycle values."""
+        return self._cycle_values(cycle_values)
+
+    def alphabet(self, alphabet: str) -> "BaseField":
+        """Sets alphabet."""
+        return self._alphabet(alphabet)
+
+    def link_field_reference(self, link_field_reference: str) -> "BaseField":
+        """Sets link field reference."""
+        return self._link_field_reference(link_field_reference)
+
+    def null_seed(self, seed: int) -> "BaseField":
+        """Sets null seed."""
+        return self._null_seed(seed)
+
+    def percent_null(self, percent_null: int) -> "BaseField":
+        """Sets percent null."""
+        return self._percent_null(percent_null)
