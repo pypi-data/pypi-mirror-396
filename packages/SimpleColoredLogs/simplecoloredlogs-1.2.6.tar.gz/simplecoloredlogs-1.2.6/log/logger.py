@@ -1,0 +1,1581 @@
+# Copyright (c) 2025 OPPRO.NET Network
+"""
+logger.py
+
+Professional Terminal Logger mit erweiterten Features
+Standalone-Version: Enthält LogLevels, Categories und die Logs-Klasse in einer Datei.
+Fix: Robustheit gegenüber String-Inputs als Kategorien.
+Erweiterung: Konfiguration über Umgebungsvariablen.
+"""
+
+import sys
+import threading
+import inspect
+import traceback
+import json
+import os
+import time
+import atexit
+import re
+import socket
+import gzip
+import random
+from datetime import datetime
+from typing import Optional, Callable, Dict, Any, List, Union, ClassVar
+from pathlib import Path
+from collections import defaultdict, deque
+from enum import IntEnum, Enum
+
+# Externe Abhängigkeit
+try:
+    from colorama import Fore, Style, Back, init
+    # Colorama initialisieren
+    init(autoreset=True)
+except ImportError:
+    # Fallback, falls colorama nicht installiert ist
+    class MockColor:
+        def __getattr__(self, name): return ""
+    Fore = Style = Back = MockColor()
+    def init(**kwargs): pass
+
+
+# ==========================================
+# TEIL 1: LOG LEVEL DEFINITIONEN (aus loglevel.py)
+# ==========================================
+
+class LogLevel(IntEnum):
+    """Log-Level Definitionen"""
+    TRACE = -1      # Sehr detaillierte Debug-Infos
+    DEBUG = 0       # Entwickler-Informationen
+    INFO = 1        # Allgemeine Informationen
+    SUCCESS = 2     # Erfolgreiche Operationen
+    LOADING = 3     # Startet Lade-Vorgang
+    PROCESSING = 4  # Verarbeitet gerade
+    PROGRESS = 5    # Fortschritts-Update (z.B. 45%)
+    WAITING = 6     # Wartet auf Ressource/Response
+    NOTICE = 7      # Wichtige Hinweise (zwischen INFO und WARN)
+    WARN = 8        # Warnungen
+    ERROR = 9       # Fehler
+    CRITICAL = 10   # Kritische Fehler (noch behebbar)
+    FATAL = 11      # Fatale Fehler (Programm-Absturz)
+    SECURITY = 12   # Sicherheitsrelevante Events
+
+
+class LogFormat(IntEnum):
+    """Output-Format Optionen"""
+    SIMPLE = 0      # [LEVEL] [CATEGORY] MSG
+    STANDARD = 1    # [TIMESTAMP] [LEVEL] [CATEGORY] MSG
+    DETAILED = 2    # [TIMESTAMP] [LEVEL] [CATEGORY] [file.py:123] MSG
+    JSON = 3        # JSON-Format für Log-Aggregation
+
+
+class LevelColors:
+    """Farb-Mappings für Log-Levels"""
+    
+    COLORS = {
+        LogLevel.TRACE: Fore.LIGHTBLACK_EX,
+        LogLevel.DEBUG: Fore.CYAN,
+        LogLevel.INFO: Fore.WHITE,
+        LogLevel.SUCCESS: Fore.GREEN,
+        LogLevel.LOADING: Fore.BLUE,
+        LogLevel.PROCESSING: Fore.LIGHTCYAN_EX,
+        LogLevel.PROGRESS: Fore.LIGHTBLUE_EX,
+        LogLevel.WAITING: Fore.LIGHTYELLOW_EX,
+        LogLevel.NOTICE: Fore.LIGHTMAGENTA_EX,
+        LogLevel.WARN: Fore.YELLOW,
+        LogLevel.ERROR: Fore.RED,
+        LogLevel.CRITICAL: Fore.MAGENTA,
+        LogLevel.FATAL: Fore.WHITE + Back.RED,
+        LogLevel.SECURITY: Fore.BLACK + Back.YELLOW,
+    }
+    
+    @classmethod
+    def get_color(cls, level: LogLevel) -> str:
+        """Gibt die Farbe für ein Log-Level zurück"""
+        return cls.COLORS.get(level, Fore.WHITE)
+
+
+# ==========================================
+# TEIL 2: KATEGORIEN (aus category.py)
+# ==========================================
+
+# NOTE: Diese Enum bleibt die interne Quelle der String-Werte und Farben.
+class Category(str, Enum):
+    """Standard-Kategorien für Logs mit PyNum Naming"""
+    
+    # === Core System ===
+    API = "API"
+    DATABASE = "DATABASE"
+    SERVER = "SERVER"
+    CACHE = "CACHE"
+    AUTH = "AUTH"
+    SYSTEM = "SYSTEM"
+    CONFIG = "CONFIG"
+    SCHEMA = "SCHEMA"
+    INDEX = "INDEX"
+    QUERY = "QUERY"
+    VIEW = "VIEW"
+    TRANSACTION_COMMIT = "TRANSACTION_COMMIT"
+    NOSQL = "NOSQL"
+    RELATIONAL_DB = "RELATIONAL_DB"
+    SESSION_STORAGE = "SESSION_STORAGE"
+
+    # === NEU: Runtime & Core System Erweitungen ===
+    RUNTIME = "RUNTIME"
+    COMPILER = "COMPILER"
+    DEPENDENCY = "DEPENDENCY"
+    CLI = "CLI"
+    
+    # === Network & Communication ===
+    NETWORK = "NETWORK"
+    HTTP = "HTTP"
+    WEBSOCKET = "WEBSOCKET"
+    GRPC = "GRPC"
+    GRAPHQL = "GRAPHQL"
+    REST = "REST"
+    SOAP = "SOAP"
+    LOAD_BALANCER = "LOAD_BALANCER"
+    REVERSE_PROXY = "REVERSE_PROXY"
+    DNS = "DNS"
+    CDN = "CDN"
+    
+    # === NEU: Geolocation ===
+    GEOLOCATION = "GEOLOCATION"
+    
+    # === Security & Compliance ===
+    SECURITY = "SECURITY"
+    ENCRYPTION = "ENCRYPTION"
+    FIREWALL = "FIREWALL"
+    AUDIT = "AUDIT"
+    COMPLIANCE = "COMPLIANCE"
+    VULNERABILITY = "VULNERABILITY"
+    GDPR = "GDPR"
+    HIPAA = "HIPAA"
+    PCI_DSS = "PCI_DSS"
+    IDP = "IDP"
+    MFA = "MFA"
+    RATE_LIMITER = "RATE_LIMITER"
+    
+    # === NEU: Fraud & Business Security ===
+    FRAUD = "FRAUD"
+    
+    # === Frontend & User Interface ===
+    CLIENT = "CLIENT"
+    UI = "UI"
+    UX = "UX"
+    SPA = "SPA"
+    SSR = "SSR"
+    STATE = "STATE"
+    COMPONENT = "COMPONENT"
+
+    # === NEU: Internationalisierung ===
+    I18N = "I18N"
+    
+    # === Storage & Files ===
+    FILE = "FILE"
+    STORAGE = "STORAGE"
+    BACKUP = "BACKUP"
+    SYNC = "SYNC"
+    UPLOAD = "UPLOAD"
+    DOWNLOAD = "DOWNLOAD"
+
+    # === NEU: Assets ===
+    ASSET = "ASSET"
+    
+    # === Messaging & Events ===
+    QUEUE = "QUEUE"
+    EVENT = "EVENT"
+    PUBSUB = "PUBSUB"
+    KAFKA = "KAFKA"
+    RABBITMQ = "RABBITMQ"
+    REDIS = "REDIS"
+    
+    # === External Services ===
+    EMAIL = "EMAIL"
+    SMS = "SMS"
+    NOTIFICATION = "NOTIFICATION"
+    PAYMENT = "PAYMENT"
+    BILLING = "BILLING"
+    STRIPE = "STRIPE"
+    PAYPAL = "PAYPAL"
+    
+    # === Monitoring & Observability ===
+    METRICS = "METRICS"
+    PERFORMANCE = "PERFORMANCE"
+    HEALTH = "HEALTH"
+    MONITORING = "MONITORING"
+    TRACING = "TRACING"
+    PROFILING = "PROFILING"
+    
+    # === Data Processing ===
+    ETL = "ETL"
+    PIPELINE = "PIPELINE"
+    WORKER = "WORKER"
+    CRON = "CRON"
+    SCHEDULER = "SCHEDULER"
+    BATCH = "BATCH"
+    STREAM = "STREAM"
+
+    # === NEU: Data Transformation & Reporting ===
+    MAPPING = "MAPPING"
+    TRANSFORM = "TRANSFORM"
+    REPORTING = "REPORTING"
+    
+    # === Business Logic ===
+    BUSINESS = "BUSINESS"
+    WORKFLOW = "WORKFLOW"
+    TRANSACTION = "TRANSACTION"
+    ORDER = "ORDER"
+    INVOICE = "INVOICE"
+    SHIPPING = "SHIPPING"
+    
+    # === NEU: Business Finanzen & Bestand ===
+    ACCOUNTING = "ACCOUNTING"
+    INVENTORY = "INVENTORY"
+    
+    # === User Management ===
+    USER = "USER"
+    SESSION = "SESSION"
+    REGISTRATION = "REGISTRATION"
+    LOGIN = "LOGIN"
+    LOGOUT = "LOGOUT"
+    PROFILE = "PROFILE"
+    
+    # === AI & ML ===
+    AI = "AI"
+    ML = "ML"
+    TRAINING = "TRAINING"
+    INFERENCE = "INFERENCE"
+    MODEL = "MODEL"
+    
+    # === DevOps & Infrastructure ===
+    DEPLOY = "DEPLOY"
+    CI_CD = "CI/CD"
+    DOCKER = "DOCKER"
+    KUBERNETES = "K8S"
+    TERRAFORM = "TERRAFORM"
+    ANSIBLE = "ANSIBLE"
+    SERVERLESS = "SERVERLESS"
+    CONTAINER = "CONTAINER"
+    IAC = "IAC"
+    VPC = "VPC"
+    AUTOSCALING = "AUTOSCALING"
+
+    # === NEU: IaC Provisioning ===
+    PROVISION = "PROVISION"
+    DEPROVISION = "DEPROVISION"
+    
+    # === Testing & Quality ===
+    TEST = "TEST"
+    UNITTEST = "UNITTEST"
+    INTEGRATION = "INTEGRATION"
+    E2E = "E2E"
+    LOAD_TEST = "LOAD_TEST"
+    
+    # === Third Party Integrations ===
+    SLACK = "SLACK"
+    DISCORD = "DISCORD"
+    TWILIO = "TWILIO"
+    AWS = "AWS"
+    GCP = "GCP"
+    AZURE = "AZURE"
+    
+    # === Discord Bot Specific ===
+    BOT = "BOT"
+    COGS = "COGS"
+    COMMANDS = "COMMANDS"
+    EVENTS = "EVENTS"
+    VOICE = "VOICE"
+    GUILD = "GUILD"
+    MEMBER = "MEMBER"
+    CHANNEL = "CHANNEL"
+    MESSAGE = "MESSAGE"
+    REACTION = "REACTION"
+    MODERATION = "MODERATION"
+    PERMISSIONS = "PERMISSIONS"
+    EMBED = "EMBED"
+    SLASH_CMD = "SLASH_CMD"
+    BUTTON = "BUTTON"
+    MODAL = "MODAL"
+    SELECT_MENU = "SELECT_MENU"
+    AUTOMOD = "AUTOMOD"
+    WEBHOOK = "WEBHOOK"
+    PRESENCE = "PRESENCE"
+    INTENTS = "INTENTS"
+    SHARDING = "SHARDING"
+    GATEWAY = "GATEWAY"
+    RATELIMIT = "RATELIMIT"
+    
+    # === Development ===
+    DEBUG = "DEBUG"
+    DEV = "DEV"
+    STARTUP = "STARTUP"
+    SHUTDOWN = "SHUTDOWN"
+    MIGRATION = "MIGRATION"
+    UPDATE = "UPDATE"
+    VERSION = "VERSION"
+
+
+class CategoryColors:
+    """Farb-Mappings für Kategorien"""
+    
+    COLORS: ClassVar[dict] = {
+        # Core System
+        Category.API: Fore.BLUE,
+        Category.DATABASE: Fore.MAGENTA,
+        Category.SERVER: Fore.CYAN,
+        Category.CACHE: Fore.YELLOW,
+        Category.AUTH: Fore.RED,
+        Category.SYSTEM: Fore.WHITE,
+        Category.CONFIG: Fore.LIGHTMAGENTA_EX,
+        Category.SCHEMA: Fore.LIGHTBLUE_EX,
+        Category.INDEX: Fore.LIGHTCYAN_EX,
+        Category.QUERY: Fore.CYAN + Style.BRIGHT,
+        Category.VIEW: Fore.MAGENTA + Style.BRIGHT,
+        Category.TRANSACTION_COMMIT: Fore.GREEN + Style.BRIGHT,
+        Category.NOSQL: Fore.LIGHTYELLOW_EX,
+        Category.RELATIONAL_DB: Fore.LIGHTMAGENTA_EX,
+        Category.SESSION_STORAGE: Fore.LIGHTGREEN_EX,
+
+        # NEU: Runtime & Core System Erweitungen
+        Category.RUNTIME: Fore.YELLOW + Style.BRIGHT,
+        Category.COMPILER: Fore.LIGHTBLUE_EX + Style.BRIGHT,
+        Category.DEPENDENCY: Fore.LIGHTCYAN_EX,
+        Category.CLI: Fore.WHITE + Style.BRIGHT,
+
+        
+        # Network & Communication
+        Category.NETWORK: Fore.LIGHTBLUE_EX,
+        Category.HTTP: Fore.BLUE + Style.BRIGHT,
+        Category.WEBSOCKET: Fore.LIGHTBLUE_EX + Style.BRIGHT,
+        Category.GRPC: Fore.CYAN + Style.BRIGHT,
+        Category.GRAPHQL: Fore.MAGENTA + Style.BRIGHT,
+        Category.REST: Fore.BLUE,
+        Category.SOAP: Fore.LIGHTBLUE_EX,
+        Category.LOAD_BALANCER: Fore.YELLOW + Style.BRIGHT,
+        Category.REVERSE_PROXY: Fore.CYAN + Style.BRIGHT,
+        Category.DNS: Fore.LIGHTGREEN_EX,
+        Category.CDN: Fore.MAGENTA + Style.BRIGHT,
+
+        # NEU: Geolocation
+        Category.GEOLOCATION: Fore.LIGHTYELLOW_EX,
+
+        
+        # Security & Compliance
+        Category.SECURITY: Fore.LIGHTRED_EX,
+        Category.ENCRYPTION: Fore.RED + Style.BRIGHT,
+        Category.FIREWALL: Fore.RED,
+        Category.AUDIT: Fore.LIGHTRED_EX,
+        Category.COMPLIANCE: Fore.MAGENTA,
+        Category.VULNERABILITY: Fore.RED + Back.WHITE,
+        Category.GDPR: Fore.YELLOW,
+        Category.HIPAA: Fore.YELLOW + Style.BRIGHT,
+        Category.PCI_DSS: Fore.RED + Style.BRIGHT,
+        Category.IDP: Fore.CYAN,
+        Category.MFA: Fore.LIGHTCYAN_EX,
+        Category.RATE_LIMITER: Fore.YELLOW + Style.BRIGHT,
+
+        # NEU: Fraud
+        Category.FRAUD: Fore.RED + Back.YELLOW,
+        
+        # Frontend & User Interface
+        Category.CLIENT: Fore.LIGHTBLUE_EX,
+        Category.UI: Fore.MAGENTA,
+        Category.UX: Fore.LIGHTMAGENTA_EX,
+        Category.SPA: Fore.CYAN + Style.BRIGHT,
+        Category.SSR: Fore.BLUE + Style.BRIGHT,
+        Category.STATE: Fore.LIGHTYELLOW_EX,
+        Category.COMPONENT: Fore.MAGENTA + Style.BRIGHT,
+
+        # NEU: Internationalisierung
+        Category.I18N: Fore.RED,
+
+        
+        # Storage & Files
+        Category.FILE: Fore.LIGHTGREEN_EX,
+        Category.STORAGE: Fore.LIGHTGREEN_EX,
+        Category.BACKUP: Fore.GREEN,
+        Category.SYNC: Fore.CYAN,
+        Category.UPLOAD: Fore.GREEN + Style.BRIGHT,
+        Category.DOWNLOAD: Fore.LIGHTGREEN_EX,
+
+        # NEU: Assets
+        Category.ASSET: Fore.MAGENTA,
+
+        
+        # Messaging & Events
+        Category.QUEUE: Fore.LIGHTCYAN_EX,
+        Category.EVENT: Fore.LIGHTYELLOW_EX,
+        Category.PUBSUB: Fore.LIGHTMAGENTA_EX,
+        Category.KAFKA: Fore.WHITE + Style.BRIGHT,
+        Category.RABBITMQ: Fore.LIGHTYELLOW_EX,
+        Category.REDIS: Fore.RED,
+        
+        # External Services
+        Category.EMAIL: Fore.LIGHTMAGENTA_EX,
+        Category.SMS: Fore.LIGHTCYAN_EX,
+        Category.NOTIFICATION: Fore.YELLOW,
+        Category.PAYMENT: Fore.GREEN + Style.BRIGHT,
+        Category.BILLING: Fore.LIGHTGREEN_EX,
+        Category.STRIPE: Fore.LIGHTBLUE_EX,
+        Category.PAYPAL: Fore.BLUE,
+        
+        # Monitoring & Observability
+        Category.METRICS: Fore.LIGHTYELLOW_EX,
+        Category.PERFORMANCE: Fore.LIGHTYELLOW_EX,
+        Category.HEALTH: Fore.GREEN,
+        Category.MONITORING: Fore.CYAN,
+        Category.TRACING: Fore.LIGHTCYAN_EX,
+        Category.PROFILING: Fore.YELLOW,
+        
+        # Data Processing
+        Category.ETL: Fore.MAGENTA,
+        Category.PIPELINE: Fore.CYAN,
+        Category.WORKER: Fore.LIGHTBLUE_EX,
+        Category.CRON: Fore.YELLOW,
+        Category.SCHEDULER: Fore.LIGHTYELLOW_EX,
+        Category.BATCH: Fore.LIGHTMAGENTA_EX,
+        Category.STREAM: Fore.LIGHTCYAN_EX,
+
+        # NEU: Data Transformation & Reporting
+        Category.MAPPING: Fore.GREEN,
+        Category.TRANSFORM: Fore.CYAN,
+        Category.REPORTING: Fore.LIGHTGREEN_EX,
+        
+        # Business Logic
+        Category.BUSINESS: Fore.WHITE + Style.BRIGHT,
+        Category.WORKFLOW: Fore.CYAN,
+        Category.TRANSACTION: Fore.GREEN,
+        Category.ORDER: Fore.LIGHTGREEN_EX,
+        Category.INVOICE: Fore.LIGHTYELLOW_EX,
+        Category.SHIPPING: Fore.LIGHTBLUE_EX,
+        
+        # NEU: Business Finanzen & Bestand
+        Category.ACCOUNTING: Fore.GREEN + Back.BLACK,
+        Category.INVENTORY: Fore.LIGHTMAGENTA_EX,
+        
+        # User Management
+        Category.USER: Fore.LIGHTMAGENTA_EX,
+        Category.SESSION: Fore.CYAN,
+        Category.REGISTRATION: Fore.GREEN,
+        Category.LOGIN: Fore.BLUE,
+        Category.LOGOUT: Fore.LIGHTBLUE_EX,
+        Category.PROFILE: Fore.MAGENTA,
+        
+        # AI & ML
+        Category.AI: Fore.MAGENTA + Style.BRIGHT,
+        Category.ML: Fore.LIGHTMAGENTA_EX,
+        Category.TRAINING: Fore.YELLOW,
+        Category.INFERENCE: Fore.LIGHTYELLOW_EX,
+        Category.MODEL: Fore.CYAN,
+        
+        # DevOps & Infrastructure
+        Category.DEPLOY: Fore.GREEN + Style.BRIGHT,
+        Category.CI_CD: Fore.LIGHTGREEN_EX,
+        Category.DOCKER: Fore.BLUE,
+        Category.KUBERNETES: Fore.LIGHTBLUE_EX,
+        Category.TERRAFORM: Fore.MAGENTA,
+        Category.ANSIBLE: Fore.RED,
+        Category.SERVERLESS: Fore.CYAN + Style.BRIGHT,
+        Category.CONTAINER: Fore.LIGHTCYAN_EX,
+        Category.IAC: Fore.YELLOW,
+        Category.VPC: Fore.LIGHTYELLOW_EX,
+        Category.AUTOSCALING: Fore.GREEN + Style.BRIGHT,
+
+        # NEU: IaC Provisioning
+        Category.PROVISION: Fore.LIGHTGREEN_EX + Style.BRIGHT,
+        Category.DEPROVISION: Fore.RED + Style.BRIGHT,
+        
+        
+        # Testing & Quality
+        Category.TEST: Fore.YELLOW,
+        Category.UNITTEST: Fore.LIGHTYELLOW_EX,
+        Category.INTEGRATION: Fore.CYAN,
+        Category.E2E: Fore.LIGHTCYAN_EX,
+        Category.LOAD_TEST: Fore.LIGHTMAGENTA_EX,
+        
+        # Third Party Integrations
+        Category.SLACK: Fore.MAGENTA,
+        Category.DISCORD: Fore.LIGHTBLUE_EX,
+        Category.TWILIO: Fore.RED,
+        Category.AWS: Fore.YELLOW,
+        Category.GCP: Fore.LIGHTBLUE_EX,
+        Category.AZURE: Fore.CYAN,
+        
+        # Discord Bot Specific
+        Category.BOT: Fore.LIGHTBLUE_EX + Style.BRIGHT,
+        Category.COGS: Fore.MAGENTA + Style.BRIGHT,
+        Category.COMMANDS: Fore.CYAN + Style.BRIGHT,
+        Category.EVENTS: Fore.LIGHTYELLOW_EX + Style.BRIGHT,
+        Category.VOICE: Fore.LIGHTGREEN_EX,
+        Category.GUILD: Fore.LIGHTMAGENTA_EX,
+        Category.MEMBER: Fore.LIGHTCYAN_EX,
+        Category.CHANNEL: Fore.BLUE,
+        Category.MESSAGE: Fore.WHITE,
+        Category.REACTION: Fore.YELLOW,
+        Category.MODERATION: Fore.RED + Style.BRIGHT,
+        Category.PERMISSIONS: Fore.LIGHTRED_EX,
+        Category.EMBED: Fore.LIGHTBLUE_EX,
+        Category.SLASH_CMD: Fore.CYAN + Style.BRIGHT,
+        Category.BUTTON: Fore.GREEN,
+        Category.MODAL: Fore.LIGHTMAGENTA_EX,
+        Category.SELECT_MENU: Fore.LIGHTYELLOW_EX,
+        Category.AUTOMOD: Fore.RED + Back.WHITE,
+        Category.WEBHOOK: Fore.LIGHTCYAN_EX,
+        Category.PRESENCE: Fore.LIGHTYELLOW_EX,
+        Category.INTENTS: Fore.MAGENTA,
+        Category.SHARDING: Fore.LIGHTBLUE_EX + Style.BRIGHT,
+        Category.GATEWAY: Fore.CYAN,
+        Category.RATELIMIT: Fore.YELLOW + Style.BRIGHT,
+        
+        # Development
+        Category.DEBUG: Fore.LIGHTBLACK_EX,
+        Category.DEV: Fore.CYAN,
+        Category.STARTUP: Fore.GREEN,
+        Category.SHUTDOWN: Fore.RED,
+        Category.MIGRATION: Fore.LIGHTYELLOW_EX,
+        Category.UPDATE: Fore.MAGENTA,
+        Category.VERSION: Fore.LIGHTGREEN_EX,
+    }
+    
+    @classmethod
+    def get_color(cls, category: Category) -> str:
+        """Gibt die Farbe für eine Kategorie zurück"""
+        return cls.COLORS.get(category, Style.BRIGHT)
+
+# ==========================================
+# GLOBALE ZUGRIFFS-KLASSEN (für DC.BOT, CORE.API)
+# ==========================================
+
+# NOTE: Die Klassen werden global definiert, um direkten Zugriff (z.B. DC.BOT) zu ermöglichen.
+
+class CORE:
+    """Core System & Runtime Accessor"""
+    API = Category.API
+    DB = Category.DATABASE
+    SERVER = Category.SERVER
+    CACHE = Category.CACHE
+    AUTH = Category.AUTH
+    SYS = Category.SYSTEM
+    CFG = Category.CONFIG
+    SCHEMA = Category.SCHEMA
+    IDX = Category.INDEX
+    QUERY = Category.QUERY
+    VIEW = Category.VIEW
+    RUNTIME = Category.RUNTIME
+    COMPILER = Category.COMPILER
+    DEP = Category.DEPENDENCY
+    CLI = Category.CLI
+
+class NET:
+    """Network & Communication Accessor"""
+    BASE = Category.NETWORK
+    HTTP = Category.HTTP
+    WS = Category.WEBSOCKET
+    GRPC = Category.GRPC
+    GQL = Category.GRAPHQL
+    REST = Category.REST
+    SOAP = Category.SOAP
+    LB = Category.LOAD_BALANCER
+    PROXY = Category.REVERSE_PROXY
+    DNS = Category.DNS
+    CDN = Category.CDN
+    GEO = Category.GEOLOCATION
+
+class SEC:
+    """Security & Compliance Accessor"""
+    BASE = Category.SECURITY
+    ENCRY = Category.ENCRYPTION
+    FW = Category.FIREWALL
+    AUDIT = Category.AUDIT
+    COMPLIANCE = Category.COMPLIANCE
+    VULN = Category.VULNERABILITY
+    FRAUD = Category.FRAUD
+    MFA = Category.MFA
+    RL = Category.RATE_LIMITER
+    GDPR = Category.GDPR
+    HIPAA = Category.HIPAA
+    PCI = Category.PCI_DSS
+    IDP = Category.IDP
+
+class STORAGE:
+    """Storage & Files Accessor"""
+    FILE = Category.FILE
+    BASE = Category.STORAGE
+    BKP = Category.BACKUP
+    SYNC = Category.SYNC
+    UP = Category.UPLOAD
+    DOWN = Category.DOWNLOAD
+    ASSET = Category.ASSET
+
+class UI:
+    """Frontend & User Interface Accessor"""
+    CLIENT = Category.CLIENT
+    BASE = Category.UI
+    UX = Category.UX
+    SPA = Category.SPA
+    SSR = Category.SSR
+    STATE = Category.STATE
+    COMP = Category.COMPONENT
+    I18N = Category.I18N
+
+class USER:
+    """User Management Accessor"""
+    BASE = Category.USER
+    SESSION = Category.SESSION
+    REG = Category.REGISTRATION
+    LOGIN = Category.LOGIN
+    LOGOUT = Category.LOGOUT
+    PROFILE = Category.PROFILE
+
+class MONITOR:
+    """Monitoring & Observability Accessor"""
+    METRICS = Category.METRICS
+    PERF = Category.PERFORMANCE
+    HEALTH = Category.HEALTH
+    BASE = Category.MONITORING
+    TRACE = Category.TRACING
+    PROFILE = Category.PROFILING
+
+class MSG:
+    """Messaging & Events Accessor"""
+    QUEUE = Category.QUEUE
+    EVENT = Category.EVENT
+    PUBSUB = Category.PUBSUB
+    KAFKA = Category.KAFKA
+    RABBIT = Category.RABBITMQ
+    REDIS = Category.REDIS
+
+class DATA:
+    """Data Processing Accessor"""
+    ETL = Category.ETL
+    PIPE = Category.PIPELINE
+    WORKER = Category.WORKER
+    CRON = Category.CRON
+    SCHED = Category.SCHEDULER
+    BATCH = Category.BATCH
+    STREAM = Category.STREAM
+    MAPPING = Category.MAPPING
+    TRANSFORM = Category.TRANSFORM
+    REPORT = Category.REPORTING
+
+class BIZ:
+    """Business Logic Accessor"""
+    BASE = Category.BUSINESS
+    WORKFLOW = Category.WORKFLOW
+    TX = Category.TRANSACTION
+    ORDER = Category.ORDER
+    INVOICE = Category.INVOICE
+    SHIP = Category.SHIPPING
+    ACC = Category.ACCOUNTING
+    INV = Category.INVENTORY
+
+class AI:
+    """AI & ML Accessor"""
+    BASE = Category.AI
+    ML = Category.ML
+    TRAIN = Category.TRAINING
+    INFER = Category.INFERENCE
+    MODEL = Category.MODEL
+
+class DEVOPS:
+    """DevOps & Infrastructure Accessor"""
+    DEPLOY = Category.DEPLOY
+    CICD = Category.CI_CD
+    DOCKER = Category.DOCKER
+    K8S = Category.KUBERNETES
+    TF = Category.TERRAFORM
+    ANSIBLE = Category.ANSIBLE
+    SERVERLESS = Category.SERVERLESS
+    CONTAINER = Category.CONTAINER
+    IAC = Category.IAC
+    VPC = Category.VPC
+    AS = Category.AUTOSCALING
+    PROVISION = Category.PROVISION
+    DEPROVISION = Category.DEPROVISION
+
+class TEST:
+    """Testing & Quality Accessor"""
+    BASE = Category.TEST
+    UNIT = Category.UNITTEST
+    INTEG = Category.INTEGRATION
+    E2E = Category.E2E
+    LOAD = Category.LOAD_TEST
+
+class TP:
+    """Third Party Integrations Accessor"""
+    SLACK = Category.SLACK
+    DISCORD = Category.DISCORD
+    TWILIO = Category.TWILIO
+    AWS = Category.AWS
+    GCP = Category.GCP
+    AZURE = Category.AZURE
+    EMAIL = Category.EMAIL
+    SMS = Category.SMS
+    PAYMENT = Category.PAYMENT
+    STRIPE = Category.STRIPE
+    PAYPAL = Category.PAYPAL
+
+class DC:
+    """Discord Bot Specific Accessor (Flat)"""
+    BOT = Category.BOT
+    COGS = Category.COGS
+    CMD = Category.COMMANDS
+    EVENT = Category.EVENTS
+    VOICE = Category.VOICE
+    GUILD = Category.GUILD
+    MEMBER = Category.MEMBER
+    CHANNEL = Category.CHANNEL
+    MSG = Category.MESSAGE
+    REACTION = Category.REACTION
+    MOD = Category.MODERATION
+    PERM = Category.PERMISSIONS
+    EMBED = Category.EMBED
+    SLASH = Category.SLASH_CMD
+    BUTTON = Category.BUTTON
+    MODAL = Category.MODAL
+    SELECT = Category.SELECT_MENU
+    AM = Category.AUTOMOD
+    WEBHOOK = Category.WEBHOOK
+    PRESENCE = Category.PRESENCE
+    INTENTS = Category.INTENTS
+    SHARDING = Category.SHARDING
+    GATEWAY = Category.GATEWAY
+    RL = Category.RATELIMIT
+
+class DEV:
+    """Development & Core Control Accessor"""
+    BASE = Category.DEV
+    DEBUG = Category.DEBUG
+    START = Category.STARTUP
+    SHUT = Category.SHUTDOWN
+    MIG = Category.MIGRATION
+    UPDATE = Category.UPDATE
+    VER = Category.VERSION
+
+
+# ==========================================
+# HIERARCHISCHE ZUGRIFFS-KLASSE (Alias C.DC.BOT)
+# ==========================================
+
+class C:
+    """
+    Shorthand für hierarchischen Kategorie-Zugriff (z.B. C.CORE.API).
+    Verweist auf die globalen Accessor-Klassen.
+    """
+    CORE = CORE
+    NET = NET
+    SEC = SEC
+    STORAGE = STORAGE
+    UI = UI
+    USER = USER
+    MONITOR = MONITOR
+    MSG = MSG
+    DATA = DATA
+    BIZ = BIZ
+    AI = AI
+    DEVOPS = DEVOPS
+    TEST = TEST
+    TP = TP
+    DC = DC
+    DEV = DEV
+
+# ==========================================
+# TEIL 3: HAUPT-LOGGING KLASSE
+# ==========================================
+
+class logger:
+    """
+    Professional Terminal Logger mit erweiterten Features
+    """
+    
+    # NEU: Definiert die öffentliche Schnittstelle für Autovervollständigung.
+    # Dies hilft VS Code/Pylance, interne Methoden (_ und Standard-Dunder __) 
+    # auszublenden, wenn der Benutzer 'logger.' tippt.
+    __all__ = [
+        # Logging-Methoden
+        "trace", "debug", "info", "success", "loading", "processing", "progress", 
+        "waiting", "notice", "warn", "error", "critical", "fatal", "security",
+        
+        # Kontext-Management
+        "push_context", "pop_context",
+        
+        # Konfiguration & Management
+        "configure", "set_custom_format", "register_alert_handler", 
+        "start_session_recording", "stop_session_recording"
+    ]
+    
+    # === Konfiguration ===
+    enabled: bool = True
+    show_timestamp: bool = True
+    min_level: LogLevel = LogLevel.DEBUG
+    log_file: Optional[Path] = None
+    colorize: bool = True
+    format_type: LogFormat = LogFormat.STANDARD
+    
+    # Erweiterte Optionen
+    show_metadata: bool = False
+    show_thread_id: bool = False
+    auto_flush: bool = True
+    max_file_size: Optional[int] = 10 * 1024 * 1024  # 10MB
+    backup_count: int = 3
+    
+    # Filter
+    _category_filter: Optional[List[str]] = None
+    _excluded_categories: List[str] = []
+    
+    # Format-Strings
+    timestamp_format: str = "%Y-%m-%d %H:%M:%S"
+    message_color: str = Fore.WHITE
+    
+    # Buffer-System
+    _buffer_enabled: bool = False
+    _buffer: deque = deque(maxlen=1000)
+    _buffer_flush_interval: float = 5.0
+    _last_flush: float = time.time()
+    
+    # Session Recording
+    _session_recording: bool = False
+    _session_logs: List[Dict[str, Any]] = []
+    _session_start: Optional[datetime] = None
+    
+    # Alert-System
+    _alert_handlers: Dict[LogLevel, List[Callable]] = defaultdict(list)
+    _alert_cooldown: Dict[str, float] = {}
+    _alert_cooldown_seconds: float = 60.0
+    
+    # Sensitive Data Redaction
+    _redact_enabled: bool = False
+    _redact_patterns: List[str] = [
+        r'\b\d{16}\b',  # Kreditkarten
+        r'\b\d{3}-\d{2}-\d{4}\b',  # SSN
+        r'password["\s:=]+\S+',
+        r'api[_-]?key["\s:=]+\S+',
+        r'secret["\s:=]+\S+',
+        r'token["\s:=]+\S+',
+        r'Bearer\s+\S+',
+    ]
+    
+    # Correlation & Tracing
+    _correlation_id: Optional[str] = None
+    _trace_id: Optional[str] = None
+    _span_id: Optional[str] = None
+    
+    # Remote Forwarding
+    _remote_host: Optional[str] = None
+    _remote_port: Optional[int] = None
+    _remote_enabled: bool = False
+    
+    # Sampling & Rate Limiting
+    _sampling_rate: float = 1.0
+    _rate_limits: Dict[str, tuple] = {}
+    _max_logs_per_minute: int = 1000
+    _rate_limit_enabled: bool = False
+    
+    # Adaptive Logging
+    _auto_adjust_level: bool = False
+    _noise_threshold: int = 100
+    _last_adjust_time: float = time.time()
+    
+    # Compression
+    _compression_enabled: bool = False
+    
+    # Interne State
+    _lock = threading.Lock()
+    _handlers: List[Callable] = []
+    _context_stack: List[str] = []
+    _performance_markers: Dict[str, float] = {}
+    _log_count: Dict[LogLevel, int] = {level: 0 for level in LogLevel}
+    _category_count: Dict[str, int] = defaultdict(int)
+    _error_count_by_category: Dict[str, int] = defaultdict(int)
+    
+    
+    @classmethod
+    def _load_env_config(cls):
+        """Lädt Konfigurationseinstellungen aus Umgebungsvariablen."""
+        # MIN_LEVEL
+        env_level = os.environ.get('LOG_MIN_LEVEL')
+        if env_level:
+            try:
+                cls.min_level = LogLevel[env_level.upper()]
+            except KeyError:
+                # print(f"[Logs] WARN: Unbekanntes Log-Level in LOG_MIN_LEVEL: {env_level}", file=sys.stderr)
+                pass
+
+        # LOG_FILE
+        env_file = os.environ.get('LOG_FILE')
+        if env_file:
+            cls.log_file = Path(env_file)
+            if cls.log_file.parent:
+                cls.log_file.parent.mkdir(parents=True, exist_ok=True)
+        
+        # FORMAT_TYPE
+        env_format = os.environ.get('LOG_FORMAT')
+        if env_format:
+            try:
+                cls.format_type = LogFormat[env_format.upper()]
+            except KeyError:
+                # print(f"[Logs] WARN: Unbekanntes Log-Format in LOG_FORMAT: {env_format}", file=sys.stderr)
+                pass
+                
+        # COLORIZE
+        env_colorize = os.environ.get('LOG_COLORIZE')
+        if env_colorize is not None:
+            cls.colorize = env_colorize.lower() in ('true', '1', 'on')
+            
+        # SHOW_METADATA
+        env_metadata = os.environ.get('LOG_SHOW_METADATA')
+        if env_metadata is not None:
+            cls.show_metadata = env_metadata.lower() in ('true', '1', 'on')
+            
+        # SAMPLING_RATE
+        env_sampling = os.environ.get('LOG_SAMPLING_RATE')
+        if env_sampling is not None:
+            try:
+                rate = float(env_sampling)
+                cls._sampling_rate = max(0.0, min(1.0, rate))
+            except ValueError:
+                # print(f"[Logs] WARN: Ungültiger Wert für LOG_SAMPLING_RATE: {env_sampling}", file=sys.stderr)
+                pass
+                
+        # REMOTE_HOST
+        env_remote_host = os.environ.get('LOG_REMOTE_HOST')
+        if env_remote_host:
+            cls._remote_host = env_remote_host
+            cls._remote_enabled = True # Aktivieren, wenn Host gesetzt ist
+            
+        # REMOTE_PORT
+        env_remote_port = os.environ.get('LOG_REMOTE_PORT')
+        if env_remote_port:
+            try:
+                cls._remote_port = int(env_remote_port)
+            except ValueError:
+                pass
+
+
+    @classmethod
+    def _redact_sensitive_data(cls, message: str) -> str:
+        """Entfernt sensible Daten aus Log-Messages"""
+        if not cls._redact_enabled:
+            return message
+        
+        redacted = message
+        for pattern in cls._redact_patterns:
+            redacted = re.sub(pattern, '[REDACTED]', redacted, flags=re.IGNORECASE)
+        return redacted
+    
+    @classmethod
+    def _should_sample(cls) -> bool:
+        """Prüft ob Log gesampelt werden soll"""
+        if cls._sampling_rate >= 1.0:
+            return True
+        return random.random() < cls._sampling_rate
+    
+    @classmethod
+    def _check_rate_limit(cls, category: str) -> bool:
+        """Prüft Rate-Limit für Kategorie"""
+        if not cls._rate_limit_enabled:
+            return True
+        
+        current_time = time.time()
+        key = f"rate_limit_{category}"
+        
+        if key in cls._rate_limits:
+            count, window_start = cls._rate_limits[key]
+            
+            if current_time - window_start > 60:
+                cls._rate_limits[key] = (1, current_time)
+                return True
+            
+            if count >= cls._max_logs_per_minute:
+                return False
+            
+            cls._rate_limits[key] = (count + 1, window_start)
+            return True
+        else:
+            cls._rate_limits[key] = (1, current_time)
+            return True
+    
+    @classmethod
+    def _auto_adjust_log_level(cls):
+        """Passt Log-Level automatisch an bei hoher Last"""
+        if not cls._auto_adjust_level or not cls._session_start:
+            return
+        
+        current_time = time.time()
+        if current_time - cls._last_adjust_time < 60:
+            return
+        
+        cls._last_adjust_time = current_time
+        
+        duration = (datetime.now() - cls._session_start).total_seconds() / 60
+        if duration > 0:
+            current_rate = sum(cls._log_count.values()) / duration
+            
+            if current_rate > cls._noise_threshold:
+                if cls.min_level < LogLevel.WARN:
+                    cls.min_level = LogLevel.WARN
+                    # cls.warn(Category.SYSTEM, f"Auto-adjusted log level to WARN (rate: {current_rate:.1f}/min)") # INTERNES LOG ENTFERNT
+    
+    @classmethod
+    def _send_to_remote(cls, message: str):
+        """Sendet Log zu Remote-Server (Syslog-Style)"""
+        if not cls._remote_enabled or not cls._remote_host:
+            return
+        
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            sock.settimeout(1)
+            sock.sendto(message.encode('utf-8'), (cls._remote_host, cls._remote_port),)
+            sock.close()
+        except Exception:
+            pass
+    
+    @classmethod
+    def _compress_old_logs(cls):
+        """Komprimiert alte Log-Dateien"""
+        if not cls._compression_enabled or not cls.log_file:
+            return
+        
+        try:
+            for i in range(1, cls.backup_count + 1):
+                old_file = cls.log_file.with_suffix(f"{cls.log_file.suffix}.{i}")
+                gz_file = Path(f"{old_file}.gz")
+                
+                if old_file.exists() and not gz_file.exists():
+                    with open(old_file, 'rb') as f_in:
+                        with gzip.open(gz_file, 'wb') as f_out:
+                            f_out.writelines(f_in)
+                    old_file.unlink()
+        except Exception as e:
+            print(f"[Logs] Compression-Fehler: {e}", file=sys.stderr)
+    
+    @classmethod
+    def _get_metadata(cls, frame_depth: int) -> Dict[str, Any]:
+        """Holt Metadaten vom Aufrufer"""
+        try:
+            # frame_depth = 4, da 0=inspect.stack, 1=_get_metadata, 2=_log, 3=public_method, 4=caller
+            frame = inspect.stack()[frame_depth] 
+            metadata = {
+                "file": Path(frame.filename).name,
+                "line": frame.lineno,
+                "function": frame.function,
+                "thread": threading.current_thread().name if cls.show_thread_id else None
+            }
+            
+            if cls._correlation_id:
+                metadata["correlation_id"] = cls._correlation_id
+            if cls._trace_id:
+                metadata["trace_id"] = cls._trace_id
+            if cls._span_id:
+                metadata["span_id"] = cls._span_id
+            
+            return metadata
+        except Exception:
+            return {"file": "", "line": 0, "function": "", "thread": None}
+    
+    @classmethod
+    def _format_json(cls, level: LogLevel, category: Category, message: str, metadata: Dict[str, Any], extra: Optional[Dict] = None) -> str:
+        """Formatiert Log als JSON"""
+        log_entry = {
+            "timestamp": datetime.now().isoformat(),
+            "level": level.name,
+            "category": category.value, # Kategorie als String-Wert
+            "message": message,
+            **metadata
+        }
+        if cls._context_stack:
+            log_entry["context"] = " > ".join(cls._context_stack)
+        if extra:
+            log_entry["extra"] = extra
+        return json.dumps(log_entry, ensure_ascii=False)
+    
+    @classmethod
+    def _format_colored(cls, level: LogLevel, category: Category, message: str, metadata: Dict[str, Any], extra: Optional[Dict] = None) -> str:
+        """Formatiert farbigen Log-Output"""
+        level_name = level.name
+        level_color = LevelColors.get_color(level)
+        
+        # Kategorie Farbe aus Klasse
+        category_color = CategoryColors.get_color(category) 
+        
+        # Timestamp
+        timestamp_part = ""
+        if cls.show_timestamp and cls.format_type != LogFormat.SIMPLE:
+            ts = datetime.now().strftime(cls.timestamp_format)
+            timestamp_part = f"{Style.DIM}[{ts}]{Style.RESET_ALL} "
+        
+        # Level - FETT und in Klammern
+        padded_level = f"{level_name:<10}"
+        level_part = f"{level_color}{Style.BRIGHT}[{padded_level}]{Style.RESET_ALL}"
+        
+        # Category mit Farbe
+        category_value = str(category.value) if hasattr(category, 'value') else str(category)
+        category_part = f"{category_color}[{category_value}]{Style.RESET_ALL}"
+        
+        # Kontext
+        context_part = ""
+        if cls._context_stack:
+            context = " > ".join(cls._context_stack)
+            context_part = f"{Style.DIM}({context}){Style.RESET_ALL} "
+        
+        # Metadata (Datei:Zeile)
+        metadata_part = ""
+        if cls.show_metadata and cls.format_type == LogFormat.DETAILED:
+            metadata_part = f"{Style.DIM}[{metadata['file']}:{metadata['line']}]{Style.RESET_ALL} "
+        
+        # Thread ID
+        thread_part = ""
+        if cls.show_thread_id and metadata.get('thread'):
+            thread_part = f"{Style.DIM}[{metadata['thread']}]{Style.RESET_ALL} "
+        
+        # Tracing IDs
+        tracing_part = ""
+        if cls._correlation_id:
+            tracing_part += f"{Style.DIM}[corr:{cls._correlation_id[:8]}]{Style.RESET_ALL} "
+        
+        # Extra Key-Value Pairs
+        extra_part = ""
+        if extra:
+            extra_str = " ".join(f"{Style.DIM}{k}={v}{Style.RESET_ALL}" for k, v in extra.items())
+            extra_part = f"{extra_str} "
+        
+        # Message
+        msg_color = Fore.RED if level >= LogLevel.ERROR else cls.message_color
+        message_part = f"{msg_color}{message}{Style.RESET_ALL}"
+        
+        return f"{timestamp_part}{level_part} {category_part} {thread_part}{tracing_part}{metadata_part}{context_part}{extra_part}{message_part}"
+    
+    @classmethod
+    def _should_log_category(cls, category: Union[Category, object]) -> bool:
+        """Prüft ob Kategorie geloggt werden soll"""
+        # Annahme: category ist entweder ein Category-Enum oder das CustomCategory-Objekt
+        category_str = str(category.value) if hasattr(category, 'value') else str(category)
+        
+        if category_str in cls._excluded_categories:
+            return False
+        if cls._category_filter and category_str not in cls._category_filter:
+            return False
+        return True
+    
+    @classmethod
+    def _trigger_alerts(cls, level: LogLevel, category: Union[Category, object], message: str):
+        """Triggert Alert-Handler für kritische Logs"""
+        if level in cls._alert_handlers:
+            category_value = str(category.value) if hasattr(category, 'value') else str(category)
+            alert_key = f"{level.name}:{category_value}"
+            current_time = time.time()
+            
+            if alert_key in cls._alert_cooldown:
+                if current_time - cls._alert_cooldown[alert_key] < cls._alert_cooldown_seconds:
+                    return
+            
+            cls._alert_cooldown[alert_key] = current_time
+            
+            for handler in cls._alert_handlers[level]:
+                try:
+                    handler(level, category_value, message)
+                except Exception as e:
+                    print(f"[Logs] Alert-Handler-Fehler: {e}", file=sys.stderr)
+    
+    @classmethod
+    def _log(cls, level: LogLevel, category: Union[Category, str], message: str, extra: Optional[Dict] = None, frame_depth: int = 3):
+        """Die zentrale Log-Methode"""
+        
+        if not cls.enabled or level < cls.min_level:
+            return
+        
+        # --- FIX: Robustheit gegenüber String-Inputs ---
+        is_custom_category = False
+        
+        # Wenn der Input eine der globalen Accessor-Klassen ist (z.B. DC.BOT), 
+        # ist es bereits der String-Wert des Enums. Wenn es ein Enum ist (Category.BOT), 
+        # muss es nicht konvertiert werden. Wenn es ein String ist ("BOT"), wird es unten behandelt.
+        
+        if isinstance(category, str):
+            try:
+                # Versuche, den String in ein Category-Enum umzuwandeln (z.B. "API")
+                # Dies ist wichtig für die Farbsuche, die Category-Enums benötigt.
+                category = Category(category)
+            except ValueError:
+                # Fallback für unbekannte Strings (z.B. "INIT"): 
+                class CustomCategory:
+                    def __init__(self, name): self.value = name; self.name = name
+                    def __str__(self): return self.value
+                category = CustomCategory(category)
+                is_custom_category = True
+        elif isinstance(category, (CORE, NET, SEC, STORAGE, UI, USER, MONITOR, MSG, DATA, BIZ, AI, DEVOPS, TEST, TP, DC, DEV)):
+             # Dies sollte *nicht* passieren, da die Accessor-Klassen auf Category-Enum-Werte (Strings) verweisen,
+             # aber falls ein Benutzer die Klasse selbst übergibt, behandeln wir dies hier.
+             # Da DC.BOT direkt den String "BOT" liefert, wird dies immer als String behandelt.
+             # Der Code hier bleibt unverändert, da die Klassen-Struktur bereits den String-Wert liefert.
+             pass # Wir gehen davon aus, dass der Input bereits den korrekten Wert enthält (wie in Python üblich).
+             
+        # -----------------------------------------------
+
+        if not cls._should_log_category(category):
+            return
+            
+        if not cls._should_sample():
+            return
+            
+        category_value = str(category.value) if hasattr(category, 'value') else str(category)
+        if not cls._check_rate_limit(category_value):
+            return
+            
+        cls._auto_adjust_log_level()
+        
+        with cls._lock:
+            # 1. Metadaten sammeln
+            metadata = cls._get_metadata(frame_depth=frame_depth + 1) # +1 für diesen Aufruf
+            
+            # 2. Nachricht bearbeiten
+            message = cls._redact_sensitive_data(message)
+            
+            # 3. Formatieren
+            if cls.format_type == LogFormat.JSON:
+                # Für JSON-Formatierung muss 'category' ein echtes Category-Enum oder CustomCategory sein
+                formatted_message = cls._format_json(level, category, message, metadata, extra)
+            elif level in cls._custom_formats:
+                formatted_message = cls._format_custom(level, category, message, metadata, extra)
+            else:
+                # `_format_colored` verwendet `CategoryColors.get_color(category)`
+                formatted_message = cls._format_colored(level, category, message, metadata, extra)
+            
+            # 4. Speichern und Ausgeben
+            cls._output(formatted_message, level)
+            
+            # 5. Zähler und Speicherung aktualisieren
+            cls._log_count[level] += 1
+            cls._category_count[category_value] += 1
+            if level >= LogLevel.ERROR:
+                cls._error_count_by_category[category_value] += 1
+            
+            # 6. Session Recording
+            if cls._session_recording:
+                cls._session_logs.append({
+                    "timestamp": datetime.now().isoformat(),
+                    "level": level.name,
+                    "category": category_value,
+                    "message": message,
+                    **metadata
+                })
+            
+            # 7. Alerts und Weiterleitung
+            cls._trigger_alerts(level, category, message)
+            if cls._remote_enabled:
+                cls._send_to_remote(formatted_message)
+    
+    @classmethod
+    def _output(cls, message: str, level: LogLevel):
+        """Schreibt die Nachricht in die Konsole und in die Datei"""
+        
+        # Konsole
+        if cls.colorize:
+            print(message, file=sys.stderr if level >= LogLevel.WARN else sys.stdout)
+        else:
+            # Entferne alle ANSI-Codes für nicht-farbige Ausgabe
+            message_stripped = re.sub(r'\x1b\[[0-9;]*m', '', message)
+            print(message_stripped, file=sys.stderr if level >= LogLevel.WARN else sys.stdout)
+        
+        # Datei-Log (gepuffert oder direkt)
+        if cls.log_file:
+            # Wir entfernen ANSI Codes vom Message string für das File
+            clean_msg = re.sub(r'\x1b\[[0-9;]*m', '', message)
+            
+            if cls._buffer_enabled:
+                cls._buffer.append(clean_msg)
+                if time.time() - cls._last_flush > cls._buffer_flush_interval:
+                    cls._flush_buffer()
+            else:
+                cls._write_to_file(f"{clean_msg}\n")
+    
+    @classmethod
+    def _write_to_file(cls, data: str):
+        """Führt die eigentliche Schreiboperation durch und prüft die Dateigröße"""
+        if not cls.log_file:
+            return
+
+        try:
+            # Log-Rotation prüfen
+            if cls.max_file_size and cls.log_file.exists() and cls.log_file.stat().st_size > cls.max_file_size:
+                cls._rotate_logs()
+                
+            with open(cls.log_file, 'a', encoding='utf-8') as f:
+                f.write(data)
+                if cls.auto_flush:
+                    f.flush()
+        except Exception as e:
+            print(f"[Logs] Dateischreibfehler: {e}", file=sys.stderr)
+
+    @classmethod
+    def _rotate_logs(cls):
+        """Rotiert Log-Dateien, wenn die maximale Größe erreicht ist"""
+        if not cls.log_file:
+            return
+        
+        # Älteste Datei löschen
+        if cls.backup_count > 0:
+            oldest_file = cls.log_file.with_suffix(f"{cls.log_file.suffix}.{cls.backup_count}")
+            if oldest_file.exists():
+                oldest_file.unlink()
+            
+            # Dateien verschieben (n -> n+1)
+            for i in range(cls.backup_count - 1, 0, -1):
+                src = cls.log_file.with_suffix(f"{cls.log_file.suffix}.{i}")
+                dst = cls.log_file.with_suffix(f"{cls.log_file.suffix}.{i+1}")
+                if src.exists():
+                    src.rename(dst)
+            
+            # Aktuelle Datei umbenennen zu .1
+            cls.log_file.rename(cls.log_file.with_suffix(f"{cls.log_file.suffix}.1"))
+            
+        # cls.info(Category.SYSTEM, f"Logdatei rotiert: {cls.log_file.name}") # INTERNES LOG ENTFERNT
+        cls._compress_old_logs()
+
+    @classmethod
+    def _flush_buffer(cls):
+        """Schreibt den Puffer in die Logdatei"""
+        if not cls._buffer_enabled or not cls.log_file or not cls._buffer:
+            return
+        
+        with cls._lock:
+            buffer_copy = list(cls._buffer)
+            cls._buffer.clear()
+            cls._write_to_file("\n".join(buffer_copy) + "\n")
+            cls._last_flush = time.time()
+    
+    # === Public Logging Methoden ===
+
+    @classmethod
+    def trace(cls, category: Union[Category, str], message: str, **kwargs):
+        """Trace-Level Log (sehr detailliert)"""
+        cls._log(LogLevel.TRACE, category, message, extra=kwargs, frame_depth=3)
+        
+    @classmethod
+    def debug(cls, category: Union[Category, str], message: str, **kwargs):
+        """Debug-Level Log"""
+        cls._log(LogLevel.DEBUG, category, message, extra=kwargs, frame_depth=3)
+
+    @classmethod
+    def info(cls, category: Union[Category, str], message: str, **kwargs):
+        """Info-Level Log"""
+        cls._log(LogLevel.INFO, category, message, extra=kwargs, frame_depth=3)
+
+    @classmethod
+    def success(cls, category: Union[Category, str], message: str, **kwargs):
+        """Success-Level Log"""
+        cls._log(LogLevel.SUCCESS, category, message, extra=kwargs, frame_depth=3)
+        
+    @classmethod
+    def loading(cls, category: Union[Category, str], message: str, **kwargs):
+        """Loading-Level Log"""
+        cls._log(LogLevel.LOADING, category, message, extra=kwargs, frame_depth=3)
+        
+    @classmethod
+    def processing(cls, category: Union[Category, str], message: str, **kwargs):
+        """Processing-Level Log"""
+        cls._log(LogLevel.PROCESSING, category, message, extra=kwargs, frame_depth=3)
+
+    @classmethod
+    def progress(cls, category: Union[Category, str], message: str, **kwargs):
+        """Progress-Level Log"""
+        cls._log(LogLevel.PROGRESS, category, message, extra=kwargs, frame_depth=3)
+        
+    @classmethod
+    def waiting(cls, category: Union[Category, str], message: str, **kwargs):
+        """Waiting-Level Log"""
+        cls._log(LogLevel.WAITING, category, message, extra=kwargs, frame_depth=3)
+        
+    @classmethod
+    def notice(cls, category: Union[Category, str], message: str, **kwargs):
+        """Notice-Level Log"""
+        cls._log(LogLevel.NOTICE, category, message, extra=kwargs, frame_depth=3)
+
+    @classmethod
+    def warn(cls, category: Union[Category, str], message: str, **kwargs):
+        """Warn-Level Log"""
+        cls._log(LogLevel.WARN, category, message, extra=kwargs, frame_depth=3)
+
+    @classmethod
+    def error(cls, category: Union[Category, str], message: str, exception: Optional[BaseException] = None, **kwargs):
+        """Error-Level Log mit optionaler Exception-Verarbeitung"""
+        if exception:
+            trace = traceback.format_exc()
+            message = f"{message} (Exception: {type(exception).__name__}: {exception})\n{trace}"
+        cls._log(LogLevel.ERROR, category, message, extra=kwargs, frame_depth=3)
+
+    @classmethod
+    def critical(cls, category: Union[Category, str], message: str, exception: Optional[BaseException] = None, **kwargs):
+        """Critical-Level Log"""
+        if exception:
+            trace = traceback.format_exc()
+            message = f"{message} (Exception: {type(exception).__name__}: {exception})\n{trace}"
+        cls._log(LogLevel.CRITICAL, category, message, extra=kwargs, frame_depth=3)
+        
+    @classmethod
+    def fatal(cls, category: Union[Category, str], message: str, exception: Optional[BaseException] = None, **kwargs):
+        """Fatal-Level Log"""
+        if exception:
+            trace = traceback.format_exc()
+            message = f"{message} (Exception: {type(exception).__name__}: {exception})\n{trace}"
+        cls._log(LogLevel.FATAL, category, message, extra=kwargs, frame_depth=3)
+
+    @classmethod
+    def security(cls, category: Union[Category, str], message: str, **kwargs):
+        """Security-Level Log"""
+        cls._log(LogLevel.SECURITY, category, message, extra=kwargs, frame_depth=3)
+    
+    # === Kontext-Management ===
+    
+    @classmethod
+    def push_context(cls, context: str):
+        """Fügt einen Kontext-String zum Stack hinzu"""
+        with cls._lock: # KORRIGIERT: Thread-Sicherheit hinzugefügt
+            cls._context_stack.append(context)
+        
+    @classmethod
+    def pop_context(cls):
+        """Entfernt den obersten Kontext-String vom Stack"""
+        with cls._lock: # KORRIGIERT: Thread-Sicherheit hinzugefügt
+            if cls._context_stack:
+                return cls._context_stack.pop()
+            return None
+    
+    # === Konfigurationsmethoden ===
+    
+    _custom_formats: ClassVar[Dict[LogLevel, str]] = {}
+    
+    @classmethod
+    def _format_custom(cls, level: LogLevel, category: Union[Category, object], message: str, metadata: Dict[str, Any], extra: Optional[Dict] = None) -> str:
+        """Formatiert Log mit benutzerdefiniertem String (Format-String aus _custom_formats)"""
+        
+        format_string = cls._custom_formats.get(level)
+        if not format_string:
+            return cls._format_colored(level, category, message, metadata, extra)
+
+        # Vorbereiten der Platzhalter-Werte, inklusive Farb-Tags
+        level_color = LevelColors.get_color(level)
+        category_color = CategoryColors.get_color(category) # Funktioniert auch mit CustomCategory-Objekten
+        msg_color = Fore.RED if level >= LogLevel.ERROR else cls.message_color
+        
+        category_value = str(category.value) if hasattr(category, 'value') else str(category)
+        
+        placeholders = {
+            "timestamp": datetime.now().strftime(cls.timestamp_format),
+            "level.name": f"{level_color}{Style.BRIGHT}{level.name}{Style.RESET_ALL}",
+            "category.value": f"{category_color}{category_value}{Style.RESET_ALL}",
+            "message": f"{msg_color}{message}{Style.RESET_ALL}",
+            "file": metadata.get("file", ""),
+            "line": metadata.get("line", 0),
+            "function": metadata.get("function", "")
+        }
+
+        # Format-String ersetzen
+        formatted_message = format_string
+        for key, value in placeholders.items():
+            # Verwende eine einfache String-Ersetzung, da f-string style keys verwendet werden
+            formatted_message = formatted_message.replace(f"{{{key}}}", str(value))
+        
+        return formatted_message
+
+
+    @classmethod
+    def set_custom_format(cls, level: LogLevel, format_string: str):
+        """
+        Definiert einen benutzerdefinierten Format-String für ein spezifisches Log-Level.
+        
+        Der String kann Platzhalter wie {timestamp}, {level.name}, {category.value}, 
+        {message}, {file}, {line} verwenden.
+        """
+        if not isinstance(level, LogLevel):
+            raise TypeError("Der Parameter 'level' muss ein LogLevel-Enum sein.")
+            
+        with cls._lock:
+            cls._custom_formats[level] = format_string
+            # Interne Log-Meldung entfernt
+
+    @classmethod
+    def configure(cls, 
+                  min_level: LogLevel = LogLevel.DEBUG, 
+                  log_file: Optional[Union[str, Path]] = None,
+                  format_type: LogFormat = LogFormat.STANDARD,
+                  show_metadata: bool = False,
+                  show_thread_id: bool = False,
+                  enable_buffer: bool = False,
+                  enable_redaction: bool = False,
+                  enable_remote: bool = False,
+                  remote_host: Optional[str] = None,
+                  remote_port: int = 514,
+                  category_filter: Optional[List[Category]] = None,
+                  exclude_categories: Optional[List[Category]] = None,
+                  sampling_rate: float = 1.0,
+                  apply_env_vars: bool = True # NEU: Flag zur Steuerung der Umgebungsvariablen-Anwendung
+                  ):
+        """Konfiguriert den Logger mit zentralen Einstellungen."""
+        
+        with cls._lock:
+            # 1. Manuelle Parameter anwenden
+            cls.min_level = min_level
+            cls.format_type = format_type
+            cls.show_metadata = show_metadata
+            cls.show_thread_id = show_thread_id
+            cls._buffer_enabled = enable_buffer
+            cls._redact_enabled = enable_redaction
+            cls._remote_enabled = enable_remote
+            cls._remote_host = remote_host
+            cls._remote_port = remote_port
+            cls._sampling_rate = max(0.0, min(1.0, sampling_rate))
+            
+            # 2. Umgebungsvariablen laden und überschreiben lassen
+            if apply_env_vars:
+                cls._load_env_config() # NEU: Aufruf zum Laden der Umgebungsvariablen
+            
+            # 3. Datei-Log final setzen (könnte von env_vars überschrieben worden sein)
+            if log_file:
+                cls.log_file = Path(log_file) if isinstance(log_file, str) else log_file
+                if cls.log_file.parent:
+                    cls.log_file.parent.mkdir(parents=True, exist_ok=True)
+            elif 'LOG_FILE' not in os.environ and not log_file:
+                 cls.log_file = None # explizit auf None setzen, wenn weder Parameter noch Env Var gesetzt ist
+
+                
+            if category_filter:
+                cls._category_filter = [c.value for c in category_filter]
+            else:
+                cls._category_filter = None
+                
+            if exclude_categories:
+                cls._excluded_categories = [c.value for c in exclude_categories]
+            else:
+                cls._excluded_categories = []
+    
+    @classmethod
+    def register_alert_handler(cls, level: LogLevel, handler: Callable):
+        """Registriert einen Handler, der bei einem bestimmten LogLevel ausgelöst wird."""
+        cls._alert_handlers[level].append(handler)
+        
+    @classmethod
+    def start_session_recording(cls):
+        """Startet die Aufzeichnung von Logs im Speicher."""
+        with cls._lock:
+            cls._session_recording = True
+            cls._session_logs = []
+            cls._session_start = datetime.now()
+            # cls.info(Category.SYSTEM, "Session-Recording gestartet.") # INTERNES LOG ENTFERNT
+            
+    @classmethod
+    def stop_session_recording(cls) -> List[Dict[str, Any]]:
+        """Stoppt die Aufzeichnung und gibt die gesammelten Logs zurück."""
+        with cls._lock:
+            if cls._session_recording:
+                cls._session_recording = False
+                # cls.info(Category.SYSTEM, f"Session-Recording beendet. {len(cls._session_logs)} Einträge gesammelt.") # INTERNES LOG ENTFERNT
+                return cls._session_logs
+            return []
+
+# Registriere atexit-Funktion, um den Puffer beim Beenden zu leeren
+atexit.register(logger._flush_buffer)
+
+# Rufe configure einmal beim Import auf, um Umgebungsvariablen sofort zu laden
+logger.configure(apply_env_vars=True)
