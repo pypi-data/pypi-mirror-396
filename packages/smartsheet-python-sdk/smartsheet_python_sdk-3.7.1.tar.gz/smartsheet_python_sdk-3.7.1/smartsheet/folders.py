@@ -1,0 +1,447 @@
+# pylint: disable=C0111,R0902,R0913
+# Smartsheet Python SDK.
+#
+# Copyright 2016 Smartsheet.com, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"): you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+from __future__ import absolute_import
+
+from typing import Union
+
+import logging
+import os.path
+
+from .util import fresh_operation
+from .models import Error, Folder, IndexResult, PaginatedChildrenResult, Result, Sheet
+from .util import deprecated
+
+
+class Folders:
+
+    """Class for handling Folders operations."""
+
+    def __init__(self, smartsheet_obj):
+        """Init Folders with base Smartsheet object."""
+        self._base = smartsheet_obj
+        self._log = logging.getLogger(__name__)
+
+    def copy_folder(
+        self, folder_id, container_destination_obj, include=None, skip_remap=None
+    ) -> Union[Result[Folder], Error]:
+        """Creates a copy of the specified Folder.
+
+        Args:
+            folder_id (int): Folder ID
+            container_destination_obj
+                (ContainerDestination): Container Destination object.
+            include (list[str]): A comma separated list of
+                elements to copy. Valid list values: attachments,
+                attachments, cellLinks, data, discussions, filters, forms, ruleRecipients,
+                rules, shares, all (deprecated).
+            skip_remap (list[str]): A comma separated list
+                of references to NOT re-map for the newly created resource.
+                Valid list items: cellLinks, reports, sheetHyperlinks, sights
+
+        Returns:
+            Union[Result[Folder], Error]: The result of the operation, or an Error object if the request fails.
+        """
+        _op = fresh_operation("copy_folder")
+        _op["method"] = "POST"
+        _op["path"] = "/folders/" + str(folder_id) + "/copy"
+        _op["query_params"]["include"] = include
+        _op["query_params"]["skipRemap"] = skip_remap
+        _op["json"] = container_destination_obj
+
+        expected = ["Result", "Folder"]
+
+        prepped_request = self._base.prepare_request(_op)
+        response = self._base.request(prepped_request, expected, _op)
+
+        return response
+
+    def create_folder_in_folder(self, folder_id, folder_obj) -> Union[Result[Folder], Error]:
+        """Create a Folder in the specified Folder
+
+        Args:
+            folder_id (int): Folder ID
+            folder_obj (Folder): Folder object.
+
+        Returns:
+            Union[Result[Folder], Error]: The result of the operation, or an Error object if the request fails.
+        """
+        if isinstance(folder_obj, str):
+            folder_obj = Folder({"name": folder_obj})
+
+        _op = fresh_operation("create_folder_in_folder")
+        _op["method"] = "POST"
+        _op["path"] = "/folders/" + str(folder_id) + "/folders"
+        _op["json"] = folder_obj
+
+        expected = ["Result", "Folder"]
+
+        prepped_request = self._base.prepare_request(_op)
+        response = self._base.request(prepped_request, expected, _op)
+
+        return response
+
+    def create_sheet_in_folder(self, folder_id, sheet_obj) -> Union[Result[Sheet], Error]:
+        """Create a Sheet from scratch in the specified Folder.
+
+        Args:
+            folder_id (int): Folder ID
+            sheet_obj (Sheet): Sheet object.
+
+        Returns:
+            Union[Result[Sheet], Error]: The result of the operation, or an Error object if the request fails.
+        """
+        _op = fresh_operation("create_sheet_in_folder")
+        _op["method"] = "POST"
+        _op["path"] = "/folders/" + str(folder_id) + "/sheets"
+        _op["json"] = sheet_obj
+
+        expected = ["Result", "Sheet"]
+
+        prepped_request = self._base.prepare_request(_op)
+        response = self._base.request(prepped_request, expected, _op)
+
+        return response
+
+    # pylint: disable=invalid-name
+    def create_sheet_in_folder_from_template(self, folder_id, sheet_obj, include=None) -> Union[Result[Sheet], Error]:
+        """Create a Sheet in the specified Folder from the specified Template.
+
+        The Sheet object should be limited to the following
+        attributes:
+
+        name (required): need not be unique.
+        fromId (required): the ID of the Template to use in creating the
+        Sheet.
+
+        The optional Include parameter is a list of elements to copy from
+        the Template. It may include: data, attachments, discussions,
+        cellLinks, forms
+
+        Args:
+            folder_id (int): Folder ID
+            sheet_obj (Sheet): Sheet object.
+            include (list[str]): A list of optional elements
+                to include from the source Template. Valid list values:
+                data, attachments, discussions, cellLinks, forms.
+
+        Returns:
+            Union[Result[Sheet], Error]: The result of the operation, or an Error object if the request fails.
+        """
+        _op = fresh_operation("create_sheet_in_folder_from_template")
+        _op["method"] = "POST"
+        _op["path"] = "/folders/" + str(folder_id) + "/sheets"
+        _op["query_params"]["include"] = include
+        _op["json"] = sheet_obj
+
+        expected = ["Result", "Sheet"]
+
+        prepped_request = self._base.prepare_request(_op)
+        response = self._base.request(prepped_request, expected, _op)
+
+        return response
+
+    # pylint: enable=invalid-name
+
+    def delete_folder(self, folder_id) -> Union[Result[None], Error]:
+        """Delete the Folder (and its contents) specified in the request.
+
+        Args:
+            folder_id (int): Folder ID
+
+        Returns:
+            Union[Result[None], Error]: The result of the operation, or an Error object if the request fails.
+        """
+        _op = fresh_operation("delete_folder")
+        _op["method"] = "DELETE"
+        _op["path"] = "/folders/" + str(folder_id)
+
+        expected = ["Result", None]
+        prepped_request = self._base.prepare_request(_op)
+        response = self._base.request(prepped_request, expected, _op)
+
+        return response
+
+    @deprecated
+    def get_folder(self, folder_id, include=None) -> Union[Folder, Error]:
+        """Get the specified Folder (and list its contents).
+
+        Deprecated: 3.1.0
+           Use `get_folder_metadata` and `get_folder_children` instead.
+
+        Args:
+            folder_id (int): Folder ID
+            include (list[str]): A comma-separated list of
+                optional elements to include in the response. Valid list
+                values: ownerInfo, sheetVersion, source.
+
+        Returns:
+            Union[Folder, Error]: The result of the operation, or an Error object if the request fails.
+        """
+        _op = fresh_operation("get_folder")
+        _op["method"] = "GET"
+        _op["path"] = "/folders/" + str(folder_id)
+        _op["query_params"]["include"] = include
+
+        expected = "Folder"
+        prepped_request = self._base.prepare_request(_op)
+        response = self._base.request(prepped_request, expected, _op)
+
+        return response
+
+    @deprecated
+    def list_folders(self, folder_id, page_size=None, page=None, include_all=None) -> Union[IndexResult[Folder], Error]:
+        """Get a list of top-level child Folders within the specified Folder.
+
+        Deprecated: 3.1.0
+           Use `get_folder_children` with children_resource_types=['folders'] instead.
+
+        Args:
+            folder_id (int): Folder ID
+            page_size (int): The maximum number of items to
+                return per page.
+            page (int): Which page to return.
+            include_all (bool): If true, include all results
+                (i.e. do not paginate).
+
+        Returns:
+            Union[IndexResult[Folder], Error]: The result of the operation, or an Error object if the request fails.
+        """
+        _op = fresh_operation("list_folders")
+        _op["method"] = "GET"
+        _op["path"] = "/folders/" + str(folder_id) + "/folders"
+        _op["query_params"]["pageSize"] = page_size
+        _op["query_params"]["page"] = page
+        _op["query_params"]["includeAll"] = include_all
+
+        expected = ["IndexResult", "Folder"]
+
+        prepped_request = self._base.prepare_request(_op)
+        response = self._base.request(prepped_request, expected, _op)
+
+        return response
+
+    def move_folder(self, folder_id, container_destination_obj) -> Union[Result[Folder], Error]:
+        """Moves the specified Folder to another location.
+
+        Args:
+            folder_id (int): Folder ID
+            container_destination_obj
+                (ContainerDestination): Container Destination object.
+
+        Returns:
+            Union[Result[Folder], Error]: The result of the operation, or an Error object if the request fails.
+        """
+        _op = fresh_operation("move_folder")
+        _op["method"] = "POST"
+        _op["path"] = "/folders/" + str(folder_id) + "/move"
+        _op["json"] = container_destination_obj
+
+        expected = ["Result", "Folder"]
+
+        prepped_request = self._base.prepare_request(_op)
+        response = self._base.request(prepped_request, expected, _op)
+
+        return response
+
+    def update_folder(self, folder_id, folder_obj) -> Union[Result[Folder], Error]:
+        """Update the specified Folder.
+
+        Args:
+            folder_id (int): Folder ID
+            folder_obj (Folder): Folder object.
+
+        Returns:
+            Union[Result[Folder], Error]: The result of the operation, or an Error object if the request fails.
+        """
+        if isinstance(folder_obj, str):
+            folder_obj = Folder({"name": folder_obj})
+
+        _op = fresh_operation("update_folder")
+        _op["method"] = "PUT"
+        _op["path"] = "/folders/" + str(folder_id)
+        _op["json"] = folder_obj
+
+        expected = ["Result", "Folder"]
+
+        prepped_request = self._base.prepare_request(_op)
+        response = self._base.request(prepped_request, expected, _op)
+
+        return response
+
+    def get_folder_metadata(self, folder_id, include=None) -> Union[Folder, Error]:
+        """Get the metadata of a folder.
+
+        Args:
+            folder_id (int): Folder ID
+            include (list[str]): A list of optional elements to include
+            in the response. Valid list values: source.
+
+        Returns:
+            Union[Folder, Error]: The result of the operation, or an Error object if the request fails.
+        """
+        _op = fresh_operation("get_folder_metadata")
+        _op["method"] = "GET"
+        _op["path"] = "/folders/" + str(folder_id) + "/metadata"
+        _op["query_params"]["include"] = include
+
+        expected = "Folder"
+        prepped_request = self._base.prepare_request(_op)
+        response = self._base.request(prepped_request, expected, _op)
+
+        return response
+
+    def get_folder_children(
+            self,
+            folder_id,
+            children_resource_types=None,
+            include=None,
+            last_key=None,
+            max_items=None
+    ) -> Union[PaginatedChildrenResult, Error]:
+        """Get the children of a folder.
+
+        Args:
+            folder_id (int): Folder ID
+            children_resource_types (list[str]): The types of the children resources.
+                If not provided, returns children of all types.
+                Valid list values: sheets, reports, sights, folders.
+            include (list[str]): A list of optional elements to include in the
+                response. Valid list values: source, ownerInfo.
+            last_key (str): The token from a previous request that will allow this one
+                to fetch the next page of results.
+            max_items (int): The maximum number of items to return in the response.
+
+        Returns:
+            Union[PaginatedChildrenResult, Error]: The result of the operation, or an Error object if the request fails.
+        """
+        _op = fresh_operation("get_folder_children")
+        _op["method"] = "GET"
+        _op["path"] = "/folders/" + str(folder_id) + "/children"
+        _op["query_params"]["childrenResourceTypes"] = children_resource_types
+        _op["query_params"]["include"] = include
+        _op["query_params"]["lastKey"] = last_key
+        _op["query_params"]["maxItems"] = max_items
+
+        expected = "PaginatedChildrenResult"
+        prepped_request = self._base.prepare_request(_op)
+        response = self._base.request(prepped_request, expected, _op)
+
+        return response
+
+    def import_csv_sheet(
+        self,
+        folder_id,
+        file,
+        sheet_name=None,
+        header_row_index=None,
+        primary_column_index=None,
+    ) -> Union[Result[Sheet], Error]:
+        """Imports a sheet in the specified folder.
+
+        Args:
+            folder_id (int): folder ID
+            file (string): path to CSV file.
+            sheet_name (string): destination sheet name
+            header_row_index (int): index (0 based) of row to be used for column names
+            primary_column_index (int): index (0 based) of primary column
+
+        Returns:
+            Union[Result[Sheet], Error]: The result of the operation, or an Error object if the request fails.
+        """
+        if not all(val is not None for val in ["folder_id", "file"]):
+            raise ValueError(
+                ("One or more required values are missing from call to " + __name__)
+            )
+
+        return self._import_sheet(
+            folder_id,
+            file,
+            "text/csv",
+            sheet_name,
+            header_row_index,
+            primary_column_index,
+        )
+
+    def import_xlsx_sheet(
+        self,
+        folder_id,
+        file,
+        sheet_name=None,
+        header_row_index=None,
+        primary_column_index=None,
+    ) -> Union[Result[Sheet], Error]:
+        """Imports a sheet in the specified folder.
+
+        Args:
+            folder_id (int): folder ID
+            file (string): path to XLSX file.
+            sheet_name (string): destination sheet name
+            header_row_index (int): index (0 based) of row to be used for column names
+            primary_column_index (int): index (0 based) of primary column
+
+        Returns:
+            Union[Result[Sheet], Error]: The result of the operation, or an Error object if the request fails.
+        """
+        if not all(val is not None for val in ["folder_id", "file"]):
+            raise ValueError(
+                ("One or more required values are missing from call to " + __name__)
+            )
+
+        return self._import_sheet(
+            folder_id,
+            file,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            sheet_name,
+            header_row_index,
+            primary_column_index,
+        )
+
+    def _import_sheet(
+        self,
+        folder_id,
+        file,
+        file_type,
+        sheet_name,
+        header_row_index,
+        primary_column_index,
+    ) -> Union[Result[Sheet], Error]:
+        """Internal function used to import sheet"""
+
+        if sheet_name is None:
+            head, tail = os.path.split(file)
+            sheet_name = tail or os.path.basename(head)
+
+        _data = open(file, "rb").read()
+        _op = fresh_operation("import_sheet_into_folder")
+        _op["method"] = "POST"
+        _op["path"] = "/folders/" + str(folder_id) + "/sheets/import"
+        _op["headers"] = {
+            "content-type": file_type,
+            "content-disposition": "attachment",
+        }
+        _op["form_data"] = _data
+        _op["query_params"]["sheetName"] = sheet_name
+        _op["query_params"]["headerRowIndex"] = header_row_index
+        _op["query_params"]["primaryColumnIndex"] = primary_column_index
+
+        expected = ["Result", "Sheet"]
+
+        prepped_request = self._base.prepare_request(_op)
+        response = self._base.request(prepped_request, expected, _op)
+
+        return response
