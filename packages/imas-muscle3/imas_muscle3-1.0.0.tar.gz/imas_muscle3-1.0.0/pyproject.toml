@@ -1,0 +1,137 @@
+[build-system]
+# Minimum requirements for the build system to execute.
+requires = ["setuptools>=61", "wheel", "packaging", "tomli;python_version<'3.11'", "setuptools_scm>8"]
+
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "imas-muscle3"
+authors = [
+  {name = "Mike Sanders", email = "msanders@ignitioncomputing.com"}
+]
+description = "IMAS MUSCLE3 tools"
+readme = {file = "README.md", content-type = "text/markdown"}
+requires-python = ">=3.7"
+license = {file = "LICENSE.md"}
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Environment :: Plugins",
+    "Framework :: Flake8",
+    "Framework :: Pytest",
+    "Framework :: Sphinx",
+# Custom trove classifiers are not allowed, and newer versions of python setuptools will fail to build
+# when classifiers other than those listed on: https://pypi.org/classifiers/ are included
+#    "Framework :: IMAS",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: System Administrators",
+# The license is prepended by private which makes it a valid trove classifier,
+# it will also prevent uploading to package indices such as PyPI
+    "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
+    "Natural Language :: English",
+    "Operating System :: POSIX",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Unix Shell",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System",
+    "Topic :: System :: Software Distribution",
+    "Topic :: Utilities",
+]
+dynamic = ["version"]
+dependencies = [
+    "numpy>=1.15.4",
+    "importlib_resources",
+    "rich",
+    "packaging",
+    "imas-python",
+    "imas-validator",
+    "muscle3",
+    "panel",
+    "holoviews",
+    "hvplot",
+    "xarray"
+]
+
+[project.optional-dependencies]
+# these self-dependencies are available since pip 21.2
+all = [
+    "imas-muscle3[docs,test,linting]"
+]
+docs = [
+    "sphinx>=6.0.0,<7.0.0",
+    "sphinx-autosummary-accessors>=0.1.2",
+    "sphinx_immaterial>=0.11.0,<0.12",
+    "recommonmark>=0.6",
+]
+test = [
+    "pytest>=5.4.1",
+    "pytest-cov>=0.6",
+    "pytest-xdist",
+    "pytest-randomly",
+]
+linting = [
+    "black>=24,<25",
+    "flake8",
+    "mypy",
+    "isort",
+]
+
+[project.urls]
+homepage = "https://github.com/iterorganization/IMAS-MUSCLE3"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["imas_muscle3*"]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "--strict-markers"
+testpaths = "tests"
+
+[tool.setuptools_scm]
+write_to = "imas_muscle3/_version.py"
+local_scheme = "no-local-version"
+
+[tool.black]
+force-exclude = "imas_muscle3/_version.py"
+line-length = 79
+
+[tool.mypy]
+packages = "imas_muscle3"
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+disallow_untyped_decorators = true
+
+[[tool.mypy.overrides]]
+module = [
+    "tests.*",
+    "imas_muscle3.visualization.examples.*"
+]
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = [
+    "imas.*",
+    "numpy.*",
+    "rich.*",
+    "imas_validator.*",
+    "libmuscle.*",
+    "ymmsl.*",
+    "imas_muscle3._version",
+    "panel.*",
+    "param.*",
+    "holoviews.*"
+]
+ignore_missing_imports = true
+
+[tool.isort]
+profile = "black"
+skip=['imas_muscle3/_version.py']
