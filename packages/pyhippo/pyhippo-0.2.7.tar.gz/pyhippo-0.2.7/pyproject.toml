@@ -1,0 +1,91 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include=["hippoclient*", "henry*", "hippometa*", "hipposerve*"]
+exclude=["*tests*", "*examples*", "*htmlcov*"]
+
+[tool.setuptools.package-data]
+hipposerve = ["web/static/*.svg", "web/static/*.ico", "web/static/*.png", "web/templates/*.html"]
+
+[project]
+name = "pyhippo"
+description = "The Hierarchical Product Post Office, developed for the Simons Observatory."
+version = "0.2.7"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic<2.11", # Needed until beanie fixes or merges https://github.com/BeanieODM/beanie/pull/1150
+    "pydantic-settings",
+    # 4.1.0 and above introduce a deprecation warning
+    # that breaks the latest versions of asyncer.
+    "anyio<4.1.0",
+    "asyncer",
+    "fastapi",
+    "uvicorn",
+    "beanie>=2.0.0",
+    "minio",
+    "jinja2",
+    "xxhash",
+    "jinja-markdown",
+    "typer",
+    "httpx",
+    "astropy",
+    "pyjwt",
+    "pwdlib[argon2]",
+    "python-multipart",
+    "loguru",
+    "tqdm",
+    "pymongo",
+    "textual[syntax]",
+    "soauth>=0.5.2",
+]
+authors = [
+    {name = "Josh Borrow", email = "josh@joshborow.com"},
+    {name = "Jeremy Myers"},
+    {name = "Divesh Jain"}
+]
+license = "MIT"
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "Topic :: Software Development :: Build Tools",
+  "Topic :: Scientific/Engineering :: Astronomy"
+]
+
+[project.urls]
+Repository = "https://github.com/simonsobs/hippo.git"
+Issues = "https://github.com/simonsobs/hippo/issues"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff",
+    "testcontainers",
+    "coverage",
+    "pytest-cov",
+    "pytest-asyncio",
+    "pytest-xprocess"
+]
+
+[project.scripts]
+henry = "hippoclient.cli:main"
+
+[tool.ruff.lint]
+extend-select = ["I"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = [
+    "hipposerve",
+    "hippoclient"
+]
+omit = [
+    "hipposerve/web/*"
+]
