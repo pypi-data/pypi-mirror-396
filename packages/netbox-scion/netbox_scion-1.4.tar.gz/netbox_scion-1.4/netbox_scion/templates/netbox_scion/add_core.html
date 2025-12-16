@@ -1,0 +1,26 @@
+{% extends 'generic/object_edit.html' %}
+{% load helpers form_helpers %}
+
+{% block title %}{{ action }} Appliance {{ action|lower|default:'to' }} {{ isdas }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col col-md-6">
+        <div class="card">
+            <h5 class="card-header">
+                {{ action }} Appliance {{ action|lower|default:'to' }} {{ isdas }}
+            </h5>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    {% render_field form.appliance_name %}
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary">{{ action }} Appliance</button>
+                        <a href="{% url 'plugins:netbox_scion:isdas' isdas.pk %}" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

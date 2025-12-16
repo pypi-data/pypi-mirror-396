@@ -1,0 +1,74 @@
+{% extends 'generic/object_list.html' %}
+{% load render_table from django_tables2 %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col col-md-6">
+        <div class="card">
+            <h5 class="card-header">ISD-AS</h5>
+            <div class="card-body">
+                <table class="table table-hover attr-table">
+                    <tr>
+                        <th scope="row">ISD-AS</th>
+                        <td>{{ object.isd_as }}</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Organization</th>
+                        <td>
+                            {% if object.organization %}
+                                <a href="{% url 'plugins:netbox_scion:organization' object.organization.pk %}">{{ object.organization.short_name }}</a>
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% if object.description %}
+                    <tr>
+                        <th scope="row">Description</th>
+                        <td>{{ object.description|linebreaksbr }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if object.appliances %}
+                    <tr>
+                        <th scope="row">Appliances</th>
+                        <td>{{ object.appliances_display }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if object.links.exists %}
+<div class="row">
+    <div class="col col-md-12">
+        <div class="card">
+            <h5 class="card-header">SCION Links ({{ object.links.count }})</h5>
+            <div class="card-body">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Interface ID</th>
+                            <th>Customer ID</th>
+                            <th>Peer Name</th>
+                            <th>Zendesk Ticket</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for link in object.links.all %}
+                        <tr>
+                            <td><a href="{% url 'plugins:netbox_scion:scionlink' link.pk %}">{{ link.interface_id }}</a></td>
+                            <td>{{ link.customer_id }}</td>
+                            <td>{{ link.peer_name }}</td>
+                            <td><a href="{{ link.get_zendesk_url }}" target="_blank">{{ link.zendesk_ticket }}</a></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
