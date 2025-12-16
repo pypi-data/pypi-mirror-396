@@ -1,0 +1,87 @@
+"""Constants and type definitions for the Addepy SDK."""
+from typing import Literal, Set
+
+# Polling defaults
+DEFAULT_INITIAL_WAIT: float = 30.0  # seconds
+DEFAULT_MAX_WAIT: float = 300.0  # 5 minutes
+DEFAULT_BACKOFF_FACTOR: float = 1.5
+DEFAULT_TIMEOUT: float = 1200.0  # 20 minutes
+
+# Pagination defaults
+DEFAULT_PAGE_LIMIT: int = 500
+MAX_PAGE_LIMIT: int = 2000
+
+# Import job completed statuses (stops polling)
+IMPORT_COMPLETED_STATUSES: Set[str] = {
+    "ERRORS_READY_FOR_REVIEW",
+    "WARNINGS_READY_FOR_REVIEW",
+    "ERRORS_AND_WARNINGS_READY_FOR_REVIEW",
+    "DRY_RUN_SUCCESSFUL",
+    "IMPORT_SUCCESSFUL",
+    "VALIDATION_FAILED",
+    "IMPORT_FAILED",
+}
+
+# Import statuses where results are available
+IMPORT_RESULT_READY_STATUSES: Set[str] = {
+    "ERRORS_READY_FOR_REVIEW",
+    "WARNINGS_READY_FOR_REVIEW",
+    "ERRORS_AND_WARNINGS_READY_FOR_REVIEW",
+    "DRY_RUN_SUCCESSFUL",
+    "IMPORT_SUCCESSFUL",
+}
+
+# Valid import types for POST requests
+VALID_POST_IMPORT_TYPES: Set[str] = {
+    "ATTRIBUTES",
+    "BENCHMARKS",
+    "BENCHMARK_ASSOCIATIONS",
+    "CONTACTS",
+    "COST_BASIS",
+    "ESTIMATED_RETURNS",
+    "GROUPS",
+    "HISTORICAL_PRICES",
+    "MANAGE_INVESTMENTS",
+    "MANAGE_OWNERSHIP",
+    "MANUAL_ADJUSTMENTS",
+    "CONSTITUENTS",
+    "POSITION_VALUATIONS",
+    "SUMMARY_DATA",
+    "TARGET_ALLOCATIONS",
+    "TOTAL_OUTSTANDING_SHARES",
+    "TRANSACTIONS",
+    "DELETE_TRANSACTIONS",
+    "VALUES_AND_FLOWS",
+}
+
+# Valid import types for DELETE requests
+VALID_DELETE_IMPORT_TYPES: Set[str] = {"DELETE_TRANSACTIONS"}
+
+# All valid import types
+ALL_VALID_IMPORT_TYPES: Set[str] = VALID_POST_IMPORT_TYPES | VALID_DELETE_IMPORT_TYPES
+
+# Type literal for static type checking
+AddeparImportType = Literal[
+    "ATTRIBUTES",
+    "BENCHMARKS",
+    "BENCHMARK_ASSOCIATIONS",
+    "CONTACTS",
+    "COST_BASIS",
+    "ESTIMATED_RETURNS",
+    "GROUPS",
+    "HISTORICAL_PRICES",
+    "MANAGE_INVESTMENTS",
+    "MANAGE_OWNERSHIP",
+    "MANUAL_ADJUSTMENTS",
+    "CONSTITUENTS",
+    "POSITION_VALUATIONS",
+    "SUMMARY_DATA",
+    "TARGET_ALLOCATIONS",
+    "TOTAL_OUTSTANDING_SHARES",
+    "TRANSACTIONS",
+    "DELETE_TRANSACTIONS",
+    "VALUES_AND_FLOWS",
+]
+
+# Default content type for Addepar API (JSON:API)
+DEFAULT_CONTENT_TYPE = "application/vnd.api+json"
