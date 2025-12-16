@@ -1,0 +1,23 @@
+#!/usr/bin/env clitest --v0
+
+set _PI_SHELL_ALLOW_NON_TERMINAL 1;
+
+# Invalid shell that exits too early
+$ _PI_SHELL=/bin/false _PI_SHELL_TYPE=bash pi
+! Shell process "/bin/false" exited with status: exit status: 1
+
+# Invalid shell that exits too early
+$ _PI_SHELL=/bin/true _PI_SHELL_TYPE=bash pi
+! Shell process "/bin/true" exited without output
+
+# Invalid shell that isn't found
+$ _PI_SHELL=does-not-exist _PI_SHELL_TYPE=bash pi
+! Could not create "shell-osc133-probe"
+! Failed to spawn process "does-not-exist"
+! No such file or directory (os error 2)
+
+# Invalid sidebar that isn't found
+$ _PI_SIDEBAR=does-not-exist pi
+! Could not create "sidebar"
+! Failed to spawn process "does-not-exist"
+! No such file or directory (os error 2)

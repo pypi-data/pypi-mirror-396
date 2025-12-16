@@ -1,0 +1,51 @@
+#!/usr/bin/env clitest --v0
+
+$ pi-captive reset --force
+*
+
+$ pi-captive run /bin/sh -c 'echo $$; sleep 10'
+%SET PROCESS_PID "${captive_pid}"
+! [pi] Started captive process with --pid %{NUMBER:captive_pid} and --tag %{WORD}
+! %{NUMBER:bash_pid}%{CR=\r}
+!
+
+if "TARGET_OS" == "linux" {
+    $ pstree --hide-threads --show-pids --show-pgids $PROCESS_PID
+    %SET SLEEP_PID "${sleep_pid}"
+    ! pi-captive(%{NUMBER},%{NUMBER})---sh(%{NUMBER},%{NUMBER})---sleep(%{NUMBER:sleep_pid},%{NUMBER})
+
+    $ pi-captive kill --pid $PROCESS_PID
+    ! [pi] Process exited with status: -1
+    !
+
+    $ pstree --hide-threads --show-pids --show-pgids $PROCESS_PID
+    ! pi-captive(%{NUMBER},%{NUMBER})
+
+    $ pstree --hide-threads --show-pids --show-pgids $SLEEP_PID
+
+    # Still alive for 60s after kill
+    $ pi-captive ls
+    ! [pi] --pid %{NUMBER} --tag sh (active)
+}
+
+# Note: need to test the output of pstree on macOS
+if "TARGET_OS" == "macos" {
+    $ pstree $PROCESS_PID
+    %SET SLEEP_PID "${sleep_pid}"
+    ! -+= %{NUMBER} %{WORD} %{GREEDYDATA}/pi-captive %{GREEDYDATA}
+    !  \-+= %{NUMBER} %{WORD} /bin/sh %{GREEDYDATA}
+    !    \--- %{NUMBER:sleep_pid} %{WORD} sleep 10
+
+    $ pi-captive kill --pid $PROCESS_PID
+    ! [pi] Process exited with status: -1
+    !
+
+    $ pstree $PROCESS_PID
+    ! --= %{NUMBER} %{WORD} %{GREEDYDATA}/pi-captive %{GREEDYDATA}
+
+    $ pstree $SLEEP_PID
+
+    # Still alive for 60s after kill
+    $ pi-captive ls
+    ! [pi] --pid %{NUMBER} --tag sh (active)
+}
