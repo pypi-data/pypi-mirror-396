@@ -1,0 +1,103 @@
+Metadata-Version: 2.4
+Name: apex-saas-framework
+Version: 0.3.24
+Summary: A pure Python SDK for multi-tenant SaaS (users, auth, RBAC, payments, email, files), database-agnostic and framework-agnostic.
+Author-email: ApexNeural <example@apexneural.com>
+Maintainer-email: ApexNeural <example@apexneural.com>
+License: MIT
+Project-URL: Homepage, https://github.com/apexneural/apex-saas-framework
+Project-URL: Documentation, https://github.com/apexneural/apex-saas-framework#readme
+Project-URL: Repository, https://github.com/apexneural/apex-saas-framework
+Project-URL: Issues, https://github.com/apexneural/apex-saas-framework/issues
+Project-URL: Bug Tracker, https://github.com/apexneural/apex-saas-framework/issues
+Project-URL: Changelog, https://github.com/apexneural/apex-saas-framework/releases
+Keywords: saas,sdk,multi-tenant,authentication,rbac,payments,database-agnostic,async
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: Software Development :: Libraries
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: sqlalchemy>=2.0.0
+Requires-Dist: alembic>=1.12.0
+Requires-Dist: pydantic>=2.5.0
+Requires-Dist: pydantic-settings>=2.1.0
+Requires-Dist: python-jose[cryptography]>=3.3.0
+Requires-Dist: passlib[bcrypt]>=1.7.4
+Requires-Dist: typer>=0.9.0
+Requires-Dist: psycopg2-binary>=2.9.9
+Requires-Dist: asyncpg>=0.29.0
+Requires-Dist: aiosqlite>=0.19.0
+Requires-Dist: aiomysql>=0.2.0
+Requires-Dist: httpx>=0.25.0
+Requires-Dist: sendgrid>=6.11.0
+Requires-Dist: bcrypt==4.0.1
+Provides-Extra: dev
+Requires-Dist: pytest>=7.4.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.21.0; extra == "dev"
+Requires-Dist: httpx>=0.25.0; extra == "dev"
+Requires-Dist: black>=23.11.0; extra == "dev"
+Requires-Dist: ruff>=0.1.6; extra == "dev"
+Requires-Dist: mypy>=1.7.0; extra == "dev"
+Dynamic: license-file
+
+# Apex SaaS Framework
+
+A pure Python SDK for multi-tenant SaaS applications. Database-agnostic and framework-agnostic.
+
+## Features
+
+- **Authentication**: Signup, login, JWT tokens, password reset
+- **Users**: User management with flexible models
+- **Organizations**: Multi-tenant organization support
+- **RBAC**: Roles and permissions system
+- **Payments**: PayPal integration
+- **Email**: SendGrid integration
+- **Files**: File upload and management
+- **Settings**: Application settings management
+
+## Quick Start
+
+```python
+from apex import Client, set_default_client, bootstrap
+from apex.auth import signup, login
+from apex.core.base import Base, UUIDPKMixin, TimestampMixin
+from sqlalchemy import Column, String
+
+# Define your models
+class User(Base, UUIDPKMixin, TimestampMixin):
+    __tablename__ = "users"
+    email = Column(String(255), unique=True)
+    password_hash = Column(String(255))
+
+# Initialize client
+client = Client(database_url="sqlite+aiosqlite:///./mydb.db", user_model=User)
+set_default_client(client)
+
+# Bootstrap database
+bootstrap(models=[User])
+
+# Use functions directly
+user = signup(email="user@example.com", password="pass123")
+tokens = login(email="user@example.com", password="pass123")
+```
+
+## Installation
+
+```bash
+pip install apex-saas-framework
+```
+
+## Documentation
+
+For detailed documentation, visit: https://github.com/apexneural/apex-saas-framework
+
+## License
+
+MIT License
