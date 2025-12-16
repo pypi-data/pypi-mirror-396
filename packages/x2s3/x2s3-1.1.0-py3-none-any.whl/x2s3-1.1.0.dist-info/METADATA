@@ -1,0 +1,161 @@
+Metadata-Version: 2.4
+Name: x2s3
+Version: 1.1.0
+Summary: RESTful web service which makes any storage system X available as an S3-compatible REST API
+Author-email: Konrad Rokicki <rokicki@janelia.hhmi.org>
+License: BSD 3-Clause License
+        
+        Copyright (c) 2024, Howard Hughes Medical Institute
+        
+        Redistribution and use in source and binary forms, with or without
+        modification, are permitted provided that the following conditions are met:
+        
+        1. Redistributions of source code must retain the above copyright notice, this
+           list of conditions and the following disclaimer.
+        
+        2. Redistributions in binary form must reproduce the above copyright notice,
+           this list of conditions and the following disclaimer in the documentation
+           and/or other materials provided with the distribution.
+        
+        3. Neither the name of the copyright holder nor the names of its
+           contributors may be used to endorse or promote products derived from
+           this software without specific prior written permission.
+        
+        THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+        AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+        IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+        DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+        FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+        DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+        SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+        CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+        OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+        OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+        
+Project-URL: Homepage, https://github.com/JaneliaSciComp/x2s3
+Project-URL: Repository, https://github.com/JaneliaSciComp/x2s3
+Classifier: License :: OSI Approved :: BSD License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Intended Audience :: Science/Research
+Classifier: Operating System :: OS Independent
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: aiobotocore>=2.22
+Requires-Dist: boto3>=1.37
+Requires-Dist: botocore>=1.37
+Requires-Dist: fastapi>=0.115
+Requires-Dist: loguru>=0.7
+Requires-Dist: pydantic>=2.11
+Requires-Dist: pydantic-settings>=2.9
+Requires-Dist: pydantic-settings-yaml>=0.2.0
+Requires-Dist: python-dateutil>=2.9
+Requires-Dist: pytest>=8.3
+Requires-Dist: starlette>=0.46
+Requires-Dist: uvicorn>=0.34
+Requires-Dist: uvloop>=0.21
+Requires-Dist: jinja2>=3.1
+Provides-Extra: test
+Requires-Dist: pytest; extra == "test"
+Requires-Dist: pytest-cov; extra == "test"
+Requires-Dist: pytest-html; extra == "test"
+Requires-Dist: httpx>=0.28; extra == "test"
+Provides-Extra: release
+Requires-Dist: build; extra == "release"
+Requires-Dist: twine; extra == "release"
+Dynamic: license-file
+
+# x2s3
+
+[![Python CI](https://github.com/JaneliaSciComp/x2s3/actions/workflows/python-ci.yml/badge.svg)](https://github.com/JaneliaSciComp/x2s3/actions/workflows/python-ci.yml)
+
+RESTful web service which makes any storage system *X* available as an S3-compatible REST API, hence the name "X to S3". It was initially built to support cloud-compatible microscopy image viewers such as [N5 Viewer](https://github.com/saalfeldlab/n5-viewer) (BigDataViewer) and [Neuroglancer](https://github.com/google/neuroglancer).
+
+At Janelia, we use **x2s3** to make private buckets on Seagate Lyve appear public, and to proxy internal resources (e.g. VAST S3). It can also be used as a pop-up file service for quickly viewing local images in BigDataViewer or Neuroglancer.
+
+<p align="center">
+    <img src="https://raw.githubusercontent.com/JaneliaSciComp/x2s3/main/docs/use_cases.png">
+</p>
+
+# Features
+
+* Extensible support for backend storage systems
+* Optional web-based bucket explorer
+* Hidden buckets
+* Partial buckets (chroot-like prefixes)
+* Non-blocking object streaming
+
+Inspired by S3 proxies such as [oxyno-zeta/s3-proxy](https://github.com/oxyno-zeta/s3-proxy) and [pottava/aws-s3-proxy](https://github.com/pottava/aws-s3-proxy), this service goes a step further to implement enough of the [AWS S3 API](https://docs.aws.amazon.com/AmazonS3/latest/API/Type_API_Reference.html) to be useable by AWS clients, such as  BigDataViewer. The S3 proxy implements which do this well (e.g. [gaul/s3proxy](https://github.com/gaul/s3proxy)) only proxy a single bucket at a time.
+
+S3 endpoints implemented:
+* [GetBucketAcl](https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketAcl.html)
+* [GetObject](https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html)
+* [HeadObject](https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html)
+* [ListBuckets](https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListBuckets.html)
+* [ListObjectsV2](https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListObjectsV2.html)
+
+S3 features omitted:
+* Permissions
+* Encryption
+* Versioning
+* RequestPayer
+* etc.
+
+# Running
+
+Create a `config.yaml` file that contains all of the buckets you want to serve. You can get started quickly by using the provided example template:
+
+```bash
+cp config.template.yaml config.yaml
+```
+
+See the [documentation](docs/Config.md) for more information about the configuration file.
+
+The simplest way to run the service is to use Docker:
+
+```bash
+docker run -it -p 8000:8000 -v ./config.yaml:/app/x2s3/config.yaml ghcr.io/janeliascicomp/x2s3:latest
+```
+
+You can also run the service with Python/Uvicorn directly. See the [development documentation](docs/Development.md) for more information on setting that up.
+
+
+## Production Deployment
+
+For production deployments, we recommend using an orchestrator (like Docker Compose) to run the prebuilt Docker container along with an Nginx reverse proxy which provides caching and TLS termination.
+
+Create a `./docker/.env` file that looks like this:
+
+```bash
+CONFIG_FILE=/path/to/config.yaml
+VAR_DIR=/path/to/var/dir
+CERT_DIR=/path/to/certs
+NGINX_CACHE_DIR=/path/to/cache
+```
+
+These properties configure the service as follows:
+* `CONFIG_FILE`: path to the `config.yaml` settings file
+* `VAR_DIR`: optional path to the var directory containing access keys referenced by `config.yaml`
+* `CERT_FILE`: optional path to the SSL cert file
+* `KEY_FILE`: optional path to the SSL key file
+* `NGINX_CACHE_DIR`: path for Nginx response caching (you can disable caching by editing `nginx.conf`)
+
+Now you can bring up the container:
+
+```bash
+cd docker/
+docker compose up -d
+```
+
+# Additional Documentation
+
+* [Configuation](docs/Config.md) - how to use `config.yaml` to configure the service
+* [Development](docs/Development.md) - notes on developing the service codebase
+
+
+# Attributions
+
+* Proxy icons created by [Uniconlabs - Flaticon](https://www.flaticon.com/free-icons/proxy)
+* [AWS S3 API](https://docs.aws.amazon.com/AmazonS3/latest/API/Type_API_Reference.html) Reference
