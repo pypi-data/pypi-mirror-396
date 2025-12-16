@@ -1,0 +1,76 @@
+# Qdrant Configuration for bruno-memory development
+# https://qdrant.tech/documentation/guides/configuration/
+
+log_level: INFO
+
+storage:
+  # Storage path for collections
+  storage_path: /qdrant/storage
+  
+  # Performance settings
+  performance:
+    max_search_threads: 4
+    max_optimization_threads: 2
+
+service:
+  # HTTP server settings
+  host: 0.0.0.0
+  http_port: 6333
+  
+  # gRPC server settings
+  grpc_port: 6334
+  
+  # Enable CORS for development
+  enable_cors: true
+  
+  # Maximum request size (in bytes)
+  max_request_size_mb: 32
+  
+  # Maximum timeout for operations
+  max_timeout_sec: 60
+
+# Collection settings
+collection:
+  # Default vector size
+  # vector_size: 1536  # Configured per collection
+  
+  # Optimizer settings
+  optimizer:
+    # The minimal fraction of vectors required to be deleted before optimization
+    deleted_threshold: 0.2
+    
+    # The minimal fraction of vectors required to be updated before optimization
+    vacuum_min_vector_number: 1000
+    
+    # Default segment size
+    default_segment_number: 2
+    
+    # Maximum segment size before split
+    max_segment_size_kb: 200000
+    
+    # Memory threshold for creating new segment
+    memmap_threshold_kb: 100000
+    
+    # Indexing threshold
+    indexing_threshold_kb: 20000
+    
+    # Flush interval
+    flush_interval_sec: 5
+    
+    # Maximum optimization threads
+    max_optimization_threads: 1
+
+# Clustering (disabled for single-node development)
+cluster:
+  enabled: false
+  # p2p:
+  #   port: 6335
+  # consensus:
+  #   tick_period_ms: 100
+
+# TLS (disabled for development)
+tls:
+  enabled: false
+
+# Telemetry (disabled for privacy)
+telemetry_disabled: true

@@ -1,0 +1,154 @@
+# Docker Compose configuration for bruno-memory CI/CD testing
+# Optimized for GitHub Actions and CI/CD pipelines
+#
+# Features:
+#   - No data persistence (faster cleanup)
+#   - Minimal resource allocation
+#   - Reduced startup times
+#   - No unnecessary features
+#
+# Usage in CI:
+#   docker-compose -f docker-compose.ci.yml up -d
+#   # Run tests
+#   docker-compose -f docker-compose.ci.yml down -v
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database with pgvector extension
+  postgresql:
+    build:
+      context: ./docker/postgresql
+      dockerfile: Dockerfile
+    container_name: bruno-memory-postgres-ci
+    environment:
+      POSTGRES_DB: bruno_memory_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: testpass123
+      POSTGRES_INITDB_ARGS: "-E UTF8"
+      # CI optimizations
+      POSTGRES_HOST_AUTH_METHOD: trust
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    tmpfs:
+      - /var/lib/postgresql/data:rw,noexec,nosuid,size=512m
+    volumes:
+      - ./docker/postgresql/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d bruno_memory_test"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+    networks:
+      - bruno-network-ci
+    # CI optimization: don't restart
+    restart: "no"
+    # Resource limits for CI
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  # Redis Cache and Session Store
+  redis:
+    image: redis:7-alpine
+    container_name: bruno-memory-redis-ci
+    command: >
+      redis-server
+      --save ""
+      --appendonly no
+      --maxmemory 128mb
+      --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    tmpfs:
+      - /data:rw,noexec,nosuid,size=128m
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 2s
+      retries: 10
+      start_period: 5s
+    networks:
+      - bruno-network-ci
+    restart: "no"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+  # ChromaDB Vector Database
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: bruno-memory-chromadb-ci
+    environment:
+      ANONYMIZED_TELEMETRY: false
+      IS_PERSISTENT: false
+    ports:
+      - "8000:8000"
+    tmpfs:
+      - /chroma/chroma:rw,noexec,nosuid,size=256m
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 15s
+    networks:
+      - bruno-network-ci
+    restart: "no"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  # Qdrant Vector Database
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: bruno-memory-qdrant-ci
+    environment:
+      QDRANT__SERVICE__GRPC_PORT: 6334
+      QDRANT__LOG_LEVEL: WARN
+      QDRANT__STORAGE__PERFORMANCE__MAX_SEARCH_THREADS: 1
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    tmpfs:
+      - /qdrant/storage:rw,noexec,nosuid,size=256m
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 15s
+    networks:
+      - bruno-network-ci
+    restart: "no"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+# Network for service communication
+networks:
+  bruno-network-ci:
+    driver: bridge
+    name: bruno-memory-network-ci

@@ -1,0 +1,77 @@
+# Docker Compose configuration for bruno-memory minimal testing
+# This file includes only PostgreSQL and Redis for quick testing of core backends
+#
+# Usage:
+#   docker-compose -f docker-compose.minimal.yml up -d
+#   docker-compose -f docker-compose.minimal.yml down
+#
+# Services included:
+#   - PostgreSQL (with pgvector extension)
+#   - Redis (for caching and session management)
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database with pgvector extension
+  postgresql:
+    build:
+      context: ./docker/postgresql
+      dockerfile: Dockerfile
+    container_name: bruno-memory-postgres-minimal
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-bruno_memory_test}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-testpass123}
+      POSTGRES_INITDB_ARGS: "-E UTF8"
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data-minimal:/var/lib/postgresql/data
+      - ./docker/postgresql/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-bruno_memory_test}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - bruno-network-minimal
+    restart: unless-stopped
+
+  # Redis Cache and Session Store
+  redis:
+    image: redis:7-alpine
+    container_name: bruno-memory-redis-minimal
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory ${REDIS_MAX_MEMORY:-256mb}
+      --maxmemory-policy allkeys-lru
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data-minimal:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - bruno-network-minimal
+    restart: unless-stopped
+
+# Named volumes for data persistence
+volumes:
+  postgres-data-minimal:
+    driver: local
+    name: bruno-memory-postgres-data-minimal
+  redis-data-minimal:
+    driver: local
+    name: bruno-memory-redis-data-minimal
+
+# Network for service communication
+networks:
+  bruno-network-minimal:
+    driver: bridge
+    name: bruno-memory-network-minimal

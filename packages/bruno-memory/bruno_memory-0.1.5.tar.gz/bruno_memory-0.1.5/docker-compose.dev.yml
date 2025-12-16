@@ -1,0 +1,204 @@
+# Docker Compose configuration for bruno-memory development
+# Includes all services with development-friendly features
+#
+# Features:
+#   - Data persistence for local development
+#   - Volume mounts for live configuration updates
+#   - Debug logging enabled
+#   - Port mappings for direct access
+#   - Hot reload support where applicable
+#
+# Usage:
+#   docker-compose -f docker-compose.dev.yml up -d
+#   docker-compose -f docker-compose.dev.yml logs -f
+#   docker-compose -f docker-compose.dev.yml down
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database with pgvector extension
+  postgresql:
+    build:
+      context: ./docker/postgresql
+      dockerfile: Dockerfile
+    container_name: bruno-memory-postgres-dev
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-bruno_memory_dev}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-devpass123}
+      POSTGRES_INITDB_ARGS: "-E UTF8"
+      # Development settings
+      POSTGRES_LOG_STATEMENT: ${POSTGRES_LOG_STATEMENT:-all}
+      POSTGRES_LOG_DURATION: ${POSTGRES_LOG_DURATION:-on}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data-dev:/var/lib/postgresql/data
+      - ./docker/postgresql/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./docker/postgresql/dev-queries.sql:/docker-entrypoint-initdb.d/99-dev-queries.sql:ro
+      # Mount PostgreSQL config for live updates
+      - ./docker/postgresql/postgresql.dev.conf:/etc/postgresql/postgresql.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-bruno_memory_dev}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - bruno-network-dev
+    restart: unless-stopped
+    labels:
+      - "com.bruno-memory.environment=development"
+      - "com.bruno-memory.service=postgresql"
+
+  # Redis Cache and Session Store
+  redis:
+    image: redis:7-alpine
+    container_name: bruno-memory-redis-dev
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory ${REDIS_MAX_MEMORY:-512mb}
+      --maxmemory-policy allkeys-lru
+      --loglevel ${REDIS_LOG_LEVEL:-debug}
+      --slowlog-log-slower-than 10000
+      --slowlog-max-len 128
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data-dev:/data
+      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - bruno-network-dev
+    restart: unless-stopped
+    labels:
+      - "com.bruno-memory.environment=development"
+      - "com.bruno-memory.service=redis"
+
+  # ChromaDB Vector Database
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: bruno-memory-chromadb-dev
+    environment:
+      ANONYMIZED_TELEMETRY: false
+      CHROMA_SERVER_AUTH_CREDENTIALS_PROVIDER: ${CHROMADB_AUTH_PROVIDER:-chromadb.auth.token.TokenAuthenticationServerProvider}
+      CHROMA_SERVER_AUTH_CREDENTIALS: ${CHROMADB_AUTH_CREDENTIALS:-dev-token}
+      CHROMA_SERVER_AUTH_TOKEN_TRANSPORT_HEADER: ${CHROMADB_AUTH_HEADER:-X-Chroma-Token}
+      CHROMA_LOG_LEVEL: ${CHROMADB_LOG_LEVEL:-DEBUG}
+      IS_PERSISTENT: true
+    ports:
+      - "${CHROMADB_PORT:-8000}:8000"
+    volumes:
+      - chromadb-data-dev:/chroma/chroma
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - bruno-network-dev
+    restart: unless-stopped
+    labels:
+      - "com.bruno-memory.environment=development"
+      - "com.bruno-memory.service=chromadb"
+
+  # Qdrant Vector Database
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: bruno-memory-qdrant-dev
+    environment:
+      QDRANT__SERVICE__GRPC_PORT: 6334
+      QDRANT__LOG_LEVEL: ${QDRANT_LOG_LEVEL:-DEBUG}
+      QDRANT__SERVICE__ENABLE_TLS: false
+      QDRANT__STORAGE__PERFORMANCE__MAX_SEARCH_THREADS: 4
+    ports:
+      - "${QDRANT_HTTP_PORT:-6333}:6333"
+      - "${QDRANT_GRPC_PORT:-6334}:6334"
+      # Expose Qdrant Web UI
+      - "${QDRANT_WEB_UI_PORT:-6335}:6333"
+    volumes:
+      - qdrant-data-dev:/qdrant/storage
+      - ./docker/qdrant/config.dev.yaml:/qdrant/config/production.yaml:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - bruno-network-dev
+    restart: unless-stopped
+    labels:
+      - "com.bruno-memory.environment=development"
+      - "com.bruno-memory.service=qdrant"
+
+  # Redis Commander - Redis Web UI (Development only)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: bruno-memory-redis-commander
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "${REDIS_COMMANDER_PORT:-8081}:8081"
+    depends_on:
+      - redis
+    networks:
+      - bruno-network-dev
+    restart: unless-stopped
+    labels:
+      - "com.bruno-memory.environment=development"
+      - "com.bruno-memory.service=redis-commander"
+
+  # pgAdmin - PostgreSQL Web UI (Development only)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: bruno-memory-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@bruno-memory.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-devpass123}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+    ports:
+      - "${PGADMIN_PORT:-8082}:80"
+    volumes:
+      - pgadmin-data-dev:/var/lib/pgadmin
+      - ./docker/postgresql/servers.json:/pgadmin4/servers.json:ro
+    depends_on:
+      - postgresql
+    networks:
+      - bruno-network-dev
+    restart: unless-stopped
+    labels:
+      - "com.bruno-memory.environment=development"
+      - "com.bruno-memory.service=pgadmin"
+
+# Named volumes for data persistence
+volumes:
+  postgres-data-dev:
+    driver: local
+    name: bruno-memory-postgres-data-dev
+  redis-data-dev:
+    driver: local
+    name: bruno-memory-redis-data-dev
+  chromadb-data-dev:
+    driver: local
+    name: bruno-memory-chromadb-data-dev
+  qdrant-data-dev:
+    driver: local
+    name: bruno-memory-qdrant-data-dev
+  pgadmin-data-dev:
+    driver: local
+    name: bruno-memory-pgadmin-data-dev
+
+# Network for service communication
+networks:
+  bruno-network-dev:
+    driver: bridge
+    name: bruno-memory-network-dev
