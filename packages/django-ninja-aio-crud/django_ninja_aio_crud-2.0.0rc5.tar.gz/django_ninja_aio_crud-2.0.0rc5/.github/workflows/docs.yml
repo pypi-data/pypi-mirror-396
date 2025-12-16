@@ -1,0 +1,110 @@
+name: Deploy Docs
+
+on:
+  workflow_dispatch:
+    inputs:
+      docs_version:
+        description: 'Docs version to deploy (e.g. v1.0.0)'
+        required: true
+        default: 'dev'
+        type: choice  # ← SonarQube compliant: predefined safe options
+        options:
+          - dev
+          - stable
+          - "1.0"
+          - "2.0"
+      make_latest:
+        description: 'Set as "latest" and default?'
+        type: boolean
+        default: true
+
+      delete_version:
+          description: 'Version to DELETE (leave empty to skip)'
+          required: false
+          default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    # Only trusted events (SonarQube safe)
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Install MkDocs Mike and theme
+        run: pip install -r docs/requirements.txt
+
+      - name: Compute VERSION and MAKE_LATEST
+        id: vars
+        env:
+          # Assign untrusted input to env var FIRST (SonarQube compliant)
+          INPUT_VERSION: ${{ inputs.docs_version }}
+        shell: bash
+        run: |
+          # Now use safe shell variable $INPUT_VERSION
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "$INPUT_VERSION" ]; then
+            VERSION="$INPUT_VERSION"
+          else
+            VERSION="dev"
+          fi
+
+          # Boolean input is always safe ("true"/"false")
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            MAKE_LATEST="${{ inputs.make_latest }}"
+          else
+            MAKE_LATEST="true"
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "make_latest=$MAKE_LATEST" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy to GitHub Pages
+        env:
+          VERSION: ${{ steps.vars.outputs.version }}
+          MAKE_LATEST: ${{ steps.vars.outputs.make_latest }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git fetch --all --tags
+          git fetch origin gh-pages --depth=1 || true
+          
+          # Idempotent worktree setup
+          if git worktree list | grep -q " gh-pages "; then
+            git worktree remove gh-pages --force
+          fi
+          git worktree add gh-pages gh-pages 2>/dev/null || git worktree add gh-pages origin/gh-pages
+
+          if [ "$MAKE_LATEST" = "true" ]; then
+            echo "🚀 Deploying $VERSION as latest and default"
+            mike deploy --push --update-aliases "$VERSION" latest --ignore-remote-status
+            mike set-default "$VERSION"
+          else
+            echo "📦 Deploying $VERSION (non-latest)"
+            mike deploy --push "$VERSION" --ignore-remote-status
+          fi
+
+          git worktree remove gh-pages --force
+
+      - name: Delete version
+        if: inputs.delete_version != ''
+        run: |
+          echo "Deleting version: ${{ inputs.delete_version }}"
+          mike delete "${{ inputs.delete_version }}" --push
+          echo "Version ${{ inputs.delete_version }} deleted successfully"
+
+      - name: List versions
+        run: mike list
