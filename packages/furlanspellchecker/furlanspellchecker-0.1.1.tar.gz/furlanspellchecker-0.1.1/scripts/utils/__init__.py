@@ -1,0 +1,1 @@
+"""FurlanSpellChecker utility scripts package."""

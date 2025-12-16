@@ -1,0 +1,182 @@
+{
+  "version": "1.0.0",
+  "timestamp": "2025-12-03T12:45:53.095318",
+  "metadata": {
+    "word_count": 1000,
+    "python_version": "3.13.5 (tags/v3.13.5:6cb20a2, Jun 11 2025, 16:15:46) [MSC v.1943 64 bit (AMD64)]",
+    "platform": "win32",
+    "initialization_time_ms": 0.87
+  },
+  "benchmarks": {
+    "initialization": {
+      "name": "initialization",
+      "description": "Cold start initialization of all components",
+      "iterations": 3,
+      "times_ms": [
+        249.2891000583768,
+        33.22360012680292,
+        32.87799982354045
+      ],
+      "mean_ms": 105.13,
+      "stdev_ms": 124.85,
+      "min_ms": 32.88,
+      "max_ms": 249.29
+    },
+    "database_loading": {
+      "name": "database_loading",
+      "description": "Time to load each database type (first access)",
+      "databases": {
+        "phonetic_db": 2.4324001278728247,
+        "frequency_db": 1.6950001008808613,
+        "elision_db": 19.367400091141462,
+        "error_db": 2.5016001891344786,
+        "radix_tree": 15.08249994367361
+      },
+      "total_ms": 41.08
+    },
+    "phonetic_hash": {
+      "name": "phonetic_hash",
+      "description": "Phonetic hash calculation per word",
+      "word_count": 1000,
+      "total_ms": 61.49,
+      "mean_ms": 0.0615,
+      "stdev_ms": 0.0175,
+      "min_ms": 0.0006,
+      "max_ms": 0.2338,
+      "percentiles_ms": {
+        "p50": 0.058,
+        "p75": 0.0661,
+        "p90": 0.0787,
+        "p95": 0.0895,
+        "p99": 0.1337
+      },
+      "throughput_ops_per_sec": 16262.97
+    },
+    "dictionary_lookup": {
+      "name": "dictionary_lookup",
+      "description": "Phonetic hash lookup in dictionary",
+      "word_count": 1000,
+      "total_ms": 54.5,
+      "mean_ms": 0.0545,
+      "stdev_ms": 0.0323,
+      "min_ms": 0.0016,
+      "max_ms": 0.3837,
+      "percentiles_ms": {
+        "p50": 0.0506,
+        "p75": 0.0632,
+        "p90": 0.0877,
+        "p95": 0.1134,
+        "p99": 0.1655
+      },
+      "throughput_ops_per_sec": 18350.1
+    },
+    "frequency_lookup": {
+      "name": "frequency_lookup",
+      "description": "FrequencyDatabase.get_frequency() per word",
+      "word_count": 1000,
+      "total_ms": 16.7,
+      "mean_ms": 0.0167,
+      "stdev_ms": 0.0041,
+      "min_ms": 0.0015,
+      "max_ms": 0.0565,
+      "percentiles_ms": {
+        "p50": 0.0163,
+        "p75": 0.0186,
+        "p90": 0.0206,
+        "p95": 0.0221,
+        "p99": 0.0298
+      },
+      "throughput_ops_per_sec": 59892.06
+    },
+    "radix_tree_ed1": {
+      "name": "radix_tree_ed1",
+      "description": "RadixTree get_words_ed1() per word",
+      "word_count": 1000,
+      "total_ms": 3382.1,
+      "mean_ms": 3.3821,
+      "stdev_ms": 1.5305,
+      "min_ms": 0.0014,
+      "max_ms": 15.1285,
+      "percentiles_ms": {
+        "p50": 3.3389,
+        "p75": 4.1246,
+        "p90": 5.0316,
+        "p95": 5.6111,
+        "p99": 7.709
+      },
+      "throughput_ops_per_sec": 295.67
+    },
+    "levenshtein": {
+      "name": "levenshtein",
+      "description": "Levenshtein distance calculation per word pair",
+      "pair_count": 1000,
+      "total_ms": 3.16,
+      "mean_ms": 0.0032,
+      "stdev_ms": 0.0008,
+      "min_ms": 0.002,
+      "max_ms": 0.0228,
+      "percentiles_ms": {
+        "p50": 0.0031,
+        "p75": 0.0034,
+        "p90": 0.0037,
+        "p95": 0.0039,
+        "p99": 0.0044
+      },
+      "throughput_ops_per_sec": 316195.06
+    },
+    "check_word": {
+      "name": "check_word",
+      "description": "check_word_str() per word (includes asyncio.run overhead)",
+      "word_count": 1000,
+      "total_ms": 1140.59,
+      "mean_ms": 1.1406,
+      "stdev_ms": 0.674,
+      "min_ms": 0.675,
+      "max_ms": 20.9347,
+      "percentiles_ms": {
+        "p50": 1.0698,
+        "p75": 1.2006,
+        "p90": 1.4001,
+        "p95": 1.6283,
+        "p99": 2.1179
+      },
+      "throughput_ops_per_sec": 876.74
+    },
+    "check_word_sync": {
+      "name": "check_word_sync",
+      "description": "check_word() with shared event loop (reduced asyncio overhead)",
+      "word_count": 1000,
+      "total_ms": 184.69,
+      "mean_ms": 0.1847,
+      "stdev_ms": 0.0681,
+      "min_ms": 0.0488,
+      "max_ms": 0.8245,
+      "percentiles_ms": {
+        "p50": 0.1696,
+        "p75": 0.2345,
+        "p90": 0.2605,
+        "p95": 0.2882,
+        "p99": 0.3646
+      },
+      "throughput_ops_per_sec": 5414.46
+    },
+    "suggest": {
+      "name": "suggest",
+      "description": "SuggestionEngine.suggest() per word",
+      "word_count": 100,
+      "total_ms": 91.81,
+      "mean_ms": 0.9181,
+      "stdev_ms": 2.1244,
+      "min_ms": 0.2111,
+      "max_ms": 20.0316,
+      "percentiles_ms": {
+        "p50": 0.4994,
+        "p75": 0.75,
+        "p90": 1.2162,
+        "p95": 1.5507,
+        "p99": 5.9177
+      },
+      "throughput_ops_per_sec": 1089.16
+    }
+  }
+}

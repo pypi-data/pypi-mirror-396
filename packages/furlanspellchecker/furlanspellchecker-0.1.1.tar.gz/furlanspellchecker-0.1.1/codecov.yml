@@ -1,0 +1,41 @@
+# Codecov configuration for FurlanSpellChecker
+# Documentation: https://docs.codecov.com/docs/codecov-yaml
+
+codecov:
+  require_ci_to_pass: true  # Wait for CI to pass before processing coverage
+
+coverage:
+  precision: 2
+  round: down
+  range: "70...100"
+  
+  status:
+    project:
+      default:
+        target: auto           # Compare to previous base commit
+        threshold: 1%          # Allow 1% drop (for refactoring)
+        informational: false   # Block PR if target not met
+        
+    patch:
+      default:
+        target: 80%            # New code must be 80% covered
+        threshold: 0%          # Strict enforcement
+        informational: false   # Block PR if target not met
+
+comment:
+  layout: "diff, flags, files, footer"
+  behavior: default
+  require_changes: false       # Always comment
+  require_base: true           # Need base report to compare
+  require_head: true           # Need head report
+  hide_project_coverage: false # Show project coverage
+
+# GitHub Check Run Annotations
+github_checks:
+  annotations: true            # Show coverage annotations in PR
+
+# Ignore paths (if needed)
+ignore:
+  - "tests/*"
+  - "scripts/*"
+  - "docs/*"
