@@ -1,0 +1,40 @@
+Metadata-Version: 2.4
+Name: gl-mitid
+Version: 1.6.0
+Summary: MitID middle layer
+License: MPL-2.0
+License-File: LICENSE
+Author: Magenta ApS
+Author-email: info@magenta.dk
+Requires-Python: >=3.11,<4.0
+Classifier: License :: OSI Approved
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
+Requires-Dist: django (>=5,<6)
+Requires-Dist: pysaml2 (==7.5.4)
+Requires-Dist: xmltodict (==1.0.2)
+Project-URL: Homepage, https://magenta.dk/
+Project-URL: Repository, https://git.magenta.dk/gronlandsprojekter/gldjangologin
+Description-Content-Type: text/markdown
+
+# Django MitID Auth
+
+Module for authenticating against an OpenID backend and against a MitID backend,
+with common middleware to intercept requests, check path against a whitelist, 
+and delegate to configured handler.
+
+The auth mechanism is a bit different from the standard Django auth system, 
+in that we don't leverage the User classes, but instead write relevant data 
+directly to the session, which also determines whether a user is logged in. 
+This means that we don't collide with standard login mechanisms (e.g. normal 
+django username/password), and an admin of staff user that's logged in "the 
+normal way" can also be logged in through our session, in essence faking a 
+citizen login.
+
+The Saml2 code borrows heavily from https://pypi.org/project/python3-saml-django/
+(MIT Licensed). It does so in order to avoid using the default django auth 
+system.
+
