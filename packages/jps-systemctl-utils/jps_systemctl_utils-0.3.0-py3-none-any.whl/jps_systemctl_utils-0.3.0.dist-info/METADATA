@@ -1,0 +1,374 @@
+Metadata-Version: 2.4
+Name: jps-systemctl-utils
+Version: 0.3.0
+Summary: Collection of utils for systemctl related tasks
+Author-email: Jaideep Sundaram <jai.python3@gmail.com>
+License: MIT
+Project-URL: Homepage, https://github.com/jai-python3/jps-systemctl-utils
+Project-URL: Repository, https://github.com/jai-python3/jps-systemctl-utils
+Project-URL: Issues, https://github.com/jai-python3/jps-systemctl-utils/issues
+Keywords: systemctl,service-management,automation,yaml-config,linux,devops,safety-checks,restart-services
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: typer>=0.12.3
+Requires-Dist: rich>=13.0.0
+Requires-Dist: pyyaml>=6.0.0
+Provides-Extra: dev
+Requires-Dist: flake8>=7.0.0; extra == "dev"
+Requires-Dist: black>=24.0.0; extra == "dev"
+Requires-Dist: build>=1.2.1; extra == "dev"
+Requires-Dist: twine>=5.0.0; extra == "dev"
+Requires-Dist: pytest>=8.0.0; extra == "dev"
+Requires-Dist: pytest-cov>=5.0.0; extra == "dev"
+Requires-Dist: isort>=5.13.0; extra == "dev"
+Requires-Dist: codecov>=2.1.13; extra == "dev"
+Requires-Dist: autoflake>=2.3.1; extra == "dev"
+Requires-Dist: pre-commit>=3.8.0; extra == "dev"
+Requires-Dist: bandit>=1.7.9; extra == "dev"
+Requires-Dist: vulture>=2.11; extra == "dev"
+Requires-Dist: flynt>=1.0.1; extra == "dev"
+Requires-Dist: pydocstyle>=6.3.0; extra == "dev"
+Requires-Dist: darglint>=1.8.1; extra == "dev"
+Requires-Dist: mypy>=1.12.1; extra == "dev"
+Requires-Dist: bump-my-version>=1.0.1; extra == "dev"
+Requires-Dist: git-changelog>=2.7.0; extra == "dev"
+Dynamic: license-file
+
+# jps-systemctl-utils
+
+![Build](https://github.com/jai-python3/jps-systemctl-utils/actions/workflows/test.yml/badge.svg)
+![Publish to PyPI](https://github.com/jai-python3/jps-systemctl-utils/actions/workflows/publish-to-pypi.yml/badge.svg)
+[![codecov](https://codecov.io/gh/jai-python3/jps-systemctl-utils/branch/main/graph/badge.svg)](https://codecov.io/gh/jai-python3/jps-systemctl-utils)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+A Python utility for automating systemctl service management operations with comprehensive logging and reporting.
+
+## 🚀 Overview
+
+`jps-systemctl-utils` provides a simple, sequential utility to manage systemd services in bulk. It automates the common workflow of checking status, stopping, starting, and verifying services, with full logging and detailed reports.
+
+### Features
+
+- ✅ **YAML Configuration** - Define services and safety checks in structured YAML format
+- 🔄 **Automated Workflow** - Runs `status → stop → start → status` for each service
+- 🛡️ **Safety Checks** - Configurable pre-restart checks to prevent unsafe operations
+- 📊 **Progress Tracking** - Real-time progress bar using Rich
+- 📝 **Comprehensive Logging** - Dual logging to file (INFO) and stderr (WARNING+)
+- 📋 **Detailed Reports** - Timestamped reports with all command outputs
+- 🧪 **Dry-run Mode** - Test your workflow without executing commands
+- ⚙️ **Flexible Configuration** - Custom output directories, log files, and reports
+- 🎯 **Smart Skipping** - Automatically skip services with active jobs
+
+### Use Cases
+
+- Restarting multiple services after configuration changes
+- Performing routine service maintenance
+- Testing service restart procedures
+- Documenting service states before/after operations
+- Automating deployment workflows
+
+## 📦 Installation
+
+### From Source
+
+```bash
+git clone https://github.com/jai-python3/jps-systemctl-utils.git
+cd jps-systemctl-utils
+make install
+```
+
+### For Development
+
+```bash
+make install-dev-tools
+```
+
+## 🎯 Usage
+
+### Basic Usage
+
+Create a YAML configuration file with services and optional safety checks:
+
+```yaml
+# services.yaml
+---
+nginx.service:
+  # No safety checks - will always restart
+apache2.service:
+mysql.service:
+postgresql.service:
+```
+
+Run the utility:
+
+```bash
+jps-systemctl-utils-restart-services --infile services.yaml
+```
+
+### Advanced: YAML Configuration with Safety Checks
+
+For more control, use a YAML configuration file with safety check commands:
+
+```yaml
+# services.yaml
+---
+nginx.service:
+  - pgrep -f nginx_backup
+  - test -f /var/lock/nginx.lock
+apache2.service:
+  - systemctl is-active httpd-backup
+mysql.service:
+  - pgrep -f mysqldump
+  - pgrep -f mysql_backup
+postgresql.service:
+  # No safety checks - will always restart
+```
+
+Run with safety checks:
+
+```bash
+jps-systemctl-utils-restart-services --infile services.yaml
+```
+
+**How Safety Checks Work:**
+- Each service can have a list of shell commands to execute before restarting
+- If ANY command returns output, the service restart is **skipped**
+- If all commands return no output, it's safe to restart
+- Services without safety checks are always restarted (if no jobs found)
+- Useful for checking if batch jobs, database operations, or critical processes are running
+
+### Dry-run Mode
+
+Test without executing commands:
+
+```bash
+jps-systemctl-utils-restart-services --infile services.txt --dryrun
+```
+
+### Custom Output Location
+
+```bash
+jps-systemctl-utils-restart-services --infile services.txt --outdir /var/log/service-ops
+```
+
+### Full Control
+
+```bash
+jps-systemctl-utils-restart-services \
+  --infile services.txt \
+  --outdir /custom/output \
+  --report-file /custom/report.txt \
+  --logfile /custom/app.log \
+  --dryrun
+```
+
+### Example Output Structure
+
+Default output location: `/tmp/<username>/systemctl_runner/<timestamp>/`
+
+```
+/tmp/myuser/systemctl_runner/2025-12-13-143000/
+├── systemctl_runner_report.txt    # Detailed command outputs
+└── systemctl_runner.log            # Application logs
+```
+
+### Report Format
+
+The generated report includes safety check results and command outputs:
+
+```text
+## method-created: /path/to/restart_services.py
+## date-created: 2025-12-13 14:30:00
+## created-by: myuser
+## logfile: /tmp/myuser/restart_services/2025-12-13-143000/restart_services.log
+## infile: /path/to/services.yaml
+
+# Service: nginx.service
+# Running safety checks for nginx.service:
+$ pgrep -f nginx_backup
+(exit: 0)
+# Safety checks PASSED: Safe to restart nginx.service
+
+$ systemctl status nginx.service
+● nginx.service - A high performance web server
+   Loaded: loaded (/etc/systemd/system/nginx.service)
+   Active: active (running)
+(exit: 0)
+
+$ systemctl stop nginx.service
+(exit: 0)
+
+$ systemctl start nginx.service
+(exit: 0)
+
+$ systemctl status nginx.service
+● nginx.service - A high performance web server
+   Active: active (running)
+(exit: 0)
+
+# Service: mysql.service
+# Running safety checks for mysql.service:
+$ pgrep -f mysql_backup
+12345
+mysql_backup_process
+(exit: 0)
+# Safety check FAILED: Output detected, service has active jobs
+
+⚠️  SKIPPING mysql.service: Safety check failed - jobs are still running
+```
+
+## 📚 API Documentation
+
+### Command-line Options
+
+| Option | Type | Required | Description |
+|--------|------|----------|-------------|
+| `--infile` | Path | Yes | YAML file with service configurations and safety checks |
+| `--outdir` | Path | No | Output directory for logs and reports |
+| `--report-file` | Path | No | Custom path for the report file |
+| `--logfile` | Path | No | Custom path for the log file |
+| `--dryrun` | Flag | No | If set, no systemctl commands are executed (safety checks bypassed) |
+
+### Input File Format
+
+**YAML Format:**
+```yaml
+---
+service_name.service:
+  - safety_check_command_1
+  - safety_check_command_2
+another_service.service:
+  # Empty list, null, or omitted means no safety checks
+third_service.service: null
+fourth_service.service: []
+```
+
+**Safety Check Examples:**
+- `pgrep -f process_name` - Check for running processes
+- `pgrep -f backup_script` - Check if backup is running
+- `systemctl is-active dependent-service` - Check dependent services
+- `curl -s http://localhost/health | grep OK` - Health check endpoints
+- `test -f /var/lock/myservice.lock` - Check for lock files
+- `ps aux | grep 'my_job' | grep -v grep` - Check for specific jobs
+
+## 🧪 Development
+
+### Running Tests
+
+```bash
+# Run all tests with coverage
+make test
+
+# Run specific test file
+pytest tests/test_processor.py -v
+
+# Run with detailed coverage report
+pytest tests/ -v --cov=src/jps_systemctl_utils --cov-report=html
+```
+
+### Code Quality
+
+```bash
+# Auto-fix code issues
+make fix
+
+# Format code with black
+make format
+
+# Run linting
+make lint
+
+# Run all quality checks
+make fix && make format && make lint
+```
+
+### Pre-commit Hooks
+
+```bash
+# Install pre-commit hooks
+make precommit
+```
+
+### Building and Publishing
+
+```bash
+# Build distribution packages
+make build
+
+# Check built packages
+make check-build
+
+# Publish to PyPI (with dry-run option)
+make publish DRYRUN=1
+make publish
+```
+
+## 🏗️ Project Structure
+
+```
+jps-systemctl-utils/
+├── src/
+│   └── jps_systemctl_utils/
+│       ├── __init__.py           # Package version
+│       ├── constants.py          # Logging constants
+│       ├── logging_helper.py     # Logging configuration
+│       ├── processor.py          # Core service processing logic
+│       ├── report_writer.py      # Report generation
+│       └── systemctl_runner.py   # CLI entry point
+├── tests/
+│   ├── conftest.py               # Shared fixtures
+│   ├── test_constants.py         # Constants tests
+│   ├── test_logging_helper.py    # Logging tests
+│   ├── test_processor.py         # Processor tests
+│   ├── test_report_writer.py     # Report writer tests
+│   └── test_systemctl_runner.py  # CLI tests
+├── pyproject.toml                # Project metadata
+├── Makefile                      # Development commands
+└── README.md                     # This file
+```
+
+## 🧩 Requirements
+
+- Python 3.10+
+- typer >= 0.12.3
+- rich >= 13.0.0
+- pyyaml >= 6.0.0
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Run tests (`make test`)
+4. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+5. Push to the branch (`git push origin feature/AmazingFeature`)
+6. Open a Pull Request
+
+## 📝 Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for version history.
+
+## 📄 License
+
+MIT License © Jaideep Sundaram
+
+## 🔗 Links
+
+- [Homepage](https://github.com/jai-python3/jps-systemctl-utils)
+- [Issue Tracker](https://github.com/jai-python3/jps-systemctl-utils/issues)
+- [PyPI](https://pypi.org/project/jps-systemctl-utils/)
+
+## ⚠️ Disclaimer
+
+This tool executes systemctl commands that affect system services. Always:
+- Test with `--dryrun` first
+- Review the service list carefully
+- Have appropriate system permissions
+- Back up important configurations
+- Use in controlled environments
