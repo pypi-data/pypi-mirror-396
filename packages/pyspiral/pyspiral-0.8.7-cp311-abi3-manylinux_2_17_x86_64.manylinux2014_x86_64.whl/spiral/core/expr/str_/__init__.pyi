@@ -1,0 +1,3 @@
+from .. import Expr
+
+def substr(expr: Expr, begin: int, end: int | None) -> Expr: ...

@@ -1,0 +1,3 @@
+from .. import Expr
+
+def expensive(expr: Expr) -> Expr: ...
