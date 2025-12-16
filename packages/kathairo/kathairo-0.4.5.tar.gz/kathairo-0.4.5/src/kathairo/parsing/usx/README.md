@@ -1,0 +1,1 @@
+The UsxVerseParser is a modification of SIL's UsxVerseParser.  The difference is that kathairo's version includes text from \d tags in the verse text.  This is so that we can get Psalm superscriptions.  All other changes to other files in this folder are just so that we can use the modified version of UsxVerseParser.
