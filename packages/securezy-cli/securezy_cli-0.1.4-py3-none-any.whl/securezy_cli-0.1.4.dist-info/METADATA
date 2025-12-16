@@ -1,0 +1,85 @@
+Metadata-Version: 2.4
+Name: securezy-cli
+Version: 0.1.4
+Summary: Lightweight security utility CLI (port scan, vault, crypto, hashing, reports, plugins).
+Project-URL: Homepage, https://github.com/akashkokare2910/securezy-cli
+Project-URL: Repository, https://github.com/akashkokare2910/securezy-cli
+Project-URL: Issues, https://github.com/akashkokare2910/securezy-cli/issues
+Author: Akash
+License: MIT License
+        
+        Copyright (c) 2020 Parinz
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+License-File: LICENSE
+Keywords: audit,cli,encryption,hashing,network,security
+Classifier: Development Status :: 3 - Alpha
+Classifier: Environment :: Console
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Security
+Requires-Python: >=3.9
+Requires-Dist: rich>=13.0.0
+Requires-Dist: typer>=0.9.0
+Provides-Extra: crypto
+Requires-Dist: cryptography>=41.0.0; extra == 'crypto'
+Provides-Extra: dev
+Requires-Dist: pytest>=7.4.0; extra == 'dev'
+Requires-Dist: ruff>=0.3.0; extra == 'dev'
+Provides-Extra: vault
+Requires-Dist: cryptography>=41.0.0; extra == 'vault'
+Description-Content-Type: text/markdown
+
+# Securezy CLI (`securezy-cli`)
+
+Securezy CLI is a lightweight, pip-installable Python command-line toolkit for common security tasks: fast TCP port scanning, encrypted vault storage, file encryption, hashing, scan reports, and plugins.
+
+PyPI: `securezy-cli` (CLI command: `securezy`)
+
+## Install
+
+```bash
+python -m pip install "securezy-cli[crypto,vault]"
+securezy --help
+```
+
+## Quickstart
+
+```bash
+securezy scan ports -t 127.0.0.1 -p 1-1024
+securezy tls check example.com
+securezy vault init
+securezy crypto encrypt -i secret.txt -o secret.txt.sz
+securezy hash text --algo sha256 "hello"
+```
+
+## Plugins
+
+Plugins are discovered via Python entry points group `securezy.plugins`.
+
+```bash
+securezy plugins list
+securezy plugins scaffold my-plugin -o .
+```
