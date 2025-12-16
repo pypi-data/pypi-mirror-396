@@ -1,0 +1,375 @@
+import argparse
+import importlib.resources as pkg_resources
+import json
+import logging
+import os
+import sys
+
+from jsonschema import Draft7Validator
+from referencing import Registry
+from referencing.jsonschema import DRAFT7
+from .tidas_log import setup_logging
+
+import tidas_tools.tidas.schemas as schemas
+
+
+def validate_elementary_flows_classification_hierarchy(class_items):
+
+    errors = []
+
+    for i, item in enumerate(class_items):
+        level = int(item["@level"])
+        if level != i:
+            errors.append(
+                f"Elementary flow classification level sorting error: at index {i}, expected level {i}, got {level}"
+            )
+
+    for i in range(1, len(class_items)):
+        parent_id = class_items[i - 2]["@catId"]
+        child_id = class_items[i]["@catId"]
+
+        if not child_id.startswith(parent_id):
+            errors.append(
+                f"Elementary flow classification code error: child code '{child_id}' does not start with parent code '{parent_id}'"
+            )
+
+    if errors:
+        return {"valid": False, "errors": errors}
+    else:
+        return {"valid": True}
+
+
+def validate_product_flows_classification_hierarchy(class_items):
+
+    errors = []
+
+    for i, item in enumerate(class_items):
+        level = int(item["@level"])
+        if level != i:
+            errors.append(
+                f"Product flow classification level sorting error: at index {i}, expected level {i}, got {level}"
+            )
+
+    for i in range(1, len(class_items)):
+        parent_id = class_items[i - 1]["@classId"]
+        child_id = class_items[i]["@classId"]
+
+        if not child_id.startswith(parent_id):
+            errors.append(
+                f"Product flow classification code error: child code '{child_id}' does not start with parent code '{parent_id}'"
+            )
+
+    if errors:
+        return {"valid": False, "errors": errors}
+    else:
+        return {"valid": True}
+
+
+def validate_processes_classification_hierarchy(class_items):
+    errors = []
+
+    # Derived from tidas_processes_category.json (level 0 -> level 1 codes)
+    level0_to_level1_mapping = {
+        "A": ["01", "02", "03"],
+        "B": ["05", "06", "07", "08", "09"],
+        "C": [f"{i:02d}" for i in range(10, 34)],  # 10 to 33
+        "D": ["35"],
+        "E": ["36", "37", "38", "39"],
+        "F": ["41", "42", "43"],
+        "G": ["46", "47"],
+        "H": ["49", "50", "51", "52", "53"],
+        "I": ["55", "56"],
+        "J": ["58", "59", "60"],
+        "K": ["61", "62", "63"],
+        "L": ["64", "65", "66"],
+        "M": ["68"],
+        "N": ["69", "70", "71", "72", "73", "74", "75"],
+        "O": ["77", "78", "79", "80", "81", "82"],
+        "P": ["84"],
+        "Q": ["85"],
+        "R": ["86", "87", "88"],
+        "S": ["90", "91", "92", "93"],
+        "T": ["94", "95", "96"],
+        "U": ["97", "98"],
+        "V": ["99"],
+    }
+
+    for i, item in enumerate(class_items):
+        level = int(item["@level"])
+        if level != i:
+            errors.append(
+                f"Processes classification level sorting error: at index {i}, expected level {i}, got {level}"
+            )
+
+    for i in range(1, len(class_items)):
+        parent = class_items[i - 1]
+        child = class_items[i]
+
+        parent_level = int(parent["@level"])
+        child_level = int(child["@level"])
+
+        parent_id = parent["@classId"]
+        child_id = child["@classId"]
+
+        if parent_level == 0 and child_level == 1:
+            valid_level1_codes = level0_to_level1_mapping.get(parent_id, [])
+            if child_id not in valid_level1_codes:
+                errors.append(
+                    f"Processes classification code error: level 1 code '{child_id}' does not correspond to level 0 code '{parent_id}'"
+                )
+
+        else:
+            if not child_id.startswith(parent_id):
+                errors.append(
+                    f"Processes classification code error: child code '{child_id}' does not start with parent code '{parent_id}'"
+                )
+
+    if errors:
+        return {"valid": False, "errors": errors}
+    else:
+        return {"valid": True}
+
+
+def validate_sources_classification_hierarchy(class_items):
+    errors = []
+
+    # Normalize to list if the schema provided a single object
+    if isinstance(class_items, dict):
+        class_items = [class_items]
+
+    # If the data is not a list at this point (e.g. None), treat as empty.
+    if not isinstance(class_items, list):
+        class_items = []
+
+    for i, item in enumerate(class_items):
+        try:
+            level = int(item["@level"])
+        except (KeyError, TypeError, ValueError):
+            errors.append(
+                f"Sources classification level parsing error: missing or invalid '@level' at index {i}"
+            )
+            continue
+        if level != i:
+            errors.append(
+                f"Sources classification level sorting error: at index {i}, expected level {i}, got {level}"
+            )
+
+    for i in range(1, len(class_items)):
+        parent_id = class_items[i - 1].get("@classId")
+        child_id = class_items[i].get("@classId")
+
+        if parent_id is None or child_id is None:
+            errors.append(
+                f"Sources classification code error: missing '@classId' for parent index {i-1} or child index {i}"
+            )
+            continue
+
+        if not child_id.startswith(parent_id):
+            errors.append(
+                f"Sources classification code error: child code '{child_id}' does not start with parent code '{parent_id}'"
+            )
+
+    if errors:
+        return {"valid": False, "errors": errors}
+    else:
+        return {"valid": True}
+
+
+def retrieve_schema(uri):
+    """Custom retrieval function for schema references"""
+    # Handle both local and remote references
+    if not uri.startswith(("http://", "https://")):
+        # This is a local reference, load from package
+        try:
+            # Try finding the file directly in the schemas package
+            schema_path = pkg_resources.files(schemas) / uri
+            with open(schema_path, "r") as f:
+                schema_data = json.load(f)
+                # Create a proper resource object
+                return DRAFT7.create_resource(schema_data)
+        except Exception as e:
+            logging.error(f"Failed to resolve: {uri}, error: {e}")
+            raise
+    # For remote references, return None to indicate the reference couldn't be resolved
+    return None
+
+
+def category_validate(json_file_path: str, category: str):
+    schema_file_path = pkg_resources.files(schemas) / f"tidas_{category.lower()}.json"
+    schema_uri = f"file://{schema_file_path}"
+
+    with schema_file_path.open() as f:
+        schema = json.load(f)
+
+        # Create registry with our retrieve function
+        registry = Registry(retrieve=retrieve_schema)
+        # Add the main schema to the registry
+        registry = registry.with_resource(schema_uri, DRAFT7.create_resource(schema))
+        # Instantiate validator once per category for efficiency
+        validator = Draft7Validator(schema, registry=registry)
+
+        for filename in os.listdir(json_file_path):
+            if filename.endswith(".json"):
+                full_path = os.path.join(json_file_path, filename)
+                with open(full_path, "r") as json_file:
+                    json_item = json.load(json_file)
+
+                    errors = []
+
+                    try:
+                        # Use iter_errors to capture every schema violation
+                        for schema_error in validator.iter_errors(json_item):
+                            location = (
+                                "/".join(str(part) for part in schema_error.path)
+                                if schema_error.path
+                                else "<root>"
+                            )
+                            errors.append(
+                                f"Schema Error at {location}: {schema_error.message}"
+                            )
+                    except Exception as e:
+                        logging.error(
+                            f"Unexpected validation error: {type(e).__name__}: {e}"
+                        )
+                        errors.append(f"Validation error: {e}")
+
+                    if category == "flows":
+                        if (
+                            json_item["flowDataSet"]["modellingAndValidation"][
+                                "LCIMethod"
+                            ]["typeOfDataSet"]
+                            == "Product flow"
+                        ):
+                            validation_result = (
+                                validate_product_flows_classification_hierarchy(
+                                    json_item["flowDataSet"]["flowInformation"][
+                                        "dataSetInformation"
+                                    ]["classificationInformation"][
+                                        "common:classification"
+                                    ][
+                                        "common:class"
+                                    ]
+                                )
+                            )
+                            if not validation_result["valid"]:
+                                errors.extend(validation_result["errors"])
+                        elif (
+                            json_item["flowDataSet"]["modellingAndValidation"][
+                                "LCIMethod"
+                            ]["typeOfDataSet"]
+                            == "Elementary flow"
+                        ):
+                            validation_result = (
+                                validate_elementary_flows_classification_hierarchy(
+                                    json_item["flowDataSet"]["flowInformation"][
+                                        "dataSetInformation"
+                                    ]["classificationInformation"][
+                                        "common:elementaryFlowCategorization"
+                                    ][
+                                        "common:category"
+                                    ]
+                                )
+                            )
+                            if not validation_result["valid"]:
+                                errors.extend(validation_result["errors"])
+
+                    if category == "processes":
+                        validation_result = validate_processes_classification_hierarchy(
+                            json_item["processDataSet"]["processInformation"][
+                                "dataSetInformation"
+                            ]["classificationInformation"]["common:classification"][
+                                "common:class"
+                            ]
+                        )
+                        if not validation_result["valid"]:
+                            errors.extend(validation_result["errors"])
+
+                    if category == "lifecyclemodels":
+                        validation_result = validate_processes_classification_hierarchy(
+                            json_item["lifecycleModelDataSet"][
+                                "lifecycleModelInformation"
+                            ]["dataSetInformation"]["classificationInformation"][
+                                "common:classification"
+                            ][
+                                "common:class"
+                            ]
+                        )
+                        if not validation_result["valid"]:
+                            errors.extend(validation_result["errors"])
+
+                    if category == "sources":
+                        validation_result = validate_sources_classification_hierarchy(
+                            json_item["sourceDataSet"]["sourceInformation"][
+                                "dataSetInformation"
+                            ]["classificationInformation"]["common:classification"][
+                                "common:class"
+                            ]
+                        )
+                        if not validation_result["valid"]:
+                            errors.extend(validation_result["errors"])
+
+                    if errors:
+                        for err in errors:
+                            logging.error(f"ERROR: {full_path} {err}")
+                    else:
+                        logging.info(f"INFO: {full_path} PASSED.")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="TIDAS format validator.")
+    parser.add_argument(
+        "--input-dir",
+        "-i",
+        type=str,
+        help="Input directory containing files to validate",
+    )
+    parser.add_argument(
+        "--verbose", "-v", action="store_true", help="Enable verbose logging"
+    )
+    try:
+        args = parser.parse_args()
+
+        setup_logging(args.verbose, "validate")
+
+        schemas_root = pkg_resources.files(schemas)
+        supported_categories = [
+            "contacts",
+            "flowproperties",
+            "flows",
+            "lciamethods",
+            "lifecyclemodels",
+            "processes",
+            "sources",
+            "unitgroups",
+        ]
+
+        for category in supported_categories:
+            try:
+                category_dir = os.path.join(args.input_dir, category)
+                if not os.path.isdir(category_dir):
+                    logging.debug("Skipping missing directory %s", category_dir)
+                    continue
+
+                schema_filename = f"tidas_{category.lower()}.json"
+                schema_path = schemas_root / schema_filename
+
+                if not schema_path.is_file():
+                    logging.debug(
+                        "Skipping directory %s — no schema file %s",
+                        category_dir,
+                        schema_filename,
+                    )
+                    continue
+
+                category_validate(category_dir, category)
+            except Exception as e:
+                error_msg = f"Error validating category {category}: {e}"
+                logging.error(error_msg)
+    except Exception as e:
+        error_msg = f"Error validating: {e}"
+        logging.error(error_msg)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
