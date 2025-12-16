@@ -1,0 +1,487 @@
+{% extends "enap_designsystem/base.html" %}
+{% load static %}
+{% load wagtailcore_tags wagtailimages_tags %}
+{% load wagtailcore_tags %}
+{% block metadata %}
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{% static 'enap_designsystem/css/capsulas-design-v2.css' %}">
+    <style>
+        /* Estilos adicionais para o scroll spy */
+        .capsulas-index-link {
+            transition: color 0.3s ease, font-weight 0.3s ease;
+        }
+        
+        /* Estilo para o botão voltar ao topo */
+        .capsulas-back-to-top {
+            display: none;
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: #071D41;
+            color: white;
+            border: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 1000;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+        
+        .capsulas-back-to-top:hover {
+            background-color: #0C3B83;
+            transform: translateY(-3px);
+        }
+
+        /* Estilos para conteúdo indentado */
+        .capsulas-detailed-content {
+            margin-left: 2rem;
+            padding-left: 1rem;
+            border-left: 3px solid #e0e0e0;
+            color: #555;
+            line-height: 1.6;
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .capsulas-section-content > .capsulas-detailed-content:first-of-type {
+            margin-top: 1.5rem;
+        }
+
+        /* Sidebar sticky respeitando o container */
+        .capsulas-sidebar-content {
+            position: sticky;
+            top: 20px;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+            will-change: position;
+        }
+    </style>
+{% endblock %}
+
+{% block title %}
+    <title>{{ page.title }}</title>
+{% endblock %}
+
+{%block govnavbar %}
+    <div style="background-color: #071E41;">
+        <div class="menu">
+            <div class="logo">
+                <img style="width: 51px; height: 18px;" src="{% static 'enap_designsystem/icons/logo-white.png' %}" alt="Logo GovBR">
+            </div>
+            <a href="https://www.gov.br/secom/pt-br/acesso-a-informacao/comunicabr">Comunica BR</a>
+            <div class="separator"></div>
+            <a href="https://www.gov.br/acessoainformacao/pt-br">Acesso à informação</a>
+            <div class="separator"></div>
+            <a href="https://www.gov.br/pt-br/participacao-social/">Participe</a>
+            <div class="separator"></div>
+            <a href="https://www4.planalto.gov.br/legislacao/">Legislação</a>
+            <div class="separator"></div>
+            <a href="https://www.gov.br/pt-br/orgaos-do-governo">Órgãos do Governo</a>
+        </div>
+    </div>
+{% endblock %}
+
+{% block navbar %}
+    {% if page.navbar %}
+        {% include "enap_designsystem/blocks/navbar/navbar_block.html" with navbar=page.navbar %}
+    {% else %}
+        <p style="color: red;">DEBUG: Nenhuma Navbar foi definida.</p>
+    {% endif %}
+{% endblock %}
+
+
+{% block content %}
+
+
+{% for block in page.menu %}
+    {% include_block block %}
+{% endfor %}
+{% if page.breadcrumbs %}
+{% include_block page.breadcrumbs %}
+{% endif %}
+
+
+<section class="wrapper-capsulas-page">
+
+    <!-- Layout com sidebar -->
+    <div class="capsulas-layout">
+        <!-- Sidebar com índice fixo -->
+        <div class="capsulas-sidebar" role="navigation" aria-label="Índice de navegação">
+            <div class="capsulas-sidebar-content">
+                <h2 class="capsulas-sidebar-title">Índice</h2>
+                <nav class="capsulas-index" aria-label="Índice de seções">
+                    <ul>
+                        <li><a href="#section-what" class="capsulas-index-link active">O que é</a></li>
+                        <li><a href="#section-why" class="capsulas-index-link">Por que é importante</a></li>
+                        <li><a href="#section-when" class="capsulas-index-link">Quando utilizar</a></li>
+                        <li><a href="#section-how" class="capsulas-index-link">Como aplicar</a></li>
+                        <li><a href="#section-check" class="capsulas-index-link">Método de verificação</a></li>
+                        <li><a href="#section-examples" class="capsulas-index-link">Exemplos</a></li>
+                        <li><a href="#section-dont" class="capsulas-index-link">O que não fazer</a></li>
+                        <li><a href="#section-norms" class="capsulas-index-link">Normas</a></li>
+                        {% if capsulas_relacionadas %}
+                        <li><a href="#section-related" class="capsulas-index-link">Cápsulas relacionadas</a></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Conteúdo principal -->
+        <div id="content" class="capsulas-main-content">
+            <!-- Cabeçalho da cápsula -->
+            <header class="capsulas-page-header">
+                <h2 id="top">{{ page.title }}</h2>
+                {% if page.resumo_card %}
+                <p class="capsulas-summary">{{ page.resumo_card }}</p>
+                {% endif %}
+            </header>
+
+            <!-- O que é? -->
+            <section id="section-what" class="capsulas-section">
+                <h2>O que é?</h2>
+                <div class="capsulas-section-content">
+                    {{ page.o_que_e_resumo|safe }}
+                    {% if page.o_que_e_detalhado %}
+                    <div class="capsulas-detailed-content" role="region" aria-label="Detalhes sobre o que é">
+                        {{ page.o_que_e_detalhado|safe }}
+                    </div>
+                    {% endif %}
+                </div>
+            </section>
+
+            <!-- Por que é importante? -->
+            <section id="section-why" class="capsulas-section">
+                <h2>Por que é importante?</h2>
+                <div class="capsulas-section-content">
+                    {{ page.por_que_importante_resumo|safe }}
+                    {% if page.por_que_importante_detalhado %}
+                    <div class="capsulas-detailed-content" role="region" aria-label="Detalhes sobre importância">
+                        {{ page.por_que_importante_detalhado|safe }}
+                    </div>
+                    {% endif %}
+                </div>
+            </section>
+
+            <!-- Quando utilizar? -->
+            <section id="section-when" class="capsulas-section">
+                <h2>Quando utilizar?</h2>
+                <div class="capsulas-section-content">
+                    {{ page.quando_utilizar_resumo|safe }}
+                    {% if page.quando_utilizar_cards %}
+                        {% for grid_block in page.quando_utilizar_cards %}
+                            {% include_block grid_block %}
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </section>
+
+            <!-- Como aplicar? -->
+            <section id="section-how" class="capsulas-section">
+                <h2>Como aplicar?</h2>
+                <div class="capsulas-section-content">
+                    {{ page.como_aplicar_resumo|safe }}
+                    {% if page.como_aplicar_detalhado %}
+                    <div class="capsulas-detailed-content" role="region" aria-label="Guia completo de como aplicar">
+                        {{ page.como_aplicar_detalhado|safe }}
+                    </div>
+                    {% endif %}
+                </div>
+            </section>
+
+            <!-- Método de verificação -->
+            <section id="section-check" class="capsulas-section">
+                <h2>Método de verificação</h2>
+                <div class="capsulas-section-content">
+                    {{ page.metodo_verificacao_resumo|safe }}
+                    {% if page.quando_utilizar_cards %}
+                        {% for grid_block in page.quando_utilizar_cards %}
+                            {% include_block grid_block %}
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </section>
+
+            <!-- Exemplos -->
+            <section id="section-examples" class="capsulas-section">
+                <h2>Exemplos</h2>
+                <div class="capsulas-section-content">
+                    {{ page.exemplos_resumo|safe }}
+                    {% if page.exemplos_detalhado %}
+                    <div class="capsulas-detailed-content" role="region" aria-label="Exemplos detalhados">
+                        {{ page.exemplos_detalhado|safe }}
+                    </div>
+                    {% endif %}
+                </div>
+            </section>
+
+            <!-- O que não fazer? -->
+            <section id="section-dont" class="capsulas-section">
+                <h2>O que não fazer?</h2>
+                <div class="capsulas-section-content">
+                    {{ page.o_que_nao_fazer_resumo|safe }}
+                    {% if page.o_que_nao_fazer_detalhado %}
+                    <div class="capsulas-detailed-content" role="region" aria-label="Análise completa do que não fazer">
+                        {{ page.o_que_nao_fazer_detalhado|safe }}
+                    </div>
+                    {% endif %}
+                </div>
+            </section>
+
+            <!-- Normas de referência -->
+            <section id="section-norms" class="capsulas-section">
+                <h2>Normas de referência</h2>
+                <div class="capsulas-section-content">
+                    {% if page.normas_referencia %}
+                        {{ page.normas_referencia|safe }}
+                    {% else %}
+                        <p>Nenhuma norma de referência foi especificada.</p>
+                    {% endif %}
+                </div>
+            </section>
+
+            <!-- Cápsulas Relacionadas -->
+            {% if capsulas_relacionadas %}
+            <section id="section-related" class="capsulas-section">
+                <h2>Cápsulas relacionadas</h2>
+                <div class="capsulas-section-content">
+                    <ul class="capsulas-related-list">
+                        {% for capsula in capsulas_relacionadas %}
+                        <li>
+                            <a href="{% pageurl capsula %}">
+                                {{ capsula.title }}
+                            </a>
+                            {% if capsula.resumo_card %}
+                            <p>{{ capsula.resumo_card }}</p>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </section>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Botão voltar ao topo -->
+    <button id="back-to-top" class="capsulas-back-to-top" aria-label="Voltar ao topo da página" title="Voltar ao topo">
+        <i class="fas fa-arrow-up" aria-hidden="true"></i>
+    </button>
+</section>
+
+<!-- Seção ENAP -->
+<section>
+    {% include_block page.cards %}
+    </section>
+{% endblock %}
+
+
+
+{% block footer %}
+    {% include "enap_designsystem/includes/footer.html" %}
+{% endblock %}
+
+
+{% block scriptinline %}
+<script>
+    // Toggle mobile menu
+    const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
+    const mobileNav = document.getElementById('mobileNav');
+    const mobileMenuIcon = mobileMenuBtn ? mobileMenuBtn.querySelector('i') : null;
+
+    if (mobileMenuBtn) {
+        mobileMenuBtn.addEventListener('click', function() {
+            mobileNav.classList.toggle('show');
+            
+            // Change icon
+            if (mobileNav.classList.contains('show')) {
+                mobileMenuIcon.classList.remove('fa-bars');
+                mobileMenuIcon.classList.add('fa-times');
+            } else {
+                mobileMenuIcon.classList.remove('fa-times');
+                mobileMenuIcon.classList.add('fa-bars');
+            }
+        });
+    }
+
+    // Close mobile menu when clicking on a link
+    const mobileLinks = mobileNav ? mobileNav.querySelectorAll('.link-capsula') : [];
+    mobileLinks.forEach(link => {
+        link.addEventListener('click', function() {
+            mobileNav.classList.remove('show');
+            if (mobileMenuIcon) {
+                mobileMenuIcon.classList.remove('fa-times');
+                mobileMenuIcon.classList.add('fa-bars');
+            }
+        });
+    });
+
+    // Set active link based on current URL
+    function setActiveLink() {
+        const currentPath = window.location.pathname;
+        const allLinks = document.querySelectorAll('.link-capsula');
+        
+        allLinks.forEach(link => {
+            link.classList.remove('active');
+            const linkPath = link.getAttribute('href');
+            
+            // Exact match for home
+            if (currentPath === '/' && linkPath === '/') {
+                link.classList.add('active');
+            }
+            // Match for /capsulas/
+            else if (currentPath.startsWith('/capsulas') && linkPath === '/capsulas/') {
+                link.classList.add('active');
+            }
+            // Match for /recursos/
+            else if (currentPath.startsWith('/recursos') && linkPath === '/recursos/') {
+                link.classList.add('active');
+            }
+        });
+    }
+
+    // Execute on page load
+    setActiveLink();
+
+    // Also execute when navigating (for SPAs)
+    window.addEventListener('popstate', setActiveLink);
+
+    // SCROLL SPY FUNCTIONALITY
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get all section elements
+        const sections = document.querySelectorAll('.capsulas-section');
+        // Get all index links
+        const navLinks = document.querySelectorAll('.capsulas-index-link');
+        
+        // Options for the Intersection Observer
+        const observerOptions = {
+            root: null, // Use the viewport as the root
+            rootMargin: '-100px 0px -70% 0px', // Adjust margin to trigger earlier/later
+            threshold: 0 // Trigger as soon as the element enters the viewport
+        };
+        
+        // Function to handle when a section is intersecting
+        const handleIntersection = (entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    // Remove active class from all links
+                    navLinks.forEach(link => {
+                        link.classList.remove('active');
+                    });
+                    
+                    // Get the ID of the intersecting section
+                    const id = entry.target.getAttribute('id');
+                    
+                    // Find the corresponding navigation link and add the active class
+                    const correspondingLink = document.querySelector(`.capsulas-index-link[href="#${id}"]`);
+                    if (correspondingLink) {
+                        correspondingLink.classList.add('active');
+                    }
+                }
+            });
+        };
+        
+        // Create a new Intersection Observer
+        const observer = new IntersectionObserver(handleIntersection, observerOptions);
+        
+        // Observe each section
+        sections.forEach(section => {
+            observer.observe(section);
+        });
+        
+        // Smooth scrolling when clicking on index links
+        navLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                const targetId = this.getAttribute('href');
+                const targetSection = document.querySelector(targetId);
+                
+                if (targetSection) {
+                    // Scroll to the section smoothly
+                    targetSection.scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                    
+                    // Update URL hash without jumping
+                    history.pushState(null, null, targetId);
+                    
+                    // Remove active class from all links
+                    navLinks.forEach(link => {
+                        link.classList.remove('active');
+                    });
+                    
+                    // Add active class to the clicked link
+                    this.classList.add('active');
+                }
+            });
+        });
+        
+        // Back to top button functionality
+        const backToTopButton = document.getElementById('back-to-top');
+        
+        if (backToTopButton) {
+            // Show button when page is scrolled down
+            window.addEventListener('scroll', () => {
+                if (window.pageYOffset > 300) {
+                    backToTopButton.style.display = 'flex';
+                } else {
+                    backToTopButton.style.display = 'none';
+                }
+            });
+            
+            // Scroll to top when button is clicked
+            backToTopButton.addEventListener('click', () => {
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            });
+        }
+
+        // Sticky sidebar com limite do container
+        const sidebar = document.querySelector('.capsulas-sidebar');
+        const sidebarContent = document.querySelector('.capsulas-sidebar-content');
+        const layout = document.querySelector('.capsulas-layout');
+
+        if (sidebar && sidebarContent && layout) {
+            window.addEventListener('scroll', () => {
+                const layoutRect = layout.getBoundingClientRect();
+                const sidebarRect = sidebar.getBoundingClientRect();
+                const sidebarContentHeight = sidebarContent.offsetHeight;
+                
+                // Se a sidebar sair do topo da viewport, ela fica grudada
+                if (sidebarRect.top <= 20) {
+                    sidebarContent.style.position = 'fixed';
+                    sidebarContent.style.top = '20px';
+                    sidebarContent.style.left = sidebarRect.left + 'px';
+                    sidebarContent.style.width = sidebarRect.width + 'px';
+                    
+                    // Se a sidebar bater no final do layout, ela volta a ser estática
+                    const layoutBottom = layoutRect.bottom;
+                    const fixedBottom = 20 + sidebarContentHeight;
+                    
+                    if (window.scrollY + fixedBottom >= layout.offsetTop + layout.offsetHeight) {
+                        sidebarContent.style.position = 'absolute';
+                        sidebarContent.style.top = 'auto';
+                        sidebarContent.style.bottom = '0';
+                        sidebarContent.style.left = 'auto';
+                        sidebarContent.style.width = 'auto';
+                    }
+                } else {
+                    // Volta para o fluxo normal
+                    sidebarContent.style.position = 'static';
+                    sidebarContent.style.top = 'auto';
+                    sidebarContent.style.left = 'auto';
+                    sidebarContent.style.width = 'auto';
+                    sidebarContent.style.bottom = 'auto';
+                }
+            }, { passive: true });
+        }
+    });
+</script>
+{% endblock %}
