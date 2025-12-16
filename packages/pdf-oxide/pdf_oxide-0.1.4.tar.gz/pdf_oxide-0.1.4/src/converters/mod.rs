@@ -1,0 +1,219 @@
+//! Format converters for PDF documents.
+//!
+//! This module provides functionality to convert PDF pages to different formats:
+//! - **Markdown**: Semantic text with headings, paragraphs, and images
+//! - **HTML**: Both semantic and layout-preserved modes
+//! - **Plain text**: Simple text extraction
+//!
+//! # Examples
+//!
+//! ```no_run
+//! use pdf_oxide::PdfDocument;
+//! use pdf_oxide::converters::ConversionOptions;
+//!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! let mut doc = PdfDocument::open("paper.pdf")?;
+//!
+//! // Convert to Markdown with heading detection
+//! let options = ConversionOptions {
+//!     detect_headings: true,
+//!     ..Default::default()
+//! };
+//! let markdown = doc.to_markdown(0, &options)?;
+//!
+//! // Convert to semantic HTML
+//! let html = doc.to_html(0, &options)?;
+//!
+//! // Convert to layout-preserved HTML
+//! let layout_options = ConversionOptions {
+//!     preserve_layout: true,
+//!     ..Default::default()
+//! };
+//! let layout_html = doc.to_html(0, &layout_options)?;
+//! # Ok(())
+//! # }
+//! ```
+
+pub mod html;
+pub mod markdown;
+pub mod whitespace;
+
+// Re-export main types
+pub use html::HtmlConverter;
+pub use markdown::MarkdownConverter;
+pub use whitespace::{cleanup_markdown, normalize_whitespace, remove_page_artifacts};
+
+/// Options for converting PDF pages to different formats.
+///
+/// These options control how the conversion is performed, including
+/// layout preservation, heading detection, image handling, etc.
+///
+/// # Examples
+///
+/// ```
+/// use pdf_oxide::converters::{ConversionOptions, ReadingOrderMode};
+///
+/// // Default options
+/// let opts = ConversionOptions::default();
+///
+/// // Custom options
+/// let opts = ConversionOptions {
+///     preserve_layout: true,
+///     detect_headings: false,
+///     extract_tables: false,
+///     include_images: true,
+///     image_output_dir: Some("images/".to_string()),
+///     reading_order_mode: ReadingOrderMode::ColumnAware,
+/// };
+/// ```
+#[derive(Debug, Clone, PartialEq)]
+pub struct ConversionOptions {
+    /// Preserve exact layout with CSS positioning (HTML only).
+    ///
+    /// When true, generates HTML with absolute positioning to match the PDF layout.
+    /// When false, generates semantic HTML with natural flow.
+    pub preserve_layout: bool,
+
+    /// Automatically detect headings based on font size and weight.
+    ///
+    /// When true, uses font clustering to identify heading levels (H1, H2, H3).
+    /// When false, treats all text as paragraphs.
+    pub detect_headings: bool,
+
+    /// Extract tables from the document.
+    ///
+    /// Note: Table extraction is currently not fully implemented.
+    pub extract_tables: bool,
+
+    /// Include images in the output.
+    ///
+    /// When true, images are included as Markdown image syntax or HTML img tags.
+    /// When false, images are omitted from the output.
+    pub include_images: bool,
+
+    /// Directory path for saving extracted images.
+    ///
+    /// If None, images are referenced but not saved.
+    /// If Some(path), images are saved to the specified directory.
+    pub image_output_dir: Option<String>,
+
+    /// Reading order determination mode.
+    ///
+    /// Controls how text blocks are ordered in the output.
+    pub reading_order_mode: ReadingOrderMode,
+}
+
+impl Default for ConversionOptions {
+    /// Create default conversion options.
+    ///
+    /// Defaults:
+    /// - preserve_layout: false (semantic mode)
+    /// - detect_headings: true (enabled for proper markdown output)
+    /// - extract_tables: false
+    /// - include_images: true
+    /// - image_output_dir: None
+    /// - reading_order_mode: StructureTreeFirst (PDF-spec-compliant for Tagged PDFs, falls back to XY-Cut for untagged)
+    fn default() -> Self {
+        Self {
+            preserve_layout: false,
+            detect_headings: true,
+            extract_tables: false,
+            include_images: true,
+            image_output_dir: None,
+            reading_order_mode: ReadingOrderMode::StructureTreeFirst { mcid_order: vec![] },
+        }
+    }
+}
+
+/// Reading order determination mode for text blocks.
+///
+/// Determines how text blocks are ordered when converting to output formats.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ReadingOrderMode {
+    /// Simple top-to-bottom, left-to-right ordering.
+    ///
+    /// Sorts all blocks by Y coordinate (top to bottom), then by X coordinate (left to right).
+    /// This works well for single-column documents.
+    TopToBottomLeftToRight,
+
+    /// Column-aware reading order.
+    ///
+    /// Uses the XY-Cut algorithm to detect columns and determines proper reading order
+    /// across multiple columns. This works better for multi-column documents.
+    ColumnAware,
+
+    /// Structure tree first, with fallback to column-aware.
+    ///
+    /// For Tagged PDFs: Uses the PDF logical structure tree (ISO 32000-1:2008 Section 14.7)
+    /// to determine reading order via Marked Content IDs (MCIDs). This is the PDF-spec-compliant
+    /// approach and provides perfect reading order for Tagged PDFs.
+    ///
+    /// For Untagged PDFs: Falls back to ColumnAware (XY-Cut algorithm).
+    ///
+    /// This mode requires passing MCID reading order through ConversionOptions.mcid_order.
+    StructureTreeFirst {
+        /// Reading order as a sequence of MCIDs from structure tree traversal.
+        /// If empty, falls back to ColumnAware mode.
+        mcid_order: Vec<u32>,
+    },
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_conversion_options_default() {
+        let opts = ConversionOptions::default();
+        assert!(!opts.preserve_layout);
+        assert!(opts.detect_headings);
+        assert!(!opts.extract_tables);
+        assert!(opts.include_images);
+        assert_eq!(opts.image_output_dir, None);
+        assert_eq!(
+            opts.reading_order_mode,
+            ReadingOrderMode::StructureTreeFirst { mcid_order: vec![] }
+        );
+    }
+
+    #[test]
+    fn test_conversion_options_custom() {
+        let opts = ConversionOptions {
+            preserve_layout: true,
+            detect_headings: false,
+            extract_tables: false,
+            include_images: false,
+            image_output_dir: Some("output/".to_string()),
+            reading_order_mode: ReadingOrderMode::ColumnAware,
+        };
+
+        assert!(opts.preserve_layout);
+        assert!(!opts.detect_headings);
+        assert!(!opts.include_images);
+        assert_eq!(opts.image_output_dir, Some("output/".to_string()));
+        assert_eq!(opts.reading_order_mode, ReadingOrderMode::ColumnAware);
+    }
+
+    #[test]
+    fn test_reading_order_mode_equality() {
+        assert_eq!(
+            ReadingOrderMode::TopToBottomLeftToRight,
+            ReadingOrderMode::TopToBottomLeftToRight
+        );
+        assert_ne!(ReadingOrderMode::TopToBottomLeftToRight, ReadingOrderMode::ColumnAware);
+    }
+
+    #[test]
+    fn test_conversion_options_clone() {
+        let opts1 = ConversionOptions::default();
+        let opts2 = opts1.clone();
+        assert_eq!(opts1, opts2);
+    }
+
+    #[test]
+    fn test_conversion_options_debug() {
+        let opts = ConversionOptions::default();
+        let debug_str = format!("{:?}", opts);
+        assert!(debug_str.contains("ConversionOptions"));
+    }
+}
