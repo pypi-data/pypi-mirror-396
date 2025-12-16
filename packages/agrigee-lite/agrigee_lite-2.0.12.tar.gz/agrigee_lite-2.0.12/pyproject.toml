@@ -1,0 +1,158 @@
+[project]
+name = "agrigee_lite"
+version = "2.0.12"
+description = "Because using satellite data should not be rocket science."
+authors = [{ name = "Mateus Pinto da Silva", email = "mateus.p.silva@ufv.br" }]
+readme = "README.md"
+keywords = ['python']
+requires-python = ">=3.10,<4.0"
+dependencies = [
+    "earthengine-api>=1.5.7",
+    "ee-s1-ard>=1.0.5",
+    "geopandas>=1.0.1",
+    "tqdm>=4.67.1",
+    "pandera>=0.26.1",
+    "topojson>=1.9",
+    "aria2p>=0.12.1",
+]
+classifiers = [
+    "Intended Audience :: Developers",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.optional-dependencies]
+visualization = ["matplotlib>=3.10.1", "plotly>=6.2.0"]
+tasks = ["smart_open[gcs]>=7.1.0", "textual-pandas>=0.2.3", "pyarrow>=19.0.1"]
+all = [
+    "matplotlib>=3.10.1",
+    "plotly>=6.2.0",
+    "smart_open[gcs]>=7.1.0",
+    "textual-pandas>=0.2.3",
+    "pyarrow>=19.0.1",
+]
+
+[project.scripts]
+agl_tm = "agrigee_lite.tgui_task_manager:main"
+
+[project.urls]
+Homepage = "https://mateuspinto.github.io/agrigee_lite/"
+Repository = "https://github.com/mateuspinto/agrigee_lite"
+Documentation = "https://mateuspinto.github.io/agrigee_lite/"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.5",
+    "pre-commit>=4.2.0",
+    "tox-uv>=1.25.0",
+    "deptry>=0.23.0",
+    "mypy>=1.15.0",
+    "pytest-cov>=6.0.0",
+    "ruff>=0.11.2",
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.6.9",
+    "mkdocstrings[python]>=0.29.0",
+    "ipykernel>=6.29.5",
+    "pandas-stubs>=2.2.3.250308",
+    "types-shapely>=2.0.0.20250202",
+    "types-tqdm>=4.67.0.20250319",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.setuptools]
+py-modules = ["agrigee_lite"]
+
+[tool.mypy]
+files = ["agrigee_lite"]
+disallow_untyped_defs = true
+# disallow_any_unimported = true
+no_implicit_optional = true
+# check_untyped_defs = true
+# warn_return_any = true
+warn_unused_ignores = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = ["untyped_package.*"]
+follow_untyped_imports = true
+
+[[tool.mypy.overrides]]
+module = ["geopandas.*", "topojson.*"]
+ignore_missing_imports = true
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+fix = true
+
+[tool.ruff.lint]
+select = [
+    # flake8-2020
+    "YTT",
+    # flake8-bandit
+    "S",
+    # flake8-bugbear
+    "B",
+    # flake8-builtins
+    "A",
+    # flake8-comprehensions
+    "C4",
+    # flake8-debugger
+    "T10",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+    # mccabe
+    "C90",
+    # pycodestyle
+    "E",
+    "W",
+    # pyflakes
+    "F",
+    # pygrep-hooks
+    "PGH",
+    # pyupgrade
+    "UP",
+    # ruff
+    "RUF",
+    # tryceratops
+    "TRY",
+]
+ignore = [
+    # LineTooLong
+    "E501",
+    # DoNotAssignLambda
+    "E731",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]
+
+[tool.ruff.format]
+preview = true
+
+[tool.coverage.report]
+skip_empty = true
+
+[tool.coverage.run]
+branch = true
+source = ["agrigee_lite"]
+
+[tool.hatch.build]
+include = ["agrigee_lite/**", "README.md", "LICENSE"]
+exclude = [
+    "agrigee_lite/**/*.pyc",
+    "agrigee_lite/**/*.pyo",
+    "agrigee_lite/**/__pycache__/**",
+    "docs/*",
+    "mkdocs.yml",
+]
