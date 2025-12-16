@@ -1,0 +1,160 @@
+Metadata-Version: 2.4
+Name: adjoint-lgtm-observe
+Version: 0.1.0
+Summary: Observability CLI for agentic workflows and event-driven systems. Query LGTM stack + Kafka from your terminal.
+Project-URL: Homepage, https://github.com/adjoint-io/lgtm-observe
+Project-URL: Documentation, https://github.com/adjoint-io/lgtm-observe#readme
+Project-URL: Repository, https://github.com/adjoint-io/lgtm-observe
+Project-URL: Issues, https://github.com/adjoint-io/lgtm-observe/issues
+Author-email: Adjoint <engineering@adjoint.uk>
+License: Apache-2.0
+License-File: LICENSE
+Keywords: agentic,ai-agents,cli,distributed-tracing,event-driven,grafana,kafka,lgtm,loki,observability,prometheus,tempo
+Classifier: Development Status :: 3 - Alpha
+Classifier: Environment :: Console
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: System Administrators
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: System :: Logging
+Classifier: Topic :: System :: Monitoring
+Requires-Python: >=3.10
+Provides-Extra: all
+Requires-Dist: kafka-python>=2.0.0; extra == 'all'
+Provides-Extra: dev
+Requires-Dist: pytest-cov>=4.0.0; extra == 'dev'
+Requires-Dist: pytest>=7.0.0; extra == 'dev'
+Requires-Dist: ruff>=0.1.0; extra == 'dev'
+Provides-Extra: kafka
+Requires-Dist: kafka-python>=2.0.0; extra == 'kafka'
+Description-Content-Type: text/markdown
+
+# lgtm-observe
+
+**Observability CLI for agentic workflows and event-driven systems.**
+
+Trace requests across distributed services, debug Kafka consumers, and correlate logs with traces - all from your terminal.
+
+Built for teams running AI agents, Kafka pipelines, and microservices on the LGTM stack (Loki, Grafana, Tempo, Prometheus).
+
+## Why?
+
+When debugging agentic workflows, you need to:
+- **Trace a request** across multiple services (agent → tool → API → database)
+- **Check Kafka lag** to see if consumers are keeping up
+- **Correlate logs with traces** to find where things went wrong
+- **Do it fast** without clicking through Grafana dashboards
+
+Existing tools are siloed:
+- `logcli` - Loki only
+- `promtool` - Prometheus only
+- `tempo-cli` - Tempo only
+
+**lgtm-observe**: All of them + Kafka in one tool. Optimized for the workflow of debugging distributed systems.
+
+## Install
+
+```bash
+# Core (logs, traces, metrics)
+pip install adjoint-lgtm-observe
+
+# With Kafka support
+pip install adjoint-lgtm-observe[kafka]
+
+# Development
+pip install -e ".[dev,kafka]"
+```
+
+## Quick Start
+
+```bash
+# Configure endpoints (pick one method)
+
+# Option 1: Environment variables
+export LOKI_URL=http://localhost:3100
+export TEMPO_URL=http://localhost:3200
+export PROMETHEUS_URL=http://localhost:9090
+export KAFKA_BOOTSTRAP=localhost:9093
+
+# Option 2: Config file
+cat > ~/.lgtm-observe.json << 'EOF'
+{
+  "loki_url": "http://localhost:3100",
+  "tempo_url": "http://localhost:3200",
+  "prometheus_url": "http://localhost:9090",
+  "kafka_bootstrap": "localhost:9093"
+}
+EOF
+
+# Check status
+lgtm-observe status
+
+# Query logs
+lgtm-observe logs
+lgtm-observe logs --service myapp --limit 50
+
+# Get traces
+lgtm-observe traces --service myapp
+lgtm-observe trace abc123def456
+
+# Query metrics
+lgtm-observe metrics 'up'
+lgtm-observe metrics 'rate(http_requests_total[5m])'
+
+# Kafka state
+lgtm-observe kafka topics
+lgtm-observe kafka consumers
+lgtm-observe kafka lag
+```
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `status` | Health check all systems |
+| `config` | Show current configuration |
+| `logs` | Query logs from Loki |
+| `trace <id>` | Get a specific trace |
+| `traces` | Search recent traces |
+| `metrics <query>` | Query Prometheus |
+| `kafka topics` | List topics with message counts |
+| `kafka consumers` | List consumer groups |
+| `kafka lag` | Show consumer lag |
+
+## Development
+
+```bash
+# Using uv (recommended)
+uv sync --all-extras --dev
+uv run pytest
+uv run ruff check src/
+
+# Or with pip
+pip install -e ".[dev,kafka]"
+pytest
+ruff check src/
+```
+
+## Publishing
+
+This package uses [uv](https://docs.astral.sh/uv/) and PyPI Trusted Publishers for secure, token-free releases.
+
+1. Create a GitHub release with a version tag (e.g., `v0.1.0`)
+2. GitHub Actions automatically builds and publishes to PyPI
+
+### First-time PyPI setup
+
+Add a Trusted Publisher on PyPI:
+- Go to https://pypi.org/manage/project/adjoint-lgtm-observe/settings/publishing/
+- Add GitHub as trusted publisher:
+  - Owner: `Adjoint-uk`
+  - Repository: `lgtm-observe`
+  - Workflow: `publish.yml`
+  - Environment: `pypi`
+
+## License
+
+Apache 2.0 - [Adjoint Ltd](https://adjoint.uk)

@@ -1,0 +1,61 @@
+[project]
+name = "adjoint-lgtm-observe"
+version = "0.1.0"
+description = "Observability CLI for agentic workflows and event-driven systems. Query LGTM stack + Kafka from your terminal."
+readme = "README.md"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "Adjoint", email = "engineering@adjoint.uk"}
+]
+keywords = ["observability", "lgtm", "loki", "tempo", "prometheus", "kafka", "grafana", "cli", "agentic", "ai-agents", "event-driven", "distributed-tracing"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: System :: Monitoring",
+    "Topic :: System :: Logging",
+]
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+kafka = ["kafka-python>=2.0.0"]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.1.0",
+]
+all = ["kafka-python>=2.0.0"]
+
+[project.scripts]
+lgtm-observe = "lgtm_observe.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/adjoint-io/lgtm-observe"
+Documentation = "https://github.com/adjoint-io/lgtm-observe#readme"
+Repository = "https://github.com/adjoint-io/lgtm-observe"
+Issues = "https://github.com/adjoint-io/lgtm-observe/issues"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lgtm_observe"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --cov=lgtm_observe"
