@@ -1,0 +1,400 @@
+quiz_info:
+  min_supported_app_version: 0.0.18
+user_info:
+  email: Клондайк аналитика
+quizes:
+  python_basics:
+    title: Основы Python
+    questions:
+      Изменить порядок слов в предложении:
+        text: 'Дано предложение, без запятых, только английские символы, используются
+          только строчные буквы.
+
+          Написать функцию, меняющую порядок слов в предложении на обратный.
+
+          Например ''the sky is blue'' -> ''blue is sky the'''
+        code_template: "def solution(s: str) -> str:\n  pass"
+        code: "def solution(s: str) -> str:\n  return \" \".join(reversed(s.split()))"
+        test_cases:
+        - s: hello
+          expected: hello
+        - s: hello world
+          expected: world hello
+        - s: all work and no play makes jack a dull boy
+          expected: boy dull a jack makes play no and work all
+        is_passed: passed
+        params:
+          s: str
+          return: str
+      Сумма всех четных чисел до N:
+        text: Напишите функцию, которая вычисляем сумму всех четных чисел в промежутке
+          от 1 до N, включая N.
+        code_template: "def solution(n: int):\n  return 0"
+        code: "def solution(n: int):\n  return sum(x for x in range(n+1) if x % 2\
+          \ == 0)"
+        test_cases:
+        - n: 1
+          expected: 0
+        - n: 10
+          expected: 30
+        - n: 19
+          expected: 90
+        is_passed: passed
+        params:
+          n: int
+          return: int
+      Разворот числа:
+        text: 'Напишите программу, которая развернет число: 12345 -> 54321. Для отрицательных
+          чисел вернуть тоже самое число (без разворотов). Считаем, что функция принимает
+          только натуральные числа.'
+        code_template: "def solution(n: int):\n  return n"
+        code: "def solution(n: int):\n  return \"\".join(reversed(str(n)))"
+        test_cases:
+        - n: 0
+          expected: 0
+        - n: 123
+          expected: 321
+        - n: 123456
+          expected: 654321
+        is_passed: passed
+        params:
+          n: int
+          return: int
+  more_difficult_tasks:
+    title: Сложные задачи по Python
+    questions:
+      Самый длинный префикс:
+        text: 'Дан список слов. Найти самый длинный префикс.
+
+          Например, [''flower'', ''flow'', ''flight''] -> ''fl'''
+        code_template: "def solution(words: list[str]) -> str:\n\treturn ''"
+        code: "def solution(words: list[str]) -> str:\n\t\n\tdef get_prefix(pref_len:\
+          \ int) -> list[str]:\n\t\treturn [\n\t\t\tw[:pref_len] for w in words\n\t\
+          \t]\n\t\n\t\n\tmin_common_len = min(len(w) for w in words)\n\tfor l in range(min_common_len,0,-1):\n\
+          \t\tprefixes = get_prefix(l)\n\t\tare_the_same = len(set(prefixes)) == 1\n\
+          \t\tif are_the_same:\n\t\t\treturn prefixes[0]\n\treturn ''"
+        test_cases:
+        - words:
+          - flower
+          - flow
+          - flight
+          expected: fl
+        - words:
+          - abc
+          - xyz
+          - hgf
+          expected: ''
+        - words:
+          - europe
+          - europe
+          - europe
+          expected: europe
+        is_passed: passed
+        params:
+          words: list
+          return: str
+      Сумма чисел:
+        text: Дан массив чисел и число target. Написать функцию, которая вернет список,
+          состоящий из двух индексов элементов, которые в сумме дают число target.
+          Допустим, что в массиве существует только одна пара таких элементов
+        code_template: "def solution(nums: list, target: int) -> list[int]:\n\treturn\
+          \ []"
+        code: "def solution(nums: list, target: int) -> list[int]:\n\tdef get_freq_dict()\
+          \ -> dict[int, int]:\n\t\tfreq = {}\n\t\tfor i,n in enumerate(nums):\n\t\
+          \t\tfreq[n] = i\n\t\treturn freq\n\t\n\tfreq = get_freq_dict()\n\tfor i,n\
+          \ in enumerate(nums):\n\t\tother = target - n\n\t\tif other in freq:\n\t\
+          \t\treturn [i, freq[other]] \n\traise ValueError(\"Fail to find pair\")\n\
+          \t"
+        test_cases:
+        - nums:
+          - 2
+          - 7
+          - 11
+          - 15
+          target: 9
+          expected:
+          - 0
+          - 1
+        is_passed: passed
+        params:
+          nums: list
+          target: int
+          return: list
+      Группировка палиндромов:
+        text: 'Написать функцию, которая группирует слова-палиндромы вместе.
+
+          Например для списка слов [''eat'',''tea'',''the'',''teh'',''hte'',''abc'',''edf'']
+          функция должна вернуть
+
+          [[''eat'',''tea''], [''the'',''teh'',''hte''], ''abc'',''edf''].
+
+          Два слова являются палиндромами если они состоят из одних и тех же букв,
+          но в разном порядке.'
+        code_template: "def solution(words: list):\n\treturn []"
+        code: "def solution(words: list):\n\twords_dict = dict()\n\tfor w in words:\n\
+          \t\tsorted_word = \"\".join(sorted(w))\n\t\tif sorted_word not in words_dict:\n\
+          \t\t\twords_dict[sorted_word] = [w]\n\t\telse:\n\t\t\twords_dict[sorted_word].append(w)\n\
+          \tfinal_list = [\n\t\tlst if len(lst) > 1 else lst[0]\n\t\t for lst in words_dict.values()\n\
+          \t]\n\treturn final_list"
+        test_cases:
+        - words:
+          - eat
+          - tea
+          - the
+          - teh
+          - hte
+          - abc
+          - edf
+          expected:
+          - - eat
+            - tea
+          - - the
+            - teh
+            - hte
+          - abc
+          - edf
+        is_passed: passed
+        params:
+          words: list
+          return: list
+  list_string_tasks:
+    title: Списки и строки
+    questions:
+      Поиск подстрок:
+        text: 'Написать функцию, которая принимает строку subs и строку long_string.
+
+          Функция вернет список индексов всех вхождений подстроки subs в строке long_string.
+
+          Номера позиций начинаются с нуля.
+
+          Например:
+
+          - подстрока "hello" встречается в строке "hello, world, all people hello"
+          два раза: на позиции 0 (начало строки) и 25.
+
+          - подстрока "xyz" встречается в строке "abc def xyz ghr" один раз на позиции
+          8.
+
+          Таким образом:
+
+          - solution("hello, world, all people hello") -> [0, 25]
+
+          - solution("xyz", "abc def xyz ghr") -> [8]
+
+          - solution("", "my string") -> [] (для пустой строки вернет пустой список)
+
+          - solution("hello", "ok, great!") -> [] (нет вхождений)'
+        code_template: "def solution(subs: str, long_string: str):\n\treturn []"
+        code: "def solution(subs: str, long_string: str):\n\tindexes = []\n\tfor i\
+          \ in range(len(long_string) - len(subs) + 1):\n\t\ts = long_string[i:i+len(subs)]\n\
+          \t\tif s == subs:\n\t\t\tindexes.append(i)\n\treturn indexes"
+        test_cases:
+        - subs: abc
+          long_string: _abc_abc
+          expected:
+          - 1
+          - 5
+        - subs: hello
+          long_string: hello world hello
+          expected:
+          - 0
+          - 12
+        - subs: xyz
+          long_string: abc def xyz ghr
+          expected:
+          - 8
+        is_passed: passed
+        params:
+          subs: str
+          long_string: str
+          return: list
+      Нерадивый ученик:
+        text: 'Ученик написал на доске предложение:
+
+          ''привет, мир. какая хорошая погода. мне все нравится.''
+
+          Но он забыл, что предложения начинаются с большой буквы.
+
+          Напишите функцию, которая принимает строку с таким предложением и возвращает
+          новую строку, где все предложения начинаются с большой буквы.
+
+          Считаем, что предложение может заканчиваться только точкой.'
+        code_template: "def solution(sentence: str):\n\treturn ''"
+        code: "def solution(sentence: str):\n\tdef _raise_first_letter(s: str) ->\
+          \ str:\n\t\tcleaned_s = s.strip()\n\t\treturn cleaned_s[0].upper() + cleaned_s[1:]\n\
+          \n\tif sentence.strip() == \"\":\n\t\treturn \"\"\n\tnot_empty_sentences\
+          \ = [\n\t\ts for s in sentence.split('.') if s.strip() != \"\"\n\t]\n\t\
+          titled_sentences = [_raise_first_letter(s) for s in not_empty_sentences]\n\
+          \t\n\tif len(titled_sentences) > 1:\t\n\t\treturn '. '.join(titled_sentences)\
+          \ + \".\"\n\telse:\n\t\treturn titled_sentences[0] + \".\""
+        test_cases:
+        - sentence: ''
+          expected: ''
+        - sentence: привет.
+          expected: Привет.
+        - sentence: анализ данных - лучшая профессия.
+          expected: Анализ данных - лучшая профессия.
+        - sentence: привет, мир. какая хорошая погода. мне все нравится.
+          expected: Привет, мир. Какая хорошая погода. Мне все нравится.
+        is_passed: passed
+        params:
+          sentence: str
+          return: str
+      Аббревиатура:
+        text: 'Напишите функцию, которая принимает название учреждения и возвращает
+          аббревиатуру.
+
+          Например, Министерство Иностранных Дел -> МИД
+
+          или Российская Федерация -> РФ
+
+          Нельзя привязываться к числу слов, их может быть бесконечное число.
+
+          Буквы в entity могут быть как большими, так и маленькими.
+
+          Если в entity одно слово, то вернуть его первую букву, например:
+
+          ''учреждение'''
+        code_template: "def solution(entity: str):\n\treturn ''"
+        code: "def solution(entity: str):\n\treturn ''.join([w[0].upper() for w in\
+          \ entity.split()])"
+        test_cases:
+        - entity: ''
+          expected: ''
+        - entity: учреждение
+          expected: У
+        - entity: Российская Федерация
+          expected: РФ
+        - entity: министерство иностранных дел
+          expected: МИД
+        - entity: союз   советских   социалистических  республик
+          expected: СССР
+        is_passed: passed
+        params:
+          entity: str
+          return: str
+      Локальные максимумы:
+        text: 'Напишите функцию, которая принимает список и возвращает список локальных
+          максимумов.
+
+          Локальный максимум - это элемент, который:
+
+          - больше предыдущего
+
+          - больше следующего
+
+          Например:
+
+          - [1,2,5,3,4,7,8,3,2,0] -> [5, 8]
+
+          - [3,2,1] -> [] пустой список, не лок. максимумов.'
+        code_template: "def solution(lst: list):\n\treturn []"
+        code: "def solution(lst: list):\n\tmax_list = []\n\tfor i in range(1, len(lst)\
+          \ - 1):\n\t\tcurr = lst[i]\n\t\tprev = lst[i-1]\n\t\tnxt = lst[i+1]\n\t\t\
+          if curr >= prev and curr >= nxt:\n\t\t\tmax_list.append(curr)\n\treturn\
+          \ max_list"
+        test_cases:
+        - lst:
+          - 8
+          - 7
+          - 6
+          - 5
+          - 4
+          expected: []
+        - lst:
+          - 8
+          - 10
+          - 6
+          - 5
+          - 4
+          expected:
+          - 10
+        - lst:
+          - 1
+          - 4
+          - 2
+          - 5
+          - 10
+          - 3
+          - 2
+          expected:
+          - 4
+          - 10
+        - lst:
+          - 1
+          - 2
+          - 5
+          - 3
+          - 4
+          - 7
+          - 8
+          - 3
+          - 2
+          - 0
+          expected:
+          - 5
+          - 8
+        is_passed: passed
+        params:
+          lst: list
+          return: list
+      Сумма положительных:
+        text: 'Написать функцию, которая принимает список чисел и вернет сумму только
+          положительных элементов.
+
+          Для пустого списка вернуть 0. Аналогично, вернуть 0 если нет ни одного положительного
+          элемента.
+
+          Например:
+
+          - solution([]) -> 0
+
+          - solution([1, 2, -3]) -> 3
+
+          - solution([3, 4, -2, 7, -10, 12]) -> 26'
+        code_template: "def solution(lst: list):\n\treturn 0"
+        code: "def solution(lst: list):\n\treturn sum([x for x in lst if x > 0])"
+        test_cases:
+        - lst: []
+          expected: 0
+        - lst:
+          - 14
+          expected: 14
+        - lst:
+          - 2
+          - 5
+          - 8
+          expected: 15
+        - lst:
+          - 3
+          - -2
+          - -2
+          - -15
+          - -10
+          - 12
+          expected: 15
+        - lst:
+          - 1
+          - 2
+          - -3
+          expected: 3
+        - lst:
+          - 3
+          - 4
+          - -2
+          - 7
+          - -10
+          - 12
+          expected: 26
+        - lst:
+          - -3
+          - -4
+          - -2
+          - -7
+          - -10
+          - -12
+          expected: 0
+        is_passed: passed
+        params:
+          lst: list
+          return: int
