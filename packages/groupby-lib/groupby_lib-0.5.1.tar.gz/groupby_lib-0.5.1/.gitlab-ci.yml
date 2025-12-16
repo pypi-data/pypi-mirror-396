@@ -1,0 +1,181 @@
+stages:
+  - test
+  - build
+  - deploy
+
+variables:
+  CONDA_ENV: "groupby-lib-env"
+  PACKAGE_NAME: "groupby-lib"
+
+# Base template for conda setup
+.conda_setup: &conda_setup
+  before_script:
+    - wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+    - bash miniconda.sh -b -p $HOME/miniconda
+    - export PATH="$HOME/miniconda/bin:$PATH"
+    - conda init bash
+    - source ~/.bashrc
+    - conda config --set always_yes yes --set changeps1 no
+    - conda update -q conda
+    - conda info -a
+    - conda create -q -n $CONDA_ENV python=3.12
+    - source activate $CONDA_ENV
+    - conda install -c conda-forge numpy pandas numba polars pytest pytest-xdist conda-build anaconda-client
+
+# Test stage - run tests on multiple Python versions
+test:python3.10:
+  stage: test
+  image: continuumio/miniconda3:latest
+  <<: *conda_setup
+  script:
+    - conda create -q -n test-env python=3.10
+    - source activate test-env
+    - conda install -c conda-forge numpy pandas numba polars pytest pytest-xdist
+    - pip install -e .
+    - python -m pytest tests/ -v --tb=short
+  only:
+    - merge_requests
+    - main
+    - develop
+
+test:python3.12:
+  stage: test
+  image: continuumio/miniconda3:latest
+  <<: *conda_setup
+  script:
+    - conda create -q -n test-env python=3.12
+    - source activate test-env
+    - conda install -c conda-forge numpy pandas numba polars pytest pytest-xdist
+    - pip install -e .
+    - python -m pytest tests/ -v --tb=short
+  only:
+    - merge_requests
+    - main
+    - develop
+
+test:python3.13:
+  stage: test
+  image: continuumio/miniconda3:latest
+  <<: *conda_setup
+  script:
+    - conda create -q -n test-env python=3.13
+    - source activate test-env
+    - conda install -c conda-forge numpy pandas numba polars pytest pytest-xdist
+    - pip install -e .
+    - python -m pytest tests/ -v --tb=short
+  only:
+    - merge_requests
+    - main
+    - develop
+
+
+# Build conda package
+build:conda:
+  stage: build
+  image: continuumio/miniconda3:latest
+  <<: *conda_setup
+  script:
+    - source activate $CONDA_ENV
+    - conda build conda-recipe/ --output-folder ./conda-packages
+    - ls -la ./conda-packages/
+  artifacts:
+    paths:
+      - conda-packages/
+    expire_in: 1 week
+  only:
+    - tags
+    - main
+
+# Test the built conda package
+test:conda-package:
+  stage: build
+  image: continuumio/miniconda3:latest
+  <<: *conda_setup
+  dependencies:
+    - build:conda
+  script:
+    - source activate $CONDA_ENV
+    - conda install -c ./conda-packages $PACKAGE_NAME
+    - python -c "import groupby_lib; print('Package installed successfully')"
+    - python -m pytest tests/ -v --tb=short
+  only:
+    - tags
+    - main
+
+# Deploy to conda channel (requires ANACONDA_TOKEN variable)
+deploy:conda:
+  stage: deploy
+  image: continuumio/miniconda3:latest
+  <<: *conda_setup
+  dependencies:
+    - build:conda
+    - test:conda-package
+  script:
+    - source activate $CONDA_ENV
+    - |
+      if [ -n "$ANACONDA_TOKEN" ]; then
+        echo "Uploading to anaconda cloud..."
+        anaconda -t $ANACONDA_TOKEN upload conda-packages/noarch/$PACKAGE_NAME-*.tar.bz2 --user $ANACONDA_USER --force
+      else
+        echo "ANACONDA_TOKEN not set, skipping upload"
+        exit 1
+      fi
+  only:
+    - tags
+  when: manual
+
+# Deploy to PyPI (requires PYPI_TOKEN variable)
+deploy:pypi:
+  stage: deploy
+  image: python:3.12
+  before_script:
+    - pip install build twine
+  script:
+    - python -m build
+    - |
+      if [ -n "$PYPI_TOKEN" ]; then
+        echo "Uploading to PyPI..."
+        twine upload dist/* -u __token__ -p $PYPI_TOKEN
+      else
+        echo "PYPI_TOKEN not set, skipping upload"
+        exit 1
+      fi
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 week
+  only:
+    - tags
+  when: manual
+
+# Linting and code quality checks
+lint:
+  stage: test
+  image: python:3.12
+  before_script:
+    - pip install black flake8 isort mypy
+  script:
+    - black --check --diff groupby_lib/
+    - flake8 groupby_lib/
+    - isort --check-only --diff groupby_lib/
+    - mypy groupby_lib/ --ignore-missing-imports
+  allow_failure: true
+  only:
+    - merge_requests
+    - main
+    - develop
+
+# Security scanning
+security:
+  stage: test
+  image: python:3.12
+  before_script:
+    - pip install bandit safety
+  script:
+    - bandit -r groupby_lib/
+    - safety check --json
+  allow_failure: true
+  only:
+    - merge_requests
+    - main
+    - develop

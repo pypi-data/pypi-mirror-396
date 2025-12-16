@@ -1,0 +1,7 @@
+- Add pivot_table_fast patch to DataFrame
+- Do JIT compilations before distributing task across thread pools
+- Consider chunked factorizations for multi-keys
+- Add Demo NB
+- Add comprehensive benchmarking and performance notes
+- Build documentation webpage
+- Unify implementations of numba scalar reductions
