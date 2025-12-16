@@ -1,0 +1,43 @@
+from unittest.mock import patch
+
+import pytest
+import typer
+
+
+class TestCLICommon:
+    def test_prompt_with_default_with_input(self):
+        """Test _prompt_with_default with user input."""
+        from bedrock_agentcore_starter_toolkit.cli.common import _prompt_with_default
+
+        with patch("bedrock_agentcore_starter_toolkit.cli.common.prompt", return_value="user_input"):
+            result = _prompt_with_default("Enter value", "default_value")
+            assert result == "user_input"
+
+    def test_prompt_with_default_empty_input(self):
+        """Test _prompt_with_default with empty input."""
+        from bedrock_agentcore_starter_toolkit.cli.common import _prompt_with_default
+
+        with patch("bedrock_agentcore_starter_toolkit.cli.common.prompt", return_value=""):
+            result = _prompt_with_default("Enter value", "default_value")
+            assert result == "default_value"
+
+    @patch("bedrock_agentcore_starter_toolkit.cli.common.console")
+    def test_print_success(self, mock_console):
+        """Test _print_success function."""
+        from bedrock_agentcore_starter_toolkit.cli.common import _print_success
+
+        _print_success("Test success message")
+        mock_console.print.assert_called_once_with("[green]✓[/green] Test success message")
+
+    def test_assert_valid_aws_creds_or_exit_failure(self):
+        """Test assert_valid_aws_creds_or_exit with invalid credentials."""
+        from bedrock_agentcore_starter_toolkit.cli.common import assert_valid_aws_creds_or_exit
+
+        with patch(
+            "bedrock_agentcore_starter_toolkit.cli.common.ensure_valid_aws_creds",
+            return_value=(False, "Invalid credentials"),
+        ):
+            with patch("bedrock_agentcore_starter_toolkit.cli.cli_ui.show_invalid_aws_creds", return_value=False):
+                with pytest.raises(typer.Exit) as exc_info:
+                    assert_valid_aws_creds_or_exit()
+                assert exc_info.value.exit_code == 1
