@@ -1,0 +1,118 @@
+Metadata-Version: 2.4
+Name: spiderweb-framework
+Version: 2.2.1
+Summary: A small web framework, just big enough for a spider.
+Project-URL: Homepage, https://github.com/itsthejoker/spiderweb
+Project-URL: Documentation, https://github.com/itsthejoker/spiderweb
+Project-URL: Repository, https://git.joekaufeld.com/jkaufeld/spiderweb
+Project-URL: Bug Tracker, https://github.com/itsthejoker/spiderweb/issues
+Author-email: Joe Kaufeld <opensource@joekaufeld.com>
+License-Expression: MIT
+License-File: LICENSE.txt
+Classifier: Development Status :: 4 - Beta
+Classifier: Environment :: Web Environment
+Classifier: Intended Audience :: Developers
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Topic :: Internet :: WWW/HTTP :: HTTP Servers
+Classifier: Topic :: Internet :: WWW/HTTP :: WSGI
+Classifier: Topic :: Internet :: WWW/HTTP :: WSGI :: Application
+Classifier: Topic :: Software Development :: Libraries :: Application Frameworks
+Requires-Python: >=3.11
+Requires-Dist: advanced-alchemy<2.0.0,>=1.6.3
+Requires-Dist: cryptography>=46.0.2
+Requires-Dist: email-validator>=2.3.0
+Requires-Dist: jinja2>=3.1.6
+Requires-Dist: multipart>=1.3.0
+Requires-Dist: sqlalchemy>=2.0.44
+Provides-Extra: pydantic
+Requires-Dist: pydantic<3,>=2.8.2; extra == 'pydantic'
+Description-Content-Type: text/markdown
+
+# spiderweb
+
+<p align="center">
+    <img
+    src="https://img.shields.io/pypi/v/spiderweb-framework.svg?style=for-the-badge"
+    alt="PyPI release version for Spiderweb"
+    />
+    <img
+        src="https://img.shields.io/badge/gitmoji-%20😜%20😍-FFDD67.svg?style=for-the-badge"
+        alt="Gitmoji"
+    />
+    <img 
+        src="https://img.shields.io/badge/code%20style-black-000000.svg?style=for-the-badge"
+        alt="Code style: Black"
+    />
+</p>
+
+As a professional web developer focusing on arcane uses of Django for arcane purposes, it occurred to me a little while ago that I didn't actually know how a web framework _worked_.
+
+So I built one.
+
+`spiderweb` is a small web framework, just big enough to hold a spider. Getting started is easy:
+
+```shell
+uv add spiderweb-framework
+# or
+pip install spiderweb-framework
+```
+
+Create a new file and drop this in it:
+
+```python
+from spiderweb import SpiderwebRouter
+from spiderweb.response import HttpResponse
+
+app = SpiderwebRouter()
+
+@app.route("/")
+def index(request):
+    return HttpResponse("HELLO, WORLD!")
+
+if __name__ == "__main__":
+    app.start()
+```
+
+## [View the docs here!](https://itsthejoker.github.io/spiderweb/#/)
+
+### Development (using uv)
+
+This repository uses uv for local development and testing.
+
+- Create a virtual environment: `uv venv`
+- Activate it (Windows): `.venv\Scripts\activate`
+- Activate it (POSIX): `source .venv/bin/activate`
+- Install deps (editable + dev): `uv pip install -e .[dev]`
+- Run tests: `uv run python -m pytest`
+- Lint/format: `uv run ruff check .` and `uv run black .`
+
+My goal with this framework was to do three things:
+
+  1. Learn a lot
+  2. Create an unholy blend of Django and Flask
+  3. Not look at any existing code. Go off of vibes alone and try to solve all the problems I could think of in my own way
+
+And, honestly, I think I got there. Here's a non-exhaustive list of things this can do:
+
+- Function-based views
+- Optional Flask-style URL routing
+- Optional Django-style URL routing
+- URLs with variables in them a lá Django
+- Full middleware implementation
+- Limit routes by HTTP verbs
+- Custom error routes
+- Built-in dev server
+- Gunicorn support
+- HTML templates with Jinja2
+- Static files support
+- Cookies (reading and setting)
+- Optional append_slash (with automatic redirects!)
+- CSRF middleware
+- CORS middleware
+- Optional POST data validation middleware with Pydantic
+- Session middleware with built-in session store
+- Database support (using SQLAlchemy, but you can use whatever you want as long as there's a SQLAlchemy driver for it)
+- Tests (currently roughly 89% coverage)
