@@ -1,0 +1,198 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "langchain-cratedb"
+version = "0.2.0"
+description = "Use LangChain with CrateDB"
+authors = []
+readme = "README.md"
+repository = "https://github.com/crate/langchain-cratedb"
+license = "MIT"
+keywords = [
+  "ai",
+  "artificial intelligence",
+  "cratedb",
+  "embedding vectors",
+  "fulltext search",
+  "langchain",
+  "llm",
+  "machine learning",
+  "ml",
+  "rag",
+  "semantic search",
+  "vdbms",
+  "vector embeddings",
+  "vector database",
+  "vector search",
+  "vector store",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Environment :: No Input/Output (Daemon)",
+  "Environment :: Plugins",
+  "Environment :: Web Environment",
+  "Intended Audience :: Customer Service",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Education",
+  "Intended Audience :: End Users/Desktop",
+  "Intended Audience :: Information Technology",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: MacOS",
+  "Operating System :: POSIX",
+  "Operating System :: Unix",
+  "Programming Language :: ML",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Communications",
+  "Topic :: Database",
+  "Topic :: Documentation",
+  "Topic :: Education :: Computer Aided Instruction (CAI)",
+  "Topic :: Internet",
+  "Topic :: Internet :: WWW/HTTP :: Indexing/Search",
+  "Topic :: Printing",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Scientific/Engineering :: Human Machine Interfaces",
+  "Topic :: Scientific/Engineering :: Image Processing",
+  "Topic :: Scientific/Engineering :: Image Recognition",
+  "Topic :: Scientific/Engineering :: Information Analysis",
+  "Topic :: Scientific/Engineering :: Interface Engine/Protocol Translator",
+  "Topic :: Software Development :: Libraries",
+  "Topic :: Software Development :: Code Generators",
+  "Topic :: Software Development :: Libraries :: Application Frameworks",
+  "Topic :: Software Development :: Pre-processors",
+  "Topic :: System :: Archiving",
+  "Topic :: Text Processing",
+  "Topic :: Text Processing :: Filters",
+  "Topic :: Text Processing :: Indexing",
+  "Topic :: Text Processing :: Linguistic",
+  "Topic :: Utilities",
+]
+
+[tool.mypy]
+disallow_untyped_defs = "True"
+ignore_missing_imports = "True"
+install_types = true
+non_interactive = true
+pretty = true
+
+[tool.poetry.urls]
+"Source Code" = "https://github.com/crate/langchain-cratedb"
+"Release Notes" = "https://github.com/crate/langchain-cratedb/releases"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<4.0"
+langchain-community = "<0.5"
+langchain = ">=1,<1.2"
+langchain-classic = "<2"
+langchain-postgres = "==0.0.16"
+sqlalchemy-cratedb = ">=0.40.1"
+
+[tool.ruff.lint]
+
+select = [
+  # Builtins
+  "A",
+  # Bugbear
+  "B",
+  # comprehensions
+  "C4",
+  # Pycodestyle
+  "E",
+  # eradicate
+  "ERA",
+  # Pyflakes
+  "F",
+  # isort
+  "I",
+  # pandas-vet
+  "PD",
+  # return
+  "RET",
+  # Bandit
+  "S",
+  # print
+  "T20",
+  "W",
+  # flake8-2020
+  "YTT",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"docs/*.ipynb" = [
+  "ERA001",  # Found commented-out code
+  "F401",
+  "F821",
+  "T201",
+]
+"examples/*.py" = [
+  "ERA001",  # Found commented-out code
+  "F401",
+  "F821",
+  "T20",  # `print` found.
+]
+"tests/*" = ["S101"]  # Use of `assert` detected
+".github/scripts/*" = ["S101"]  # Use of `assert` detected
+
+[tool.coverage.run]
+omit = [
+    "langchain_cratedb/retrievers.py",
+    "tests/*",
+]
+
+[tool.pytest.ini_options]
+addopts = """
+  --strict-markers --strict-config --durations=5
+  --cov --cov-report=term-missing --cov-report=xml
+"""
+markers = [
+]
+asyncio_mode = "auto"
+log_level = "DEBUG"
+log_cli_level = "DEBUG"
+
+[tool.poetry.group.test]
+optional = true
+
+[tool.poetry.group.codespell]
+optional = true
+
+[tool.poetry.group.lint]
+optional = true
+
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
+
+[tool.poetry.group.test.dependencies]
+langchain-openai = "<0.4"
+langchain-tests = "==0.3.22"
+notebook = "<7.6"
+pytest = "<9"
+pytest-asyncio = "<1.3"
+pytest-cov = "<8"
+pytest-mock = "<4"
+pytest-rerunfailures = "<17"
+pytest-socket = "<0.8"
+pytest-watcher = "<0.5"
+requests = "<3"
+sqlparse = "<0.6"
+testbook = "<0.5"
+
+[tool.poetry.group.codespell.dependencies]
+codespell = "<2.5"
+
+[tool.poetry.group.lint.dependencies]
+ruff = "<0.15"
+
+[tool.poetry.group.typing.dependencies]
+mypy = "<1.20"
