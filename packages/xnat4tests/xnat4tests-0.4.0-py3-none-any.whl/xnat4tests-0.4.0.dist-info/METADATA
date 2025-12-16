@@ -1,0 +1,196 @@
+Metadata-Version: 2.4
+Name: xnat4tests
+Version: 0.4.0
+Summary: Creates basic XNAT instance for API tests
+Home-page: https://github.com/australian-imaging-service/xnat4tests
+Author: Thomas G. Close
+Author-email: tom.g.close@gmail.com
+License: Apache License 2.0
+Keywords: repository analysis neuroimaging workflows pipelines
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Healthcare Industry
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Natural Language :: English
+Classifier: Topic :: Scientific/Engineering :: Bio-Informatics
+Classifier: Topic :: Scientific/Engineering :: Medical Science Apps.
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+License-File: LICENSE
+Requires-Dist: docker>=5.0.2
+Requires-Dist: xnat
+Requires-Dist: click>=7.1.2
+Requires-Dist: requests>=2.10.0
+Requires-Dist: medimages4tests>=0.3
+Requires-Dist: PyYAML>=6.0
+Provides-Extra: test
+Requires-Dist: pytest>=5.4.3; extra == "test"
+Requires-Dist: pytest-cov>=2.12.1; extra == "test"
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: home-page
+Dynamic: keywords
+Dynamic: license
+Dynamic: license-file
+Dynamic: provides-extra
+Dynamic: requires-dist
+Dynamic: summary
+
+Xnat4Tests
+==========
+.. image:: https://github.com/australian-imaging-service/xnat4tests/actions/workflows/test.yml/badge.svg
+   :target: https://github.com/Australian-Imaging-Service/xnat4tests/actions/workflows/test.yml
+.. image:: https://codecov.io/gh/australian-imaging-service/xnat4tests/branch/main/graph/badge.svg?token=UIS0OGPST7
+   :target: https://codecov.io/gh/australian-imaging-service/xnat4tests
+.. image:: https://img.shields.io/pypi/v/xnat4tests.svg
+   :target: https://pypi.python.org/pypi/xnat4tests/
+.. image:: https://img.shields.io/pypi/pyversions/xnat4tests.svg
+   :target: https://pypi.python.org/pypi/xnat4tests/
+   :alt: Supported Python versions
+
+
+Xnat4Tests runs a basic XNAT repository instance in a single Docker to be
+used for quick demonstrations on your workstation or integrated within test suites for
+tools that use XNAT's REST API. 
+
+The XNAT container service plugin is installed by default and is configured to use
+the same Docker host as the XNAT instance.
+
+The ``home/logs``, ``home/work``, ``build``, ``archive``, ``prearchive`` directories are
+mounted in from the host system from the ``$HOME/.xnat4tests/xnat_root/default`` directory
+by default. This can be useful for debugging and can be used to replicate the environment
+under which containers run in within XNAT's container service.
+
+In addition to the ``start_xnat``, ``stop_xnat`` and ``restart_xnat`` functions, which control the life-cycle of
+the XNAT instance, there is also a ``connect`` function that returns an XnatPy connection object to the test instance
+
+
+Installation
+------------
+
+Docker needs to be installed on your system, see `Get Docker <https://docs.docker.com/get-docker/>`_
+for details.
+
+Xnat4Tests is available on PyPI so can be installed with
+
+.. code-block:: bash
+
+    $ pip3 install xnat4tests
+
+or include in your package's ``test_requires`` if you are writing Python tests.
+
+Usage
+-----
+
+Command line interface
+~~~~~~~~~~~~~~~~~~~~~~
+
+A test XNAT instance can be launched using the CLI with
+
+.. code-block:: bash
+
+    $ xnat4tests start
+
+This will spin up an empty XNAT instance that can be accessed using the default admin
+user account user='admin'/password='admin'. To add some sample data to play with you
+can use the `add-data` command
+
+.. code-block:: bash
+
+    $ xnat4tests start
+    $ xnat4tests add-data 'dummydicom'
+
+or in a single line
+
+.. code-block:: bash
+
+    $ xnat4tests start --with-data 'dummydicom'
+
+By default, xnat4tests will create a configuration file at `$HOME/.xnat4tests/configs/default.yaml`.
+The config file can be adapted to modify the names of the Docker images/containers used, the ports
+the containers run on, and which directories are mounted into the container. Multiple
+configurations can be used concurrently by saving the config file to a new location and
+passing it to the base command, i.e.
+
+.. code-block:: bash
+
+    $ xnat4tests --config /path/to/my/repo/xnat4tests-config.yaml start
+
+To stop or restart the running container you can use ``xnat4tests stop`` and ``xnat4tests
+restart`` commands, respectively.
+
+
+Python API
+~~~~~~~~~~
+
+If you are developing Python applications you will typically want to use the API to
+launch the XNAT instance using the `xnat4tests.start_xnat` function. An XnatPy connection
+session object can be accessed using `xnat4tests.connect` and the instanced stopped
+afterwards using `stop_xnat`.
+
+.. code-block:: python
+
+    # Import xnat4tests functions
+    from xnat4tests import start_xnat, stop_xnat, connect, Config
+
+    config = Config.load("default")
+
+    # Launch the instance (NB: it takes quite while for an XNAT instance to start). If an existing
+    # container with the reserved name is already running it is returned instead
+    start_xnat(config)
+
+    # Connect to the XNAT instance using XnatPy and run some tests
+    with connect(config) as login:
+        PROJECT = 'MY_TEST_PROJECT'
+        SUBJECT = 'MYSUBJECT'
+        SESSION = 'MYSESSION'
+
+        login.put(f'/data/archive/projects/MY_TEST_PROJECT')
+
+        # Create subject
+        xsubject = login.classes.SubjectData(label=SUBJECT,
+                                             parent=login.projects[PROJECT])
+        # Create session
+        login.classes.MrSessionData(label=SESSION, parent=xsubject)
+
+    assert [p.name for p in (config.xnat_root_dir / "archive").iterdir()] == [PROJECT]
+
+    # Remove the container after you are done (not strictly necessary). To avoid
+    # having to wait for XNAT to restart each time before you run your tests, you can
+    # skip this line and start_xnat will attempt to use the instance that is already
+    # running
+    stop_xnat(config)
+
+Alternatively, if you are using Pytest then you can set up the connection as
+a fixture in your ``conftest.py``, e.g.
+
+.. code-block:: python
+
+    import tempfile
+    from pathlib import Path
+    from xnat4tests import start_xnat, stop_xnat, connect, Config
+
+    @pytest.fixture(scope="session")
+    def xnat_config():
+        tmp_dir = Path(tempfile.mkdtemp())
+        return Config(
+            xnat_root_dir=tmp_dir,
+            xnat_port=9999,
+            docker_image="myrepo_xnat4tests",
+            docker_container="myrepo_xnat4tests",
+            build_args={
+                "xnat_version": "1.8.5",
+                "xnat_cs_plugin_version": "3.2.0",
+            },
+        )
+
+    @pytest.fixture(scope="session")
+    def xnat_uri(xnat_config):
+        xnat4tests.start_xnat(xnat_config)
+        xnat4tests.add_data("dummydicom")
+        yield xnat_config.xnat_uri
+        xnat4tests.stop_xnat(xnat_config)
