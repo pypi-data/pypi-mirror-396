@@ -1,0 +1,39 @@
+[project]
+name = "hdf5vault"
+version = "0.2.0"
+description = "A parallel HDF5-based archiving tool."
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [{name = "Daniel Roten", email = "daniel.roten@fmi.ch"}]
+dependencies = [
+    "h5py",
+    "mpi4py",
+    "blosc2",
+    "pandas",
+    "humanize"
+]
+
+[project.scripts]
+hdf5vault_create = "hdf5vault.create:main"
+hdf5vault_check = "hdf5vault.check:main"
+hdf5vault_unpack = "hdf5vault.unpack:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+sources = ["src"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hdf5vault"]
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "ToDo.txt",
+    "pixi.lock",
+    "pixi.toml",
+    "dist/*",
+    "rebuild.md"
+]
