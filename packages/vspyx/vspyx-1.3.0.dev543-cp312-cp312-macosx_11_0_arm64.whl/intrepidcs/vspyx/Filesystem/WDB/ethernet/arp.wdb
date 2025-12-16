@@ -1,0 +1,139 @@
+[setup]
+	version = '2.1.0'
+	include = ['builtin://WDB/ethernet/ethernet.wdb', 'builtin://WDB/ethernet/ipv4.wdb', 'builtin://WDB/ethernet/ipv6.wdb']
+
+	[[setup.hooks]]
+		expression = 'eth.type = 0x0806'
+		location = 'eth.payload'
+		protocol = '#ARP'
+
+[ARP]
+	name = 'ARP'
+	long_name = 'Address Resolution Protocol'
+
+	[[ARP.fields]]
+		long_name = 'Hardware type'
+		name = 'HW type'
+		tag = 'hwtype'
+		format = 'decimal'
+		length = 16
+
+		[[ARP.fields.states]]
+			name = 'Ethernet'
+			value = 1
+
+	[[ARP.fields]]
+		long_name = 'Protocol type'
+		name = 'Proto type'
+		tag = 'prototype'
+		length = 16
+
+		[[ARP.fields.states]]
+			name = 'IPv4'
+			value = 0x0800
+
+		[[ARP.fields.states]]
+			name = 'IPv6'
+			value = 0x86DD
+
+	[[ARP.fields]]
+		long_name = 'Hardware size'
+		name = 'HW size'
+		tag = 'hwsize'
+		format = 'decimal'
+		length = 8
+
+	[[ARP.fields]]
+		long_name = 'Protocol size'
+		name = 'Proto size'
+		tag = 'protosize'
+		length = 8
+		format = 'decimal'
+
+	[[ARP.fields]]
+		name = 'Opcode'
+		short_name = 'Opcode'
+		length = 16
+		format = 'decimal'
+		summary = true
+
+	[[ARP.fields.states]]
+		name = 'Request'
+		value = 1
+
+	[[ARP.fields.states]]
+		name = 'Reply'
+		value = 2
+
+	[[ARP.fields]]
+		long_name = 'Sender Hardware address'
+		name = 'Sender HW Address'
+		tag = 'src.hw'
+		length = '^.hwsize * 8'
+		enable = '^.hwtype != 1 || ^.hwsize != 6'
+
+	[[ARP.fields]]
+		long_name = 'Sender MAC address'
+		name = 'Sender MAC'
+		tag = 'src.hw_mac'
+		inherit = '#MACAddress'
+		enable = '^.hwtype == 1 && ^.hwsize == 6'
+
+	[[ARP.fields]]
+		long_name = 'Sender IP address'
+		name = 'Sender IP'
+		tag = 'src.proto_ipv4'
+		inherit = '#IPV4Address'
+		enable = '^.prototype == 0x0800 && ^.protosize == 4'
+
+	[[ARP.fields]]
+		long_name = 'Sender IP address'
+		name = 'Sender IP'
+		tag = 'src.proto_ipv6'
+		inherit = '#IPV6Address'
+		enable = '^.prototype == 0x86DD && ^.protosize == 16'
+
+	[[ARP.fields]]
+		long_name = 'Sender Protocol address'
+		name = 'Sender proto address'
+		tag = 'src.proto'
+		length = '^.protosize * 8'
+		enable = '( ^.prototype != 0x0800 || ^.protosize != 4 ) && ( ^.prototype != 0x86DD || ^.protosize != 16 )'
+
+	[[ARP.fields]]
+		long_name = 'Target Hardware address'
+		name = 'Target HW Address'
+		tag = 'dst.hw'
+		length = '^.hwsize * 8'
+		enable = '^.hwtype != 1 || ^.hwsize != 6'
+
+	[[ARP.fields]]
+		long_name = 'Target MAC address'
+		name = 'Target MAC'
+		tag = 'dst.hw_mac'
+		inherit = '#MACAddress'
+		enable = '^.hwtype == 1 && ^.hwsize == 6'
+
+	[[ARP.fields]]
+		long_name = 'Target IP address'
+		name = 'Target IP'
+		tag = 'dst.proto_ipv4'
+		inherit = '#IPV4Address'
+		enable = '^.prototype == 0x0800 && ^.protosize == 4'
+
+	[[ARP.fields]]
+		long_name = 'Target IP address'
+		name = 'Target IP'
+		tag = 'dst.proto_ipv6'
+		inherit = '#IPV6Address'
+		enable = '^.prototype == 0x86DD && ^.protosize == 16'
+
+	[[ARP.fields]]
+		long_name = 'Target Protocol address'
+		name = 'Target proto address'
+		tag = 'dst.proto'
+		length = '^.protosize * 8'
+		enable = '( ^.prototype != 0x0800 || ^.protosize != 4 ) && ( ^.prototype != 0x86DD || ^.protosize != 16 )'
+
+
+
