@@ -1,0 +1,102 @@
+[project]
+name = "auto_adpq"
+version = "0.3.5"
+description = "Implementing auto adpq"
+authors = [
+    {name = "Tfloow", email = "88899420+Tfloow@users.noreply.github.com"}
+]
+license="Apache-2.0"
+license-files = ["LICENSE"]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "torch",
+    "numpy",
+    "tqdm",
+    "pydantic>=1.10"
+]
+
+[project.urls]
+homepage = "https://thomas.debelle.be"
+documentation = "https://auto-adpq.readthedocs.io/en/stable/"
+source = "https://github.com/Tfloow/auto_adpq"
+download = "https://pypi.org/project/auto_adpq/#files"
+tracker = "https://github.com/Tfloow/auto_adpq/issues"
+"release notes" = "https://auto-adpq.readthedocs.io/en/stable/release"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "coverage",
+    "build",
+    "ruff",
+    "sphinx",
+    "transformers",
+    "sphinx-multiversion",
+    "furo",
+    "twine",
+    "snakeviz",
+    "matplotlib",
+]
+
+
+[pytest]
+markers = [
+    "slow : marks tests as slow (deselect with '-m \"not slow\"')",
+]
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests"
+]
+markers = [
+    "run_first: run this test before others",
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
+
+
+# ====================================================================
+# [tool.ruff] - Ruff Configuration
+# ====================================================================
+[tool.ruff]
+lint.select = [
+    "E", "F", "W", "I", "B", "C4", "T20", "D"
+]
+
+# Disable specific rules if they conflict with your style or needs.
+# Example: D203 conflicts with D205 for docstrings.
+lint.ignore = [
+    # "E501", # Uncomment to ignore line length checks completely
+]
+
+# Set the maximum line length. The standard is 88 (per Black formatter).
+line-length = 88
+
+# Directory/files to exclude from linting (e.g., auto-generated files).
+exclude = [
+    ".venv",
+    "build",
+    "dist",
+]
+
+# Path to the directories where your package source code lives.
+src = [
+    "src"
+]
+
+# Enable autofixing for certain rules.
+fix = true
+
+[tool.ruff.lint.pydocstyle]
+convention="google"
+
+[tool.coverage.run]
+# Only check coverage for code inside your package folder
+source = ["src"] 
+# OR if your code isn't in src, use: source = ["auto_adpq"]
+
+# Explicitly exclude temp files
+omit = [
+    "/tmp/*",
+    "*/tmp/*"
+]
