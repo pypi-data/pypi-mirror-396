@@ -1,0 +1,83 @@
+# Stella Logger
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
+[![Tests](https://img.shields.io/badge/Tests-pytest-green)](./pyproject.toml)
+
+Strict and safe structured logging SDK for Python. Stella Logger centralizes log event definitions, validates payloads with Pydantic 2.x (schema is required), renders messages from templates (no ad-hoc overrides), and adapts output for multiple clouds via pluggable “output modes.”
+
+- **Centralized definitions**: `LogDefinition` + `LogRegistry` keep event keys/codes unique.
+- **Validated payloads**: Optional Pydantic models ensure schema correctness.
+- **Template-based messages**: Messages are rendered from `message_template`; callers cannot inject arbitrary text.
+- **Cloud-ready output**: Standard `logging` backend with modes for JSON line (CloudWatch), nested extra (GCP), or flat extra (Lambda JSON).
+
+## Why
+Long-running services accumulate ad-hoc logs that drift. Stella Logger treats logs as events with stable keys/codes, enforceable schemas, and predictable output formats, keeping observability consistent across teams and clouds.
+
+## Install
+```bash
+pip install stella-logger
+```
+
+## Quickstart
+```python
+import logging
+from pydantic import BaseModel
+from stella_logger.core import StellaCoreLogger, StellaCoreSettings, StellaSeverity
+from stella_logger.schema import LogDefinition, LogRegistry, LogKind
+from stella_logger.logger import StellaLogger
+
+class DbQueryTimeoutPayload(BaseModel):
+    host: str
+    port: int
+    elapsed_ms: int | None = None
+
+definitions = [
+    LogDefinition(
+        event_key="DB_QUERY_TIMEOUT",
+        event_code=1053,
+        message_template="DB timeout on {host}:{port}, elapsed={elapsed_ms}ms (code={event_code})",
+        event_severity=StellaSeverity.ERROR,
+        event_kind=LogKind.ERROR,
+        event_category="TECH_ERROR",
+        schema_model=DbQueryTimeoutPayload,
+        include_message_in_extra=True,
+        # include_event_key_in_extra / include_event_code_in_extra /
+        # include_severity_in_extra / include_kind_in_extra /
+        # include_category_in_extra all default to True and can be set False.
+    )
+]
+
+registry = LogRegistry(definitions)
+core = StellaCoreLogger(
+    settings=StellaCoreSettings(
+        service_name="my-app",
+        service_version="1.5.17",
+        structured_message=True,  # JSON_MESSAGE mode
+    ),
+    base_logger=logging.getLogger("myapp.stella"),
+)
+logger = StellaLogger(core=core, registry=registry)
+
+logger.log_error("DB_QUERY_TIMEOUT", extra={"host": "db1", "port": 5432, "elapsed_ms": 1200})
+```
+
+## Output modes (core)
+- `JSON_MESSAGE`: `msg=json.dumps(payload)`; best for AWS CloudWatch Logs (non-Lambda).
+- `FLAT_EXTRA`: `msg=payload["message"]`; extra is flattened (message dropped); good for Lambda JSON logging.
+- `NESTED_EXTRA`: `msg=payload["message"]`; extra nests payload under `payload_attr_name` (e.g., `json_fields` for GCP).
+
+## Project layout
+- SDK code: `src/stella_logger/`
+- Tests: `tests/`
+- Docs (design/spec/recipes): `docs/`
+
+詳細な設計思想・仕様・クラウド別レシピは `docs/` を参照してください。
+
+## Development
+- Install deps: `poetry install --with dev`
+- Run tests: `poetry run pytest`
+- Lint: `poetry run ruff check`
+
+## License
+MIT
