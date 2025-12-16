@@ -1,0 +1,545 @@
+Metadata-Version: 2.4
+Name: md-spreadsheet-parser
+Version: 0.1.2
+Summary: Add your description here
+Author: f-y
+License-File: LICENSE
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+
+# Markdown Spreadsheet Parser
+
+<p align="center">
+  <a href="https://github.com/f-y/md-spreadsheet-parser/blob/main/LICENSE">
+    <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License" />
+  </a>
+  <a href="https://pypi.org/project/md-spreadsheet-parser/">
+    <img src="https://img.shields.io/badge/pypi-v0.1.0-blue" alt="PyPI" />
+  </a>
+  <a href="https://github.com/f-y/md-spreadsheet-parser">
+    <img src="https://img.shields.io/badge/repository-github-green.svg" alt="Repository" />
+  </a>
+</p>
+
+<p align="center">
+  <strong>A robust, zero-dependency Python library for parsing, validating, and manipulating Markdown tables.</strong>
+</p>
+
+---
+
+**md-spreadsheet-parser** turns loose Markdown text into strongly-typed data structures. It validates content against schemas and generates clean Markdown output. Ideal for building spreadsheet-like interfaces, data pipelines, and automation tools.
+
+## Table of Contents
+
+- [Features](#features)
+- [Installation](#installation)
+- [Usage](#usage)
+    - [1. Basic Parsing](#1-basic-parsing)
+    - [2. Type-Safe Validation](#2-type-safe-validation-recommended)
+        - [Pydantic Integration](#pydantic-integration-optional)
+    - [3. JSON / Dict Export](#3-json--dict-export)
+    - [4. Markdown Generation](#4-markdown-generation-round-trip)
+    - [5. Advanced Features](#5-advanced-features)
+    - [6. Advanced Type Conversion](#6-advanced-type-conversion)
+    - [7. Robustness](#7-robustness-handling-malformed-tables)
+    - [8. In-Cell Line Break Support](#8-in-cell-line-break-support)
+    - [9. Performance & Scalability (Streaming API)](#9-performance--scalability-streaming-api)
+    - [Command Line Interface (CLI)](#command-line-interface-cli)
+- [Configuration](#configuration)
+- [Future Roadmap](#future-roadmap)
+- [License](#license)
+
+## Features
+
+- **Pure Python & Zero Dependencies**: Lightweight and portable. Runs anywhere Python runs, including **WebAssembly (Pyodide)**.
+- **Type-Safe Validation**: Convert loose Markdown tables into strongly-typed Python `dataclasses` with automatic type conversion, including customizable boolean logic (I18N) and custom type converters.
+- **Round-Trip Support**: Parse to objects, modify data, and generate Markdown back. Perfect for editors.
+- **Robust Parsing**: Gracefully handles malformed tables (missing/extra columns) and escaped characters.
+- **Multi-Table Workbooks**: Support for parsing multiple sheets and tables from a single file, including metadata.
+- **JSON-Friendly**: Easy export to dictionaries/JSON for integration with other tools (e.g., Pandas, APIs).
+
+## Installation
+
+```bash
+pip install md-spreadsheet-parser
+```
+
+## Usage
+
+### 1. Basic Parsing
+
+**Single Table**
+Parse a standard Markdown table into a structured object.
+
+```python
+from md_spreadsheet_parser import parse_table
+
+markdown = """
+| Name | Age |
+| --- | --- |
+| Alice | 30 |
+| Bob | 25 |
+"""
+
+result = parse_table(markdown)
+
+print(result.headers)
+# ['Name', 'Age']
+
+print(result.rows)
+# [['Alice', '30'], ['Bob', '25']]
+```
+
+**Multiple Tables (Workbook)**
+Parse a file containing multiple sheets (sections). By default, it looks for `# Tables` as the root marker and `## Sheet Name` for sheets.
+
+```python
+from md_spreadsheet_parser import parse_workbook, MultiTableParsingSchema
+
+markdown = """
+# Tables
+
+## Users
+| ID | Name |
+| -- | ---- |
+| 1  | Alice|
+
+## Products
+| ID | Item |
+| -- | ---- |
+| A  | Apple|
+"""
+
+# Use default schema
+schema = MultiTableParsingSchema()
+workbook = parse_workbook(markdown, schema)
+
+for sheet in workbook.sheets:
+    print(f"Sheet: {sheet.name}")
+    for table in sheet.tables:
+        print(table.rows)
+```
+
+**File Loading Helpers**
+
+For convenience, you can parse directly from a file path (`str` or `Path`) or file-like object using the `_from_file` variants:
+
+```python
+from md_spreadsheet_parser import parse_workbook_from_file
+
+# Clean and easy
+workbook = parse_workbook_from_file("data.md")
+```
+
+Available helpers:
+- `parse_table_from_file(path_or_file)`
+- `parse_workbook_from_file(path_or_file)`
+- `scan_tables_from_file(path_or_file)`
+
+### 2. Type-Safe Validation (Recommended)
+
+The most powerful feature of this library is converting loose markdown tables into strongly-typed Python objects using `dataclasses`. This ensures your data is valid and easy to work with.
+
+```python
+from dataclasses import dataclass
+from md_spreadsheet_parser import parse_table, TableValidationError
+
+@dataclass
+class User:
+    name: str
+    age: int
+    is_active: bool = True
+
+markdown = """
+| Name | Age | Is Active |
+|---|---|---|
+| Alice | 30 | yes |
+| Bob | 25 | no |
+"""
+
+try:
+    # Parse and validate in one step
+    users = parse_table(markdown).to_models(User)
+    
+    for user in users:
+        print(f"{user.name} is {user.age} years old.")
+        # Alice is 30 years old.
+        # Bob is 25 years old.
+
+except TableValidationError as e:
+    print(e)
+```
+
+**Features:**
+*   **Type Conversion**: Automatically converts strings to `int`, `float`, `bool` using standard rules.
+*   **Boolean Handling (Default)**: Supports standard pairs out-of-the-box: `true/false`, `yes/no`, `on/off`, `1/0`. (See [Advanced Type Conversion](#6-advanced-type-conversion) for customization).
+*   **Optional Fields**: Handles `Optional[T]` by converting empty strings to `None`.
+*   **Validation**: Raises detailed errors if data doesn't match the schema.
+
+### Pydantic Integration (Optional)
+
+For more advanced validation (email format, ranges, regex), you can use [Pydantic](https://docs.pydantic.dev/) models instead of dataclasses. This feature is enabled automatically if `pydantic` is installed.
+
+```python
+from pydantic import BaseModel, Field, EmailStr
+
+class User(BaseModel):
+    name: str = Field(alias="User Name")
+    age: int = Field(gt=0)
+    email: EmailStr
+
+# Automatically detects Pydantic model and uses it for validation
+users = parse_table(markdown).to_models(User)
+```
+
+The parser respects Pydantic's `alias` and `Field` constraints.
+
+### 3. JSON / Dict Export
+
+All result objects (`Workbook`, `Sheet`, `Table`) have a `.json` property that returns a dictionary, making it easy to serialize or pass to other libraries (like Pandas).
+
+```python
+import json
+import pandas as pd
+
+# Export to JSON
+print(json.dumps(workbook.json, indent=2))
+
+# Convert to Pandas DataFrame
+table_data = workbook.sheets[0].tables[0].json
+df = pd.DataFrame(table_data["rows"], columns=table_data["headers"])
+```
+
+### 4. Markdown Generation (Round-Trip)
+
+You can modify parsed objects and convert them back to Markdown strings using `to_markdown()`. This enables a complete "Parse -> Modify -> Generate" workflow.
+
+```python
+from md_spreadsheet_parser import parse_table, ParsingSchema
+
+markdown = "| A | B |\n|---|---| \n| 1 | 2 |"
+table = parse_table(markdown)
+
+# Modify data
+table.rows.append(["3", "4"])
+
+# Generate Markdown
+# You can customize the output format using a schema
+schema = ParsingSchema(require_outer_pipes=True)
+print(table.to_markdown(schema))
+# | A | B |
+# | --- | --- |
+# | 1 | 2 |
+# | 3 | 4 |
+```
+
+### 5. Advanced Features
+
+**Metadata Extraction (Table Names & Descriptions)**
+You can configure the parser to extract table names (from headers) and descriptions (text preceding the table).
+
+```python
+from md_spreadsheet_parser import parse_workbook, MultiTableParsingSchema
+
+markdown = """
+# Tables
+
+## Sales Data
+
+### Q1 Results
+Financial performance for the first quarter.
+
+| Month | Revenue |
+| ----- | ------- |
+| Jan   | 1000    |
+"""
+
+# Configure schema to capture table headers (level 3) and descriptions
+schema = MultiTableParsingSchema(
+    table_header_level=3,     # Treat ### Header as table name
+    capture_description=True  # Capture text between header and table
+)
+
+workbook = parse_workbook(markdown, schema)
+table = workbook.sheets[0].tables[0]
+
+print(f"Table: {table.name}")        # "Q1 Results"
+print(f"Desc: {table.description}")  # "Financial performance for the first quarter."
+```
+
+**Lookup API**
+Retrieve sheets and tables directly by name instead of iterating.
+
+```python
+sheet = workbook.get_sheet("Sales Data")
+if sheet:
+    table = sheet.get_table("Q1 Results")
+    if table:
+        print(table.rows)
+```
+
+**Simple Scan Interface**
+If you want to extract *all* tables from a document regardless of its structure (ignoring sheets and headers), use `scan_tables`.
+
+```python
+from md_spreadsheet_parser import scan_tables
+
+markdown = """
+Here is some text.
+
+| ID | Name |
+| -- | ---- |
+| 1  | Alice|
+
+More text...
+
+| ID | Item |
+| -- | ---- |
+| A  | Apple|
+"""
+
+# Returns a flat list of all tables found
+tables = scan_tables(markdown)
+
+print(len(tables))
+# 2
+```
+
+### 6. Advanced Type Conversion
+
+You can customize how string values are converted to Python objects by passing a `ConversionSchema` to `to_models()`. This is useful for internationalization (I18N) and handling custom types.
+
+**Internationalization (I18N): Custom Boolean Pairs**
+
+Configure which string pairs map to `True`/`False` (case-insensitive).
+
+```python
+from md_spreadsheet_parser import parse_table, ConversionSchema
+
+markdown = """
+| User | Active? |
+| --- | --- |
+| Tanaka | はい |
+| Suzuki | いいえ |
+"""
+
+# Configure "はい" -> True, "いいえ" -> False
+schema = ConversionSchema(
+    boolean_pairs=(("はい", "いいえ"),)
+)
+
+users = parse_table(markdown).to_models(User, conversion_schema=schema)
+# Tanaka.active is True
+```
+
+**Custom Type Converters**
+
+Register custom conversion functions for specific types. You can use **ANY Python type** as a key, including:
+
+- **Built-ins**: `int`, `float`, `bool` (to override default behavior)
+- **Standard Library**: `Decimal`, `datetime`, `date`, `ZoneInfo`, `UUID`
+- **Custom Classes**: Your own data classes or objects
+
+Example using standard library types and a custom class:
+
+```python
+from dataclasses import dataclass
+from uuid import UUID
+from zoneinfo import ZoneInfo
+from md_spreadsheet_parser import ConversionSchema, parse_table
+
+@dataclass
+class Color:
+    r: int
+    g: int
+    b: int
+
+@dataclass
+class Config:
+    timezone: ZoneInfo
+    session_id: UUID
+    theme_color: Color
+
+markdown = """
+| Timezone | Session ID | Theme Color |
+| --- | --- | --- |
+| Asia/Tokyo | 12345678-1234-5678-1234-567812345678 | 255,0,0 |
+"""
+
+schema = ConversionSchema(
+    custom_converters={
+        # Standard Library Types
+        ZoneInfo: lambda v: ZoneInfo(v),
+        UUID: lambda v: UUID(v),
+        # Custom Class
+        Color: lambda v: Color(*map(int, v.split(",")))
+    }
+)
+
+data = parse_table(markdown).to_models(Config, conversion_schema=schema)
+# data[0].timezone is ZoneInfo("Asia/Tokyo")
+# data[0].theme_color is Color(255, 0, 0)
+```
+
+**Field-Specific Converters**
+
+For granular control, you can define converters for specific field names, which take precedence over type-based converters.
+
+```python
+def parse_usd(val): ...
+def parse_jpy(val): ...
+
+schema = ConversionSchema(
+    # Type-based defaults (Low priority)
+    custom_converters={
+        Decimal: parse_usd 
+    },
+    # Field-name overrides (High priority)
+    field_converters={
+        "price_jpy": parse_jpy,
+        "created_at": lambda x: datetime.strptime(x, "%Y/%m/%d")
+    }
+)
+
+# price_usd (no override) -> custom_converters (parse_usd)
+# price_jpy (override)    -> field_converters (parse_jpy)
+data = parse_table(markdown).to_models(Product, conversion_schema=schema)
+```
+
+**Standard Converters Library**
+
+For common patterns (currencies, lists), you can use the built-in helper functions in `md_spreadsheet_parser.converters` instead of writing your own.
+
+```python
+from md_spreadsheet_parser.converters import (
+    to_decimal_clean,        # Handles "$1,000", "¥500" -> Decimal
+    make_datetime_converter, # Factory for parse/TZ logic
+    make_list_converter,     # "a,b,c" -> ["a", "b", "c"]
+    make_bool_converter      # Custom strict boolean sets
+)
+
+schema = ConversionSchema(
+    custom_converters={
+        # Currency: removes $, ¥, €, £, comma, space
+        Decimal: to_decimal_clean,
+        # DateTime: ISO format default, attach Tokyo TZ if naive
+        datetime: make_datetime_converter(tz=ZoneInfo("Asia/Tokyo")),
+        # Lists: Split by comma, strip whitespace
+        list: make_list_converter(separator=",")
+    },
+    field_converters={
+        # Custom boolean for specific field
+        "is_valid": make_bool_converter(true_values=["OK"], false_values=["NG"])
+    }
+)
+```
+
+### 7. Robustness (Handling Malformed Tables)
+
+The parser is designed to handle imperfect markdown tables gracefully.
+
+*   **Missing Columns**: Rows with fewer columns than the header are automatically **padded** with empty strings.
+*   **Extra Columns**: Rows with more columns than the header are automatically **truncated**.
+
+```python
+from md_spreadsheet_parser import parse_table
+
+markdown = """
+| A | B |
+|---|---|
+| 1 |       <-- Missing column
+| 1 | 2 | 3 <-- Extra column
+"""
+
+table = parse_table(markdown)
+
+print(table.rows)
+# [['1', ''], ['1', '2']]
+```
+
+This ensures that `table.rows` always matches the structure of `table.headers`, preventing crashes during iteration or validation.
+
+### 8. In-Cell Line Break Support
+
+The parser automatically converts HTML line breaks to Python newlines (`\n`). This enables handling multiline cells naturally.
+
+**Supported Tags (Case-Insensitive):**
+- `<br>`
+- `<br/>`
+- `<br />`
+
+```python
+markdown = "| Line1<br>Line2 |"
+table = parse_table(markdown)
+# table.rows[0][0] == "Line1\nLine2"
+```
+
+To disable this, set `convert_br_to_newline=False` in `ParsingSchema`.
+
+### 9. Performance & Scalability (Streaming API)
+
+**Beyond Excel's Limits**: While Excel is limited to 1,048,576 rows, `md-spreadsheet-parser` can process Markdown files of **unlimited size** (e.g., 10GB+ server logs) using the Streaming API.
+
+**scan_tables_iter**:
+This function reads the file line-by-line and yields `Table` objects as they are found. It does **not** load the entire file into memory.
+
+```python
+from md_spreadsheet_parser import scan_tables_iter
+
+# Process a massive log file (e.g., 10GB)
+# Memory usage remains low (only the size of a single table block)
+for table in scan_tables_iter("huge_server_log.md"):
+    print(f"Found table with {len(table.rows)} rows")
+    
+    # Process rows...
+    for row in table.rows:
+        pass
+```
+
+This is ideal for data pipelines, log analysis, and processing exports that are too large to open in standard spreadsheet editors.
+
+### Command Line Interface (CLI)
+
+You can use the `md-spreadsheet-parser` command to parse Markdown files and output JSON. This is useful for piping data to other tools.
+
+```bash
+# Read from file
+md-spreadsheet-parser input.md
+
+# Read from stdin (pipe)
+cat input.md | md-spreadsheet-parser
+```
+
+**Options:**
+- `--scan`: Scan for all tables ignoring workbook structure (returns a list of tables).
+- `--root-marker`: Set the root marker (default: `# Tables`).
+- `--sheet-header-level`: Set sheet header level (default: 2).
+- `--table-header-level`: Set table header level (default: 3).
+- `--capture-description`: Capture table descriptions (default: True).
+
+## Configuration
+
+Customize parsing behavior using `ParsingSchema` and `MultiTableParsingSchema`.
+
+| Option | Default | Description |
+| :--- | :--- | :--- |
+| `column_separator` | `\|` | Character used to separate columns. |
+| `header_separator_char` | `-` | Character used in the separator row. |
+| `require_outer_pipes` | `True` | If `True`, generated markdown tables will include outer pipes. |
+| `strip_whitespace` | `True` | If `True`, whitespace is stripped from cell values. |
+| `root_marker` | `# Tables` | (MultiTable) Marker indicating start of data section. |
+| `sheet_header_level` | `2` | (MultiTable) Header level for sheets. |
+| `table_header_level` | `3` | (MultiTable) Header level for tables. |
+| `capture_description` | `True` | (MultiTable) Capture text between header and table. |
+
+## Future Roadmap
+
+We plan to extend the library to support **Visual Metadata** for better integration with rich Markdown editors.
+
+- **Column Widths**: Persisting user-adjusted column widths.
+- **Conditional Formatting**: Highlighting cells based on values.
+- **Data Types**: Explicitly defining column types (e.g., currency, date) for better editor UX.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
