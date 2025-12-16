@@ -1,0 +1,202 @@
+Metadata-Version: 2.4
+Name: dedupkit
+Version: 0.1.0
+Summary: Semantic deduplication using embeddings
+Author-email: Alexander Budanov <alex@apexbridge.tech>
+License: MIT License
+        
+        Copyright (c) 2025 Apex Bridge Technology
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+License-File: LICENSE
+Requires-Python: >=3.10
+Requires-Dist: numpy>=1.24.0
+Provides-Extra: all
+Requires-Dist: asyncpg>=0.29.0; extra == 'all'
+Requires-Dist: openai>=1.10.0; extra == 'all'
+Requires-Dist: pgvector>=0.2.4; extra == 'all'
+Requires-Dist: sentence-transformers>=2.2.2; extra == 'all'
+Provides-Extra: dev
+Requires-Dist: mypy>=1.8.0; extra == 'dev'
+Requires-Dist: pytest-asyncio>=0.23.0; extra == 'dev'
+Requires-Dist: pytest>=7.4.0; extra == 'dev'
+Requires-Dist: ruff>=0.1.0; extra == 'dev'
+Provides-Extra: local
+Requires-Dist: sentence-transformers>=2.2.2; extra == 'local'
+Provides-Extra: openai
+Requires-Dist: openai>=1.10.0; extra == 'openai'
+Provides-Extra: postgres
+Requires-Dist: asyncpg>=0.29.0; extra == 'postgres'
+Requires-Dist: pgvector>=0.2.4; extra == 'postgres'
+Description-Content-Type: text/markdown
+
+# DedupKit
+
+Semantic deduplication using embeddings.
+
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+DedupKit detects duplicate or similar text using semantic embeddings. Unlike keyword matching, it understands **meaning** — so "Login button is broken" matches "Can't sign in".
+
+## Installation
+```bash
+# Core with local embeddings
+pip install dedupkit[local]
+
+# With OpenAI embeddings
+pip install dedupkit[openai]
+
+# With PostgreSQL storage
+pip install dedupkit[postgres]
+
+# Everything
+pip install dedupkit[all]
+```
+
+## Quick Start
+```python
+from dedupkit import Deduplicator
+from dedupkit.providers import LocalEmbeddingProvider
+from dedupkit.storage import MemoryStorage
+
+dedup = Deduplicator(
+    embedding=LocalEmbeddingProvider(),
+    storage=MemoryStorage(),
+    threshold=0.85
+)
+
+# Add items
+dedup.add("Login button is broken", item_id="BUG-001")
+dedup.add("Payment form crashes", item_id="BUG-002")
+
+# Check for duplicates
+result = dedup.check("Login button not working")
+print(result.is_duplicate)           # True
+print(result.matches[0].id)          # BUG-001
+print(result.matches[0].similarity)  # 0.92
+```
+
+## Providers
+
+**Local (no API key needed):**
+```python
+from dedupkit.providers import LocalEmbeddingProvider
+
+provider = LocalEmbeddingProvider()
+```
+
+**OpenAI:**
+```python
+from dedupkit.providers import OpenAIProvider
+
+provider = OpenAIProvider(api_key="sk-...")
+```
+
+## Storage Backends
+
+**In-Memory (development):**
+```python
+from dedupkit.storage import MemoryStorage
+
+storage = MemoryStorage()
+```
+
+**PostgreSQL + pgvector (production):**
+```python
+from dedupkit.storage import PostgresStorage
+
+storage = await PostgresStorage.create(
+    connection_string="postgresql://user:pass@localhost:5432/db",
+    dimensions=384  # Must match embedding provider
+)
+```
+
+## Async Support
+
+For production applications, use `AsyncDeduplicator` with PostgreSQL:
+```python
+import asyncio
+from dedupkit import AsyncDeduplicator
+from dedupkit.providers import LocalEmbeddingProvider
+from dedupkit.storage import PostgresStorage
+
+async def main():
+    storage = await PostgresStorage.create(
+        connection_string="postgresql://user:pass@localhost:5432/db",
+        dimensions=384
+    )
+    
+    dedup = AsyncDeduplicator(
+        embedding=LocalEmbeddingProvider(),
+        storage=storage,
+        threshold=0.85
+    )
+    
+    await dedup.add("Login button is broken", item_id="BUG-001")
+    
+    result = await dedup.check("Can't sign in")
+    print(result.is_duplicate)  # True
+    
+    await storage.close()
+
+asyncio.run(main())
+```
+
+## API Reference
+
+### Deduplicator / AsyncDeduplicator
+
+| Method | Description | Returns |
+|--------|-------------|---------|
+| `add(text, item_id?, metadata?)` | Add item to index | `str` |
+| `check(text, threshold?)` | Check for duplicates | `DedupResult` |
+| `remove(item_id)` | Remove item | `bool` |
+| `len()` / `count()` | Number of items | `int` |
+
+### DedupResult
+```python
+DedupResult(
+    is_duplicate: bool,        # True if matches found above threshold
+    matches: list[SearchHit]   # Similar items, sorted by similarity
+)
+```
+
+### SearchHit
+```python
+SearchHit(
+    id: str,              # Item ID
+    similarity: float,    # Similarity score (0.0 - 1.0)
+    metadata: dict | None # Optional metadata
+)
+```
+
+## Error Handling
+```python
+from dedupkit.exceptions import ValidationError, StorageError
+
+try:
+    dedup.add("")  # Empty text
+except ValidationError as e:
+    print(f"Invalid input: {e}")
+```
+
+## License
+
+MIT
