@@ -1,0 +1,35 @@
+# Installation
+
+??? info "🤖 AI Summary"
+
+    Requires Python 3.12 and `uv`. Install: `git clone` repo, `uv sync`. Verify: `uv run python dota_match_mcp_server.py`. Then connect to your LLM client (Claude Desktop, Claude Code, etc.).
+
+## Requirements
+
+- Python 3.12
+- [uv](https://docs.astral.sh/uv/) package manager
+
+## Install
+
+```bash
+git clone https://github.com/DeepBlueCoding/mcp-replay-dota2.git
+cd mcp-replay-dota2
+uv sync
+```
+
+## Verify
+
+```bash
+uv run python dota_match_mcp_server.py
+```
+
+You should see:
+```
+Dota 2 Match MCP Server starting...
+Resources: dota2://heroes/all, dota2://map, ...
+Tools: get_hero_deaths, get_combat_log, ...
+```
+
+## Next Step
+
+[Connect to your LLM](../integrations/index.md)
