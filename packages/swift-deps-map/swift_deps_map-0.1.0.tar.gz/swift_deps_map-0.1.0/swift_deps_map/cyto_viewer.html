@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Dependency Graph (Cytoscape)</title>
+  <script src="https://unpkg.com/cytoscape@3/dist/cytoscape.min.js"></script>
+  <style>
+    html, body { margin: 0; padding: 0; width: 100%; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #0b1021; color: #e4e7f1; }
+    body { display: flex; flex-direction: column; }
+    #toolbar { padding: 8px 12px; background: #11172e; border-bottom: 1px solid #1f2a4d; display: flex; align-items: center; gap: 10px; font-size: 14px; flex-wrap: wrap; }
+    #toolbar input { background: #0b1021; color: #e4e7f1; border: 1px solid #25325c; padding: 6px 8px; border-radius: 4px; min-width: 220px; }
+    #toolbar select { background: #0b1021; color: #e4e7f1; border: 1px solid #25325c; padding: 6px 8px; border-radius: 4px; }
+    #toolbar button { background: #25325c; color: #e4e7f1; border: 1px solid #3b4a7a; padding: 6px 10px; border-radius: 4px; cursor: pointer; }
+    #toolbar button:hover { background: #2f3c6e; }
+    #content { display: flex; width: 100%; height: calc(100% - 46px); }
+    #cy { flex: 1; }
+    #sidebar { width: 320px; background: #0d152d; border-left: 1px solid #1f2a4d; padding: 10px 12px; overflow-y: auto; }
+    #sidebar h3 { margin: 12px 0 6px; font-size: 13px; color: #c9d4ff; letter-spacing: 0.2px; }
+    #sidebar ol { margin: 0 0 10px 16px; padding: 0; color: #c4ccdf; font-size: 12px; }
+    #sidebar li { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; cursor: pointer; }
+    #sidebar li:hover { color: #ffd166; }
+    .node-name { word-break: break-all; }
+    .count { color: #9bb0ff; font-variant-numeric: tabular-nums; }
+    #status { margin-left: auto; opacity: 0.8; }
+  </style>
+</head>
+<body>
+  <div id="toolbar">
+    <label for="search">Highlight node:</label>
+    <input id="search" type="text" placeholder="e.g. Models/Anime.swift" />
+    <label for="filter">Filter:</label>
+    <input id="filter" type="text" placeholder="show only matching nodes" />
+    <label for="focus-toggle">
+      <input id="focus-toggle" type="checkbox" />
+      Hide others when focusing
+    </label>
+    <select id="focus-depth" title="Neighborhood depth">
+      <option value="1">1-hop</option>
+      <option value="2" selected>2-hop</option>
+    </select>
+    <button id="scatter" title="Relayout with more spacing">Scatter layout</button>
+    <button id="bubble" title="Bubble-style layout">Bubble</button>
+    <button id="concentric" title="Concentric rings (degree outer)">Concentric</button>
+    <span id="status">Loading...</span>
+  </div>
+  <div id="content">
+    <div id="cy"></div>
+    <div id="sidebar">
+      <h3>Most outgoing (depends on others)</h3>
+      <ol id="top-out"></ol>
+      <h3>Most incoming (others depend on)</h3>
+      <ol id="top-in"></ol>
+      <h3>Least outgoing</h3>
+      <ol id="low-out"></ol>
+      <h3>Least incoming</h3>
+      <ol id="low-in"></ol>
+    </div>
+  </div>
+  <script>
+    async function loadGraph() {
+      const statusEl = document.getElementById("status");
+      let data;
+      try {
+        const res = await fetch("deps.cyto.json");
+        if (!res.ok) throw new Error("Cannot load deps.cyto.json");
+        data = await res.json();
+      } catch (err) {
+        console.warn(err);
+        statusEl.textContent = "Select deps.cyto.json to view";
+        const picker = Object.assign(document.createElement("input"), {
+          type: "file",
+          accept: ".json,application/json",
+        });
+        picker.setAttribute("style", "display:none");
+        document.body.appendChild(picker);
+        data = await new Promise((resolve) => {
+          picker.addEventListener(
+            "change",
+            async () => {
+              const file = picker.files?.[0];
+              if (!file) return resolve(null);
+              try {
+                resolve(JSON.parse(await file.text()));
+              } catch (parseErr) {
+                console.error(parseErr);
+                statusEl.textContent = "Invalid JSON file";
+                resolve(null);
+              }
+            },
+            { once: true },
+          );
+          picker.click();
+        });
+        if (!data) return;
+      }
+
+        const layoutOptions = { name: "cose", fit: true, animate: false, padding: 120, randomize: true, nodeOverlap: 5, nodeRepulsion: 16000, idealEdgeLength: 220, componentSpacing: 260 };
+
+        const palette = ["#5aa9e6", "#7fc8f8", "#ffe45e", "#ff6392", "#bc6ff1", "#6ede8a", "#f19c79", "#f5cac3", "#84dcc6", "#95b2ff"];
+
+        const cy = cytoscape({
+          container: document.getElementById("cy"),
+          elements: data.elements,
+          layout: layoutOptions,
+          style: [
+            {
+              selector: "node",
+              style: {
+                "label": "data(label)",
+                "font-size": 11,
+                "font-weight": "600",
+                "background-color": "data(bg)",
+                "color": "#e4e7f1",
+                "text-outline-color": "#0b1021",
+                "text-outline-width": 2,
+                "text-valign": "center",
+                "text-halign": "center",
+                "text-wrap": "wrap",
+                "text-max-width": "80px",
+                "width": "mapData(deg, 1, 60, 14, 48)",
+                "height": "mapData(deg, 1, 60, 14, 48)"
+              }
+            },
+            {
+              selector: "edge",
+              style: {
+                "width": 1.2,
+                "line-color": "#6d7aa3",
+                "target-arrow-color": "#6d7aa3",
+                "target-arrow-shape": "triangle",
+                "curve-style": "bezier",
+                "opacity": 0.7
+              }
+            },
+            {
+              selector: ".highlighted",
+              style: {
+                "background-color": "#ffd166",
+                "line-color": "#ffd166",
+                "target-arrow-color": "#ffd166",
+                "z-index": 999
+              }
+            },
+            {
+              selector: ".selected",
+              style: {
+                "background-color": "#ffb703",
+                "width": "mapData(deg, 1, 60, 20, 64)",
+                "height": "mapData(deg, 1, 60, 20, 64)",
+                "z-index": 1000
+              }
+            },
+            {
+              selector: ".neighbor",
+              style: {
+                "background-color": "#8ecae6",
+                "line-color": "#8ecae6",
+                "target-arrow-color": "#8ecae6",
+                "z-index": 998
+              }
+            },
+            {
+              selector: ".link",
+              style: {
+                "line-color": "#ffd166",
+                "target-arrow-color": "#ffd166",
+                "width": 2.2
+              }
+            },
+            {
+              selector: ".edge-faded",
+              style: {
+                "opacity": 0.1,
+                "target-arrow-shape": "none"
+              }
+            },
+            {
+              selector: ".dimmed",
+              style: {
+                "opacity": 0.18
+              }
+            }
+          ]
+        });
+
+        // Precompute degree for node sizing
+        cy.nodes().forEach((n) => {
+          const degree = n.indegree() + n.outdegree();
+          n.data("deg", degree);
+          const id = n.id();
+          const parts = id.split("/");
+          n.data("label", parts[parts.length - 1] || id);
+          // stable color from id hash
+          let hash = 0;
+          for (let i = 0; i < id.length; i++) {
+            hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+          }
+          const color = palette[hash % palette.length];
+          n.data("bg", color);
+        });
+
+        const search = document.getElementById("search");
+        search.addEventListener("input", () => {
+          const q = search.value.trim().toLowerCase();
+          cy.elements().removeClass("highlighted dimmed");
+          if (!q) return;
+          const hits = cy.nodes().filter(n => n.id().toLowerCase().includes(q));
+          hits.addClass("highlighted");
+          if (hits.length > 0) {
+            cy.fit(hits, 80);
+          }
+        });
+
+        function showAll() {
+          cy.nodes().style("display", "element");
+          cy.edges().style("display", "element");
+        }
+
+        function clearHighlight() {
+          cy.elements().removeClass("highlighted dimmed selected neighbor link");
+          const focusToggle = document.getElementById("focus-toggle");
+          if (!focusToggle?.checked) {
+            showAll();
+          }
+        }
+
+        function neighborhoodWithDepth(node, depth) {
+          let current = node;
+          let visited = new Set([node.id()]);
+          for (let i = 0; i < depth; i++) {
+            const neighbors = current.openNeighborhood().nodes();
+            neighbors.forEach(n => visited.add(n.id()));
+            current = current.union(neighbors);
+          }
+          return cy.nodes().filter(n => visited.has(n.id()));
+        }
+
+        function highlightNode(node) {
+          if (!node || node.empty()) return;
+          clearHighlight();
+          const connectedEdges = node.connectedEdges();
+          const neighbors = node.openNeighborhood().nodes();
+          node.addClass("selected");
+          neighbors.addClass("neighbor");
+          connectedEdges.addClass("link");
+          const highlightSet = node.union(neighbors).union(connectedEdges);
+          cy.elements().difference(highlightSet).addClass("dimmed");
+
+          const focusToggle = document.getElementById("focus-toggle");
+          const depthSel = document.getElementById("focus-depth");
+          if (focusToggle?.checked) {
+            const depth = parseInt(depthSel?.value || "2", 10);
+            const keepNodes = neighborhoodWithDepth(node, depth);
+            const keepEdges = cy.edges().filter(e => keepNodes.contains(e.source()) && keepNodes.contains(e.target()));
+            cy.nodes().style("display", "none");
+            cy.edges().style("display", "none");
+            keepNodes.style("display", "element");
+            keepEdges.style("display", "element");
+            cy.fit(keepNodes, 160);
+          } else {
+            cy.fit(node.union(neighbors), 140);
+          }
+          const searchBox = document.getElementById("search");
+          if (searchBox) {
+            searchBox.value = node.id();
+          }
+        }
+
+        function highlightById(id) {
+          if (!id) return;
+          const node = cy.$id(id);
+          highlightNode(node);
+        }
+
+        cy.on("tap", "node", (evt) => {
+          highlightNode(evt.target);
+        });
+
+        cy.on("tap", (evt) => {
+          if (evt.target === cy) {
+            clearHighlight();
+            const focusToggle = document.getElementById("focus-toggle");
+            if (focusToggle?.checked) {
+              showAll();
+            }
+            cy.fit(cy.elements(), 60);
+          }
+        });
+
+        function runLayout(custom = {}) {
+          cy.layout({ ...layoutOptions, ...custom }).run();
+        }
+
+        function scatter() {
+          clearHighlight();
+          cy.edges().removeClass("edge-faded");
+          runLayout({
+            animate: true,
+            animationDuration: 500,
+            padding: 160,
+            randomize: true,
+            nodeRepulsion: 20000,
+            idealEdgeLength: 280,
+            componentSpacing: 360,
+            fit: true
+          });
+        }
+
+        function bubble() {
+          clearHighlight();
+          cy.edges().addClass("edge-faded");
+          cy.layout({
+            name: "fcose",
+            animate: true,
+            animationDuration: 650,
+            randomize: true,
+            padding: 220,
+            nodeRepulsion: 32000,
+            idealEdgeLength: 360,
+            gravity: 1.4,
+            gravityRangeCompound: 1.2,
+            gravityCompound: 1.2,
+            tile: true
+          }).run();
+          cy.fit(cy.nodes(), 140);
+        }
+
+        function concentricLayout() {
+          clearHighlight();
+          cy.edges().removeClass("edge-faded");
+          cy.layout({
+            name: "concentric",
+            animate: true,
+            animationDuration: 500,
+            padding: 200,
+            startAngle: 3 * Math.PI / 2,
+            clockwise: true,
+            minNodeSpacing: 80,
+            levelWidth: () => 1,
+            concentric: (n) => -(n.degree() || 1)
+          }).run();
+          cy.fit(cy.nodes(), 140);
+        }
+
+        const scatterBtn = document.getElementById("scatter");
+        scatterBtn?.addEventListener("click", scatter);
+        const bubbleBtn = document.getElementById("bubble");
+        bubbleBtn?.addEventListener("click", bubble);
+        const concentricBtn = document.getElementById("concentric");
+        concentricBtn?.addEventListener("click", concentricLayout);
+
+        const focusToggle = document.getElementById("focus-toggle");
+        focusToggle?.addEventListener("change", () => {
+          if (!focusToggle.checked) {
+            showAll();
+            cy.elements().removeClass("dimmed");
+            cy.fit(cy.elements(), 80);
+          }
+        });
+
+        function updateSidebar() {
+          const stats = cy.nodes().map((n) => {
+            const id = n.id();
+            const label = n.data("label") || id;
+            const out = cy.edges(`[source = "${id}"]`).length;
+            const incoming = cy.edges(`[target = "${id}"]`).length;
+            return { id, label, out, incoming };
+          });
+
+          const topOut = [...stats].sort((a, b) => b.out - a.out).slice(0, 12);
+          const topIn = [...stats].sort((a, b) => b.incoming - a.incoming).slice(0, 12);
+          const lowOut = [...stats].sort((a, b) => a.out - b.out).slice(0, 12);
+          const lowIn = [...stats].sort((a, b) => a.incoming - b.incoming).slice(0, 12);
+
+          const renderList = (elId, items, key) => {
+            const el = document.getElementById(elId);
+            el.innerHTML = items
+              .map(item => `<li data-id="${item.id}"><span class="node-name">${item.label}</span><span class="count">${item[key]}</span></li>`)
+              .join("") || "<li>None</li>";
+          };
+
+          renderList("top-out", topOut, "out");
+          renderList("top-in", topIn, "incoming");
+          renderList("low-out", lowOut, "out");
+          renderList("low-in", lowIn, "incoming");
+        }
+
+        updateSidebar();
+
+        const sidebar = document.getElementById("sidebar");
+        sidebar?.addEventListener("click", (evt) => {
+          const li = evt.target.closest("li[data-id]");
+          if (!li) return;
+          const id = li.getAttribute("data-id");
+          highlightById(id);
+        });
+
+        const filterInput = document.getElementById("filter");
+        filterInput?.addEventListener("input", () => {
+          const q = filterInput.value.trim().toLowerCase();
+          cy.elements().removeClass("dimmed edge-faded");
+          if (!q) {
+            cy.nodes().style("display", "element");
+            cy.edges().style("display", "element");
+            return;
+          }
+          const matching = cy.nodes().filter(n => n.id().toLowerCase().includes(q) || (n.data("label") || "").toLowerCase().includes(q));
+          const neighbors = matching.openNeighborhood().nodes();
+          const keepNodes = matching.union(neighbors);
+          const keepEdges = cy.edges().filter(e => keepNodes.contains(e.source()) && keepNodes.contains(e.target()));
+          cy.nodes().not(keepNodes).style("display", "none");
+          cy.edges().not(keepEdges).style("display", "none");
+          cy.fit(keepNodes, 160);
+        });
+
+        statusEl.textContent = `${cy.nodes().length} nodes / ${cy.edges().length} edges`;
+    }
+
+    window.addEventListener("load", loadGraph);
+  </script>
+</body>
+</html>
