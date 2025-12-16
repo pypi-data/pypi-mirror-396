@@ -1,0 +1,88 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hcs-cli"
+description = "Horizon Cloud Service CLI."
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [
+    { name="Nanw1103", email="nanw1103@gmail.com" },
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+keywords = [
+    "Horizon", "Horizon Cloud", "Horizon Cloud Service", "CLI"
+]
+dynamic = ["version"]
+dependencies = [
+    "hcs-core>=0.1.316",
+    "reportlab>=4.0.0",
+    "matplotlib>=3.8.0",
+    "InquirerPy>=0.3.4",
+    "paho-mqtt>=2.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "build",
+    "black",
+    "mypy",
+    "bandit",
+    "wheel",
+    "twine",
+    "pylint",
+    "pytest",
+    "ruff",
+    "flake8",
+    "hatch"
+]
+
+[project.urls]
+Homepage = "https://github.com/euc-eng/hcs-cli"
+"Bug Tracker" = "https://github.com/euc-eng/hcs-cli/issues"
+documentation = "https://readthedocs.org"
+repository = "https://github.com/euc-eng/hcs-cli"
+changelog = "https://github.com/euc-eng/hcs-cli/blob/main/CHANGELOG.md"
+
+[project.scripts]
+hcs = "hcs_cli.main:main"
+
+[tool.hatch.version]
+path = "hcs_cli/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["hcs_cli"]
+
+[tool.hatch.build]
+include = [
+    "hcs_cli/**/*.py",
+    "hcs_cli/**/*.yaml",
+    "hcs_cli/**/*.yml",
+    "hcs_cli/**/*.json",
+    "hcs_cli/**/*.template",
+]
+exclude = [
+    "tests/**",
+]
+
+[tool.black]
+line-length = 140
+target-version = ['py39']
+include = '\.pyi?$'
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v -s"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::UserWarning",
+]
+pythonpath = ["./hcs-cli/tests"]
+norecursedirs = [".venv"]

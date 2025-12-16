@@ -1,0 +1,45 @@
+{
+    "size": 0,
+    "query": {
+        "bool": {
+            "filter": [
+                {
+                    "range": {
+                        "data.d.utcTime": {
+                            "gte": {{from}},
+                            "lte": {{to}},
+                            "format": "epoch_millis"
+                        }
+                    }
+                },
+                {
+                    "query_string": {
+                        "analyze_wildcard": true,
+                        "query": "data.src: inv AND data.d.s: ns AND data.t: \"us:rq:dt\" AND data.d.oid: \"{{org_id}}\""
+                    }
+                }
+            ]
+        }
+    },
+    "aggs": {
+        "2": {
+            "date_histogram": {
+                "field": "data.d.utcTime",
+                "min_doc_count": "1",
+                "extended_bounds": {
+                    "min": {{from}},
+                    "max": {{to}}
+                },
+                "format": "epoch_millis",
+                "fixed_interval": "30m"
+            },
+            "aggs": {
+                "3": {
+                    "cardinality": {
+                        "field": "data.d.uid"
+                    }
+                }
+            }
+        }
+    }
+}
