@@ -1,0 +1,56 @@
+Description: Multiple DER Programs
+Category: Control
+Classes:
+ - A
+
+TargetVersions:
+ - v1.2
+
+Preconditions:
+  required_clients:
+    - id: client
+  
+Steps:
+  - id: (A) PRECONDITION
+    repeat_until_pass: true
+    client: client
+    instructions:
+      - Configure two FunctionSetAssignments - FSA1 and FSA2
+      - Each FunctionSetAssignment contains one DERProgram configured under it (DERP1 and DERP2 respectively). DERP1 has a primacy of 1 and DERP2 has a primacy of 2. 
+      - Give DERP1 a default DER control with opModExpLimW set to 30% of the DER's rated active power.
+      - Give DERP2 an active control with opModExpLimW = 200% of the DER's rated active power.
+    action: 
+      type: discovery
+      parameters:
+        resources:
+          - EndDevice
+          - DefaultDERControl
+          - FunctionSetAssignments
+    checks:
+      - type: function-set-assignment
+        parameters:
+          minimum_count: 2
+          maximum_count: 2
+          matches_client_edev: true
+      - type: der-program # DERP 1
+        parameters:
+          minimum_count: 1
+          maximum_count: 1
+          primacy: 1
+          fsa_index: 1
+      - type: der-program # DERP 2
+        parameters:
+          minimum_count: 1
+          maximum_count: 1
+          primacy: 2
+          fsa_index: 2
+      - type: default-der-control
+        parameters:
+          minimum_count: 1
+          derp_primacy: 1
+          opModExpLimW: $(setMaxW * 0.3)
+      - type: der-control
+        parameters:
+          minimum_count: 1
+          derp_primacy: 2
+          opModExpLimW: $(setMaxW * 2)

@@ -1,0 +1,62 @@
+Description: Invalid Control Responses
+Category: Control
+Classes:
+ - A
+
+TargetVersions:
+ - v1.2
+
+Preconditions:
+  required_clients:
+    - id: client
+  
+Steps:
+  - id: PRECONDITION
+    repeat_until_pass: true
+    instructions:
+      - The utility server is configured with active control with opModExpLimW / opModImpLimW = 200% of the DER's rated active power, responseRequired = 03, and replyTo set to the response endpoint on the test utility server.
+    action: 
+      type: discovery
+      parameters:
+        resources:
+          - EndDevice
+          - DERControl
+    checks:
+      - type: end-device 
+        parameters:
+          matches_client: true
+      - type: der-control
+        parameters:
+          minimum_count: 1
+          maximum_count: 1
+          opModExpLimW: $(setMaxW * 2)
+          opModImpLimW: $(setMaxW * 2)
+          responseRequired: 3
+          event_status: 1 # Active
+          # replyTo should also be set but this check is implicit in later communications
+  
+  - id: (1) Malformed response - mrid doesnt exist # Expects 4XX response
+    action: 
+      type: send-malformed-response
+      parameters:
+        mrid_unknown: true
+        endDeviceLFDI_unknown: false
+        response_invalid: false
+
+  - id: (2) Malformed response - lfdi doesnt exist # Expects 4XX response
+    action: 
+      type: send-malformed-response
+      parameters:
+        mrid_unknown: false
+        endDeviceLFDI_unknown: true
+        response_invalid: false
+
+  - id: (3) Malformed response - lfdi doesnt exist # Expects 4XX response
+    action: 
+      type: send-malformed-response
+      parameters:
+        mrid_unknown: false
+        endDeviceLFDI_unknown: false
+        response_invalid: true
+
+

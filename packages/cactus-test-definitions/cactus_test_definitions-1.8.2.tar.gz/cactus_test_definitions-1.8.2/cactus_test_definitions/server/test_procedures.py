@@ -1,0 +1,176 @@
+from dataclasses import dataclass
+from enum import StrEnum
+from importlib import resources
+
+import yaml
+from cactus_test_definitions.csipaus import CSIPAusVersion
+from cactus_test_definitions.schema import UniqueKeyLoader
+from cactus_test_definitions.server.actions import Action
+from cactus_test_definitions.server.checks import Check
+from dataclass_wizard import LoadMeta, YAMLWizard
+
+
+class TestProcedureId(StrEnum):
+    """The set of all available test ID's
+
+    This should be kept in sync with the current set of test procedures loaded from the procedures directory"""
+
+    __test__ = False  # Prevent pytest from picking up this class
+    S_ALL_01 = "S-ALL-01"
+    S_ALL_02 = "S-ALL-02"
+    S_ALL_03 = "S-ALL-03"
+    S_ALL_04 = "S-ALL-04"
+    S_ALL_05 = "S-ALL-05"
+    S_ALL_06 = "S-ALL-06"
+    S_ALL_07 = "S-ALL-07"
+    S_ALL_08 = "S-ALL-08"
+    S_ALL_09 = "S-ALL-09"
+    S_ALL_10 = "S-ALL-10"
+    S_ALL_11 = "S-ALL-11"
+    S_ALL_12 = "S-ALL-12"
+    S_ALL_13 = "S-ALL-13"
+    S_ALL_14 = "S-ALL-14"
+    S_ALL_15 = "S-ALL-15"
+    S_ALL_16 = "S-ALL-16"
+    S_ALL_17 = "S-ALL-17"
+    S_ALL_18 = "S-ALL-18"
+    S_ALL_19 = "S-ALL-19"
+    S_ALL_20 = "S-ALL-20"
+    S_ALL_21 = "S-ALL-21"
+    S_ALL_22 = "S-ALL-22"
+    S_ALL_23 = "S-ALL-23"
+    S_ALL_24 = "S-ALL-24"
+    S_ALL_25 = "S-ALL-25"
+    S_ALL_26 = "S-ALL-26"
+    S_ALL_27 = "S-ALL-27"
+    S_ALL_28 = "S-ALL-28"
+    S_ALL_29 = "S-ALL-29"
+    S_ALL_30 = "S-ALL-30"
+    S_ALL_31 = "S-ALL-31"
+    S_ALL_32 = "S-ALL-32"
+    S_ALL_33 = "S-ALL-33"
+    S_ALL_34 = "S-ALL-34"
+    S_ALL_35 = "S-ALL-35"
+    S_ALL_36 = "S-ALL-36"
+    S_ALL_37 = "S-ALL-37"
+    S_ALL_38 = "S-ALL-38"
+    S_ALL_39 = "S-ALL-39"
+    S_ALL_40 = "S-ALL-40"
+    S_ALL_41 = "S-ALL-41"
+    S_ALL_42 = "S-ALL-42"
+    S_ALL_43 = "S-ALL-43"
+    S_ALL_44 = "S-ALL-44"
+    S_ALL_45 = "S-ALL-45"
+    # 46
+    # 47
+    S_ALL_48 = "S-ALL-48"
+    S_ALL_49 = "S-ALL-49"
+    # 50
+    S_ALL_51 = "S-ALL-51"
+    S_ALL_52 = "S-ALL-52"
+    S_ALL_53 = "S-ALL-53"
+    # 54
+    S_ALL_55 = "S-ALL-55"
+    S_ALL_56 = "S-ALL-56"
+    S_ALL_57 = "S-ALL-57"
+    S_OPT_01 = "S-OPT-01"
+    S_OPT_02 = "S-OPT-02"
+    S_OPT_03 = "S-OPT-03"
+    S_OPT_04 = "S-OPT-04"
+    S_OPT_05 = "S-OPT-05"
+    # S-OPT-06 DRED
+
+
+class ClientType(StrEnum):
+    DEVICE = "device"  # This is a direct device client - i.e. the cert will match a SPECIFIC EndDevice
+    AGGREGATOR = "aggregator"  # This is an aggregator client - i.e. the cert can manage MANY EndDevices
+
+
+@dataclass
+class RequiredClient:
+    """A RequiredClient is a way for a test to assert that it needs a specific client type or set of clients. The id
+    will be used internally within a test to reference a specific client"""
+
+    id: str  # How this client will be referred to within the step's of the test
+    client_type: ClientType | None = None  # If set - the client type that is required
+
+
+@dataclass
+class Step:
+    """A step is an action for a client to execute and then a series of checks to validate the results. If the action
+    raises an exception OR any of the checks fail, this step will marked as failed and the test will be aborted.
+
+    Actions might represent a single operation or they may represent a series of polls/checks over a period of time.
+    """
+
+    id: str  # Descriptive identifier for this step (must be unique)
+    action: Action  # The action to execute when the step starts
+    client: str | None = None  # The RequiredClient.id that will execute this step. If None - use the 0th client.
+    use_client_context: str | None = (
+        None  # Specify to allow a request to execute with clientX using the context of clientY
+    )
+    checks: list[Check] | None = None  # The checks (if any) to execute AFTER action completes to determine success
+    instructions: list[str] | None = None  # Text to display while this step executes
+
+    repeat_until_pass: bool = False  # If True - failing checks will cause this step to re-execute until successful
+
+
+@dataclass
+class Preconditions:
+    """Preconditions are a way of setting up the test / server before the test begins.
+
+    Instructions are out-of-band information to show until the preconditions are all met.
+
+    If any checks are required - they will be polled regularly until ALL pass. For each check poll, a discovery
+    will be run to ensure data is available.
+    """
+
+    required_clients: list[RequiredClient]  # What client(s) need to be supplied to run this test procedure
+
+
+@dataclass
+class TestProcedure(YAMLWizard):
+    """Top level object for collecting everything relevant to a single TestProcedure"""
+
+    __test__ = False  # Prevent pytest from picking up this class
+    description: str  # Metadata from test definitions
+    category: str  # Metadata from test definitions
+    classes: list[str]  # Metadata from test definitions
+    target_versions: list[CSIPAusVersion]  # What version(s) of csip-aus is this test targeting?
+    preconditions: Preconditions
+    steps: list[Step]  # What behavior will the test procedure be evaluating?
+
+
+LoadMeta(raise_on_unknown_json_key=True).bind_to(TestProcedure)
+
+
+def parse_test_procedure(yaml_contents: str) -> TestProcedure:
+    """Given a YAML string - parse a TestProcedure.
+
+    This will ensure the YAML parser will use all the "strict" extensions to reduce the incidence of errors"""
+
+    return TestProcedure.from_yaml(
+        yaml_contents,
+        decoder=yaml.load,  # type: ignore
+        Loader=UniqueKeyLoader,
+    )
+
+
+def get_yaml_contents(test_procedure_id: TestProcedureId) -> str:
+    """Finds the YAML contents for the TestProcedure with the specified TestProcedureId"""
+    yaml_resource = resources.files("cactus_test_definitions.server.procedures") / f"{test_procedure_id}.yaml"
+    with resources.as_file(yaml_resource) as yaml_file:
+        with open(yaml_file, "r") as f:
+            yaml_contents = f.read()
+            return yaml_contents
+
+
+def get_test_procedure(test_procedure_id: TestProcedureId) -> TestProcedure:
+    """Gets the TestProcedure with the nominated ID by loading its definition from disk"""
+    yaml_contents = get_yaml_contents(test_procedure_id)
+    return parse_test_procedure(yaml_contents)
+
+
+def get_all_test_procedures() -> dict[TestProcedureId, TestProcedure]:
+    """Gets every TestProcedure, keyed by their TestProcedureId"""
+    return {tp_id: get_test_procedure(tp_id) for tp_id in TestProcedureId}
