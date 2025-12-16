@@ -1,0 +1,1 @@
+import{Tr as e,wr as t}from"./index-DNeFC82p.js";function n(t){return e(`MuiDialogTitle`,t)}var r=t(`MuiDialogTitle`,[`root`]);export{n,r as t};

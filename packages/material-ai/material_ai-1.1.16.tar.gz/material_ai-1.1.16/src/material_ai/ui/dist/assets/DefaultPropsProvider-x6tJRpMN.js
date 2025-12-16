@@ -1,0 +1,1 @@
+import{ar as e,ir as t}from"./index-DNeFC82p.js";export{t as default,e as useDefaultProps};

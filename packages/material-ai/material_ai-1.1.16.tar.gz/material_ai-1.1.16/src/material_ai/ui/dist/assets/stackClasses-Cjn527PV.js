@@ -1,0 +1,1 @@
+import{wr as e}from"./index-DNeFC82p.js";var t=e(`MuiStack`,[`root`]);export{t};
