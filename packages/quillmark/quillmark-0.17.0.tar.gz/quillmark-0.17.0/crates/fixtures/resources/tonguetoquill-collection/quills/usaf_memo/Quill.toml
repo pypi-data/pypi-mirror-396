@@ -1,0 +1,125 @@
+[Quill]
+name = "usaf_memo"
+backend = "typst"
+plate_file = "plate.typ"
+example_file = "usaf_memo.md"
+description = "Typesetted USAF Official Memorandum"
+
+# ==========================================
+# Group 1: Essentials
+# (To, From, Subject, Signature)
+# ==========================================
+
+[fields.memo_for]
+title = "List of recipient organization(s)"
+type = "array"
+examples = [["ORG1/SYMBOL", "ORG2/SYMBOL"]]
+ui.group = "Essentials"
+description = "Organization/office symbol in UPPERCASE. To address a specific person, add their rank and name in parentheses (e.g., 'ORG/SYMBOL (LT COL JANE DOE)'). For numerous recipients, use 'DISTRIBUTION'."
+
+[fields.memo_from]
+title = "Sender information as array: [ORG/SYMBOL, 'Organization Name', 'Street Address', 'City State ZIP']"
+type = "array"
+examples = [["ORG/SYMBOL", "Organization Name", "123 Street Ave", "City ST 12345-6789"]]
+ui.group = "Essentials"
+description = "If recipients are on the same installation, use only the office symbol. For recipients on other installations, include the full mailing address to enable return correspondence."
+
+[fields.subject]
+title = "Subject of the memo"
+type = "string"
+examples = ["Subject of the Memorandum"]
+ui.group = "Essentials"
+description = "Be brief and clear. Capitalize the first letter of each word except articles, prepositions, and conjunctions. Include suspense dates in parentheses if applicable."
+
+[fields.signature_block]
+title = "Signature block lines"
+type = "array"
+examples = [["FIRST M. LAST, Rank, USSF", "Duty Title"]]
+ui.group = "Essentials"
+description = "Line 1: Name in UPPERCASE as signed, grade, and service. Line 2: Duty title. Spell out 'Colonel' and general officer ranks."
+
+# ==========================================
+# Group 2: Letterhead
+# (Static Unit Branding)
+# ==========================================
+
+[fields.letterhead_title]
+title = "Title in letterhead"
+type = "string"
+default = "DEPARTMENT OF THE AIR FORCE"
+ui.group = "Letterhead"
+description = "Standard title. Only change for Joint Commands or DoW Agencies."
+
+[fields.letterhead_caption]
+title = "Letterhead caption line(s)"
+type = "array"
+default = ["HEADQUARTERS [UNIT NAME]"]
+ui.group = "Letterhead"
+description = "The full organization name of your unit."
+
+[fields.tag_line]
+title = "Tag line at bottom of memo"
+type = "string"
+default = ""
+ui.group = "Letterhead"
+description = "Organizational motto at the bottom of the page."
+
+# ==========================================
+# Group 3: Advanced
+# (Routing, References, Formatting)
+# ==========================================
+
+[fields.date]
+title = "Date of memo (YYYY-MM-DD); defaults to today"
+type = "string"
+default = ""
+ui.group = "Advanced"
+description = "YYYY-MM-DD. Leave blank to use today's date."
+
+[fields.references]
+title = "References for the memo"
+type = "array"
+default = []
+examples = [["AFM 33-326, 31 July 2019, Preparing Official Communications"]]
+ui.group = "Advanced"
+description = "Cite by organization, type, date, and title."
+
+[fields.cc]
+title = "Carbon copy recipients"
+type = "array"
+default = []
+examples = [["Rank and Name, ORG/SYMBOL"]]
+ui.group = "Advanced"
+description = "List office symbols of recipients to receive copies."
+
+[fields.distribution]
+title = "Distribution list. Used when \"SEE DISTRIBUTION\" is specified in `memo_for`."
+type = "array"
+default = []
+examples = [["ORG1/SYMBOL", "ORG2/SYMBOL"]]
+ui.group = "Advanced"
+description = "Complete list of recipients if 'SEE DISTRIBUTION' is used in the 'Memo For' field."
+
+[fields.attachments]
+title = "List of attachments"
+type = "array"
+default = []
+examples = [["Attachment description, YYYY MMM DD"]]
+ui.group = "Advanced"
+description = "List attachments in the order they are mentioned in the memo. Briefly describe each; do not use 'as stated' or abbreviations."
+
+[fields.classification]
+title = "Classification level of the memo that displays in the banner"
+type = "string"
+default = ""
+examples = ["CONFIDENTIAL"]
+ui.group = "Advanced"
+description = "Follow AFI 31-401 and applicable DoD guidance for classification markings. Leave blank for unclassified."
+
+[fields.font_size]
+title = "Font size for the memo text (int pt)"
+type = "number"
+default = 11
+examples = [11]
+ui.group = "Advanced"
+description = "Font size for the memo text (pt)."
