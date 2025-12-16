@@ -1,0 +1,65 @@
+[project]
+name = "infrahub-testcontainers"
+version = "1.6.1"
+requires-python = ">=3.10"
+
+description = "Testcontainers instance for Infrahub to easily build integration tests"
+authors = [{ name = "OpsMill", email = "info@opsmill.com" }]
+readme = "README.md"
+license = "Apache-2.0"
+classifiers = [
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+
+dependencies = [
+    "testcontainers>=4.8,<4.9",
+    "psutil",
+    "pytest",
+    "httpx<0.28",
+    "pydantic>=2.10.6,<3",
+    "prefect-client==3.5.0",
+]
+
+[project.urls]
+Homepage = "https://opsmill.com"
+Repository = "https://github.com/opsmill/infrahub"
+
+[project.entry-points.pytest11]
+pytest-infrahub-performance-test = "infrahub_testcontainers.plugin"
+
+[dependency-groups]
+dev = [
+    "rich>=13.9.4,<14",
+    "pytest-cov==7.0.0",
+    "pytest-xdist>=3.4,<3.5",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py39"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "infrahub_testcontainers",
+    "infrahub_testcontainers/docker-compose.test.yml",
+    "infrahub_testcontainers/haproxy.cfg",
+    "infrahub_testcontainers/prometheus.yml",
+]
+
+[tool.hatch.build.targets.wheel]
+include = [
+    "infrahub_testcontainers",
+    "infrahub_testcontainers/docker-compose.test.yml",
+    "infrahub_testcontainers/haproxy.cfg",
+    "infrahub_testcontainers/prometheus.yml",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
