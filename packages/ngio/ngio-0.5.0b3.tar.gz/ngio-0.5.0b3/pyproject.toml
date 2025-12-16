@@ -1,0 +1,254 @@
+# https://peps.python.org/pep-0517/
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+# https://hatch.pypa.io/latest/config/metadata/
+[tool.hatch.version]
+source = "vcs"
+
+# read more about configuring hatch at:
+# https://hatch.pypa.io/latest/config/build/
+[tool.hatch.build.targets.wheel]
+packages = ["src/ngio"]
+
+# https://peps.python.org/pep-0621/
+[project]
+name = "ngio"
+dynamic = ["version"]
+description = "Next Generation file format IO"
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+license = { text = "BSD-3-Clause" }
+authors = [{ name = "Lorenzo Cerrone", email = "lorenzo.cerrone@uzh.ch" }]
+# https://pypi.org/classifiers/
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Typing :: Typed",
+]
+# add your package dependencies here
+dependencies = [
+    "numpy",
+    "filelock",
+    "zarr>3",
+    "anndata",
+    "pydantic",
+    "pandas>=1.2.0",
+    "requests",
+    "aiohttp",
+    "dask[array]<2025.11.0",
+    "dask[distributed]<2025.11.0",
+    # "xarray", still not used
+    "ome-zarr-models",
+    "pooch",
+    "polars",
+    "pyarrow",
+    "pillow",
+]
+
+# https://peps.python.org/pep-0621/#dependencies-optional-dependencies
+# "extras" (e.g. for `pip install .[test]`)
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-cov",
+    "scikit-image",
+    "moto[server]",
+    "boto",
+    "pytest_httpserver",
+    "devtools",
+    "s3fs",
+]
+
+dev = [
+    "zarrs",
+    "Pympler",
+    "napari",
+    "pyqt5",
+    "matplotlib",
+    "notebook",
+    "mypy",
+    "pdbpp",        # https://github.com/pdbpp/pdbpp
+    "pre-commit",
+    "rich",         # https://github.com/Textualize/rich
+    "ruff",
+    "scikit-image",
+] # add anything else you like to have in your dev environment here
+
+docs = [
+    "mkdocs",
+    "mkdocs-include-markdown-plugin",
+    "mkdocs-material",
+    "mkdocstrings[python]",
+    "mkdocs-jupyter",
+    "mkdocs-autorefs",
+    "mkdocs-git-revision-date-localized-plugin",
+    "mkdocs-git-committers-plugin-2",
+    "markdown-exec[ansi]",
+    "griffe-typingdoc",
+    "scikit-image",
+    "matplotlib",
+    "tabulate",
+    "rich",
+    "mike",
+]
+
+
+[project.urls]
+homepage = "https://github.com/BioVisionCenter/ngio"
+repository = "https://github.com/BioVisionCenter/ngio"
+
+# Entry points
+# https://peps.python.org/pep-0621/#entry-points
+# same as console_scripts entry point
+# [project.scripts]
+# ngio-cli = "ngio:main_cli"
+
+# [project.entry-points."some.group"]
+# tomatoes = "ngio:main_tomatoes"
+
+# https://docs.astral.sh/ruff
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+src = ["src"]
+
+# https://docs.astral.sh/ruff/rules
+[tool.ruff.lint]
+pydocstyle = { convention = "google" }
+select = [
+    "E",    # style errors
+    "W",    # style warnings
+    "F",    # flakes
+    "D",    # pydocstyle
+    "D417", # Missing argument descriptions in Docstrings
+    "I",    # isort
+    "UP",   # pyupgrade
+    "C4",   # flake8-comprehensions
+    "B",    # flake8-bugbear
+    "A001", # flake8-builtins
+    "RUF",  # ruff-specific rules
+    "TCH",  # flake8-type-checking
+    "TID",  # flake8-tidy-imports
+]
+ignore = [
+    "D401", # First line should be in imperative mood (remove to opt in)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = ["D", "S"]
+
+# https://docs.astral.sh/ruff/formatter/
+[tool.ruff.format]
+docstring-code-format = true
+skip-magic-trailing-comma = false # default is false
+
+# https://mypy.readthedocs.io/en/stable/config_file.html
+[tool.mypy]
+files = "src/**/"
+strict = true
+ignore_missing_imports = true
+disallow_any_generics = false
+disallow_subclassing_any = false
+show_error_codes = true
+pretty = true
+
+# https://docs.pytest.org/
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+filterwarnings = [
+    "error",
+    "ignore::zarr.errors.ZarrUserWarning", # required for anndata
+    "ignore::UserWarning",                 # from ngio.utils._zarr_utils
+    "ignore::DeprecationWarning",          # temporary ignore deprecation warnings
+]
+addopts = [
+    "-vv",
+    "--color=yes",
+    "--cov",
+    "--cov-report=term-missing",
+    "--cov-report=xml",
+]
+
+# https://coverage.readthedocs.io/
+[tool.coverage.report]
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "@overload",
+    "except ImportError",
+    "\\.\\.\\.",
+    "raise NotImplementedError()",
+    "pass",
+]
+
+[tool.coverage.run]
+source = ["ngio"]
+
+# https://github.com/mgedmin/check-manifest#configuration
+# add files that you want check-manifest to explicitly ignore here
+# (files that are in the repo but shouldn't go in the package)
+[tool.check-manifest]
+ignore = [".pre-commit-config.yaml", ".ruff_cache/**/*", "tests/**/*"]
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["osx-arm64", "linux-64", "win-64"]
+
+[tool.pixi.pypi-dependencies]
+ngio = { path = ".", editable = true }
+
+[tool.pixi.feature.task-feat.dependencies]
+python = ">=3.11,<3.12"
+
+[tool.pixi.feature.dev.dependencies]
+python = ">=3.11,<3.12"
+
+[tool.pixi.feature.py11.dependencies]
+python = ">=3.11,<3.12"
+
+[tool.pixi.feature.py12.dependencies]
+python = ">=3.12,<3.13"
+
+[tool.pixi.feature.py13.dependencies]
+python = ">=3.13,<3.14"
+
+
+[tool.pixi.environments]
+default = { solve-group = "default" }
+
+# utils envs
+task = { features = ["task-feat", "dev"], solve-group = "py11" }
+docs = { features = ["docs"], solve-group = "py11" }
+
+# test envs
+test11 = { features = ["py11", "dev", "test"], solve-group = "py11" }
+test12 = { features = ["py12", "test"], solve-group = "py12" }
+test13 = { features = ["py13", "test"], solve-group = "py13" }
+
+# dev env
+dev = { features = ["dev", "test"], solve-group = "py11" }
+test = { features = ["test"], solve-group = "py11" }
+
+[tool.pixi.tasks]
+serve_docs = "mkdocs serve"
+run_tests = "pytest"
+clean_nb_data = "rm -rf ./docs/notebooks/**/*.zarr"
+test_nb = { cmd = "jupyter-execute ./docs/notebooks/*.ipynb" }
+test = { depends-on = ["run_tests", "clean_nb_data", "test_nb"] }
+pre_commit_install = "pre-commit install"
+
+ruff-fix-imports = "ruff check --select I --fix"
+ruff-format = { cmd = "ruff format", depends-on = ["ruff-fix-imports"] }
+
+pre-commit = { cmd = "pre-commit run --all-files", depends-on = [
+    "pre_commit_install",
+    "ruff-format",
+] }
