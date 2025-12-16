@@ -1,0 +1,220 @@
+# Agentic Workflow OS CLI & TUI Reference
+
+**Version:** 1.0.4
+**Generated:** December 13, 2025
+**Source:** Code Review Analysis
+
+## Overview
+
+The Agentic Workflow OS provides both command-line (CLI) and text user interface (TUI) access to multi-agent workflow orchestration. The CLI uses a **context-aware design** where available commands depend on whether you're in a project directory or not. The TUI provides interactive, menu-driven workflow management with guided wizards and context-aware operations.
+
+## Global Options
+
+All commands support these global options:
+
+| Option | Short | Description |
+|--------|-------|-------------|
+| `--version` | | Show version and exit |
+| `--verbose` | `-v` | Enable verbose output |
+| `--force` | `-f` | Force operations |
+| `--help` | | Show help message |
+
+## Command Groups
+
+### Context-Aware CLI Design
+
+The CLI automatically detects context and shows different commands:
+
+#### Global Context Commands (from repository root)
+Available when **outside** project directories for system-wide operations.
+
+| Command | Arguments | Options | Description |
+|---------|-----------|---------|-------------|
+| `init` | `name` | `--workflow`, `--description` | Initialize new project with workflow |
+| `list-workflows` | None | None | List available workflow types |
+| `config` | None | None | Show current configuration |
+| (no subcommand) | None | None | Launch TUI in global mode |
+
+#### Project Context Commands (from within project directory)
+Available when **inside** project directories for workflow operations.
+
+| Command | Arguments | Options | Description |
+|---------|-----------|---------|-------------|
+| `status` | None | None | Show project status and workflow state |
+| `activate` | `agent_id` | None | Activate specific agent session |
+| `handoff` | None | `--to`, `--artifacts`, `--from` | Record agent handoff with artifacts (from agent inferred from active session) |
+| `decision` | None | `--title`, `--rationale` | Record project decision |
+| `end-session` | None | None | End current workflow session |
+
+## Usage Examples
+
+### CLI Usage
+
+### Global Context (Repository Root)
+
+```bash
+# Initialize a new project
+agentic init my_project --workflow planning --description "My new project"
+
+# List available workflows
+agentic list-workflows
+
+# Show configuration
+agentic config
+
+# Launch TUI (global mode)
+agentic
+```
+
+### Project Context (Inside Project Directory)
+
+```bash
+# Navigate to project
+cd projects/my_project
+
+# Show project status
+agentic status
+
+# Activate an agent
+agentic activate A-01
+
+# Record handoff between agents (from agent inferred from active session)
+agentic handoff --to A-02 --artifacts "requirements.md,architecture.md"
+
+# Record project decision
+agentic decision --title "Technology Stack Selection" --rationale "React + Node.js chosen"
+
+# End workflow session
+agentic end-session
+```
+
+### TUI Usage
+
+```bash
+# Launch interactive Text User Interface (auto-detects context)
+agentic  # From repository root (global mode)
+
+# From within project directory (project mode)
+cd projects/my_project
+agentic
+
+# From source/development
+python3 -m agentic_workflow.cli.main
+```
+
+### Advanced Usage
+
+```bash
+# Enable verbose logging
+agentic --verbose status
+
+# Force operations (use with caution)
+agentic --force init my_project --workflow planning
+```
+
+## CLI vs TUI
+
+### Command Line Interface (CLI)
+- **Best for**: Scripting, automation, CI/CD pipelines
+- **Features**: Structured output formats (JSON, YAML, CSV), API mode, scripting integration
+- **Usage**: Direct commands with options and arguments
+- **Context**: Manual context management
+
+### Text User Interface (TUI)
+- **Best for**: Interactive workflow management, learning the system, guided operations
+- **Features**: Menu-driven interface, context-aware menus, guided wizards, real-time data display
+- **Usage**: `agentic` (no subcommand needed - auto-detects context)
+- **Context**: Automatic detection (global vs project mode)
+
+### When to Use Each
+
+| Use Case | Recommended Interface | Reason |
+|----------|----------------------|---------|
+| **Scripting/Automation** | CLI | Structured output, API mode |
+| **First-time setup** | TUI (`agentic`) | Guided wizards, help text |
+| **CI/CD pipelines** | CLI | Non-interactive, predictable |
+| **Interactive exploration** | TUI (`agentic`) | Menus, real-time feedback |
+| **Batch operations** | CLI | Command composition, loops |
+| **Learning the system** | TUI (`agentic`) | Context-aware guidance |
+
+## Error Handling
+
+The CLI provides comprehensive error handling with user-friendly messages:
+
+- **Validation Errors**: Clear messages for invalid inputs
+- **File System Errors**: Helpful guidance for permission/path issues
+- **Network Errors**: Retry logic with informative messages
+- **Configuration Errors**: Suggestions for fixing config issues
+
+## Exit Codes
+
+- `0`: Success
+- `1`: General error
+- `2`: Command not found
+- `3`: Validation error
+- `4`: File system error
+
+## Configuration
+
+The CLI uses YAML configuration files. Default locations:
+
+1. Project-specific: `projects/<project>/.agentic/config.yaml`
+2. Global config: `~/.config/agentic/config.yaml`
+
+Example configuration:
+
+```yaml
+# Global config (~/.config/agentic/config.yaml)
+default_workspace: "~/AgenticProjects"
+editor_command: "code"
+tui_enabled: true
+check_updates: true
+log_level: "INFO"
+
+# Project config (projects/my_project/.agentic/config.yaml)
+workflow: planning
+strict_mode: true
+excluded_paths:
+  - "node_modules"
+  - ".git"
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Command not found**: Ensure `agentic` is in your PATH after installation
+2. **Permission denied**: Check file permissions in project directory
+3. **Workflow not found**: Verify workflow name with `agentic list-workflows`
+4. **Wrong context**: Make sure you're in the right directory (repo root for global commands, project directory for workflow commands)
+5. **Agent ID format**: Use correct format like `A-01`, `I-02` (not `A01`, `I02`)
+
+### Context Issues
+
+- **"Command not available in this context"**: You're trying to use project commands from repo root, or global commands from project directory
+- **Solution**: Check your current directory and use `agentic --help` to see available commands
+
+### Getting Help
+
+```bash
+# Show general help (shows available commands based on context)
+agentic --help
+
+# Show help for specific commands
+agentic init --help
+agentic activate --help
+agentic handoff --help
+```
+
+### Context Detection
+
+The CLI automatically detects your context:
+
+- **Global Context**: When you're in the repository root or outside project directories
+- **Project Context**: When you're inside a `projects/<project_name>/` directory
+
+Available commands change based on context. Use `agentic --help` to see what's available in your current location.
+
+---
+
+*This documentation covers both CLI and TUI interfaces for the Agentic Workflow OS. Last updated: December 11, 2025*
