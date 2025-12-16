@@ -1,0 +1,110 @@
+from dataclasses import dataclass
+from itertools import chain
+
+from kirin import ir, types
+from kirin.dialects import ilist
+from kirin.rewrite import abc as rewrite_abc
+from typing_extensions import Callable, Iterable, Sequence, TypeGuard, TypeVar
+
+from bloqade.lanes.dialects import move, place
+from bloqade.lanes.layout.encoding import LaneAddress, LocationAddress
+
+T = TypeVar("T")
+
+
+def no_none_elements(xs: Sequence[T | None]) -> TypeGuard[Sequence[T]]:
+    """Check that there are no None elements in the sequence.
+
+    Args:
+        xs: A sequence that may contain None elements.
+
+    Returns:
+        A TypeGuard indicating that all elements are not None.
+
+    """
+    return all(x is not None for x in xs)
+
+
+@dataclass
+class RewriteLocations(rewrite_abc.RewriteRule):
+    transform_location: Callable[[LocationAddress], Iterable[LocationAddress] | None]
+
+    def rewrite_Statement(self, node: ir.Statement):
+        if not isinstance(
+            node, (move.Fill, move.LocalR, move.LocalRz, move.Initialize)
+        ):
+            return rewrite_abc.RewriteResult()
+
+        iterators = list(map(self.transform_location, node.location_addresses))
+
+        if not no_none_elements(iterators):
+            return rewrite_abc.RewriteResult()
+
+        physical_addresses = tuple(chain.from_iterable(iterators))
+
+        attributes: dict[str, ir.Attribute] = {
+            "location_addresses": ir.PyAttr(
+                physical_addresses,
+                pytype=types.Tuple[types.Vararg(types.PyClass(LocationAddress))],
+            )
+        }
+
+        node.replace_by(node.from_stmt(node, attributes=attributes))
+        return rewrite_abc.RewriteResult(has_done_something=True)
+
+
+@dataclass
+class RewriteMoves(rewrite_abc.RewriteRule):
+    transform_lane: Callable[[LaneAddress], Iterable[LaneAddress] | None]
+
+    def rewrite_Statement(self, node: ir.Statement):
+        if not isinstance(node, move.Move):
+            return rewrite_abc.RewriteResult()
+
+        iterators = list(map(self.transform_lane, node.lanes))
+
+        if not no_none_elements(iterators):
+            return rewrite_abc.RewriteResult()
+
+        physical_lanes = tuple(chain.from_iterable(iterators))
+
+        node.replace_by(move.Move(lanes=physical_lanes))
+
+        return rewrite_abc.RewriteResult(has_done_something=True)
+
+
+@dataclass
+class RewriteGetMeasurementResult(rewrite_abc.RewriteRule):
+    transform_lane: Callable[[LocationAddress], Iterable[LocationAddress] | None]
+
+    def rewrite_Statement(self, node: ir.Statement):
+        if not isinstance(node, move.GetMeasurementResult):
+            return rewrite_abc.RewriteResult()
+
+        new_results = []
+        iterator = self.transform_lane(node.location_address)
+
+        if iterator is None:
+            return rewrite_abc.RewriteResult()
+
+        for address in iterator:
+            new_stmt = move.GetMeasurementResult(
+                node.measurement_future, location_address=address
+            )
+            new_results.append(new_stmt.result)
+            new_stmt.insert_before(node)
+
+        node.replace_by(ilist.New(tuple(new_results)))
+
+        return rewrite_abc.RewriteResult(has_done_something=True)
+
+
+class RewriteLogicalToPhysicalConversion(rewrite_abc.RewriteRule):
+    """Note that this rewrite is to be combined with RewriteGetMeasurementResult."""
+
+    def rewrite_Statement(self, node: ir.Statement) -> rewrite_abc.RewriteResult:
+        if not isinstance(node, place.ConvertToPhysicalMeasurements):
+            return rewrite_abc.RewriteResult()
+
+        node.replace_by(ilist.New(tuple(node.args)))
+        return rewrite_abc.RewriteResult(has_done_something=True)
