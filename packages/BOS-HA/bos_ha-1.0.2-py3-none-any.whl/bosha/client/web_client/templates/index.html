@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BOS-HA - 手语识别系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.1/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <style>
+        /* 侧边栏样式 */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        
+        .container {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        /* 侧边栏 */
+        .sidebar {
+            width: 280px;
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* 产品名称 */
+        .sidebar-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #34495e;
+        }
+        
+        .product-name {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 0;
+            color: #3498db;
+        }
+        
+        /* 侧边栏菜单 */
+        .sidebar-menu {
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        .sidebar-section {
+            margin-bottom: 20px;
+        }
+        
+        .sidebar-section-title {
+            font-size: 14px;
+            font-weight: bold;
+            text-transform: uppercase;
+            color: #bdc3c7;
+            margin-bottom: 10px;
+        }
+        
+        .sidebar-menu ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .sidebar-menu li {
+            margin-bottom: 5px;
+        }
+        
+        .sidebar-menu a {
+            display: block;
+            padding: 12px 15px;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar-menu a:hover {
+            background-color: #34495e;
+            transform: translateX(5px);
+        }
+        
+        .sidebar-menu a.active {
+            background-color: #3498db;
+        }
+        
+        /* 主内容区域 */
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            background-color: #ecf0f1;
+        }
+        
+        /* 顶部导航栏 */
+        .main-header {
+            background-color: white;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .main-header h1 {
+            margin: 0;
+            font-size: 24px;
+            color: #2c3e50;
+        }
+        
+        .subtitle {
+            margin: 5px 0 0 0;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+        
+        /* 内容区域 */
+        .content-area {
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 左侧侧边栏 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1 class="product-name">BOS-HA</h1>
+            </div>
+            <nav class="sidebar-menu">
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title">主要功能</div>
+                    <ul>
+                        <li><a href="#" class="active">实时识别</a></li>
+                        <li><a href="#">视频上传</a></li>
+                        <li><a href="#">历史记录</a></li>
+                        <li><a href="#">模型训练</a></li>
+                    </ul>
+                </div>
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title">设置</div>
+                    <ul>
+                        <li><a href="#">摄像头设置</a></li>
+                        <li><a href="#">模型设置</a></li>
+                        <li><a href="#">识别设置</a></li>
+                    </ul>
+                </div>
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title">帮助与支持</div>
+                    <ul>
+                        <li><a href="#">操作文档</a></li>
+                        <li><a href="#">手势指导</a></li>
+                        <li><a href="#">关于BOS-HA</a></li>
+                    </ul>
+                </div>
+            </nav>
+        </aside>
+        
+        <!-- 主内容区域 -->
+        <div class="main-content">
+            <!-- 顶部导航栏 -->
+            <header class="main-header">
+                <h1>手语识别系统</h1>
+                <p class="subtitle">基于深度学习的实时手语识别</p>
+            </header>
+            
+            <!-- 内容区域 -->
+            <main class="content-area">
+                <!-- 视频显示区 -->
+                <section class="video-section">
+                    <div class="video-container">
+                        <div class="video-wrapper">
+                            <img id="video-feed" src="" alt="摄像头画面" class="video-frame">
+                            <div class="recognition-overlay">
+                                <div id="current-result" class="result-text">
+                                    <span id="result-text">等待识别...</span>
+                                    <span id="result-confidence" class="confidence"></span>
+                                </div>
+                                <div id="current-sentence" class="sentence-text">
+                                    <span>当前句子: </span>
+                                    <span id="sentence-text">...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            <!-- 详细介绍下拉栏 -->
+            <section class="dropdown-section">
+                <div class="dropdown-container">
+                    <!-- 关于介绍下拉 -->
+                    <div class="dropdown-item">
+                        <button class="dropdown-toggle">
+                            <h2>关于手语识别系统</h2>
+                            <span class="dropdown-icon">▼</span>
+                        </button>
+                        <div class="dropdown-content">
+                            <div class="about-container">
+                                <div class="about-item">
+                                    <h3>应用介绍</h3>
+                                    <p>本系统是一款基于深度学习的实时手语识别应用，能够将手势动作转换为文字，帮助听障人士与健听人士进行沟通。系统支持60+种常见手语词汇，并能将连续手势组合成完整句子。</p>
+                                </div>
+                                <div class="about-item">
+                                    <h3>技术原理</h3>
+                                    <p>系统采用先进的计算机视觉技术和深度学习模型，通过摄像头捕获手势动作，经过预处理后输入到训练好的PyTorch模型中进行识别。识别结果通过WebSocket实时传输到前端，并由句子生成器组合成完整句子。</p>
+                                </div>
+                                <div class="about-item">
+                                    <h3>使用说明</h3>
+                                    <p>1. 确保摄像头权限已开启<br>2. 点击"开启摄像头"按钮启动视频流<br>3. 在摄像头前做出清晰的手势动作<br>4. 系统会实时识别并显示结果<br>5. 连续做出手势，系统会自动生成句子</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 手势指导下拉 -->
+                    <div class="dropdown-item">
+                        <button class="dropdown-toggle">
+                            <h2>手势指导</h2>
+                            <span class="dropdown-icon">▼</span>
+                        </button>
+                        <div class="dropdown-content">
+                            <div class="gesture-guide-container">
+                                <div class="gesture-guide-item">
+                                    <h3>问候类手势</h3>
+                                    <ul>
+                                        <li><strong>你好</strong>: 右手伸直，掌心向外，左右摆动</li>
+                                        <li><strong>谢谢</strong>: 右手握拳，拇指向上，向前摆动</li>
+                                        <li><strong>再见</strong>: 右手伸直，掌心向外，左右摆动</li>
+                                    </ul>
+                                </div>
+                                <div class="gesture-guide-item">
+                                    <h3>情感类手势</h3>
+                                    <ul>
+                                        <li><strong>我爱你</strong>: 右手伸出拇指、食指和小指，掌心向外</li>
+                                        <li><strong>喜欢</strong>: 右手拇指和食指相碰，形成圆形，其余手指伸直</li>
+                                        <li><strong>开心</strong>: 双手握拳，拇指向上，举到头部两侧</li>
+                                    </ul>
+                                </div>
+                                <div class="gesture-guide-item">
+                                    <h3>回答类手势</h3>
+                                    <ul>
+                                        <li><strong>是</strong>: 点头，同时右手拇指向上</li>
+                                        <li><strong>否</strong>: 摇头，同时右手掌向外推</li>
+                                        <li><strong>不知道</strong>: 双手摊开，掌心向上</li>
+                                    </ul>
+                                </div>
+                                <div class="gesture-guide-item">
+                                    <h3>日常交流</h3>
+                                    <ul>
+                                        <li><strong>我</strong>: 右手食指指向自己</li>
+                                        <li><strong>你</strong>: 右手食指指向对方</li>
+                                        <li><strong>帮助</strong>: 双手交叉放在胸前，然后向前伸出</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 手语学习资源下拉 -->
+                    <div class="dropdown-item">
+                        <button class="dropdown-toggle">
+                            <h2>手语学习资源</h2>
+                            <span class="dropdown-icon">▼</span>
+                        </button>
+                        <div class="dropdown-content">
+                            <div class="resources-container">
+                                <p class="resources-intro">学习常见手语句子表达，提高识别准确率：</p>
+                                <div class="resources-grid">
+                                    <div class="resource-item">
+                                        <h3>基础手语教程</h3>
+                                        <ul>
+                                            <li><a href="https://www.youtube.com/playlist?list=PLnX37eQ_vD1h5T8uR07bP7S7yY7y9x2R9" target="_blank">中国手语基础教学</a></li>
+                                            <li><a href="https://www.bilibili.com/video/BV1Ls411Y7M5" target="_blank">日常手语句子表达</a></li>
+                                            <li><a href="https://www.bilibili.com/video/BV1Wx411S7W7" target="_blank">手语字母表教学</a></li>
+                                        </ul>
+                                    </div>
+                                    <div class="resource-item">
+                                        <h3>场景手语教程</h3>
+                                        <ul>
+                                            <li><a href="https://www.bilibili.com/video/BV1Ex411S7W7" target="_blank">购物场景手语</a></li>
+                                            <li><a href="https://www.bilibili.com/video/BV1Ks411Y7M5" target="_blank">医疗场景手语</a></li>
+                                            <li><a href="https://www.bilibili.com/video/BV1Ws411Y7M5" target="_blank">校园场景手语</a></li>
+                                        </ul>
+                                    </div>
+                                    <div class="resource-item">
+                                        <h3>句子表达教程</h3>
+                                        <ul>
+                                            <li><a href="https://www.bilibili.com/video/BV1Ys411Y7M5" target="_blank">问候类句子</a></li>
+                                            <li><a href="https://www.bilibili.com/video/BV1Zs411Y7M5" target="_blank">情感表达句子</a></li>
+                                            <li><a href="https://www.bilibili.com/video/BV1Ts411Y7M5" target="_blank">请求帮助句子</a></li>
+                                        </ul>
+                                    </div>
+                                    <div class="resource-item">
+                                        <h3>进阶学习资源</h3>
+                                        <ul>
+                                            <li><a href="https://www.bilibili.com/video/BV1Fs411Y7M5" target="_blank">手语语法讲解</a></li>
+                                            <li><a href="https://www.bilibili.com/video/BV1Gs411Y7M5" target="_blank">手语故事讲述</a></li>
+                                            <li><a href="https://www.bilibili.com/video/BV1Hs411Y7M5" target="_blank">手语歌曲教学</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 生成的句子 -->
+            <section class="sentence-section">
+                <h2>生成的句子</h2>
+                <div class="sentence-container">
+                    <div id="generated-sentences" class="sentences-list">
+                        <!-- 生成的句子将通过JavaScript动态添加 -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- 控制面板 -->
+            <section class="control-section">
+                <h2>控制面板</h2>
+                <div class="control-grid">
+                    <!-- 摄像头控制 -->
+                    <div class="control-group">
+                        <h3>摄像头控制</h3>
+                        <div class="button-group">
+                            <button id="toggle-camera" class="btn btn-primary">
+                                {% if running %}关闭摄像头{% else %}开启摄像头{% endif %}
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 视频上传 -->
+                    <div class="control-group">
+                        <h3>视频上传识别</h3>
+                        <div class="file-upload">
+                            <input type="file" id="video-upload" accept="video/*" class="form-control">
+                            <button id="upload-button" class="btn btn-primary mt-2">上传并识别</button>
+                            <div id="upload-progress" class="upload-progress mt-2" style="display: none;">
+                                <div class="progress-bar" style="width: 0%;">0%</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 视频设置 -->
+                    <div class="control-group">
+                        <h3>视频设置</h3>
+                        <div class="setting-item">
+                            <label for="fps-select">视频帧率:</label>
+                            <select id="fps-select" class="form-control">
+                                <option value="15" {% if fps == 15 %}selected{% endif %}>15fps</option>
+                                <option value="24" {% if fps == 24 %}selected{% endif %}>24fps</option>
+                                <option value="30" {% if fps == 30 %}selected{% endif %}>30fps</option>
+                                <option value="60" {% if fps == 60 %}selected{% endif %}>60fps</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- 检测设置 -->
+                    <div class="control-group">
+                        <h3>检测设置</h3>
+                        <div class="setting-item">
+                            <label for="detection-interval">检测频率:</label>
+                            <div class="input-with-unit">
+                                <input type="range" id="detection-interval" min="1" max="10" value="{{ detection_interval }}" class="slider">
+                                <span class="unit">{{ detection_interval }}秒/次</span>
+                            </div>
+                            <small class="hint">当前设置: 每分钟{{ 60//detection_interval }}次</small>
+                        </div>
+                    </div>
+
+                    <!-- 结果设置 -->
+                    <div class="control-group">
+                        <h3>结果设置</h3>
+                        <div class="setting-item">
+                            <label for="merge-window">结果合并窗口:</label>
+                            <div class="input-with-unit">
+                                <input type="range" id="merge-window" min="1" max="10" value="{{ merge_window }}" class="slider">
+                                <span class="unit">{{ merge_window }}秒</span>
+                            </div>
+                            <small class="hint">相同结果在时间窗口内只显示一次</small>
+                        </div>
+                    </div>
+
+                    <!-- 保存设置 -->
+                    <div class="control-group full-width">
+                        <button id="save-settings" class="btn btn-secondary">保存设置</button>
+                        <button id="reset-settings" class="btn btn-danger">重置</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 视频识别结果 -->
+            <section class="video-result-section">
+                <h2>视频识别结果</h2>
+                <div id="video-result" class="video-result-container">
+                    <!-- 视频识别结果将通过JavaScript动态添加 -->
+                </div>
+            </section>
+
+            <!-- 识别结果历史 -->
+            <section class="results-section">
+                <div class="results-header">
+                    <h2>识别结果历史</h2>
+                    <div class="results-controls">
+                        <select id="select-range" class="form-control">
+                            <option value="all">全部选择</option>
+                            <option value="recent-3">最近3条</option>
+                            <option value="recent-5">最近5条</option>
+                            <option value="recent-10">最近10条</option>
+                        </select>
+                        <button id="merge-sentences" class="btn btn-secondary">合并句子</button>
+                        <button id="ai-polish" class="btn btn-primary">AI润色</button>
+                    </div>
+                </div>
+                <div class="results-container">
+                    <ul id="results-list" class="results-list">
+                        <!-- 历史结果将通过JavaScript动态添加 -->
+                    </ul>
+                </div>
+                <div class="results-footer">
+                    <button id="clear-history" class="btn btn-small">清空历史</button>
+                    <button id="clear-sentences" class="btn btn-small btn-danger">清空句子</button>
+                </div>
+                
+                <!-- 合并后的句子 -->
+                <div class="merged-sentence-container">
+                    <h3>合并后的句子</h3>
+                    <div id="merged-sentence" class="merged-sentence">
+                        <!-- 合并后的句子将通过JavaScript动态添加 -->
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>&copy; 2025 BOS-HA - 基于深度学习的手语识别系统</p>
+        </footer>
+    </div>
+</div>
+
+    <!-- 模态框 -->
+    <div id="status-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <p id="modal-message">操作中...</p>
+        </div>
+    </div>
+</body>
+</html>
