@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+
+    <template
+        id="valued_report_picking_unvalued_copy"
+        inherit_id="stock_picking_report_valued.valued_report_picking"
+    >
+        <xpath expr="//t[@t-set='is_outgoing']" position="attributes">
+            <attribute
+                name="t-value"
+            >o.picking_type_code == 'outgoing' and not skip_valued_report</attribute>
+        </xpath>
+    </template>
+
+    <template
+        id="report_deliveryslip_unvalued_copy"
+        inherit_id="stock.report_deliveryslip"
+    >
+        <xpath expr="//t" position="inside">
+            <t
+                t-if="o.valued and o.unvalued_copy and o.picking_type_code == 'outgoing'"
+            >
+              <t t-call="stock.report_delivery_document" t-lang="o._get_report_lang()">
+                <t t-set="skip_valued_report" t-value="True" />
+              </t>
+            </t>
+        </xpath>
+    </template>
+
+</odoo>
