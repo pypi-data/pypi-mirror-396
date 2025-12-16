@@ -1,0 +1,13 @@
+A = 0.3
+KPAR = 0.5
+MIN_FIPAR = 0.0
+MAX_FIPAR = 1.0
+MIN_LAI = 0.0
+MAX_LAI = 10.0
+BALL_BERRY_INTERCEPT_C4 = 0.04
+RESAMPLING = "cubic"
+
+# Default scale factor for C4 fraction
+C4_FRACTION_SCALE_FACTOR = 0.01
+
+UPSCALE_TO_DAYLIGHT = False
