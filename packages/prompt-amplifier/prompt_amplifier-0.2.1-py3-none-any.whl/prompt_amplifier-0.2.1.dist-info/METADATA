@@ -1,0 +1,378 @@
+Metadata-Version: 2.4
+Name: prompt-amplifier
+Version: 0.2.1
+Summary: Transform short prompts into detailed, structured instructions using context-aware retrieval
+Author-email: Rajesh More <moreyrb@gmail.com>
+License: Apache-2.0
+Project-URL: Homepage, https://github.com/DeccanX/Prompt-Amplifier
+Project-URL: Documentation, https://prompt-amplifier.readthedocs.io
+Project-URL: Repository, https://github.com/DeccanX/Prompt-Amplifier
+Project-URL: Issues, https://github.com/DeccanX/Prompt-Amplifier/issues
+Keywords: prompt-engineering,llm,rag,retrieval-augmented-generation,prompt-expansion,ai,nlp,vector-search,embeddings
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Classifier: Topic :: Text Processing :: Linguistic
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: numpy>=1.24.0
+Requires-Dist: scikit-learn>=1.3.0
+Requires-Dist: pydantic>=2.0.0
+Requires-Dist: typing-extensions>=4.0.0
+Provides-Extra: loaders
+Requires-Dist: python-docx>=0.8.11; extra == "loaders"
+Requires-Dist: openpyxl>=3.0.0; extra == "loaders"
+Requires-Dist: pandas>=1.3.0; extra == "loaders"
+Requires-Dist: pymupdf>=1.23.0; extra == "loaders"
+Requires-Dist: beautifulsoup4>=4.9.0; extra == "loaders"
+Requires-Dist: markdown>=3.3.0; extra == "loaders"
+Provides-Extra: loaders-web
+Requires-Dist: requests>=2.28.0; extra == "loaders-web"
+Requires-Dist: beautifulsoup4>=4.9.0; extra == "loaders-web"
+Requires-Dist: lxml>=4.9.0; extra == "loaders-web"
+Provides-Extra: loaders-youtube
+Requires-Dist: youtube-transcript-api>=0.6.0; extra == "loaders-youtube"
+Provides-Extra: loaders-rss
+Requires-Dist: feedparser>=6.0.0; extra == "loaders-rss"
+Provides-Extra: embeddings-local
+Requires-Dist: sentence-transformers>=2.2.0; extra == "embeddings-local"
+Requires-Dist: fastembed>=0.1.0; extra == "embeddings-local"
+Provides-Extra: embeddings-openai
+Requires-Dist: openai>=1.0.0; extra == "embeddings-openai"
+Provides-Extra: embeddings-cohere
+Requires-Dist: cohere>=5.0.0; extra == "embeddings-cohere"
+Provides-Extra: embeddings-voyage
+Requires-Dist: voyageai>=0.2.0; extra == "embeddings-voyage"
+Provides-Extra: embeddings-jina
+Requires-Dist: requests>=2.28.0; extra == "embeddings-jina"
+Provides-Extra: embeddings-mistral
+Requires-Dist: mistralai>=0.1.0; extra == "embeddings-mistral"
+Provides-Extra: embeddings-google
+Requires-Dist: google-generativeai>=0.3.0; extra == "embeddings-google"
+Provides-Extra: vectorstore-chroma
+Requires-Dist: chromadb>=0.4.0; extra == "vectorstore-chroma"
+Provides-Extra: vectorstore-faiss
+Requires-Dist: faiss-cpu>=1.7.0; extra == "vectorstore-faiss"
+Provides-Extra: vectorstore-lancedb
+Requires-Dist: lancedb>=0.1.0; extra == "vectorstore-lancedb"
+Provides-Extra: vectorstore-qdrant
+Requires-Dist: qdrant-client>=1.6.0; extra == "vectorstore-qdrant"
+Provides-Extra: vectorstore-pinecone
+Requires-Dist: pinecone-client>=2.0.0; extra == "vectorstore-pinecone"
+Provides-Extra: vectorstore-weaviate
+Requires-Dist: weaviate-client>=3.0.0; extra == "vectorstore-weaviate"
+Provides-Extra: generators-openai
+Requires-Dist: openai>=1.0.0; extra == "generators-openai"
+Provides-Extra: generators-anthropic
+Requires-Dist: anthropic>=0.18.0; extra == "generators-anthropic"
+Provides-Extra: generators-google
+Requires-Dist: google-generativeai>=0.3.0; extra == "generators-google"
+Provides-Extra: generators-ollama
+Requires-Dist: ollama>=0.1.0; extra == "generators-ollama"
+Provides-Extra: generators-mistral
+Requires-Dist: mistralai>=0.1.0; extra == "generators-mistral"
+Provides-Extra: generators-together
+Requires-Dist: requests>=2.28.0; extra == "generators-together"
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.21.0; extra == "dev"
+Requires-Dist: black>=23.0.0; extra == "dev"
+Requires-Dist: ruff>=0.1.0; extra == "dev"
+Requires-Dist: mypy>=1.0.0; extra == "dev"
+Requires-Dist: pre-commit>=3.0.0; extra == "dev"
+Provides-Extra: docs
+Requires-Dist: mkdocs>=1.5.0; extra == "docs"
+Requires-Dist: mkdocs-material>=9.0.0; extra == "docs"
+Requires-Dist: mkdocstrings[python]>=0.24.0; extra == "docs"
+Provides-Extra: all
+Requires-Dist: prompt-amplifier[loaders]; extra == "all"
+Requires-Dist: prompt-amplifier[embeddings-local]; extra == "all"
+Requires-Dist: prompt-amplifier[embeddings-openai]; extra == "all"
+Requires-Dist: prompt-amplifier[vectorstore-chroma]; extra == "all"
+Requires-Dist: prompt-amplifier[vectorstore-faiss]; extra == "all"
+Requires-Dist: prompt-amplifier[generators-openai]; extra == "all"
+Requires-Dist: prompt-amplifier[generators-anthropic]; extra == "all"
+Requires-Dist: prompt-amplifier[generators-google]; extra == "all"
+Dynamic: license-file
+
+
+<h1 align="center">Prompt Amplifier</h1>
+
+<!-- Center-align the logo and set its size -->
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/969c98f9-364c-4db7-a13a-9d8777a6686f" alt="Prompt Amplifier Logo" width="400" height="200"/>
+</p>
+
+**Transform short prompts into detailed, structured instructions using context-aware retrieval.**
+
+[![PyPI version](https://badge.fury.io/py/prompt-amplifier.svg)](https://pypi.org/project/prompt-amplifier/)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
+---
+
+## 🎯 What is Prompt Amplifier?
+
+Prompt Amplifier is a library for **Prompt Amplification** — the process of transforming short, ambiguous user intents into comprehensive, well-structured prompts that LLMs can execute effectively.
+
+```python
+from prompt_amplifier import PromptForge
+
+forge = PromptForge()
+forge.load_documents("./company_docs/")
+
+# Short, vague input
+short_prompt = "How's the deal going?"
+
+# Detailed, structured output
+detailed = forge.expand(short_prompt)
+```
+
+**Before (user input):**
+> "How's the deal going?"
+
+**After (expanded prompt):**
+> "Generate a Deal Health Assessment report with the following structure:
+> 
+> **1. Executive Summary** - Overall health status (Healthy/Warning/Critical)
+> 
+> **2. Key Metrics Table**
+> | Metric | Current | Target | Status |
+> |--------|---------|--------|--------|
+> | Winscore | ... | ... | ... |
+> | POC Progress | ... | ... | ... |
+> 
+> **3. Risk Factors** - List blocking issues from Success Plan
+> 
+> **4. Recommended Actions** - Prioritized next steps
+> 
+> Use data from: Deal Profile, Success Plan, Activity Log..."
+
+---
+
+## ✨ Features
+
+- 📄 **Multi-format Document Loading** — PDF, DOCX, Excel, CSV, TXT, Markdown, HTML
+- 🔢 **Pluggable Embedders** — TF-IDF, BM25, Sentence Transformers, OpenAI, Cohere, Google
+- 💾 **Vector Store Support** — In-memory, ChromaDB, FAISS, Pinecone, Qdrant, Weaviate
+- 🔍 **Smart Retrieval** — Vector search, hybrid (BM25 + Vector), reranking
+- 🤖 **LLM Backends** — OpenAI, Anthropic, Google Gemini, Ollama (local)
+- 📋 **Domain Schemas** — Define field structures for your domain
+- 🔌 **Extensible** — Easy to add custom loaders, embedders, and vector stores
+
+---
+
+## 🚀 Quick Start
+
+### Installation
+
+```bash
+# Core library
+pip install prompt-amplifier
+
+# With common extras
+pip install prompt-amplifier[loaders,embeddings-local,vectorstore-chroma]
+
+# Everything
+pip install prompt-amplifier[all]
+```
+
+### Basic Usage
+
+```python
+from prompt_amplifier import PromptForge
+
+# Initialize with defaults (TF-IDF embedder, in-memory store)
+forge = PromptForge()
+
+# Load your documents
+forge.load_documents("./docs/")
+
+# Expand a short prompt
+result = forge.expand("Give me a POC health check")
+
+print(result.prompt)      # The expanded prompt
+print(result.context)     # Retrieved context chunks
+print(result.metadata)    # Stats and metadata
+```
+
+### With Persistent Vector Store
+
+```python
+from prompt_amplifier import PromptForge
+from prompt_amplifier.vectorstores import ChromaStore
+from prompt_amplifier.embedders import SentenceTransformerEmbedder
+
+forge = PromptForge(
+    embedder=SentenceTransformerEmbedder("all-MiniLM-L6-v2"),
+    vectorstore=ChromaStore(
+        collection_name="my_docs",
+        persist_directory="./chroma_db"
+    )
+)
+
+# First run: embeds and stores
+forge.load_documents("./docs/")
+
+# Subsequent runs: uses existing embeddings
+result = forge.expand("Summarize the project status")
+```
+
+### With Cloud Vector Store (Pinecone)
+
+```python
+from prompt_amplifier import PromptForge
+from prompt_amplifier.vectorstores import PineconeStore
+from prompt_amplifier.embedders import OpenAIEmbedder
+
+forge = PromptForge(
+    embedder=OpenAIEmbedder(model="text-embedding-3-small"),
+    vectorstore=PineconeStore(
+        api_key="your-api-key",
+        index_name="prompt-amplifier-prod"
+    ),
+    generator="gpt-4o"
+)
+```
+
+---
+
+## 📖 Documentation
+
+- [Getting Started](https://prompt-amplifier.readthedocs.io/getting-started)
+- [API Reference](https://prompt-amplifier.readthedocs.io/api-reference)
+- [Tutorials](https://prompt-amplifier.readthedocs.io/tutorials)
+- [Research Paper](https://prompt-amplifier.readthedocs.io/research)
+
+---
+
+## 🧩 Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Prompt Amplifier                         │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│   Documents    →   Chunker   →   Embedder   →   VectorStore │
+│   (PDF, DOCX)      (split)       (encode)       (persist)   │
+│                                                              │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│   User Query   →   Embedder  →   Retriever  →   Generator   │
+│   "short"          (encode)      (search)       (expand)    │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🔌 Supported Integrations
+
+### Document Loaders
+| Format | Loader |
+|--------|--------|
+| PDF | `PDFLoader` |
+| Word | `DocxLoader` |
+| Excel | `ExcelLoader` |
+| CSV | `CSVLoader` |
+| Text | `TxtLoader` |
+| Markdown | `MarkdownLoader` |
+| HTML | `HTMLLoader` |
+| JSON | `JSONLoader` |
+
+### Embedders
+| Provider | Class | Type |
+|----------|-------|------|
+| TF-IDF | `TFIDFEmbedder` | Free, Local |
+| BM25 | `BM25Embedder` | Free, Local |
+| Sentence Transformers | `SentenceTransformerEmbedder` | Free, Local |
+| OpenAI | `OpenAIEmbedder` | Paid API |
+| Cohere | `CohereEmbedder` | Paid API |
+| Google | `GoogleEmbedder` | Paid API |
+| Voyage AI | `VoyageEmbedder` | Paid API |
+
+### Vector Stores
+| Store | Class | Type |
+|-------|-------|------|
+| In-Memory | `MemoryStore` | Local |
+| ChromaDB | `ChromaStore` | Local |
+| FAISS | `FAISSStore` | Local |
+| LanceDB | `LanceDBStore` | Local |
+| Pinecone | `PineconeStore` | Cloud |
+| Qdrant | `QdrantStore` | Local/Cloud |
+| Weaviate | `WeaviateStore` | Cloud |
+| pgvector | `PGVectorStore` | Self-host |
+
+### LLM Generators
+| Provider | Class |
+|----------|-------|
+| OpenAI | `OpenAIGenerator` |
+| Anthropic | `AnthropicGenerator` |
+| Google Gemini | `GoogleGenerator` |
+| Ollama | `OllamaGenerator` |
+| HuggingFace | `HuggingFaceGenerator` |
+
+---
+
+## 🧪 Research
+
+Prompt Amplifier was developed as part of research into **Prompt Amplification** — systematically transforming short user intents into detailed, structured prompts.
+
+Key contributions:
+- Formalization of the prompt expansion problem
+- Comparison of embedding strategies for prompt enhancement
+- Evaluation metrics for prompt quality
+- Benchmark datasets across multiple domains
+
+📄 **Paper**: [Coming Soon]
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+```bash
+# Clone the repo
+git clone https://github.com/DeccanX/Prompt-Amplifier.git
+cd Prompt-Amplifier
+
+# Install dev dependencies
+pip install -e ".[dev]"
+
+# Run tests
+pytest
+
+# Run linting
+ruff check src/
+black src/
+```
+
+---
+
+## 📜 License
+
+Apache 2.0 — See [LICENSE](LICENSE) for details.
+
+---
+
+## 🙏 Acknowledgments
+
+Built with inspiration from:
+- [LangChain](https://github.com/langchain-ai/langchain)
+- [LlamaIndex](https://github.com/run-llama/llama_index)
+- [ChromaDB](https://github.com/chroma-core/chroma)
+
+---
+
+**Made with ❤️ by Rajesh More for the AI community**
