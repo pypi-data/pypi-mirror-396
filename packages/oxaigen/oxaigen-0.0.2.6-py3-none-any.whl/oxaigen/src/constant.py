@@ -1,0 +1,3 @@
+# -*- coding: utf-8 -*-
+CLIENT_ACCESS_TOKEN = "CLIENT_ACCESS_TOKEN"
+DEFAULT_REPORTS_DIR = "reports"
