@@ -1,0 +1,123 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "alchemist-nrel"
+version = "0.3.1"
+description = "Active learning and optimization toolkit for chemical and materials research"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{name = "Caleb Coatney", email = "caleb.coatney@nrel.gov"}]
+license = {text = "BSD-3-Clause"}
+keywords = ["active learning", "bayesian optimization", "gaussian processes", "materials science", "chemistry"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Chemistry",
+]
+dependencies = [
+    "numpy",
+    "pandas",
+    "scipy",
+    "matplotlib",
+    "mplcursors",
+    "scikit-learn",
+    "scikit-optimize",
+    "botorch",
+    "torch",
+    "gpytorch",
+    "ax-platform",
+    "customtkinter",
+    "tksheet",
+    "tabulate",
+    "ctkmessagebox",
+    "joblib",
+    # FastAPI dependencies
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.27.0",
+    "pydantic>=2.5.0",
+    "python-multipart>=0.0.6",  # For file uploads
+    "requests"
+]
+
+[project.scripts]
+alchemist = "main:main"
+alchemist-web = "api.run_api:main"
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-anyio>=0.0.0",
+    "httpx>=0.25.0",  # Required for FastAPI TestClient
+    "requests>=2.31.0",  # Required for some tests
+]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-anyio>=0.0.0",
+    "httpx>=0.25.0",
+    "requests>=2.31.0",
+]
+
+[tool.setuptools]
+py-modules = ["main"]
+
+[tool.setuptools.packages.find]
+include = ["ui*", "alchemist_core*", "api*"]
+
+[tool.setuptools.package-data]
+api = ["static/**/*"]
+
+[project.urls]
+"Homepage" = "https://github.com/NREL/ALchemist"
+"Documentation" = "https://nrel.github.io/ALchemist/"
+"Source" = "https://github.com/NREL/ALchemist"
+"Bug Tracker" = "https://github.com/NREL/ALchemist/issues"
+"Changelog" = "https://github.com/NREL/ALchemist/releases"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--strict-config",
+]
+
+[tool.coverage.run]
+source = ["alchemist_core", "api"]
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/site-packages/*",
+    "alchemist-web/*",
+    "ui/*",
+]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
+

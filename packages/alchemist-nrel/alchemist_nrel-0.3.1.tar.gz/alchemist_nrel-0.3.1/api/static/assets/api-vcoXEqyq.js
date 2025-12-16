@@ -1,0 +1,1 @@
+async function i(t,n,o=!1){const s={...n},e=await fetch(`/api/v1/sessions/${t}/experiments?auto_train=${o}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(s)});if(!e.ok)throw new Error(`Add experiment failed: ${e.statusText}`);return e.json()}export{i as addExperiment};
