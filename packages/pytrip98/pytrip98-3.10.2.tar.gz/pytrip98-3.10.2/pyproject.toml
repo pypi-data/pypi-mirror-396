@@ -1,0 +1,112 @@
+[build-system]
+requires = [
+  "setuptools>=64",
+  "setuptools_scm>=8",
+  "wheel",
+  "numpy>=2.0"
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pytrip98"
+dynamic = ["version"]
+description = "PyTRiP: Python tools for TRiP98 treatment planning and data handling"
+readme = "README.rst"
+license = "GPL-3.0-only"
+authors = [
+  { name = "Jakob Toftegaard" },
+  { name = "Niels Bassler" },
+  { name = "Leszek Grzanka", email = "leszek.grzanka@ifj.edu.pl" }
+]
+requires-python = ">=3.9"
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Scientific/Engineering :: Medical Science Apps.",
+  "Topic :: Scientific/Engineering :: Physics",
+  "Environment :: Console",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: Unix",
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: MacOS",
+  "Programming Language :: C",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: Implementation :: CPython"
+]
+
+dependencies = [
+  "matplotlib",
+  "pydicom",
+  "scipy",
+  "numpy>=2.0"
+]
+
+[project.optional-dependencies]
+remote = ["paramiko"]
+test = [
+  "pytest",
+  "flake8"
+]
+
+[project.urls]
+Homepage = "https://github.com/pytrip/pytrip"
+Documentation = "https://pytrip.readthedocs.io/"
+Source = "https://github.com/pytrip/pytrip"
+
+[project.scripts]
+trip2dicom = "pytrip.utils.trip2dicom:main"
+dicom2trip = "pytrip.utils.dicom2trip:main"
+cubeslice = "pytrip.utils.cubeslice:main"
+rst2sobp = "pytrip.utils.rst2sobp:main"
+rst_plot = "pytrip.utils.rst_plot:main"
+bevlet2oer = "pytrip.utils.bevlet2oer:main"
+gd2dat = "pytrip.utils.gd2dat:main"
+gd2agr = "pytrip.utils.gd2agr:main"
+spc2pdf = "pytrip.utils.spc2pdf:main"
+
+[tool.cibuildwheel]
+before-build = "pip install numpy"
+#build-verbosity = 3
+dependency-versions = "latest"
+archs = ["auto64"]
+build = ["cp39-*", "cp310-*", "cp311-*", "cp312-*", "cp313-*", "cp314-*"]
+skip = "cp3??t-*"
+test-sources = "tests"
+# - test-sources = "tests" tells cibuildwheel to copy our tests into a temporary directory
+#   where it installs the freshly built wheel and runs pytest against the installed package;
+#   tests are not included in the wheel payload itself.
+test-requires = ["pytest", "setuptools"]
+test-command = "pytest"
+
+[tool.cibuildwheel.environment]
+PIP_PREFER_BINARY = "true"
+# - PIP_PREFER_BINARY=true nudges pip to choose prebuilt wheels when available (e.g. NumPy),
+#   avoiding slow source builds observed on some OS/Python combinations during cibuildwheel runs.
+
+[tool.setuptools]
+# C extensions are defined in setup.py
+# - setup.py remains because pyproject.toml alone does not yet cover our C extension
+#   compilation needs (NumPy headers, build-time configuration). See the header in setup.py.
+packages = { find = { exclude = ["tests", "tests.*", "docs", "docs.*", "examples", "examples.*", "build", "build.*", "dist", "dist.*"] } }
+# Rationale:
+# - We explicitly exclude tests from the packaged wheel to keep artifacts small and focused.
+#   Tests are executed separately by cibuildwheel (see test-sources note above).
+include-package-data = true
+package-data = { pytrip = ["data/*.dat"] }
+script-files = []
+
+[tool.setuptools_scm]
+version_scheme = "post-release"
+local_scheme = "node-and-date"
+write_to = "pytrip/_version.py"
+
+[tool.yapf]
+based_on_style = "pep8"
+column_limit = 120
