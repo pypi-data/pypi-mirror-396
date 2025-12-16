@@ -1,0 +1,50 @@
+[setup]
+	version = '2.1.0'
+
+	[[setup.hooks]]
+		expression = 'ip.proto == 0x11 && ipv4.frag_offset == 0 && ipv4.flags.mf == 0'
+		location = 'ip.payload'
+		protocol = '#UDP'
+
+	[[setup.hooks]]
+		expression = 'ipv6.nxt == 0x11'
+		location = 'ip.payload'
+		protocol = '#UDP'
+
+[UDP]
+	long_name = 'User Datagram Protocol'
+	name = 'UDP'
+	tag = 'udp'
+
+	[[UDP.fields]]
+		name = 'Source port'
+		short_name = 'Source port'
+		tag = 'srcport'
+		aliases = ['port', 'ip.srcport']
+		length = 16
+		format = 'decimal'
+		summary = true
+
+	[[UDP.fields]]
+		name = 'Destination port'
+		short_name = 'Destination port'
+		tag = 'dstport'
+		aliases = ['port', 'ip.dstport']
+		length = 16
+		format = 'decimal'
+		summary = true
+
+	[[UDP.fields]]
+		name = 'Length'
+		tag = 'length'
+		length = 16
+		format = 'decimal'
+
+	[[UDP.fields]]
+		name = 'Checksum'
+		length = 16
+
+	[[UDP.fields]]
+		name = 'Payload'
+		length = '^.length * 8 - 8 * 8'
+		type = 'hook'
