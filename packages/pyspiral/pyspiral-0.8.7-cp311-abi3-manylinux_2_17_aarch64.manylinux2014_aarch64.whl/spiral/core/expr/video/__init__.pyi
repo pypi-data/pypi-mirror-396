@@ -1,0 +1,3 @@
+from .. import Expr
+
+def read(expr: Expr, ranges: Expr, crops: Expr, format: str) -> Expr: ...
