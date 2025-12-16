@@ -1,0 +1,274 @@
+Metadata-Version: 2.4
+Name: supertape
+Version: 1.0.0.dev10
+Summary: Audio player/recorder software for legacy computers as tape recorder replacement
+License: LICENSE
+License-File: LICENSE
+Keywords: audio,vintage,computers,tape,recorder,alice,tandy,mc-10
+Author: Yannick Kirschhoffer
+Author-email: alcibiade@alcibiade.org
+Requires-Python: >=3.11,<3.14
+Classifier: Development Status :: 4 - Beta
+Classifier: Environment :: Console
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: End Users/Desktop
+Classifier: License :: OSI Approved :: MIT License
+Classifier: License :: Other/Proprietary License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Topic :: Multimedia :: Sound/Audio
+Classifier: Topic :: System :: Emulators
+Requires-Dist: PyYAML (>=6.0.2)
+Requires-Dist: cython (>=3.0.11)
+Requires-Dist: dulwich (>=0.24.10,<0.25.0)
+Requires-Dist: imageio (>=2.36.0)
+Requires-Dist: numpy (>=2.1.1)
+Requires-Dist: prompt-toolkit (>=3.0.0)
+Requires-Dist: pyaudio (>=0.2.14)
+Requires-Dist: rich (>=13.0.0)
+Requires-Dist: tabulate (>=0.9.0)
+Project-URL: Documentation, https://github.com/supertape/supertape/
+Project-URL: Homepage, https://github.com/supertape/supertape/
+Project-URL: Repository, https://github.com/supertape/supertape/
+Description-Content-Type: text/markdown
+
+# Supertape
+
+An audio player/recorder software working with legacy computers as a tape recorder replacement. Supertape allows you to load, save, and play audio cassette tape data for vintage computers through modern audio interfaces.
+
+## Features
+
+* **Audio Interface Integration**: Real-time audio input/output through modern sound cards
+* **File Format Support**: Handle BASIC source files (.bas) and assembly source files (.asm)
+* **Audio Processing**: Convert between audio signals and digital tape data
+* **Interactive Shell**: Enhanced command-line interface with rich UI features
+* **Tape Database**: Persistent storage of tape files using YAML format
+* **Image Conversion**: Convert images to BASIC programs for display
+* **Audio Monitoring**: Real-time audio level monitoring and device selection
+
+## Installation
+
+### Requirements
+
+* Python 3.11+
+* Audio interface (microphone/line input and speaker/line output)
+
+### Dependencies
+
+Install using Poetry (recommended):
+
+```bash
+poetry install
+```
+
+Or install using pip after building with Poetry:
+
+```bash
+poetry build
+pip install dist/supertape-*.whl
+```
+
+### Poetry Setup (Recommended)
+
+```bash
+# Install Poetry if not already installed
+curl -sSL https://install.python-poetry.org | python3 -
+
+# Install dependencies
+poetry install
+```
+
+## Usage
+
+### Basic Commands
+
+Run commands using Poetry:
+
+```bash
+poetry run supertape [command] [options]
+```
+
+### Available Commands
+
+#### Audio Operations
+
+**Listen to audio input or file:**
+```bash
+poetry run supertape listen [--device N] [--dump] [--list] [file.wav]
+```
+
+* `--device N`: Select audio device by index
+* `--dump`: Display raw byte data
+* `--list`: Show BASIC program listing
+* `file.wav`: Process audio file instead of live input
+
+**Play files to audio output:**
+```bash
+poetry run supertape play [--device N] file.bas
+poetry run supertape play [--device N] file.asm
+```
+
+Converts BASIC or assembly source files to audio signals.
+
+#### Interactive Tools
+
+**Interactive shell:**
+```bash
+poetry run supertape shell [--device N] [database_name]
+```
+
+**List audio devices:**
+```bash
+poetry run supertape devices
+```
+
+**Show help:**
+```bash
+poetry run supertape
+```
+
+#### File Operations
+
+**Image to BASIC conversion:**
+```bash
+poetry run supertape image_to_basic input.png output.bas
+```
+
+**Preprocess BASIC files:**
+```bash
+poetry run supertape preprocess input.bas output.bas
+```
+
+### Example Workflows
+
+**Recording from vintage computer:**
+```bash
+# List available audio devices
+poetry run supertape devices
+
+# Listen and save programs from audio input
+poetry run supertape listen --device 1 --list
+
+# Use interactive shell for managing recordings
+poetry run supertape shell my_tapes
+```
+
+**Playing programs to vintage computer:**
+```bash
+# Convert and play a BASIC program
+poetry run supertape play --device 0 basic/duke.bas
+
+# Convert and play an assembly program
+poetry run supertape play --device 0 test/programs/test.asm
+```
+
+## Testing
+
+Run the test suite:
+
+```bash
+poetry run pytest test/
+```
+
+Run specific test modules:
+
+```bash
+poetry run pytest test/test_basic.py
+poetry run pytest test/test_assembly.py
+```
+
+## Compatibility
+
+### Currently Supported
+
+#### Matra Alice
+
+Supertape fully supports the Matra Alice computer range:
+
+* **Alice 4k** (original Alice)
+* **Alice 32**
+* **Alice 90**
+
+#### Tandy MC-10
+
+The Matra Alice 4k being a clone of the Tandy MC-10, both systems share the same tape formats and are fully compatible with Supertape.
+
+### File Format Support
+
+* **BASIC Programs**: `.bas` source files with preprocessing and minification
+* **Assembly Programs**: `.asm` source files
+* **Audio Files**: `.wav` files for playback and analysis
+* **Tape Data**: Native tape file format with persistent database storage
+
+### Future Plans
+
+This application is planning to support additional vintage computers with audio tape interfaces:
+
+* **Commodore 64**
+* **Amstrad CPC**
+* **Sinclair ZX Spectrum**
+* **TRS-80**
+* **Apple II**
+
+## Architecture
+
+Supertape uses a modular architecture with audio processing pipelines:
+
+* **Audio Layer**: Real-time audio I/O with device abstraction
+* **Signal Processing**: Modulation/demodulation for tape data encoding
+* **File Processing**: BASIC/assembly compilation and tape file management
+* **User Interfaces**: Console commands and interactive shell
+* **Storage**: YAML-based persistent tape file repository
+
+### Technical Documentation
+
+For detailed information about the tape format specification, see [TAPE_FORMAT.md](docs/TAPE_FORMAT.md). This document covers:
+
+* Physical FSK encoding (1200/2400 Hz frequencies)
+* Block types and structure (header, data, EOF)
+* Namefile header format with file types and addressing
+* Complete cassette block layout and checksums
+
+### Developer Documentation
+
+For comprehensive programming guides, see the [docs/](docs/) directory:
+
+* **[Alice 32/90 Graphics Guide](docs/ALICE_GRAPHICS.md)** - Graphics programming using the EF9345 video processor
+  * Hardware comparison (MC-10/Alice 4k vs Alice 32/90)
+  * EF9345 register programming in C and Assembly
+  * Graphics modes, colors, and drawing operations
+  * Complete code examples with test programs
+
+* **[C Development Guide](docs/C_DEVELOPMENT.md)** - C programming for M6803 microprocessor
+  * Fuzix-Compiler-Kit (FCC) setup and usage
+  * M6803 architecture and limitations
+  * Memory-mapped I/O patterns
+  * Code examples and optimization techniques
+
+* **[Assembly Development Guide](docs/ASM_DEVELOPMENT.md)** - M6803 assembly programming
+  * Complete instruction set reference
+  * Addressing modes and assembler directives
+  * Programming patterns and optimization
+  * Debugging strategies
+
+* **[Memory Map Reference](docs/MEMORY_MAP.md)** - Memory addressing for Alice 4k/32/90
+  * Complete memory maps for all models
+  * I/O register addresses and usage
+  * Zero page, RAM, ROM, and VRAM organization
+  * Programming examples and best practices
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes with appropriate tests
+4. Run the test suite: `poetry run pytest test/`
+5. Submit a pull request
+
+## License
+
+See the LICENSE file for details.
+
