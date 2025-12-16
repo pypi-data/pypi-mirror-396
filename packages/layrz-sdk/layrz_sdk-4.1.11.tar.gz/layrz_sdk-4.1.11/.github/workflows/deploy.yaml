@@ -1,0 +1,47 @@
+name: "Deploy package"
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    permissions:
+      id-token: write
+      contents: read
+      repository-projects: read
+      packages: read
+
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/goldenm-software/python-builder:uv-3.13
+      options: --user root
+      credentials:
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache uv
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            .venv
+          key: ${{ runner.os }}-uv-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+
+      - name: Install dependencies
+        run: |
+          uv sync
+
+      - name: Build and upload
+        run: |
+          uv run python -m build
+
+      - name: Publish to PyPI
+        run: |
+          uv run python -m twine upload -u ${{ secrets.LAYRZ_PYPI_USERNAME }} -p ${{ secrets.LAYRZ_PYPI_PASSWORD }} dist/*
