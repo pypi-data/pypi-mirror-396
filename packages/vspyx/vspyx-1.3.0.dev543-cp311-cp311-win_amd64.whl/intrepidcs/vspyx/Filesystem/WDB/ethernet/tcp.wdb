@@ -1,0 +1,152 @@
+[setup]
+	version = '2.1.0'
+
+	[[setup.hooks]]
+		expression = 'ip.proto == 0x06 && ipv4.frag_offset == 0 && ipv4.flags.mf == 0'
+		location = 'ip.payload'
+		protocol = '#TCP'
+
+	[[setup.hooks]]
+		expression = 'ipv6.nxt == 0x06'
+		location = 'ip.payload'
+		protocol = '#TCP'
+
+[TCP]
+	long_name = 'Transmission Control Protocol'
+	short_name = 'TCP'
+	tag = 'tcp'
+
+	[[TCP.fields]]
+		name = 'Source port'
+		short_name = 'Source port'
+		tag = 'srcport'
+		aliases = ['port', 'ip.srcport']
+		length = 16
+		format = 'decimal'
+		summary = true
+
+	[[TCP.fields]]
+		name = 'Destination port'
+		short_name = 'Destination port'
+		tag = 'dstport'
+		aliases = ['port', 'ip.dstport']
+		length = 16
+		format = 'decimal'
+		summary = true
+
+	[[TCP.fields]]
+		long_name = 'Sequence number'
+		short_name = 'Seq num'
+		tag = 'seq'
+		length = 32
+		format = 'decimal'
+		summary = true
+
+	[[TCP.fields]]
+		long_name = 'Acknowledgment number'
+		short_name = 'Ack num'
+		tag = 'ack'
+		length = 32
+		format = 'decimal'
+		summary = true
+
+	[[TCP.fields]]
+		name = 'Data offset'
+		tag = 'offset'
+		length = 4
+		format = 'decimal'
+
+	[[TCP.fields]]
+		name = 'Flags'
+		inherit = '#Flags'
+
+	[[TCP.fields]]
+		name = 'Window size'
+		tag = 'window_size_value'
+		length  = 16
+		format = 'decimal'
+
+	[[TCP.fields]]
+		name = 'Checksum'
+		length = 16
+
+	[[TCP.fields]]
+		name = 'Urgent pointer'
+		tag = 'urgent_pointer'
+		length = 16
+		format = 'decimal'
+
+	[[TCP.fields]]
+		name = 'Options'
+		enable = '^.offset > 5'
+		length = '( ^.offset * 4 - 20 ) * 8'
+
+	[[TCP.fields]]
+		name = 'Payload'
+		tag = 'payload'
+		length = 'ip.payload:length - ( ^.offset * 4 * 8 )'
+		type = 'hook'
+
+[Flags]
+	mask_type = 'all'
+	length = 12
+
+	[[Flags.fields]]
+		long_name = 'Reserved'
+		short_name = 'Reserved'
+		tag = 'res'
+		length = 3
+
+	[[Flags.fields]]
+		long_name = 'Nonce'
+		short_name = 'NS'
+		tag = 'ns'
+		length = 1
+
+	[[Flags.fields]]
+		long_name = 'Congestion Window Reduced' 
+		short_name = 'CWR'
+		tag = 'cwr'
+		length = 1
+
+	[[Flags.fields]]
+		long_name = 'ECN-Echo' 
+		short_name = 'ECN'
+		tag = 'ecn'
+		length = 1
+
+	[[Flags.fields]]
+		long_name = 'Urgent' 
+		short_name = 'URG'
+		tag = 'urg'
+		length = 1
+
+	[[Flags.fields]]
+		long_name = 'Acknowledgment' 
+		short_name = 'ACK'
+		tag = 'ack'
+		length = 1
+
+	[[Flags.fields]]
+		long_name = 'Push' 
+		short_name = 'PSH'
+		tag = 'push'
+		length = 1
+
+	[[Flags.fields]]
+		long_name = 'Reset' 
+		short_name = 'RST'
+		tag = 'reset'
+		length = 1
+
+	[[Flags.fields]]
+		long_name = 'Synchronize' 
+		short_name = 'SYN'
+		tag = 'syn'
+		length = 1
+
+	[[Flags.fields]]
+		long_name = 'Finished'
+		short_name = 'FIN'
+		tag = 'fin'
+		length = 1
