@@ -1,0 +1,130 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pmpl"
+version = "0.1.0"
+description = "Pretty Matplotlib - Create presentation-ready plots with minimal effort"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+authors = [
+    {name = "Rens ter Maat", email = "rens.termaat@gmail.com"}
+]
+keywords = ["matplotlib", "plotting", "visualization", "presentation", "styling"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Visualization",
+    "Typing :: Typed",
+]
+dependencies = [
+    "matplotlib>=3.10.8",
+    "numpy>=2.3.5",
+]
+
+[project.urls]
+Homepage = "https://github.com/RensterMaat/pmpl"
+Repository = "https://github.com/RensterMaat/pmpl"
+Issues = "https://github.com/RensterMaat/pmpl/issues"
+Changelog = "https://github.com/RensterMaat/pmpl/blob/main/CHANGELOG.md"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pmpl"]
+
+[project.optional-dependencies]
+test = [
+    "numpy>=1.26.0",
+]
+
+[dependency-groups]
+dev = [
+    "hatchling>=1.28.0",
+    "ipykernel>=7.1.0",
+    "jupyter>=1.1.1",
+    "myst-parser>=4.0.1",
+    "numpy>=1.26.0",
+    "pre-commit>=4.5.0",
+    "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
+    "python-semantic-release>=10.5.2",
+    "ruff>=0.14.9",
+    "sphinx>=8.2.3",
+    "sphinx-autodoc-typehints>=3.5.2",
+    "sphinx-rtd-theme>=3.0.2",
+]
+
+[tool.semantic_release]
+version_toml = ["pyproject.toml:project.version"]
+build_command = "pip install build && python -m build"
+major_on_zero = false
+allow_zero_version = true
+
+[tool.semantic_release.commit_parser_options]
+allowed_tags = ["feat", "fix", "docs", "chore", "ci", "refactor", "test", "perf", "build", "style"]
+minor_tags = ["feat"]
+patch_tags = ["fix", "perf"]
+
+[tool.semantic_release.changelog]
+template_dir = "templates"
+exclude_commit_patterns = []
+
+[tool.semantic_release.changelog.default_templates]
+changelog_file = "CHANGELOG.md"
+commit_message = "chore: release v{version}"
+
+[tool.semantic_release.branches.main]
+match = "main"
+prerelease = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--strict-config",
+]
+
+[tool.coverage.run]
+source = ["pmpl"]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "N",      # pep8-naming
+    "UP",     # pyupgrade
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "SIM",    # flake8-simplify
+    "ARG",    # flake8-unused-arguments
+    "PTH",    # flake8-use-pathlib
+]
+ignore = []
+
+[tool.ruff.lint.isort]
+known-first-party = ["pmpl"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
