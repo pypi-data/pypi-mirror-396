@@ -1,0 +1,23 @@
+[Unit]
+Description=PostgreSQL %i database server
+After=network.target
+
+[Service]
+Type=notify
+{executeas}
+
+# Disable OOM kill on the postmaster
+OOMScoreAdjust=-1000
+Environment=PG_OOM_ADJUST_FILE=/proc/self/oom_score_adj
+Environment=PG_OOM_ADJUST_VALUE=0
+
+{environment}
+ExecStart={execpath} postgres %i
+ExecReload=/bin/kill -HUP $MAINPID
+
+KillMode=mixed
+KillSignal=SIGINT
+TimeoutSec=infinity
+
+[Install]
+WantedBy=default.target

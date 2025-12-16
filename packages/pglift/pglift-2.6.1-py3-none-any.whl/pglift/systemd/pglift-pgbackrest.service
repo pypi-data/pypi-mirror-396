@@ -1,0 +1,18 @@
+[Unit]
+Description=pgBackRest Server
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+{executeas}
+Restart=always
+RestartSec=1
+{environment}
+ExecStart={execpath} server --config={configpath}
+ExecStartPost=/bin/sleep 3
+ExecStartPost=/bin/bash -c "[ ! -z $MAINPID ]"
+ExecReload=/bin/kill -HUP $MAINPID
+
+[Install]
+WantedBy=default.target
