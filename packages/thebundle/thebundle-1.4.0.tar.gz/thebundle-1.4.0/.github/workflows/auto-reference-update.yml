@@ -1,0 +1,160 @@
+name: auto reference update 🔄
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  check_commit_message:
+    runs-on: ubuntu-latest
+    outputs:
+      should_generate_ref: ${{ steps.check.outputs.should_generate_ref }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          ref: ${{ github.head_ref || github.event.pull_request.head.ref }}
+
+      - id: check
+        run: |
+          commit_message=$(git log $(git rev-parse HEAD) -1 --pretty=%B)
+          echo "Commit message: $commit_message"
+
+          if echo "$commit_message" | grep -q "🔥"; then
+            echo "Found 🔥, Auto Reference update will run!"
+            echo "should_generate_ref=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "🔥 not found, skipping Auto Reference update."
+            echo "should_generate_ref=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  wait_for_crossplatforms-tests:
+    needs: [check_commit_message]
+    if: ${{ needs.check_commit_message.outputs.should_generate_ref == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Wait for Ubuntu tests
+        uses: lewagon/wait-on-check-action@v1.3.1
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+          check-regexp: '^ubuntu_tests \(3\.\d{2}\)$'
+          repo-token: ${{ secrets.GITACTION_ACCESS_TOKEN }}
+          wait-interval: 3
+          allowed-conclusions: success
+
+      - name: Wait for macOS tests
+        uses: lewagon/wait-on-check-action@v1.3.1
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+          check-regexp: '^macos_tests \(3\.\d{2}\)$'
+          repo-token: ${{ secrets.GITACTION_ACCESS_TOKEN }}
+          wait-interval: 3
+          allowed-conclusions: success
+
+      - name: Wait for Windows tests
+        uses: lewagon/wait-on-check-action@v1.3.1
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+          check-regexp: '^windows_tests \(3\.\d{2}\)$'
+          repo-token: ${{ secrets.GITACTION_ACCESS_TOKEN }}
+          wait-interval: 3
+          allowed-conclusions: success
+
+  update_reference_linux:
+    needs: [wait_for_crossplatforms-tests, check_commit_message]
+    if: ${{ needs.check_commit_message.outputs.should_generate_ref == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.head_ref || github.ref_name }}
+
+      - uses: ./.github/actions/setup-test
+        with:
+          python-version: '3.10'
+
+      - name: Pull changes
+        run: |
+          git fetch origin
+          git checkout ${{ github.event.pull_request.head.ref }}
+          git pull origin ${{ github.event.pull_request.head.ref }}
+
+      - uses: ./.github/actions/commit-reference-push
+        with:
+          path: references/linux
+          message: " 🔐|🐧 update references"
+          token: ${{ secrets.GITACTION_ACCESS_TOKEN }}
+
+  update_reference_darwin:
+    needs: [update_reference_linux, check_commit_message]
+    if: ${{ needs.check_commit_message.outputs.should_generate_ref == 'true' }}
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.head_ref || github.ref_name }}
+
+      - uses: ./.github/actions/setup-test
+        with:
+          python-version: '3.10'
+
+      - name: Pull changes
+        run: |
+          git fetch origin
+          git checkout ${{ github.event.pull_request.head.ref }}
+          git pull origin ${{ github.event.pull_request.head.ref }}
+
+      - uses: ./.github/actions/commit-reference-push
+        with:
+          path: references/darwin
+          message: " 🔐|🍏 update references"
+          token: ${{ secrets.GITACTION_ACCESS_TOKEN }}
+
+  update_reference_windows:
+    needs: [update_reference_darwin, check_commit_message]
+    if: ${{ needs.check_commit_message.outputs.should_generate_ref == 'true' }}
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.head_ref || github.ref_name }}
+
+      - uses: ./.github/actions/setup-test
+        with:
+          python-version: '3.10'
+
+      - name: Pull changes
+        run: |
+          git fetch origin
+          git checkout ${{ github.event.pull_request.head.ref }}
+          git pull origin ${{ github.event.pull_request.head.ref }}
+
+      - uses: ./.github/actions/commit-reference-push
+        with:
+          path: references/windows
+          message: " 🔐|🪟 update references"
+          token: ${{ secrets.GITACTION_ACCESS_TOKEN }}
+
+  remove_target_commit:
+    needs: [update_reference_windows, check_commit_message]
+    if: ${{ needs.check_commit_message.outputs.should_generate_ref == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      
+      - uses: actions/checkout@v4 
+      
+      - name: Pull changes
+        run: |
+          git fetch origin
+          git checkout ${{ github.event.pull_request.head.ref }}
+          git pull origin ${{ github.event.pull_request.head.ref }}
+
+      - uses: ./.github/actions/commit-reference-drop
+        with:
+          pattern: "🔥"
+          token: ${{ secrets.GITACTION_ACCESS_TOKEN }}

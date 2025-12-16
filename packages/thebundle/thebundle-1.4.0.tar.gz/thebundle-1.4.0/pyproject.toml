@@ -1,0 +1,86 @@
+[build-system]
+requires = ["setuptools", "wheel", "setuptools_scm", "build"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "thebundle"
+dynamic = ["version"]
+description = "Python TheBundle essential code."
+authors = [{ name = "M. Treglia", email = "horuselohim@gmail.com" }]
+requires-python = ">=3.10"
+dependencies = [
+    "zmq",
+    "tqdm",
+    "rich",
+    "toml",
+    "wheel",
+    "click",
+    "aiohttp",
+    "pybind11",
+    "tabulate",
+    "rich_click",
+    "requests",
+    "colorama",
+    "aiofiles",
+    "pydantic",
+    "jsonschema",
+    "asyncclick",
+    "playwright",
+    "setuptools",
+    "typing-extensions",
+    "tornado>=6.1; sys_platform == 'win32'",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools_scm]
+version_file = "src/bundle/_version.py"
+
+[project.optional-dependencies]
+test = ["pytest", "pytest-asyncio", "nest_asyncio"]
+dev = ["snakeviz"]
+pypi = ["build", "twine"]
+ble = [
+    "bleak>=0.22.1",
+    "pyyaml",
+]
+youtube = ["pytubefix", "mutagen", "ffmpeg-python"]
+web = ["fastapi", "uvicorn[standard]", "websockets", "jinja2", "bleak>=0.22.1", "pyyaml"]
+all = [
+    "pytest",
+    "pytest-asyncio",
+    "nest_asyncio",
+    "snakeviz",
+    "build",
+    "twine",
+    "pytubefix",
+    "mutagen",
+    "ffmpeg-python",
+    "fastapi",
+    "uvicorn[standard]",
+    "websockets",
+]
+
+[project.scripts]
+bundle = "bundle.cli:main"
+
+[tool.pytest.ini_options]
+addopts = ["--doctest-modules"]
+testpaths = ["tests"]
+log_cli = true
+log_cli_level = "ERROR"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.black]
+line-length = 128
+target-version = ['py310']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 120
+skip = ["__init__.py"]
+
+[tool.flake8]
+max-line-length = 128
