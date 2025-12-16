@@ -1,0 +1,21 @@
+{% extends "email/base.html.j2" %}
+{% block document_title %}Parsec Account: Confirm account recovery{% endblock %}
+
+{% block preheader %}You have requested to recover your Parsec Account.{% endblock %}
+
+{% block title %}Your account recovery code{% endblock %}
+
+{% block main_content %}
+{% from "email/macros.html.j2" import gen_contents, render_code %}
+{{
+  gen_contents([
+    namespace(
+      title="Code to recover your account",
+      text="To confirm the recovery of your account, use the following code:",
+      extras=[
+        render_code(validation_code)
+      ]
+    ),
+  ])
+}}
+{% endblock %}
