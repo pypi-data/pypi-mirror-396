@@ -1,0 +1,387 @@
+Metadata-Version: 2.4
+Name: jsmon
+Version: 1.0.2
+Summary: Advanced JavaScript monitoring for bug bounty hunters
+Author-email: h3llwish <sosibonka3@gmail.com>
+License-Expression: MIT
+Project-URL: Homepage, https://github.com/h3llwish/jsmon
+Project-URL: Documentation, https://github.com/h3llwish/jsmon
+Project-URL: Repository, https://github.com/h3llwish/jsmon
+Project-URL: Bug Tracker, https://github.com/h3llwish/jsmon/issues
+Keywords: security,bug-bounty,javascript,monitoring,recon,pentesting
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Information Technology
+Classifier: Intended Audience :: Developers
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Topic :: Security
+Classifier: Topic :: Software Development :: Testing
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: aiohttp>=3.8.0
+Requires-Dist: redis>=4.5.0
+Requires-Dist: playwright>=1.40.0
+Requires-Dist: jsbeautifier>=1.14.0
+Requires-Dist: beautifulsoup4>=4.11.0
+Requires-Dist: lxml>=4.9.0
+Requires-Dist: cryptography>=41.0.0
+Requires-Dist: tqdm>=4.65.0
+Requires-Dist: aiofiles>=23.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.21.0; extra == "dev"
+Requires-Dist: black>=23.0.0; extra == "dev"
+Requires-Dist: mypy>=1.0.0; extra == "dev"
+Requires-Dist: pre-commit>=3.0.0; extra == "dev"
+Dynamic: license-file
+
+<div align="center">
+
+# 🕵️ JSMon - Advanced JavaScript Monitoring for Bug Bounty
+
+[![Python Version](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
+**Discover hidden attack surface by monitoring JavaScript changes with AI-powered analysis**
+
+[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Contributing](#-contributing)
+
+</div>
+
+---
+
+## 🎯 What is JSMon?
+
+JSMon is a cutting-edge JavaScript monitoring tool designed for bug bounty hunters and security researchers. It automatically discovers new functionality, API endpoints, and potential vulnerabilities by analyzing JavaScript changes across web applications.
+
+### 🚀 Why JSMon?
+
+Modern web applications deploy new features through JavaScript updates. JSMon helps you:
+
+- 🔍 **Discover** lazy-loaded chunks, Service Workers, and dynamic imports
+- 🤖 **Analyze** diffs with AI (Gemini/Groq) to identify new attack surface
+- 🎯 **Filter** noise with smart trivia detection (90%+ FP reduction)
+- 📊 **Report** findings in beautiful HTML dashboards with dark mode
+- ⚡ **Monitor** continuously with authenticated session support
+
+## ✨ Features
+
+### 🎨 Discovery Engine
+- ✅ **Lazy-Loaded JavaScript** - Detects `import()` dynamic chunks
+- ✅ **Service Workers** - Finds PWA background scripts
+- ✅ **Web Workers** - Discovers worker threads
+- ✅ **GraphQL Operations** - Extracts mutations/queries with filtering
+- ✅ **Inline Scripts** - Analyzes embedded JavaScript
+- ✅ **Sourcemaps** - Unpacks minified code when available
+
+### 🤖 AI-Powered Analysis
+- **Gemini 1.5 Flash** - 1M token context, discovery-focused prompts
+- **Groq** - Ultra-fast LLM for diff analysis
+- **Trivia Filtering** - Skips vendor bundles, polyfills, localization (75% noise reduction)
+- **Semantic Diff** - Identifies new endpoints, parameters, feature flags
+
+### 🔐 Security & Stealth
+- **Authenticated Scanning** - Session cookies, localStorage, bearer tokens
+- **WAF Bypass** - Smart headers, human-like timing, retry logic
+- **Hybrid Fetching** - aiohttp + Playwright for bot detection bypass
+- **Session Encryption** - Fernet-encrypted session storage
+
+### 📊 Reporting
+- **FAANG-Level HTML Reports** - Dark mode, search, copy URL, JSON export
+- **Alpine.js UI** - Reactive interface without heavy frameworks
+- **Screenshot Capture** - Visual proof of endpoint discovery
+- **Notifications** - Discord/Telegram/Email alerts (configurable)
+
+### 🛡️ Enterprise-Grade
+- **Redis Storage** - Distributed deduplication and caching
+- **Async Architecture** - Handle 1000s of concurrent requests
+- **Circuit Breakers** - Fault tolerance and graceful degradation
+- **Progress Tracking** - tqdm integration for real-time feedback
+
+## 📦 Installation
+
+### Prerequisites
+- Python 3.8+
+- Redis Server
+- Playwright browsers (auto-installed)
+
+### Option 1: From PyPI (Recommended)
+```bash
+pip install jsmon
+playwright install chromium
+```
+
+### Option 2: From Source
+```bash
+git clone https://github.com/h3llwish/jsmon.git
+cd jsmon
+pip install -e .
+playwright install chromium
+```
+
+### Option 3: Docker
+```bash
+docker pull h3llwish/jsmon:latest
+docker run -v $(pwd)/targets.txt:/app/targets.txt jsmon
+```
+
+## 🚀 Quick Start
+
+### Basic Usage
+```bash
+# Monitor single target
+jsmon -u https://example.com
+
+# Monitor from file
+jsmon -i targets.txt
+
+# With AI analysis (Gemini)
+jsmon -i targets.txt --ai-provider gemini --ai-api-key YOUR_KEY
+
+# Continuous monitoring
+jsmon -i targets.txt --loop --interval 300
+```
+
+### Advanced Usage
+```bash
+# Authenticated scanning
+jsmon -i targets.txt \
+  --enable-auth-mode \
+  --session-file sessions.json
+
+# Custom configuration
+jsmon -i targets.txt \
+  --threads 20 \
+  --max-browser-concurrency 3 \
+  --ai-provider groq \
+  --ai-model llama3-70b-8192 \
+  --notify-provider-config discord_webhook.json
+
+# Debug mode
+jsmon -i targets.txt --debug --log-diffs diffs.txt
+```
+
+## 📚 Documentation
+
+### Configuration
+
+#### Environment Variables
+```bash
+export SESSION_ENCRYPTION_KEY="your-32-byte-fernet-key"
+export REDIS_HOST="localhost"
+export REDIS_PORT=6379
+```
+
+#### Session Management
+```python
+# Import session from browser
+python -m jsmon.utils.import_sessions \
+  --domain example.com \
+  --cookies cookies.json \
+  --localstorage localstorage.json \
+  --bearer-token "eyJhbGc..."
+```
+
+#### AI Provider Setup
+
+**Gemini (Free Tier)**
+```bash
+# Get API key: https://makersuite.google.com/app/apikey
+jsmon -i targets.txt \
+  --ai-provider gemini \
+  --ai-api-key "AIza..."
+```
+
+**Groq (Fast)**
+```bash
+# Get API key: https://console.groq.com
+jsmon -i targets.txt \
+  --ai-provider groq \
+  --ai-api-key "gsk_..."
+```
+
+### CLI Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `-i, --input` | File with target URLs | Required |
+| `-u, --url` | Single target URL | - |
+| `--threads` | Worker threads | 10 |
+| `--max-browser-concurrency` | Parallel browsers | 2 |
+| `--ai-provider` | AI provider (gemini/groq) | - |
+| `--ai-api-key` | AI API key | - |
+| `--ai-model` | Specific model | Auto |
+| `--loop` | Continuous monitoring | False |
+| `--interval` | Loop interval (seconds) | 3600 |
+| `--debug` | Debug logging + AI analysis log | False |
+| `--log-diffs` | Save diffs to file | - |
+| `--redis-host` | Redis hostname | localhost |
+| `--redis-port` | Redis port | 6379 |
+
+### Debug Mode & AI Analysis Logging
+
+When running with `--debug`, JSMon creates `ai_analysis_debug.log` with detailed information for tuning and troubleshooting:
+
+```bash
+jsmon -i targets.txt --ai-provider gemini --ai-api-key YOUR_KEY --debug
+```
+
+The debug log includes:
+
+**1. Trivia Filter Decisions**
+```
+[2025-12-11 15:30:00] TRIVIA FILTER ANALYSIS
+════════════════════════════════════════════════════════════════════
+JS URL: https://example.com/app.js
+Diff Size: 1234 chars
+
+CHECKS PERFORMED:
+  • webpack_hash: ✅ OK
+  • token_change: ✅ OK
+  • comments_only: ✅ OK
+
+SCORES:
+  • Trivia Score: 0.15 (threshold: 0.75)
+  • Has API Indicators: ❌ NO
+
+DECISION: 🔍 ANALYZE WITH AI
+REASON: significant_change
+
+────────────────── DIFF CONTENT ──────────────────
++function _0x3f2a() { return fetch("/api/v2/admin/users") }
+-function _0x3f2a() { return fetch("/api/v1/users") }
+────────────────── END DIFF ──────────────────
+```
+
+**2. AI Analysis Request/Response**
+- Full diff sent to Gemini
+- Raw AI response (before JSON parsing)
+- Parsed changes with severity levels
+
+**3. Alert Decisions**
+- Which alerts were sent
+- Which were skipped as duplicates
+
+This log helps you:
+- Understand why trivia filter passed/blocked a diff
+- See exactly what Gemini received and responded
+- Tune the system for fewer false positives/negatives
+
+## 🎨 Example Output
+
+### Terminal
+```
+[+] Connected to Redis for state tracking.
+[🍪] Found 3 stored sessions:
+  ✅ example.com (30.2 days left)
+  ⚠️  test.com (2.1 days left)
+
+--- Starting scan cycle 1 with 5 base URLs ---
+--- Phase 1: Crawling for JS files ---
+Crawling URLs: 100%|████████| 5/5 [00:12<00:00]
+[+] Discovery phase complete. Found 127 JS sources.
+
+--- Phase 2: Analyzing 127 JS sources ---
+Analyzing JS: 100%|████████| 127/127 [01:23<00:00]
+[+] CHANGE DETECTED for: https://example.com/static/app.bundle.js
+[AI DISCOVERY] Admin User Deletion API Found
+  Endpoint: DELETE /api/v2/admin/users/delete
+  Parameters: userId, reason
+  Confidence: 95%
+
+[+] Analysis phase complete.
+📊 New endpoints: 23 | API keys: 2
+```
+
+### HTML Report
+![JSMon Report Example](https://via.placeholder.com/800x400?text=Beautiful+Dark+Mode+Report)
+
+*Features: Dark mode, search, copy URL, JSON export, status filtering*
+
+## 🔍 How It Works
+
+```mermaid
+graph LR
+    A[Target URLs] --> B[Crawler]
+    B --> C[JS Discovery]
+    C --> D{Source Type}
+    D -->|External| E[fetch file]
+    D -->|Lazy-loaded| F[import detect]
+    D -->|Service Worker| G[SW register]
+    E --> H[Diff Detection]
+    F --> H
+    G --> H
+    H -->|Changed| I[Trivia Filter]
+    I -->|Significant| J[AI Analysis]
+    J --> K[Endpoint Extraction]
+    K --> L[HTML Report]
+```
+
+1. **Crawl** - Fetch HTML + extract all JS sources
+2. **Discover** - Find lazy chunks, Service Workers, dynamic imports
+3. **Diff** - Compare with previous version (Redis cache)
+4. **Filter** - Skip vendor bundles, polyfills, formatting changes
+5. **Analyze** - AI identifies new endpoints/features
+6. **Report** - Generate beautiful HTML + send alerts
+
+## 🆚 Comparison
+
+| Feature | JSMon | Linkfinder | JSFScan | Subdomainizer |
+|---------|-------|------------|---------|---------------|
+| Lazy-loaded JS | ✅ | ❌ | ❌ | ❌ |
+| Service Workers | ✅ | ❌ | ❌ | ❌ |
+| GraphQL Support | ✅ | ❌ | ✅ | ❌ |
+| AI Analysis | ✅ | ❌ | ❌ | ❌ |
+| Trivia Filtering | ✅ | ❌ | ⚠️ | ❌ |
+| Continuous Monitoring | ✅ | ❌ | ❌ | ❌ |
+| Authenticated Scans | ✅ | ❌ | ❌ | ❌ |
+| HTML Reports | ✅ | ❌ | ✅ | ❌ |
+
+## 🤝 Contributing
+
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+### Development Setup
+```bash
+git clone https://github.com/h3llwish/jsmon.git
+cd jsmon
+pip install -e ".[dev]"
+pre-commit install
+```
+
+### Running Tests
+```bash
+pytest tests/
+black jsmon/
+mypy jsmon/
+```
+
+## 📝 License
+
+This project is licensed under the MIT License - see [LICENSE](LICENSE) file.
+
+## 🙏 Acknowledgments
+
+- [Linkfinder](https://github.com/GerbenJavado/LinkFinder) - Inspiration for endpoint extraction
+- [Nuclei](https://github.com/projectdiscovery/nuclei) - Template-based scanning approach
+- [Amass](https://github.com/OWASP/Amass) - Architecture patterns
+
+## 📬 Contact
+
+- **Twitter**: [@h3llwish](https://twitter.com/h3llwish)
+- **Email**: sosibonka3@gmail.com
+
+## ⭐ Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=h3llwish/jsmon&type=Date)](https://star-history.com/#h3llwish/jsmon&Date)
+
+---
+
+<div align="center">
+Made with ❤️ for the bug bounty community
+</div>
