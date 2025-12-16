@@ -1,0 +1,47 @@
+name: Run Tests
+
+on:
+  push:
+    paths:
+      - 'julearn/**'
+      - '.github/workflows/**'
+      - 'tox.ini'
+      - 'pyproject.toml'
+  pull_request:
+    paths:
+      - 'julearn/**'
+      - '.github/workflows/**'
+      - 'tox.ini'
+      - 'pyproject.toml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - '3.9'
+          - '3.10'
+          - '3.11'
+          - '3.12'
+          - '3.13'
+
+    steps:
+    - uses: actions/checkout@v5
+    - uses: actions/setup-python@v6
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip setuptools wheel
+        python -m pip install tox tox-gh-actions
+    - name: Test with tox
+      run: |
+        tox
+    - uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        fail_ci_if_error: true
+        flags: julearn
+      if: success() && matrix.python-version == 3.12
