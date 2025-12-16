@@ -1,0 +1,120 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "bec_testing_plugin"
+version = "0.2.0"
+description = "A plugin repository for BEC"
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "black",
+    "copier",
+    "isort",
+    "coverage",
+    "pylint",
+    "pytest",
+    "pytest-random-order",
+    "ophyd_devices",
+    "bec_server",
+]
+
+[project.entry-points."bec"]
+plugin_bec = "bec_testing_plugin"
+
+[project.entry-points."bec.deployment.device_server"]
+plugin_ds_startup = "bec_testing_plugin.deployments.device_server.startup:run"
+
+[project.entry-points."bec.file_writer"]
+plugin_file_writer = "bec_testing_plugin.file_writer"
+
+[project.entry-points."bec.scans"]
+plugin_scans = "bec_testing_plugin.scans"
+
+[project.entry-points."bec.scans.metadata_schema"]
+plugin_metadata_schema = "bec_testing_plugin.scans.metadata_schema"
+
+[project.entry-points."bec.ipython_client_startup"]
+plugin_ipython_client_pre = "bec_testing_plugin.bec_ipython_client.startup.pre_startup"
+plugin_ipython_client_post = "bec_testing_plugin.bec_ipython_client.startup"
+
+[project.entry-points."bec.widgets.auto_updates"]
+plugin_widgets_update = "bec_testing_plugin.bec_widgets.auto_updates"
+
+[project.entry-points."bec.widgets.user_widgets"]
+plugin_widgets = "bec_testing_plugin.bec_widgets.widgets"
+
+[tool.isort]
+profile = "black"
+line_length = 100
+multi_line_output = 3
+include_trailing_comma = true
+
+[tool.black]
+line-length = 100
+skip-magic-trailing-comma = true
+
+[tool.pylint.basic]
+# Good variable names regexes, separated by a comma. If names match any regex,
+# they will always be accepted
+good-names-rgxs = [
+    ".*scanID.*",
+    ".*RID.*",
+    ".*pointID.*",
+    ".*ID.*",
+    ".*_2D.*",
+    ".*_1D.*",
+]
+
+[tool.hatch.build.targets.wheel]
+include = ["*"]
+exclude = ["docs/**", "tests/**"]
+
+[tool.hatch.build.targets.sdist]
+include = ["*"]
+exclude = ["docs/**", "tests/**"]
+
+[tool.semantic_release]
+build_command = "pip install build wheel && python -m build"
+version_toml = ["pyproject.toml:project.version"]
+
+[tool.semantic_release.commit_author]
+env = "GIT_COMMIT_AUTHOR"
+default = "semantic-release <semantic-release>"
+
+[tool.semantic_release.commit_parser_options]
+allowed_tags = [
+    "build",
+    "chore",
+    "ci",
+    "docs",
+    "feat",
+    "fix",
+    "perf",
+    "style",
+    "refactor",
+    "test",
+]
+minor_tags = ["feat"]
+patch_tags = ["fix", "perf"]
+default_bump_level = 0
+
+[tool.semantic_release.remote]
+name = "origin"
+type = "github"
+ignore_token_for_push = true
+
+[tool.semantic_release.remote.token]
+env = "GH_TOKEN"
+
+[tool.semantic_release.publish]
+dist_glob_patterns = ["dist/*"]
+upload_to_vcs_release = true
