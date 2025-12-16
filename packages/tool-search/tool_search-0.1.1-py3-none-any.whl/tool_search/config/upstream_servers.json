@@ -1,0 +1,37 @@
+{
+  "servers": [
+    {
+      "name": "context7",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"]
+    },
+    {
+      "name": "ilograph",
+      "transport": "stdio",
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "ghcr.io/quincymillerdev/ilograph-mcp-server:latest"]
+    },
+    {
+      "name": "zen",
+      "transport": "stdio",
+      "command": "/Users/alexanderalyushin/zen-mcp-server/.zen_venv/bin/python",
+      "args": ["/Users/alexanderalyushin/zen-mcp-server/server.py"],
+      "env": {
+        "CUSTOM_API_URL": "http://localhost:8317/v1",
+        "CUSTOM_MODEL_NAME": "gpt-5.1-pro",
+        "DEFAULT_MODEL": "auto",
+        "DEFAULT_THINKING_MODE_THINKDEEP": "high",
+        "CONVERSATION_TIMEOUT_HOURS": "24",
+        "MAX_CONVERSATION_TURNS": "40",
+        "LOG_LEVEL": "DEBUG",
+        "DISABLED_TOOLS": "analyze,refactor,testgen,secaudit,docgen,tracer"
+      }
+    },
+    {
+      "name": "linear",
+      "transport": "http",
+      "url": "https://mcp.linear.app/mcp"
+    }
+  ]
+}
