@@ -1,0 +1,168 @@
+Metadata-Version: 2.4
+Name: sailor-remote-agent
+Version: 0.1.0
+Summary: Minimal Bottle web app for clipboard and evaluation operations
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+Requires-Dist: bottle>=0.12.0
+
+# Remote Agent
+
+A minimal Python web app + API built with Bottle for clipboard operations and safe expression evaluation.
+
+## Features
+
+- **GET /ping** - Health check endpoint returning `{pong: "ok"}`
+- **POST /clipboard** - Accepts JSON with `content` field, stores in memory, and executes xclip command
+- **POST /evaluate** - Safely evaluates Python literals using `ast.literal_eval` and stores results
+- **GET /answer** - Renders HTML showing the latest evaluation result
+- **GET /result** - Renders HTML showing all evaluation results
+
+## Installation
+
+### Development Installation
+
+1. Install dependencies:
+```bash
+pip install bottle
+```
+
+2. Run the app directly:
+```bash
+python app.py
+```
+
+### Package Installation
+
+1. Build the package:
+```bash
+pip install build
+python -m build
+```
+
+This will create `dist/remote-agent-0.1.0.tar.gz` and wheel files.
+
+2. Install locally:
+```bash
+pip install dist/remote-agent-0.1.0*.whl
+```
+
+3. Run using the console script:
+```bash
+remote-agent
+```
+
+The app will start on `http://localhost:8080`
+
+## Publishing to PyPI
+
+### Prerequisites
+
+1. Create accounts:
+   - PyPI account: https://pypi.org/account/register/
+   - TestPyPI account: https://test.pypi.org/account/register/
+
+2. Install required tools:
+```bash
+pip install build twine
+```
+
+### Build and Upload Steps
+
+1. **Update version** in `pyproject.toml` if needed:
+```toml
+version = "0.1.0"
+```
+
+2. **Build the package**:
+```bash
+python -m build
+```
+
+This creates:
+- `dist/remote-agent-0.1.0.tar.gz` (source distribution)
+- `dist/remote-agent-0.1.0-py3-none-any.whl` (wheel)
+
+3. **Test on TestPyPI first** (recommended):
+```bash
+twine upload --repository testpypi dist/*
+```
+
+You'll be prompted for:
+- Username: your TestPyPI username
+- Password: your TestPyPI API token (create at https://test.pypi.org/manage/account/token/)
+
+4. **Test installation from TestPyPI**:
+```bash
+pip install --index-url https://test.pypi.org/simple/ remote-agent
+```
+
+5. **Upload to PyPI** (production):
+```bash
+twine upload dist/*
+```
+
+You'll be prompted for:
+- Username: `__token__`
+- Password: your PyPI API token (create at https://pypi.org/manage/account/token/)
+
+6. **Verify installation**:
+```bash
+pip install remote-agent
+remote-agent
+```
+
+## Project Structure
+
+```
+.
+├── app.py              # Main application
+├── __init__.py
+├── views/
+│   ├── answer.tpl      # Template for latest result
+│   └── result.tpl      # Template for all results
+├── pyproject.toml      # Package configuration
+└── README.md           # This file
+```
+
+## API Usage Examples
+
+### Health Check
+```bash
+curl http://localhost:8080/ping
+# Response: {"pong": "ok"}
+```
+
+### Clipboard Operation
+```bash
+curl -X POST http://localhost:8080/clipboard \
+  -H "Content-Type: application/json" \
+  -d '{"content": "Hello World"}'
+# Response: {"status": "ok"}
+```
+
+### Evaluate Expression
+```bash
+curl -X POST http://localhost:8080/evaluate \
+  -H "Content-Type: application/json" \
+  -d '{"expr": "[1, 2, 3]"}'
+# Response: {"status": "ok", "result": [1, 2, 3]}
+```
+
+### View Results
+- Open `http://localhost:8080/answer` in browser (latest result)
+- Open `http://localhost:8080/result` in browser (all results)
+
+## Notes
+
+- Storage is in-memory (data is lost on restart)
+- Evaluation uses `ast.literal_eval` for safety (only Python literals, no code execution)
+- Clipboard command requires `xclip` to be installed on the system
+- The app runs on `localhost:8080` by default
+
+## Requirements
+
+- Python 3.7+
+- Bottle (only dependency)
+- xclip (for clipboard functionality on Linux)
+
