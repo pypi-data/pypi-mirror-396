@@ -1,0 +1,300 @@
+# Witticism
+
+[![CI](https://github.com/Aaronontheweb/witticism/actions/workflows/ci.yml/badge.svg)](https://github.com/Aaronontheweb/witticism/actions/workflows/ci.yml)
+[![PyPI version](https://img.shields.io/pypi/v/witticism.svg)](https://pypi.org/project/witticism/)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Python](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue)](https://www.python.org/downloads/)
+[![GitHub release](https://img.shields.io/github/release/Aaronontheweb/witticism.svg)](https://github.com/Aaronontheweb/witticism/releases/latest)
+
+🎙️ **One-command install. Zero configuration. Just works.**
+
+WhisperX-powered voice transcription tool that types text directly at your cursor position. Hold F9 to record, release to transcribe.
+
+## ✨ Features
+
+- **🚀 One-Command Install** - Automatic GPU detection and configuration
+- **🎮 True GPU Acceleration** - Full CUDA support, even for older GPUs (GTX 10xx series)
+- **⚡ Instant Transcription** - Press F9, speak, release. Text appears at cursor
+- **🔄 Continuous Dictation Mode** - Toggle on for hands-free transcription
+- **🎯 System Tray Integration** - Runs quietly in background, always ready
+- **📦 No Configuration** - Works out of the box with smart defaults
+- **🔧 Easy Updates** - Re-run install script to upgrade to latest version
+
+## Why Witticism?
+
+Built to solve real GPU acceleration issues with whisper.cpp. WhisperX provides:
+- Proper CUDA/GPU support for faster transcription (2-10x faster than CPU)
+- Word-level timestamps and alignment for accuracy
+- Better accuracy with less latency
+- Native Python integration that actually works
+
+## Installation
+
+### 🚀 Quick Install
+
+**Linux:**
+```bash
+curl -sSL https://raw.githubusercontent.com/Aaronontheweb/witticism/master/install.sh | bash
+```
+
+**Windows:**
+```powershell
+irm https://raw.githubusercontent.com/Aaronontheweb/witticism/master/install.ps1 | iex
+```
+
+> For detailed Windows installation instructions, see [INSTALL_WINDOWS.md](INSTALL_WINDOWS.md)
+
+**That's it!** The installer will:
+- ✅ Install system dependencies automatically (asks for sudo only if needed)
+- ✅ Detect your GPU automatically (GTX 1080, RTX 3090, etc.)
+- ✅ Install the right CUDA/PyTorch versions
+- ✅ Create desktop launcher with custom icon
+- ✅ Set up auto-start on login
+- ✅ Configure the system tray icon
+- ✅ Handle all dependencies in an isolated environment
+
+**No Python knowledge required. No CUDA configuration. It just works.**
+
+Note: The installer will ask for your sudo password only if PortAudio needs to be installed. Witticism itself runs as your regular user.
+
+### Manual Installation
+
+If you prefer to install manually:
+
+### Prerequisites
+
+- **Linux** (Ubuntu, Fedora, Debian, etc.)
+- **Python 3.10-3.12** (pipx will handle this)
+- **NVIDIA GPU** (optional but recommended for faster transcription)
+
+1. Install system dependencies:
+```bash
+# Debian/Ubuntu
+sudo apt-get install portaudio19-dev
+
+# Fedora/RHEL
+sudo dnf install portaudio-devel
+
+# Arch Linux
+sudo pacman -S portaudio
+```
+
+2. Install pipx if needed:
+```bash
+python3 -m pip install --user pipx
+python3 -m pipx ensurepath
+```
+
+3. Install Witticism:
+```bash
+# For CPU-only
+pipx install witticism
+
+# For GPU with CUDA 11.8+
+pipx install witticism --pip-args="--index-url https://download.pytorch.org/whl/cu118 --extra-index-url https://pypi.org/simple"
+
+# For GPU with CUDA 12.1+
+pipx install witticism --pip-args="--index-url https://download.pytorch.org/whl/cu121 --extra-index-url https://pypi.org/simple"
+```
+
+4. Set up auto-start (optional):
+```bash
+mkdir -p ~/.config/autostart
+cat > ~/.config/autostart/witticism.desktop << EOF
+[Desktop Entry]
+Type=Application
+Name=Witticism
+Exec=$HOME/.local/bin/witticism
+StartupNotify=false
+Terminal=false
+X-GNOME-Autostart-enabled=true
+EOF
+```
+
+### Desktop Integration
+
+The quick installer automatically sets up desktop integration with launcher icon. If you installed manually, Witticism can still be launched from the terminal with the `witticism` command.
+
+### Upgrading
+
+To upgrade to the latest version, simply re-run the install script:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/Aaronontheweb/witticism/master/install.sh | bash
+```
+
+The install script is idempotent and will automatically upgrade existing installations to the latest version with all dependencies.
+
+## Usage
+
+### Basic Operation
+
+1. The app runs in your system tray (green "W" icon)
+2. **Hold F9** to start recording
+3. **Release F9** to stop and transcribe
+4. Text appears instantly at your cursor position
+
+**Or use Continuous Mode:**
+- Toggle continuous dictation from the tray menu
+- Speak naturally - transcription happens automatically
+- Perfect for long-form writing
+
+### System Tray Menu
+
+- **Status**: Shows current state (Ready/Recording/Transcribing)
+- **Model**: Choose transcription model
+  - `tiny/tiny.en`: Fastest, less accurate
+  - `base/base.en`: Good balance (default)
+  - `small/medium/large-v3`: More accurate, slower
+- **Audio Device**: Select input microphone
+- **Quit**: Exit application
+
+### Command Line Options
+
+```bash
+witticism --model base --log-level INFO
+```
+
+Options:
+- `--model`: Choose model (tiny, base, small, medium, large-v3)
+- `--log-level`: Set logging verbosity (DEBUG, INFO, WARNING, ERROR)
+- `--reset-config`: Reset settings to defaults
+- `--version`: Show version information
+
+## Configuration
+
+Config file location: `~/.config/witticism/config.json`
+
+Key settings:
+```json
+{
+  "model": {
+    "size": "base",
+    "device": "auto"
+  },
+  "hotkeys": {
+    "push_to_talk": "f9"
+  }
+}
+```
+
+## Performance
+
+With GTX 1080 GPU:
+- **tiny model**: ~0.5s latency, 5-10x realtime
+- **base model**: ~1-2s latency, 2-5x realtime  
+- **large-v3**: ~3-5s latency, 1-2x realtime
+
+CPU-only fallback available but slower.
+
+## Troubleshooting
+
+### No audio input
+- Check microphone permissions
+- Try selecting a different audio device from tray menu
+
+### CUDA not detected
+```bash
+python -c "import torch; print(torch.cuda.is_available())"
+```
+Should return `True` if CUDA is available.
+
+### CUDA errors after suspend/resume
+If you experience CUDA crashes after suspending and resuming your system, the installer (v0.6.0+) automatically configures NVIDIA to preserve GPU memory across suspend cycles. If you installed Witticism before this fix was added, you can either:
+
+1. **Re-run the installer** (recommended):
+   ```bash
+   curl -sSL https://raw.githubusercontent.com/aaronstannard/witticism/main/install.sh | bash
+   ```
+   The installer is idempotent and will apply the fix without reinstalling Witticism.
+
+2. **Apply the fix manually**:
+   ```bash
+   # Configure NVIDIA to preserve memory across suspend
+   echo "options nvidia NVreg_PreserveVideoMemoryAllocations=1" | sudo tee /etc/modprobe.d/nvidia-power-management.conf
+   echo "options nvidia NVreg_TemporaryFilePath=/tmp" | sudo tee -a /etc/modprobe.d/nvidia-power-management.conf
+   sudo update-initramfs -u
+   
+   # Enable NVIDIA suspend services (if available)
+   sudo systemctl enable nvidia-suspend.service
+   sudo systemctl enable nvidia-resume.service
+   
+   # Reboot for changes to take effect
+   sudo reboot
+   ```
+
+This fix prevents the `nvidia_uvm` kernel module from becoming corrupted during suspend/resume cycles, which is the root cause of "CUDA unspecified launch failure" errors.
+
+### Models not loading
+First run downloads models (~150MB for base). Ensure stable internet connection.
+
+### Debug logging
+
+**Log file locations:**
+- **Linux**: `~/.local/share/witticism/debug.log`
+- **Windows**: `%LOCALAPPDATA%\witticism\debug.log` (e.g., `C:\Users\YourName\AppData\Local\witticism\debug.log`)
+
+To enable debug logging, either:
+- Run with `--log-level DEBUG`
+- Edit the config file and set `"logging": {"level": "DEBUG", "file": "<path-to-log-file>"}`
+  - **Linux config**: `~/.config/witticism/config.json`
+  - **Windows config**: `%APPDATA%\witticism\config.json`
+
+Common issues visible in debug logs:
+- "No active speech found in audio" - Check microphone connection/volume
+- CUDA context errors - Restart after suspend/resume
+- Model loading failures - Check GPU memory with `nvidia-smi`
+
+### Force Reinstall
+
+If you need to force a complete reinstallation (e.g., to fix corrupted dependencies or reset settings):
+
+**Linux:**
+```bash
+# Force reinstall with the installer
+curl -sSL https://raw.githubusercontent.com/Aaronontheweb/witticism/master/install.sh | bash -s -- --force
+```
+
+**Windows:**
+```powershell
+# Force reinstall with all dependencies
+irm https://raw.githubusercontent.com/Aaronontheweb/witticism/master/install.ps1 | iex -ForceReinstall
+
+# Additional options can be combined:
+# Force CPU-only reinstall without auto-start
+$script = irm https://raw.githubusercontent.com/Aaronontheweb/witticism/master/install.ps1
+& ([scriptblock]::Create($script)) -ForceReinstall -CPUOnly -SkipAutoStart
+```
+
+The force reinstall option will:
+- Remove existing Witticism installation
+- Clear the pipx/pip cache
+- Reinstall all dependencies fresh
+- Preserve your configuration files (unless you use `--reset-config`)
+
+## Development
+
+### Project Structure
+```
+src/witticism/
+├── core/           # Core functionality
+│   ├── whisperx_engine.py
+│   ├── audio_capture.py
+│   ├── hotkey_manager.py
+│   └── transcription_pipeline.py
+├── ui/             # User interface
+│   └── system_tray.py
+├── utils/          # Utilities
+│   ├── output_manager.py
+│   ├── config_manager.py
+│   └── logging_config.py
+└── main.py         # Entry point
+```
+
+## Author
+
+Created by [Aaron Stannard](https://aaronstannard.com/)
+
+## License
+
+Apache-2.0
