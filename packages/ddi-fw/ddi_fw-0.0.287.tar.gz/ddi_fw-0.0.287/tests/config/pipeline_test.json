@@ -1,0 +1,61 @@
+{
+    "experiments": [
+        {
+            "type": "general",
+            "library": "tensorflow",
+            "experiment_name": "Pipeline-Test-1",
+            "experiment_description": "This is a test experiment for pipeline.",
+            "default_model": {
+                "model_type": "tests.config.models.create_model",
+                "params": {
+                    "batch_size": 32,
+                    "epochs": 150
+                }
+            },
+            "tracking_config": {
+                "use_tracking": true,
+                "library": "mlflow",
+                "params": {
+                    "mlflow": {
+                        "experiment_name": "Enhancement of ddi classification",
+                        "tracking_uri": "sqlite:///mlflow.db",
+                        "artifact_location": "mlruns",
+                        "experiment_tags": {
+                            "project_name": "Pipeline-Test-1",
+                            "project_quarter": "Q1-2025",
+                            "mlflow.note.content": "This is a test experiment for pipeline."
+                        }
+                    }
+                }
+            },
+            "dataset": {
+                "dataset_type": "tests.config.iris_dataset.IrisDataset",
+                "dataset_splitter_type": "ddi_fw.datasets.dataset_splitter.DatasetSplitter",
+                "columns": [
+                    "sepal_length",
+                    "sepal_width",
+                    "petal_length",
+                    "petal_width"
+                ]
+            },
+            "multi_modal": [
+                {
+                    "input_type": "1D",
+                    "force_stack": false,
+                    "name": "all_features",
+                    "inputs": [
+                        "sepal_length",
+                        "sepal_width",
+                        "petal_length",
+                        "petal_width"
+                    ],
+                    "model_type": "tests.config.models.create_model",
+                    "params": {
+                        "batch_size": 32,
+                        "epochs": 50
+                    }
+                }
+            ]
+        }
+    ]
+}
