@@ -1,0 +1,142 @@
+
+[project]
+name = "lightcurvelynx"
+license = "MIT"
+license-files = ["LICENSE"]
+readme = "README.md"
+authors = [
+    { name = "LINCC Frameworks", email = "lincc-frameworks-team@lists.lsst.org" }
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+]
+dynamic = ["version"]
+requires-python = ">=3.10"
+dependencies = [
+    "astropy",
+    "cdshealpix",
+    "citation-compass>=0.0.3",
+    "matplotlib",
+    "mocpy",
+    "nested-pandas",
+    "networkx",  # Used for graph visualization
+    "numpy>=2.0",
+    "pandas",
+    "pooch",
+    "PyYAML>=6.0",
+    "regions",
+    "scipy",
+    "tqdm",
+]
+
+[project.urls]
+"Source Code" = "https://github.com/lincc-frameworks/lightcurvelynx"
+
+# On a mac, install optional dependencies with `pip install '.[dev]'` (include the single quotes)
+[project.optional-dependencies]
+dev = [
+    "asv[virtualenv]==0.6.5", # Used to compute performance benchmarks
+    "bilby",  # Used for Bayesian inference
+    "dust_extinction",
+    "extinction>=0.4.7",  # Needed by sncosmo
+    "fsspec[http]",  # Read OpSim file from the web with utils/make_opsim_shorten.py
+    "jupyter", # Clears output from Jupyter notebooks
+    "jax",
+    "lsdb",
+    "networkx",  # Used for graph visualization
+    "pre-commit", # Used to run checks before finalizing a git commit
+    "pytest",
+    "pytest-cov", # Used to report total code coverage
+    "pzflow",
+    "ruff", # Used for static linting of files
+    "sncosmo",
+    "synphot", # Used for SED modeling tests
+    "VBMicrolensing",  # used for microlensing tests
+]
+
+# Install all the optional astro dependencies with `pip install '.[all]'`
+# (include the single quotes)
+all = [
+    "bilby",  # Used for Bayesian inference
+    "dust_extinction",
+    "extinction>=0.4.7",  # Needed by sncosmo
+    "jax",
+    "lsdb",  # Used to read and write LSDB catalogs
+    "networkx",  # Used for graph visualization
+    "pzflow",
+    "sncosmo",
+    "synphot",  # used for SED modeling tests
+    "VBMicrolensing",  # used for microlensing tests
+]
+
+[build-system]
+requires = [
+    "setuptools>=62", # Used to build and package the Python project
+    "setuptools_scm>=6.2", # Gets release version from git. Makes it available programmatically
+]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+write_to = "src/lightcurvelynx/_version.py"
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests",
+    "src",
+    "docs",
+]
+addopts = "--doctest-modules --doctest-glob=*.rst"
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+[tool.ruff.lint]
+select = [
+    # pycodestyle
+    "E",
+    "W",
+    # Pyflakes
+    "F",
+    # pep8-naming
+    "N",
+    # pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+    # docstrings
+    "D101",
+    "D102",
+    "D103",
+    "D106",
+    "D206",
+    "D207",
+    "D208",
+    "D300",
+    "D417",
+    "D419",
+]
+ignore = [
+    "UP006", # Allow non standard library generics in type hints
+    "UP007", # Allow Union in type hints
+    "SIM114", # Allow if with same arms
+    "B028", # Allow default warning level
+    "SIM117", # Allow nested with
+    "UP015", # Allow redundant open parameters
+    "UP028", # Allow yield in for loop
+    "E721", # Allow direct type comparison
+    "N803", # Allow arguments to start with a capital letter
+    "N806", # Allow variables to use non-lowercase letter
+    "SIM108" # Allow if-else blocks that could be ternary expressions
+]
+
+
+[tool.coverage.run]
+omit=["src/lightcurvelynx/_version.py"]
