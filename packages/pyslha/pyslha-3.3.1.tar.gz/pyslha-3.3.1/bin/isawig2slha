@@ -1,0 +1,36 @@
+#! /usr/bin/env python
+
+"""\
+Usage: %prog IN.isa [OUT.spc]
+
+Convert a HERWIG/ISAWIG model/decay spectrum file to an SLHA spectrum input
+file.
+
+Conversion based on the HERWIG SUSY specification format, from
+http://www.hep.phy.cam.ac.uk/~richardn/HERWIG/ISAWIG/file.html
+"""
+
+import pyslha
+import sys, argparse
+parser = argparse.ArgumentParser(usage=__doc__)
+parser.add_argument("INFILE")
+parser.add_argument("OUTFILE", nargs="?", default=None)
+parser.add_argument("--version", action="version", version="%(prog)s " + pyslha.__version__)
+args = parser.parse_args()
+
+## Choose output file
+import os
+if not args.OUTFILE:
+    o = os.path.basename(args.INFILE)
+    if "." in o:
+        o = o[:o.rindex(".")]
+    args.OUTFILE = o + ".isa"
+
+## Read spectrum file
+doc = pyslha.readISAWIGFile(args.INFILE)
+
+## And write it out again!
+if args.OUTFILE == "-":
+    sys.stdout.write(pyslha.writeSLHA(doc))
+else:
+    pyslha.writeSLHAFile(args.OUTFILE, doc)
