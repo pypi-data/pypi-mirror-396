@@ -1,0 +1,111 @@
+# Changelog
+
+
+## 0.11.0 (2025-12-13)
+
+- Adapted to format specification version 0.10:
+
+  - Series property `name` has been renamed to `title`.
+  - Series property `alternative_names` has been renamed to
+    `alternative_titles`.
+  - Optional `links` section added to series.
+
+- Renamed `reading` subpackage to `deserialization`, and adjusted function
+  names.
+
+- Renamed `writing` subpackage to `serialization`.
+
+- Implemented serialization and deserialization of (single) series.
+
+- Added suffix `_from_toml` to public deserialization functions with string
+  input argument.
+
+- Added suffix `_to_toml` to public serialization functions.
+
+- Renamed model `Links` to `PartyLinks`.
+
+- Updated pytest to v9.0.2 (from v8.3.5).
+
+- Updated ruff to v0.14.8 (from v0.11.3).
+
+- Updated tomlkit to v0.13.3 (from v0.13.2).
+
+
+## 0.10.0 (2025-04-04)
+
+- Upgraded to LANpartyDB data format v0.9 (backwards-incompatible).
+
+
+## 0.9.2 (2025-01-11)
+
+- Added support for Python 3.13.
+
+
+## 0.9.1 (2024-11-13)
+
+- Added description, usage examples to README.
+
+
+## 0.9.0 (2024-11-03)
+
+- Fixed parsing of empty series document.
+
+- Changed type of `Series` fields `alternative_names`, `country_codes` from
+  `set[str]` to `list[str]`.
+
+- Fixed serialization of party location's latitude and longitude.
+
+- Added testing infrastructure (pytest, GitHub Action).
+
+- Added tests for party, series reading.
+
+- Added tests for party serialization.
+
+- Added ruff as a development dependency.
+
+- Updated repository URL.
+
+
+## 0.8.0 (2024-10-25)
+
+- Raised minimum required tomlkit version to 0.13.2.
+
+- Switched package/project manager from rye to uv.
+
+
+## 0.7.0 (2024-07-01)
+
+- Added optional `country_codes` property to `Series`.
+
+
+## 0.6.0 (2024-06-30)
+
+- Added module to write a party to a TOML document.
+
+
+## 0.5.0 (2024-06-30)
+
+- Removed support to load website URL from `links.website`. From now on, it is
+  expected only in `links.website.url`.
+
+
+## 0.4.0 (2024-06-30)
+
+- Generalized name of model `Website` to `Resource`.
+
+
+## 0.3.0 (2024-05-16)
+
+- Added optional `attendees` property to `Party`.
+
+- Added support for Python 3.12.
+
+
+## 0.2.0 (2024-02-21)
+
+- Added module to load models from TOML data.
+
+
+## 0.1.0 (2024-02-21)
+
+- Added models.
