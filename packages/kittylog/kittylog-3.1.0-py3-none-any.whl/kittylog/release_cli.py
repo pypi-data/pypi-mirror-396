@@ -1,0 +1,144 @@
+"""CLI command for preparing changelog releases."""
+
+import logging
+import sys
+
+import click
+
+from kittylog.changelog.io import prepare_release, read_changelog
+from kittylog.config import ChangelogOptions, WorkflowOptions
+from kittylog.constants import EnvDefaults, Logging
+from kittylog.errors import AIError, ChangelogError, ConfigError, GitError, handle_error
+from kittylog.main import main_business_logic
+from kittylog.output import get_output_manager
+from kittylog.utils.logging import setup_command_logging
+
+logger = logging.getLogger(__name__)
+
+
+@click.command()
+@click.argument("version", required=True)
+@click.option("--file", "-f", default="CHANGELOG.md", help="Path to changelog file")
+@click.option("--dry-run", "-d", is_flag=True, help="Show what would be done without making changes")
+@click.option("--skip-generate", is_flag=True, help="Skip changelog generation, only finalize release")
+@click.option("--model", "-m", default=None, help="Override default model for generation")
+@click.option("--hint", "-h", default="", help="Additional context for the prompt")
+@click.option(
+    "--language",
+    "-l",
+    default=None,
+    help="Override the language for changelog entries (e.g., 'Spanish', 'es', 'zh-CN')",
+)
+@click.option(
+    "--audience",
+    "-u",
+    type=click.Choice(["developers", "users", "stakeholders"], case_sensitive=False),
+    default=None,
+    help="Target audience for changelog tone (developers, users, stakeholders)",
+)
+@click.option("--quiet", "-q", is_flag=True, help="Suppress non-error output")
+@click.option("--verbose", "-v", is_flag=True, help="Increase output verbosity")
+@click.option(
+    "--log-level",
+    type=click.Choice(Logging.LEVELS, case_sensitive=False),
+    help="Set log level",
+)
+@click.option(
+    "--include-diff",
+    is_flag=True,
+    help="Include git diff in AI context (warning: can dramatically increase token usage)",
+)
+def release(
+    version,
+    file,
+    dry_run,
+    skip_generate,
+    model,
+    hint,
+    language,
+    audience,
+    quiet,
+    verbose,
+    log_level,
+    include_diff,
+):
+    """Prepare changelog for a release.
+
+    Generates changelog entries (unless --skip-generate) and converts the
+    [Unreleased] section to a versioned release with today's date.
+
+    VERSION is the version to release (e.g., 2.3.0 or v2.3.0).
+
+    Examples:
+
+        kittylog release 2.3.0              # Generate changelog & prepare release
+
+        kittylog release 2.3.0 --skip-generate  # Only finalize existing Unreleased
+
+        kittylog release v2.3.0 --dry-run   # Preview what would happen
+
+        kittylog release 2.3.0 --include-diff  # Include git diff context in AI analysis
+    """
+    try:
+        # Set up logging using shared utility
+        setup_command_logging(log_level, verbose, quiet)
+
+        output = get_output_manager()
+
+        # Normalize version
+        normalized_version = version.lstrip("v")
+
+        logger.info(f"Preparing release {normalized_version}")
+
+        # Step 1: Generate changelog entries (unless skipped)
+        if not skip_generate:
+            output.info(f"Generating changelog entries for {normalized_version}...")
+
+            changelog_opts = ChangelogOptions(
+                changelog_file=file,
+                from_tag=None,
+                to_tag=None,
+                special_unreleased_mode=True,  # Process commits since last tag for the release
+            )
+            workflow_opts = WorkflowOptions(
+                quiet=quiet,
+                dry_run=dry_run,
+                language=language or EnvDefaults.LANGUAGE,
+                audience=audience or EnvDefaults.AUDIENCE,
+                no_unreleased=False,
+                interactive=False,
+                include_diff=include_diff,
+                hint=hint,
+            )
+
+            success, _token_usage = main_business_logic(
+                changelog_opts=changelog_opts,
+                workflow_opts=workflow_opts,
+                model=model,
+                hint=hint,
+            )
+
+            if not success:
+                output.error("Failed to generate changelog entries")
+                sys.exit(1)
+
+        # Step 2: Prepare release (convert Unreleased to versioned)
+        if dry_run:
+            content = read_changelog(file)
+            if "## [Unreleased]" in content:
+                output.info(f"Would convert [Unreleased] to [{normalized_version}] - <today's date>")
+            else:
+                output.warning("No [Unreleased] section found to convert")
+            output.success(f"Dry run complete for release {normalized_version}")
+        else:
+            output.info(f"Finalizing release {normalized_version}...")
+            prepare_release(file, normalized_version)
+            output.success(f"Prepared changelog for release {normalized_version}")
+
+    except (ConfigError, GitError, AIError, ChangelogError) as e:
+        handle_error(e)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    release()
