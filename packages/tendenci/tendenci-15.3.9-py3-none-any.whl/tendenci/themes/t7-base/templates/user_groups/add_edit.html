@@ -1,0 +1,44 @@
+{% extends "user_groups/base.html" %}
+{% load styled_forms %}
+{% load user_group_tags %}
+
+
+{% block title %}{% if group %}{% trans "Edit Group" %}{% else %}{% trans 'Groups Add' %}{% endif %}{% endblock %}
+
+{% block extra_head %}
+    {{ block.super }}
+    <link rel="stylesheet" href="{% static 'css/iconrow.css' %}">
+    <link rel="stylesheet" href="{% static 'css/forms.css' %}">
+    <link rel="stylesheet" href="{% static 'css/usergroups.css' %}">
+{% endblock %}
+
+
+{% block content %}
+ <h1>{% if group %}{% trans "Edit Group" %}{% else %}{% trans "Create Group" %}{% endif %} </h1>
+ <div>
+     <form id="t-user_group-form" class="form-horizontal"  action="." method="post" enctype="multipart/form-data">{% csrf_token %}
+         <div class="forms">
+             {{ form|styled_form }}
+
+             <input class="btn btn-primary" type="submit" value="{% trans 'Save' %}" />
+         </div>
+     </form>
+ </div>
+{% endblock %}
+
+{% block extra_body %}
+    {{ block.super }}
+    <script type="text/javascript" src="{% static 'js/slug.js' %}"></script>
+    <script type="text/javascript">
+        $(document).ready(function () {
+            // Slugify
+            var slugit = new Slugify({
+                input_element : '#id_name',
+                slug_element : '#id_slug',
+                submit_element : 'button[type="submit"]',
+                help: false,
+                limit : 150
+            });
+        });
+    </script>
+{% endblock %}
