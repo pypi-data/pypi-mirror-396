@@ -1,0 +1,161 @@
+Metadata-Version: 2.4
+Name: alertiqo
+Version: 1.0.3
+Summary: Alertiqo SDK for Python error tracking
+Author-email: Muhammad Hamizi Jaminan <hello@hamizi.net>
+License: MIT
+Project-URL: Homepage, https://github.com/hymns/alertiqo-client-python
+Project-URL: Repository, https://github.com/hymns/alertiqo-client-python
+Keywords: alertiqo,error-tracking,python,sdk,monitoring
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: requests>=2.25.0
+Dynamic: license-file
+
+# Alertiqo Python SDK
+
+Error tracking SDK for Python applications.
+
+## Installation
+
+```bash
+pip install alertiqo
+```
+
+## Usage
+
+### Basic Setup
+
+```python
+from alertiqo import Alertiqo
+
+alertiqo = Alertiqo(
+    api_key="your-api-key",
+    endpoint="https://alertiqo.hamizi.net",
+    environment="production",
+    release="1.0.0",
+)
+
+alertiqo.init()
+```
+
+### Capture Exceptions
+
+```python
+try:
+    raise ValueError("Something went wrong")
+except Exception as e:
+    alertiqo.capture_exception(e)
+```
+
+### Capture Messages
+
+```python
+alertiqo.capture_message("User completed checkout", level="info")
+```
+
+### Add Breadcrumbs
+
+```python
+alertiqo.add_breadcrumb(
+    message="User clicked button",
+    category="user-action",
+    level="info",
+    data={"button_id": "submit-btn"}
+)
+```
+
+### Set User Context
+
+```python
+alertiqo.set_user(
+    user_id="12345",
+    email="user@example.com",
+    username="johndoe"
+)
+```
+
+### Set Tags
+
+```python
+alertiqo.set_tag("page", "checkout")
+alertiqo.set_tags({
+    "feature": "payments",
+    "version": "2.1.0"
+})
+```
+
+## Flask Integration
+
+```python
+from flask import Flask
+from alertiqo import Alertiqo, alertiqo_middleware
+
+app = Flask(__name__)
+
+alertiqo = Alertiqo(
+    api_key="your-api-key",
+    endpoint="https://alertiqo.hamizi.net",
+)
+alertiqo.init()
+
+# Add middleware
+app.wsgi_app = alertiqo_middleware(alertiqo)(app.wsgi_app)
+```
+
+## Django Integration
+
+```python
+# settings.py
+ALERTIQO_API_KEY = "your-api-key"
+ALERTIQO_ENDPOINT = "https://alertiqo.hamizi.net"
+
+# In your app's apps.py or __init__.py
+from alertiqo import Alertiqo
+
+alertiqo = Alertiqo(
+    api_key=settings.ALERTIQO_API_KEY,
+    endpoint=settings.ALERTIQO_ENDPOINT,
+)
+alertiqo.init()
+```
+
+## API
+
+### `Alertiqo(config)`
+
+Creates a new Alertiqo instance.
+
+**Config Options:**
+
+- `api_key` (required): Your API key
+- `endpoint` (required): Backend endpoint URL
+- `environment`: Environment name (default: `PYTHON_ENV` or 'production')
+- `release`: Release version
+- `tags`: Default tags for all errors
+- `capture_unhandled`: Auto-capture uncaught exceptions (default: True)
+- `before_send`: Callback to modify/filter errors before sending
+
+### Methods
+
+- `init()`: Initialize error handlers
+- `capture_exception(error, additional_data=None)`: Capture an exception
+- `capture_message(message, level="info")`: Capture a message
+- `add_breadcrumb(message, category, level, data)`: Add a breadcrumb
+- `set_user(user_id, email, username)`: Set user context
+- `set_tag(key, value)`: Set a single tag
+- `set_tags(tags)`: Set multiple tags
+
+## License
+
+MIT
