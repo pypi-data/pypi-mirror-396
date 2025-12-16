@@ -1,0 +1,86 @@
+[tool.poetry]
+name = "bootgraph"
+version = "v1.15.0.dev32328"
+description = "A Python library for integrating SQLModel and Strawberry, providing a seamless GraphQL integration with FastAPI and advanced features for database interactions."
+authors = ["Matheus Doreto <matheusdoreto.md@gmail.com>", "Pavel Mulin <mulin.pasha@gmail.com>"]
+readme = "README.md"
+packages = [{include = "bootgraph"}]
+homepage = "https://github.com/MDoreto/graphemy"
+documentation = "https://graphemy.readthedocs.io/en/latest/"
+repository = "https://github.com/MDoreto/graphemy"
+license = "MIT"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Topic :: Database",
+    "Topic :: Database :: Database Engines/Servers",
+    "Intended Audience :: Developers",
+    "Framework :: FastAPI",
+    "Programming Language :: Python :: 3.12",
+    "Natural Language :: English",
+]
+[tool.poetry.urls]
+"Documentation" = "https://graphemy.readthedocs.io/en/latest/"
+"Repository" = "https://github.com/MDoreto/graphemy"
+"Bug Tracker" = "https://github.com/MDoreto/graphemy/issues"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+sqlmodel = "^0.0.27"
+strawberry-graphql = {extras = ["debug-server"], version = "^0.284.2"}
+fastapi = "^0.121.1"
+black = "^24.10.0"
+
+
+[tool.poetry.group.dev.dependencies]
+pytest-cov = "^4.1.0"
+isort = "^5.12.0"
+taskipy = "^1.12.0"
+httpx = "^0.27.2"
+pytest-env = "^1.1.1"
+aiosqlite = "^0.20.0"
+gevent = "^24.2.1"
+fastapi-cli = "^0.0.5"
+pytest = "^8.3.3"
+pytest-asyncio = "0.21.2"
+
+
+[tool.poetry.group.doc.dependencies]
+mkdocs-material = "^9.4.7"
+mkdocs-macros-plugin = "^1.0.5"
+jinja2 = "^3.1.2"
+mdx-include = "^1.4.2"
+mkdocstrings = "^0.26.1"
+mkdocstrings-python = "^1.11.1"
+asyncpg = ">=0.29.0"
+greenlet = ">=3.0.3"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+pythonpath = "."
+
+[tool.coverage.run]
+concurrency = ["thread","gevent"]
+
+[tool.isort]
+profile = "black"
+line_length = 79
+
+[tool.taskipy.tasks]
+ex_basic = "fastapi dev examples/tutorial/basic/main:app"
+ex_dl = "fastapi dev examples/tutorial/relationship/main.py"
+lint = "black . && isort ."
+docs = "mkdocs serve"
+pre_publish = "poetry export --output requirements-docs.txt --with doc --without-hashes   "
+pre_test = "task lint"
+test = "pytest -s -x --cov=bootgraph -vv -W ignore::DeprecationWarning"
+post_test = "coverage html"
+publish = "poetry publish --build"
+
+
+[tool.coverage.report]
+exclude_also = [
+    "if TYPE_CHECKING:",
+    ]
