@@ -1,0 +1,277 @@
+Metadata-Version: 2.4
+Name: promptsentry
+Version: 0.1.1
+Summary: AI prompt security scanner with differential validation - detects vulnerabilities before they reach production
+Author: PromptSentry Team
+License: MIT
+Project-URL: Homepage, https://github.com/Brightlord5/PromptGuard
+Project-URL: Repository, https://github.com/Brightlord5/PromptGuard
+Project-URL: Issues, https://github.com/Brightlord5/PromptGuard/issues
+Keywords: ai,llm,security,prompt-injection,pre-commit,owasp,vulnerability-scanner
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Security
+Classifier: Topic :: Software Development :: Quality Assurance
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: click>=8.1.0
+Requires-Dist: rich-click>=1.7.0
+Requires-Dist: GitPython>=3.1.0
+Requires-Dist: pydantic>=2.0.0
+Requires-Dist: pyyaml>=6.0
+Requires-Dist: rich>=13.0.0
+Requires-Dist: ollama>=0.4.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.4.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.1.0; extra == "dev"
+Requires-Dist: black>=23.0.0; extra == "dev"
+Requires-Dist: ruff>=0.1.0; extra == "dev"
+Requires-Dist: mypy>=1.5.0; extra == "dev"
+Requires-Dist: pre-commit>=3.5.0; extra == "dev"
+Dynamic: license-file
+
+# 🛡️ PromptSentry
+
+**AI Prompt Security Scanner** - Detect and prevent vulnerabilities in AI prompts before they reach production.
+
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![OWASP LLM Top 10](https://img.shields.io/badge/OWASP-LLM%20Top%2010-orange.svg)](https://owasp.org/www-project-top-10-for-large-language-model-applications/)
+
+---
+
+## 🚀 Features
+
+- **3-Stage Security Pipeline**: Comprehensive analysis using prompt detection, pattern matching, and optional LLM validation
+- **OWASP LLM Top 10 2025 Rules**: Industry-standard vulnerability detection loaded as context
+- **Differential Validation**: No "moving goalposts" - only blocks for previously identified unfixed issues
+- **Git Pre-commit Hook**: Automatic scanning before every commit
+- **Beautiful CLI**: Rich terminal output with actionable recommendations
+- **Local LLM Analysis**: Uses Ollama with Qwen 2.5 Coder 0.5B (~500MB) for intelligent security assessment
+- **Stable Fingerprinting**: Advanced code normalization ensures issues are tracked across refactoring
+
+---
+
+## 📦 Installation
+
+```bash
+pip install promptsentry
+```
+
+## ⚡ Quick Start
+
+```bash
+# Initialize PromptSentry
+promptsentry init
+
+# Install git pre-commit hook
+cd your-project
+promptsentry install-hook
+
+# Scan a file manually
+promptsentry scan chatbot.py
+
+# Scan without LLM (faster, pattern matching only)
+promptsentry scan --no-llm chatbot.py
+```
+
+---
+
+## 🔍 How It Works
+
+PromptSentry uses a 3-stage pipeline to detect vulnerabilities:
+
+```
+┌─────────────┐    ┌──────────────┐    ┌─────────────┐
+│  1. DETECT  │ -> │  2. PATTERNS │ -> │ 3. SLM      │
+│   Prompts   │    │    Check     │    │   ANALYSIS  │
+└─────────────┘    └──────────────┘    └─────────────┘
+  Fast filter       OWASP LLM Top 10    Ollama + Qwen
+   (0.1s)           rules (0.2s)        (optional, 2s)
+```
+
+### Stage 1: Prompt Detection
+Quickly identifies AI prompts in source code using heuristics and pattern matching.
+
+### Stage 2: Pattern Matching
+Applies OWASP LLM Top 10 2025 rules for deterministic vulnerability detection.
+
+### Stage 3: SLM Analysis (Optional)
+Uses Ollama with Qwen 2.5 Coder 0.5B for intelligent, context-aware vulnerability assessment. OWASP rules are passed as context to the model for comprehensive analysis.
+
+---
+
+## 🛡️ Vulnerabilities Detected
+
+Based on [OWASP LLM Top 10](https://owasp.org/www-project-top-10-for-large-language-model-applications/):
+
+| Category | Description | Detection |
+|----------|-------------|-----------|
+| **LLM01** | Prompt Injection | Direct concatenation, missing delimiters, weak system prompts |
+| **LLM02** | Sensitive Information Disclosure | PII, credentials, API keys in prompts |
+| **LLM03** | Supply Chain Vulnerabilities | Vulnerable dependencies, untrusted models/data |
+| **LLM04** | Data and Model Poisoning | Poisoned training data, malicious fine-tuning |
+| **LLM05** | Improper Output Handling | eval(), exec(), subprocess, SQL/XSS from LLM output |
+| **LLM06** | Excessive Agency | Unrestricted file/network access, auto-execution |
+| **LLM07** | System Prompt Leakage | Extractable logic, secrets in system prompts |
+| **LLM08** | Vector and Embedding Weaknesses | RAG poisoning, embedding manipulation |
+| **LLM09** | Misinformation | Hallucinations, lack of factual grounding |
+| **LLM10** | Unbounded Consumption | No rate limiting, infinite loops, resource exhaustion |
+
+---
+
+## 💡 Key Innovation: Differential Validation
+
+PromptSentry tracks issues across commits and only blocks for **previously identified** unfixed issues:
+
+1. **First scan**: Detects issues and tracks them
+2. **Fix and commit**: Only checks if tracked issues are fixed
+3. **No moving goalposts**: New findings are noted but don't block
+
+This prevents the frustrating experience of fixing one issue only to have the scanner find new nitpicks.
+
+---
+
+## 📋 CLI Commands
+
+### Setup
+```bash
+promptsentry init              # Initialize PromptSentry
+promptsentry install-hook      # Install git pre-commit hook
+promptsentry uninstall-hook    # Remove the hook
+```
+
+### Scanning
+```bash
+promptsentry scan file.py      # Scan a single file (LLM enabled by default)
+promptsentry scan .            # Scan current directory
+promptsentry scan --staged     # Scan staged git files
+promptsentry scan --no-llm     # Disable LLM for faster scanning
+```
+
+### Issue Management
+```bash
+promptsentry issues list       # List tracked issues
+promptsentry issues stats      # Show statistics
+promptsentry issues clear file.py  # Clear issues for a file
+promptsentry issues ignore ID  # Ignore a specific issue
+```
+
+### Configuration
+```bash
+promptsentry config show       # Show current config
+promptsentry config set scan.threshold 80  # Set blocking threshold
+promptsentry config reset      # Reset to defaults
+```
+
+### Rules
+```bash
+promptsentry rules            # List all detection rules
+```
+
+---
+
+## ⚙️ Configuration
+
+Configuration is stored in `~/.promptsentry/config.yaml`:
+
+```yaml
+scan:
+  threshold: 50              # Score to block (0-100)
+  min_confidence: 0.6        # Prompt detection threshold
+  file_extensions:
+    - .py
+    - .js
+    - .ts
+
+llm:
+  model_name: qwen2.5-coder:0.5b  # Ollama model
+  enabled: true                    # Enable LLM analysis by default
+  timeout: 30                      # LLM request timeout (seconds)
+  
+hook:
+  enabled: true
+  block_on_issues: true
+  allow_bypass: true         # Allow --no-verify
+```
+
+---
+
+## 🎬 Demo Flow
+
+```bash
+# First commit - issues detected
+$ git add chatbot.py
+$ git commit -m "Add chatbot"
+
+🔍 PromptSentry: Scanning staged files...
+   ✓ Found 1 prompt in chatbot.py
+
+❌ COMMIT BLOCKED - 2 vulnerabilities found
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔴 HIGH - Direct Concatenation
+   chatbot.py:15
+
+   Problem:
+   > prompt = "Translate: " + user_input
+
+   Fix:
+   > prompt = f"Translate: <input>{user_input}</input>"
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Fix and commit again
+$ git commit -m "Fix: Add delimiters"
+
+🔍 PromptSentry: Checking fixes...
+
+✅ Fixed: Direct Concatenation ✓
+
+🎉 All vulnerabilities resolved!
+✅ COMMIT ALLOWED
+```
+
+---
+
+## 🔧 Development
+
+```bash
+# Clone repository
+git clone https://github.com/Brightlord5/PromptGuard
+cd PromptGuard
+
+# Install development dependencies
+pip install -e ".[dev]"
+
+# Run tests
+pytest
+
+# Run linting
+black promptsentry
+ruff check promptsentry
+```
+
+---
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+---
+
+## 🙏 Acknowledgments
+
+- [OWASP LLM Top 10](https://owasp.org/www-project-top-10-for-large-language-model-applications/) for vulnerability categories
+- [Ollama](https://ollama.ai/) for local LLM infrastructure
+- [Qwen](https://github.com/QwenLM/Qwen2.5) for the efficient coder model
+- [Rich](https://github.com/Textualize/rich) for beautiful terminal output
+
+---
+
+**Made with ❤️ for secure AI development**
