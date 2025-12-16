@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Şifre Üret - SafePass{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/components/sidebar.css' %}">
+<link rel="stylesheet" href="{% static 'css/components/layout.css' %}">
+<link rel="stylesheet" href="{% static 'css/components/generator.css' %}">
+<link rel="stylesheet" href="{% static 'css/components/buttons.css' %}">
+{% endblock %}
+
+{% block body_class %}with-sidebar{% endblock %}
+
+{% block content %}
+{% include "partials/sidebar.html" %}
+
+<div class="main-content">
+    <div class="page-header">
+        <h1>🔑 Güçlü Şifre Üret</h1>
+        <p>Özelleştirilmiş benzersiz ve güvenli şifreler oluşturun.</p>
+    </div>
+
+    <div class="generator-container">
+        <div class="generated-password-card">
+            <label>Oluşturulan Şifre</label>
+            <div class="password-display-wrapper">
+                <input type="text" id="generatedPassword" class="password-display" value="" readonly>
+                <button type="button" class="btn-icon" onclick="copyGeneratedPassword()" title="Kopyala">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                </button>
+                <button type="button" class="btn-icon" onclick="generateNewPassword()" title="Yenile">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="23 4 23 10 17 10"></polyline>
+                        <polyline points="1 20 1 14 7 14"></polyline>
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="strength-indicator">
+                <div class="strength-label">Güç: <span id="strengthText">-</span></div>
+                <div class="strength-bar">
+                    <div id="strengthBar" class="strength-fill" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="generator-options">
+            <h3>Şifre Ayarları</h3>
+            
+            <div class="form-group-length">
+                <label for="passwordLength">Uzunluk</label>
+                <select id="passwordLength" class="form-select-styled">
+                    <option value="8">8 karakter</option>
+                    <option value="12">12 karakter</option>
+                    <option value="16" selected>16 karakter (Önerilen)</option>
+                    <option value="20">20 karakter</option>
+                    <option value="24">24 karakter</option>
+                </select>
+            </div>
+
+            <div class="options-section">
+                <h4>Karakter Tipleri</h4>
+                <div class="checkbox-grid">
+                    <label class="checkbox-card">
+                        <input type="checkbox" id="includeUppercase" checked>
+                        <div class="checkbox-content">
+                            <div class="checkbox-header">
+                                <span class="checkbox-icon">ABC</span>
+                                <span class="checkbox-check"></span>
+                            </div>
+                            <span class="checkbox-title">Büyük Harfler</span>
+                            <span class="checkbox-desc">A-Z</span>
+                        </div>
+                    </label>
+
+                    <label class="checkbox-card">
+                        <input type="checkbox" id="includeLowercase" checked>
+                        <div class="checkbox-content">
+                            <div class="checkbox-header">
+                                <span class="checkbox-icon">abc</span>
+                                <span class="checkbox-check"></span>
+                            </div>
+                            <span class="checkbox-title">Küçük Harfler</span>
+                            <span class="checkbox-desc">a-z</span>
+                        </div>
+                    </label>
+
+                    <label class="checkbox-card">
+                        <input type="checkbox" id="includeNumbers" checked>
+                        <div class="checkbox-content">
+                            <div class="checkbox-header">
+                                <span class="checkbox-icon">123</span>
+                                <span class="checkbox-check"></span>
+                            </div>
+                            <span class="checkbox-title">Sayılar</span>
+                            <span class="checkbox-desc">0-9</span>
+                        </div>
+                    </label>
+
+                    <label class="checkbox-card">
+                        <input type="checkbox" id="includeSymbols" checked>
+                        <div class="checkbox-content">
+                            <div class="checkbox-header">
+                                <span class="checkbox-icon">!@#</span>
+                                <span class="checkbox-check"></span>
+                            </div>
+                            <span class="checkbox-title">Özel Karakterler</span>
+                            <span class="checkbox-desc">!@#$%^&*</span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <button type="button" class="btn btn-primary btn-generate" onclick="generateNewPassword()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
+                    <polyline points="23 4 23 10 17 10"></polyline>
+                    <polyline points="1 20 1 14 7 14"></polyline>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                </svg>
+                Yeni Şifre Üret
+            </button>
+        </div>
+
+        <div class="generator-tips">
+            <h3>💡 Güvenlik İpuçları</h3>
+            <ul>
+                <li>En az 16 karakter uzunluğunda şifreler kullanın</li>
+                <li>Tüm karakter tiplerini (büyük, küçük, sayı, özel) ekleyin</li>
+                <li>Her hesap için farklı şifre kullanın</li>
+                <li>Sözlükte geçen kelimeleri kullanmayın</li>
+                <li>Kişisel bilgilerinizi (doğum tarihi, isim vb.) kullanmayın</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/modules/generator.js' %}"></script>
+{% endblock %}
