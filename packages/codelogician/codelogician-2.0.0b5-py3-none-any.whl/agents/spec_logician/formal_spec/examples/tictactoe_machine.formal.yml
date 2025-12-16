@@ -1,0 +1,111 @@
+output: |
+  entity game { ongoing post_move_checks ended }
+
+  action make_move {
+    player: string
+    row: int
+    col: int
+  }
+  action check_winner { }
+  action reset_game { }
+
+  internal state {
+    board: (string list) list = [['', '', ''], ['', '', ''], ['', '', '']];
+    current_player: string = '';
+    winner: string = '';
+  }
+
+  function get_at_row(board: (string list) list, row: int): string list {
+    return hd(take(len(board) - row, rev(take(row + 1, board))))
+  }
+  function get_at_col(row: string list, col: int): string {
+    return hd(take(len(row) - col, rev(take(col + 1, row))))
+  }
+  function update_at_col(row: string list, col: int, value: string): string list {
+    return app(take(col, row), add(value, take(len(row) - col - 1, rev(row))))
+  }
+  function update_at_row(board: (string list) list, row: int, new_row: string list): (string list) list {
+    return app(take(row, board), add(new_row, take(len(board) - row - 1, rev(board))))
+  }
+  function get_cell(board: (string list) list, row: int, col: int): string {
+    let row_list : string list = get_at_row(board, row)
+    return get_at_col(row_list, col)
+  }
+  function set_cell(board: (string list) list, row: int, col: int, value: string): (string list) list {
+    let row_list : string list = get_at_row(board, row)
+    let new_row : string list = update_at_col(row_list, col, value)
+    return update_at_row(board, row, new_row)
+  }
+  function empty_board(): (string list) list {
+    return [['', '', ''], ['', '', ''], ['', '', '']]
+  }
+  function is_valid_move(board: (string list) list, row: int, col: int): bool {
+    return row >= 0 && row < 3 && col >= 0 && col < 3 && get_cell(board, row, col) == ''
+  }
+  function check_line(a: string, b: string, c: string): bool {
+    return a != '' && a == b && b == c
+  }
+  function get_winner(board: (string list) list): string {
+    let r0 : string list = get_at_row(board, 0)
+    let r1 : string list = get_at_row(board, 1)
+    let r2 : string list = get_at_row(board, 2)
+    let has_row_win : bool = check_line(get_at_col(r0,0), get_at_col(r0,1), get_at_col(r0,2)) || check_line(get_at_col(r1,0), get_at_col(r1,1), get_at_col(r1,2)) || check_line(get_at_col(r2,0), get_at_col(r2,1), get_at_col(r2,2))
+    let has_col_win : bool = check_line(get_at_col(r0,0), get_at_col(r1,0), get_at_col(r2,0)) || check_line(get_at_col(r0,1), get_at_col(r1,1), get_at_col(r2,1)) || check_line(get_at_col(r0,2), get_at_col(r1,2), get_at_col(r2,2))
+    let has_diag_win : bool = check_line(get_at_col(r0,0), get_at_col(r1,1), get_at_col(r2,2)) || check_line(get_at_col(r2,0), get_at_col(r1,1), get_at_col(r0,2))
+    let x_wins : bool = (has_row_win || has_col_win || has_diag_win) && (get_at_col(r1,1) == 'x')
+    let o_wins : bool = (has_row_win || has_col_win || has_diag_win) && (get_at_col(r1,1) == 'o')
+    return if x_wins then 'x' else if o_wins then 'o' else ''
+  }
+  function is_board_full(board: (string list) list): bool {
+    let r0 : string list = get_at_row(board, 0)
+    let r1 : string list = get_at_row(board, 1)
+    let r2 : string list = get_at_row(board, 2)
+    return forall(r0, {x|x != ''}) && forall(r1, {x|x != ''}) && forall(r2, {x|x != ''})
+  }
+
+  Feature: Tic Tac Toe Game Rules
+
+    Scenario: Valid Move Execution
+      Given game on ongoing
+      When make_move
+      SuchThat current_player == player
+      SuchThat is_valid_move(board, row, col)
+      Then board is set_cell(board, row, col, player)
+      Then game on post_move_checks
+
+    Scenario: X Wins Check
+      Given game on post_move_checks
+      When check_winner
+      SuchThat get_winner(board) == 'x'
+      Then winner is 'x'
+      Then game on ended
+
+    Scenario: O Wins Check
+      Given game on post_move_checks
+      When check_winner
+      SuchThat get_winner(board) == 'o'
+      Then winner is 'o'
+      Then game on ended
+
+    Scenario: Board Full Check
+      Given game on post_move_checks
+      When check_winner
+      SuchThat get_winner(board) == ''
+      SuchThat is_board_full(board)
+      Then game on ended
+
+    Scenario: Continue Playing
+      Given game on post_move_checks
+      When check_winner
+      SuchThat get_winner(board) == ''
+      SuchThat !is_board_full(board)
+      Then game on ongoing
+      Then current_player is if current_player == 'x' then 'o' else 'x'
+
+    Scenario: Game Reset
+      Given game on ended
+      When reset_game
+      Then board is empty_board()
+      Then current_player is 'x'
+      Then winner is ''
+      Then game on ongoing

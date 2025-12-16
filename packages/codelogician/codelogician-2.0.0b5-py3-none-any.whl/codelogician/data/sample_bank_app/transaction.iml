@@ -1,0 +1,47 @@
+[@@@import Currency, "currency.iml"]
+
+
+(* Transaction type representing different transaction types *)
+type transaction_type =
+  | DEBIT
+  | CREDIT
+
+(* Transaction record to represent a financial transaction *)
+type transaction = {
+  trans_type: transaction_type;
+  from_account: LString.t;
+  to_account: LString.t;
+  amount: real
+}
+
+(* Get the from_account property *)
+let from_account (t: transaction) : LString.t =
+  t.from_account
+
+(* Get the to_account property *)
+let to_account (t: transaction) : LString.t =
+  t.to_account
+
+(* Create a debit transaction *)
+let debit_transaction (from_acc: LString.t) (to_acc: LString.t) (amt: real) : transaction =
+  {
+    trans_type = DEBIT;
+    from_account = from_acc;
+    to_account = to_acc;
+    amount = amt
+  }
+
+(* Create a credit transaction *)
+let credit_transaction (from_acc: LString.t) (to_acc: LString.t) (amt: real) : transaction =
+  {
+    trans_type = CREDIT;
+    from_account = from_acc;
+    to_account = to_acc;
+    amount = amt
+  }
+
+(* Main function demonstrating usage *)
+let main () : transaction * transaction =
+  let d = debit_transaction {l|123456789|l} {l|987654321|l} 100.0 in
+  let c = credit_transaction {l|987654321|l} {l|123456789|l} 100.0 in
+  (d, c)

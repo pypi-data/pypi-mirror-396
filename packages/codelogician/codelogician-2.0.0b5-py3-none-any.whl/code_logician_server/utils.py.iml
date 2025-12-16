@@ -1,0 +1,55 @@
+(* Utility functions - Level 3 (depends on multiple packages) *)
+
+let polynomial_evaluate_helper (acc : real) (coeffs : real list) (x : real) : real =
+  match coeffs with
+  | [] -> acc
+  | coeff :: rest ->
+      let new_acc = Core_arithmetic.add (Core_arithmetic.multiply acc x) coeff in
+      polynomial_evaluate_helper new_acc rest x
+[@@measure Ordinal.of_int (List.length coeffs)]
+
+let polynomial_evaluate (coefficients : real list) (x : real) : real =
+  (* Evaluate polynomial at x using Horner's method. *)
+  match coefficients with
+  | [] -> 0.0
+  | first :: rest -> polynomial_evaluate_helper first rest x
+
+let combinations (n : int) (r : int) : int =
+  (* Calculate combinations C(n,r). *)
+  if r < 0 || r > n || n < 0 then
+    0
+  else if r = 0 || r = n then
+    1
+  else
+    let n_fact_opt = Core_advanced.factorial n in
+    let r_fact_opt = Core_advanced.factorial r in
+    let n_minus_r_fact_opt = Core_advanced.factorial (n - r) in
+    match (n_fact_opt, r_fact_opt, n_minus_r_fact_opt) with
+    | (Some n_fact, Some r_fact, Some n_minus_r_fact) ->
+        let denominator = Core_arithmetic.multiply (Real.of_int r_fact) (Real.of_int n_minus_r_fact) in
+        let result_opt = Core_arithmetic.divide (Real.of_int n_fact) denominator in
+        (match result_opt with
+         | Some result -> Real.to_int result
+         | None -> 0)
+    | _ -> 0
+
+let normalize_data (data : real list) : real list =
+  (* Normalize data to have mean 0 and std 1. *)
+  if List.is_empty data then
+    []
+  else
+    let data_mean_opt = Stats_basic.mean data in
+    let data_std_opt = Stats_measures.standard_deviation data in
+    match (data_mean_opt, data_std_opt) with
+    | (Some data_mean, Some data_std) ->
+        if data_std = 0.0 then
+          List.map (fun _ -> 0.0) data
+        else
+          List.map (fun value ->
+            let neg_mean = Core_arithmetic.multiply (~-. 1.0) data_mean in
+            let diff = Core_arithmetic.add value neg_mean in
+            match Core_arithmetic.divide diff data_std with
+            | Some normalized_value -> normalized_value
+            | None -> 0.0
+          ) data
+    | _ -> []

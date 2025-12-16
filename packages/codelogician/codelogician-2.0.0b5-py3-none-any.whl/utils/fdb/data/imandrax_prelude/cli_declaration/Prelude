@@ -1,0 +1,312 @@
+type int = <logic_core_builtin>
+
+ (*  Builtin integer type, using arbitrary precision integers.
+ 
+     This type is an alias to {!Z.t}
+     (using {{: https://github.com/ocaml/Zarith} Zarith}).
+ 
+     {b NOTE}: here Imandra diverges from normal OCaml, where integers width
+     is bounded by native machine integers.
+     "Normal" OCaml integers have type {!Caml.Int.t} and can be entered
+     using the 'i' suffix: [0i]
+     
+     Usage/Pattern: Arbitrary precision integers for unbounded calculations *)
+
+type nonrec bool = <logic_core_builtin>  
+(* Builtin boolean type.
+
+   Usage/Pattern: Boolean true/false values for logical operations *)
+
+let ||: bool -> bool -> bool = <logic_core_builtin>
+(* [||] is the boolean OR operator 
+   
+   Usage/Pattern: Logical OR operation between two boolean values *)
+
+let &&: bool -> bool -> bool = <logic_core_builtin>
+(* [&&] is the boolean AND operator
+   
+   Usage/Pattern: Logical AND operation between two boolean values *)
+
+type nonrec unit = | ()
+(* Unit type with single constructor [()]
+   
+   Usage/Pattern: Represents absence of a meaningful value *)
+
+let =: 'a -> 'a -> bool =
+  <logic_core_builtin>
+ (* Equality. Must be applied to non-function types.
+    
+    Usage/Pattern: Value equality comparison *)
+
+let <>: 'a -> 'a -> bool = <logic_core_builtin>
+(* [<>] is the inequality operator
+   
+   Usage/Pattern: Value inequality comparison *)
+
+let not: bool -> bool = <logic_core_builtin>
+(* [not] is the boolean NOT operator
+   
+   Usage/Pattern: Logical negation of boolean values *)
+
+let ==>: bool -> bool -> bool = <logic_core_builtin>
+(* [==>] is logical implication
+   
+   Usage/Pattern: Logical implication in mathematical reasoning *)
+
+let <== (x : bool) (y : bool) : bool = y ==> x
+(* [<==] is reverse logical implication
+   
+   Usage/Pattern: Reverse logical implication in mathematical reasoning *)
+
+let <==>: bool -> bool -> bool = <logic_core_builtin>
+(* [<==>] is logical equivalence
+   
+   Usage/Pattern: Logical equivalence/biconditional in mathematical reasoning *)
+
+let +: int -> int -> int = <logic_core_builtin>
+(* [+] is integer addition
+   
+   Usage/Pattern: Basic arithmetic addition of integers *)
+
+let const (x : 'a) (_ : 'b) : 'a =
+  x
+ (* [const x y] returns [x]. In other words, [const x] is
+    the constant function that always returns [x].
+    
+    Usage/Pattern: Creating constant functions in functional programming *)
+
+let >=: int -> int -> bool = <logic_core_builtin>
+(* [>=] is greater than or equal comparison for integers
+   
+   Usage/Pattern: Numeric comparison for ordering *)
+
+let mk_nat (x : int) : int = if x >= 0 then x else 0
+(* [mk_nat x] converts integer [x] to natural number by returning [x] if non-negative, 0 otherwise
+   
+   Usage/Pattern: Converting integers to non-negative numbers *)
+
+type nonrec option = | None | Some of 'a
+(* Option type representing optional values
+   
+   Usage/Pattern: Representing values that may or may not exist *)
+
+type list = | [] | :: of 'a * 'a list
+(* List type with empty list [] and cons :: constructors
+   
+   Usage/Pattern: Sequential data structure with variable length *)
+
+type nonrec float = <logic_core_builtin>
+(* Floating point number type
+   
+   Usage/Pattern: IEEE 754 floating point arithmetic *)
+
+type nonrec real = <logic_core_builtin>
+(* Real number type
+   
+   Usage/Pattern: Mathematical real number calculations *)
+
+type nonrec string = <logic_core_builtin>
+(* String type
+   
+   Usage/Pattern: Text manipulation and processing *)
+
+let <: int -> int -> bool = <logic_core_builtin>
+(* [<] is less than comparison for integers
+   
+   Usage/Pattern: Numeric comparison for strict ordering *)
+
+let <=: int -> int -> bool = <logic_core_builtin>
+(* [<=] is less than or equal comparison for integers
+   
+   Usage/Pattern: Numeric comparison for non-strict ordering *)
+
+let >: int -> int -> bool = <logic_core_builtin>
+(* [>] is greater than comparison for integers
+   
+   Usage/Pattern: Numeric comparison for strict ordering *)
+
+let min: int -> int -> int = <logic_core_builtin>
+(* [min x y] returns the minimum of integers [x] and [y]
+   
+   Usage/Pattern: Finding smaller of two numbers *)
+
+let max: int -> int -> int = <logic_core_builtin>
+(* [max x y] returns the maximum of integers [x] and [y]
+   
+   Usage/Pattern: Finding larger of two numbers *)
+
+let <.: real -> real -> bool = <logic_core_builtin>
+(* [<.] is less than comparison for reals
+   
+   Usage/Pattern: Real number comparison for strict ordering *)
+
+let <=.: real -> real -> bool = <logic_core_builtin>
+(* [<=.] is less than or equal comparison for reals
+   
+   Usage/Pattern: Real number comparison for non-strict ordering *)
+
+let >.: real -> real -> bool = <logic_core_builtin>
+(* [>.] is greater than comparison for reals
+   
+   Usage/Pattern: Real number comparison for strict ordering *)
+
+let >=.: real -> real -> bool = <logic_core_builtin>
+(* [>=.] is greater than or equal comparison for reals
+   
+   Usage/Pattern: Real number comparison for non-strict ordering *)
+
+let min_r: real -> real -> real = <logic_core_builtin>
+(* [min_r x y] returns the minimum of reals [x] and [y]
+   
+   Usage/Pattern: Finding smaller of two real numbers *)
+
+let max_r: real -> real -> real = <logic_core_builtin>
+(* [max_r x y] returns the maximum of reals [x] and [y]
+   
+   Usage/Pattern: Finding larger of two real numbers *)
+
+let ~-: int -> int = <logic_core_builtin>
+(* [~- x] returns the negation of integer [x]
+   
+   Usage/Pattern: Arithmetic negation of integers *)
+
+let abs (x : int) : int = if x >= 0 then x else ~- x
+(* [abs x] returns the absolute value of integer [x]
+   
+   Usage/Pattern: Computing magnitude of numbers *)
+
+let -: int -> int -> int = <logic_core_builtin>
+(* [-] is integer subtraction
+   
+   Usage/Pattern: Basic arithmetic subtraction *)
+
+let ~+ (x : int) : int = x
+(* [~+ x] returns [x] unchanged (unary plus)
+   
+   Usage/Pattern: Identity operation on numbers *)
+
+let *: int -> int -> int = <logic_core_builtin>
+(* [*] is integer multiplication
+   
+   Usage/Pattern: Basic arithmetic multiplication *)
+
+let /: int -> int -> int =
+  <logic_core_builtin>
+ (* Euclidian division on integers,
+    see {{: http://smtlib.cs.uiowa.edu/theories-Ints.shtml} http://smtlib.cs.uiowa.edu/theories-Ints.shtml}
+    
+    Usage/Pattern: Integer division with rounding towards zero *)
+
+let mod: int -> int -> int =
+  <logic_core_builtin>
+ (* Euclidian remainder on integers
+    
+    Usage/Pattern: Computing remainders in modular arithmetic *)
+
+let compare (x : int) (y : int) : int =
+  if x = y then 0 else if x < y then -1 else 1
+ (* Total order
+    
+    Usage/Pattern: Three-way comparison for sorting and ordering *)
+
+type result =
+  | Ok of 'a
+  | Error of 'b
+ (* Result type, representing either a successful result [Ok x]
+    or an error [Error x].
+    
+    Usage/Pattern: Error handling and computation results *)
+
+type either = | Left of 'a | Right of 'b  
+(* A familiar type for Haskellers
+   
+   Usage/Pattern: Representing values of two different types *)
+
+let |> (x : 'a) (f : 'a -> 'b) : 'b =
+  f x
+(* Pipeline operator.
+   [x |> f] is the same as [f x], but it composes nicely:
+   [ x |> f |> g |> h] can be more readable than [h(g(f x))].
+   
+   Usage/Pattern: Function composition in data processing pipelines *)
+
+let @@ (f : 'a -> 'b) (x : 'a) : 'b =
+  f x
+(* Right-associative application operator.
+   [f @@ x] is the same as [f x], but it binds to the right:
+   [f @@ g @@ h @@ x] is the same as [f (g (h x))] but with fewer parentheses.
+   
+   Usage/Pattern: Nested function application without parentheses *)
+
+let id (x : 'a) : 'a =
+  x
+(* Identity function. [id x = x] always holds.
+   
+   Usage/Pattern: Function that returns its input unchanged *)
+
+let %> (f : 'a -> 'b) (g : 'b -> 'c) (x : 'a) : 'c =
+  g (f x)
+(* Mathematical composition operator.
+   [f %> g] is [fun x -> g (f x)]
+   
+   Usage/Pattern: Composing functions in mathematical style *)
+
+let +.: real -> real -> real = <logic_core_builtin>
+(* [+.] is addition for reals
+   
+   Usage/Pattern: Real number arithmetic addition *)
+
+let -.: real -> real -> real = <logic_core_builtin>
+(* [-.] is subtraction for reals
+   
+   Usage/Pattern: Real number arithmetic subtraction *)
+
+let ~-.: real -> real = <logic_core_builtin>
+(* [~-.] is negation for reals
+   
+   Usage/Pattern: Real number arithmetic negation *)
+
+let *.: real -> real -> real = <logic_core_builtin>
+(* [*.] is multiplication for reals
+   
+   Usage/Pattern: Real number arithmetic multiplication *)
+
+let /.: real -> real -> real = <logic_core_builtin>
+(* [/.] is division for reals
+   
+   Usage/Pattern: Real number arithmetic division *)
+
+let @ : 'a list = List.append  
+(* Infix alias to {!List.append}
+   
+   Usage/Pattern: List concatenation *)
+
+let -- : int list = List.--  
+(* Alias to {!List.(--)}
+   
+   Usage/Pattern: Integer range generation *)
+
+let ^ : String.t = String.append  
+(* Alias to {!String.append}
+   
+   Usage/Pattern: String concatenation *)
+
+let succ (x : int) : int = x + 1  
+(* [succ x] returns the successor of integer [x]
+   
+   Usage/Pattern: Incrementing integers by one *)
+
+let pred (x : int) : int = x - 1  
+(* [pred x] returns the predecessor of integer [x]
+   
+   Usage/Pattern: Decrementing integers by one *)
+
+let fst (_x_2110_9 : ('a * 'b)) : 'a = let (x, _) = _x_2110_9 in x
+(* [fst (x,y)] returns the first component [x] of pair [(x,y)]
+   
+   Usage/Pattern: Accessing first element of a pair *)
+
+let snd (_x_2112_9 : ('a * 'b)) : 'b = let (_, y) = _x_2112_9 in y
+(* [snd (x,y)] returns the second component [y] of pair [(x,y)]
+   
+   Usage/Pattern: Accessing second element of a pair *)

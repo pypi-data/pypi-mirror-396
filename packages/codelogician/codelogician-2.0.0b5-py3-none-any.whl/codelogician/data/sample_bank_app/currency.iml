@@ -1,0 +1,84 @@
+
+
+(* Currency type representing different currencies *)
+type currency =
+  | EUR
+  | USD
+  | GBP
+  | JPY
+  | CNY
+  | INR
+  | AUD
+  | CAD
+  | CHF
+  | NZD
+
+(* Currency pairs represented as a map from (currency * currency) to exchange rate *)
+type currency_pairs = {
+  pairs: ((currency * currency), real) Map.t
+}
+
+(* Convert an amount from one currency to another *)
+let convert (cp: currency_pairs) (from_currency: currency) (to_currency: currency) (amount: real) : real option =
+  if from_currency = to_currency then
+    Some amount
+  else
+    let pair_key = (from_currency, to_currency) in
+    let rate = Map.get pair_key cp.pairs in
+    if rate = Map.get_default cp.pairs then
+      None
+    else
+      Some (amount *. rate)
+
+(* Initialize currency pairs with rates *)
+let init_currency_pairs (rates: ((currency * currency) * real) list) : currency_pairs =
+  { pairs = Map.of_list 0.0 rates }
+
+(* Main function demonstrating usage *)
+let main () : (real option) list =
+  let rates = [
+    ((EUR, USD), 1.1);
+    ((USD, EUR), 0.9);
+    ((GBP, USD), 1.3);
+    ((USD, GBP), 0.77);
+    ((JPY, USD), 0.009);
+    ((USD, JPY), 110.0);
+    ((CNY, USD), 0.15);
+    ((USD, CNY), 6.5);
+    ((INR, USD), 0.013);
+    ((USD, INR), 75.0);
+    ((AUD, USD), 0.7);
+    ((USD, AUD), 1.4);
+    ((CAD, USD), 0.8);
+    ((USD, CAD), 1.25);
+    ((CHF, USD), 1.05);
+    ((USD, CHF), 0.95);
+    ((NZD, USD), 0.65);
+    ((USD, NZD), 1.54)
+  ] in
+  
+  let pairs = init_currency_pairs rates in
+  
+  [
+    convert pairs EUR USD 100.0;
+    convert pairs USD EUR 100.0;
+    convert pairs GBP USD 100.0;
+    convert pairs USD GBP 100.0;
+    convert pairs JPY USD 100.0;
+    convert pairs USD JPY 100.0
+  ]
+verify (fun (c: currency) (a: real) (pairs: currency_pairs) -> convert pairs c c a = Some a)
+verify (fun (from_currency: currency) (to_currency: currency) (amount: real) (cp: currency_pairs) -> (from_currency <> to_currency && Map.get (from_currency, to_currency) cp.pairs = Map.get_default cp.pairs) ==> (convert cp from_currency to_currency amount = None))
+verify (fun cp from_currency to_currency amount -> 
+  let pair_key = (from_currency, to_currency) in
+  let rate = Map.get pair_key cp.pairs in
+  (from_currency <> to_currency && rate <> Map.get_default cp.pairs) ==> 
+    (convert cp from_currency to_currency amount = Some (amount *. rate)))
+verify (fun cp from_currency to_currency amount -> (amount >. 0.0) ==> (match convert cp from_currency to_currency amount with | Some result -> result >. 0.0 | None -> true))
+verify (fun (cp: currency_pairs) (from_currency: currency) (to_currency: currency) ->
+  let result = convert cp from_currency to_currency 0.0 in
+  match result with
+  | Some r -> r = 0.0
+  | None -> true)
+verify (fun rates -> let cp = init_currency_pairs rates in List.for_all (fun (pair, rate) -> Map.get pair cp.pairs = rate) rates)
+

@@ -1,0 +1,151 @@
+(* 
+  --------------------------------------------------------------------------
+  title: Timer IML model
+  description: XState Timer IML model
+  order: 2
+  --------------------------------------------------------------------------
+  
+  ========================================================================== *)
+(* ========================================= *)
+(* ========================================= *)
+(* Timer Machine - IML Formalization         *)
+(* ========================================= *)
+
+(* === Type Definitions === *)
+
+(* States *)
+type state =
+  | Stopped
+  | Running
+
+(* Events *)
+type event =
+  | Start
+  | Stop
+  | Reset
+  | Minute
+  | Second
+  | Tick (* Models the 'TICK' event from the invoked `ticks` actor *)
+
+(* Context *)
+type context = {
+  seconds: int;
+}
+
+(* Machine Configuration *)
+type config = {
+  state: state;
+  ctx: context;
+}
+
+(* === Initial State === *)
+
+let initial_context : context = {
+  seconds = 0;
+}
+
+let init : config = {
+  state = Stopped;
+  ctx = initial_context;
+}
+
+(* === Transition Function === *)
+
+let step (c: config) (ev: event) : config =
+  match (c.state, ev) with
+  (* Global reset event - can happen in any state *)
+  | (_, Reset) when c.ctx.seconds > 0 ->
+      (* This is a global transition that does not change the state, only context. *)
+      { c with ctx = { seconds = 0 } }
+
+  (* Stopped State Transitions *)
+  | (Stopped, Start) when c.ctx.seconds > 0 ->
+      { state = Running; ctx = c.ctx }
+
+  | (Stopped, Minute) ->
+      { c with ctx = { seconds = c.ctx.seconds + 60 } }
+
+  | (Stopped, Second) ->
+      { c with ctx = { seconds = c.ctx.seconds + 1 } }
+
+  (* Running State Transitions *)
+  | (Running, Stop) ->
+      { state = Stopped; ctx = c.ctx }
+
+  | (Running, Tick) ->
+      (* This transition combines the TICK event action and the subsequent 'always' check. *)
+      let new_seconds = c.ctx.seconds - 1 in
+      (* The 'always' guard in XState checks if seconds are 0 after the tick. *)
+      if new_seconds <= 0 then
+        { state = Stopped; ctx = { seconds = 0 } } (* Transition to Stopped and clamp seconds at 0 *)
+      else
+        { state = Running; ctx = { seconds = new_seconds } }
+
+  (* No-op for all other cases, e.g., starting with 0 seconds, resetting at 0, etc. *)
+  | _ -> c
+
+(* === Run Events === *)
+
+let rec run (c: config) (evs: event list) : config =
+  match evs with
+  | [] -> c
+  | e :: rest -> run (step c e) rest
+
+(* === Properties === *)
+
+(* Property 1: Verifies that the timer, once started, eventually stops if ticked enough times. *)
+let prop_timer_stops_at_zero (initial_seconds : int) : bool =
+  if initial_seconds <= 0 then
+    true (* The timer would not start, so the property holds trivially. *)
+  else
+    let initial_config = { state = Stopped; ctx = { seconds = initial_seconds } } in
+    let rec create_ticks n = if n <= 0 then [] else Tick :: create_ticks (n - 1) in
+    let events = Start :: create_ticks initial_seconds in
+    let final_config = run initial_config events in
+    final_config.state = Stopped && final_config.ctx.seconds = 0
+
+(* Property 2: Verifies that resetting from the 'running' state correctly sets seconds to 0
+   without stopping the timer, but the next tick will stop it. *)
+let prop_reset_while_running_stops_on_next_tick () : bool =
+  let events = [Second; Second; Start; Tick; Reset; Tick] in
+  let final_config = run init events in
+  (* After Reset, state is Running, seconds=0. After next Tick, state is Stopped, seconds=0. *)
+  final_config.state = Stopped && final_config.ctx.seconds = 0
+
+(* === Eval Examples === *)
+
+(* Scenario 1: Add time, start the timer, and let it run down to zero.
+   Expected: { state = Stopped; ctx = { seconds = 0 } } *)
+eval (run init [
+  Second;
+  Second;
+  Start;
+  Tick;
+  Tick
+])
+
+(* Scenario 2: Start the timer and then stop it before it finishes.
+   Expected: { state = Stopped; ctx = { seconds = 58 } } *)
+eval (run init [
+  Minute;
+  Start;
+  Tick;
+  Tick;
+  Stop
+])
+
+(* Scenario 3: Add time and then reset it.
+   Expected: { state = Stopped; ctx = { seconds = 0 } } *)
+eval (run init [
+  Minute;
+  Reset
+])
+
+(* Scenario 4: Try to start with 0 seconds (guard fails, no change).
+   Expected: { state = Stopped; ctx = { seconds = 0 } } *)
+eval (run init [Start])
+
+(* Verify properties *)
+eval (prop_timer_stops_at_zero 5)
+eval (prop_reset_while_running_stops_on_next_tick ())
+

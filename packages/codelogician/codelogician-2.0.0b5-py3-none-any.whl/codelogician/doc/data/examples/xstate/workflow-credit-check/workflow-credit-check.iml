@@ -1,0 +1,258 @@
+(* 
+  --------------------------------------------------------------------------
+  title: Credit Check Workflow IML model
+  description: XState Credit Check IML model
+  order: 2
+  --------------------------------------------------------------------------
+  
+  ========================================================================== *)
+(* ========================================================== *)
+(*  Customer Credit Check Workflow - IML Formalization        *)
+(* ========================================================== *)
+
+open Option
+
+(* === Type Definitions === *)
+
+(* Context-related types mirroring the TypeScript interfaces *)
+type customer_record = {
+  id: string;
+  name: string;
+  ssn: int;
+  yearly_income: int;
+  address: string;
+  employer: string;
+}
+
+type credit_decision =
+  | Approved
+  | Denied
+
+type credit_check_result = {
+  decision: credit_decision;
+  (* Other fields like score, reason are omitted as they are not used in the logic *)
+}
+
+type context = {
+  customer: customer_record;
+  credit_check: credit_check_result option;
+}
+
+(* States of the machine. 'EvaluateDecision' is modeled as inline logic. *)
+type state =
+  | CheckCredit
+  | StartApplication
+  | RejectApplication
+  | End
+  | Timeout
+
+(* Events, including explicit translations for async operations and timers *)
+type event =
+  (* Represents the onDone from 'callCreditCheckMicroservice' *)
+  | CreditCheckComplete of credit_check_result
+  (* Represents the onDone from 'startApplicationWorkflowId' *)
+  | ApplicationStarted
+  (* Represents the onDone from 'sendRejectionEmailFunction' *)
+  | RejectionSent
+  (* Represents the 'after: PT15M' timeout *)
+  | CreditCheckTimeout
+
+(* Machine Configuration *)
+type config = {
+  st: state;
+  ctx: context;
+}
+
+(* === Initial State === *)
+
+(* A sample customer to use for the initial context, as per the actor's input *)
+let sample_customer : customer_record = {
+  id = "customer123";
+  name = "John Doe";
+  ssn = 123456;
+  yearly_income = 50000;
+  address = "123 MyLane, MyCity, MyCountry";
+  employer = "MyCompany";
+}
+
+let initial_context : context = {
+  customer = sample_customer;
+  credit_check = None;
+}
+
+let init : config = {
+  st = CheckCredit;
+  ctx = initial_context;
+}
+
+(* === Transition Function === *)
+
+let step (c: config) (ev: event) : config =
+  match (c.st, ev) with
+  (* The 'CheckCredit' state receives the result from the microservice invoke *)
+  | (CheckCredit, CreditCheckComplete result) ->
+      let updated_ctx = { c.ctx with credit_check = Some result } in
+      (* Inline logic for the 'EvaluateDecision' always transition *)
+      (match result.decision with
+        | Approved -> { st = StartApplication; ctx = updated_ctx }
+        | Denied   -> { st = RejectApplication; ctx = updated_ctx }
+      )
+
+  (* The 'CheckCredit' state times out *)
+  | (CheckCredit, CreditCheckTimeout) ->
+      { c with st = Timeout }
+
+  (* 'StartApplication' completes its async operation *)
+  | (StartApplication, ApplicationStarted) ->
+      { c with st = End }
+
+  (* 'RejectApplication' completes its async operation *)
+  | (RejectApplication, RejectionSent) ->
+      { c with st = End }
+
+  (* Final and terminal states do not transition further *)
+  | (End, _) -> c
+  | (Timeout, _) -> c
+
+  (* Default case: no valid transition for the given state and event *)
+  | _ -> c
+
+(* === Run Events === *)
+
+let rec run (c: config) (evs: event list) : config =
+  match evs with
+  | [] -> c
+  | e :: rest -> run (step c e) rest
+
+(* === Properties === *)
+
+(* Property: An 'Approved' decision must lead to the 'End' state after the application is started. *)
+let prop_approval_leads_to_end (decision: credit_check_result) : bool =
+  if decision.decision = Approved then
+    let events = [
+      CreditCheckComplete decision;
+      ApplicationStarted
+    ] in
+    (run init events).st = End
+  else
+    true
+
+(* Property: A 'Denied' decision must lead to the 'End' state after the rejection is sent. *)
+let prop_denial_leads_to_end (decision: credit_check_result) : bool =
+  if decision.decision = Denied then
+    let events = [
+      CreditCheckComplete decision;
+      RejectionSent
+    ] in
+    (run init events).st = End
+  else
+    true
+
+(* Property: A timeout always results in the 'Timeout' state. *)
+let prop_timeout_is_terminal () : bool =
+  let events = [CreditCheckTimeout; ApplicationStarted] in (* second event should be ignored *)
+  (run init events).st = Timeout
+
+(* === Eval Examples === *)
+
+(* Happy path: Credit is approved *)
+eval (run init [
+  CreditCheckComplete { decision = Approved };
+  ApplicationStarted
+])
+
+(* Unhappy path: Credit is denied *)
+eval (run init [
+  CreditCheckComplete { decision = Denied };
+  RejectionSent
+])
+
+(* Timeout path *)
+eval (run init [
+  CreditCheckTimeout
+])
+
+(* Verify properties *)
+eval (prop_approval_leads_to_end { decision = Approved })
+eval (prop_denial_leads_to_end { decision = Denied })
+eval (prop_timeout_is_terminal ())
+
+
+(* ========================================================== *)
+(* Verification Goals for Customer Credit Check              *)
+(* ========================================================== *)
+
+(* ========================================================== *)
+(* 1. FUNCTIONAL CORRECTNESS (BUSINESS LOGIC)                 *)
+(* ========================================================== *)
+
+(* Theorem: Approval Logic
+   If the decision is Approved, the system enters StartApplication 
+   and eventually End given the correct sequence. *)
+theorem approval_flow_correct result =
+  result.decision = Approved ==>
+  let events = [CreditCheckComplete result; ApplicationStarted] in
+  let final_cfg = run init events in
+  final_cfg.st = End && final_cfg.ctx.credit_check = Some result
+[@@by auto]
+
+(* Theorem: Rejection Logic
+   If the decision is Denied, the system enters RejectApplication 
+   and eventually End given the correct sequence. *)
+theorem rejection_flow_correct result =
+  result.decision = Denied ==>
+  let events = [CreditCheckComplete result; RejectionSent] in
+  let final_cfg = run init events in
+  final_cfg.st = End && final_cfg.ctx.credit_check = Some result
+[@@by auto]
+
+(* Theorem: Timeout Logic
+   A timeout event immediately leads to the Timeout state. *)
+theorem timeout_logic_correct () =
+  (run init [CreditCheckTimeout]).st = Timeout
+[@@by auto]
+
+(* ========================================================== *)
+(* 2. SAFETY PROPERTIES (STABILITY)                           *)
+(* ========================================================== *)
+
+(* Theorem: End State Stability
+   Once in the End state, no subsequent event can change the state. *)
+theorem end_state_stable event =
+  let end_config = { init with st = End } in
+  (step end_config event).st = End
+[@@by auto]
+
+(* Theorem: Timeout State Stability
+   Once in the Timeout state, no subsequent event can change the state. *)
+theorem timeout_state_stable event =
+  let timeout_config = { init with st = Timeout } in
+  (step timeout_config event).st = Timeout
+[@@by auto]
+
+(* ========================================================== *)
+(* 3. REACHABILITY & INSTANCES                                *)
+(* ========================================================== *)
+
+(* Instance: Find a path to Success
+   Imandra will synthesize the list of events required to reach End. *)
+instance (fun events -> 
+  (run init events).st = End 
+  && List.length events <= 3)
+
+(* Instance: Find a path to Timeout *)
+instance (fun events -> 
+  (run init events).st = Timeout
+  && List.length events <= 2)
+
+(* ========================================================== *)
+(* 4. COMPLETENESS (NO DEADLOCKS ON VALID PATHS)              *)
+(* ========================================================== *)
+
+(* Theorem: Valid Approval Sequence is always Terminal *)
+theorem valid_approval_path_terminates result =
+  result.decision = Approved ==>
+  let events = [CreditCheckComplete result; ApplicationStarted] in
+  let state = (run init events).st in
+  state = End || state = Timeout
+[@@by auto]

@@ -1,0 +1,57 @@
+[@@@import Core_comparison, "core/comparison.iml"]
+[@@@import Core_arithmetic, "core/arithmetic.iml"]
+[@@@import Core_advanced, "core/advanced.iml"]
+[@@@import Stats_basic, "stats/basic.iml"]
+[@@@import Stats_measures, "stats/measures.iml"]
+
+
+(* Utility functions - Level 3 (depends on multiple packages) *)
+
+let rec bad_function (i : int) : LString.t =
+  if i <= 0 then {l|ok|l} else bad_function (i + 1)
+
+let rec polynomial_evaluate_helper (result : real) (coeffs : real list) (x : real) : real =
+  match coeffs with
+  | [] -> result
+  | coeff :: rest ->
+      let new_result = Core_arithmetic.add (Core_arithmetic.multiply result x) coeff in
+      polynomial_evaluate_helper new_result rest x
+[@@measure Ordinal.of_int (List.length coeffs)]
+
+let polynomial_evaluate (coefficients : real list) (x : real) : real =
+  match coefficients with
+  | [] -> 0.0
+  | first :: rest -> polynomial_evaluate_helper first rest x
+
+let combinations (n : int) (r : int) : int =
+  if r < 0 || r > n || n < 0 then
+    0
+  else if r = 0 || r = n then
+    1
+  else
+    match (Core_advanced.factorial n, Core_advanced.factorial r, Core_advanced.factorial (n - r)) with
+    | (Some fn, Some fr, Some fnr) ->
+        let denominator = Core_arithmetic.multiply (Real.of_int fr) (Real.of_int fnr) in
+        (match Core_arithmetic.divide (Real.of_int fn) denominator with
+        | Some result -> Real.to_int result
+        | None -> 0)
+    | _ -> 0
+
+let normalize_data (data : real list) : real list option =
+  if List.is_empty data then
+    Some []
+  else
+    match (Stats_basic.mean data, Stats_measures.standard_deviation data) with
+    | (Some data_mean, Some data_std) ->
+        if data_std = 0.0 then
+          Some (List.map (fun _ -> 0.0) data)
+        else
+          let neg_one = Real.(~-) 1.0 in
+          Some (List.map (fun value ->
+            let neg_mean = Core_arithmetic.multiply neg_one data_mean in
+            let numerator = Core_arithmetic.add value neg_mean in
+            match Core_arithmetic.divide numerator data_std with
+            | Some normalized_value -> normalized_value
+            | None -> 0.0
+          ) data)
+    | _ -> None

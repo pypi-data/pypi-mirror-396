@@ -1,0 +1,75 @@
+[@@@import Models, "models.iml"]
+[@@@import Storage, "storage.iml"]
+
+
+open Models
+open Storage
+
+type task_service = {
+  storage : in_memory_storage;
+}
+
+let init_task_service (storage : in_memory_storage) : task_service = {
+  storage = storage;
+}
+
+let create_task 
+    (task_id : int)
+    (title : LString.t)
+    (desc : LString.t)
+    (priority : priority)
+    (deadline : int)
+    (project_id : int)
+    (user_id : int option)
+    (service : task_service) : task * task_service =
+  let user_opt = 
+    match user_id with
+    | Some uid -> Map.get uid service.storage.users
+    | None -> None
+  in
+  let task = {
+    id = task_id;
+    title = title;
+    description = desc;
+    priority = priority;
+    deadline = deadline;
+    assigned_to = user_opt;
+    completed = false;
+  } in
+  let new_storage = add_task task project_id service.storage in
+  (task, { storage = new_storage })
+
+let mark_completed (task_id : int) (service : task_service) : (task_service, LString.t) result =
+  match Map.get task_id service.storage.tasks with
+  | None -> Error {l|Task not found|l}
+  | Some task ->
+      let updated_task = { task with completed = true } in
+      let new_tasks = Map.add task_id (Some updated_task) service.storage.tasks in
+      let new_storage = { service.storage with tasks = new_tasks } in
+      Ok { storage = new_storage }
+
+let get_all_tasks (storage : in_memory_storage) : task list =
+  match storage.tasks with
+  | {l = task_pairs; default = _} ->
+      List.filter_map (fun (_, task_opt) -> task_opt) task_pairs
+
+let overdue_tasks (now : int) (service : task_service) : task list =
+  let all_tasks = get_all_tasks service.storage in
+  List.filter 
+    (fun t -> not t.completed && t.deadline < now)
+    all_tasks
+
+let tasks_for_user (user_id : int) (service : task_service) : task list =
+  let all_tasks = get_all_tasks service.storage in
+  List.filter
+    (fun t ->
+      match t.assigned_to with
+      | Some user -> user.id = user_id
+      | None -> false)
+    all_tasks
+
+let high_priority_tasks (service : task_service) : task list =
+  let all_tasks = get_all_tasks service.storage in
+  List.filter
+    (fun t -> t.priority = High && not t.completed)
+    all_tasks

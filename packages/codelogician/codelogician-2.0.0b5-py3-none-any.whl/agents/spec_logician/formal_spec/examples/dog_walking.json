@@ -1,0 +1,210 @@
+{
+  "title": "Dog Walking States and Behaviors",
+  "preamble": {
+    "entities": [
+      {
+        "name": "dog",
+        "states": [
+          {
+            "name": "waiting",
+            "is_initial": true
+          },
+          {
+            "name": "on_walk",
+            "is_initial": false
+          },
+          {
+            "name": "walk_complete",
+            "is_initial": false
+          }
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "name": "leave_home",
+        "local_properties": []
+      },
+      {
+        "name": "speed_up",
+        "local_properties": []
+      },
+      {
+        "name": "slow_down",
+        "local_properties": []
+      },
+      {
+        "name": "start_wagging",
+        "local_properties": []
+      },
+      {
+        "name": "stop_wagging",
+        "local_properties": []
+      },
+      {
+        "name": "arrive_home",
+        "local_properties": []
+      }
+    ],
+    "global_properties": [
+      {
+        "name": "is_running",
+        "ipl_type": "bool",
+        "init_value": "false"
+      },
+      {
+        "name": "is_walking",
+        "ipl_type": "bool",
+        "init_value": "false"
+      },
+      {
+        "name": "tail_wagging",
+        "ipl_type": "bool",
+        "init_value": "false"
+      }
+    ],
+    "fun_defs": []
+  },
+  "scenarios": [
+    {
+      "title": "Start Walk",
+      "given_clauses": [
+        {
+          "entity": "dog",
+          "state": "waiting"
+        }
+      ],
+      "when_clause": {
+        "action": "leave_home",
+        "local_properties": []
+      },
+      "such_that_clauses": [],
+      "then_clauses": [
+        {
+          "entity": "dog",
+          "state": "on_walk"
+        }
+      ]
+    },
+    {
+      "title": "Speed Up Walk",
+      "given_clauses": [
+        {
+          "entity": "dog",
+          "state": "on_walk"
+        },
+        {
+          "predicate": "is_walking == true"
+        }
+      ],
+      "when_clause": {
+        "action": "speed_up",
+        "local_properties": []
+      },
+      "such_that_clauses": [],
+      "then_clauses": [
+        {
+          "property": "is_running",
+          "expression": "true"
+        },
+        {
+          "property": "is_walking",
+          "expression": "false"
+        }
+      ]
+    },
+    {
+      "title": "Slow Down Walk",
+      "given_clauses": [
+        {
+          "entity": "dog",
+          "state": "on_walk"
+        },
+        {
+          "predicate": "is_running == true"
+        }
+      ],
+      "when_clause": {
+        "action": "slow_down",
+        "local_properties": []
+      },
+      "such_that_clauses": [],
+      "then_clauses": [
+        {
+          "property": "is_running",
+          "expression": "false"
+        },
+        {
+          "property": "is_walking",
+          "expression": "true"
+        }
+      ]
+    },
+    {
+      "title": "Start Tail Wagging",
+      "given_clauses": [
+        {
+          "entity": "dog",
+          "state": "on_walk"
+        },
+        {
+          "predicate": "tail_wagging == false"
+        }
+      ],
+      "when_clause": {
+        "action": "start_wagging",
+        "local_properties": []
+      },
+      "such_that_clauses": [],
+      "then_clauses": [
+        {
+          "property": "tail_wagging",
+          "expression": "true"
+        }
+      ]
+    },
+    {
+      "title": "Stop Tail Wagging",
+      "given_clauses": [
+        {
+          "entity": "dog",
+          "state": "on_walk"
+        },
+        {
+          "predicate": "tail_wagging == true"
+        }
+      ],
+      "when_clause": {
+        "action": "stop_wagging",
+        "local_properties": []
+      },
+      "such_that_clauses": [],
+      "then_clauses": [
+        {
+          "property": "tail_wagging",
+          "expression": "false"
+        }
+      ]
+    },
+    {
+      "title": "Complete Walk",
+      "given_clauses": [
+        {
+          "entity": "dog",
+          "state": "on_walk"
+        }
+      ],
+      "when_clause": {
+        "action": "arrive_home",
+        "local_properties": []
+      },
+      "such_that_clauses": [],
+      "then_clauses": [
+        {
+          "entity": "dog",
+          "state": "walk_complete"
+        }
+      ]
+    }
+  ]
+}

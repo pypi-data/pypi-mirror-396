@@ -1,0 +1,5 @@
+- Copied from `imandrax-cli repl --serve true`
+- Add docstrings
+  - Prompt: "Refer to the implementation and add docstrings for each function. Note that you should use the full name of the function, eg `Option.map` not just `map`. Forget about the `Usage/Pattern` section you seen before for now."
+- Add lang-agnostic usage/pattern descriptions
+  - Prompt: "Add a `Usage/Pattern` section to each function in docstrings, describing how the function is used in practice. It should be language-agnostic as it will be used as reference documentation when converting another language to OCaml."

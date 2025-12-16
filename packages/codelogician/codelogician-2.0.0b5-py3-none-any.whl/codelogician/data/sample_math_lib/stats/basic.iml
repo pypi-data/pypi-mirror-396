@@ -1,0 +1,55 @@
+[@@@import Core_comparison, "core/comparison.iml"]
+[@@@import Core_arithmetic, "core/arithmetic.iml"]
+
+
+(* Basic statistical operations - Level 2 (depends on core) *)
+
+let sum_list (numbers : real list) : real =
+  List.fold_left (fun total num -> Core_arithmetic.add total num) 0.0 numbers
+
+let mean (numbers : real list) : real option =
+  if List.is_empty numbers then
+    None
+  else
+    let sum = sum_list numbers in
+    let count = Real.of_int (List.length numbers) in
+    Core_arithmetic.divide sum count
+
+let count_values (numbers : real list) : int =
+  List.length numbers
+
+let rec find_max_helper (max_val : real) (rest : real list) : real =
+  match rest with
+  | [] -> max_val
+  | num :: tail ->
+      let new_max = Core_comparison.maximum max_val num in
+      find_max_helper new_max tail
+
+let find_max (numbers : real list) : real option =
+  match numbers with
+  | [] -> None
+  | first :: rest -> Some (find_max_helper first rest)
+[@@decomp top ~prune:true ~ctx_simp:true ()]
+
+let rec find_min_helper (min_val : real) (rest : real list) : real =
+  match rest with
+  | [] -> min_val
+  | num :: tail ->
+      let new_min = Core_comparison.minimum min_val num in
+      find_min_helper new_min tail
+
+let find_min (numbers : real list) : real option =
+  match numbers with
+  | [] -> None
+  | first :: rest -> Some (find_min_helper first rest)
+verify (fun () -> sum_list [] = 0.0)
+verify (fun l1 l2 -> sum_list (l1 @ l2) = Core_arithmetic.add (sum_list l1) (sum_list l2))
+verify (fun numbers -> (List.length numbers > 0) ==> (match (mean numbers, find_min numbers, find_max numbers) with | (Some m, Some min_val, Some max_val) -> min_val <=. m && m <=. max_val | _ -> true))
+verify (fun numbers -> count_values numbers >= 0)
+verify (fun numbers -> not (List.is_empty numbers) ==> (mean numbers = Some (Core_arithmetic.divide (sum_list numbers) (Real.of_int (count_values numbers)))))
+verify (fun numbers -> (numbers <> []) ==> (match find_max numbers with | Some max_val -> List.for_all (fun num -> max_val >=. num) numbers | None -> false))
+verify (fun numbers -> (not (List.is_empty numbers)) ==> (match find_max numbers with | Some max_val -> List.mem max_val numbers | None -> true))
+verify (fun numbers -> (not (List.is_empty numbers)) ==> (match find_min numbers with | None -> true | Some min_val -> List.for_all (fun num -> min_val <=. num) numbers))
+verify (fun numbers -> (not (List.is_empty numbers)) ==> (match find_min numbers with | Some min_val -> List.mem min_val numbers | None -> true))
+verify (fun numbers -> (not (List.is_empty numbers)) ==> (match (find_min numbers, find_max numbers) with | (Some min_val, Some max_val) -> min_val <=. max_val | _ -> true))
+

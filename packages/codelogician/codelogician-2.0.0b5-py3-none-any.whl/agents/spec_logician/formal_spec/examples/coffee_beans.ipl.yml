@@ -1,0 +1,45 @@
+output: |
+  enum can_state {
+    ready
+  }
+
+  internal state {
+    can : can_state = can_state.ready;
+    beans : string list = [];
+  }
+
+  function drop(n: int, xs: string list): string list {
+    return rev(take(len(xs) - n, rev(xs)))
+  }
+  function get_at(n: int, xs: string list): string {
+    return hd(drop(n, xs))
+  }
+  function delete_at(n: int, xs: string list): string list {
+    return app(take(n, xs), drop(n + 1, xs))
+  }
+  function select_beans_precond_0(index1: int, index2: int): bool {
+    return (state.can == can_state.ready) && (len(state.beans) >= 2) && (index1 != index2) && (index1 >= 0 && index1 < len(state.beans)) && (index2 >= 0 && index2 < len(state.beans)) && (get_at(index1, state.beans) == get_at(index2, state.beans))
+  }
+
+  function select_beans_precond_1(index1: int, index2: int): bool {
+    return (state.can == can_state.ready) && (len(state.beans) >= 2) && (index1 != index2) && (index1 >= 0 && index1 < len(state.beans)) && (index2 >= 0 && index2 < len(state.beans)) && (get_at(index1, state.beans) != get_at(index2, state.beans))
+  }
+
+  action select_beans {
+    index1: int
+    index2: int
+    validate {
+      select_beans_precond_0(this.index1, this.index2) || select_beans_precond_1(this.index1, this.index2)
+    }
+  }
+
+  receive (a: select_beans){
+    if (select_beans_precond_0(a.index1, a.index2)) then {
+      state.can = can_state.ready
+      state.beans = add('black', delete_at(if a.index1 > a.index2 then a.index1 else a.index2, delete_at(if a.index1 < a.index2 then a.index1 else a.index2, state.beans)))
+    }
+    if (select_beans_precond_1(a.index1, a.index2)) then {
+      state.can = can_state.ready
+      state.beans = if get_at(a.index1, state.beans) == 'white' then delete_at(a.index2, state.beans) else if get_at(a.index2, state.beans) == 'white' then delete_at(a.index1, state.beans) else state.beans
+    }
+  }

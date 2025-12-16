@@ -1,0 +1,142 @@
+module String = struct
+ (*  {2 Byte strings}
+ 
+     These strings correspond to OCaml native strings, and do not have
+     a particular unicode encoding.
+ 
+     Rather, they should be seen as sequences of bytes, and it is also
+     this way that Imandra considers them.
+  *)
+  type String.t =  string
+  
+  let String.empty : string =
+     ""
+  (* [String.empty] returns an empty string
+     
+     Usage/Pattern: Initializing an empty string, like "" in other languages *)
+  
+  let String.length: String.t -> int =
+    <logic_core_builtin>
+   (*  Length of the string, i.e. its number of bytes
+   
+       Usage/Pattern: Getting string length, similar to .length or len() in other languages *)
+  
+  let String.append: String.t -> String.t -> String.t =
+    <logic_core_builtin>
+   (*  String concatenation
+   
+       Usage/Pattern: Joining two strings together, like + operator or concat() in other languages *)
+  
+  let rec String.concat (sep : string) (l : String.t list) : string =
+    match l with
+    | [] ->  ""
+    | [x] -> x
+    | (x :: tail) ->
+      String.append x (String.append sep (String.concat sep tail))
+  
+   (*  [concat sep l] concatenates strings in [l] with [sep] inserted between
+       each element.
+   
+       - [concat sep [] = ""]
+       - [concat sep [x] = x]
+       - [concat sep [x;y] = x ^ sep ^ y]
+       - [concat sep (x :: tail) = x ^ sep ^ concat sep tail]
+       
+       Usage/Pattern: Joining array/list of strings with separator, like join() or String.join() in other languages *)
+  
+  let String.prefix: String.t -> String.t -> bool =
+    <logic_core_builtin>
+  
+   (*  [prefix a b] returns [true] iff [a] is a prefix of [b]
+         (or if [a=b]
+         
+       Usage/Pattern: Checking if string starts with another string, like startsWith() in other languages *)
+  
+  let String.suffix: String.t -> String.t -> bool =
+    <logic_core_builtin>
+  
+   (*  [suffix a b] returns [true] iff [a] is a suffix of [b]
+         (or if [a=b]
+         
+       Usage/Pattern: Checking if string ends with another string, like endsWith() in other languages *)
+  
+  let String.contains: String.t -> String.t -> bool =
+    <logic_core_builtin>
+  (* [String.contains s1 s2] tests if [s2] appears as a substring within [s1]
+     
+     Usage/Pattern: Checking if string contains substring, like includes() or contains() in other languages *)
+  
+  let String.unsafe_sub: String.t -> int -> int -> String.t =
+    <logic_core_builtin>
+  (* [String.unsafe_sub s pos len] extracts substring of [s] starting at [pos] of length [len].
+     No bounds checking - use [String.sub] for safe substring extraction
+     
+     Usage/Pattern: Low-level substring extraction without bounds checking, like internal substring operations *)
+  
+  let String.sub (a : string) (i : int) (len : int) : String.t option =
+    if (i >= 0)
+     &&
+     ((len >= 0) && ((i + len) <= (String.length a)))
+    then Some String.unsafe_sub a i len
+    else None
+  
+   (* [String.sub s i len] returns the string [s[i], s[i+1],…,s[i+len-1]].
+   
+       Usage/Pattern: Safe substring extraction with bounds checking, like substring() in other languages *)
+  
+  let String.of_int (i : int) : string =
+    if i >= 0
+    then Int.to_string i
+    else String.append  "-" (Int.to_string (~- i))
+   (*  String representation of an integer
+   
+       Usage/Pattern: Converting integer to string, like toString() or str() in other languages *)
+  
+  let String.unsafe_to_nat: String.t -> int =
+    <logic_core_builtin>
+  (* [String.unsafe_to_nat s] converts string [s] to natural number without validation.
+     Use [String.to_nat] for safe conversion
+     
+     Usage/Pattern: Low-level string to number conversion without validation *)
+  
+  let String.to_nat (s : string) : int option =
+    let x = String.unsafe_to_nat s in
+    if x >= 0 then Some x else None
+   (*  Parse a string into a nonnegative number, or return [None]
+   
+       Usage/Pattern: Safe conversion of string to natural number, like parseInt() with validation *)
+  
+  let String.is_nat (s : string) : bool =
+    (s <>  "") && ((String.unsafe_to_nat s) >= 0)
+  (* [String.is_nat s] tests if string [s] represents a valid natural number
+     
+     Usage/Pattern: Validating if string represents non-negative integer, like input validation *)
+  
+  let String.is_int (s : string) : bool =
+    (String.is_nat s)
+     ||
+     ((String.prefix  "-" s)
+       &&
+       (String.is_nat (String.unsafe_sub s 1 ((String.length s) - 1))))
+  (* [String.is_int s] tests if string [s] represents a valid integer
+     
+     Usage/Pattern: Validating if string represents any integer (positive/negative), like input validation *)
+  
+  let String.unsafe_to_int (s : string) : int =
+    let x = String.unsafe_to_nat s in
+    if x >= 0
+    then x
+    else
+      ~- (String.unsafe_to_nat (String.unsafe_sub s 1 ((String.length s) - 1)))
+  (* [String.unsafe_to_int s] converts string [s] to integer without validation.
+     Use [String.to_int] for safe conversion
+     
+     Usage/Pattern: Low-level string to integer conversion without validation *)
+  
+  let String.to_int (s : string) : int option =
+    if String.is_int s then Some String.unsafe_to_int s else None
+  (* [String.to_int s] safely converts string [s] to integer.
+     Returns None if [s] is not a valid integer
+     
+     Usage/Pattern: Safe conversion of string to integer with validation, like parseInt() with error handling *)
+end

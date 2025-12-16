@@ -1,0 +1,43 @@
+(* Statistical measures - Level 3 (depends on stats.basic and core) *)
+
+let variance (numbers : real list) : real option =
+  (* Calculate variance. *)
+  if List.is_empty numbers then
+    None
+  else if List.length numbers = 1 then
+    Some 0.0
+  else
+    let avg_opt = Stats_basic.mean numbers in
+    match avg_opt with
+    | None -> None
+    | Some avg ->
+        let squared_diffs = List.map (fun num ->
+          let diff = Core_arithmetic.subtract num avg in
+          Core_arithmetic.multiply diff diff
+        ) numbers in
+        let sum_squared_diffs = Stats_basic.sum_list squared_diffs in
+        let n_minus_1 = Real.of_int (List.length numbers - 1) in
+        Core_arithmetic.divide sum_squared_diffs n_minus_1
+
+let standard_deviation (numbers : real list) : real option =
+  (* Calculate standard deviation. *)
+  let var_opt = variance numbers in
+  match var_opt with
+  | None -> None
+  | Some var -> Core_advanced.square_root var
+
+let find_max_min (remaining : real list) (current_max : real) (current_min : real) : real * real =
+  match remaining with
+  | [] -> (current_max, current_min)
+  | num :: rest ->
+      let new_max = if num >. current_max then num else current_max in
+      let new_min = if num <. current_min then num else current_min in
+      find_max_min rest new_max new_min
+
+let range_value (numbers : real list) : real option =
+  (* Calculate range (max - min). *)
+  match numbers with
+  | [] -> None
+  | first :: rest ->
+      let (max_val, min_val) = find_max_min rest first first in
+      Some (max_val -. min_val)

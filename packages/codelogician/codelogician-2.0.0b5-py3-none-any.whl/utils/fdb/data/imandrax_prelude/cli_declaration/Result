@@ -1,0 +1,141 @@
+module Result = struct
+  (* Result module provides monadic operations and utilities for working with the result type.
+      The result type represents either success (Ok) or failure (Error) outcomes. *)
+
+  type Result.t =  ('a, 'b) result
+  
+  let Result.return (x : 'a) : ('a, 'b) result =
+    Ok x
+  (* [Result.return x] wraps a value [x] in an Ok result
+      
+      Usage/Pattern: Converting raw values into success results for validation chains
+      and computation sequences *)
+  
+  let Result.fail (s : 'a) : ('b, 'a) result =
+    Error s
+  (* [Result.fail s] wraps a value [s] in an Error result
+      
+      Usage/Pattern: Converting error information into error results during validation
+      or error handling *)
+  
+  let Result.map (f : 'b -> 'c) (e : ('b, 'a) result) : ('c, 'a) result =
+    match e with
+    | Ok x -> Ok f x
+    | Error s -> Error s
+  (* [Result.map f e] applies function [f] to the value inside [e] if it's Ok,
+      otherwise propagates the Error
+      
+      Usage/Pattern: Applying transformations to success values while preserving error state *)
+  
+  let Result.map_err (f : 'a -> 'c) (e : ('b, 'a) result) : ('b, 'c) result =
+    match e with
+    | Ok x -> Ok x
+    | Error y -> Error f y
+  (* [Result.map_err f e] applies function [f] to the error value if [e] is Error,
+      otherwise propagates the Ok value
+      
+      Usage/Pattern: Converting between error types while preserving success values *)
+  
+  let Result.get_or ~default:(default : 'a) (e : ('a, 'b) result) : 'a =
+    match e with
+    | Ok x -> x
+    | Error _ -> default
+  (* [Result.get_or ~default e] extracts the Ok value from [e], or returns [default] if [e] is Error
+      
+      Usage/Pattern: Extracting values with fallback for error cases *)
+  
+  let Result.map_or ~default:(default : 'a)
+    (f : 'c -> 'a)
+    (e : ('c, 'b) result)
+    : 'a =
+    match e with
+    | Ok x -> f x
+    | Error _ -> default
+  (* [Result.map_or ~default f e] applies [f] to the Ok value in [e], or returns [default] if [e] is Error
+      
+      Usage/Pattern: Transforming success values with a fallback for error cases *)
+  
+  let Result.>|= (e : ('b, 'a) result) (f : 'b -> 'c) : ('c, 'a) result =
+    Result.map f e
+  (* [Result.>|=] is an infix operator alias for [Result.map]
+      
+      Usage/Pattern: Infix syntax for transforming success values *)
+  
+  let Result.flat_map (f : 'b -> ('c, 'a) result) (e : ('b, 'a) result)
+    : ('c, 'a) result =
+    match e with
+    | Ok x -> f x
+    | Error s -> Error s
+  (* [Result.flat_map f e] applies [f] to the Ok value in [e] to produce a new result,
+      or propagates the Error
+      
+      Usage/Pattern: Chaining operations that can fail *)
+  
+  let Result.>>= (e : ('b, 'a) result) (f : 'b -> ('c, 'a) result)
+    : ('c, 'a) result =
+    Result.flat_map f e
+  (* [Result.>>=] is an infix operator alias for [Result.flat_map]
+      
+      Usage/Pattern: Infix syntax for chaining fallible operations *)
+  
+  let Result.fold (ok : 'b -> 'c) (error : 'a -> 'c) (x : ('b, 'a) result)
+    : 'c =
+    match x with
+    | Ok x -> ok x
+    | Error s -> error s
+  (* [Result.fold ok error x] applies [ok] to the value if [x] is Ok,
+      or applies [error] if [x] is Error
+      
+      Usage/Pattern: Converting both success and error cases to a single type *)
+  
+  let Result.is_ok (_x_886_15 : ('a, 'b) result) : bool =
+    match _x_886_15 with
+    | Ok _ -> true
+    | Error _ -> false
+  (* [Result.is_ok x] returns true if [x] is Ok, false otherwise
+      
+      Usage/Pattern: Testing if a result represents success *)
+  
+  let Result.is_error (_x_891_18 : ('a, 'b) result) : bool =
+    match _x_891_18 with
+    | Ok _ -> false
+    | Error _ -> true
+  (* [Result.is_error x] returns true if [x] is Error, false otherwise
+      
+      Usage/Pattern: Testing if a result represents failure *)
+  
+  let Result.monoid_product (a : ('a, 'b) result) (b : ('c, 'b) result)
+    : (('a * 'c), 'b) result =
+    match (a, b) with
+    | (Ok x, Ok y) -> Ok (x, y)
+    | (Error e, _) -> Error e
+    | (_, Error e) -> Error e
+  (* [Result.monoid_product a b] combines two results into a tuple if both are Ok,
+      otherwise returns the first Error encountered
+      
+      Usage/Pattern: Combining two independent results into a tuple result *)
+  
+  let Result.let+ : ('c, 'a) result =
+    Result.>|=
+  (* [Result.let+] is a binding operator alias for [>|=] (map)
+      
+      Usage/Pattern: Binding syntax for transforming success values *)
+  
+  let Result.and+ : (('a * 'c), 'b) result =
+    Result.monoid_product
+  (* [Result.and+] is a binding operator alias for [Result.monoid_product]
+      
+      Usage/Pattern: Binding syntax for combining independent results *)
+  
+  let Result.let* : ('c, 'a) result =
+    Result.>>=
+  (* [Result.let*] is a binding operator alias for [>>=] (flat_map)
+      
+      Usage/Pattern: Binding syntax for chaining fallible operations *)
+  
+  let Result.and* : (('a * 'c), 'b) result =
+    Result.monoid_product
+  (* [Result.and*] is a binding operator alias for [Result.monoid_product]
+      
+      Usage/Pattern: Alternative binding syntax for combining results *)
+end

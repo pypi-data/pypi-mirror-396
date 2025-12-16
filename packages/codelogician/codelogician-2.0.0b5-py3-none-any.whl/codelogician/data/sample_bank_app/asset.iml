@@ -1,0 +1,57 @@
+[@@@import Currency, "currency.iml"]
+
+
+(* Asset type representing different types of financial assets *)
+type asset_type =
+  | CASH
+  | STOCK
+  | BOND
+  | REAL_ESTATE
+  | OTHER
+
+(* Convert asset type to string *)
+let asset_type_to_string (at: asset_type) : LString.t =
+  match at with
+  | CASH -> {l|Cash|l}
+  | STOCK -> {l|Stock|l}
+  | BOND -> {l|Bond|l}
+  | REAL_ESTATE -> {l|Real Estate|l}
+  | OTHER -> {l|Other|l}
+
+(* Asset record representing a financial asset *)
+type asset = {
+  name: LString.t;
+  asset_type: asset_type;
+  value: real
+}
+
+(* Initialize an asset with validation *)
+let init_asset (name: LString.t) (asset_type: asset_type) (value: real) : asset option =
+  if value <. 0.0 then
+    None
+  else
+    Some { name = name; asset_type = asset_type; value = value }
+
+(* Convert asset to dictionary representation *)
+let asset_to_dict (a: asset) : (LString.t * real) list =
+  [({l|value|l}, a.value)]
+
+(* Create asset from dictionary *)
+let asset_from_dict (data: (LString.t * real) list) : asset option =
+  match List.assoc {l|value|l} data with
+  | Some value -> 
+      if value <. 0.0 then
+        None
+      else
+        Some { name = {l||l}; asset_type = OTHER; value = value }
+  | None -> None
+
+(* Main function demonstrating usage *)
+let main () : asset option list =
+  let asset_opt = init_asset {l|MyAsset|l} CASH 1000.0 in
+  match asset_opt with
+  | Some asset ->
+      let asset_dict = asset_to_dict asset in
+      let new_asset_opt = asset_from_dict asset_dict in
+      [Some asset; new_asset_opt]
+  | None -> [None]

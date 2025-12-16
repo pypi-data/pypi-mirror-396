@@ -1,0 +1,53 @@
+output: |
+  enum glass_monitor_state {
+    checking_level
+    adding_water
+    concluded_full
+  }
+
+  internal state {
+    glass_monitor : glass_monitor_state = glass_monitor_state.checking_level;
+    water_level : int = 0;
+    max_level : int = 0;
+  }
+
+  function inspect_level_precond_0(): bool {
+    return (state.glass_monitor == glass_monitor_state.checking_level) && (state.water_level < state.max_level)
+  }
+
+  function inspect_level_precond_1(): bool {
+    return (state.glass_monitor == glass_monitor_state.checking_level) && (state.water_level == state.max_level)
+  }
+
+  action inspect_level {
+    validate {
+      inspect_level_precond_0() || inspect_level_precond_1()
+    }
+  }
+
+  receive (a: inspect_level){
+    if (inspect_level_precond_0()) then {
+      state.glass_monitor = glass_monitor_state.adding_water
+    }
+    if (inspect_level_precond_1()) then {
+      state.glass_monitor = glass_monitor_state.concluded_full
+    }
+  }
+
+  function add_water_precond_0(units: int): bool {
+    return (state.glass_monitor == glass_monitor_state.adding_water) && (units > 0)
+  }
+
+  action add_water {
+    units: int
+    validate {
+      add_water_precond_0(this.units)
+    }
+  }
+
+  receive (a: add_water){
+    if (add_water_precond_0(a.units)) then {
+      state.glass_monitor = glass_monitor_state.checking_level
+      state.water_level = state.water_level + a.units
+    }
+  }

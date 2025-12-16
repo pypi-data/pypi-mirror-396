@@ -1,0 +1,198 @@
+output: |
+  enum machine_state {
+    fetching
+    assembling
+    frying
+    flipping
+    drying
+    glazing
+    serving
+  }
+
+  enum dough_state {
+    not_started
+    in_progress
+    ready
+  }
+
+  enum mixing_state {
+    not_started
+    dry_mixing
+    wet_mixing
+    completed
+  }
+
+  internal state {
+    machine : machine_state = machine_state.fetching;
+    dough : dough_state = dough_state.not_started;
+    mixing : mixing_state = mixing_state.not_started;
+    dry_mix_done : bool = false;
+    wet_mix_done : bool = false;
+  }
+
+  function fetch_complete_precond_0(): bool {
+    return (state.machine == machine_state.fetching)
+  }
+
+  action fetch_complete {
+    validate {
+      fetch_complete_precond_0()
+    }
+  }
+
+  receive (a: fetch_complete){
+    if (fetch_complete_precond_0()) then {
+      state.machine = machine_state.assembling
+      state.dough = dough_state.in_progress
+    }
+  }
+
+  function dough_ready_precond_0(): bool {
+    return (state.machine == machine_state.assembling) && (state.dough == dough_state.in_progress)
+  }
+
+  action dough_ready {
+    validate {
+      dough_ready_precond_0()
+    }
+  }
+
+  receive (a: dough_ready){
+    if (dough_ready_precond_0()) then {
+      state.dough = dough_state.ready
+      state.mixing = mixing_state.not_started
+    }
+  }
+
+  function dry_mix_complete_precond_0(): bool {
+    return (state.machine == machine_state.assembling) && (state.mixing == mixing_state.dry_mixing)
+  }
+
+  action dry_mix_complete {
+    validate {
+      dry_mix_complete_precond_0()
+    }
+  }
+
+  receive (a: dry_mix_complete){
+    if (dry_mix_complete_precond_0()) then {
+      state.dry_mix_done = true
+    }
+  }
+
+  function wet_mix_complete_precond_0(): bool {
+    return (state.machine == machine_state.assembling) && (state.mixing == mixing_state.wet_mixing)
+  }
+
+  action wet_mix_complete {
+    validate {
+      wet_mix_complete_precond_0()
+    }
+  }
+
+  receive (a: wet_mix_complete){
+    if (wet_mix_complete_precond_0()) then {
+      state.wet_mix_done = true
+    }
+  }
+
+  function assembly_complete_precond_0(): bool {
+    return (state.machine == machine_state.assembling) && (state.dry_mix_done == true && state.wet_mix_done == true)
+  }
+
+  action assembly_complete {
+    validate {
+      assembly_complete_precond_0()
+    }
+  }
+
+  receive (a: assembly_complete){
+    if (assembly_complete_precond_0()) then {
+      state.machine = machine_state.frying
+      state.mixing = mixing_state.completed
+    }
+  }
+
+  function frying_complete_precond_0(): bool {
+    return (state.machine == machine_state.frying)
+  }
+
+  action frying_complete {
+    validate {
+      frying_complete_precond_0()
+    }
+  }
+
+  receive (a: frying_complete){
+    if (frying_complete_precond_0()) then {
+      state.machine = machine_state.flipping
+    }
+  }
+
+  function flipping_complete_precond_0(): bool {
+    return (state.machine == machine_state.flipping)
+  }
+
+  action flipping_complete {
+    validate {
+      flipping_complete_precond_0()
+    }
+  }
+
+  receive (a: flipping_complete){
+    if (flipping_complete_precond_0()) then {
+      state.machine = machine_state.drying
+    }
+  }
+
+  function drying_complete_precond_0(): bool {
+    return (state.machine == machine_state.drying)
+  }
+
+  action drying_complete {
+    validate {
+      drying_complete_precond_0()
+    }
+  }
+
+  receive (a: drying_complete){
+    if (drying_complete_precond_0()) then {
+      state.machine = machine_state.glazing
+    }
+  }
+
+  function glazing_complete_precond_0(): bool {
+    return (state.machine == machine_state.glazing)
+  }
+
+  action glazing_complete {
+    validate {
+      glazing_complete_precond_0()
+    }
+  }
+
+  receive (a: glazing_complete){
+    if (glazing_complete_precond_0()) then {
+      state.machine = machine_state.serving
+    }
+  }
+
+  function serving_complete_precond_0(): bool {
+    return (state.machine == machine_state.serving)
+  }
+
+  action serving_complete {
+    validate {
+      serving_complete_precond_0()
+    }
+  }
+
+  receive (a: serving_complete){
+    if (serving_complete_precond_0()) then {
+      state.machine = machine_state.fetching
+      state.dough = dough_state.not_started
+      state.mixing = mixing_state.not_started
+      state.dry_mix_done = false
+      state.wet_mix_done = false
+    }
+  }

@@ -1,0 +1,112 @@
+[@@@import Core_comparison, "core/comparison.iml"]
+[@@@import Core_arithmetic, "core/arithmetic.iml"]
+
+
+(* Advanced mathematical operations - Level 2 (depends on core.arithmetic) *)
+
+(* Helper function for square root iteration *)
+let square_root_iterate_measure (iterations_left : int) : Ordinal.t =
+  Ordinal.of_int iterations_left
+
+let rec square_root_iterate (x : real) (guess : real) (iterations_left : int) : real =
+  if iterations_left <= 0 then
+    guess
+  else
+    let x_div_guess = 
+      match Core_arithmetic.divide x guess with
+      | Some v -> v
+      | None -> x /. guess
+    in
+    let sum = Core_arithmetic.add guess x_div_guess in
+    let new_guess = 
+      match Core_arithmetic.divide sum 2.0 with
+      | Some v -> v
+      | None -> sum /. 2.0
+    in
+    let diff = Core_arithmetic.subtract new_guess guess in
+    let abs_diff = Core_comparison.absolute_value diff in
+    if abs_diff <. 0.0000000001 then
+      new_guess
+    else
+      square_root_iterate x new_guess (iterations_left - 1)
+[@@measure square_root_iterate_measure iterations_left]
+
+let square_root (x : real) : real option =
+  if x <. 0.0 then
+    None
+  else if x = 0.0 then
+    Some 0.0
+  else
+    let initial_guess = 
+      match Core_arithmetic.divide x 2.0 with
+      | Some v -> v
+      | None -> x /. 2.0
+    in
+    Some (square_root_iterate x initial_guess 20)
+
+(* Helper function for factorial computation *)
+let compute_factorial_measure (n : int) (i : int) : Ordinal.t =
+  Ordinal.of_int (n - i + 1)
+
+let rec compute_factorial (n : int) (i : int) (acc : int) : int =
+  if i > n then
+    acc
+  else
+    let next_acc = Real.to_int (Core_arithmetic.multiply (Real.of_int acc) (Real.of_int i)) in
+    compute_factorial n (i + 1) next_acc
+[@@measure compute_factorial_measure n i]
+
+let factorial (n : int) : int option =
+  if n < 0 then
+    None
+  else if n = 0 || n = 1 then
+    Some 1
+  else
+    Some (compute_factorial n 2 1)
+
+let is_even (n : int) : bool =
+  n mod 2 = 0
+
+(* Helper function for checking divisors *)
+let check_divisors_measure (limit : int) (i : int) : Ordinal.t =
+  Ordinal.of_int (limit - i + 1)
+
+let rec check_divisors (n : int) (limit : int) (i : int) : bool =
+  if i > limit then
+    true
+  else if n mod i = 0 then
+    false
+  else
+    check_divisors n limit (i + 1)
+[@@measure check_divisors_measure limit i]
+
+let is_prime (n : int) : bool =
+  if n < 2 then
+    false
+  else
+    let sqrt_n_opt = square_root (Real.of_int n) in
+    match sqrt_n_opt with
+    | None -> false
+    | Some sqrt_n ->
+        let limit = Real.to_int sqrt_n in
+        check_divisors n limit 2
+verify (fun x -> x <. 0.0 ==> square_root x = None)
+verify (fun () -> square_root 0.0 = Some 0.0)
+verify (fun x -> x >=. 0.0 ==> (match square_root x with | Some y -> y >=. 0.0 | None -> true))
+verify (fun x -> x >. 0.0 ==> (match square_root x with | Some y -> let y_squared = Core_arithmetic.multiply y y in let diff = Core_arithmetic.subtract y_squared x in let abs_diff = Core_comparison.absolute_value diff in abs_diff <. 0.001 | None -> false))
+verify (fun n -> n < 0 ==> factorial n = None)
+verify (fun () -> factorial 0 = Some 1 && factorial 1 = Some 1)
+verify (fun n -> n >= 0 ==> (match factorial n with | Some result -> result > 0 | None -> true))
+verify (fun n -> n > 1 ==> (match factorial n with | Some fn -> (match factorial (n - 1) with | Some fn1 -> fn = n * fn1 | None -> true) | None -> true))
+verify (fun n -> (n mod 2 = 0) ==> (is_even n = true))
+verify (fun n -> (n mod 2 <> 0) ==> (is_even n = false))
+verify (fun n -> n < 2 ==> is_prime n = false)
+verify (fun n -> n >= 2 ==> (is_prime n = true <==> (forall i. i >= 2 && i <= Real.to_int (Option.get (square_root (Real.of_int n))) ==> n mod i <> 0)))
+verify (fun () -> is_prime 2 = true)
+verify (fun n -> n >= 4 ==> ((exists k -> 2 <= k && k <= n / 2 && n mod k = 0) ==> is_prime n = false))
+verify (fun x guess -> square_root_iterate x guess 0 = guess)
+verify (fun x -> fun guess -> fun iterations_left -> (x >. 0.0 && iterations_left > 0) ==> (let x_div_guess = (match Core_arithmetic.divide x guess with | Some v -> v | None -> x /. guess) in let sum = Core_arithmetic.add guess x_div_guess in let new_guess = (match Core_arithmetic.divide sum 2.0 with | Some v -> v | None -> sum /. 2.0) in let diff = Core_arithmetic.subtract new_guess guess in let abs_diff = Core_comparison.absolute_value diff in (abs_diff <. 0.0000000001) ==> (square_root_iterate x guess iterations_left = new_guess)))
+verify (fun n i acc -> i > n ==> compute_factorial n i acc = acc)
+verify (fun n -> fun limit -> fun i -> i > limit ==> check_divisors n limit i = true)
+verify (fun n -> fun limit -> fun i -> (i <= limit && n mod i = 0) ==> (check_divisors n limit i = false))
+

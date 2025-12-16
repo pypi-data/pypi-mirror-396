@@ -1,0 +1,197 @@
+{
+  "title": "Bean Selection Game",
+  "preamble": {
+    "entities": [
+      {
+        "name": "can",
+        "states": [
+          {
+            "name": "ready",
+            "is_initial": true
+          }
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "name": "select_beans",
+        "local_properties": [
+          {
+            "name": "index1",
+            "ipl_type": "int"
+          },
+          {
+            "name": "index2",
+            "ipl_type": "int"
+          }
+        ]
+      }
+    ],
+    "global_properties": [
+      {
+        "name": "beans",
+        "ipl_type": {
+          "type_ctor": "list",
+          "base_type": "string"
+        },
+        "init_value": "[]"
+      }
+    ],
+    "fun_defs": [
+      {
+        "name": "drop",
+        "parameters": [
+          {
+            "name": "n",
+            "ipl_type": "int"
+          },
+          {
+            "name": "xs",
+            "ipl_type": {
+              "type_ctor": "list",
+              "base_type": "string"
+            }
+          }
+        ],
+        "return_type": {
+          "type_ctor": "list",
+          "base_type": "string"
+        },
+        "statements": [
+          "return rev(take(len(xs) - n, rev(xs)))"
+        ]
+      },
+      {
+        "name": "get_at",
+        "parameters": [
+          {
+            "name": "n",
+            "ipl_type": "int"
+          },
+          {
+            "name": "xs",
+            "ipl_type": {
+              "type_ctor": "list",
+              "base_type": "string"
+            }
+          }
+        ],
+        "return_type": "string",
+        "statements": [
+          "return hd(drop(n, xs))"
+        ]
+      },
+      {
+        "name": "delete_at",
+        "parameters": [
+          {
+            "name": "n",
+            "ipl_type": "int"
+          },
+          {
+            "name": "xs",
+            "ipl_type": {
+              "type_ctor": "list",
+              "base_type": "string"
+            }
+          }
+        ],
+        "return_type": {
+          "type_ctor": "list",
+          "base_type": "string"
+        },
+        "statements": [
+          "return app(take(n, xs), drop(n + 1, xs))"
+        ]
+      }
+    ]
+  },
+  "scenarios": [
+    {
+      "title": "Match Beans Removal",
+      "given_clauses": [
+        {
+          "entity": "can",
+          "state": "ready"
+        },
+        {
+          "predicate": "len(beans) >= 2"
+        }
+      ],
+      "when_clause": {
+        "action": "select_beans",
+        "local_properties": [
+          "index1",
+          "index2"
+        ]
+      },
+      "such_that_clauses": [
+        {
+          "predicate": "index1 != index2"
+        },
+        {
+          "predicate": "index1 >= 0 && index1 < len(beans)"
+        },
+        {
+          "predicate": "index2 >= 0 && index2 < len(beans)"
+        },
+        {
+          "predicate": "get_at(index1, beans) == get_at(index2, beans)"
+        }
+      ],
+      "then_clauses": [
+        {
+          "entity": "can",
+          "state": "ready"
+        },
+        {
+          "property": "beans",
+          "expression": "add('black', delete_at(if index1 > index2 then index1 else index2, delete_at(if index1 < index2 then index1 else index2, beans)))"
+        }
+      ]
+    },
+    {
+      "title": "Mismatch Beans Handling",
+      "given_clauses": [
+        {
+          "entity": "can",
+          "state": "ready"
+        },
+        {
+          "predicate": "len(beans) >= 2"
+        }
+      ],
+      "when_clause": {
+        "action": "select_beans",
+        "local_properties": [
+          "index1",
+          "index2"
+        ]
+      },
+      "such_that_clauses": [
+        {
+          "predicate": "index1 != index2"
+        },
+        {
+          "predicate": "index1 >= 0 && index1 < len(beans)"
+        },
+        {
+          "predicate": "index2 >= 0 && index2 < len(beans)"
+        },
+        {
+          "predicate": "get_at(index1, beans) != get_at(index2, beans)"
+        }
+      ],
+      "then_clauses": [
+        {
+          "entity": "can",
+          "state": "ready"
+        },
+        {
+          "property": "beans",
+          "expression": "if get_at(index1, beans) == 'white' then delete_at(index2, beans) else if get_at(index2, beans) == 'white' then delete_at(index1, beans) else beans"
+        }
+      ]
+    }
+  ]
+}

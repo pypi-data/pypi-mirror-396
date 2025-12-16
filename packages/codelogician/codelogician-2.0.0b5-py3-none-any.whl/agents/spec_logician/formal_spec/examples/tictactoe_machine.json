@@ -1,0 +1,546 @@
+{
+  "title": "Tic Tac Toe Game Rules",
+  "preamble": {
+    "entities": [
+      {
+        "name": "game",
+        "states": [
+          {
+            "name": "ongoing",
+            "is_initial": true
+          },
+          {
+            "name": "post_move_checks",
+            "is_initial": false
+          },
+          {
+            "name": "ended",
+            "is_initial": false
+          }
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "name": "make_move",
+        "local_properties": [
+          {
+            "name": "player",
+            "ipl_type": "string"
+          },
+          {
+            "name": "row",
+            "ipl_type": "int"
+          },
+          {
+            "name": "col",
+            "ipl_type": "int"
+          }
+        ]
+      },
+      {
+        "name": "check_winner",
+        "local_properties": []
+      },
+      {
+        "name": "reset_game",
+        "local_properties": []
+      }
+    ],
+    "global_properties": [
+      {
+        "name": "board",
+        "ipl_type": {
+          "type_ctor": "list",
+          "base_type": {
+            "type_ctor": "list",
+            "base_type": "string"
+          }
+        },
+        "init_value": "[['', '', ''], ['', '', ''], ['', '', '']]"
+      },
+      {
+        "name": "current_player",
+        "ipl_type": "string",
+        "init_value": "''"
+      },
+      {
+        "name": "winner",
+        "ipl_type": "string",
+        "init_value": "''"
+      }
+    ],
+    "fun_defs": [
+      {
+        "name": "get_at_row",
+        "parameters": [
+          {
+            "name": "board",
+            "ipl_type": {
+              "type_ctor": "list",
+              "base_type": {
+                "type_ctor": "list",
+                "base_type": "string"
+              }
+            }
+          },
+          {
+            "name": "row",
+            "ipl_type": "int"
+          }
+        ],
+        "return_type": {
+          "type_ctor": "list",
+          "base_type": "string"
+        },
+        "statements": [
+          "return hd(take(len(board) - row, rev(take(row + 1, board))))"
+        ]
+      },
+      {
+        "name": "get_at_col",
+        "parameters": [
+          {
+            "name": "row",
+            "ipl_type": {
+              "type_ctor": "list",
+              "base_type": "string"
+            }
+          },
+          {
+            "name": "col",
+            "ipl_type": "int"
+          }
+        ],
+        "return_type": "string",
+        "statements": [
+          "return hd(take(len(row) - col, rev(take(col + 1, row))))"
+        ]
+      },
+      {
+        "name": "update_at_col",
+        "parameters": [
+          {
+            "name": "row",
+            "ipl_type": {
+              "type_ctor": "list",
+              "base_type": "string"
+            }
+          },
+          {
+            "name": "col",
+            "ipl_type": "int"
+          },
+          {
+            "name": "value",
+            "ipl_type": "string"
+          }
+        ],
+        "return_type": {
+          "type_ctor": "list",
+          "base_type": "string"
+        },
+        "statements": [
+          "return app(take(col, row), add(value, take(len(row) - col - 1, rev(row))))"
+        ]
+      },
+      {
+        "name": "update_at_row",
+        "parameters": [
+          {
+            "name": "board",
+            "ipl_type": {
+              "type_ctor": "list",
+              "base_type": {
+                "type_ctor": "list",
+                "base_type": "string"
+              }
+            }
+          },
+          {
+            "name": "row",
+            "ipl_type": "int"
+          },
+          {
+            "name": "new_row",
+            "ipl_type": {
+              "type_ctor": "list",
+              "base_type": "string"
+            }
+          }
+        ],
+        "return_type": {
+          "type_ctor": "list",
+          "base_type": {
+            "type_ctor": "list",
+            "base_type": "string"
+          }
+        },
+        "statements": [
+          "return app(take(row, board), add(new_row, take(len(board) - row - 1, rev(board))))"
+        ]
+      },
+      {
+        "name": "get_cell",
+        "parameters": [
+          {
+            "name": "board",
+            "ipl_type": {
+              "type_ctor": "list",
+              "base_type": {
+                "type_ctor": "list",
+                "base_type": "string"
+              }
+            }
+          },
+          {
+            "name": "row",
+            "ipl_type": "int"
+          },
+          {
+            "name": "col",
+            "ipl_type": "int"
+          }
+        ],
+        "return_type": "string",
+        "statements": [
+          "let row_list : string list = get_at_row(board, row)",
+          "return get_at_col(row_list, col)"
+        ]
+      },
+      {
+        "name": "set_cell",
+        "parameters": [
+          {
+            "name": "board",
+            "ipl_type": {
+              "type_ctor": "list",
+              "base_type": {
+                "type_ctor": "list",
+                "base_type": "string"
+              }
+            }
+          },
+          {
+            "name": "row",
+            "ipl_type": "int"
+          },
+          {
+            "name": "col",
+            "ipl_type": "int"
+          },
+          {
+            "name": "value",
+            "ipl_type": "string"
+          }
+        ],
+        "return_type": {
+          "type_ctor": "list",
+          "base_type": {
+            "type_ctor": "list",
+            "base_type": "string"
+          }
+        },
+        "statements": [
+          "let row_list : string list = get_at_row(board, row)",
+          "let new_row : string list = update_at_col(row_list, col, value)",
+          "return update_at_row(board, row, new_row)"
+        ]
+      },
+      {
+        "name": "empty_board",
+        "parameters": [],
+        "return_type": {
+          "type_ctor": "list",
+          "base_type": {
+            "type_ctor": "list",
+            "base_type": "string"
+          }
+        },
+        "statements": [
+          "return [['', '', ''], ['', '', ''], ['', '', '']]"
+        ]
+      },
+      {
+        "name": "is_valid_move",
+        "parameters": [
+          {
+            "name": "board",
+            "ipl_type": {
+              "type_ctor": "list",
+              "base_type": {
+                "type_ctor": "list",
+                "base_type": "string"
+              }
+            }
+          },
+          {
+            "name": "row",
+            "ipl_type": "int"
+          },
+          {
+            "name": "col",
+            "ipl_type": "int"
+          }
+        ],
+        "return_type": "bool",
+        "statements": [
+          "return row >= 0 && row < 3 && col >= 0 && col < 3 && get_cell(board, row, col) == ''"
+        ]
+      },
+      {
+        "name": "check_line",
+        "parameters": [
+          {
+            "name": "a",
+            "ipl_type": "string"
+          },
+          {
+            "name": "b",
+            "ipl_type": "string"
+          },
+          {
+            "name": "c",
+            "ipl_type": "string"
+          }
+        ],
+        "return_type": "bool",
+        "statements": [
+          "return a != '' && a == b && b == c"
+        ]
+      },
+      {
+        "name": "get_winner",
+        "parameters": [
+          {
+            "name": "board",
+            "ipl_type": {
+              "type_ctor": "list",
+              "base_type": {
+                "type_ctor": "list",
+                "base_type": "string"
+              }
+            }
+          }
+        ],
+        "return_type": "string",
+        "statements": [
+          "let r0 : string list = get_at_row(board, 0)",
+          "let r1 : string list = get_at_row(board, 1)",
+          "let r2 : string list = get_at_row(board, 2)",
+          "let has_row_win : bool = check_line(get_at_col(r0,0), get_at_col(r0,1), get_at_col(r0,2)) || check_line(get_at_col(r1,0), get_at_col(r1,1), get_at_col(r1,2)) || check_line(get_at_col(r2,0), get_at_col(r2,1), get_at_col(r2,2))",
+          "let has_col_win : bool = check_line(get_at_col(r0,0), get_at_col(r1,0), get_at_col(r2,0)) || check_line(get_at_col(r0,1), get_at_col(r1,1), get_at_col(r2,1)) || check_line(get_at_col(r0,2), get_at_col(r1,2), get_at_col(r2,2))",
+          "let has_diag_win : bool = check_line(get_at_col(r0,0), get_at_col(r1,1), get_at_col(r2,2)) || check_line(get_at_col(r2,0), get_at_col(r1,1), get_at_col(r0,2))",
+          "let x_wins : bool = (has_row_win || has_col_win || has_diag_win) && (get_at_col(r1,1) == 'x')",
+          "let o_wins : bool = (has_row_win || has_col_win || has_diag_win) && (get_at_col(r1,1) == 'o')",
+          "return if x_wins then 'x' else if o_wins then 'o' else ''"
+        ]
+      },
+      {
+        "name": "is_board_full",
+        "parameters": [
+          {
+            "name": "board",
+            "ipl_type": {
+              "type_ctor": "list",
+              "base_type": {
+                "type_ctor": "list",
+                "base_type": "string"
+              }
+            }
+          }
+        ],
+        "return_type": "bool",
+        "statements": [
+          "let r0 : string list = get_at_row(board, 0)",
+          "let r1 : string list = get_at_row(board, 1)",
+          "let r2 : string list = get_at_row(board, 2)",
+          "return forall(r0, {x|x != ''}) && forall(r1, {x|x != ''}) && forall(r2, {x|x != ''})"
+        ]
+      }
+    ]
+  },
+  "scenarios": [
+    {
+      "title": "Valid Move Execution",
+      "given_clauses": [
+        {
+          "entity": "game",
+          "state": "ongoing"
+        }
+      ],
+      "when_clause": {
+        "action": "make_move",
+        "local_properties": [
+          "player",
+          "row",
+          "col"
+        ]
+      },
+      "such_that_clauses": [
+        {
+          "predicate": "current_player == player"
+        },
+        {
+          "predicate": "is_valid_move(board, row, col)"
+        }
+      ],
+      "then_clauses": [
+        {
+          "property": "board",
+          "expression": "set_cell(board, row, col, player)"
+        },
+        {
+          "entity": "game",
+          "state": "post_move_checks"
+        }
+      ]
+    },
+    {
+      "title": "X Wins Check",
+      "given_clauses": [
+        {
+          "entity": "game",
+          "state": "post_move_checks"
+        }
+      ],
+      "when_clause": {
+        "action": "check_winner",
+        "local_properties": []
+      },
+      "such_that_clauses": [
+        {
+          "predicate": "get_winner(board) == 'x'"
+        }
+      ],
+      "then_clauses": [
+        {
+          "property": "winner",
+          "expression": "'x'"
+        },
+        {
+          "entity": "game",
+          "state": "ended"
+        }
+      ]
+    },
+    {
+      "title": "O Wins Check",
+      "given_clauses": [
+        {
+          "entity": "game",
+          "state": "post_move_checks"
+        }
+      ],
+      "when_clause": {
+        "action": "check_winner",
+        "local_properties": []
+      },
+      "such_that_clauses": [
+        {
+          "predicate": "get_winner(board) == 'o'"
+        }
+      ],
+      "then_clauses": [
+        {
+          "property": "winner",
+          "expression": "'o'"
+        },
+        {
+          "entity": "game",
+          "state": "ended"
+        }
+      ]
+    },
+    {
+      "title": "Board Full Check",
+      "given_clauses": [
+        {
+          "entity": "game",
+          "state": "post_move_checks"
+        }
+      ],
+      "when_clause": {
+        "action": "check_winner",
+        "local_properties": []
+      },
+      "such_that_clauses": [
+        {
+          "predicate": "get_winner(board) == ''"
+        },
+        {
+          "predicate": "is_board_full(board)"
+        }
+      ],
+      "then_clauses": [
+        {
+          "entity": "game",
+          "state": "ended"
+        }
+      ]
+    },
+    {
+      "title": "Continue Playing",
+      "given_clauses": [
+        {
+          "entity": "game",
+          "state": "post_move_checks"
+        }
+      ],
+      "when_clause": {
+        "action": "check_winner",
+        "local_properties": []
+      },
+      "such_that_clauses": [
+        {
+          "predicate": "get_winner(board) == ''"
+        },
+        {
+          "predicate": "!is_board_full(board)"
+        }
+      ],
+      "then_clauses": [
+        {
+          "entity": "game",
+          "state": "ongoing"
+        },
+        {
+          "property": "current_player",
+          "expression": "if current_player == 'x' then 'o' else 'x'"
+        }
+      ]
+    },
+    {
+      "title": "Game Reset",
+      "given_clauses": [
+        {
+          "entity": "game",
+          "state": "ended"
+        }
+      ],
+      "when_clause": {
+        "action": "reset_game",
+        "local_properties": []
+      },
+      "such_that_clauses": [],
+      "then_clauses": [
+        {
+          "property": "board",
+          "expression": "empty_board()"
+        },
+        {
+          "property": "current_player",
+          "expression": "'x'"
+        },
+        {
+          "property": "winner",
+          "expression": "''"
+        },
+        {
+          "entity": "game",
+          "state": "ongoing"
+        }
+      ]
+    }
+  ]
+}

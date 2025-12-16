@@ -1,0 +1,234 @@
+(*
+   --------------------------------------------------------------------------
+   title: Flight Booker IML model
+   description: XState Flight Booker IML model
+   order: 2
+   --------------------------------------------------------------------------
+   
+   ========================================================================== *)
+
+(* === Type Definitions === *)
+
+(* Nested scheduling modes mirror the oneWay / roundTrip substates *)
+type scheduling_mode =
+  | OneWay
+  | RoundTrip
+
+(* Root states *)
+type state =
+  | Scheduling of scheduling_mode
+  | Booking
+  | Booked  (* final *)
+
+(* Events, including explicit invoke completions for the Booker actor *)
+type event =
+  | BookDepart               (* BOOK_DEPART *)
+  | BookReturn               (* BOOK_RETURN *)
+  | ChangeTripType           (* CHANGE_TRIP_TYPE *)
+  | ChangeDepartDate of int  (* CHANGE_DEPART_DATE value (abstracted ordinal) *)
+  | ChangeReturnDate of int  (* CHANGE_RETURN_DATE value (abstracted ordinal) *)
+  | BookingCompleted         (* invoke onDone *)
+  | BookingFailed            (* invoke onError *)
+
+(* Context mirrors FlightData: dates abstracted to ordinal ints for ordering *)
+type context = {
+  depart_date : int;
+  return_date : int;
+}
+
+(* Machine configuration bundles state and context *)
+type config = {
+  state : state;
+  ctx : context;
+}
+
+(* === Initial State === *)
+
+(* Constants stand in for TODAY / TOMORROW from the TS utils *)
+let today : int = 0      (* abstract reference day *)
+let tomorrow : int = 1   (* strictly after today *)
+
+let initial_context : context = {
+  depart_date = today;
+  return_date = tomorrow;
+}
+
+let init : config = {
+  state = Scheduling OneWay;
+  ctx = initial_context;
+}
+
+(* === Guards (pure predicates) === *)
+
+let is_valid_depart_date (ctx : context) : bool =
+  ctx.depart_date >= today
+
+let is_valid_return_date (ctx : context) : bool =
+  ctx.depart_date >= today
+  && ctx.return_date > ctx.depart_date
+
+(* === Transition Function === *)
+
+let step (c : config) (ev : event) : config =
+  match (c.state, ev) with
+  (* Context updates that keep the current scheduling substate *)
+  | (Scheduling mode, ChangeDepartDate v) ->
+      { state = Scheduling mode; ctx = { c.ctx with depart_date = v } }
+
+  | (Scheduling RoundTrip, ChangeReturnDate v) ->
+      { state = Scheduling RoundTrip; ctx = { c.ctx with return_date = v } }
+
+  (* Trip type toggles *)
+  | (Scheduling OneWay, ChangeTripType) ->
+      { state = Scheduling RoundTrip; ctx = c.ctx }
+
+  | (Scheduling RoundTrip, ChangeTripType) ->
+      { state = Scheduling OneWay; ctx = c.ctx }
+
+  (* Booking attempts with guards *)
+  | (Scheduling OneWay, BookDepart) when is_valid_depart_date c.ctx ->
+      { state = Booking; ctx = c.ctx }
+
+  | (Scheduling RoundTrip, BookReturn) when is_valid_return_date c.ctx ->
+      { state = Booking; ctx = c.ctx }
+
+  (* Invoke completions from Booker *)
+  | (Booking, BookingCompleted) ->
+      { state = Booked; ctx = c.ctx }
+
+  | (Booking, BookingFailed) ->
+      (* onError returns to scheduling, root state's initial substate *)
+      { state = Scheduling OneWay; ctx = c.ctx }
+
+  (* Final state is stable *)
+  | (Booked, _) -> c
+
+  (* Unhandled events leave the configuration unchanged *)
+  | _ -> c
+
+(* === Run Events === *)
+
+let run (c : config) (evs : event list) : config =
+  List.fold_left step c evs
+
+(* === Properties === *)
+
+let reaches_booked (evs : event list) : bool =
+  (run init evs).state = Booked
+
+(* If return date is not strictly after depart date, round trip booking should not proceed *)
+let prop_roundtrip_invalid_return_rejected () : bool =
+  let bad_ctx_events = [
+    ChangeTripType;                      (* switch to round trip *)
+    ChangeDepartDate 10;
+    ChangeReturnDate 9;                  (* invalid: before depart *)
+    BookReturn;                          (* guard should block *)
+  ] in
+  match (run init bad_ctx_events).state with
+  | Scheduling RoundTrip -> true
+  | _ -> false
+
+(* === Eval Examples (smoke tests) === *)
+
+(* One-way happy path *)
+eval (run init [
+  ChangeDepartDate 10;
+  BookDepart;
+  BookingCompleted
+])
+
+(* Round-trip happy path *)
+eval (run init [
+  ChangeTripType;
+  ChangeDepartDate 10;
+  ChangeReturnDate 17;
+  BookReturn;
+  BookingCompleted
+])
+
+(* Booking fails and returns to scheduling *)
+eval (run init [
+  BookDepart;
+  BookingFailed
+])
+
+(* Property check: invalid return date blocks booking *)
+eval (prop_roundtrip_invalid_return_rejected ())
+
+(* Reachability check for booked after success *)
+eval (reaches_booked [
+  BookDepart;
+  BookingCompleted
+])
+
+
+(* === Helpers === *)
+
+let is_final (st : state) : bool =
+  match st with
+  | Booked -> true
+  | _ -> false
+
+let depart_not_past (c : config) : bool =
+  c.ctx.depart_date >= today
+
+(* === Reachability === *)
+
+theorem roundtrip_happy_path_reaches_booked () =
+  (run init [
+    ChangeTripType;
+    ChangeDepartDate 5;
+    ChangeReturnDate 6;
+    BookReturn;
+    BookingCompleted
+  ]).state = Booked
+[@@by auto]
+
+instance (fun ev1 ev2 ev3 ev4 ->
+  (run init [ev1; ev2; ev3; ev4]).state = Booked)
+
+(* === Safety / Stability === *)
+
+theorem final_state_stable ev =
+  let cfg : config = { state = Booked; ctx = init.ctx } in
+  (step cfg ev).state = Booked
+[@@by auto]
+
+(* Guard blocks past departures for one-way bookings *)
+theorem invalid_past_depart_blocked () =
+  let cfg : config = { state = Scheduling OneWay; ctx = { depart_date = today - 1; return_date = today } } in
+  (step cfg BookDepart).state = Scheduling OneWay
+[@@by auto]
+
+(* Bounded safety: any path to Booked implies depart date is not past today *)
+verify (fun ev1 ev2 ev3 ev4 ev5 ev6 ev7 ->
+  let final = run init [ev1; ev2; ev3; ev4; ev5; ev6; ev7] in
+  is_final final.state ==> depart_not_past final)
+
+(* === Eval smoke tests === *)
+
+(* One-way success *)
+eval (run init [
+  ChangeDepartDate 2;
+  BookDepart;
+  BookingCompleted
+])
+
+(* Round-trip success *)
+eval (run init [
+  ChangeTripType;
+  ChangeDepartDate 3;
+  ChangeReturnDate 10;
+  BookReturn;
+  BookingCompleted
+])
+
+(* Failed booking returns to scheduling *)
+eval (run init [
+  ChangeTripType;
+  ChangeDepartDate 3;
+  ChangeReturnDate 2;  (* invalid return before depart *)
+  BookReturn;          (* guard blocks; stays scheduling *)
+  BookDepart;          (* still scheduling OneWay, guard fails (depart < today?) if today>3 else stays *)
+  BookingFailed
+])

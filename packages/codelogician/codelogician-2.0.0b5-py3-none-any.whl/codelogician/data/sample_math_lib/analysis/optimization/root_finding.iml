@@ -1,0 +1,147 @@
+[@@@import Core_arithmetic, "core/arithmetic.iml"]
+[@@@import Analysis_numerical_derivatives, "analysis/numerical/derivatives.iml"]
+[@@@import Core_comparison, "core/comparison.iml"]
+
+
+(* Root finding algorithms - Level 4 *)
+
+open Core_arithmetic
+open Core_comparison
+open Analysis_numerical_derivatives
+
+let bisection_method_measure (a : real) (b : real) (iterations : int) : Ordinal.t =
+  Ordinal.of_int iterations
+
+let rec bisection_method_helper 
+    (func : real -> real) 
+    (a : real) 
+    (b : real) 
+    (tolerance : real) 
+    (iterations : int) : real option =
+  if iterations <= 0 then
+    Option.map (fun sum -> divide sum 2.0) (Option.monoid_product (Some a) (Some b))
+      |> Option.flat_map (fun x -> x)
+  else
+    let c_opt = 
+      let sum = add a b in
+      divide sum 2.0
+    in
+    match c_opt with
+    | None -> None
+    | Some c ->
+        let fc = func c in
+        if absolute_value fc <. tolerance then
+          Some c
+        else
+          let fa = func a in
+          if (fa *. fc) <. 0.0 then
+            bisection_method_helper func a c tolerance (iterations - 1)
+          else
+            bisection_method_helper func c b tolerance (iterations - 1)
+[@@measure bisection_method_measure a b iterations]
+
+let bisection_method 
+    (func : real -> real) 
+    (a : real) 
+    (b : real) 
+    (tolerance : real) : real option =
+  let fa = func a in
+  let fb = func b in
+  if (fa *. fb) >. 0.0 then
+    None
+  else
+    bisection_method_helper func a b tolerance 100
+
+let newton_method_measure (iterations : int) : Ordinal.t =
+  Ordinal.of_int iterations
+
+let rec newton_method_helper 
+    (func : real -> real) 
+    (x : real) 
+    (tolerance : real) 
+    (iterations : int) : real option =
+  if iterations <= 0 then
+    Some x
+  else
+    let fx = func x in
+    if absolute_value fx <. tolerance then
+      Some x
+    else
+      let fpx_opt = numerical_derivative func x 0.00000001 in
+      match fpx_opt with
+      | None -> None
+      | Some fpx ->
+          if absolute_value fpx <. tolerance then
+            None
+          else
+            let x_new_opt = divide fx fpx |> Option.map (fun d -> subtract x d) in
+            match x_new_opt with
+            | None -> None
+            | Some x_new ->
+                if absolute_value (subtract x_new x) <. tolerance then
+                  Some x_new
+                else
+                  newton_method_helper func x_new tolerance (iterations - 1)
+[@@measure newton_method_measure iterations]
+
+let newton_method 
+    (func : real -> real) 
+    (x0 : real) 
+    (tolerance : real) : real option =
+  newton_method_helper func x0 tolerance 50
+
+let find_minimum_golden_section_measure (a : real) (b : real) (tolerance : real) : Ordinal.t =
+  let diff = absolute_value (subtract b a) in
+  if diff <=. tolerance then
+    Ordinal.of_int 0
+  else
+    let ratio = diff /. tolerance in
+    Ordinal.of_int (Real.to_int ratio + 1)
+
+let rec find_minimum_golden_section_helper
+    (func : real -> real)
+    (a : real)
+    (b : real)
+    (x1 : real)
+    (x2 : real)
+    (f1 : real)
+    (f2 : real)
+    (tolerance : real)
+    (phi : real)
+    (resphi : real) : real =
+  if absolute_value (subtract b a) <=. tolerance then
+    match divide (add a b) 2.0 with
+    | Some result -> result
+    | None -> a
+  else
+    if f1 <. f2 then
+      let new_b = x2 in
+      let new_x2 = x1 in
+      let new_f2 = f1 in
+      let new_x1 = add a (multiply resphi (subtract new_b a)) in
+      let new_f1 = func new_x1 in
+      find_minimum_golden_section_helper func a new_b new_x1 new_x2 new_f1 new_f2 tolerance phi resphi
+    else
+      let new_a = x1 in
+      let new_x1 = x2 in
+      let new_f1 = f2 in
+      let new_x2 = subtract b (multiply resphi (subtract b new_a)) in
+      let new_f2 = func new_x2 in
+      find_minimum_golden_section_helper func new_a b new_x1 new_x2 new_f1 new_f2 tolerance phi resphi
+[@@measure find_minimum_golden_section_measure a b tolerance]
+
+let find_minimum_golden_section
+    (func : real -> real)
+    (a : real)
+    (b : real)
+    (tolerance : real) : real =
+  let phi = 1.618033988749895 in
+  let resphi = subtract 2.0 phi in
+  
+  let x1 = add a (multiply resphi (subtract b a)) in
+  let x2 = subtract b (multiply resphi (subtract b a)) in
+  
+  let f1 = func x1 in
+  let f2 = func x2 in
+  
+  find_minimum_golden_section_helper func a b x1 x2 f1 f2 tolerance phi resphi

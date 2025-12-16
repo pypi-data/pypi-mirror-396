@@ -1,0 +1,23 @@
+module LChar = struct
+ (*  {1 Logic mode char}      An 8-bit char.  *)
+  type LChar.t =
+    | LChar.Char of bool * bool * bool * bool * bool * bool * bool * bool
+  
+  let LChar.zero : LChar.t =
+    LChar.Char (false, false, false, false, false, false, false, false)
+  (* [LChar.zero] returns a character with all bits set to false (null character)
+     
+     Usage/Pattern: Creating a null/zero character, like '\0' or character code 0 in other languages *)
+  
+  let LChar.is_printable (c : LChar.t) : bool =
+    match c with
+    | LChar.Char (false, false, true, false, false, false, false, false) ->
+      false
+    | (LChar.Char (_, true, _, _, _, _, _, _) |
+       LChar.Char (_, _, true, _, _, _, _, _)) ->
+      true
+    | _ -> false
+  (* [LChar.is_printable c] tests if character [c] is printable based on its bit pattern
+     
+     Usage/Pattern: Checking if a character is displayable/printable, like isprint() or similar character classification functions *)
+end

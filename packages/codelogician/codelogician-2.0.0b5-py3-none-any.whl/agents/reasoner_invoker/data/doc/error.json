@@ -1,0 +1,50 @@
+[
+    {
+        "id": "346841e7-98ff-4e90-89c8-0325b5d5e2d3",
+        "reasoner": "imandrax",
+        "input": "let land = x + 1",
+        "errors": [
+            "\u001b[31;1mError\u001b[0m{ Kind.name = \"SyntaxErr\" }:\n  syntax error\n  in file '<none>', line 1 columns 5..8 [4..7]\n  1 | let land = x + 1\n          ^^^^\n  \n----------------------------------------------------------------------------\n\u001b[34;1mContext\u001b[0m: Parsing string"
+        ],
+        "correction": "`land` is a reserved keyword in Imandra. Please use a different name, eg `land_`.",
+        "tags": [
+            "test"
+        ]
+    },
+    {
+        "id": "ac4d0a12-8790-4256-ac29-6b0971696a9c",
+        "reasoner": "imandrax",
+        "input": "let f = Option.bind",
+        "errors": [
+            "Unknown function `Option.bind`."
+        ],
+        "correction": "There's no `Option.bind` in IML. Consider using the following:\n1. `Option.flat_map`\nval flat_map : ('a -> 'b option) -> 'a option -> 'b option\n\"Applies a function that returns an option to an optional value. If [x] is [None], returns [None]. If [x] is [Some v], returns [f v]. Used for composing operations that may each produce optional results.\"\n2. `Option.>>=`\nval (>>=) : 'a option -> ('a -> 'b option) -> 'b option\n\"An infix operator version of [Option.flat_map]. Allows writing [x >>= f] instead of [Option.flat_map f x]. Standard monadic bind operator for options.\"\n3. `Option.let*`\nval let* : 'a option -> ('a -> 'b option) -> 'b option\n\"A binding operator alias for [Option.>>=]. Provides monadic let-binding syntax for sequencing optional computations.\"",
+        "tags": [
+            "test"
+        ]
+    },
+    {
+        "id": "abb6ef8a-24ea-4c77-94bb-be23b84760fc",
+        "reasoner": "imandrax",
+        "input": "let f = Option.map2",
+        "errors": [
+            "Unknown function `Option.map2`."
+        ],
+        "correction": "There's no `Option.map2` in IML. Potential workaround 1:\nlet map2 f opt1 opt2 =\n  Option.monoid_product opt1 opt2 \n  |> Option.map (fun (x, y) -> f x y)",
+        "tags": [
+            "test"
+        ]
+    },
+    {
+        "id": "b85ffbd1-4eaa-4412-9c92-5ce7889b0280",
+        "reasoner": "imandrax",
+        "input": "let f = List.fold_left2",
+        "errors": [
+            "Unknown function `List.fold_left2`."
+        ],
+        "correction": "There's no `List.fold_left2` in IML. Potential workaround 1:\nlet fold_left2 f acc l1 l2 =\n    match List.map2 (fun x y -> (x,y)) l1 l2 with\n    | Ok pairs -> List.fold_left (fun acc (x,y) -> f acc x y) acc pairs\n    | Error msg -> Error msg",
+        "tags": [
+            "test"
+        ]
+    }
+]

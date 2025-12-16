@@ -1,0 +1,123 @@
+[@@@import Currency, "currency.iml"]
+[@@@import Transaction, "transaction.iml"]
+
+
+(* Account type representing different account types *)
+type account_type =
+  | LIABILITY
+  | ASSET
+
+(* Account record to represent a bank account *)
+type account = {
+  account_type: account_type;
+  customer: LString.t;
+  currency: Currency.currency;
+  name: LString.t;
+  number: LString.t;
+  balance: real;
+  transactions: Transaction.transaction list
+}
+
+(* Get the type of the account *)
+let account_type (acc: account) : account_type =
+  acc.account_type
+
+(* Get the customer associated with the account *)
+let customer (acc: account) : LString.t =
+  acc.customer
+
+(* Get the name of the account *)
+let name (acc: account) : LString.t =
+  acc.name
+
+(* Get the account number *)
+let number (acc: account) : LString.t =
+  acc.number
+
+(* Get the currency of the account *)
+let currency (acc: account) : Currency.currency =
+  acc.currency
+
+(* Get the current balance of the account *)
+let balance (acc: account) : real =
+  acc.balance
+
+(* Get the list of transactions in the account *)
+let transactions (acc: account) : Transaction.transaction list =
+  acc.transactions
+
+(* Initialize an account with account number and balance *)
+let init_account 
+    (cust: LString.t) 
+    (acc_name: LString.t) 
+    (curr: Currency.currency) 
+    (acc_type: account_type) 
+    (acc_number: LString.t) 
+    (starting_balance: real) : account =
+  {
+    account_type = acc_type;
+    customer = cust;
+    currency = curr;
+    name = acc_name;
+    number = acc_number;
+    balance = starting_balance;
+    transactions = []
+  }
+
+(* Apply a transaction to the account *)
+let apply_transaction (acc: account) (transaction: Transaction.transaction) : (account, LString.t) result =
+  (* Determine the transaction type based on the account number *)
+  let trans_type = 
+    match transaction.trans_type with
+    | Transaction.DEBIT ->
+        if transaction.to_account <> acc.number then
+          Transaction.CREDIT
+        else
+          Transaction.DEBIT
+    | Transaction.CREDIT ->
+        if transaction.to_account <> acc.number then
+          Transaction.DEBIT
+        else
+          Transaction.CREDIT
+  in
+
+  (* Process the transaction based on type and account type *)
+  let new_balance =
+    match trans_type with
+    | Transaction.DEBIT ->
+        (match acc.account_type with
+         | ASSET -> Ok (acc.balance +. transaction.amount)
+         | LIABILITY ->
+             if acc.balance >=. transaction.amount then
+               Ok (acc.balance -. transaction.amount)
+             else
+               Error {l|Insufficient balance for debit transaction|l})
+    | Transaction.CREDIT ->
+        (match acc.account_type with
+         | LIABILITY -> Ok (acc.balance +. transaction.amount)
+         | ASSET ->
+             if acc.balance >=. transaction.amount then
+               Ok (acc.balance -. transaction.amount)
+             else
+               Error {l|Insufficient balance for credit transaction|l})
+  in
+
+  match new_balance with
+  | Error msg -> Error msg
+  | Ok bal ->
+      Ok {
+        acc with
+        balance = bal;
+        transactions = List.append acc.transactions [transaction]
+      }
+
+(* Main function demonstrating usage *)
+let main () : (account, LString.t) result =
+  let open Result in
+  let acc = init_account {l|Denis|l} {l|Checking Account|l} Currency.USD ASSET {l|1234567890|l} 0.0 in
+  
+  let* acc1 = apply_transaction acc (Transaction.debit_transaction {l|1234567891|l} {l|1234567890|l} 100.0) in
+  let* acc2 = apply_transaction acc1 (Transaction.credit_transaction {l|1234567891|l} {l|1234567890|l} 50.0) in
+  let* acc3 = apply_transaction acc2 (Transaction.debit_transaction {l|1234567890|l} {l|1234567891|l} 30.0) in
+  let* acc4 = apply_transaction acc3 (Transaction.credit_transaction {l|1234567891|l} {l|1234567890|l} 20.0) in
+  Ok acc4

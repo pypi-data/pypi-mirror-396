@@ -1,0 +1,68 @@
+module Multiset = struct
+ (*  {2 Multiset}
+ 
+     A multiset is a collection of elements that don't have any particular
+     order, but can occur several times (unlike a regular set).  *)
+  type Multiset.t =  ('a, int) Map.t
+  (* The multiset type, implemented as a map from elements to their occurrence counts.
+     Each element is associated with an integer representing how many times it appears
+     in the multiset.
+     
+     Usage/Pattern: Representing collections where elements can appear multiple times,
+     like counting word frequencies or tracking inventory quantities *)
+  
+  let Multiset.empty : ('a, int) Map.t =
+    Map.const 0
+  (* [Multiset.empty] creates an empty multiset where all possible elements implicitly
+     have a count of 0. This serves as the starting point for building multisets.
+     
+     Usage/Pattern: Initializing a new multiset before adding elements, similar to
+     creating an empty array or list in other languages *)
+  
+  let Multiset.add (x : 'a) (m : ('a, int) Map.t) : ('a, int) Map.t =
+    Map.add x ((Map.get x m) + 1) m
+  (* [Multiset.add x m] adds one occurrence of element [x] to multiset [m] by
+     retrieving its current count, incrementing it by 1, and storing the new count.
+     This maintains the multiset property of tracking multiple occurrences.
+     
+     Usage/Pattern: Incrementing counters for elements, like counting word frequencies
+     or adding items to a shopping cart *)
+  
+  let Multiset.find : 'b =
+    Map.get
+  (* [Multiset.find x m] retrieves the number of occurrences of element [x] in
+     multiset [m]. This is an alias for Map.get that returns the count directly.
+     
+     Usage/Pattern: Querying how many times an element appears, such as checking
+     inventory levels or word frequencies *)
+  
+  let Multiset.mem (x : 'a) (m : ('a, int) Map.t) : bool =
+    (Multiset.find x m) > 0
+  (* [Multiset.mem x m] tests if element [x] exists in multiset [m] by checking
+     if its occurrence count is greater than 0. This distinguishes between elements
+     that are present (count > 0) and absent (count = 0).
+     
+     Usage/Pattern: Testing if an element exists at least once in the collection,
+     like checking if an item is in stock *)
+  
+  let Multiset.remove (x : 'a) (m : ('a, int) Map.t) : ('a, int) Map.t =
+    let n = max 0 ((Map.get x m) - 1) in
+    Map.add x n m
+  (* [Multiset.remove x m] removes one occurrence of element [x] from multiset [m]
+     by decreasing its count by 1, ensuring the count never goes below 0. This
+     maintains the invariant that counts are always non-negative.
+     
+     Usage/Pattern: Decreasing element counts one at a time, such as removing
+     items from a shopping cart or consuming inventory *)
+  
+  let rec Multiset.of_list (_x_1819_21 : 'a list) : ('a, int) Map.t =
+    match _x_1819_21 with
+    | [] -> Multiset.empty
+    | (x :: tail) -> (Multiset.add x) @@ (Multiset.of_list tail)
+  (* [Multiset.of_list l] converts a list [l] into a multiset by recursively
+     processing each element. It starts with an empty multiset and adds each
+     element from the list in sequence, building up the occurrence counts.
+     
+     Usage/Pattern: Converting sequences or collections from other data structures
+     into counted form, like building a frequency table from a list of events *)
+end

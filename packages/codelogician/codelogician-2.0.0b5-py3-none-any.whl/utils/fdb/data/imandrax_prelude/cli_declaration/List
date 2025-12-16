@@ -1,0 +1,406 @@
+module List = struct
+ (*  {2 List module}
+ 
+     This module contains many safe functions for manipulating lists.
+  *)
+  type List.t =  'a list
+  
+  let List.empty : 'a list =
+    []
+  (* [List.empty] returns an empty list
+     
+     Usage/Pattern: Creating an empty list, initializing a new list with no elements *)
+  
+  let List.is_empty (xs : 'a list) : bool =
+    match xs with
+    | [] -> true
+    | (_ :: _) -> false
+  (* [List.is_empty l] tests whether list [l] is empty
+     
+     Usage/Pattern: Checking if a list has no elements *)
+  
+  let List.cons (x : 'a) (y : 'a list) : 'a list =
+    (x :: y)
+  (* [List.cons x l] prepends [x] to the beginning of [l], returning a new list
+     
+     Usage/Pattern: Adding an element to the front of a list *)
+  
+  let List.return (x : 'a) : 'a list =
+    [x]
+  (* [List.return x] creates a singleton list containing only [x]
+     
+     Usage/Pattern: Creating a single-element list *)
+  
+  let List.hd: 'a list -> 'a =
+    <logic_core_builtin>
+  (* [List.hd l] returns the first element of list [l].
+     Partial function that fails on empty lists.
+     But it is recommended to rely on pattern matching instead
+     
+     Usage/Pattern: Getting first element of list, with no safety check *)
+  
+  let List.tl: 'a list -> 'a list =
+    <logic_core_builtin>
+  (* [List.tl l] returns the list [l] without its first element.
+     Partial function that fails on empty lists.
+     But it is recommended to rely on pattern matching instead
+     
+     Usage/Pattern: Getting all elements except first, with no safety check *)
+  
+  let List.head_opt (l : 'a list) : 'a option =
+    match l with
+    | [] -> None
+    | (x :: _) -> Some x
+  (* [List.head_opt l] returns [Some x] where [x] is the first element of [l], or [None] if [l] is empty
+     
+     Usage/Pattern: Safely getting first element of list with null check *)
+  
+  let rec List.append (l1 : 'a list) (l2 : 'a list) : 'a list =
+    match l1 with
+    | [] -> l2
+    | (x :: l1') -> (x :: List.append l1' l2)
+  (* [List.append l1 l2] returns a list composed of all elements of [l1], followed by all elements of [l2]
+     
+     Usage/Pattern: Concatenating two lists together *)
+  
+  theorem List.append_to_nil (x : 'a list) : bool =
+    (List.append x []) = x
+  by ((((((Tactic.induct ?smt:None) ?on_fun:None)
+          ?on_vars:(Some [ "x"]))
+         ?otf:None)
+        ?max_induct:None)
+       ?do_not:None)
+      ()
+  
+    rw 	 true
+
+  
+  theorem List.append_single (x : 'a) (y : 'a list) (z : 'a list) : bool =
+    (List.append (List.append y ([x])) z) = (List.append y ((x :: z)))
+  by ((((((Tactic.induct ?smt:None) ?on_fun:None)
+          ?on_vars:(Some [ "y"]))
+         ?otf:None)
+        ?max_induct:None)
+       ?do_not:None)
+      ()
+  
+    rw 	 true
+
+  
+  let rec List.rev (l : 'a list) : 'a list =
+    match l with
+    | [] -> []
+    | (x :: l') -> List.append (List.rev l') ([x])
+  (* [List.rev l] returns a new list with all elements of [l] in reverse order
+     
+     Usage/Pattern: Reversing order of elements in list *)
+  
+  let rec List.length (l : 'a list) : int =
+    match l with
+    | [] -> 0
+    | (_ :: l2) -> 1 + (List.length l2)
+  (* [List.length l] returns the number of elements in list [l]. Linear time
+     
+     Usage/Pattern: Getting number of elements in list *)
+  
+  theorem List.len_nonnegative (l : 'a list) : bool =
+    List.length l (* trigger: anon *) >= 0
+  by ((((((Tactic.induct ?smt:None) ?on_fun:None)
+          ?on_vars:(Some [ "l"]))
+         ?otf:None)
+        ?max_induct:None)
+       ?do_not:None)
+      ()
+  (* Length of a list is non-negative. This useful theorem is installed
+     as a forward-chaining rule. *)
+  
+  theorem List.len_zero_is_empty (x : 'a list) : bool =
+    ((List.length x) = 0) = (x = [])
+  by ((((((Tactic.induct ?smt:None) ?on_fun:None)
+          ?on_vars:(Some [ "x"]))
+         ?otf:None)
+        ?max_induct:None)
+       ?do_not:None)
+      ()
+  (* A list has length zero iff it is empty.
+     This is a useful rewrite rule for obtaining empty lists. *)
+  
+  theorem List.len_append (x : 'a list) (y : 'a list) : bool =
+    (List.length (List.append x y)) = ((List.length x) + (List.length y))
+  by Tactic.auto
+  (* The length of (x @ y) is the sum of the lengths of x and y *)
+  
+  let rec List.split (l : ('a * 'b) list) : ('a list * 'b list) =
+    match l with
+    | [] -> ([], [])
+    | ((x, y) :: tail) ->
+      let (tail1, tail2) = List.split tail in ((x :: tail1), (y :: tail2))
+  (* [List.split l] takes a list of pairs and returns a pair of lists
+     
+     Usage/Pattern: Converting list of tuples into tuple of lists *)
+  
+  let rec List.map (f : 'a -> 'b) (l : 'a list) : 'b list =
+    match l with
+    | [] -> []
+    | (x :: l2) -> (f x :: List.map f l2)
+  (* [List.map f l] applies function [f] to each element of [l] and returns the resulting list.
+     - [List.map f [] = []]
+     - [List.map f [x] = [f x]]
+     - [List.map f (x :: tail) = f x :: List.map f tail]
+     
+     Usage/Pattern: Transforming each element of list using a function *)
+  
+  let rec List.map2 (f : 'c -> 'a -> 'b) (l1 : 'c list) (l2 : 'a list)
+    : ('b list, string) result =
+    match (l1, l2) with
+    | ([], []) -> Ok []
+    | ((x :: l1), (y :: l2)) ->
+      Result.>|= (List.map2 f l1 l2) (List.cons (f x y))
+    | (_, _) ->
+      Error  "map2: Lengths of l1 and l2 don't match"
+  (* [List.map2 f l1 l2] maps function [f] over pairs of elements from [l1] and [l2].
+     Returns [Error] if lists have different lengths
+     
+     Usage/Pattern: Combining elements from two lists using a function *)
+  
+  let rec List.for_all (f : 'a -> bool) (l : 'a list) : bool =
+    match l with
+    | [] -> true
+    | (x :: l2) -> (f x) && (List.for_all f l2)
+  (* [List.for_all f l] tests whether all elements of [l] satisfy predicate [f]
+     
+     Usage/Pattern: Testing if condition holds for all elements *)
+  
+  let rec List.exists (f : 'a -> bool) (l : 'a list) : bool =
+    match l with
+    | [] -> false
+    | (x :: l2) -> (f x) || (List.exists f l2)
+  (* [List.exists f l] tests whether there exists an element in [l] that satisfies predicate [f]
+     
+     Usage/Pattern: Testing if condition holds for at least one element *)
+  
+  let rec List.fold_left (f : 'b -> 'a -> 'b)
+    (acc : 'b)
+    (xs : 'a list)
+    : 'b =
+    match xs with
+    | [] -> acc
+    | (x :: tail) -> List.fold_left f (f acc x) tail
+  (* [List.fold_left f acc l] folds list [l] from left to right using function [f] and initial accumulator [acc]
+     
+     Usage/Pattern: Reducing list to single value by processing elements left-to-right *)
+  
+  let rec List.fold_right (f : 'b -> 'a -> 'a) (l : 'b list) (acc : 'a)
+    : 'a =
+    match l with
+    | [] -> acc
+    | (x :: tail) -> let acc = List.fold_right f tail acc in f x acc
+  (* [List.fold_right f l acc] folds list [l] from right to left using function [f] and initial accumulator [acc]
+     
+     Usage/Pattern: Reducing list to single value by processing elements right-to-left *)
+  
+  let List.mapi (f : int -> 'b -> 'a) (l : 'b list) : 'a list =
+    let rec loop =
+      fun (i : int) (l : 'b list) ->
+        match l with
+        | [] -> []
+        | (x :: l2) -> let y = f i x in (y :: loop (i + 1) l2)
+    in
+    loop 0 l
+  (* [List.mapi f l] maps function [f] over list [l], passing both the element and its index to [f]
+     
+     Usage/Pattern: Transforming elements with access to their position/index *)
+  
+  let rec List.filter (f : 'a -> bool) (xs : 'a list) : 'a list =
+    match xs with
+    | [] -> []
+    | (x :: tail) ->
+      let tail = List.filter f tail in
+      if f x then (x :: tail) else tail
+  (* [List.filter f l] keeps only the elements of [l] that satisfy [f]
+     
+     Usage/Pattern: Filtering elements from a collection based on a condition *)
+  
+  let rec List.filter_map (f : 'a -> 'b option) (xs : 'a list)
+    : 'b list =
+    match xs with
+    | [] -> []
+    | (x :: tail) ->
+      let tail = List.filter_map f tail in
+      match f x with
+      | None -> tail
+      | Some y -> (y :: tail)
+  (* [List.filter_map f l] applies [f] to each element of [l]. If [f] returns [Some y], keeps [y] in result list.
+     If [f] returns [None], that element is dropped
+     
+     Usage/Pattern: Combined filtering and transformation of elements, like filter().map() or comprehensions *)
+  
+  let rec List.flat_map (f : 'b -> 'a list) (xs : 'b list) : 'a list =
+    match xs with
+    | [] -> []
+    | (x :: tail) -> List.append (f x) (List.flat_map f tail)
+  (* [List.flat_map f l] applies [f] to each element of [l] and concatenates all resulting lists
+     
+     Usage/Pattern: Mapping elements to lists and flattening results, like flatMap() or SelectMany() *)
+  
+  let rec List.find (f : 'a -> bool) (l : 'a list) : 'a option =
+    match l with
+    | [] -> None
+    | (x :: tl) -> if f x then Some x else List.find f tl
+  (* [List.find f l] returns [Some x] if [x] is the first element of [l] such that [f x] is true. 
+     Otherwise it returns [None]
+     
+     Usage/Pattern: Finding first element matching condition, like find() or First() *)
+  
+  let rec List.mem (x : 'a) (xs : 'a list) : bool =
+    match xs with
+    | [] -> false
+    | (y :: tail) -> (x = y) || (List.mem x tail)
+  (* [List.mem x l] returns [true] iff [x] is an element of [l]
+     
+     Usage/Pattern: Testing if value exists in collection, like includes() or contains() *)
+  
+  let rec List.mem_assoc (x : 'a) (xs : ('a * 'b) list) : bool =
+    match xs with
+    | [] -> false
+    | ((k, _) :: tail) -> (x = k) || (List.mem_assoc x tail)
+  (* [List.mem_assoc x l] returns [true] if [x] appears as a key in association list [l]
+     
+     Usage/Pattern: Testing if key exists in key-value pairs, like hasKey() or containsKey() *)
+  
+  let rec List.nth (n : int) (xs : 'a list) : 'a option =
+    match xs with
+    | [] -> None
+    | (y :: tail) -> if n = 0 then Some y else List.nth (n - 1) tail
+  (* [List.nth n l] returns [Some x] where [x] is the nth element of [l], or [None] if list is too short
+     
+     Usage/Pattern: Safe indexed access to collection elements, like get() or ElementAt() *)
+  
+  let rec List.assoc (x : 'a) (xs : ('a * 'b) list) : 'b option =
+    match xs with
+    | [] -> None
+    | ((k, v) :: tail) -> if x = k then Some v else List.assoc x tail
+  (* [List.assoc x l] returns [Some v] if [(x,v)] appears in association list [l], [None] otherwise
+     
+     Usage/Pattern: Looking up values by key in key-value pairs, like get() or TryGetValue() *)
+  
+  let rec List.bounded_recons (n : int) (l : 'a list) : 'a list =
+    if n <= 0
+    then []
+    else
+      match l with
+      | [] -> []
+      | (hd :: tl) -> (hd :: List.bounded_recons (n - 1) tl)
+  (* Like [List.take n l], but measured subset is [n] instead of [l]
+     
+     Usage/Pattern: Taking first N elements with focus on count rather than input *)
+  
+  let rec List.take (n : int) (xs : 'a list) : 'a list =
+    match xs with
+    | [] -> []
+    | _ whenn <= 0 -> []
+    | (x :: tl) -> (x :: List.take (n - 1) tl)
+  (* [List.take n l] returns a list composed of the first (at most) [n] elements
+     of [l]. If [length l <= n] then it returns [l]
+     
+     Usage/Pattern: Taking first N elements from collection, like take() or slice(0,n) *)
+  
+  let rec List.drop (n : int) (xs : 'a list) : 'a list =
+    match xs with
+    | [] -> []
+    | l whenn <= 0 -> l
+    | (_ :: tl) -> List.drop (n - 1) tl
+  (* [List.drop n l] returns [l] where the first (at most) [n] elements
+     have been removed. If [length l <= n] then it returns [[]]
+     
+     Usage/Pattern: Skipping first N elements from collection, like skip() or slice(n) *)
+  
+  let rec List.range (i : int) (j : int) : int list =
+    if i >= j then [] else (i :: List.range (i + 1) j)
+  (* Integer range. [List.range i j] is the list [[i; i+1; i+2; …; j-1]].
+     Returns the empty list if [i >= j]
+     
+     Usage/Pattern: Generating sequence of integers, like range() or Enumerable.Range() *)
+  
+  let List.-- : int list =
+    List.range
+  (* [List.--] is an infix operator alias for [List.range]
+     
+     Usage/Pattern: Infix syntax for integer ranges *)
+  
+  let rec List.insert_sorted ~leq:(leq : 'a -> 'a -> bool)
+    (x : 'a)
+    (l : 'a list)
+    : 'a list =
+    match l with
+    | [] -> [x]
+    | (y :: _) whenleq x y -> (x :: l)
+    | (y :: tail) -> (y :: ((List.insert_sorted ~leq:leq) x) tail)
+  (* [List.insert_sorted ~leq x l] inserts [x] in [l], keeping [l] sorted according to [leq]
+     
+     Usage/Pattern: Inserting element while maintaining sort order *)
+  
+  let List.sort ~leq:(leq : 'a -> 'a -> bool) (l : 'a list) : 'a list =
+    List.fold_right
+      (fun (x : 'a) (acc : 'a list) -> ((List.insert_sorted ~leq:leq) x) acc)
+      l
+      []
+  (* [List.sort ~leq l] sorts list [l] according to [leq] ordering
+     
+     Usage/Pattern: Sorting collection with custom comparison *)
+  
+  let rec List.is_sorted ~leq:(leq : 'a -> 'a -> bool)
+    (xs : 'a list)
+    : bool =
+    match xs with
+    | ([] | [_]) -> true
+    | (x :: ((y :: _) as tail)) ->
+      (leq x y) && ((List.is_sorted ~leq:leq) tail)
+  (* [List.is_sorted ~leq l] checks whether list [l] is sorted according to [leq] ordering
+     
+     Usage/Pattern: Testing if collection is in sorted order *)
+  
+  let List.monoid_product (l1 : 'a list) (l2 : 'b list) : ('a * 'b) list =
+    List.flat_map (fun (x : 'a) -> List.map (fun (y : 'b) -> (x, y)) l2) l1
+  (* [List.monoid_product l1 l2] returns list of all pairs [(x,y)] where [x] comes from [l1] and [y] from [l2]
+     
+     Usage/Pattern: Cartesian product of two collections *)
+  
+  let List.>|= (o : 'a list) (f : 'a -> 'b) : 'b list =
+    List.map f o
+  (* [List.>|=] is an infix operator alias for [List.map]
+     
+     Usage/Pattern: Infix syntax for mapping/transforming elements *)
+  
+  let List.>>= (o : 'b list) (f : 'b -> 'a list) : 'a list =
+    List.flat_map f o
+  (* [List.>>=] is an infix operator alias for [List.flat_map]
+     
+     Usage/Pattern: Infix syntax for flat mapping elements *)
+  
+  let List.let+ : 'b list =
+    List.>|=
+  (* [List.let+] is an alias for [List.>|=]
+     
+     Usage/Pattern: Alternative syntax for mapping in monadic contexts *)
+  
+  let List.and+ : ('a * 'b) list =
+    List.monoid_product
+  (* [List.and+] is an alias for [List.monoid_product]
+     
+     Usage/Pattern: Alternative syntax for cartesian product in applicative contexts *)
+  
+  let List.let* : 'a list =
+    List.>>=
+  (* [List.let*] is an alias for [List.>>=]
+     
+     Usage/Pattern: Alternative syntax for flat mapping in monadic contexts *)
+  
+  let List.and* : ('a * 'b) list =
+    List.monoid_product
+  (* [List.and*] is an alias for [List.monoid_product]
+     
+     Usage/Pattern: Alternative syntax for cartesian product in monadic contexts *)
+end
+
+

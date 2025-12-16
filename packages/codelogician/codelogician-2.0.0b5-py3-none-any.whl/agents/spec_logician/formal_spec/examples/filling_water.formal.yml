@@ -1,0 +1,34 @@
+output: |
+  entity glass_monitor { checking_level adding_water concluded_full }
+
+  action inspect_level { }
+  action add_water {
+    units: int
+  }
+
+  internal state {
+    water_level: int = 0;
+    max_level: int = 0;
+  }
+
+
+  Feature: Water Glass Filling System
+
+    Scenario: Initiate Water Addition
+      Given glass_monitor on checking_level
+      Given water_level < max_level
+      When inspect_level
+      Then glass_monitor on adding_water
+
+    Scenario: Add Water Units
+      Given glass_monitor on adding_water
+      When add_water
+      SuchThat units > 0
+      Then water_level is water_level + units
+      Then glass_monitor on checking_level
+
+    Scenario: Confirm Full Capacity
+      Given glass_monitor on checking_level
+      Given water_level == max_level
+      When inspect_level
+      Then glass_monitor on concluded_full

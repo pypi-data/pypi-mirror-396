@@ -1,0 +1,46 @@
+[@@@import Core_comparison, "core/comparison.iml"]
+[@@@import Core_arithmetic, "core/arithmetic.iml"]
+[@@@import Core_advanced, "core/advanced.iml"]
+[@@@import Stats_basic, "stats/basic.iml"]
+
+
+(* Statistical measures - Level 3 (depends on stats.basic and core) *)
+
+let variance (numbers : real list) : real option =
+  if List.is_empty numbers then
+    None
+  else if List.length numbers = 1 then
+    Some 0.0
+  else
+    match Stats_basic.mean numbers with
+    | None -> None
+    | Some avg ->
+        let squared_diffs = 
+          List.map (fun num ->
+            let diff = Core_arithmetic.subtract num avg in
+            Core_arithmetic.multiply diff diff
+          ) numbers
+        in
+        let sum_squared_diffs = Stats_basic.sum_list squared_diffs in
+        let n_minus_1 = Core_arithmetic.subtract (Real.of_int (List.length numbers)) 1.0 in
+        Core_arithmetic.divide sum_squared_diffs n_minus_1
+
+let standard_deviation (numbers : real list) : real option =
+  match variance numbers with
+  | None -> None
+  | Some var -> Core_advanced.square_root var
+
+let rec find_range_helper (max_val : real) (min_val : real) (rest : real list) : real * real =
+  match rest with
+  | [] -> (max_val, min_val)
+  | num :: tail ->
+      let new_max = if num >. max_val then num else max_val in
+      let new_min = if num <. min_val then num else min_val in
+      find_range_helper new_max new_min tail
+
+let range_value (numbers : real list) : real option =
+  match numbers with
+  | [] -> None
+  | first :: rest ->
+      let (max_val, min_val) = find_range_helper first first rest in
+      Some (Core_arithmetic.subtract max_val min_val)

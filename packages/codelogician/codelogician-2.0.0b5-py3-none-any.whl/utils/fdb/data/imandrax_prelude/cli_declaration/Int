@@ -1,0 +1,117 @@
+module Int = struct
+  type Int.t =  int
+  (* Integer type using arbitrary precision integers (Z.t from Zarith) *)
+  
+  let Int.+ : int =
+    +
+  (* [Int.+] Addition operator for integers
+      
+      Usage/Pattern: Basic arithmetic addition *)
+  
+  let Int.- : int =
+    -
+  (* [Int.-] Subtraction operator for integers
+      
+      Usage/Pattern: Basic arithmetic subtraction *)
+  
+  let Int.~- : int =
+    ~-
+  (* [Int.~-] Unary negation operator for integers
+      
+      Usage/Pattern: Negating a number *)
+  
+  let Int.* : int =
+    *
+  (* [Int.*] Multiplication operator for integers
+      
+      Usage/Pattern: Basic arithmetic multiplication *)
+  
+  let Int./ : int =
+    /
+  (* [Int./] Division operator for integers
+      
+      Usage/Pattern: Integer division with truncation toward zero *)
+  
+  let Int.mod : int =
+    mod
+  (* [Int.mod] Modulo operator for integers
+      
+      Usage/Pattern: Computing remainders and wrapping values *)
+  
+  let Int.< : bool =
+    <
+  (* [Int.<] Less than comparison operator
+      
+      Usage/Pattern: Numeric ordering comparison *)
+  
+  let Int.<= : bool =
+    <=
+  (* [Int.<=] Less than or equal comparison operator
+      
+      Usage/Pattern: Numeric ordering and equality comparison *)
+  
+  let Int.> : bool =
+    >
+  (* [Int.>] Greater than comparison operator
+      
+      Usage/Pattern: Numeric ordering comparison *)
+  
+  let Int.>= : bool =
+    >=
+  (* [Int.>=] Greater than or equal comparison operator
+      
+      Usage/Pattern: Numeric ordering and equality comparison *)
+  
+  let Int.min : int =
+    min
+  (* [Int.min x y] Returns the minimum of two integers
+      
+      Usage/Pattern: Finding smaller of two values *)
+  
+  let Int.max : int =
+    max
+  (* [Int.max x y] Returns the maximum of two integers
+      
+      Usage/Pattern: Finding larger of two values *)
+  
+  let Int.abs : int =
+    abs
+  (* [Int.abs x] Returns absolute value of an integer
+      
+      Usage/Pattern: Getting magnitude of a number *)
+  
+  let Int.to_string: Int.t -> string =
+    <logic_core_builtin>
+  (* [Int.to_string x] Converts non-negative integer to string representation
+      
+      Usage/Pattern: String formatting and display of numbers *)
+  
+  let Int.compare (x : int) (y : int) : int =
+    if x = y then 0 else if Int.< x y then -1 else 1
+  (* [Int.compare x y] Returns -1 if x < y, 0 if x = y, 1 if x > y
+      
+      Usage/Pattern: Three-way comparison for sorting and ordering *)
+  
+  let Int.equal : bool =
+    =
+  (* [Int.equal x y] Tests equality of two integers
+      
+      Usage/Pattern: Value equality comparison *)
+  
+  let Int.pow: Int.t -> Int.t -> Int.t =
+    <logic_core_builtin>
+  (* [Int.pow x n] Computes x raised to power n
+      
+      Usage/Pattern: Exponential calculations *)
+  
+  axiom Int.mod_zero_prod (n : int) (m : int) (x : int) : bool =
+    ((Int.> n 0) && ((Int.mod x n) = 0))
+     ==>
+     ((Int.mod (Int.* x m) n) = 0)
+  
+  axiom Int.mod_sub_id (n : int) (m : int) : bool =
+    ((Int.<= m n) && (Int.> m 0))
+     ==>
+     ((Int.mod (Int.+ n (Int.* -1 m)) m) = (Int.mod n m))
+  
+end

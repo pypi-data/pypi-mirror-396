@@ -1,0 +1,205 @@
+(* 
+  --------------------------------------------------------------------------
+  title: Patient Monitoring Workflow IML model
+  description: XState Patient Monitoring IML model
+  order: 2
+  --------------------------------------------------------------------------
+  
+  ========================================================================== *)
+(* ========================================= *)
+(* Patient Vitals Workflow - IML Formalization *)
+(* ========================================= *)
+
+(* The XState machine has a single long-running state (MonitorVitals) that reacts
+   to three monitoring events. It performs side-effectful actions (ordering Tylenol,
+   calling a nurse, calling a pulmonologist) without changing the state. We model
+   those actions as log entries so the behavior remains pure and analyzable. *)
+
+(* === Type Definitions === *)
+
+type event_info = {
+  source : string;
+  id : string;
+  time : string;
+  patient_id : string;
+  value : string;
+}
+
+type event =
+  | HighBodyTemp of event_info
+  | HighBloodPressure of event_info
+  | HighRespirationRate of event_info
+
+(* Only one state in the XState machine. *)
+type state =
+  | MonitorVitals
+
+(* Context mirrors the XState context: patientId only. *)
+type context = {
+  patient_id : string;
+}
+
+(* Machine configuration carries state, context, and an accumulated log of actions. *)
+type config = {
+  st : state;
+  ctx : context;
+  logs : string list;
+}
+
+(* === Initial State === *)
+
+let initial_context : context = {
+  patient_id = "patient1";  (* default input; adjust per scenario *)
+}
+
+let init : config = {
+  st = MonitorVitals;
+  ctx = initial_context;
+  logs = [];
+}
+
+(* === Transition Function === *)
+
+let step (c : config) (ev : event) : config =
+  match (c.st, ev) with
+  | (MonitorVitals, HighBodyTemp info) ->
+      if info.patient_id = c.ctx.patient_id then
+        { c with logs = c.logs @ ["sendTylenolOrder for " ^ info.patient_id] }
+      else
+        { c with logs = c.logs @ ["ignored highBodyTemp for " ^ info.patient_id] }
+
+  | (MonitorVitals, HighBloodPressure info) ->
+      if info.patient_id = c.ctx.patient_id then
+        { c with logs = c.logs @ ["callNurse for " ^ info.patient_id] }
+      else
+        { c with logs = c.logs @ ["ignored highBloodPressure for " ^ info.patient_id] }
+
+  | (MonitorVitals, HighRespirationRate info) ->
+      if info.patient_id = c.ctx.patient_id then
+        { c with logs = c.logs @ ["callPulmonologist for " ^ info.patient_id] }
+      else
+        { c with logs = c.logs @ ["ignored highRespirationRate for " ^ info.patient_id] }
+
+  (* No other states exist; keep current config *)
+  | _ -> c
+
+(* === Run Events === *)
+
+let run (c : config) (evs : event list) : config =
+  List.fold_left step c evs
+
+(* === Properties === *)
+
+(* Property: state never leaves MonitorVitals and patient_id stays unchanged. *)
+let invariant_monitoring_only (evs : event list) : bool =
+  let final_cfg = run init evs in
+  (final_cfg.st = MonitorVitals) && (final_cfg.ctx.patient_id = init.ctx.patient_id)
+
+(* Property: matching patient events generate at least one action log. *)
+let property_actions_logged_for_matching_patient () : bool =
+  let info = {
+    source = "monitoringSource";
+    id = "e1";
+    time = "t1";
+    patient_id = init.ctx.patient_id;
+    value = "high";
+  } in
+  let final_cfg =
+    run init [HighBodyTemp info; HighBloodPressure info; HighRespirationRate info]
+  in
+  List.length final_cfg.logs = 3
+
+(* === Eval Examples === *)
+
+let sample_info patient value = {
+  source = "monitoringSource";
+  id = "evt";
+  time = "2025-01-01T00:00:00Z";
+  patient_id = patient;
+  value = value;
+}
+
+(* Happy path: all events for the monitored patient *)
+eval (run init [
+  HighBodyTemp (sample_info "patient1" "102F");
+  HighBloodPressure (sample_info "patient1" "150/95");
+  HighRespirationRate (sample_info "patient1" "30");
+])
+
+(* Mixed patient IDs: second event should be ignored *)
+eval (run init [
+  HighBodyTemp (sample_info "patient1" "102F");
+  HighBloodPressure (sample_info "other" "150/95");
+  HighRespirationRate (sample_info "patient1" "30");
+])
+
+(* Verify properties *)
+eval (invariant_monitoring_only [
+  HighBodyTemp (sample_info "patient1" "101F");
+  HighBloodPressure (sample_info "patient1" "140/90");
+])
+
+eval (property_actions_logged_for_matching_patient ())
+
+(* ========================================= *)
+(* Verification Goals (bounded, per guide)   *)
+(* ========================================= *)
+
+(* Safety: state is stable and stays in MonitorVitals after any single event. *)
+theorem monitor_state_stable ev =
+  (step init ev).st = MonitorVitals
+[@@by auto]
+
+(* Safety: patient_id in context is preserved across any single event. *)
+theorem patient_id_preserved ev =
+  (step init ev).ctx.patient_id = init.ctx.patient_id
+[@@by auto]
+
+(* Bounded verification (3 params = number of event variants):
+   After any three events, we remain in MonitorVitals and patient_id is unchanged. *)
+verify (fun ev1 ev2 ev3 ->
+  let final = run init [ev1; ev2; ev3] in
+  (final.st = MonitorVitals) && (final.ctx.patient_id = init.ctx.patient_id))
+[@@by auto]
+
+(* General stability from any MonitorVitals configuration. *)
+theorem monitor_state_stable_any c ev =
+  c.st = MonitorVitals ==> (step c ev).st = MonitorVitals
+[@@by auto]
+
+(* Context patient_id is preserved from any MonitorVitals configuration. *)
+theorem patient_id_preserved_any c ev =
+  c.st = MonitorVitals ==> (step c ev).ctx.patient_id = c.ctx.patient_id
+[@@by auto]
+
+(* No-op: empty trace leaves the configuration unchanged. *)
+theorem no_op_empty_trace =
+  run init [] = init
+[@@by auto]
+
+(* Patient filtering soundness: non-matching patient events are logged as ignored. *)
+theorem nonmatching_bodytemp_logged_as_ignored (info : event_info) =
+  info.patient_id <> init.ctx.patient_id ==>
+  let final = step init (HighBodyTemp info) in
+  List.mem ("ignored highBodyTemp for " ^ info.patient_id) final.logs
+[@@by auto]
+
+(* Patient filtering soundness: matching patient events log the intended action. *)
+theorem matching_bodytemp_logs_action (info : event_info) =
+  info.patient_id = init.ctx.patient_id ==>
+  let final = step init (HighBodyTemp info) in
+  List.mem ("sendTylenolOrder for " ^ info.patient_id) final.logs
+[@@by auto]
+
+(* Idempotence on repeated events: state/context stable, logs grow linearly. *)
+theorem double_event_preserves_context ev =
+  let final = run init [ev; ev] in
+  (final.st = MonitorVitals) &&
+  (final.ctx.patient_id = init.ctx.patient_id) &&
+  (List.length final.logs = 2)
+[@@by auto]
+
+(* Bounded determinism (explicit but trivial): same inputs yield same result. *)
+theorem deterministic_three ev1 ev2 ev3 =
+  run init [ev1; ev2; ev3] = run init [ev1; ev2; ev3]
+[@@by auto]

@@ -1,0 +1,111 @@
+output: |
+  enum dog_state {
+    waiting
+    on_walk
+    walk_complete
+  }
+
+  internal state {
+    dog : dog_state = dog_state.waiting;
+    is_running : bool = false;
+    is_walking : bool = false;
+    tail_wagging : bool = false;
+  }
+
+  function leave_home_precond_0(): bool {
+    return (state.dog == dog_state.waiting)
+  }
+
+  action leave_home {
+    validate {
+      leave_home_precond_0()
+    }
+  }
+
+  receive (a: leave_home){
+    if (leave_home_precond_0()) then {
+      state.dog = dog_state.on_walk
+    }
+  }
+
+  function speed_up_precond_0(): bool {
+    return (state.dog == dog_state.on_walk) && (state.is_walking == true)
+  }
+
+  action speed_up {
+    validate {
+      speed_up_precond_0()
+    }
+  }
+
+  receive (a: speed_up){
+    if (speed_up_precond_0()) then {
+      state.is_running = true
+      state.is_walking = false
+    }
+  }
+
+  function slow_down_precond_0(): bool {
+    return (state.dog == dog_state.on_walk) && (state.is_running == true)
+  }
+
+  action slow_down {
+    validate {
+      slow_down_precond_0()
+    }
+  }
+
+  receive (a: slow_down){
+    if (slow_down_precond_0()) then {
+      state.is_running = false
+      state.is_walking = true
+    }
+  }
+
+  function start_wagging_precond_0(): bool {
+    return (state.dog == dog_state.on_walk) && (state.tail_wagging == false)
+  }
+
+  action start_wagging {
+    validate {
+      start_wagging_precond_0()
+    }
+  }
+
+  receive (a: start_wagging){
+    if (start_wagging_precond_0()) then {
+      state.tail_wagging = true
+    }
+  }
+
+  function stop_wagging_precond_0(): bool {
+    return (state.dog == dog_state.on_walk) && (state.tail_wagging == true)
+  }
+
+  action stop_wagging {
+    validate {
+      stop_wagging_precond_0()
+    }
+  }
+
+  receive (a: stop_wagging){
+    if (stop_wagging_precond_0()) then {
+      state.tail_wagging = false
+    }
+  }
+
+  function arrive_home_precond_0(): bool {
+    return (state.dog == dog_state.on_walk)
+  }
+
+  action arrive_home {
+    validate {
+      arrive_home_precond_0()
+    }
+  }
+
+  receive (a: arrive_home){
+    if (arrive_home_precond_0()) then {
+      state.dog = dog_state.walk_complete
+    }
+  }

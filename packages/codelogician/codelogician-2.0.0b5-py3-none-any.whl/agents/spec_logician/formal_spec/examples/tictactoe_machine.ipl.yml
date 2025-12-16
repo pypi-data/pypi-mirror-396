@@ -1,0 +1,139 @@
+output: |
+  enum game_state {
+    ongoing
+    post_move_checks
+    ended
+  }
+
+  internal state {
+    game : game_state = game_state.ongoing;
+    board : (string list) list = [['', '', ''], ['', '', ''], ['', '', '']];
+    current_player : string = '';
+    winner : string = '';
+  }
+
+  function get_at_row(board: (string list) list, row: int): string list {
+    return hd(take(len(board) - row, rev(take(row + 1, board))))
+  }
+  function get_at_col(row: string list, col: int): string {
+    return hd(take(len(row) - col, rev(take(col + 1, row))))
+  }
+  function update_at_col(row: string list, col: int, value: string): string list {
+    return app(take(col, row), add(value, take(len(row) - col - 1, rev(row))))
+  }
+  function update_at_row(board: (string list) list, row: int, new_row: string list): (string list) list {
+    return app(take(row, board), add(new_row, take(len(board) - row - 1, rev(board))))
+  }
+  function get_cell(board: (string list) list, row: int, col: int): string {
+    let row_list : string list = get_at_row(board, row)
+    return get_at_col(row_list, col)
+  }
+  function set_cell(board: (string list) list, row: int, col: int, value: string): (string list) list {
+    let row_list : string list = get_at_row(board, row)
+    let new_row : string list = update_at_col(row_list, col, value)
+    return update_at_row(board, row, new_row)
+  }
+  function empty_board(): (string list) list {
+    return [['', '', ''], ['', '', ''], ['', '', '']]
+  }
+  function is_valid_move(board: (string list) list, row: int, col: int): bool {
+    return row >= 0 && row < 3 && col >= 0 && col < 3 && get_cell(board, row, col) == ''
+  }
+  function check_line(a: string, b: string, c: string): bool {
+    return a != '' && a == b && b == c
+  }
+  function get_winner(board: (string list) list): string {
+    let r0 : string list = get_at_row(board, 0)
+    let r1 : string list = get_at_row(board, 1)
+    let r2 : string list = get_at_row(board, 2)
+    let has_row_win : bool = check_line(get_at_col(r0,0), get_at_col(r0,1), get_at_col(r0,2)) || check_line(get_at_col(r1,0), get_at_col(r1,1), get_at_col(r1,2)) || check_line(get_at_col(r2,0), get_at_col(r2,1), get_at_col(r2,2))
+    let has_col_win : bool = check_line(get_at_col(r0,0), get_at_col(r1,0), get_at_col(r2,0)) || check_line(get_at_col(r0,1), get_at_col(r1,1), get_at_col(r2,1)) || check_line(get_at_col(r0,2), get_at_col(r1,2), get_at_col(r2,2))
+    let has_diag_win : bool = check_line(get_at_col(r0,0), get_at_col(r1,1), get_at_col(r2,2)) || check_line(get_at_col(r2,0), get_at_col(r1,1), get_at_col(r0,2))
+    let x_wins : bool = (has_row_win || has_col_win || has_diag_win) && (get_at_col(r1,1) == 'x')
+    let o_wins : bool = (has_row_win || has_col_win || has_diag_win) && (get_at_col(r1,1) == 'o')
+    return if x_wins then 'x' else if o_wins then 'o' else ''
+  }
+  function is_board_full(board: (string list) list): bool {
+    let r0 : string list = get_at_row(board, 0)
+    let r1 : string list = get_at_row(board, 1)
+    let r2 : string list = get_at_row(board, 2)
+    return forall(r0, {x|x != ''}) && forall(r1, {x|x != ''}) && forall(r2, {x|x != ''})
+  }
+  function make_move_precond_0(player: string, row: int, col: int): bool {
+    return (state.game == game_state.ongoing) && (state.current_player == player) && (is_valid_move(state.board, row, col))
+  }
+
+  action make_move {
+    player: string
+    row: int
+    col: int
+    validate {
+      make_move_precond_0(this.player, this.row, this.col)
+    }
+  }
+
+  receive (a: make_move){
+    if (make_move_precond_0(a.player, a.row, a.col)) then {
+      state.game = game_state.post_move_checks
+      state.board = set_cell(state.board, a.row, a.col, a.player)
+    }
+  }
+
+  function check_winner_precond_0(): bool {
+    return (state.game == game_state.post_move_checks) && (get_winner(state.board) == 'x')
+  }
+
+  function check_winner_precond_1(): bool {
+    return (state.game == game_state.post_move_checks) && (get_winner(state.board) == 'o')
+  }
+
+  function check_winner_precond_2(): bool {
+    return (state.game == game_state.post_move_checks) && (get_winner(state.board) == '') && (is_board_full(state.board))
+  }
+
+  function check_winner_precond_3(): bool {
+    return (state.game == game_state.post_move_checks) && (get_winner(state.board) == '') && (!is_board_full(state.board))
+  }
+
+  action check_winner {
+    validate {
+      check_winner_precond_0() || check_winner_precond_1() || check_winner_precond_2() || check_winner_precond_3()
+    }
+  }
+
+  receive (a: check_winner){
+    if (check_winner_precond_0()) then {
+      state.game = game_state.ended
+      state.winner = 'x'
+    }
+    if (check_winner_precond_1()) then {
+      state.game = game_state.ended
+      state.winner = 'o'
+    }
+    if (check_winner_precond_2()) then {
+      state.game = game_state.ended
+    }
+    if (check_winner_precond_3()) then {
+      state.game = game_state.ongoing
+      state.current_player = if state.current_player == 'x' then 'o' else 'x'
+    }
+  }
+
+  function reset_game_precond_0(): bool {
+    return (state.game == game_state.ended)
+  }
+
+  action reset_game {
+    validate {
+      reset_game_precond_0()
+    }
+  }
+
+  receive (a: reset_game){
+    if (reset_game_precond_0()) then {
+      state.game = game_state.ongoing
+      state.board = empty_board()
+      state.current_player = 'x'
+      state.winner = ''
+    }
+  }

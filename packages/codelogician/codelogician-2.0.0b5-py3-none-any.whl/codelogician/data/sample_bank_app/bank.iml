@@ -1,0 +1,102 @@
+[@@@import Currency, "currency.iml"]
+[@@@import Transaction, "transaction.iml"]
+[@@@import Account, "account.iml"]
+[@@@import Asset, "asset.iml"]
+[@@@import Liability, "liability.iml"]
+[@@@import Ledger, "ledger.iml"]
+
+
+(* Bank type to manage accounts and transactions *)
+type bank = {
+  ledger: Ledger.ledger;
+  accounts: Account.account list
+}
+
+(* Initialize a bank with empty ledger and accounts *)
+let init_bank () : bank =
+  {
+    ledger = Ledger.init_ledger [] [];
+    accounts = []
+  }
+
+(* Create a new account in the bank *)
+let create_account 
+    (b: bank) 
+    (customer: LString.t) 
+    (name: LString.t) 
+    (currency: Currency.currency) 
+    (account_type: Account.account_type) 
+    (account_number: LString.t) 
+    (starting_balance: real) : bank * Account.account =
+  let account = Account.init_account customer name currency account_type account_number starting_balance in
+  let new_bank = { b with accounts = List.append b.accounts [account] } in
+  (new_bank, account)
+
+(* Add an already existing account object *)
+let add_account (b: bank) (acc: Account.account) : bank =
+  { b with accounts = List.append b.accounts [acc] }
+
+(* Get account by ID *)
+let rec get_account_by_id_helper (acc_number: LString.t) (accounts: Account.account list) : Account.account option =
+  match accounts with
+  | [] -> None
+  | acc :: rest ->
+      if Account.number acc = acc_number then
+        Some acc
+      else
+        get_account_by_id_helper acc_number rest
+
+let get_account_by_id (b: bank) (acc_number: LString.t) : Account.account option =
+  get_account_by_id_helper acc_number b.accounts
+
+(* Update an account in the bank's account list *)
+let rec update_account_helper (acc_number: LString.t) (new_acc: Account.account) (accounts: Account.account list) : Account.account list =
+  match accounts with
+  | [] -> []
+  | acc :: rest ->
+      if Account.number acc = acc_number then
+        new_acc :: rest
+      else
+        acc :: update_account_helper acc_number new_acc rest
+
+let update_account (b: bank) (acc_number: LString.t) (new_acc: Account.account) : bank =
+  { b with accounts = update_account_helper acc_number new_acc b.accounts }
+
+(* Add a transaction to the bank *)
+let add_transaction (b: bank) (t: Transaction.transaction) : (bank, LString.t) result =
+  let open Result in
+  let from_acc_opt = get_account_by_id b (Transaction.from_account t) in
+  let to_acc_opt = get_account_by_id b (Transaction.to_account t) in
+  
+  match (from_acc_opt, to_acc_opt) with
+  | (Some acc_one, Some acc_two) ->
+      let* updated_acc_one = Account.apply_transaction acc_one t in
+      let* updated_acc_two = Account.apply_transaction acc_two t in
+      let b1 = update_account b (Account.number acc_one) updated_acc_one in
+      let b2 = update_account b1 (Account.number acc_two) updated_acc_two in
+      Ok b2
+  | (Some acc_one, None) ->
+      let* updated_acc_one = Account.apply_transaction acc_one t in
+      let b1 = update_account b (Account.number acc_one) updated_acc_one in
+      Ok b1
+  | (None, Some acc_two) ->
+      let* updated_acc_two = Account.apply_transaction acc_two t in
+      let b1 = update_account b (Account.number acc_two) updated_acc_two in
+      Ok b1
+  | (None, None) ->
+      Ok b
+
+(* Main function demonstrating usage *)
+let main () : (bank, LString.t) result =
+  let open Result in
+  let bank = init_bank () in
+  
+  let bank = add_account bank (Account.init_account {l|John Doe|l} {l|Savings Account|l} Currency.USD Account.ASSET {l|123456789|l} 1000.0) in
+  let bank = add_account bank (Account.init_account {l|John Doe|l} {l|Savings Account|l} Currency.USD Account.ASSET {l|123456789|l} 1000.0) in
+  let bank = add_account bank (Account.init_account {l|Jane Doe|l} {l|Checking Account|l} Currency.USD Account.ASSET {l|987654321|l} 1500.0) in
+  let bank = add_account bank (Account.init_account {l|John Doe|l} {l|Savings Account|l} Currency.USD Account.ASSET {l|123456789|l} 1000.0) in
+  
+  let* bank = add_transaction bank (Transaction.debit_transaction {l|123456789|l} {l|987654321|l} 100.0) in
+  let* bank = add_transaction bank (Transaction.credit_transaction {l|987654321|l} {l|123456789|l} 50.0) in
+  
+  Ok bank

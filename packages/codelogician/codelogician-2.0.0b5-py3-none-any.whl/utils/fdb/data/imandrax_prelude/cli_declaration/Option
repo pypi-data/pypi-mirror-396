@@ -1,0 +1,191 @@
+module Option = struct
+ (*  {2 Option module}
+ 
+     The option type [type 'a option = None | Some of 'a] is useful for
+     representing partial functions and optional values.
+      *)
+
+  type Option.t =  'a option
+  (* The option type representing optional values. Can be either [None] representing absence
+     of a value, or [Some x] containing a value [x] of type ['a].
+     
+     Usage/Pattern: Representing nullable/optional values in a type-safe way *)
+  
+  let Option.map (f : 'a -> 'b) (x : 'a option) : 'b option =
+    match x with
+    | None -> None
+    | Some x -> Some f x
+  (* [Option.map f x] transforms an optional value by applying function [f] to the contained value.
+     If [x] is [None], returns [None]. If [x] is [Some v], returns [Some (f v)].
+     This allows transforming the value while preserving the optional structure.
+     
+     Usage/Pattern: Transforming optional values without having to explicitly handle the None case *)
+  
+  let Option.map_or ~default:(default : 'b)
+    (f : 'a -> 'b)
+    (x : 'a option)
+    : 'b =
+    match x with
+    | None -> default
+    | Some x -> f x
+  (* [Option.map_or ~default f x] transforms an optional value into a definite value.
+     If [x] is [Some v], applies [f] to [v]. If [x] is [None], returns the [default] value.
+     This ensures a value is always returned, handling the None case with a default.
+     
+     Usage/Pattern: Converting optional values to non-optional with a fallback value *)
+  
+  let Option.is_some (x : 'a option) : bool =
+    match x with
+    | None -> false
+    | Some _ -> true
+  (* [Option.is_some x] checks if an option contains a value.
+     Returns [true] if [x] is [Some _], [false] if [x] is [None].
+     Useful for checking presence of optional values without extracting them.
+     
+     Usage/Pattern: Testing if an optional value is present before attempting to use it *)
+  
+  let Option.is_none (x : 'a option) : bool =
+    match x with
+    | None -> true
+    | Some _ -> false
+  (* [Option.is_none x] checks if an option is empty.
+     Returns [true] if [x] is [None], [false] if [x] is [Some _].
+     Complement of [Option.is_some].
+     
+     Usage/Pattern: Testing if an optional value is absent/null/undefined *)
+  
+  let Option.return (x : 'a) : 'a option =
+    Some x
+  (* [Option.return x] wraps a value in [Some] constructor.
+     This is the fundamental way to create an optional value containing something.
+     Always returns [Some x] for any input [x].
+     
+     Usage/Pattern: Converting regular values into optional values for optional-aware functions *)
+  
+  let Option.>|= (x : 'a option) (f : 'a -> 'b) : 'b option =
+    Option.map f x
+  (* [Option.>|= x f] is an infix operator version of [Option.map].
+     Allows writing [x >|= f] instead of [Option.map f x] for more natural composition syntax.
+     
+     Usage/Pattern: Chaining transformations on optional values in a pipeline style *)
+  
+  let Option.flat_map (f : 'a -> 'b option) (o : 'a option) : 'b option =
+    match o with
+    | None -> None
+    | Some x -> f x
+  (* [Option.flat_map f x] applies a function that returns an option to an optional value.
+     If [x] is [None], returns [None]. If [x] is [Some v], returns [f v].
+     Used for composing operations that may each produce optional results.
+     
+     Usage/Pattern: Chaining multiple operations that each might fail/return nothing *)
+  
+  let Option.>>= (o : 'a option) (f : 'a -> 'b option) : 'b option =
+    Option.flat_map f o
+  (* [Option.>>= x f] is an infix operator version of [Option.flat_map].
+     Allows writing [x >>= f] instead of [Option.flat_map f x].
+     Standard monadic bind operator for options.
+     
+     Usage/Pattern: Chaining optional computations in a pipeline style *)
+  
+  let Option.or_ (a : 'a option) (b : 'a option) : 'a option =
+    match a with
+    | None -> b
+    | Some _ -> a
+  (* [Option.or_ a b] provides a fallback option.
+     Returns [a] if it contains a value, otherwise returns [b].
+     Useful for providing default optional values.
+     
+     Usage/Pattern: Providing fallback values when the primary optional value is None *)
+  
+  let Option.<+> (a : 'a option) (b : 'a option) : 'a option =
+    Option.or_ a b
+  (* [Option.<+> a b] is an infix operator version of [Option.or_].
+     Allows writing [a <+> b] instead of [Option.or_ a b] for more natural fallback syntax.
+     
+     Usage/Pattern: Chaining multiple fallback options in order of preference *)
+  
+  let Option.exists (p : 'a -> bool) (x : 'a option) : bool =
+    match x with
+    | None -> false
+    | Some x -> p x
+  (* [Option.exists p x] tests if the value in an option satisfies a predicate.
+     Returns [false] if [x] is [None], otherwise returns [p v] where [v] is the contained value.
+     Similar to [List.exists] but for a single optional value.
+     
+     Usage/Pattern: Testing properties of optional values without explicit None handling *)
+  
+  let Option.for_all (p : 'a -> bool) (x : 'a option) : bool =
+    match x with
+    | None -> true
+    | Some x -> p x
+  (* [Option.for_all p x] tests if the value in an option satisfies a predicate.
+     Returns [true] if [x] is [None], otherwise returns [p v] where [v] is the contained value.
+     Similar to [List.for_all] but for a single optional value.
+     
+     Usage/Pattern: Validating properties of optional values with None considered valid *)
+  
+  let Option.get_or ~default:(default : 'a) (x : 'a option) : 'a =
+    match x with
+    | None -> default
+    | Some y -> y
+  (* [Option.get_or ~default x] safely extracts the value from an option with a fallback.
+     Returns the value contained in [x] if present, otherwise returns the [default] value.
+     Ensures a value is always returned without risk of exceptions.
+     
+     Usage/Pattern: Safely extracting values from optionals with a default value *)
+  
+  let Option.fold (f : 'b -> 'a -> 'b) (acc : 'b) (o : 'a option) : 'b =
+    match o with
+    | None -> acc
+    | Some x -> f acc x
+  (* [Option.fold f acc x] reduces an optional value using an accumulator.
+     If [x] is [None], returns [acc] unchanged. If [x] is [Some v], returns [f acc v].
+     Similar to [List.fold_left] but for a single optional value.
+     
+     Usage/Pattern: Accumulating/reducing optional values into a single result *)
+  
+  let Option.<$> : 'b option =
+    Option.map
+  (* [Option.<$> f x] is an infix operator alias for [Option.map f x].
+     Provides applicative functor syntax for mapping over options.
+     
+     Usage/Pattern: Applying functions to optional values in a functional style *)
+  
+  let Option.monoid_product (a : 'a option) (b : 'b option) : ('a * 'b) option =
+    match (a, b) with
+    | (Some x, Some y) -> Some (x, y)
+    | _ -> None
+  (* [Option.monoid_product a b] combines two options into a tuple option.
+     Returns [Some (x,y)] if both inputs contain values, [None] if either is [None].
+     Used for combining independent optional computations.
+     
+     Usage/Pattern: Combining multiple optional values that all must be present *)
+  
+  let Option.let+ : 'b option =
+    Option.>|=
+  (* [Option.let+] is a binding operator alias for [Option.>|=].
+     Provides syntactic sugar for mapping over options in let-binding syntax.
+     
+     Usage/Pattern: Transforming optional values in a let-binding style *)
+  
+  let Option.and+ : ('a * 'b) option =
+    Option.monoid_product
+  (* [Option.and+] is a binding operator alias for [Option.monoid_product].
+     Provides syntactic sugar for combining options in let-binding syntax.
+     
+     Usage/Pattern: Combining multiple optional values in a let-binding style *)
+  
+  let Option.let* : 'b option =
+    Option.>>=
+  (* [Option.let*] is a binding operator alias for [Option.>>=].
+     Provides monadic let-binding syntax for sequencing optional computations.
+     
+     Usage/Pattern: Chaining optional computations in a let-binding style *)
+  
+  let Option.and* : ('a * 'b) option =
+    Option.monoid_product
+  (* [Option.and*] is a binding operator alias for [Option.monoid_product].
+     Alternative syntax for combining options in monadic let-binding style.
+     
+     Usage/Pattern: Combining multiple optional values in a monadic let-binding style *)
+end

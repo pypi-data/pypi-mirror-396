@@ -1,0 +1,275 @@
+{
+  "title": "Water Transfer Between Jars",
+  "preamble": {
+    "entities": [
+      {
+        "name": "small_jar",
+        "states": [
+          {
+            "name": "ready",
+            "is_initial": true
+          }
+        ]
+      },
+      {
+        "name": "big_jar",
+        "states": [
+          {
+            "name": "ready",
+            "is_initial": true
+          }
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "name": "fill_from_faucet",
+        "local_properties": [
+          {
+            "name": "jar",
+            "ipl_type": "string"
+          }
+        ]
+      },
+      {
+        "name": "empty_jar",
+        "local_properties": [
+          {
+            "name": "jar",
+            "ipl_type": "string"
+          }
+        ]
+      },
+      {
+        "name": "pour_between_jars",
+        "local_properties": [
+          {
+            "name": "source",
+            "ipl_type": "string"
+          },
+          {
+            "name": "target",
+            "ipl_type": "string"
+          }
+        ]
+      }
+    ],
+    "global_properties": [
+      {
+        "name": "small_jar_contents",
+        "ipl_type": "int",
+        "init_value": "0"
+      },
+      {
+        "name": "big_jar_contents",
+        "ipl_type": "int",
+        "init_value": "0"
+      }
+    ],
+    "fun_defs": [
+      {
+        "name": "get_jar_max_units",
+        "parameters": [
+          {
+            "name": "jar",
+            "ipl_type": "string"
+          }
+        ],
+        "return_type": "int",
+        "statements": [
+          "return if jar == 'small_jar' then 3 else 5"
+        ]
+      },
+      {
+        "name": "compute_transfer_amount",
+        "parameters": [
+          {
+            "name": "source_contents",
+            "ipl_type": "int"
+          },
+          {
+            "name": "target_contents",
+            "ipl_type": "int"
+          },
+          {
+            "name": "target_max",
+            "ipl_type": "int"
+          }
+        ],
+        "return_type": "int",
+        "statements": [
+          "let space_in_target : int = target_max - target_contents",
+          "return if source_contents <= space_in_target then source_contents else space_in_target"
+        ]
+      }
+    ]
+  },
+  "scenarios": [
+    {
+      "title": "Fill Small Jar",
+      "given_clauses": [
+        {
+          "entity": "small_jar",
+          "state": "ready"
+        }
+      ],
+      "when_clause": {
+        "action": "fill_from_faucet",
+        "local_properties": [
+          "jar"
+        ]
+      },
+      "such_that_clauses": [
+        {
+          "predicate": "jar == 'small_jar'"
+        }
+      ],
+      "then_clauses": [
+        {
+          "property": "small_jar_contents",
+          "expression": "get_jar_max_units('small_jar')"
+        }
+      ]
+    },
+    {
+      "title": "Fill Big Jar",
+      "given_clauses": [
+        {
+          "entity": "big_jar",
+          "state": "ready"
+        }
+      ],
+      "when_clause": {
+        "action": "fill_from_faucet",
+        "local_properties": [
+          "jar"
+        ]
+      },
+      "such_that_clauses": [
+        {
+          "predicate": "jar == 'big_jar'"
+        }
+      ],
+      "then_clauses": [
+        {
+          "property": "big_jar_contents",
+          "expression": "get_jar_max_units('big_jar')"
+        }
+      ]
+    },
+    {
+      "title": "Empty Small Jar",
+      "given_clauses": [
+        {
+          "entity": "small_jar",
+          "state": "ready"
+        }
+      ],
+      "when_clause": {
+        "action": "empty_jar",
+        "local_properties": [
+          "jar"
+        ]
+      },
+      "such_that_clauses": [
+        {
+          "predicate": "jar == 'small_jar'"
+        }
+      ],
+      "then_clauses": [
+        {
+          "property": "small_jar_contents",
+          "expression": "0"
+        }
+      ]
+    },
+    {
+      "title": "Empty Big Jar",
+      "given_clauses": [
+        {
+          "entity": "big_jar",
+          "state": "ready"
+        }
+      ],
+      "when_clause": {
+        "action": "empty_jar",
+        "local_properties": [
+          "jar"
+        ]
+      },
+      "such_that_clauses": [
+        {
+          "predicate": "jar == 'big_jar'"
+        }
+      ],
+      "then_clauses": [
+        {
+          "property": "big_jar_contents",
+          "expression": "0"
+        }
+      ]
+    },
+    {
+      "title": "Pour Small to Big",
+      "given_clauses": [
+        {
+          "entity": "small_jar",
+          "state": "ready"
+        }
+      ],
+      "when_clause": {
+        "action": "pour_between_jars",
+        "local_properties": [
+          "source",
+          "target"
+        ]
+      },
+      "such_that_clauses": [
+        {
+          "predicate": "source == 'small_jar' && target == 'big_jar'"
+        }
+      ],
+      "then_clauses": [
+        {
+          "property": "big_jar_contents",
+          "expression": "big_jar_contents + compute_transfer_amount(small_jar_contents, big_jar_contents, get_jar_max_units('big_jar'))"
+        },
+        {
+          "property": "small_jar_contents",
+          "expression": "small_jar_contents - compute_transfer_amount(small_jar_contents, big_jar_contents, get_jar_max_units('big_jar'))"
+        }
+      ]
+    },
+    {
+      "title": "Pour Big to Small",
+      "given_clauses": [
+        {
+          "entity": "big_jar",
+          "state": "ready"
+        }
+      ],
+      "when_clause": {
+        "action": "pour_between_jars",
+        "local_properties": [
+          "source",
+          "target"
+        ]
+      },
+      "such_that_clauses": [
+        {
+          "predicate": "source == 'big_jar' && target == 'small_jar'"
+        }
+      ],
+      "then_clauses": [
+        {
+          "property": "small_jar_contents",
+          "expression": "small_jar_contents + compute_transfer_amount(big_jar_contents, small_jar_contents, get_jar_max_units('small_jar'))"
+        },
+        {
+          "property": "big_jar_contents",
+          "expression": "big_jar_contents - compute_transfer_amount(big_jar_contents, small_jar_contents, get_jar_max_units('small_jar'))"
+        }
+      ]
+    }
+  ]
+}
