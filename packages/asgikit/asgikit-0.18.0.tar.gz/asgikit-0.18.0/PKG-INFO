@@ -1,0 +1,106 @@
+Metadata-Version: 2.1
+Name: asgikit
+Version: 0.18.0
+Summary: Toolkit for building ASGI applications and libraries
+Keywords: asgi,toolkit,asyncio,web
+Author: Livio Ribeiro
+License: MIT
+Classifier: Development Status :: 4 - Beta
+Classifier: Environment :: Web Environment
+Classifier: Framework :: AsyncIO
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
+Classifier: Topic :: Internet :: WWW/HTTP
+Classifier: Topic :: Internet :: WWW/HTTP :: Dynamic Content
+Classifier: Topic :: Software Development :: Libraries :: Application Frameworks
+Project-URL: Source, https://codeberg.org/python-zayt/asgikit
+Project-URL: Documentation, https://python-zayt.codeberg.page/asgikit
+Requires-Python: >=3.11
+Requires-Dist: anyio~=4.12.0
+Requires-Dist: multipart~=1.3.0
+Description-Content-Type: text/markdown
+
+# Asgikit - ASGI Toolkit
+
+Asgikit is a toolkit for building asgi applications and frameworks.
+
+The [examples directory](./examples) contain usage examples of several use cases
+
+## Features:
+
+- Request
+  - Headers
+  - Cookies
+  - Body (bytes, str, json, form, stream)
+  - Form
+- Response
+  - Plain text
+  - Json
+  - Streaming
+  - File
+- Websockets
+
+## Example request and response
+
+```python
+from asgikit import Request
+
+
+async def main(scope, receive, send):
+    assert scope["type"] == "http"
+
+    request = Request(scope, receive, send)
+
+    # request method
+    method = request.method
+
+    # request path
+    path = request.path
+
+    # request headers
+    headers = request.headers
+
+    # read body as json
+    body = await request.body.read_json()
+
+    data = {
+        "lang": "Python",
+        "async": True,
+        "platform": "asgi",
+        "method": method,
+        "path": path,
+        "headers": dict(headers.items()),
+        "body": body,
+    }
+
+    # send json response
+    await request.respond_json(data)
+```
+
+## Example websocket
+
+```python
+from asgikit import Request, WebSocketDisconnect
+
+
+async def app(scope, receive, send):
+    if scope["type"] != "websocket":
+        return
+
+    request = Request(scope, receive, send)
+    ws = await request.upgrade()
+
+    while True:
+        try:
+            message = await ws.read()
+            await ws.write(message)
+        except WebSocketDisconnect:
+            print("Client disconnect")
+            break
+```

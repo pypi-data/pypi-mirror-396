@@ -1,0 +1,97 @@
+[project]
+name = "asgikit"
+description = "Toolkit for building ASGI applications and libraries"
+authors = [
+    { name = "Livio Ribeiro" },
+]
+readme = "README.md"
+keywords = [
+    "asgi",
+    "toolkit",
+    "asyncio",
+    "web",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Web Environment",
+    "Framework :: AsyncIO",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+]
+dynamic = []
+requires-python = ">=3.11"
+dependencies = [
+    "anyio~=4.12.0",
+    "multipart~=1.3.0",
+]
+version = "0.18.0"
+
+[project.license]
+text = "MIT"
+
+[project.urls]
+Source = "https://codeberg.org/python-zayt/asgikit"
+Documentation = "https://python-zayt.codeberg.page/asgikit"
+
+[dependency-groups]
+dev = [
+    "uvicorn[standard]~=0.38",
+    "granian~=2.6",
+    "mypy~=1.19",
+    "isort~=7.0",
+    "ruff~=0.14",
+    "pylint~=4.0",
+]
+test = [
+    "pytest~=9.0.0",
+    "pytest-asyncio~=1.3.0",
+    "pytest-cov~=7.0.0",
+    "httpx~=0.28.1",
+    "httpx-ws~=0.8.2",
+    "asgiref~=3.11.0",
+]
+docs = [
+    "sphinx~=9.0.4",
+    "sphinx-autobuild>=2025.8.25",
+    "sphinx-intl~=2.3.2",
+]
+
+[tool.pdm]
+distribution = true
+
+[tool.pdm.version]
+source = "file"
+path = "src/asgikit/__version__.py"
+
+[tool.pdm.scripts]
+test = "pytest --cov src --cov-report term --cov-report html"
+
+[tool.pdm.scripts.docs]
+shell = "    sphinx-autobuild --doctree-dir=docs/_build/doctrees --watch=src/asgikit --post-build='{pdm} run docs/build_locales.py' docs docs/_build/html\n"
+
+[tool.pdm.scripts.docs-build]
+composite = [
+    "sphinx-build -d docs/_build/doctrees/en/ docs docs/_build/html",
+    "{pdm} run docs/build_locales.py",
+]
+
+[tool.pdm.scripts.docs-intl]
+composite = [
+    "sphinx-build -M gettext docs docs/_build",
+    "sphinx-intl update -d docs/_locale -p docs/_build/gettext -l pt_BR",
+]
+
+[build-system]
+requires = [
+    "pdm-backend",
+]
+build-backend = "pdm.backend"
