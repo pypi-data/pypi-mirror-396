@@ -1,0 +1,97 @@
+name: CI for bec_testing_plugin
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      BEC_WIDGETS_BRANCH:
+        description: "Branch of BEC Widgets to install"
+        required: false
+        type: string
+        default: "main"
+      BEC_CORE_BRANCH:
+        description: "Branch of BEC Core to install"
+        required: false
+        type: string
+        default: "main"
+      OPHYD_DEVICES_BRANCH:
+        description: "Branch of Ophyd Devices to install"
+        required: false
+        type: string
+        default: "main"
+      BEC_PLUGIN_REPO_BRANCH:
+        description: "Branch of the BEC Plugin Repository to install"
+        required: false
+        type: string
+        default: "main"
+      PYTHON_VERSION:
+        description: "Python version to use"
+        required: false
+        type: string
+        default: "3.11"
+
+permissions:
+  pull-requests: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      QTWEBENGINE_DISABLE_SANDBOX: 1
+      QT_QPA_PLATFORM: "offscreen"
+
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "${{ inputs.PYTHON_VERSION || '3.11' }}"
+
+      - name: Checkout BEC Core
+        uses: actions/checkout@v4
+        with:
+          repository: bec-project/bec
+          ref: "${{ inputs.BEC_CORE_BRANCH || 'main' }}"
+          path: ./bec
+
+      - name: Checkout Ophyd Devices
+        uses: actions/checkout@v4
+        with:
+          repository: bec-project/ophyd_devices
+          ref: "${{ inputs.OPHYD_DEVICES_BRANCH || 'main' }}"
+          path: ./ophyd_devices
+
+      - name: Checkout BEC Widgets
+        uses: actions/checkout@v4
+        with:
+          repository: bec-project/bec_widgets
+          ref: "${{ inputs.BEC_WIDGETS_BRANCH || 'main' }}"
+          path: ./bec_widgets
+
+      - name: Checkout BEC Plugin Repository
+        uses: actions/checkout@v4
+        with:
+          repository: bec-project/bec_testing_plugin
+          ref: "${{ inputs.BEC_PLUGIN_REPO_BRANCH || github.head_ref || github.sha }}"
+          path: ./bec_testing_plugin
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1 libegl1 x11-utils libxkbcommon-x11-0 libdbus-1-3 xvfb
+          sudo apt-get -y install libnss3 libxdamage1 libasound2t64 libatomic1 libxcursor1
+
+      - name: Install Python dependencies
+        shell: bash
+        run: |
+          pip install uv
+          uv pip install --system -e ./ophyd_devices
+          uv pip install --system -e ./bec/bec_lib[dev]
+          uv pip install --system -e ./bec/bec_ipython_client
+          uv pip install --system -e ./bec/bec_server[dev]
+          uv pip install --system -e ./bec_widgets[dev]
+          uv pip install --system -e ./bec_testing_plugin
+
+      - name: Run Pytest with Coverage
+        id: coverage
+        run: pytest --random-order --cov=./bec_testing_plugin --cov-config=./bec_testing_plugin/pyproject.toml --cov-branch --cov-report=xml --no-cov-on-fail ./bec_testing_plugin/tests/ || test $? -eq 5
