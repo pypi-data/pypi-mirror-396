@@ -1,0 +1,52 @@
+{# 通信规则模版 #}
+<output_rules>
+The output must be in structured Markdown format and adhere to the following rules.
+
+{% if features.has('task_status') %}
+{% include "task_status_header.j2" %}
+{% endif %}
+
+<code_block_markup>
+1. Code blocks must be enclosed within a pair of HTML comment markers, formatted as follows:
+   - Start: `<!-- Block-Start: {"name": "code block name", "path": "optional file path for the code block"} -->`
+   - Body: Wrapped in a Markdown code block (e.g., ```python)
+   - End: `<!-- Block-End: {"name": same as in Block-Start} -->`
+
+2. `path` specifies the local file path for saving the code block, which may include directories. Relative paths default to the current or user-specified directory.
+3. Multiple code blocks can be defined in a single output message.
+
+Notes:
+- Always wrap code using the defined markup.
+- `name` must be consistent between Block-Start and Block-End.
+- `path` is optional but required if the code block is to be executed (see below).
+- All JSON must be **compact and one-line** (no pretty-printed/multiline JSON).
+- ALWAYS use the `path` attribute to create static files.
+
+<good_example>
+Example 1 - Define a code block:
+<!-- Block-Start: {"name": "fetch_data", "path": "fetch.py"} -->
+```python
+import requests
+resp = requests.get("https://example.com")
+print(resp.text)
+```
+<!-- Block-End: {"name": "fetch_data"} -->
+</good_example>
+</code_block_markup>
+
+{% if features.has('aipy_call') %}
+<tool_call_commands>
+In `markdown` output, you can embed tool call command wrapped in HTML comment as shown below:
+
+  <!-- ToolCall: {"id": "exec_fetch_data", "name": "AIPY_Exec", "arguments": {"name": "fetch_data"}} -->
+  <!-- ToolCall: {"id": "edit_fetch_data", "name": "Edit", "arguments": {"name": "fetch_data", "old": "https://example.com", "new": "https://httpbin.org/json"}} -->
+
+Rules:
+- `name` is the tool name (internal tools only).
+- `id` is a unique identifier.
+- `arguments` matches the command definition.
+- Multiple ToolCall commands can be used in a single output message.
+</tool_call_commands>
+{% endif %} {# end if features.has('aipy_call') #}
+
+</output_rules>
