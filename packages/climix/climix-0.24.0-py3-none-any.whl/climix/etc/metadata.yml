@@ -1,0 +1,205 @@
+index_functions:
+  count_level_crossings:
+    description: |
+      This index function takes two inputs, low_data and high_data, together
+      with one parameter, the threshold.
+      It calculates the number of times low_data is below threshold while
+      high_data is above threshold.
+      First, the threshold is transformed to the same standard_name and units as
+      the input data, then the thresholding is performed, and finally, the number
+      of occurrences is counted.
+    parameters:
+      threshold:
+        kind: quantity
+
+  count_occurrences:
+    description: |
+      Calculates the number of times some condition is met.
+      First, the threshold is transformed to the same standard_name and units as
+      the input data.
+      Then the thresholding is performed as condition(data, threshold), ie
+      if condition is <, data < threshold.
+      Finally, count the number of occurrences when condition is met.
+    parameters:
+      threshold:
+        kind: quantity
+      condition:
+        kind: operator
+
+  diurnal_temperature_range:
+    description: |
+      This index function takes two inputs, low_data and high_data, i.e.
+      daily minimum and maximum temperature.
+      The diurnal temperature range is calculated using the inputs and
+      then the specified statistic is calculated.
+    parameters:
+      statistic:
+        kind: reducer
+
+  interday_diurnal_temperature_range:
+    description: |
+      This index function takes two inputs, low_data and high_data, i.e.
+      daily minimum and maximum temperature.
+      From this it calculates the average day-to-day difference in
+      diurnal temperature range.
+
+  extreme_temperature_range:
+    description: |
+      This index function takes two inputs, low_data and high_data, i.e.
+      daily minimum and maximum temperature.
+      From this it calculates the extreme temperature range as the
+      maximum of daily maximum temperature minus the minimum of daily
+      minimum temperature.
+
+  first_occurrence:
+    description: |
+      Calculates the first time some condition is met.
+      First, the threshold is transformed to the same standard_name and units as
+      the input data.
+      Then the thresholding is performed as condition(data, threshold), ie
+      if condition is <, data < threshold.
+      Finally, locate the first occurrence when condition is met.
+    parameters:
+      threshold:
+        kind: quantity
+      condition:
+        kind: operator
+
+  first_spell:
+    description: |
+      Calculates the beginning of the first spell that meets a minimum duration.
+      First, the threshold is transformed to the same standard_name and units as
+      the input data.
+      Then the thresholding is performed as condition(data, threshold), ie
+      if condition is <, data < threshold.
+      After that spells of at least minimum length are identified.
+      Finally, locate the first occurrence of such spells.
+    parameters:
+      threshold:
+        kind: quantity
+      duration:
+        kind: quantity
+      condition:
+        kind: operator
+
+  last_occurrence:
+    description: |
+      Calculates the last time some condition is met.
+      First, the threshold is transformed to the same standard_name and units as
+      the input data.
+      Then the thresholding is performed as condition(data, threshold), ie
+      if condition is <, data < threshold.
+      Finally, locate the last occurrence when condition is met.
+    parameters:
+      threshold:
+        kind: quantity
+      condition:
+        kind: operator
+
+  spell_length:
+    description: |
+      Calculates statistics on lengths of spells.
+      First, the threshold is transformed to the same standard_name and units as
+      the input data.
+      Then the thresholding is performed as condition(data, threshold),
+      ie if condition is <, data < threshold.
+      Then the spells are determined, and finally the specified statistic
+      is calculated.
+    parameters:
+      threshold:
+        kind: quantity
+      condition:
+        kind: operator
+      statistic:
+        kind: reducer
+
+  statistics:
+    description: |
+      Calculates a simple statistic of the data.
+    parameters:
+      statistic:
+        kind: reducer
+
+  thresholded_statistics:
+    description: |
+      Calculates a simple statistic of the data for which some condition is met.
+      First, the threshold is transformed to the same standard_name and units as
+      the input data.
+      Then the thresholding is performed as condition(data, threshold), ie
+      if condition is <, data < threshold.
+      Finally, the statistic is calculated for those data values that fulfill
+      the condition.
+    parameters:
+      threshold:
+        kind: quantity
+      condition:
+        kind: operator
+      statistic:
+        kind: reducer
+
+  percentile:
+    description: |
+      Calculates percentiles, default method is "linear" option of numpy and dask.
+    parameters:
+      percentiles:
+        kind: quantity
+
+  thresholded_percentile:
+    description: |
+      Calculates percentiles of data for which some condition is met.
+      First, the threshold is transformed to the same standard_name and units as
+      the input data.
+      Then the thresholding is performed as condition(data, threshold), ie
+      if condition is <, data < threshold.
+      Finally, the percentiles is calculated for those data values that fulfill
+      the condition. The default percentile method is "linear" option of numpy.
+    parameters:
+      threshold:
+        kind: quantity
+      condition:
+        kind: operator
+      percentiles:
+        kind: quantity
+
+  running_statistics:
+    description: |
+      First calculate a statistic within a moving window, then calculate a
+      different statistic across the moving windows.
+    parameters:
+      rolling_aggregator:
+        kind: reducer
+      window_size:
+        kind: quantity
+      overall_statistic:
+        kind: reducer
+
+  thresholded_running_statistics:
+    description: |
+      First calculate a statistic within a moving window, then calculate a
+      different statistic across the moving windows.
+    parameters:
+      threshold:
+        kind: quantity
+      condition:
+        kind: operator
+      rolling_aggregator:
+        kind: reducer
+      window_size:
+        kind: quantity
+      overall_statistic:
+        kind: reducer
+
+  temperature_sum:
+    description: |
+      Calculates the temperature sum above/below a threshold. First, the threshold
+      is transformed to the same standard_name and units as the input data.
+      Then the thresholding is performed as condition(data, threshold), ie
+      if condition is <, data < threshold.
+      Finally, the sum is calculated for those data values that fulfill
+      the condition after subtraction of the threshold value. If the sum is for
+      values below the threshold the result is multiplied by -1.
+    parameters:
+      threshold:
+        kind: quantity
+      condition:
+        kind: operator
