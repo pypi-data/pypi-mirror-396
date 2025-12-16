@@ -1,0 +1,288 @@
+Metadata-Version: 2.4
+Name: PubChmAPI
+Version: 0.0.47
+Summary: Simplifies interaction with the PubChem database via PUG-REST API.
+Home-page: https://github.com/ahmed1212212/PubChmAPI
+Author: Ahmed Alhilal
+Author-email: aalhilal@kfu.edu.sa
+License: MIT
+Project-URL: Source, https://github.com/ahmed1212212/PubChmAPI
+Project-URL: Tracker, https://github.com/ahmed1212212/PubChmAPI/issues
+Keywords: cheminformatics pubchem api biology chemistry drug-discovery
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: Education
+Classifier: Intended Audience :: Science/Research
+Classifier: Operating System :: OS Independent
+Classifier: Operating System :: Microsoft :: Windows :: Windows 10
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Topic :: Scientific/Engineering :: Bio-Informatics
+Classifier: Topic :: Scientific/Engineering :: Chemistry
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENCE.txt
+Requires-Dist: requests>=2.25.0
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: keywords
+Dynamic: license
+Dynamic: license-file
+Dynamic: project-url
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+````markdown
+# PubChmAPI Library
+
+## Overview
+
+### Introduction
+
+The **PubChmAPI** Python package simplifies interaction with the PubChem database via the PUG-REST API. Unlike traditional wrappers with hard-coded functions, PubChmAPI uses dynamic metaprogramming to generate endpoints, ensuring full coverage of the PubChem schema. It handles URL generation, automatic batching, and throttling to provide a seamless data retrieval experience.
+
+---
+
+## Naming Convention
+
+Functions in **PubChmAPI** follow a strict semantic naming convention to eliminate ambiguity:
+
+`domain_identifier_get_operation_option`
+
+* **Domain:** The primary database being queried (e.g., `compound`, `substance`, `assay`, `gene`).  
+* **Identifier:** The input type provided (e.g., `cid`, `name`, `smiles`, `geneid`).  
+* **Operation:** The specific data to retrieve (e.g., `properties`, `aids`, `synonyms`).  
+* **Option (Optional):** Filters or variants (e.g., `active`, `inactive`, `2d`).  
+
+---
+
+## Functions
+
+### Compound Property Functions (By Name)
+
+Retrieve calculated properties using a compound name (e.g., "Aspirin").  
+**Format:** `compound_name_get_[Property](identifier)`
+
+#### Code Example
+
+```python
+# test_pubchmapi.py
+from PubChmAPI import (
+    compound_name_get_Title, 
+    compound_name_get_MolecularFormula,
+    compound_name_get_MolecularWeight, 
+    compound_name_get_CanonicalSMILES, 
+    compound_name_get_InChI,
+    compound_name_get_InChIKey, 
+    compound_name_get_IUPACName,
+    compound_name_get_XLogP, 
+    compound_name_get_ExactMass
+)
+
+def test_pubchmapi():
+    compound = "Aspirin"
+    print("Testing PubChmAPI functions for:", compound)
+    
+    print("Title:", compound_name_get_Title(compound))
+    print("Molecular Formula:", compound_name_get_MolecularFormula(compound))
+    print("Molecular Weight:", compound_name_get_MolecularWeight(compound))
+    print("Canonical SMILES:", compound_name_get_CanonicalSMILES(compound))
+    print("InChI:", compound_name_get_InChI(compound))
+    print("InChIKey:", compound_name_get_InChIKey(compound))
+    print("IUPAC Name:", compound_name_get_IUPACName(compound))
+    print("XLogP:", compound_name_get_XLogP(compound))
+    print("Exact Mass:", compound_name_get_ExactMass(compound))
+
+if __name__ == "__main__":
+    test_pubchmapi()
+````
+
+#### Sample Output
+
+```text
+Testing PubChmAPI functions for: Aspirin
+Title: ['https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/Aspirin/property/Title/txt']
+Molecular Formula: ['https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/Aspirin/property/MolecularFormula/txt']
+Molecular Weight: ['https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/Aspirin/property/MolecularWeight/txt']
+Canonical SMILES: ['https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/Aspirin/property/SMILES/txt']
+InChI: ['https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/Aspirin/property/InChI/txt']
+InChIKey: ['https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/Aspirin/property/InChIKey/txt']
+IUPAC Name: ['https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/Aspirin/property/IUPACName/txt']
+XLogP: ['https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/Aspirin/property/XLogP/txt']
+Exact Mass: ['https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/Aspirin/property/ExactMass/txt']
+```
+
+---
+
+### Compound CID Functions
+
+Retrieve data using a Compound Identifier (CID).
+**Format:** `compound_cid_get_[Operation](identifier)`
+
+#### Code Example
+
+```python
+# test_pubchmapi_cid.py
+from PubChmAPI import (
+    compound_cid_get_description,
+    compound_cid_get_synonyms,
+    compound_cid_get_sids,
+    compound_cid_get_cids,
+    compound_cid_get_conformers,
+    compound_cid_get_png,
+    compound_cid_get_aids,
+    compound_cid_get_aids_active,
+    compound_cid_get_aids_inactive,
+    compound_cid_get_assaysummary
+)
+
+def test_cid_functions():
+    cid = 2244  # Aspirin CID
+    print(f"Testing PubChmAPI CID functions for CID: {cid}")
+
+    print("Description:", compound_cid_get_description(cid))
+    print("Synonyms:", compound_cid_get_synonyms(cid)[:5], "...")
+    print("Substance IDs:", compound_cid_get_sids(cid)[:5], "...")
+    print("Self-retrieved CIDs:", compound_cid_get_cids(cid))
+    print("Conformers:", compound_cid_get_conformers(cid)[:3], "...")
+    print("PNG URL or data type:", type(compound_cid_get_png(cid)))
+    print("All Assay IDs:", compound_cid_get_aids(cid)[:5], "...")
+    print("Active Assay IDs:", compound_cid_get_aids_active(cid)[:5], "...")
+    print("Inactive Assay IDs:", compound_cid_get_aids_inactive(cid)[:5], "...")
+    print("Assay Summary:", compound_cid_get_assaysummary(cid))
+
+if __name__ == "__main__":
+    test_cid_functions()
+```
+
+#### Sample Output
+
+```text
+Testing PubChmAPI CID functions for CID: 2244
+Description: ['https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/2244/description/xml']
+Synonyms: ['https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/2244/synonyms/txt'] ...
+Substance IDs: ['https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/2244/sids/txt'] ...
+Self-retrieved CIDs: ['https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/2244/cids/txt']
+Conformers: ['https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/2244/conformers/xml'] ...
+PNG URL or data type: <class 'list'>
+All Assay IDs: ['https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/2244/aids/txt'] ...
+Active Assay IDs: ['https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/2244/aids/txt?aids_type=active'] ...
+Inactive Assay IDs: ['https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/2244/aids/txt?aids_type=inactive'] ...
+Assay Summary: ['https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/2244/assaysummary/xml']
+```
+
+---
+
+### Biological Domain Functions
+
+Retrieve data related to proteins, genes, taxonomy, and cell lines.
+
+#### Code Example
+
+```python
+# test_pubchmapi_biological.py
+from PubChmAPI import (
+    # Protein
+    protein_accession_get_summary,
+    protein_accession_get_aids,
+    protein_gi_get_summary,
+    protein_synonym_get_aids,
+    # Gene
+    gene_geneid_get_summary,
+    gene_geneid_get_aids,
+    gene_genesymbol_get_summary,
+    gene_genesymbol_get_aids,
+    # Taxonomy
+    taxonomy_taxid_get_summary,
+    taxonomy_taxid_get_aids,
+    taxonomy_synonym_get_aids,
+    # Cell line
+    cell_cellacc_get_summary,
+    cell_cellacc_get_aids,
+    cell_synonym_get_summary
+)
+
+def test_biological_functions():
+    print("Testing PubChmAPI Biological Functions\n")
+
+    # Protein
+    accession = "P68871"
+    gi = "4506723"
+    protein_syn = "Hemoglobin"
+    print("Protein Functions:")
+    print("Summary:", protein_accession_get_summary(accession))
+    print("AIDs:", protein_accession_get_aids(accession)[:5], "...")
+    print("GI Summary:", protein_gi_get_summary(gi))
+    print("Synonym AIDs:", protein_synonym_get_aids(protein_syn)[:5], "...\n")
+
+    # Gene
+    geneid = "3043"
+    symbol = "HBB"
+    print("Gene Functions:")
+    print("GeneID Summary:", gene_geneid_get_summary(geneid))
+    print("GeneID AIDs:", gene_geneid_get_aids(geneid)[:5], "...")
+    print("Symbol Summary:", gene_genesymbol_get_summary(symbol))
+    print("Symbol AIDs:", gene_genesymbol_get_aids(symbol)[:5], "...\n")
+
+    # Taxonomy
+    taxid = "9606"
+    tax_syn = "Human"
+    print("Taxonomy Functions:")
+    print("TaxID Summary:", taxonomy_taxid_get_summary(taxid))
+    print("TaxID AIDs:", taxonomy_taxid_get_aids(taxid)[:5], "...")
+    print("Synonym AIDs:", taxonomy_synonym_get_aids(tax_syn)[:5], "...\n")
+
+    # Cell Line
+    cellacc = "CVCL_0030"
+    cell_syn = "HeLa"
+    print("Cell Line Functions:")
+    print("Cell Summary:", cell_cellacc_get_summary(cellacc))
+    print("Cell AIDs:", cell_cellacc_get_aids(cellacc)[:5], "...")
+    print("Synonym Summary:", cell_synonym_get_summary(cell_syn))
+
+if __name__ == "__main__":
+    test_biological_functions()
+```
+
+#### Sample Output
+
+```text
+Testing PubChmAPI Biological Functions
+
+Protein Functions:
+Summary: ['https://pubchem.ncbi.nlm.nih.gov/rest/pug/protein/accession/P68871/summary/json']
+AIDs: ['https://pubchem.ncbi.nlm.nih.gov/rest/pug/protein/accession/P68871/aids/txt'] ...
+GI Summary: ['https://pubchem.ncbi.nlm.nih.gov/rest/pug/protein/gi/4506723/summary/json']
+Synonym AIDs: ['https://pubchem.ncbi.nlm.nih.gov/rest/pug/protein/synonym/Hemoglobin/aids/txt'] ...
+
+Gene Functions:
+GeneID Summary: ['https://pubchem.ncbi.nlm.nih.gov/rest/pug/gene/geneid/3043/summary/json']
+GeneID AIDs: ['https://pubchem.ncbi.nlm.nih.gov/rest/pug/gene/geneid/3043/aids/txt'] ...
+Symbol Summary: ['https://pubchem.ncbi.nlm.nih.gov/rest/pug/gene/genesymbol/HBB/summary/json']
+Symbol AIDs: ['https://pubchem.ncbi.nlm.nih.gov/rest/pug/gene/genesymbol/HBB/aids/txt'] ...
+
+Taxonomy Functions:
+TaxID Summary: ['https://pubchem.ncbi.nlm.nih.gov/rest/pug/taxonomy/taxid/9606/summary/json']
+TaxID AIDs: ['https://pubchem.ncbi.nlm.nih.gov/rest/pug/taxonomy/taxid/9606/aids/txt'] ...
+Synonym AIDs: ['https://pubchem.ncbi.nlm.nih.gov/rest/pug/taxonomy/synonym/Human/aids/txt'] ...
+
+Cell Line Functions:
+Cell Summary: ['https://pubchem.ncbi.nlm.nih.gov/rest/pug/cell/cellacc/CVCL_0030/summary/json']
+Cell AIDs: ['https://pubchem.ncbi.nlm.nih.gov/rest/pug/cell/cellacc/CVCL_0030/aids/txt'] ...
+Synonym Summary: ['https://pubchem.ncbi.nlm.nih.gov/rest/pug/cell/synonym/HeLa/summary/json']
+```
+
+---
+
+
+
+Ahmed Alhilal
+=============
+
+0.0.42 (12/12/2025)
+-------------------
+- First Release
