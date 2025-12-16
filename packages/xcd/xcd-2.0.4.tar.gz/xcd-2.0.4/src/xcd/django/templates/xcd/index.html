@@ -1,0 +1,383 @@
+{% extends "layout.html" %}
+{% load static %}
+{% block content %}
+
+
+    <link rel="stylesheet" type="text/css" href="{% static 'vlastni_css/style.css' %}">
+
+    <style>
+        body {
+            background-image: url('/static/XCD2_bg.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            font-family: "Calibri", "Inter", sans-serif;
+            color: #fff;
+        }
+
+        .form-container {
+            background: rgba(0, 0, 0, 0.55);
+            border-radius: 20px;
+            padding: 30px 40px;
+            max-width: 550px;
+            margin: 50px auto;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
+        }
+
+        h1 {
+            text-align: center;
+            color: #fff;
+            margin-bottom: 2px;
+            font-weight: bold;
+            font-size: 3.2rem;
+            letter-spacing: 2px;
+        }
+        
+        .btn-outline-light {
+            background-color: #464646ff;
+
+            border: none;
+            color: white;
+            font-weight: bold;
+            border-radius: 8px;
+            padding: 10px 15px;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-outline-light:hover {
+            background-color: #ffffffff;
+            color: #1976d2;
+            cursor: pointer;
+        }
+
+        label {
+            margin-top: 12px;
+            font-weight: bold;
+            color: #ddd;
+        }
+
+        input[type="file"],
+        select,
+        textarea {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #fff;
+            padding: 8px;
+            border-radius: 8px;
+            margin-top: 5px;
+            font-size: 15px;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            cursor: pointer;
+        }
+
+        input[type="file"]::file-selector-button {
+            background-color: #1976d2;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+        }
+
+        input[type="file"]::file-selector-button:hover {
+            background-color: #ffffffff;
+            color: #1976d2;
+            cursor: pointer;
+        }
+
+        input[type="file"]::file-selector-button:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+        }
+
+        select option {
+            background: #222;
+            color: #fff;
+        }
+
+        select:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px #1976d2;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        input[type="checkbox"] {
+            accent-color: #1976d2;
+            transform: scale(1);
+            margin-right: 6px;
+            margin-top: 20px;
+            cursor: pointer;
+        }
+
+        button {
+            width: 100%;
+            margin-top: 25px;
+            padding: 10px 0;
+            background-color: #1976d2;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #ffffffff;
+            color: #1976d2;
+            cursor: pointer;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+    </style>
+
+<body>
+<div class="form-container">
+    <a href="{% url 'xcd:download_xml' %}" class="btn btn-outline-light w-100 mb-3" onclick="return confirmDownload(event);"> Stáhnout XCD.xml </a>
+    <h1>X-CELL DNA</h1>
+    <p style="text-align: center; color:gray; font-size=0.4em;"> v{{ XCD_VERSION }}</p>
+
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <!-- Výběr GeneMapper TXT -->
+        <div class="form-group">
+            {{ form.txt_file.label_tag }}
+            {{ form.txt_file }}
+        </div>
+
+        <!-- Dva comboboxy vedle sebe -->
+        <div class="form-row">
+            <div class="form-group half">
+                {{ form.kit_autosomal.label_tag }}
+                {{ form.kit_autosomal }}
+            </div>
+            <div class="form-group half">
+                {{ form.kit_y.label_tag }}
+                {{ form.kit_y }}
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group half">
+                {{ form.highlight_major }}
+                {{ form.highlight_major.label }}
+            </div>
+            <div class="form-group half">
+                {{ form.slope_effect }}
+                {{ form.slope_effect.label }}
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group half">
+                <label for="mode_filter">Typ odečtu:</label>
+                <select id="mode_filter" name="mode_filter" class="form-control" disabled>
+                    <option value="VŠE">Vše</option>
+                    <option value="SOUPISKA">Soupiska</option>
+                    <option value="PŘÍPAD">Případ</option>
+                    <option value="EXPERT">Expert</option>
+                </select>
+            </div>
+            <div class="form-group half" id="filter_container" style="display:none">
+                <label for="filter_value">Vyber:</label>
+                <select id="filter_value" name="filter_value" class="form-control">
+                    <option value="">Nejprve zvol typ odečtu</option>
+                </select>
+            </div>
+        </div>
+
+        <button type="submit">Odečíst</button>
+    
+        <div id="progress-wrap" style="display:none; margin-top:10px;">
+        <progress id="progress-bar" value="0" max="100" style="width:100%; height:20px;"></progress>
+        </div>
+    </form>
+</div>
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+  // --- prvky z DOMu ---
+  const form           = document.querySelector("form");
+  const txtInput       = document.querySelector('input[name="txt_file"]');
+  const modeSelect     = document.getElementById("mode_filter");
+  const filterSelect   = document.getElementById("filter_value");
+  const filterContainer= document.getElementById("filter_container");
+  const progressWrap   = document.getElementById("progress-wrap");
+  const progressBar    = document.getElementById("progress-bar");
+  const csrfTokenEl    = document.querySelector('[name=csrfmiddlewaretoken]');
+
+  // --- URL šablony (respektují namespace 'xcd') ---
+  const START_URL      = "{% url 'xcd:start_report' %}";
+  const LOAD_URL       = "{% url 'xcd:load_options' %}";
+  const PROGRESS_URL_T = "{% url 'xcd:progress' job_id='__JOB__' %}";
+
+  let cachedData = null;
+
+  // ======================
+  // 1) Nahrání TXT → načtení možností (případy/experti/runy)
+  // ======================
+  if (txtInput) {
+    txtInput.addEventListener("change", function (e) {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const fd = new FormData();
+      fd.append("txt_file", file);
+
+      fetch(LOAD_URL, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "X-CSRFToken": csrfTokenEl.value },
+        body: fd,
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          cachedData = data || {};
+          window.caseMap = data.case_map || {};
+          modeSelect.disabled = false;
+          filterSelect.innerHTML = "<option value=''>Zvol typ odečtu</option>";
+          filterContainer.style.display = "none";
+        })
+        .catch((err) => {
+          console.error("❌ Chyba při načtení možností:", err);
+          cachedData = null;
+          modeSelect.disabled = true;
+          filterContainer.style.display = "none";
+        });
+    });
+  }
+
+  // ======================
+  // 2) Změna typu odečtu → naplnění comboboxu
+  // ======================
+  if (modeSelect) {
+    modeSelect.addEventListener("change", function () {
+      filterSelect.innerHTML = "";
+      if (!cachedData) {
+        filterSelect.innerHTML = "<option>Nejprve nahraj TXT</option>";
+        filterContainer.style.display = "none";
+        return;
+      }
+
+      let list = [];
+      const mode = modeSelect.value;
+      if (mode === "PŘÍPAD")      list = cachedData.cases   || [];
+      else if (mode === "EXPERT") list = cachedData.experts || [];
+      else if (mode === "SOUPISKA") list = cachedData.runs  || [];
+      else if (mode === "VŠE")    list = [];
+
+      if (mode === "VŠE") {
+        filterContainer.style.display = "none";
+        return;
+      } else {
+        filterContainer.style.display = "block";
+      }
+
+      if (!list.length) {
+        filterSelect.innerHTML = "<option>Žádná data</option>";
+        return;
+      }
+
+      const frag = document.createDocumentFragment();
+      list.forEach((v) => {
+        const opt = document.createElement("option");
+        opt.value = v;
+        opt.textContent = v;
+        frag.appendChild(opt);
+      });
+      filterSelect.appendChild(frag);
+    });
+  }
+
+  // ======================
+  // 3) Vybraná položka z comboboxu → zapiš do hidden inputu
+  // ======================
+  if (filterSelect) {
+    filterSelect.addEventListener("change", function () {
+      if (!cachedData) return;
+      const map = cachedData.case_map || {};
+      const selected = filterSelect.value;
+      const real = map[selected] || selected || "";
+      const hidden = document.querySelector("input[name='filter_value']");
+      if (hidden) hidden.value = real;
+    });
+  }
+
+  // ======================
+  // 4) Odeslání formuláře → start reportu + progress bar
+  // ======================
+  if (form) {
+    form.addEventListener("submit", function (ev) {
+      ev.preventDefault();
+
+      const fd = new FormData(form);
+
+      fetch(START_URL, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "X-CSRFToken": csrfTokenEl.value },
+        body: fd,
+      })
+        .then(async (r) => {
+          if (!r.ok) {
+            const text = await r.text();
+            throw new Error(`HTTP ${r.status}: ${text.slice(0, 800)}`);
+          }
+          return r.json();
+        })
+        .then(({ job_id }) => {
+          if (!job_id) throw new Error("Job ID chybí.");
+          progressWrap.style.display = "block";
+          progressBar.value = 0;
+
+          const poll = () => {
+            const url = PROGRESS_URL_T.replace("__JOB__", job_id);
+            fetch(url)
+              .then((r) => r.json())
+              .then(({ progress }) => {
+                progressBar.value = progress ?? 0;
+                if ((progress ?? 0) < 100) {
+                  setTimeout(poll, 500);
+                } else {
+                  // po 1 s progress schovej a resetuj
+                  setTimeout(() => {
+                    progressWrap.style.display = "none";
+                    progressBar.value = 0;
+                  }, 1000);
+                }
+              })
+              .catch(() => setTimeout(poll, 800));
+          };
+          poll();
+        })
+        .catch((err) => {
+          console.error("❌ start_report error:", err);
+          alert("Chyba při startu generování:\n" + (err.message || err));
+        });
+    });
+  }
+});
+</script>
+
+
+</body>
+
+{% endblock %}
+
+{% include "zapati.html" %}
