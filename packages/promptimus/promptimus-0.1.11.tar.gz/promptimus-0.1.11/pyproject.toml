@@ -1,0 +1,58 @@
+[project]
+name = "promptimus"
+version = "0.1.11"
+readme = "README.md"
+description = "A PyTorch-like API for building composable LLM agents"
+authors = [
+    { name = "ailadin", email = "korzhukandrew@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "loguru>=0.7.3",
+    "openai>=1.58.1",
+    "pydantic>=2.10.4",
+    "tomlkit>=0.13.2",
+]
+
+[project.optional-dependencies]
+testing = [
+    "pytest>=8.3.4",
+    "pytest-asyncio>=0.25.0",
+]
+
+phoenix = [
+    "promptimus-phoenix-tracer"
+]
+
+chromadb = [
+    "promptimus-chromadb-store"
+]
+
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/promptimus"]
+
+[dependency-groups]
+dev = [
+    "ipykernel>=6.29.5",
+    "ipywidgets>=8.1.5",
+    "pre-commit>=4.2.0",
+    "rich>=13.9.4",
+]
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+
+[tool.uv.workspace]
+members = [
+    "libs/*",
+]
+
+[tool.uv.sources]
+promptimus-phoenix-tracer = { workspace = true }
+promptimus-chromadb-store = { workspace = true }
