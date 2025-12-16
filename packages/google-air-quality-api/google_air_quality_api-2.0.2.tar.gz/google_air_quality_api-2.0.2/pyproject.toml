@@ -1,0 +1,107 @@
+[build-system]
+requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
+build-backend = "poetry_dynamic_versioning.backend"
+
+[project]
+name = "google_air_quality_api"
+version = "2.0.2"
+description = "Python module to talk to Google Air Quality API."
+readme = "README.md"
+license = { text = "MIT" }
+authors  = [{ name = "Thomas Peter Protzner", email = "thomas.protzner@gmail.com" }]
+requires-python = ">=3.11"
+dependencies = [
+    "aiohttp>=3.9.3,<4.0.0",
+    "mashumaro>=3.12,<4.0.0",
+]
+packages     = [{ include = "google_air_quality_api", from = "src" }]
+
+[project.urls]
+Homepage = "https://github.com/Thomas55555/python-google-air-quality-api"
+Repository = "https://github.com/Thomas55555/python-google-air-quality-api"
+Documentation = "https://github.com/Thomas55555/python-google-air-quality-api"
+Issues = "https://github.com/Thomas55555/aioautomower/issues"
+
+[tool.poetry-dynamic-versioning]
+enable = true
+vcs = "git"
+style = "simple"
+metadata = false
+
+[tool.poetry.requires-plugins]
+poetry-dynamic-versioning = { version = ">=1.0.0,<2.0.0", extras = ["plugin"] }
+
+[tool.poetry.group.dev.dependencies]
+aioresponses = "0.7.8"
+codespell = "2.4.1"
+covdefaults = "2.3.0"
+coverage = {version = "7.12.0", extras = ["toml"]}
+pre-commit = "4.5.0"
+pre-commit-hooks = "6.0.0"
+pytest = "9.0.2"
+pytest-asyncio = "1.3.0"
+pytest-cov = "7.0.0"
+ruff = "0.14.7"
+syrupy = "5.0.0"
+time-machine = "3.1.0"
+types-pyyaml = "^6.0.12.20241230"
+yamllint = "1.37.1"
+pytest-aiohttp = "1.1.0"
+ty = "0.0.1a29"
+
+[tool.pytest.ini_options]
+addopts = "--cov=google_air_quality_api --cov-report=term-missing -vv"
+asyncio_mode = "auto"
+
+[tool.ruff]
+fix = true
+show-fixes = true
+src = ["./src"]
+target-version = "py311"
+line-length = 88
+include = ["src/**/*.py", "tests/**/*.py"]
+
+
+[tool.ruff.lint]
+ignore = [
+  "ANN401", # Opinioated warning on disallowing dynamically typed expressions
+  "D203", # Conflicts with other rules
+  "D213", # Conflicts with other rules
+  "D417", # False positives in some occasions
+  "PLR2004", # Just annoying, not really useful
+  "S101", # False positives in tests
+  "E501", # Temporary for tests
+
+  # Conflicts with the Ruff formatter
+  "COM812",
+]
+select = ["ALL"]
+
+[tool.ruff.lint.per-file-ignores]
+# Allow for main entry & scripts to write to stdout
+"example.py" = ["T201", "T203"]
+
+[tool.ruff.lint.flake8-annotations]
+allow-star-arg-any = true
+suppress-dummy-args = true
+
+[tool.ruff.lint.flake8-builtins]
+builtins-ignorelist = ["id"]
+
+[tool.ruff.lint.pydocstyle]
+# Use Google-style docstrings.
+convention = "pep257"
+
+[tool.ty.environment]
+root = ["./src"]
+
+[tool.ty.src]
+include = ["src"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 50
+
+[tool.coverage.run]
+plugins = ["covdefaults"]
+source = ["google_air_quality_api"]
