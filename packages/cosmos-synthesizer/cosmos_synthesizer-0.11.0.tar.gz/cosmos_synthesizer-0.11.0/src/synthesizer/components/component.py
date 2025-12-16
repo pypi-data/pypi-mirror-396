@@ -1,0 +1,1672 @@
+"""A module containing generic component functionality.
+
+This module contains the abstract base class for all components in the
+synthesizer. It defines the basic structure of a component and the methods
+that all components should have.
+
+StellarComponents and BlackHoleComponents are children of this class and
+contain the specific functionality for stellar and black hole components
+respectively.
+"""
+
+from abc import ABC, abstractmethod
+
+from unyt import arcsecond, kpc, pc
+
+from synthesizer import exceptions
+from synthesizer.cosmology import (
+    get_angular_diameter_distance,
+    get_luminosity_distance,
+)
+from synthesizer.emission_models import EmissionModel
+from synthesizer.emissions import plot_spectra
+from synthesizer.imaging.image_generators import (
+    _combine_image_collections,
+    _generate_image_collection_generic,
+    _prepare_component_image_labels,
+)
+from synthesizer.instruments import Instrument
+from synthesizer.synth_warnings import deprecated, deprecation
+from synthesizer.units import unit_is_compatible
+from synthesizer.utils.ascii_table import TableFormatter
+
+
+class Component(ABC):
+    """The parent class for all components in the synthesizer.
+
+    This class contains the basic structure of a component and the methods
+    that all components should have.
+
+    Attributes:
+        component_type (str):
+            The type of component, either "Stars" or "BlackHole".
+        spectra (dict):
+            A dictionary to hold the stellar spectra.
+        lines (dict):
+            A dictionary to hold the stellar emission lines.
+        photo_lnu (dict):
+            A dictionary to hold the stellar photometry in luminosity units.
+        photo_fnu (dict):
+            A dictionary to hold the stellar photometry in flux units.
+        images_lnu (dict):
+            A dictionary to hold the images in luminosity units.
+        images_fnu (dict):
+            A dictionary to hold the images in flux units
+        fesc (float):
+            The escape fraction of the component.
+        model_param_cache (dict):
+            A cache for parameters calculated by emission models.
+    """
+
+    def __init__(
+        self,
+        component_type,
+        fesc,
+        **kwargs,
+    ):
+        """Initialise the Component.
+
+        Args:
+            component_type (str):
+                The type of component, either "Stars" or "BlackHole".
+            fesc (float):
+                The escape fraction of the component.
+            **kwargs (dict):
+                Any additional keyword arguments to attach to the Component.
+        """
+        # Attach the component type and name to the object
+        self.component_type = component_type
+
+        # Define the spectra dictionary to hold the stellar spectra
+        self.spectra = {}
+
+        # Define the line dictionary to hold the stellar emission lines
+        self.lines = {}
+
+        # Define the photometry dictionaries to hold the stellar photometry
+        self.photo_lnu = {}
+        self.photo_fnu = {}
+
+        # Define the dictionaries to hold the images (we carry 3 different
+        # dictionaries for both lnu and fnu images to draw a distinction
+        # between images with and without a PSF and/or noise)
+        self.images_lnu = {}
+        self.images_fnu = {}
+        self.images_psf_lnu = {}
+        self.images_psf_fnu = {}
+        self.images_noise_lnu = {}
+        self.images_noise_fnu = {}
+
+        # Define the dictionaries to hold instrument specific spectroscopy
+        self.spectroscopy = {}
+        self.particle_spectroscopy = {}
+
+        # Attach a default escape fraction
+        self.fesc = fesc if fesc is not None else 0.0
+
+        # Set any of the extra attribute provided as kwargs
+        for key, val in kwargs.items():
+            setattr(self, key, val)
+
+        # A container for any grid weights we already computed
+        self._grid_weights = {"cic": {}, "ngp": {}}
+
+        # A container for caching parameters calculated by emission models
+        self.model_param_cache = {}
+
+    @property
+    def photo_fluxes(self):
+        """Get the photometric fluxes.
+
+        Returns:
+            dict
+                The photometry fluxes.
+        """
+        deprecation(
+            "The `photo_fluxes` attribute is deprecated. Use "
+            "`photo_fnu` instead. Will be removed in v1.0.0"
+        )
+        return self.photo_fnu
+
+    @property
+    def photo_luminosities(self):
+        """Get the photometric luminosities.
+
+        Returns:
+            dict
+                The photometry luminosities.
+        """
+        deprecation(
+            "The `photo_luminosities` attribute is deprecated. Use "
+            "`photo_lnu` instead. Will be removed in v1.0.0"
+        )
+        return self.photo_lnu
+
+    @abstractmethod
+    def get_mask(
+        self,
+        attr,
+        thresh,
+        op,
+        mask=None,
+        attr_override_obj=None,
+    ):
+        """Return a mask based on the attribute and threshold.
+
+        Will derive a mask of the form attr op thresh, e.g. age > 10 Myr.
+
+        Overloading functions should use
+        synthesizer.emission_models.utils.get_param instead of getattr to
+        allow for attribute overrides, e.g.:
+            from synthesizer.emission_models.utils import get_param
+            attr_values = get_param(
+                attr,
+                override_obj,
+                None,
+                self
+            )
+            # then use attr_values to derive the mask
+
+        Args:
+            attr (str):
+                The attribute to derive the mask from.
+            thresh (float):
+                The threshold value.
+            op (str):
+                The operation to apply. Can be '<', '>', '<=', '>=', "==",
+                or "!=".
+            mask (np.ndarray):
+                Optionally, a mask to combine with the new mask.
+            attr_override_obj (object):
+                An alternative object to check from the attribute. This
+                is specifically used when an EmissionModel may have a
+                fixed parameter override, but can be used more generally.
+
+        Returns:
+            mask (np.ndarray):
+                The mask array.
+        """
+        pass
+
+    @abstractmethod
+    def get_weighted_attr(self, attr, weights, **kwargs):
+        """Return the weighted attribute."""
+        pass
+
+    @property
+    def is_parametric(self):
+        """Return whether the component is parametric.
+
+        Returns:
+            bool
+                Whether the component is parametric.
+        """
+        # Import here to avoid circular imports
+        from synthesizer.parametric import BlackHole as ParametricBlackHole
+        from synthesizer.parametric import Stars as ParametricStars
+
+        return isinstance(self, (ParametricStars, ParametricBlackHole))
+
+    @property
+    def is_particle(self):
+        """Return whether the component is particle based.
+
+        Returns:
+            bool
+                Whether the component is particle based.
+        """
+        return not self.is_parametric
+
+    def get_luminosity_distance(self, cosmo):
+        """Get the luminosity distance of the component.
+
+        This requires the redshift to be set on the component.
+
+        This will use the astropy cosmology module to calculate the
+        luminosity distance. If the redshift is 0, the distance will be set to
+        10 pc to avoid any issues with 0s.
+
+        Args:
+            cosmo (astropy.cosmology):
+                The cosmology to use for the calculation.
+
+        Returns:
+            unyt_quantity:
+                The luminosity distance of the component in kpc.
+        """
+        # If we don't have a redshift then we can't calculate the
+        # luminosity distance
+        if not hasattr(self, "redshift"):
+            raise exceptions.InconsistentArguments(
+                "The component does not have a redshift set."
+            )
+
+        # Check redshift is set
+        if self.redshift is None:
+            raise exceptions.InconsistentArguments(
+                "The component must have a redshift set to calculate the "
+                "luminosity distance."
+            )
+
+        # At redshift > 0 we can calculate the luminosity distance explicitly
+        if self.redshift > 0:
+            return get_luminosity_distance(cosmo, self.redshift).to("kpc")
+
+        # At redshift 0 just place the component at 10 pc to
+        # avoid any issues with 0s
+        return (10 * pc).to(kpc)
+
+    def get_angular_diameter_distance(self, cosmo):
+        """Get the angular diameter distance of the component.
+
+        This requires the redshift to be set on the component.
+
+        This will use the astropy cosmology module to calculate the
+        angular diameter distance. If the redshift is 0, the distance will be
+        set to 10 pc to avoid any issues with 0s.
+
+        Args:
+            cosmo (astropy.cosmology):
+                The cosmology to use for the calculation.
+
+        Returns:
+            unyt_quantity:
+                The angular diameter distance of the component in kpc.
+        """
+        # If we don't have a redshift then we can't calculate the
+        # angular diameter distance
+        if not hasattr(self, "redshift"):
+            raise exceptions.InconsistentArguments(
+                "The component does not have a redshift set."
+            )
+
+        # Check redshift is set
+        if self.redshift is None:
+            raise exceptions.InconsistentArguments(
+                "The component must have a redshift set to calculate the "
+                "angular diameter distance."
+            )
+
+        # At redshift > 0 we can calculate the angular diameter distance
+        # explicitly
+        if self.redshift > 0:
+            return get_angular_diameter_distance(
+                cosmo,
+                self.redshift,
+            ).to("kpc")
+
+        # At redshift 0 just place the component at 10 pc to
+        # avoid any issues with 0s
+        return (10 * pc).to(kpc)
+
+    def get_photo_lnu(self, filters, verbose=True, nthreads=1, limit_to=None):
+        """Calculate luminosity photometry using a FilterCollection object.
+
+        Args:
+            filters (filters.FilterCollection):
+                A FilterCollection object.
+            verbose (bool):
+                Are we talking?
+            nthreads (int):
+                The number of threads to use for the integration. If -1, all
+                threads will be used.
+            limit_to (str/list, optional):
+                If None, then photometry is calculated for all spectra in the
+                galaxy. If a string or list of strings is provided, then
+                photometry is only calculated for the specified spectra.
+
+        Returns:
+            photo_lnu (dict):
+                A dictionary of rest frame broadband luminosities.
+        """
+        # Get the labels
+        labels = self.spectra.keys() if limit_to is None else limit_to
+
+        # Loop over spectra in the component
+        for label in labels:
+            # Create the photometry collection and store it in the object
+            self.photo_lnu[label] = self.spectra[label].get_photo_lnu(
+                filters,
+                verbose,
+                nthreads=nthreads,
+            )
+
+        return self.photo_lnu
+
+    @deprecated(
+        "The `get_photo_luminosities` method is deprecated. Use "
+        "`get_photo_lnu` instead. Will be removed in v1.0.0"
+    )
+    def get_photo_luminosities(self, filters, verbose=True):
+        """Calculate luminosity photometry using a FilterCollection object.
+
+        Alias to get_photo_lnu.
+
+        Photometry is calculated in spectral luminosity density units.
+
+        Args:
+            filters (FilterCollection):
+                A FilterCollection object.
+            verbose (bool):
+                Are we talking?
+
+        Returns:
+            PhotometryCollection
+                A PhotometryCollection object containing the luminosity
+                photometry in each filter in filters.
+        """
+        return self.get_photo_lnu(filters, verbose)
+
+    def get_photo_fnu(self, filters, verbose=True, nthreads=1, limit_to=None):
+        """Calculate flux photometry using a FilterCollection object.
+
+        Args:
+            filters (FilterCollection):
+                A FilterCollection object.
+            verbose (bool):
+                Are we talking?
+            nthreads (int):
+                The number of threads to use for the integration. If -1, all
+                threads will be used.
+            limit_to (str/list, optional):
+                If None, then photometry is calculated for all spectra in the
+                galaxy. If a string or list of strings is provided, then
+                photometry is only calculated for the specified spectra.
+
+        Returns:
+            dict:
+                A dictionary of fluxes in each filter in filters.
+        """
+        # Get the labels
+        labels = self.spectra.keys() if limit_to is None else limit_to
+
+        # Loop over spectra in the component
+        for label in labels:
+            # Create the photometry collection and store it in the object
+            self.photo_fnu[label] = self.spectra[label].get_photo_fnu(
+                filters,
+                verbose,
+                nthreads=nthreads,
+            )
+
+        return self.photo_fnu
+
+    @deprecated(
+        "The `get_photo_fluxes` method is deprecated. Use "
+        "`get_photo_fnu` instead. Will be removed in v1.0.0"
+    )
+    def get_photo_fluxes(self, filters, verbose=True):
+        """Calculate flux photometry using a FilterCollection object.
+
+        Alias to get_photo_fnu.
+
+        Photometry is calculated in spectral flux density units.
+
+        Args:
+            filters (FilterCollection):
+                A FilterCollection object.
+            verbose (bool):
+                Are we talking?
+
+        Returns:
+            PhotometryCollection:
+                A PhotometryCollection object containing the flux photometry
+                in each filter in filters.
+        """
+        return self.get_photo_fnu(filters, verbose)
+
+    def get_spectra(
+        self,
+        emission_model,
+        dust_curves=None,
+        tau_v=None,
+        fesc=None,
+        mask=None,
+        vel_shift=None,
+        verbose=True,
+        nthreads=1,
+        grid_assignment_method="cic",
+        **kwargs,
+    ):
+        """Generate stellar spectra as described by the emission model.
+
+        Args:
+            emission_model (EmissionModel):
+                The emission model to use.
+            dust_curves (dict):
+                An override to the emission model dust curves. Either:
+                    - None, indicating the dust_curves defined on the emission
+                      models should be used.
+                    - A single dust curve to apply to all emission models.
+                    - A dictionary of the form {<label>: <dust_curve instance>}
+                      to use a specific dust curve instance with particular
+                      properties.
+            tau_v (dict):
+                An override to the dust model optical depth. Either:
+                    - None, indicating the tau_v defined on the emission model
+                      should be used.
+                    - A float to use as the optical depth for all models.
+                    - A dictionary of the form {<label>: float(<tau_v>)}
+                      to use a specific optical depth with a particular
+                      model or {<label>: str(<attribute>)} to use an attribute
+                      of the component as the optical depth.
+            fesc (dict):
+                An override to the emission model escape fraction. Either:
+                    - None, indicating the fesc defined on the emission model
+                      should be used.
+                    - A float to use as the escape fraction for all models.
+                    - A dictionary of the form {<label>: float(<fesc>)}
+                      to use a specific escape fraction with a particular
+                      model or {<label>: str(<attribute>)} to use an
+                      attribute of the component as the escape fraction.
+            mask (dict):
+                An override to the emission model mask. Either:
+                    - None, indicating the mask defined on the emission model
+                      should be used.
+                    - A dictionary of the form {<label>: {"attr": attr,
+                      "thresh": thresh, "op": op}} to add a specific mask to
+                      a particular model.
+            vel_shift (bool):
+                Flags whether to apply doppler shift to the spectra.
+            verbose (bool):
+                Are we talking?
+            nthreads (int):
+                The number of threads to use for the tree search. If -1, all
+                available threads will be used.
+            grid_assignment_method (str):
+                The method to use for assigning particles to the grid. Options
+                are "cic" (cloud-in-cell) or "ngp" (nearest grid point)."
+            **kwargs (dict):
+                Any additional keyword arguments to pass to the generator
+                function.
+
+        Returns:
+            dict
+                A dictionary of spectra which can be attached to the
+                appropriate spectra attribute of the component
+                (spectra/particle_spectra)
+        """
+        # Get the spectra
+        spectra, particle_spectra = emission_model._get_spectra(
+            emitters={"stellar": self}
+            if self.component_type == "Stars"
+            else {"blackhole": self},
+            dust_curves=dust_curves,
+            tau_v=tau_v,
+            fesc=fesc,
+            mask=mask,
+            vel_shift=vel_shift,
+            verbose=verbose,
+            nthreads=nthreads,
+            grid_assignment_method=grid_assignment_method,
+            **kwargs,
+        )
+
+        # Update the spectra dictionary
+        self.spectra.update(spectra)
+
+        # Update the particle_spectra dictionary if it exists
+        if hasattr(self, "particle_spectra"):
+            self.particle_spectra.update(particle_spectra)
+
+        # Return the spectra the user wants
+        if emission_model.per_particle:
+            return self.particle_spectra[emission_model.label]
+        return self.spectra[emission_model.label]
+
+    def get_lines(
+        self,
+        line_ids,
+        emission_model,
+        dust_curves=None,
+        tau_v=None,
+        fesc=None,
+        mask=None,
+        verbose=True,
+        **kwargs,
+    ):
+        """Generate stellar lines as described by the emission model.
+
+        Args:
+            line_ids (list):
+                A list of line_ids. Doublets can be specified as a nested list
+                or using a comma (e.g. 'OIII4363,OIII4959').
+            emission_model (EmissionModel):
+                The emission model to use.
+            dust_curves (dict):
+                An override to the emission model dust curves. Either:
+                    - None, indicating the dust_curves defined on the emission
+                      models should be used.
+                    - A single dust curve to apply to all emission models.
+                    - A dictionary of the form {<label>: <dust_curve instance>}
+                      to use a specific dust curve instance with particular
+                      properties.
+            tau_v (dict):
+                An override to the dust model optical depth. Either:
+                    - None, indicating the tau_v defined on the emission model
+                      should be used.
+                    - A float to use as the optical depth for all models.
+                    - A dictionary of the form {<label>: float(<tau_v>)}
+                      to use a specific optical depth with a particular
+                      model or {<label>: str(<attribute>)} to use an attribute
+                      of the component as the optical depth.
+            fesc (dict):
+                An override to the emission model escape fraction. Either:
+                    - None, indicating the fesc defined on the emission model
+                      should be used.
+                    - A float to use as the escape fraction for all models.
+                    - A dictionary of the form {<label>: float(<fesc>)}
+                      to use a specific escape fraction with a particular
+                      model or {<label>: str(<attribute>)} to use an
+                      attribute of the component as the escape fraction.
+            mask (dict):
+                An override to the emission model mask. Either:
+                    - None, indicating the mask defined on the emission model
+                      should be used.
+                    - A dictionary of the form {<label>: {"attr": attr,
+                      "thresh": thresh, "op": op}} to add a specific mask to
+                      a particular model.
+            verbose (bool):
+                Are we talking?
+            kwargs (dict):
+                Any additional keyword arguments to pass to the generator
+                function.
+
+        Returns:
+            LineCollection
+                A LineCollection object containing the lines defined by the
+                root model.
+        """
+        # Get the lines
+        lines, particle_lines = emission_model._get_lines(
+            line_ids=line_ids,
+            emitters={"stellar": self}
+            if self.component_type == "Stars"
+            else {"blackhole": self},
+            dust_curves=dust_curves,
+            tau_v=tau_v,
+            fesc=fesc,
+            mask=mask,
+            verbose=verbose,
+            **kwargs,
+        )
+
+        # Update the lines dictionary
+        self.lines.update(lines)
+
+        # Update the particle_lines dictionary if it exists
+        if hasattr(self, "particle_lines"):
+            self.particle_lines.update(particle_lines)
+
+        # Return the lines the user wants
+        if emission_model.per_particle:
+            return self.particle_lines[emission_model.label]
+        return self.lines[emission_model.label]
+
+    def _get_images(
+        self,
+        *labels,
+        fov,
+        img_type="smoothed",
+        instrument=None,
+        kernel=None,
+        kernel_threshold=1,
+        nthreads=1,
+        limit_to=None,
+        resolution=None,
+        cosmo=None,
+        phot_type="lnu",
+    ):
+        """Make an ImageCollection from component luminosities or fluxes.
+
+        For Parametric components, images can only be smoothed. An
+        exception will be raised if a histogram is requested.
+
+        For Particle components, images can either be a simple
+        histogram ("hist") or an image with particles smoothed over
+        their SPH kernel.
+
+        Which images are produced is defined by the labels passed. If any
+        of the necessary photometry is missing for generating a particular
+        image, an exception will be raised.
+
+        Note that black holes will never be smoothed and only produce a
+        histogram due to the point source nature of black holes.
+
+        All images that are created will be stored on the emitter (Stars or
+        BlackHole/s) under the images_lnu attribute (for phot_type='lnu')
+        or images_fnu attribute (for phot_type='fnu').
+
+        Args:
+            *labels (str):
+                The labels of the emission models to make images for. These
+                must be present in the photometry dicts of the component. For
+                particle components, these labels must be present in the
+                particle photometry dicts.
+            fov (unyt_quantity of float):
+                The width of the image in image coordinates.
+            img_type (str):
+                The type of image to be made, either "hist" -> a histogram, or
+                "smoothed" -> particles smoothed over a kernel for a particle
+                galaxy. Otherwise, only smoothed is applicable.
+            instrument (Instrument):
+                The instrument to use for the image.
+            kernel (np.ndarray of float):
+                The values from one of the kernels from the kernel_functions
+                module. Only used for smoothed images.
+            kernel_threshold (float):
+                The kernel's impact parameter threshold (by default 1).
+            nthreads (int):
+                The number of threads to use in the tree search. Default is 1.
+            resolution (unyt_quantity of float):
+                [DEPRECATED] The size of a pixel.
+            cosmo (astropy.cosmology):
+                The cosmology to use for the calculation of the luminosity
+                distance. Only needed for internal conversions from cartesian
+                to angular coordinates when an angular resolution is used.
+            limit_to (str/list):
+                [DEPRECATED] If not None, defines a specific model (or list of
+                models) to limit the image generation to. Otherwise, all
+                models with saved spectra will have images generated.
+            phot_type (str):
+                The type of photometry to use, either 'lnu' for luminosity
+                units or 'fnu' for flux units.
+
+        Returns:
+            ImageCollection/dict
+                Either a single ImageCollection if only one label is passed,
+                otherwise a dict of ImageCollections keyed by label.
+        """
+        # Convert labels tuple to a list
+        labels = list(labels)
+
+        # If limit_to is passed flag that this is deprecated
+        if limit_to is not None:
+            deprecation(
+                "The `limit_to` argument in `get_images_luminosity` is "
+                "deprecated and will be removed in v1.0.0. You now pass "
+                "the desired model label(s) as positional arguments."
+            )
+
+        # Similarly, if labels contain an emission_model raise a deprecation
+        # warning and extract that models label. We will make an image for
+        # that model only.
+        _labels = []
+        while len(labels) > 0:
+            label = labels.pop(0)
+            if isinstance(label, EmissionModel):
+                deprecation(
+                    "Passing an EmissionModel to `get_images_luminosity` is "
+                    "deprecated and will be removed in v1.0.0. You now pass "
+                    "the desired model label(s) as positional arguments. We'll"
+                    f" just make an image for the root model {label.label}."
+                )
+                _labels.append(label.label)
+            else:
+                _labels.append(label)
+        labels = _labels
+
+        # Are we doing a parametric image?
+        is_param = hasattr(self, "morphology")
+
+        # Ensure we aren't trying to make a histogram for a parametric
+        # component
+        if is_param and img_type == "hist":
+            raise exceptions.InconsistentArguments(
+                f"Parametric {self.component_type} can only produce "
+                "smoothed images."
+            )
+
+        # If we haven't got an instrument create one
+        # TODO: we need to eventually fully pivot to taking only an instrument
+        # this will be done when we introduced some premade instruments
+        if instrument is None:
+            deprecation(
+                "Not passing an Instrument to `get_images_luminosity` is "
+                "deprecated and will be removed in v1.0.0. Please create/load "
+                "and pass an Instrument instance."
+            )
+            if resolution is None or fov is None:
+                raise ValueError(
+                    "If instrument not provided, a resolution and fov must "
+                    "be specified."
+                )
+
+            # Guard against empty labels list
+            if not labels:
+                raise ValueError(
+                    "No labels provided for instrument fallback. "
+                    "Please provide at least one label."
+                )
+
+            # Get the first label to extract filters for the fallback
+            # instrument
+            first_label = labels[0]
+
+            # Get the filters from the emitters based on photometry type
+            filters = None
+            if phot_type == "lnu":
+                if first_label in self.photo_lnu:
+                    filters = self.photo_lnu[first_label].filters
+            elif phot_type == "fnu":
+                if first_label in self.photo_fnu:
+                    filters = self.photo_fnu[first_label].filters
+            else:
+                raise ValueError(
+                    f"Unknown phot_type '{phot_type}'. Must be 'lnu' or 'fnu'."
+                )
+
+            # Verify filters was found
+            if filters is None:
+                raise exceptions.MissingPhotometry(
+                    f"No photometry found for label '{first_label}' with "
+                    f"type '{phot_type}'. Ensure photometry has been "
+                    "generated before creating images."
+                )
+
+            # Make the place holder instrument
+            instrument = Instrument(
+                "GenericInstrument",
+                resolution=resolution,
+                filters=filters,
+            )
+
+        # Ensure we have a cosmology if we need it
+        if unit_is_compatible(instrument.resolution, arcsecond):
+            if cosmo is None:
+                raise exceptions.InconsistentArguments(
+                    "Cosmology must be provided when using an angular "
+                    "resolution and FOV."
+                )
+
+            # Also ensure we have a redshift
+            if self.redshift is None:
+                raise exceptions.MissingAttribute(
+                    "Redshift must be set when using an angular "
+                    "resolution and FOV."
+                )
+
+        # Find which images must be generated and which can simply
+        # be combined
+        combine_labels, generate_labels = _prepare_component_image_labels(
+            labels,
+            self.model_param_cache,
+            remove_missing=True,
+        )
+
+        # Define dictionary to hold the images we are generating
+        out_images = {}
+
+        # Get the appropriate photometry
+        if is_param and phot_type == "lnu":
+            photometry_dict = self.photo_lnu
+        elif is_param and phot_type == "fnu":
+            photometry_dict = self.photo_fnu
+        elif phot_type == "lnu":
+            photometry_dict = self.particle_photo_lnu
+        elif phot_type == "fnu":
+            photometry_dict = self.particle_photo_fnu
+        else:
+            raise exceptions.InconsistentArguments(
+                f"Photometry type {phot_type} not recognised. Must be "
+                "'lnu' or 'fnu'."
+            )
+
+        # Get the images
+        for label in generate_labels:
+            # If label isn't in the photometry dict raise an exception
+            if label not in photometry_dict:
+                raise exceptions.MissingPhotometryType(
+                    f"Photometry for model {label} not found on the "
+                    f"{self.component_type} component."
+                )
+
+            out_images[label] = _generate_image_collection_generic(
+                instrument=instrument,
+                photometry=photometry_dict[label],
+                fov=fov,
+                img_type=img_type,
+                kernel=kernel,
+                kernel_threshold=kernel_threshold,
+                nthreads=nthreads,
+                emitter=self,
+                cosmo=cosmo,
+            )
+
+        # OK, loop over the combination labels and make those images
+        for label in combine_labels:
+            out_images.update(
+                {
+                    label: _combine_image_collections(
+                        images=out_images,
+                        label=label,
+                        model_cache=self.model_param_cache,
+                    )
+                }
+            )
+
+        # Get the instrument name
+        instrument_name = instrument.label
+
+        # Attach the images properly depending on whether we have a
+        # generic instrument or not
+        if instrument_name is not None:
+            if phot_type == "lnu":
+                self.images_lnu.setdefault(instrument_name, {})
+                self.images_lnu[instrument_name].update(out_images)
+            else:
+                self.images_fnu.setdefault(instrument_name, {})
+                self.images_fnu[instrument_name].update(out_images)
+        else:
+            if phot_type == "lnu":
+                self.images_lnu.update(out_images)
+            else:
+                self.images_fnu.update(out_images)
+
+        # If we generated nothing there's nothing to return
+        if len(out_images) == 0:
+            return out_images
+
+        # Return either the single image or the dict of images
+        if len(labels) == 1:
+            return out_images[labels[0]]
+        return out_images
+
+    def get_images_luminosity(
+        self,
+        *labels,
+        fov,
+        img_type="smoothed",
+        instrument=None,
+        kernel=None,
+        kernel_threshold=1,
+        nthreads=1,
+        limit_to=None,
+        resolution=None,
+        cosmo=None,
+    ):
+        """Make an ImageCollection from component luminosities.
+
+        For Parametric components, images can only be smoothed. An
+        exception will be raised if a histogram is requested.
+
+        For Particle components, images can either be a simple
+        histogram ("hist") or an image with particles smoothed over
+        their SPH kernel.
+
+        Which images are produced is defined by the labels passed. If any
+        of the necessary photometry is missing for generating a particular
+        image, an exception will be raised.
+
+        Note that black holes will never be smoothed and only produce a
+        histogram due to the point source nature of black holes.
+
+        All images that are created will be stored on the emitter (Stars or
+        BlackHole/s) under the images_lnu attribute.
+
+        Args:
+            *labels (str):
+                The labels of the emission models to make images for. These
+                must be present in the photometry dicts of the component. For
+                particle components, these labels must be present in the
+                particle photometry dicts.
+            fov (unyt_quantity of float):
+                The width of the image in image coordinates.
+            img_type (str):
+                The type of image to be made, either "hist" -> a histogram, or
+                "smoothed" -> particles smoothed over a kernel for a particle
+                galaxy. Otherwise, only smoothed is applicable.
+            instrument (Instrument):
+                The instrument to use for the image.
+            kernel (np.ndarray of float):
+                The values from one of the kernels from the kernel_functions
+                module. Only used for smoothed images.
+            kernel_threshold (float):
+                The kernel's impact parameter threshold (by default 1).
+            nthreads (int):
+                The number of threads to use in the tree search. Default is 1.
+            resolution (unyt_quantity of float):
+                [DEPRECATED] The size of a pixel.
+            cosmo (astropy.cosmology):
+                The cosmology to use for the calculation of the luminosity
+                distance. Only needed for internal conversions from cartesian
+                to angular coordinates when an angular resolution is used.
+            limit_to (str/list):
+                [DEPRECATED] If not None, defines a specific model (or list of
+                models) to limit the image generation to. Otherwise, all
+                models with saved spectra will have images generated.
+
+        Returns:
+            ImageCollection/dict
+                Either a single ImageCollection if only one label is passed,
+                otherwise a dict of ImageCollections keyed by label.
+        """
+        return self._get_images(
+            *labels,
+            fov=fov,
+            img_type=img_type,
+            instrument=instrument,
+            kernel=kernel,
+            kernel_threshold=kernel_threshold,
+            nthreads=nthreads,
+            limit_to=limit_to,
+            resolution=resolution,
+            cosmo=cosmo,
+            phot_type="lnu",
+        )
+
+    def get_images_flux(
+        self,
+        *labels,
+        fov,
+        img_type="smoothed",
+        instrument=None,
+        kernel=None,
+        kernel_threshold=1,
+        nthreads=1,
+        limit_to=None,
+        resolution=None,
+        cosmo=None,
+    ):
+        """Make an ImageCollection from component fluxes.
+
+        For Parametric components, images can only be smoothed. An
+        exception will be raised if a histogram is requested.
+
+        For Particle components, images can either be a simple
+        histogram ("hist") or an image with particles smoothed over
+        their SPH kernel.
+
+        Which images are produced is defined by the labels passed. If any
+        of the necessary photometry is missing for generating a particular
+        image, an exception will be raised.
+
+        Note that black holes will never be smoothed and only produce a
+        histogram due to the point source nature of black holes.
+
+        All images that are created will be stored on the emitter (Stars or
+        BlackHole/s) under the images_fnu attribute.
+
+        Args:
+            *labels (str):
+                The labels of the emission models to make images for. These
+                must be present in the photometry dicts of the component. For
+                particle components, these labels must be present in the
+                particle photometry dicts.
+            fov (unyt_quantity of float):
+                The width of the image in image coordinates.
+            img_type (str):
+                The type of image to be made, either "hist" -> a histogram, or
+                "smoothed" -> particles smoothed over a kernel for a particle
+                galaxy. Otherwise, only smoothed is applicable.
+            instrument (Instrument):
+                The instrument to use for the image.
+            kernel (np.ndarray of float):
+                The values from one of the kernels from the kernel_functions
+                module. Only used for smoothed images.
+            kernel_threshold (float):
+                The kernel's impact parameter threshold (by default 1).
+            nthreads (int):
+                The number of threads to use in the tree search. Default is 1.
+            resolution (unyt_quantity of float):
+                [DEPRECATED] The size of a pixel.
+            cosmo (astropy.cosmology):
+                The cosmology to use for the calculation of the luminosity
+                distance. Only needed for internal conversions from cartesian
+                to angular coordinates when an angular resolution is used.
+            limit_to (str/list):
+                [DEPRECATED] If not None, defines a specific model (or list of
+                models) to limit the image generation to. Otherwise, all
+                models with saved spectra will have images generated.
+
+        Returns:
+            ImageCollection/dict
+                Either a single ImageCollection if only one label is passed,
+                otherwise a dict of ImageCollections keyed by label.
+        """
+        return self._get_images(
+            *labels,
+            fov=fov,
+            img_type=img_type,
+            instrument=instrument,
+            kernel=kernel,
+            kernel_threshold=kernel_threshold,
+            nthreads=nthreads,
+            limit_to=limit_to,
+            resolution=resolution,
+            cosmo=cosmo,
+            phot_type="fnu",
+        )
+
+    def apply_psf_to_images_lnu(
+        self,
+        instrument,
+        psf_resample_factor=1,
+        limit_to=None,
+    ):
+        """Apply instrument PSFs to this component's luminosity images.
+
+        Args:
+            instrument (Instrument):
+                The instrument with the PSF to apply.
+            psf_resample_factor (int):
+                The resample factor for the PSF. This should be a value greater
+                than 1. The image will be resampled by this factor before the
+                PSF is applied and then downsampled back to the original
+                after convolution. This can help minimize the effects of
+                using a generic PSF centred on the galaxy centre, a
+                simplification we make for performance reasons (the
+                effects are sufficiently small that this simplifications is
+                justified).
+            limit_to (str/list):
+                If not None, defines a specific model (or list of models) to
+                limit the image generation to. Otherwise, all models with saved
+                spectra will have images generated.
+
+        Returns:
+            dict The images with the PSF applied.
+        """
+        # Ensure limit_to is a list
+        limit_to = [limit_to] if isinstance(limit_to, str) else limit_to
+
+        # Sanity check that we have a PSF
+        if instrument.psfs is None:
+            raise exceptions.InconsistentArguments(
+                f"Instrument ({instrument.label}) does not have PSFs."
+            )
+
+        # Ensure we have images for this instrument
+        if instrument.label not in self.images_lnu:
+            raise exceptions.InconsistentArguments(
+                "No images found in images_lnu for instrument"
+                f" {instrument.label}."
+            )
+
+        # Create an entry for the instrument in the PSF images
+        # dictionary if it doesn't exist
+        if instrument.label not in self.images_psf_lnu:
+            self.images_psf_lnu[instrument.label] = {}
+
+        # Loop over the images in the component
+        for key in self.images_lnu[instrument.label]:
+            # Are we limiting to a specific model?
+            if limit_to is not None and key not in limit_to:
+                continue
+
+            # Unpack the image
+            imgs = self.images_lnu[instrument.label][key]
+
+            # If requested, do the resampling
+            if psf_resample_factor > 1:
+                imgs.supersample(psf_resample_factor)
+
+            # Apply the PSF
+            self.images_psf_lnu[instrument.label][key] = imgs.apply_psfs(
+                instrument.psfs
+            )
+
+            # Undo the resampling (if needed)
+            if psf_resample_factor > 1:
+                self.images_psf_lnu[instrument.label][key].downsample(
+                    1 / psf_resample_factor
+                )
+
+        return self.images_psf_lnu[instrument.label]
+
+    def apply_psf_to_images_fnu(
+        self,
+        instrument,
+        psf_resample_factor=1,
+        limit_to=None,
+    ):
+        """Apply instrument PSFs to this component's flux images.
+
+        Args:
+            instrument (Instrument):
+                The instrument with the PSF to apply.
+            psf_resample_factor (int):
+                The resample factor for the PSF. This should be a value greater
+                than 1. The image will be resampled by this factor before the
+                PSF is applied and then downsampled back to the original
+                after convolution. This can help minimize the effects of
+                using a generic PSF centred on the galaxy centre, a
+                simplification we make for performance reasons (the
+                effects are sufficiently small that this simplifications is
+                justified).
+            limit_to (str/list):
+                If not None, defines a specific model (or list of models) to
+                limit the image generation to. Otherwise, all models with saved
+                spectra will have images generated.
+
+        Returns:
+            dict The images with the PSF applied.
+        """
+        # Ensure limit_to is a list
+        limit_to = [limit_to] if isinstance(limit_to, str) else limit_to
+
+        # Sanity check that we have a PSF
+        if instrument.psfs is None:
+            raise exceptions.InconsistentArguments(
+                f"Instrument ({instrument.label}) does not have PSFs."
+            )
+
+        # Ensure we have images for this instrument
+        if instrument.label not in self.images_fnu:
+            raise exceptions.InconsistentArguments(
+                "No images found in images_fnu for instrument"
+                f" {instrument.label}."
+            )
+
+        # Create an entry for the instrument in the PSF images
+        # dictionary if it doesn't exist
+        if instrument.label not in self.images_psf_fnu:
+            self.images_psf_fnu[instrument.label] = {}
+
+        # Loop over the images in the component
+        for key in self.images_fnu[instrument.label]:
+            # Are we limiting to a specific model?
+            if limit_to is not None and key not in limit_to:
+                continue
+
+            # Unpack the image
+            imgs = self.images_fnu[instrument.label][key]
+
+            # If requested, do the resampling
+            if psf_resample_factor > 1:
+                imgs.supersample(psf_resample_factor)
+
+            # Apply the PSF
+            self.images_psf_fnu[instrument.label][key] = imgs.apply_psfs(
+                instrument.psfs
+            )
+
+            # Undo the resampling (if needed)
+            if psf_resample_factor > 1:
+                self.images_psf_fnu[instrument.label][key].downsample(
+                    1 / psf_resample_factor
+                )
+
+        return self.images_psf_fnu[instrument.label]
+
+    def apply_noise_to_images_lnu(
+        self,
+        instrument,
+        limit_to=None,
+        apply_to_psf=True,
+    ):
+        """Apply instrument noise to this component's images.
+
+        Args:
+            instrument (Instrument):
+                The instrument with the noise to apply.
+            limit_to (str/list):
+                If not None, defines a specific model (or list of models) to
+                limit the image generation to. Otherwise, all models with saved
+                spectra will have images generated.
+            apply_to_psf (bool):
+                If True, apply the noise to the PSF images.
+                Otherwise, apply to the non-PSF images.
+
+        Returns:
+            dict The images with the noise applied.
+        """
+        # Ensure limit_to is a list
+        limit_to = [limit_to] if isinstance(limit_to, str) else limit_to
+
+        # Get the images we are applying the noise to
+        if apply_to_psf and instrument.label in self.images_psf_lnu:
+            images = self.images_psf_lnu[instrument.label]
+        elif instrument.label in self.images_lnu:
+            images = self.images_lnu[instrument.label]
+        else:
+            if apply_to_psf:
+                raise exceptions.InconsistentArguments(
+                    "No images found in images_psf_lnu for instrument"
+                    f" {instrument.label}."
+                )
+            raise exceptions.InconsistentArguments(
+                "No images found in images_lnu  for instrument"
+                f" {instrument.label}."
+            )
+
+        # Create an entry for the instrument in the noise images
+        # dictionary if it doesn't exist
+        if instrument.label not in self.images_noise_lnu:
+            self.images_noise_lnu[instrument.label] = {}
+
+        # Loop over the images in the component
+        for key in images:
+            # Are we limiting to a specific model?
+            if limit_to is not None and key not in limit_to:
+                continue
+
+            # Unpack the image
+            imgs = images[key]
+
+            # Apply the noise using the correct method
+            if instrument.noise_maps is not None:
+                self.images_noise_lnu[instrument.label][key] = (
+                    imgs.apply_noise_arrays(
+                        instrument.noise_maps,
+                    )
+                )
+            elif instrument.snrs is not None:
+                self.images_noise_lnu[instrument.label][key] = (
+                    imgs.apply_noise_from_snrs(
+                        snrs=instrument.snrs,
+                        depths=instrument.depth,
+                        aperture_radius=instrument.depth_aperture_radius,
+                    )
+                )
+            else:
+                raise exceptions.InconsistentArguments(
+                    f"Instrument ({instrument.label}) cannot be used "
+                    "for applying noise."
+                )
+
+        return self.images_noise_lnu[instrument.label]
+
+    def apply_noise_to_images_fnu(
+        self,
+        instrument,
+        limit_to=None,
+        apply_to_psf=True,
+    ):
+        """Apply instrument noise to this component's images.
+
+        Args:
+            instrument (Instrument):
+                The instrument with the noise to apply.
+            limit_to (str/list):
+                If not None, defines a specific model (or list of models) to
+                limit the image generation to. Otherwise, all models with saved
+                spectra will have images generated.
+            apply_to_psf (bool):
+                If True, apply the noise to the PSF images.
+                Otherwise, apply to the non-PSF images.
+
+        Returns:
+            dict The images with the noise applied.
+        """
+        # Ensure limit_to is a list
+        limit_to = [limit_to] if isinstance(limit_to, str) else limit_to
+
+        # Get the images we are applying the noise to
+        if apply_to_psf and instrument.label in self.images_psf_fnu:
+            images = self.images_psf_fnu[instrument.label]
+        elif instrument.label in self.images_fnu:
+            images = self.images_fnu[instrument.label]
+        else:
+            if apply_to_psf:
+                raise exceptions.InconsistentArguments(
+                    "No images found in images_psf_fnu for instrument"
+                    f" {instrument.label}."
+                )
+            raise exceptions.InconsistentArguments(
+                "No images found in images_fnu for instrument"
+                f" {instrument.label}."
+            )
+
+        # Create an entry for the instrument in the noise images
+        # dictionary if it doesn't exist
+        if instrument.label not in self.images_noise_fnu:
+            self.images_noise_fnu[instrument.label] = {}
+
+        # Loop over the images in the component
+        for key in images:
+            # Are we limiting to a specific model?
+            if limit_to is not None and key not in limit_to:
+                continue
+
+            # Unpack the image
+            imgs = images[key]
+
+            # Apply the noise using the correct method
+            if instrument.noise_maps is not None:
+                self.images_noise_fnu[instrument.label][key] = (
+                    imgs.apply_noise_arrays(
+                        instrument.noise_maps,
+                    )
+                )
+            elif instrument.snrs is not None:
+                self.images_noise_fnu[instrument.label][key] = (
+                    imgs.apply_noise_from_snrs(
+                        snrs=instrument.snrs,
+                        depths=instrument.depth,
+                        aperture_radius=instrument.depth_aperture_radius,
+                    )
+                )
+            else:
+                raise exceptions.InconsistentArguments(
+                    f"Instrument ({instrument.label}) cannot be used "
+                    "for applying noise."
+                )
+
+        return self.images_noise_fnu[instrument.label]
+
+    def get_spectroscopy(
+        self,
+        instrument,
+        limit_to=None,
+    ):
+        """Get spectroscopy for the component based on a specific instrument.
+
+        This will apply the instrument's wavelength array to each
+        spectra stored on the component.
+
+        Args:
+            instrument (Instrument):
+                The instrument to use for the spectroscopy.
+            limit_to (str/list, optional):
+                If None, then spectroscopy is calculated for all spectra in
+                the component. If a string or list of strings is provided,
+                then spectroscopy is only calculated for the specified
+                spectra.
+
+        Returns:
+            dict
+                The spectroscopy for the galaxy.
+        """
+        # Create an entry for the instrument in the spectroscopy
+        # dictionary if it doesn't exist
+        if instrument.label not in self.spectroscopy:
+            self.spectroscopy[instrument.label] = {}
+
+        # Get the labels
+        labels = self.spectra.keys() if limit_to is None else limit_to
+
+        # Loop over the spectra in the component and apply the instrument
+        for label in labels:
+            # Skip labels that don't exist on this component
+            if label not in self.spectra:
+                continue
+            self.spectroscopy[instrument.label][label] = self.spectra[
+                label
+            ].apply_instrument_lams(instrument)
+
+        # If we have particle spectra then do the same for them
+        if (
+            hasattr(self, "particle_spectra")
+            and len(self.particle_spectra) > 0
+        ):
+            if instrument.label not in self.particle_spectroscopy:
+                self.particle_spectroscopy[instrument.label] = {}
+
+            # Get the labels for particle spectra
+            particle_labels = (
+                self.particle_spectra.keys() if limit_to is None else limit_to
+            )
+
+            # Loop over the spectra in the component and apply the instrument
+            for label in particle_labels:
+                # Skip labels that don't exist on this component
+                if label not in self.particle_spectra:
+                    continue
+                self.particle_spectroscopy[instrument.label][label] = (
+                    self.particle_spectra[label].apply_instrument_lams(
+                        instrument
+                    )
+                )
+
+        # Return the spectroscopy for the component
+        return self.spectroscopy[instrument.label]
+
+    def plot_spectra(
+        self,
+        spectra_to_plot=None,
+        show=False,
+        ylimits=(),
+        xlimits=(),
+        figsize=(3.5, 5),
+        **kwargs,
+    ):
+        """Plot the spectra of the component.
+
+        Can either plot specific spectra (specified via spectra_to_plot) or
+        all spectra on the child object.
+
+        Args:
+            spectra_to_plot (string/list, string):
+                The specific spectra to plot.
+                    - If None all spectra are plotted.
+                    - If a list of strings each specifc spectra is plotted.
+                    - If a single string then only that spectra is plotted.
+            show (bool):
+                Flag for whether to show the plot or just return the
+                figure and axes.
+            ylimits (tuple):
+                The limits to apply to the y axis. If not provided the limits
+                will be calculated with the lower limit set to 1000 (100) times
+                less than the peak of the spectrum for rest_frame (observed)
+                spectra.
+            xlimits (tuple):
+                The limits to apply to the x axis. If not provided the optimal
+                limits are found based on the ylimits.
+            figsize (tuple):
+                Tuple with size 2 defining the figure size.
+            kwargs (dict):
+                Arguments to the `sed.plot_spectra` method called from this
+                wrapper.
+
+        Returns:
+            fig (matplotlib.pyplot.figure)
+                The matplotlib figure object for the plot.
+            ax (matplotlib.axes)
+                The matplotlib axes object containing the plotted data.
+        """
+        # Handling whether we are plotting all spectra, specific spectra, or
+        # a single spectra
+        if spectra_to_plot is None:
+            spectra = self.spectra
+        elif isinstance(spectra_to_plot, (list, tuple)):
+            spectra = {key: self.spectra[key] for key in spectra_to_plot}
+        else:
+            spectra = self.spectra[spectra_to_plot]
+
+        return plot_spectra(
+            spectra,
+            show=show,
+            ylimits=ylimits,
+            xlimits=xlimits,
+            figsize=figsize,
+            draw_legend=isinstance(spectra, dict),
+            **kwargs,
+        )
+
+    def plot_spectroscopy(
+        self,
+        instrument_label,
+        spectra_to_plot=None,
+        show=False,
+        ylimits=(),
+        xlimits=(),
+        figsize=(3.5, 5),
+        fig=None,
+        ax=None,
+        **kwargs,
+    ):
+        """Plot the instrument's spectroscopy of the component.
+
+        This will plot the spectroscopy for the component using the
+        instrument's wavelength array. The spectra are plotted
+        in the order they are stored in the spectroscopy dictionary.
+
+        Can either plot specific spectroscopy (specified via spectra_to_plot)
+        or all spectroscopy on the component.
+
+        Args:
+            instrument_label (str):
+                The label of the instrument to use for the spectroscopy.
+            spectra_to_plot (string/list, string):
+                The specific spectroscopy to plot.
+                    - If None all spectra are plotted.
+                    - If a list of strings each specifc spectra is plotted.
+                    - If a single string then only that spectra is plotted.
+            show (bool):
+                Flag for whether to show the plot or just return the
+                figure and axes.
+            ylimits (tuple):
+                The limits to apply to the y axis. If not provided the limits
+                will be calculated with the lower limit set to 1000 (100) times
+                less than the peak of the spectrum for rest_frame (observed)
+                spectra.
+            xlimits (tuple):
+                The limits to apply to the x axis. If not provided the optimal
+                limits are found based on the ylimits.
+            figsize (tuple):
+                Tuple with size 2 defining the figure size.
+            fig (matplotlib.pyplot.figure):
+                The matplotlib figure object for the plot.
+            ax (matplotlib.axes):
+                The matplotlib axes object containing the plotted data.
+            **kwargs (dict):
+                Arguments to the `sed.plot_spectra` method called from this
+                wrapper.
+
+        Returns:
+            fig (matplotlib.pyplot.figure)
+                The matplotlib figure object for the plot.
+            ax (matplotlib.axes)
+                The matplotlib axes object containing the plotted data.
+        """
+        # Handling whether we are plotting all spectra, specific spectra, or
+        # a single spectra
+        if spectra_to_plot is None:
+            spectra = self.spectroscopy[instrument_label]
+        elif isinstance(spectra_to_plot, (list, tuple)):
+            spectra = {
+                key: self.spectroscopy[instrument_label][key]
+                for key in spectra_to_plot
+            }
+        else:
+            spectra = self.spectroscopy[instrument_label][spectra_to_plot]
+
+        # Include the instrument label in the spectra key (i.e. plot lables)
+        if isinstance(spectra, dict):
+            spectra = {
+                f"{instrument_label}: {key}": self.spectroscopy[
+                    instrument_label
+                ][key]
+                for key in spectra
+            }
+
+        return plot_spectra(
+            spectra,
+            show=show,
+            ylimits=ylimits,
+            xlimits=xlimits,
+            figsize=figsize,
+            draw_legend=isinstance(spectra, dict),
+            fig=fig,
+            ax=ax,
+            **kwargs,
+        )
+
+    def clear_all_spectra(self):
+        """Clear all spectra from the component."""
+        self.spectra = {}
+        if hasattr(self, "particle_spectra"):
+            self.particle_spectra = {}
+
+    def clear_all_spectroscopy(self):
+        """Clear all spectroscopy from the component."""
+        self.spectroscopy = {}
+        if hasattr(self, "particle_spectroscopy"):
+            self.particle_spectroscopy = {}
+
+    def clear_all_lines(self):
+        """Clear all lines from the component."""
+        self.lines = {}
+        if hasattr(self, "particle_lines"):
+            self.particle_lines = {}
+
+    def clear_all_photometry(self):
+        """Clear all photometry from the component."""
+        self.photo_lnu = {}
+        self.photo_fnu = {}
+        if hasattr(self, "particle_photo_lnu"):
+            self.particle_photo_lnu = {}
+        if hasattr(self, "particle_photo_fnu"):
+            self.particle_photo_fnu = {}
+
+    def clear_all_emissions(self):
+        """Clear all emissions from the component.
+
+        This clears all spectra, lines, and photometry.
+        """
+        self.clear_all_spectra()
+        self.clear_all_lines()
+        self.clear_all_photometry()
+        self.clear_all_spectroscopy()
+
+    def clear_weights(self):
+        """Clear all cached grid weights from the component.
+
+        This clears all grid weights calculated using different
+        methods from this component, and resets the `_grid_weights`
+        dictionary.
+        """
+        if hasattr(self, "_grid_weights"):
+            self._grid_weights = {"cic": {}, "ngp": {}}
+
+    def print_used_parameters(self, *models):
+        """Print the parameters used by emission models in a formatted table.
+
+        This method displays all parameters that have been cached during
+        emission model calculations, organized by model label. Each model's
+        parameters are shown with their computed values.
+
+        The output is formatted using TableFormatter to match the style
+        of other print methods in synthesizer.
+
+        Args:
+            *models (str):
+                Optional model labels to print. If provided, only the
+                specified models will be printed. If not provided, all
+                cached models will be printed.
+        """
+        # Check if cache is empty
+        if not self.model_param_cache:
+            print(
+                f"No cached model parameters found for {self.component_type}."
+            )
+            return
+
+        # Determine which models to print
+        if len(models) > 0:
+            # Filter to only the requested models
+            models_to_print = {
+                label: params
+                for label, params in self.model_param_cache.items()
+                if label in models
+            }
+            # Warn about any requested models that don't exist
+            missing = set(models) - set(self.model_param_cache.keys())
+            if len(missing) > 0:
+                print(
+                    f"The following models were not found in "
+                    f"the cache: {', '.join(missing)}"
+                )
+        else:
+            # Print all models
+            models_to_print = self.model_param_cache
+
+        # Check if we have any models to print after filtering
+        if not models_to_print:
+            print("No matching models found in cache.")
+            return
+
+        # Loop over each model in the cache
+        for model_label, params in models_to_print.items():
+            # Create a simple object to hold the parameters for this model
+            class ModelParams:
+                def __init__(self, params_dict):
+                    for key, value in params_dict.items():
+                        setattr(self, key, value)
+
+            # Create the object and format it
+            param_obj = ModelParams(params)
+            formatter = TableFormatter(param_obj)
+
+            # Print the table for this model
+            print("\n" + formatter.get_table(f"Model: {model_label}"))

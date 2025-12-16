@@ -1,0 +1,70 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+
+name: Synthesizer
+
+on:
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 2
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install wheel
+          sudo apt install pandoc
+          WITH_OPENMP=1 pip install .[test,docs]
+          # Install loader dependencies (doing this separately because bigfile
+          # is not set up properly and depends on numpy and cython, the former
+          # we depend on, the latter we need to install)
+          pip install cython
+          WITH_OPENMP=1 pip install .[bluetides,eagle]
+          # These optional dependencies are needed for the docs and test but 
+          # neither are on PyPI so must be installed separately
+          pip install "illustris_python @ git+https://github.com/illustristng/illustris_python.git@master"
+          pip install "dense_basis@git+https://github.com/kartheikiyer/dense_basis"
+          pip install pytest-xdist  # enable parallel pytest execution
+          # Output the compilation report so it can be viewed in an action log
+          cat build_synth.log
+      - uses: astral-sh/ruff-action@v3 # Lint with Ruff
+        with:
+          version: 0.11.7
+          args: "format --check --diff"
+      - name: Download test data
+        run: |
+          # Download the data we need
+          synthesizer-download --test-grids --dust-grid --all-sim-data --instruments EuclidNISP
+      - name: Test with pytest
+        run: |
+          pytest -n auto
+          # Test ipython notebooks
+          pytest -n auto --nbmake docs/source/*/*.ipynb docs/source/*/*/*.ipynb
+      - name: Test grid-generation
+        run: |
+          git clone https://github.com/synthesizer-project/grid-generation.git
+          cd grid-generation
+          pip install .
+          pytest -n auto
+      - name: Sphinx Build
+        run: |
+          # Test sphinx build (runs all notebooks)
+          cd docs
+          make clean
+          make html SPHINXOPTS="-j auto"
