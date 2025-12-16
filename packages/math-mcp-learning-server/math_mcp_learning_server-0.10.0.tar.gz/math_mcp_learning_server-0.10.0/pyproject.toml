@@ -1,0 +1,109 @@
+[project]
+name = "math-mcp-learning-server"
+version = "0.10.0"
+description = "Production-ready educational MCP server with enhanced visualizations and persistent workspace - Complete learning guide demonstrating FastMCP 2.0 best practices for Model Context Protocol development"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [
+    {name = "Hugues Clouâtre", email = "hugues@linux.com"}
+]
+keywords = ["mcp", "math", "calculator", "learning", "fastmcp", "tutorial", "education", "cloud", "deployment", "workspace", "persistence"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Education",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Documentation",
+    "Environment :: Console",
+]
+dependencies = [
+    "fastmcp>=2.0.0",
+    "pydantic>=2.12.0",
+    "pydantic-settings>=2.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/clouatre-labs/math-mcp-learning-server"
+Repository = "https://github.com/clouatre-labs/math-mcp-learning-server"
+Issues = "https://github.com/clouatre-labs/math-mcp-learning-server/issues"
+Documentation = "https://github.com/clouatre-labs/math-mcp-learning-server#readme"
+Contributing = "https://github.com/clouatre-labs/math-mcp-learning-server/blob/main/CONTRIBUTING.md"
+Roadmap = "https://github.com/clouatre-labs/math-mcp-learning-server/blob/main/ROADMAP.md"
+Changelog = "https://github.com/clouatre-labs/math-mcp-learning-server/releases"
+"Code of Conduct" = "https://github.com/clouatre-labs/math-mcp-learning-server/blob/main/CODE_OF_CONDUCT.md"
+License = "https://github.com/clouatre-labs/math-mcp-learning-server/blob/main/LICENSE"
+
+[project.scripts]
+math-mcp-learning-server = "math_mcp.server:main"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+pythonpath = ["src"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.4.2",
+    "pytest-asyncio>=0.25.2",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.13.1",
+]
+plotting = [
+    "matplotlib>=3.10.6",
+    "numpy>=2.3.3",
+]
+scientific = [
+    "numpy>=2.3.3",
+]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "W",   # pycodestyle warnings
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "S",   # flake8-bandit (security)
+]
+ignore = [
+    "S101",  # Use of assert (common in tests)
+    "S307",  # Use of eval() - controlled and safe for math calculator
+    "E501",  # Line too long - formatter handles most cases
+    "B904",  # raise-without-from - acceptable for this educational project
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "F401"]  # Allow assert + unused imports in tests
+
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
