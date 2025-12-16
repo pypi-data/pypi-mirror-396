@@ -1,0 +1,87 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mle-runtime"
+dynamic = ["version"]
+description = "High-performance machine learning inference engine that outperforms joblib by 10-100x"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Vinay Kamble", email = "vinaykamble289@gmail.com"}
+]
+maintainers = [
+    {name = "MLE Runtime Team", email = "contact@mle-runtime.org"}
+]
+keywords = [
+    "machine learning", "inference", "runtime", "performance", 
+    "joblib", "scikit-learn", "pytorch", "tensorflow", "compression",
+    "serialization", "model deployment", "edge computing"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: C++",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Archiving :: Compression",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "numpy>=1.19.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0",
+    "pytest-cov>=2.0",
+    "black>=21.0",
+    "flake8>=3.8",
+    "mypy>=0.800",
+]
+sklearn = ["scikit-learn>=1.0.0"]
+pytorch = ["torch>=1.9.0"]
+tensorflow = ["tensorflow>=2.6.0"]
+xgboost = ["xgboost>=1.5.0"]
+lightgbm = ["lightgbm>=3.2.0"]
+catboost = ["catboost>=1.0.0"]
+all = [
+    "scikit-learn>=1.0.0",
+    "torch>=1.9.0", 
+    "tensorflow>=2.6.0",
+    "xgboost>=1.5.0",
+    "lightgbm>=3.2.0",
+    "catboost>=1.0.0",
+]
+
+[project.scripts]
+mle-runtime = "mle_runtime.cli:main"
+mle-export = "mle_runtime.exporters.cli:export_main"
+mle-inspect = "mle_runtime.cli:inspect_main"
+mle-benchmark = "mle_runtime.cli:benchmark_main"
+
+[project.urls]
+Homepage = "https://github.com/vinaykamble289/mle-runtime"
+Documentation = "https://mle-runtime.readthedocs.io/"
+Repository = "https://github.com/vinaykamble289/mle-runtime"
+"Bug Tracker" = "https://github.com/vinaykamble289/mle-runtime/issues"
+
+[tool.setuptools]
+packages = ["mle_runtime", "mle_runtime.exporters"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+mle_runtime = ["*.so", "*.dll", "*.dylib"]
+
+[tool.setuptools_scm]
+write_to = "mle_runtime/_version.py"
