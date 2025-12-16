@@ -1,0 +1,1694 @@
+Constraints API Reference
+=========================
+
+This page provides complete API documentation for the constraint system in
+``rust-ephem``. Constraints are used to evaluate observational restrictions
+for satellite and astronomical observation planning.
+
+.. contents:: Table of Contents
+   :local:
+   :depth: 3
+
+Overview
+--------
+
+The constraint system provides two complementary APIs:
+
+1. **Rust-backed Constraint class** — Low-level interface with factory methods
+   for creating constraints directly in Rust. Faster for simple use cases.
+
+2. **Pydantic configuration models** — Type-safe Python models that serialize
+   to/from JSON and support operator-based composition. Recommended for most users.
+
+Both APIs can be used interchangeably and produce identical results.
+
+Quick Start
+-----------
+
+.. code-block:: python
+
+   import rust_ephem
+   from rust_ephem.constraints import SunConstraint, MoonConstraint
+   from datetime import datetime, timezone
+
+   # Ensure planetary ephemeris is loaded
+   rust_ephem.ensure_planetary_ephemeris()
+
+   # Create ephemeris
+   ephem = rust_ephem.TLEEphemeris(
+       norad_id=25544,  # ISS
+       begin=datetime(2024, 1, 1, tzinfo=timezone.utc),
+       end=datetime(2024, 1, 2, tzinfo=timezone.utc),
+       step_size=300
+   )
+
+   # Create combined constraint using operators
+   constraint = SunConstraint(min_angle=45.0) & MoonConstraint(min_angle=10.0)
+
+   # Evaluate for a target (Crab Nebula)
+   result = constraint.evaluate(ephem, target_ra=83.63, target_dec=22.01)
+
+   print(f"All satisfied: {result.all_satisfied}")
+   print(f"Violations: {len(result.violations)}")
+   print(f"Visibility windows: {len(result.visibility)}")
+
+
+Constraint Class (Rust Backend)
+-------------------------------
+
+The ``Constraint`` class provides the core constraint evaluation functionality
+implemented in Rust for maximum performance.
+
+Factory Methods
+^^^^^^^^^^^^^^^
+
+.. py:staticmethod:: Constraint.sun_proximity(min_angle, max_angle=None)
+
+   Create a Sun proximity constraint.
+
+   :param float min_angle: Minimum allowed angular separation from Sun in degrees (0-180)
+   :param float max_angle: Maximum allowed angular separation from Sun in degrees (optional)
+   :returns: A new Constraint instance
+   :rtype: Constraint
+   :raises ValueError: If angles are out of valid range
+
+   **Example:**
+
+   .. code-block:: python
+
+      # Target must be at least 45° from Sun
+      constraint = Constraint.sun_proximity(45.0)
+
+      # Target must be between 30° and 120° from Sun
+      constraint = Constraint.sun_proximity(30.0, 120.0)
+
+.. py:staticmethod:: Constraint.moon_proximity(min_angle, max_angle=None)
+
+   Create a Moon proximity constraint.
+
+   :param float min_angle: Minimum allowed angular separation from Moon in degrees (0-180)
+   :param float max_angle: Maximum allowed angular separation from Moon in degrees (optional)
+   :returns: A new Constraint instance
+   :rtype: Constraint
+   :raises ValueError: If angles are out of valid range
+
+   **Example:**
+
+   .. code-block:: python
+
+      # Target must be at least 10° from Moon
+      constraint = Constraint.moon_proximity(10.0)
+
+.. py:staticmethod:: Constraint.earth_limb(min_angle, max_angle=None)
+
+   Create an Earth limb avoidance constraint.
+
+   For spacecraft, this ensures the target is sufficiently above Earth's limb
+   as seen from the spacecraft position.
+
+   :param float min_angle: Additional margin beyond Earth's apparent angular radius (degrees)
+   :param float max_angle: Maximum allowed angular separation from Earth limb (degrees, optional)
+   :returns: A new Constraint instance
+   :rtype: Constraint
+   :raises ValueError: If angles are out of valid range
+
+   **Example:**
+
+   .. code-block:: python
+
+      # Target must be at least 28° above Earth's limb
+      constraint = Constraint.earth_limb(28.0)
+
+.. py:staticmethod:: Constraint.body_proximity(body, min_angle, max_angle=None)
+
+   Create a generic solar system body avoidance constraint.
+
+   :param str body: Body identifier — NAIF ID or name (e.g., "Jupiter", "499", "Mars")
+   :param float min_angle: Minimum allowed angular separation in degrees (0-180)
+   :param float max_angle: Maximum allowed angular separation in degrees (optional)
+   :returns: A new Constraint instance
+   :rtype: Constraint
+   :raises ValueError: If angles are out of valid range
+
+   **Supported Bodies:**
+
+   - Planet names: "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune"
+   - Planet barycenters: "Jupiter barycenter", "5" (NAIF ID)
+   - Other bodies: "Pluto", various moons (depending on loaded kernels)
+
+   .. note::
+      Body availability depends on the ephemeris type and loaded SPICE kernels.
+      The default ``de440s.bsp`` includes Sun, Moon, Earth, and planetary barycenters.
+
+   **Example:**
+
+   .. code-block:: python
+
+      # Target must be at least 15° from Mars
+      constraint = Constraint.body_proximity("Mars", 15.0)
+
+      # Using NAIF ID (5 = Jupiter barycenter)
+      constraint = Constraint.body_proximity("5", 20.0)
+
+.. py:staticmethod:: Constraint.eclipse(umbra_only=True)
+
+   Create an eclipse constraint that detects when the observer is in Earth's shadow.
+
+   :param bool umbra_only: If True, only umbra counts as eclipse. If False, penumbra also counts.
+   :returns: A new Constraint instance
+   :rtype: Constraint
+
+   **Example:**
+
+   .. code-block:: python
+
+      # Constraint violated only in umbra (full shadow)
+      constraint = Constraint.eclipse(umbra_only=True)
+
+      # Constraint violated in both umbra and penumbra
+      constraint = Constraint.eclipse(umbra_only=False)
+
+.. py:staticmethod:: Constraint.airmass(max_airmass, min_airmass=None)
+
+   Create an airmass constraint that limits observations based on atmospheric path length.
+
+   :param float max_airmass: Maximum allowed airmass (> 1.0)
+   :param float min_airmass: Minimum allowed airmass (≥ 1.0, optional)
+   :returns: A new Constraint instance
+   :rtype: Constraint
+   :raises ValueError: If airmass values are out of valid range
+
+   Airmass represents the optical path length through Earth's atmosphere:
+
+   * Airmass = 1.0 at zenith (best observing conditions)
+   * Airmass = 2.0 at ~30° altitude
+   * Airmass = 3.0 at ~19° altitude
+   * Higher airmass values indicate worse observing conditions
+
+   **Example:**
+
+   .. code-block:: python
+
+      # Target must be at airmass ≤ 2.0 (altitude ≥ ~30°)
+      constraint = Constraint.airmass(2.0)
+
+      # Target must be between airmass 1.2 and 2.5
+      constraint = Constraint.airmass(2.5, min_airmass=1.2)
+
+.. py:staticmethod:: Constraint.daytime(twilight="civil")
+
+   Create a daytime constraint that prevents observations during daylight hours.
+
+   :param str twilight: Twilight definition ("civil", "nautical", "astronomical", or "none")
+   :returns: A new Constraint instance
+   :rtype: Constraint
+   :raises ValueError: If twilight type is invalid
+
+   Twilight definitions:
+
+   * ``"civil"``: Civil twilight (-6° below horizon, default)
+   * ``"nautical"``: Nautical twilight (-12° below horizon)
+   * ``"astronomical"``: Astronomical twilight (-18° below horizon)
+   * ``"none"``: Strict daytime only (Sun above horizon)
+
+   **Example:**
+
+   .. code-block:: python
+
+      # Prevent observations during civil twilight or daylight
+      constraint = Constraint.daytime()
+
+      # Use nautical twilight definition
+      constraint = Constraint.daytime(twilight="nautical")
+
+.. py:staticmethod:: Constraint.moon_phase(max_illumination, min_illumination=None, min_distance=None, max_distance=None, enforce_when_below_horizon=False, moon_visibility="full")
+
+   Create a Moon phase constraint with optional distance filtering.
+
+   :param float max_illumination: Maximum allowed Moon illumination fraction (0.0-1.0)
+   :param float min_illumination: Minimum allowed Moon illumination fraction (0.0-1.0, optional)
+   :param float min_distance: Minimum allowed Moon distance in degrees from target (optional)
+   :param float max_distance: Maximum allowed Moon distance in degrees from target (optional)
+   :param bool enforce_when_below_horizon: Whether to enforce constraint when Moon is below horizon
+   :param str moon_visibility: Moon visibility requirement ("full" or "partial")
+   :returns: A new Constraint instance
+   :rtype: Constraint
+   :raises ValueError: If parameters are out of valid range
+
+   Moon illumination ranges from 0.0 (new moon) to 1.0 (full moon).
+
+   **Example:**
+
+   .. code-block:: python
+
+      # Moon illumination must be ≤ 30%
+      constraint = Constraint.moon_phase(0.3)
+
+      # Moon illumination between 10% and 50%, keep Moon ≥ 30° away
+      constraint = Constraint.moon_phase(0.5, min_illumination=0.1, min_distance=30.0)
+
+.. py:staticmethod:: Constraint.saa(polygon)
+
+   Create a South Atlantic Anomaly constraint.
+
+   The South Atlantic Anomaly is a region of reduced magnetic field strength
+   that increases radiation exposure for satellites.
+
+   :param list polygon: List of (longitude, latitude) pairs defining the SAA region boundary
+   :returns: A new Constraint instance
+   :rtype: Constraint
+   :raises ValueError: If polygon has fewer than 3 vertices
+
+   The polygon should be defined as a list of (longitude, latitude) coordinate pairs
+   in degrees, defining the boundary of the region. The polygon is assumed to be
+   closed (first and last points are connected).
+
+   **Example:**
+
+   .. code-block:: python
+
+      # Define SAA region as a polygon
+      saa_polygon = [
+          (-90.0, -50.0),   # Southwest corner
+          (-40.0, -50.0),   # Southeast corner
+          (-40.0, 0.0),     # Northeast corner
+          (-90.0, 0.0),     # Northwest corner
+      ]
+
+      # Avoid SAA region
+      constraint = Constraint.saa(saa_polygon)
+
+      # To require being in SAA region, use NOT
+      require_saa = ~Constraint.saa(saa_polygon)
+
+.. py:staticmethod:: Constraint.alt_az(min_altitude, max_altitude=None, min_azimuth=None, max_azimuth=None, polygon=None)
+
+   Create an altitude/azimuth constraint.
+
+   Constrains observations based on target position in the observer's local horizon
+   coordinate system. Can use simple altitude/azimuth ranges or define a custom
+   polygon region in altitude/azimuth space.
+
+   :param float min_altitude: Minimum allowed altitude in degrees (0-90)
+   :param float max_altitude: Maximum allowed altitude in degrees (0-90), optional
+   :param float min_azimuth: Minimum allowed azimuth in degrees (0-360), optional
+   :param float max_azimuth: Maximum allowed azimuth in degrees (0-360), optional
+   :param list polygon: List of (altitude, azimuth) pairs defining allowed region, optional
+   :returns: A new Constraint instance
+   :rtype: Constraint
+   :raises ValueError: If angles are out of valid range or polygon has fewer than 3 vertices
+
+   **Coordinate System:**
+
+   * Altitude: Angular distance from horizon (0° = horizon, 90° = zenith)
+   * Azimuth: Angular distance from North, measured eastward (0° = North, 90° = East, 180° = South, 270° = West)
+
+   **Polygon Mode:**
+
+   When a polygon is provided, the target must be inside the polygon to satisfy the constraint.
+   The polygon is defined as a list of (altitude, azimuth) coordinate pairs forming a closed region.
+   Uses the winding number algorithm for robust point-in-polygon testing.
+
+   **Example:**
+
+   .. code-block:: python
+
+      # Simple altitude range constraint
+      constraint = Constraint.alt_az(min_altitude=10.0, max_altitude=85.0)
+
+      # Azimuth range constraint (e.g., avoid west, only observe east/south)
+      constraint = Constraint.alt_az(min_altitude=5.0, min_azimuth=45.0, max_azimuth=225.0)
+
+      # Define a custom observing region as a polygon
+      # Observing window at altitude [30-70°] and azimuth [90-180°] (south to east)
+      observing_region = [
+          (30, 90),    # Southwest corner
+          (30, 180),   # Southeast corner
+          (70, 180),   # Northeast corner
+          (70, 90),    # Northwest corner
+      ]
+      constraint = Constraint.alt_az(min_altitude=0.0, polygon=observing_region)
+
+      # Combine polygon with additional altitude constraint
+      constraint = Constraint.alt_az(min_altitude=35.0, polygon=observing_region)
+
+.. py:staticmethod:: Constraint.orbit_ram(min_angle, max_angle=None)
+
+   Create an orbit RAM direction constraint.
+
+   Ensures the target maintains minimum angular separation from the spacecraft's
+   velocity vector (RAM direction).
+
+   :param float min_angle: Minimum allowed angular separation from RAM direction in degrees (0-180)
+   :param float max_angle: Maximum allowed angular separation from RAM direction in degrees (optional)
+   :returns: A new Constraint instance
+   :rtype: Constraint
+   :raises ValueError: If angles are out of valid range
+
+   **Requirements:**
+
+   The ephemeris must contain velocity data (6 columns: position + velocity).
+
+   **Example:**
+
+   .. code-block:: python
+
+      # Target must be at least 10° from RAM direction
+      constraint = Constraint.orbit_ram(10.0)
+
+      # Target must be between 5° and 45° from RAM direction
+      constraint = Constraint.orbit_ram(5.0, 45.0)
+
+.. py:staticmethod:: Constraint.orbit_pole(min_angle, max_angle=None)
+
+   Create an orbit pole direction constraint.
+
+   Ensures the target maintains minimum angular separation from the orbital pole
+   (direction perpendicular to the orbital plane). Useful for maintaining
+   specific orientations relative to the spacecraft's orbit.
+
+   :param float min_angle: Minimum allowed angular separation from orbital pole in degrees (0-180)
+   :param float max_angle: Maximum allowed angular separation from orbital pole in degrees (optional)
+   :returns: A new Constraint instance
+   :rtype: Constraint
+   :raises ValueError: If angles are out of valid range
+
+   **Requirements:**
+
+   The ephemeris must contain velocity data (6 columns: position + velocity).
+
+   **Example:**
+
+   .. code-block:: python
+
+      # Target must be at least 15° from orbital pole
+      constraint = Constraint.orbit_pole(15.0)
+
+      # Target must be between 10° and 80° from orbital pole
+      constraint = Constraint.orbit_pole(10.0, 80.0)
+
+Logical Combinators
+^^^^^^^^^^^^^^^^^^^
+
+.. py:staticmethod:: Constraint.and_(*constraints)
+
+   Combine constraints with logical AND.
+
+   :param constraints: Variable number of Constraint objects
+   :returns: A new Constraint that is satisfied only if ALL input constraints are satisfied
+   :rtype: Constraint
+   :raises ValueError: If no constraints provided
+
+   **Example:**
+
+   .. code-block:: python
+
+      sun = Constraint.sun_proximity(45.0)
+      moon = Constraint.moon_proximity(10.0)
+      combined = Constraint.and_(sun, moon)
+
+.. py:staticmethod:: Constraint.or_(*constraints)
+
+   Combine constraints with logical OR.
+
+   :param constraints: Variable number of Constraint objects
+   :returns: A new Constraint that is satisfied if ANY input constraint is satisfied
+   :rtype: Constraint
+   :raises ValueError: If no constraints provided
+
+   **Example:**
+
+   .. code-block:: python
+
+      eclipse = Constraint.eclipse()
+      earth_limb = Constraint.earth_limb(20.0)
+      either = Constraint.or_(eclipse, earth_limb)
+
+.. py:staticmethod:: Constraint.xor_(*constraints)
+
+   Combine constraints with logical XOR.
+
+   :param constraints: Variable number of Constraint objects (minimum 2)
+   :returns: A new Constraint that is violated when EXACTLY ONE input constraint is violated
+   :rtype: Constraint
+   :raises ValueError: If fewer than two constraints are provided
+
+   **Violation Semantics:**
+
+   - XOR is violated when exactly one sub-constraint is violated
+   - XOR is satisfied when zero or more than one sub-constraints are violated
+
+   **Example:**
+
+   .. code-block:: python
+
+      sun = Constraint.sun_proximity(45.0)
+      moon = Constraint.moon_proximity(10.0)
+      exclusive = Constraint.xor_(sun, moon)
+
+.. py:staticmethod:: Constraint.not_(constraint)
+
+   Negate a constraint with logical NOT.
+
+   :param Constraint constraint: Constraint to negate
+   :returns: A new Constraint that is satisfied when the input is violated
+   :rtype: Constraint
+
+   **Example:**
+
+   .. code-block:: python
+
+      eclipse = Constraint.eclipse()
+      not_eclipse = Constraint.not_(eclipse)  # Satisfied when NOT in eclipse
+
+.. py:staticmethod:: Constraint.from_json(json_str)
+
+   Create a constraint from a JSON string configuration.
+
+   :param str json_str: JSON representation of the constraint configuration
+   :returns: A new Constraint instance
+   :rtype: Constraint
+   :raises ValueError: If JSON is invalid or contains unknown constraint type
+
+   **JSON Format Examples:**
+
+   Simple constraints:
+
+   .. code-block:: json
+
+      {"type": "sun", "min_angle": 45.0}
+
+   .. code-block:: json
+
+      {"type": "moon", "min_angle": 10.0, "max_angle": 90.0}
+
+   .. code-block:: json
+
+      {"type": "eclipse", "umbra_only": true}
+
+   .. code-block:: json
+
+      {"type": "earth_limb", "min_angle": 28.0}
+
+   .. code-block:: json
+
+      {"type": "body", "body": "Mars", "min_angle": 15.0}
+
+   .. code-block:: json
+
+      {"type": "saa", "polygon": [[-90.0, -50.0], [-40.0, -50.0], [-40.0, 0.0], [-90.0, 0.0]]}
+
+   Logical combinators:
+
+   .. code-block:: json
+
+      {"type": "and", "constraints": [{"type": "sun", "min_angle": 45.0}, {"type": "moon", "min_angle": 10.0}]}
+
+   .. code-block:: json
+
+      {"type": "not", "constraint": {"type": "eclipse", "umbra_only": true}}
+
+   **Example:**
+
+   .. code-block:: python
+
+      json_config = '{"type": "sun", "min_angle": 45.0}'
+      constraint = Constraint.from_json(json_config)
+
+Evaluation Methods
+^^^^^^^^^^^^^^^^^^
+
+.. py:method:: Constraint.evaluate(ephemeris, target_ra, target_dec, times=None, indices=None)
+
+   Evaluate constraint against ephemeris data.
+
+   :param ephemeris: One of TLEEphemeris, SPICEEphemeris, GroundEphemeris, or OEMEphemeris
+   :param float target_ra: Target right ascension in degrees (ICRS/J2000)
+   :param float target_dec: Target declination in degrees (ICRS/J2000)
+   :param times: Optional specific time(s) to evaluate (datetime or list of datetimes)
+   :param indices: Optional specific time index/indices to evaluate (int or list of ints)
+   :returns: ConstraintResult containing violation windows
+   :rtype: ConstraintResult
+   :raises ValueError: If both times and indices are provided, or if times/indices not found
+   :raises TypeError: If ephemeris type is not supported
+
+   **Example:**
+
+   .. code-block:: python
+
+      result = constraint.evaluate(ephem, target_ra=83.63, target_dec=22.01)
+
+      # Evaluate at specific times
+      from datetime import datetime, timezone
+      times = [
+          datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+          datetime(2024, 1, 1, 18, 0, 0, tzinfo=timezone.utc),
+      ]
+      result = constraint.evaluate(ephem, 83.63, 22.01, times=times)
+
+      # Evaluate at specific indices
+      result = constraint.evaluate(ephem, 83.63, 22.01, indices=[0, 10, 20])
+
+.. py:method:: Constraint.in_constraint_batch(ephemeris, target_ras, target_decs, times=None, indices=None)
+
+   Check if targets are in-constraint for multiple RA/Dec positions (vectorized).
+
+   This method is **3-50x faster** than calling ``evaluate()`` in a loop when
+   you need to check many target positions.
+
+   :param ephemeris: One of TLEEphemeris, SPICEEphemeris, GroundEphemeris, or OEMEphemeris
+   :param list target_ras: List of target right ascensions in degrees (ICRS/J2000)
+   :param list target_decs: List of target declinations in degrees (ICRS/J2000)
+   :param times: Optional specific time(s) to evaluate
+   :param indices: Optional specific time index/indices to evaluate
+   :returns: 2D numpy boolean array of shape (n_targets, n_times)
+   :rtype: numpy.ndarray
+
+   **Return Value:**
+
+   The returned array has shape ``(n_targets, n_times)`` where:
+
+   - ``violations[i, j] = True`` means target ``i`` **violates** the constraint at time ``j``
+   - ``violations[i, j] = False`` means target ``i`` **satisfies** the constraint at time ``j``
+
+   **Example:**
+
+   .. code-block:: python
+
+      import numpy as np
+
+      # Check 1000 random targets
+      target_ras = np.random.uniform(0, 360, 1000)
+      target_decs = np.random.uniform(-90, 90, 1000)
+
+      violations = constraint.in_constraint_batch(ephem, target_ras, target_decs)
+
+      print(f"Shape: {violations.shape}")  # (1000, n_times)
+
+      # Count violations per target
+      violation_counts = violations.sum(axis=1)
+
+      # Find targets that never violate
+      always_visible = np.where(violation_counts == 0)[0]
+
+.. py:method:: Constraint.in_constraint(time, ephemeris, target_ra, target_dec)
+
+   Check if the target satisfies the constraint at given time(s).
+
+   This method accepts single times, lists of times, or numpy arrays of times.
+   For multiple times, it efficiently uses batch evaluation internally.
+
+   :param time: The time(s) to check (must exist in ephemeris timestamps).
+                Can be a single datetime, list of datetimes, or numpy array of datetimes.
+   :type time: datetime or list[datetime] or numpy.ndarray
+   :param ephemeris: One of TLEEphemeris, SPICEEphemeris, GroundEphemeris, or OEMEphemeris
+   :param float target_ra: Target right ascension in degrees (ICRS/J2000)
+   :param float target_dec: Target declination in degrees (ICRS/J2000)
+   :returns: True if constraint is satisfied at the given time(s).
+             Returns a single bool for a single time, or a list of bools for multiple times.
+   :rtype: bool or list[bool]
+   :raises ValueError: If time is not found in ephemeris timestamps
+
+   **Examples:**
+
+   .. code-block:: python
+
+      import numpy as np
+      from datetime import datetime, timezone
+
+      time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+
+      # Single time
+      is_visible = constraint.in_constraint(time, ephem, 83.63, 22.01)
+      # Returns: bool
+
+      # Multiple times as list
+      times = [time, time]
+      results = constraint.in_constraint(times, ephem, 83.63, 22.01)
+      # Returns: [bool, bool]
+
+      # Multiple times as numpy array
+      times_array = np.array([time, time, time])
+      results = constraint.in_constraint(times_array, ephem, 83.63, 22.01)
+      # Returns: [bool, bool, bool]
+
+Serialization Methods
+^^^^^^^^^^^^^^^^^^^^^
+
+.. py:method:: Constraint.to_json()
+
+   Get constraint configuration as JSON string.
+
+   :returns: JSON string representation of the constraint
+   :rtype: str
+
+.. py:method:: Constraint.to_dict()
+
+   Get constraint configuration as Python dictionary.
+
+   :returns: Dictionary representation of the constraint
+   :rtype: dict
+
+
+Pydantic Configuration Models
+-----------------------------
+
+The ``rust_ephem.constraints`` module provides Pydantic models for type-safe
+constraint configuration. These models support:
+
+- JSON serialization/deserialization
+- Validation of parameter ranges
+- Python operator overloading for composition
+- IDE autocompletion and type checking
+
+Import all constraint models:
+
+.. code-block:: python
+
+   from rust_ephem.constraints import (
+       SunConstraint,
+       MoonConstraint,
+       EarthLimbConstraint,
+       BodyConstraint,
+       EclipseConstraint,
+       AirmassConstraint,
+       DaytimeConstraint,
+       MoonPhaseConstraint,
+       SAAConstraint,
+       OrbitRamConstraint,
+       OrbitPoleConstraint,
+       AndConstraint,
+       OrConstraint,
+       XorConstraint,
+       NotConstraint,
+       ConstraintConfig,
+   )
+
+SunConstraint
+^^^^^^^^^^^^^
+
+Sun proximity constraint ensuring target maintains minimum angular separation from Sun.
+
+.. py:class:: SunConstraint(min_angle, max_angle=None)
+
+   :param float min_angle: Minimum allowed angular separation in degrees (0-180, required)
+   :param float max_angle: Maximum allowed angular separation in degrees (0-180, optional)
+
+   **Attributes:**
+
+   - ``type`` — Always ``"sun"`` (Literal)
+   - ``min_angle`` — Minimum angle from Sun in degrees
+   - ``max_angle`` — Maximum angle from Sun in degrees (or None)
+
+   **Example:**
+
+   .. code-block:: python
+
+      from rust_ephem.constraints import SunConstraint
+
+      # Simple minimum angle
+      sun = SunConstraint(min_angle=45.0)
+
+      # With maximum angle (target must be between 30° and 120° from Sun)
+      sun = SunConstraint(min_angle=30.0, max_angle=120.0)
+
+MoonConstraint
+^^^^^^^^^^^^^^
+
+Moon proximity constraint ensuring target maintains minimum angular separation from Moon.
+
+.. py:class:: MoonConstraint(min_angle, max_angle=None)
+
+   :param float min_angle: Minimum allowed angular separation in degrees (0-180, required)
+   :param float max_angle: Maximum allowed angular separation in degrees (0-180, optional)
+
+   **Attributes:**
+
+   - ``type`` — Always ``"moon"`` (Literal)
+   - ``min_angle`` — Minimum angle from Moon in degrees
+   - ``max_angle`` — Maximum angle from Moon in degrees (or None)
+
+   **Example:**
+
+   .. code-block:: python
+
+      from rust_ephem.constraints import MoonConstraint
+
+      moon = MoonConstraint(min_angle=10.0)
+
+EarthLimbConstraint
+^^^^^^^^^^^^^^^^^^^
+
+Earth limb avoidance constraint ensuring target is above Earth's horizon/limb.
+
+.. py:class:: EarthLimbConstraint(min_angle, max_angle=None, include_refraction=False, horizon_dip=False)
+
+   :param float min_angle: Minimum angular separation from Earth's limb in degrees (0-180, required)
+   :param float max_angle: Maximum angular separation from Earth's limb in degrees (0-180, optional)
+   :param bool include_refraction: Include atmospheric refraction correction (~0.57°) for ground observers (default: False)
+   :param bool horizon_dip: Include geometric horizon dip correction for ground observers (default: False)
+
+   **Attributes:**
+
+   - ``type`` — Always ``"earth_limb"`` (Literal)
+   - ``min_angle`` — Minimum angle from Earth's limb in degrees
+   - ``max_angle`` — Maximum angle from Earth's limb in degrees (or None)
+   - ``include_refraction`` — Whether to include atmospheric refraction
+   - ``horizon_dip`` — Whether to include geometric horizon dip
+
+   **Example:**
+
+   .. code-block:: python
+
+      from rust_ephem.constraints import EarthLimbConstraint
+
+      # For spacecraft: target must be 28° above Earth's limb
+      earth_limb = EarthLimbConstraint(min_angle=28.0)
+
+      # For ground observers: include atmospheric effects
+      earth_limb = EarthLimbConstraint(
+          min_angle=10.0,
+          include_refraction=True,
+          horizon_dip=True
+      )
+
+BodyConstraint
+^^^^^^^^^^^^^^
+
+Generic solar system body proximity constraint.
+
+.. py:class:: BodyConstraint(body, min_angle, max_angle=None)
+
+   :param str body: Name of the solar system body (e.g., "Mars", "Jupiter")
+   :param float min_angle: Minimum allowed angular separation in degrees (0-180, required)
+   :param float max_angle: Maximum allowed angular separation in degrees (0-180, optional)
+
+   **Attributes:**
+
+   - ``type`` — Always ``"body"`` (Literal)
+   - ``body`` — Name of the solar system body
+   - ``min_angle`` — Minimum angle from body in degrees
+   - ``max_angle`` — Maximum angle from body in degrees (or None)
+
+   **Example:**
+
+   .. code-block:: python
+
+      from rust_ephem.constraints import BodyConstraint
+
+      # Avoid Mars
+      mars = BodyConstraint(body="Mars", min_angle=15.0)
+
+      # Avoid Jupiter barycenter
+      jupiter = BodyConstraint(body="Jupiter barycenter", min_angle=20.0)
+
+EclipseConstraint
+^^^^^^^^^^^^^^^^^
+
+Eclipse constraint detecting when observer is in Earth's shadow.
+
+.. py:class:: EclipseConstraint(umbra_only=True)
+
+   :param bool umbra_only: If True, only umbra counts as eclipse. If False, includes penumbra. (default: True)
+
+   **Attributes:**
+
+   - ``type`` — Always ``"eclipse"`` (Literal)
+   - ``umbra_only`` — Whether only umbra counts as eclipse
+
+   **Example:**
+
+   .. code-block:: python
+
+      from rust_ephem.constraints import EclipseConstraint
+
+      # Only detect full shadow (umbra)
+      eclipse = EclipseConstraint(umbra_only=True)
+
+      # Detect both umbra and penumbra
+      eclipse = EclipseConstraint(umbra_only=False)
+
+AirmassConstraint
+^^^^^^^^^^^^^^^^^
+
+Airmass constraint limiting observations based on atmospheric path length.
+
+.. py:class:: AirmassConstraint(max_airmass, min_airmass=None)
+
+   :param float max_airmass: Maximum allowed airmass (> 1.0, required)
+   :param float min_airmass: Minimum allowed airmass (≥ 1.0, optional)
+
+   **Attributes:**
+
+   - ``type`` — Always ``"airmass"`` (Literal)
+   - ``max_airmass`` — Maximum allowed airmass
+   - ``min_airmass`` — Minimum allowed airmass (or None)
+
+   Airmass represents the optical path length through Earth's atmosphere:
+
+   * Airmass = 1.0 at zenith (best observing conditions)
+   * Airmass = 2.0 at ~30° altitude
+   * Airmass = 3.0 at ~19° altitude
+
+   **Example:**
+
+   .. code-block:: python
+
+      from rust_ephem.constraints import AirmassConstraint
+
+      # Target must be at airmass ≤ 2.0 (altitude ≥ ~30°)
+      airmass = AirmassConstraint(max_airmass=2.0)
+
+      # Target must be between airmass 1.2 and 2.5
+      airmass = AirmassConstraint(max_airmass=2.5, min_airmass=1.2)
+
+DaytimeConstraint
+^^^^^^^^^^^^^^^^^
+
+Daytime constraint preventing observations during daylight hours.
+
+.. py:class:: DaytimeConstraint(twilight="civil")
+
+   :param str twilight: Twilight definition ("civil", "nautical", "astronomical", or "none", default: "civil")
+
+   **Attributes:**
+
+   - ``type`` — Always ``"daytime"`` (Literal)
+   - ``twilight`` — Twilight definition
+
+   Twilight definitions:
+
+   * ``"civil"``: Civil twilight (-6° below horizon)
+   * ``"nautical"``: Nautical twilight (-12° below horizon)
+   * ``"astronomical"``: Astronomical twilight (-18° below horizon)
+   * ``"none"``: Strict daytime only (Sun above horizon)
+
+   **Example:**
+
+   .. code-block:: python
+
+      from rust_ephem.constraints import DaytimeConstraint
+
+      # Prevent observations during civil twilight or daylight
+      daytime = DaytimeConstraint()
+
+      # Use nautical twilight definition
+      daytime = DaytimeConstraint(twilight="nautical")
+
+MoonPhaseConstraint
+^^^^^^^^^^^^^^^^^^^
+
+Moon phase constraint with optional distance filtering.
+
+.. py:class:: MoonPhaseConstraint(max_illumination, min_illumination=None, min_distance=None, max_distance=None, enforce_when_below_horizon=False, moon_visibility="full")
+
+   :param float max_illumination: Maximum allowed Moon illumination fraction (0.0-1.0, required)
+   :param float min_illumination: Minimum allowed Moon illumination fraction (0.0-1.0, optional)
+   :param float min_distance: Minimum allowed Moon distance in degrees from target (optional)
+   :param float max_distance: Maximum allowed Moon distance in degrees from target (optional)
+   :param bool enforce_when_below_horizon: Whether to enforce constraint when Moon is below horizon (default: False)
+   :param str moon_visibility: Moon visibility requirement ("full" or "partial", default: "full")
+
+   **Attributes:**
+
+   - ``type`` — Always ``"moon_phase"`` (Literal)
+   - ``max_illumination`` — Maximum allowed Moon illumination
+   - ``min_illumination`` — Minimum allowed Moon illumination (or None)
+   - ``min_distance`` — Minimum Moon distance from target (or None)
+   - ``max_distance`` — Maximum Moon distance from target (or None)
+   - ``enforce_when_below_horizon`` — Whether to enforce when Moon is below horizon
+   - ``moon_visibility`` — Moon visibility requirement
+
+   Moon illumination ranges from 0.0 (new moon) to 1.0 (full moon).
+
+   **Example:**
+
+   .. code-block:: python
+
+      from rust_ephem.constraints import MoonPhaseConstraint
+
+      # Moon illumination must be ≤ 30%
+      moon_phase = MoonPhaseConstraint(max_illumination=0.3)
+
+      # Moon illumination between 10% and 50%, keep Moon ≥ 30° away
+      moon_phase = MoonPhaseConstraint(
+          max_illumination=0.5,
+          min_illumination=0.1,
+          min_distance=30.0
+      )
+
+SAAConstraint
+^^^^^^^^^^^^^
+
+South Atlantic Anomaly constraint with polygon-defined region.
+
+.. py:class:: SAAConstraint(polygon)
+
+   :param list polygon: List of (longitude, latitude) pairs defining the region boundary (minimum 3 vertices)
+
+   **Attributes:**
+
+   - ``type`` — Always ``"saa"`` (Literal)
+   - ``polygon`` — List of (longitude, latitude) pairs defining the region boundary
+
+   The polygon should be defined as a list of (longitude, latitude) coordinate pairs
+   in degrees, defining the boundary of the region. The polygon is assumed to be
+   closed (first and last points are connected). Uses ray casting algorithm to
+   determine if a point is inside the polygon.
+
+   **Example:**
+
+   .. code-block:: python
+
+      from rust_ephem.constraints import SAAConstraint
+
+      # Define SAA region as a polygon
+      saa_polygon = [
+          (-90.0, -50.0),   # Southwest corner
+          (-40.0, -50.0),   # Southeast corner
+          (-40.0, 0.0),     # Northeast corner
+          (-90.0, 0.0),     # Northwest corner
+      ]
+
+      # Avoid SAA region
+      saa_constraint = SAAConstraint(polygon=saa_polygon)
+
+      # To require being in SAA region, use NOT
+      require_saa = ~SAAConstraint(polygon=saa_polygon)
+
+AltAzConstraint
+^^^^^^^^^^^^^^^
+
+Altitude/Azimuth constraint restricting observations based on local horizon coordinates.
+
+.. py:class:: AltAzConstraint(min_altitude, max_altitude=None, min_azimuth=None, max_azimuth=None, polygon=None)
+
+   :param float min_altitude: Minimum allowed altitude in degrees (0-90)
+   :param float max_altitude: Maximum allowed altitude in degrees (0-90), optional
+   :param float min_azimuth: Minimum allowed azimuth in degrees (0-360), optional
+   :param float max_azimuth: Maximum allowed azimuth in degrees (0-360), optional
+   :param list polygon: List of (altitude, azimuth) pairs defining allowed region, optional
+
+   **Attributes:**
+
+   - ``type`` — Always ``"alt_az"`` (Literal)
+   - ``min_altitude`` — Minimum allowed altitude in degrees
+   - ``max_altitude`` — Maximum allowed altitude in degrees (optional)
+   - ``min_azimuth`` — Minimum allowed azimuth in degrees (optional)
+   - ``max_azimuth`` — Maximum allowed azimuth in degrees (optional)
+   - ``polygon`` — List of (altitude, azimuth) pairs defining allowed region (optional)
+
+   **Coordinate System:**
+
+   * Altitude: Angular distance from horizon (0° = horizon, 90° = zenith)
+   * Azimuth: Angular distance from North, measured eastward (0° = North, 90° = East, 180° = South, 270° = West)
+
+   **Polygon Mode:**
+
+   When a polygon is provided, it defines an allowed region in altitude/azimuth space.
+   The target must be inside this polygon to satisfy the constraint. Uses the winding
+   number algorithm for robust point-in-polygon testing.
+
+   **Example:**
+
+   .. code-block:: python
+
+      from rust_ephem.constraints import AltAzConstraint
+
+      # Simple altitude constraint (target above 10° elevation)
+      alt_az = AltAzConstraint(min_altitude=10.0)
+
+      # Altitude and azimuth range constraint
+      alt_az = AltAzConstraint(
+          min_altitude=10.0,
+          max_altitude=85.0,
+          min_azimuth=45.0,   # Only observe east/south
+          max_azimuth=225.0
+      )
+
+      # Define custom observing region with polygon
+      observing_window = [
+          (30, 90),    # Southwest corner (alt=30°, az=90°=East)
+          (30, 180),   # Southeast corner (alt=30°, az=180°=South)
+          (70, 180),   # Northeast corner (alt=70°, az=180°=South)
+          (70, 90),    # Northwest corner (alt=70°, az=90°=East)
+      ]
+      alt_az = AltAzConstraint(min_altitude=0.0, polygon=observing_window)
+
+      # Combine polygon with additional altitude constraint
+      alt_az = AltAzConstraint(min_altitude=35.0, polygon=observing_window)
+
+OrbitRamConstraint
+^^^^^^^^^^^^^^^^^^
+
+Orbit RAM direction constraint ensuring target maintains minimum angular separation from spacecraft velocity vector.
+
+.. py:class:: OrbitRamConstraint(min_angle, max_angle=None)
+
+   :param float min_angle: Minimum allowed angular separation from RAM direction in degrees (0-180, required)
+   :param float max_angle: Maximum allowed angular separation from RAM direction in degrees (0-180, optional)
+
+   **Attributes:**
+
+   - ``type`` — Always ``"orbit_ram"`` (Literal)
+   - ``min_angle`` — Minimum angle from RAM direction in degrees
+   - ``max_angle`` — Maximum angle from RAM direction in degrees (or None)
+
+   **Requirements:**
+
+   The ephemeris must contain velocity data (6 columns: position + velocity).
+
+   **Example:**
+
+   .. code-block:: python
+
+      from rust_ephem.constraints import OrbitRamConstraint
+
+      # Target must be at least 10° from RAM direction
+      orbit_ram = OrbitRamConstraint(min_angle=10.0)
+
+      # Target must be between 5° and 45° from RAM direction
+      orbit_ram = OrbitRamConstraint(min_angle=5.0, max_angle=45.0)
+
+OrbitPoleConstraint
+^^^^^^^^^^^^^^^^^^^
+
+Orbit pole direction constraint ensuring target maintains minimum angular separation from orbital pole.
+
+.. py:class:: OrbitPoleConstraint(min_angle, max_angle=None)
+
+   :param float min_angle: Minimum allowed angular separation from orbital pole in degrees (0-180, required)
+   :param float max_angle: Maximum allowed angular separation from orbital pole in degrees (0-180, optional)
+
+   **Attributes:**
+
+   - ``type`` — Always ``"orbit_pole"`` (Literal)
+   - ``min_angle`` — Minimum angle from orbital pole in degrees
+   - ``max_angle`` — Maximum angle from orbital pole in degrees (or None)
+
+   **Requirements:**
+
+   The ephemeris must contain velocity data (6 columns: position + velocity).
+
+   **Example:**
+
+   .. code-block:: python
+
+      from rust_ephem.constraints import OrbitPoleConstraint
+
+      # Target must be at least 15° from orbital pole
+      orbit_pole = OrbitPoleConstraint(min_angle=15.0)
+
+      # Target must be between 10° and 80° from orbital pole
+      orbit_pole = OrbitPoleConstraint(min_angle=10.0, max_angle=80.0)
+
+AndConstraint
+^^^^^^^^^^^^^
+
+Logical AND combination — satisfied only if ALL sub-constraints are satisfied.
+
+.. py:class:: AndConstraint(constraints)
+
+   :param list constraints: List of ConstraintConfig objects to combine (minimum 1)
+
+   **Attributes:**
+
+   - ``type`` — Always ``"and"`` (Literal)
+   - ``constraints`` — List of constraints to AND together
+
+   **Example:**
+
+   .. code-block:: python
+
+      from rust_ephem.constraints import AndConstraint, SunConstraint, MoonConstraint
+
+      combined = AndConstraint(constraints=[
+          SunConstraint(min_angle=45.0),
+          MoonConstraint(min_angle=10.0),
+      ])
+
+OrConstraint
+^^^^^^^^^^^^
+
+Logical OR combination — satisfied if ANY sub-constraint is satisfied.
+
+.. py:class:: OrConstraint(constraints)
+
+   :param list constraints: List of ConstraintConfig objects to combine (minimum 1)
+
+   **Attributes:**
+
+   - ``type`` — Always ``"or"`` (Literal)
+   - ``constraints`` — List of constraints to OR together
+
+   **Example:**
+
+   .. code-block:: python
+
+      from rust_ephem.constraints import OrConstraint, EclipseConstraint, EarthLimbConstraint
+
+      either = OrConstraint(constraints=[
+          EclipseConstraint(),
+          EarthLimbConstraint(min_angle=20.0),
+      ])
+
+XorConstraint
+^^^^^^^^^^^^^
+
+Logical XOR combination — violated when EXACTLY ONE sub-constraint is violated.
+
+.. py:class:: XorConstraint(constraints)
+
+   :param list constraints: List of ConstraintConfig objects (minimum 2)
+
+   **Violation Semantics:**
+
+   - XOR is **violated** when exactly one sub-constraint is violated
+   - XOR is **satisfied** when zero or more than one sub-constraints are violated
+
+   **Attributes:**
+
+   - ``type`` — Always ``"xor"`` (Literal)
+   - ``constraints`` — List of constraints (minimum 2) evaluated with XOR semantics
+
+   **Example:**
+
+   .. code-block:: python
+
+      from rust_ephem.constraints import XorConstraint, SunConstraint, MoonConstraint
+
+      exclusive = XorConstraint(constraints=[
+          SunConstraint(min_angle=45.0),
+          MoonConstraint(min_angle=30.0),
+      ])
+
+NotConstraint
+^^^^^^^^^^^^^
+
+Logical NOT — inverts a constraint (satisfied when inner constraint is violated).
+
+.. py:class:: NotConstraint(constraint)
+
+   :param constraint: ConstraintConfig object to negate
+
+   **Attributes:**
+
+   - ``type`` — Always ``"not"`` (Literal)
+   - ``constraint`` — Constraint to negate
+
+   **Example:**
+
+   .. code-block:: python
+
+      from rust_ephem.constraints import NotConstraint, EclipseConstraint
+
+      # Satisfied when NOT in eclipse
+      not_eclipse = NotConstraint(constraint=EclipseConstraint())
+
+
+Operator Overloading
+--------------------
+
+All Pydantic constraint models support Python bitwise operators for intuitive
+composition:
+
+.. list-table:: Constraint Operators
+   :header-rows: 1
+   :widths: 20 30 50
+
+   * - Operator
+     - Equivalent
+     - Description
+   * - ``a & b``
+     - ``AndConstraint([a, b])``
+     - Logical AND — both must be satisfied
+   * - ``a | b``
+     - ``OrConstraint([a, b])``
+     - Logical OR — at least one must be satisfied
+   * - ``a ^ b``
+     - ``XorConstraint([a, b])``
+     - Logical XOR — violated when exactly one is violated
+   * - ``~a``
+     - ``NotConstraint(a)``
+     - Logical NOT — inverts the constraint
+
+**Example:**
+
+.. code-block:: python
+
+   from rust_ephem.constraints import (
+       SunConstraint, MoonConstraint, EclipseConstraint, EarthLimbConstraint
+   )
+
+   # Build complex constraint with operators
+   constraint = (
+       SunConstraint(min_angle=45.0) &
+       MoonConstraint(min_angle=10.0) &
+       ~EclipseConstraint(umbra_only=True)
+   )
+
+   # Equivalent to:
+   # AndConstraint(constraints=[
+   #     SunConstraint(min_angle=45.0),
+   #     MoonConstraint(min_angle=10.0),
+   #     NotConstraint(constraint=EclipseConstraint(umbra_only=True))
+   # ])
+
+   # Chain multiple operators
+   complex_constraint = (
+       (SunConstraint(min_angle=45.0) & MoonConstraint(min_angle=10.0)) |
+       EarthLimbConstraint(min_angle=28.0)
+   )
+
+
+Common Methods (RustConstraintMixin)
+------------------------------------
+
+All Pydantic constraint models inherit these methods:
+
+.. py:method:: evaluate(ephemeris, target_ra, target_dec, times=None, indices=None)
+
+   Evaluate the constraint using the Rust backend.
+
+   This method lazily creates the corresponding Rust constraint object on first use.
+
+   :param ephemeris: One of TLEEphemeris, SPICEEphemeris, GroundEphemeris, or OEMEphemeris
+   :param float target_ra: Target right ascension in degrees (ICRS/J2000)
+   :param float target_dec: Target declination in degrees (ICRS/J2000)
+   :param times: Optional specific time(s) to evaluate
+   :param indices: Optional specific time index/indices to evaluate
+   :returns: ConstraintResult containing violation windows
+   :rtype: ConstraintResult
+
+.. py:method:: in_constraint_batch(ephemeris, target_ras, target_decs, times=None, indices=None)
+
+   Check if targets are in-constraint for multiple RA/Dec positions (vectorized).
+
+   :param ephemeris: One of TLEEphemeris, SPICEEphemeris, GroundEphemeris, or OEMEphemeris
+   :param list target_ras: List of target right ascensions in degrees
+   :param list target_decs: List of target declinations in degrees
+   :param times: Optional specific time(s) to evaluate
+   :param indices: Optional specific time index/indices to evaluate
+   :returns: 2D numpy array of shape (n_targets, n_times) with boolean violation status
+   :rtype: numpy.ndarray
+
+.. py:method:: in_constraint(time, ephemeris, target_ra, target_dec)
+
+   Check if target violates the constraint at given time(s).
+
+   :param time: The time(s) to check (must exist in ephemeris). Can be a single datetime,
+                list of datetimes, or numpy array of datetimes.
+   :type time: datetime or list[datetime] or numpy.ndarray
+   :param ephemeris: One of TLEEphemeris, SPICEEphemeris, GroundEphemeris, or OEMEphemeris
+   :param float target_ra: Target right ascension in degrees
+   :param float target_dec: Target declination in degrees
+   :returns: True if constraint is satisfied at the given time(s). Returns a single bool
+             for a single time, or a list of bools for multiple times.
+   :rtype: bool or list[bool]
+
+.. py:method:: and_(other)
+
+   Combine this constraint with another using logical AND.
+
+   :param other: Another ConstraintConfig
+   :returns: AndConstraint combining both
+   :rtype: AndConstraint
+
+.. py:method:: or_(other)
+
+   Combine this constraint with another using logical OR.
+
+   :param other: Another ConstraintConfig
+   :returns: OrConstraint combining both
+   :rtype: OrConstraint
+
+.. py:method:: xor_(other)
+
+   Combine this constraint with another using logical XOR.
+
+   :param other: Another ConstraintConfig
+   :returns: XorConstraint combining both
+   :rtype: XorConstraint
+
+.. py:method:: not_()
+
+   Negate this constraint using logical NOT.
+
+   :returns: NotConstraint negating this constraint
+   :rtype: NotConstraint
+
+
+Result Classes
+--------------
+
+ConstraintResult
+^^^^^^^^^^^^^^^^
+
+Result of constraint evaluation containing all violation information.
+
+.. py:class:: ConstraintResult
+
+   **Attributes:**
+
+   - ``violations`` (list[ConstraintViolation]) — List of violation time windows
+   - ``all_satisfied`` (bool) — True if constraint was satisfied for entire time range
+   - ``constraint_name`` (str) — Name/description of the constraint
+   - ``timestamps`` (numpy.ndarray | list[datetime]) — Evaluation times (cached, lazy)
+   - ``constraint_array`` (list[bool]) — Boolean array where True = violated (cached, lazy)
+   - ``visibility`` (list[VisibilityWindow]) — Contiguous windows when target is visible
+
+   **Methods:**
+
+   .. py:method:: total_violation_duration()
+
+      Get the total duration of violations in seconds.
+
+      :returns: Total violation duration in seconds
+      :rtype: float
+
+   .. py:method:: in_constraint(time)
+
+      Check if the target is in-constraint at a given time.
+
+      :param datetime time: A datetime object (must exist in evaluated timestamps)
+      :returns: True if constraint is violated at the given time
+      :rtype: bool
+      :raises ValueError: If time is not in the evaluated timestamps
+
+   **Example:**
+
+   .. code-block:: python
+
+      result = constraint.evaluate(ephem, 83.63, 22.01)
+
+      print(f"Constraint: {result.constraint_name}")
+      print(f"All satisfied: {result.all_satisfied}")
+      print(f"Total violation duration: {result.total_violation_duration()} seconds")
+
+      # Access visibility windows
+        for window in result.visibility:
+           print(f"Visible: {window.start_time} to {window.end_time}")
+
+        # Efficient iteration using cached arrays
+        for time, violated in zip(result.timestamps, result.constraint_array):
+           if not violated:
+              print(f"Target visible at {time}")
+
+ConstraintViolation
+^^^^^^^^^^^^^^^^^^^
+
+Information about a specific constraint violation time window.
+
+.. py:class:: ConstraintViolation
+
+   **Attributes:**
+
+   - ``start_time`` (datetime) — Start time of violation window
+   - ``end_time`` (datetime) — End time of violation window
+   - ``max_severity`` (float) — Maximum severity of violation (0.0 = just violated, 1.0+ = severe)
+   - ``description`` (str) — Human-readable description of the violation
+
+   **Example:**
+
+   .. code-block:: python
+
+      for violation in result.violations:
+          print(f"Violation: {violation.start_time} to {violation.end_time}")
+          print(f"  Severity: {violation.max_severity:.2f}")
+          print(f"  Description: {violation.description}")
+
+VisibilityWindow
+^^^^^^^^^^^^^^^^
+
+Time window when the observation target is not constrained (visible).
+
+.. py:class:: VisibilityWindow
+
+   **Attributes:**
+
+   - ``start_time`` (datetime) — Start time of visibility window
+   - ``end_time`` (datetime) — End time of visibility window
+   - ``duration_seconds`` (float) — Duration of the window in seconds (computed property)
+
+   **Example:**
+
+   .. code-block:: python
+
+      for window in result.visibility:
+          print(f"Window: {window.start_time} to {window.end_time}")
+          print(f"  Duration: {window.duration_seconds / 3600:.2f} hours")
+
+
+   Moving Target Visibility
+   ^^^^^^^^^^^^^^^^^^^^^^^^
+
+   Use ``Constraint.evaluate_moving_body()`` when RA/Dec change with time. Two modes:
+
+   1. Provide aligned arrays: ``target_ras``, ``target_decs`` (same length as ephemeris timestamps).
+   2. Provide a ``body`` name or NAIF ID; positions come from ``ephemeris.get_body``
+      (default planetary kernel ``de440s.bsp``; override with ``spice_kernel``
+      path or URL, downloads cached under ``~/.cache/rust_ephem``).
+
+   JPL Horizons Support
+   ~~~~~~~~~~~~~~~~~~~~
+
+   When the SPICE kernel (e.g., ``de440s.bsp``) does not contain a body, you can automatically
+   fall back to JPL Horizons to query its position and velocity. Set ``use_horizons=True``
+   in ``get_body()`` or ``evaluate_moving_body()`` to enable this fallback:
+
+   .. code-block:: python
+
+      from rust_ephem import TLEEphemeris
+      from rust_ephem.constraints import SunConstraint
+      from datetime import datetime
+
+      eph = TLEEphemeris(norad_id=28485, begin=datetime(2024, 6, 1), end=datetime(2024, 6, 2))
+      constraint = SunConstraint(min_angle=45)
+
+      # Query a minor planet (Ceres, NAIF ID 1) using JPL Horizons
+      result = constraint.evaluate_moving_body(
+         ephemeris=eph,
+         body="1",  # Ceres
+         use_horizons=True,  # Fall back to JPL Horizons if SPICE doesn't have it
+      )
+
+      print(result.all_satisfied)  # Overall constraint satisfaction
+      print(len(result.visibility))  # Number of visibility windows
+
+   **Notes:**
+
+   - Horizons queries use the default time range from the ephemeris.
+   - Positions are queried from NASA's JPL Horizons system via HTTP (requires internet).
+   - Both ``get_body()`` and ``evaluate_moving_body()`` support the ``use_horizons`` parameter.
+   - Without ``use_horizons=True``, bodies not in SPICE kernels will raise an error.
+
+   Example (body lookup)
+   ~~~~~~~~~~~~~~~~~~~~~
+
+   .. code-block:: python
+
+      from rust_ephem import TLEEphemeris
+      from rust_ephem.constraints import SunConstraint
+      from datetime import datetime, timedelta
+
+      eph = TLEEphemeris(norad_id=28485, begin=datetime(2024, 6, 1), end=datetime(2024, 6, 2))
+      constraint = SunConstraint(min_angle=45)
+
+      result = constraint.evaluate_moving_body(
+         ephemeris=eph,
+         body="4",  # Mars (names like "Mars" also work)
+      )
+
+      print(result.constraint_array[0:5])              # per-sample satisfied flags
+      print(len(result.visibility))                # merged visibility windows
+      print(result.visibility)
+
+
+   Example (explicit RA/Dec arrays)
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   .. code-block:: python
+
+      import numpy as np
+      from rust_ephem import TLEEphemeris
+      from rust_ephem.constraints import EarthLimbConstraint
+
+      eph = TLEEphemeris(norad_id=28485)
+      times = eph.timestamp[:100]  # numpy datetime64 array
+      ras = np.linspace(10.0, 12.0, len(times))
+      decs = np.linspace(-20.0, -21.0, len(times))
+
+      constraint = EarthLimbConstraint(min_angle=30)
+      result = constraint.evaluate_moving_body(
+         ephemeris=eph,
+         target_ras=list(ras),
+         target_decs=list(decs),
+      )
+
+   Notes
+   ~~~~~
+
+   * ``target_ras``/``target_decs`` must have the same length as ephemeris timestamps.
+   * When ``body`` is set, timestamps come from the ephemeris.
+    * Body positions use the planetary ephemeris kernel (default ``de440s.bsp``). To override for a specific
+       body lookup, call ``ephemeris.get_body(body, spice_kernel="path_or_url", use_horizons=True)`` (local file or URL). Downloads
+       are cached under ``~/.cache/rust_ephem``; reuse the cached path to avoid re-fetching.
+    * If you already have a planetary kernel on disk, point ``spice_kernel`` at that path; this does not affect
+       telescope/observer geometry — only body positions.
+    * Use ``use_horizons=True`` for bodies not available in your SPICE kernels; JPL Horizons covers all major and many minor solar system bodies.
+
+
+Type Aliases
+------------
+
+.. py:data:: ConstraintConfig
+
+   Union type for all constraint configuration classes::
+
+       ConstraintConfig = Union[
+           SunConstraint,
+           MoonConstraint,
+           EclipseConstraint,
+           EarthLimbConstraint,
+           BodyConstraint,
+           AndConstraint,
+           OrConstraint,
+           XorConstraint,
+           NotConstraint,
+       ]
+
+   Use this type for function signatures that accept any constraint type.
+
+.. py:data:: CombinedConstraintConfig
+
+   Pydantic TypeAdapter for parsing constraint configurations from JSON::
+
+       from rust_ephem.constraints import CombinedConstraintConfig
+
+       json_str = '{"type": "sun", "min_angle": 45.0}'
+       constraint = CombinedConstraintConfig.validate_json(json_str)
+
+
+JSON Serialization
+------------------
+
+All Pydantic constraint models can be serialized to/from JSON:
+
+.. code-block:: python
+
+   from rust_ephem.constraints import SunConstraint, MoonConstraint
+
+   # Create constraint
+   constraint = SunConstraint(min_angle=45.0) & MoonConstraint(min_angle=10.0)
+
+   # Serialize to JSON
+   json_str = constraint.model_dump_json()
+   # '{"type":"and","constraints":[{"type":"sun","min_angle":45.0,"max_angle":null},{"type":"moon","min_angle":10.0,"max_angle":null}]}'
+
+   # Parse from JSON
+   from rust_ephem.constraints import CombinedConstraintConfig
+   parsed = CombinedConstraintConfig.validate_json(json_str)
+
+   # Or use the Rust backend directly
+   import rust_ephem
+   rust_constraint = rust_ephem.Constraint.from_json(json_str)
+
+
+Performance Guide
+-----------------
+
+The constraint system is optimized for high-performance evaluation. Follow these
+guidelines for best performance:
+
+Batch Evaluation (Fastest)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For evaluating many targets, use ``in_constraint_batch()``:
+
+.. code-block:: python
+
+   import numpy as np
+
+   # Generate 10,000 target positions
+   target_ras = np.random.uniform(0, 360, 10000)
+   target_decs = np.random.uniform(-90, 90, 10000)
+
+   # Single call evaluates all targets (3-50x faster than loop)
+   violations = constraint.in_constraint_batch(ephem, target_ras, target_decs)
+
+   # violations.shape = (10000, n_times)
+
+**Performance by constraint type:**
+
+- Sun/Moon proximity: ~3-4x speedup over loop
+- Earth limb: ~5x speedup
+- Eclipse: ~48x speedup (target-independent)
+- Logical combinators: ~2-3x speedup
+
+Single Target Evaluation
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+For a single target over many times:
+
+.. code-block:: python
+
+   # FAST: Evaluate once, use cached arrays
+   result = constraint.evaluate(ephem, ra, dec)
+
+   # Access cached arrays (90x faster on repeated access)
+   times = result.timestamp
+   satisfied = result.constraint_array
+
+   # Find visibility windows directly
+   visible_indices = np.where(satisfied)[0]
+
+Single Time Check
+^^^^^^^^^^^^^^^^^
+
+For checking a single time:
+
+.. code-block:: python
+
+   # Use in_constraint() for single-time checks
+   is_visible = constraint.in_constraint(time, ephem, ra, dec)
+
+For checking multiple times efficiently:
+
+.. code-block:: python
+
+   # Use in_constraint() with arrays for multiple times
+   times_array = ephem.timestamp[10:20]  # numpy array
+   results = constraint.in_constraint(times_array, ephem, ra, dec)
+   # Returns list of booleans
+
+Anti-Patterns (Avoid)
+^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+   # SLOW: Don't call in_constraint() in a loop
+   for time in ephem.timestamp:
+       if constraint.in_constraint(time, ephem, ra, dec):  # Re-evaluates every time!
+           pass
+
+   # SLOW: Don't call evaluate() for each target
+   for ra, dec in zip(target_ras, target_decs):
+       result = constraint.evaluate(ephem, ra, dec)  # Use in_constraint_batch() instead!
+
+Subset Evaluation
+^^^^^^^^^^^^^^^^^
+
+Evaluate only specific times to reduce computation:
+
+.. code-block:: python
+
+   # Only evaluate first 10 and last 10 times
+   indices = list(range(10)) + list(range(-10, 0))
+   result = constraint.evaluate(ephem, ra, dec, indices=indices)
+
+   # Only evaluate specific datetimes
+   specific_times = [
+       datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+       datetime(2024, 1, 1, 18, 0, 0, tzinfo=timezone.utc),
+   ]
+   result = constraint.evaluate(ephem, ra, dec, times=specific_times)

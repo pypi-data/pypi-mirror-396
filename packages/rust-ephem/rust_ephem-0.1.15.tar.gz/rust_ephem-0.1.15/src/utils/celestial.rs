@@ -1,0 +1,838 @@
+use chrono::{DateTime, Datelike, Timelike, Utc};
+use erfa::earth::position_velocity_00;
+use erfa::prenut::precession_matrix_06;
+use erfa::vectors_and_matrices::mat_mul_pvec;
+use ndarray::{s, Array1, Array2};
+use sofars::astro::atco13;
+use std::sync::Arc;
+
+use crate::ephemeris::ephemeris_common::EphemerisBase;
+use crate::utils::conversions::{convert_frames, Frame};
+use crate::utils::geo::ecef_to_geodetic_deg;
+use crate::utils::math_utils::transpose_matrix;
+use crate::utils::time_utils::{datetime_to_jd_tt, datetime_to_jd_utc};
+use crate::utils::{eop_provider, ut1_provider};
+use crate::{is_planetary_ephemeris_initialized, utils::config::*};
+
+/// Calculate Sun positions for multiple timestamps
+/// Returns Array2 with shape (N, 6) containing [x, y, z, vx, vy, vz] for each timestamp
+pub fn calculate_sun_positions_erfa(times: &[DateTime<Utc>]) -> Array2<f64> {
+    let n = times.len();
+    let mut out = Array2::<f64>::zeros((n, 6));
+
+    // uses AU_TO_KM, AU_PER_DAY_TO_KM_PER_SEC from config
+
+    for (i, dt) in times.iter().enumerate() {
+        let (jd_tt1, jd_tt2) = datetime_to_jd_tt(dt);
+
+        let (_warning, pvh, _pvb) = position_velocity_00(jd_tt1, jd_tt2);
+
+        // Sun position is negative of Earth's heliocentric position
+        let mut row = out.row_mut(i);
+        row[0] = -pvh[0][0] * AU_TO_KM;
+        row[1] = -pvh[0][1] * AU_TO_KM;
+        row[2] = -pvh[0][2] * AU_TO_KM;
+        row[3] = -pvh[1][0] * AU_PER_DAY_TO_KM_PER_SEC;
+        row[4] = -pvh[1][1] * AU_PER_DAY_TO_KM_PER_SEC;
+        row[5] = -pvh[1][2] * AU_PER_DAY_TO_KM_PER_SEC;
+    }
+
+    out
+}
+
+/// Calculate Moon positions for multiple timestamps
+/// Returns Array2 with shape (N, 6) containing [x, y, z, vx, vy, vz] for each timestamp
+pub fn calculate_moon_positions_meeus(times: &[DateTime<Utc>]) -> Array2<f64> {
+    let n = times.len();
+    let mut out = Array2::<f64>::zeros((n, 6));
+
+    // uses GM_EARTH, JD_J2000, DAYS_PER_CENTURY from config
+
+    for (i, dt) in times.iter().enumerate() {
+        // Meeus formulae use dynamical time (TT)
+        let (jd_tt1, jd_tt2) = datetime_to_jd_tt(dt);
+        let jd = jd_tt1 + jd_tt2;
+
+        // Julian centuries from J2000.0 in TT
+        let t = (jd - JD_J2000) / DAYS_PER_CENTURY;
+        let t_sq = t * t;
+        let t_cb = t_sq * t;
+        let t_qt = t_cb * t;
+
+        // Meeus formulae for Moon's mean longitude, elongation, anomaly, etc.
+        let l_prime = 218.3164477 + 481267.88123421 * t - 0.0015786 * t_sq + t_cb / 538841.0
+            - t_qt / 65194000.0;
+        let d = 297.8501921 + 445267.1114034 * t - 0.0018819 * t_sq + t_cb / 545868.0
+            - t_qt / 113065000.0;
+        let m = 357.5291092 + 35999.0502909 * t - 0.0001536 * t_sq + t_cb / 24490000.0;
+        let m_prime = 134.9633964 + 477198.8675055 * t + 0.0087414 * t_sq + t_cb / 69699.0
+            - t_qt / 14712000.0;
+        let f = 93.2720950 + 483202.0175233 * t - 0.0036539 * t_sq - t_cb / 3526000.0
+            + t_qt / 863310000.0;
+
+        // Convert to radians
+        let d_rad = d.to_radians();
+        let m_rad = m.to_radians();
+        let m_prime_rad = m_prime.to_radians();
+        let f_rad = f.to_radians();
+
+        // Pre-compute commonly used multiples
+        let d_rad_2 = 2.0 * d_rad;
+        let d_rad_4 = 4.0 * d_rad;
+        let m_prime_rad_2 = 2.0 * m_prime_rad;
+        let m_prime_rad_3 = 3.0 * m_prime_rad;
+        let f_rad_2 = 2.0 * f_rad;
+        let m_rad_2 = 2.0 * m_rad;
+
+        // Cached trigonometric values
+        let sin_m_prime = m_prime_rad.sin();
+        let cos_m_prime = m_prime_rad.cos();
+        let sin_d = d_rad.sin();
+        let sin_d_2 = d_rad_2.sin();
+        let cos_d_2 = d_rad_2.cos();
+        let sin_m = m_rad.sin();
+        let cos_m = m_rad.cos();
+        let sin_f = f_rad.sin();
+        let sin_f_2 = f_rad_2.sin();
+        let cos_f_2 = f_rad_2.cos();
+
+        // Calculate longitude (corrections in degrees according to Meeus Chapter 47)
+        // Using significant terms (> 10000 micro-degrees or 0.01 degrees)
+        let mut lon = l_prime
+            + 6.288774 * sin_m_prime
+            + 1.274027 * (d_rad_2 - m_prime_rad).sin()
+            + 0.658314 * sin_d_2
+            + 0.213618 * m_prime_rad_2.sin()
+            - 0.185116 * sin_m
+            - 0.114332 * sin_f_2
+            + 0.058793 * (d_rad_2 - m_prime_rad_2).sin()
+            + 0.057066 * (d_rad_2 - m_rad - m_prime_rad).sin()
+            + 0.053322 * (d_rad_2 + m_prime_rad).sin()
+            + 0.045758 * (d_rad_2 - m_rad).sin()
+            - 0.040923 * (m_rad - m_prime_rad).sin()
+            - 0.034720 * sin_d
+            - 0.030383 * (m_rad + m_prime_rad).sin()
+            + 0.015327 * (d_rad_2 - f_rad_2).sin()
+            - 0.012528 * (m_prime_rad + f_rad_2).sin()
+            + 0.010980 * (m_prime_rad - f_rad_2).sin()
+            + 0.010675 * (d_rad_4 - m_prime_rad).sin()
+            + 0.010034 * m_prime_rad_3.sin()
+            + 0.008548 * (d_rad_4 - m_prime_rad_2).sin()
+            - 0.007888 * (d_rad_2 + m_rad - m_prime_rad).sin()
+            - 0.006766 * (d_rad_2 + m_rad).sin()
+            - 0.005163 * (d_rad - m_prime_rad).sin()
+            + 0.004987 * (d_rad + m_rad).sin()
+            + 0.004036 * (d_rad_2 - m_rad + m_prime_rad).sin()
+            + 0.003994 * (d_rad_2 + m_prime_rad_2).sin()
+            + 0.003861 * d_rad_4.sin()
+            + 0.003665 * (d_rad_2 - m_prime_rad_3).sin()
+            - 0.002689 * (m_rad - m_prime_rad_2).sin()
+            - 0.002602 * (d_rad_2 - m_prime_rad + f_rad_2).sin()
+            + 0.002390 * (d_rad_2 - m_rad - m_prime_rad_2).sin()
+            - 0.002348 * (d_rad + m_prime_rad).sin()
+            + 0.002236 * (d_rad_2 - m_rad_2).sin()
+            - 0.002120 * (m_rad + m_prime_rad_2).sin()
+            - 0.002069 * m_rad_2.sin();
+
+        // Additional correction terms from Meeus (A1, A2, A3)
+        let a1 = (119.75 + 131.849 * t).to_radians();
+        let a2 = (53.09 + 479264.290 * t).to_radians();
+        let a3 = (313.45 + 481266.484 * t).to_radians();
+        lon += 0.003958 * a1.sin();
+        lon += 0.001962 * (l_prime.to_radians() - f_rad).sin();
+        lon += 0.000318 * a2.sin();
+
+        // Calculate latitude (corrections in degrees according to Meeus Chapter 47)
+        let mut lat = 5.128122 * sin_f
+            + 0.280602 * (m_prime_rad + f_rad).sin()
+            + 0.277693 * (m_prime_rad - f_rad).sin()
+            + 0.173237 * (d_rad_2 - f_rad).sin()
+            + 0.055413 * (d_rad_2 - m_prime_rad + f_rad).sin()
+            + 0.046271 * (d_rad_2 - m_prime_rad - f_rad).sin()
+            + 0.032573 * (d_rad_2 + f_rad).sin()
+            + 0.017198 * (m_prime_rad_2 + f_rad).sin()
+            + 0.009266 * (d_rad_2 + m_prime_rad - f_rad).sin()
+            + 0.008822 * (m_prime_rad_2 - f_rad).sin()
+            + 0.008216 * (d_rad_2 - m_rad - f_rad).sin()
+            + 0.004324 * (d_rad_2 - m_prime_rad_2 - f_rad).sin()
+            + 0.004200 * (d_rad_2 + m_prime_rad + f_rad).sin()
+            - 0.003359 * (d_rad_2 + m_rad - f_rad).sin();
+
+        // Additional latitude correction terms from Meeus
+        lat -= 0.002235 * l_prime.to_radians().sin();
+        lat += 0.000382 * a3.sin();
+        lat += 0.000175 * (a1 - f_rad).sin();
+        lat += 0.000175 * (a1 + f_rad).sin();
+        lat += 0.000127 * (l_prime.to_radians() - m_prime_rad).sin();
+        lat -= 0.000115 * (l_prime.to_radians() + m_prime_rad).sin();
+
+        // Calculate distance (corrections in km according to Meeus Chapter 47)
+        let dist = 385000.56
+            - 20905.355 * cos_m_prime
+            - 3699.111 * (d_rad_2 - m_prime_rad).cos()
+            - 2955.968 * cos_d_2
+            - 569.925 * m_prime_rad_2.cos()
+            + 48.888 * cos_m
+            - 3.149 * cos_f_2
+            + 246.158 * (d_rad_2 - m_prime_rad_2).cos()
+            - 152.138 * (d_rad_2 - m_rad - m_prime_rad).cos()
+            - 170.733 * (d_rad_2 + m_prime_rad).cos()
+            - 204.586 * (d_rad_2 - m_rad).cos()
+            - 129.620 * (m_rad - m_prime_rad).cos()
+            + 108.743 * d_rad.cos()
+            + 104.755 * (m_rad + m_prime_rad).cos()
+            + 10.321 * (d_rad_2 - f_rad_2).cos();
+
+        // Convert to radians for final calculation
+        let lon_rad = lon.to_radians();
+        let lat_rad = lat.to_radians();
+
+        // Pre-compute sin/cos for final transformation
+        let sin_lat = lat_rad.sin();
+        let cos_lat = lat_rad.cos();
+        let sin_lon = lon_rad.sin();
+        let cos_lon = lon_rad.cos();
+
+        // Convert spherical to Cartesian (ecliptic coordinates)
+        let x_ecl = dist * cos_lat * cos_lon;
+        let y_ecl = dist * cos_lat * sin_lon;
+        let z_ecl = dist * sin_lat;
+
+        // Mean obliquity of the ecliptic (J2000.0)
+        let epsilon = (23.439291 - 0.0130042 * t).to_radians();
+        let cos_epsilon = epsilon.cos();
+        let sin_epsilon = epsilon.sin();
+
+        // Rotate from ecliptic to equatorial coordinates (mean equator and equinox of date)
+        let x_eq_date = x_ecl;
+        let y_eq_date = y_ecl * cos_epsilon - z_ecl * sin_epsilon;
+        let z_eq_date = y_ecl * sin_epsilon + z_ecl * cos_epsilon;
+
+        // Approximate velocity using orbital mechanics
+        let vel_mag = (GM_EARTH / dist).sqrt();
+
+        // Velocity direction in ecliptic coordinates
+        let r_ecl_mag = (x_ecl * x_ecl + y_ecl * y_ecl + z_ecl * z_ecl).sqrt();
+        let vx_ecl = vel_mag * (-y_ecl / r_ecl_mag);
+        let vy_ecl = vel_mag * (x_ecl / r_ecl_mag);
+        let vz_ecl = 0.0;
+
+        // Rotate velocity from ecliptic to equatorial coordinates (mean equator and equinox of date)
+        let vx_eq_date = vx_ecl;
+        let vy_eq_date = vy_ecl * cos_epsilon - vz_ecl * sin_epsilon;
+        let vz_eq_date = vy_ecl * sin_epsilon + vz_ecl * cos_epsilon;
+
+        // Transform from mean equatorial of date to GCRS (J2000) using precession matrix
+        let (jd_tt1, jd_tt2) = datetime_to_jd_tt(dt);
+
+        // Get the precession matrix from J2000 to date
+        let prec_matrix = precession_matrix_06(jd_tt1, jd_tt2);
+
+        // Transpose to get date to J2000 (for orthogonal matrices, transpose = inverse)
+        let prec_matrix_t = transpose_matrix(prec_matrix);
+
+        // Apply precession transformation to get J2000/GCRS coordinates
+        let pos_date = [x_eq_date, y_eq_date, z_eq_date];
+        let vel_date = [vx_eq_date, vy_eq_date, vz_eq_date];
+
+        let gcrs_pos = mat_mul_pvec(prec_matrix_t, pos_date);
+        let gcrs_vel = mat_mul_pvec(prec_matrix_t, vel_date);
+
+        // Store results
+        let mut row = out.row_mut(i);
+        row[0] = gcrs_pos[0];
+        row[1] = gcrs_pos[1];
+        row[2] = gcrs_pos[2];
+        row[3] = gcrs_vel[0];
+        row[4] = gcrs_vel[1];
+        row[5] = gcrs_vel[2];
+    }
+
+    out
+}
+
+/// Calculate high-precision positions for any solar system body using SPICE/ANISE ephemeris
+///
+/// This function uses JPL's high-precision ephemeris data to calculate positions
+/// with sub-arcsecond accuracy. Requires a SPICE kernel file (e.g., de440s.bsp).
+///
+/// # Arguments
+/// * `times` - Vector of timestamps for which to calculate positions
+/// * `target_id` - NAIF ID of the target body (e.g., 301 for Moon, 10 for Sun)
+/// * `center_id` - NAIF ID of the center body (e.g., 399 for Earth, 0 for Solar System Barycenter)
+///
+/// Panics if the ephemeris has no GCRS position data
+/// // Moon relative to Earth
+/// let moon_positions = calculate_body_positions_spice(&times, 301, 399);
+/// // Sun relative to Earth
+/// let sun_positions = calculate_body_positions_spice(&times, 10, 399);
+/// ```
+pub fn calculate_body_positions_spice(
+    times: &[DateTime<Utc>],
+    target_id: i32,
+    center_id: i32,
+) -> Array2<f64> {
+    // Import ANISE types
+    use anise::prelude::*;
+    use hifitime::Epoch as HifiEpoch;
+
+    // Prefer a centrally-initialized planetary almanac if available
+    use crate::ephemeris::spice_manager;
+
+    let maybe_ephemeris = spice_manager::get_planetary_ephemeris();
+
+    let almanac = if let Some(almanac) = maybe_ephemeris {
+        almanac
+    } else {
+        // Fallback: try to load from the best available default cache path (prefer full DE440)
+        let path = if let Some(p) = spice_manager::best_available_planetary_path() {
+            p
+        } else {
+            DEFAULT_DE440S_PATH.as_path().to_path_buf()
+        };
+        if !path.exists() {
+            panic!(
+                "SPK file not found at '{}'. Cannot compute high-precision body positions. \
+                 To resolve this, initialize the planetary ephemeris using init_planetary_ephemeris() \
+                 or ensure the SPK file exists at the specified path.",
+                path.display()
+            );
+        }
+
+        let path_str = path.to_str().expect("Invalid UTF-8 in path");
+        let spk = SPK::load(path_str)
+            .unwrap_or_else(|e| panic!("Failed to load SPK file '{}': {:?}", path.display(), e));
+
+        Arc::new(Almanac::default().with_spk(spk))
+    };
+
+    // Prepare output array
+    let n = times.len();
+    let mut out = Array2::<f64>::zeros((n, 6));
+
+    for (i, dt) in times.iter().enumerate() {
+        // Convert DateTime<Utc> to hifitime Epoch
+        let epoch = HifiEpoch::from_gregorian_utc(
+            dt.year(),
+            dt.month() as u8,
+            dt.day() as u8,
+            dt.hour() as u8,
+            dt.minute() as u8,
+            dt.second() as u8,
+            dt.timestamp_subsec_nanos(),
+        );
+
+        // Create frames for target and center bodies using J2000 orientation (GCRS)
+        let target_frame = Frame::from_ephem_j2000(target_id);
+        let center_frame = Frame::from_ephem_j2000(center_id);
+
+        let state = almanac
+            .translate_geometric(target_frame, center_frame, epoch)
+            .unwrap_or_else(|e| {
+                panic!(
+                    "Failed to get state for body {target_id} relative to {center_id} at {dt}: {e:?}. \
+                     Ensure SPK file contains ephemeris data for both bodies."
+                )
+            });
+
+        // Extract position and velocity
+        // ANISE returns position in km and velocity in km/s
+        let mut row = out.row_mut(i);
+        row[0] = state.radius_km.x;
+        row[1] = state.radius_km.y;
+        row[2] = state.radius_km.z;
+        row[3] = state.velocity_km_s.x;
+        row[4] = state.velocity_km_s.y;
+        row[5] = state.velocity_km_s.z;
+    }
+
+    out
+}
+
+/// Non-panicking variant: calculate body positions using SPICE, returning Result
+pub fn calculate_body_positions_spice_result(
+    times: &[DateTime<Utc>],
+    target_id: i32,
+    center_id: i32,
+    spice_kernel: Option<&str>,
+) -> Result<Array2<f64>, String> {
+    use crate::ephemeris::spice_manager;
+    use anise::prelude::*;
+    use hifitime::Epoch as HifiEpoch;
+
+    // If a kernel is specified, initialize from it (URL or path). Otherwise use cache/defaults.
+    if let Some(spec) = spice_kernel {
+        spice_manager::ensure_planetary_ephemeris_spec(spec)
+            .map_err(|e| format!("Failed to initialize planetary ephemeris from '{spec}': {e}"))?;
+    }
+
+    let almanac = if let Some(almanac) = spice_manager::get_planetary_ephemeris() {
+        almanac
+    } else {
+        let path = if let Some(p) = spice_manager::best_available_planetary_path() {
+            p
+        } else {
+            DEFAULT_DE440S_PATH.as_path().to_path_buf()
+        };
+        if !path.exists() {
+            return Err(format!(
+                "SPK file not found at '{}'. Initialize planetary ephemeris with ensure_planetary_ephemeris().",
+                path.display()
+            ));
+        }
+        let path_str = path
+            .to_str()
+            .ok_or_else(|| "Invalid UTF-8 in SPK path".to_string())?;
+        let spk = SPK::load(path_str)
+            .map_err(|e| format!("Failed to load SPK file '{}': {:?}", path.display(), e))?;
+        Arc::new(Almanac::default().with_spk(spk))
+    };
+
+    let n = times.len();
+    let mut out = Array2::<f64>::zeros((n, 6));
+
+    for (i, dt) in times.iter().enumerate() {
+        let epoch = HifiEpoch::from_gregorian_utc(
+            dt.year(),
+            dt.month() as u8,
+            dt.day() as u8,
+            dt.hour() as u8,
+            dt.minute() as u8,
+            dt.second() as u8,
+            dt.timestamp_subsec_nanos(),
+        );
+
+        let target_frame = Frame::from_ephem_j2000(target_id);
+        let center_frame = Frame::from_ephem_j2000(center_id);
+
+        let state = almanac
+            .translate_geometric(target_frame, center_frame, epoch)
+            .map_err(|e| {
+                format!(
+                    "SPICE could not provide body {target_id} relative to {center_id} at {dt}: {e:?}. \
+                     This often means the current kernel does not include that NAIF ID. \
+                     If you're using de440s.bsp, try a planetary barycenter (e.g., 'Jupiter barycenter' or '5') \
+                     or install a full kernel like de440.bsp."
+                )
+            })?;
+
+        let mut row = out.row_mut(i);
+        row[0] = state.radius_km.x;
+        row[1] = state.radius_km.y;
+        row[2] = state.radius_km.z;
+        row[3] = state.velocity_km_s.x;
+        row[4] = state.velocity_km_s.y;
+        row[5] = state.velocity_km_s.z;
+    }
+
+    Ok(out)
+}
+
+/// Convert RA/Dec to Altitude/Azimuth for given ephemeris times
+///
+/// This function calculates the topocentric altitude and azimuth of a celestial target
+/// as seen from the observer locations defined in the ephemeris.
+///
+/// # Arguments
+/// * `ra_deg` - Right ascension in degrees
+/// * `dec_deg` - Declination in degrees
+/// * `ephemeris` - Ephemeris containing observer positions and times
+/// * `time_indices` - Optional indices into ephemeris times to evaluate (default: all times)
+///
+/// # Returns
+/// Array2 with shape (N, 2) containing [altitude_deg, azimuth_deg] for each time
+/// where N is the number of selected times
+///
+/// # Panics
+/// Panics if the ephemeris has no GCRS position data
+/// Calculate airmass from altitude angle and observer height above sea level
+///
+/// Airmass represents the relative path length through Earth's atmosphere compared to
+/// zenith observation. Lower airmass values indicate better observing conditions.
+///
+/// # Arguments
+/// * `altitude_deg` - Altitude angle in degrees (0° = horizon, 90° = zenith)
+/// * `height_km` - Observer height above sea level in kilometers
+///
+/// # Returns
+/// Airmass value:
+/// - 1.0 at zenith (directly overhead)
+/// - ~2.0 at 30° altitude
+/// - ~5.8 at 10° altitude
+/// - Infinity for targets below horizon
+///
+/// # Implementation
+/// - For altitude < 10°: Uses Rozenberg approximation for low elevations
+/// - For altitude ≥ 10°: Uses simple secant approximation (1 / sin(altitude))
+/// - Corrects for observer height using exponential atmospheric scale height (8.5 km)
+///
+/// # Example
+/// ```rust,ignore
+/// let airmass_zenith = altitude_to_airmass(90.0, 0.0);  // 1.0 at sea level
+/// let airmass_30deg = altitude_to_airmass(30.0, 0.0);   // ~2.0
+/// let airmass_high_altitude = altitude_to_airmass(90.0, 2.0);  // <1.0 (less atmosphere above)
+/// ```
+pub fn altitude_to_airmass(altitude_deg: f64, height_km: f64) -> f64 {
+    let alt_rad = altitude_deg.to_radians();
+    let scale_height_km = 8.5; // Atmospheric scale height in km
+
+    let airmass_sea_level = if alt_rad <= 0.0 {
+        // Target below horizon - infinite airmass
+        f64::INFINITY
+    } else if alt_rad < 0.174533 {
+        // 10 degrees
+        // Use Rozenberg approximation for low elevations
+        1.0 / (alt_rad.sin() + 0.025 * (alt_rad + 0.15 * alt_rad.powi(2)).exp().ln())
+    } else {
+        // Simple secant approximation: airmass ≈ 1 / sin(altitude)
+        1.0 / alt_rad.sin()
+    };
+
+    // Correct for observer height above sea level
+    // At higher altitudes, there's less atmosphere above, so airmass is reduced
+    if airmass_sea_level.is_finite() {
+        airmass_sea_level * (-height_km / scale_height_km).exp()
+    } else {
+        airmass_sea_level
+    }
+}
+
+pub fn radec_to_altaz(
+    ra_deg: f64,
+    dec_deg: f64,
+    ephemeris: &dyn EphemerisBase,
+    time_indices: Option<&[usize]>,
+) -> Array2<f64> {
+    // Get ephemeris data
+    let times = ephemeris.get_times().expect("Ephemeris must have times");
+    let gcrs_data = ephemeris
+        .data()
+        .gcrs
+        .as_ref()
+        .expect("Ephemeris must have GCRS data");
+
+    // Filter times and GCRS data if indices provided
+    let (times_filtered, gcrs_filtered) = if let Some(indices) = time_indices {
+        let filtered_times: Vec<DateTime<Utc>> = indices.iter().map(|&i| times[i]).collect();
+        let obs_filtered = gcrs_data.select(ndarray::Axis(0), indices);
+        (filtered_times, obs_filtered)
+    } else {
+        (times.to_vec(), gcrs_data.clone())
+    };
+
+    let n_times = times_filtered.len();
+    let mut result = Array2::<f64>::zeros((n_times, 2));
+
+    // Convert observer positions from GCRS to ITRS (convert_frames expects 6 columns: pos + vel)
+    let itrs_data = convert_frames(
+        &gcrs_filtered,
+        &times_filtered,
+        Frame::GCRS,
+        Frame::ITRS,
+        true,
+    );
+
+    // Convert ITRS positions to geodetic coordinates (extract position columns only)
+    let positions_slice = itrs_data.slice(s![.., 0..3]);
+    let positions_array = positions_slice.to_owned();
+    let (lats_deg, lons_deg, heights_km) = ecef_to_geodetic_deg(&positions_array);
+
+    // Precompute target coordinates in radians
+    let ra_rad = ra_deg.to_radians();
+    let dec_rad = dec_deg.to_radians();
+
+    for i in 0..n_times {
+        let lat_rad = lats_deg[i].to_radians();
+        let lon_rad = lons_deg[i].to_radians();
+        let height_m = heights_km[i] * 1000.0;
+        let time = &times_filtered[i];
+
+        let (utc1, utc2) = datetime_to_jd_utc(time);
+        let dut1 = ut1_provider::get_ut1_utc_offset(time);
+        let (xp, yp) = eop_provider::get_polar_motion_rad(time);
+
+        // Use SOFA apparent-place routine for full topocentric alt/az (pressure=0: no refraction)
+        let (aob, zob, _hob, _dob, _rob, _eo) = atco13(
+            ra_rad, dec_rad, 0.0, 0.0, 0.0, 0.0, utc1, utc2, dut1, lon_rad, lat_rad, height_m, xp,
+            yp, 0.0, 0.0, 0.0, 0.55,
+        )
+        .expect("SOFA atco13 failed");
+
+        let alt_deg = (std::f64::consts::FRAC_PI_2 - zob).to_degrees();
+        let mut az_deg = aob.to_degrees();
+        if az_deg < 0.0 {
+            az_deg += 360.0;
+        }
+
+        result[[i, 0]] = alt_deg;
+        result[[i, 1]] = az_deg;
+    }
+
+    result
+}
+
+/// Calculate Sun altitudes for all ephemeris times (vectorized for daytime constraints)
+///
+/// This function calculates the Sun's altitude above the horizon for all times in the ephemeris,
+/// which is needed for daytime constraint evaluation.
+///
+/// # Arguments
+/// * `ephemeris` - Ephemeris object containing Sun positions and observer positions
+/// * `time_indices` - Optional indices into ephemeris times (default: all times)
+///
+/// # Returns
+/// Array1 containing Sun altitude in degrees for each time
+///
+/// # Performance
+/// Calculate Sun altitude angles - FAST approximation version
+/// This is suitable for daytime/twilight constraints where we don't need
+/// topocentric accuracy (sub-degree is fine).
+///
+/// This version avoids expensive frame conversions and SOFA calls by using
+/// a simpler geocentric approximation, which is typically within 0.5-1.0 degrees
+/// of the true topocentric value for ground-based observers.
+pub fn calculate_sun_altitudes_batch_fast(
+    ephemeris: &dyn EphemerisBase,
+    time_indices: Option<&[usize]>,
+) -> Array1<f64> {
+    // Get Sun positions in GCRS frame
+    let sun_positions = ephemeris
+        .data()
+        .sun_gcrs
+        .as_ref()
+        .expect("Ephemeris must have Sun data");
+
+    // Get observer positions in GCRS frame
+    let obs_positions = ephemeris
+        .data()
+        .gcrs
+        .as_ref()
+        .expect("Ephemeris must have GCRS data");
+
+    // Get times
+    let times = ephemeris.get_times().expect("Ephemeris must have times");
+
+    // Filter data if indices provided
+    let (sun_filtered, obs_filtered, times_filtered) = if let Some(indices) = time_indices {
+        let sun_filtered = sun_positions.select(ndarray::Axis(0), indices);
+        let obs_filtered = obs_positions.select(ndarray::Axis(0), indices);
+        let times_filtered: Vec<DateTime<Utc>> = indices.iter().map(|&i| times[i]).collect();
+        (sun_filtered, obs_filtered, times_filtered)
+    } else {
+        (sun_positions.clone(), obs_positions.clone(), times.to_vec())
+    };
+
+    let n_times = times_filtered.len();
+    let mut result = Array1::<f64>::zeros(n_times);
+
+    // Use simple geocentric approximation:
+    // 1. Calculate relative Sun position (Sun as seen from observer)
+    // 2. Convert to altitude using observer's latitude/longitude from geocentric position
+    // 3. This avoids expensive frame conversions and is good enough for twilight
+
+    for i in 0..n_times {
+        // Get positions
+        let sun_x = sun_filtered[[i, 0]];
+        let sun_y = sun_filtered[[i, 1]];
+        let sun_z = sun_filtered[[i, 2]];
+
+        let obs_x = obs_filtered[[i, 0]];
+        let obs_y = obs_filtered[[i, 1]];
+        let obs_z = obs_filtered[[i, 2]];
+
+        // Relative Sun position from observer
+        let rel_x = sun_x - obs_x;
+        let rel_y = sun_y - obs_y;
+        let rel_z = sun_z - obs_z;
+
+        // Observer's geocentric latitude and longitude (from GCRS position)
+        let obs_lat = obs_z.atan2((obs_x * obs_x + obs_y * obs_y).sqrt());
+        let obs_lon = obs_y.atan2(obs_x);
+
+        // Convert Sun's relative position to RA/Dec
+        let sun_dist = (rel_x * rel_x + rel_y * rel_y + rel_z * rel_z).sqrt();
+        if sun_dist == 0.0 {
+            result[i] = -90.0; // Sun at observer position
+            continue;
+        }
+
+        let sun_dec = (rel_z / sun_dist).asin();
+        let sun_ra = rel_y.atan2(rel_x);
+
+        // Calculate Hour Angle (HA = LST - RA)
+        // For simplicity, approximate LST ≈ observer_longitude (geocentric)
+        // In GCRS, the x-axis points to vernal equinox, so longitude ≈ atan2(y, x)
+        let lst_approx = obs_lon;
+        let ha = lst_approx - sun_ra;
+
+        // Simple altitude formula (good enough for daytime constraint):
+        // sin(alt) = sin(dec) * sin(lat) + cos(dec) * cos(lat) * cos(HA)
+        let sin_alt = sun_dec.sin() * obs_lat.sin() + sun_dec.cos() * obs_lat.cos() * ha.cos();
+        let alt_rad = sin_alt.asin();
+        result[i] = alt_rad.to_degrees();
+    }
+
+    result
+}
+
+/// Convert CIRS RA/Dec to horizontal coordinates (altitude/azimuth)
+///
+/// # Arguments
+/// * `lat_deg` - Observer latitude in degrees
+/// * `lst_deg` - Local Sidereal Time in degrees
+/// * `ra_deg` - Right ascension in CIRS frame (degrees)
+/// * `dec_deg` - Declination in CIRS frame (degrees)
+///
+/// # Returns
+/// (altitude_deg, azimuth_deg)
+/// Compatibility stub for old calculate_moon_positions_spice function
+///
+/// This function maintains backward compatibility with code that used the old
+/// `calculate_moon_positions_spice(times, spk_path)` signature. It now calls
+/// the more general `calculate_body_positions_spice` with Moon-specific parameters.
+///
+/// # Arguments
+/// * `times` - Vector of timestamps for which to calculate Moon positions
+///
+/// # Returns
+/// Array2 with shape (N, 6) containing [x, y, z, vx, vy, vz] in GCRS frame for each timestamp
+///
+/// # Note
+/// The ephemeris is now loaded globally via `spice_manager`. This function calls
+/// `calculate_body_positions_spice(times, 301, 399)` where 301 is the NAIF ID for Moon
+/// and 399 is the NAIF ID for Earth.
+pub fn calculate_moon_positions(times: &[DateTime<Utc>]) -> Array2<f64> {
+    // Moon NAIF ID: 301, Earth NAIF ID: 399
+    if is_planetary_ephemeris_initialized() {
+        calculate_body_positions_spice(times, MOON_NAIF_ID, EARTH_NAIF_ID)
+    } else {
+        calculate_moon_positions_meeus(times)
+    }
+}
+
+pub fn calculate_sun_positions(times: &[DateTime<Utc>]) -> Array2<f64> {
+    // Sun NAIF ID: 10, Earth NAIF ID: 399
+    if is_planetary_ephemeris_initialized() {
+        calculate_body_positions_spice(times, SUN_NAIF_ID, EARTH_NAIF_ID)
+    } else {
+        calculate_sun_positions_erfa(times)
+    }
+}
+
+/// Calculate positions for any body identified by NAIF ID or name
+///
+/// This is a convenience wrapper around `calculate_body_positions_spice` that accepts
+/// either a NAIF ID (integer) or a body name (string). This is analogous to astropy's
+/// `get_body` function.
+///
+/// # Arguments
+/// * `times` - Vector of timestamps for which to calculate positions
+/// * `body_identifier` - NAIF ID or body name (e.g., "Jupiter", "mars", "301" for Moon, "Halley" for comet)
+/// * `observer_id` - NAIF ID of the observer/center body (default: 399 for Earth)
+///
+/// # Returns
+/// `Ok(Array2<f64>)` with shape (N, 6) containing [x, y, z, vx, vy, vz] in GCRS frame,
+/// or `Err(String)` if the body identifier is not recognized
+///
+/// # Example
+/// ```rust,ignore
+/// use chrono::{DateTime, Utc};
+/// let times = vec![DateTime::parse_from_rfc3339("2025-01-01T00:00:00Z").unwrap().into()];
+///
+/// // By name
+/// let jupiter = calculate_body_by_id_or_name(&times, "Jupiter", 399).unwrap();
+///
+/// // By NAIF ID
+/// let mars = calculate_body_by_id_or_name(&times, "499", 399).unwrap();
+///
+/// // By name (case insensitive)
+/// let moon = calculate_body_by_id_or_name(&times, "moon", 399, None, false).unwrap();
+///
+/// // Comet by name (requires use_horizons=true)
+/// let halley = calculate_body_by_id_or_name(&times, "Halley", 399, None, true).unwrap();
+///
+/// // Or use JPL Horizons as fallback when SPICE data unavailable
+/// let asteroid = calculate_body_by_id_or_name(&times, "433", 399, None, true).unwrap();
+/// ```
+pub fn calculate_body_by_id_or_name(
+    times: &[DateTime<Utc>],
+    body_identifier: &str,
+    observer_id: i32,
+    spice_kernel: Option<&str>,
+    use_horizons: bool,
+) -> Result<Array2<f64>, String> {
+    use crate::naif_ids::parse_body_identifier;
+    use crate::utils::horizons::query_horizons_body;
+
+    // First, try to parse as a known NAIF ID/name
+    if let Some(target_id) = parse_body_identifier(body_identifier) {
+        // Try SPICE first
+        let spice_result =
+            calculate_body_positions_spice_result(times, target_id, observer_id, spice_kernel);
+
+        // If SPICE fails and use_horizons is enabled, try JPL Horizons
+        if spice_result.is_err() && use_horizons {
+            return query_and_convert_horizons(times, target_id, observer_id, &query_horizons_body);
+        }
+
+        return spice_result;
+    }
+
+    // If not a recognized NAIF ID/name and use_horizons is enabled, try as a comet or object name
+    if use_horizons {
+        // Treat as a comet/object name
+        return query_and_convert_horizons_by_name(times, body_identifier, observer_id);
+    }
+
+    // Neither NAIF ID/name nor Horizons
+    Err(format!(
+        "Unknown body identifier: '{}'. Provide a valid NAIF ID, body name (e.g., 'Jupiter', 'Mars', '301' for Moon), or enable use_horizons=True for comet/asteroid names.",
+        body_identifier
+    ))
+}
+
+/// Helper function to query Horizons by ID and convert coordinates
+#[allow(clippy::type_complexity)]
+fn query_and_convert_horizons(
+    times: &[DateTime<Utc>],
+    target_id: i32,
+    observer_id: i32,
+    query_fn: &dyn Fn(&[DateTime<Utc>], i32) -> Result<Array2<f64>, String>,
+) -> Result<Array2<f64>, String> {
+    // Horizons fallback only works for Earth-centered observers (NAIF ID 399)
+    // For satellite observers, use SPICE kernels instead
+    if observer_id != EARTH_NAIF_ID {
+        return Err(format!(
+            "Horizons fallback only supports Earth-centered observer (NAIF ID {}). \
+            For satellite/spacecraft observers, ensure SPICE kernels are available. Got observer_id={}",
+            EARTH_NAIF_ID, observer_id
+        ));
+    }
+
+    // Query Horizons for geocentric position (CENTER='@399' in the API)
+    // The Horizons API already returns Earth-centered ICRF coordinates
+    query_fn(times, target_id)
+}
+
+/// Helper function to query Horizons by name and convert coordinates
+fn query_and_convert_horizons_by_name(
+    times: &[DateTime<Utc>],
+    body_name: &str,
+    observer_id: i32,
+) -> Result<Array2<f64>, String> {
+    use crate::utils::horizons::query_horizons_body_by_name;
+
+    // Horizons fallback only works for Earth-centered observers (NAIF ID 399)
+    // For satellite observers, use SPICE kernels instead
+    if observer_id != EARTH_NAIF_ID {
+        return Err(format!(
+            "Horizons fallback only supports Earth-centered observer (NAIF ID {}). \
+            For satellite/spacecraft observers, ensure SPICE kernels are available. Got observer_id={}",
+            EARTH_NAIF_ID, observer_id
+        ));
+    }
+
+    // Query Horizons for geocentric position by name (CENTER='@399' in the API)
+    // The Horizons API already returns Earth-centered ICRF coordinates
+    query_horizons_body_by_name(times, body_name)
+}
