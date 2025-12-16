@@ -1,0 +1,299 @@
+{
+    "ts_mean(group_rank(ts_delta(<analyst_field/>, 5), sector), 5) - ts_mean(group_rank(ts_delta(<analyst_field/>, 60), sector), 20)": {
+        "template_explanation": "Fresh vs stale analyst revision momentum: reward stocks whose 5-day EPS estimate change ranks strongly vs sector over last 5 days while penalising those whose 60-day change has been persistently well-ranked over 20 days; sector-neutral double difference keeps signal \u2018fresh\u2019.",
+        "seed_alpha_settings": {
+            "instrumentType": "EQUITY",
+            "region": "IND",
+            "universe": "TOP500",
+            "delay": 1,
+            "decay": 5,
+            "neutralization": "SECTOR",
+            "truncation": 0.01,
+            "pasteurization": "ON",
+            "unitHandling": "VERIFY",
+            "nanHandling": "ON",
+            "maxTrade": "OFF",
+            "language": "FASTEXPR",
+            "visualization": false,
+            "startDate": "2013-01-20",
+            "endDate": "2023-01-20"
+        },
+        "placeholder_candidates": {
+            "<analyst_field/>": {
+                "type": "data_field",
+                "candidates": [
+                    {
+                        "id": "anl10_grmfq1_consensus_6261",
+                        "description": "Consensus estimate value for gross margin Q1"
+                    },
+                    {
+                        "id": "anl15_s_12_m_total",
+                        "description": "The total of 12-month forward earnings estimation aggregated within GICS sector grouping."
+                    },
+                    {
+                        "id": "anl15_gr_12_m_total",
+                        "description": "The total of 12-month forward earnings estimation aggregated within GICS group grouping."
+                    },
+                    {
+                        "id": "anl10_grmsmun_1qf_6228",
+                        "description": "Sample/analyst number - indicating how many analysts contributed to that particular estimate or forecast for gross margin"
+                    },
+                    {
+                        "id": "anl10_grmsmun_1yf_6257",
+                        "description": "Sample/analyst number - indicating how many analysts contributed to that particular estimate or forecast for gross margin"
+                    },
+                    {
+                        "id": "rtk_ptg_number",
+                        "description": "Num of Price Target -"
+                    },
+                    {
+                        "id": "anl15_gr_12_m_6m_chg",
+                        "description": "The weighted 6-month percent change of 12-month forward EPS estimation aggregated within GICS group grouping."
+                    },
+                    {
+                        "id": "anl15_gr_12_m_1m_chg",
+                        "description": "The weighted 1-month percent change of 12-month forward EPS estimation aggregated within GICS group grouping."
+                    }
+                ]
+            }
+        }
+    },
+    "-(ts_rank(ts_sum(<earnings_surprise_field/>, 10), 60) - group_rank(ts_rank(<earnings_surprise_field/>, 60), industry))": {
+        "template_explanation": "Earnings-momentum convergence trade: short stocks whose recent 10-day sum of earnings surprises ranks high in own history but low vs industry peers, betting on convergence of extreme outliers.",
+        "seed_alpha_settings": {
+            "instrumentType": "EQUITY",
+            "region": "IND",
+            "universe": "TOP500",
+            "delay": 1,
+            "decay": 5,
+            "neutralization": "SECTOR",
+            "truncation": 0.01,
+            "pasteurization": "ON",
+            "unitHandling": "VERIFY",
+            "nanHandling": "ON",
+            "maxTrade": "OFF",
+            "language": "FASTEXPR",
+            "visualization": false,
+            "startDate": "2013-01-20",
+            "endDate": "2023-01-20"
+        },
+        "placeholder_candidates": {
+            "<earnings_surprise_field/>": {
+                "type": "data_field",
+                "candidates": [
+                    {
+                        "id": "anl39_qepsinclxo",
+                        "description": "EPS including extraordinary items - most recent quarter"
+                    },
+                    {
+                        "id": "anl39_roxlcxspeq",
+                        "description": "EPS excluding extraordinary items - most recent quarter"
+                    },
+                    {
+                        "id": "rsk68_beta",
+                        "description": "Beta"
+                    },
+                    {
+                        "id": "anl14_actvalue_revenue_fp0",
+                        "description": "Revenue - recent last quarter"
+                    },
+                    {
+                        "id": "anl11_company_name",
+                        "description": "Company name"
+                    },
+                    {
+                        "id": "anl10_entfy1_consensus_6473",
+                        "description": "Consensus estimate value for earnings net taxes FY1"
+                    }
+                ]
+            }
+        }
+    },
+    "ts_zscore(ts_backfill(<smart_estimate_field/>, 30), country) * sign(ts_delta(<price_field/>, 10))": {
+        "template_explanation": "Global estimate drift with price confirmation: cross-country z-scored SmartEstimate revision (30-day backfill) amplified only when direction agrees with 10-day price move, aligning fundamentals & price momentum.",
+        "seed_alpha_settings": {
+            "instrumentType": "EQUITY",
+            "region": "IND",
+            "universe": "TOP500",
+            "delay": 1,
+            "decay": 5,
+            "neutralization": "SECTOR",
+            "truncation": 0.01,
+            "pasteurization": "ON",
+            "unitHandling": "VERIFY",
+            "nanHandling": "ON",
+            "maxTrade": "OFF",
+            "language": "FASTEXPR",
+            "visualization": false,
+            "startDate": "2013-01-20",
+            "endDate": "2023-01-20"
+        },
+        "placeholder_candidates": {
+            "<smart_estimate_field/>": {
+                "type": "data_field",
+                "candidates": [
+                    {
+                        "id": "anl10_grmfq1_smart_ests_v1_6245",
+                        "description": "Smart estimates version 1 value for gross margin for Q1"
+                    },
+                    {
+                        "id": "anl10_grmfq2_smart_ests_v1_6246",
+                        "description": "Smart estimates version 1 value for gross margin for Q2"
+                    },
+                    {
+                        "id": "anl15_s_12_m_total",
+                        "description": "The total of 12-month forward earnings estimation aggregated within GICS sector grouping."
+                    },
+                    {
+                        "id": "anl15_gr_12_m_total",
+                        "description": "The total of 12-month forward earnings estimation aggregated within GICS group grouping."
+                    },
+                    {
+                        "id": "anl10_grmfq2_pred_surps_v1_6235",
+                        "description": "Predicted surprise version 1 for gross margin for Q2 (calculated as (smart_ests - consensus)/consensus)"
+                    },
+                    {
+                        "id": "anl10_grmfq2_pred_surps_v2_6266",
+                        "description": "Predicted surprise version 2 for gross margin for Q2 (calculated as (smart_ests - consensus)/consensus)"
+                    },
+                    {
+                        "id": "anl10_grmsmun_1qf_6228",
+                        "description": "Sample/analyst number - indicating how many analysts contributed to that particular estimate or forecast for gross margin"
+                    },
+                    {
+                        "id": "anl10_grmsmun_1yf_6257",
+                        "description": "Sample/analyst number - indicating how many analysts contributed to that particular estimate or forecast for gross margin"
+                    },
+                    {
+                        "id": "anl10_grmfq1_consensus_6261",
+                        "description": "Consensus estimate value for gross margin Q1"
+                    }
+                ]
+            },
+            "<price_field/>": {
+                "type": "data_field",
+                "candidates": [
+                    {
+                        "id": "anl10_cpsfq2_consensus_6300",
+                        "description": "Consensus estimate value for cash per share Q2"
+                    },
+                    {
+                        "id": "country_count_adjusted",
+                        "description": "The adjusted count of countries represented in the portfolio or model."
+                    },
+                    {
+                        "id": "anl14_actvalue_roe_fp0",
+                        "description": "Returns on equity - recent last quarter"
+                    }
+                ]
+            }
+        }
+    },
+    "group_rank(ts_mean(regression_neut(ts_delta(<analyst_field/>, 1), sector), 21), sector)": {
+        "template_explanation": "Pure sector-neutral analyst revision alpha: daily estimate change first sector-demeaned, then 21-day smoothed and ranked within sector, isolating stock-specific revision strength.",
+        "seed_alpha_settings": {
+            "instrumentType": "EQUITY",
+            "region": "IND",
+            "universe": "TOP500",
+            "delay": 1,
+            "decay": 5,
+            "neutralization": "SECTOR",
+            "truncation": 0.01,
+            "pasteurization": "ON",
+            "unitHandling": "VERIFY",
+            "nanHandling": "ON",
+            "maxTrade": "OFF",
+            "language": "FASTEXPR",
+            "visualization": false,
+            "startDate": "2013-01-20",
+            "endDate": "2023-01-20"
+        },
+        "placeholder_candidates": {
+            "<analyst_field/>": {
+                "type": "data_field",
+                "candidates": [
+                    {
+                        "id": "anl10_grmfq1_consensus_6261",
+                        "description": "Consensus estimate value for gross margin Q1"
+                    },
+                    {
+                        "id": "rtk_ptg_number",
+                        "description": "Num of Price Target -"
+                    },
+                    {
+                        "id": "anl15_s_12_m_total",
+                        "description": "The total of 12-month forward earnings estimation aggregated within GICS sector grouping."
+                    },
+                    {
+                        "id": "anl15_ind_12_m_total",
+                        "description": "The total of 12-month forward earnings estimation aggregated within GICS industry grouping."
+                    },
+                    {
+                        "id": "anl10_grmsmun_1qf_6228",
+                        "description": "Sample/analyst number - indicating how many analysts contributed to that particular estimate or forecast for gross margin"
+                    },
+                    {
+                        "id": "anl10_grmsmun_1yf_6257",
+                        "description": "Sample/analyst number - indicating how many analysts contributed to that particular estimate or forecast for gross margin"
+                    }
+                ]
+            }
+        }
+    },
+    "trade_when(group_rank(<iv_skew_field/>, subindustry) > 0.9, -ts_delta(<price_field/>, 5), ts_rank(<price_field/>, 20))": {
+        "template_explanation": "Conditional reversal vs trend: if IV skew is extremely high vs subindustry peers, bet on 5-day price reversal; else follow 20-day price trend, exploiting option-flow extremes.",
+        "seed_alpha_settings": {
+            "instrumentType": "EQUITY",
+            "region": "IND",
+            "universe": "TOP500",
+            "delay": 1,
+            "decay": 5,
+            "neutralization": "SECTOR",
+            "truncation": 0.01,
+            "pasteurization": "ON",
+            "unitHandling": "VERIFY",
+            "nanHandling": "ON",
+            "maxTrade": "OFF",
+            "language": "FASTEXPR",
+            "visualization": false,
+            "startDate": "2013-01-20",
+            "endDate": "2023-01-20"
+        },
+        "placeholder_candidates": {
+            "<iv_skew_field/>": {
+                "type": "data_field",
+                "candidates": [
+                    {
+                        "id": "rsk68_weight_volatility_short",
+                        "description": "Short-term volatility"
+                    },
+                    {
+                        "id": "healthcare_equipment_exposure",
+                        "description": "Portfolio exposure to the healthcare equipment sector."
+                    },
+                    {
+                        "id": "anl10_cpsfq2_pred_surps_v0_6298",
+                        "description": "Predicted surprise version 0 for cash per share for Q2 (calculated as (smart_ests - consensus)/consensus)"
+                    }
+                ]
+            },
+            "<price_field/>": {
+                "type": "data_field",
+                "candidates": [
+                    {
+                        "id": "anl11_company_name",
+                        "description": "Company name"
+                    },
+                    {
+                        "id": "anl10_cpsfq2_consensus_6300",
+                        "description": "Consensus estimate value for cash per share Q2"
+                    },
+                    {
+                        "id": "rsk68_weight_dadv",
+                        "description": "Dollar average daily volume"
+                    }
+                ]
+            }
+        }
+    }
+}
