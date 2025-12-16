@@ -1,0 +1,55 @@
+[tool.pdm.build]
+includes = [
+    "alliance_platform",
+]
+
+[tool.pdm.version]
+source = "call"
+getter = "extract_version:get_version()"
+
+[tool.pdm.dev-dependencies]
+dev = [
+    "-e alliance-platform-core @ file:///${PROJECT_ROOT}/../ap-core",
+    "psycopg2",
+    "rules",
+]
+
+[tool.django-stubs]
+django_settings_module = "test_alliance_platform_codegen.settings"
+
+[tool.mypy]
+python_version = "3.11"
+plugins = [
+    "mypy_django_plugin.main",
+    "mypy_drf_plugin.main",
+]
+explicit_package_bases = true
+warn_unused_ignores = true
+
+[project]
+name = "alliance-platform-codegen"
+dynamic = []
+description = "Alliance Platform Codegen"
+authors = [
+    { name = "Alliance Software", email = "support@alliancesoftware.com.au" },
+]
+dependencies = [
+    "alliance-platform-core",
+    "Django>=4.2.11",
+    "django-allianceutils>=4.0",
+]
+requires-python = ">=3.11"
+readme = "README.md"
+include = [
+    "alliance_platform/codegen/py.typed",
+]
+version = "0.0.9"
+
+[project.license]
+text = "BSD-2-Clause"
+
+[build-system]
+requires = [
+    "pdm-backend",
+]
+build-backend = "pdm.backend"
