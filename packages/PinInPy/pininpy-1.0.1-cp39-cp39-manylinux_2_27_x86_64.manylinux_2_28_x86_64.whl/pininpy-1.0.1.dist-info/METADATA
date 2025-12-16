@@ -1,0 +1,90 @@
+Metadata-Version: 2.2
+Name: PinInPy
+Version: 1.0.1
+Summary: Python library for Pinyin searching
+Keywords: PinIn,pinyin match,pinyin,cffi
+Author-Email: SajoYukimi <kagiyamahino@gmail.com>
+License: MIT
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: MacOS :: MacOS X
+Classifier: Operating System :: Microsoft :: Windows
+Classifier: Operating System :: POSIX :: Linux
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
+Classifier: Programming Language :: C++
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Natural Language :: Chinese (Simplified)
+Classifier: Natural Language :: Chinese (Traditional)
+Project-URL: Homepage, https://github.com/KagiamamaHIna/PinInPy
+Project-URL: Bug Tracker, https://github.com/KagiamamaHIna/PinInPy/issues
+Project-URL: Source, https://github.com/KagiamamaHIna/PinInPy
+Requires-Python: >=3.9
+Requires-Dist: cffi
+Description-Content-Type: text/markdown
+
+[![Upload Python Package](https://github.com/KagiamamaHIna/PinInPy/actions/workflows/python-publish.yml/badge.svg)](https://github.com/KagiamamaHIna/PinInPy/actions/workflows/python-publish.yml)
+![PyPI version](https://img.shields.io/pypi/v/PinInPy)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/PinInPy)
+![PyPI - License](https://img.shields.io/pypi/l/PinInPy)
+
+# PinIn Python
+基于[PinIn4Cpp](https://github.com/KagiamamaHIna/PinIn4Cpp)的Python封装，提供C++的性能的同时用python的方式使用PinIn4Cpp
+
+## 特性
+完全基于PinIn4Cpp的C API，因此相比C++版本功能略有减少
+- 提供Pythonic的封装，而不必调用原始的C API
+- 高效的构建和即时搜索性能
+- 可配置的预设键位方案和模糊音方案
+
+## 安装
+```
+pip install PinInPy
+```
+
+## 示例
+**注意**：拼音字典文件(pinyin.txt)，需要自行准备，也可以从[pinyin-data](https://github.com/mozillazg/pinyin-data)中下载直接使用
+
+```python
+import PinInPy
+# BEGIN是前缀匹配，也就是根据字符串开头开始匹配
+tree = PinInPy.TreeSearcher(PinInPy.Logic.BEGIN, "pinyin.txt")
+tree.put_string("佐城雪美")
+tree.put_string("游佐梢")
+tree.put_string("市原仁奈")
+
+print(tree.execute_search("zcxm"))#根据zcxm搜索 打印: ["佐城雪美"]
+print(tree.execute_search("zchenxm"))#测试无模糊音时 打印: []
+
+pinin = tree.get_pinin()# 获取PinIn对象，可以用于配置依赖PinIn对象的TreeSearcher
+pinin.get_config().set_fEng2En(True).commit()# 设置eng -> en的模糊音
+# 这时候en == eng
+print(tree.execute_search("zchenxm"))# 打印: ["佐城雪美"]
+
+pinin.get_config().set_keyboard(PinInPy.Keyboard.MICROSOFT).commit()# 设置键位为微软双拼
+# y b(ou) z o(uo)  u(sh) k(ao) == you zuo shao
+print(tree.execute_search("ybzouk"))# 打印: ["游佐梢"]
+
+# 可以根据已有的PinIn对象去构造新的搜索树，PinIn上的配置是会被共享的 CONTAIN是部分匹配，部分匹配则是可以从任意位置开始匹配
+# 通常部分匹配的性能更差
+tree2 = PinInPy.TreeSearcher(PinInPy.Logic.CONTAIN, pinin)
+tree2.put_string("佐城雪美")
+tree2.put_string("游佐梢")
+tree2.put_string("市原仁奈")
+tree2.put_string("serika")
+# r f(en) n l(ai) == ren nai
+print(tree2.execute_search("rfnl"))# 因为是部分匹配，所以后面会被匹配仁奈 打印: ["市原仁奈"]
+# 注意！ 双拼是成对匹配的，如果只有奇数个拼音音素输入则不会匹配任何中文
+print(tree2.execute_search("r"))# 打印: ["serika"]
+```
+## 注意事项
+不包含PinIn4Cpp中的ParallelSearch，拼音格式化功能，Keyboard自定义（只能使用预设），从内存中加载字典文件，从内存中加载二进制序列化文件的功能
+PinIn类也不暴露拼音获取功能
+
+理论上是平台无关的，但是GitHub Actions只构建了Linux，Windows，MacOS的Wheel包，如果你的目标平台不是其中之一的话可以自行尝试下载源代码，配置CMake，配置C/C++编译器，用```pip install .```安装
