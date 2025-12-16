@@ -1,0 +1,10 @@
+CTAPI_FAILURE_CODE = 900
+MESSAGE = "message"
+STATUS_CODE = "statusCode"
+ERROR = "error"
+ERROR_CODE = "errorCode"
+DESCRIPTION = "description"
+HTTP_CODE = "httpCode"
+TRACEID = "traceId"
+TRACE_ID = "trace_id"
+X_TRACE_ID = "x-trace-id"
