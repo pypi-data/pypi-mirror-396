@@ -1,0 +1,366 @@
+# # Integration test configuration.
+#
+# This file contains sets of tests to compare Climix
+# output with other index data.
+#
+# The `test_settings` section contains general test settings,
+# with `base_path` pointing to a folder where all input test
+# data is located.
+#
+# Example:
+#
+# ```yaml
+# test_settings:
+#   base_path: "/home/user/testdata/"
+# ```
+#
+# The `test_configuration` section specifies all test sets,
+# each of which contains three keys: `description`, `data`
+# and `tests`.
+#
+# `data`, in turn, contains `index_path`, the path to index data
+# that should be used for comparison, and `variable_path`, the
+# path to variable data that should be used as input to Climix.
+# They should both be relative to `base_path` given in the test
+# settings. `data` also contains `variables`, which maps
+# variable names to a file name, which may contain wildcards
+# if several files should be used as input for a variable.
+#
+# `tests` contains all tests for the current set, which each
+# should specify the following:
+# * `index`: the name of the index Climix should calculate
+# * `period`: the period of the output. Should be one of
+#     `annual`, `seasonal` or `monthly`.
+# * `reference_data`: the filename of the index data file to
+#     compare Climix output with. The file must be located
+#     in the `index_path`.
+# * `comparisons`: a dictionary with all data comparisons to
+#     do between the data and the reference data. There are
+#     currently two options: `allclose` and `mismatch_ratio`.
+#     `allclose` runs `dask.array.allclose` with the given
+#     value as absolute tolerance, and `mismatch_ratio` asserts
+#     that the ratio of cells that differs between the data and
+#     reference data is smaller than the given value.
+# * `compare_coords`: `true` or `false` to enable or disable
+#     comparison between coords as well. This test makes sure
+#     coords units are the same, and that the coords of the
+#     data and reference data pass an `allclose` check.
+#
+# Example:
+#
+# ```yaml
+# test_configuration:
+#   ngcd_reg:
+#     description: |
+#       Description of test set
+#     data:
+#       index_path: "reference_index/"
+#       variable_path: "variables/"
+#       variables:
+#         pr: "pr_*.nc"
+#     tests:
+#       r10mm_yr:
+#         index: r10mm
+#         period: annual
+#         reference_data: "r10mm_yr.nc"
+#         comparisons:
+#           mismatch_ratio: 0.0
+#         compare_coords: true
+# ```
+---
+
+test_settings:
+  base_path: "/nobackup/rossby27/proj/rossby/joint_exp/climix/testdata/"
+
+test_configuration:
+  ngcd_reg:
+    description: |
+      Tests to compare Climix output against earlier, verified version.
+    data:
+      index_path: "NGCD/clipped/climix/v0.24/SverigeScaled"
+      variable_path: "NGCD/clipped/input_data/SverigeScaled"
+      variables:
+        pr: "NGCD_RR_type2_*.nc"
+        tas: "NGCD_TG_type2_*.nc"
+        tasmax: "NGCD_TX_type2_*.nc"
+        tasmin: "NGCD_TN_type2_*.nc"
+    tests:
+      cdd_yr:
+        compare_coords: true
+        comparisons:
+          mismatch_ratio: 0.0
+        index: cdd
+        period: annual
+        reference_data: "cdd_yr.nc"
+      cdf_yr:
+        compare_coords: true
+        comparisons:
+          mismatch_ratio: 0.0
+        index: cfd
+        period: annual
+        reference_data: "cfd_yr.nc"
+      csu_yr:
+        compare_coords: true
+        comparisons:
+          mismatch_ratio: 0.0
+        index: csu
+        period: annual
+        reference_data: "csu_yr.nc"
+      cwd_yr:
+        compare_coords: true
+        comparisons:
+          mismatch_ratio: 0.0
+        index: cwd
+        period: annual
+        reference_data: "cwd_yr.nc"
+      dtr_yr:
+        compare_coords: true
+        comparisons:
+          allclose: 0.0
+        index: dtr
+        period: annual
+        reference_data: "dtr_yr.nc"
+      fd_yr:
+        compare_coords: true
+        comparisons:
+          mismatch_ratio: 0.0
+        index: fd
+        period: annual
+        reference_data: "fd_yr.nc"
+      id_yr:
+        compare_coords: true
+        comparisons:
+          mismatch_ratio: 0.0
+        index: id
+        period: annual
+        reference_data: "id_yr.nc"
+      prcptot_yr:
+        compare_coords: true
+        comparisons:
+          allclose: 0.0
+        index: prcptot
+        period: annual
+        reference_data: "prcptot_yr.nc"
+      r10mm_yr:
+        compare_coords: true
+        comparisons:
+          mismatch_ratio: 0.0
+        index: r10mm
+        period: annual
+        reference_data: "r10mm_yr.nc"
+      r1mm_yr:
+        compare_coords: true
+        comparisons:
+          mismatch_ratio: 0.0
+        index: r1mm
+        period: annual
+        reference_data: "r1mm_yr.nc"
+      r20mm_yr:
+        compare_coords: true
+        comparisons:
+          mismatch_ratio: 0.0
+        index: r20mm
+        period: annual
+        reference_data: "r20mm_yr.nc"
+      rx1day_yr:
+        compare_coords: true
+        comparisons:
+          allclose: 0.0
+        index: rx1day
+        period: annual
+        reference_data: "rx1day_yr.nc"
+      sdii_yr:
+        compare_coords: true
+        comparisons:
+          allclose: 0.0
+        index: sdii
+        period: annual
+        reference_data: "sdii_yr.nc"
+      su_yr:
+        compare_coords: true
+        comparisons:
+          mismatch_ratio: 0.0
+        index: su
+        period: annual
+        reference_data: "su_yr.nc"
+      tnn_yr:
+        compare_coords: true
+        comparisons:
+          allclose: 0.0
+        index: tnn
+        period: annual
+        reference_data: "tnn_yr.nc"
+      tnx_yr:
+        compare_coords: true
+        comparisons:
+          allclose: 0.0
+        index: tnx
+        period: annual
+        reference_data: "tnx_yr.nc"
+      tr_yr:
+        compare_coords: true
+        comparisons:
+          mismatch_ratio: 0.0
+        index: tr
+        period: annual
+        reference_data: "tr_yr.nc"
+      txn_yr:
+        compare_coords: true
+        comparisons:
+          allclose: 0.0
+        index: txn
+        period: annual
+        reference_data: "txn_yr.nc"
+      txx_yr:
+        compare_coords: true
+        comparisons:
+          allclose: 0.0
+        index: txx
+        period: annual
+        reference_data: "txx_yr.nc"
+
+  ngcd_org:
+    description: |
+      Tests to compare Climix output against NGCD index data.
+    data:
+      index_path: "NGCD/clipped/indicators/SverigeScaled"
+      variable_path: "NGCD/clipped/input_data/SverigeScaled"
+      variables:
+        pr: "NGCD_RR_type2_*.nc"
+        tas: "NGCD_TG_type2_*.nc"
+        tasmax: "NGCD_TX_type2_*.nc"
+        tasmin: "NGCD_TN_type2_*.nc"
+    tests:
+      cdd_yr:
+        compare_coords: false
+        comparisons:
+          mismatch_ratio: 0.036
+        index: cdd
+        period: annual
+        reference_data: "NGCD_cddETCCDI_yr_RR_type2_1971-2017.nc"
+      cdf_yr:
+        compare_coords: false
+        comparisons:
+          mismatch_ratio: 0.11
+        index: cfd
+        period: annual
+        reference_data: "NGCD_cfdETCCDI_yr_T_type2_1971-2017.nc"
+      csu_yr:
+        compare_coords: false
+        comparisons:
+          mismatch_ratio: 0.0
+        index: csu
+        period: annual
+        reference_data: "NGCD_csuETCCDI_yr_T_type2_1971-2017.nc"
+      cwd_yr:
+        compare_coords: false
+        comparisons:
+          mismatch_ratio: 0.019
+        index: cwd
+        period: annual
+        reference_data: "NGCD_cwdETCCDI_yr_RR_type2_1971-2017.nc"
+      dtr_yr:
+        compare_coords: false
+        comparisons:
+          allclose: 0.0
+        index: dtr
+        period: annual
+        reference_data: "NGCD_dtrETCCDI_yr_T_type2_1971-2017.nc"
+      fd_yr:
+        compare_coords: false
+        comparisons:
+          mismatch_ratio: 0.60
+        index: fd
+        period: annual
+        reference_data: "NGCD_fdETCCDI_yr_T_type2_1971-2017.nc"
+      id_yr:
+        compare_coords: false
+        comparisons:
+          mismatch_ratio: 0.52
+        index: id
+        period: annual
+        reference_data: "NGCD_idETCCDI_yr_T_type2_1971-2017.nc"
+      prcptot_yr:
+        compare_coords: false
+        comparisons:
+          allclose: 0.0
+        index: prcptot
+        period: annual
+        reference_data: "NGCD_prcptotETCCDI_yr_RR_type2_1971-2017.nc"
+      r10mm_yr:
+        compare_coords: false
+        comparisons:
+          mismatch_ratio: 0.0
+        index: r10mm
+        period: annual
+        reference_data: "NGCD_r10mmETCCDI_yr_RR_type2_1971-2017.nc"
+      r1mm_yr:
+        compare_coords: false
+        comparisons:
+          mismatch_ratio: 0.0
+        index: r1mm
+        period: annual
+        reference_data: "NGCD_r1mmETCCDI_yr_RR_type2_1971-2017.nc"
+      r20mm_yr:
+        compare_coords: false
+        comparisons:
+          mismatch_ratio: 0.0
+        index: r20mm
+        period: annual
+        reference_data: "NGCD_r20mmETCCDI_yr_RR_type2_1971-2017.nc"
+      rx1day_yr:
+        compare_coords: false
+        comparisons:
+          allclose: 0.0
+        index: rx1day
+        period: annual
+        reference_data: "NGCD_rx1dayETCCDI_yr_RR_type2_1971-2017.nc"
+      sdii_yr:
+        compare_coords: false
+        comparisons:
+          allclose: 0.0
+        index: sdii
+        period: annual
+        reference_data: "NGCD_sdiiETCCDI_yr_RR_type2_1971-2017.nc"
+      su_yr:
+        compare_coords: false
+        comparisons:
+          mismatch_ratio: 0.0
+        index: su
+        period: annual
+        reference_data: "NGCD_suETCCDI_yr_T_type2_1971-2017.nc"
+      tnn_yr:
+        compare_coords: false
+        comparisons:
+          allclose: 0.0
+        index: tnn
+        period: annual
+        reference_data: "NGCD_tnnETCCDI_yr_T_type2_1971-2017.nc"
+      tnx_yr:
+        compare_coords: false
+        comparisons:
+          allclose: 0.0
+        index: tnx
+        period: annual
+        reference_data: "NGCD_tnxETCCDI_yr_T_type2_1971-2017.nc"
+      tr_yr:
+        compare_coords: false
+        comparisons:
+          mismatch_ratio: 0.0
+        index: tr
+        period: annual
+        reference_data: "NGCD_trETCCDI_yr_T_type2_1971-2017.nc"
+      txn_yr:
+        compare_coords: false
+        comparisons:
+          allclose: 0.0
+        index: txn
+        period: annual
+        reference_data: "NGCD_txnETCCDI_yr_T_type2_1971-2017.nc"
+      txx_yr:
+        compare_coords: false
+        comparisons:
+          allclose: 0.0
+        index: txx
+        period: annual
+        reference_data: "NGCD_txxETCCDI_yr_T_type2_1971-2017.nc"

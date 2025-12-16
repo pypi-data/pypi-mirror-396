@@ -1,0 +1,180 @@
+# This file specifies how the global attributes from the input files
+# are transferred to the global attributes in the output file. The configuration
+# can be specified for both input and output, where the configuration for
+# input is applied after loading the input data files, whereas, the output
+# configuration is applied in the post-processing step of the cube. The structure of
+# the I/O configurations is different:
+#
+# Input:
+# ------
+# The input configuration has three sections: default, drop, and transfer.
+#
+# default:
+# --------
+#
+# default: <option>
+#
+# The following two options are available:
+# - equalize: keep all attributes that are equal between the cubes
+# - drop: remove all attributes except the ones specified under transfer
+#
+# By default, Climix will use equalize to remove the attributes that are not equal
+# between all cubes. The default configuration can be used to remove redundant
+# attributes without specifying all of their names.
+#
+#
+# drop:
+# -----
+#
+# drop:
+#     - existing_attribute
+#
+# The drop configuration can be used to remove specific existing attributes.
+#
+#
+# transfer:
+# ---------
+#
+# transfer:
+#     attr_name_1:
+#        - existing_attribute
+#     attr_name_2:
+#        - existing_attribute_1
+#        - existing_attribute_2
+#
+# The variables configuration allows the user to specify which attributes to keep
+# and join. Here, `attr_name` determines the names for the output attribute, while
+# `existing_attribute` determines which attributes should be stored under
+# `attr_name`. If `existing_attribute` has different values between cubes, the
+# *unique* values will be joined with a comma separator, e.g.,
+#
+# transfer:
+#     creation-dates:
+#        - creation_date
+#
+# creates the output attribute:
+# creation-dates = "2018-06-21-T20:03:01Z, 2018-06-21-T19:59:31Z"
+#
+# However, if the user defines multiple existing attributes they will first be joined
+# with an underscore and then the unique values will be joined with a comma separator,
+# e.g.,
+#
+# transfer:
+#     tracking-and-creation:
+#        - tracking_id
+#        - creation_date
+#
+# creates the output attribute:
+# tracking-and-creation = "1a76c102-ed05-4d84-bfeb-e4dc1c48a5dc_2018-06-21-T20:03:01Z, df8c2f0a-4126-4c05-aafa-db532304cdcc_2018-06-21-T19:59:31Z"
+#
+#
+# Output:
+# -------
+# The output configuration has one section: create.
+#
+# create:
+# ---------
+#
+# create:
+#     attr_name: "string with information to store"
+#
+# Here, the user can define attribute values that will be set for `attr_name`, e.g.,
+#
+# create:
+#     institution: "SMHI"
+#
+# creates the output attribute:
+# institution = "SMHI"
+#
+# If the user chooses the same `attr_name` as an already existing attribute, either in
+# the input configuration or in the cube's global attributes, it will be overwritten.
+# It is also possible to fill in useful information that is created during the run,
+# e.g., existing global attributes, the software version being used, and time.
+# Valid values: {NOW}, {CF_CONVENTIONS_VERSION}, {INDEX_DISTRIBUTION},
+# {existing_attribute}, {CLIMIX_VERSION}, {GORDIAS_VERSION}.
+#
+# create:
+#     creation_date: "{NOW}"
+#     software: "{CLIMIX_VERSION} {GORDIAS_VERSION}"
+#     rcm-gcm: "rcm: {rcm} gcm: {gcm}"
+#
+# can create the output attributes:
+# creation-date = "2023-03-31T14:52:32 UTC"
+# software = "climix-0.21.0 gordias-0.1.0"
+# rcm-gcm: "rcm: SMHI-RCA4_v1 gcm: NCC-NorESM1-M"
+---
+config:
+   global_attributes:
+      input:
+         default: equalize
+         drop:
+            # CORDEX and CMIP attributes that are transferred (see below)
+            - driving_experiment_name
+            - model_id
+            - rcm_version_id
+            - driving_model_id
+            - tracking_id
+            - creation_date
+            - driving_model_ensemble_member
+            - history
+            - history_of_appended_files
+            - institution
+            - institute_id
+            - references
+            - product
+            - contact
+            - software
+            - project_id
+            - experiment
+            - experiment_id
+            - driving_experiment
+            - initialization_method
+            - physics_version
+            - realization
+            - source
+            - table_id
+            - title
+         transfer:
+            scenario:
+               - driving_experiment_name
+            rcm:
+               - model_id
+               - rcm_version_id
+            gcm:
+               - driving_model_id
+            gcm_ensemble_member:
+               - driving_model_ensemble_member
+            tracking-id_creation-date:
+               - tracking_id
+               - creation_date
+            history-attribute:
+               - history
+               - history_of_appended_files
+            input_frequency:
+               - frequency
+            input_institution:
+               - institution
+            input_institute_id:
+               - institute_id
+            input_references:
+               - references
+            input_product:
+               - product
+            input_contact:
+               - contact
+            input_software:
+               - software
+            input_project_id:
+               - project_id
+            CORDEX_domain:
+               - CORDEX_domain
+
+      output:
+         create:
+            product: "climate indicator"
+            institution: "Swedish Meteorological and Hydrological Institute, Rossby Centre"
+            institute_id: SMHI
+            references: "https://www.smhi.se/en/research/research-departments/climate-research-at-the-rossby-centre"
+            creation_date: "{NOW}"
+            software: "{CLIMIX_VERSION} {GORDIAS_VERSION}"
+            Conventions: "{CF_CONVENTIONS_VERSION} {INDEX_DISTRIBUTION}"
