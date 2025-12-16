@@ -1,0 +1,212 @@
+# TUI Application Profiles
+#
+# Unified configuration for TUI application processing pipelines.
+# Each profile defines:
+#   - clear_protections: Which boundary protection rules to apply
+#   - normalization_patterns: Which patterns to use for line comparison
+#   - additional_pipeline: Optional shell command for additional processing
+
+profiles:
+  claude_code:
+    description: "Claude Code terminal UI (claude.ai/code)"
+    clear_protections:
+      - blank_boundary
+      - user_input_final
+    normalization_patterns:
+      - dialog_question
+      - task_todos_time_tokens_down
+      - task_todos
+      - activity_time_tokens_down
+      - activity_spinner
+      - thinking
+      - action
+      - user_input
+    additional_pipeline: "uniqseq --track '^\\S' --quiet --max-history 5 --window-size 1 --max-unique-sequences 0"
+
+  generic:
+    description: "Generic TUI with only universal rules"
+    clear_protections:
+      - blank_boundary
+    normalization_patterns: []
+
+  minimal:
+    description: "Minimal - only base rule, no protections"
+    clear_protections: []
+    normalization_patterns: []
+
+# Default profile to use when none specified
+default_profile: claude_code
+
+# Base clear count formula (applies to all profiles)
+base_clear_count:
+  formula: "N - 1"  # Always clear N-1 lines (where N is the [clear_line] count)
+
+# Clear protection definitions
+# Each protection can reduce the clear count based on boundary conditions
+clear_protections:
+  blank_boundary:
+    description: "Preserve blank lines at the boundary (furthest from clear marker)"
+    enabled: true
+    condition:
+      type: first_cleared_line_matches
+      pattern: "^\\s*$"  # Regex: line is empty or only whitespace
+    reduction: 1
+
+  user_input_final:
+    description: "Preserve submitted user input when it's the final occurrence in a cluster"
+    enabled: true
+    condition:
+      type: first_sequence_line_and_next_line_differ
+      # Checks if:
+      # 1. First line of sequence (after previous clear) matches first_line_pattern
+      # 2. Next line after current clear does NOT match the same content
+      # This identifies the "final" occurrence before moving to new content
+      first_line_pattern: "\\[48;5;237m"  # Claude Code: submitted input has background color
+    reduction: 1
+
+# Normalization pattern definitions
+# Used by consolidate_clears to normalize lines for comparison
+# Each rule specifies pattern matching and output format
+patterns:
+  # Dialog question - leader for dialog choices sequence
+  # Example: " Do you want to make this edit?"
+  # Followed by numbered choices with optional selection marker
+  dialog_question:
+    description: "Dialog question followed by numbered choice options (multi-line sequence)"
+    pattern:
+      - text: " Do you want to "
+      - field: content
+      - text: "?"
+    sequence:
+      followers:
+        - pattern:
+            - text: " "
+            - serialized: "\u276f"  # ❯ arrow marker (selected)
+            - text: " "
+            - field: number
+              parser: NUMBER
+            - text: ". "
+            - field: choice_text
+          output: "[dialog-option-selected:{number}. {choice_text}]"
+        - pattern:
+            - text: "   "  # 3 spaces (unselected)
+            - field: number
+              parser: NUMBER
+            - text: ". "
+            - field: choice_text
+          output: "[dialog-option:{number}. {choice_text}]"
+    output: "[dialog-question:{content}]"
+
+  # Task with todos hint, time and tokens
+  # Examples:
+  #   "✢ Creating project structure… (esc to interrupt · ctrl+t to show todos · 13s · ↓ 1.0k tokens)"
+  #   "✢ Creating project structure… (esc to interrupt · ctrl+t to show todos · 13s · ↓ 869 tokens)"
+  task_todos_time_tokens_down:
+    description: "Task with todos hint, timing and token count (integer or k suffix)"
+    pattern:
+      - char: "·✢✳✶✻✽"
+      - text: " "
+      - field: task
+      - text: "…"
+      - text: " (esc to interrupt · ctrl+t to show todos · "
+      - field: time
+        parser: NUMBER
+      - text: "s · ↓ "
+      - alternatives:
+          - text: "{NUMBER:tokens} tokens)"
+          - text: "{FLOAT:tokens}k tokens)"
+    output: "[task-todos-time-tokens-down:{task}]"
+
+  # Task with todos hint only (no timing)
+  # Example: "· Creating project structure… (esc to interrupt · ctrl+t to show todos)"
+  task_todos:
+    description: "Task with todos hint but no timing information"
+    pattern:
+      - char: "·✢✳✶✻✽"
+      - text: " "
+      - field: task
+      - text: "…"
+      - text: " (esc to interrupt · ctrl+t to show todos)"
+    output: "[task-todos:{task}]"
+
+  # Activity with time and tokens
+  # Examples:
+  #   "✽ Whirlpooling… (esc to interrupt · 16s · ↓ 1.0k tokens)"
+  #   "✽ Slithering… (esc to interrupt · 7s · ↓ 182 tokens)"
+  activity_time_tokens_down:
+    description: "Activity with timing and token count (integer or k suffix)"
+    pattern:
+      - char: "·✢✳✶✻✽"
+      - text: " "
+      - field: verb
+      - text: "ing"
+      - text: "… (esc to interrupt · "
+      - field: time
+        parser: NUMBER
+      - text: "s · ↓ "
+      - alternatives:
+          - text: "{NUMBER:tokens} tokens)"
+          - text: "{FLOAT:tokens}k tokens)"
+    output: "[activity-time-tokens-down:{verb}]"
+
+  # Activity spinner lines: ignore spinner symbol variation
+  # After cleaning (ANSI, prefixes, line endings), lines look like: "· Slithering… (esc to interrupt)"
+  activity_spinner:
+    description: "Normalize activity lines with rotating spinner symbols"
+    pattern:
+      - char: "·✢✳✶✻✽"
+      - text: " "
+      - field: verb
+      - text: "ing"
+      - text: "… (esc to interrupt)"
+    output: "[activity:{verb}]"
+
+  # Thinking indicator
+  # Example: "∴ Thought for 5s (ctrl+o to show thinking)"
+  thinking:
+    description: "Thinking time indicator"
+    pattern:
+      - serialized: "\u2234"  # Therefore symbol ∴
+      - text: " Thought for "
+      - field: time
+        parser: NUMBER
+      - text: "s (ctrl+o to show thinking)"
+    output: "[thinking]"
+
+  # Action in progress - only matches lines WITH the marker
+  # Example: "⏺ Web Search("best weather API 2025 free tier")"
+  # Can match lines with marker OR spaces if action is the same
+  # Note: Lines without marker may have 2-3 spaces (from ANSI-colored space or indentation)
+  action:
+    description: "Action"
+    pattern:
+      - alternatives:
+        - serialized: "\u23fa"  # Record symbol ⏺
+        - text: " "
+      - text: " "
+      - options:
+          name: action_type
+          values:
+            - text: "Read"
+            - text: "Search"
+            - text: "Web Search"
+            - text: "Bash"
+            - text: "Write"
+      - text: "("
+      - field: content
+      - text: ")"
+    output: "[action:{action_type},content:{content}]"
+
+  # User input prompt - matches any text after "> "
+  # Note: Uses NBSP (U+00A0) after >, not regular space
+  # Examples:
+  #   ">�Let's review line"
+  #   ">�Let's review lines"
+  #   ">�" (empty input)
+  user_input:
+    description: "User input prompt with any text"
+    pattern:
+      - text: ">"
+      - serialized: "\u00a0"
+      - field: input
+    output: "[user-input]"
