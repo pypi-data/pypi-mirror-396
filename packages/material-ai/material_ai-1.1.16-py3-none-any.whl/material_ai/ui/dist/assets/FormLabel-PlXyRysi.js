@@ -1,0 +1,1 @@
+import{et as e,nt as t,rt as n,tt as r}from"./index-DNeFC82p.js";export{e as FormLabelRoot,r as default,t as formLabelClasses,n as getFormLabelUtilityClasses};

@@ -1,0 +1,1 @@
+import{n as e,r as t,t as n}from"./Collapse-IpfIk0WX.js";export{e as collapseClasses,n as default,t as getCollapseUtilityClass};

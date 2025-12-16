@@ -1,0 +1,1 @@
+import{Fr as e,Ir as t}from"./index-DNeFC82p.js";var n=t(e());function r(e){let t=n.useRef({});return n.useEffect(()=>{t.current=e}),t.current}var i=r;export{i as t};
