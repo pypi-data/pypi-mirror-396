@@ -1,0 +1,49 @@
+<configure
+  xmlns="http://namespaces.zope.org/zope"
+  xmlns:faceted="http://namespaces.zope.org/faceted"
+  xmlns:browser="http://namespaces.zope.org/browser"
+  i18n_domain="plonemeeting.portal.core">
+
+  <include package=".widgets" />
+
+  <adapter
+    for="plonemeeting.portal.core.interfaces.IMeetingsFolder"
+    provides="eea.facetednavigation.interfaces.ICriteria"
+    factory=".criteria.MeetingsCriteria" />
+
+  <adapter
+    for="plonemeeting.portal.core.interfaces.IPublicationsFolder"
+    provides="eea.facetednavigation.interfaces.ICriteria"
+    factory=".criteria.PublicationsCriteria" />
+
+  <faceted:view
+    name="faceted-preview-meeting"
+    template="preview_meeting.pt"
+    title="Faceted meeting preview"
+    permission="zope2.View"
+    />
+
+  <browser:page
+    name="faceted-macro-pm-item"
+    for="eea.facetednavigation.interfaces.IFacetedNavigable"
+    template="macro_item.pt"
+    permission="zope2.View"
+    layer="plonemeeting.portal.core.interfaces.IPlonemeetingPortalCoreLayer"
+    />
+
+  <faceted:view
+    name="faceted-preview-publications"
+    template="preview_publications.pt"
+    title="Faceted publications preview"
+    permission="zope2.View"
+    />
+
+  <browser:page
+    name="faceted-macro-publication"
+    for="eea.facetednavigation.interfaces.IFacetedNavigable"
+    template="macro_publication.pt"
+    permission="zope2.View"
+    layer="plonemeeting.portal.core.interfaces.IPlonemeetingPortalCoreLayer"
+    />
+
+</configure>

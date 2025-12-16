@@ -1,0 +1,122 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"
+   metal:use-macro="context/main_template/macros/master"
+   i18n:domain="plonemeeting.portal"
+>
+<body>
+<metal:title fill-slot="content-title"/>
+
+<metal:content-core
+  fill-slot="content-core"
+>
+  <tal:defines define="institutions view/get_json_institutions;
+                       institution_type_vocabulary view/get_json_institution_type_vocabulary;
+                       faq_items view/get_faq_items;">
+
+    <section id="homepage-hero" class="full-width mb-3">
+      <svg
+        class="hero-grid absolute inset-0 -z-10 h-full w-full stroke-gray-200 [mask-image:radial-gradient(100%_100%_at_top_right,white,transparent)]"
+        aria-hidden="true">
+        <defs>
+          <pattern id="0787a7c5-978c-4f66-83c7-11c213f99cb7" width="150" height="150" x="50%" y="-1"
+                   patternUnits="userSpaceOnUse">
+            <path d="M.5 200V.5H200" fill="none"/>
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" stroke-width="0" fill="url(#0787a7c5-978c-4f66-83c7-11c213f99cb7)"/>
+      </svg>
+      <div class="container">
+        <div class="row">
+          <div class="col-lg-4">
+            <div class="hero-img-wrapper">
+              <img src="++plone++plonemeeting.portal.core/assets/delibe.svg" alt="">
+            </div>
+          </div>
+          <div class="col-lg-8">
+            <div class="hero-content">
+              <h1>
+                Je cherche <br> les
+                <div class="text-container">
+                  <span style="">décisions</span>
+                  <span style="">publications</span>
+                </div>
+                à...
+              </h1>
+
+              <x-institution-select
+                class="institution-select"
+                 tal:attributes="data-institutions institutions;
+                data-institution-type-vocabulary institution_type_vocabulary"
+              >
+              </x-institution-select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <section id="institutions-map" class="row mb-3">
+
+      <h2>Couverture géographique</h2>
+      <x-institution-map></x-institution-map>
+
+    </section>
+
+    <!--?    <section id="news-sections" class="row">-->
+    <!--?      <h2>Nouveautés</h2>-->
+    <!--?      <div class="news-items">-->
+    <!--?        <div class="news-item">-->
+    <!--?          <h3 class="news-title">-->
+    <!--?            Lorem Ipsum-->
+    <!--?          </h3>-->
+    <!--?          <div class="news-description">-->
+    <!--?            Lorem ipsum dolor sit amet, consectetur adipisicing elit. Alias animi architecto blanditiis consequatur-->
+    <!--?            corporis cum doloremque dolorum ea, ipsa iste minima minus modi nemo, nulla praesentium quas, sapiente sint-->
+    <!--?            suscipit.-->
+    <!--?          </div>-->
+    <!--?        </div>-->
+    <!--?        <div class="news-item">-->
+    <!--?          <h3 class="news-title">-->
+    <!--?            Lorem Ipsum-->
+    <!--?          </h3>-->
+    <!--?          <div class="news-description">-->
+    <!--?            Lorem ipsum dolor sit amet, consectetur adipisicing elit. Alias animi architecto blanditiis consequatur-->
+    <!--?            corporis cum doloremque dolorum ea, ipsa iste minima minus modi nemo, nulla praesentium quas, sapiente sint-->
+    <!--?            suscipit.-->
+    <!--?          </div>-->
+    <!--?        </div>-->
+    <!--?        <div class="news-item">-->
+    <!--?          <h3 class="news-title">-->
+    <!--?            Lorem Ipsum-->
+    <!--?          </h3>-->
+    <!--?          <div class="news-description">-->
+    <!--?            Lorem ipsum dolor sit amet, consectetur adipisicing elit. Alias animi architecto blanditiis consequatur-->
+    <!--?            corporis cum doloremque dolorum ea, ipsa iste minima minus modi nemo, nulla praesentium quas, sapiente sint-->
+    <!--?            suscipit.-->
+    <!--?          </div>-->
+    <!--?        </div>-->
+    <!--?      </div>-->
+
+    <!--?    </section>-->
+
+    <section class="faq-section">
+      <h2>Foire aux questions</h2>
+      <x-masonry-columns container-selector=".faq-grid" item-selector=".faq-item-wrapper" gutter="50"/>
+      <div class="faq-grid">
+        <div tal:repeat="faq_item faq_items" class="card faq-item-wrapper">
+          <div class="card-body">
+            <h3 tal:content="structure faq_item/title"></h3>
+            <a tal:attributes="name faq_item/id"></a>
+            <div class="faq-item" tal:content="structure faq_item/text"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </tal:defines>
+</metal:content-core>
+
+</body>
+</html>
+
+
+
