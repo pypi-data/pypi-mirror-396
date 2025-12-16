@@ -1,0 +1,1 @@
+Contact the Gekko editor if Windows 32-bit is of interest.
