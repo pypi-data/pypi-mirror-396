@@ -1,0 +1,196 @@
+{% extends "core.html" %}
+{% block content %}
+<div class="container-fluid fs-base">
+    <h2>
+        Search by Metadata
+    </h2>
+    <form
+        id="search-metadata-form"
+        role="search"
+        action="{{ web_root }}/searchmetadata/results"
+        method="get"
+        onsubmit="submitMetadataSearch(event)"
+    >
+        <div style="width: 15rem;">
+            <select
+                class="form-select form-select-sm"
+                id="metadata-type-select"
+                aria-label="Choose metadata type"
+                name="metadata_type"
+                onchange="showFields(this.value)"
+            >
+                <option value="">Choose a metadata type</option>
+                {% for class_name, fields in metadata.items() %}
+                    <option value="{{ class_name }}">{{ class_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% for class_name, fields in metadata.items() %}
+            <div
+                id="{{ class_name }}-fields"
+                class="container flex-column align-items-center gap-3 metadata-fields input-group input-group-sm mt-3 p-3 border border rounded shadow-sm"
+                style="display: none;"
+            >
+                {% if fields.items()|length >= 1 %}
+                    <fieldset class="container">
+                        <legend class="row fs-6 fw-bolder">Metadata Fields</legend>
+                        <div class="row">
+                            {% for field_key, field_data in fields.items() %}
+                                {% if field_data["type"] == "number" %}
+                                    <div
+                                        class="col-md-3 col-sm-4 small d-inline-block m-1 p-2 border border-light rounded-2 bg-light"
+                                    >
+                                        <div class="fw-bold">{{field_data["title"]}}</div>
+                                        {% for min_or_max in ['min', 'max'] %}
+                                            <label
+                                                class="form-label small m-0"
+                                                for="{{ class_name }}-{{ field_key}}-{{ min_or_max }}"
+                                            >
+                                                {{ min_or_max | capitalize }}
+                                                <input
+                                                    id="{{ class_name }}-{{ field_key}}-{{ min_or_max }}"
+                                                    class="form-control small"
+                                                    type="number"
+                                                    data-key="{{ field_key }}"
+                                                    data-minmax="{{ min_or_max }}"
+                                                    name="{{ field_key }}-{{ min_or_max }}"
+                                                    style="font-size: 1em; width: 20ch;"
+                                                    step="any"
+                                                    min="{{ field_data['min'] | default('') }}"
+                                                    max="{{ field_data['max'] | default('') }}"
+                                                >
+                                            </label>
+                                        {% endfor %}
+                                    </div>
+                                {% elif field_data["type"] == "enum" %}
+                                    <label
+                                        class="col-md-3 col-sm-4 form-label small m-1 fw-bold"
+                                        for="{{ class_name }}-{{ field_key}}"
+                                        title="Type: {{ field_data['type'] }}"
+                                    >
+                                        {{ field_data["title"] }}
+                                        <select
+                                            class="form-select form-select-sm"
+                                            id="{{ class_name }}-{{ field_key}}"
+                                            name="{{ field_key }}"
+                                            style="font-size: 1em;"
+                                        >
+                                            <option value="" selected>Choose a {{ field_data["title"] }}</option>
+                                            {% for option in field_data["options"] %}
+                                                <option value="{{ option.strip() }}">{{ option.strip() }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </label>
+                                {% elif field_data["type"] == "array" %}
+                                    <label
+                                        class="col-md-3 col-sm-4 form-label small m-1 fw-bold"
+                                        for="{{ class_name }}-{{ field_key}}"
+                                        title="Type: comma-separated list of {{ field_data['list_arg'] }}s"
+                                        >
+                                        {{ field_data["title"] }}
+                                        <input
+                                            id="{{ class_name }}-{{ field_key}}"
+                                            class="form-control small"
+                                            type="text"
+                                            name="{{ field_key }}"
+                                            style="font-size: 1em;"
+                                            placeholder="E.g., value1, value2"
+                                        >
+                                    </label>
+                                {% else %}
+                                    <label
+                                        class="col-md-3 col-sm-4 form-label small m-1 fw-bold"
+                                        for="{{ class_name }}-{{ field_key}}"
+                                        title="Type: {{ field_data['type']}}"
+                                        >
+                                        {{ field_data["title"] }}
+                                        <input
+                                            id="{{ class_name }}-{{ field_key}}"
+                                            class="form-control small"
+                                            type="text"
+                                            name="{{ field_key }}"
+                                            style="font-size: 1em;"
+                                            placeholder="Enter {{ field_data['type'] }}"
+                                        >
+                                    </label>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </fieldset>
+                    <div>
+                        <button class="btn btn-dark btn-sm rounded-1 shadow-sm" type="submit">Search {{ class_name }}</button>
+                    </div>
+                {% else %}
+                    <span class="fs-6">No metadata fields</span>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function showFields(selectedClass) {
+        document.querySelectorAll('.metadata-fields').forEach(div => {
+            div.style.display = 'none';
+            div.querySelectorAll('input').forEach(inputEl => {
+                inputEl.disabled = true;
+            })
+            div.querySelectorAll('select').forEach(selectEl => {
+                selectEl.disabled = true;
+            })
+        })
+
+        const selectedFields = document.getElementById(`${selectedClass}-fields`);
+        if (selectedFields) {
+            selectedFields.style.display = 'flex';
+            selectedFields.querySelectorAll('input').forEach(inputEl => {
+                inputEl.disabled = false;
+            })
+            selectedFields.querySelectorAll('select').forEach(selectEl => {
+                selectEl.disabled = false;
+            })
+        }
+    }
+
+    function submitMetadataSearch(e) {
+        e.preventDefault();
+
+        const form = document.querySelector("#search-metadata-form");
+        const formData = new FormData(form);
+        const params = new URLSearchParams();
+        const numberInputs = Array.from(form.querySelectorAll('input[type="number"]:not([disabled])'));
+
+        // create a key:value object for the range inputs
+        const rangeParams = {};
+        formData.forEach((value, key) => {
+            if (value) {
+                const numberInput = numberInputs.find(el => el.name === key);
+                if (numberInput) {
+                    // use the dataset.key HTML attribute that is the same as the
+                    // input's name attribute but without the "-min" or "-max" suffix
+                    const parentKey = numberInput.dataset.key;
+                    const minOrMax =  numberInput.dataset.minmax;
+
+                    rangeParams[parentKey] = {
+                        ...rangeParams[parentKey],
+                        [minOrMax]: value,
+                    }
+                } else {
+                    params.append(key, value);
+                }
+            }
+        });
+
+        for (const key in rangeParams) {
+            params.append(
+                key,
+                `${rangeParams[key].min},${rangeParams[key].max}`
+            );
+        }
+
+        window.location.href = `${form.action}?${params.toString()}`;
+    }
+</script>
+{% endblock %}

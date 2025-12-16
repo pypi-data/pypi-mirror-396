@@ -1,0 +1,125 @@
+<style>
+  .custom-nav-styles {
+    background-color: #dee2e6; /* corresponds to Bootstrap's gray-300 */
+    column-gap: 3em;
+    row-gap: 0.5em;
+  }
+</style>
+
+<nav 
+  class="border-bottom border-secondary-subtle shadow-sm mb-2 py-2 px-3 d-flex flex-wrap justify-content-between align-items-center custom-nav-styles"
+>
+    <div class="d-flex align-items-center gap-3">
+      <div class="rounded-circle shadow-sm" title="Click to return to home page">
+        <a class="nav-link color-light" href="{{ web_root }}">
+          <img alt="HIPPO logo" src="{{ web_root }}/static/logo.svg" width="55" height="auto" />
+        </a>
+      </div>
+      <form
+        role="search"
+        action="{{ web_root }}/search/results"
+        method="get"
+        style="min-width: 400px; max-width: 750px"
+      >
+        <div class="rounded input-group input-group-sm shadow-sm">
+          <div
+            class="position-relative"
+            style="height: 40px; min-height: 40px;"
+          >
+            <label
+              class="small position-absolute opacity-50"
+              for="search-filter"
+              style="top: 2px; left: 10px;"
+            >
+              Filter by:
+            </label>
+            <select
+              class="form-select form-select-sm rounded-0 rounded-start-2"
+              id="search-filter"
+              style="height: 100%; padding-top: 15px;"
+              name="filter"
+              onchange="onFilterChange(event)"
+            >
+              <option value="products" {% if filter == "products" %}selected{% endif %}>Products</option>
+              <option value="collections" {% if filter == "collections" %}selected{% endif %}>Collections</option>
+              <option value="owner" {% if filter == "owner" %}selected{% endif %}>Owner</option>
+            </select>
+          </div>
+          <label for="search-bar" class="visually-hidden">Search:</label>
+          <input
+            class="form-control"
+            type="search"
+            id="search-bar"
+            name="q"
+            style="flex-grow: 2;"
+            value="{{ '' if query is none else query }}"
+          >
+          <button class="btn btn-dark btn-sm" type="submit">Search</button>
+        </div>
+      </form>
+    </div>
+    <ul class="nav gap-4 align-items-center full-menu flex-nowrap">
+      <li class="nav-item">
+        <a class="btn btn-outline-dark btn-sm d-flex align-items-center shadow-sm text-nowrap" style="height: 40px;" href="{{ web_root }}/searchmetadata">Search by metadata</a>
+      </li>
+      <li class="nav-item">
+        {% if soauth_enabled %}
+          {% if request.user.is_authenticated %}
+              {% set avatar_url = "https://github.com/" ~ request.user.display_name ~ ".png" %}
+              <a href="{{ web_root }}/user">
+                <img
+                  class="border rounded-circle shadow-sm"
+                  src="{{ avatar_url }}"
+                  alt="User’s GitHub avatar"
+                  width="45"
+                  height="auto"
+                />
+              </a>
+          {% else %}
+            <a
+              class="btn btn-primary btn-sm d-flex align-items-center shadow-sm text-nowrap"
+              style="height: 40px;"
+              href="{{ soauth_login_url }}"
+            >
+              Log in <img src="{{ web_root }}/static/apple-touch-icon.png" style="height:24px;padding-left:0.5em"/>
+            </a>
+          {% endif %}
+        {% else %}
+        {# In cases where soauth is not used, there's no login system - all requests are pre-authenticated with the default user. #}
+        <a href="{{ web_root }}/user">
+          User
+        </a>
+        {% endif %}
+      </li>      
+    </ul>
+  </nav>
+
+  {% block scripts %}
+    <script>
+      let selectedFilter = '';
+      
+      document.addEventListener('DOMContentLoaded', () => {
+        if (selectedFilter.length) {
+          return;
+        } else {
+          selectedFilter = 'products';
+          setPlaceholder();
+        }
+      })
+
+      function setPlaceholder() {
+        const inputEl = document.querySelector('#search-bar');
+        if (selectedFilter === "owner") {
+          inputEl.placeholder = "Search by owner name...";
+        } else {
+          inputEl.placeholder = "Search by " + selectedFilter.substring(0, selectedFilter.length - 1) + " names...";
+        }
+      }
+
+      function onFilterChange(e) {
+        selectedFilter = e.target.value;
+        setPlaceholder();
+      }
+
+    </script>
+  {% endblock %}
