@@ -1,0 +1,47 @@
+# SPDX-FileCopyrightText: Copyright (c) 2019-2025, NVIDIA CORPORATION.
+# SPDX-License-Identifier: Apache-2.0
+
+from rmm.librmm.cuda_stream_view cimport cuda_stream_view
+from rmm.librmm.memory_resource cimport device_memory_resource
+
+
+cdef extern from "rmm/mr/per_device_resource.hpp" namespace "rmm" nogil:
+    cdef cppclass cuda_device_id:
+        ctypedef int value_type
+        cuda_device_id()
+        cuda_device_id(value_type id)
+        value_type value()
+
+    cdef cuda_device_id get_current_cuda_device()
+
+cdef extern from "rmm/prefetch.hpp" namespace "rmm" nogil:
+    cdef void prefetch(const void* ptr,
+                       size_t bytes,
+                       cuda_device_id device,
+                       cuda_stream_view stream) except +
+
+cdef extern from "rmm/device_buffer.hpp" namespace "rmm" nogil:
+    cdef cppclass device_buffer:
+        device_buffer()
+        device_buffer(
+            size_t size,
+            cuda_stream_view stream,
+            device_memory_resource *
+        ) except +
+        device_buffer(
+            const void* source_data,
+            size_t size,
+            cuda_stream_view stream,
+            device_memory_resource *
+        ) except +
+        device_buffer(
+            const device_buffer buf,
+            cuda_stream_view stream,
+            device_memory_resource *
+        ) except +
+        void reserve(size_t new_capacity, cuda_stream_view stream) except +
+        void resize(size_t new_size, cuda_stream_view stream) except +
+        void shrink_to_fit(cuda_stream_view stream) except +
+        void* data()
+        size_t size()
+        size_t capacity()
