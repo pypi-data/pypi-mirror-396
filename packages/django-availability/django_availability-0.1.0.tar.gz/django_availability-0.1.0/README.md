@@ -1,0 +1,101 @@
+# django-availability
+
+Reusable Django app for modelling provider/resource availability with weekly hours, breaks, one-off exceptions, and optional tenant-wide holidays. It answers “when can this provider be booked?” and stays out of booking/slot generation concerns.
+
+## Features
+- Weekly recurring working windows per provider
+- Recurring breaks inside working windows
+- Exceptions for closed days and special hours
+- Optional tenant holidays (enabled when a tenant model is configured)
+- Timezone-safe selectors that return aware datetimes
+- Admin UX tuned for day-of-week workflows
+
+## Installation
+1) Add the package and Django to your project (Django 4.2+):
+```bash
+pip install django-availability
+```
+
+2) Configure settings:
+- `AVAILABILITY_PROVIDER_MODEL` (required): the provider model as `app_label.ModelName` (default: `"providers.Provider"`).
+- `AVAILABILITY_TENANT_MODEL` (optional): tenant model as `app_label.ModelName`. When set, tenant FKs are added to models and TenantHoliday is enabled.
+
+3) Add to `INSTALLED_APPS`:
+```python
+INSTALLED_APPS = [
+    # ...
+    "availability",
+]
+```
+
+4) Run migrations:
+```bash
+python manage.py migrate
+```
+
+## Models
+- `WeeklyAvailability`: recurring weekly working windows (weekday, start_time, end_time, is_active, sort_order).
+- `AvailabilityBreak`: recurring breaks per weekday that subtract from working windows.
+- `AvailabilityException`: one-off CLOSED or SPECIAL_HOURS per date; unique per provider+date.
+- `TenantHoliday` (tenant mode only): tenant-wide closed dates.
+
+Validation rules:
+- `end_time` must be after `start_time`.
+- Active weekly windows/breaks cannot overlap for a provider+weekday.
+- SPECIAL_HOURS require start/end; CLOSED must not provide times.
+- Tenant consistency enforced when `AVAILABILITY_TENANT_MODEL` is set.
+
+## Public API (selectors)
+Import from `availability.selectors`:
+- `get_working_windows_for_date(provider, date, tz=None) -> list[(start_dt, end_dt)]`
+- `get_working_windows(provider, start_date, end_date, tz=None) -> dict[date, list[(start_dt, end_dt)]]`
+- `is_provider_available(provider, dt, tz=None) -> bool`
+
+Example:
+```python
+from datetime import date, datetime
+from django.utils import timezone
+from availability.selectors import get_working_windows_for_date, is_provider_available
+
+provider = ...
+target_date = date(2024, 1, 1)
+tz = timezone.get_current_timezone()
+
+windows = get_working_windows_for_date(provider, target_date, tz=tz)
+if is_provider_available(provider, datetime(2024, 1, 1, 10, 30), tz=tz):
+    print("open")
+```
+
+The selectors:
+- honor CLOSED/SPECIAL_HOURS exceptions
+- subtract breaks from weekly or special-hour windows
+- close days that fall on tenant holidays (if enabled)
+- return timezone-aware datetimes; `tz` defaults to Django’s current timezone
+
+## Admin
+Admin list filters cover weekday/kind/tenant and call `full_clean()` on save for safety. Ordering is optimized for weekday flows.
+
+## Testing locally
+This repo ships a minimal test project. Run:
+```bash
+python test availability
+```
+The helper script pins `DJANGO_SETTINGS_MODULE=tests.settings` so the bundled test provider/tenant models are used. You can pass other labels, e.g. `python test tests`.
+
+## Releasing to PyPI
+1) **Bump version**: update `pyproject.toml` (and `availability/__init__.py` if mirroring).
+2) **Clean dist**: remove old artifacts: `rm -rf dist/ build/ *.egg-info`.
+3) **Build**:
+```bash
+python -m pip install --upgrade build twine
+python -m build
+```
+4) **Check**: `python -m twine check dist/*`.
+5) **Publish** (replace token): `python -m twine upload dist/* -u __token__ -p pypi-XXXXXXXXXXXXXXXXXXXX`.
+   - For TestPyPI: `python -m twine upload --repository testpypi dist/*`.
+6) **Verify install** (optional): `pip install --no-cache-dir django-availability`.
+
+## Scope notes
+- No booking/slot generation/payment/notification logic.
+- Datetimes are expected/stored in UTC; local rules are weekday + local times.
+- Overnight windows are not supported in v0.
