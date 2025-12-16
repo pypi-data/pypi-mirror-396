@@ -1,0 +1,81 @@
+Metadata-Version: 2.4
+Name: nagoya-bus-mcp
+Version: 0.6.0
+Summary: Model Context Protocol (MCP) server providing tools to query Nagoya City bus timetables
+Author-email: Yusuke Miyazaki <miyazaki.dev@gmail.com>
+Maintainer-email: Yusuke Miyazaki <miyazaki.dev@gmail.com>
+License-Expression: MIT
+Project-URL: Homepage, https://github.com/ymyzk/nagoya-bus-mcp
+Project-URL: Repository, https://github.com/ymyzk/nagoya-bus-mcp
+Project-URL: Issues, https://github.com/ymyzk/nagoya-bus-mcp/issues
+Keywords: mcp,model context protocol,fastmcp,nagoya,bus,public transport,transit
+Classifier: Development Status :: 3 - Alpha
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
+Classifier: Topic :: Utilities
+Classifier: Typing :: Typed
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: fastmcp>=2.13.1
+Requires-Dist: httpx>=0.28.1
+Requires-Dist: pydantic>=2.11.7
+Dynamic: license-file
+
+# nagoya-bus-mcp
+[![PyPI - Version](https://img.shields.io/pypi/v/nagoya-bus-mcp)](https://pypi.org/project/nagoya-bus-mcp/)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/nagoya-bus-mcp)](https://pypi.org/project/nagoya-bus-mcp/)
+[![CI](https://github.com/ymyzk/nagoya-bus-mcp/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ymyzk/nagoya-bus-mcp/actions/workflows/ci.yml)
+
+## Getting started
+The Nagoya Bus MCP server is published to PyPI.
+
+### Claude Desktop
+Add the following configuration to `claude_desktop_config.json`.
+```json
+{
+  "mcpServers": {
+    "nagoya-bus": {
+      "command": "uvx",
+      "args": ["nagoya-bus-mcp"]
+    }
+  }
+}
+```
+
+### Visual Studio Code
+Add the following configuration to `.vscode/mcp.json`.
+```json
+{
+  "servers": {
+    "nagoya-bus": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["nagoya-bus-mcp"],
+      "env": {}
+    }
+  }
+}
+```
+
+### Manual
+```shell
+# Using uvx
+$ uvx nagoya-bus-mcp
+
+# Using Docker
+$ docker run -i --rm ghcr.io/ymyzk/nagoya-bus-mcp
+```
+
+## For developers
+```
+# Use MCP Inspector
+$ npx @modelcontextprotocol/inspector uv run nagoya-bus-mcp
+
+# Try API client
+$ uv run python -m nagoya_bus_mcp.client
+```
