@@ -1,0 +1,123 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+# Please place this file in `~/.otava/otava.yaml` and provide the missing config values:
+fallout:
+  url: https://fallout.sjc.dsinternal.org/
+  user: FALLOUT_USER
+  token: FALLOUT_OAUTH_TOKEN
+
+graphite:
+  url: http://history.sjc.dsinternal.org/
+  suffixes:
+    - ebdse_read.result
+    - ebdse_write.result
+    - Real_select_trade.ok
+    - Real_insert_trade.ok
+    - nb_bench.main.result-success
+    - stress-insert_standard.st
+    - stress-read_standard-800.st
+
+grafana:
+  url: http://history.datastax.lan:3000/
+  user: GRAFANA_USER
+  password: GRAFANA_PASSWORD
+
+# Templates define common bits shared between test definitions
+templates:
+  common_metrics:
+    metrics:
+      throughput:
+        scale: 1
+        direction: 1
+      p50:
+        scale: 1.0e-6
+        direction: -1
+      p75:
+        scale: 1.0e-6
+        direction: -1
+      p90:
+        scale: 1.0e-6
+        direction: -1
+      p95:
+        scale: 1.0e-6
+        direction: -1
+      p99:
+        scale: 1.0e-6
+        direction: -1
+      max:
+        scale: 1.0e-6
+        direction: -1
+
+  write_metrics:
+    type: graphite
+    metrics:
+      throughput:
+        suffix: write.result-success.throughput
+      p50:
+        suffix: write.result-success.p50
+      p75:
+        suffix: write.result-success.p75
+      p90:
+        suffix: write.result-success.p90
+      p95:
+        suffix: write.result-success.p95
+      p99:
+        suffix: write.result-success.p99
+      max:
+        suffix: write.result-success.max
+
+
+tests:
+  local1:
+    type: csv
+    file: tests/resources/sample.csv
+    time_column: time
+    metrics: [metric1, metric2]
+    attributes: [commit]
+
+  local2:
+    type: csv
+    file: tests/resources/sample.csv
+    time_column: time
+    metrics:
+      m1:
+        column: metric1
+        direction: 1
+      m2:
+        column: metric2
+        direction: -1
+    attributes: [ commit ]
+
+  remote1:
+    inherit: [common_metrics, write_metrics]
+    prefix: "performance_regressions.my_product.%{BRANCH}.test1"
+
+  remote2:
+    inherit: [common_metrics, write_metrics]
+    prefix: "performance_regressions.my_product.main.test2"
+    branch_prefix: "performance_regressions.my_product.feature-%{BRANCH}.test2"
+
+
+
+test_groups:
+  local:
+    - local1
+    - local2
+  remote:
+    - remote1
+    - remote2

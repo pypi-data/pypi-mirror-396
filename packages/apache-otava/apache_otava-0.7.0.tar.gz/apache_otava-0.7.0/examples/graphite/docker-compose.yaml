@@ -1,0 +1,76 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+services:
+  graphite:
+    image: graphiteapp/graphite-statsd
+    container_name: graphite
+    ports:
+      - "80:80"
+      - "2003-2004:2003-2004"
+      - "2023-2024:2023-2024"
+      - "8125:8125/udp"
+      - "8126:8126"
+    networks:
+      - otava-graphite
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - graphite
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana:/etc/grafana/provisioning
+    networks:
+      - otava-graphite
+
+  data-sender:
+    image: bash
+    container_name: data-sender
+    depends_on:
+      - graphite
+    volumes:
+      - ./datagen:/datagen
+    entrypoint: ["bash", "/datagen/datagen.sh"]
+    networks:
+      - otava-graphite
+
+  otava:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: otava
+    depends_on:
+      - graphite
+    environment:
+      GRAPHITE_ADDRESS: http://graphite/
+      GRAFANA_ADDRESS: http://grafana:3000/
+      GRAFANA_USER: admin
+      GRAFANA_PASSWORD: admin
+      OTAVA_CONFIG: /config/otava.yaml
+    networks:
+      - otava-graphite
+    volumes:
+      - ./config:/config
+
+networks:
+  otava-graphite:
+    driver: bridge
