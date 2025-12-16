@@ -1,0 +1,42 @@
+{
+  "version": "1.0",
+  "parameters": {
+    "Region": {
+      "type": "string",
+      "builtIn": "AWS::Region",
+      "required": false,
+      "documentation": "The AWS region to use for the service."
+    },
+    "UseDualStack": {
+      "type": "boolean",
+      "builtIn": "AWS::UseDualStack",
+      "required": false,
+      "documentation": "Whether to use dual-stack endpoints."
+    },
+    "UseFIPS": {
+      "type": "boolean",
+      "builtIn": "AWS::UseFIPS",
+      "required": false,
+      "documentation": "Whether to use FIPS endpoints."
+    }
+  },
+  "rules": [
+    {
+      "conditions": [],
+      "endpoint": {
+        "url": "https://api.prod.cp.aidevops.{Region}.api.aws",
+        "properties": {
+          "authSchemes": [
+            {
+              "name": "sigv4",
+              "signingName": "aidevops",
+              "signingRegion": "{Region}"
+            }
+          ]
+        },
+        "headers": {}
+      },
+      "type": "endpoint"
+    }
+  ]
+}

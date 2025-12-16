@@ -1,0 +1,116 @@
+{
+  "version": 2,
+  "waiters": {
+    "TaskCompleted": {
+      "delay": 5,
+      "maxAttempts": 60,
+      "operation": "GetTask",
+      "acceptors": [
+        {
+          "state": "success",
+          "matcher": "path",
+          "argument": "task.status",
+          "expected": "COMPLETED"
+        },
+        {
+          "state": "failure",
+          "matcher": "path",
+          "argument": "task.status",
+          "expected": "FAILED"
+        },
+        {
+          "state": "failure",
+          "matcher": "path",
+          "argument": "task.status",
+          "expected": "CANCELED"
+        },
+        {
+          "state": "failure",
+          "matcher": "path",
+          "argument": "task.status",
+          "expected": "CANCELLED"
+        },
+        {
+          "state": "failure",
+          "matcher": "path",
+          "argument": "task.status",
+          "expected": "TIMED_OUT"
+        }
+      ]
+    },
+    "TaskFailed": {
+      "delay": 5,
+      "maxAttempts": 60,
+      "operation": "GetTask",
+      "acceptors": [
+        {
+          "state": "success",
+          "matcher": "path",
+          "argument": "task.status",
+          "expected": "FAILED"
+        },
+        {
+          "state": "failure",
+          "matcher": "path",
+          "argument": "task.status",
+          "expected": "COMPLETED"
+        },
+        {
+          "state": "failure",
+          "matcher": "path",
+          "argument": "task.status",
+          "expected": "CANCELED"
+        },
+        {
+          "state": "failure",
+          "matcher": "path",
+          "argument": "task.status",
+          "expected": "CANCELLED"
+        },
+        {
+          "state": "failure",
+          "matcher": "path",
+          "argument": "task.status",
+          "expected": "TIMED_OUT"
+        }
+      ]
+    },
+    "TaskStarted": {
+      "delay": 2,
+      "maxAttempts": 30,
+      "operation": "GetTask",
+      "acceptors": [
+        {
+          "state": "success",
+          "matcher": "path",
+          "argument": "task.status",
+          "expected": "IN_PROGRESS"
+        },
+        {
+          "state": "failure",
+          "matcher": "path",
+          "argument": "task.status",
+          "expected": "FAILED"
+        },
+        {
+          "state": "failure",
+          "matcher": "path",
+          "argument": "task.status",
+          "expected": "CANCELED"
+        },
+        {
+          "state": "failure",
+          "matcher": "path",
+          "argument": "task.status",
+          "expected": "CANCELLED"
+        },
+        {
+          "state": "failure",
+          "matcher": "path",
+          "argument": "task.status",
+          "expected": "TIMED_OUT"
+        }
+      ]
+    }
+  }
+}
