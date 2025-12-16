@@ -1,0 +1,75 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Ruff version.
+    rev: v0.14.6
+    hooks:
+      - id: ruff-format
+        exclude: test.*
+      - id: ruff-check
+        args: [--fix, --exit-non-zero-on-fix]
+        exclude: test.*
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.4.1
+    hooks:
+    - id: codespell
+      additional_dependencies:
+        - tomli
+      args: [--ignore-words-list, astroid ]
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+      - id: check-case-conflict
+      - id: check-executables-have-shebangs
+      - id: check-json
+        exclude: test.*
+      - id: check-merge-conflict
+      - id: check-shebang-scripts-are-executable
+      - id: check-symlinks
+      - id: check-toml
+      - id: check-yaml
+        exclude: |
+          (?x)^(
+            test.*|
+            mkdocs.yml
+          )$
+        args: [--allow-multiple-documents]
+      - id: debug-statements
+      - id: end-of-file-fixer
+        exclude: "^tests/resources/"
+      - id: fix-byte-order-marker
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.21.2
+    hooks:
+      - id: pyupgrade
+        args: ["--keep-runtime-typing", ]
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        additional_dependencies: ["gibberish-detector"]
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.18.2
+    hooks:
+      - id: mypy
+        args: [--no-strict-optional, --ignore-missing-imports]
+        additional_dependencies: ["pydantic>2.0", "toml"]
+        exclude: |
+          (?x)^(
+            test.*
+          )$
+  - repo: https://github.com/jsh9/pydoclint
+    rev: 0.8.2
+    hooks:
+      - id: pydoclint
+        args:
+          - "--config=pyproject.toml"
+  - repo: https://github.com/econchick/interrogate
+    rev: 1.7.0  # or master if you're bold
+    hooks:
+      - id: interrogate
+        exclude: test.*
+
+ci:
+  autofix_prs: false
