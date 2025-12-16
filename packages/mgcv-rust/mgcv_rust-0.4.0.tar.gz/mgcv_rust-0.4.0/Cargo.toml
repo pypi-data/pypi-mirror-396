@@ -1,0 +1,168 @@
+[package]
+name = "mgcv_rust"
+version = "0.4.0"
+edition = "2021"
+readme = "README.md"
+
+[lib]
+name = "mgcv_rust"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+ndarray = "0.16"
+approx = "0.5"
+thiserror = "2.0"
+pyo3 = { version = "0.27", features = ["extension-module"], optional = true }
+numpy = { version = "0.27", optional = true }
+rand = { version = "0.8", optional = true }
+rand_chacha = { version = "0.3", optional = true }
+
+# ndarray-linalg with conditional OpenBLAS linking
+[dependencies.ndarray-linalg]
+version = "0.17"
+optional = true
+default-features = false
+
+[features]
+default = []
+python = ["pyo3", "numpy"]
+# BLAS features:
+# - Use 'blas,blas-system' for system OpenBLAS (development, requires libopenblas-dev)
+# - Use 'blas,blas-static' for statically linked OpenBLAS (wheel distribution)
+blas = ["ndarray-linalg", "rand", "rand_chacha"]
+blas-system = ["ndarray-linalg/openblas-system"]  # Use system OpenBLAS
+blas-static = ["ndarray-linalg/openblas-static"]  # Statically link OpenBLAS (includes LAPACK)
+
+[dev-dependencies]
+approx = "0.5"
+rand = "0.8"
+rand_chacha = "0.3"
+ndarray-rand = "0.15"
+
+[profile.release]
+# Aggressive optimization flags for maximum performance
+opt-level = 3              # Maximum optimization
+lto = "fat"                # Link-time optimization across all crates
+codegen-units = 1          # Better optimization at cost of compile time
+panic = "abort"            # Smaller binaries, slightly faster
+strip = true               # Strip symbols for smaller binaries
+
+# Enable CPU-specific optimizations (requires nightly or RUSTFLAGS)
+# To use: RUSTFLAGS="-C target-cpu=native" cargo build --release
+
+[profile.dev]
+opt-level = 1              # Some optimization in dev mode for faster iteration
+
+[[example]]
+name = "test_blas_api"
+path = "test_ndarray_linalg_api.rs"
+required-features = ["blas"]
+
+[[bin]]
+name = "bench_solve"
+path = "benches/bench_solve.rs"
+
+[[bin]]
+name = "test_batch_solve"
+path = "test_batch_solve.rs"
+required-features = ["blas"]
+
+[[bin]]
+name = "profile_gradient"
+path = "profile_gradient.rs"
+required-features = ["blas"]
+
+[[bin]]
+name = "debug_cholesky"
+path = "debug_cholesky.rs"
+required-features = ["blas"]
+
+[[bin]]
+name = "test_batch_trace"
+path = "test_batch_trace.rs"
+required-features = ["blas"]
+
+[[bin]]
+name = "profile_detailed"
+path = "profile_detailed.rs"
+required-features = ["blas"]
+
+[[bin]]
+name = "profile_full"
+path = "profile_full.rs"
+required-features = ["blas"]
+
+[[bin]]
+name = "test_cholesky_gradient"
+path = "test_cholesky_gradient.rs"
+required-features = ["blas"]
+
+[[bin]]
+name = "test_cholesky_stability"
+path = "test_cholesky_stability.rs"
+required-features = ["blas"]
+
+[[bin]]
+name = "test_cached_gradient"
+path = "test_cached_gradient.rs"
+required-features = ["blas"]
+
+[[bin]]
+name = "profile_cached_detailed"
+path = "profile_cached_detailed.rs"
+required-features = ["blas"]
+
+[[bin]]
+name = "profile_xtwx"
+path = "profile_xtwx.rs"
+required-features = ["blas"]
+
+[[bin]]
+name = "benchmark_components"
+path = "benchmark_components.rs"
+required-features = ["blas"]
+
+[[bin]]
+name = "test_fully_cached"
+path = "test_fully_cached.rs"
+required-features = ["blas"]
+
+[[bin]]
+name = "test_newton_reml"
+path = "test_newton_reml.rs"
+required-features = ["blas"]
+
+[[bin]]
+name = "benchmark_rust_performance"
+path = "benchmark_rust_performance.rs"
+required-features = ["blas"]
+
+[[bin]]
+name = "benchmark_comprehensive"
+path = "benchmark_comprehensive.rs"
+required-features = ["blas"]
+
+[[bin]]
+name = "benchmark_rust_comprehensive"
+path = "benchmark_rust_comprehensive.rs"
+required-features = ["blas"]
+
+[[bin]]
+name = "debug_multidim"
+path = "debug_multidim.rs"
+required-features = ["blas"]
+
+[[bin]]
+name = "test_high_d"
+path = "test_high_d.rs"
+required-features = ["blas"]
+
+[[bin]]
+name = "test_d8_n5000_rust"
+path = "test_d8_n5000_rust.rs"
+required-features = ["blas"]
+
+[[bin]]
+name = "profile_n5000"
+path = "profile_n5000.rs"
+required-features = ["blas"]
