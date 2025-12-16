@@ -1,0 +1,85 @@
+[build-system]
+requires = ["setuptools>=45", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "resfo"
+description="A (lazy) parser and writer for reservoir simulator fortran output format."
+readme = "README.md"
+classifiers=[
+    "Development Status :: 6 - Mature",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+dependencies = ["numpy", "typing_extensions"]
+dynamic=["version"]
+
+authors = [
+    {name="Equinor", email="fg_sib-scout@equinor.com"},
+]
+
+maintainers = [
+    {name="Eivind Jahren", email="ejah@equinor.com"},
+]
+license = "LGPL-3.0-or-later"
+
+[project.urls]
+"Homepage" = "https://github.com/equinor/resfo"
+"Repository" = "https://github.com/equinor/resfo"
+"Documentation" = "https://resfo.readthedocs.io/en/stable/"
+"Bug Tracker" = "https://github.com/equinor/resfo/issues"
+
+[project.optional-dependencies]
+doc = [
+    "sphinx",
+    "sphinx-rtd-theme",
+]
+dev = [
+    "pytest",
+    "hypothesis",
+    "tox",
+    "pre-commit"
+]
+
+[tool.setuptools_scm]
+
+[tool.setuptools.package-data]
+"resfo" = ["py.typed", "*.pyi", "**/*.pyi"]
+
+[tool.ruff]
+src = ["src"]
+line-length = 88
+
+[tool.ruff.lint]
+select = [
+  "W",  # pycodestyle
+  "I",  # isort
+  "B",  # flake-8-bugbear
+  "SIM",  # flake-8-simplify
+  "F",  # pyflakes
+  "PL",  # pylint
+  "NPY",  # numpy specific rules
+  "C4",  # flake8-comprehensions
+]
+preview = true
+ignore = ["PLW2901",  # redefined-loop-name
+          "PLR2004",  # magic-value-comparison
+          "PLR0915",  # too-many-statements
+          "PLR0912",  # too-many-branches
+          "PLR0911",  # too-many-return-statements
+          "PLC2701",  # import-private-name
+          "PLR6201",  # literal-membership
+          "PLR0914",  # too-many-locals
+          "PLR6301",  # no-self-use
+          "PLW1641",  # eq-without-hash
+          "PLR0904",  # too-many-public-methods
+          "PLR1702",  # too-many-nested-blocks
+          "PLW3201",  # bad-dunder-method-name
+]
+
+[tool.ruff.lint.pylint]
+max-args = 10

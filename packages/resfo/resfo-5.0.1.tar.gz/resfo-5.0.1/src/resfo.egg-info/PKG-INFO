@@ -1,0 +1,93 @@
+Metadata-Version: 2.4
+Name: resfo
+Version: 5.0.1
+Summary: A (lazy) parser and writer for reservoir simulator fortran output format.
+Author-email: Equinor <fg_sib-scout@equinor.com>
+Maintainer-email: Eivind Jahren <ejah@equinor.com>
+License-Expression: LGPL-3.0-or-later
+Project-URL: Homepage, https://github.com/equinor/resfo
+Project-URL: Repository, https://github.com/equinor/resfo
+Project-URL: Documentation, https://resfo.readthedocs.io/en/stable/
+Project-URL: Bug Tracker, https://github.com/equinor/resfo/issues
+Classifier: Development Status :: 6 - Mature
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
+Description-Content-Type: text/markdown
+License-File: LICENSE.md
+Requires-Dist: numpy
+Requires-Dist: typing_extensions
+Provides-Extra: doc
+Requires-Dist: sphinx; extra == "doc"
+Requires-Dist: sphinx-rtd-theme; extra == "doc"
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: hypothesis; extra == "dev"
+Requires-Dist: tox; extra == "dev"
+Requires-Dist: pre-commit; extra == "dev"
+Dynamic: license-file
+
+resfo
+===========
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![docs](https://readthedocs.org/projects/resfo/badge/?version=latest&style=plastic)](https://resfo.readthedocs.io/)
+
+resfo (REservoir Simulator Fortran Output) is a parser for the output format
+used by several reservoir simulators such as [opm
+flow](https://github.com/OPM/opm-simulators), such as found in files with
+extensions .UNRST, .EGRID, .INIT, etc. and also the corresponding ascii files
+with extension .FUNRST, .FEGRID, .FINIT, etc.
+
+
+Installation
+============
+
+resfo can be installed with pip:
+
+```bash
+pip install resfo
+```
+
+Getting started
+===============
+
+Reservoir simulator output files consist of a sequence of named arrays. resfo
+does not interpret the names, but simply give you a tuple of the name and a
+numpy array with the read function:
+
+```
+import resfo
+
+for kw, arr in resfo.read("my_grid.egrid"):
+    print(kw)
+
+>>> "FILEHEAD"
+>>> "GRIDHEAD"
+>>> "COORD"
+>>> "ZCORN"
+>>> "ACTNUM"
+>>> "MAPAXES"
+```
+
+For more information, see [the docs](http://resfo.rtfd.io).
+
+
+How to contribute
+=================
+
+The easiest way to set up a nice development environment for resfo is to use tox (can be installed via `pip install tox` or
+`sudo apt install tox` on ubuntu), then all testing and linting can be ran with
+
+```bash
+tox
+```
+
+You can also set up `pre-commit` to ensure style checks are done as you commit:
+
+```bash
+pip install pre-commit
+pre-commit install
+```
