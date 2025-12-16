@@ -1,0 +1,31 @@
+[package]
+name = "prism_finance_core"
+version = "0.3.1"
+edition = "2021"
+
+[lib]
+# The library name must match the package name.
+name = "prism_finance_core"
+
+# "cdylib" is for the Python extension via maturin.
+# "rlib" is for the native Rust toolchain, including `cargo test` and `cargo build`.
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+petgraph = "0.6.4"
+pyo3 = { version = "0.27", features = ["extension-module"] } # 0.27 really is the current version
+thiserror = "1.0"
+tempfile = "3"
+smallvec = "1.11"
+
+# SIMD abstraction for portable vectorization (AVX/Neon/SSE)
+wide = "0.7"
+
+# For IPOPT FFI
+libc = "0.2"
+
+[dev-dependencies]
+rstest = "0.21.0"
+
+[build-dependencies]
+pkg-config = "0.3"
