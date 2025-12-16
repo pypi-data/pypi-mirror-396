@@ -1,0 +1,818 @@
+import ipaddress, os, shutil, socket, subprocess, tempfile, time
+from functools import cached_property
+from pathlib import Path
+
+import requests
+
+from syncweb.cmd_utils import Pclose, cmd
+from syncweb.config import ConfigXML
+from syncweb.consts import PYTEST_RUNNING
+from syncweb.ensure import ensure_syncthing
+from syncweb.log_utils import log
+
+ROLE_TO_TYPE = {
+    "r": "receiveonly",
+    "w": "sendonly",
+    "rw": "sendreceive",
+}
+
+ULA_NETWORK = ipaddress.IPv6Network("fc00::/7")
+
+
+class SyncthingNodeXML:
+    def __init__(self, name: str = "st-node", syncthing_exe=None, base_dir=None):
+        self.name = name
+        self.syncthing_exe = syncthing_exe or ensure_syncthing()
+        self.process: subprocess.Popen
+        self.sync_port: int
+        self.discovery_port: int
+
+        if base_dir is None:
+            base_dir = tempfile.mkdtemp(prefix="syncthing-node-")
+            log.info("Using home %s", base_dir)
+        self.home = Path(base_dir)
+        self.home.mkdir(parents=True, exist_ok=True)
+        self.config_path = self.home / "config.xml"
+
+        if not self.config_path.exists():
+            cmd(self.syncthing_exe, f"--home={self.home}", "generate")
+
+        self.config = ConfigXML(self.config_path)
+        self.xml_set_default_config(PYTEST_RUNNING)
+
+        lock_path = self.home / "syncthing.lock"
+        self.running: bool = lock_path.exists()
+        if self.running:
+            log.debug("Found lockfile, is a Syncweb instance already running? %s", lock_path)
+            try:
+                if self.wait_for_pong(timeout=15):
+                    log.debug("Yes! Good thing we waited")
+                    self.running = True
+            except TimeoutError:
+                log.error("Could not connect to existing(?) Syncweb instance at %s", self.api_url)
+                self.running = False
+        else:
+            self.xml_update_config()
+
+    def xml_set_default_config(self, testing=False):
+        node = self.config["device"]
+        # node["@id"] = "DWFH3CZ-6D3I5HE-6LPQAHE-YGO3KQY-PX36X4V-BZORCMN-PC2V7O5-WB3KIAR"
+        node["@name"] = self.name  # will use hostname by default
+        # node["@compression"] = "metadata"
+        # node["@introducer"] = "false"
+        # node["@skipIntroductionRemovals"] = "false"
+        # node["@introducedBy"] = ""
+        # node["address"] = "dynamic"
+        # node["paused"] = "false"
+        # node["autoAcceptFolders"] = "false"
+        # node["maxSendKbps"] = "0"
+        # node["maxRecvKbps"] = "0"
+        # node["maxRequestKiB"] = "0"
+        # node["untrusted"] = "false"
+        # node["remoteGUIPort"] = "0"
+        # node["numConnections"] = "0"
+
+        # gui = self.config["gui"]
+        # gui["@enabled"] = "true"
+        # gui["@tls"] = "false"
+        # gui["@sendBasicAuthPrompt"] = "false"
+        # gui["address"] = "0.0.0.0:8384"
+        # gui["metricsWithoutAuth"] = "false"
+        # gui["apikey"] = "yQzanLVcNw2Rr2bQRH75Ncds3XStomR7"
+        # gui["theme"] = "default"
+
+        opts = self.config["options"]
+        if testing:
+            opts["globalAnnounceEnabled"] = "false"
+            opts["relaysEnabled"] = "false"
+            opts["limitBandwidthInLan"] = "true"
+            opts["maxSendKbps"] = "20"
+            opts["maxRecvKbps"] = "20"
+
+        opts["startBrowser"] = "false"
+        # disable Anonymous Usage Statistics
+        opts["urAccepted"] = "-1"
+        opts["urSeen"] = "3"
+        opts["urInitialDelayS"] = "3600"
+        # disable auto update
+        opts["autoUpgradeIntervalH"] = "0"
+        opts["keepTemporariesH"] = "192"
+        opts["progressUpdateIntervalS"] = "10"
+
+        # TODO: evaluate performance difference
+        # opts["cacheIgnoredFiles"] = "true"
+        # opts["maxFolderConcurrency"] = "8"
+        # opts["maxConcurrentIncomingRequestKiB"] = "400000"
+        # opts["connectionLimitEnough"] = "8000"
+        # opts["connectionLimitMax"] = "80000"
+
+        # opts["listenAddress"] = "default"  # will be randomly picked
+        # opts["globalAnnounceServer"] = "default"
+        # opts["localAnnounceEnabled"] = "true"
+        # opts["localAnnouncePort"] = "21027"
+        # opts["localAnnounceMCAddr"] = "[ff12::8384]:21027"
+        # opts["reconnectionIntervalS"] = "60"
+        # opts["relayReconnectIntervalM"] = "10"
+        # opts["natEnabled"] = "true"
+        # opts["natLeaseMinutes"] = "60"
+        # opts["natRenewalMinutes"] = "30"
+        # opts["natTimeoutSeconds"] = "10"
+        # opts["urUniqueID"] = ""
+        # opts["urURL"] = "https://data.syncthing.net/newdata"
+        # opts["urPostInsecurely"] = "false"
+        # opts["upgradeToPreReleases"] = "false"
+        # opts["minHomeDiskFree"] = {"@unit": "%", "#text": "1"}
+        # opts["releasesURL"] = "https://upgrades.syncthing.net/meta.json"
+        # opts["overwriteRemoteDeviceNamesOnConnect"] = "false"
+        # opts["tempIndexMinBlocks"] = "10"
+        # opts["unackedNotificationID"] = "authenticationUserAndPassword"
+        # opts["trafficClass"] = "0"
+        # opts["setLowPriority"] = "true"
+        # opts["crashReportingURL"] = "https://crash.syncthing.net/newcrash"
+        # opts["crashReportingEnabled"] = "true"
+        # opts["stunKeepaliveStartS"] = "180"
+        # opts["stunKeepaliveMinS"] = "20"
+        # opts["stunServer"] = "default"
+        # opts["announceLANAddresses"] = "true"
+        # opts["sendFullIndexOnUpgrade"] = "false"
+        # opts["auditEnabled"] = "false"
+        # opts["auditFile"] = ""
+        # opts["connectionPriorityTcpLan"] = "10"
+        # opts["connectionPriorityQuicLan"] = "20"
+        # opts["connectionPriorityTcpWan"] = "30"
+        # opts["connectionPriorityQuicWan"] = "40"
+        # opts["connectionPriorityRelay"] = "50"
+        # opts["connectionPriorityUpgradeThreshold"] = "0"
+
+    def xml_add_devices(self, peer_ids):
+        for j, peer_id in enumerate(peer_ids):
+            device = self.config.append(
+                "device",
+                attrib={
+                    "id": peer_id,
+                    "name": f"node{j}",
+                    "compression": "metadata",
+                    "introducer": "false",
+                    "skipIntroductionRemovals": "false",
+                    "introducedBy": "",
+                },
+            )
+            device["address"] = "dynamic"
+            # device["address"] = "http://localhost:22000"
+            device["paused"] = "false"
+            device["autoAcceptFolders"] = "false"
+            device["maxSendKbps"] = "0"
+            device["maxRecvKbps"] = "0"
+            device["maxRequestKiB"] = "0"
+            device["untrusted"] = "false"
+            device["remoteGUIPort"] = "0"
+            device["numConnections"] = "0"
+
+    def xml_add_folder(self, folder_id, peer_ids, folder_type="sendreceive", folder_label=None, prefix=None, path=None):
+        is_fakefs = prefix and prefix.startswith("fake")
+
+        if is_fakefs and prefix:
+            path = Path(prefix) / folder_id
+        else:
+            path = Path(prefix or self.home) / self.name / folder_id
+
+        if not is_fakefs:
+            path.mkdir(parents=True, exist_ok=True)
+
+        if folder_label is None:
+            folder_label = "SharedFolder"
+
+        folder = self.config.append(
+            "folder",
+            attrib={
+                "id": folder_id,
+                "label": folder_label,
+                "path": prefix if is_fakefs else str(path),
+                "type": ROLE_TO_TYPE.get(folder_type, folder_type),
+                "rescanIntervalS": "3600",
+                "fsWatcherEnabled": "false" if is_fakefs else "true",
+                "fsWatcherDelayS": "5",
+                "fsWatcherTimeoutS": "0",
+                "ignorePerms": "true",
+                "autoNormalize": "true",
+            },
+        )
+        folder["filesystemType"] = "fake" if is_fakefs else "basic"
+        folder["minDiskFree"] = {"@unit": "%", "#text": "1"}
+        versioning = folder.append("versioning")
+        versioning["cleanupIntervalS"] = "3600"
+        versioning["fsPath"] = ""
+        versioning["fsType"] = "fake" if is_fakefs else "basic"
+        folder["copiers"] = "0"
+        folder["pullerMaxPendingKiB"] = "0"
+        folder["hashers"] = "0"
+        folder["order"] = "random"
+        folder["ignoreDelete"] = "false"
+        folder["scanProgressIntervalS"] = "10"
+        folder["pullerPauseS"] = "0"
+        folder["pullerDelayS"] = "1"
+        folder["maxConflicts"] = "10"
+        folder["disableSparseFiles"] = "false"
+        folder["paused"] = "false"
+        folder["markerName"] = ".stfolder"
+        folder["copyOwnershipFromParent"] = "false"
+        folder["modTimeWindowS"] = "0"
+        folder["maxConcurrentWrites"] = "16"
+        folder["disableFsync"] = "false"
+        folder["blockPullOrder"] = "standard"
+        folder["copyRangeMethod"] = "standard"
+        folder["caseSensitiveFS"] = "false"
+        folder["junctionsAsDirs"] = "false"
+        folder["syncOwnership"] = "false"
+        folder["sendOwnership"] = "false"
+        folder["syncXattrs"] = "false"
+        folder["sendXattrs"] = "false"
+        xattrFilter = folder.append("xattrFilter")
+        xattrFilter["maxSingleEntrySize"] = "1024"
+        xattrFilter["maxTotalSize"] = "4096"
+
+        # add devices to folder
+        for peer_id in peer_ids:
+            folder_device = folder.append("device", attrib={"id": peer_id, "introducedBy": ""})
+            folder_device["encryptionPassword"] = ""
+
+        self.xml_update_config()
+
+    def xml_update_config(self):
+        was_running = self.running
+        if was_running:
+            self.stop()  # stop node to be able to write configs
+
+        self.config.save()
+
+        if was_running:
+            self.start()
+
+    @staticmethod
+    def find_free_port(start_port: int) -> int:
+        port = start_port
+        while True:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                try:
+                    s.bind(("127.0.0.1", port))
+                    return port
+                except OSError:
+                    port += 1
+
+    def start(self, daemonize=False):
+        if self.running:
+            log.debug("[START]: %s self.running already set", self.name)
+            return
+        if getattr(self, "process", False) and self.process.poll() is None:
+            self.running = True
+            log.warning("[START]: %s process already running", self.name)
+            return
+
+        gui_port = self.find_free_port(8384)
+        self.config["gui"]["address"] = f"127.0.0.1:{gui_port}"
+        # self.sync_port = find_free_port(22000)
+        # self.config["options"]["listenAddress"] = f"tcp://0.0.0.0:{self.sync_port}"
+
+        self.xml_update_config()
+
+        cmd = [self.syncthing_exe, f"--home={self.home}", "--no-browser", "--no-upgrade", "--no-restart"]
+
+        if daemonize:
+            z = subprocess.DEVNULL
+            self.process = subprocess.Popen(cmd, stdin=z, stdout=z, stderr=z, close_fds=True, start_new_session=True)
+        else:
+            self.process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        # Give Syncthing a moment
+        time.sleep(0.5)
+        self.running = True
+        log.debug("[START]: %s started", self.name)
+
+    def stop(self):
+        self.running = False
+
+        if not getattr(self, "process", None):
+            log.warning("[STOP]: %s was daemonized? It seems outside of our control", self.name)
+            return
+
+        if self.process.poll() is None:
+            self.process.terminate()
+            try:
+                self.process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
+        else:
+            log.warning("[STOP]: %s exited already", self.name)
+
+        if self.process.stdout and not self.process.stdout.closed:
+            self.log()
+        log.debug("[STOP]: %s stopped", self.name)
+
+    def log(self):
+        r = Pclose(self.process)
+
+        if r.returncode != 0:
+            log.info(self.name, "exited", r.returncode)
+        if r.stdout:
+            log.info(r.stdout)
+        if r.stderr:
+            log.info(r.stderr)
+
+    @property
+    def api_url(self):
+        return "http://" + str(self.config["gui"]["address"])
+
+    def _get(self, path, **kwargs):
+        resp = self.session.get(f"{self.api_url}/rest/{path}", **kwargs)
+        if resp.text:
+            log.debug(resp.text)
+        if resp.status_code == 404:
+            log.info("404 Not Found %s %s", path, kwargs)
+            return {}
+        else:
+            resp.raise_for_status()
+        return resp.json()
+
+    def wait_for_pong(self, timeout: float = 30.0):
+        start = time.monotonic()
+
+        while time.monotonic() - start < timeout:
+            try:
+                if self._get("system/ping", timeout=5) == {"ping": "pong"}:
+                    return True
+            except Exception as e:
+                log.debug("Error waiting for pong %s", e)
+            time.sleep(0.5)
+
+        raise TimeoutError
+
+    @property
+    def api_key(self):
+        return str(self.config["gui"]["apikey"])
+
+    @cached_property
+    def session(self):
+        s = requests.Session()
+        s.headers.update({"X-API-Key": self.api_key})
+        return s
+
+    def _put(self, path, **kwargs):
+        resp = self.session.put(f"{self.api_url}/rest/{path}", **kwargs)
+        if resp.text:
+            log.debug(resp.text)
+        if resp.status_code == 404:
+            log.info("404 Not Found %s %s", path, kwargs)
+            return {}
+        else:
+            resp.raise_for_status()
+        return resp.json() if resp.text else None
+
+    def _post(self, path, json=None, **kwargs):
+        resp = self.session.post(f"{self.api_url}/rest/{path}", json=json, **kwargs)
+        if resp.text:
+            log.debug(resp.text)
+        if resp.status_code == 404:
+            log.info("404 Not Found %s %s", path, kwargs)
+            return {}
+        else:
+            resp.raise_for_status()
+        return resp.json() if resp.text else None
+
+    def _patch(self, path, **kwargs):
+        resp = self.session.patch(f"{self.api_url}/rest/{path}", **kwargs)
+        if resp.text:
+            log.debug(resp.text)
+        if resp.status_code == 404:
+            log.info("404 Not Found %s %s", path, kwargs)
+            return {}
+        else:
+            resp.raise_for_status()
+        return resp.json() if resp.text else None
+
+    def _delete(self, path, **kwargs):
+        resp = self.session.delete(f"{self.api_url}/rest/{path}", **kwargs)
+        if resp.text:
+            log.debug(resp.text)
+        if resp.status_code == 404:
+            log.info("404 Not Found %s", path)
+        else:
+            resp.raise_for_status()
+        return resp
+
+
+class SyncthingNode(SyncthingNodeXML):
+    def wait_for_node(self, timeout=60):
+        deadline = time.time() + timeout
+
+        if getattr(self, "process", False):
+            assert self.process.poll() is None
+
+        errors = []
+        while time.time() < deadline:
+            try:
+                data = self._get("system/connections")
+                for _dev, info in data.get("connections", {}).items():
+                    if info.get("connected"):
+                        return True
+            except Exception as e:
+                errors.append(e)
+            time.sleep(2)
+
+        log.error(f"Timed out waiting for %s device to connect on %s", self.name, self.api_url)
+        for error in errors:
+            log.warning(error)
+        raise TimeoutError
+
+    def shutdown(self):
+        return self._post("system/shutdown")
+
+    def is_restart_required(self) -> bool:
+        resp = self._get("config/restart-required")
+        return resp.get("restartRequired", False)
+
+    @cached_property
+    def version(self):
+        return self._get("system/version")
+
+    def status(self, retries=5, delay=1):
+        for _ in range(retries):
+            try:
+                status = self._get("system/status")
+                return status
+            except Exception:
+                time.sleep(delay)
+        raise RuntimeError("Failed to get status of Syncthing node")
+
+    def system_errors(self):
+        return self._get("system/error")
+
+    def get_config(self):
+        return self._get("config")
+
+    def replace_config(self, config: dict):
+        config = self.get_config() | config
+        return self._put("config", json=config)
+
+    def get_device_id(self, retries=15, delay=0.5):
+        for _ in range(retries):
+            try:
+                status = self._get("system/status")
+                return status["myID"]
+            except Exception:
+                time.sleep(delay)
+
+        log.warning("Failed to get device ID from Syncthing node")
+        raise TimeoutError
+
+    @cached_property
+    def device_id(self):
+        if not self.running:
+            self.start()
+        try:
+            return self.get_device_id()
+        except TimeoutError:
+            # relies on initial empty config
+            log.warning("GUI Port is not set; relying on XML which may be incorrect")
+            return str(self.config["device"]["@id"])
+
+    def devices(self, local_only=False):
+        if local_only:
+            devices = self._get("config/devices")
+            local_devices = []
+            for d in devices:
+                address = self.strip_port(d.get("address", ""))
+                if self.is_local_address(address):
+                    local_devices.append(d)
+
+            return local_devices
+
+        return self._get("config/devices")
+
+    @property
+    def devices_list(self):
+        return [d["deviceID"] for d in self.devices()]
+
+    @property
+    def devices_dict(self):
+        return {d["deviceID"]: d for d in self.devices()}
+
+    @property
+    def folders_dict(self):
+        return {d["id"]: d for d in self.folders()}
+
+    @property
+    def folder_roots(self):
+        return {d["path"]: d["id"] for d in self.folders()}
+
+    def add_device(self, **kwargs):
+        return self._post("config/devices", json=kwargs)
+
+    def delete_device(self, device_id: str):
+        return self._delete(f"config/devices/{device_id}")
+
+    def delete_pending_device(self, device_id: str):
+        return self._delete(f"cluster/pending/devices", params={"device": device_id})
+
+    def device_stats(self):
+        return self._get("stats/device")
+
+    def pause(self, device_id: str | None = None):
+        params = {}
+        if device_id:  # when omitted pauses all devices
+            params["device"] = device_id
+        return self._post("system/pause", params=params)
+
+    def resume(self, device_id: str | None = None):
+        params = {}
+        if device_id:  # when omitted resumes all devices
+            params["device"] = device_id
+        return self._post("system/resume", params=params)
+
+    def pause_folder(self, folder_id: str):
+        existing_folder = self.folder(folder_id)
+        existing_folder["paused"] = True
+        self._patch(f"config/folders/{folder_id}", json=existing_folder)
+
+    def resume_folder(self, folder_id: str):
+        existing_folder = self.folder(folder_id)
+        existing_folder["paused"] = False
+        self._patch(f"config/folders/{folder_id}", json=existing_folder)
+
+    def folder_status(self, folder_id: str):
+        return self._get("db/status", params={"folder": folder_id})
+
+    def default_folder(self):
+        return self._get("config/defaults/folder")
+
+    def set_default_folder(self, **folder):
+        default_folder = self.default_folder()
+        default_folder["name"] = "default"
+        default_folder["label"] = "Syncweb Default"
+        default_folder["path"] = os.getenv("SYNCWEB_HOME") or os.path.realpath(os.path.expanduser("~/Syncweb"))
+        default_folder["rescanIntervalS"] = 7200
+        default_folder["fsWatcherDelayS"] = 5
+        default_folder["ignorePerms"] = True
+        default_folder["ignoreDelete"] = True
+        default_folder["scanProgressIntervalS"] = 10
+        default_folder["copyRangeMethod"] = "all"
+        folder = default_folder | folder
+        return self._put("config/defaults/folder", json=folder)
+
+    def default_ignores(self):
+        return self._get("config/defaults/ignores")
+
+    def set_default_ignores(self, lines: list[str] | None = None):
+        if lines is None:
+            lines = ["*"]
+        return self._put("config/defaults/ignores", json={"lines": lines})
+
+    def ignores(self, folder_id: str):
+        return self._get("db/ignores", params={"folder": folder_id})
+
+    def set_ignores(self, folder_id: str, lines: list[str] | None = None):
+        if lines is None:
+            lines = ["*"]
+        return self._post("db/ignores", params={"folder": folder_id}, json={"ignore": lines})
+
+    def folder(self, folder_id: str):
+        return self._get(f"config/folders/{folder_id}")
+
+    def folders(self):
+        return self._get("config/folders")
+
+    @staticmethod
+    def is_local_address(s):
+        try:
+            ip = ipaddress.ip_address(s)
+            if ip.is_private or ip.is_loopback or ip.is_link_local:
+                return True
+            elif ip.version == 6 and ip in ULA_NETWORK:
+                return True
+        except ValueError:
+            # Ignore non-IP (like DNS hostnames)
+            pass
+        return False
+
+    @staticmethod
+    def strip_port(s):
+        # print(s)
+
+        if "://" in s:  # strip scheme
+            s = s[s.find("://") + 3 :]
+
+        if s.startswith("[") and s.endswith("]"):
+            s = s[1:-1]
+        elif s.startswith("[") and "]:" in s:
+            s = s[1 : s.rfind("]:")]
+        else:
+            last_colon_index = s.rfind(":")
+            if last_colon_index != -1:
+                s = s[:last_colon_index]
+
+        # print(s)
+        return s
+
+    def pending_devices(self, local_only=False):
+        if local_only:
+            devices = self._get("cluster/pending/devices")
+            local_devices = {}
+            for device_id, d in devices.items():
+                address = self.strip_port(d.get("address", ""))
+                if self.is_local_address(address):
+                    local_devices[device_id] = d
+
+            return local_devices
+
+        return self._get("cluster/pending/devices")
+
+    def discovered_devices(self, local_only=False):
+        if local_only:
+            devices = self._get("system/discovery")
+            local_devices = {}
+            for device_id, d in devices.items():
+                for address in d.get("addresses") or []:
+                    address = self.strip_port(address)
+                    if self.is_local_address(address):
+                        local_devices[device_id] = d
+                        break
+
+            return local_devices
+
+        return self._get("system/discovery")
+
+    def pending_folders(self, device_id=None):
+        params = {}
+        if device_id is not None:  # filter response to only folders offered from specific device
+            params["device"] = device_id
+        return self._get("cluster/pending/folders", params=params)
+
+    def add_folder(self, **kwargs):
+        if "label" not in kwargs:
+            kwargs["label"] = None
+
+        existing_folder = self.folder(kwargs["id"])
+        if existing_folder:
+            log.info("Folder id %s already added", kwargs["id"])
+            return
+
+        kwargs = self.default_folder() | kwargs
+        return self._post("config/folders", json=kwargs)
+
+    def add_folder_devices(self, folder_id: str, device_ids: list[str]):
+        existing_folder = self.folder(folder_id)
+
+        existing_device_ids = {dd["deviceID"] for dd in existing_folder.get("devices") or []}
+        new_devices = [{"deviceID": d} for d in device_ids if d not in existing_device_ids]
+        if not new_devices:
+            log.info(f"[%s] Folder '%s' already available to all requested devices", folder_id, self.name)
+            return
+
+        existing_folder["devices"].extend(new_devices)
+        log.debug(f"[%s] Patching '%s' with %s new devices", folder_id, self.name, len(new_devices))
+        self._patch(f"config/folders/{folder_id}", json=existing_folder)
+
+    def remove_folder_devices(self, folder_id: str, device_ids: list[str]):
+        existing_folder = self.folder(folder_id)
+
+        existing_devices = existing_folder.get("devices") or []
+        new_devices = [d for d in existing_devices if d["deviceID"] not in device_ids]
+        if new_devices == existing_devices:
+            return
+
+        existing_folder["devices"] = new_devices
+        log.debug(
+            f"[%s] Patching '%s' to drop %n devices", folder_id, self.name, len(existing_devices) - len(new_devices)
+        )
+        self._patch(f"config/folders/{folder_id}", json=existing_folder)
+
+    def delete_folder(self, folder_id: str):
+        return self._delete(f"config/folders/{folder_id}")
+
+    def delete_pending_folder(self, folder_id: str, device_id=None):
+        params = {"folder": folder_id}
+        if device_id is not None:  # ignore folder announcements from specific device
+            params["device"] = device_id
+        return self._delete(f"cluster/pending/folders", params=params)
+
+    def reset_folder(self, folder_id: str | None = None):
+        params = {}
+        if folder_id:  # when omitted resets whole DB
+            params["folder"] = folder_id
+        return self._post("system/reset", params=params)
+
+    def folder_stats(self):
+        return self._get("stats/folder")
+
+    def files(self, folder_id: str, levels: int | None = None, prefix: str | None = None):
+        params = {"folder": folder_id}
+        if levels is not None:
+            params["levels"] = str(levels)
+        if prefix is not None:
+            params["prefix"] = prefix
+
+        return self._get("db/browse", params=params)
+
+    def file(self, folder_id: str, relative_path: str):
+        params = {"folder": folder_id, "file": relative_path}
+
+        resp = self.session.get(f"{self.api_url}/rest/db/file", params=params)
+        if resp.status_code == 404:
+            log.info("404 Not Found %s", relative_path)
+            return
+        else:
+            resp.raise_for_status()
+        return resp.json()
+
+    def folder_revert(self, receiveonly_folder_id: str):
+        return self._post("db/revert", json={"folder": receiveonly_folder_id})
+
+    def folder_override(self, sendonly_folder_id: str):
+        return self._post("db/override", json={"folder": sendonly_folder_id})
+
+    def prioritize_file_transfer(self, folder_id: str, file_path: str):
+        return self._post(f"db/prio", params={"folder": folder_id, "file": file_path})
+
+    def _folder_errors(self, **kwargs):
+        return self._get("folder/errors", params=kwargs)
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.stop()
+
+
+class SyncthingCluster:
+    def __init__(self, roles, prefix="syncthing-cluster-"):
+        self.roles = roles
+        self.tmpdir = Path(tempfile.mkdtemp(prefix=prefix))
+        self.nodes: list[SyncthingNode] = []
+        for i, _role in enumerate(self.roles):
+            home = self.tmpdir / f"node{i}"
+            home.mkdir(parents=True, exist_ok=True)
+            st = SyncthingNode(name=f"node{i}", base_dir=home)
+            self.nodes.append(st)
+
+    @property
+    def device_ids(self):
+        return [st.device_id for st in self.nodes]
+
+    def setup_peers(self):
+        for st in self.nodes:
+            st.xml_add_devices(self.device_ids)
+
+    def setup_folder(self, folder_id: str | None = None, prefix: str | None = None, folder_type: str = "sendreceive"):
+        if folder_id is None:
+            folder_id = "data"
+
+        for idx, st in enumerate(self.nodes):
+            st.xml_add_folder(
+                folder_id, self.device_ids, folder_type=folder_type, prefix=self.increment_seed(prefix, idx)
+            )
+        return folder_id
+
+    @staticmethod
+    def increment_seed(prefix, idx):
+        if prefix and "seed=?" in prefix:
+            return prefix.replace("seed=?", f"seed={idx}")
+        return prefix
+
+    def wait_for_connection(self, timeout=60):
+        return [st.wait_for_node(timeout=timeout) for st in self.nodes]
+
+    def start(self):
+        [st.start() for st in self.nodes]
+
+    def stop(self):
+        [st.stop() for st in self.nodes]
+
+    def inspect(self):
+        print(len(self.nodes), "nodes")
+        for node in self.nodes:
+            print("###", node.name)
+            print("open", node.api_url)
+            print("ls", node.home)
+            print()
+
+    def __iter__(self):
+        yield from self.nodes
+
+    def __enter__(self):
+        self.setup_peers()
+        self.folder_id = "data"
+
+        for st in self.nodes:
+            for idx, st in enumerate(self.nodes):
+                role = self.roles[idx]
+                st.xml_add_folder(self.folder_id, peer_ids=self.device_ids, folder_type=role)
+            st.start()
+
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        for st in self.nodes:
+            st.stop()
+
+        # only delete tempdir if no exception occurred
+        if exc_type is None:
+            shutil.rmtree(self.tmpdir, ignore_errors=True)
