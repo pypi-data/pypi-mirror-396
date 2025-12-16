@@ -1,0 +1,81 @@
+{% extends 'generic/object.html' %}
+{% load helpers %}
+{% load buttons %}
+
+{% block breadcrumbs %}
+  {{ block.super }}
+  <li class="breadcrumb-item active">{{ object }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col col-md-6">
+        <div class="card">
+            <h5 class="card-header">Organization</h5>
+            <div class="card-body">
+                <table class="table table-hover attr-table">
+                    <tr>
+                        <th scope="row">Short Name</th>
+                        <td>{{ object.short_name }}</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Full Name</th>
+                        <td>{{ object.full_name }}</td>
+                    </tr>
+                    {% if object.description %}
+                    <tr>
+                        <th scope="row">Description</th>
+                        <td>{{ object.description|linebreaksbr }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+        {% include 'inc/panels/custom_fields.html' %}
+        {% include 'inc/panels/tags.html' %}
+        {% include 'inc/panels/comments.html' %}
+    </div>
+    <div class="col col-md-6">
+        <div class="card">
+            <h5 class="card-header">
+                <a href="{% url 'plugins:netbox_scion:isdas_list' %}?organization={{ object.pk }}" class="text-decoration-none text-primary">
+                    ISD-ASes
+                </a>
+                <div class="card-actions">
+                    <a href="{% url 'plugins:netbox_scion:isdas_add' %}?organization={{ object.pk }}" class="btn btn-primary btn-sm">
+                        <i class="mdi mdi-plus-thick"></i> Add
+                    </a>
+                </div>
+            </h5>
+            <div class="card-body">
+                {% if object.isd_ases.exists %}
+                <table class="table table-hover">
+                    <tr>
+                        <th>ISD-AS</th>
+                        <th>Appliances</th>
+                        <th>Links</th>
+                    </tr>
+                    {% for isdas in object.isd_ases.all %}
+                    <tr>
+                        <td><a href="{% url 'plugins:netbox_scion:isdas' isdas.pk %}">{{ isdas.isd_as }}</a></td>
+                        <td>
+                            {% if isdas.appliances %}
+                                {% for appliance in isdas.appliances %}
+                                    <span class="badge badge-secondary">{{ appliance }}</span>
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted">None</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ isdas.links.count }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+                {% else %}
+                <span class="text-muted">None</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

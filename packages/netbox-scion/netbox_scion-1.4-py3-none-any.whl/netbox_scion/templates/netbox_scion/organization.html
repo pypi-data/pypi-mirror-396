@@ -1,0 +1,60 @@
+{% extends 'generic/object_list.html' %}
+{% load render_table from django_tables2 %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col col-md-6">
+        <div class="card">
+            <h5 class="card-header">Organization</h5>
+            <div class="card-body">
+                <table class="table table-hover attr-table">
+                    <tr>
+                        <th scope="row">Short Name</th>
+                        <td>{{ object.short_name }}</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Full Name</th>
+                        <td>{{ object.full_name }}</td>
+                    </tr>
+                    {% if object.description %}
+                    <tr>
+                        <th scope="row">Description</th>
+                        <td>{{ object.description|linebreaksbr }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if object.isd_ases.exists %}
+<div class="row">
+    <div class="col col-md-12">
+        <div class="card">
+            <h5 class="card-header">ISD-ASes ({{ object.isd_ases.count }})</h5>
+            <div class="card-body">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ISD-AS</th>
+                            <th>Description</th>
+                            <th>Appliances</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for isdas in object.isd_ases.all %}
+                        <tr>
+                            <td><a href="{% url 'plugins:netbox_scion:isdas' isdas.pk %}">{{ isdas.isd_as }}</a></td>
+                            <td>{{ isdas.description|default:"-" }}</td>
+                            <td>{{ isdas.appliances_display|default:"-" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

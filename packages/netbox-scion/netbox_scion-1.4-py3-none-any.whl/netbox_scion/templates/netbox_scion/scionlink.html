@@ -1,0 +1,58 @@
+{% extends 'generic/object_list.html' %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col col-md-6">
+        <div class="card">
+            <h5 class="card-header">SCION Link</h5>
+            <div class="card-body">
+                <table class="table table-hover attr-table">
+                    <tr>
+                        <th scope="row">ISD-AS</th>
+                        <td><a href="{% url 'plugins:netbox_scion:isdas' object.isd_as.pk %}">{{ object.isd_as.isd_as }}</a></td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Interface ID</th>
+                        <td>{{ object.interface_id }}</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Customer ID</th>
+                        <td>{{ object.customer_id }}</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Peer Name</th>
+                        <td>{{ object.peer_name }}</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Zendesk Ticket</th>
+                        <td><a href="{{ object.get_zendesk_url }}" target="_blank">{{ object.zendesk_ticket }}</a></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col col-md-6">
+        <div class="card">
+            <h5 class="card-header">Organization</h5>
+            <div class="card-body">
+                <table class="table table-hover attr-table">
+                    <tr>
+                        <th scope="row">Organization</th>
+                        <td>
+                            {% if object.isd_as.organization %}
+                                <a href="{% url 'plugins:netbox_scion:organization' object.isd_as.organization.pk %}">{{ object.isd_as.organization.short_name }}</a>
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Full Name</th>
+                        <td>{{ object.isd_as.organization.full_name|default:"—" }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

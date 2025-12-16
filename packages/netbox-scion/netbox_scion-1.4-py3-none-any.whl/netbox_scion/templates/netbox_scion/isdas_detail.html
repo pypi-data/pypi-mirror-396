@@ -1,0 +1,182 @@
+{% extends 'generic/object.html' %}
+{% load helpers %}
+{% load buttons %}
+
+{% block content %}
+<div class="row">
+    <div class="col col-md-6">
+        <div class="card">
+            <h5 class="card-header">ISD-AS</h5>
+            <div class="card-body">
+                <table class="table table-hover attr-table">
+                    <tr>
+                        <th scope="row">ISD-AS</th>
+                        <td>{{ object.isd_as }}</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Organization</th>
+                        <td>
+                            {% if object.organization %}
+                                <a href="{% url 'plugins:netbox_scion:organization' object.organization.pk %}">{{ object.organization.short_name }}</a>
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% if object.description %}
+                    <tr>
+                        <th scope="row">Description</th>
+                        <td>{{ object.description|linebreaksbr }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+        
+        <!-- Appliances Management Section -->
+        <div class="card">
+            <h5 class="card-header">
+                Appliances
+                <div class="card-actions">
+                    <a href="{% url 'plugins:netbox_scion:add_appliance' object.pk %}" class="btn btn-primary btn-sm">
+                        <i class="mdi mdi-plus-thick"></i> Add Appliance
+                    </a>
+                </div>
+            </h5>
+            <div class="card-body">
+                {% if object.appliances %}
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Appliance</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for appliance in object.appliances %}
+                        <tr>
+                            <td>{{ appliance }}</td>
+                            <td>
+                                <a href="{% url 'plugins:netbox_scion:edit_appliance' object.pk appliance %}" 
+                                   class="btn btn-outline-primary btn-sm">
+                                    <i class="mdi mdi-pencil"></i> Edit
+                                </a>
+                                <a href="{% url 'plugins:netbox_scion:remove_appliance' object.pk appliance %}" 
+                                   class="btn btn-outline-danger btn-sm"
+                                   onclick="return confirmApplianceDelete('{{ appliance }}', '{{ object.pk }}');">
+                                    <i class="mdi mdi-trash-can-outline"></i> Remove
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <span class="text-muted">None</span>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% include 'inc/panels/custom_fields.html' %}
+        {% include 'inc/panels/tags.html' %}
+        {% include 'inc/panels/comments.html' %}
+    </div>
+    <div class="col col-md-6">
+        <div class="card">
+            <h5 class="card-header">
+                <a href="{% url 'plugins:netbox_scion:scionlink_list' %}?isd_as={{ object.pk }}" class="text-decoration-none text-primary">
+                    SCION Links
+                </a>
+                <div class="card-actions">
+                    <a href="{% url 'plugins:netbox_scion:scionlink_add' %}?isd_as={{ object.pk }}" class="btn btn-primary btn-sm">
+                        <i class="mdi mdi-plus-thick"></i> Add
+                    </a>
+                </div>
+            </h5>
+            <div class="card-body">
+                {% if object.links.exists %}
+                <table class="table table-hover">
+                    <tr>
+                        <th>Interface</th>
+                        <th>Appliance</th>
+                        <th>Relationship</th>
+                        <th>Status</th>
+                        <th>Peer Name</th>
+                        <th>Peer</th>
+                        <th>Ticket</th>
+                    </tr>
+                    {% for link in object.links.all %}
+                    <tr>
+                        <td><a href="{% url 'plugins:netbox_scion:scionlink' link.pk %}">{{ link.interface_id }}</a></td>
+                        <td>{{ link.core }}</td>
+                        <td>
+                            {% if link.relationship == 'CORE' %}
+                                <span class="badge" style="background-color:#4f46e5;color:#fff;font-weight:500;">Core</span>
+                            {% elif link.relationship == 'CHILD' %}
+                                <span class="badge" style="background-color:#14b8a6;color:#fff;font-weight:500;">Child</span>
+                            {% elif link.relationship == 'PARENT' %}
+                                <span class="badge" style="background-color:#3b82f6;color:#fff;font-weight:500;">Parent</span>
+                            {% else %}
+                                {{ link.get_relationship_display }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if link.status %}
+                                {% if link.status == 'ACTIVE' %}
+                                    <span class="badge" style="background-color:#28a745;color:#fff;font-weight:500;">Active</span>
+                                {% elif link.status == 'RESERVED' %}
+                                    <span class="badge" style="background-color:#ffc107;color:#000;font-weight:500;">Reserved</span>
+                                {% elif link.status == 'PLANNED' %}
+                                    <span class="badge" style="background-color:#6c757d;color:#fff;font-weight:500;">Planned</span>
+                                {% else %}
+                                    <span class="badge badge-secondary">{{ link.status }}</span>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                        <td>{{ link.peer_name }}</td>
+                        <td>{{ link.peer }}</td>
+                        <td>
+                            {% if link.ticket %}
+                                {% with url=link.get_ticket_url %}
+                                    {% if url %}
+                                        <a href="{{ url }}" target="_blank" rel="noopener noreferrer">{{ link.ticket }}</a>
+                                    {% else %}
+                                        {{ link.ticket }}
+                                    {% endif %}
+                                {% endwith %}
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </table>
+                {% else %}
+                <span class="text-muted">None</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function confirmApplianceDelete(applianceName, isdasPk) {
+    try {
+        // Count how many SCION links would be affected
+        const response = await fetch(`/api/plugins/scion/links/?isd_as_id=${isdasPk}&core=${encodeURIComponent(applianceName)}`);
+        const data = await response.json();
+        const linkCount = data.count || 0;
+        
+        let message = `Are you sure you want to remove appliance "${applianceName}"?`;
+        if (linkCount > 0) {
+            message += `\n\nThis will also delete ${linkCount} SCION link(s) that use this appliance.`;
+        }
+        
+        return confirm(message);
+    } catch (error) {
+        // Fallback message if API call fails
+        return confirm(`Are you sure you want to remove appliance "${applianceName}"?\n\nThis may also delete associated SCION links.`);
+    }
+}
+</script>
+{% endblock %}
