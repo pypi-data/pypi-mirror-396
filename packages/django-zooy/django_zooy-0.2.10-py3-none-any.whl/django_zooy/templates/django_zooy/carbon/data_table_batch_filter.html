@@ -1,0 +1,37 @@
+{% load carbon %}
+{% load i18n %}
+
+<cds-popover data-batch-filter drop-shadow align="bottom-end"
+             backgroundToken="background">
+    <cds-icon-button kind="ghost" size="lg" aria-label="{{ tooltip_content|default:'Filter' }}" >
+        {% carbon_icon "filter" slot="icon" %}
+        <span slot="tooltip-content">{{ tooltip_content|default:"Filter" }}</span>
+    </cds-icon-button>
+    <cds-popover-content slot="content" backgroundToken="background">
+        <div class="batch-filter-container {{ orientation|default:'horizontal' }}">
+            {% for item, tup in field_choices.items %}
+            <cds-checkbox-group
+                    zoo-filter-field="{{ item }}"
+                    legend-text="{{ tup.0 }}"
+                    orientation="vertical">
+                {% for choice in tup.1 %}
+                <cds-checkbox
+                        style="white-space: nowrap;"
+                        label-text="{{ choice.1 }}"
+                        id="{{ item }}:{{ choice.0 }}">
+                </cds-checkbox>
+                {% endfor %}
+            </cds-checkbox-group>
+            <div class="divider"></div>
+            {% endfor %}
+        </div>
+        <cds-modal-footer>
+            <cds-modal-footer-button kind="secondary" reset-filter>
+                {{ button_label_reset|default:"Reset filters" }}
+            </cds-modal-footer-button>
+            <cds-modal-footer-button kind="primary" apply-filter>
+                {{ button_label_set|default:"Apply filters" }}
+            </cds-modal-footer-button>
+        </cds-modal-footer>
+    </cds-popover-content>
+</cds-popover>
