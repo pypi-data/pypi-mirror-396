@@ -1,0 +1,113 @@
+Metadata-Version: 2.4
+Name: granite-common
+Version: 0.3.6
+Summary: Input and output processing for IBM Granite models
+Author-email: Fred Reiss <frreiss@us.ibm.com>, Gabe Goodhart <ghart@us.ibm.com>, Mark Sturdevant <mark.sturdevant@ibm.com>, Martin Hickey <martin.hickey@ie.ibm.com>, Khoi-Nguyen Tran <kndtran@ibm.com>
+Project-URL: homepage, https://github.com/ibm-granite/granite-common
+Project-URL: source, https://github.com/ibm-granite/granite-common
+Project-URL: issues, https://github.com/ibm-granite/granite-common/issues
+Classifier: Development Status :: 3 - Alpha
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Operating System :: POSIX :: Linux
+Classifier: Operating System :: MacOS :: MacOS X
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: Implementation :: CPython
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: jsonschema
+Requires-Dist: pydantic<3.0,>=2.0.0
+Provides-Extra: transformers
+Requires-Dist: transformers[torch]; extra == "transformers"
+Requires-Dist: peft; extra == "transformers"
+Requires-Dist: huggingface-hub; extra == "transformers"
+Requires-Dist: xgrammar; extra == "transformers"
+Provides-Extra: nltk
+Requires-Dist: nltk~=3.9.1; extra == "nltk"
+Provides-Extra: gpt-oss
+Requires-Dist: triton>=3.4; extra == "gpt-oss"
+Requires-Dist: accelerate; extra == "gpt-oss"
+Requires-Dist: kernels; extra == "gpt-oss"
+Provides-Extra: retriever
+Requires-Dist: sentence-transformers; extra == "retriever"
+Requires-Dist: pyarrow; extra == "retriever"
+Requires-Dist: elasticsearch<9.0.0,>=8.0.0; extra == "retriever"
+Provides-Extra: dev
+Requires-Dist: isort==6.0.1; extra == "dev"
+Requires-Dist: pre-commit<5.0,>=3.0.4; extra == "dev"
+Requires-Dist: pylint<5.0,>=2.16.2; extra == "dev"
+Requires-Dist: pylint-pydantic; extra == "dev"
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: pytest-cov; extra == "dev"
+Requires-Dist: pytest-html; extra == "dev"
+Requires-Dist: pytest-retry~=1.7; extra == "dev"
+Requires-Dist: pytest-xdist; extra == "dev"
+Requires-Dist: pytest-recording; extra == "dev"
+Requires-Dist: ruff==0.14.9; extra == "dev"
+Requires-Dist: tox; extra == "dev"
+Requires-Dist: anywidget; extra == "dev"
+Requires-Dist: ipywidgets; extra == "dev"
+Requires-Dist: openai; extra == "dev"
+Requires-Dist: huggingface-hub; extra == "dev"
+Requires-Dist: granite-common[transformers]; extra == "dev"
+Requires-Dist: granite-common[nltk]; extra == "dev"
+Requires-Dist: granite-common[gpt-oss]; extra == "dev"
+Requires-Dist: granite-common[retriever]; extra == "dev"
+Provides-Extra: notebook
+Requires-Dist: notebook; extra == "notebook"
+Requires-Dist: aiohttp; extra == "notebook"
+Requires-Dist: openai; extra == "notebook"
+Requires-Dist: nltk; extra == "notebook"
+Requires-Dist: huggingface-hub; extra == "notebook"
+Provides-Extra: all
+Requires-Dist: granite-common[dev]; extra == "all"
+Requires-Dist: granite-common[notebook]; extra == "all"
+Dynamic: license-file
+
+# granite-common
+
+
+Python library that provides enhanced prompt creation and output parsing for IBM
+Granite models.
+
+
+## Installation
+
+To install from the main development branch, type:
+
+```
+pip install git+https://github.com/ibm-granite/granite-common.git
+```
+
+## Developer setup
+
+For compatibility with different underlying operating system versions, we recommend using `conda` to create a consistent base Python environment for development and testing.
+
+Detailed instructions:
+
+1. Install [MiniForge](https://github.com/conda-forge/miniforge) or another package that provides the `conda` command-line utility.
+1. Set the environment variable `CONDA_HOME` to point to the root of your `conda` install. If you installed MiniForge in your home directory, this value should be `${HOME}/miniforge3`.
+1. Check out a copy of this repository.
+1. Run the script [`scripts/env.sh`](scripts/env.sh) from the root of your local copy of the repository. The script will create a Conda environment in `./env` and will install the source code of your local copy as an editable Pip package. The script will also install and enable pre-commit hooks with [pre-commit](https://pre-commit.com/).
+1. Before running commands such as `python` or `jupyter` from the command line, activate the Conda environment by typing `conda activate ./env` from the root of your local copy of this repository.
+1. If you are using Visual Studio Code or a similar IDE, configure your IDE to use the environment at `./env`
+
+## Running tests
+
+After following the instructions in the previous section, you should be able to run tests on your local machine by typing:
+```
+pytest tests
+```
+from the root of your local copy of this repository, using the conda environment
+described in the previous section.
+
+The build automation for this project uses the [`tox`](https://tox.wiki/en) environment manager. Sometimes you will need to run tests from inside a `tox` managed environment to replicate issues from the continuous integration environment. To run tests with `tox`, activate the Python environment `./env` created earlier, then choose from among the following:
+
+* Run regression tests: `tox -e unit`
+* Run `pylint` checks: `tox -e lint`
+* Run `ruff` formatter: `tox -e ruff`
+* Run a full continuous integration suite: `tox`
