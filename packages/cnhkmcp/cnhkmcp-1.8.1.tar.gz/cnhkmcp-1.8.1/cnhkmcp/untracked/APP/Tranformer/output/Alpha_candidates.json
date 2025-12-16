@@ -1,0 +1,259 @@
+{
+    "-(ts_scale(group_scale(ts_backfill(<crowding_proxy/>, 60), group_cartesian_product(country, subindustry)), 180))": {
+        "template_explanation": "Short the most \u2018crowded\u2019 stocks in illiquid low-vol Asia: backfill a clean crowding proxy, neutralise across country\u00d7sub-industry, then rank how close the current reading is to its 180-day high; most extended = strongest short.",
+        "seed_alpha_settings": {
+            "instrumentType": "EQUITY",
+            "region": "ASI",
+            "universe": "ILLIQUID_MINVOL1M",
+            "delay": 1,
+            "decay": 0,
+            "neutralization": "STATISTICAL",
+            "truncation": 0.01,
+            "pasteurization": "ON",
+            "unitHandling": "VERIFY",
+            "nanHandling": "ON",
+            "maxTrade": "ON",
+            "language": "FASTEXPR",
+            "visualization": false,
+            "startDate": "2013-01-20",
+            "endDate": "2023-01-20"
+        },
+        "placeholder_candidates": {
+            "<crowding_proxy/>": {
+                "type": "data_field",
+                "candidates": [
+                    {
+                        "id": "shrt24_triggertime",
+                        "description": "Time when the short sale circuit breaker was triggered for the security (D0 - current day)"
+                    },
+                    {
+                        "id": "inst6_num_of_institutional_holders",
+                        "description": "Number of institutional owners for security"
+                    },
+                    {
+                        "id": "compustat_liquidity_metric_one",
+                        "description": "First liquidity ratio or metric calculated from Compustat data."
+                    },
+                    {
+                        "id": "fnd6_optprcgr",
+                        "description": "Options Granted - Price"
+                    },
+                    {
+                        "id": "volume",
+                        "description": "Daily volume"
+                    }
+                ]
+            }
+        }
+    },
+    "-ts_rank(group_zscore(ts_delta(<analyst_eps_rev/>, 21), subindustry), 90)": {
+        "template_explanation": "Fade the fastest upward EPS-revision stocks inside each Asian sub-industry when those revisions have reached a 90-day high \u2013 revisions often overshoot in thin-trading, low-vol names.",
+        "seed_alpha_settings": {
+            "instrumentType": "EQUITY",
+            "region": "ASI",
+            "universe": "ILLIQUID_MINVOL1M",
+            "delay": 1,
+            "decay": 0,
+            "neutralization": "STATISTICAL",
+            "truncation": 0.01,
+            "pasteurization": "ON",
+            "unitHandling": "VERIFY",
+            "nanHandling": "ON",
+            "maxTrade": "ON",
+            "language": "FASTEXPR",
+            "visualization": false,
+            "startDate": "2013-01-20",
+            "endDate": "2023-01-20"
+        },
+        "placeholder_candidates": {
+            "<analyst_eps_rev/>": {
+                "type": "data_field",
+                "candidates": [
+                    {
+                        "id": "eps",
+                        "description": "Earnings Per Share (Basic) - Including Extraordinary Items"
+                    },
+                    {
+                        "id": "anl10_ndtsmun_1yf_1857",
+                        "description": "Sample/analyst number - indicating how many analysts contributed to that particular estimate or forecast for date"
+                    },
+                    {
+                        "id": "anl10_ebismun_1yf_2478",
+                        "description": "Sample/analyst number - indicating how many analysts contributed to that particular estimate or forecast for earnings before interest"
+                    }
+                ]
+            }
+        }
+    },
+    "ts_mean(regression_neut(<residual_momentum/>, mkt_beta, size_factor, value_factor), 120)": {
+        "template_explanation": "Extract residual momentum after stripping market, size and value exposures; average over 120 days to harvest slow, pure alpha in the illiquid, low-vol universe.",
+        "seed_alpha_settings": {
+            "instrumentType": "EQUITY",
+            "region": "ASI",
+            "universe": "ILLIQUID_MINVOL1M",
+            "delay": 1,
+            "decay": 0,
+            "neutralization": "STATISTICAL",
+            "truncation": 0.01,
+            "pasteurization": "ON",
+            "unitHandling": "VERIFY",
+            "nanHandling": "ON",
+            "maxTrade": "ON",
+            "language": "FASTEXPR",
+            "visualization": false,
+            "startDate": "2013-01-20",
+            "endDate": "2023-01-20"
+        },
+        "placeholder_candidates": {
+            "<residual_momentum/>": {
+                "type": "data_field",
+                "candidates": [
+                    {
+                        "id": "snt21_2dts_sop_132",
+                        "description": "Standard deviation of positive sentiment scores."
+                    },
+                    {
+                        "id": "pv47_spret",
+                        "description": "specific return"
+                    },
+                    {
+                        "id": "est_cashflow_invst",
+                        "description": "Cash Flow From Investing - mean of estimations"
+                    },
+                    {
+                        "id": "low",
+                        "description": "Daily low price"
+                    }
+                ]
+            }
+        }
+    },
+    "trade_when(ts_std_dev(<price/>, 20) < ts_mean(ts_std_dev(<price/>, 20), 60), -ts_scale(group_scale(<liquidity_surprise/>, industry), 40), 0)": {
+        "template_explanation": "Only short low-volatility stocks when their realised vol is below its own 60-day mean; inside each industry scale the most positive liquidity-surprise names to their 40-day high and short them \u2013 avoids fading during volatile regimes.",
+        "seed_alpha_settings": {
+            "instrumentType": "EQUITY",
+            "region": "ASI",
+            "universe": "ILLIQUID_MINVOL1M",
+            "delay": 1,
+            "decay": 0,
+            "neutralization": "STATISTICAL",
+            "truncation": 0.01,
+            "pasteurization": "ON",
+            "unitHandling": "VERIFY",
+            "nanHandling": "ON",
+            "maxTrade": "ON",
+            "language": "FASTEXPR",
+            "visualization": false,
+            "startDate": "2013-01-20",
+            "endDate": "2023-01-20"
+        },
+        "placeholder_candidates": {
+            "<price/>": {
+                "type": "data_field",
+                "candidates": [
+                    {
+                        "id": "close",
+                        "description": "Daily close price"
+                    },
+                    {
+                        "id": "high",
+                        "description": "Daily high price"
+                    },
+                    {
+                        "id": "low",
+                        "description": "Daily low price"
+                    },
+                    {
+                        "id": "volume",
+                        "description": "Daily volume"
+                    }
+                ]
+            },
+            "<liquidity_surprise/>": {
+                "type": "data_field",
+                "candidates": [
+                    {
+                        "id": "volume",
+                        "description": "Daily volume"
+                    },
+                    {
+                        "id": "trkdpit_liquidity_metric_three",
+                        "description": "Third liquidity ratio or metric calculated from trkdpit data."
+                    },
+                    {
+                        "id": "low",
+                        "description": "Daily low price"
+                    },
+                    {
+                        "id": "fnd6_ivstch",
+                        "description": "Short-Term Investments - Change"
+                    }
+                ]
+            }
+        }
+    },
+    "-ts_corr(ts_backfill(<social_buzz/>, 10), ts_backfill(<news_sentiment/>, 10), 60)": {
+        "template_explanation": "Short stocks whose social-media buzz and news sentiment have become most tightly correlated over 60 days \u2013 a warning of crowded narrative in illiquid names prone to reversal.",
+        "seed_alpha_settings": {
+            "instrumentType": "EQUITY",
+            "region": "ASI",
+            "universe": "ILLIQUID_MINVOL1M",
+            "delay": 1,
+            "decay": 0,
+            "neutralization": "STATISTICAL",
+            "truncation": 0.01,
+            "pasteurization": "ON",
+            "unitHandling": "VERIFY",
+            "nanHandling": "ON",
+            "maxTrade": "ON",
+            "language": "FASTEXPR",
+            "visualization": false,
+            "startDate": "2013-01-20",
+            "endDate": "2023-01-20"
+        },
+        "placeholder_candidates": {
+            "<social_buzz/>": {
+                "type": "data_field",
+                "candidates": [
+                    {
+                        "id": "scl12_sentiment",
+                        "description": "sentiment"
+                    },
+                    {
+                        "id": "snt_social_volume",
+                        "description": "Normalized tweet volume"
+                    },
+                    {
+                        "id": "volume",
+                        "description": "Daily volume"
+                    },
+                    {
+                        "id": "anl10_cpsfq2_pred_surps_v2",
+                        "description": "Predicted surprise version 2 for cash per share for Q2 (calculated as (smart_ests - consensus)/consensus)"
+                    }
+                ]
+            },
+            "<news_sentiment/>": {
+                "type": "data_field",
+                "candidates": [
+                    {
+                        "id": "max_sentiment_score_transfer",
+                        "description": "The maximum sentiment score derived from transferred news sentiment for the period."
+                    },
+                    {
+                        "id": "snt22neut_mean_203",
+                        "description": "mean neutral sentiment score."
+                    },
+                    {
+                        "id": "snt22pos_median_202",
+                        "description": "median positive sentiment score."
+                    },
+                    {
+                        "id": "nws7_2_d0_tone_score",
+                        "description": "Average tone score ((pos - neg) / (pos + neg))"
+                    }
+                ]
+            }
+        }
+    }
+}
