@@ -1,0 +1,568 @@
+Metadata-Version: 2.4
+Name: anyt
+Version: 0.11.3
+Summary: AI-native task management CLI for coding agents and human developers
+Project-URL: Homepage, https://anyt.dev
+Project-URL: Documentation, https://anyt.dev/docs/cli
+Project-URL: Support, https://anyt.dev/support
+Author-email: AnyTransformer Inc <contact@anytransformer.com>
+Maintainer-email: AnyTransformer Inc <contact@anytransformer.com>
+License: Proprietary
+License-File: LICENSE
+Keywords: ai,cli,developer-tools,productivity,task-management
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: Other/Proprietary License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: Utilities
+Requires-Python: <3.14,>=3.12
+Requires-Dist: httpx>=0.28.1
+Requires-Dist: inquirerpy>=0.3.4
+Requires-Dist: jinja2>=3.1.0
+Requires-Dist: keyring>=25.0.0
+Requires-Dist: mcp>=1.17.0
+Requires-Dist: nest-asyncio>=1.6.0
+Requires-Dist: packaging>=24.0
+Requires-Dist: pydantic>=2.11.9
+Requires-Dist: pyperclip>=1.8.2
+Requires-Dist: python-dotenv>=1.0.0
+Requires-Dist: pyyaml>=6.0
+Requires-Dist: rich>=14.0.0
+Requires-Dist: tenacity>=9.1.2
+Requires-Dist: typer>=0.15.3
+Description-Content-Type: text/markdown
+
+# AnyTask CLI
+
+> AI-native task management CLI for coding agents and human developers
+
+AnyTask CLI is a command-line interface for managing tasks and projects, designed specifically for AI agents and developers working together. It provides Linear-style task management with agent-aware features and powerful AI-assisted commands.
+
+## Features
+
+- **Linear-style Task Management**: Human-readable task IDs (DEV-123), status workflows, priorities, and dependencies
+- **Secure API Key Authentication**: Simple API key-based authentication with optional keyring storage
+- **Workspace & Project Organization**: Isolated workspaces with role-based access
+- **Rich Terminal UI**: Beautiful, color-coded task boards and visualizations
+- **Agent Integration**: Native support for AI coding agents (Claude Code, Cursor, Codex, Gemini)
+- **Worker System**: Automated task execution using declarative YAML workflows
+- **AI-Powered Commands**: Task suggestions, smart decomposition, and context-aware assistance
+
+## Installation
+
+### Recommended: Install with uvx or pipx
+
+For the best experience, install using `uvx` (recommended) or `pipx`:
+
+```bash
+# Install uv first (if not already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Using uvx (recommended - no installation needed)
+uvx anyt --help
+
+# Or using pipx (install once, use everywhere)
+pipx install anyt
+anyt --help
+```
+
+### Alternative: Install with pip
+
+```bash
+pip install anyt
+```
+
+
+## Quick Start
+
+### 1. Get an API Key
+
+Visit [https://anyt.dev/home/settings/api-keys](https://anyt.dev/home/settings/api-keys) to create an API key.
+
+### 2. Set Up Authentication
+
+Add to your shell profile for persistence:
+
+```bash
+# For zsh users (macOS default)
+echo 'export ANYT_API_KEY=anyt_agent_xxxxxxxxxxxxx' >> ~/.zshrc
+source ~/.zshrc
+
+# For bash users
+echo 'export ANYT_API_KEY=anyt_agent_xxxxxxxxxxxxx' >> ~/.bashrc
+source ~/.bashrc
+```
+
+Or set temporarily for current session:
+
+```bash
+export ANYT_API_KEY=anyt_agent_xxxxxxxxxxxxx
+```
+
+### 3. Initialize Your Workspace
+
+Run the interactive setup:
+
+```bash
+anyt init
+```
+
+The CLI will guide you through:
+- Verifying your authentication
+- **Interactively selecting a workspace** from your available workspaces
+- **Interactively choosing a project** to work in with rich display
+- Saving configuration to `.anyt/anyt.json`
+- Viewing completion summary and next steps
+
+**For automation/CI/CD:**
+
+```bash
+# Auto-select first workspace and project
+anyt init --non-interactive
+
+# Or specify explicitly
+anyt init --workspace-id 123 --project-id 5
+```
+
+### 4. Start Using AnyTask
+
+```bash
+# Create a task
+anyt task add "Implement user authentication" --priority 1
+
+# View workspace summary
+anyt summary
+
+# Pick a task to work on
+anyt task pick DEV-1
+
+# Show active task
+anyt active
+
+# Mark as done
+anyt task done DEV-1
+```
+
+## Core Commands
+
+### Initialization & Configuration
+
+```bash
+anyt init                         # Interactive workspace setup (recommended)
+  --non-interactive, -y           # Auto-select first workspace/project
+  --workspace-id <id>             # Specify workspace ID
+  --project-id <id>               # Specify project ID
+  --identifier <prefix>           # Workspace identifier (e.g., DEV)
+  --agents <list>                 # Install agent integrations (claude,cursor,codex,gemini)
+  --dev                           # Use development API
+
+anyt login                        # Login with API key
+```
+
+### Health Check
+
+```bash
+anyt health check                 # Check backend server status
+```
+
+### Task Synchronization
+
+```bash
+anyt pull <identifier>            # Pull task from server to local filesystem
+anyt push <identifier>            # Push local task changes to server
+anyt task open <identifier>       # Open task folder in editor/file manager
+```
+
+### Task Management
+
+**Create and update tasks:**
+
+```bash
+anyt task add <title>             # Create new task
+  --status <status>               # backlog, todo, active, blocked, done, canceled, archived
+  --priority <-2 to 2>            # Priority level (default: 0)
+  --owner <user-id>               # Assign to user or agent
+  --labels <labels>               # Comma-separated labels
+  --phase <phase>                 # Phase/milestone identifier
+  --estimate <hours>              # Time estimate in hours
+  --project <id>                  # Project ID (uses current project if not specified)
+
+anyt task edit [identifier]       # Update task fields (uses active task if not specified)
+  --title <title>                 # New title
+  --description <text>            # New description
+  --status <status>               # New status
+  --priority <priority>           # New priority (-2 to 2)
+  --labels <labels>               # Replace all labels (comma-separated)
+  --owner <user-id>               # New owner ID
+  --estimate <hours>              # New time estimate in hours
+  --ids <ids>                     # Multiple task IDs to edit (comma-separated)
+  --dry-run                       # Preview changes without applying
+
+anyt task done [identifier...]    # Mark task(s) as done (uses active task if not specified)
+  --note <message>                # Add completion note
+
+anyt task rm [identifier...]      # Delete task(s) (uses active task if not specified)
+  --force                         # Skip confirmation
+
+anyt task bulk-update <ids>       # Update multiple tasks
+  --status <status>               # New status for all
+  --priority <priority>           # New priority for all
+  --yes                           # Skip confirmation
+```
+
+**View tasks:**
+
+```bash
+anyt task list                    # List all tasks
+  --status <status>               # Filter by status (comma-separated)
+  --mine                          # Show only tasks assigned to you
+  --assignee <user-id>            # Filter by assignee (user ID or agent ID)
+  --labels <labels>               # Filter by labels (comma-separated)
+  --phase <phase>                 # Filter by phase/milestone
+  --project <id>                  # Filter by project ID
+  --all                           # Show tasks from all projects
+  --sort <field>                  # Sort by: priority, updated_at, created_at, status
+  --order <asc|desc>              # Sort order (default: desc)
+  --limit <n>                     # Max tasks to show (default: 50)
+
+anyt task show <identifier>       # Show task details
+  --show-metadata                 # Include workflow metadata
+
+anyt summary                      # Workspace summary
+  --period <today|weekly|monthly> # Summary period
+  --phase <phase>                 # Filter by phase/milestone
+  --project <id>                  # Filter by project ID
+  --all                           # Include all projects (ignore current project)
+  --format <text|markdown|json>   # Format output
+  --json                          # Shortcut for JSON output
+
+anyt task suggest                 # Suggest next tasks based on priority and dependencies
+  --limit <n>                     # Number of suggestions (default: 10)
+  --status <status>               # Filter by status (comma-separated, default: todo,backlog)
+  --include-assigned              # Include already-assigned tasks
+```
+
+**Task dependencies:**
+
+```bash
+anyt task dep add <identifier>    # Add dependencies
+  --on <task-ids>                 # Tasks this depends on
+
+anyt task dep rm <identifier>     # Remove dependencies
+  --on <task-ids>                 # Tasks to remove dependency on
+
+anyt task dep list <identifier>   # List dependencies
+
+**Active task tracking:**
+
+```bash
+anyt task pick <identifier>       # Pick task to work on
+anyt active                       # Show current task
+anyt task open <identifier>       # Open local task folder (uses active task if omitted)
+  --code / --finder / --file      # Preferred editor or file
+```
+
+**Comments:**
+
+```bash
+anyt comment add <identifier>     # Add comment
+  --message <text>                # Comment content
+
+anyt comment list <identifier>    # List all comments
+```
+
+**Sharing:**
+
+```bash
+anyt task share <identifier>      # Generate shareable link
+  --copy                          # Copy to clipboard
+```
+
+**Implementation plans:**
+
+```bash
+anyt task plan submit DEV-42 --file plan.md   # Submit plan content
+anyt task plan show DEV-42 --json             # Show plan details
+anyt task plan approve DEV-42 --feedback "Looks good"
+anyt task plan request-changes DEV-42 --feedback "Add test strategy"
+```
+
+**Pull requests:**
+
+```bash
+anyt task pr list DEV-42                      # List linked PRs
+anyt task pr show DEV-42 --pr 123             # Show specific PR
+anyt task pr register DEV-42 --pr-number 123 \
+  --pr-url https://github.com/org/repo/pull/123 \
+  --head-branch feature/DEV-42 --base-branch main --head-sha abc123
+```
+
+### Visualization & Reporting
+
+```bash
+anyt summary                      # Workspace summary
+  --period <today|weekly|monthly> # Summary period
+  --phase <phase>                 # Filter by phase
+  --format <text|markdown|json>   # Output format
+```
+
+### Worker System
+
+Automated task execution for AI agents:
+
+```bash
+anyt worker start                 # Start worker (interactive workflow selection)
+  --workspace <path>              # Workspace directory (default: current)
+  --workflow <name>               # Specific workflow (remote_dev, local_dev, dry_run)
+  --workflows <dir>               # Custom workflows directory
+  --poll-interval <seconds>       # Polling interval (default: 5)
+  --max-backoff <seconds>         # Maximum backoff interval
+  --project-id <id>               # Project scope override
+  --skip-checks                   # Skip workflow requirement validation
+  --force-check                   # Force fresh requirement checks
+  --clone-repos                   # Force clone project repos
+  --no-cleanup                    # Keep task workspaces after execution
+  --agents <claude,cursor>        # Explicit agent list
+  --skip-detection                # Skip agent detection
+
+anyt worker list-workflows        # List available workflows
+  --show-requirements             # Show detailed requirements for each workflow
+
+anyt worker validate-workflow <file>  # Validate workflow definition
+
+anyt worker check                 # Check workflow requirements and validate environment
+```
+
+**Built-in workflows:**
+- `local_dev`: Direct implementation on current repository
+- `dry_run`: Testing workflow without external dependencies
+- `remote_dev`: Remote development workflow with GitHub integration
+- `pr_monitor`: Pull request monitoring workflow
+
+**Secret management:**
+
+```bash
+anyt worker secret set <name>     # Store secret
+  --value <value>                 # Secret value (or prompt)
+
+anyt worker secret get <name>     # Retrieve secret
+  --show                          # Show value (default: masked)
+
+anyt worker secret delete <name>  # Delete secret
+
+anyt worker secret test <text>    # Test secret interpolation
+```
+
+**Workflow artifacts & attempts:**
+
+```bash
+anyt attempt list <task-id>       # List task attempts
+anyt attempt show <attempt-id>    # Show attempt details
+
+anyt artifact download <id>       # Download artifact
+  --output <path>                 # Output file
+  --stdout                        # Print to stdout
+```
+
+## Usage Examples
+
+### Daily Workflow
+
+```bash
+# View workspace summary
+anyt summary
+
+# Pick a task
+anyt task pick DEV-42
+
+# Show active task
+anyt active
+
+# Update progress
+anyt task edit DEV-42 --status active
+
+# Add a comment
+anyt comment add DEV-42 -m "Completed implementation"
+
+# Complete the task
+anyt task done DEV-42 --note "All tests passing"
+```
+
+### Team Collaboration
+
+```bash
+# List all tasks
+anyt task list
+
+# Filter by status and phase
+anyt task list --status active --phase T7
+
+# View task details
+anyt task show DEV-123
+
+# Add dependencies
+anyt task dep add DEV-124 --on DEV-123
+
+# Review dependencies
+anyt task dep list DEV-124
+
+# Share task link
+anyt task share DEV-123 --copy
+```
+
+### Workflow Automation
+
+```bash
+# Get task suggestions for agent
+anyt task suggest --limit 5
+
+# Start worker with interactive workflow selection
+export ANYT_API_KEY=anyt_agent_xxx
+anyt worker start
+
+# Or start worker with specific workflow
+anyt worker start --workflow remote_dev
+anyt worker start --workflow local_dev
+
+# View workflow attempts
+anyt attempt list DEV-42
+anyt attempt show attempt-123
+
+# Download artifacts
+anyt artifact download artifact-456 --output result.json
+```
+
+### Bulk Operations
+
+```bash
+# Update multiple tasks at once
+anyt task bulk-update DEV-1,DEV-2,DEV-3 --status done --yes
+
+# Mark multiple tasks as done
+anyt task done DEV-4 DEV-5 DEV-6
+```
+
+## Agent Integration
+
+AnyTask integrates with popular coding agents including Claude Code, Cursor, Codex, and Gemini through custom slash commands.
+
+### Installing Agent Commands
+
+```bash
+# List available agents and installation status
+anyt agent list
+
+# Install slash commands for an agent
+anyt agent install claude     # For Claude Code
+anyt agent install cursor     # For Cursor
+anyt agent install codex      # For Codex
+anyt agent install gemini     # For Gemini
+
+# Uninstall agent commands
+anyt agent uninstall claude
+```
+
+You can also install agent integrations during workspace initialization:
+
+```bash
+# Interactive agent selection during init
+anyt init
+
+# Or specify agents explicitly
+anyt init --agents claude,cursor
+```
+
+## Configuration
+
+### Environment Variables
+
+Authentication and API configuration via environment variables:
+
+```bash
+# Required: API key for authentication
+export ANYT_API_KEY=anyt_agent_xxxxxxxxxxxxx
+
+# Optional: Override API URL (defaults to https://api.anyt.dev)
+export ANYT_API_URL=http://localhost:8000
+
+# Optional: Override config directory (defaults to ~/.config/anyt)
+export ANYT_CONFIG_DIR=/custom/path
+```
+
+### Workspace Configuration
+
+After running `anyt init`, workspace settings are stored in `.anyt/anyt.json`:
+
+```json
+{
+  "workspace_id": 123,
+  "workspace_name": "Development",
+  "workspace_identifier": "DEV",
+  "api_url": "https://api.anyt.dev",
+  "current_project_id": 456,
+  "last_sync": "2025-11-14T10:30:00Z"
+}
+```
+
+**Note:** The workspace config file does not store API keys. All authentication is handled via the `ANYT_API_KEY` environment variable.
+
+### Active Task Tracking
+
+The currently picked task is stored in `.anyt/active_task.json`:
+
+```json
+{
+  "identifier": "DEV-42",
+  "title": "Implement OAuth callback",
+  "picked_at": "2025-11-06T10:30:00Z"
+}
+```
+
+### Configuration Commands
+
+Manage authentication without touching shell profiles:
+
+```bash
+anyt config set-api-key --key anyt_agent_xxxxx      # Store API key (prompts when --key omitted)
+anyt config get-api-key                             # Show configured keys (masked)
+anyt config clear-api-key --yes                     # Remove stored key without prompts
+anyt config status                                  # View API source + workspace metadata
+```
+
+---
+
+## CLI Self-Management
+
+Keep the CLI itself up to date with built-in commands:
+
+```bash
+anyt self check        # Compare installed version with the latest release
+anyt self update       # Upgrade in-place (detects uv/pipx/pip installs)
+anyt self info         # Show install method, binary path, and Python runtime
+```
+
+## Documentation
+
+### User Guides
+
+- [CLI Usage Guide](docs/user/CLI_USAGE.md) - Complete CLI usage documentation
+- [CLI Reference](docs/user/CLI_REFERENCE.md) - Auto-generated command reference
+- [Worker Guide](docs/worker/WORKER_GUIDE.md) - Worker system setup and usage
+
+### Developer Documentation
+
+For contributors and internal development:
+
+- [CLAUDE.md](CLAUDE.md) - Project overview and development guide
+- [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) - Development setup and workflow
+- [docs/](docs/README.md) - Complete documentation index
+
+## Support
+
+For issues and questions, contact: contact@anytransformer.com
+
+## License
+
+Proprietary - AnyTransformer Inc.
