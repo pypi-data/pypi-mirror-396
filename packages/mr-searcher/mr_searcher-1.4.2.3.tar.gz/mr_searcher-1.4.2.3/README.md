@@ -1,0 +1,68 @@
+# 🔍 Mr. Searcher CLI: The Terminal Information Utility
+
+[![PyPI - Version](https://img.shields.io/pypi/v/mr-searcher?color=blue)](https://pypi.org/project/mr-searcher/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python Version](https://img.shields.io/badge/Python-3.8+-blue)](https://www.python.org/downloads/)
+
+A powerful, non-hostile, and self-contained command-line utility for information retrieval, system diagnostics, and entertainment. **Mr. Searcher** allows you to perform specialized searches, play media, change themes, and run system checks—all without leaving your terminal.
+## ⚖️ Important Legal Disclaimer
+
+**Mr. Searcher CLI is a general-purpose information retrieval and utility tool.**
+
+The user of this software is solely responsible for ensuring that their use complies with all local, national, and international laws, particularly concerning:
+
+1.  **Copyright:** The media download feature (`{fetch}`) should only be used to download content that you have the legal right to access and retain.
+2.  **Conduct:** The authors and contributors of Mr. Searcher are not liable for any misuse of the software for illegal activities. By using this software, you agree to assume full responsibility for all actions taken.
+---
+
+## ✨ Features at a Glance
+
+* **DuckDuckGo Search:** Fast, private searching with specialized filters.
+* **Media Downloader:** Use the `{fetch}` command to download audio/video via `yt-dlp`.
+* **Terminal Art & Themes:** Customize your terminal experience with `{animart}` and `{theme}`.
+* **System Diagnostics:** Check real-time CPU and Memory usage with `{sysinfo}`.
+* **Local Media Player:** Simple music player controls using `{play}`, `{pause}`, etc.
+* **NEW! QR Code Generator:** Use the `{qrcode}` command to instantly generate a scannable QR code in your terminal.
+---
+
+## 🛠️ Installation
+
+### 1. Python Package Installation
+
+Install all the necessary packages by coping this code and pasting it into to terminal.
+```bash
+pip install psutil pyfiglet pygame colorama duckduckgo-search pyspellchecker openai-whisper numpy yt-dlp qrcode
+```
+Install the latest version directly from PyPI:
+
+```bash
+pip install mr-searcher
+```
+* Add Python in the **PATH** in **Windows** Desktop, So the installation will be lot easy for all the other **pip** related packages
+## Dependency
+### yt-dlp & ffmpeg
+
+### Purpose and How to Install
+
+
+```yt-dlp``` is a command-line program primarily used for downloading videos and audio from YouTube and thousands of other video platforms. Its presence on PyPI (the Python Package Index) signifies its nature as a Python package, allowing for convenient installation and management through Python's package manager, pip.
+Here are the main uses of yt-dlp as a PyPI package:
+Easy Installation and Updates: Users can install yt-dlp and keep it updated using pip, the standard Python package installer. This simplifies the process compared to manual downloads and updates. 
+
+Code
+```bash
+    pip install yt-dlp
+    pip install --upgrade yt-dlp
+```
+## ffmpeg
+### Used for converting downloads (e.g., to MP3). (Example for Debian/Ubuntu)
+
+```bash 
+sudo apt install ffmpeg
+``` 
+ or see official documentation on ```https://www.ffmpeg.org/download.html#build-windows``` for installation on your OS.
+ 
+## Project Overview
+
+Here is a look at the main screen of the application:
+![Main application dashboard](https://github.com/Om12345679w0/Mr-Searcher/blob/6a655ef9cf0a39cb0b5a5dcc6ae2ebbd59ebb5b3/Mr-searcher.png)
