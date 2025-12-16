@@ -1,0 +1,64 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "redact-proxy-reid"
+version = "0.1.0"
+description = "DE-ID/RE-ID SDK for LLMs - Full-cycle PHI protection with automatic re-identification"
+readme = "README.md"
+license = "LicenseRef-Commercial"
+authors = [
+    { name = "Craig Spergel", email = "cspergel@gmail.com" }
+]
+keywords = ["phi", "hipaa", "healthcare", "llm", "openai", "anthropic", "redaction", "de-identification", "re-identification"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Healthcare Industry",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Security",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "redact-proxy>=0.1.4",
+    "httpx>=0.25.0",
+    "pydantic>=2.0.0",
+    "cryptography>=41.0.0",
+]
+
+[project.optional-dependencies]
+openai = ["openai>=1.0.0"]
+anthropic = ["anthropic>=0.18.0"]
+gemini = ["google-generativeai>=0.4.0"]
+all = [
+    "openai>=1.0.0",
+    "anthropic>=0.18.0",
+    "google-generativeai>=0.4.0",
+]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+]
+
+[project.urls]
+Homepage = "https://redact.health"
+"Product Page" = "https://www.redact.health/redact-proxy-reid"
+Repository = "https://github.com/cspergel/redact-proxy-reid"
+Issues = "https://github.com/cspergel/redact-proxy-reid/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["redact_proxy_reid"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+ignore = ["E501"]
