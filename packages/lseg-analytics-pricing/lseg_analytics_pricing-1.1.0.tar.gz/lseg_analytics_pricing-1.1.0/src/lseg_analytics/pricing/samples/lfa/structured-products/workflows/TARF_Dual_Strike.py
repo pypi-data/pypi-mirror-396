@@ -1,0 +1,177 @@
+from lseg_analytics.pricing.instruments import structured_products as sp
+
+import json
+import datetime as dt
+import pandas as pd
+from IPython.display import display
+
+# 1. Create SP definition object
+
+print("Step 1: Configuring instrument definition...")
+
+TARF_definition = sp.StructuredProductsDefinition(
+    deal_ccy = "EUR",
+    instrument_tag = "TARF_Dual_Strike",
+    inputs = [
+        sp.NameTypeValue(name="Underlying", type = "string", value="USDEUR"),
+        sp.NameTypeValue(name="StartDate", type = "date", value= dt.date(2022, 1, 25)),
+        sp.NameTypeValue(name="EndDate", type = "string", value="StartDate + 1Y"),
+        sp.NameTypeValue(name="Frequency", type = "string", value="1M"),
+        sp.NameTypeValue(name="Notional", type = "string", value="10000000"),
+        sp.NameTypeValue(name="LowerStrike", type = "string", value="0.85"),
+        sp.NameTypeValue(name="UpperStrike", type = "string", value="0.9"),
+        sp.NameTypeValue(name="Leverage", type = "string", value="2"),
+        sp.NameTypeValue(name="ProfitTarget", type = "string", value="0.05"),
+        sp.NameTypeValue(name="KO_Payment", type = "string", value="Settlement[t]"),
+    ],
+    payoff_description = [
+					[
+                        "ScheduleType",
+                        "Schedule description",
+                        "FX",
+                        "Coupon",
+                        "Settlement",
+                        "Sum",
+                        "Alive",
+                        "KO_Amount",
+                        "Price"
+                    ],
+                    [
+                        "AtDate",
+                        "StartDate",
+                        "",
+                        "",
+                        "",
+                        "0",
+                        "1",
+                        "",
+                        ""
+                    ],
+                    [
+                        "OnSchedule",
+                        "DateTable(StartDate + Frequency, EndDate, Frequency, ResetGap:=0b)",
+                        "FxSpot(Underlying)",
+                        "If(FX[t] > UpperStrike, FX[t] - UpperStrike, If(FX[t] < LowerStrike, Leverage * (FX[t] - LowerStrike), 0))",
+                        "Coupon[t] * Notional",
+                        "Sum[LastDate] + Max(Coupon[t], 0)",
+                        "If(Sum[t] >= ProfitTarget, 0, Alive[LastDate - 1])",
+                        "Alive[LastDate - 1] * (1 - Alive[LastDate]) * KO_Payment",
+                        "Alive[t] * Settlement[t] + KO_Amount[t]"
+                    ],
+                    [
+                        "AtDate",
+                        "EndDate",
+                        "FxSpot(Underlying)",
+                        "If(FX[t] > UpperStrike, FX[t] - UpperStrike, If(FX[t] < LowerStrike, Leverage * (FX[t] - LowerStrike), 0))",
+                        "Coupon[t] * Notional",
+                        "Sum[LastDate] + Max(Coupon[t], 0)",
+                        "If(Sum[t] >= ProfitTarget, 0, Alive[LastDate - 1])",
+                        "Alive[LastDate - 1] * (1 - Alive[LastDate]) * KO_Payment",
+                        "Alive[t] * Settlement[t] + KO_Amount[t]"
+                    ]
+				]
+)
+
+print("	Instrument definition configured")
+
+# 2. Create SP instrument definition object
+print("Step 2: Creating instrument definition object...")
+
+tarf_dual_strike = sp.StructuredProductsDefinitionInstrument(definition = TARF_definition)
+print("	Instrument definition created")
+
+# 3. Create SP parameters object - optional
+print("Step 3: Configuring pricing parameters...")
+
+TARF_pricing_params = sp.StructuredProductsPricingParameters(
+    valuation_date= dt.date(2022, 3, 16),  # Set your desired valuation date
+    numerical_method = sp.GenericNumericalMethod(method="MonteCarlo"),
+    models=[sp.ModelDefinition(
+            underlying_code = "USDEUR",
+            underlying_tag = "USDEUR",
+            underlying_currency = "EUR",
+            asset_class = "ForeignExchange",
+            model_name= "Dupire")]
+)
+print("	Pricing parameters configured")
+
+# Execute the calculation using the price() function
+# The 'definitions' parameter accepts a list of instruments definitions for batch processing
+
+try:
+    response = sp.price(
+        definitions=[tarf_dual_strike],
+        pricing_preferences=TARF_pricing_params,
+        market_data=None,
+        return_market_data=True,  # or False
+        fields=None  # or specify fields as a string
+    )
+
+    errors = [a.error for a in response.data.analytics if a.error]
+    if errors:
+        raise Exception(errors[0].message)
+    print("Pricing execution completed")
+    
+except Exception as e:
+    print(f"Price calculation failed: {str(e)}")
+    raise
+
+# Extract description from response
+description = response.data.analytics[0].description
+
+# Convert to dictionary for display
+print(json.dumps(description.as_dict(), indent=4))
+
+# Extract vauation from the response
+valuation = response.data.analytics[0].valuation
+
+# Convert the dictionary to a DataFrame
+df_tarf_valuation = pd.DataFrame(list(valuation.items()), columns=["Field", "Value"])
+
+display(df_tarf_valuation)
+
+# Extract cashflows from response
+cashflows = response.data.analytics[0].cashflows["cashFlows"]
+
+# Build dataframes for all cash flow types
+df_fx = pd.DataFrame(cashflows[0]['payments']).rename(columns={'amount': cashflows[0]['legTag']})
+df_coupon = pd.DataFrame(cashflows[1]['payments']).rename(columns={'amount': cashflows[1]['legTag']})
+df_settlement = pd.DataFrame(cashflows[2]['payments']).rename(columns={'amount': cashflows[2]['legTag']})
+df_sum  = pd.DataFrame(cashflows[3]['payments']).rename(columns={'amount': cashflows[3]['legTag']})
+df_alive = pd.DataFrame(cashflows[4]['payments']).rename(columns={'amount': cashflows[4]['legTag']})
+df_ko_amount = pd.DataFrame(cashflows[5]['payments']).rename(columns={'amount': cashflows[5]['legTag']})
+df_price = pd.DataFrame(cashflows[6]['payments']).rename(columns={'amount': cashflows[6]['legTag']})
+
+# Merge all dataframes on the 'date' column
+# Add suffix to distinguish between different data sources
+combined_df = pd.concat(
+    [df_fx.add_suffix('_fx'), 
+     df_coupon.add_suffix('_coupon'),
+     df_settlement.add_suffix('_settlement'), 
+     df_sum.add_suffix('_sum'), 
+     df_alive.add_suffix('_alive'), 
+     df_ko_amount.add_suffix('_ko_amount'), 
+     df_price.add_suffix('_price')], 
+    axis=1
+)
+
+# Remove duplicate columns with the same values
+combined_df = combined_df.loc[:, ~combined_df.T.duplicated()]
+
+# Keep only one discountFactor column and sort the columns
+combined_df = combined_df.loc[:,['date_fx', 'discountFactor_fx', 'FX_fx', 'Coupon_coupon', 'Settlement_settlement','Sum_sum',  'Alive_alive',
+       'KO_Amount_ko_amount','Price_price', 'currency_fx', 'event_fx','occurence_fx']]
+
+# Rename columns to match the desired layout
+combined_df.columns = ['date', 'discountFactor', 'FX', 'Coupon', 'Settlement', 'Sum', 'Alive', 'KO_Amount', 'Price', 'currency', 'event', 'occurrence']
+
+# Display the combined dataframe
+display(combined_df)
+
+# Extract Greeks from the response
+greeks = response.data.analytics[0].greeks
+
+# Convert the dictionary to a DataFrame
+df_tarf_greeks = pd.DataFrame(list(greeks.items()), columns=["Greeks", "Value"])
+
+display(df_tarf_greeks)

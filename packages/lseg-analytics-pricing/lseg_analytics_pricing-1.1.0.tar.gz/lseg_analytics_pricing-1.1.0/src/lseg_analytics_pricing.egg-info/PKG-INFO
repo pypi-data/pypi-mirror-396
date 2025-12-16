@@ -1,0 +1,146 @@
+Metadata-Version: 2.4
+Name: lseg-analytics-pricing
+Version: 1.1.0
+Summary: LSEG Analytics LFA SDK for Python
+Author-email: analyticssdk <analyticssdk@lseg.com>
+Maintainer-email: analyticssdk <analyticssdk@lseg.com>
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: corehttp==1.0.0b5
+Requires-Dist: python-dotenv
+Requires-Dist: requests
+Requires-Dist: isodate<1.0.0,>=0.6.1
+Requires-Dist: lseg-analytics-core<2.0.0,>=1.1.0
+Requires-Dist: pandas
+Dynamic: license-file
+
+# LSEG Analytics SDK for Python
+
+The LSEG Analytics SDK for Python provides access to LSEG Financials Analytics Services.
+
+## Getting Started
+
+```shell
+$ pip install lseg-analytics-pricing
+```
+
+### Migrating from Previous Package Names
+
+**Important:** This package was previously named  `lseg-analytics`. If you have old package installed, please uninstall it first to avoid conflicts:
+
+```shell
+# Remove old packages (if installed)
+$ pip uninstall lseg-analytics -y
+
+# Install the new package
+$ pip install lseg-analytics-pricing
+```
+
+Or in a single command:
+
+```shell
+$ pip uninstall lseg-analytics -y && pip install lseg-analytics-pricing
+```
+
+**What changed:**
+- Package name: `lseg-analytics` → `lseg-analytics-pricing`
+- Import path: `from lseg_analytics import ...` → `from lseg_analytics.pricing import ...`
+- All functionality and APIs remain compatible
+
+
+## Usage Examples
+
+An example to create a FX Forward Curve.
+
+```python
+from lseg_analytics.pricing.common import (
+    TenorType
+)
+
+from lseg_analytics.pricing.market_data.fx_forward_curves import (
+    create_from_fx_forwards,
+    IndirectSourcesSwaps
+)
+
+create_from_fx_forwards(
+            cross_currency="EURGBP",
+            reference_currency="USD",
+            sources=IndirectSourcesSwaps(base_fx_forwards="RFB"),
+            additional_tenor_types=[TenorType.LONG, TenorType.END_OF_MONTH],
+)
+```
+
+## Modules Structure
+
+- `common` - contains models that can be used in different API modules
+- `helpers` - utility functions
+- API modules
+  - `reference_data`
+    - `calendars`
+    - `floating_rate_indices`
+  - `market_data`
+    - `fx_forward_curves`
+    - `commodities_curves`
+    - `credit_curves`
+    - `eq_volatility`
+    - `fx_volatility`
+    - `inflation_curves`
+    - `interest_rate_curves`
+    - `ipa_interest_rate_curves`
+    - `ircaplet_volatility`
+    - `irswaption_volatility`
+  - `instruments`
+    - `fx_spots`
+    - `fx_forwards`
+    - `bond`
+    - `bond_future`
+    - `cap_floor`
+    - `cds`
+    - `forward_rate_agreement`
+    - `ir_swaps`
+    - `loans`
+    - `options`
+    - `repo`
+    - `structured_products`
+    - `swaption`
+    - `term_deposit`
+  - `templates`
+    - `instrument_templates`
+  - `yield_book_rest`
+
+# Changelog
+
+## 1.1.0
+
+-   \[BREAKING CHANGE\] Integrate with QPS API Instrument Templates
+    1.0.11376 with following breaking changes:
+    -   Added new mandatory property `underlying_spot_date` to class
+        `StirFutureDefinition` in module `instrument_templates`
+-   Integrate with QPS API IrSwap and Loan 1.0.11406 to support async.
+    The async return model will change in next release
+-   Added authentication examples in HTML documentation for service
+    account, user account, user provided token and proxy server
+-   Added more API fundamental and workflows examples
+-   Added helper functions for Pandas DataFrame conversion in module
+    `helpers`
+    -   `description_to_df`
+    -   `valuation_to_df`
+    -   `risk_to_df`
+    -   `cashflows_to_df`
+-   Fixed duplicated structured products examples in HTML documentation
+-   Removed unnecessary libraries in dependencies
+
+## 1.0.0
+
+-   Added 4 new functions `request_bond_search_async_get`,
+    `request_bond_search_async_post`, `request_bond_search_sync_get` and
+    `request_bond_search_sync_post` in module `yield_book_rest` for
+    Yield Book Rest APIs
+-   Supported sorted samples categories and sorted samples of each
+    category for samples meta json file
+-   Integrated with QPS API FinancialContract 1.0.11382
+-   Added more fundamental and workflows samples and updated existing
+    samples
+-   Package created to support QPS and Yield Book Rest only APIs based
+    on Python SDK 2.1.0b5
