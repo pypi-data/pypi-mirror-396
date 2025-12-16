@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "namecast"
+version = "0.1.0"
+description = "AI-powered brand name oracle - forecast your name's future"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "Max Ghenis"}
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "click>=8.0",
+    "httpx>=0.25",
+    "python-whois>=0.8",
+    "anthropic>=0.18",
+    "rich>=13.0",
+    "fastapi>=0.109",
+    "uvicorn>=0.27",
+]
+
+[project.optional-dependencies]
+phonetic = [
+    "big-phoney>=1.0",  # Neural net phonetic prediction for brand names
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "pytest-mock>=3.0",
+]
+
+[project.scripts]
+namecast = "namecast.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["namecast/tests"]
+asyncio_mode = "auto"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["namecast*"]
