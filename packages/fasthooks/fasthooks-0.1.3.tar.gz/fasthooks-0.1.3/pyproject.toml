@@ -1,0 +1,62 @@
+[project]
+name = "fasthooks"
+version = "0.1.3"
+description = "Delightful Claude Code hooks - FastAPI-like DX for building hooks"
+readme = "README.md"
+keywords = ["claude", "hooks", "cli", "ai", "anthropic"]
+authors = [
+    { name = "Mehmet Oner Yalcin", email = "oneryalcin@gmail.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "anyio>=4.0",
+    "pydantic>=2.0",
+    "rich>=13.0",
+    "typer>=0.9.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/oneryalcin/fasthooks"
+Repository = "https://github.com/oneryalcin/fasthooks"
+Issues = "https://github.com/oneryalcin/fasthooks/issues"
+
+[project.scripts]
+fasthooks = "fasthooks.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/fasthooks"]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.19.0",
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.14.9",
+]
+docs = [
+    "mkdocs-material>=9.0",
+]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --cov=fasthooks --cov-report=term-missing"
+asyncio_mode = "auto"
+
+[tool.mypy]
+strict = true
+python_version = "3.12"
+
+[tool.coverage.run]
+source = ["src/fasthooks"]
+branch = true
