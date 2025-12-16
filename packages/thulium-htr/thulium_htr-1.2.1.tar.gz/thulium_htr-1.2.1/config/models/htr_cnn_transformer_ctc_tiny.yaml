@@ -1,0 +1,106 @@
+# HTR Model Configuration: CNN + Transformer + CTC (Tiny)
+#
+# Minimal Transformer-based model for edge deployment. Uses fewer
+# attention heads and layers while maintaining transformer benefits.
+#
+# Architecture: ResNet18 (slim) -> Transformer (narrow) -> CTC Decoder
+#
+# Specifications:
+#   - Parameters: ~3M
+#   - Inference: CPU-friendly with proper optimization
+#   - Memory: ~150MB
+#
+# Suitable for:
+#   - Edge devices requiring attention mechanisms
+#   - Applications needing global context on low resources
+#   - Mobile deployment with ONNX
+
+model:
+  name: "htr_cnn_transformer_ctc_tiny"
+  version: "1.2.0"
+  capacity: "tiny"
+  
+  backbone:
+    type: "resnet"
+    config_name: "resnet18"
+    in_channels: 1
+    output_channels: 256
+    dropout: 0.0
+    slim_ratio: 0.5
+    
+  sequence_head:
+    type: "transformer"
+    hidden_size: 128
+    num_heads: 4
+    num_layers: 2
+    dim_feedforward: 512
+    dropout: 0.1
+    pos_encoding: "sinusoidal"
+    pre_norm: true
+    
+  decoder:
+    type: "ctc"
+    blank_index: 0
+    dropout: 0.1
+    
+  height_projection:
+    type: "mean_pool"
+    
+preprocessing:
+  image_height: 32
+  normalize: true
+  mean: [0.5]
+  std: [0.5]
+  grayscale: true
+  
+training:
+  optimizer:
+    type: "adamw"
+    lr: 0.0005
+    weight_decay: 0.01
+    betas: [0.9, 0.98]
+    
+  scheduler:
+    type: "cosine"
+    warmup_epochs: 5
+    min_lr: 0.00001
+    
+  loss:
+    type: "ctc"
+    blank: 0
+    reduction: "mean"
+    zero_infinity: true
+    
+  regularization:
+    label_smoothing: 0.0
+    dropout: 0.1
+    
+  augmentation:
+    enabled: true
+    random_affine:
+      degrees: 2
+      translate: [0.01, 0.01]
+      scale: [0.98, 1.02]
+    elastic_distortion:
+      alpha: 20
+      sigma: 4
+      probability: 0.2
+    noise:
+      gaussian_std: 0.01
+      probability: 0.1
+      
+  batch_size: 96
+  epochs: 100
+  mixed_precision: false
+  max_grad_norm: 1.0
+  
+decoding:
+  method: "greedy"
+  beam_width: 5
+  lm_alpha: 0.0
+  lm_beta: 0.0
+  length_normalization: false
+
+inference:
+  onnx_export: true
+  quantization: "dynamic"

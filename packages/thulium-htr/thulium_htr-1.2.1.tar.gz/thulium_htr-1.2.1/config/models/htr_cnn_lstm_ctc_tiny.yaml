@@ -1,0 +1,104 @@
+# HTR Model Configuration: CNN + BiLSTM + CTC (Tiny)
+#
+# Minimal capacity model optimized for edge deployment and low-resource
+# environments. Uses a lightweight ResNet backbone with reduced LSTM
+# hidden dimensions.
+#
+# Architecture: ResNet18 (slim) -> BiLSTM (narrow) -> CTC Decoder
+#
+# Specifications:
+#   - Parameters: ~2M
+#   - Inference: CPU-optimized
+#   - Memory: < 100MB
+#
+# Suitable for:
+#   - Edge devices (mobile, IoT)
+#   - Real-time applications with latency constraints
+#   - Embedded systems with limited memory
+
+model:
+  name: "htr_cnn_lstm_ctc_tiny"
+  version: "1.2.0"
+  capacity: "tiny"
+  
+  backbone:
+    type: "resnet"
+    config_name: "resnet18"
+    in_channels: 1
+    output_channels: 256
+    dropout: 0.0
+    slim_ratio: 0.5  # Halve channel widths
+    
+  sequence_head:
+    type: "bilstm"
+    hidden_size: 128
+    num_layers: 1
+    dropout: 0.2
+    bidirectional: true
+    
+  decoder:
+    type: "ctc"
+    blank_index: 0
+    dropout: 0.1
+    
+  height_projection:
+    type: "mean_pool"
+    
+preprocessing:
+  image_height: 32
+  normalize: true
+  mean: [0.5]
+  std: [0.5]
+  grayscale: true
+  
+training:
+  optimizer:
+    type: "adamw"
+    lr: 0.001
+    weight_decay: 0.01
+    betas: [0.9, 0.999]
+    
+  scheduler:
+    type: "cosine"
+    warmup_epochs: 3
+    min_lr: 0.00001
+    
+  loss:
+    type: "ctc"
+    blank: 0
+    reduction: "mean"
+    zero_infinity: true
+    
+  regularization:
+    label_smoothing: 0.0
+    dropout: 0.2
+    
+  augmentation:
+    enabled: true
+    random_affine:
+      degrees: 2
+      translate: [0.01, 0.01]
+      scale: [0.98, 1.02]
+    elastic_distortion:
+      alpha: 20
+      sigma: 4
+      probability: 0.2
+    noise:
+      gaussian_std: 0.01
+      probability: 0.1
+      
+  batch_size: 128
+  epochs: 80
+  mixed_precision: false  # Often disabled for CPU
+  max_grad_norm: 5.0
+  
+decoding:
+  method: "greedy"
+  beam_width: 5
+  lm_alpha: 0.0
+  lm_beta: 0.0
+  length_normalization: false
+
+inference:
+  onnx_export: true
+  quantization: "dynamic"  # int8 dynamic quantization for edge

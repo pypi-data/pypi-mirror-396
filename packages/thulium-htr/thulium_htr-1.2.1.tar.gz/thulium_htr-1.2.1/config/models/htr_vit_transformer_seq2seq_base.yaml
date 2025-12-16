@@ -1,0 +1,53 @@
+# HTR Configuration: ViT-Transformer-Seq2Seq (Advanced)
+# High accuracy for complex scripts, requires GPU.
+
+model:
+  name: "htr_vit_transformer_seq2seq_base"
+  architecture: "transformer"
+  
+  backbone:
+    type: "vit"
+    image_size: [32, 384] # Fixed size or patch-based
+    patch_size: 16
+    dim: 768
+    depth: 12
+    heads: 12
+    mlp_dim: 3072
+    pretrained: true
+    
+  head:
+    type: "transformer_encoder"
+    d_model: 768
+    nhead: 8
+    num_layers: 6
+    dim_feedforward: 2048
+    dropout: 0.1
+    
+  decoder:
+    type: "transformer_decoder" # Seq2Seq attention
+    d_model: 768
+    nhead: 8
+    num_layers: 6
+    num_classes: 100
+    dropout: 0.1
+    max_len: 128
+
+training:
+  batch_size: 32
+  epochs: 200
+  optimizer: "AdamW"
+  lr: 1e-4
+  weight_decay: 0.05
+  label_smoothing: 0.1
+  
+  scheduler: "cosine"
+  warmup_steps: 4000
+  
+  mixed_precision: true
+  device: "cuda"
+
+data:
+  height: 32
+  width: 384 # Transformer often needs fixed or padded constraints
+  augmentation:
+    spec_augment: true

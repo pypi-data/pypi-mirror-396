@@ -1,0 +1,120 @@
+# Training Configuration: CNN + LSTM Base Multilingual
+#
+# Production-ready training recipe for the CNN-LSTM-CTC base model
+# optimized for multilingual handwriting recognition.
+#
+# Features:
+#   - AdamW optimizer with decoupled weight decay
+#   - Cosine annealing with warmup
+#   - Mixed precision training
+#   - Gradient clipping and accumulation
+#   - Early stopping on validation CER
+#   - Best model checkpointing
+#
+# Target languages: All Latin-script languages in Thulium
+
+experiment:
+  name: "cnn_lstm_base_multilingual"
+  seed: 42
+  deterministic: true
+  
+model:
+  config: "config/models/htr_cnn_lstm_ctc_base.yaml"
+  
+data:
+  train_datasets:
+    - name: "iam_train"
+      path: "${DATA_DIR}/iam/train"
+      weight: 1.0
+    - name: "multilingual_latin"
+      path: "${DATA_DIR}/multilingual/latin"
+      weight: 0.5
+      
+  val_dataset:
+    name: "iam_val"
+    path: "${DATA_DIR}/iam/val"
+    
+  preprocessing:
+    image_height: 64
+    max_width: 2048
+    normalize: true
+    mean: [0.485, 0.456, 0.406]
+    std: [0.229, 0.224, 0.225]
+    
+  augmentation:
+    enabled: true
+    config: "config/augmentations/standard.yaml"
+
+optimizer:
+  type: "AdamW"
+  lr: 3e-4
+  weight_decay: 0.01
+  betas: [0.9, 0.999]
+  eps: 1e-8
+  
+scheduler:
+  type: "cosine"
+  warmup_steps: 2000
+  warmup_ratio: null
+  min_lr: 1e-6
+  num_cycles: 1
+  
+regularization:
+  label_smoothing: 0.1
+  dropout: 0.2
+  max_grad_norm: 1.0
+  
+training:
+  epochs: 100
+  batch_size: 32
+  accumulation_steps: 2  # Effective batch size: 64
+  
+  mixed_precision: true
+  amp_dtype: "float16"  # or "bfloat16" for newer GPUs
+  
+  dataloader:
+    num_workers: 4
+    pin_memory: true
+    prefetch_factor: 2
+    
+  logging:
+    log_interval: 100  # steps
+    wandb:
+      enabled: false
+      project: "thulium-htr"
+      
+checkpointing:
+  save_dir: "checkpoints/${experiment.name}"
+  save_every: 5  # epochs
+  keep_last: 3
+  save_best: true
+  best_metric: "val_cer"
+  best_mode: "min"
+  
+early_stopping:
+  enabled: true
+  patience: 15  # epochs without improvement
+  min_delta: 0.001
+  metric: "val_cer"
+  mode: "min"
+  
+evaluation:
+  eval_interval: 1  # epochs
+  metrics:
+    - "cer"
+    - "wer"
+    - "ser"
+  decoding:
+    method: "greedy"  # Fast eval; beam search for final
+    
+distributed:
+  enabled: false
+  backend: "nccl"
+  find_unused_parameters: false
+  
+profiling:
+  enabled: false
+  schedule:
+    wait: 1
+    warmup: 1
+    active: 3

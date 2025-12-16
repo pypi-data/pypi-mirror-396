@@ -1,0 +1,48 @@
+# Thulium HTR Pipeline Configuration - Turkish
+# This configuration is optimized for Turkish handwriting recognition,
+# supporting the Turkish Latin alphabet with dotted/dotless i distinction.
+
+language:
+  code: "tr"
+  use_language_profile: true
+
+preprocessing:
+  target_height: 64
+  normalize: true
+  binarize: false
+  augmentation:
+    enabled: false
+
+model:
+  backbone:
+    type: "cnn_resnet"
+    pretrained: true
+    freeze_layers: 0
+  sequence_head:
+    type: "bilstm"
+    hidden_size: 256
+    num_layers: 2
+    bidirectional: true
+    dropout: 0.1
+  decoder:
+    type: "ctc"
+    beam_width: 10
+    use_language_model: false
+
+segmentation:
+  enabled: true
+  method: "unet"
+  min_line_height: 20
+  merge_threshold: 0.5
+
+postprocessing:
+  normalize_unicode: true
+  strip_whitespace: true
+  lowercase: false
+  # Turkish-specific: preserve dotted/dotless i case folding
+  turkish_i_handling: true
+
+inference:
+  batch_size: 16
+  device: "auto"
+  precision: "fp32"

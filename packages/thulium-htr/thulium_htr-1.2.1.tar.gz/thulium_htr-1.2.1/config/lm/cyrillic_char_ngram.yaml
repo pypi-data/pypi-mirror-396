@@ -1,0 +1,63 @@
+# Language Model Configuration: Cyrillic Script Character N-gram
+#
+# Character-level n-gram language model for Cyrillic script languages
+# including Russian, Ukrainian, Bulgarian, Serbian, and others.
+
+model:
+  name: "cyrillic_char_ngram"
+  type: "character_ngram"
+  version: "1.2.0"
+  
+  languages:
+    - ru  # Russian
+    - uk  # Ukrainian
+    - bg  # Bulgarian
+    - sr  # Serbian (Cyrillic)
+    - mk  # Macedonian
+    - be  # Belarusian
+    - kk  # Kazakh
+    - mn  # Mongolian (Cyrillic)
+
+ngram:
+  order: 5
+  
+  vocab:
+    type: "cyrillic_extended"
+    include_digits: true
+    include_punctuation: true
+    case_sensitive: false
+    # Include specific letters
+    include_chars:
+      - "ь"  # Soft sign
+      - "ъ"  # Hard sign
+      - "ё"  # Yo (Russian)
+      - "є"  # Ukrainian Ye
+      - "і"  # Ukrainian I
+      - "ї"  # Ukrainian Yi
+      - "ґ"  # Ukrainian G
+    
+  smoothing:
+    type: "kneser_ney"
+    discount: 0.75
+    
+  pruning:
+    min_count: 2
+
+training:
+  data:
+    - type: "wikipedia"
+      languages: ["ru", "uk", "bg"]
+      sample_size: 1000000
+
+decoding:
+  beam_search:
+    lm_alpha: 0.6
+    lm_beta: 0.15
+    
+  cache:
+    enabled: true
+    max_size: 10000
+
+export:
+  format: "arpa"
+  output_path: "models/lm/cyrillic_char_5gram.arpa"

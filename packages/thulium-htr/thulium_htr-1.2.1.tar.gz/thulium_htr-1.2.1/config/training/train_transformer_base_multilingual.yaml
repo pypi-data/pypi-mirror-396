@@ -1,0 +1,120 @@
+# Training Configuration: CNN + Transformer Base Multilingual
+#
+# Production training recipe for CNN-Transformer-CTC models optimized
+# for high-accuracy multilingual recognition on GPU.
+#
+# Features:
+#   - Pre-LN Transformer with stochastic depth
+#   - AdamW with aggressive weight decay
+#   - Longer warmup for Transformer stability
+#   - Label smoothing for calibration
+#   - Gradient accumulation for large effective batch
+
+experiment:
+  name: "cnn_transformer_base_multilingual"
+  seed: 42
+  deterministic: true
+  
+model:
+  config: "config/models/htr_cnn_transformer_ctc_base.yaml"
+  
+data:
+  train_datasets:
+    - name: "iam_train"
+      path: "${DATA_DIR}/iam/train"
+      weight: 1.0
+    - name: "multilingual_latin"
+      path: "${DATA_DIR}/multilingual/latin"
+      weight: 0.7
+    - name: "historical_docs"
+      path: "${DATA_DIR}/historical"
+      weight: 0.3
+      
+  val_dataset:
+    name: "iam_val"
+    path: "${DATA_DIR}/iam/val"
+    
+  preprocessing:
+    image_height: 64
+    max_width: 2048
+    normalize: true
+    mean: [0.485, 0.456, 0.406]
+    std: [0.229, 0.224, 0.225]
+    
+  augmentation:
+    enabled: true
+    config: "config/augmentations/strong.yaml"
+
+optimizer:
+  type: "AdamW"
+  lr: 3e-4
+  weight_decay: 0.05  # Higher for Transformers
+  betas: [0.9, 0.98]  # Transformer-style betas
+  eps: 1e-8
+  
+scheduler:
+  type: "cosine"
+  warmup_steps: 4000  # Longer warmup for Transformers
+  warmup_ratio: null
+  min_lr: 1e-7
+  num_cycles: 1
+  
+regularization:
+  label_smoothing: 0.1
+  dropout: 0.1
+  stochastic_depth: 0.1
+  max_grad_norm: 1.0
+  
+training:
+  epochs: 150
+  batch_size: 24
+  accumulation_steps: 4  # Effective batch size: 96
+  
+  mixed_precision: true
+  amp_dtype: "float16"
+  
+  dataloader:
+    num_workers: 4
+    pin_memory: true
+    prefetch_factor: 2
+    
+  logging:
+    log_interval: 50
+    wandb:
+      enabled: false
+      project: "thulium-htr"
+      
+checkpointing:
+  save_dir: "checkpoints/${experiment.name}"
+  save_every: 5
+  keep_last: 3
+  save_best: true
+  best_metric: "val_cer"
+  best_mode: "min"
+  
+early_stopping:
+  enabled: true
+  patience: 20
+  min_delta: 0.0005
+  metric: "val_cer"
+  mode: "min"
+  
+evaluation:
+  eval_interval: 1
+  metrics:
+    - "cer"
+    - "wer"
+    - "ser"
+    - "ece"  # Expected Calibration Error
+  decoding:
+    method: "greedy"
+    
+distributed:
+  enabled: false
+  backend: "nccl"
+  find_unused_parameters: false
+  
+ema:
+  enabled: true
+  decay: 0.9999
+  update_interval: 1

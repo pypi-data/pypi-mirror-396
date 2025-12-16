@@ -1,0 +1,49 @@
+# HTR Configuration: Standard CNN-LSTM-CTC (Base)
+# Suitable for CPU/GPU inference and general purpose HTR.
+
+model:
+  name: "htr_cnn_lstm_ctc_base"
+  architecture: "crnn"
+  
+  backbone:
+    type: "resnet"
+    output_channels: 512
+    # ResNet18/34/50 support via 'layers' param if factory implemented
+    layers: 18 
+    pretrained: true
+    
+  head:
+    type: "bilstm"
+    input_size: 512
+    hidden_size: 256
+    num_layers: 2
+    dropout: 0.2
+    bidirectional: true
+    
+  decoder:
+    type: "ctc"
+    num_classes: 100 # Overwritten by tokenizer
+    blank_idx: 0
+    beam_width: 10 # For beam search decoding
+
+training:
+  batch_size: 64
+  epochs: 100
+  optimizer: "AdamW"
+  lr: 0.0003
+  weight_decay: 0.01
+  
+  scheduler: "cosine"
+  warmup_steps: 1000
+  
+  mixed_precision: true
+  max_grad_norm: 1.0
+  save_every: 5
+
+data:
+  height: 32 # Input height
+  width: null # Variable width
+  augmentation:
+    random_rotate: 5 # degrees
+    random_affine: true
+    elastic_transform: false

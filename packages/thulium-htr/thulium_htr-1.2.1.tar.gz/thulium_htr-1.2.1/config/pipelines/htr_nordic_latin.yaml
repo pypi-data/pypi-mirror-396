@@ -1,0 +1,58 @@
+# Thulium HTR Pipeline Configuration - Nordic/Scandinavian Languages
+# This configuration supports Norwegian (Bokmal/Nynorsk), Swedish, Danish,
+# Icelandic, Faroese, and Finnish handwriting recognition.
+#
+# All these languages use Latin script with Nordic-specific extensions.
+
+language:
+  # Default to Norwegian Bokmal, but can be overridden at runtime
+  code: "nb"
+  use_language_profile: true
+  # Supported codes for this pipeline: nb, nn, sv, da, is, fo, fi
+  compatible_languages:
+    - "nb"  # Norwegian Bokmal
+    - "nn"  # Norwegian Nynorsk
+    - "sv"  # Swedish
+    - "da"  # Danish
+    - "is"  # Icelandic
+    - "fo"  # Faroese
+    - "fi"  # Finnish
+
+preprocessing:
+  target_height: 64
+  normalize: true
+  binarize: false
+  augmentation:
+    enabled: false
+
+model:
+  backbone:
+    type: "cnn_resnet"
+    pretrained: true
+    freeze_layers: 0
+  sequence_head:
+    type: "bilstm"
+    hidden_size: 256
+    num_layers: 2
+    bidirectional: true
+    dropout: 0.1
+  decoder:
+    type: "ctc"
+    beam_width: 10
+    use_language_model: false
+
+segmentation:
+  enabled: true
+  method: "unet"
+  min_line_height: 20
+  merge_threshold: 0.5
+
+postprocessing:
+  normalize_unicode: true
+  strip_whitespace: true
+  lowercase: false
+
+inference:
+  batch_size: 16
+  device: "auto"
+  precision: "fp32"

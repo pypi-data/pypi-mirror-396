@@ -1,0 +1,159 @@
+# Augmentation Configuration: Strong
+#
+# Aggressive augmentation recipe for robustness training.
+# Applies stronger transformations to improve model generalization.
+#
+# Recommended for:
+# - Challenging datasets with noise
+# - Historical documents with degradation
+# - Transfer learning / domain adaptation
+# - Final training stages for robustness
+
+version: "1.2.0"
+name: "strong"
+description: "Strong augmentation for robust HTR training"
+
+enabled: true
+p: 0.9  # 90% of samples will be augmented
+
+transforms:
+  # Geometric transforms (stronger)
+  geometric:
+    - name: "random_rotation"
+      enabled: true
+      p: 0.6
+      params:
+        degrees: [-10, 10]
+        
+    - name: "random_scale"
+      enabled: true
+      p: 0.5
+      params:
+        scale: [0.8, 1.2]
+        
+    - name: "random_translate"
+      enabled: true
+      p: 0.4
+      params:
+        translate_x: [-0.1, 0.1]
+        translate_y: [-0.1, 0.1]
+        
+    - name: "random_shear"
+      enabled: true
+      p: 0.4
+      params:
+        shear_x: [-10, 10]
+        shear_y: [-5, 5]
+        
+    - name: "perspective"
+      enabled: true
+      p: 0.3
+      params:
+        distortion_scale: 0.2
+
+  # Photometric transforms (stronger)
+  photometric:
+    - name: "brightness_contrast"
+      enabled: true
+      p: 0.5
+      params:
+        brightness: [-0.3, 0.3]
+        contrast: [0.7, 1.3]
+        
+    - name: "gamma"
+      enabled: true
+      p: 0.3
+      params:
+        gamma: [0.7, 1.5]
+        
+    - name: "gaussian_noise"
+      enabled: true
+      p: 0.4
+      params:
+        mean: 0
+        std: 0.04
+        
+    - name: "salt_pepper_noise"
+      enabled: true
+      p: 0.2
+      params:
+        amount: 0.02
+        salt_vs_pepper: 0.5
+        
+    - name: "gaussian_blur"
+      enabled: true
+      p: 0.4
+      params:
+        kernel_size: [3, 7]
+        sigma: [0.1, 2.0]
+        
+    - name: "motion_blur"
+      enabled: true
+      p: 0.2
+      params:
+        kernel_size: [5, 9]
+        angle: [-45, 45]
+        
+    - name: "jpeg_compression"
+      enabled: true
+      p: 0.3
+      params:
+        quality: [30, 70]
+
+  # Elastic distortion (stronger)
+  elastic:
+    - name: "elastic_distortion"
+      enabled: true
+      p: 0.5
+      params:
+        alpha: 50
+        sigma: 7
+
+  # Structural augmentations
+  structural:
+    - name: "random_erasing"
+      enabled: true
+      p: 0.3
+      params:
+        scale: [0.02, 0.15]
+        ratio: [0.3, 3.3]
+        value: "random"
+        
+    - name: "grid_dropout"
+      enabled: true
+      p: 0.2
+      params:
+        ratio: 0.3
+        unit_size: [8, 16]
+        
+    - name: "ink_smudge"
+      enabled: true
+      p: 0.2
+      params:
+        size: [3, 8]
+        intensity: [0.3, 0.7]
+
+  # Paper/background simulation
+  background:
+    - name: "paper_texture"
+      enabled: true
+      p: 0.3
+      params:
+        texture_types: ["grain", "fiber", "stain"]
+        intensity: [0.1, 0.3]
+        
+    - name: "background_degradation"
+      enabled: true
+      p: 0.3
+      params:
+        yellowing: [0.0, 0.2]
+        foxing: 0.1
+
+composition:
+  mode: "random"
+  max_transforms: 5
+
+normalize:
+  enabled: true
+  mean: [0.485, 0.456, 0.406]
+  std: [0.229, 0.224, 0.225]

@@ -1,0 +1,111 @@
+# Language Model Configuration: Arabic Script Character N-gram
+#
+# Character-level n-gram language model for Arabic script languages
+# including Arabic, Farsi (Persian), and Urdu.
+#
+# Special considerations:
+# - Right-to-left script handling
+# - Connected letter forms
+# - Diacritics (tashkeel) handling
+
+model:
+  name: "arabic_char_ngram"
+  type: "character_ngram"
+  version: "1.2.0"
+  
+  languages:
+    - ar  # Arabic
+    - fa  # Farsi (Persian)
+    - ur  # Urdu
+
+ngram:
+  order: 6  # Higher order for Arabic morphology
+  
+  vocab:
+    type: "arabic_extended"
+    include_digits: true  # Eastern Arabic numerals
+    include_punctuation: true
+    
+    # Arabic-specific characters
+    include_chars:
+      # Base letters
+      - "ا"  # Alef
+      - "ب"  # Ba
+      - "ت"  # Ta
+      - "ث"  # Tha
+      - "ج"  # Jeem
+      - "ح"  # Ha
+      - "خ"  # Kha
+      - "د"  # Dal
+      - "ذ"  # Thal
+      - "ر"  # Ra
+      - "ز"  # Zay
+      - "س"  # Seen
+      - "ش"  # Sheen
+      - "ص"  # Sad
+      - "ض"  # Dad
+      - "ط"  # Tah
+      - "ظ"  # Zah
+      - "ع"  # Ain
+      - "غ"  # Ghain
+      - "ف"  # Fa
+      - "ق"  # Qaf
+      - "ك"  # Kaf
+      - "ل"  # Lam
+      - "م"  # Meem
+      - "ن"  # Noon
+      - "ه"  # Ha
+      - "و"  # Waw
+      - "ي"  # Ya
+      # Special characters
+      - "ء"  # Hamza
+      - "آ"  # Alef with madda
+      - "أ"  # Alef with hamza above
+      - "إ"  # Alef with hamza below
+      - "ة"  # Ta marbuta
+      - "ى"  # Alef maksura
+      # Persian additions
+      - "پ"  # Pe
+      - "چ"  # Che
+      - "ژ"  # Zhe
+      - "گ"  # Gaf
+      - "ک"  # Keheh
+      - "ی"  # Farsi Yeh
+      
+    # Diacritics (optional)
+    include_diacritics: false  # Set true if training data has tashkeel
+    
+  smoothing:
+    type: "kneser_ney"
+    discount: 0.7
+    
+  pruning:
+    min_count: 3
+
+preprocessing:
+  # Arabic text normalization
+  normalize_alef: true  # Normalize alef variants
+  normalize_teh_marbuta: true
+  remove_tatweel: true  # Remove kashida
+  normalize_digits: "arabic"  # Convert to Arabic-Indic numerals
+
+training:
+  data:
+    - type: "wikipedia"
+      languages: ["ar", "fa"]
+      sample_size: 500000
+    - type: "news"
+      path: "${DATA_DIR}/arabic_news"
+
+decoding:
+  beam_search:
+    lm_alpha: 0.7  # Higher weight for Arabic morphology
+    lm_beta: 0.2
+    
+  cache:
+    enabled: true
+    max_size: 15000  # Larger cache for Arabic
+
+export:
+  format: "arpa"
+  output_path: "models/lm/arabic_char_6gram.arpa"

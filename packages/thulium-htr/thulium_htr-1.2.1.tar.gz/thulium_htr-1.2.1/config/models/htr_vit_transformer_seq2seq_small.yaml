@@ -1,0 +1,106 @@
+# HTR Model Configuration: ViT + Transformer + Seq2Seq (Small)
+#
+# Compact Vision Transformer for balanced performance.
+# Good accuracy with moderate computational requirements.
+#
+# Architecture: ViT (medium) -> Transformer Decoder -> Seq2Seq
+#
+# Specifications:
+#   - Parameters: ~12M
+#   - Inference: GPU recommended
+#   - Memory: ~400MB
+#
+# Suitable for:
+#   - Server-side inference with GPU
+#   - Multi-language models
+#   - Research prototyping
+
+model:
+  name: "htr_vit_transformer_seq2seq_small"
+  version: "1.2.0"
+  capacity: "small"
+  architecture: "transformer"
+  
+  backbone:
+    type: "vit"
+    image_size: [32, 384]
+    patch_size: 8
+    dim: 384
+    depth: 6
+    heads: 6
+    mlp_dim: 1024
+    dropout: 0.1
+    pretrained: true
+    
+  head:
+    type: "transformer_encoder"
+    d_model: 384
+    nhead: 6
+    num_layers: 3
+    dim_feedforward: 1024
+    dropout: 0.1
+    
+  decoder:
+    type: "transformer_decoder"
+    d_model: 384
+    nhead: 6
+    num_layers: 3
+    num_classes: 100
+    dropout: 0.1
+    max_len: 96
+    
+preprocessing:
+  image_height: 32
+  image_width: 384
+  normalize: true
+  mean: [0.485, 0.456, 0.406]
+  std: [0.229, 0.224, 0.225]
+
+training:
+  optimizer:
+    type: "adamw"
+    lr: 0.0003
+    weight_decay: 0.05
+    betas: [0.9, 0.98]
+    
+  scheduler:
+    type: "cosine"
+    warmup_epochs: 15
+    min_lr: 0.000005
+    
+  loss:
+    type: "cross_entropy"
+    label_smoothing: 0.1
+    
+  regularization:
+    dropout: 0.1
+    stochastic_depth: 0.1
+    
+  augmentation:
+    enabled: true
+    random_affine:
+      degrees: 4
+      translate: [0.03, 0.03]
+      scale: [0.92, 1.08]
+    color_jitter:
+      brightness: 0.15
+      contrast: 0.15
+      probability: 0.3
+    mixup:
+      alpha: 0.2
+      probability: 0.3
+      
+  batch_size: 48
+  epochs: 180
+  mixed_precision: true
+  max_grad_norm: 1.0
+
+decoding:
+  method: "beam_search"
+  beam_width: 10
+  length_penalty: 1.0
+  max_length: 96
+
+inference:
+  onnx_export: true
+  quantization: "none"

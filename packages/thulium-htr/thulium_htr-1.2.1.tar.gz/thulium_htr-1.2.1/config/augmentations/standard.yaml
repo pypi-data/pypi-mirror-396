@@ -1,0 +1,89 @@
+# Augmentation Configuration: Standard
+#
+# Standard augmentation recipe for general HTR training.
+# Provides moderate augmentation suitable for most handwriting data.
+#
+# Recommended for:
+# - Initial training runs
+# - Clean, modern handwriting
+# - Well-scanned documents
+
+version: "1.2.0"
+name: "standard"
+description: "Standard augmentation for general HTR training"
+
+# Probability of applying any augmentation
+enabled: true
+p: 0.7  # 70% of samples will be augmented
+
+transforms:
+  # Geometric transforms
+  geometric:
+    - name: "random_rotation"
+      enabled: true
+      p: 0.5
+      params:
+        degrees: [-5, 5]
+        
+    - name: "random_scale"
+      enabled: true
+      p: 0.3
+      params:
+        scale: [0.9, 1.1]
+        
+    - name: "random_translate"
+      enabled: true
+      p: 0.3
+      params:
+        translate_x: [-0.05, 0.05]
+        translate_y: [-0.05, 0.05]
+        
+    - name: "random_shear"
+      enabled: true
+      p: 0.2
+      params:
+        shear_x: [-5, 5]
+        shear_y: [-5, 5]
+
+  # Photometric transforms
+  photometric:
+    - name: "brightness_contrast"
+      enabled: true
+      p: 0.4
+      params:
+        brightness: [-0.2, 0.2]
+        contrast: [0.8, 1.2]
+        
+    - name: "gaussian_noise"
+      enabled: true
+      p: 0.3
+      params:
+        mean: 0
+        std: 0.02
+        
+    - name: "gaussian_blur"
+      enabled: true
+      p: 0.2
+      params:
+        kernel_size: [3, 5]
+        sigma: [0.1, 1.0]
+
+  # Elastic distortion (ink movement simulation)
+  elastic:
+    - name: "elastic_distortion"
+      enabled: true
+      p: 0.3
+      params:
+        alpha: 30
+        sigma: 5
+
+# Composition settings
+composition:
+  mode: "random"  # Apply transforms randomly
+  max_transforms: 3  # Maximum number of transforms per sample
+
+# Normalization (applied after augmentation)
+normalize:
+  enabled: true
+  mean: [0.485, 0.456, 0.406]
+  std: [0.229, 0.224, 0.225]

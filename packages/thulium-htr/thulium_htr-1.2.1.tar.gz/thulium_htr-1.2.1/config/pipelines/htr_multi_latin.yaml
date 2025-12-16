@@ -1,0 +1,67 @@
+# Thulium HTR Pipeline Configuration - Multi-Language Latin
+# This configuration supports recognition across multiple Latin-script languages
+# using a unified model with extended character coverage.
+#
+# Suitable for documents containing mixed-language content or when the
+# source language is unknown/variable.
+
+language:
+  code: "multi-latin"
+  use_language_profile: false  # Uses combined alphabet
+  
+  # Combined alphabet covering all Latin-based languages
+  combined_alphabet:
+    base: "latin"
+    extensions:
+      - "azerbaijani"   # schwa, etc.
+      - "turkish"       # dotless i, etc.
+      - "german"        # umlauts, eszett
+      - "french"        # accents
+      - "spanish"       # n-tilde, inverted punctuation
+      - "portuguese"    # cedilla, tildes
+      - "polish"        # ogonek, kreska
+      - "czech"         # hacek
+      - "hungarian"     # double acute
+      - "romanian"      # comma-below
+      - "nordic"        # ae, oe, ash
+      - "vietnamese"    # extensive diacritics
+      - "baltic"        # macron, ogonek
+
+preprocessing:
+  target_height: 64
+  normalize: true
+  binarize: false
+  augmentation:
+    enabled: false
+
+model:
+  backbone:
+    type: "cnn_resnet"
+    pretrained: true
+    freeze_layers: 0
+  sequence_head:
+    type: "bilstm"
+    hidden_size: 512  # Larger for multi-language
+    num_layers: 2
+    bidirectional: true
+    dropout: 0.1
+  decoder:
+    type: "ctc"
+    beam_width: 15  # Wider beam for larger vocabulary
+    use_language_model: false
+
+segmentation:
+  enabled: true
+  method: "unet"
+  min_line_height: 20
+  merge_threshold: 0.5
+
+postprocessing:
+  normalize_unicode: true
+  strip_whitespace: true
+  lowercase: false
+
+inference:
+  batch_size: 8  # Smaller batch for larger model
+  device: "auto"
+  precision: "fp32"

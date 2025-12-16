@@ -1,0 +1,103 @@
+# HTR Model Configuration: ViT + Transformer + Seq2Seq (Tiny)
+#
+# Minimal Vision Transformer model for edge deployment.
+# Smaller patch size and reduced depth for efficiency.
+#
+# Architecture: ViT (slim) -> Transformer Decoder -> Seq2Seq
+#
+# Specifications:
+#   - Parameters: ~5M
+#   - Inference: GPU preferred, CPU possible
+#   - Memory: ~200MB
+#
+# Suitable for:
+#   - Edge devices with GPU (mobile, embedded)
+#   - Quick prototyping with transformer architectures
+#   - Simple scripts with limited vocabulary
+
+model:
+  name: "htr_vit_transformer_seq2seq_tiny"
+  version: "1.2.0"
+  capacity: "tiny"
+  architecture: "transformer"
+  
+  backbone:
+    type: "vit"
+    image_size: [32, 256]
+    patch_size: 8
+    dim: 256
+    depth: 4
+    heads: 4
+    mlp_dim: 512
+    dropout: 0.1
+    pretrained: false
+    
+  head:
+    type: "transformer_encoder"
+    d_model: 256
+    nhead: 4
+    num_layers: 2
+    dim_feedforward: 512
+    dropout: 0.1
+    
+  decoder:
+    type: "transformer_decoder"
+    d_model: 256
+    nhead: 4
+    num_layers: 2
+    num_classes: 100
+    dropout: 0.1
+    max_len: 64
+    
+preprocessing:
+  image_height: 32
+  image_width: 256
+  normalize: true
+  mean: [0.5]
+  std: [0.5]
+  grayscale: true
+
+training:
+  optimizer:
+    type: "adamw"
+    lr: 0.0005
+    weight_decay: 0.03
+    betas: [0.9, 0.98]
+    
+  scheduler:
+    type: "cosine"
+    warmup_epochs: 10
+    min_lr: 0.00001
+    
+  loss:
+    type: "cross_entropy"
+    label_smoothing: 0.05
+    
+  regularization:
+    dropout: 0.1
+    stochastic_depth: 0.05
+    
+  augmentation:
+    enabled: true
+    random_affine:
+      degrees: 3
+      translate: [0.02, 0.02]
+      scale: [0.95, 1.05]
+    mixup:
+      alpha: 0.1
+      probability: 0.2
+      
+  batch_size: 64
+  epochs: 150
+  mixed_precision: true
+  max_grad_norm: 1.0
+
+decoding:
+  method: "greedy"
+  beam_width: 5
+  length_penalty: 1.0
+  max_length: 64
+
+inference:
+  onnx_export: true
+  quantization: "dynamic"

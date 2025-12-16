@@ -1,0 +1,106 @@
+# HTR Model Configuration: CNN + BiLSTM + CTC (Large)
+#
+# High-capacity model for maximum accuracy on challenging handwriting.
+# Requires GPU for practical training and inference speeds.
+#
+# Architecture: ResNet34 -> BiLSTM (wide) -> CTC Decoder
+#
+# Specifications:
+#   - Parameters: ~15M
+#   - Inference: GPU recommended
+#   - Memory: ~500MB
+#
+# Suitable for:
+#   - Maximum accuracy requirements
+#   - Historical document analysis
+#   - Complex/degraded handwriting
+#   - Research benchmarking
+
+model:
+  name: "htr_cnn_lstm_ctc_large"
+  version: "1.2.0"
+  capacity: "large"
+  
+  backbone:
+    type: "resnet"
+    config_name: "resnet34"
+    in_channels: 3
+    output_channels: 512
+    dropout: 0.1
+    
+  sequence_head:
+    type: "bilstm"
+    hidden_size: 384
+    num_layers: 3
+    dropout: 0.3
+    bidirectional: true
+    
+  decoder:
+    type: "ctc"
+    blank_index: 0
+    dropout: 0.2
+    
+  height_projection:
+    type: "adaptive_pool"
+    
+preprocessing:
+  image_height: 64
+  normalize: true
+  mean: [0.485, 0.456, 0.406]
+  std: [0.229, 0.224, 0.225]
+  
+training:
+  optimizer:
+    type: "adamw"
+    lr: 0.0003
+    weight_decay: 0.02
+    betas: [0.9, 0.999]
+    
+  scheduler:
+    type: "cosine"
+    warmup_epochs: 10
+    min_lr: 0.000005
+    
+  loss:
+    type: "ctc"
+    blank: 0
+    reduction: "mean"
+    zero_infinity: true
+    
+  regularization:
+    label_smoothing: 0.05
+    dropout: 0.3
+    
+  augmentation:
+    enabled: true
+    random_affine:
+      degrees: 5
+      translate: [0.03, 0.03]
+      scale: [0.9, 1.1]
+    elastic_distortion:
+      alpha: 35
+      sigma: 6
+      probability: 0.4
+    noise:
+      gaussian_std: 0.02
+      probability: 0.25
+    color_jitter:
+      brightness: 0.15
+      contrast: 0.15
+      probability: 0.2
+      
+  batch_size: 48
+  epochs: 150
+  mixed_precision: true
+  max_grad_norm: 1.0
+  
+decoding:
+  method: "beam_search"
+  beam_width: 20
+  lm_alpha: 0.5
+  lm_beta: 0.1
+  length_normalization: true
+
+inference:
+  onnx_export: true
+  quantization: "none"

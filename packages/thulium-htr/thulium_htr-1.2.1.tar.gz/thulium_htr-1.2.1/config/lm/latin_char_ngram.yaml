@@ -1,0 +1,93 @@
+# Language Model Configuration: Latin Script Character N-gram
+#
+# Character-level n-gram language model optimized for Latin script
+# languages including English, French, German, Spanish, and others.
+#
+# Use with CTC beam search decoding to improve accuracy on
+# Latin-script handwriting recognition.
+
+model:
+  name: "latin_char_ngram"
+  type: "character_ngram"
+  version: "1.2.0"
+  
+  # Supported languages (ISO 639-1 codes)
+  languages:
+    - en  # English
+    - de  # German
+    - fr  # French
+    - es  # Spanish
+    - it  # Italian
+    - pt  # Portuguese
+    - nl  # Dutch
+    - sv  # Swedish
+    - no  # Norwegian
+    - da  # Danish
+    - fi  # Finnish
+    - pl  # Polish
+    - cs  # Czech
+    - hu  # Hungarian
+    - ro  # Romanian
+    - tr  # Turkish
+    - az  # Azerbaijani (Latin)
+    - lt  # Lithuanian
+    - lv  # Latvian
+    - et  # Estonian
+
+ngram:
+  order: 5  # 5-gram (uses 4 characters of context)
+  
+  # Vocabulary (character set)
+  vocab:
+    type: "union"  # Union of all supported language alphabets
+    include_digits: true
+    include_punctuation: true
+    include_special: ["'", "-", " "]
+    case_sensitive: false
+    
+  # Smoothing
+  smoothing:
+    type: "kneser_ney"
+    discount: 0.75
+    # Alternative: "witten_bell", "add_k"
+    
+  # Pruning for memory efficiency
+  pruning:
+    min_count: 2
+    max_vocab_size: null  # No limit
+
+training:
+  # Corpus sources
+  data:
+    - type: "wikipedia"
+      languages: ["en", "de", "fr", "es"]
+      sample_size: 1000000  # lines per language
+    - type: "news"
+      path: "${DATA_DIR}/news_corpus"
+      
+  # Preprocessing
+  preprocessing:
+    lowercase: true
+    normalize_whitespace: true
+    remove_urls: true
+    remove_numbers: false
+    
+decoding:
+  # Integration with CTC beam search
+  beam_search:
+    lm_alpha: 0.5  # LM weight
+    lm_beta: 0.1   # Length bonus per character
+    
+  # Performance optimizations
+  cache:
+    enabled: true
+    max_size: 10000  # Maximum cached prefixes
+    
+  # Fallback for OOV characters
+  oov_handling:
+    strategy: "backoff"  # or "uniform", "skip"
+    oov_penalty: -10.0
+
+export:
+  format: "arpa"  # Standard ARPA format for interoperability
+  output_path: "models/lm/latin_char_5gram.arpa"

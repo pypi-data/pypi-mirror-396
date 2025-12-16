@@ -1,0 +1,78 @@
+# Language Model Configuration: CJK Character N-gram
+#
+# Character-level n-gram language model for CJK (Chinese, Japanese, Korean)
+# scripts. Special handling for logographic writing systems.
+#
+# Note: CJK models typically use lower n-gram orders due to the
+# semantic nature of characters.
+
+model:
+  name: "cjk_char_ngram"
+  type: "character_ngram"
+  version: "1.2.0"
+  
+  languages:
+    - zh  # Chinese (Simplified)
+    - zh-tw  # Chinese (Traditional)
+    - ja  # Japanese
+    - ko  # Korean
+
+ngram:
+  order: 3  # Lower order for CJK (characters carry more meaning)
+  
+  vocab:
+    type: "cjk_unified"
+    
+    # Chinese characters (Hanzi/Kanji)
+    unicode_ranges:
+      - [0x4E00, 0x9FFF]   # CJK Unified Ideographs
+      - [0x3400, 0x4DBF]   # CJK Extension A
+      - [0x20000, 0x2A6DF] # CJK Extension B (optional, memory heavy)
+      
+    # Japanese specific
+    hiragana: true   # [0x3040, 0x309F]
+    katakana: true   # [0x30A0, 0x30FF]
+    
+    # Korean specific
+    hangul: true     # [0xAC00, 0xD7AF]
+    jamo: true       # [0x1100, 0x11FF]
+    
+    include_digits: true
+    include_punctuation: true
+    
+    # CJK punctuation
+    cjk_punctuation: true  # Full-width punctuation
+    
+    # Maximum vocab size (CJK has many characters)
+    max_vocab_size: 10000
+    
+  smoothing:
+    type: "add_k"  # Simpler smoothing for large vocab
+    k: 0.1
+    
+  pruning:
+    min_count: 5  # Higher threshold for CJK
+
+training:
+  data:
+    - type: "wikipedia"
+      languages: ["zh", "ja", "ko"]
+      sample_size: 500000
+      
+  preprocessing:
+    normalize_unicode: true
+    convert_traditional_to_simplified: false  # Keep separate models
+    segment_chinese: false  # Character-level, no word segmentation
+
+decoding:
+  beam_search:
+    lm_alpha: 0.4  # Lower weight for CJK
+    lm_beta: 0.0   # No length bonus (characters are semantic units)
+    
+  cache:
+    enabled: true
+    max_size: 20000
+
+export:
+  format: "binary"  # Binary format for large CJK models
+  output_path: "models/lm/cjk_char_3gram.bin"

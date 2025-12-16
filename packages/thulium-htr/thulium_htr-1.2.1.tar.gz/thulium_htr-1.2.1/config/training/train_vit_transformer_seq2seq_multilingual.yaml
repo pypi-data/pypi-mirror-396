@@ -1,0 +1,159 @@
+# Training Configuration: ViT + Transformer Seq2Seq Multilingual
+#
+# High-capacity training recipe for Vision Transformer models with
+# autoregressive decoding. Designed for maximum accuracy on complex
+# scripts and challenging handwriting.
+#
+# Features:
+#   - Layer-wise learning rate decay
+#   - Extended warmup for ViT stability
+#   - Mixup and CutMix augmentation
+#   - EMA model averaging
+#   - Multi-stage training support
+
+experiment:
+  name: "vit_transformer_seq2seq_multilingual"
+  seed: 42
+  deterministic: true
+  
+model:
+  config: "config/models/htr_vit_transformer_seq2seq_base.yaml"
+  
+  # Optional: load pretrained ViT backbone
+  pretrained:
+    backbone: "google/vit-base-patch16-224"
+    freeze_epochs: 5  # Freeze backbone for initial epochs
+  
+data:
+  train_datasets:
+    - name: "iam_train"
+      path: "${DATA_DIR}/iam/train"
+      weight: 1.0
+    - name: "multilingual_all"
+      path: "${DATA_DIR}/multilingual"
+      weight: 1.0
+    - name: "historical_docs"
+      path: "${DATA_DIR}/historical"
+      weight: 0.5
+    - name: "synthetic"
+      path: "${DATA_DIR}/synthetic"
+      weight: 0.3
+      
+  val_dataset:
+    name: "iam_val"
+    path: "${DATA_DIR}/iam/val"
+    
+  preprocessing:
+    image_height: 32
+    image_width: 512
+    normalize: true
+    mean: [0.485, 0.456, 0.406]
+    std: [0.229, 0.224, 0.225]
+    
+  augmentation:
+    enabled: true
+    config: "config/augmentations/strong.yaml"
+    mixup:
+      enabled: true
+      alpha: 0.2
+    cutmix:
+      enabled: true
+      alpha: 1.0
+
+optimizer:
+  type: "AdamW"
+  lr: 1e-4  # Lower LR for ViT
+  weight_decay: 0.08
+  betas: [0.9, 0.98]
+  eps: 1e-8
+  
+  # Layer-wise LR decay for pretrained backbone
+  layer_decay:
+    enabled: true
+    decay_rate: 0.75
+    
+scheduler:
+  type: "cosine"
+  warmup_steps: 6000  # Extended warmup for ViT
+  warmup_ratio: null
+  min_lr: 5e-8
+  num_cycles: 1
+  
+regularization:
+  label_smoothing: 0.15
+  dropout: 0.1
+  stochastic_depth: 0.2
+  attention_dropout: 0.1
+  max_grad_norm: 0.5  # More aggressive clipping
+  
+training:
+  epochs: 200
+  batch_size: 16
+  accumulation_steps: 8  # Effective batch size: 128
+  
+  mixed_precision: true
+  amp_dtype: "bfloat16"  # Preferred for ViT
+  
+  # Multi-stage training
+  stages:
+    - name: "warmup"
+      epochs: 5
+      freeze_backbone: true
+      lr_multiplier: 0.1
+    - name: "finetune"
+      epochs: 195
+      freeze_backbone: false
+      lr_multiplier: 1.0
+  
+  dataloader:
+    num_workers: 8
+    pin_memory: true
+    prefetch_factor: 4
+    
+  logging:
+    log_interval: 25
+    wandb:
+      enabled: false
+      project: "thulium-htr"
+      
+checkpointing:
+  save_dir: "checkpoints/${experiment.name}"
+  save_every: 10
+  keep_last: 5
+  save_best: true
+  best_metric: "val_cer"
+  best_mode: "min"
+  
+early_stopping:
+  enabled: true
+  patience: 30
+  min_delta: 0.0002
+  metric: "val_cer"
+  mode: "min"
+  
+evaluation:
+  eval_interval: 2
+  metrics:
+    - "cer"
+    - "wer"
+    - "ser"
+    - "ece"
+  decoding:
+    method: "beam_search"
+    beam_width: 5
+    length_penalty: 1.0
+    
+distributed:
+  enabled: false
+  backend: "nccl"
+  strategy: "ddp"
+  find_unused_parameters: true  # Required for staged training
+  
+ema:
+  enabled: true
+  decay: 0.9999
+  update_interval: 1
+  
+profiling:
+  enabled: false
+  memory_snapshot: false

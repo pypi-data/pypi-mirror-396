@@ -1,0 +1,54 @@
+# Evaluation Configuration: Latin Multilingual
+#
+# Multilingual evaluation for all Latin-script languages.
+
+evaluation:
+  name: "eval_latin_multilingual"
+  description: "Multi-language evaluation for Latin scripts"
+  version: "1.2.0"
+
+languages:
+  - en  # English
+  - de  # German
+  - fr  # French
+  - es  # Spanish
+  - it  # Italian
+  - pt  # Portuguese
+  - nl  # Dutch
+  - sv  # Swedish
+  - pl  # Polish
+  - cs  # Czech
+
+datasets:
+  - language: "en"
+    name: "IAM"
+    path: "${DATA_DIR}/iam/test"
+  - language: "de"
+    name: "IAM_German"
+    path: "${DATA_DIR}/german/test"
+  - language: "fr"
+    name: "RIMES"
+    path: "${DATA_DIR}/rimes/test"
+
+preprocessing:
+  image_height: 64
+  normalize: true
+
+model:
+  config: "config/models/htr_cnn_transformer_ctc_base.yaml"
+  checkpoint: null
+
+decoding:
+  method: "beam_search"
+  beam_width: 15
+  lm_config: "config/lm/latin_char_ngram.yaml"
+
+metrics:
+  primary: "cer"
+  compute: ["cer", "wer", "ser"]
+  per_language: true
+  aggregate: true
+
+output:
+  formats: ["markdown", "json", "csv"]
+  report_file: "latin_multilingual_report"

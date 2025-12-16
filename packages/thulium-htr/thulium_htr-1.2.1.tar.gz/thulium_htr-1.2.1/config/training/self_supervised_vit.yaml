@@ -1,0 +1,101 @@
+# Self-Supervised Pretraining Configuration: ViT
+#
+# Configuration for contrastive self-supervised pretraining of 
+# Vision Transformer backbones on unlabeled handwriting data.
+#
+# Method: InfoNCE contrastive learning with multi-view augmentation
+#
+# Use this to pretrain on large unlabeled datasets before
+# fine-tuning on smaller labeled datasets.
+
+experiment:
+  name: "self_supervised_vit_pretrain"
+  seed: 42
+  deterministic: true
+
+pretraining:
+  method: "contrastive"
+  
+  encoder:
+    type: "vit"
+    config: "config/models/htr_vit_transformer_seq2seq_base.yaml"
+    output_dim: 768
+    freeze_patch_embed: false
+    
+  projection_head:
+    type: "mlp"
+    hidden_dim: 2048
+    output_dim: 128
+    num_layers: 2
+    batch_norm: true
+    
+  loss:
+    type: "infonce"
+    temperature: 0.1
+    use_hard_negatives: false
+    
+  augmentation:
+    views: 2
+    config: "config/augmentations/strong.yaml"
+    # Additional strong augmentations for contrastive learning
+    extra_transforms:
+      - type: "random_grayscale"
+        probability: 0.2
+      - type: "gaussian_blur"
+        kernel_size: [3, 7]
+        sigma: [0.1, 2.0]
+        probability: 0.5
+      - type: "solarization"
+        threshold: 128
+        probability: 0.2
+
+data:
+  unlabeled_datasets:
+    - name: "handwriting_unlabeled"
+      path: "${DATA_DIR}/unlabeled"
+      
+  preprocessing:
+    image_height: 32
+    image_width: 512
+    normalize: true
+    mean: [0.485, 0.456, 0.406]
+    std: [0.229, 0.224, 0.225]
+
+optimizer:
+  type: "AdamW"
+  lr: 1e-4
+  weight_decay: 0.1
+  betas: [0.9, 0.98]
+  
+scheduler:
+  type: "cosine"
+  warmup_epochs: 10
+  min_lr: 1e-7
+  
+training:
+  epochs: 100
+  batch_size: 256
+  accumulation_steps: 4  # Effective batch size: 1024
+  
+  mixed_precision: true
+  amp_dtype: "bfloat16"
+  
+  dataloader:
+    num_workers: 8
+    pin_memory: true
+    
+checkpointing:
+  save_dir: "checkpoints/${experiment.name}"
+  save_every: 10
+  keep_last: 3
+  
+# EMA for stable representations
+ema:
+  enabled: true
+  decay: 0.999
+  
+# Optional: BYOL-style momentum encoder
+momentum_encoder:
+  enabled: false
+  momentum: 0.996
+  momentum_schedule: "cosine"
