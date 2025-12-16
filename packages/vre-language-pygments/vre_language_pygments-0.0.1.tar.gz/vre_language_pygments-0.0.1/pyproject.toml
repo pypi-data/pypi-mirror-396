@@ -1,0 +1,48 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "vre-language-pygments"
+version = "0.0.1"
+authors = [
+  {name="The Virtmat Tools Team", email="virtmat-tools@lists.kit.edu"},
+]
+description = "Pygments plugin for VRE-Language"
+dependencies = ["pygments"]
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+]
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
+
+[project.urls]
+Homepage = "https://gitlab.kit.edu/kit/virtmat-tools/vre-language-pygments"
+Download = "https://pypi.org/project/vre-language-pygments/#files"
+Issues = "https://gitlab.kit.edu/kit/virtmat-tools/vre-language-pygments/-/issues"
+
+[project.entry-points."pygments.lexers"]
+texts_lexer = "texts_lexer:TextSLexer"
+textm_lexer = "texts_lexer:TextMLexer"
+
+[project.entry-points."pygments.formatters"]
+texts_formatter = "texts_formatter:TextSFormatter"
+
+[project.entry-points."pygments.styles"]
+texts-style = "texts_style:TextSStyle"
+
+[project.entry-points."pygments.filters"]
+texts-filter = "texts_filter:TextSFilter"
+
+[tool.hatch.envs.default.scripts]
+test = "pygmentize -l texts -f texts-format -F texts-filter -O style=texts-style test.vm"
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]

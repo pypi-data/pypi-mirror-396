@@ -1,0 +1,33 @@
+orr_total = Reaction 2 H2 + O2 = 2 H2O
+
+H2O = Species H2O, composition: 'H2O' (
+    (energy: props_h2o_energy),
+    (entropy: 2.1669e-3) [eV/K], # https://webbook.nist.gov/cgi/cbook.cgi?ID=C7732185
+    (zpe: 0.558) [eV], # https://webbook.nist.gov/cgi/cbook.cgi?ID=C7732185
+    (temperature: 298.15) [K]
+)
+
+H2 = Species H2, composition: 'H2' (
+    (energy: props_h2_energy),
+    (zpe: 0.270) [eV], # J. Phys. Chem. Ref. Data 36, 389 (2007)
+    (entropy: 1.3613e-3) [eV/K], # https://webbook.nist.gov/cgi/cbook.cgi?ID=C1333740
+    (temperature: 298.15) [K]
+)
+
+orr_free = -4.916 [eV]
+O2 = Species O2, composition: 'O2' (
+    (free_energy: 2.*H2O.free_energy[0] - 2.*H2.free_energy[0] - orr_free),
+    (entropy: 2.1370e-3) [eV/K], # https://webbook.nist.gov/cgi/cbook.cgi?ID=C7782447
+    (zpe: 0.098) [eV], # J. Phys. Chem. Ref. Data 36, 389 (2007)
+    (temperature: 298.15) [K]
+)
+
+print(H2O)
+
+props_h2o_energy = 0. [eV]
+props_h2_energy  = 0. [eV]
+
+print('O2 energy', O2.energy)
+
+print('orr_total:', orr_total.free_energy[0])
+print(orr_total)
