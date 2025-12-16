@@ -1,0 +1,59 @@
+name: Generate Changelog
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Target Owner/Repo"
+        required: true
+      branch:
+        description: "The branch or reference name to filter pull requests by"
+        required: false
+      convert_to_rst:
+        description: "Whether to convert to RST"
+        required: false
+        type: boolean
+      since:
+        description: "Use PRs with activity since this date or git reference"
+        required: false
+      until:
+        description: "Use PRs with activity until this date or git reference"
+        required: false
+      since_last_stable:
+        description: "Use PRs with activity since the last stable git tag"
+        required: false
+        type: boolean
+jobs:
+  generate_changelog:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jupyterlab/maintainer-tools/.github/actions/base-setup@v1
+      - name: Install Dependencies
+        shell: bash
+        run: |
+          sudo apt-get install pandoc
+          pip install -e .
+          pip install pandoc
+
+      - name: Generate the Changelog
+        env:
+          GITHUB_ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          export RH_BRANCH=${{ github.event.inputs.branch }}
+          export RH_SINCE=${{ github.event.inputs.since }}
+          export RH_REF=refs/heads/${RH_BRANCH}
+          export RH_REPOSITORY=${{ github.event.inputs.target }}
+          export RH_UNTIL=${{ github.event.inputs.until }}
+          export RH_CONVERT_TO_RST=${{ github.event.inputs.convert_to_rst }}
+          export RH_SINCE_LAST_STABLE=${{ github.event.inputs.since_last_stable }}
+          python -m jupyter_releaser.actions.generate_changelog
+          cat CHANGELOG_ENTRY.md
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: changelog-${{ github.job }}-${{ strategy.job-index }}
+          path: CHANGELOG_ENTRY.md
