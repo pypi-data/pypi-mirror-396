@@ -1,0 +1,71 @@
+# CMAD — Convolution Matrix Anomaly Detection
+
+**CMAD** is a lightweight, unsupervised framework for detecting **negative spatio-temporal anomalies**
+in sequential 2D data.  
+It is designed for applications such as ice melt detection, environmental degradation,
+loss analysis, and decline-focused change detection.
+
+CMAD operates on **consecutive time steps**, requires **no labels**, and adapts automatically
+to arbitrary spatial resolutions.
+
+---
+
+## ⚠️ Important Version Note
+
+**This version of CMAD detects _negative anomalies only_.**
+
+An anomaly is flagged **only when the change between consecutive time steps is negative**
+(e.g., loss, decrease, melting, erosion).
+
+Positive changes are intentionally ignored in this release.
+
+---
+
+## Key Features
+
+- ✔ Unsupervised (no training labels required)
+- ✔ Works with **images or generic 2D time-series arrays**
+- ✔ Supports arbitrary spatial dimensions (no fixed size)
+- ✔ Adaptive IQR-based thresholding
+- ✔ Binary anomaly masks (`1 = anomaly, 0 = normal`)
+- ✔ CPU-only by default (GPU-ready via PyTorch)
+- ✔ Suitable for large spatio-temporal datasets
+
+---
+
+## Method Overview
+
+Given a time series of 2D data  
+\[
+X = \{X_1, X_2, \dots, X_T\}, \quad X_t \in \mathbb{R}^{H \times W}
+\]
+
+CMAD performs:
+
+1. **Temporal differencing**
+   \[
+   D_t = X_{t+1} - X_t
+   \]
+
+2. **2×2 convolution + stride-2 downsampling**
+
+3. **Second-stage 2×2 pooling**
+   - Produces local neighborhoods of 4 values
+
+4. **Adaptive IQR thresholding**
+   - Per-cell thresholds learned from training data
+
+5. **Back-projection**
+   - Anomalies mapped to original resolution using 4-corner mapping
+
+6. **Negative-only filtering**
+   - A location is anomalous **only if**:
+     - It exceeds the adaptive threshold **and**
+     - The temporal difference is **negative**
+
+---
+
+## Installation
+
+```bash
+pip install cmad
