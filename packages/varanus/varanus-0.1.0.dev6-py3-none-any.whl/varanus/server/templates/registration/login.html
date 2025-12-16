@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+{% if form.errors %}
+    <p>Your username and password didn't match. Please try again.</p>
+{% endif %}
+
+{% if next %}
+    {% if user.is_authenticated %}
+        <p>Your account doesn't have access to this page. To proceed, please login with an account that has access.</p>
+    {% else %}
+        <p>Please login to see this page.</p>
+    {% endif %}
+{% endif %}
+
+<form method="post" action="{% url 'login' %}">
+    {% csrf_token %}
+    {{ form }}
+    <button class="btn btn-default btn-primary">Login</button>
+    <input type="hidden" name="next" value="{{ next }}">
+</form>
+{% endblock %}
+
+{% block javascript %}
+<script>
+    document.querySelectorAll("form input").forEach((e) => {
+        e.classList.add("form-control");
+    });
+</script>
+{% endblock javascript %}

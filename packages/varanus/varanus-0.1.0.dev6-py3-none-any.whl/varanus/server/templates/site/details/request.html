@@ -1,0 +1,146 @@
+{% load i18n %}
+
+<div class="offcanvas-header">
+    <h5 class="offcanvas-title">{{ object.method }} {{ object.path }}</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+</div>
+<div class="offcanvas-body">
+    <table class="table table-sm">
+        <tbody>
+            <tr>
+                <th>{% trans "Node" %}</th>
+                <td>{{ object.node }}</td>
+            </tr>
+            <tr>
+                <th>{% trans "Host" %}</th>
+                <td>{{ object.host }}</td>
+            </tr>
+            <tr>
+                <th>{% trans "Request" %}</th>
+                <td>{{ object.method }} {{ object.path }}{% if object.query %}?{{ object.query }}{% endif %}</td>
+            </tr>
+            <tr>
+                <th>{% trans "Status" %}</th>
+                <td>{{ object.http_status }}</td>
+            </tr>
+            <tr>
+                <th>{% trans "IP" %}</th>
+                <td>{{ object.ip }}</td>
+            </tr>
+            <tr>
+                <th>{% trans "User" %}</th>
+                <td>{{ object.user }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    {% if object.headers %}
+    <div class="accordion mb-3" id="accordion">
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#headers" aria-expanded="false" aria-controls="headers">{% trans "Headers" %}</button>
+            </h2>
+            <div id="headers" class="accordion-collapse collapse" data-bs-parent="#accordion">
+                <div class="accordion-body">
+                    <table class="table table-sm">
+                        <tbody>
+                            {% for name, value in object.headers.items %}
+                                <tr>
+                                    <th class="text-nowrap">{{ name }}</th>
+                                    <td class="text-break">{{ value }}</th>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if context.errors.exists %}
+    <table class="table table-sm">
+        <thead class="table-header">
+            <tr>
+                <th>{% trans "Error" %}</th>
+                <th>{% trans "Kind" %}</th>
+                <th>{% trans "Module" %}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for err in context.errors.all %}
+                <tr>
+                    <td>
+                        <a href="{{ err.get_absolute_url }}" data-bs-target="#inspector" hx-get="{{ err.get_absolute_url }}" hx-target="#inspector">{{ err.message|default:"(no message)" }}</a>
+                    </td>
+                    <td>{{ err.kind }}</td>
+                    <td>{{ err.module }}</td>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    {% if context.logs.exists %}
+    <table class="table table-sm">
+        <thead class="table-header">
+            <tr>
+                <th>{% trans "Log" %}</th>
+                <th>{% trans "Level" %}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in context.logs.all %}
+                <tr>
+                    <td>
+                        <a href="{{ log.get_absolute_url }}" data-bs-target="#inspector" hx-get="{{ log.get_absolute_url }}" hx-target="#inspector">{{ log.message }}</a>
+                    </td>
+                    <td>{{ log.get_level_display }}</td>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    {% if context.queries.exists %}
+    <table class="table table-sm">
+        <thead class="table-header">
+            <tr>
+                <th>{% trans "Query" %}</th>
+                <th>{% trans "Elapsed" %}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for query in context.queries.all %}
+                <tr>
+                    <td>
+                        <a href="{{ query.get_absolute_url }}" data-bs-target="#inspector" hx-get="{{ query.get_absolute_url }}" hx-target="#inspector">{{ query.sql_summary }}</a>
+                    </td>
+                    <td>{{ query.elapsed_ms }}ms</td>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    {% if context.metrics.exists %}
+    <table class="table table-sm">
+        <thead class="table-header">
+            <tr>
+                <th>{% trans "Metric" %}</th>
+                <th>{% trans "Count" %}</th>
+                <th>{% trans "Sum" %}</th>
+                <th>{% trans "Average" %}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m in context.metrics.all %}
+                <tr>
+                    <td>
+                        <a href="{{ m.get_absolute_url }}" data-bs-target="#inspector" hx-get="{{ m.get_absolute_url }}" hx-target="#inspector">{{ m.name }}</a>
+                    </td>
+                    <td>{{ m.agg_count }}</td>
+                    <td>{{ m.agg_sum }}</td>
+                    <td>{{ m.agg_avg }}</td>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</div>

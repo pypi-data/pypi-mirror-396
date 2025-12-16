@@ -1,0 +1,46 @@
+{% load i18n %}
+{% load varanus %}
+
+<div class="offcanvas-header">
+    {% if context.request %}
+        <a class="btn btn-outline-secondary text-truncate me-2" href="{{ context.request.get_absolute_url }}" data-bs-target="#inspector" hx-get="{{ context.request.get_absolute_url }}" hx-target="#inspector"><i class="bi bi-chevron-left"></i> {{ context }}</a>
+    {% endif %}
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+</div>
+<div class="offcanvas-body">
+    <table class="table table-sm">
+        <tbody>
+            <tr>
+                <th>{% trans "Database" %}</th>
+                <td>{{ object.db }}</td>
+            </tr>
+            <tr>
+                <th>{% trans "Elapsed" %}</th>
+                <td>{{ object.elapsed_ms }}ms</td>
+            </tr>
+            {% if object.params %}
+                <tr>
+                    <th>{% trans "Parameters" %}</th>
+                    <td>{{ object.params }}</td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+
+    <code><pre>{{ object.sql_formatted }}</pre></code>
+
+    <ul class="list-unstyled">
+        {% for line in object.filtered_stack %}
+            <li>
+                <p class="mb-3 p-2">
+                    <strong>{{ line.module }} ({{ line.function }})</strong><br />
+                    <small class="text-secondary">{{ line.file|truncatepath }}:{{ line.lineno }}</small>
+                    {% if line.linesrc %}
+                        <br /><code>{{ line.linesrc }}</code>
+                    {% endif %}
+                </p>
+            </li>
+        {% endfor %}
+    </ul>
+
+</div>

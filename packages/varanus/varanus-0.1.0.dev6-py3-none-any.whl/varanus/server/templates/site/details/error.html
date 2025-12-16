@@ -1,0 +1,47 @@
+{% load i18n %}
+{% load varanus %}
+
+<div class="offcanvas-header">
+    {% if context.request %}
+        <a class="btn btn-outline-secondary text-truncate me-2" href="{{ context.request.get_absolute_url }}" data-bs-target="#inspector" hx-get="{{ context.request.get_absolute_url }}" hx-target="#inspector"><i class="bi bi-chevron-left"></i> {{ context }}</a>
+    {% endif %}
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+</div>
+<div class="offcanvas-body">
+    <table class="table table-sm">
+        <tbody>
+            <tr>
+                <th>{% trans "Kind" %}</th>
+                <td>{{ object.kind }}</td>
+            </tr>
+            <tr>
+                <th>{% trans "Module" %}</th>
+                <td>{{ object.module }}</td>
+            </tr>
+            <tr>
+                <th>{% trans "Message" %}</th>
+                <td>{{ object.message }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <ul class="list-unstyled">
+        {% for line in object.filtered_stack %}
+            <li class="p-2">
+                <p class="mb-3">
+                    <strong>{{ line.module }}.{{ line.function }}</strong><br />
+                    <small class="text-secondary">{{ line.file|truncatepath }}:{{ line.lineno }}</small>
+                    {% if line.linesrc %}
+                        <br /><code data-bs-toggle="collapse" data-bs-target="#vars-{{ forloop.counter }}" style="cursor:pointer;">{{ line.linesrc }}</code>
+                    {% endif %}
+                </p>
+                <dl class="ms-4 mb-0 font-monospace collapse" id="vars-{{ forloop.counter }}">
+                    {% for name, value in line.locals.items %}
+                        <dt><code>{{ name }}</code></dt>
+                        <dd class="ms-4">{{ value }}</dd>
+                    {% endfor %}
+                </dl>
+            </li>
+        {% endfor %}
+    </ul>
+</div>
