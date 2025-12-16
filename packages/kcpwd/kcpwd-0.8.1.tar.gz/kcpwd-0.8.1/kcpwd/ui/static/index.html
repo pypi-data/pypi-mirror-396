@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kcpwd - Password Manager</title>
+    <link rel="icon" type="image/png" sizes="40x40" href="/static/kcpwd_logo.png">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-logo">
+                <img src="/static/kcpwd_logo.png" alt="kcpwd Logo" class="logo-image" onerror="this.style.display='none'">
+                <div class="header-text">
+                    <h1>kcpwd Password Manager</h1>
+                    <p id="backend-info">Web UI v0.8.1</p>
+                </div>
+            </div>
+            <div id="session-info" class="hidden">
+                <div class="status">
+                    <span id="session-status"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Auth Form -->
+        <div id="auth-form" class="auth-form">
+            <h2>🔑 Unlock kcpwd</h2>
+            <p>Enter your UI secret to access the password manager</p>
+            <input
+                type="password"
+                id="secret-input"
+                placeholder="UI Secret"
+                onkeypress="if(event.key==='Enter') authenticate()"
+            >
+            <button class="btn-primary" onclick="authenticate()">
+                🔓 Unlock
+            </button>
+            <div class="mt-3 text-muted text-center">
+                <small>
+                    💡 The UI secret was displayed when you started the server<br>
+                    Or set via KCPWD_UI_SECRET environment variable
+                </small>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div id="main-content" class="main-content hidden">
+            <!-- Top Actions -->
+            <div class="flex-between mb-3">
+                <div>
+                    <span id="stats-info" class="text-muted"></span>
+                </div>
+                <div>
+                    <button class="btn-secondary btn-small" onclick="refreshAll()">
+                        🔄 Refresh
+                    </button>
+                    <button class="btn-danger btn-small" onclick="logout()">
+                        🚪 Logout
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('list')">
+                    📋 Passwords
+                </button>
+                <button class="tab" onclick="switchTab('add')">
+                    ➕ Add New
+                </button>
+                <button class="tab" onclick="switchTab('generate')">
+                    🎲 Generate
+                </button>
+                <button class="tab" onclick="switchTab('tools')">
+                    🛠️ Tools
+                </button>
+                <!-- NEW: Share Tab -->
+                <button class="tab" onclick="switchTab('share')">
+                    🔗 Share
+                </button>
+            </div>
+
+            <!-- List Tab -->
+            <div id="list-tab" class="tab-content">
+                <div class="card-header">
+                    <h2 class="card-title">Your Passwords</h2>
+                    <input
+                        type="text"
+                        id="search-input"
+                        placeholder="🔍 Search passwords..."
+                        style="width: 300px; margin: 0;"
+                        oninput="filterPasswords()"
+                    >
+                </div>
+
+                <div id="password-list" class="password-list">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🔐</div>
+                        <h3>No passwords yet</h3>
+                        <p>Add your first password to get started</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add Tab -->
+            <div id="add-tab" class="tab-content hidden">
+                <h2>Add New Password</h2>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Password Details</div>
+                    </div>
+
+                    <input
+                        type="text"
+                        id="add-key"
+                        placeholder="Key (e.g., github_token, aws_secret)"
+                    >
+
+                    <div style="position: relative;">
+                        <input
+                            type="password"
+                            id="add-password"
+                            placeholder="Password"
+                            oninput="checkAddPasswordStrength()"
+                        >
+                        <button
+                            class="btn-secondary btn-small"
+                            style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%);"
+                            onclick="togglePasswordVisibility('add-password')"
+                        >
+                            👁️
+                        </button>
+                    </div>
+
+                    <div id="add-strength-indicator" class="hidden">
+                        <div class="strength-bar">
+                            <div id="add-strength-fill" class="strength-fill"></div>
+                        </div>
+                        <div class="strength-text">
+                            <span class="score" id="add-strength-score"></span>
+                            <span class="level" id="add-strength-level"></span>
+                        </div>
+                    </div>
+
+                    <label>
+                        <input type="checkbox" id="add-master" onchange="toggleMasterPassword('add')">
+                        🔒 Protect with master password
+                    </label>
+
+                    <input
+                        type="password"
+                        id="add-master-pass"
+                        placeholder="Master Password (min 8 characters)"
+                        class="hidden"
+                    >
+
+                    <div class="mt-2">
+                        <button class="btn-primary" onclick="addPassword()">
+                            💾 Save Password
+                        </button>
+                        <button class="btn-secondary" onclick="clearAddForm()">
+                            🗑️ Clear
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Generate Tab -->
+            <div id="generate-tab" class="tab-content hidden">
+                <h2>Generate Secure Password</h2>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Generation Options</div>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <div style="flex: 1;">
+                            <label>Length:
+                                <input
+                                    type="number"
+                                    id="gen-length"
+                                    value="16"
+                                    min="4"
+                                    max="128"
+                                    oninput="updateLengthDisplay()"
+                                >
+                            </label>
+                        </div>
+                        <div style="flex: 2;">
+                            <input
+                                type="range"
+                                id="gen-length-slider"
+                                min="4"
+                                max="64"
+                                value="16"
+                                style="width: 100%;"
+                                oninput="syncLengthSlider()"
+                            >
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2" style="flex-wrap: wrap;">
+                        <label>
+                            <input type="checkbox" id="gen-upper" checked>
+                            Uppercase (A-Z)
+                        </label>
+                        <label>
+                            <input type="checkbox" id="gen-lower" checked>
+                            Lowercase (a-z)
+                        </label>
+                        <label>
+                            <input type="checkbox" id="gen-digits" checked>
+                            Digits (0-9)
+                        </label>
+                        <label>
+                            <input type="checkbox" id="gen-symbols" checked>
+                            Symbols (!@#$...)
+                        </label>
+                        <label>
+                            <input type="checkbox" id="gen-ambiguous">
+                            Exclude Ambiguous (0/O, 1/l/I)
+                        </label>
+                    </div>
+
+                    <button class="btn-primary" onclick="generatePassword()">
+                        🎲 Generate Password
+                    </button>
+                </div>
+
+                <div id="generated-result" class="card hidden">
+                    <div class="card-header">
+                        <div class="card-title">Generated Password</div>
+                    </div>
+
+                    <div style="position: relative;">
+                        <input
+                            type="text"
+                            id="generated-password"
+                            readonly
+                            style="font-family: monospace; font-size: 1.1rem; font-weight: bold;"
+                        >
+                        <button
+                            class="btn-secondary btn-small"
+                            style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%);"
+                            onclick="togglePasswordVisibility('generated-password')"
+                        >
+                            👁️
+                        </button>
+                    </div>
+
+                    <div class="strength-bar">
+                        <div id="gen-strength-fill" class="strength-fill"></div>
+                    </div>
+                    <div class="strength-text">
+                        <span class="score" id="gen-strength-score"></span>
+                        <span class="level" id="gen-strength-level"></span>
+                    </div>
+
+                    <div id="gen-feedback" class="feedback-list hidden">
+                        <h4>💡 Suggestions</h4>
+                        <ul id="gen-feedback-list"></ul>
+                    </div>
+
+                    <div class="mt-2 flex gap-1">
+                        <button class="btn-success" onclick="copyGeneratedPassword()">
+                            📋 Copy to Clipboard
+                        </button>
+                        <button class="btn-primary" onclick="showSaveGeneratedModal()">
+                            💾 Save as...
+                        </button>
+                        <button class="btn-secondary" onclick="generatePassword()">
+                            🔄 Generate Another
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tools Tab -->
+            <div id="tools-tab" class="tab-content hidden">
+                <h2>Tools & Settings</h2>
+
+                <!-- Stats Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">📊 Statistics</div>
+                    </div>
+                    <div id="stats-details">
+                        <p>Loading...</p>
+                    </div>
+                </div>
+
+                <!-- Export Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">📤 Export Passwords</div>
+                    </div>
+                    <p class="text-muted mb-2">
+                        Export your passwords to a JSON file for backup
+                    </p>
+                    <div class="feedback-list" style="background: #fef3c7; border-color: #f59e0b;">
+                        <h4>⚠️ Security Warning</h4>
+                        <ul>
+                            <li>Exported file contains passwords in PLAIN TEXT</li>
+                            <li>Store in a secure location</li>
+                            <li>Never commit to version control</li>
+                        </ul>
+                    </div>
+                    <label>
+                        <input type="checkbox" id="export-passwords" checked>
+                        Include passwords (uncheck to export keys only)
+                    </label>
+                    <button class="btn-primary" onclick="exportPasswords()">
+                        📤 Export to JSON
+                    </button>
+                </div>
+
+                <!-- Import Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">📥 Import Passwords</div>
+                    </div>
+                    <p class="text-muted mb-2">
+                        Import passwords from a JSON backup file
+                    </p>
+                    <input
+                        type="file"
+                        id="import-file"
+                        accept=".json"
+                        style="margin-bottom: 10px;"
+                    >
+                    <label>
+                        <input type="checkbox" id="import-overwrite">
+                        Overwrite existing passwords
+                    </label>
+                    <button class="btn-primary" onclick="importPasswords()">
+                        📥 Import from JSON
+                    </button>
+                </div>
+
+                <!-- Platform Info Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">ℹ️ Platform Information</div>
+                    </div>
+                    <div id="platform-details">
+                        <p>Loading...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NEW: Share Tab -->
+            <div id="share-tab" class="tab-content hidden">
+                <h2>Share Passwords Securely</h2>
+                <p class="text-muted mb-2">
+                    Create temporary, secure links to share passwords without sending them via email or chat
+                </p>
+
+                <!-- Create Share Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">🔗 Create Share Link</div>
+                    </div>
+
+                    <label for="share-key-select">Select Password to Share:</label>
+                    <select id="share-key-select">
+                        <option value="">-- Select a password --</option>
+                    </select>
+
+                    <label for="share-duration">Link Duration:</label>
+                    <select id="share-duration">
+                        <option value="5m">5 minutes</option>
+                        <option value="15m">15 minutes</option>
+                        <option value="30m">30 minutes</option>
+                        <option value="1h" selected>1 hour</option>
+                        <option value="3h">3 hours</option>
+                    </select>
+
+                    <label for="share-access-type">Access Type:</label>
+                    <select id="share-access-type" onchange="toggleShareAccessPassword()">
+                        <option value="anyone" selected>Anyone with link</option>
+                        <option value="once">One-time access (link expires after viewing)</option>
+                        <option value="password">Require password to access</option>
+                    </select>
+
+                    <input
+                        type="password"
+                        id="share-access-password"
+                        placeholder="Access password (others will need this)"
+                        class="hidden"
+                    >
+
+                    <label for="share-max-views">Maximum Views (optional):</label>
+                    <input
+                        type="number"
+                        id="share-max-views"
+                        placeholder="Leave empty for unlimited"
+                        min="1"
+                        max="100"
+                    >
+
+                    <label>
+                        <input type="checkbox" id="share-require-master" onchange="toggleShareMasterPassword()">
+                        🔒 This password is master-protected
+                    </label>
+
+                    <input
+                        type="password"
+                        id="share-master-password"
+                        placeholder="Master password"
+                        class="hidden"
+                    >
+
+                    <div class="feedback-list" style="background: #fff3cd; border-color: #f59e0b;">
+                        <h4>🔒 Security Tips</h4>
+                        <ul>
+                            <li>Share links expire automatically after the set duration</li>
+                            <li>One-time links are deleted after first access</li>
+                            <li>Use password protection for sensitive passwords</li>
+                            <li>Share links via secure channels (Signal, encrypted email)</li>
+                            <li>Never share links in public forums or social media</li>
+                        </ul>
+                    </div>
+
+                    <button class="btn-primary" onclick="createShare()">
+                        🔗 Create Share Link
+                    </button>
+                </div>
+
+                <!-- Active Shares Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">📋 Active Shares</div>
+                        <button class="btn-secondary btn-small" onclick="loadActiveShares()">
+                            🔄 Refresh
+                        </button>
+                    </div>
+
+                    <div id="active-shares-list">
+                        <p class="text-muted">No active shares</p>
+                    </div>
+                </div>
+
+                <!-- Share Stats Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">📊 Sharing Statistics</div>
+                    </div>
+
+                    <div id="share-stats">
+                        <p>Loading...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+
+    <!-- View Password Modal -->
+    <div id="view-modal" class="modal-overlay hidden" onclick="closeViewModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title">🔐 View Password</h3>
+                <button class="modal-close" onclick="closeViewModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Key:</strong> <span id="view-key"></span></p>
+                <p id="view-master-badge" class="hidden">
+                    <span class="password-item-badge">🔒 Master Protected</span>
+                </p>
+
+                <input
+                    type="password"
+                    id="view-master-input"
+                    placeholder="Enter master password"
+                    class="hidden"
+                    onkeypress="if(event.key==='Enter') retrievePassword()"
+                >
+
+                <div id="view-password-container" class="hidden">
+                    <div style="position: relative;">
+                        <input
+                            type="password"
+                            id="view-password"
+                            readonly
+                            style="font-family: monospace; font-weight: bold;"
+                        >
+                        <button
+                            class="btn-secondary btn-small"
+                            style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%);"
+                            onclick="togglePasswordVisibility('view-password')"
+                        >
+                            👁️
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="view-retrieve-btn" class="btn-primary" onclick="retrievePassword()">
+                    🔓 Retrieve
+                </button>
+                <button id="view-copy-btn" class="btn-success hidden" onclick="copyViewPassword()">
+                    📋 Copy
+                </button>
+                <button class="btn-secondary" onclick="closeViewModal()">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Generated Password Modal -->
+    <div id="save-modal" class="modal-overlay hidden" onclick="closeSaveModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title">💾 Save Generated Password</h3>
+                <button class="modal-close" onclick="closeSaveModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <input
+                    type="text"
+                    id="save-key"
+                    placeholder="Key name (e.g., aws_secret)"
+                >
+                <label>
+                    <input type="checkbox" id="save-master" onchange="toggleMasterPassword('save')">
+                    🔒 Protect with master password
+                </label>
+                <input
+                    type="password"
+                    id="save-master-pass"
+                    placeholder="Master Password"
+                    class="hidden"
+                >
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" onclick="saveGeneratedPassword()">
+                    💾 Save
+                </button>
+                <button class="btn-secondary" onclick="closeSaveModal()">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="delete-modal" class="modal-overlay hidden" onclick="closeDeleteModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title">⚠️ Delete Password</h3>
+                <button class="modal-close" onclick="closeDeleteModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete:</p>
+                <p><strong id="delete-key"></strong></p>
+                <div class="feedback-list" style="background: #fee; border-color: #f00;">
+                    <h4>⚠️ Warning</h4>
+                    <ul>
+                        <li>This action cannot be undone</li>
+                        <li>Make sure you have a backup if needed</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-danger" onclick="confirmDelete()">
+                    🗑️ Delete
+                </button>
+                <button class="btn-secondary" onclick="closeDeleteModal()">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW: Share Link Modal -->
+    <div id="share-link-modal" class="modal-overlay hidden" onclick="closeShareLinkModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title">🔗 Share Link Created</h3>
+                <button class="modal-close" onclick="closeShareLinkModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Your share link is ready!</strong></p>
+
+                <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin: 15px 0; border: 2px solid #10b981;">
+                    <input
+                        type="text"
+                        id="share-link-url"
+                        readonly
+                        style="font-family: monospace; font-size: 0.9rem; border: none; background: transparent; width: 100%;"
+                    >
+                </div>
+
+                <div id="share-link-info" style="font-size: 0.9rem; color: #666;"></div>
+
+                <div class="feedback-list" style="background: #fee; border-color: #ef4444; margin-top: 15px;">
+                    <h4>⚠️ Important</h4>
+                    <ul>
+                        <li id="share-link-warning">This link will expire soon</li>
+                        <li>Share only via secure channels</li>
+                        <li>Link cannot be recovered once closed</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-success" onclick="copyShareLink()">
+                    📋 Copy Link
+                </button>
+                <button class="btn-secondary" onclick="closeShareLinkModal()">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay hidden">
+        <div class="loading"></div>
+        <div class="loading-text">Loading...</div>
+    </div>
+    
+    <script src="/static/app.js"></script>
+</body>
+</html>
