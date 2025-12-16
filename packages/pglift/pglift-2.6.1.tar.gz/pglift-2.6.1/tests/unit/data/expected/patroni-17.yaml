@@ -1,0 +1,106 @@
+bootstrap:
+  initdb:
+  - locale: C
+  - encoding: UTF8
+  - waldir: $PREFIX/srv/pgsql/17/test/wal
+  - data-checksums
+ctl:
+  certfile: /path/to/host.pem
+  keyfile: /path/to/host.key
+etcd3:
+  cacert: /path/to/cacert.pem
+  cert: /path/to/host.pem
+  hosts:
+  - etcd1:123
+  - etcd2:456
+  key: /path/to/host.key
+  password: etcdP4zw0rd
+  protocol: https
+  username: etcduser
+log:
+  dir: $PREFIX/log/patroni
+  format: '%(levelname)-8s: %(message)s'
+name: pg1
+postgresql:
+  authentication:
+    replication:
+      password: rrr
+      sslcert: $PREFIX/certs/repl.pem
+      sslcrldir: $PREFIX/crls
+      sslkey: $PREFIX/certs/repl.key
+      sslmode: verify-ca
+      sslpassword: repsslpwd
+      username: replication
+    rewind:
+      sslcrldir: $PREFIX/crls
+      sslmode: verify-ca
+      username: postgres
+    superuser:
+      sslcrldir: $PREFIX/crls
+      sslmode: verify-ca
+      username: postgres
+  basebackup:
+  - waldir: $PREFIX/srv/pgsql/17/test/wal
+  bin_dir: $PREFIX/postgresql/17/bin
+  connect_address: pghost.test:5555
+  create_replica_methods:
+  - pgbackrest
+  - basebackup
+  data_dir: $PREFIX/srv/pgsql/17/test/data
+  listen: '*:5555'
+  parameters:
+    archive_command: pgbackrest --config-path=/cfg/pgbackrest --stanza=test-stanza
+      --pg1-path=/pg/data archive-push %p
+    archive_mode: true
+    effective_cache_size: 4 GB
+    lc_messages: C
+    lc_monetary: C
+    lc_numeric: C
+    lc_time: C
+    log_checkpoints: true
+    log_connections: true
+    log_destination: syslog
+    log_directory: /tmp/log
+    log_disconnections: false
+    log_filename: patgres-%Y-%m-%d.log
+    log_min_duration_statement: 3s
+    logging_collector: true
+    shared_buffers: 257MB
+    shared_preload_libraries: passwordcheck, pg_qualstats, pg_stat_statements, pg_stat_kcache
+    syslog_ident: postgresql-17-test
+    unix_socket_directories: /tmp/tests
+    wal_level: replica
+  pg_hba:
+  - local   all             postgres                                peer
+  - local   all             all                                     peer
+  - host    all             all             127.0.0.1/32            password
+  - host    all             all             ::1/128                 password
+  pg_ident:
+  - testmap         tester                  testdba
+  pgbackrest:
+    command: $PREFIX/bin/pgbackrest --log-level-file=off
+      --log-level-stderr=info --config-path $PREFIX/etc/pgbackrest
+      --stanza test-stanza --pg1-path $PREFIX/srv/pgsql/17/test/data
+      --link-map pg_wal=$PREFIX/srv/pgsql/17/test/wal
+      restore
+    keep_data: true
+    no_params: true
+  pgpass: $PREFIX/etc/patroni/17-test.pgpass
+  use_pg_rewind: true
+  use_unix_socket: true
+  use_unix_socket_repl: true
+restapi:
+  authentication:
+    password: P4zw0rd
+    username: patroniuser
+  cafile: $PREFIX/ssl/cacert.pem
+  certfile: $PREFIX/ssl/host.pem
+  connect_address: localhost:8080
+  keyfile: $PREFIX/ssl/host.key
+  listen: localhost:8080
+  verify_client: optional
+scope: test-scope
+watchdog:
+  device: /dev/watchdog
+  mode: required
+  safety_margin: 5

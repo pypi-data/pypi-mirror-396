@@ -1,0 +1,212 @@
+{
+  "connection_limit": {
+    "description": [
+      "How many concurrent connections the role can make"
+    ],
+    "type": "int"
+  },
+  "createdb": {
+    "default": false,
+    "description": [
+      "Whether role can create new databases"
+    ],
+    "type": "bool"
+  },
+  "createrole": {
+    "default": false,
+    "description": [
+      "Whether role can create new roles"
+    ],
+    "type": "bool"
+  },
+  "drop_owned": {
+    "default": false,
+    "description": [
+      "Drop all PostgreSQL's objects owned by the role being dropped"
+    ],
+    "type": "bool"
+  },
+  "encrypted_password": {
+    "description": [
+      "Role password, already encrypted"
+    ],
+    "no_log": true,
+    "type": "str"
+  },
+  "hba_records": {
+    "default": [],
+    "description": [
+      "Entries in the pg_hba.conf file for this role"
+    ],
+    "elements": "dict",
+    "options": {
+      "connection": {
+        "description": [
+          "Connection information for this HBA record",
+          "If unspecified a 'local' record is assumed"
+        ],
+        "options": {
+          "address": {
+            "description": [
+              "Client machine address(es); can be either a hostname, an IP or an IP address range"
+            ],
+            "required": true,
+            "type": "str"
+          },
+          "netmask": {
+            "description": [
+              "Client machine netmask"
+            ],
+            "type": "str"
+          },
+          "type": {
+            "choices": [
+              "host",
+              "hostssl",
+              "hostnossl",
+              "hostgssenc",
+              "hostnogssenc"
+            ],
+            "default": "host",
+            "description": [
+              "Connection type"
+            ]
+          }
+        },
+        "type": "dict"
+      },
+      "database": {
+        "default": "all",
+        "description": [
+          "Database name(s)",
+          "Multiple database names can be supplied by separating them with commas"
+        ],
+        "type": "str"
+      },
+      "method": {
+        "description": [
+          "Authentication method"
+        ],
+        "required": true,
+        "type": "str"
+      },
+      "state": {
+        "choices": [
+          "present",
+          "absent"
+        ],
+        "default": "present",
+        "description": [
+          "Whether the entry should be written in or removed from pg_hba.conf"
+        ]
+      }
+    },
+    "type": "list"
+  },
+  "inherit": {
+    "default": true,
+    "description": [
+      "Let the role inherit the privileges of the roles it is a member of"
+    ],
+    "type": "bool"
+  },
+  "login": {
+    "default": false,
+    "description": [
+      "Allow the role to log in"
+    ],
+    "type": "bool"
+  },
+  "memberships": {
+    "default": [],
+    "description": [
+      "Roles which this role should be a member of"
+    ],
+    "elements": "dict",
+    "options": {
+      "role": {
+        "description": [
+          "Role name"
+        ],
+        "required": true,
+        "type": "str"
+      },
+      "state": {
+        "choices": [
+          "present",
+          "absent"
+        ],
+        "default": "present",
+        "description": [
+          "Membership state",
+          "'present' for 'granted', 'absent' for 'revoked'"
+        ]
+      }
+    },
+    "type": "list"
+  },
+  "name": {
+    "description": [
+      "Role name"
+    ],
+    "required": true,
+    "type": "str"
+  },
+  "password": {
+    "description": [
+      "Role password"
+    ],
+    "no_log": true,
+    "type": "str"
+  },
+  "pgpass": {
+    "default": false,
+    "description": [
+      "Whether to add an entry in password file for this role"
+    ],
+    "type": "bool"
+  },
+  "reassign_owned": {
+    "description": [
+      "Reassign all PostgreSQL's objects owned by the role being dropped to the specified role name"
+    ],
+    "type": "str"
+  },
+  "replication": {
+    "default": false,
+    "description": [
+      "Whether the role is a replication role"
+    ],
+    "type": "bool"
+  },
+  "state": {
+    "choices": [
+      "present",
+      "absent"
+    ],
+    "default": "present",
+    "description": [
+      "Whether the role be present or absent"
+    ]
+  },
+  "superuser": {
+    "default": false,
+    "description": [
+      "Whether the role is a superuser"
+    ],
+    "type": "bool"
+  },
+  "valid_until": {
+    "description": [
+      "Date and time after which the role's password is no longer valid"
+    ],
+    "type": "str"
+  },
+  "validity": {
+    "description": [
+      "DEPRECATED",
+      "Use 'valid_until' instead"
+    ],
+    "type": "str"
+  }
+}

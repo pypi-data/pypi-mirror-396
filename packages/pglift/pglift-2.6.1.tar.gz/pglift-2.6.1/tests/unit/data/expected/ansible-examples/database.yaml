@@ -1,0 +1,29 @@
+- name: An app database with custom settings, schemas and extensions
+  dalibo.pglift.database:
+    name: app
+    state: present
+    owner: appuser
+    settings:
+      work_mem: 3MB
+    schemas:
+      - name: admin
+        owner: postgres
+    extensions:
+      - name: hstore
+      - name: unaccent
+        version: '1.1'
+
+- name: A database cloned and migrated through logical replication
+  dalibo.pglift.database:
+    name: migrated-app
+    clone:
+      dsn: postgresql://app:{{ app_password }}@localhost:5499/app
+      schema_only: true
+    subscriptions:
+      - name: migrate
+        enabled: false
+        connection:
+          conninfo: host=localhost user=app port=5499
+          password: '{{ app_password }}'
+        publications:
+          - migrate

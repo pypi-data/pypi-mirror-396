@@ -1,0 +1,27 @@
+[Unit]
+Description=Patroni for high-availability PostgreSQL %i
+After=network.target
+
+[Service]
+Type=simple
+{executeas}
+
+# Pre-commands to start watchdog device
+# Uncomment if watchdog is part of your patroni setup
+#ExecStartPre=-/usr/bin/sudo /sbin/modprobe softdog
+#ExecStartPre=-/usr/bin/sudo /bin/chown postgres /dev/watchdog
+
+ExecStart={execpath} {configpath}
+ExecReload=/bin/kill -s HUP $MAINPID
+
+# only kill the patroni process, not it's children, so it will gracefully stop postgres
+KillMode=process
+
+# Give a reasonable amount of time for the server to start up/shut down
+TimeoutSec=30
+
+# Do not restart the service if it crashes, we want to manually inspect database on failure
+Restart=no
+
+[Install]
+WantedBy=default.target
