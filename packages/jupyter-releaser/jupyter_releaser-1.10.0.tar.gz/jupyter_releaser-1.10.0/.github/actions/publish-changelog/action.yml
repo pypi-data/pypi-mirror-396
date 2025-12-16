@@ -1,0 +1,51 @@
+name: "Publish Changelog"
+description: "Remove silent placeholder entries in the changelog file."
+inputs:
+  token:
+    description: "GitHub access token"
+    required: true
+  target:
+    description: "The owner/repo GitHub target"
+    required: false
+  branch:
+    description: "The branch to target"
+    required: false
+  dry_run:
+    description: "If set, do not make a PR"
+    default: "false"
+    required: false
+  shell:
+    description: "The shell being used for the action steps"
+    required: false
+    default: bash -eux {0}
+outputs:
+  pr_url:
+    description: "The html URL of the draft GitHub release"
+    value: ${{ steps.publish-changelog.outputs.pr_url }}
+runs:
+  using: "composite"
+  steps:
+    - name: install-releaser
+      shell: ${{ inputs.shell }}
+      run: |
+        cd "${{ github.action_path }}/../../scripts"
+        bash install-releaser.sh
+
+    - id: publish-changelog
+      shell: ${{ inputs.shell }}
+      run: |
+        export GITHUB_ACCESS_TOKEN=${{ inputs.token }}
+        export GITHUB_ACTOR=${{ github.triggering_actor }}
+        export RH_REPOSITORY=${{ inputs.target }}
+        if [ ! -z ${{ inputs.branch }} ]; then
+          export RH_BRANCH=${{ inputs.branch }}
+        fi
+        export RH_DRY_RUN=${{ inputs.dry_run }}
+        export RH_ADMIN_CHECK=false
+
+        python -m jupyter_releaser.actions.publish_changelog
+
+    - shell: ${{ inputs.shell }}
+      run: |
+        echo "## Next Step" >> $GITHUB_STEP_SUMMARY
+        echo "Merge the changelog update PR: ${{ steps.publish-changelog.outputs.pr_url }}" >> $GITHUB_STEP_SUMMARY

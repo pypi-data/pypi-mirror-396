@@ -1,0 +1,60 @@
+name: "Check Release"
+description: "Run through a dry run release cycle"
+inputs:
+  token:
+    description: "GitHub access token"
+    required: true
+  version_spec:
+    description: "New Version Specifier"
+    required: false
+    default: ""
+  steps_to_skip:
+    description: "Comma separated list of steps to skip"
+    required: false
+  admin_check:
+    description: "Check if the user is a repo admin"
+    required: false
+    default: "true"
+  shell:
+    description: "The shell being used for the action steps"
+    required: false
+    default: bash -eux {0}
+runs:
+  using: "composite"
+  steps:
+    - shell: ${{ inputs.shell }}
+      id: install-releaser
+      run: |
+        cd "${{ github.action_path }}/../../scripts"
+        bash install-releaser.sh
+
+    - id: prep-release
+      shell: ${{ inputs.shell }}
+      run: |
+        export RH_DRY_RUN="true"
+        export GITHUB_ACCESS_TOKEN=${{ inputs.token }}
+        export RH_VERSION_SPEC=${{ inputs.version_spec }}
+        export RH_STEPS_TO_SKIP=${{ inputs.steps_to_skip }}
+        export RH_ADMIN_CHECK=${{ inputs.admin_check }}
+        python -m jupyter_releaser.actions.prep_release
+
+    - id: populate-release
+      shell: ${{ inputs.shell }}
+      run: |
+        export RH_DRY_RUN="true"
+        export GITHUB_ACCESS_TOKEN=${{ inputs.token }}
+        export RH_RELEASE_URL=${{ steps.prep-release.outputs.release_url }}
+        export RH_STEPS_TO_SKIP=${{ inputs.steps_to_skip }}
+        export RH_ADMIN_CHECK=${{ inputs.admin_check }}
+        export YARN_UNSAFE_HTTP_WHITELIST=0.0.0.0
+        python -m jupyter_releaser.actions.populate_release
+
+    - id: finalize-release
+      shell: ${{ inputs.shell }}
+      run: |
+        export RH_DRY_RUN="true"
+        export GITHUB_ACCESS_TOKEN=${{ inputs.token }}
+        export RH_RELEASE_URL=${{ steps.populate-release.outputs.release_url }}
+        export RH_STEPS_TO_SKIP=${{ inputs.steps_to_skip }}
+        export RH_ADMIN_CHECK=${{ inputs.admin_check }}
+        python -m jupyter_releaser.actions.finalize_release
