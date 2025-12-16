@@ -1,0 +1,154 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "supertape"
+version = "1.0.0.dev10"
+description = "Audio player/recorder software for legacy computers as tape recorder replacement"
+authors = ["Yannick Kirschhoffer <alcibiade@alcibiade.org>"]
+readme = "README.md"
+license = "LICENSE"
+homepage = "https://github.com/supertape/supertape/"
+repository = "https://github.com/supertape/supertape/"
+documentation = "https://github.com/supertape/supertape/"
+keywords = ["audio", "vintage", "computers", "tape", "recorder", "alice", "tandy", "mc-10"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Topic :: System :: Emulators",
+]
+packages = [
+    { include = "supertape", from = "src" }
+]
+
+[tool.poetry.dependencies]
+python = ">=3.11,<3.14"
+cython = ">=3.0.11"
+pyaudio = ">=0.2.14"
+tabulate = ">=0.9.0"
+PyYAML = ">=6.0.2"
+imageio = ">=2.36.0"
+numpy = ">=2.1.1"
+rich = ">=13.0.0"
+prompt-toolkit = ">=3.0.0"
+dulwich = "^0.24.10"
+
+[tool.poetry.group.dev.dependencies]
+pytest = ">=8.3.3"
+ruff = "^0.8.0"
+isort = "^5.13.0"
+flake8 = "^7.0.0"
+mypy = "^1.8.0"
+bandit = "^1.7.0"
+coverage = "^7.4.0"
+pytest-cov = "^4.0.0"
+pyinstaller = "^6.0.0"
+types-tabulate = "^0.9.0"
+types-pyyaml = "^6.0.2"
+
+[tool.poetry.scripts]
+supertape = "supertape.cli.__main__:main"
+
+
+# Ruff configuration
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+]
+ignore = [
+    "E501", # line too long, handled by formatter
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+# isort configuration (now handled by ruff)
+[tool.ruff.lint.isort]
+known-first-party = ["supertape"]
+
+# mypy configuration
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = [
+    "pyaudio.*",
+    "imageio.*",
+    "numpy.*",
+]
+ignore_missing_imports = true
+
+# pytest configuration
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--verbose",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+]
+
+# Coverage configuration
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
