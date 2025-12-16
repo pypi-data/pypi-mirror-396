@@ -1,0 +1,188 @@
+name: Connector Regression Test
+permissions:
+  contents: read
+  checks: write
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_image:
+        description: "Target connector image (new version) with tag (e.g., airbyte/source-github:2.0.0). Optional if connector_name is provided."
+        required: false
+        type: string
+      control_image:
+        description: "Control connector image (baseline version) with tag (e.g., airbyte/source-github:1.0.0). Optional if connection_id is provided (auto-detected)."
+        required: false
+        type: string
+      connector_name:
+        description: "Connector name to build target image from source (e.g., 'source-pokeapi'). If provided, builds the target image locally."
+        required: false
+        type: string
+      command:
+        description: "Airbyte command to run"
+        required: false
+        type: choice
+        options:
+          - spec
+          - check
+          - discover
+          - read
+        default: check
+      connection_id:
+        description: "Airbyte Cloud connection ID to fetch config/catalog from. If provided, control_image can be auto-detected."
+        required: false
+        type: string
+      state_path:
+        description: "Path to state JSON file (optional for read)"
+        required: false
+        type: string
+
+  workflow_call:
+    inputs:
+      target_image:
+        description: "Target connector image (new version) with tag. Optional if connector_name is provided."
+        required: false
+        type: string
+      control_image:
+        description: "Control connector image (baseline version) with tag. Optional if connection_id is provided."
+        required: false
+        type: string
+      connector_name:
+        description: "Connector name to build target image from source (e.g., 'source-pokeapi')."
+        required: false
+        type: string
+      command:
+        description: "Airbyte command to run (spec, check, discover, read)"
+        required: false
+        type: string
+        default: check
+      connection_id:
+        description: "Airbyte Cloud connection ID to fetch config/catalog from. If provided, control_image can be auto-detected."
+        required: false
+        type: string
+      state_path:
+        description: "Path to state JSON file (optional for read)"
+        required: false
+        type: string
+    outputs:
+      success:
+        description: "True if regression test passed (no regression detected)"
+        value: ${{ jobs.regression-test.outputs.success }}
+      summary_url:
+        description: "GitHub Actions run summary URL"
+        value: ${{ jobs.regression-test.outputs.summary_url }}
+      report_url:
+        description: "Detailed regression report (GitHub Check URL)"
+        value: ${{ jobs.regression-test.outputs.report_url }}
+    secrets:
+      AIRBYTE_CLOUD_CLIENT_ID:
+        required: false
+      AIRBYTE_CLOUD_CLIENT_SECRET:
+        required: false
+
+jobs:
+  regression-test:
+    name: Run Regression Test
+    runs-on: ubuntu-latest
+    outputs:
+      success: ${{ steps.regression-test.outputs.success }}
+      summary_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      report_url: ${{ steps.create-report-check.outputs.report_url }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: uv sync --group dev
+
+      - name: Run Regression Test
+        id: regression-test
+        env:
+          AIRBYTE_CLOUD_CLIENT_ID: ${{ secrets.AIRBYTE_CLOUD_CLIENT_ID }}
+          AIRBYTE_CLOUD_CLIENT_SECRET: ${{ secrets.AIRBYTE_CLOUD_CLIENT_SECRET }}
+        run: |
+          ARGS=(--command "${{ inputs.command }}")
+
+          if [ -n "${{ inputs.target_image }}" ]; then
+            ARGS+=(--target-image "${{ inputs.target_image }}")
+          fi
+
+          if [ -n "${{ inputs.control_image }}" ]; then
+            ARGS+=(--control-image "${{ inputs.control_image }}")
+          fi
+
+          if [ -n "${{ inputs.connector_name }}" ]; then
+            ARGS+=(--connector-name "${{ inputs.connector_name }}")
+          fi
+
+          if [ -n "${{ inputs.connection_id }}" ]; then
+            ARGS+=(--connection-id "${{ inputs.connection_id }}")
+          fi
+
+          if [ -n "${{ inputs.state_path }}" ]; then
+            ARGS+=(--state-path "${{ inputs.state_path }}")
+          fi
+
+          uv run airbyte-ops cloud connector regression-test "${ARGS[@]}"
+
+      - name: Create Regression Test Report Check
+        id: create-report-check
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const reportPath = '/tmp/regression_test_artifacts/report.md';
+            
+            let reportContent = 'Report not generated';
+            if (fs.existsSync(reportPath)) {
+              reportContent = fs.readFileSync(reportPath, 'utf8');
+            }
+            
+            const conclusion = '${{ steps.regression-test.outcome }}' === 'success' ? 'success' : 'failure';
+            
+            const check = await github.rest.checks.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: 'Regression Test Report',
+              head_sha: context.sha,
+              status: 'completed',
+              conclusion: conclusion,
+              output: {
+                title: 'Regression Test Report',
+                summary: `Regression test comparing \`${{ inputs.target_image }}\` vs \`${{ inputs.control_image }}\` using \`${{ inputs.command }}\` command.`,
+                text: reportContent
+              }
+            });
+            
+            core.setOutput('report_url', check.data.html_url);
+
+      - name: Add Report Link to Summary
+        if: always()
+        run: |
+          {
+            echo ""
+            echo "---"
+            echo ""
+            echo "### View Full Report"
+            echo ""
+            echo "[Open Regression Test Report](${{ steps.create-report-check.outputs.report_url }})"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Test Artifacts
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: regression-test-artifacts-${{ github.run_id }}
+          path: /tmp/regression_test_artifacts/
+          retention-days: 7
