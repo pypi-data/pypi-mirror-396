@@ -1,0 +1,42 @@
+{% load admin_list %}
+{% load i18n %}
+{% load humanize %}
+
+{% load excel_tags %}
+
+{% include 'admin/edit_inline/tabular.html' %}
+
+{% block extrahead %}
+    {% comment %} {{ block.super }} {% endcomment %}
+    <link rel="stylesheet" type="text/css" href="/static/admin/css/changelists.css">
+{% endblock %}
+
+{% block after_inline %}
+    <p class="paginator override-pagination">
+        {% with inline_admin_formset.formset.cl as cl %}
+            {% make_range inline_admin_formset.formset.cl.paginator.num_pages as page_range %}
+            {% for i in page_range %}
+                {% if cl.paginator %}
+                    {% if forloop.first %}
+                        {% back_url cl i %}
+                    {% endif %}
+
+                    {% paginator_number cl i %}
+
+                    {% if forloop.last %}
+                        {% forward_url cl i %}
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+
+            {{ cl.result_count | intcomma }} 
+            {% if cl.result_count == 1 %}
+                {% comment %} {{ cl.opts.verbose_name }} {% endcomment %}
+                Item
+            {% else %}
+            {% comment %} {{ cl.opts.verbose_name_plural }} {% endcomment %}
+                Items
+            {% endif %}
+        {% endwith %}
+    </p>
+{% endblock %}

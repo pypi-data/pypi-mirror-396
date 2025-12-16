@@ -1,0 +1,146 @@
+Metadata-Version: 2.4
+Name: minchin.django.excel
+Version: 1.0.0
+Summary: Load Excel files into your Django database.
+Author-email: William Minchin <w_minchin@hotmail.com>
+Maintainer-email: William Minchin <w_minchin@hotmail.com>
+License-Expression: MIT
+Project-URL: Repository, https://github.com/minchinweb/minchin.django.excel
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Environment :: Web Environment
+Classifier: Intended Audience :: Developers
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Framework :: Django
+Description-Content-Type: text/markdown
+License-File: LICENSE.txt
+Requires-Dist: django>=4.0
+Requires-Dist: django-auto-prefetch>=0.0.6
+Requires-Dist: ciso8601>=2.2.0
+Requires-Dist: dateparser>=1.1.1
+Requires-Dist: numpy>=1.22.4
+Requires-Dist: pytz>=2022.1
+Requires-Dist: psycopg2>=2.9.3
+Requires-Dist: pandas>=1.4.2
+Requires-Dist: colorama>=0.4.4
+Requires-Dist: minchin.text>=6.1.0
+Requires-Dist: django-prettyjson>=0.4.1
+Requires-Dist: django-related-admin==1.0.1
+Requires-Dist: openpyxl>=3.0.10
+Provides-Extra: dev
+Requires-Dist: invoke; extra == "dev"
+Requires-Dist: minchin.releaser; extra == "dev"
+Requires-Dist: isort; extra == "dev"
+Requires-Dist: black; extra == "dev"
+Dynamic: license-file
+
+# Minchin.Django.Excel
+
+This is a Django app designed to allow you to push the contents of Excel
+workbooks to your Django database. I packaged it because while it seems like it
+should be simple, it involved many more moving pieces (including management
+commands, templates, template tags, admin pagination, etc.) than I initially
+thought it should.
+
+
+## Installation
+
+The package is installable via `pip`:
+
+```sh
+pip install minchin.django.excel
+```
+
+This will also install all the required dependencies (of which there are
+many...).
+
+From there, you need to add it to your list of installed apps in your Django
+`settings.py`:
+
+```py
+# settings.py
+
+INSTALLED_APPS = [
+  # first in line
+  "related_admin",  # for minchin.django.excel
+
+  # django built-ins
+  # others...
+  "django.contrib.humanize",
+  
+   # others...
+   "minchin.django.excel",
+   "prettyjson",  # for minchin.django.excel
+]
+
+# other settings...
+```
+
+Second, ensure that your `TEMPLATES` setting contains a DjangoTemplates backend
+whose `APP_DIRS` options is set to `True`:
+
+```py
+# settings.py
+
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "APP_DIRS": True,
+        # ...
+    }
+]
+
+# other settings...
+```
+
+and then run the included database migrations:
+
+```sh
+python manage.py migrate
+```
+
+### Loading Excel Data
+
+Includes is a Django management commands to load the Excel files:
+
+```sh
+python manage.py load_excel <excel_file.xlxs>
+```
+
+ From there, you would likely process the data further within Django.
+
+
+### Django Admin Site
+
+There are also several helpers so that you can see the loaded data on the
+built-in Django admin site. However, you'll need to register them to your admin site:
+
+```py
+# admin.py
+
+from minchin.django.excel.admin import WorkbookAdmin, SheetAdmin, RowAdmin
+from minchin.django.excel.models import Workbook, Sheet, Row
+
+admin.site.register(Workbook, WorkbookAdmin)
+admin.site.register(Sheet, SheetAdmin)
+admin.site.register(Row, RowAdmin)
+```
+
+
+## License
+
+The code is licensed under the MIT license. See attached `License.txt`
+
+
+## Changelog
+
+### Version 1.0.0 -- Dec. 12, 2025
+
+- initial public release
+
+## Contributions
+
+Contributions are welcome, however the scope of the project is intentionally
+limited. In particular though, there are no tests currently in place, and
+additions there would be appreciated.
