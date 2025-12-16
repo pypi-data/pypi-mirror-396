@@ -1,0 +1,24 @@
+"""{{ class_name }} interface"""
+from abc import abstractmethod
+from typing import List, Optional
+
+from vega.patterns import Repository
+{% if domain_module_base %}
+from {{ domain_module_base }}.domain.{{ resource_folder }}.{{ entity_file }} import {{ entity_name }}
+{% else %}
+from domain.{{ resource_folder }}.{{ entity_file }} import {{ entity_name }}
+{% endif %}
+
+
+class {{ class_name }}(Repository[{{ entity_name }}]):
+    """{{ class_name }} interface"""
+
+    @abstractmethod
+    async def find_all(self) -> List[{{ entity_name }}]:
+        """Find all {{ entity_name|lower }}s"""
+        pass
+
+    # Add your custom methods here
+    # @abstractmethod
+    # async def find_by_name(self, name: str) -> Optional[{{ entity_name }}]:
+    #     pass
