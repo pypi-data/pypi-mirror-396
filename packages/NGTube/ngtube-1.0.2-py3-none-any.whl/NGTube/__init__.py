@@ -1,0 +1,14 @@
+"""
+NGTube - A Python library for YouTube data extraction
+
+This package provides modules for extracting data from YouTube videos, channels, comments, and searches.
+"""
+
+from .core import YouTubeCore
+from .video.video import Video
+from .comments.comments import Comments
+from .channel.channel import Channel
+from .search.search import Search, SearchFilters
+
+__version__ = "1.0.2"
+__author__ = "NGTube Team"
