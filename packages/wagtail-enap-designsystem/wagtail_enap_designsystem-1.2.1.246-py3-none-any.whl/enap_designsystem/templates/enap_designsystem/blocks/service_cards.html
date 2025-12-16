@@ -1,0 +1,710 @@
+{% load wagtailcore_tags wagtailimages_tags %}
+{% block content %}
+
+<div class="service-cards-container layout-{{ value.layout_style|default:'side_by_horizontal' }}">
+    {% if value.layout_style == 'vertical' %}
+        <!-- Layout vertical: Cards dispostos verticalmente -->
+        <div class="service-cards-vertical">
+            {% for card in value.cards %}
+                <div class="feature-full-item-wrapper service-card--vertical">
+                    <a href="{{ card.link }}" class="feature-full-item">
+                        <div class="feature-full-item__media">
+                            {% if card.image %}
+                                {% image card.image original class="feature-full-item__image" alt="{{ card.title }}" %}
+                            {% else %}
+                                <div class="service-card__placeholder"></div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="feature-full-item__content">
+                            <h3 class="service-card-two__title">{{ card.title }}</h3>
+                            <div class="service-card-two__description">
+                                {{ card.description|richtext }}
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            {% endfor %}
+        </div>
+    
+    {% elif value.layout_style == 'destaque_em_cima' %}
+        <!-- Layout destaque em cima: 1 card grande em cima e grid abaixo -->
+        <div class="service-cards-destaque">
+            {% if value.cards %}
+                <!-- Card destacado -->
+                {% with featured_card=value.cards.0 %}
+                    <div class="service-card-two service-card--featured">
+                        <a href="{{ featured_card.link }}" class="service-card__link">
+                            <div class="service-card-two__image-container">
+                                {% if featured_card.image %}
+                                    {% image featured_card.image original class="service-card-two__image" alt="{{ featured_card.title }}" %}
+                                {% else %}
+                                    <div class="service-card__placeholder"></div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="service-card-two__content">
+                                <h3 class="service-card-two__title-large">{{ featured_card.title }}</h3>
+                                <div class="service-card-two__description">
+                                    {{ featured_card.description|richtext }}
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                {% endwith %}
+                
+                <!-- Grid de cards -->
+                <div class="service-cards-grid">
+                    {% for card in value.cards %}
+                        {% if not forloop.first %}
+                            <div class="service-card-two service-card--grid">
+                                <a href="{{ card.link }}" class="service-card-two">
+                                    <div class="service-card-two__image-container">
+                                        {% if card.image %}
+                                            {% image card.image original class="service-card-two__image" alt="{{ card.title }}" %}
+                                        {% else %}
+                                            <div class="service-card__placeholder"></div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <div class="service-card-two__content">
+                                        <h3 class="service-card-two__title">{{ card.title }}</h3>
+                                        <div class="service-card-two__description">
+                                            {{ card.description|richtext }}
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    
+    {% elif value.layout_style == 'centered' %}
+        <!-- Layout centered: Layout tipo notícia com destaque central -->
+        <div class="service-cards-news-grid">
+            {% for card in value.cards %}
+                {% if forloop.first %}
+                    <div class="service-card-two service-card--news-main">
+                        <a href="{{ card.link }}" class="service-card__link">
+                            <div class="service-card-two__image-container">
+                                {% if card.image %}
+                                    {% image card.image original class="service-card-two__image" alt="{{ card.title }}" %}
+                                {% else %}
+                                    <div class="service-card__placeholder"></div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="service-card-two__content">
+                                <h3 class="service-card-two__title-large">{{ card.title }}</h3>
+                                <div class="service-card-two__description">
+                                    {{ card.description|richtext }}
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="service-card-two service-card--news-item">
+                        <a href="{{ card.link }}" class="service-card__link">
+                            <div class="service-card-two__image-container">
+                                {% if card.image %}
+                                    {% image card.image original class="service-card-two__image" alt="{{ card.title }}" %}
+                                {% else %}
+                                    <div class="service-card__placeholder"></div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="service-card-two__content">
+                                <h3 class="service-card-two__title">{{ card.title }}</h3>
+                                <div class="service-card-two__description">
+                                    {{ card.description|richtext }}
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    
+    {% elif value.layout_style == 'destaque' %}
+        <!-- Layout destaque: 3 cards em destaque lado a lado -->
+        <div class="service-cards-three-featured">
+            {% for card in value.cards %}
+                {% if forloop.counter <= 3 %}
+                    <div class="feature-full-main__inner">
+                        <a href="{{ card.link }}" class="service-card-three__link">
+                            <div class="feature-full-main__inner">
+                                {% if card.image %}
+                                    {% image card.image original class="feature-full-main__image" alt="{{ card.title }}" %}
+                                {% else %}
+                                    <div class="service-card-three__placeholder"></div>
+                                {% endif %}
+                            </div>
+                            <div class="feature-full-main__overlay">
+                            <div class="feature-full-main__content">
+                                <h3 class="feature-full-main__title">{{ card.title }}</h3>
+                                <div class="feature-full-main__description">
+                                    {{ card.description|richtext }}
+                                </div>
+                            </div>
+                            </div>
+                        </a>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    
+    {% else %}
+        <!-- Layout default/side_by_horizontal: Cards dispostos horizontalmente -->
+        <div class="service-cards-horizontal">
+            {% for card in value.cards %}
+                <div class="service-card-two service-card--horizontal">
+                    <a href="{{ card.link }}" class="service-card__link">
+                        <div class="service-card-two__image-container">
+                            {% if card.image %}
+                                {% image card.image original class="service-card-two__image" alt="{{ card.title }}" %}
+                            {% else %}
+                                <div class="service-card__placeholder"></div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="service-card-two__content">
+                            <h3 class="service-card-two__title">{{ card.title }}</h3>
+                            <div class="service-card-two__description">
+                                {{ card.description|richtext }}
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+
+<!-- CSS para os layouts -->
+<style>
+    /* Base styles */
+    .service-cards-container {
+        margin: 2rem auto;
+        max-width: 1142px;
+        background-color: #fff; /* Background branco padrão para todos */
+    }
+    
+    .service-card {
+        background-color: #fff;
+        border-radius: 0.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        transition: box-shadow 0.3s, transform 0.3s;
+    }
+    
+    .service-card:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px);
+    }
+    
+    .service-card__link {
+        display: flex;
+        height: 100%;
+        text-decoration: none;
+        color: inherit;
+    }
+    
+    .service-card__image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+    
+    .service-card__placeholder {
+        width: 100%;
+        height: 100%;
+        background-color: #e9ecef;
+    }
+    
+    .service-card__title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 0 0 0.75rem;
+        color: #333;
+    }
+    
+    .service-card__description {
+        font-size: 0.875rem;
+        color: #555;
+    }
+    
+    .service-card__description p {
+        margin: 0 0 0.5rem;
+    }
+    
+    .service-card__description p:last-child {
+        margin-bottom: 0;
+    }
+    
+    /* ==========================
+       LAYOUT HORIZONTAL
+       ========================== */
+    
+    .layout-side_by_horizontal .service-cards-horizontal {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 2rem;
+        margin: 2rem 0;
+        max-width: 1142px;
+        margin: auto;
+        margin-top: 30px;
+        padding-bottom: 40px;
+    }
+    
+    .service-card--horizontal {
+        flex: 0 0 calc(33.333% - 1rem);
+        margin-bottom: 1.5rem;
+    }
+    
+    .service-card--horizontal .service-card__link {
+        flex-direction: column;
+    }
+    
+    .service-card--horizontal .service-card-two__image-container {
+        height: 200px;
+    }
+    
+    .service-card--horizontal .service-card-two__content {
+        padding: 1.25rem;
+        flex: 1;
+    }
+    
+    /* ==========================
+       LAYOUT VERTICAL
+       ========================== */
+    
+    .layout-vertical .service-cards-vertical {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+    
+    .layout-vertical .feature-full-item-wrapper {
+        border: 1px solid rgba(175, 240, 237, 0.2);
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+    
+    .service-card--vertical {
+        width: 100%;
+        border-bottom: 1px solid rgba(175, 240, 237, 0.2);
+        padding-bottom: 20px;
+    }
+    
+    .service-card--vertical .service-card__link {
+        flex-direction: row;
+    }
+    
+    .service-card--vertical .service-card__image-container {
+        flex: 0 0 35%;
+    }
+    
+    .service-card--vertical .service-card__content {
+        flex: 1;
+        padding: 1.5rem;
+    }
+    
+    /* ==========================
+       LAYOUT DESTAQUE EM CIMA
+       ========================== */
+    
+    .layout-destaque_em_cima .service-cards-destaque {
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+    }
+    
+    .service-card--featured {
+        width: 100%;
+    }
+    
+    .service-card--featured .service-card__link {
+        flex-direction: column;
+    }
+    
+    .service-card--featured .service-card-two__content {
+        padding: 10px 0;
+    }
+    
+    .service-card--featured .service-card-two__title-large {
+        font-size: 1.75rem;
+    }
+    
+    .service-card--featured .service-card-two__description {
+        font-size: 1rem;
+    }
+    
+    .service-cards-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.5rem;
+    }
+    
+    .service-card--grid {
+        height: 100%;
+    }
+    
+    .service-card--grid .service-card__link {
+        flex-direction: column;
+    }
+    
+    .service-card--grid .service-card-two__image-container {
+        height: 180px;
+    }
+    
+    .service-card--grid .service-card-two__content {
+        padding: 10px 0;
+        flex: 1;
+    }
+    
+    /* ==========================
+   LAYOUT CENTERED (NEWS STYLE)
+   ========================== */
+
+.layout-centered .service-cards-news-grid {
+    display: grid;
+    width: 100%;
+    grid-template-columns: 1fr 2fr; 
+    grid-gap: 1.5rem;
+}
+
+.service-card--news-main {
+    grid-column: 1;
+    grid-row: span 3; /* Ocupar verticalmente o espaço de 3 cards */
+}
+
+.service-card--news-main .service-card__link {
+    flex-direction: column;
+    height: 100%;
+}
+
+.service-card--news-main .service-card-two__image-container {
+    height: 100%;
+}
+
+.service-card--news-main .service-card-two__image-container .service-card-two__image {
+    height: 100%;
+}
+
+.service-card--news-main .service-card-two__content {
+    padding: 10px 0;
+}
+
+.service-card--news-main .service-card-two__title-large {
+    font-size: 1.5rem;
+}
+
+/* Todos os items secundários vão para a segunda coluna */
+.service-card--news-item {
+    grid-column: 2;
+    margin-bottom: 1rem;
+}
+
+/* Modificação para layout horizontal nos cards menores */
+.service-card--news-item .service-card__link {
+    flex-direction: row; /* Alterado para row para ficar horizontal */
+    align-items: flex-start;
+    gap: 15px;
+}
+
+.service-card--news-item .service-card-two__image-container {
+    width: 40%; 
+    height: 100%; 
+    flex-shrink: 0; 
+}
+
+.service-card--news-item .service-card-two__image-container img{
+    height: 100%; 
+}
+
+.service-card--news-item .service-card-two__content {
+    padding: 20px 0;
+    flex: 1;
+}
+
+.service-card--news-item .service-card-two__title {
+    font-size:22px;
+    margin-top: 0;
+}
+
+.service-card--news-item .service-card-two__description {
+    font-size: 0.85rem; /* Texto um pouco menor */
+}
+
+/* Hide extra items */
+.service-card--news-item:nth-of-type(n+5) {
+    display: none;
+}
+
+/* ==========================
+   RESPONSIVE ADJUSTMENTS - CENTERED
+   ========================== */
+
+
+/* Mobile */
+@media (max-width: 768px) {
+    /* Layout centered */
+    .layout-centered .service-cards-news-grid {
+        grid-template-columns: 1fr;
+        margin: 0;
+    }
+    
+    .service-card--news-main {
+        grid-column: 1;
+        grid-row: auto;
+    }
+    
+    .service-card--news-item {
+        grid-column: 1;
+    }
+
+    
+    /* Hide extra items */
+    .service-card--news-item:nth-of-type(n+4) {
+        display: none;
+    }
+}
+
+/* Mobile pequeno */
+@media (max-width: 480px) {
+    /* Para telas muito pequenas, voltar ao layout vertical */
+    .service-card--news-item .service-card__link {
+        flex-direction: column;
+    }
+    
+    .service-card--news-item .service-card-two__image-container {
+        width: 100%;
+        height: 120px;
+    }
+}
+    
+    /* ==========================
+       LAYOUT DESTAQUE (3 CARDS)
+       ========================== */
+    
+    .layout-destaque .service-cards-three-featured {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+        margin: 0 auto;
+    }
+    
+    .service-card-three {
+        position: relative;
+        background: #fff;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .service-card-three:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    }
+    
+    .service-card-three__link {
+        display: block;
+        text-decoration: none;
+        color: inherit;
+    }
+    
+    .service-card-three__image-container {
+        position: relative;
+        height: 220px;
+        overflow: hidden;
+    }
+    
+    .service-card-three__image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+        transition: transform 0.5s ease;
+    }
+    
+    .service-card-three:hover .service-card-three__image {
+        transform: scale(1.05);
+    }
+    
+    .service-card-three__placeholder {
+        width: 100%;
+        height: 100%;
+        background-color: #e0e0e0;
+    }
+    
+    .service-card-three__overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        padding: 1rem;
+        display: flex;
+        justify-content: space-between;
+    }
+    
+    
+    .service-card-three__category {
+        display: inline-block;
+        padding: 0.3rem 0.8rem;
+        background-color: rgba(0, 123, 255, 0.9);
+        color: #fff;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        border-radius: 4px;
+        letter-spacing: 0.5px;
+    }
+    
+    .service-card-three__date {
+        font-size: 0.75rem;
+        color: #fff;
+        background: rgba(0, 0, 0, 0.5);
+        padding: 0.3rem 0.8rem;
+        border-radius: 4px;
+    }
+    
+    .service-card-three__content {
+        padding: 1.5rem;
+    }
+    
+    .service-card-three__title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 0 0 0.75rem;
+        line-height: 1.3;
+        color: #333;
+    }
+    
+    .service-card-three__description {
+        color: #666;
+        font-size: 0.875rem;
+        line-height: 1.5;
+        margin-bottom: 0;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    
+    /* Cores diferentes para cada cartão */
+    .service-card-three:nth-child(1) .service-card-three__category {
+        background-color: rgba(233, 30, 99, 0.9);
+    }
+    
+    .service-card-three:nth-child(2) .service-card-three__category {
+        background-color: rgba(63, 81, 181, 0.9);
+    }
+    
+    .service-card-three:nth-child(3) .service-card-three__category {
+        background-color: rgba(76, 175, 80, 0.9);
+    }
+    
+    /* ==========================
+       RESPONSIVE ADJUSTMENTS
+       ========================== */
+    
+    /* Tablets */
+    @media (max-width: 1024px) {
+        /* Layout horizontal */
+        .service-card--horizontal {
+            flex: 0 0 calc(50% - 0.75rem);
+        }
+        
+        /* Layout destaque em cima */
+        .service-cards-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+        
+        /* Hide extra items */
+        .service-card--news-item:nth-of-type(n+7) {
+            display: none;
+        }
+        
+        /* Layout destaque (3 cards) */
+        .layout-destaque .service-cards-three-featured {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.25rem;
+        }
+        
+        .service-card-three:nth-child(3) {
+            grid-column: span 2;
+        }
+    }
+    
+    /* Mobile */
+    @media (max-width: 768px) {
+        /* Layout horizontal */
+        .service-card--horizontal {
+            flex: 0 0 100%;
+        }
+        
+        /* Layout vertical */
+        .service-card--vertical .service-card__link {
+            flex-direction: column;
+        }
+
+        .service-cards-container {
+            margin: 2rem 20px;
+        }
+        
+        .service-card--vertical .service-card__image-container {
+            flex: none;
+            height: 200px;
+        }
+        
+        /* Layout destaque em cima */
+        .service-cards-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        /* Layout centered */
+        .layout-centered .service-cards-news-grid {
+            margin: 0 ;
+            grid-template-columns: 1fr;
+            grid-template-areas:
+                "m"
+                "s1"
+                "s2"
+                "s3"
+                "s4";
+        }
+        
+        /* Hide extra items */
+        .service-card--news-item:nth-of-type(n+5) {
+            display: none;
+        }
+        
+        /* Layout destaque (3 cards) */
+        .layout-destaque .service-cards-three-featured {
+            grid-template-columns: 1fr;
+        }
+        
+        .service-card-three:nth-child(3) {
+            grid-column: auto;
+        }
+    }
+    
+    /* Mobile pequeno */
+    @media (max-width: 480px) {
+        /* Layout destaque em cima */
+        .service-cards-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        /* Reduzir tamanho das imagens */
+        .service-card--featured .service-card-two__image-container {
+            height: 250px;
+        }
+    }
+</style>
+
+{% endblock %}
