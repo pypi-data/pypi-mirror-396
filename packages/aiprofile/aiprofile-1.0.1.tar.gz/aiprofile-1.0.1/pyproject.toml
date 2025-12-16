@@ -1,0 +1,75 @@
+[tool.poetry]
+name = "aiprofile"
+version = "1.0.1"
+description = "AI-powered Python profiling tool with Claude AI insights and intelligent optimization recommendations"
+authors = ["AI Profile Team"]
+readme = "README.md"
+license = "MIT"
+keywords = ["profiling", "performance", "ai", "claude", "python", "optimization", "bottleneck-detection"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Monitoring",
+]
+packages = [
+    { include = "cli", from = "packages/cli/src" },
+]
+
+[tool.poetry.dependencies]
+python = "^3.9,!=3.11.0"
+typer = "^0.9.0,<0.13.0"
+rich = "^13.0.0"
+anthropic = "^0.71.0"
+psutil = "^5.9.0"
+pydantic = "^2.0.0"
+scalene = "^1.5.0"
+tenacity = "^8.2.0"
+click = "^8.0.0,<8.2.0"
+requests = "^2.31.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"
+pytest-cov = "^4.1.0"
+pytest-mock = "^3.11.0"
+black = "^23.0.0"
+ruff = "^0.14.3"
+mypy = "^1.5.0"
+
+[tool.poetry.scripts]
+aiprofile = "cli.main:app"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+testpaths = ["packages/cli/tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --strict-markers"
+
+[tool.black]
+line-length = 100
+target-version = ['py39', 'py310', 'py311', 'py312']
+
+[tool.ruff]
+target-version = "py39"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "N", "W", "B", "UP"]
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
