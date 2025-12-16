@@ -1,0 +1,134 @@
+# -*- mode: yaml; coding: utf-8 -*-
+#
+# Copyright 2020 CONTACT Software GmbH
+# https://www.contact-software.com/
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Schema definitions for spin
+
+spin:
+  type: object
+  help: |
+    Settings required for running spin. Many of these cannot be set
+    via a spinfile or via the command line, but are computed by spin.
+  properties:
+    spinfile:
+      type: path
+      help: |
+        The name of the configuration file for the project. This can
+        be overridden via 'spin -f <filename>'.
+      default: spinfile.yaml
+    project_root:
+      type: path internal
+      help: The path to the project directory.
+      # value is set during runtime
+    spin_dir:
+      type: path internal
+      help: |
+        The absolute path to spin's project related data. This is also the place
+        environments are provisioned.
+      default: "{spin.project_root}/.spin"
+    launch_dir:
+      type: path internal
+      help: The directory in which spin was called.
+      # value is set during runtime
+    data:
+      type: path
+      default: "{SPIN_DATA}"
+      help: Path that points to spins data
+    config:
+      type: path internal
+      default: "{SPIN_CONFIG}"
+      help: Path where to store global configuration for spin
+    version:
+      type: str internal
+      help: The version of spin that is being used.
+    project_name:
+      type: str
+      help: The project that is spin running on
+    topo_plugins:
+      type: list internal
+      help: Topological ordered list of initialized plugins
+    index_url:
+      type: str
+      help: The default Python package index url.
+      default: https://pypi.org/simple
+    extra_index:
+      type: str
+      help: Additional index to install plugin-packages from.
+    hooks:
+      type: object internal
+      help: |
+        A dictionary mapping workflow names to lists of commands. This is
+        automatically set up by the `when` argument to :py:func:`spin.task`.
+
+environment:
+  type: object
+  help: |
+    `environment` maps additional environment variables and their values which
+    will added to the environment when running spin.
+
+extra_tasks:
+  type: object
+  help: |
+    `extra_tasks` maps task names to task definitions, where task
+    definitions support ``env`` and ``script`` keys.
+
+verbosity:
+  type: str internal
+  default: NORMAL
+  help: |
+    `verbosity` defines the level of which spin will print messages to stdout.
+    Levels are: QUIET, NORMAL, INFO, DEBUG
+
+plugins:
+  type: list
+  help: The list of plugins to import.
+
+plugin_packages:
+  type: list
+  help: |
+    A list of plugin packages to install. Supports the same
+    requirements specifiers as pip, including URLs, local file names
+    and PEP 440 specifiers.
+
+plugin_paths:
+  type: list
+  help: |
+    A list of paths to local directories containing plugin modules and their
+    optional schemas.
+
+platform:
+  type: object
+  help: Providing OS/platform-specific properties
+  properties:
+    exe:
+      type: path
+      help: The file type of executables, "exe" on Windows and "" on non-Windows
+
+loaded:
+  type: object internal
+  help: Mapping between plugin names and their module objects
+
+build_rules:
+  type: object
+  help: Configuration of rules for build targets.
+
+system_requirements:
+  type: object
+  help: The system requirements for the current project.
+
+schema:
+  type: object internal
+  help: The schema shipped by spin.
