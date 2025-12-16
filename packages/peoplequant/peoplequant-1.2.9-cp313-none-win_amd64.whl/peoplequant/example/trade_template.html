@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <!-- 其他代码不变，新增这行 -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text x=%220%22 y=%2290%22 font-size=%2290%22>📊</text></svg>" type="image/svg+xml">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>策略管理</title>
+    <style>
+        /* 样式与之前一致，省略重复部分 */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: "Microsoft YaHei", Arial, sans-serif; margin: 20px; background-color: #f8f9fa; }
+        h1 { text-align: center; margin: 20px 0; color: #333; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .table-section { 
+            background: white; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
+            padding: 20px; 
+            margin-bottom: 30px;
+        }
+        .section-title { 
+            font-size: 18px; 
+            font-weight: bold; 
+            margin-bottom: 15px; 
+            color: #2c3e50; 
+            padding-bottom: 10px; 
+            border-bottom: 1px solid #eee;
+        }
+        .position-table, .strategy-table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            font-size: 14px;
+        }
+        .position-table th, .strategy-table th { 
+            background-color: #f1f3f5; 
+            color: #212529; 
+            padding: 12px 10px; 
+            text-align: left; 
+            border: 1px solid #dee2e6;
+            position: sticky;
+            top: 0;
+        }
+        .position-table td, .strategy-table td { 
+            padding: 10px; 
+            border: 1px solid #dee2e6; 
+        }
+        .position-table tr:hover, .strategy-table tr:hover { 
+            background-color: #f8f9fa; 
+        }
+        .pos-long { background-color: #fff5f5; }
+        .pos-short { background-color: #f0f7ff; }
+        .profit-positive { color: #dc3545; font-weight: 500; }
+        .profit-negative { color: #007bff; font-weight: 500; }
+        .price-up { color: #dc3545; }
+        .price-down { color: #007bff; }
+        .strategy-name { 
+            font-weight: bold; 
+            background-color: #e8f4f8; 
+            padding: 5px 10px; 
+            border-radius: 4px;
+        }
+        .contract-item { padding-left: 20px; }
+        button { 
+            padding: 4px 10px; 
+            border: none; 
+            border-radius: 3px; 
+            cursor: pointer; 
+            font-size: 13px;
+            margin-right: 5px;
+        }
+        button.enable { background-color: #28a745; color: white; }
+        button.pause { background-color: #dc3545; color: white; }
+        button.strategy-btn { margin-left: 10px; }
+    </style>
+</head>
+<body>
+    <h1>策略管理</h1>
+    <div class="container">
+        <!-- 持仓明细表格 -->
+        <div class="table-section">
+            <div class="section-title">持仓明细</div>
+            <table class="position-table">
+                <tr>
+                    <th>合约名</th>
+                    <th>多/空</th>
+                    <th>数量（手）</th>
+                    <th>开仓均价</th>
+                    <th>浮动盈亏</th>
+                    <th>最新价</th>
+                </tr>
+                <tbody id="position-table-body"></tbody>
+            </table>
+        </div>
+
+        <!-- 策略-合约管理表格 -->
+        <div class="table-section">
+            <div class="section-title">策略-合约管理</div>
+            <table class="strategy-table">
+                <tr>
+                    <th>策略名</th>
+                    <th>包含合约</th>
+                    <th>操作</th>
+                </tr>
+                <tbody id="strategy-table-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+    <script>
+        const socket = io.connect(document.domain + ':' + location.port, {
+            transports: ['polling'],  // 禁用 WebSocket，只用长轮询
+            reconnection: true,
+            reconnectionAttempts: 100,  // 最多重连100次
+            reconnectionDelay: 1000,    // 重连间隔1秒
+            reconnectionDelayMax: 5000, // 最大重连间隔5秒
+            pingTimeout: 120000,        // 与后端一致（120秒）
+            pingInterval: 30000         // 与后端一致（30秒）
+        });
+
+        // 监听连接状态，打印日志
+        socket.on('connect', function() {
+            console.log("✅ WebSocket 连接成功");
+            socket.emit('request_initial_data'); // 连接成功后请求初始数据
+        });
+
+        socket.on('connect_error', (error) => {
+            console.error("❌ 连接错误（可能是数据解析失败）：", error);
+        });
+
+
+        // 监听连接状态，打印详细原因
+        socket.on('disconnect', function(reason) {
+            console.error(`⚠️ WebSocket 断开原因：${reason}`);
+            // 常见原因：ping 超时（后端没收到前端 ping）、服务器过载、网络波动
+            if (reason === 'ping timeout') {
+                console.error("❌ 断开原因：ping 超时（网络不稳定或后端压力大）");
+            } else if (reason === 'transport close') {
+                console.error("❌ 断开原因：传输通道关闭（网络中断）");
+            }
+        });
+        // 存储合约ID与持仓行的映射（用于快速更新）
+        const positionMap = new Map(); // key: "合约ID_多空", value: 行DOM
+
+        // 初始化：接收全量数据
+        socket.on('initial_data', function(data) {
+            console.log("初始数据合约列表：", data.flatMap(s => s.contracts.map(c => c.name)));
+            // 验证数据是否为数组
+            if (!Array.isArray(data)) {
+                console.error("初始数据不是数组！", data);
+                return;
+            }
+            // 逐个打印策略，排查异常合约
+            data.forEach((strategy, sIdx) => {
+                //console.log(`策略${sIdx}：`, strategy);
+                if (strategy.contracts && Array.isArray(strategy.contracts)) {
+                    strategy.contracts.forEach((contract, cIdx) => {
+                        //console.log(`策略${sIdx}-合约${cIdx}：`, contract);
+                        // 检查关键字段是否存在
+                        const requiredFields = ['name', 'pos_long', 'float_profit_long', 'latest_price'];
+                        requiredFields.forEach(field => {
+                            if (contract[field] === undefined) {
+                                console.error(`合约${cIdx}缺少字段：${field}`);
+                            }
+                        });
+                    });
+                } else {
+                    console.error(`策略${sIdx}无合法合约列表`);
+                }
+            });
+            // 验证每个策略是否包含必要字段
+            const validStrategies = data.filter(strategy => {
+                const hasContracts = strategy.contracts && Array.isArray(strategy.contracts);
+                if (!hasContracts) console.error("策略缺少合约列表：", strategy);
+                return hasContracts;
+            });
+            // 只渲染合法数据
+            renderPositionTable(validStrategies);
+            renderStrategyTable(validStrategies);
+        });
+
+        // 单独写监听函数，避免被覆盖
+        function handleBatchUpdates(batchData) {
+            batchData.forEach(strategy => {
+                // 更新策略表格状态
+                const strategyRow = document.querySelector(`tr[data-strategy-id="${strategy.id}"]`);
+                if (strategyRow) {
+                    strategy.contracts.forEach(contract => {
+                        // 更新状态显示
+                        const statusElem = strategyRow.querySelector(`.contract-item[data-contract-id="${contract.id}"] .contract-status`);
+                        if (statusElem) {
+                            statusElem.textContent = contract.status === 'enable' ? '已启用' : '已暂停';
+                            statusElem.style.color = contract.status === 'enable' ? '#28a745' : '#6c757d';
+                        }
+                        // 更新持仓数据
+                        addOrUpdatePositionRow(contract);
+                    });
+                }
+            });
+        }
+
+        // 绑定批量事件监听（确保不被其他代码覆盖）
+        socket.off('batch_strategy_updates'); // 先移除旧监听，避免重复
+        socket.on('batch_strategy_updates', handleBatchUpdates);
+
+        // 优化策略更新监听（确保收到就更）
+        // 监听后端批量更新事件（唯一数据源）
+        socket.on('batch_strategy_updates', function(batchData) {
+            console.log(`📥 收到批量更新：${batchData.length} 个策略`);
+            
+            // 遍历所有策略的更新数据
+            batchData.forEach(strategy => {
+                console.log(`  处理策略：${strategy.id}（${strategy.name || '未命名'}）`);
+                
+                // 遍历策略下的所有合约
+                strategy.contracts.forEach(contract => {
+                    console.log(`  - 合约 ${contract.name}：状态=${contract.status}，最新价=${contract.latest_price}`);
+                    
+                    // 1. 更新策略管理表格的合约状态
+                    const strategyRow = document.querySelector(`.strategy-table tbody tr[data-strategy-id="${strategy.id}"]`);
+                    if (strategyRow) {
+                        // 找到当前合约对应的DOM元素
+                        const contractItem = strategyRow.querySelector(`.contract-item[data-contract-id="${contract.id}"]`);
+                        if (contractItem) {
+                            // 更新状态文本和颜色
+                            const statusElem = contractItem.querySelector('.contract-status');
+                            if (statusElem) {
+                                statusElem.textContent = contract.status === 'enable' ? '已启用' : '已暂停';
+                                statusElem.style.color = contract.status === 'enable' ? '#28a745' : '#6c757d';
+                            }
+                            
+                            // （可选）更新其他策略表格字段（如最新价）
+                            const priceElem = contractItem.querySelector('.contract-price');
+                            if (priceElem) {
+                                priceElem.textContent = contract.latest_price.toFixed(2);
+                            }
+                        } else {
+                            console.warn(`  未找到合约DOM：${contract.id}（策略${strategy.id}）`);
+                        }
+                    } else {
+                        console.warn(`  未找到策略行DOM：${strategy.id}`);
+                    }
+                    
+                    // 2. 更新持仓表格数据
+                    addOrUpdatePositionRow(contract);
+                });
+            });
+        });
+
+        // 保留旧事件监听（兼容手动点击推送，可选）
+        socket.on('strategy_update', function(updatedStrategy) {
+            console.log("✅ 收到单条策略更新：", updatedStrategy.id);
+            // 复用批量更新的处理逻辑
+            const batchData = [updatedStrategy];
+            batchData.forEach(updatedStrategy => {
+                // （复制上面批量事件中的处理代码，确保单条更新也能生效）
+                const strategyId = updatedStrategy.id;
+                const strategyRow = document.querySelector(`.strategy-table tbody tr[data-strategy-id="${strategyId}"]`);
+                updatedStrategy.contracts.forEach(contract => {
+                    addOrUpdatePositionRow(contract);
+                    if (strategyRow) {
+                        const contractItem = strategyRow.querySelector(`.contract-item[data-contract-id="${contract.id}"]`);
+                        if (contractItem) {
+                            const statusElem = contractItem.querySelector('.contract-status');
+                            if (statusElem) {
+                                statusElem.textContent = contract.status === 'enable' ? '已启用' : '已暂停';
+                                statusElem.style.color = contract.status === 'enable' ? '#28a745' : '#6c757d';
+                            }
+                        }
+                    }
+                });
+            });
+        });
+
+        // 初始化渲染持仓表格
+        function renderPositionTable(strategies) {
+            const tbody = document.getElementById('position-table-body');
+            tbody.innerHTML = '';
+            positionMap.clear();
+
+            strategies.forEach(strategy => {
+                strategy.contracts.forEach(contract => {
+                    addOrUpdatePositionRow(contract); // 复用更新逻辑
+                });
+            });
+        }
+
+        // 初始化渲染策略表格
+        function renderStrategyTable(strategies) {
+            const tbody = document.getElementById('strategy-table-body');
+            tbody.innerHTML = '';
+
+            strategies.forEach(strategy => {
+                renderStrategyRow(strategy); // 渲染单条策略行
+            });
+        }
+
+        // 持仓表格更新函数（配套完整实现）
+        // 持仓表格更新函数（配套完整实现）
+        function addOrUpdatePositionRow(contract) {
+            const positionTbody = document.getElementById('position-table-body');
+            if (!positionTbody) {
+                console.error("持仓表格tbody不存在");
+                return;
+            }
+
+            // 生成唯一行键（基于合约ID+多空方向，避免重复）
+            const longKey = `pos_${contract.id}_long`;
+            const shortKey = `pos_${contract.id}_short`;
+
+            // 更新多头持仓行
+            let longRow = document.querySelector(`tr[data-key="${longKey}"]`);
+            if (!longRow) {
+                longRow = document.createElement('tr');
+                longRow.dataset.key = longKey;
+                positionTbody.appendChild(longRow);
+            }
+            // 移除最后一列状态数据
+            longRow.innerHTML = `
+                <td>${contract.name}</td>
+                <td>多头</td>
+                <td>${contract.pos_long}</td>
+                <td>${contract.open_price_long ? contract.open_price_long.toFixed(2) : '-'}</td>
+                <td>${contract.float_profit_long >= 0 ? '+' : ''}${contract.float_profit_long.toFixed(2)}</td>
+                <td>${contract.latest_price.toFixed(2)}</td>
+            `;
+
+            // 更新空头持仓行
+            let shortRow = document.querySelector(`tr[data-key="${shortKey}"]`);
+            if (!shortRow) {
+                shortRow = document.createElement('tr');
+                shortRow.dataset.key = shortKey;
+                positionTbody.appendChild(shortRow);
+            }
+            // 移除最后一列状态数据
+            shortRow.innerHTML = `
+                <td>${contract.name}</td>
+                <td>空头</td>
+                <td>${contract.pos_short}</td>
+                <td>${contract.open_price_short ? contract.open_price_short.toFixed(2) : '-'}</td>
+                <td>${contract.float_profit_short >= 0 ? '+' : ''}${contract.float_profit_short.toFixed(2)}</td>
+                <td>${contract.latest_price.toFixed(2)}</td>
+            `;
+        }
+
+        // 渲染单条策略行（用于初始化和更新）
+        function renderStrategyRow(strategy) {
+            let row = document.querySelector(`.strategy-table tbody tr[data-strategy-id="${strategy.id}"]`);
+            if (!row) {
+                row = document.createElement('tr');
+                document.getElementById('strategy-table-body').appendChild(row);
+            }
+
+            // 生成多个合约的 HTML（循环渲染策略下所有合约）
+            let contractHtml = '';
+            strategy.contracts.forEach(contract => {
+                contractHtml += `
+                    <div class="contract-item" data-contract-id="${contract.id}" style="margin: 5px 0; padding: 3px; border-bottom: 1px dashed #eee;">
+                        ${contract.name} 
+                        <span class="contract-status" style="margin-left:10px; font-size:12px; color: ${contract.status === 'enable' ? '#28a745' : '#6c757d'}">
+                            ${contract.status === 'enable' ? '已启用' : '已暂停'}
+                        </span>
+                        <button class="enable" onclick="setContractStatus('${strategy.id}', '${contract.id}', 'enable')">启用</button>
+                        <button class="pause" onclick="setContractStatus('${strategy.id}', '${contract.id}', 'pause')">暂停</button>
+                    </div>
+                `;
+            });
+
+            // 填充策略行内容（包含多个合约）
+            row.innerHTML = `
+                <td class="strategy-name">${strategy.name}</td>
+                <td><div class="contract-list">${contractHtml}</div></td>
+                <td>
+                    <button class="enable strategy-btn" onclick="setStrategyStatus('${strategy.id}', 'enable')">启用策略</button>
+                    <button class="pause strategy-btn" onclick="setStrategyStatus('${strategy.id}', 'pause')">暂停策略</button>
+                </td>
+            `;
+
+            // 最后设置 data-strategy-id（避免被 innerHTML 覆盖）
+            row.setAttribute('data-strategy-id', strategy.id);
+        }
+
+        // 根据策略更新持仓表格
+        function updatePositionByStrategy(strategy) {
+            strategy.contracts.forEach(contract => {
+                addOrUpdatePositionRow(contract); // 复用新增/更新逻辑
+            });
+        }
+
+        // 更新策略表格中的单个策略行
+        function updateStrategyTable(strategy) {
+            renderStrategyRow(strategy); // 复用渲染逻辑
+        }
+
+        // 策略级操作
+        // 策略级操作
+        function setStrategyStatus(strategyId, status) {
+            console.log(`触发策略状态切换：${strategyId} → ${status}`);
+            
+            // 前端先临时更新（无需等后端推送）
+            const strategyRow = document.querySelector(`.strategy-table tbody tr[data-strategy-id="${strategyId}"]`);
+            if (strategyRow) {
+                // 更新该策略下所有合约的状态显示
+                const contractItems = strategyRow.querySelectorAll('.contract-item');
+                contractItems.forEach(item => {
+                    const statusElem = item.querySelector('.contract-status');
+                    if (statusElem) {
+                        statusElem.textContent = status === 'enable' ? '已启用' : '已暂停';
+                        statusElem.style.color = status === 'enable' ? '#28a745' : '#6c757d';
+                    }
+                });
+            }
+            
+            // 发送请求给后端
+            socket.emit('update_strategy_status', {
+                strategy_id: strategyId,
+                status: status
+            });
+        }
+
+        // 保留点击即时反馈（关键提升体验）
+        function setContractStatus(strategyId, contractId, status) {
+            console.log(`触发合约状态切换：${contractId} → ${status}`);
+            // 前端先临时更新（无需等后端推送）
+            const strategyRow = document.querySelector(`.strategy-table tbody tr[data-strategy-id="${strategyId}"]`);
+            const contractItem = strategyRow?.querySelector(`.contract-item[data-contract-id="${contractId}"]`);
+            const statusElem = contractItem?.querySelector('.contract-status');
+            if (statusElem) {
+                statusElem.textContent = status === 'enable' ? '已启用' : '已暂停';
+                statusElem.style.color = status === 'enable' ? '#28a745' : '#6c757d';
+            }
+            // 发送请求给后端
+            socket.emit('update_contract_status', {
+                strategy_id: strategyId,
+                contract_id: contractId,
+                status: status
+            });
+        }
+
+        // 请求初始数据
+        window.onload = function() {
+            socket.emit('request_initial_data');
+        };
+    </script>
+</body>
+</html>
