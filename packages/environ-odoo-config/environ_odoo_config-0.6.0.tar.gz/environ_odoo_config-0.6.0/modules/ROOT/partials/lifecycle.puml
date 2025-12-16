@@ -1,0 +1,35 @@
+@startuml
+start
+:PARSE CLI args;
+:LOAD os.environ;
+partition "**process** mapper" {
+    #LawnGreen:APPLY compatibility mapper;
+    #Chocolate:LOAD entry-point mapper;
+    #LimeGreen:EXCLUDE mapper;
+    repeat :for each mapper;
+        #LawnGreen:APPLY mapper;
+    repeat while (has mapper)
+
+    #Chocolate:LOAD entry-point post_mapper;
+    #LimeGreen:EXCLUDE post_mapper;
+    repeat :for each post_mapper;
+        #LawnGreen:APPLY post_mapper;
+    repeat while (has post_mapper)
+}
+partition "**process** converter" {
+    #Chocolate:LOAD converter;
+    repeat :for each converter;
+      #LawnGreen:APPLY converter;
+    repeat while (has converter)
+
+    #Chocolate:LOAD post_converter;
+    repeat :for each post_converter;
+        #LawnGreen:APPLY post_converter;
+    repeat while (has post_converter)
+}
+partition "Output config" {
+:Generate Odoo Cli;
+:Direct edit config file;
+}
+stop
+@enduml

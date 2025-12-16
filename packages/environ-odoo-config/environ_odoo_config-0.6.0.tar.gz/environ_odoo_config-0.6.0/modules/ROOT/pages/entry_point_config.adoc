@@ -1,0 +1,39 @@
+= Entrypoint for default config
+
+== Mapper
+You can change the config with a custom `entry-point` inside your python libs named `environ_odoo_config.mapper`.
+
+This entry-point expect a function following this signnature.
+
+[,python]
+----
+from typing_extensions import Union, Dict
+from environ_odoo_config.environ import Environ # <4>
+# <1> <2>
+def your_function_mapper(current_env: Union[Environ, Dict[str,str]]) -> Union[Environ, Dict[str,str]]:
+    return {} # <3>
+----
+<1> The name of the function don't matter
+<2> Only `1` parameter is expected, `environ_odoo_config.api.Env` is a `dict` on steroid
+<3> You can return a `dict` or an `environ_odoo_config.api.Env`
+<4> This import is not required if you don't want officially depends of `{page-component-name}`
+
+CAUTION: Use old style typing without `|` because {page-component-name} still support python 3.8
+
+The `current_env` is a copy, so you can change it if you want, but only the `return` can actually change the environ.
+
+In your `pyproject.toml` you need to declare your entry-point too.
+
+.pyproject.toml
+[,toml]
+----
+# ...
+[project.entry-points."environ_odoo_config.mapper"] # <1>
+# <2> <3>
+awesome_mapper = "package.path.to.file:your_function_mapper"
+----
+<1> The group of entry point
+<2> The name of the entry point don't matter to {page-component-name}
+<3> The path to your function following `<path with dot>:<function_name>`
+
+NOTE: In your Odoo environment, you can exclude a `mapper` with the variable `ODOO_ENV2CONFIG_EXCLUDE_MAPPERS="awesome_mapper,awesome_mapper2"`.

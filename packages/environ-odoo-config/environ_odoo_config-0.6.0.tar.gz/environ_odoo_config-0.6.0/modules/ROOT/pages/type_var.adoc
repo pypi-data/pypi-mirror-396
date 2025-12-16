@@ -1,0 +1,127 @@
+= Type des valeurs
+
+Environment variables contains only string as value.
+{page-component-name} convert this string value to python types (`int`, `float`, `list`)
+
+[[env_var_value_type_str]]
+== String
+
+Stay as is, no transformation is applied unless specified.
+
+[[env_var_value_type_bool]]
+== Boolean
+
+Convert to a `bool`.
+
+`True` value are.
+
+* `"True"`
+* `"true"`
+* `"t"`
+* `"T"`
+* `"1"`
+
+explicit `False` value are.
+
+* `"False"`
+* `"false"`
+* `"f"`
+* `"F"`
+* `"0"`
+
+IMPORTANT: If documentation don't spécifiy `Explicit Boolean` then every not `True` value are used as `False`
+
+[[env_var_value_type_int]]
+== Int
+
+Convert to python `int`
+
+`int` value are :
+
+* `"123456"`
+* `"1.2"` -> `1`
+
+Otherwise a `ValueError` is raise.
+
+[[env_var_value_type_Path]]
+== Path
+
+Convert to python `pathlib.Path`
+
+The value can start `/` otherwise it's relative to current working dir.
+
+NOTE: The path don't have to exist to be valid, see the documentation of the field for further information.
+
+
+[[env_var_value_type_float]]
+== Float
+
+Convert to python `int`
+
+`int` value are :
+
+* `"123456"` -> `"123456.0"`
+* `"1.2"` -> `1.2`
+
+Otherwise a `ValueError` is raise.
+
+[[env_var_value_type_enum]]
+== Enum
+
+Enum are restricted `string` value.
+The possible value must be explicit in the doc.
+
+[[env_var_value_type_repeatable]]
+== Repeatable
+
+The repeatable type allow to split declaring value into multiple environ variable.
+The environ variable is used as the `key` to look up or a prefix with `<key>_<xxx>`.
+
+
+
+This two ways can be mixed, like in the sample below.
+
+A repeatable env variable, for exemple `VAR_A="1" VAR_B="2"` will be converted to a python `tuple` of two element `VAR=("1", "2")`.
+
+NOTE: Each value is then converted to the wanted scalar type.
+
+IMPORTANT: Read the doc of each to know the internal type used, most final values are deduplicated
+
+The behavior depends of the value.
+
+* If the value is "True" then the suffix is used.
+* If the value is "False" then value is discard
+* If the value is not a boolean (int, float, string, csv) then the suffix is taken has value.
+
+.Environ
+[,shell]
+----
+VAR="v1,v2" # <.>
+VAR_0="v0,bar" # <.>
+VAR_2="1" # <.>
+VAR_FOO="True" # <.>
+VAR_XX="bar" # <.>
+
+# Result VAR => "v1,v2,v0,bar,1,foo,bar"
+----
+<.> Classic csv value
+<.> csv value : don't use the suffix
+<.> Not a boolean value : use the value
+<.> Boolean value: The suffix `FOO` is used
+<.> Not a boolean value : use the value
+
+NOTE: {page-component-name} always lower the suffix, and remove duplicate value.
+
+
+[[env_var_value_type_csv]]
+== CSV
+
+The `csv` type allow declaring a comma separated values.
+
+TIP: This mostly an internal type for retro-compatibility. In all the case a <<env_var_value_type_repeatable>> exist.
+
+.Sample
+[,shell]
+----
+VAR="1,5"
+----

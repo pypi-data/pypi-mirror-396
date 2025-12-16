@@ -1,0 +1,74 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "environ-odoo-config"
+version = "0.6.0"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
+    "Programming Language :: Python :: 3 :: Only",
+    "Framework :: Odoo",
+    "Framework :: Odoo :: 12.0",
+    "Framework :: Odoo :: 13.0",
+    "Framework :: Odoo :: 14.0",
+    "Framework :: Odoo :: 15.0",
+    "Framework :: Odoo :: 16.0",
+    "Framework :: Odoo :: 17.0",
+    "Framework :: Odoo :: 18.0",
+    "Typing :: Typed",
+]
+dependencies = [
+    "python-dotenv~=1.0;python_version>'3.7'",
+    "python-dotenv==0.21.1;python_version=='3.7'",
+    "typing-extensions>=4.3.0,<5",
+    "get-annotations>=0.1.2;python_version<'3.10'",
+    "importlib-metadata>=6.7.0",
+]
+
+[project.scripts]
+odoo-env2config = "environ_odoo_config.cli:cli_main"
+
+[project.entry-points."environ_odoo_config.extension"]
+auto_load_widemodules = "environ_odoo_config.extension.auto_load_widemodules:AutoLoadServerWideModuleExtension"
+db_max_conn_auto = "environ_odoo_config.extension.db_max_conn_auto:AutoMaxDatabaseConnExtension"
+remove_addon_path = "environ_odoo_config.extension.remove_addon_path:RemoveAddonPathExtension"
+auto_odoo_addon_path = "environ_odoo_config.extension.auto_odoo_addon_path:AutoOdooDirNameAddonsToAddonsPath"
+
+[project.entry-points."environ_odoo_config.auto_server_wide_module"]
+web = "environ_odoo_config.utils:always_true"
+base = "environ_odoo_config.utils:always_true"
+
+[project.entry-points."environ_odoo_config.mapper"]
+postgresql1_libpq = "environ_odoo_config.extension.postgresql_mapper:postgresql_env_libpq"
+postgresql2_docker = "environ_odoo_config.extension.postgresql_mapper:postgresql_env_docker"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/environ_odoo_config", "src/odoo"]
+
+# https://docs.astral.sh/uv/reference/settings/
+[tool.uv]
+required-version = ">=0.6.0"
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "pytest-mock",
+]
+
+[tool.pytest]
+log_cli = true
+log_cli_level = "debug"
+adopts = ["--cov", "--cov-fail-under=80"]
+
+[tool.coverage.run]
+omit = [
+    "*/odoo/addons/*"
+]

@@ -1,0 +1,59 @@
+= {page-component-name}
+
+{page-component-name} allow to convert environment variable to valide Odoo cli. +
+This support Odoo `12.0` until `19.0` for now and works on python 3.8 to 3.13. +
+
+This lib was created before Odoo config allow environment variable (appear in 19.0, see <<env_conflic>>).
+
+The main goal is to have a unified config over environment and Odoo version, because most cloud provider support environment varaible but don't support custom `cli` args on start-up.
+
+CAUTION: This package is not an Odoo module, you need to invoke it before Odoo start up.
+
+Because all the config is provided by environement variable, there is some trick to simplify verbose Odoo config.
+
+This package allow natively extension to add your custom behavior depends of the env, or the host computer.
+
+== Lifecycle
+
+This is the lifecycle own this package works. +
+
+- In "Brown" the `entry-point` to add your custom code
+- In "Light Green" When the env is used or changed according to converter and mapper
+- In "Dark Green" An another possible config to exclude some part.
+
+[plantuml]
+....
+include::partial$/lifecycle.puml[]
+....
+
+
+[[env_conflic]]
+== Manage Environment variable conflict
+
+{page-component-name} don't know if a variable shouldn't be process.
+In Odoo 19.0 you can use variable starting with `ODOO_` or the one declared in `env_name=` of the CLI option.
+See https://github.com/odoo/odoo/blob/19.0/odoo/tools/config.py[odoo/tools/config.py]
+
+NOTE: For now {page-component-name} don't have know conflict with Odoo Env variables.
+
+== Other behavior
+
+1. {page-component-name} allow you to programmatically choose to add an odoo module in the xref:generated:converters/wide_modules.adoc[]
+
+== Test a config
+
+You can use the cli to test a environment
+
+[,shell]
+----
+$ odoo-env2config --cmd # <.>
+----
+<.> `--cmd` only display the odoo cli args generated. You don't need to have `odoo` in your current venv.
+
+Or you can use the special arg `-` to get the environment from `stdin`
+
+[,shell]
+----
+$ cat .env | odoo-env2config --cmd - # <.>
+----
+<.> `-` read the env only from `stdin` use `-e` or `--environ` to include your shell environment.
