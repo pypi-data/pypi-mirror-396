@@ -1,0 +1,85 @@
+name: Tests
+
+on:
+  push:
+    branches: ["**"]   # test all branches
+    tags: ["v*"]       # also test version tags
+  pull_request:
+    branches: ["**"]   # test all PRs
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Show versions
+        run: |
+          python -V
+          pip -V
+          make -v
+
+      - name: Run tests
+        run: |
+          make test
+
+  mark-stable:
+    name: Mark stable tag (highest successful version)
+    needs: [unit-tests]
+    runs-on: ubuntu-latest
+
+    # Only act on version tag pushes, never on branches/PRs
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout (full history + tags)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Determine if current tag is the highest
+        id: semver
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          current_tag="${GITHUB_REF#refs/tags/}"
+
+          git fetch --tags --force
+
+          highest_tag="$(git tag -l 'v*' --sort=version:refname | tail -n 1)"
+
+          echo "Current tag: ${current_tag}"
+          echo "Highest tag: ${highest_tag}"
+
+          if [[ "${current_tag}" == "${highest_tag}" ]]; then
+            echo "is_highest=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_highest=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "current_tag=${current_tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Move stable tag to this release
+        if: steps.semver.outputs.is_highest == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git tag -f stable "${{ steps.semver.outputs.current_tag }}"
+          git push origin -f refs/tags/stable
