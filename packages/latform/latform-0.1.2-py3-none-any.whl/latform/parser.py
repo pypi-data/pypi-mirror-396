@@ -1,0 +1,601 @@
+from __future__ import annotations
+
+import logging
+import pathlib
+from dataclasses import dataclass, field
+from typing import Sequence
+
+from .const import EQUALS
+from .exceptions import UnexpectedAssignment
+from .statements import (
+    Assignment,
+    Constant,
+    Element,
+    ElementList,
+    Empty,
+    Line,
+    NonstandardParameter,
+    Parameter,
+    Simple,
+    Statement,
+    get_call_filename,
+)
+from .token import Comments, Role, Token
+from .tokenizer import tokenize
+from .types import (
+    COMMA,
+    Attribute,
+    Block,
+    CallName,
+    Delimiter,
+    FormatOptions,
+    Seq,
+    TokenizerItem,
+)
+from .util import partition_items
+
+logger = logging.getLogger(__name__)
+
+
+def _make_attribute(item: Attribute | Token | Seq) -> Attribute:
+    if isinstance(item, Attribute):
+        return item
+    if isinstance(item, Delimiter):
+        raise ValueError(f"Unexpected delimiter found in place of attribute: {item} at {item.loc}")
+    if isinstance(item, Token):
+        return Attribute(name=item)
+    if isinstance(item, Seq):
+        return Attribute(name=item)
+    raise ValueError(f"Unexpected item found in place of attribute: {item} at {item.loc}")
+
+
+def _make_attribute_list(items: list[TokenizerItem]) -> list[Attribute]:
+    item = Seq.from_items(items)
+    if not isinstance(item, Seq):
+        return [_make_attribute(item)]
+
+    return [_make_attribute(item) for item in item.items]
+
+
+def _is_multipass_marker(blk: Block) -> bool:
+    """Check if Array represents a multipass marker."""
+    return (
+        blk.opener == "["
+        and len(blk.items) == 1
+        and isinstance(blk.items[0], Token)
+        and str(blk.items[0]).lower() == "multipass"
+    )
+
+
+def _extract_leading_comment(first: TokenizerItem) -> Comments:
+    comments = first.comments.clone()
+    first.comments.clear()
+    return comments
+
+
+def _nab_comments(items) -> Comments:
+    res = Comments()
+    inline = []
+    for item in items:
+        if isinstance(item, Seq):
+            comment = _nab_comments(item.items)
+        else:
+            comment = item.comments
+
+        res.pre.extend(comment.pre)
+        comment.pre.clear()
+        if comment.inline:
+            inline.append(comment.inline)
+            comment.inline = None
+
+    if not inline:
+        pass
+    elif len(inline) == 1:
+        res.inline = inline[0]
+    else:
+        res.pre.extend(inline[:-1])
+        res.inline = inline[-1]
+    return res
+
+
+def _line_elements_from_block(block: Block) -> Seq:
+    if block.opener != "(":
+        raise ValueError(f"Unexpected block opener: {block.opener}")
+
+    eles = Seq.from_delimited_block(block, delimiter=COMMA)
+    assert isinstance(eles, Seq)
+    for ele in eles.items:
+        match ele:
+            case Seq(items=["-", "-", name]):
+                # Element reversal and reflection
+                ele.items = [Delimiter("--"), name.with_(role=Role.name_)]
+            case Token():
+                ele.role = Role.name_
+            case Seq():
+                ele.items = ele.with_(role=Role.name_).items
+            case _:
+                raise ValueError(f"Unexpected type found in element list: {type(ele)} {ele=}")
+
+    return eles
+
+
+known_parameters_keyed = {(param.target, param.name): param for param in Parameter.known}
+
+
+def fix_parameter_value(
+    target: Token, name: Token, value: Token | Seq, raw_value: list[Token | Block]
+):
+    key = (str(target).lower(), str(name).lower())
+    try:
+        param = known_parameters_keyed[key]
+    except KeyError:
+        return value
+
+    if param.type == "species":
+        if isinstance(value, Seq):
+            return value.to_token(include_opener=False).replace(" ", "")
+        return value
+
+    if param.type is str:
+        value = Token.join(raw_value)
+        if not value.is_quoted_string:
+            return Token(f'"{value}"', loc=value.loc, comments=value.comments)
+        return value
+
+    if param.type == "geometry":
+        if isinstance(value, Token):
+            if value.lower().startswith("o"):
+                return Token("open", loc=value.loc, comments=value.comments)
+            if value.lower().startswith("c"):
+                return Token("closed", loc=value.loc, comments=value.comments)
+        return value
+
+    if param.type is bool:
+        if isinstance(value, Token):
+            if value.lower().startswith("t"):
+                return Token("True", loc=value.loc, comments=value.comments)
+            if value.lower().startswith("f"):
+                return Token("False", loc=value.loc, comments=value.comments)
+        return value
+
+    return value
+
+
+def parse_items(items: list[TokenizerItem]):
+    if not items:
+        raise ValueError("No items provided")
+
+    first = items[0]
+    comments = _extract_leading_comment(first)
+    first.comments.clear()
+
+    match items:
+        # These two cases are handled at the end, along with general 'parameters'.
+        # case [Token("beginning") as target, Block() as name, "=", _ as value]:
+        # case [Token("parameter") as target, Block() as name, "=", Token() as value]:
+
+        case [Token("redef"), ":", Token() as name, "=", *rest]:
+            value = Seq.from_items(rest)
+            if isinstance(value, Attribute):
+                raise UnexpectedAssignment(
+                    f"Unexpected named attribute assignment: {value} at {value.loc}"
+                )
+            return Constant(
+                comments=comments,
+                name=name.with_(role=Role.name_),
+                value=value,
+                redef=True,
+            )
+
+        case [Token() as name, "=", *rest]:
+            value = Seq.from_items(rest)
+            if isinstance(value, Attribute):
+                raise UnexpectedAssignment(
+                    f"Unexpected named attribute assignment: {value} at {value.loc}"
+                )
+            return Constant(comments=comments, name=name.with_(role=Role.name_), value=value)
+
+        case [Token() as name, ":", Token("list"), "=", Block(opener="(") as elements_block]:
+            return ElementList(
+                comments=comments,
+                name=name.with_(role=Role.name_),
+                elements=_line_elements_from_block(elements_block),
+            )
+
+        case [Token() as name, ":", Token("line"), "=", Block(opener="(") as elements_block]:
+            return Line(
+                comments=comments,
+                name=name.with_(role=Role.name_),
+                elements=_line_elements_from_block(elements_block),
+            )
+
+        case [
+            Token() as name,
+            ":",
+            Token("line"),
+            Block(opener="[") as multipass,
+            "=",
+            Block(opener="(") as elements_block,
+        ] if _is_multipass_marker(multipass):
+            return Line(
+                comments=comments,
+                name=name.with_(role=Role.name_),
+                elements=_line_elements_from_block(elements_block),
+                multipass=True,
+            )
+
+        case [
+            Token() as name,
+            Block(opener="(") as line_args,
+            ":",
+            Token("line"),
+            "=",
+            Block(opener="(") as elements_block,
+        ]:
+            assert isinstance(name, Token)
+            return Line(
+                comments=comments,
+                name=CallName(
+                    name=name.with_(role=Role.name_),
+                    args=Seq.from_item(line_args),
+                ),
+                elements=_line_elements_from_block(elements_block),
+            )
+
+        case [Token() as name, ":", Token() as element_type, *rest]:
+            match rest:
+                case ["=", Block(opener="{") as ele_list, *after]:
+                    if after and after[0] == COMMA:
+                        after = after[1:]
+                    return Element(
+                        comments=comments,
+                        name=name.with_(role=Role.name_),
+                        keyword=element_type,
+                        ele_list=Seq.from_delimited_block(ele_list, delimiter=COMMA),
+                        attributes=_make_attribute_list(after),
+                    )
+
+                case [",", *after]:
+                    return Element(
+                        comments=comments,
+                        name=name.with_(role=Role.name_),
+                        keyword=element_type,
+                        attributes=_make_attribute_list(after),
+                    )
+
+                case []:
+                    return Element(
+                        comments=comments,
+                        name=name.with_(role=Role.name_),
+                        keyword=element_type,
+                        attributes=[],
+                    )
+
+        case [Token() as stmt]:
+            if stmt == "":
+                return Empty(comments=comments)
+
+            return Simple(comments=comments, statement=stmt, arguments=[])
+
+    if isinstance(first, Token):
+        if first.lower() in {"print", "parser_debug"}:
+            args = items[1:]
+            if args[0] == COMMA:
+                args = args[1:]
+            return Simple(
+                comments=comments,
+                statement=first,
+                arguments=[item.to_token() if isinstance(item, Block) else item for item in args],
+            )
+
+        if Simple.is_known_statement(first):
+            args = items[1:]
+
+            if args[0] == COMMA:
+                args = args[1:]
+
+            attrs = _make_attribute_list(args)
+            assert isinstance(first, Token)
+
+            return Simple(
+                comments=comments,
+                statement=first,
+                arguments=attrs,
+            )
+
+    # Match assignment patterns
+    if EQUALS in items:
+        before_equals, _, after_equals = partition_items(items, EQUALS)
+        if not before_equals or not after_equals:
+            raise ValueError("Unhandled assignment: missing name or value")
+
+        value = Seq.from_items(after_equals)
+
+        if isinstance(value, Attribute):
+            raise UnexpectedAssignment(
+                f"Unexpected named attribute assignment: {value} at {value.loc}"
+            )
+
+        match before_equals:
+            # Parameter with [attribute] syntax: target[name] = value
+            case [*target, Block(opener="[") as name_block]:
+                target = Seq.from_items(target)
+
+                # This couldn't be an attribute as there's no '=' in there
+                assert not isinstance(target, Attribute)
+
+                try:
+                    name = name_block.squeeze_single_token()
+                    if "%" in name:
+                        raise ValueError("Nonstandard parameter name")
+                except ValueError:
+                    name = name_block.to_token(include_opener=False)
+                    name = Token(name.replace(" ", ""), comments=name.comments, loc=name.loc)
+                    cls = NonstandardParameter
+                else:
+                    cls = Parameter
+
+                if isinstance(target, Token):
+                    value = fix_parameter_value(target, name, value, raw_value=after_equals)
+
+                return cls(
+                    comments=comments,
+                    target=target,
+                    name=name.with_(role=Role.name_),
+                    value=value,
+                )
+            # Generic assignment: name = value
+            case _:
+                name = Seq.from_items(before_equals)
+                # This couldn't be an attribute as there's no '=' in there
+                assert not isinstance(name, Attribute)
+                return Assignment(
+                    name=name.with_(role=Role.name_),
+                    value=value,
+                    comments=comments,
+                )
+
+    raise ValueError("Unhandled - unknown")
+
+
+def get_named_items(statements: Sequence[Statement]) -> dict[Token, Statement]:
+    named_items = {}
+    for statement in statements:
+        if isinstance(statement, (Element, Constant)):
+            named_items[statement.name.upper()] = statement
+        elif isinstance(statement, Line):
+            if isinstance(statement.name, CallName):
+                named_items[statement.name.name.upper()] = statement
+            else:
+                named_items[statement.name.upper()] = statement
+    return named_items
+
+
+def parse(
+    contents: str, filename: pathlib.Path | str = "unset", annotate: bool = True
+) -> Sequence[Statement]:
+    blocks = tokenize(contents, filename)
+    res = [block.parse() for block in blocks]
+    if annotate:
+        named = get_named_items(res)
+        for st in res:
+            st.annotate(named=named)
+
+    return res
+
+
+def parse_file(filename: pathlib.Path | str, annotate: bool = True) -> Sequence[Statement]:
+    contents = pathlib.Path(filename).read_text()
+    return parse(contents=contents, filename=filename, annotate=annotate)
+
+
+def parse_file_recursive(filename: pathlib.Path | str, annotate: bool = True) -> Files:
+    files = Files(main=pathlib.Path(filename))
+    files.parse()
+    if annotate:
+        files.annotate()
+    return files
+
+
+def is_call_statement(st: Statement) -> bool:
+    return isinstance(st, Simple) and st.statement == "call"
+
+
+@dataclass
+class Files:
+    """
+    Represents a collection of parsed files starting from a main entry point.
+    """
+
+    main: pathlib.Path
+    # Stack stores: (relative_filename_to_parse, parent_directory_of_caller)
+    stack: list[tuple[pathlib.Path, pathlib.Path]] = field(default_factory=list)
+    by_filename: dict[pathlib.Path, list[Statement]] = field(default_factory=dict)
+    local_file_to_source_filename: dict[pathlib.Path, str] = field(default_factory=dict)
+    filename_calls: dict[pathlib.Path, list[pathlib.Path]] = field(default_factory=dict)
+
+    def _add_file_by_statement(self, statement_filename: pathlib.Path, st: Simple) -> pathlib.Path:
+        """
+        Identify a 'call' statement and add the target file to the stack to be parsed.
+        """
+        assert isinstance(st, Simple) and st.statement == "call"
+        sub_filename, fn = get_call_filename(
+            st, caller_directory=statement_filename.parent, expand_vars=True
+        )
+        self.local_file_to_source_filename[fn] = sub_filename
+        logger.debug(f"Adding {sub_filename} relative to {statement_filename.parent} which is {fn}")
+        self.stack.append((fn, statement_filename.parent))
+        self.filename_calls.setdefault(statement_filename, [])
+        self.filename_calls[statement_filename].append(fn)
+        return fn
+
+    @property
+    def call_graph_edges(self) -> list[tuple[str, str]]:
+        """
+        Return a list of (caller, callee) string edges for visualization.
+        """
+        graph = []
+        for path_fn, calls in self.filename_calls.items():
+            # If path_fn is not in local_file_to_source_filename, it is likely the root
+            # loaded differently (or absolute), fall back to name or string rep.
+            fn = self.local_file_to_source_filename.get(path_fn, str(path_fn))
+            for call_path in calls:
+                call_fn = self.local_file_to_source_filename.get(call_path, str(call_path))
+                graph.append((fn, call_fn))
+        return graph
+
+    def _get_file_contents(self, filepath: pathlib.Path) -> str:
+        """Hook to read file contents. default: read from disk."""
+        return filepath.read_text()
+
+    def parse(self, recurse: bool = True):
+        """
+        Parse the main file and optionally its dependencies recursively.
+        """
+        self.main = self.main.resolve()
+        if not self.stack:
+            # We treat the main file as relative to its own parent for consistency
+            self.stack = [(self.main, self.main.parent)]
+            self.local_file_to_source_filename[self.main] = self.main.name
+
+        # We need to track processed files to avoid infinite loops in circular refs
+        processed = set(self.by_filename.keys())
+
+        while self.stack:
+            filename_part, parent_dir = self.stack.pop()
+
+            # Resolve the full path based on the parent context
+            # (Note: filename_part might already be absolute if it's the main entry from disk)
+            if filename_part.is_absolute():
+                full_path = filename_part
+            else:
+                full_path = parent_dir / filename_part
+
+            # Optimization: skip if already parsed
+            if full_path in processed:
+                continue
+
+            processed.add(full_path)
+
+            try:
+                contents = self._get_file_contents(full_path)
+            except FileNotFoundError:
+                logger.error(f"Could not find file: {full_path}")
+                continue
+
+            # We don't annotate individually here, we do it in bulk later or let caller decide
+            statements = list(parse(contents=contents, filename=full_path, annotate=False))
+            self.by_filename[full_path] = statements
+
+            for st in statements:
+                if is_call_statement(st):
+                    st.metadata["local_path"] = self._add_file_by_statement(
+                        statement_filename=full_path, st=st
+                    )
+
+            if not recurse:
+                break
+
+        return self.by_filename
+
+    def annotate(self):
+        """
+        Resolve named items across all parsed files.
+        """
+        named = self.get_named_items()
+        for statements in self.by_filename.values():
+            for st in statements:
+                st.annotate(named=named)
+
+    def get_named_items(self) -> dict[Token, Statement]:
+        """
+        Aggregate named items from all files.
+        """
+        named_items = {}
+        for statements in self.by_filename.values():
+            new_items = get_named_items(statements)
+            # TODO: potential for linting with redef
+            named_items.update(new_items)
+        return named_items
+
+    def _write_reformatted(self, path: pathlib.Path, formatted: str) -> None:
+        path.write_text(formatted)
+
+    def flatten(self, call: bool, inline: bool) -> list[Statement]:
+        # TODO inline handling
+        def _flatten(fn):
+            res = []
+            for st in self.by_filename[fn]:
+                if is_call_statement(st):
+                    res.extend(_flatten(st.metadata["local_path"]))
+                else:
+                    res.append(st)
+            return res
+
+        statements = _flatten(self.main)
+        return statements
+
+    def reformat(self, options: FormatOptions) -> None:
+        """
+        Reformat all files in the collection.
+        """
+        from .output import format_statements
+
+        if options.flatten_call:
+            statements = self.flatten(call=options.flatten_call, inline=options.flatten_inline)
+            formatted = format_statements(statements, options)
+            self._write_reformatted(self.main, formatted)
+
+        for fn, statements in self.by_filename.items():
+            formatted = format_statements(statements, options)
+            self._write_reformatted(fn, formatted)
+
+
+@dataclass
+class MemoryFiles(Files):
+    """
+    Files alternative that starts parsing from a string in memory rather than a
+    file on disk. Recursion will look to the filesystem relative to
+    `root_path`.
+    """
+
+    initial_contents: str = ""
+    _formatted_contents: str | None = None
+
+    @classmethod
+    def from_contents(cls, contents: str, root_path: pathlib.Path | str) -> "MemoryFiles":
+        """
+        Create a MemoryFiles instance from a string.
+
+        Parameters
+        ----------
+        contents : str
+            The source code content.
+        root_path : pathlib.Path | str
+            A "virtual" path where this file supposedly lives, used for resolving
+            relative calls to other files.
+
+        Returns
+        -------
+        MemoryFiles
+            The initialized object (call .parse() on it next).
+        """
+        return cls(main=pathlib.Path(root_path).resolve(), initial_contents=contents)
+
+    def _get_file_contents(self, filepath: pathlib.Path) -> str:
+        if filepath == self.main:
+            return self.initial_contents
+        return super()._get_file_contents(filepath)
+
+    def _write_reformatted(self, path: pathlib.Path, formatted: str) -> None:
+        if path == self.main:
+            self._formatted_contents = formatted
+        else:
+            path.write_text(formatted)
+
+    @property
+    def formatted_contents(self) -> str:
+        """Get the formatted result of the initial memory contents."""
+        if self._formatted_contents is None:
+            raise RuntimeError("Contents have not been reformatted yet. Call .reformat() first.")
+        return self._formatted_contents
