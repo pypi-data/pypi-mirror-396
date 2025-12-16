@@ -1,0 +1,247 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Transaction Pattern",
+  "description": "Schema for a single transaction pattern.",
+  "type": "object",
+  "properties": {
+    "title": {
+      "title": "Title",
+      "description": "The merchant name. Can be a string or a template object for dynamic generation.",
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "template"
+            },
+            "template": {
+              "type": "string",
+              "description": "Template string with {param} placeholders"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "generator": {
+                    "enum": [
+                      "random_digits",
+                      "random_alnum",
+                      "choice"
+                    ]
+                  },
+                  "length": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "charset": {
+                    "type": "string",
+                    "default": "abcdefghijklmnopqrstuvwxyz0123456789"
+                  },
+                  "options": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "minItems": 1
+                  },
+                  "weights": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 1
+                  },
+                  "zero_pad": {
+                    "type": "boolean"
+                  },
+                  "globalConstant": {
+                    "type": "boolean"
+                  },
+                  "transform": {
+                    "type": "object",
+                    "properties": {
+                      "case": {
+                        "enum": [
+                          "upper",
+                          "lower",
+                          "title"
+                        ]
+                      }
+                    }
+                  }
+                },
+                "required": [
+                  "generator"
+                ],
+                "allOf": [
+                  {
+                    "if": {
+                      "properties": {
+                        "generator": {
+                          "const": "random_digits"
+                        }
+                      }
+                    },
+                    "then": {
+                      "required": [
+                        "length"
+                      ]
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "generator": {
+                          "const": "random_alnum"
+                        }
+                      }
+                    },
+                    "then": {
+                      "required": [
+                        "length"
+                      ]
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "generator": {
+                          "const": "choice"
+                        }
+                      }
+                    },
+                    "then": {
+                      "required": [
+                        "options"
+                      ]
+                    }
+                  },
+                  {
+                    "if": {
+                      "required": [
+                        "weights"
+                      ]
+                    },
+                    "then": {
+                      "required": [
+                        "options"
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "required": [
+            "type",
+            "template"
+          ]
+        }
+      ]
+    },
+    "currency": {
+      "title": "Currency",
+      "description": "The currency of the transaction (3-letter currency code).",
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    },
+    "amountRange": {
+      "title": "Amount Range",
+      "description": "A dictionary with `min` and `max` values for the transaction amount.",
+      "type": "object",
+      "properties": {
+        "min": {
+          "title": "Minimum Amount",
+          "type": "number"
+        },
+        "max": {
+          "title": "Maximum Amount",
+          "type": "number"
+        }
+      },
+      "required": [
+        "min",
+        "max"
+      ]
+    },
+    "amountFormat": {
+      "title": "Amount Format",
+      "description": "An integer that controls the rounding of the generated transaction amount. Positive integers round to n decimal places, 0 rounds to whole numbers, negative integers round to nearest 10^|n|.",
+      "type": "integer",
+      "minimum": -8,
+      "maximum": 8
+    },
+    "types": {
+      "title": "Transaction types (tags)",
+      "description": "An array of tags categorizing the merchant.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "prettyTitle": {
+      "title": "Pretty title",
+      "description": "Short merchant name without cities, country codes, or punctuation noise.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 150,
+      "pattern": "^\\S(?:.*\\S)?$"
+    },
+    "weight": {
+      "title": "Weight",
+      "description": "The relative probability weight for pattern selection.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000000,
+      "default": 1000
+    },
+    "refundProbability": {
+      "title": "Refund Probability",
+      "description": "The probability (from 0.0 to 1.0) that a transaction will be refunded.",
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "refundDelayMinHours": {
+      "title": "Refund Delay Minimum Hours",
+      "description": "The minimum number of hours after a transaction that a refund can be generated.",
+      "type": "integer",
+      "minimum": 1,
+      "default": 72
+    },
+    "refundDelayMaxHours": {
+      "title": "Refund Delay Maximum Hours",
+      "description": "The maximum number of hours after a transaction that a refund can be generated.",
+      "type": "integer",
+      "minimum": 1,
+      "default": 288
+    },
+    "numberOfOccurrences": {
+      "title": "Number of Occurrences",
+      "description": "The maximum number of times this transaction pattern can be used globally across a statement.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000000
+    },
+    "subscriptionFrequencyDays": {
+      "title": "Subscription Frequency Days",
+      "description": "The frequency in days for recurring transactions. Additional transactions will be generated every N days from the initial occurrence.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 365
+    }
+  },
+  "required": [
+    "title",
+    "currency",
+    "amountRange",
+    "amountFormat",
+    "types",
+    "prettyTitle"
+  ]
+}
