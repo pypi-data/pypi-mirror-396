@@ -1,0 +1,377 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://gomask.ai/schemas/synthetic-routine/v1.0.0",
+  "title": "GoMask Synthetic Data Generation Routine Configuration",
+  "description": "Schema for defining synthetic data generation routines - maps directly to database tables",
+  "type": "object",
+  "required": [
+    "routine",
+    "tables"
+  ],
+  "properties": {
+    "routine": {
+      "type": "object",
+      "description": "Maps to routines table",
+      "required": [
+        "name",
+        "type",
+        "connector_id"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the synthetic routine",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the routine"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "synthetic"
+          ],
+          "description": "Type of routine (must be 'synthetic')"
+        },
+        "connector_id": {
+          "type": "integer",
+          "description": "ID of the database connector",
+          "minimum": 1
+        }
+      }
+    },
+    "settings": {
+      "type": "object",
+      "description": "Maps to synthetic_data_settings table",
+      "properties": {
+        "generation_mode": {
+          "type": "string",
+          "description": "Generation mode",
+          "default": "hierarchical"
+        },
+        "batch_size": {
+          "type": "integer",
+          "description": "Number of records per batch",
+          "minimum": 1,
+          "default": 1000
+        },
+        "parallel_workers": {
+          "type": "integer",
+          "description": "Number of parallel workers",
+          "minimum": 1,
+          "default": 4
+        },
+        "enforce_referential_integrity": {
+          "type": "boolean",
+          "description": "Ensure foreign keys reference valid records",
+          "default": true
+        },
+        "localization_language": {
+          "type": "string",
+          "description": "Language code (e.g., 'en')",
+          "default": "en"
+        },
+        "localization_region": {
+          "type": "string",
+          "description": "Region code (e.g., 'US')",
+          "default": "US"
+        },
+        "global_record_count": {
+          "type": "integer",
+          "description": "Default record count",
+          "default": 1000
+        },
+        "runtime_parameter_definitions": {
+          "type": "array",
+          "description": "Runtime parameters that can be overridden during execution",
+          "items": {
+            "type": "object",
+            "required": [
+              "key",
+              "name",
+              "type",
+              "defaultValue"
+            ],
+            "properties": {
+              "key": {
+                "type": "string",
+                "description": "Unique parameter key (e.g., 'param_1761651918376')"
+              },
+              "name": {
+                "type": "string",
+                "description": "Parameter display name"
+              },
+              "description": {
+                "type": "string",
+                "description": "Parameter description"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "string",
+                  "integer",
+                  "float",
+                  "boolean"
+                ],
+                "description": "Parameter data type"
+              },
+              "defaultValue": {
+                "description": "Default value for the parameter"
+              },
+              "required": {
+                "type": "boolean",
+                "default": false,
+                "description": "Whether parameter is required"
+              }
+            }
+          }
+        }
+      }
+    },
+    "tables": {
+      "type": "array",
+      "description": "Maps to routine_tables, synthetic_table_hierarchy, and synthetic_column_config",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "table_name"
+        ],
+        "properties": {
+          "table_name": {
+            "type": "string",
+            "description": "Name of the table",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "schema_name": {
+            "type": "string",
+            "description": "Database schema name",
+            "minLength": 1,
+            "maxLength": 255,
+            "default": "public"
+          },
+          "table_type": {
+            "type": "string",
+            "description": "Type of table (entity or junction)",
+            "default": "entity"
+          },
+          "parent_table_name": {
+            "type": "string",
+            "description": "Parent table for hierarchy"
+          },
+          "hierarchy_level": {
+            "type": "integer",
+            "description": "Level in generation hierarchy",
+            "minimum": 0,
+            "default": 0
+          },
+          "target_record_count": {
+            "type": "integer",
+            "description": "Number of records to generate",
+            "minimum": 0
+          },
+          "order_index": {
+            "type": "integer",
+            "description": "Order within hierarchy level",
+            "default": 0
+          },
+          "record_distribution": {
+            "type": "object",
+            "description": "Maps to synthetic_record_distribution table",
+            "properties": {
+              "distribution_type": {
+                "type": "string",
+                "description": "Type of distribution",
+                "default": "uniform"
+              },
+              "min_records_per_parent": {
+                "type": "integer",
+                "description": "Minimum records per parent",
+                "default": 1
+              },
+              "max_records_per_parent": {
+                "type": "integer",
+                "description": "Maximum records per parent",
+                "default": 5
+              },
+              "average_records_per_parent": {
+                "type": "number",
+                "description": "Average for statistical distributions"
+              },
+              "distribution_weights": {
+                "type": "object",
+                "description": "JSON weights for custom distribution",
+                "properties": {
+                  "weights": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    }
+                  },
+                  "values": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    }
+                  },
+                  "custom_distribution": {
+                    "type": "string",
+                    "description": "Lambda function for custom distribution"
+                  }
+                }
+              },
+              "custom_distribution_function": {
+                "type": "string",
+                "description": "Custom distribution function code"
+              }
+            }
+          },
+          "columns": {
+            "type": "array",
+            "description": "Column configurations",
+            "items": {
+              "type": "object",
+              "required": [
+                "column_name"
+              ],
+              "properties": {
+                "column_name": {
+                  "type": "string",
+                  "description": "Column name",
+                  "minLength": 1,
+                  "maxLength": 255
+                },
+                "original_data_type": {
+                  "type": "string",
+                  "description": "Database data type"
+                },
+                "generation_function": {
+                  "type": "string",
+                  "description": "Name of generation function"
+                },
+                "generation_parameters": {
+                  "type": "array",
+                  "description": "Generation function parameters - array of parameter configurations",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "description": "Parameter name"
+                      },
+                      "value": {
+                        "description": "Parameter value (for simple values)"
+                      },
+                      "valueType": {
+                        "type": "string",
+                        "description": "Type of value: 'static', 'reference', 'expression'",
+                        "enum": [
+                          "static",
+                          "reference",
+                          "expression"
+                        ]
+                      },
+                      "columnReference": {
+                        "type": "string",
+                        "description": "Referenced column name (when valueType is 'reference')"
+                      },
+                      "tableReference": {
+                        "type": "string",
+                        "description": "Referenced table name (when valueType is 'reference')"
+                      },
+                      "mode": {
+                        "type": "string",
+                        "description": "Special mode like 'column_reference'"
+                      },
+                      "filter": {
+                        "type": "string",
+                        "description": "Optional filter/WHERE clause"
+                      }
+                    },
+                    "additionalProperties": true
+                  }
+                },
+                "is_primary_key": {
+                  "type": "boolean",
+                  "description": "Is primary key",
+                  "default": false
+                },
+                "is_foreign_key": {
+                  "type": "boolean",
+                  "description": "Is foreign key",
+                  "default": false
+                },
+                "reference_table": {
+                  "type": "string",
+                  "description": "Referenced table for FKs"
+                },
+                "reference_column": {
+                  "type": "string",
+                  "description": "Referenced column for FKs"
+                },
+                "nullable": {
+                  "type": "boolean",
+                  "description": "Column allows nulls",
+                  "default": true
+                },
+                "unique_constraint": {
+                  "type": "boolean",
+                  "description": "Has unique constraint",
+                  "default": false
+                },
+                "is_indexed": {
+                  "type": "boolean",
+                  "description": "Has index",
+                  "default": false
+                },
+                "max_length": {
+                  "type": "integer",
+                  "description": "Maximum length for varchar/char"
+                },
+                "precision": {
+                  "type": "integer",
+                  "description": "Precision for numeric columns"
+                },
+                "scale": {
+                  "type": "integer",
+                  "description": "Scale for numeric columns"
+                },
+                "default_value": {
+                  "type": "string",
+                  "description": "Default value for column"
+                },
+                "enum_values": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Allowed enum values"
+                },
+                "column_comment": {
+                  "type": "string",
+                  "description": "Column comment/description"
+                },
+                "order_index": {
+                  "type": "integer",
+                  "description": "Column order",
+                  "default": 0
+                },
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Whether to generate data for this column",
+                  "default": true
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

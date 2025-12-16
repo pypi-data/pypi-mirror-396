@@ -1,0 +1,3 @@
+"""
+GoMask CLI commands
+"""
