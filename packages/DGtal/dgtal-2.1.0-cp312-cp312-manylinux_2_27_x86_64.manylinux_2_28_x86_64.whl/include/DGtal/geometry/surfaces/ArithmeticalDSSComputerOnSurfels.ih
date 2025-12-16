@@ -1,0 +1,494 @@
+/**
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU Lesser General Public License as
+ *  published by the Free Software Foundation, either version 3 of the
+ *  License, or  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ **/
+
+/**
+ * @file ArithmeticalDSSComputerOnSurfels.ih
+ * @author Jocelyn Meyron (\c jocelyn.meyron@liris.cnrs.fr )
+ * Laboratoire d'InfoRmatique en Image et Systèmes d'information - LIRIS (CNRS, UMR 5205), CNRS, France
+ * @author Tristan Roussillon (\c tristan.roussillon@liris.cnrs.fr )
+ * Laboratoire d'InfoRmatique en Image et Systèmes d'information - LIRIS (CNRS, UMR 5205), CNRS, France
+ *
+ * @date 2021/01/22
+ *
+ * Implementation of inline methods defined in ArithmeticalDSSComputerOnSurfels.h
+ *
+ * This file is part of the DGtal library.
+ */
+
+///////////////////////////////////////////////////////////////////////////////
+// IMPLEMENTATION of inline methods.
+///////////////////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////////////
+#include <cstdlib>
+#include <algorithm>
+#include <boost/version.hpp>
+#if BOOST_VERSION < 105800
+#include <boost/math/common_factor_rt.hpp>
+#else
+#include <boost/integer/common_factor_rt.hpp>
+#endif
+
+//////////////////////////////////////////////////////////////////////////////
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Implementation of inline methods                                          //
+
+//-----------------------------------------------------------------------------
+template <typename TKSpace, typename TIterator, typename TInteger>
+inline
+DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::
+ArithmeticalDSSComputerOnSurfels()
+  : myKSpace(nullptr), mySliceAxis1(), mySliceAxis2(), myProjectionAxis(),
+    my2DProjector(), myExtractor(nullptr), myDSS( Point(0,0) ), myBegin(), myEnd()
+{
+}
+
+//-----------------------------------------------------------------------------
+template <typename TKSpace, typename TIterator, typename TInteger>
+inline
+DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::
+ArithmeticalDSSComputerOnSurfels(const KSpace& aKSpace, Dimension aDim1, Dimension aDim2, bool aFlagToReverse)
+  : myKSpace(&aKSpace), mySliceAxis1(aDim1), mySliceAxis2(aDim2), myProjectionAxis(),
+    my2DProjector(), myExtractor(), myDSS( Point(0,0) ), myBegin(), myEnd()
+{
+   ASSERT(aDim1 != aDim2);
+   
+   myProjectionAxis = dimNotIn(aDim1, aDim2); 
+
+   std::vector<Dimension> v = {aDim1, aDim2}; 
+   my2DProjector.init(v.begin(),v.end());
+
+   if (aFlagToReverse) {
+     myExtractor = PairExtractor(new IndirectPairExtractor()); 
+   } else {
+     myExtractor = PairExtractor(new DirectPairExtractor()); 
+   }
+}
+
+//-----------------------------------------------------------------------------
+template <typename TKSpace, typename TIterator, typename TInteger>
+inline
+DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::
+ArithmeticalDSSComputerOnSurfels ( const ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger> & other )
+  : myKSpace(other.myKSpace), mySliceAxis1(other.mySliceAxis1), mySliceAxis2(other.mySliceAxis2), myProjectionAxis(other.myProjectionAxis),
+    my2DProjector(other.my2DProjector), myExtractor(other.myExtractor), myDSS(other.myDSS), myBegin(other.myBegin), myEnd(other.myEnd)
+{
+}
+
+//-----------------------------------------------------------------------------
+template <typename TKSpace, typename TIterator, typename TInteger>
+inline
+typename DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>&
+DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::
+operator=( const ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger> & other )
+{
+  if ( this != &other )
+    {
+      myKSpace = other.myKSpace;
+      mySliceAxis1 = other.mySliceAxis1;
+      mySliceAxis2 = other.mySliceAxis2;
+      myProjectionAxis = other.myProjectionAxis; 
+      my2DProjector = other.my2DProjector;
+      myExtractor = other.myExtractor; 
+      myDSS = other.myDSS;
+      myBegin = other.myBegin;
+      myEnd = other.myEnd;
+    }
+  return *this;
+}
+
+//-----------------------------------------------------------------------------
+template <typename TKSpace, typename TIterator, typename TInteger>
+inline
+typename DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::Reverse
+DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>
+::getReverse() const
+{
+  return Reverse(*myKSpace, mySliceAxis1, mySliceAxis2, true);
+}
+
+//-----------------------------------------------------------------------------
+template <typename TKSpace, typename TIterator, typename TInteger>
+inline
+typename DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::Self
+DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>
+::getSelf() const
+{
+  return Self(*myKSpace, mySliceAxis1, mySliceAxis2);
+}
+
+//-----------------------------------------------------------------------------
+template <typename TKSpace, typename TIterator, typename TInteger>
+inline
+bool
+DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::
+operator==( const ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>& other ) const
+{
+  return ( (myBegin == other.myBegin)
+           && (myEnd == other.myEnd)
+           && (myDSS == other.myDSS) );
+}
+
+//-----------------------------------------------------------------------------
+template <typename TKSpace, typename TIterator, typename TInteger>
+inline
+bool
+DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::
+operator!=( const ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger> & other ) const
+{
+  return (!(*this == other));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                       Update methods                                      //
+///////////////////////////////////////////////////////////////////////////////
+//--------------------------------------------------------------------
+template <typename TKSpace, typename TIterator, typename TInteger>
+inline
+bool 
+DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::isExtendableFront()
+{
+  //the caller must be sure that 'myEnd' can be safely dereferenced 
+  return myDSS.isExtendableFront( getNextProjectedPoint(*myEnd) ); 
+}
+
+//--------------------------------------------------------------------
+template <typename TKSpace, typename TIterator, typename TInteger>
+inline
+bool 
+DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::isExtendableBack()
+{
+  ConstIterator it = myBegin; 
+  --it; 
+  //the caller must be sure that 'it' can be safely dereferenced 
+  return myDSS.isExtendableBack( getPreviousProjectedPoint(*it) ); 
+}
+
+//-----------------------------------------------------------------------------
+template <typename TKSpace, typename TIterator, typename TInteger>
+inline
+bool 
+DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::extendFront()
+{
+  //the caller must be sure that 'myEnd' can be safely dereferenced 
+  if (myDSS.extendFront(getNextProjectedPoint(*myEnd)))
+    {
+      ++myEnd;
+      return true; 
+    }
+  else 
+    return false;  
+}
+
+//--------------------------------------------------------------------
+template <typename TKSpace, typename TIterator, typename TInteger>
+inline
+bool 
+DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::extendBack()
+{
+  ConstIterator it = myBegin; 
+  --it; 
+  //the caller must be sure that 'it' can be safely dereferenced 
+  if (myDSS.extendBack(getPreviousProjectedPoint(*it)))
+    {
+      myBegin = it;
+      return true; 
+    }
+  else 
+    return false;  
+}
+
+//--------------------------------------------------------------------
+template <typename TKSpace, typename TIterator, typename TInteger>
+inline
+bool 
+DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::retractFront()
+{
+  if (myDSS.retractFront())
+    {
+      --myEnd; 
+      return true; 
+    }
+  else 
+    return false;  
+}
+
+//--------------------------------------------------------------------
+template <typename TKSpace, typename TIterator, typename TInteger>
+inline
+bool 
+DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::retractBack()
+{
+  if (myDSS.retractBack())
+    {
+      ++myBegin;
+      return true; 
+    }
+  else 
+    return false;  
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                       Accessors                                           //
+///////////////////////////////////////////////////////////////////////////////
+//-------------------------------------------------------------------------
+template <typename TKSpace, typename TIterator, typename TInteger>
+inline
+const typename DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::Primitive&
+DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::primitive() const
+{
+  return myDSS;
+}
+
+//-------------------------------------------------------------------------
+template <typename TKSpace, typename TIterator, typename TInteger>
+inline
+TInteger
+DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::a() const
+{
+  return myDSS.a();
+}
+
+//-------------------------------------------------------------------------
+template <typename TKSpace, typename TIterator, typename TInteger>
+inline
+TInteger
+DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::b() const
+{
+  return myDSS.b();
+}
+
+//-------------------------------------------------------------------------
+template <typename TKSpace, typename TIterator, typename TInteger>
+inline
+TInteger
+DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::mu() const
+{
+  return myDSS.mu();
+}
+
+//-------------------------------------------------------------------------
+template <typename TKSpace, typename TIterator, typename TInteger>
+inline
+TInteger
+DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::omega() const
+{
+  return myDSS.omega();
+}
+
+//-------------------------------------------------------------------------
+template <typename TKSpace, typename TIterator, typename TInteger>
+inline
+typename DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::Point
+DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::Uf() const
+{
+  return myDSS.Uf();
+}
+
+//-------------------------------------------------------------------------
+template <typename TKSpace, typename TIterator, typename TInteger>
+inline
+typename DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::Point
+DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::Ul() const
+{
+  return myDSS.Ul();
+}
+
+//-------------------------------------------------------------------------
+template <typename TKSpace, typename TIterator, typename TInteger>
+inline
+typename DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::Point
+DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::Lf() const
+{
+  return myDSS.Lf();
+}
+
+//-------------------------------------------------------------------------
+template <typename TKSpace, typename TIterator, typename TInteger>
+inline
+typename DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::Point
+DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::Ll() const
+{
+  return myDSS.Ll();
+}
+
+//-------------------------------------------------------------------------
+template <typename TKSpace, typename TIterator, typename TInteger>
+inline
+typename DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::Point
+DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::back() const
+{
+  return myDSS.back();
+}
+
+//-------------------------------------------------------------------------
+template <typename TKSpace, typename TIterator, typename TInteger>
+inline
+typename DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::Point
+DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::front() const
+{
+  return myDSS.front();
+}
+
+//-------------------------------------------------------------------------
+template <typename TKSpace, typename TIterator, typename TInteger>
+inline
+TIterator
+DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::begin() const
+{
+  return myBegin;
+}
+
+//-------------------------------------------------------------------------
+template <typename TKSpace, typename TIterator, typename TInteger>
+inline
+TIterator
+DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::end() const
+{
+  return myEnd;
+}
+
+//-----------------------------------------------------------------
+template <typename TKSpace, typename TIterator, typename TInteger>
+inline
+bool
+DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::isValid() const
+{
+  return ( (myDSS.isValid())&&(isNotEmpty(myBegin,myEnd)) );
+}
+
+//-----------------------------------------------------------------
+template <typename TKSpace, typename TIterator, typename TInteger>
+inline
+void
+DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::selfDisplay ( std::ostream & out) const
+{
+  out << "[ArithmeticalDSSComputerOnSurfels] " << myDSS;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                       Initialization                                      //
+///////////////////////////////////////////////////////////////////////////////
+
+//-----------------------------------------------------------------------------
+template <typename TKSpace, typename TIterator, typename TInteger>
+inline
+void DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::
+init(const ConstIterator& it)
+{
+  ASSERT(myKSpace != nullptr);
+
+  myBegin = it;
+  myEnd = it;
+  ++myEnd;
+
+  SCell surfel = *it;
+  auto pair = getProjectedPointsFromSurfel(surfel);
+  auto p = myExtractor->first(pair); 
+  myDSS = DSS( p );
+  auto q = myExtractor->second(pair); 
+  ASSERT(myDSS.isExtendableFront( q )); 
+  myDSS.extendFront( q ); 
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                       Projection                                          //
+///////////////////////////////////////////////////////////////////////////////
+
+//-----------------------------------------------------------------
+template <typename TKSpace, typename TIterator, typename TInteger>
+inline
+std::pair<typename DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::Point,
+          typename DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::Point>
+DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::getProjectedPointsFromSurfel(SCell const& aSurfel) const
+{
+
+  SCell linel1;
+  //this convention has been chosen so that
+  //linels always stand at the same side
+  if (myKSpace->sSign(aSurfel) == myKSpace->POS) {
+    linel1 = myKSpace->sDirectIncident(aSurfel, myProjectionAxis); 
+  } else {
+    linel1 = myKSpace->sIndirectIncident(aSurfel, myProjectionAxis); 
+  }
+
+  return getProjectedPointsFromLinel(linel1);
+}
+
+//-----------------------------------------------------------------
+template <typename TKSpace, typename TIterator, typename TInteger>
+inline
+typename DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::Point
+DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::getNextProjectedPoint(SCell const& aSurfel) const
+{
+  return myExtractor->second(getProjectedPointsFromSurfel(aSurfel)); 
+}
+
+//-----------------------------------------------------------------
+template <typename TKSpace, typename TIterator, typename TInteger>
+inline
+typename DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::Point
+DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::getPreviousProjectedPoint(SCell const& aSurfel) const
+{
+  return myExtractor->first(getProjectedPointsFromSurfel(aSurfel)); 
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//                       Private methods                                      //
+///////////////////////////////////////////////////////////////////////////////
+
+
+//-----------------------------------------------------------------
+template <typename TKSpace, typename TIterator, typename TInteger>
+inline
+std::pair<typename DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::Point,
+          typename DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::Point>
+DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::getProjectedPointsFromLinel(SCell const& aLinel) const
+{
+  auto dim = *myKSpace->sDirs(aLinel); 
+  
+  auto pointel1 = myKSpace->sIndirectIncident(aLinel, dim);
+  auto p1 = my2DProjector(myKSpace->sCoords(pointel1));  
+
+  auto pointel2 = myKSpace->sDirectIncident(aLinel, dim); 
+  auto p2 = my2DProjector(myKSpace->sCoords(pointel2));  
+
+  return {p1, p2}; 
+}
+
+//-----------------------------------------------------------------
+template <typename TKSpace, typename TIterator, typename TInteger>
+inline
+DGtal::Dimension
+DGtal::ArithmeticalDSSComputerOnSurfels<TKSpace,TIterator,TInteger>::dimNotIn(Dimension const& aDim1, Dimension const& aDim2) const
+{
+  ASSERT( KSpace::dimension == 3 );
+  ASSERT( aDim1 != aDim2 );
+  
+  bool marks[3] = {false, false, false};
+  marks[aDim1] = true;
+  marks[aDim2] = true; 
+
+  int i = 0;
+  while (marks[i] == true) {
+    i++; 
+  }
+
+  ASSERT( (marks[i] == false) && (i < 3) );
+  return i; 
+}
