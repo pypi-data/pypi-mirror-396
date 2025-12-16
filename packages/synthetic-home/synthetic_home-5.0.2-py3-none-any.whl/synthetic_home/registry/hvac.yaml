@@ -1,0 +1,59 @@
+---
+device_type: hvac
+desc: A climate device that supports HVAC Cool and Heat modes.
+device_states:
+  "off":
+    climate.hvac:
+      hvac_mode: "off"
+      hvac_action: "off"
+      current_temperature: 22
+      target_temperature: 22
+    sensor.temperature:
+      native_value: 22
+    sensor.humidity:
+      native_value: 45
+
+  cooling:
+    climate.hvac:
+      hvac_mode: cool
+      hvac_action: cooling
+      current_temperature: 25
+      target_temperature: 23
+    sensor.temperature:
+      native_value: 25
+    sensor.humidity:
+      native_value: 45
+
+  very-low:
+    climate.hvac:
+      hvac_mode: cool
+      hvac_action: cooling
+      current_temperature: 25
+      target_temperature: 12
+    sensor.temperature:
+      native_value: 25
+    sensor.humidity:
+      native_value: 45
+entities:
+  climate:
+    hvac:
+      unit_of_measurement: °C
+      supported_features:
+        - climate.ClimateEntityFeature.FAN_MODE
+        - climate.ClimateEntityFeature.TURN_ON
+        - climate.ClimateEntityFeature.TURN_OFF
+        - climate.ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
+      hvac_modes:
+        - "off"
+        - cool
+        - heat
+        - auto
+  sensor:
+    temperature:
+      native_unit_of_measurement: °C
+      device_class: sensor.SensorDeviceClass.TEMPERATURE
+      state_class: sensor.SensorStateClass.MEASUREMENT
+    humidity:
+      native_unit_of_measurement: "%"
+      device_class: sensor.SensorDeviceClass.HUMIDITY
+      state_class: sensor.SensorStateClass.MEASUREMENT
