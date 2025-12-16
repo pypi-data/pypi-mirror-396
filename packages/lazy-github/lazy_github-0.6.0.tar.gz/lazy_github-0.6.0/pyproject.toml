@@ -1,0 +1,61 @@
+[project]
+name = "lazy-github"
+description = "A terminal UI for interacting with Github"
+readme = "README.md"
+authors = [
+	{ name = "Chris (Gizmo)", email = "gizmo385@users.noreply.github.com" },
+]
+maintainers = [
+	{ name = "Chris (Gizmo)", email = "gizmo385@users.noreply.github.com" },
+]
+license = { file = "LICENSE"}
+
+dynamic = ["version"]
+
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3.11",
+]
+
+requires-python = ">=3.11"
+dependencies = [
+	"httpx",
+	"hishel<1.0.0",
+	"pydantic<3",
+	"textual",
+	"click>=8.1.7",
+]
+
+[project.scripts]
+lazy-github = "lazy_github.cli:cli"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.envs.default]
+installer = "uv"
+
+[tool.hatch.version]
+path = "lazy_github/version.py"
+
+[tool.hatch.build.targets.wheel]
+include = ["lazy_github*"]
+
+[tool.ruff]
+line-length = 120
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+
+[dependency-groups]
+dev = [
+    "pyright",
+    "ruff",
+    "pre-commit",
+    "textual-dev",
+    "pytest>=8.4.2",
+]

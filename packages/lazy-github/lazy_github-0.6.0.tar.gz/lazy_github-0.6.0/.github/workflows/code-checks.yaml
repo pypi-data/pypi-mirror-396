@@ -1,0 +1,41 @@
+name: Run code quality checks
+
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+    branches:
+    - main
+
+permissions:
+  contents: read
+
+jobs:
+  code-quality:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+    - uses: yezz123/setup-uv@v4
+    - run: uv sync
+    - name: Run linter
+      run: ./lint.sh
+    - name: Run tests
+      run: uv run pytest tests/ -v
+
+  notify-on-failure:
+    name: Notify on Code Quality Failures
+    if: ${{ failure() && github.ref == 'refs/heads/main' }}
+    needs:
+      - code-quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: nobrayner/discord-webhook@v1
+        with:
+          github-token: ${{ secrets.github_token }}
+          discord-webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          title: 'LazyGithub Code Quality Checks Failed'
+          description: 'There are linter errors on main!'
