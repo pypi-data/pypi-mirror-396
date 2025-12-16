@@ -1,0 +1,84 @@
+Metadata-Version: 2.4
+Name: parvati
+Version: 1.0.1
+Summary: A package to compute and analyse stellar line profiles
+Project-URL: Homepage, https://github.com/mrainer74/parvati
+Project-URL: Issues, https://github.com/mrainer74/parvati/issues
+Author-email: Monica Rainer <monica.rainer@inaf.it>
+License-Expression: GPL-3.0-or-later
+License-File: LICENSE
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Requires-Python: >=3.9
+Requires-Dist: astropy
+Requires-Dist: csaps
+Requires-Dist: matplotlib
+Requires-Dist: numpy
+Requires-Dist: scipy
+Requires-Dist: uncertainties
+Description-Content-Type: text/markdown
+
+# PARVATI
+
+PARVATI (Profile and Analysis of Radial Velocity using Astronomical Tools for Investigation)
+is a Python package for astronomical spectroscopy.
+
+## Introduction
+PARVATI consists in several useful functions that allows to create mean line profiles or extract single line from ASCII or FITS spectra, and then to analyse those lines.
+
+## Preparation of the spectra
+The input spectra may have different format: either ASCII files with wavelength, flux and additional information (e.g., SNR or echelle order number), standard monodimensionl FITS file or FITS table. The spectra may be read with the `read_spectrum`, and before extracting the line profiles must be normalised using the `norm_spectrum` function.
+
+### Read the spectra
+The function `read_spectrum` will require as input the filename of the spectrum, and accordingly to the other options given it will read:
+
+- a monodimensional FITS file with the flux as the hdu[0].data and the wavelength in the header (CRVAL1, CDELT1, NAXIS1)
+- a FITS table with all the data in hdu[1].data. By default, the wavelength will be read in the first field and the flux in the second field, but the number of the field may be given. If the additional data as SNR and/or echelle order number and/or nomrmalised flux are present they may be specified here. IMPORTANT: the numbers of the fields start with 1, not 0
+- an ASCII files with at least two columns (wavelength and flux), but additional columns with SNR and/or echelle order number and/or nomrmalised flux may be present and specified here. IMPORTANT: the numbers of the columns start with 1, not 0
+
+The wavelength is assumed to be in Angstroms, if otherwise then it must be specified here.
+
+### Normalise the spectra
+If the spectra are not normalised, it is possible to use the function `norm_spectrum` to do so. The function requires the wavelength and flux as input, plus many other additional options. It is possible to set the degree of the polynomial and a number of subsets to normalise independently.
+
+## Creation of the profiles
+Once in possessione of normalised spectra, the line profiles may be extracted or created in several different ways.
+
+### Single line extraction
+The function `extract_line` requires the spectrum in the format given by `read_spectrum` or `norm_spectrum`, the laboratory wavelength of the desired line, the radial velocity range and step of the extraction window. The extracted line will be interpolated on a Doppler velocity range, to help with the subsequent analysis.
+
+### Mean line profile: LSD
+The function `compute_lsd` compute the mean line profile by performing a Least-Squares Deconvolution of the spectrum in the format given by `read_spectrum` or `norm_spectrum` with a mask that may be either an ASCII mask (VALD stellar mask, simple 2-columns file, normalised spectrum/model) or a FITS file (mask or normalised spectrum/model). Several options may be passed to optimised the profile extraction.
+
+### Mean line profile: CCF
+The function `compute_lsd` compute the mean line profile by performing a Cross-Correlation of the spectrum in the format given by `read_spectrum` or `norm_spectrum` with a mask that may be either an ASCII mask (VALD stellar mask, simple 2-columns file, normalised spectrum/model) or a FITS file (mask or normalised spectrum/model). Several options may be passed to optimised the profile extraction.
+
+## Analysis of the profiles
+Once the profiles have been obtained, PARVATI allows to perform several useful operation on the data, to better analyse them.
+
+### Normalise the profiles
+First of all, even if the profiles should already be normalised, any slight deviation from a perfect normalisation of the spectra will impact the profiles. It is better to re-normalised them using the `norm_profile` function. This function required as input not the name of a single file, but an ASCII file with a list of names: this will allow to compute also an average mean line profile and the standard deviation of the profiles from this average, to better see where possible line profile variations are located. 
+
+### Fit the profiles
+Once normalised, the profiles may be fitted using the `fit_profile` function. It is posible to choose different fitting function: Gaussian, Lorentzian, Voigt or rotational profile. All the fitting functions yield a Radial Velocity (RV) estimation, the Equivalent Width (EW) and other information (e.g. the vsini from the rotational function). IMPORTANT: the rotational function is very sensitive to the initial RV and line width guess, incorrect values will result in wrong and unphysical results.
+
+### Compute the line moments
+The first four line moments may be computed from the normalised profiles using the `moments` function. The moments are:
+
+- m0: EW
+- m1: RV
+- m2: sigma, from which also the Full-Width-at-Half-Maximum (FWHM) is derived
+- m3: from which the skewness is derived
+- m4: from which the kurtosis is derived.
+
+### Compute the line's bisector
+The function`bisector` computes both the bisector of the line and the bisector's span.
+
+### Compute the Fourier Transform of the line
+The function `fourier` first symmetrised the line and then performs the Fourier Transform (FT) of the symmetrised line. The symmetrisation process yield another estimate of the RV, while the positions of the first 3 zeroes of the FT give information on the vsini and the differential rotation IF the rotational broadening is the dominant line broadening effect.
+
+## Test files
+A couple of simple script are given in the tests directory along with two high-resolution spectra and two VALD stellar masks to guide in computing/extracting the line profile and then analysing them.
+
+## Graphical interface: SHIVA
+The graphical interface of PARVATI is SHIVA (Simple and Helpful Interface for Variability Analysis). SHIVA may be downloaded from https://github.com/mrainer74/shiva
