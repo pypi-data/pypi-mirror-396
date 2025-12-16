@@ -1,0 +1,41 @@
+[project]
+name = "cachu"
+version = "0.1.2"
+description = "Flexible caching library built on dogpile.cache"
+readme = "README.md"
+license = "0BSD"
+authors = [{ name = "bissli" }]
+requires-python = ">=3.10"
+dependencies = [
+    "dogpile.cache",
+    "func-timeout",
+]
+
+[project.optional-dependencies]
+redis = ["redis"]
+test = [
+    "pytest",
+    "pytest-mock",
+    "redis",
+    "testcontainers[redis]",
+]
+
+[project.urls]
+Repository = "https://github.com/bissli/cachu.git"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+  "redis: marks tests requiring Redis (deselect with '-m \"not redis\"')",
+  "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
