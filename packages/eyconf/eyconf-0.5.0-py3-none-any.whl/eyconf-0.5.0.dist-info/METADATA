@@ -1,0 +1,123 @@
+Metadata-Version: 2.4
+Name: eyconf
+Version: 0.5.0
+Summary: Easy Yaml based Configuration for Python
+Author-email: "Sebastian B. Mohr" <sebastian@mohrenclan.de>
+License-File: LICENSE
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: GNU General Public License v3 (GPLv3)
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Requires-Python: >=3.10
+Requires-Dist: jsonschema
+Requires-Dist: pyyaml
+Requires-Dist: typing-extensions
+Provides-Extra: cli
+Requires-Dist: typer; extra == 'cli'
+Provides-Extra: dev
+Requires-Dist: pre-commit; extra == 'dev'
+Requires-Dist: pytest; extra == 'dev'
+Requires-Dist: pytest-cov>=5.0.0; extra == 'dev'
+Requires-Dist: ruff>=0.8.6; extra == 'dev'
+Requires-Dist: typer; extra == 'dev'
+Provides-Extra: docs
+Requires-Dist: furo>=2024.8.6; extra == 'docs'
+Requires-Dist: myst-nb>=1.1.2; extra == 'docs'
+Requires-Dist: myst-parser>=4.0.0; extra == 'docs'
+Requires-Dist: sphinx-copybutton>=0.5.2; extra == 'docs'
+Requires-Dist: sphinx-design>=0.6.1; extra == 'docs'
+Requires-Dist: sphinx-inline-tabs>=2023.4.21; extra == 'docs'
+Requires-Dist: sphinx>=8.0.2; extra == 'docs'
+Requires-Dist: sphinxcontrib-typer[html]>=0.5.0; extra == 'docs'
+Provides-Extra: test
+Requires-Dist: pytest; extra == 'test'
+Requires-Dist: pytest-cov>=5.0.0; extra == 'test'
+Provides-Extra: typed
+Requires-Dist: mypy; extra == 'typed'
+Requires-Dist: types-jsonschema; extra == 'typed'
+Requires-Dist: types-pyyaml; extra == 'typed'
+Description-Content-Type: text/markdown
+
+<p align="center">
+    <h1 align="center">EYConf</h1>
+</p>
+<p align="center">
+    <em><b>E</b>asy <b>Y</B>aml based <b>Conf</b>iguration for Python</em>
+</p>
+
+
+<p align="center">
+     <a href="https://pypi.org/project/eyconf/">
+        <img alt="PyPI - Version" src="https://img.shields.io/pypi/v/eyconf?style=flat-square">
+     </a>
+    <a href="https://github.com/semohr/eyconf/actions">
+        <img alt="build status" src="https://img.shields.io/github/actions/workflow/status/semohr/eyconf/workflow.yml?style=flat-square" />
+    </a>
+    <a href="https://eyconf.readthedocs.io/en/latest/">
+        <img alt="docs" src="https://img.shields.io/readthedocs/eyconf?style=flat-square" />
+    </a>
+    <a href="https://github.com/semohr/eyconf/blob/main/LICENSE">
+        <img alt="License: GPL v3" src="https://img.shields.io/badge/License-GPL%20v3-blue.svg?style=flat-square" />
+    </a>
+    <a href="https://codecov.io/github/semohr/eyconf" > 
+        <img src="https://codecov.io/github/semohr/eyconf/graph/badge.svg?token=JJVCY9H6QR"/> 
+    </a>
+</p>
+
+
+## Why EYConf?
+
+<!-- start features -->
+- **Schema-First Configuration**: Define your config structure with Python dataclasses, get automatic YAML generation with comments
+- **Type-Safe Access**: Access nested configuration values with full IDE support and runtime type checking
+- **Validation First**: Catch configuration errors early with detailed, human-readable validation messages
+- **Zero Boilerplate**: No manual YAML parsing, no dictionary access - just clean attribute access to your configuration
+<!-- end features -->
+
+## Installation
+
+<!-- start installation -->
+You can install EYConf from [PyPI](https://pypi.org/project/eyconf/) using pip.
+
+```bash
+pip install eyconf
+```
+<!-- end installation -->
+
+## Example Usage
+
+<!-- start usage -->
+
+```python
+from dataclasses import dataclass
+from eyconf import EYConf
+
+@dataclass
+class AppConfig:
+    """Application configuration"""
+    database_url: str = "sqlite:///app.db"
+    debug: bool = False
+
+# Creates/loads config.yaml automatically
+config = EYConf(AppConfig)
+
+# Use your config
+print(config.data.debug)  # False
+```
+
+This will create a `config.yaml` file in your current working directory with the following content:
+
+```yaml
+# Application configuration
+
+database_url: sqlite:///app.db
+debug: false
+```
+<!-- end usage -->
+
+Please refer to the [documentation](https://eyconf.readthedocs.io/en/latest/) for more examples and detailed usage instructions.
