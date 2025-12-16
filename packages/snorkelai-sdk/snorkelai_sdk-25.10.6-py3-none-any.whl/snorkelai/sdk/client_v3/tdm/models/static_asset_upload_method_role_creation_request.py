@@ -1,0 +1,111 @@
+from typing import (
+    Any,
+    Dict,
+    List,
+    Type,
+    TypeVar,
+    Union,
+)
+
+import attrs
+
+from ..models.static_asset_upload_method import StaticAssetUploadMethod
+from ..models.static_asset_upload_method_action import StaticAssetUploadMethodAction
+from ..models.user_role import UserRole
+from ..types import UNSET, Unset
+
+T = TypeVar("T", bound="StaticAssetUploadMethodRoleCreationRequest")
+
+
+@attrs.define
+class StaticAssetUploadMethodRoleCreationRequest:
+    """
+    Attributes:
+        permissions (List[StaticAssetUploadMethodAction]):
+        static_asset_upload_method_type (StaticAssetUploadMethod):
+        user_roles (List[UserRole]):
+        workspace_uid (Union[Unset, int]):
+    """
+
+    permissions: List[StaticAssetUploadMethodAction]
+    static_asset_upload_method_type: StaticAssetUploadMethod
+    user_roles: List[UserRole]
+    workspace_uid: Union[Unset, int] = UNSET
+    additional_properties: Dict[str, Any] = attrs.field(init=False, factory=dict)
+
+    def to_dict(self) -> Dict[str, Any]:
+        permissions = []
+        for permissions_item_data in self.permissions:
+            permissions_item = permissions_item_data.value
+            permissions.append(permissions_item)
+
+        static_asset_upload_method_type = self.static_asset_upload_method_type.value
+        user_roles = []
+        for user_roles_item_data in self.user_roles:
+            user_roles_item = user_roles_item_data.value
+            user_roles.append(user_roles_item)
+
+        workspace_uid = self.workspace_uid
+
+        field_dict: Dict[str, Any] = {}
+        field_dict.update(self.additional_properties)
+        field_dict.update(
+            {
+                "permissions": permissions,
+                "static_asset_upload_method_type": static_asset_upload_method_type,
+                "user_roles": user_roles,
+            }
+        )
+        if workspace_uid is not UNSET:
+            field_dict["workspace_uid"] = workspace_uid
+
+        return field_dict
+
+    @classmethod
+    def from_dict(cls: Type[T], src_dict: Dict[str, Any]) -> T:
+        d = src_dict.copy()
+        permissions = []
+        _permissions = d.pop("permissions")
+        for permissions_item_data in _permissions:
+            permissions_item = StaticAssetUploadMethodAction(permissions_item_data)
+
+            permissions.append(permissions_item)
+
+        static_asset_upload_method_type = StaticAssetUploadMethod(
+            d.pop("static_asset_upload_method_type")
+        )
+
+        user_roles = []
+        _user_roles = d.pop("user_roles")
+        for user_roles_item_data in _user_roles:
+            user_roles_item = UserRole(user_roles_item_data)
+
+            user_roles.append(user_roles_item)
+
+        _workspace_uid = d.pop("workspace_uid", UNSET)
+        workspace_uid = UNSET if _workspace_uid is None else _workspace_uid
+
+        obj = cls(
+            permissions=permissions,
+            static_asset_upload_method_type=static_asset_upload_method_type,
+            user_roles=user_roles,
+            workspace_uid=workspace_uid,
+        )
+        obj.additional_properties = d
+        return obj
+
+    @property
+    def additional_keys(self) -> List[str]:
+        return list(self.additional_properties.keys())
+
+    def __getitem__(self, key: str) -> Any:
+        return self.additional_properties[key]
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        self.additional_properties[key] = value
+
+    def __delitem__(self, key: str) -> None:
+        del self.additional_properties[key]
+
+    def __contains__(self, key: str) -> bool:
+        return key in self.additional_properties
