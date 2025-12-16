@@ -1,0 +1,107 @@
+[project]
+name = "ogcapi-registry"
+version = "0.3.0"
+description = "A Python library for validating OpenAPI documents published by OGC API servers"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [
+    { name = "Francesco Bartoli", email = "xbartolone@gmail.com" }
+]
+keywords = [
+    "ogc",
+    "ogc-api",
+    "openapi",
+    "validation",
+    "geospatial",
+    "features",
+    "tiles",
+    "processes",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: GIS",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+requires-python = ">=3.11"
+dependencies = [
+    "httpx>=0.28.1",
+    "openapi-pydantic>=0.5.1",
+    "pydantic>=2.12.5",
+    "pyyaml>=6.0.3",
+]
+
+[project.urls]
+Homepage = "https://github.com/francbartoli/ogcapi-registry"
+Documentation = "https://francbartoli.github.io/ogcapi-registry/"
+Repository = "https://github.com/francbartoli/ogcapi-registry"
+Changelog = "https://github.com/francbartoli/ogcapi-registry/blob/main/CHANGELOG.md"
+Issues = "https://github.com/francbartoli/ogcapi-registry/issues"
+
+[build-system]
+requires = ["uv_build>=0.8.17,<0.9.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.7.0",
+    "mkdocs-kroki-plugin>=0.9.0",
+    "mypy>=1.19.0",
+    "pytest>=9.0.1",
+    "pytest-asyncio>=1.3.0",
+    "pytest-cov>=6.0.0",
+    "pytest-httpx>=0.36.0",
+    "ruff>=0.14.8",
+    "types-pyyaml>=6.0.12.20250915",
+]
+
+[tool.mypy]
+python_version = "3.11"
+warn_unused_ignores = true
+plugins = ["pydantic.mypy"]
+# Ignore missing imports for packages without type stubs
+ignore_missing_imports = true
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+
+# Semantic Release Configuration
+[tool.semantic_release]
+version_toml = ["pyproject.toml:project.version"]
+version_variables = ["src/ogcapi_registry/__init__.py:__version__"]
+branch = "main"
+commit_message = "chore(release): {version} [skip ci]"
+tag_format = "v{version}"
+
+[tool.semantic_release.changelog]
+exclude_commit_patterns = [
+    "^chore\\(release\\):",
+    "^ci:",
+    "^docs:",
+    "^style:",
+]
+
+[tool.semantic_release.changelog.default_templates]
+changelog_file = "CHANGELOG.md"
+
+[tool.semantic_release.commit_parser_options]
+allowed_tags = ["feat", "fix", "perf", "refactor", "build"]
+minor_tags = ["feat"]
+patch_tags = ["fix", "perf", "refactor"]
+
+[tool.semantic_release.remote]
+type = "github"
+token = { env = "GH_TOKEN" }
+
+[tool.semantic_release.publish]
+upload_to_vcs_release = true
