@@ -1,0 +1,34 @@
+repos:
+  -  repo: https://github.com/astral-sh/ruff-pre-commit
+     rev: v0.6.9
+     hooks:
+       - id: ruff
+         args: ["--fix"]
+       - id: ruff-format
+  -  repo: https://github.com/pre-commit/pre-commit-hooks
+     rev: v4.6.0
+     hooks:
+       - id: check-toml
+  -  repo: https://github.com/pre-commit/mirrors-mypy
+     # Pin to a stable mypy mirror release
+     rev: v1.8.0
+     hooks:
+       - id: mypy
+         name: mypy (src)
+         args: ["--config-file=pyproject.toml", "src/cortexgraph"]
+         additional_dependencies:
+           - "mcp>=1.2.0"
+           - "pydantic>=2.0.0"
+           - "python-dotenv>=1.0.0"
+           - "python-frontmatter>=1.1.0"
+           - "markdown>=3.5.0"
+           - "GitPython>=3.1.40"
+           - "types-PyYAML>=6.0"
+         pass_filenames: false
+  -  repo: local
+     hooks:
+       - id: fs-sanity-duplicates
+         name: Filesystem sanity (no trailing-number duplicates)
+         entry: bash scripts/precommit_fs_sanity.sh
+         language: system
+         pass_filenames: false
