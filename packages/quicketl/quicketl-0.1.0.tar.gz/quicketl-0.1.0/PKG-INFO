@@ -1,0 +1,269 @@
+Metadata-Version: 2.4
+Name: quicketl
+Version: 0.1.0
+Summary: QuickETL - Fast & Flexible Python ETL Framework with 20+ backend support via Ibis
+Project-URL: Homepage, https://quicketl.com
+Project-URL: Documentation, https://quicketl.readthedocs.io
+Project-URL: Repository, https://github.com/ameijin/quicketl
+Project-URL: Issues, https://github.com/ameijin/quicketl/issues
+Author-email: Eiji <eiji@eidosoft.co>
+License: MIT
+License-File: LICENSE
+Keywords: data-engineering,duckdb,elt,etl,ibis,pipeline,polars,quicketl
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Topic :: Database
+Classifier: Topic :: Scientific/Engineering
+Classifier: Typing :: Typed
+Requires-Python: >=3.12
+Requires-Dist: fsspec>=2024.6
+Requires-Dist: ibis-framework[duckdb,polars]>=9.0
+Requires-Dist: pydantic>=2.10
+Requires-Dist: pyyaml>=6.0
+Requires-Dist: rich>=13.0
+Requires-Dist: structlog>=24.0
+Requires-Dist: typer>=0.12
+Provides-Extra: all
+Requires-Dist: adlfs>=2024.4; extra == 'all'
+Requires-Dist: azure-storage-blob>=12.19; extra == 'all'
+Requires-Dist: boto3>=1.34; extra == 'all'
+Requires-Dist: gcsfs>=2024.6; extra == 'all'
+Requires-Dist: google-cloud-storage>=2.14; extra == 'all'
+Requires-Dist: hypothesis>=6.100; extra == 'all'
+Requires-Dist: ibis-framework[bigquery]>=9.0; extra == 'all'
+Requires-Dist: ibis-framework[clickhouse]>=9.0; extra == 'all'
+Requires-Dist: ibis-framework[datafusion]>=9.0; extra == 'all'
+Requires-Dist: ibis-framework[mysql]>=9.0; extra == 'all'
+Requires-Dist: ibis-framework[postgres]>=9.0; extra == 'all'
+Requires-Dist: ibis-framework[pyspark]>=9.0; extra == 'all'
+Requires-Dist: ibis-framework[snowflake]>=9.0; extra == 'all'
+Requires-Dist: ibis-framework[trino]>=9.0; extra == 'all'
+Requires-Dist: mkdocs-gen-files>=0.5; extra == 'all'
+Requires-Dist: mkdocs-literate-nav>=0.6; extra == 'all'
+Requires-Dist: mkdocs-material>=9.5; extra == 'all'
+Requires-Dist: mkdocs-section-index>=0.3; extra == 'all'
+Requires-Dist: mkdocs>=1.6; extra == 'all'
+Requires-Dist: mkdocstrings[python]>=0.25; extra == 'all'
+Requires-Dist: mypy>=1.10; extra == 'all'
+Requires-Dist: pandas>=2.0; extra == 'all'
+Requires-Dist: pre-commit>=3.7; extra == 'all'
+Requires-Dist: pymdown-extensions>=10.0; extra == 'all'
+Requires-Dist: pytest-asyncio>=0.23; extra == 'all'
+Requires-Dist: pytest-cov>=5.0; extra == 'all'
+Requires-Dist: pytest>=8.0; extra == 'all'
+Requires-Dist: ruff>=0.5; extra == 'all'
+Requires-Dist: s3fs>=2024.6; extra == 'all'
+Provides-Extra: aws
+Requires-Dist: boto3>=1.34; extra == 'aws'
+Requires-Dist: s3fs>=2024.6; extra == 'aws'
+Provides-Extra: azure
+Requires-Dist: adlfs>=2024.4; extra == 'azure'
+Requires-Dist: azure-storage-blob>=12.19; extra == 'azure'
+Provides-Extra: bigquery
+Requires-Dist: ibis-framework[bigquery]>=9.0; extra == 'bigquery'
+Provides-Extra: clickhouse
+Requires-Dist: ibis-framework[clickhouse]>=9.0; extra == 'clickhouse'
+Provides-Extra: datafusion
+Requires-Dist: ibis-framework[datafusion]>=9.0; extra == 'datafusion'
+Provides-Extra: dev
+Requires-Dist: hypothesis>=6.100; extra == 'dev'
+Requires-Dist: mypy>=1.10; extra == 'dev'
+Requires-Dist: pre-commit>=3.7; extra == 'dev'
+Requires-Dist: pytest-asyncio>=0.23; extra == 'dev'
+Requires-Dist: pytest-cov>=5.0; extra == 'dev'
+Requires-Dist: pytest>=8.0; extra == 'dev'
+Requires-Dist: ruff>=0.5; extra == 'dev'
+Provides-Extra: docs
+Requires-Dist: mkdocs-gen-files>=0.5; extra == 'docs'
+Requires-Dist: mkdocs-literate-nav>=0.6; extra == 'docs'
+Requires-Dist: mkdocs-material>=9.5; extra == 'docs'
+Requires-Dist: mkdocs-section-index>=0.3; extra == 'docs'
+Requires-Dist: mkdocs>=1.6; extra == 'docs'
+Requires-Dist: mkdocstrings[python]>=0.25; extra == 'docs'
+Requires-Dist: pymdown-extensions>=10.0; extra == 'docs'
+Provides-Extra: gcp
+Requires-Dist: gcsfs>=2024.6; extra == 'gcp'
+Requires-Dist: google-cloud-storage>=2.14; extra == 'gcp'
+Provides-Extra: mysql
+Requires-Dist: ibis-framework[mysql]>=9.0; extra == 'mysql'
+Provides-Extra: pandas
+Requires-Dist: pandas>=2.0; extra == 'pandas'
+Provides-Extra: postgres
+Requires-Dist: ibis-framework[postgres]>=9.0; extra == 'postgres'
+Provides-Extra: snowflake
+Requires-Dist: ibis-framework[snowflake]>=9.0; extra == 'snowflake'
+Provides-Extra: spark
+Requires-Dist: ibis-framework[pyspark]>=9.0; extra == 'spark'
+Provides-Extra: trino
+Requires-Dist: ibis-framework[trino]>=9.0; extra == 'trino'
+Description-Content-Type: text/markdown
+
+# QuickETL
+
+**Fast & Flexible Python ETL Framework with 20+ backend support via Ibis**
+
+QuickETL is a configuration-driven ETL framework that provides a simple, unified API for data processing across multiple compute backends including DuckDB, Polars, Spark, and pandas.
+
+## Features
+
+- **Multi-backend Support**: Run the same pipeline on DuckDB, Polars, DataFusion, Spark, pandas, and more via Ibis
+- **Configuration-driven**: Define pipelines in YAML with variable substitution
+- **Quality Checks**: Built-in data quality validation (not_null, unique, row_count, accepted_values, expression)
+- **12 Transform Operations**: select, rename, filter, derive_column, cast, fill_null, dedup, sort, join, aggregate, union, limit
+- **CLI Interface**: `quicketl run`, `quicketl validate`, `quicketl init`, `quicketl info`
+- **Airflow Integration**: `@quicketl_task` decorator for DAG tasks
+- **Cloud Storage**: S3, GCS, Azure via fsspec
+
+## Installation
+
+```bash
+# Basic installation (DuckDB + Polars)
+pip install quicketl
+
+# With additional backends
+pip install quicketl[spark]
+pip install quicketl[datafusion]
+
+# With cloud storage
+pip install quicketl[aws]
+pip install quicketl[gcp]
+pip install quicketl[azure]
+
+# All backends and tools
+pip install quicketl[all]
+```
+
+## Quick Start
+
+### CLI Usage
+
+```bash
+# Initialize a new project
+quicketl init my_project
+cd my_project
+
+# Run a pipeline
+quicketl run pipelines/sample.yml
+
+# Validate configuration
+quicketl validate pipelines/sample.yml
+
+# Show available backends
+quicketl info --backends
+```
+
+### Pipeline Configuration (YAML)
+
+```yaml
+name: sales_etl
+description: Process daily sales data
+engine: duckdb
+
+source:
+  type: file
+  path: data/sales.parquet
+  format: parquet
+
+transforms:
+  - op: filter
+    predicate: amount > 0
+  - op: derive_column
+    name: total_with_tax
+    expr: amount * 1.1
+  - op: aggregate
+    group_by: [region]
+    aggs:
+      total_sales: sum(amount)
+      order_count: count(*)
+
+checks:
+  - type: not_null
+    columns: [region, total_sales]
+  - type: row_count
+    min: 1
+
+sink:
+  type: file
+  path: data/output.parquet
+  format: parquet
+```
+
+### Python API
+
+```python
+from quicketl import Pipeline, QuickETLEngine
+from quicketl.config.models import FileSource, FileSink
+from quicketl.config.transforms import FilterTransform, DeriveColumnTransform
+
+# From YAML
+pipeline = Pipeline.from_yaml("pipeline.yml")
+result = pipeline.run()
+
+# Builder pattern
+pipeline = (
+    Pipeline("my_pipeline", engine="duckdb")
+    .source(FileSource(path="data.parquet"))
+    .transform(FilterTransform(predicate="amount > 0"))
+    .transform(DeriveColumnTransform(name="tax", expr="amount * 0.1"))
+    .sink(FileSink(path="output.parquet"))
+)
+result = pipeline.run()
+
+# Direct engine usage
+engine = QuickETLEngine(backend="duckdb")
+table = engine.read_file("data.parquet", "parquet")
+filtered = engine.filter(table, "amount > 100")
+result = engine.to_polars(filtered)
+```
+
+### Airflow Integration
+
+```python
+from quicketl.integrations.airflow import quicketl_task
+
+@quicketl_task(config_path="pipelines/daily_etl.yml")
+def run_daily_etl(**context):
+    return {"RUN_DATE": context["ds"]}
+```
+
+## Supported Backends
+
+| Backend | Type | Installation |
+|---------|------|--------------|
+| DuckDB | Local/Embedded | Included by default |
+| Polars | Local/Embedded | Included by default |
+| DataFusion | Local/Embedded | `pip install quicketl[datafusion]` |
+| Spark | Distributed | `pip install quicketl[spark]` |
+| pandas | Local | `pip install quicketl[pandas]` |
+| PostgreSQL | Database | `pip install quicketl[postgres]` |
+| MySQL | Database | `pip install quicketl[mysql]` |
+| ClickHouse | Database | `pip install quicketl[clickhouse]` |
+| Snowflake | Cloud DW | `pip install quicketl[snowflake]` |
+| BigQuery | Cloud DW | `pip install quicketl[bigquery]` |
+| Trino | Distributed SQL | `pip install quicketl[trino]` |
+
+## Development
+
+```bash
+# Clone and install dev dependencies
+git clone https://github.com/ameijin/quicketl.git
+cd quicketl
+pip install -e ".[dev]"
+
+# Run tests
+pytest
+
+# Lint
+ruff check src/
+
+# Type check
+mypy src/
+```
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details.
