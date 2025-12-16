@@ -1,0 +1,5085 @@
+from typing import List, Optional, Dict, Iterable
+import io
+import aspose.pycore
+import aspose.pydrawing
+import aspose.cad
+import aspose.cad.annotations
+import aspose.cad.cadexceptions
+import aspose.cad.cadexceptions.compressors
+import aspose.cad.cadexceptions.imageformats
+import aspose.cad.exif
+import aspose.cad.exif.enums
+import aspose.cad.fileformats
+import aspose.cad.fileformats.bitmap
+import aspose.cad.fileformats.bmp
+import aspose.cad.fileformats.cad
+import aspose.cad.fileformats.cad.cadconsts
+import aspose.cad.fileformats.cad.cadobjects
+import aspose.cad.fileformats.cad.cadobjects.acadtable
+import aspose.cad.fileformats.cad.cadobjects.assoc
+import aspose.cad.fileformats.cad.cadobjects.attentities
+import aspose.cad.fileformats.cad.cadobjects.background
+import aspose.cad.fileformats.cad.cadobjects.blocks
+import aspose.cad.fileformats.cad.cadobjects.datatable
+import aspose.cad.fileformats.cad.cadobjects.dictionary
+import aspose.cad.fileformats.cad.cadobjects.dimassoc
+import aspose.cad.fileformats.cad.cadobjects.field
+import aspose.cad.fileformats.cad.cadobjects.hatch
+import aspose.cad.fileformats.cad.cadobjects.mlinestyleobject
+import aspose.cad.fileformats.cad.cadobjects.objectcontextdata
+import aspose.cad.fileformats.cad.cadobjects.perssubentmanager
+import aspose.cad.fileformats.cad.cadobjects.polylines
+import aspose.cad.fileformats.cad.cadobjects.section
+import aspose.cad.fileformats.cad.cadobjects.sunstudy
+import aspose.cad.fileformats.cad.cadobjects.tablestyle
+import aspose.cad.fileformats.cad.cadobjects.underlaydefinition
+import aspose.cad.fileformats.cad.cadobjects.vertices
+import aspose.cad.fileformats.cad.cadobjects.wipeout
+import aspose.cad.fileformats.cad.cadparameters
+import aspose.cad.fileformats.cad.cadtables
+import aspose.cad.fileformats.cad.dwg
+import aspose.cad.fileformats.cad.dwg.acdbobjects
+import aspose.cad.fileformats.cad.dwg.appinfo
+import aspose.cad.fileformats.cad.dwg.r2004
+import aspose.cad.fileformats.cad.dwg.revhistory
+import aspose.cad.fileformats.cad.dwg.summaryinfo
+import aspose.cad.fileformats.cad.dwg.vbaproject
+import aspose.cad.fileformats.cf2
+import aspose.cad.fileformats.cgm
+import aspose.cad.fileformats.cgm.classes
+import aspose.cad.fileformats.cgm.commands
+import aspose.cad.fileformats.cgm.elements
+import aspose.cad.fileformats.cgm.enums
+import aspose.cad.fileformats.cgm.export
+import aspose.cad.fileformats.cgm.import
+import aspose.cad.fileformats.collada
+import aspose.cad.fileformats.collada.fileparser
+import aspose.cad.fileformats.collada.fileparser.elements
+import aspose.cad.fileformats.dgn
+import aspose.cad.fileformats.dgn.dgnelements
+import aspose.cad.fileformats.dgn.dgntransform
+import aspose.cad.fileformats.dgn.v8
+import aspose.cad.fileformats.dgn.v8.model
+import aspose.cad.fileformats.dgn.v8.model.structs
+import aspose.cad.fileformats.dgn.v8.model.tree
+import aspose.cad.fileformats.dicom
+import aspose.cad.fileformats.draco
+import aspose.cad.fileformats.dwf
+import aspose.cad.fileformats.dwf.dwfxps
+import aspose.cad.fileformats.dwf.dwfxps.fixedpage
+import aspose.cad.fileformats.dwf.dwfxps.fixedpage.dto
+import aspose.cad.fileformats.dwf.emodelinterface
+import aspose.cad.fileformats.dwf.eplotinterface
+import aspose.cad.fileformats.dwf.whip
+import aspose.cad.fileformats.dwf.whip.objects
+import aspose.cad.fileformats.dwf.whip.objects.drawable
+import aspose.cad.fileformats.dwf.whip.objects.drawable.text
+import aspose.cad.fileformats.dwf.whip.objects.service
+import aspose.cad.fileformats.dwf.whip.objects.service.font
+import aspose.cad.fileformats.fbx
+import aspose.cad.fileformats.glb
+import aspose.cad.fileformats.glb.animations
+import aspose.cad.fileformats.glb.geometry
+import aspose.cad.fileformats.glb.geometry.vertextypes
+import aspose.cad.fileformats.glb.io
+import aspose.cad.fileformats.glb.materials
+import aspose.cad.fileformats.glb.memory
+import aspose.cad.fileformats.glb.runtime
+import aspose.cad.fileformats.glb.scenes
+import aspose.cad.fileformats.glb.toolkit
+import aspose.cad.fileformats.glb.transforms
+import aspose.cad.fileformats.glb.validation
+import aspose.cad.fileformats.ifc
+import aspose.cad.fileformats.ifc.header
+import aspose.cad.fileformats.ifc.ifc2x3
+import aspose.cad.fileformats.ifc.ifc2x3.entities
+import aspose.cad.fileformats.ifc.ifc2x3.types
+import aspose.cad.fileformats.ifc.ifc4
+import aspose.cad.fileformats.ifc.ifc4.entities
+import aspose.cad.fileformats.ifc.ifc4.types
+import aspose.cad.fileformats.ifc.ifc4x3
+import aspose.cad.fileformats.ifc.ifc4x3.entities
+import aspose.cad.fileformats.ifc.ifc4x3.types
+import aspose.cad.fileformats.iges
+import aspose.cad.fileformats.iges.commondefinitions
+import aspose.cad.fileformats.iges.drawables
+import aspose.cad.fileformats.jpeg
+import aspose.cad.fileformats.jpeg2000
+import aspose.cad.fileformats.obj
+import aspose.cad.fileformats.obj.elements
+import aspose.cad.fileformats.obj.mtl
+import aspose.cad.fileformats.obj.vertexdata
+import aspose.cad.fileformats.obj.vertexdata.index
+import aspose.cad.fileformats.pdf
+import aspose.cad.fileformats.plt
+import aspose.cad.fileformats.plt.pltparsers
+import aspose.cad.fileformats.plt.pltparsers.pltparser
+import aspose.cad.fileformats.plt.pltparsers.pltparser.pltplotitems
+import aspose.cad.fileformats.png
+import aspose.cad.fileformats.postscript
+import aspose.cad.fileformats.psd
+import aspose.cad.fileformats.psd.resources
+import aspose.cad.fileformats.shx
+import aspose.cad.fileformats.stl
+import aspose.cad.fileformats.stl.stlobjects
+import aspose.cad.fileformats.stp
+import aspose.cad.fileformats.stp.helpers
+import aspose.cad.fileformats.stp.items
+import aspose.cad.fileformats.stp.reader
+import aspose.cad.fileformats.stp.stplibrary
+import aspose.cad.fileformats.stp.stplibrary.core
+import aspose.cad.fileformats.stp.stplibrary.core.models
+import aspose.cad.fileformats.svg
+import aspose.cad.fileformats.threeds
+import aspose.cad.fileformats.threeds.elements
+import aspose.cad.fileformats.tiff
+import aspose.cad.fileformats.tiff.enums
+import aspose.cad.fileformats.tiff.filemanagement
+import aspose.cad.fileformats.tiff.instancefactory
+import aspose.cad.fileformats.tiff.tifftagtypes
+import aspose.cad.fileformats.u3d
+import aspose.cad.fileformats.u3d.elements
+import aspose.cad.fileformats.u3d.helpers
+import aspose.cad.imageoptions
+import aspose.cad.imageoptions.svgoptionsparameters
+import aspose.cad.measurement
+import aspose.cad.palettehelper
+import aspose.cad.primitives
+import aspose.cad.sources
+import aspose.cad.timeprovision
+import aspose.cad.watermarkguard
+
+class CadBlock1PtParameters(CadBlockElement):
+    '''Class describing block parameters.'''
+    
+    def get_uid(self) -> str:
+        '''Identifier to use if object handle doesn't work. Done as method not to disturb FileComparer's property comparer'''
+        ...
+    
+    def set_uid(self, id : str) -> None:
+        '''Sets'''
+        ...
+    
+    @property
+    def embedded_objects_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer:
+        ...
+    
+    @embedded_objects_container.setter
+    def embedded_objects_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer):
+        ...
+    
+    @property
+    def object_handle(self) -> str:
+        ...
+    
+    @object_handle.setter
+    def object_handle(self, value : str):
+        ...
+    
+    @property
+    def xdata_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadXdataContainer:
+        ...
+    
+    @xdata_container.setter
+    def xdata_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadXdataContainer):
+        ...
+    
+    @property
+    def attributes(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]:
+        '''Gets the attributes.'''
+        ...
+    
+    @attributes.setter
+    def attributes(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]):
+        '''Sets the attributes.'''
+        ...
+    
+    @property
+    def application_codes_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer:
+        ...
+    
+    @application_codes_container.setter
+    def application_codes_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer):
+        ...
+    
+    @property
+    def attribute_102_values(self) -> List[aspose.cad.fileformats.cad.CadCodeValue]:
+        ...
+    
+    @attribute_102_values.setter
+    def attribute_102_values(self, value : List[aspose.cad.fileformats.cad.CadCodeValue]):
+        ...
+    
+    @property
+    def numreactors(self) -> int:
+        '''The Numreactors'''
+        ...
+    
+    @numreactors.setter
+    def numreactors(self, value : int):
+        '''The Numreactors'''
+        ...
+    
+    @property
+    def reactors(self) -> List[str]:
+        '''Get the reactors handle'''
+        ...
+    
+    @reactors.setter
+    def reactors(self, value : List[str]):
+        '''Get or sets the reactors handle'''
+        ...
+    
+    @property
+    def storage_flag(self) -> bool:
+        ...
+    
+    @storage_flag.setter
+    def storage_flag(self, value : bool):
+        ...
+    
+    @property
+    def hard_owner(self) -> str:
+        ...
+    
+    @hard_owner.setter
+    def hard_owner(self, value : str):
+        ...
+    
+    @property
+    def soft_owner(self) -> str:
+        ...
+    
+    @soft_owner.setter
+    def soft_owner(self, value : str):
+        ...
+    
+    @property
+    def is_soft_owner_set(self) -> bool:
+        ...
+    
+    @property
+    def type_name(self) -> aspose.cad.fileformats.cad.cadconsts.CadObjectTypeName:
+        ...
+    
+    @property
+    def child_objects(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]:
+        ...
+    
+    @child_objects.setter
+    def child_objects(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]):
+        ...
+    
+    @property
+    def db_eval_expr_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @db_eval_expr_parameter_list.setter
+    def db_eval_expr_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def eval_expr_parent_id(self) -> int:
+        ...
+    
+    @eval_expr_parent_id.setter
+    def eval_expr_parent_id(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_major(self) -> int:
+        ...
+    
+    @eval_expr_major.setter
+    def eval_expr_major(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_minor(self) -> int:
+        ...
+    
+    @eval_expr_minor.setter
+    def eval_expr_minor(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_value_code(self) -> int:
+        ...
+    
+    @eval_expr_value_code.setter
+    def eval_expr_value_code(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_node_id(self) -> int:
+        ...
+    
+    @eval_expr_node_id.setter
+    def eval_expr_node_id(self, value : int):
+        ...
+    
+    @property
+    def block_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @block_parameter_list.setter
+    def block_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def block_1_pt_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @block_1_pt_parameter_list.setter
+    def block_1_pt_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    ...
+
+class CadBlock2PtParameters(CadBlockElement):
+    '''Class describing BLOCK2PTPARAMETERS abstract object.'''
+    
+    def get_uid(self) -> str:
+        '''Identifier to use if object handle doesn't work. Done as method not to disturb FileComparer's property comparer'''
+        ...
+    
+    def set_uid(self, id : str) -> None:
+        '''Sets'''
+        ...
+    
+    @property
+    def embedded_objects_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer:
+        ...
+    
+    @embedded_objects_container.setter
+    def embedded_objects_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer):
+        ...
+    
+    @property
+    def object_handle(self) -> str:
+        ...
+    
+    @object_handle.setter
+    def object_handle(self, value : str):
+        ...
+    
+    @property
+    def xdata_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadXdataContainer:
+        ...
+    
+    @xdata_container.setter
+    def xdata_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadXdataContainer):
+        ...
+    
+    @property
+    def attributes(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]:
+        '''Gets the attributes.'''
+        ...
+    
+    @attributes.setter
+    def attributes(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]):
+        '''Sets the attributes.'''
+        ...
+    
+    @property
+    def application_codes_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer:
+        ...
+    
+    @application_codes_container.setter
+    def application_codes_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer):
+        ...
+    
+    @property
+    def attribute_102_values(self) -> List[aspose.cad.fileformats.cad.CadCodeValue]:
+        ...
+    
+    @attribute_102_values.setter
+    def attribute_102_values(self, value : List[aspose.cad.fileformats.cad.CadCodeValue]):
+        ...
+    
+    @property
+    def numreactors(self) -> int:
+        '''The Numreactors'''
+        ...
+    
+    @numreactors.setter
+    def numreactors(self, value : int):
+        '''The Numreactors'''
+        ...
+    
+    @property
+    def reactors(self) -> List[str]:
+        '''Get the reactors handle'''
+        ...
+    
+    @reactors.setter
+    def reactors(self, value : List[str]):
+        '''Get or sets the reactors handle'''
+        ...
+    
+    @property
+    def storage_flag(self) -> bool:
+        ...
+    
+    @storage_flag.setter
+    def storage_flag(self, value : bool):
+        ...
+    
+    @property
+    def hard_owner(self) -> str:
+        ...
+    
+    @hard_owner.setter
+    def hard_owner(self, value : str):
+        ...
+    
+    @property
+    def soft_owner(self) -> str:
+        ...
+    
+    @soft_owner.setter
+    def soft_owner(self, value : str):
+        ...
+    
+    @property
+    def is_soft_owner_set(self) -> bool:
+        ...
+    
+    @property
+    def type_name(self) -> aspose.cad.fileformats.cad.cadconsts.CadObjectTypeName:
+        ...
+    
+    @property
+    def child_objects(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]:
+        ...
+    
+    @child_objects.setter
+    def child_objects(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]):
+        ...
+    
+    @property
+    def db_eval_expr_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @db_eval_expr_parameter_list.setter
+    def db_eval_expr_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def eval_expr_parent_id(self) -> int:
+        ...
+    
+    @eval_expr_parent_id.setter
+    def eval_expr_parent_id(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_major(self) -> int:
+        ...
+    
+    @eval_expr_major.setter
+    def eval_expr_major(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_minor(self) -> int:
+        ...
+    
+    @eval_expr_minor.setter
+    def eval_expr_minor(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_value_code(self) -> int:
+        ...
+    
+    @eval_expr_value_code.setter
+    def eval_expr_value_code(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_node_id(self) -> int:
+        ...
+    
+    @eval_expr_node_id.setter
+    def eval_expr_node_id(self, value : int):
+        ...
+    
+    @property
+    def attribute280(self) -> Optional[int]:
+        '''Gets the attribute 280.'''
+        ...
+    
+    @attribute280.setter
+    def attribute280(self, value : Optional[int]):
+        '''Sets the attribute 280.'''
+        ...
+    
+    @property
+    def attribute281(self) -> Optional[int]:
+        '''Gets the attribute 281.'''
+        ...
+    
+    @attribute281.setter
+    def attribute281(self, value : Optional[int]):
+        '''Sets the attribute 281.'''
+        ...
+    
+    @property
+    def block_2_pt_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @block_2_pt_parameter_list.setter
+    def block_2_pt_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    ...
+
+class CadBlockAction(CadBlockElement):
+    '''Class describing BLOCKACTION object.'''
+    
+    def get_uid(self) -> str:
+        '''Identifier to use if object handle doesn't work. Done as method not to disturb FileComparer's property comparer'''
+        ...
+    
+    def set_uid(self, id : str) -> None:
+        '''Sets'''
+        ...
+    
+    @property
+    def embedded_objects_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer:
+        ...
+    
+    @embedded_objects_container.setter
+    def embedded_objects_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer):
+        ...
+    
+    @property
+    def object_handle(self) -> str:
+        ...
+    
+    @object_handle.setter
+    def object_handle(self, value : str):
+        ...
+    
+    @property
+    def xdata_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadXdataContainer:
+        ...
+    
+    @xdata_container.setter
+    def xdata_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadXdataContainer):
+        ...
+    
+    @property
+    def attributes(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]:
+        '''Gets the attributes.'''
+        ...
+    
+    @attributes.setter
+    def attributes(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]):
+        '''Sets the attributes.'''
+        ...
+    
+    @property
+    def application_codes_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer:
+        ...
+    
+    @application_codes_container.setter
+    def application_codes_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer):
+        ...
+    
+    @property
+    def attribute_102_values(self) -> List[aspose.cad.fileformats.cad.CadCodeValue]:
+        ...
+    
+    @attribute_102_values.setter
+    def attribute_102_values(self, value : List[aspose.cad.fileformats.cad.CadCodeValue]):
+        ...
+    
+    @property
+    def numreactors(self) -> int:
+        '''The Numreactors'''
+        ...
+    
+    @numreactors.setter
+    def numreactors(self, value : int):
+        '''The Numreactors'''
+        ...
+    
+    @property
+    def reactors(self) -> List[str]:
+        '''Get the reactors handle'''
+        ...
+    
+    @reactors.setter
+    def reactors(self, value : List[str]):
+        '''Get or sets the reactors handle'''
+        ...
+    
+    @property
+    def storage_flag(self) -> bool:
+        ...
+    
+    @storage_flag.setter
+    def storage_flag(self, value : bool):
+        ...
+    
+    @property
+    def hard_owner(self) -> str:
+        ...
+    
+    @hard_owner.setter
+    def hard_owner(self, value : str):
+        ...
+    
+    @property
+    def soft_owner(self) -> str:
+        ...
+    
+    @soft_owner.setter
+    def soft_owner(self, value : str):
+        ...
+    
+    @property
+    def is_soft_owner_set(self) -> bool:
+        ...
+    
+    @property
+    def type_name(self) -> aspose.cad.fileformats.cad.cadconsts.CadObjectTypeName:
+        ...
+    
+    @property
+    def child_objects(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]:
+        ...
+    
+    @child_objects.setter
+    def child_objects(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]):
+        ...
+    
+    @property
+    def db_eval_expr_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @db_eval_expr_parameter_list.setter
+    def db_eval_expr_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def eval_expr_parent_id(self) -> int:
+        ...
+    
+    @eval_expr_parent_id.setter
+    def eval_expr_parent_id(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_major(self) -> int:
+        ...
+    
+    @eval_expr_major.setter
+    def eval_expr_major(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_minor(self) -> int:
+        ...
+    
+    @eval_expr_minor.setter
+    def eval_expr_minor(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_value_code(self) -> int:
+        ...
+    
+    @eval_expr_value_code.setter
+    def eval_expr_value_code(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_node_id(self) -> int:
+        ...
+    
+    @eval_expr_node_id.setter
+    def eval_expr_node_id(self, value : int):
+        ...
+    
+    @property
+    def block_action_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @block_action_parameter_list.setter
+    def block_action_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    ...
+
+class CadBlockActionWithBasePt(CadBlockAction):
+    '''Class describing BlockActionWithBasePt object.'''
+    
+    def get_uid(self) -> str:
+        '''Identifier to use if object handle doesn't work. Done as method not to disturb FileComparer's property comparer'''
+        ...
+    
+    def set_uid(self, id : str) -> None:
+        '''Sets'''
+        ...
+    
+    @property
+    def embedded_objects_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer:
+        ...
+    
+    @embedded_objects_container.setter
+    def embedded_objects_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer):
+        ...
+    
+    @property
+    def object_handle(self) -> str:
+        ...
+    
+    @object_handle.setter
+    def object_handle(self, value : str):
+        ...
+    
+    @property
+    def xdata_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadXdataContainer:
+        ...
+    
+    @xdata_container.setter
+    def xdata_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadXdataContainer):
+        ...
+    
+    @property
+    def attributes(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]:
+        '''Gets the attributes.'''
+        ...
+    
+    @attributes.setter
+    def attributes(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]):
+        '''Sets the attributes.'''
+        ...
+    
+    @property
+    def application_codes_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer:
+        ...
+    
+    @application_codes_container.setter
+    def application_codes_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer):
+        ...
+    
+    @property
+    def attribute_102_values(self) -> List[aspose.cad.fileformats.cad.CadCodeValue]:
+        ...
+    
+    @attribute_102_values.setter
+    def attribute_102_values(self, value : List[aspose.cad.fileformats.cad.CadCodeValue]):
+        ...
+    
+    @property
+    def numreactors(self) -> int:
+        '''The Numreactors'''
+        ...
+    
+    @numreactors.setter
+    def numreactors(self, value : int):
+        '''The Numreactors'''
+        ...
+    
+    @property
+    def reactors(self) -> List[str]:
+        '''Get the reactors handle'''
+        ...
+    
+    @reactors.setter
+    def reactors(self, value : List[str]):
+        '''Get or sets the reactors handle'''
+        ...
+    
+    @property
+    def storage_flag(self) -> bool:
+        ...
+    
+    @storage_flag.setter
+    def storage_flag(self, value : bool):
+        ...
+    
+    @property
+    def hard_owner(self) -> str:
+        ...
+    
+    @hard_owner.setter
+    def hard_owner(self, value : str):
+        ...
+    
+    @property
+    def soft_owner(self) -> str:
+        ...
+    
+    @soft_owner.setter
+    def soft_owner(self, value : str):
+        ...
+    
+    @property
+    def is_soft_owner_set(self) -> bool:
+        ...
+    
+    @property
+    def type_name(self) -> aspose.cad.fileformats.cad.cadconsts.CadObjectTypeName:
+        ...
+    
+    @property
+    def child_objects(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]:
+        ...
+    
+    @child_objects.setter
+    def child_objects(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]):
+        ...
+    
+    @property
+    def db_eval_expr_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @db_eval_expr_parameter_list.setter
+    def db_eval_expr_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def eval_expr_parent_id(self) -> int:
+        ...
+    
+    @eval_expr_parent_id.setter
+    def eval_expr_parent_id(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_major(self) -> int:
+        ...
+    
+    @eval_expr_major.setter
+    def eval_expr_major(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_minor(self) -> int:
+        ...
+    
+    @eval_expr_minor.setter
+    def eval_expr_minor(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_value_code(self) -> int:
+        ...
+    
+    @eval_expr_value_code.setter
+    def eval_expr_value_code(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_node_id(self) -> int:
+        ...
+    
+    @eval_expr_node_id.setter
+    def eval_expr_node_id(self, value : int):
+        ...
+    
+    @property
+    def block_action_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @block_action_parameter_list.setter
+    def block_action_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def attribute92(self) -> Optional[int]:
+        '''Gets the attribute 92.'''
+        ...
+    
+    @attribute92.setter
+    def attribute92(self, value : Optional[int]):
+        '''Sets the attribute 92.'''
+        ...
+    
+    @property
+    def attribute301(self) -> str:
+        '''Gets the attribute 301.'''
+        ...
+    
+    @attribute301.setter
+    def attribute301(self, value : str):
+        '''Sets the attribute 301.'''
+        ...
+    
+    @property
+    def attribute93(self) -> Optional[int]:
+        '''Gets the attribute 93.'''
+        ...
+    
+    @attribute93.setter
+    def attribute93(self, value : Optional[int]):
+        '''Sets the attribute 93.'''
+        ...
+    
+    @property
+    def attribute302(self) -> str:
+        '''Gets the attribute 302.'''
+        ...
+    
+    @attribute302.setter
+    def attribute302(self, value : str):
+        '''Sets the attribute 302.'''
+        ...
+    
+    @property
+    def attribute280(self) -> Optional[int]:
+        '''Gets the attribute 280.'''
+        ...
+    
+    @attribute280.setter
+    def attribute280(self, value : Optional[int]):
+        '''Sets the attribute 280.'''
+        ...
+    
+    ...
+
+class CadBlockAligmentGrip(CadBlockGrip):
+    '''Class describing CadBlockAligmentGrip object.'''
+    
+    def get_uid(self) -> str:
+        '''Identifier to use if object handle doesn't work. Done as method not to disturb FileComparer's property comparer'''
+        ...
+    
+    def set_uid(self, id : str) -> None:
+        '''Sets'''
+        ...
+    
+    @property
+    def embedded_objects_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer:
+        ...
+    
+    @embedded_objects_container.setter
+    def embedded_objects_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer):
+        ...
+    
+    @property
+    def object_handle(self) -> str:
+        ...
+    
+    @object_handle.setter
+    def object_handle(self, value : str):
+        ...
+    
+    @property
+    def xdata_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadXdataContainer:
+        ...
+    
+    @xdata_container.setter
+    def xdata_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadXdataContainer):
+        ...
+    
+    @property
+    def attributes(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]:
+        '''Gets the attributes.'''
+        ...
+    
+    @attributes.setter
+    def attributes(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]):
+        '''Sets the attributes.'''
+        ...
+    
+    @property
+    def application_codes_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer:
+        ...
+    
+    @application_codes_container.setter
+    def application_codes_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer):
+        ...
+    
+    @property
+    def attribute_102_values(self) -> List[aspose.cad.fileformats.cad.CadCodeValue]:
+        ...
+    
+    @attribute_102_values.setter
+    def attribute_102_values(self, value : List[aspose.cad.fileformats.cad.CadCodeValue]):
+        ...
+    
+    @property
+    def numreactors(self) -> int:
+        '''The Numreactors'''
+        ...
+    
+    @numreactors.setter
+    def numreactors(self, value : int):
+        '''The Numreactors'''
+        ...
+    
+    @property
+    def reactors(self) -> List[str]:
+        '''Get the reactors handle'''
+        ...
+    
+    @reactors.setter
+    def reactors(self, value : List[str]):
+        '''Get or sets the reactors handle'''
+        ...
+    
+    @property
+    def storage_flag(self) -> bool:
+        ...
+    
+    @storage_flag.setter
+    def storage_flag(self, value : bool):
+        ...
+    
+    @property
+    def hard_owner(self) -> str:
+        ...
+    
+    @hard_owner.setter
+    def hard_owner(self, value : str):
+        ...
+    
+    @property
+    def soft_owner(self) -> str:
+        ...
+    
+    @soft_owner.setter
+    def soft_owner(self, value : str):
+        ...
+    
+    @property
+    def is_soft_owner_set(self) -> bool:
+        ...
+    
+    @property
+    def type_name(self) -> aspose.cad.fileformats.cad.cadconsts.CadObjectTypeName:
+        ...
+    
+    @property
+    def child_objects(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]:
+        ...
+    
+    @child_objects.setter
+    def child_objects(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]):
+        ...
+    
+    @property
+    def db_eval_expr_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @db_eval_expr_parameter_list.setter
+    def db_eval_expr_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def eval_expr_parent_id(self) -> int:
+        ...
+    
+    @eval_expr_parent_id.setter
+    def eval_expr_parent_id(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_major(self) -> int:
+        ...
+    
+    @eval_expr_major.setter
+    def eval_expr_major(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_minor(self) -> int:
+        ...
+    
+    @eval_expr_minor.setter
+    def eval_expr_minor(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_value_code(self) -> int:
+        ...
+    
+    @eval_expr_value_code.setter
+    def eval_expr_value_code(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_node_id(self) -> int:
+        ...
+    
+    @eval_expr_node_id.setter
+    def eval_expr_node_id(self, value : int):
+        ...
+    
+    @property
+    def block_aligment_grip_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @block_aligment_grip_parameter_list.setter
+    def block_aligment_grip_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    ...
+
+class CadBlockAligmentParameter(CadBlock2PtParameters):
+    '''Class describing block aligment parameter.'''
+    
+    def get_uid(self) -> str:
+        '''Identifier to use if object handle doesn't work. Done as method not to disturb FileComparer's property comparer'''
+        ...
+    
+    def set_uid(self, id : str) -> None:
+        '''Sets'''
+        ...
+    
+    @property
+    def embedded_objects_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer:
+        ...
+    
+    @embedded_objects_container.setter
+    def embedded_objects_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer):
+        ...
+    
+    @property
+    def object_handle(self) -> str:
+        ...
+    
+    @object_handle.setter
+    def object_handle(self, value : str):
+        ...
+    
+    @property
+    def xdata_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadXdataContainer:
+        ...
+    
+    @xdata_container.setter
+    def xdata_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadXdataContainer):
+        ...
+    
+    @property
+    def attributes(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]:
+        '''Gets the attributes.'''
+        ...
+    
+    @attributes.setter
+    def attributes(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]):
+        '''Sets the attributes.'''
+        ...
+    
+    @property
+    def application_codes_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer:
+        ...
+    
+    @application_codes_container.setter
+    def application_codes_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer):
+        ...
+    
+    @property
+    def attribute_102_values(self) -> List[aspose.cad.fileformats.cad.CadCodeValue]:
+        ...
+    
+    @attribute_102_values.setter
+    def attribute_102_values(self, value : List[aspose.cad.fileformats.cad.CadCodeValue]):
+        ...
+    
+    @property
+    def numreactors(self) -> int:
+        '''The Numreactors'''
+        ...
+    
+    @numreactors.setter
+    def numreactors(self, value : int):
+        '''The Numreactors'''
+        ...
+    
+    @property
+    def reactors(self) -> List[str]:
+        '''Get the reactors handle'''
+        ...
+    
+    @reactors.setter
+    def reactors(self, value : List[str]):
+        '''Get or sets the reactors handle'''
+        ...
+    
+    @property
+    def storage_flag(self) -> bool:
+        ...
+    
+    @storage_flag.setter
+    def storage_flag(self, value : bool):
+        ...
+    
+    @property
+    def hard_owner(self) -> str:
+        ...
+    
+    @hard_owner.setter
+    def hard_owner(self, value : str):
+        ...
+    
+    @property
+    def soft_owner(self) -> str:
+        ...
+    
+    @soft_owner.setter
+    def soft_owner(self, value : str):
+        ...
+    
+    @property
+    def is_soft_owner_set(self) -> bool:
+        ...
+    
+    @property
+    def type_name(self) -> aspose.cad.fileformats.cad.cadconsts.CadObjectTypeName:
+        ...
+    
+    @property
+    def child_objects(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]:
+        ...
+    
+    @child_objects.setter
+    def child_objects(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]):
+        ...
+    
+    @property
+    def db_eval_expr_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @db_eval_expr_parameter_list.setter
+    def db_eval_expr_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def eval_expr_parent_id(self) -> int:
+        ...
+    
+    @eval_expr_parent_id.setter
+    def eval_expr_parent_id(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_major(self) -> int:
+        ...
+    
+    @eval_expr_major.setter
+    def eval_expr_major(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_minor(self) -> int:
+        ...
+    
+    @eval_expr_minor.setter
+    def eval_expr_minor(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_value_code(self) -> int:
+        ...
+    
+    @eval_expr_value_code.setter
+    def eval_expr_value_code(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_node_id(self) -> int:
+        ...
+    
+    @eval_expr_node_id.setter
+    def eval_expr_node_id(self, value : int):
+        ...
+    
+    @property
+    def attribute280(self) -> Optional[int]:
+        '''Gets the attribute 280.'''
+        ...
+    
+    @attribute280.setter
+    def attribute280(self, value : Optional[int]):
+        '''Sets the attribute 280.'''
+        ...
+    
+    @property
+    def attribute281(self) -> Optional[int]:
+        '''Gets the attribute 281.'''
+        ...
+    
+    @attribute281.setter
+    def attribute281(self, value : Optional[int]):
+        '''Sets the attribute 281.'''
+        ...
+    
+    @property
+    def block_2_pt_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @block_2_pt_parameter_list.setter
+    def block_2_pt_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def block_aligment_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @block_aligment_parameter_list.setter
+    def block_aligment_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    ...
+
+class CadBlockBasePointParameter(CadBlock1PtParameters):
+    '''Class describing BlockBasePointParameter.'''
+    
+    def get_uid(self) -> str:
+        '''Identifier to use if object handle doesn't work. Done as method not to disturb FileComparer's property comparer'''
+        ...
+    
+    def set_uid(self, id : str) -> None:
+        '''Sets'''
+        ...
+    
+    @property
+    def embedded_objects_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer:
+        ...
+    
+    @embedded_objects_container.setter
+    def embedded_objects_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer):
+        ...
+    
+    @property
+    def object_handle(self) -> str:
+        ...
+    
+    @object_handle.setter
+    def object_handle(self, value : str):
+        ...
+    
+    @property
+    def xdata_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadXdataContainer:
+        ...
+    
+    @xdata_container.setter
+    def xdata_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadXdataContainer):
+        ...
+    
+    @property
+    def attributes(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]:
+        '''Gets the attributes.'''
+        ...
+    
+    @attributes.setter
+    def attributes(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]):
+        '''Sets the attributes.'''
+        ...
+    
+    @property
+    def application_codes_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer:
+        ...
+    
+    @application_codes_container.setter
+    def application_codes_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer):
+        ...
+    
+    @property
+    def attribute_102_values(self) -> List[aspose.cad.fileformats.cad.CadCodeValue]:
+        ...
+    
+    @attribute_102_values.setter
+    def attribute_102_values(self, value : List[aspose.cad.fileformats.cad.CadCodeValue]):
+        ...
+    
+    @property
+    def numreactors(self) -> int:
+        '''The Numreactors'''
+        ...
+    
+    @numreactors.setter
+    def numreactors(self, value : int):
+        '''The Numreactors'''
+        ...
+    
+    @property
+    def reactors(self) -> List[str]:
+        '''Get the reactors handle'''
+        ...
+    
+    @reactors.setter
+    def reactors(self, value : List[str]):
+        '''Get or sets the reactors handle'''
+        ...
+    
+    @property
+    def storage_flag(self) -> bool:
+        ...
+    
+    @storage_flag.setter
+    def storage_flag(self, value : bool):
+        ...
+    
+    @property
+    def hard_owner(self) -> str:
+        ...
+    
+    @hard_owner.setter
+    def hard_owner(self, value : str):
+        ...
+    
+    @property
+    def soft_owner(self) -> str:
+        ...
+    
+    @soft_owner.setter
+    def soft_owner(self, value : str):
+        ...
+    
+    @property
+    def is_soft_owner_set(self) -> bool:
+        ...
+    
+    @property
+    def type_name(self) -> aspose.cad.fileformats.cad.cadconsts.CadObjectTypeName:
+        ...
+    
+    @property
+    def child_objects(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]:
+        ...
+    
+    @child_objects.setter
+    def child_objects(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]):
+        ...
+    
+    @property
+    def db_eval_expr_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @db_eval_expr_parameter_list.setter
+    def db_eval_expr_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def eval_expr_parent_id(self) -> int:
+        ...
+    
+    @eval_expr_parent_id.setter
+    def eval_expr_parent_id(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_major(self) -> int:
+        ...
+    
+    @eval_expr_major.setter
+    def eval_expr_major(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_minor(self) -> int:
+        ...
+    
+    @eval_expr_minor.setter
+    def eval_expr_minor(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_value_code(self) -> int:
+        ...
+    
+    @eval_expr_value_code.setter
+    def eval_expr_value_code(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_node_id(self) -> int:
+        ...
+    
+    @eval_expr_node_id.setter
+    def eval_expr_node_id(self, value : int):
+        ...
+    
+    @property
+    def block_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @block_parameter_list.setter
+    def block_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def block_1_pt_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @block_1_pt_parameter_list.setter
+    def block_1_pt_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    ...
+
+class CadBlockElement(aspose.cad.fileformats.cad.cadobjects.CadDbEvalExpr):
+    '''Class describing CadBlockVisibility object.'''
+    
+    def get_uid(self) -> str:
+        '''Identifier to use if object handle doesn't work. Done as method not to disturb FileComparer's property comparer'''
+        ...
+    
+    def set_uid(self, id : str) -> None:
+        '''Sets'''
+        ...
+    
+    @property
+    def embedded_objects_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer:
+        ...
+    
+    @embedded_objects_container.setter
+    def embedded_objects_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer):
+        ...
+    
+    @property
+    def object_handle(self) -> str:
+        ...
+    
+    @object_handle.setter
+    def object_handle(self, value : str):
+        ...
+    
+    @property
+    def xdata_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadXdataContainer:
+        ...
+    
+    @xdata_container.setter
+    def xdata_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadXdataContainer):
+        ...
+    
+    @property
+    def attributes(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]:
+        '''Gets the attributes.'''
+        ...
+    
+    @attributes.setter
+    def attributes(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]):
+        '''Sets the attributes.'''
+        ...
+    
+    @property
+    def application_codes_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer:
+        ...
+    
+    @application_codes_container.setter
+    def application_codes_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer):
+        ...
+    
+    @property
+    def attribute_102_values(self) -> List[aspose.cad.fileformats.cad.CadCodeValue]:
+        ...
+    
+    @attribute_102_values.setter
+    def attribute_102_values(self, value : List[aspose.cad.fileformats.cad.CadCodeValue]):
+        ...
+    
+    @property
+    def numreactors(self) -> int:
+        '''The Numreactors'''
+        ...
+    
+    @numreactors.setter
+    def numreactors(self, value : int):
+        '''The Numreactors'''
+        ...
+    
+    @property
+    def reactors(self) -> List[str]:
+        '''Get the reactors handle'''
+        ...
+    
+    @reactors.setter
+    def reactors(self, value : List[str]):
+        '''Get or sets the reactors handle'''
+        ...
+    
+    @property
+    def storage_flag(self) -> bool:
+        ...
+    
+    @storage_flag.setter
+    def storage_flag(self, value : bool):
+        ...
+    
+    @property
+    def hard_owner(self) -> str:
+        ...
+    
+    @hard_owner.setter
+    def hard_owner(self, value : str):
+        ...
+    
+    @property
+    def soft_owner(self) -> str:
+        ...
+    
+    @soft_owner.setter
+    def soft_owner(self, value : str):
+        ...
+    
+    @property
+    def is_soft_owner_set(self) -> bool:
+        ...
+    
+    @property
+    def type_name(self) -> aspose.cad.fileformats.cad.cadconsts.CadObjectTypeName:
+        ...
+    
+    @property
+    def child_objects(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]:
+        ...
+    
+    @child_objects.setter
+    def child_objects(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]):
+        ...
+    
+    @property
+    def db_eval_expr_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @db_eval_expr_parameter_list.setter
+    def db_eval_expr_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def eval_expr_parent_id(self) -> int:
+        ...
+    
+    @eval_expr_parent_id.setter
+    def eval_expr_parent_id(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_major(self) -> int:
+        ...
+    
+    @eval_expr_major.setter
+    def eval_expr_major(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_minor(self) -> int:
+        ...
+    
+    @eval_expr_minor.setter
+    def eval_expr_minor(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_value_code(self) -> int:
+        ...
+    
+    @eval_expr_value_code.setter
+    def eval_expr_value_code(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_node_id(self) -> int:
+        ...
+    
+    @eval_expr_node_id.setter
+    def eval_expr_node_id(self, value : int):
+        ...
+    
+    ...
+
+class CadBlockFlipAction(CadBlockAction):
+    '''Class describing BLOCKFLIPACTION object.'''
+    
+    def get_uid(self) -> str:
+        '''Identifier to use if object handle doesn't work. Done as method not to disturb FileComparer's property comparer'''
+        ...
+    
+    def set_uid(self, id : str) -> None:
+        '''Sets'''
+        ...
+    
+    @property
+    def embedded_objects_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer:
+        ...
+    
+    @embedded_objects_container.setter
+    def embedded_objects_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer):
+        ...
+    
+    @property
+    def object_handle(self) -> str:
+        ...
+    
+    @object_handle.setter
+    def object_handle(self, value : str):
+        ...
+    
+    @property
+    def xdata_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadXdataContainer:
+        ...
+    
+    @xdata_container.setter
+    def xdata_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadXdataContainer):
+        ...
+    
+    @property
+    def attributes(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]:
+        '''Gets the attributes.'''
+        ...
+    
+    @attributes.setter
+    def attributes(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]):
+        '''Sets the attributes.'''
+        ...
+    
+    @property
+    def application_codes_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer:
+        ...
+    
+    @application_codes_container.setter
+    def application_codes_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer):
+        ...
+    
+    @property
+    def attribute_102_values(self) -> List[aspose.cad.fileformats.cad.CadCodeValue]:
+        ...
+    
+    @attribute_102_values.setter
+    def attribute_102_values(self, value : List[aspose.cad.fileformats.cad.CadCodeValue]):
+        ...
+    
+    @property
+    def numreactors(self) -> int:
+        '''The Numreactors'''
+        ...
+    
+    @numreactors.setter
+    def numreactors(self, value : int):
+        '''The Numreactors'''
+        ...
+    
+    @property
+    def reactors(self) -> List[str]:
+        '''Get the reactors handle'''
+        ...
+    
+    @reactors.setter
+    def reactors(self, value : List[str]):
+        '''Get or sets the reactors handle'''
+        ...
+    
+    @property
+    def storage_flag(self) -> bool:
+        ...
+    
+    @storage_flag.setter
+    def storage_flag(self, value : bool):
+        ...
+    
+    @property
+    def hard_owner(self) -> str:
+        ...
+    
+    @hard_owner.setter
+    def hard_owner(self, value : str):
+        ...
+    
+    @property
+    def soft_owner(self) -> str:
+        ...
+    
+    @soft_owner.setter
+    def soft_owner(self, value : str):
+        ...
+    
+    @property
+    def is_soft_owner_set(self) -> bool:
+        ...
+    
+    @property
+    def type_name(self) -> aspose.cad.fileformats.cad.cadconsts.CadObjectTypeName:
+        ...
+    
+    @property
+    def child_objects(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]:
+        ...
+    
+    @child_objects.setter
+    def child_objects(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]):
+        ...
+    
+    @property
+    def db_eval_expr_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @db_eval_expr_parameter_list.setter
+    def db_eval_expr_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def eval_expr_parent_id(self) -> int:
+        ...
+    
+    @eval_expr_parent_id.setter
+    def eval_expr_parent_id(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_major(self) -> int:
+        ...
+    
+    @eval_expr_major.setter
+    def eval_expr_major(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_minor(self) -> int:
+        ...
+    
+    @eval_expr_minor.setter
+    def eval_expr_minor(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_value_code(self) -> int:
+        ...
+    
+    @eval_expr_value_code.setter
+    def eval_expr_value_code(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_node_id(self) -> int:
+        ...
+    
+    @eval_expr_node_id.setter
+    def eval_expr_node_id(self, value : int):
+        ...
+    
+    @property
+    def block_action_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @block_action_parameter_list.setter
+    def block_action_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def block_flip_action_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @block_flip_action_parameter_list.setter
+    def block_flip_action_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    ...
+
+class CadBlockFlipGrip(CadBlockGrip):
+    '''Class describing CadBlockFlipGrip object.'''
+    
+    def get_uid(self) -> str:
+        '''Identifier to use if object handle doesn't work. Done as method not to disturb FileComparer's property comparer'''
+        ...
+    
+    def set_uid(self, id : str) -> None:
+        '''Sets'''
+        ...
+    
+    @property
+    def embedded_objects_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer:
+        ...
+    
+    @embedded_objects_container.setter
+    def embedded_objects_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer):
+        ...
+    
+    @property
+    def object_handle(self) -> str:
+        ...
+    
+    @object_handle.setter
+    def object_handle(self, value : str):
+        ...
+    
+    @property
+    def xdata_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadXdataContainer:
+        ...
+    
+    @xdata_container.setter
+    def xdata_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadXdataContainer):
+        ...
+    
+    @property
+    def attributes(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]:
+        '''Gets the attributes.'''
+        ...
+    
+    @attributes.setter
+    def attributes(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]):
+        '''Sets the attributes.'''
+        ...
+    
+    @property
+    def application_codes_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer:
+        ...
+    
+    @application_codes_container.setter
+    def application_codes_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer):
+        ...
+    
+    @property
+    def attribute_102_values(self) -> List[aspose.cad.fileformats.cad.CadCodeValue]:
+        ...
+    
+    @attribute_102_values.setter
+    def attribute_102_values(self, value : List[aspose.cad.fileformats.cad.CadCodeValue]):
+        ...
+    
+    @property
+    def numreactors(self) -> int:
+        '''The Numreactors'''
+        ...
+    
+    @numreactors.setter
+    def numreactors(self, value : int):
+        '''The Numreactors'''
+        ...
+    
+    @property
+    def reactors(self) -> List[str]:
+        '''Get the reactors handle'''
+        ...
+    
+    @reactors.setter
+    def reactors(self, value : List[str]):
+        '''Get or sets the reactors handle'''
+        ...
+    
+    @property
+    def storage_flag(self) -> bool:
+        ...
+    
+    @storage_flag.setter
+    def storage_flag(self, value : bool):
+        ...
+    
+    @property
+    def hard_owner(self) -> str:
+        ...
+    
+    @hard_owner.setter
+    def hard_owner(self, value : str):
+        ...
+    
+    @property
+    def soft_owner(self) -> str:
+        ...
+    
+    @soft_owner.setter
+    def soft_owner(self, value : str):
+        ...
+    
+    @property
+    def is_soft_owner_set(self) -> bool:
+        ...
+    
+    @property
+    def type_name(self) -> aspose.cad.fileformats.cad.cadconsts.CadObjectTypeName:
+        ...
+    
+    @property
+    def child_objects(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]:
+        ...
+    
+    @child_objects.setter
+    def child_objects(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]):
+        ...
+    
+    @property
+    def db_eval_expr_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @db_eval_expr_parameter_list.setter
+    def db_eval_expr_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def eval_expr_parent_id(self) -> int:
+        ...
+    
+    @eval_expr_parent_id.setter
+    def eval_expr_parent_id(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_major(self) -> int:
+        ...
+    
+    @eval_expr_major.setter
+    def eval_expr_major(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_minor(self) -> int:
+        ...
+    
+    @eval_expr_minor.setter
+    def eval_expr_minor(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_value_code(self) -> int:
+        ...
+    
+    @eval_expr_value_code.setter
+    def eval_expr_value_code(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_node_id(self) -> int:
+        ...
+    
+    @eval_expr_node_id.setter
+    def eval_expr_node_id(self, value : int):
+        ...
+    
+    @property
+    def block_flip_grip_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @block_flip_grip_parameter_list.setter
+    def block_flip_grip_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    ...
+
+class CadBlockFlipParameter(CadBlock2PtParameters):
+    '''Class describing BLOCKFLIPPARAMETER object.'''
+    
+    def get_uid(self) -> str:
+        '''Identifier to use if object handle doesn't work. Done as method not to disturb FileComparer's property comparer'''
+        ...
+    
+    def set_uid(self, id : str) -> None:
+        '''Sets'''
+        ...
+    
+    @property
+    def embedded_objects_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer:
+        ...
+    
+    @embedded_objects_container.setter
+    def embedded_objects_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer):
+        ...
+    
+    @property
+    def object_handle(self) -> str:
+        ...
+    
+    @object_handle.setter
+    def object_handle(self, value : str):
+        ...
+    
+    @property
+    def xdata_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadXdataContainer:
+        ...
+    
+    @xdata_container.setter
+    def xdata_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadXdataContainer):
+        ...
+    
+    @property
+    def attributes(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]:
+        '''Gets the attributes.'''
+        ...
+    
+    @attributes.setter
+    def attributes(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]):
+        '''Sets the attributes.'''
+        ...
+    
+    @property
+    def application_codes_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer:
+        ...
+    
+    @application_codes_container.setter
+    def application_codes_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer):
+        ...
+    
+    @property
+    def attribute_102_values(self) -> List[aspose.cad.fileformats.cad.CadCodeValue]:
+        ...
+    
+    @attribute_102_values.setter
+    def attribute_102_values(self, value : List[aspose.cad.fileformats.cad.CadCodeValue]):
+        ...
+    
+    @property
+    def numreactors(self) -> int:
+        '''The Numreactors'''
+        ...
+    
+    @numreactors.setter
+    def numreactors(self, value : int):
+        '''The Numreactors'''
+        ...
+    
+    @property
+    def reactors(self) -> List[str]:
+        '''Get the reactors handle'''
+        ...
+    
+    @reactors.setter
+    def reactors(self, value : List[str]):
+        '''Get or sets the reactors handle'''
+        ...
+    
+    @property
+    def storage_flag(self) -> bool:
+        ...
+    
+    @storage_flag.setter
+    def storage_flag(self, value : bool):
+        ...
+    
+    @property
+    def hard_owner(self) -> str:
+        ...
+    
+    @hard_owner.setter
+    def hard_owner(self, value : str):
+        ...
+    
+    @property
+    def soft_owner(self) -> str:
+        ...
+    
+    @soft_owner.setter
+    def soft_owner(self, value : str):
+        ...
+    
+    @property
+    def is_soft_owner_set(self) -> bool:
+        ...
+    
+    @property
+    def type_name(self) -> aspose.cad.fileformats.cad.cadconsts.CadObjectTypeName:
+        ...
+    
+    @property
+    def child_objects(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]:
+        ...
+    
+    @child_objects.setter
+    def child_objects(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]):
+        ...
+    
+    @property
+    def db_eval_expr_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @db_eval_expr_parameter_list.setter
+    def db_eval_expr_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def eval_expr_parent_id(self) -> int:
+        ...
+    
+    @eval_expr_parent_id.setter
+    def eval_expr_parent_id(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_major(self) -> int:
+        ...
+    
+    @eval_expr_major.setter
+    def eval_expr_major(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_minor(self) -> int:
+        ...
+    
+    @eval_expr_minor.setter
+    def eval_expr_minor(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_value_code(self) -> int:
+        ...
+    
+    @eval_expr_value_code.setter
+    def eval_expr_value_code(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_node_id(self) -> int:
+        ...
+    
+    @eval_expr_node_id.setter
+    def eval_expr_node_id(self, value : int):
+        ...
+    
+    @property
+    def attribute280(self) -> Optional[int]:
+        '''Gets the attribute 280.'''
+        ...
+    
+    @attribute280.setter
+    def attribute280(self, value : Optional[int]):
+        '''Sets the attribute 280.'''
+        ...
+    
+    @property
+    def attribute281(self) -> Optional[int]:
+        '''Gets the attribute 281.'''
+        ...
+    
+    @attribute281.setter
+    def attribute281(self, value : Optional[int]):
+        '''Sets the attribute 281.'''
+        ...
+    
+    @property
+    def block_2_pt_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @block_2_pt_parameter_list.setter
+    def block_2_pt_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    ...
+
+class CadBlockGrip(CadBlockElement):
+    '''Class describing CadBlockGrip object.'''
+    
+    def get_uid(self) -> str:
+        '''Identifier to use if object handle doesn't work. Done as method not to disturb FileComparer's property comparer'''
+        ...
+    
+    def set_uid(self, id : str) -> None:
+        '''Sets'''
+        ...
+    
+    @property
+    def embedded_objects_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer:
+        ...
+    
+    @embedded_objects_container.setter
+    def embedded_objects_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer):
+        ...
+    
+    @property
+    def object_handle(self) -> str:
+        ...
+    
+    @object_handle.setter
+    def object_handle(self, value : str):
+        ...
+    
+    @property
+    def xdata_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadXdataContainer:
+        ...
+    
+    @xdata_container.setter
+    def xdata_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadXdataContainer):
+        ...
+    
+    @property
+    def attributes(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]:
+        '''Gets the attributes.'''
+        ...
+    
+    @attributes.setter
+    def attributes(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]):
+        '''Sets the attributes.'''
+        ...
+    
+    @property
+    def application_codes_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer:
+        ...
+    
+    @application_codes_container.setter
+    def application_codes_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer):
+        ...
+    
+    @property
+    def attribute_102_values(self) -> List[aspose.cad.fileformats.cad.CadCodeValue]:
+        ...
+    
+    @attribute_102_values.setter
+    def attribute_102_values(self, value : List[aspose.cad.fileformats.cad.CadCodeValue]):
+        ...
+    
+    @property
+    def numreactors(self) -> int:
+        '''The Numreactors'''
+        ...
+    
+    @numreactors.setter
+    def numreactors(self, value : int):
+        '''The Numreactors'''
+        ...
+    
+    @property
+    def reactors(self) -> List[str]:
+        '''Get the reactors handle'''
+        ...
+    
+    @reactors.setter
+    def reactors(self, value : List[str]):
+        '''Get or sets the reactors handle'''
+        ...
+    
+    @property
+    def storage_flag(self) -> bool:
+        ...
+    
+    @storage_flag.setter
+    def storage_flag(self, value : bool):
+        ...
+    
+    @property
+    def hard_owner(self) -> str:
+        ...
+    
+    @hard_owner.setter
+    def hard_owner(self, value : str):
+        ...
+    
+    @property
+    def soft_owner(self) -> str:
+        ...
+    
+    @soft_owner.setter
+    def soft_owner(self, value : str):
+        ...
+    
+    @property
+    def is_soft_owner_set(self) -> bool:
+        ...
+    
+    @property
+    def type_name(self) -> aspose.cad.fileformats.cad.cadconsts.CadObjectTypeName:
+        ...
+    
+    @property
+    def child_objects(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]:
+        ...
+    
+    @child_objects.setter
+    def child_objects(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]):
+        ...
+    
+    @property
+    def db_eval_expr_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @db_eval_expr_parameter_list.setter
+    def db_eval_expr_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def eval_expr_parent_id(self) -> int:
+        ...
+    
+    @eval_expr_parent_id.setter
+    def eval_expr_parent_id(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_major(self) -> int:
+        ...
+    
+    @eval_expr_major.setter
+    def eval_expr_major(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_minor(self) -> int:
+        ...
+    
+    @eval_expr_minor.setter
+    def eval_expr_minor(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_value_code(self) -> int:
+        ...
+    
+    @eval_expr_value_code.setter
+    def eval_expr_value_code(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_node_id(self) -> int:
+        ...
+    
+    @eval_expr_node_id.setter
+    def eval_expr_node_id(self, value : int):
+        ...
+    
+    ...
+
+class CadBlockGripLocationComponent(aspose.cad.fileformats.cad.cadobjects.CadDbEvalExpr):
+    '''Class describing CadBlockGripLocationComponent object.'''
+    
+    def get_uid(self) -> str:
+        '''Identifier to use if object handle doesn't work. Done as method not to disturb FileComparer's property comparer'''
+        ...
+    
+    def set_uid(self, id : str) -> None:
+        '''Sets'''
+        ...
+    
+    @property
+    def embedded_objects_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer:
+        ...
+    
+    @embedded_objects_container.setter
+    def embedded_objects_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer):
+        ...
+    
+    @property
+    def object_handle(self) -> str:
+        ...
+    
+    @object_handle.setter
+    def object_handle(self, value : str):
+        ...
+    
+    @property
+    def xdata_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadXdataContainer:
+        ...
+    
+    @xdata_container.setter
+    def xdata_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadXdataContainer):
+        ...
+    
+    @property
+    def attributes(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]:
+        '''Gets the attributes.'''
+        ...
+    
+    @attributes.setter
+    def attributes(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]):
+        '''Sets the attributes.'''
+        ...
+    
+    @property
+    def application_codes_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer:
+        ...
+    
+    @application_codes_container.setter
+    def application_codes_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer):
+        ...
+    
+    @property
+    def attribute_102_values(self) -> List[aspose.cad.fileformats.cad.CadCodeValue]:
+        ...
+    
+    @attribute_102_values.setter
+    def attribute_102_values(self, value : List[aspose.cad.fileformats.cad.CadCodeValue]):
+        ...
+    
+    @property
+    def numreactors(self) -> int:
+        '''The Numreactors'''
+        ...
+    
+    @numreactors.setter
+    def numreactors(self, value : int):
+        '''The Numreactors'''
+        ...
+    
+    @property
+    def reactors(self) -> List[str]:
+        '''Get the reactors handle'''
+        ...
+    
+    @reactors.setter
+    def reactors(self, value : List[str]):
+        '''Get or sets the reactors handle'''
+        ...
+    
+    @property
+    def storage_flag(self) -> bool:
+        ...
+    
+    @storage_flag.setter
+    def storage_flag(self, value : bool):
+        ...
+    
+    @property
+    def hard_owner(self) -> str:
+        ...
+    
+    @hard_owner.setter
+    def hard_owner(self, value : str):
+        ...
+    
+    @property
+    def soft_owner(self) -> str:
+        ...
+    
+    @soft_owner.setter
+    def soft_owner(self, value : str):
+        ...
+    
+    @property
+    def is_soft_owner_set(self) -> bool:
+        ...
+    
+    @property
+    def type_name(self) -> aspose.cad.fileformats.cad.cadconsts.CadObjectTypeName:
+        ...
+    
+    @property
+    def child_objects(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]:
+        ...
+    
+    @child_objects.setter
+    def child_objects(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]):
+        ...
+    
+    @property
+    def db_eval_expr_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @db_eval_expr_parameter_list.setter
+    def db_eval_expr_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def eval_expr_parent_id(self) -> int:
+        ...
+    
+    @eval_expr_parent_id.setter
+    def eval_expr_parent_id(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_major(self) -> int:
+        ...
+    
+    @eval_expr_major.setter
+    def eval_expr_major(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_minor(self) -> int:
+        ...
+    
+    @eval_expr_minor.setter
+    def eval_expr_minor(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_value_code(self) -> int:
+        ...
+    
+    @eval_expr_value_code.setter
+    def eval_expr_value_code(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_node_id(self) -> int:
+        ...
+    
+    @eval_expr_node_id.setter
+    def eval_expr_node_id(self, value : int):
+        ...
+    
+    ...
+
+class CadBlockLinearGrip(CadBlockGrip):
+    '''Class describing CadBlockLinearGrip object.'''
+    
+    def get_uid(self) -> str:
+        '''Identifier to use if object handle doesn't work. Done as method not to disturb FileComparer's property comparer'''
+        ...
+    
+    def set_uid(self, id : str) -> None:
+        '''Sets'''
+        ...
+    
+    @property
+    def embedded_objects_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer:
+        ...
+    
+    @embedded_objects_container.setter
+    def embedded_objects_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer):
+        ...
+    
+    @property
+    def object_handle(self) -> str:
+        ...
+    
+    @object_handle.setter
+    def object_handle(self, value : str):
+        ...
+    
+    @property
+    def xdata_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadXdataContainer:
+        ...
+    
+    @xdata_container.setter
+    def xdata_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadXdataContainer):
+        ...
+    
+    @property
+    def attributes(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]:
+        '''Gets the attributes.'''
+        ...
+    
+    @attributes.setter
+    def attributes(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]):
+        '''Sets the attributes.'''
+        ...
+    
+    @property
+    def application_codes_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer:
+        ...
+    
+    @application_codes_container.setter
+    def application_codes_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer):
+        ...
+    
+    @property
+    def attribute_102_values(self) -> List[aspose.cad.fileformats.cad.CadCodeValue]:
+        ...
+    
+    @attribute_102_values.setter
+    def attribute_102_values(self, value : List[aspose.cad.fileformats.cad.CadCodeValue]):
+        ...
+    
+    @property
+    def numreactors(self) -> int:
+        '''The Numreactors'''
+        ...
+    
+    @numreactors.setter
+    def numreactors(self, value : int):
+        '''The Numreactors'''
+        ...
+    
+    @property
+    def reactors(self) -> List[str]:
+        '''Get the reactors handle'''
+        ...
+    
+    @reactors.setter
+    def reactors(self, value : List[str]):
+        '''Get or sets the reactors handle'''
+        ...
+    
+    @property
+    def storage_flag(self) -> bool:
+        ...
+    
+    @storage_flag.setter
+    def storage_flag(self, value : bool):
+        ...
+    
+    @property
+    def hard_owner(self) -> str:
+        ...
+    
+    @hard_owner.setter
+    def hard_owner(self, value : str):
+        ...
+    
+    @property
+    def soft_owner(self) -> str:
+        ...
+    
+    @soft_owner.setter
+    def soft_owner(self, value : str):
+        ...
+    
+    @property
+    def is_soft_owner_set(self) -> bool:
+        ...
+    
+    @property
+    def type_name(self) -> aspose.cad.fileformats.cad.cadconsts.CadObjectTypeName:
+        ...
+    
+    @property
+    def child_objects(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]:
+        ...
+    
+    @child_objects.setter
+    def child_objects(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]):
+        ...
+    
+    @property
+    def db_eval_expr_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @db_eval_expr_parameter_list.setter
+    def db_eval_expr_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def eval_expr_parent_id(self) -> int:
+        ...
+    
+    @eval_expr_parent_id.setter
+    def eval_expr_parent_id(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_major(self) -> int:
+        ...
+    
+    @eval_expr_major.setter
+    def eval_expr_major(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_minor(self) -> int:
+        ...
+    
+    @eval_expr_minor.setter
+    def eval_expr_minor(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_value_code(self) -> int:
+        ...
+    
+    @eval_expr_value_code.setter
+    def eval_expr_value_code(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_node_id(self) -> int:
+        ...
+    
+    @eval_expr_node_id.setter
+    def eval_expr_node_id(self, value : int):
+        ...
+    
+    @property
+    def attribute140(self) -> Optional[float]:
+        '''Gets the attribute 140.'''
+        ...
+    
+    @attribute140.setter
+    def attribute140(self, value : Optional[float]):
+        '''Sets the attribute 140.'''
+        ...
+    
+    @property
+    def attribute141(self) -> Optional[float]:
+        '''Gets the attribute 141.'''
+        ...
+    
+    @attribute141.setter
+    def attribute141(self, value : Optional[float]):
+        '''Sets the attribute 141.'''
+        ...
+    
+    @property
+    def attribute142(self) -> Optional[float]:
+        '''Gets the attribute 142.'''
+        ...
+    
+    @attribute142.setter
+    def attribute142(self, value : Optional[float]):
+        '''Sets the attribute 142.'''
+        ...
+    
+    ...
+
+class CadBlockLinearParameter(CadBlock2PtParameters):
+    '''Class describing BLOCKLINEARPARAMETER object.'''
+    
+    def get_uid(self) -> str:
+        '''Identifier to use if object handle doesn't work. Done as method not to disturb FileComparer's property comparer'''
+        ...
+    
+    def set_uid(self, id : str) -> None:
+        '''Sets'''
+        ...
+    
+    @property
+    def embedded_objects_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer:
+        ...
+    
+    @embedded_objects_container.setter
+    def embedded_objects_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer):
+        ...
+    
+    @property
+    def object_handle(self) -> str:
+        ...
+    
+    @object_handle.setter
+    def object_handle(self, value : str):
+        ...
+    
+    @property
+    def xdata_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadXdataContainer:
+        ...
+    
+    @xdata_container.setter
+    def xdata_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadXdataContainer):
+        ...
+    
+    @property
+    def attributes(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]:
+        '''Gets the attributes.'''
+        ...
+    
+    @attributes.setter
+    def attributes(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]):
+        '''Sets the attributes.'''
+        ...
+    
+    @property
+    def application_codes_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer:
+        ...
+    
+    @application_codes_container.setter
+    def application_codes_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer):
+        ...
+    
+    @property
+    def attribute_102_values(self) -> List[aspose.cad.fileformats.cad.CadCodeValue]:
+        ...
+    
+    @attribute_102_values.setter
+    def attribute_102_values(self, value : List[aspose.cad.fileformats.cad.CadCodeValue]):
+        ...
+    
+    @property
+    def numreactors(self) -> int:
+        '''The Numreactors'''
+        ...
+    
+    @numreactors.setter
+    def numreactors(self, value : int):
+        '''The Numreactors'''
+        ...
+    
+    @property
+    def reactors(self) -> List[str]:
+        '''Get the reactors handle'''
+        ...
+    
+    @reactors.setter
+    def reactors(self, value : List[str]):
+        '''Get or sets the reactors handle'''
+        ...
+    
+    @property
+    def storage_flag(self) -> bool:
+        ...
+    
+    @storage_flag.setter
+    def storage_flag(self, value : bool):
+        ...
+    
+    @property
+    def hard_owner(self) -> str:
+        ...
+    
+    @hard_owner.setter
+    def hard_owner(self, value : str):
+        ...
+    
+    @property
+    def soft_owner(self) -> str:
+        ...
+    
+    @soft_owner.setter
+    def soft_owner(self, value : str):
+        ...
+    
+    @property
+    def is_soft_owner_set(self) -> bool:
+        ...
+    
+    @property
+    def type_name(self) -> aspose.cad.fileformats.cad.cadconsts.CadObjectTypeName:
+        ...
+    
+    @property
+    def child_objects(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]:
+        ...
+    
+    @child_objects.setter
+    def child_objects(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]):
+        ...
+    
+    @property
+    def db_eval_expr_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @db_eval_expr_parameter_list.setter
+    def db_eval_expr_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def eval_expr_parent_id(self) -> int:
+        ...
+    
+    @eval_expr_parent_id.setter
+    def eval_expr_parent_id(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_major(self) -> int:
+        ...
+    
+    @eval_expr_major.setter
+    def eval_expr_major(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_minor(self) -> int:
+        ...
+    
+    @eval_expr_minor.setter
+    def eval_expr_minor(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_value_code(self) -> int:
+        ...
+    
+    @eval_expr_value_code.setter
+    def eval_expr_value_code(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_node_id(self) -> int:
+        ...
+    
+    @eval_expr_node_id.setter
+    def eval_expr_node_id(self, value : int):
+        ...
+    
+    @property
+    def attribute280(self) -> Optional[int]:
+        '''Gets the attribute 280.'''
+        ...
+    
+    @attribute280.setter
+    def attribute280(self, value : Optional[int]):
+        '''Sets the attribute 280.'''
+        ...
+    
+    @property
+    def attribute281(self) -> Optional[int]:
+        '''Gets the attribute 281.'''
+        ...
+    
+    @attribute281.setter
+    def attribute281(self, value : Optional[int]):
+        '''Sets the attribute 281.'''
+        ...
+    
+    @property
+    def block_2_pt_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @block_2_pt_parameter_list.setter
+    def block_2_pt_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def block_linear_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @block_linear_parameter_list.setter
+    def block_linear_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    ...
+
+class CadBlockMoveAction(CadBlockAction):
+    '''Class describing BLOCKMOVEACTION object.'''
+    
+    def get_uid(self) -> str:
+        '''Identifier to use if object handle doesn't work. Done as method not to disturb FileComparer's property comparer'''
+        ...
+    
+    def set_uid(self, id : str) -> None:
+        '''Sets'''
+        ...
+    
+    @property
+    def embedded_objects_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer:
+        ...
+    
+    @embedded_objects_container.setter
+    def embedded_objects_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer):
+        ...
+    
+    @property
+    def object_handle(self) -> str:
+        ...
+    
+    @object_handle.setter
+    def object_handle(self, value : str):
+        ...
+    
+    @property
+    def xdata_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadXdataContainer:
+        ...
+    
+    @xdata_container.setter
+    def xdata_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadXdataContainer):
+        ...
+    
+    @property
+    def attributes(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]:
+        '''Gets the attributes.'''
+        ...
+    
+    @attributes.setter
+    def attributes(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]):
+        '''Sets the attributes.'''
+        ...
+    
+    @property
+    def application_codes_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer:
+        ...
+    
+    @application_codes_container.setter
+    def application_codes_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer):
+        ...
+    
+    @property
+    def attribute_102_values(self) -> List[aspose.cad.fileformats.cad.CadCodeValue]:
+        ...
+    
+    @attribute_102_values.setter
+    def attribute_102_values(self, value : List[aspose.cad.fileformats.cad.CadCodeValue]):
+        ...
+    
+    @property
+    def numreactors(self) -> int:
+        '''The Numreactors'''
+        ...
+    
+    @numreactors.setter
+    def numreactors(self, value : int):
+        '''The Numreactors'''
+        ...
+    
+    @property
+    def reactors(self) -> List[str]:
+        '''Get the reactors handle'''
+        ...
+    
+    @reactors.setter
+    def reactors(self, value : List[str]):
+        '''Get or sets the reactors handle'''
+        ...
+    
+    @property
+    def storage_flag(self) -> bool:
+        ...
+    
+    @storage_flag.setter
+    def storage_flag(self, value : bool):
+        ...
+    
+    @property
+    def hard_owner(self) -> str:
+        ...
+    
+    @hard_owner.setter
+    def hard_owner(self, value : str):
+        ...
+    
+    @property
+    def soft_owner(self) -> str:
+        ...
+    
+    @soft_owner.setter
+    def soft_owner(self, value : str):
+        ...
+    
+    @property
+    def is_soft_owner_set(self) -> bool:
+        ...
+    
+    @property
+    def type_name(self) -> aspose.cad.fileformats.cad.cadconsts.CadObjectTypeName:
+        ...
+    
+    @property
+    def child_objects(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]:
+        ...
+    
+    @child_objects.setter
+    def child_objects(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]):
+        ...
+    
+    @property
+    def db_eval_expr_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @db_eval_expr_parameter_list.setter
+    def db_eval_expr_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def eval_expr_parent_id(self) -> int:
+        ...
+    
+    @eval_expr_parent_id.setter
+    def eval_expr_parent_id(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_major(self) -> int:
+        ...
+    
+    @eval_expr_major.setter
+    def eval_expr_major(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_minor(self) -> int:
+        ...
+    
+    @eval_expr_minor.setter
+    def eval_expr_minor(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_value_code(self) -> int:
+        ...
+    
+    @eval_expr_value_code.setter
+    def eval_expr_value_code(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_node_id(self) -> int:
+        ...
+    
+    @eval_expr_node_id.setter
+    def eval_expr_node_id(self, value : int):
+        ...
+    
+    @property
+    def block_action_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @block_action_parameter_list.setter
+    def block_action_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def cad_block_move_action_elements(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @cad_block_move_action_elements.setter
+    def cad_block_move_action_elements(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    ...
+
+class CadBlockPointParameter(CadBlock1PtParameters):
+    '''Class describing Block Point Parameter.'''
+    
+    def get_uid(self) -> str:
+        '''Identifier to use if object handle doesn't work. Done as method not to disturb FileComparer's property comparer'''
+        ...
+    
+    def set_uid(self, id : str) -> None:
+        '''Sets'''
+        ...
+    
+    @property
+    def embedded_objects_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer:
+        ...
+    
+    @embedded_objects_container.setter
+    def embedded_objects_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer):
+        ...
+    
+    @property
+    def object_handle(self) -> str:
+        ...
+    
+    @object_handle.setter
+    def object_handle(self, value : str):
+        ...
+    
+    @property
+    def xdata_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadXdataContainer:
+        ...
+    
+    @xdata_container.setter
+    def xdata_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadXdataContainer):
+        ...
+    
+    @property
+    def attributes(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]:
+        '''Gets the attributes.'''
+        ...
+    
+    @attributes.setter
+    def attributes(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]):
+        '''Sets the attributes.'''
+        ...
+    
+    @property
+    def application_codes_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer:
+        ...
+    
+    @application_codes_container.setter
+    def application_codes_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer):
+        ...
+    
+    @property
+    def attribute_102_values(self) -> List[aspose.cad.fileformats.cad.CadCodeValue]:
+        ...
+    
+    @attribute_102_values.setter
+    def attribute_102_values(self, value : List[aspose.cad.fileformats.cad.CadCodeValue]):
+        ...
+    
+    @property
+    def numreactors(self) -> int:
+        '''The Numreactors'''
+        ...
+    
+    @numreactors.setter
+    def numreactors(self, value : int):
+        '''The Numreactors'''
+        ...
+    
+    @property
+    def reactors(self) -> List[str]:
+        '''Get the reactors handle'''
+        ...
+    
+    @reactors.setter
+    def reactors(self, value : List[str]):
+        '''Get or sets the reactors handle'''
+        ...
+    
+    @property
+    def storage_flag(self) -> bool:
+        ...
+    
+    @storage_flag.setter
+    def storage_flag(self, value : bool):
+        ...
+    
+    @property
+    def hard_owner(self) -> str:
+        ...
+    
+    @hard_owner.setter
+    def hard_owner(self, value : str):
+        ...
+    
+    @property
+    def soft_owner(self) -> str:
+        ...
+    
+    @soft_owner.setter
+    def soft_owner(self, value : str):
+        ...
+    
+    @property
+    def is_soft_owner_set(self) -> bool:
+        ...
+    
+    @property
+    def type_name(self) -> aspose.cad.fileformats.cad.cadconsts.CadObjectTypeName:
+        ...
+    
+    @property
+    def child_objects(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]:
+        ...
+    
+    @child_objects.setter
+    def child_objects(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]):
+        ...
+    
+    @property
+    def db_eval_expr_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @db_eval_expr_parameter_list.setter
+    def db_eval_expr_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def eval_expr_parent_id(self) -> int:
+        ...
+    
+    @eval_expr_parent_id.setter
+    def eval_expr_parent_id(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_major(self) -> int:
+        ...
+    
+    @eval_expr_major.setter
+    def eval_expr_major(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_minor(self) -> int:
+        ...
+    
+    @eval_expr_minor.setter
+    def eval_expr_minor(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_value_code(self) -> int:
+        ...
+    
+    @eval_expr_value_code.setter
+    def eval_expr_value_code(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_node_id(self) -> int:
+        ...
+    
+    @eval_expr_node_id.setter
+    def eval_expr_node_id(self, value : int):
+        ...
+    
+    @property
+    def block_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @block_parameter_list.setter
+    def block_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def block_1_pt_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @block_1_pt_parameter_list.setter
+    def block_1_pt_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def block_point_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @block_point_parameter_list.setter
+    def block_point_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    ...
+
+class CadBlockRotateAction(CadBlockActionWithBasePt):
+    '''Class describing BLOCKROTATEACTION object.'''
+    
+    def get_uid(self) -> str:
+        '''Identifier to use if object handle doesn't work. Done as method not to disturb FileComparer's property comparer'''
+        ...
+    
+    def set_uid(self, id : str) -> None:
+        '''Sets'''
+        ...
+    
+    @property
+    def embedded_objects_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer:
+        ...
+    
+    @embedded_objects_container.setter
+    def embedded_objects_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer):
+        ...
+    
+    @property
+    def object_handle(self) -> str:
+        ...
+    
+    @object_handle.setter
+    def object_handle(self, value : str):
+        ...
+    
+    @property
+    def xdata_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadXdataContainer:
+        ...
+    
+    @xdata_container.setter
+    def xdata_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadXdataContainer):
+        ...
+    
+    @property
+    def attributes(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]:
+        '''Gets the attributes.'''
+        ...
+    
+    @attributes.setter
+    def attributes(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]):
+        '''Sets the attributes.'''
+        ...
+    
+    @property
+    def application_codes_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer:
+        ...
+    
+    @application_codes_container.setter
+    def application_codes_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer):
+        ...
+    
+    @property
+    def attribute_102_values(self) -> List[aspose.cad.fileformats.cad.CadCodeValue]:
+        ...
+    
+    @attribute_102_values.setter
+    def attribute_102_values(self, value : List[aspose.cad.fileformats.cad.CadCodeValue]):
+        ...
+    
+    @property
+    def numreactors(self) -> int:
+        '''The Numreactors'''
+        ...
+    
+    @numreactors.setter
+    def numreactors(self, value : int):
+        '''The Numreactors'''
+        ...
+    
+    @property
+    def reactors(self) -> List[str]:
+        '''Get the reactors handle'''
+        ...
+    
+    @reactors.setter
+    def reactors(self, value : List[str]):
+        '''Get or sets the reactors handle'''
+        ...
+    
+    @property
+    def storage_flag(self) -> bool:
+        ...
+    
+    @storage_flag.setter
+    def storage_flag(self, value : bool):
+        ...
+    
+    @property
+    def hard_owner(self) -> str:
+        ...
+    
+    @hard_owner.setter
+    def hard_owner(self, value : str):
+        ...
+    
+    @property
+    def soft_owner(self) -> str:
+        ...
+    
+    @soft_owner.setter
+    def soft_owner(self, value : str):
+        ...
+    
+    @property
+    def is_soft_owner_set(self) -> bool:
+        ...
+    
+    @property
+    def type_name(self) -> aspose.cad.fileformats.cad.cadconsts.CadObjectTypeName:
+        ...
+    
+    @property
+    def child_objects(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]:
+        ...
+    
+    @child_objects.setter
+    def child_objects(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]):
+        ...
+    
+    @property
+    def db_eval_expr_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @db_eval_expr_parameter_list.setter
+    def db_eval_expr_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def eval_expr_parent_id(self) -> int:
+        ...
+    
+    @eval_expr_parent_id.setter
+    def eval_expr_parent_id(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_major(self) -> int:
+        ...
+    
+    @eval_expr_major.setter
+    def eval_expr_major(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_minor(self) -> int:
+        ...
+    
+    @eval_expr_minor.setter
+    def eval_expr_minor(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_value_code(self) -> int:
+        ...
+    
+    @eval_expr_value_code.setter
+    def eval_expr_value_code(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_node_id(self) -> int:
+        ...
+    
+    @eval_expr_node_id.setter
+    def eval_expr_node_id(self, value : int):
+        ...
+    
+    @property
+    def block_action_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @block_action_parameter_list.setter
+    def block_action_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def attribute92(self) -> Optional[int]:
+        '''Gets the attribute 92.'''
+        ...
+    
+    @attribute92.setter
+    def attribute92(self, value : Optional[int]):
+        '''Sets the attribute 92.'''
+        ...
+    
+    @property
+    def attribute301(self) -> str:
+        '''Gets the attribute 301.'''
+        ...
+    
+    @attribute301.setter
+    def attribute301(self, value : str):
+        '''Sets the attribute 301.'''
+        ...
+    
+    @property
+    def attribute93(self) -> Optional[int]:
+        '''Gets the attribute 93.'''
+        ...
+    
+    @attribute93.setter
+    def attribute93(self, value : Optional[int]):
+        '''Sets the attribute 93.'''
+        ...
+    
+    @property
+    def attribute302(self) -> str:
+        '''Gets the attribute 302.'''
+        ...
+    
+    @attribute302.setter
+    def attribute302(self, value : str):
+        '''Sets the attribute 302.'''
+        ...
+    
+    @property
+    def attribute280(self) -> Optional[int]:
+        '''Gets the attribute 280.'''
+        ...
+    
+    @attribute280.setter
+    def attribute280(self, value : Optional[int]):
+        '''Sets the attribute 280.'''
+        ...
+    
+    @property
+    def cad_block_rotation_action(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @cad_block_rotation_action.setter
+    def cad_block_rotation_action(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    ...
+
+class CadBlockRotationGrip(CadBlockGrip):
+    '''Class describing CadBlockRotationGrip object.'''
+    
+    def get_uid(self) -> str:
+        '''Identifier to use if object handle doesn't work. Done as method not to disturb FileComparer's property comparer'''
+        ...
+    
+    def set_uid(self, id : str) -> None:
+        '''Sets'''
+        ...
+    
+    @property
+    def embedded_objects_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer:
+        ...
+    
+    @embedded_objects_container.setter
+    def embedded_objects_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer):
+        ...
+    
+    @property
+    def object_handle(self) -> str:
+        ...
+    
+    @object_handle.setter
+    def object_handle(self, value : str):
+        ...
+    
+    @property
+    def xdata_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadXdataContainer:
+        ...
+    
+    @xdata_container.setter
+    def xdata_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadXdataContainer):
+        ...
+    
+    @property
+    def attributes(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]:
+        '''Gets the attributes.'''
+        ...
+    
+    @attributes.setter
+    def attributes(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]):
+        '''Sets the attributes.'''
+        ...
+    
+    @property
+    def application_codes_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer:
+        ...
+    
+    @application_codes_container.setter
+    def application_codes_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer):
+        ...
+    
+    @property
+    def attribute_102_values(self) -> List[aspose.cad.fileformats.cad.CadCodeValue]:
+        ...
+    
+    @attribute_102_values.setter
+    def attribute_102_values(self, value : List[aspose.cad.fileformats.cad.CadCodeValue]):
+        ...
+    
+    @property
+    def numreactors(self) -> int:
+        '''The Numreactors'''
+        ...
+    
+    @numreactors.setter
+    def numreactors(self, value : int):
+        '''The Numreactors'''
+        ...
+    
+    @property
+    def reactors(self) -> List[str]:
+        '''Get the reactors handle'''
+        ...
+    
+    @reactors.setter
+    def reactors(self, value : List[str]):
+        '''Get or sets the reactors handle'''
+        ...
+    
+    @property
+    def storage_flag(self) -> bool:
+        ...
+    
+    @storage_flag.setter
+    def storage_flag(self, value : bool):
+        ...
+    
+    @property
+    def hard_owner(self) -> str:
+        ...
+    
+    @hard_owner.setter
+    def hard_owner(self, value : str):
+        ...
+    
+    @property
+    def soft_owner(self) -> str:
+        ...
+    
+    @soft_owner.setter
+    def soft_owner(self, value : str):
+        ...
+    
+    @property
+    def is_soft_owner_set(self) -> bool:
+        ...
+    
+    @property
+    def type_name(self) -> aspose.cad.fileformats.cad.cadconsts.CadObjectTypeName:
+        ...
+    
+    @property
+    def child_objects(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]:
+        ...
+    
+    @child_objects.setter
+    def child_objects(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]):
+        ...
+    
+    @property
+    def db_eval_expr_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @db_eval_expr_parameter_list.setter
+    def db_eval_expr_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def eval_expr_parent_id(self) -> int:
+        ...
+    
+    @eval_expr_parent_id.setter
+    def eval_expr_parent_id(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_major(self) -> int:
+        ...
+    
+    @eval_expr_major.setter
+    def eval_expr_major(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_minor(self) -> int:
+        ...
+    
+    @eval_expr_minor.setter
+    def eval_expr_minor(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_value_code(self) -> int:
+        ...
+    
+    @eval_expr_value_code.setter
+    def eval_expr_value_code(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_node_id(self) -> int:
+        ...
+    
+    @eval_expr_node_id.setter
+    def eval_expr_node_id(self, value : int):
+        ...
+    
+    ...
+
+class CadBlockRotationParameter(CadBlock2PtParameters):
+    '''Class block rotation parameter.'''
+    
+    def get_uid(self) -> str:
+        '''Identifier to use if object handle doesn't work. Done as method not to disturb FileComparer's property comparer'''
+        ...
+    
+    def set_uid(self, id : str) -> None:
+        '''Sets'''
+        ...
+    
+    @property
+    def embedded_objects_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer:
+        ...
+    
+    @embedded_objects_container.setter
+    def embedded_objects_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer):
+        ...
+    
+    @property
+    def object_handle(self) -> str:
+        ...
+    
+    @object_handle.setter
+    def object_handle(self, value : str):
+        ...
+    
+    @property
+    def xdata_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadXdataContainer:
+        ...
+    
+    @xdata_container.setter
+    def xdata_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadXdataContainer):
+        ...
+    
+    @property
+    def attributes(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]:
+        '''Gets the attributes.'''
+        ...
+    
+    @attributes.setter
+    def attributes(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]):
+        '''Sets the attributes.'''
+        ...
+    
+    @property
+    def application_codes_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer:
+        ...
+    
+    @application_codes_container.setter
+    def application_codes_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer):
+        ...
+    
+    @property
+    def attribute_102_values(self) -> List[aspose.cad.fileformats.cad.CadCodeValue]:
+        ...
+    
+    @attribute_102_values.setter
+    def attribute_102_values(self, value : List[aspose.cad.fileformats.cad.CadCodeValue]):
+        ...
+    
+    @property
+    def numreactors(self) -> int:
+        '''The Numreactors'''
+        ...
+    
+    @numreactors.setter
+    def numreactors(self, value : int):
+        '''The Numreactors'''
+        ...
+    
+    @property
+    def reactors(self) -> List[str]:
+        '''Get the reactors handle'''
+        ...
+    
+    @reactors.setter
+    def reactors(self, value : List[str]):
+        '''Get or sets the reactors handle'''
+        ...
+    
+    @property
+    def storage_flag(self) -> bool:
+        ...
+    
+    @storage_flag.setter
+    def storage_flag(self, value : bool):
+        ...
+    
+    @property
+    def hard_owner(self) -> str:
+        ...
+    
+    @hard_owner.setter
+    def hard_owner(self, value : str):
+        ...
+    
+    @property
+    def soft_owner(self) -> str:
+        ...
+    
+    @soft_owner.setter
+    def soft_owner(self, value : str):
+        ...
+    
+    @property
+    def is_soft_owner_set(self) -> bool:
+        ...
+    
+    @property
+    def type_name(self) -> aspose.cad.fileformats.cad.cadconsts.CadObjectTypeName:
+        ...
+    
+    @property
+    def child_objects(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]:
+        ...
+    
+    @child_objects.setter
+    def child_objects(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]):
+        ...
+    
+    @property
+    def db_eval_expr_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @db_eval_expr_parameter_list.setter
+    def db_eval_expr_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def eval_expr_parent_id(self) -> int:
+        ...
+    
+    @eval_expr_parent_id.setter
+    def eval_expr_parent_id(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_major(self) -> int:
+        ...
+    
+    @eval_expr_major.setter
+    def eval_expr_major(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_minor(self) -> int:
+        ...
+    
+    @eval_expr_minor.setter
+    def eval_expr_minor(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_value_code(self) -> int:
+        ...
+    
+    @eval_expr_value_code.setter
+    def eval_expr_value_code(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_node_id(self) -> int:
+        ...
+    
+    @eval_expr_node_id.setter
+    def eval_expr_node_id(self, value : int):
+        ...
+    
+    @property
+    def attribute280(self) -> Optional[int]:
+        '''Gets the attribute 280.'''
+        ...
+    
+    @attribute280.setter
+    def attribute280(self, value : Optional[int]):
+        '''Sets the attribute 280.'''
+        ...
+    
+    @property
+    def attribute281(self) -> Optional[int]:
+        '''Gets the attribute 281.'''
+        ...
+    
+    @attribute281.setter
+    def attribute281(self, value : Optional[int]):
+        '''Sets the attribute 281.'''
+        ...
+    
+    @property
+    def block_2_pt_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @block_2_pt_parameter_list.setter
+    def block_2_pt_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def block_rotation_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @block_rotation_parameter_list.setter
+    def block_rotation_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def attribute305(self) -> str:
+        '''Gets the attribute 305.'''
+        ...
+    
+    @attribute305.setter
+    def attribute305(self, value : str):
+        '''Sets the attribute 305.'''
+        ...
+    
+    @property
+    def attribute306(self) -> str:
+        '''Gets the attribute 306.'''
+        ...
+    
+    @attribute306.setter
+    def attribute306(self, value : str):
+        '''Sets the attribute 306.'''
+        ...
+    
+    ...
+
+class CadBlockScaleAction(CadBlockActionWithBasePt):
+    '''Class describing BLOCKSCALEACTION object.'''
+    
+    def get_uid(self) -> str:
+        '''Identifier to use if object handle doesn't work. Done as method not to disturb FileComparer's property comparer'''
+        ...
+    
+    def set_uid(self, id : str) -> None:
+        '''Sets'''
+        ...
+    
+    @property
+    def embedded_objects_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer:
+        ...
+    
+    @embedded_objects_container.setter
+    def embedded_objects_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer):
+        ...
+    
+    @property
+    def object_handle(self) -> str:
+        ...
+    
+    @object_handle.setter
+    def object_handle(self, value : str):
+        ...
+    
+    @property
+    def xdata_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadXdataContainer:
+        ...
+    
+    @xdata_container.setter
+    def xdata_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadXdataContainer):
+        ...
+    
+    @property
+    def attributes(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]:
+        '''Gets the attributes.'''
+        ...
+    
+    @attributes.setter
+    def attributes(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]):
+        '''Sets the attributes.'''
+        ...
+    
+    @property
+    def application_codes_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer:
+        ...
+    
+    @application_codes_container.setter
+    def application_codes_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer):
+        ...
+    
+    @property
+    def attribute_102_values(self) -> List[aspose.cad.fileformats.cad.CadCodeValue]:
+        ...
+    
+    @attribute_102_values.setter
+    def attribute_102_values(self, value : List[aspose.cad.fileformats.cad.CadCodeValue]):
+        ...
+    
+    @property
+    def numreactors(self) -> int:
+        '''The Numreactors'''
+        ...
+    
+    @numreactors.setter
+    def numreactors(self, value : int):
+        '''The Numreactors'''
+        ...
+    
+    @property
+    def reactors(self) -> List[str]:
+        '''Get the reactors handle'''
+        ...
+    
+    @reactors.setter
+    def reactors(self, value : List[str]):
+        '''Get or sets the reactors handle'''
+        ...
+    
+    @property
+    def storage_flag(self) -> bool:
+        ...
+    
+    @storage_flag.setter
+    def storage_flag(self, value : bool):
+        ...
+    
+    @property
+    def hard_owner(self) -> str:
+        ...
+    
+    @hard_owner.setter
+    def hard_owner(self, value : str):
+        ...
+    
+    @property
+    def soft_owner(self) -> str:
+        ...
+    
+    @soft_owner.setter
+    def soft_owner(self, value : str):
+        ...
+    
+    @property
+    def is_soft_owner_set(self) -> bool:
+        ...
+    
+    @property
+    def type_name(self) -> aspose.cad.fileformats.cad.cadconsts.CadObjectTypeName:
+        ...
+    
+    @property
+    def child_objects(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]:
+        ...
+    
+    @child_objects.setter
+    def child_objects(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]):
+        ...
+    
+    @property
+    def db_eval_expr_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @db_eval_expr_parameter_list.setter
+    def db_eval_expr_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def eval_expr_parent_id(self) -> int:
+        ...
+    
+    @eval_expr_parent_id.setter
+    def eval_expr_parent_id(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_major(self) -> int:
+        ...
+    
+    @eval_expr_major.setter
+    def eval_expr_major(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_minor(self) -> int:
+        ...
+    
+    @eval_expr_minor.setter
+    def eval_expr_minor(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_value_code(self) -> int:
+        ...
+    
+    @eval_expr_value_code.setter
+    def eval_expr_value_code(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_node_id(self) -> int:
+        ...
+    
+    @eval_expr_node_id.setter
+    def eval_expr_node_id(self, value : int):
+        ...
+    
+    @property
+    def block_action_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @block_action_parameter_list.setter
+    def block_action_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def attribute92(self) -> Optional[int]:
+        '''Gets the attribute 92.'''
+        ...
+    
+    @attribute92.setter
+    def attribute92(self, value : Optional[int]):
+        '''Sets the attribute 92.'''
+        ...
+    
+    @property
+    def attribute301(self) -> str:
+        '''Gets the attribute 301.'''
+        ...
+    
+    @attribute301.setter
+    def attribute301(self, value : str):
+        '''Sets the attribute 301.'''
+        ...
+    
+    @property
+    def attribute93(self) -> Optional[int]:
+        '''Gets the attribute 93.'''
+        ...
+    
+    @attribute93.setter
+    def attribute93(self, value : Optional[int]):
+        '''Sets the attribute 93.'''
+        ...
+    
+    @property
+    def attribute302(self) -> str:
+        '''Gets the attribute 302.'''
+        ...
+    
+    @attribute302.setter
+    def attribute302(self, value : str):
+        '''Sets the attribute 302.'''
+        ...
+    
+    @property
+    def attribute280(self) -> Optional[int]:
+        '''Gets the attribute 280.'''
+        ...
+    
+    @attribute280.setter
+    def attribute280(self, value : Optional[int]):
+        '''Sets the attribute 280.'''
+        ...
+    
+    @property
+    def block_scale_action_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @block_scale_action_list.setter
+    def block_scale_action_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    ...
+
+class CadBlockStretchAction(CadBlockAction):
+    '''Class describing BLOCKSTRETCHACTION object.'''
+    
+    def get_uid(self) -> str:
+        '''Identifier to use if object handle doesn't work. Done as method not to disturb FileComparer's property comparer'''
+        ...
+    
+    def set_uid(self, id : str) -> None:
+        '''Sets'''
+        ...
+    
+    @property
+    def embedded_objects_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer:
+        ...
+    
+    @embedded_objects_container.setter
+    def embedded_objects_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer):
+        ...
+    
+    @property
+    def object_handle(self) -> str:
+        ...
+    
+    @object_handle.setter
+    def object_handle(self, value : str):
+        ...
+    
+    @property
+    def xdata_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadXdataContainer:
+        ...
+    
+    @xdata_container.setter
+    def xdata_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadXdataContainer):
+        ...
+    
+    @property
+    def attributes(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]:
+        '''Gets the attributes.'''
+        ...
+    
+    @attributes.setter
+    def attributes(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]):
+        '''Sets the attributes.'''
+        ...
+    
+    @property
+    def application_codes_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer:
+        ...
+    
+    @application_codes_container.setter
+    def application_codes_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer):
+        ...
+    
+    @property
+    def attribute_102_values(self) -> List[aspose.cad.fileformats.cad.CadCodeValue]:
+        ...
+    
+    @attribute_102_values.setter
+    def attribute_102_values(self, value : List[aspose.cad.fileformats.cad.CadCodeValue]):
+        ...
+    
+    @property
+    def numreactors(self) -> int:
+        '''The Numreactors'''
+        ...
+    
+    @numreactors.setter
+    def numreactors(self, value : int):
+        '''The Numreactors'''
+        ...
+    
+    @property
+    def reactors(self) -> List[str]:
+        '''Get the reactors handle'''
+        ...
+    
+    @reactors.setter
+    def reactors(self, value : List[str]):
+        '''Get or sets the reactors handle'''
+        ...
+    
+    @property
+    def storage_flag(self) -> bool:
+        ...
+    
+    @storage_flag.setter
+    def storage_flag(self, value : bool):
+        ...
+    
+    @property
+    def hard_owner(self) -> str:
+        ...
+    
+    @hard_owner.setter
+    def hard_owner(self, value : str):
+        ...
+    
+    @property
+    def soft_owner(self) -> str:
+        ...
+    
+    @soft_owner.setter
+    def soft_owner(self, value : str):
+        ...
+    
+    @property
+    def is_soft_owner_set(self) -> bool:
+        ...
+    
+    @property
+    def type_name(self) -> aspose.cad.fileformats.cad.cadconsts.CadObjectTypeName:
+        ...
+    
+    @property
+    def child_objects(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]:
+        ...
+    
+    @child_objects.setter
+    def child_objects(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]):
+        ...
+    
+    @property
+    def db_eval_expr_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @db_eval_expr_parameter_list.setter
+    def db_eval_expr_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def eval_expr_parent_id(self) -> int:
+        ...
+    
+    @eval_expr_parent_id.setter
+    def eval_expr_parent_id(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_major(self) -> int:
+        ...
+    
+    @eval_expr_major.setter
+    def eval_expr_major(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_minor(self) -> int:
+        ...
+    
+    @eval_expr_minor.setter
+    def eval_expr_minor(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_value_code(self) -> int:
+        ...
+    
+    @eval_expr_value_code.setter
+    def eval_expr_value_code(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_node_id(self) -> int:
+        ...
+    
+    @eval_expr_node_id.setter
+    def eval_expr_node_id(self, value : int):
+        ...
+    
+    @property
+    def block_action_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @block_action_parameter_list.setter
+    def block_action_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def block_stretch_action_elements(self) -> List[aspose.cad.fileformats.cad.cadobjects.blocks.CadBlockStretchActionElement]:
+        ...
+    
+    @block_stretch_action_elements.setter
+    def block_stretch_action_elements(self, value : List[aspose.cad.fileformats.cad.cadobjects.blocks.CadBlockStretchActionElement]):
+        ...
+    
+    @property
+    def attribute92(self) -> Optional[int]:
+        '''Gets the attribute 92.'''
+        ...
+    
+    @attribute92.setter
+    def attribute92(self, value : Optional[int]):
+        '''Sets the attribute 92.'''
+        ...
+    
+    @property
+    def attribute301(self) -> str:
+        '''Gets the attribute 301.'''
+        ...
+    
+    @attribute301.setter
+    def attribute301(self, value : str):
+        '''Sets the attribute 301.'''
+        ...
+    
+    @property
+    def attribute93(self) -> Optional[int]:
+        '''Gets the attribute 93.'''
+        ...
+    
+    @attribute93.setter
+    def attribute93(self, value : Optional[int]):
+        '''Sets the attribute 93.'''
+        ...
+    
+    @property
+    def attribute302(self) -> str:
+        '''Gets the attribute 302.'''
+        ...
+    
+    @attribute302.setter
+    def attribute302(self, value : str):
+        '''Sets the attribute 302.'''
+        ...
+    
+    @property
+    def attribute72(self) -> Optional[int]:
+        '''Gets the attribute 72.'''
+        ...
+    
+    @attribute72.setter
+    def attribute72(self, value : Optional[int]):
+        '''Sets the attribute 72.'''
+        ...
+    
+    @property
+    def attribute73(self) -> Optional[int]:
+        '''Gets the attribute 73.'''
+        ...
+    
+    @attribute73.setter
+    def attribute73(self, value : Optional[int]):
+        '''Sets the attribute 73.'''
+        ...
+    
+    @property
+    def attribute141(self) -> Optional[float]:
+        '''Gets the attribute 141.'''
+        ...
+    
+    @attribute141.setter
+    def attribute141(self, value : Optional[float]):
+        '''Sets the attribute 141.'''
+        ...
+    
+    @property
+    def attribute140(self) -> Optional[float]:
+        '''Gets the attribute 140.'''
+        ...
+    
+    @attribute140.setter
+    def attribute140(self, value : Optional[float]):
+        '''Sets the attribute 140.'''
+        ...
+    
+    @property
+    def attribute280(self) -> Optional[int]:
+        '''Gets the attribute 280.'''
+        ...
+    
+    @attribute280.setter
+    def attribute280(self, value : Optional[int]):
+        '''Sets the attribute 280.'''
+        ...
+    
+    ...
+
+class CadBlockStretchActionElement:
+    '''The Field data'''
+    
+    @property
+    def parameters_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @parameters_list.setter
+    def parameters_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    ...
+
+class CadBlockVisibilityGrip(CadBlockGrip):
+    '''Class describing CadBlockVisibilityGrip object.'''
+    
+    def get_uid(self) -> str:
+        '''Identifier to use if object handle doesn't work. Done as method not to disturb FileComparer's property comparer'''
+        ...
+    
+    def set_uid(self, id : str) -> None:
+        '''Sets'''
+        ...
+    
+    @property
+    def embedded_objects_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer:
+        ...
+    
+    @embedded_objects_container.setter
+    def embedded_objects_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer):
+        ...
+    
+    @property
+    def object_handle(self) -> str:
+        ...
+    
+    @object_handle.setter
+    def object_handle(self, value : str):
+        ...
+    
+    @property
+    def xdata_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadXdataContainer:
+        ...
+    
+    @xdata_container.setter
+    def xdata_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadXdataContainer):
+        ...
+    
+    @property
+    def attributes(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]:
+        '''Gets the attributes.'''
+        ...
+    
+    @attributes.setter
+    def attributes(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]):
+        '''Sets the attributes.'''
+        ...
+    
+    @property
+    def application_codes_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer:
+        ...
+    
+    @application_codes_container.setter
+    def application_codes_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer):
+        ...
+    
+    @property
+    def attribute_102_values(self) -> List[aspose.cad.fileformats.cad.CadCodeValue]:
+        ...
+    
+    @attribute_102_values.setter
+    def attribute_102_values(self, value : List[aspose.cad.fileformats.cad.CadCodeValue]):
+        ...
+    
+    @property
+    def numreactors(self) -> int:
+        '''The Numreactors'''
+        ...
+    
+    @numreactors.setter
+    def numreactors(self, value : int):
+        '''The Numreactors'''
+        ...
+    
+    @property
+    def reactors(self) -> List[str]:
+        '''Get the reactors handle'''
+        ...
+    
+    @reactors.setter
+    def reactors(self, value : List[str]):
+        '''Get or sets the reactors handle'''
+        ...
+    
+    @property
+    def storage_flag(self) -> bool:
+        ...
+    
+    @storage_flag.setter
+    def storage_flag(self, value : bool):
+        ...
+    
+    @property
+    def hard_owner(self) -> str:
+        ...
+    
+    @hard_owner.setter
+    def hard_owner(self, value : str):
+        ...
+    
+    @property
+    def soft_owner(self) -> str:
+        ...
+    
+    @soft_owner.setter
+    def soft_owner(self, value : str):
+        ...
+    
+    @property
+    def is_soft_owner_set(self) -> bool:
+        ...
+    
+    @property
+    def type_name(self) -> aspose.cad.fileformats.cad.cadconsts.CadObjectTypeName:
+        ...
+    
+    @property
+    def child_objects(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]:
+        ...
+    
+    @child_objects.setter
+    def child_objects(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]):
+        ...
+    
+    @property
+    def db_eval_expr_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @db_eval_expr_parameter_list.setter
+    def db_eval_expr_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def eval_expr_parent_id(self) -> int:
+        ...
+    
+    @eval_expr_parent_id.setter
+    def eval_expr_parent_id(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_major(self) -> int:
+        ...
+    
+    @eval_expr_major.setter
+    def eval_expr_major(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_minor(self) -> int:
+        ...
+    
+    @eval_expr_minor.setter
+    def eval_expr_minor(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_value_code(self) -> int:
+        ...
+    
+    @eval_expr_value_code.setter
+    def eval_expr_value_code(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_node_id(self) -> int:
+        ...
+    
+    @eval_expr_node_id.setter
+    def eval_expr_node_id(self, value : int):
+        ...
+    
+    ...
+
+class CadBlockVisibilityParameter(CadBlock1PtParameters):
+    '''Class describing Block Visibility Parameter.'''
+    
+    def get_uid(self) -> str:
+        '''Identifier to use if object handle doesn't work. Done as method not to disturb FileComparer's property comparer'''
+        ...
+    
+    def set_uid(self, id : str) -> None:
+        '''Sets'''
+        ...
+    
+    @property
+    def embedded_objects_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer:
+        ...
+    
+    @embedded_objects_container.setter
+    def embedded_objects_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer):
+        ...
+    
+    @property
+    def object_handle(self) -> str:
+        ...
+    
+    @object_handle.setter
+    def object_handle(self, value : str):
+        ...
+    
+    @property
+    def xdata_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadXdataContainer:
+        ...
+    
+    @xdata_container.setter
+    def xdata_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadXdataContainer):
+        ...
+    
+    @property
+    def attributes(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]:
+        '''Gets the attributes.'''
+        ...
+    
+    @attributes.setter
+    def attributes(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]):
+        '''Sets the attributes.'''
+        ...
+    
+    @property
+    def application_codes_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer:
+        ...
+    
+    @application_codes_container.setter
+    def application_codes_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer):
+        ...
+    
+    @property
+    def attribute_102_values(self) -> List[aspose.cad.fileformats.cad.CadCodeValue]:
+        ...
+    
+    @attribute_102_values.setter
+    def attribute_102_values(self, value : List[aspose.cad.fileformats.cad.CadCodeValue]):
+        ...
+    
+    @property
+    def numreactors(self) -> int:
+        '''The Numreactors'''
+        ...
+    
+    @numreactors.setter
+    def numreactors(self, value : int):
+        '''The Numreactors'''
+        ...
+    
+    @property
+    def reactors(self) -> List[str]:
+        '''Get the reactors handle'''
+        ...
+    
+    @reactors.setter
+    def reactors(self, value : List[str]):
+        '''Get or sets the reactors handle'''
+        ...
+    
+    @property
+    def storage_flag(self) -> bool:
+        ...
+    
+    @storage_flag.setter
+    def storage_flag(self, value : bool):
+        ...
+    
+    @property
+    def hard_owner(self) -> str:
+        ...
+    
+    @hard_owner.setter
+    def hard_owner(self, value : str):
+        ...
+    
+    @property
+    def soft_owner(self) -> str:
+        ...
+    
+    @soft_owner.setter
+    def soft_owner(self, value : str):
+        ...
+    
+    @property
+    def is_soft_owner_set(self) -> bool:
+        ...
+    
+    @property
+    def type_name(self) -> aspose.cad.fileformats.cad.cadconsts.CadObjectTypeName:
+        ...
+    
+    @property
+    def child_objects(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]:
+        ...
+    
+    @child_objects.setter
+    def child_objects(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]):
+        ...
+    
+    @property
+    def db_eval_expr_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @db_eval_expr_parameter_list.setter
+    def db_eval_expr_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def eval_expr_parent_id(self) -> int:
+        ...
+    
+    @eval_expr_parent_id.setter
+    def eval_expr_parent_id(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_major(self) -> int:
+        ...
+    
+    @eval_expr_major.setter
+    def eval_expr_major(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_minor(self) -> int:
+        ...
+    
+    @eval_expr_minor.setter
+    def eval_expr_minor(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_value_code(self) -> int:
+        ...
+    
+    @eval_expr_value_code.setter
+    def eval_expr_value_code(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_node_id(self) -> int:
+        ...
+    
+    @eval_expr_node_id.setter
+    def eval_expr_node_id(self, value : int):
+        ...
+    
+    @property
+    def block_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @block_parameter_list.setter
+    def block_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def block_1_pt_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @block_1_pt_parameter_list.setter
+    def block_1_pt_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def block_visibility_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @block_visibility_parameter_list.setter
+    def block_visibility_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    ...
+
+class CadBlockXYGrip(CadBlockGrip):
+    '''Class describing CadBlockXYGrip object.'''
+    
+    def get_uid(self) -> str:
+        '''Identifier to use if object handle doesn't work. Done as method not to disturb FileComparer's property comparer'''
+        ...
+    
+    def set_uid(self, id : str) -> None:
+        '''Sets'''
+        ...
+    
+    @property
+    def embedded_objects_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer:
+        ...
+    
+    @embedded_objects_container.setter
+    def embedded_objects_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadEmbeddedObjectContainer):
+        ...
+    
+    @property
+    def object_handle(self) -> str:
+        ...
+    
+    @object_handle.setter
+    def object_handle(self, value : str):
+        ...
+    
+    @property
+    def xdata_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadXdataContainer:
+        ...
+    
+    @xdata_container.setter
+    def xdata_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadXdataContainer):
+        ...
+    
+    @property
+    def attributes(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]:
+        '''Gets the attributes.'''
+        ...
+    
+    @attributes.setter
+    def attributes(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectAttribute]):
+        '''Sets the attributes.'''
+        ...
+    
+    @property
+    def application_codes_container(self) -> aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer:
+        ...
+    
+    @application_codes_container.setter
+    def application_codes_container(self, value : aspose.cad.fileformats.cad.cadobjects.CadApplicationCodesContainer):
+        ...
+    
+    @property
+    def attribute_102_values(self) -> List[aspose.cad.fileformats.cad.CadCodeValue]:
+        ...
+    
+    @attribute_102_values.setter
+    def attribute_102_values(self, value : List[aspose.cad.fileformats.cad.CadCodeValue]):
+        ...
+    
+    @property
+    def numreactors(self) -> int:
+        '''The Numreactors'''
+        ...
+    
+    @numreactors.setter
+    def numreactors(self, value : int):
+        '''The Numreactors'''
+        ...
+    
+    @property
+    def reactors(self) -> List[str]:
+        '''Get the reactors handle'''
+        ...
+    
+    @reactors.setter
+    def reactors(self, value : List[str]):
+        '''Get or sets the reactors handle'''
+        ...
+    
+    @property
+    def storage_flag(self) -> bool:
+        ...
+    
+    @storage_flag.setter
+    def storage_flag(self, value : bool):
+        ...
+    
+    @property
+    def hard_owner(self) -> str:
+        ...
+    
+    @hard_owner.setter
+    def hard_owner(self, value : str):
+        ...
+    
+    @property
+    def soft_owner(self) -> str:
+        ...
+    
+    @soft_owner.setter
+    def soft_owner(self, value : str):
+        ...
+    
+    @property
+    def is_soft_owner_set(self) -> bool:
+        ...
+    
+    @property
+    def type_name(self) -> aspose.cad.fileformats.cad.cadconsts.CadObjectTypeName:
+        ...
+    
+    @property
+    def child_objects(self) -> List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]:
+        ...
+    
+    @child_objects.setter
+    def child_objects(self, value : List[aspose.cad.fileformats.cad.cadobjects.CadObjectBase]):
+        ...
+    
+    @property
+    def db_eval_expr_parameter_list(self) -> List[aspose.cad.fileformats.cad.cadparameters.CadParameter]:
+        ...
+    
+    @db_eval_expr_parameter_list.setter
+    def db_eval_expr_parameter_list(self, value : List[aspose.cad.fileformats.cad.cadparameters.CadParameter]):
+        ...
+    
+    @property
+    def eval_expr_parent_id(self) -> int:
+        ...
+    
+    @eval_expr_parent_id.setter
+    def eval_expr_parent_id(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_major(self) -> int:
+        ...
+    
+    @eval_expr_major.setter
+    def eval_expr_major(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_minor(self) -> int:
+        ...
+    
+    @eval_expr_minor.setter
+    def eval_expr_minor(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_value_code(self) -> int:
+        ...
+    
+    @eval_expr_value_code.setter
+    def eval_expr_value_code(self, value : int):
+        ...
+    
+    @property
+    def eval_expr_node_id(self) -> int:
+        ...
+    
+    @eval_expr_node_id.setter
+    def eval_expr_node_id(self, value : int):
+        ...
+    
+    ...
+
