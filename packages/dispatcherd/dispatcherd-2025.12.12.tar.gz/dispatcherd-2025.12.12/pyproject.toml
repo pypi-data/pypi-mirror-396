@@ -1,0 +1,71 @@
+[project.urls]
+Repository = "https://github.com/ansible/dispatcherd"
+
+[build-system]
+requires = ["setuptools>=42", "setuptools_scm[toml]>=7"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dispatcherd"
+description = "An asyncio-based dispatcher for tasks in a worker pool."
+readme = "README.md"
+authors = [{ name = "Alan Rominger", email = "arominge@redhat.com.com" }]
+keywords = [
+    "asyncio",
+    "multiprocessing",
+    "dispatcher",
+    "dispatcherd",
+    "pg_notify",
+    "python",
+]
+license = {text = "Apache-2.0"}
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+dependencies = ["pyyaml"]
+dynamic = ["version"]
+
+[project.scripts]
+dispatcherd = "dispatcherd.cli:standalone"
+dispatcherctl = "dispatcherd.cli:control"
+
+[tool.setuptools.packages.find]
+include = ["dispatcherd*"]
+
+[tool.setuptools]
+include-package-data = true # Ensures package data is included
+
+[tool.setuptools.package-data]
+"dispatcherd" = ["LICENSE", "README.md"]
+
+# You need psycopg, but this will not help you to install it
+
+# Linters coppied from django-ansible-base, exceptions removed
+
+[tool.setuptools_scm]
+version_scheme = "calver-by-date"
+local_scheme = "no-local-version"
+
+[tool.black]
+line-length = 160
+fast = true
+skip-string-normalization = true
+
+[tool.isort]
+profile = "black"
+line_length = 160
+
+[project.optional-dependencies]
+pg_notify = ["psycopg>=3.2.4"]
+pg_notify_dev = ["psycopg[binary]>=3.2.4"]
+pg_notify_prod = ["psycopg[c]>=3.2.4"]
+metrics = ["prometheus-client"]
+
+[tool.pytest.ini_options]
+log_cli_level = "DEBUG"
+addopts = "-m 'not asyncio'"

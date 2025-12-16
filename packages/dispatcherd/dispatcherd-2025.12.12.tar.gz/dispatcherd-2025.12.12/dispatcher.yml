@@ -1,0 +1,44 @@
+# Demo config
+---
+version: 2
+service:
+  pool_kwargs:
+    min_workers: 2  # subprocesses
+    max_workers: 12
+    scaledown_wait: 15  # seconds
+  main_kwargs:
+    node_id: demo-server-a
+    chunk_message_timeout_seconds: 5
+  metrics_kwargs: {}
+worker:
+  worker_kwargs:
+    idle_timeout: 3
+brokers:
+  pg_notify:
+    config:
+      conninfo: dbname=dispatch_db user=dispatch password=dispatching host=localhost port=55777 application_name=dispatcher_demo_run
+    sync_connection_factory: dispatcherd.brokers.pg_notify.connection_saver
+    # List of channels to listen on
+    channels:
+    - test_channel
+    - test_channel2
+    - test_channel3
+    default_publish_channel: test_channel
+    max_connection_idle_seconds: 5
+    max_self_check_message_age_seconds: 2
+  socket:
+    socket_path: demo_dispatcher.sock
+producers:
+  ScheduledProducer:
+    task_schedule:
+      'lambda: __import__("time").sleep(1)':
+        schedule: 3
+      'lambda: __import__("time").sleep(2)':
+        schedule: 3
+  OnStartProducer:
+    task_list:
+      'lambda: print("This task runs on startup")': {}
+  ControlProducer:
+publish:
+  default_control_broker: socket
+  default_broker: pg_notify

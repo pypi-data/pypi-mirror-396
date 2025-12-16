@@ -1,0 +1,93 @@
+---
+name: CI
+on:
+  pull_request:
+  push:
+jobs:
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    strategy:
+      fail-fast: false
+      matrix:
+        py_version:
+          - '3.12'
+          - '3.13'
+          - '3.14'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          show-progress: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.py_version }}
+
+      - name: Install dispatcherd
+        run: pip install -e .[pg_notify,metrics]
+      - run: make postgres
+      - run: pip install -r requirements_dev.txt
+      - name: Run synchronous tests with coverage
+        run: pytest tests/ -vv -s --cov=dispatcherd --cov-report=xml --cov-append
+      - name: Run pytest-asyncio tests with coverage
+        run: pytest tests/ -vv -s -m asyncio --cov=dispatcherd --cov-report=xml --cov-append
+      - name: Inject PR number into coverage.xml
+        if: github.event_name == 'pull_request'
+        run: |
+          if [ -f coverage.xml ]; then
+            sed -i '2i<!-- PR ${{ github.event.pull_request.number }} -->' coverage.xml
+            echo "Injected PR number ${{ github.event.pull_request.number }} into coverage.xml"
+          fi
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-${{ matrix.py_version }}
+          path: coverage.xml
+
+
+  black:
+    name: Run black
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          show-progress: false
+
+      - run: pip install black
+      - run: black --check dispatcherd
+
+  isort:
+    name: Run isort
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          show-progress: false
+
+      - run: pip install isort
+      - run: isort --check dispatcherd
+
+  mypy:
+    name: Run mypy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          show-progress: false
+
+      - run: pip install mypy
+      - run: pip install -e .[pg_notify,metrics]
+      - run: python3 -m pip install types-PyYAML
+      - run: mypy dispatcherd
+
+  flake8:
+    name: Run flake8
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          show-progress: false
+
+      - run: pip install flake8
+      - run: flake8 dispatcherd
