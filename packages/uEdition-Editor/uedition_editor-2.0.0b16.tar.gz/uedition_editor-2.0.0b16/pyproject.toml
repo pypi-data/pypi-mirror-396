@@ -1,0 +1,189 @@
+[build-system]
+requires = ["hatchling", "hatch-build-scripts"]
+build-backend = "hatchling.build"
+
+[project]
+name = "uEdition-Editor"
+dynamic = ["version"]
+description = ''
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+keywords = []
+authors = [{ name = "Mark Hall", email = "mark.hall@work.room3b.eu" }]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = [
+  "aiocron>=2.1,<3",
+  "fastapi<1",
+  "httptools<1",
+  "httpx>=0.28.1,<1",
+  "lxml>=5,<7",
+  "pydantic[email]>=2,<3",
+  "pydantic_settings>=2,<3",
+  "pygit2>=1.17.0,<2",
+  "python-multipart>=0.0.9,<1",
+  "python-slugify>=8.0.4,<9",
+  "pyjwt[crypto]>=2.10.1,<3",
+  "PyYaml>=6,<7",
+  "pyyaml_include>=2,<3",
+  "uEdition>=2.0.0a2,<2.1",
+  "typer>=0.15.1,<1",
+  "uvicorn<1",
+  "uvloop<1",
+  "websockets>=15,<16",
+]
+
+[project.urls]
+Documentation = "https://github.com/uEdition/uEditor#readme"
+Issues = "https://github.com/uEdition/uEditor/issues"
+Source = "https://github.com/uEdition/uEditor"
+
+[project.scripts]
+ueditor = "uedition_editor.cli:app"
+
+[tool.hatch.version]
+path = "uedition_editor/__about__.py"
+
+[tool.hatch.build.targets.sdist]
+artifacts = ["uedition_editor/frontend/dist/**/*"]
+exclude = [
+  ".github",
+  "dev",
+  "docs",
+  "tests",
+  ".pre-config-config.yaml",
+  ".readthedocs.yml",
+  "uedition_editor/frontend",
+]
+
+[tool.hatch.build.targets.wheel]
+artifacts = ["uedition_editor/frontend/dist/**/*"]
+exclude = [
+  ".github",
+  "dev",
+  "docs",
+  "tests",
+  ".pre-config-config.yaml",
+  ".readthedocs.yml",
+  "uedition_editor/frontend",
+]
+
+[[tool.hatch.build.hooks.build-scripts.scripts]]
+artifacts = []
+commands = ["npm ci", "npm run build"]
+work_dir = "uedition_editor/frontend"
+out_dir = "tmp"
+
+[tool.hatch.envs.default]
+extra-dependencies = ["coverage[toml]>=6.5", "httpx", "pytest", "ruff==0.9.5"]
+
+[tool.hatch.envs.default.scripts]
+server = "uvicorn --reload --port 8000 uedition_editor:app {args}"
+frontend-server = "cd uedition_editor/frontend && npm install && vite"
+build-frontend = "cd uedition_editor/frontend && npm install && vite build"
+
+# Test commands
+e2e-tests = "cd tests/e2e_tests && UEDITOR__BASE_PATH=./tmp_fixtures UEDITOR__TEST=true UEDITOR__AUTH__PROVIDER=no-auth UEDITOR__AUTH__EMAIL= UEDITOR__AUTH__NAME= npx playwright test"
+test = "UEDITOR__BASE_PATH=./tmp_fixtures UEDITOR__TEST=true UEDITOR__AUTH__PROVIDER=no-auth UEDITOR__AUTH__EMAIL= UEDITOR__AUTH__NAME=  pytest {args:tests}"
+test-cov = "UEDITOR__BASE_PATH=./tmp_fixtures UEDITOR__TEST=true UEDITOR__AUTH__PROVIDER=no-auth UEDITOR__AUTH__EMAIL= UEDITOR__AUTH__NAME=  coverage run -m pytest {args:tests}"
+cov-report = ["- coverage combine", "coverage report"]
+cov = ["test-cov", "cov-report"]
+
+# Style commands
+style = [
+  "ruff check --fix --exit-non-zero-on-fix {args:.}",
+  "ruff format --check {args:.}",
+]
+
+# Release commands
+update-version = "hatch run python update_version.py"
+
+[tool.ruff]
+target-version = "py37"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+  "A",
+  "ARG",
+  "B",
+  "C",
+  "D",
+  "DTZ",
+  "E",
+  "EM",
+  "F",
+  "FBT",
+  "I",
+  "ICN",
+  "ISC",
+  "N",
+  "PLC",
+  "PLE",
+  "PLR",
+  "PLW",
+  "Q",
+  "RUF",
+  "S",
+  "T",
+  "TID",
+  "UP",
+  "W",
+  "YTT",
+]
+ignore = [
+  # Allow non-abstract empty methods in abstract base classes
+  "B027",
+  # Allow boolean positional values in function calls, like `dict.get(... True)`
+  "FBT003",
+  # Ignore checks for possible passwords
+  "S105",
+  "S106",
+  "S107",
+  # Ignore complexity
+  "C901",
+  "PLR0911",
+  "PLR0912",
+  "PLR0913",
+  "PLR0915",
+  # Pydocstyle settings
+  "D203",
+  "D212",
+]
+unfixable = [
+  # Don't touch unused imports
+  "F401",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["uedition_editor"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.ruff.lint.per-file-ignores]
+# Tests can use magic values, assertions, and relative imports
+"tests/**/*" = ["PLR2004", "S101", "TID252"]
+
+[tool.coverage.run]
+source_pkgs = ["uedition_editor"]
+branch = true
+parallel = true
+omit = ["uedition_editor/__about__.py"]
+
+[tool.coverage.paths]
+uedition_editor = ["uedition_editor", "*/uedition_editor/uedition_editor"]
+tests = ["tests", "*/uedition_editor/tests"]
+
+[tool.coverage.report]
+exclude_lines = ["no cov", "if __name__ == .__main__.:", "if TYPE_CHECKING:"]
+skip_covered = true
+show_missing = true
