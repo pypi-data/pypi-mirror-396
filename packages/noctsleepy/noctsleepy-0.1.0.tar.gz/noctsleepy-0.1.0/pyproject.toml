@@ -1,0 +1,63 @@
+[project]
+name = "noctsleepy"
+version = "0.1.0"
+description = "This package provides a toolbox of functions to compute key metrics about nocturnal sleep from already processed wrist-worn actigraphy data."
+authors = [
+  {name = "Adam Santorelli", email = "adam.santorelli@childmind.org"},
+  {name = "Reinder Vos de Wael", email = "reinder.vosdewael@childmind.org"}
+]
+license = "LGPL-2.1-only"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=2.3.5",
+    "polars>=1.31.0",
+    "typer>=0.20.0",
+    "tzdata>=2025.2",
+]
+[project.scripts]
+noctsleepy = "noctsleepy.__main__:run_main"
+
+[dependency-groups]
+dev = [
+  "pytest>=8.3.4",
+  "mypy>=1.13.0",
+  "pre-commit>=4.0.1",
+  "pytest-cov>=6.0.0",
+  "ruff>=0.8.1",
+  "deptry>=0.23.0",
+  "pytest-mock>=3.15.1",
+]
+docs = ["pdoc>=15.0.0"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.mypy]
+ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 88
+indent-width = 4
+src = ["src"]
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["ANN", "D", "E", "F", "I"]
+ignore = []
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = []
+
+[tool.deptry.per_rule_ignores]
+DEP002 = ["tzdata"] #Windows only dependency required for timezone handling within Polars that isn't directly imported
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
