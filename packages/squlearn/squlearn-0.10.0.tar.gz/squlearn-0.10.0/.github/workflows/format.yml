@@ -1,0 +1,31 @@
+name: Formatting check
+on:
+- pull_request
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  black:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: 3.13
+
+      - name: Install dependencies
+        run: pip install black[jupyter]
+
+      - uses: actions/checkout@v5
+
+      - name: Run Black
+        run: |
+          black -l 99 src --check
+          black -l 99 tests --check
+          black -l 99 --ipynb examples --check
