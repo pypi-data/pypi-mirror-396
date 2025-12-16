@@ -1,0 +1,51 @@
+name: Post comments
+
+on:
+  workflow_run:
+    workflows: ["Unit tests"]
+    types:
+      - completed
+
+permissions:
+  checks: write
+  pull-requests: write
+  contents: write
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    if: >
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success'
+    steps:
+      - name: Download and Extract Artifacts
+        uses: dawidd6/action-download-artifact@e7466d1a7587ed14867642c2ca74b5bcc1e19a2d
+        with:
+          run_id: ${{ github.event.workflow_run.id }}
+
+      - name: Export Issue number
+        run: echo "PR_NBR=$(cat ./pr/NR)" >> $GITHUB_ENV
+
+      - name: Check if version bump is needed
+        run: |
+          if [ -s ./pr/body.md ]; then
+            echo "BUMP_VERSION=true" >> $GITHUB_ENV
+          else
+            echo "BUMP_VERSION=false" >> $GITHUB_ENV
+          fi
+
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          commit: ${{ github.event.workflow_run.head_sha }}
+          event_file: ./pr/event.json
+          event_name: ${{ github.event.workflow_run.event }}
+          files: "./pr/**/coverage-*.junit.xml"
+
+      - name: Publish version bump comment
+        if: env.BUMP_VERSION == 'true'
+        uses: thollander/actions-comment-pull-request@v3
+        with:
+          file-path: ./pr/body.md
+          pr-number: ${{ env.PR_NBR }}
+          comment-tag: version-bump
