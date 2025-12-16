@@ -1,0 +1,257 @@
+Metadata-Version: 2.4
+Name: dcone-nacos-client
+Version: 0.1.5
+Summary: 一个功能完整的 Nacos 客户端封装库，提供配置管理、服务注册与发现功能，支持多层级配置优先级、动态配置更新和优雅关闭。
+License: MIT
+Author: wangkaiay
+Author-email: wangkaiay@digitalchina.com
+Requires-Python: >=3.10
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
+Requires-Dist: nacos-sdk-python (>=2.0.9,<3.0.0)
+Requires-Dist: pyyaml (>=6.0.3,<7.0.0)
+Description-Content-Type: text/markdown
+
+# Nacos Client
+
+一个功能完整的 Nacos 客户端封装库，提供配置管理、服务注册与发现功能，支持多层级配置优先级、动态配置更新和优雅关闭。
+
+
+---
+
+## ✨ 特性
+
+- **三级配置优先级**：环境变量 > Nacos 远程配置 > 本地配置文件
+- **动态配置更新**：实时监听 Nacos 配置变更并自动更新
+- **服务注册与发现**：自动注册服务实例，支持心跳保活和优雅下线
+- **共享配置支持**：支持加载多个 Nacos 配置文件（主配置 + 共享配置）
+- **线程安全**：所有核心组件均实现线程安全
+- **优雅关闭**：自动注册 shutdown hooks，确保服务正常注销
+- **类型安全**：基于 Pydantic 的配置实体定义
+
+---
+
+## 🏗️ 架构设计
+
+```
+nacos_client/
+├── __init__.py              # 统一入口，提供初始化和全局访问方法
+├── client.py                # NacosClientManager：客户端管理器（单例）
+├── config.py                # NacosConfig：配置管理器（动态加载 + 监听）
+├── confg_environment.py     # ConfigEnvironment：三级配置环境管理
+├── registry.py              # ServiceRegistry：服务注册与心跳管理
+├── discovery.py             # ServiceDiscovery：服务发现
+├── entity.py                # 配置实体类（NacosConfigEntity, SharedConfigEntity）
+├── constant.py              # 配置键常量定义
+├── config_decorator.py      # 配置注解装饰器（自动注入配置到对象）
+└── utils.py                 # 工具函数（IP 获取、配置加载、定时器等）
+```
+
+
+---
+
+## 📦 安装依赖
+
+```bash
+# 使用 uv 安装
+uv add nacos-sdk-python pyyaml pydantic
+
+# 或使用 pip
+pip install nacos-sdk-python pyyaml pydantic
+```
+
+---
+
+## 🚀 快速开始
+
+### 1. 基本用法
+
+```python
+from src.nacos_client import init_nacos_client, get_service_discovery, app_config, NacosConstant
+
+# 获取配置
+db_host = app_config.get("database.host", "localhost")
+port = app_config.get("app.port", 8000)
+
+# 服务发现
+discovery = get_service_discovery()
+instances = discovery.get_instances("sv-maas")
+```
+
+### 2. 使用环境变量配置
+
+```bash
+# 设置环境变量（优先级最高）
+export NACOS__SERVER_ADDR="10.3.70.16:8848"
+export NACOS__NAMESPACE=""
+export NACOS__USERNAME="nacos"
+export NACOS__PASSWORD="nacos"
+export APP__NAME="sv-maas"
+export APP__PORT="8888"
+```
+
+### 3. 使用本地配置文件
+
+在 `config/config.yaml` 中配置（优先级最低）：
+
+```yaml
+nacos:
+  server_addr: "10.3.70.16:8848"
+  namespace: ""
+  username: "nacos"
+  password: "nacos"
+  # 主配置：业务配置（默认加载）
+  config_data_id: "sv-maas-service-prod.yaml"
+  config_group: "DEFAULT_GROUP"
+  # 额外加载其他 Group 的配置,获取配置优先级同配置顺序
+  shared_configs:
+    - data_id: "common-config.yaml"
+      group: "DEFAULT_GROUP"
+      refresh: true
+    - data_id: "database-config.yaml"
+      group: "DEFAULT_GROUP"
+      refresh: true
+
+app:
+  name: "sv-maas"
+  port: 8888
+```
+
+
+
+## ⚙️ 配置管理
+
+### 配置文件格式
+
+支持 **YAML** 和 **JSON** 格式（通过文件扩展名自动识别）。
+
+**YAML 示例**（`app-sv-maas-config.yaml`）：
+
+```yaml
+database:
+  host: "10.0.0.1"
+  port: 5432
+  username: "admin"
+  password: "secret"
+
+service:
+  timeout: 30
+  retry: 3
+  
+features:
+  cache_enabled: true
+  max_connections: 100
+```
+
+**JSON 示例**（`app-sv-maas-config.json`）：
+
+```json
+{
+  "database": {
+    "host": "10.0.0.1",
+    "port": 5432
+  },
+  "features": {
+    "cache_enabled": true
+  }
+}
+```
+
+
+## 🔍 服务注册与发现
+
+### 注册服务
+
+服务会自动：
+1. 注册到 Nacos
+2. 每 5 秒发送心跳
+3. 在进程退出时自动注销
+
+### 发现服务
+
+```python
+from src.nacos_client import init_nacos_client, get_service_discovery, app_config, NacosConstant
+
+discovery = get_service_discovery()
+instances = discovery.get_one_healthy_instance("sv-maas")
+
+```
+
+## 📖 API 文档
+
+### 顶层 API
+
+#### `init_nacos_client()`
+
+从配置环境初始化 Nacos（推荐方式）。
+
+```python
+from src.nacos_client import init_nacos_client, get_service_discovery, app_config, NacosConstant
+
+manager, config = init_nacos_client()
+```
+
+#### `get_nacos_config(key: str, default=None)`
+
+获取配置值（支持嵌套路径）。
+
+```python
+from src.nacos_client import init_nacos_client, get_service_discovery, app_config, NacosConstant
+
+db_host = app_config.get("database.host", "localhost")
+```
+
+#### `get_service_discovery() -> ServiceDiscovery`
+
+获取服务发现实例。
+
+```python
+from src.nacos_client import init_nacos_client, get_service_discovery, app_config, NacosConstant
+
+discovery = get_service_discovery()
+instances = discovery.get_one_healthy_instance("sv-maas")
+```
+
+
+## 💡 最佳实践
+
+###  1. 三层命名规则
+
+层级 |     作用     |                                 示例                                  | 说明 
+----|:----------:|:-------------------------------------------------------------------:|:--:
+Namespace |    环境隔离    |          `smartvision-dev` `smartvision-pre` `smartvision`          | 开发环境/预生产环境/生产环境 
+Group |   配置类型隔离   |       `MIDDLEWARE_CONFIG_GROUP`            `APP_CONFIG_GROUP`       | 中间件配置/业务配置 
+Data ID | 类型+服务+格式标识 | `middleware-base-config.yaml`             `app-sv-maas-config.yaml` | 中间件Data  ID/业务Data ID
+
+### 2. 使用环境变量区分环境
+
+
+创建不同环境对应的环境变量，并设置 Nacos 的 Namespace 和 Config Data ID。
+通过Namespace区分环境，不同环境使用不同的配置文件。
+开发环境Namespace：`smartvision-dev`
+预生产环境Namespace：`smartvision-pre`
+生产环境Namespace：`smartvision`
+
+**开发环境**：
+```bash
+export NACOS__NAMESPACE="smartvision-dev"
+export NACOS__CONFIG_DATA_ID="app-sv-maas-config.yaml"
+```
+
+**预生产环境**：
+```bash
+export NACOS__NAMESPACE="smartvision-pre"
+export NACOS__CONFIG_DATA_ID="app-sv-maas-config.yaml"
+```
+
+**生产环境**：
+```bash
+export NACOS__NAMESPACE="smartvision"
+export NACOS__CONFIG_DATA_ID="app-sv-maas-config.yaml"
+```
+
