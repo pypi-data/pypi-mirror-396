@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mett-dataportal"
+version = "0.1.0"
+description = "Python client and CLI for the METT Data Portal API"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+  {name = "METT Data Portal", email = "data-portal@example.com"}
+]
+keywords = ["microbiome", "genomics", "api", "cli"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+
+dependencies = [
+  "pydantic>=2.5",
+  "typer>=0.12",
+  "rich>=13.7",
+  "requests>=2.31.0",
+  "urllib3>=1.26,<3",
+  "python-dateutil>=2.8.2",
+  "typing_extensions>=4.7.0",
+  "tomli>=2.0; python_version < '3.11'",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=7.4",
+  "pytest-mock>=3.11",
+  "ruff>=0.5",
+]
+
+[project.scripts]
+mett = "mett_dataportal.cli.main:app"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["mett_dataportal", "mett_dataportal.*", "mett_dataportal_sdk", "mett_dataportal_sdk.*"]
+
+[tool.setuptools.package-data]
+"mett_dataportal_sdk" = ["py.typed"]
