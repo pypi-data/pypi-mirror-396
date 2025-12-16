@@ -1,0 +1,326 @@
+# Consult
+
+Multi-agent consensus system. Multiple LLM agents analyze your problem from different angles, critique each other's outputs, and iterate until they agree or an orchestrator resolves disagreements.
+
+The value isn't individual agent outputs - it's the structured peer review that catches blind spots any single perspective would miss.
+
+## What This Does
+
+1. **Parallel analysis**: N agents with domain-specific prompts analyze your problem simultaneously
+2. **Peer feedback**: Each agent reviews the others' outputs with structured critique
+3. **Meta review**: Separate pass catches integration issues the domain-focused agents miss
+4. **Iteration**: Agents incorporate feedback and revise (configurable cycles)
+5. **Resolution**: Either consensus is reached or an orchestrator synthesizes disagreements
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           CONSENSUS WORKFLOW                                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  1. PARALLEL ANALYSIS                                                       │
+│     ┌──────────┐  ┌──────────┐  ┌──────────┐                               │
+│     │ Agent A  │  │ Agent B  │  │ Agent C  │  ← Domain-specific            │
+│     │ (DB)     │  │ (API)    │  │ (Infra)  │    system prompts             │
+│     └────┬─────┘  └────┬─────┘  └────┬─────┘                               │
+│          │             │             │                                      │
+│  2. PEER REVIEW        ▼             ▼                                      │
+│     Each agent critiques the others' solutions                              │
+│                                                                             │
+│  3. META REVIEW                                                             │
+│     ┌─────────────────────────────────────┐                                │
+│     │  Cross-cutting issues, gaps,        │                                │
+│     │  integration problems               │                                │
+│     └─────────────────────────────────────┘                                │
+│                                                                             │
+│  4. REVISION                                                                │
+│     Agents incorporate feedback, revise their solutions                     │
+│                                                                             │
+│  5. APPROVAL VOTE                                                           │
+│     Each agent: "Would I sign off on THEIR solution?"                       │
+│     ├─ ≥80% approval → done                                                │
+│     └─ <80% approval → iterate or orchestrator resolves                    │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+## Installation
+
+```bash
+pip install getconsult
+```
+
+Configure API key:
+
+```bash
+mkdir -p ~/.consult
+echo 'ANTHROPIC_API_KEY=sk-ant-...' > ~/.consult/.env
+chmod 600 ~/.consult/.env
+```
+
+Or export directly:
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+```
+
+## Usage
+
+```bash
+# Basic query
+consult -p "Design a real-time chat application database"
+
+# Check status
+consult --status
+
+# List available agent configurations
+consult --list-experts
+
+# Interactive mode (Pro tier)
+consult-tui
+```
+
+## CLI Reference
+
+```
+consult [options]
+
+Required:
+  -p, --problem TEXT       Problem statement
+
+Info:
+  -v, --version            Show version
+  -s, --status             Show tier, limits, usage
+  --list-experts           Show agent configurations
+  --explain-consensus      Explain the consensus mechanism
+
+Analysis:
+  -m, --mode [single|team] Provider mode (default: single)
+  --provider [anthropic|openai|google]
+                           Provider for single mode (default: anthropic)
+  -e, --experts TEXT       Agent set or comma-separated types
+  -i, --max-iterations N   Max revision cycles (default: 1)
+  -t, --consensus-threshold FLOAT
+                           Agreement threshold 0.0-1.0 (default: 0.8)
+
+Output:
+  --markdown               Save to ~/.consult/outputs/
+  --markdown-filename TEXT Custom output filename
+
+Context:
+  --memory-session PATH    Session file for continuity
+  -a, --attachments FILES  Image/PDF files to include
+```
+
+## Agent Types
+
+Each agent type has a domain-focused system prompt that shapes how it analyzes problems. The peer review mechanism means a security-focused agent will catch issues a performance-focused agent might overlook, and vice versa.
+
+| Agent Type | Focus |
+|------------|-------|
+| `database` | Data modeling, queries, consistency, migrations |
+| `backend` | API design, service boundaries, error handling |
+| `infrastructure` | Deployment, scaling, monitoring, reliability |
+| `security` | Threat models, auth, input validation, compliance |
+| `performance` | Bottlenecks, caching, profiling, optimization |
+| `architect` | System design, trade-offs, patterns |
+| `cloud` | Cloud services, IaC, containers, DevOps |
+| `frontend` | UI architecture, state management, rendering |
+| `ml` | ML systems, training, inference, MLOps |
+| `data` | Pipelines, ETL, streaming, warehousing |
+| `ux` | User research, interaction design, accessibility |
+
+### Predefined Sets
+
+```bash
+consult -p "..." --experts default           # database, backend, infrastructure
+consult -p "..." --experts architecture      # architect, database, cloud
+consult -p "..." --experts security_focused  # security, backend, infrastructure
+consult -p "..." --experts full_stack        # backend, frontend, database, infrastructure
+```
+
+### Custom Selection (Pro)
+
+```bash
+consult -p "..." --experts "database,security,performance"
+```
+
+## How Consensus Works
+
+Consensus isn't "do the outputs look similar" - it's "would each agent approve the others' solutions for production."
+
+### Approval Voting
+
+Each agent reviews each OTHER agent's solution:
+
+```
+3 agents = 6 pairwise reviews:
+
+Agent A → B's solution: APPROVE (1.0)
+Agent A → C's solution: CONCERNS (0.7)
+Agent B → A's solution: APPROVE (1.0)
+Agent B → C's solution: OBJECT (0.0)
+Agent C → A's solution: CONCERNS (0.7)
+Agent C → B's solution: APPROVE (1.0)
+
+Aggregate: (1.0 + 0.7 + 1.0 + 0.0 + 0.7 + 1.0) / 6 = 73%
+```
+
+### Verdicts
+
+| Verdict | Score | Meaning |
+|---------|-------|---------|
+| APPROVE | 1.0 | Production-ready |
+| CONCERNS | 0.7 | Acceptable with noted issues |
+| OBJECT | 0.0 | Fundamental problems |
+
+### Resolution
+
+```
+≥80% approval → consensus reached → format output
+<80% AND iterations left → revise and re-vote
+<80% AND max iterations → orchestrator synthesizes
+```
+
+## Tiers
+
+BYOK model - you provide API keys, pay providers directly.
+
+| | Free | Pro ($9/mo) |
+|-|------|-------------|
+| Queries/day | 5 | 100 |
+| Queries/hour | 3 | 20 |
+| Max agents | 2 | Unlimited |
+| Max iterations | 1 | Unlimited |
+| Team mode | - | Yes |
+| TUI | - | Yes |
+| Sessions | - | Yes |
+| Attachments | - | Yes |
+| Export | - | Yes |
+| Custom agents | - | Yes |
+
+### License Keys
+
+```bash
+export CONSULT_LICENSE_KEY="CSL1_pro_..."
+# or
+echo "CSL1_pro_..." > ~/.consult/license
+```
+
+Check status:
+
+```bash
+consult --status
+```
+
+## Configuration
+
+```bash
+# ~/.consult/.env
+
+# API keys (at least one required)
+ANTHROPIC_API_KEY=sk-ant-...
+OPENAI_API_KEY=sk-...
+GOOGLE_API_KEY=...
+
+# Model overrides (defaults optimized for cost, Dec 2025)
+ANTHROPIC_MODEL=claude-haiku-4-5-20251001
+OPENAI_MODEL=gpt-4o-mini
+GEMINI_MODEL=gemini-2.5-flash-lite
+
+# For higher quality (and cost)
+# ANTHROPIC_MODEL=claude-sonnet-4-20250514
+# OPENAI_MODEL=gpt-4o
+
+# Meta reviewer / orchestrator model
+SOTA_MODEL=claude-opus-4-5-20251101
+
+# Data directory
+CONSULT_HOME=~/.consult
+```
+
+## Data Directory
+
+```
+~/.consult/
+├── sessions/     # Conversation state (Pro)
+├── outputs/      # Markdown exports (Pro)
+├── cache/        # Quota tracking
+└── logs/         # Debug logs (API keys redacted)
+```
+
+## Team Mode (Pro)
+
+Runs the same agent configurations across multiple providers in parallel:
+
+```bash
+consult -p "Compare approaches to real-time sync" --mode team
+```
+
+Spawns agents on OpenAI, Anthropic, and Google simultaneously, then compares outputs across providers.
+
+## Programmatic Usage
+
+```python
+from src.workflows import ConsensusWorkflow
+
+workflow = ConsensusWorkflow(
+    consensus_threshold=0.8,
+    expert_config="architecture"
+)
+
+result = await workflow.solve_problem("Design microservices architecture")
+
+print(f"Consensus: {result.consensus_achieved}")
+print(f"Resolution: {result.resolution_method}")
+print(result.final_solution)
+```
+
+## Performance
+
+| Operation | Typical Time |
+|-----------|--------------|
+| 3-agent consensus | 120-180s |
+| Team mode (9 agents) | 180-300s |
+
+Dominated by LLM API latency.
+
+## Security
+
+- API keys never written to logs, sessions, or outputs
+- Sensitive data redacted before persistence
+- Session files use hashed identifiers
+- `chmod 600 ~/.consult/.env`
+
+## Development
+
+```bash
+git clone https://github.com/1x-eng/agentic-atlas.git
+cd agentic-atlas
+pip install -e ".[dev]"
+```
+
+### Commits
+
+Uses [Conventional Commits](https://www.conventionalcommits.org/):
+
+```bash
+git commit -m "fix: handle empty input"      # patch
+git commit -m "feat: add CSV export"         # minor
+git commit -m "feat!: rename --experts flag" # major
+```
+
+`docs:`, `chore:`, `refactor:`, `test:` don't trigger releases.
+
+## License
+
+Proprietary. See [LICENSE](LICENSE).
+
+**Permitted**: Personal use, internal business use, contributing back.
+
+**Requires commercial license**: SaaS offerings, commercial integration, redistribution.
+
+Contact: pruthvikumar.123@gmail.com
+
+---
+
+Built on [AutoGen](https://github.com/microsoft/autogen).
