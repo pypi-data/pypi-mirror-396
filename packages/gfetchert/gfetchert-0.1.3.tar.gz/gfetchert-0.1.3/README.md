@@ -1,0 +1,62 @@
+# Gfetchert
+
+Fetch CHIRPS rainfall data easily for any date and location using latitude/longitude or place name.
+
+## Installation
+```bash
+pip install gfetchert
+
+
+
+
+Usage:
+
+Example 1 : For a single coordinate { For Precise Data }
+
+from gfetchert import fetch_rainfall
+
+rain = fetch_rainfall(30.55, 79.62, "2007-07-30")
+print(f"Rainfall: {rain} mm")
+
+
+
+Example 2 : For in csv file multiple rows
+
+from gfetchert import fetch_from_csv
+
+fetch_from_csv(
+    "your_file.csv",
+    date_col="Your_date_column", 
+    lat_col="Your_latitude_column", 
+    lon_col="Your_longitude_column", 
+    save_as="new_rainfall.csv"
+)
+
+
+
+Example 3 : for place name  
+
+
+from gfetchert import fetch_by_place
+
+rain = fetch_by_place("Nainital, Uttarakhand", "2008-09-14")
+print(f"Rainfall in Nainital: {rain} mm")
+
+
+
+
+
+
+Author 
+Nikhil Aka Crocodile
+
+
+
+
+NOTE :- data is available from 1981-2017 
+
+## Data Source
+This package retrieves rainfall data from the [CHIRPS dataset](https://www.chc.ucsb.edu/data/chirps),
+a product of the Climate Hazards Center, University of California, Santa Barbara.
+
+
