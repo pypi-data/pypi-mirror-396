@@ -1,0 +1,80 @@
+{
+  "type": "OBJECT",
+  "properties": {
+    "blNumber": {
+      "type": "string",
+      "nullable": true,
+      "description": "The Bill of Lading number associated with the document. Commonly known as 'Bill of Lading Number', 'BILL OF LADING NO.', 'BL Number', 'BL No.', 'B/L No.', 'BL-Nr.', 'B/L', 'HBL No.', or 'M-AWB Nummer' in the document."
+    },
+    "bookingNumber": {
+      "type": "string",
+      "nullable": true,
+      "description": " Booking numbers are unique identifiers for shipments. They are often referred to as 'Booking Number', 'Booking No.', 'Booking Ref.', 'Booking Reference', 'Booking ID', 'SACO-Pos.' or 'Order Ref'"
+    },
+    "containers": {
+      "type": "ARRAY",
+      "items": {
+        "type": "OBJECT",
+        "properties": {
+          "containerNumber": {
+            "type": "string",
+            "nullable": true,
+            "description": "The container number associated with the document. They MUST consist of 4 letters followed by 7 digits (e.g., 'CMAU1234567', 'BMOU 575538/3', 'XLXU 1277652'). It can be found in the document as 'Container No.', 'Container Number', 'Cont. No.', 'Cont Nr.', 'Seefrachtcontainer-Nr.', or 'Containernummer."
+          },
+          "containerType": {
+            "type": "string",
+            "nullable": true,
+            "description": "The size or Type of the container associated with the containerNumber, such as 20ft, 40ft, 40HC, 20DC etc."
+          },
+          "grossWeight": {
+            "type": "string",
+            "nullable": true,
+            "description": "The gross weight of the container. Usually mentioned as G.W or GW or Gross Weight, etc.."
+          },
+          "measurements": {
+            "type": "string",
+            "nullable": true,
+            "description": "The volume of the Container. Usually, it is measured in 'Cubic Meter (cbm)' or dimensions. But volume in 'cbm' is preferred."
+            },
+          "packageQuantity": {
+            "type": "string",
+            "nullable": true,
+            "description": "The quantity of the goods in the container. Usually quantity is in pallets, PLT, cartons, CTNS, pieces, PCS, packages, boxes, etc. Please prioritize the packaging types based on their size, as follows: Pallets (PLT) >> Cartons (CTNS) >> Pieces (PCS). Extract the Larger packaging types that will have a lower count."
+          },
+          "packageType": {
+            "type": "string",
+            "nullable": true,
+            "description": "The packaging type is the unit of packageQuantity. Example; pallets, PLT, cartons, CTNS, pieces, PCS, packages, etc. Sometimes, the packaging type is available in the column name of the quantityShipped."
+        },
+          "sealNumber": {
+            "type": "string",
+            "nullable": true,
+            "description": "The seal number associated with the container Number and you can find like seal number, seal nos., shipper seal, seal.. But it is not same as the container number."
+          }
+        },
+        "required": ["containerNumber", "containerType", "grossWeight", "measurements", "packageQuantity", "packageType", "sealNumber"]
+      }
+    },
+    "portOfDischarge": {
+      "type": "string",
+      "nullable": true,
+      "description": "The port where the containers are discharged from the vessel. This is the destination port for the shipment. Find information like port of discharge, pod, delivery, to."
+    },
+    "portOfLoading": {
+      "type": "string",
+      "nullable": true,
+      "description": "The origin port where the containers are loaded onto the vessel. Find information like 'Ladehafen', 'Port of Loading', 'pol', or 'from.' in the document."
+    },
+    "voyage": {
+      "type": "string",
+      "nullable": true,
+      "description": "The unique voyage number or identifier assigned to a vessel’s specific journey. This typically corresponds to the scheduled sailing associated with the shipment and can often be found near vessel information on shipping documents. such as voyage, voy. no, voyage-no."
+    },
+    "vessel": {
+      "type": "string",
+      "nullable": true,
+      "description": "The name of the vessel carrying the container or shipment"
+    }
+  },
+  "required": ["blNumber", "bookingNumber", "containers", "portOfDischarge", "portOfLoading", "voyage", "vessel"]
+}
