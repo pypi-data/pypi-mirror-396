@@ -1,0 +1,122 @@
+# RDST Build and Deployment Pipeline
+# Tests run on pre-merge only (CLs). After merge to main:
+# - Dev builds → published to AWS CodeArtifact (private)
+# - Production releases → published to CodeArtifact AND public PyPI (manual approval required)
+
+steps:
+  # If this is a gerrit change list build, notify Gerrit that the build started
+  - label: ":gerrit: Start CL"
+    branches: "!refs/heads/main"
+    command: .buildkite/set_gerrit_running.sh
+    agents:
+      queue: t3a-small
+
+  - wait
+  # Run unit tests on pre-merge only
+  - label: ":test_tube: Run RDST Unit Tests"
+    key: "rdst-unit-tests"
+    branches: "!refs/heads/main"
+    command: "chmod +x rdst/.buildkite/run_unit_tests.sh && rdst/.buildkite/run_unit_tests.sh"
+    artifact_paths:
+      - "rdst/test-results/*.xml"
+    agents:
+      queue: t3a-small
+    timeout_in_minutes: 15
+    retry:
+      automatic:
+        - exit_status: -1
+          limit: 2
+
+  # Run integration tests on pre-merge only - PostgreSQL
+  - label: ":postgres: RDST Integration Tests (PostgreSQL)"
+    key: "rdst-integration-postgresql"
+    branches: "!refs/heads/main"
+    depends_on: "rdst-unit-tests"
+    command: "chmod +x rdst/.buildkite/run_integration_tests.sh && rdst/.buildkite/run_integration_tests.sh postgresql"
+    env:
+      DUPLO_ENV: dev
+      DUPLO_TENANT: dev01
+    agents:
+      queue: t3a-small
+    timeout_in_minutes: 30
+    retry:
+      automatic:
+        - exit_status: -1
+          limit: 2
+
+  # Run integration tests on pre-merge only - MySQL
+  - label: ":mysql: RDST Integration Tests (MySQL)"
+    key: "rdst-integration-mysql"
+    branches: "!refs/heads/main"
+    depends_on: "rdst-unit-tests"
+    command: "chmod +x rdst/.buildkite/run_integration_tests.sh && rdst/.buildkite/run_integration_tests.sh mysql"
+    env:
+      DUPLO_ENV: dev
+      DUPLO_TENANT: dev01
+    agents:
+      queue: t3a-small
+    timeout_in_minutes: 30
+    retry:
+      automatic:
+        - exit_status: -1
+          limit: 2
+
+  # Wait for all non-main-only steps to complete before updating Gerrit CL status
+  - wait: ~
+    branches: '!refs/heads/main'
+    continue_on_failure: true
+
+  # Update gerrit with CL build status (pass/fail)
+  - label: ":gerrit: Update CL status"
+    key: set-gerrit-status
+    branches: '!refs/heads/main'
+    depends_on:
+      - "rdst-unit-tests"
+      - "rdst-integration-postgresql"
+      - "rdst-integration-mysql"
+    command: .buildkite/set_gerrit_status.sh
+    agents:
+      queue: t3a-small
+    retry:
+      manual:
+        permit_on_passed: true
+
+#             All main-only steps must appear below this line
+# -------------------------------------------------------------------------------------------------
+
+  # After merge to main: Build and publish Python package to dev CodeArtifact
+  - label: ":package: Build RDST Python Package"
+    key: "build-package"
+    branches: "refs/heads/main"
+    command: "chmod +x rdst/.buildkite/build_package.sh && rdst/.buildkite/build_package.sh"
+    artifact_paths:
+      - "rdst/dist/*.whl"
+      - "rdst/dist/*.tar.gz"
+    agents:
+      queue: t3a-small
+
+  # Publish to dev CodeArtifact repository
+  - label: ":rocket: Publish to Dev CodeArtifact"
+    key: "publish-dev"
+    branches: "refs/heads/main"
+    depends_on:
+      - "build-package"
+    command: "chmod +x rdst/.buildkite/deploy_dev.sh && rdst/.buildkite/deploy_dev.sh"
+    agents:
+      queue: t3a-small
+
+  # Manual approval required to promote to production (CodeArtifact + PyPI)
+  - block: ":rocket: Publish to Production (PyPI)"
+    key: "release-approval"
+    branches: "refs/heads/main"
+    prompt: "Ready to publish RDST to public PyPI and production CodeArtifact? This will make the package publicly available."
+    depends_on: "publish-dev"
+
+  # Publish to production: CodeArtifact (rdst) AND public PyPI
+  - label: ":globe_with_meridians: Publish to PyPI + CodeArtifact"
+    key: "publish-release"
+    branches: "refs/heads/main"
+    depends_on: "release-approval"
+    command: "chmod +x rdst/.buildkite/deploy_release.sh && rdst/.buildkite/deploy_release.sh"
+    agents:
+      queue: t3a-small

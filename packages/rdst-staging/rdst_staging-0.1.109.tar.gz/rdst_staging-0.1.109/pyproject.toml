@@ -1,0 +1,65 @@
+[project]
+name = "rdst-staging"
+dynamic = ["version"]
+description = "ReadySet Diagnostics & SQL Tuning - CLI tool for database diagnostics and query optimization"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "ReadySet", email = "support@readyset.io"}
+]
+keywords = ["database", "sql", "optimization", "readyset", "diagnostics", "performance", "caching"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Topic :: Database",
+    "Topic :: Software Development :: Testing",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "boto3",
+    "requests==2.31.0",
+    "psycopg2-binary",
+    "pymysql",
+    "pandas",
+    "rich",
+    "toml",
+    "pygments",
+    "posthog",
+]
+
+[project.urls]
+Homepage = "https://readyset.io"
+Documentation = "https://docs.readyset.io"
+Repository = "https://github.com/readysettech/readyset"
+Issues = "https://github.com/readysettech/readyset/issues"
+Changelog = "https://github.com/readysettech/readyset/releases"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "_version_build.py"
+pattern = "__version__ = ['\"](?P<version>[^'\"]+)['\"]"
+
+[tool.hatch.build.targets.wheel]
+packages = ["lib"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"rdst.py" = "rdst.py"
+"mcp_server.py" = "mcp_server.py"
+
+[tool.uv]
+dev-dependencies = []
+
+[project.scripts]
+rdst = "rdst:main"
+rdst-mcp = "mcp_server:main"
