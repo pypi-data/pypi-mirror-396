@@ -1,0 +1,114 @@
+Metadata-Version: 2.4
+Name: open_fda_drug_label
+Version: 0.1.0
+Summary: Package leveraging openFDA drug/label API to access drug information and store in usable python data objects
+License: MIT
+License-File: LICENSE
+Author: Leo Jergovic
+Requires-Python: >=3.12,<4.0
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
+Requires-Dist: dotenv (>=0.9.9,<0.10.0)
+Requires-Dist: requests (>=2.32.5,<3.0.0)
+Project-URL: Documentation, https://open-fda-drug-label.readthedocs.io/en/latest/#
+Project-URL: Homepage, https://github.com/thefleok/open_fda_drug_label
+Project-URL: Repository, https://github.com/thefleok/open_fda_drug_label
+Description-Content-Type: text/markdown
+
+# Introduction to open_fda_drug_label
+
+*open_fda_drug_label* is a python Package leveraging the openFDA API to access label subcategory information of the drug dataset. It enables users to gather raw API output returns about drugs, store them in *Drug* objects for ease of data access, and store multiple *Drug* objects together in a *Shelf* for pharmaceutical work. High level functions like *make_drugs* ease the initialization process of *Drug* objects and documentation for all functions is contained in respective files and *help()* functions.
+
+The FDA provides data through an Elasticsearch-based API that provides public FDA data about 3 high level categories: drugs, devices, and foods. Under the drugs category, there are 5 API endpoints: Adverse Events, Product Labeling, NDC Directory, Recall Enforcement Reports, Drugs@FDA, and Drug Shortages. For the purposes of collecting information about drugs documented in public FDA databases, the Product Labeling subcategory is the sole focus of this python package.
+
+The label subset of the openFDA API Drug call allows users to search for drugs according to any of their labeled parameters, with common fields including brand name, ingredients, and risks. However, return format is a raw set of nested dictionaries and lists with large amounts of data available, so this package also works to create data-beneficial objects that make accessing information about complex drugs more accessible for non-technical users. Users can use *Drug* objects to access the raw returns, or access processed data entries for easier manipulation of drug information. 
+
+## Installation
+
+Installing the pacakage can be easily achieved through "pip install" or whatever command line is used in the user's respective environment for adding dependencies. We demonstrate *pip install* and *poetry add* commands below:
+
+```bash
+$ pip install open_fda_drug_label
+$ poetry add open_fda_drug_label
+```
+
+To import the package and all necessary functions, simply execute the following:
+
+```bash
+import open_fda_drug_label
+from open_fda_drug_label import Drug, Shelf, Drug_Label_Client, make_drugs
+```
+
+## Usage
+
+All usage should begin by importing a user's API key. We heavily suggest using a dotenv approach with load_dotenv() for ease of implementation and effective use of testing. Users can store their api_key in a dot_env file.
+
+```bash
+from dotenv import load_dotenv
+load_dotenv()
+API_KEY = os.getenv("FDA_API_KEY")
+```
+
+Users can interact with the openFDA API through the Drug_Label_Client object:
+
+```bash
+client = Drug_Label_Client(API_KEY)
+```
+Setting up searches is easy through the client API. *generic_search* builds the optimal string format of searches, and inputting these string formats into the search_request function complete the query and returns a raw json format:
+
+```bash
+advil_search = client.generic_search("brand_name", "Advil")
+advil_result = client.search_request([advil_search])
+```
+
+Returned in the form of listed dictionaries/nests, subsets of advil_search can be used to initiate a *Drug* object:
+
+```bash
+advil_drug = Drug(advil_result["meta"], advil_result["results"][0])
+```
+
+The drug object makes accessing information buried in complex organization easy with basic calls:
+```bash
+advil_drug.get_name() # returns full name of advil drug
+advil_drug.get_date() # returns last update date of advil drug
+advil_drug.get_parameter("pregnancy") # returns for any string parameter in the dict info on advil, in this case, pregnancy warnings
+```
+
+The alternative to all of the above is to use the following make_drugs command:
+```bash
+make_drugs(API_KEY, ["brand_name"],["Advil"])
+```
+
+Drugs can be placed onto a shelf (when non-redundant with existing shelf items) and stored for pharmacies, users' personal cabinets, and any other collection environments:
+```bash
+my_shelf = Shelf()
+my_shelf.add_drug(advil_drug)
+```
+
+## Dependencies
+python = "^3.12"
+
+dotenv = "^0.9.9"
+
+requests = "^2.32.5"
+
+## Contributing
+
+Interested in contributing? Check out the contributing guidelines. Please note that this project is released with a Code of Conduct. By contributing to this project, you agree to abide by its terms.
+
+## License
+
+`open_fda_drug_label` was created by Leo Jergovic. It is licensed under the terms of the MIT license.
+
+## Contact
+Please contact original developer Leo Jergovic on linkedin by searching his name, or on github @thefleok.
+
+## Credits
+
+We indebt any relative functionality and usefulness of this package to Columbia University QMSS Professor Thomas Brambor. His excellent course materials, timely communication, and engaging teaching enabled the execution of this project.
+
+`open_fda_drug_label` was created with [`cookiecutter`](https://cookiecutter.readthedocs.io/en/latest/) and the `py-pkgs-cookiecutter` [template](https://github.com/py-pkgs/py-pkgs-cookiecutter).
+
