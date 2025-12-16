@@ -1,0 +1,67 @@
+"""
+Utility class for YellowDog item types.
+"""
+
+from typing import TypeVar
+
+from yellowdog_client.model import (
+    Allowance,
+    Application,
+    ComputeRequirement,
+    ComputeRequirementSummary,
+    ComputeRequirementTemplateSummary,
+    ComputeSourceTemplate,
+    ComputeSourceTemplateSummary,
+    ConfiguredWorkerPool,
+    Group,
+    Instance,
+    KeyringSummary,
+    MachineImageFamilySummary,
+    Namespace,
+    NamespacePolicy,
+    NamespaceStorageConfiguration,
+    Node,
+    ObjectPath,
+    PermissionDetail,
+    ProvisionedWorkerPool,
+    Role,
+    Task,
+    TaskGroup,
+    User,
+    Worker,
+    WorkerPoolSummary,
+    WorkRequirementSummary,
+)
+
+from yellowdog_cli.utils.cloudwizard_aws_types import AWSAvailabilityZone
+
+Item = TypeVar(
+    "Item",
+    AWSAvailabilityZone,
+    Allowance,
+    Application,
+    ComputeRequirement,
+    ComputeRequirementSummary,
+    ComputeRequirementTemplateSummary,
+    ComputeSourceTemplate,
+    ComputeSourceTemplateSummary,
+    ConfiguredWorkerPool,
+    Group,
+    Instance,
+    KeyringSummary,
+    MachineImageFamilySummary,
+    Namespace,
+    NamespacePolicy,
+    NamespaceStorageConfiguration,
+    Node,
+    ObjectPath,
+    PermissionDetail,
+    ProvisionedWorkerPool,
+    Role,
+    Task,
+    TaskGroup,
+    User,
+    WorkRequirementSummary,
+    Worker,
+    WorkerPoolSummary,
+)
