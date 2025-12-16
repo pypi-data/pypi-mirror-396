@@ -1,0 +1,247 @@
+{% load wagtailcore_tags wagtailimages_tags %}
+{% block content %}
+
+<div class="topic-links-container-links">
+    <!-- Área principal (destaque à esquerda) -->
+    <div class="topic-links-featured">
+        {% if value.background_image %}
+            {% image value.background_image fill-900x600 as bg_image %}
+            <div class="topic-links-featured__bg" style="background-image: url('{{ bg_image.url }}');">
+        {% else %}
+            <div class="topic-links-featured__bg topic-links-featured__bg--default">
+        {% endif %}
+                <div class="topic-links-featured__content">
+                    {% if value.title_link %}
+                        <h2 class="topic-links-featured__title">{{ value.title_link }}</h2>
+                    {% endif %}
+                    
+                    {% if value.description_link %}
+                        <div class="topic-links-featured__description">
+                            {{ value.description_link|richtext }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+    </div>
+    
+    <!-- Lista de tópicos (à direita) -->
+    <div class="topic-links-list">
+        <ul class="topic-links-items">
+            {% for topic_block in value.topics %}
+                {% with topic=topic_block.value %}
+                    <li class="topic-links-item">
+                        <div class="topic-links-item__number">{{ forloop.counter }}</div>
+                        <div class="topic-links-item__content">
+                            <a href="{{ topic.link }}" class="topic-links-item__link">
+                                <div class="topic-links-item__category">
+                                    {% if topic.category %}
+                                        {{ topic.category }}
+                                    {% else %}
+                                        {% firstof topic.title %}
+                                    {% endif %}
+                                </div>
+                                <h3 class="topic-links-item__title">
+                                    {{ topic.description }}
+                                    <span class="topic-links-item__arrow">›</span>
+                                </h3>
+                            </a>
+                        </div>
+                    </li>
+                {% endwith %}
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+
+<style>
+    /* Container principal */
+    .topic-links-container-links {
+        display: flex;
+        gap: 2rem;
+        margin: 2rem auto;
+        max-width: 1142px;
+    }
+    
+    /* ===== ÁREA PRINCIPAL (DESTAQUE) ===== */
+    .topic-links-featured {
+        flex: 0 0 65%;
+    }
+    
+    .topic-links-featured__bg {
+        height: 100%;
+        background-size: cover;
+        background-position: center;
+        position: relative;
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+    
+    .topic-links-featured__bg:before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.7) 100%);
+    }
+    
+    .topic-links-featured__bg--default {
+        background-color: #194f3c; /* Verde escuro como padrão se não houver imagem */
+    }
+    
+    .topic-links-featured__content {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 2rem;
+        color: #fff;
+    }
+    
+    .topic-links-featured__title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0 0 1rem;
+        line-height: 1.2;
+        color: white;
+    }
+    
+    .topic-links-featured__description {
+        font-size: 1.125rem;
+        max-width: 80%;
+    }
+    
+    .topic-links-featured__description p {
+        margin-bottom: 0.75rem;
+    }
+    
+    .topic-links-featured__description a {
+        color: #fff;
+        text-decoration: underline;
+    }
+    
+    /* ===== LISTA DE TÓPICOS ===== */
+    .topic-links-list {
+        flex: 0 0 35%;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .topic-links-items {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        flex: 1;
+    }
+    
+    .topic-links-item {
+        display: flex;
+        gap: 1rem;
+        padding: 1.25rem 0;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .topic-links-item:first-child {
+        padding-top: 0;
+    }
+    
+    .topic-links-item__number {
+        font-size: 2.5rem;
+        font-weight: 300;
+        color: #aaa;
+        line-height: 1;
+    }
+    
+    .topic-links-item__content {
+        flex: 1;
+    }
+    
+    .topic-links-item__category {
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        color: #888;
+        margin-bottom: 0.5rem;
+        letter-spacing: 0.5px;
+    }
+    
+    .topic-links-item__title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        margin: 0;
+        line-height: 1.3;
+        color: #00777D;
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+    }
+    
+    .topic-links-item__link {
+        color: #333;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+    
+    .topic-links-item__link:hover {
+        color: #f57c00;
+    }
+    
+    .topic-links-list__more {
+        display: block;
+        margin-top: 1.5rem;
+        font-size: 0.9375rem;
+        color: #555;
+        text-decoration: none;
+        padding-top: 0.5rem;
+    }
+    
+    .topic-links-list__arrow {
+        font-size: 1.25rem;
+        margin-left: 0.25rem;
+    }
+    
+    .topic-links-list__more:hover {
+        color: #f57c00;
+        text-decoration: underline;
+    }
+    
+    /* Responsividade */
+    @media (max-width: 992px) {
+        .topic-links-container-links {
+            flex-direction: column;
+            margin: 0 20px;
+        }
+        
+        .topic-links-featured,
+        .topic-links-list {
+            flex: none;
+            width: 100%;
+            height: 100vh;
+        }
+        
+        .topic-links-featured__bg {
+            min-height: 350px;
+        }
+        
+        .topic-links-featured__title {
+            font-size: 2rem;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .topic-links-featured__bg {
+            min-height: 300px;
+        }
+        
+        .topic-links-featured__title {
+            font-size: 1.75rem;
+        }
+        
+        .topic-links-featured__description {
+            font-size: 1rem;
+            max-width: 100%;
+        }
+    }
+</style>
+
+{% endblock %}

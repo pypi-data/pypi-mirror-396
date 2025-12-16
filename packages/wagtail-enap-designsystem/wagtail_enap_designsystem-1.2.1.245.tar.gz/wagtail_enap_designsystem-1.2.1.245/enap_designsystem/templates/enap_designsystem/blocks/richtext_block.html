@@ -1,0 +1,123 @@
+{% load wagtailcore_tags %}
+
+<style>
+    .content-richtext a {
+        display: inline-flex;
+        align-items: center;
+        padding: 0;
+        background-color: transparent;
+        border: none;
+        color: #007D7A;
+        gap: 8px;
+        width: auto;
+        border-radius: 32px;
+        font-weight: 900;
+        position: relative;
+        padding-right: 15px; 
+    }
+    
+    /* Ícone apenas para links externos */
+    .content-richtext a[target="_blank"]::after {
+        content: "";
+        width: 12px;
+        height: 12px;
+        position: absolute;
+        right: 0;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='12' height='12' fill='none' stroke='%23007D7A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6'/%3E%3Cpolyline points='15 3 21 3 21 9'/%3E%3Cline x1='10' y1='14' x2='21' y2='3'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-size: contain;
+        opacity: 0.7;
+        transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+    
+    .content-richtext a:hover::after,
+    .content-richtext a:focus::after {
+        transform: translateX(2px) translateY(-2px);
+        opacity: 1;
+    }
+
+    .content-richtext a:hover,
+    .content-richtext a:focus {
+        color: #006562;
+        text-decoration: underline;
+        outline: 2px solid transparent; /* Para acessibilidade de foco */
+    }
+
+    /* Adiciona foco visível */
+    .content-richtext a:focus-visible {
+        outline: 2px solid #006562;
+        outline-offset: 2px;
+    }
+
+    /* Restante do CSS permanece o mesmo */
+    .content-richtext p {
+        margin-bottom: 1.2em;
+        line-height: 1.6;
+    }
+
+    .content-richtext h2 {
+        font-size: 1.5em;
+        margin-top: 1em;
+        color: #333;
+    }
+
+    .content-richtext ul,
+    .content-richtext ol {
+        margin-left: 1.5em;
+        margin-bottom: 1em;
+    }
+
+    .content-richtext blockquote {
+        border-left: 3px solid #007D7A;
+        padding-left: 1em;
+        margin-left: 0;
+        color: #555;
+    }
+
+    .content-richtext img {
+        max-width: 100%;
+        height: auto;
+        margin: 1em 0;
+    }
+
+    /* Classe auxiliar para esconder visualmente texto, mas manter disponível para leitores de tela */
+    .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border-width: 0;
+    }
+</style>
+
+<div class="content-richtext">
+    {% block block_render %}{{ self|richtext }}{% endblock %}
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const links = document.querySelectorAll('.content-richtext a');
+        links.forEach(function(link) {
+            // Verifica se o link não é interno
+            const href = link.getAttribute('href');
+            if (href && !href.startsWith('#') && !href.startsWith('/')) {
+                // Adiciona atributos para nova aba
+                link.setAttribute('target', '_blank');
+                link.setAttribute('rel', 'noopener noreferrer');
+                
+                // Adiciona texto de acessibilidade (invisível visualmente, mas lido pelos leitores de tela)
+                const srText = document.createElement('span');
+                srText.classList.add('sr-only');
+                srText.textContent = ' (abre em nova aba)';
+                link.appendChild(srText);
+                
+                // Adiciona atributos para tecnologias assistivas
+                link.setAttribute('aria-describedby', 'new-window-' + Math.random().toString(36).substr(2, 9));
+            }
+        });
+    });
+</script>

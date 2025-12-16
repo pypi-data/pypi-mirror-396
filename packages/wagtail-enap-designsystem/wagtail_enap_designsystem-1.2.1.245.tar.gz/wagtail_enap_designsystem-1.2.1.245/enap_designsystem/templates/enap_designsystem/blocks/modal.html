@@ -1,0 +1,65 @@
+{% load static %}
+{% load wagtailcore_tags wagtailimages_tags %}
+{% with modal=value.modal %}
+<div class="modal-container" id="modal-container-{{ modal.id }}">
+    <button id="openModalBtn-{{ modal.id }}" class="modal-open-button">
+        {{ modal.button_text }}
+    </button>
+
+    <div id="modal-{{ modal.id }}" class="modal">
+        <div class="modal-content">
+            <span class="close material-icons" aria-label="Fechar">close</span>
+            <h4 class="modal-title">{{ modal.title }}</h4>
+
+            <div class="modal-body">
+                {{ modal.content|richtext }}
+            </div>
+            <!-- Botão opcional -->
+            {% if modal.texto_botao %}
+                <div class="modal_botao-container">
+                    <a href="{{ modal.link_botao|default:'#' }}" 
+                       class="btn {{ modal.estilo_botao }} {{ modal.tamanho_botao }}"
+                       {% if modal.link_botao and modal.link_botao|slice:':4' == 'http' %}
+                           target="_blank" rel="noopener noreferrer"
+                       {% endif %}>
+                        {{ modal.texto_botao }} <i class="fa-solid fa-circle-chevron-right"></i>
+                        {% if modal.link_botao and modal.link_botao|slice:':4' == 'http' %}
+                            <span class="sr-only">(abre em nova aba)</span>
+                        {% endif %}
+                    </a>
+                </div>
+            {% endif %}
+
+            {% if modal.button_action_text %}
+                <div class="wrapper-button-rigth">
+                    <button class="modal-action-button">{{ modal.button_action_text }}</button>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const modalId = {{ modal.id }};
+        const modalEl = document.getElementById("modal-" + modalId);
+        const btn = document.getElementById("openModalBtn-" + modalId);
+        const closeBtn = modalEl.querySelector(".close");
+
+        btn.onclick = function() { modalEl.style.display = "block"; }
+        closeBtn.onclick = function() { modalEl.style.display = "none"; }
+
+        window.addEventListener('click', function(event) {
+            if (event.target === modalEl) {
+                modalEl.style.display = "none";
+            }
+        });
+
+        {% if modal.button_action_text %}
+        modalEl.querySelector(".modal-action-button").onclick = function() {
+            modalEl.style.display = "none";
+        }
+        {% endif %}
+    });
+    </script>
+</div>
+{% endwith %}
