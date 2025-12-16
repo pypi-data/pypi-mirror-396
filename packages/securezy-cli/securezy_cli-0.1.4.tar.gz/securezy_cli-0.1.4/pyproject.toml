@@ -1,0 +1,68 @@
+[build-system]
+requires = ["hatchling>=1.21.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "securezy-cli"
+version = "0.1.4"
+description = "Lightweight security utility CLI (port scan, vault, crypto, hashing, reports, plugins)."
+readme = "PYPI.md"
+requires-python = ">=3.9"
+license = { file = "LICENSE" }
+authors = [{ name = "Akash" }]
+keywords = ["security", "cli", "network", "encryption", "hashing", "audit"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Operating System :: OS Independent",
+  "Environment :: Console",
+  "Topic :: Security",
+]
+dependencies = [
+  "typer>=0.9.0",
+  "rich>=13.0.0",
+]
+
+[project.optional-dependencies]
+crypto = [
+  "cryptography>=41.0.0",
+]
+vault = [
+  "cryptography>=41.0.0",
+]
+dev = [
+  "pytest>=7.4.0",
+  "ruff>=0.3.0",
+]
+
+[project.scripts]
+securezy = "securezy.cli:app"
+securezy-cli = "securezy.cli:app"
+
+[project.urls]
+Homepage = "https://github.com/akashkokare2910/securezy-cli"
+Repository = "https://github.com/akashkokare2910/securezy-cli"
+Issues = "https://github.com/akashkokare2910/securezy-cli/issues"
+
+[project.entry-points."securezy.plugins"]
+hello = "securezy.plugins.hello:run"
+
+[tool.hatch.build]
+exclude = [
+  "/pw.db",
+  "/key.key",
+  "/wordlist.txt",
+  "/wordlist.lst",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["securezy"]
+
+[tool.ruff]
+line-length = 100
