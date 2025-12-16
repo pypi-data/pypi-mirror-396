@@ -1,0 +1,49 @@
+<configure
+    xmlns="http://namespaces.zope.org/zope"
+    xmlns:five="http://namespaces.zope.org/five"
+    xmlns:i18n="http://namespaces.zope.org/i18n"
+    xmlns:zcml="http://namespaces.zope.org/zcml"
+    i18n_domain="eea">
+
+    <!-- Configure plone.supermodel support if available -->
+    <configure zcml:condition="installed plone.supermodel">
+      <utility
+          component=".handler.SlateJSONHandler"
+          name="eea.schema.slate.field.SlateJSONField"
+          />
+    </configure>
+
+    <!-- Configure plone.schemaeditor field factory if installed -->
+    <configure zcml:condition="installed plone.schemaeditor">
+      <class class="eea.schema.slate.field.SlateJSONField">
+        <implements interface=".editor.ISlateJSON" />
+      </class>
+
+      <utility
+          name="eea.schema.slate.field.SlateJSONField"
+          component=".editor.SlateJSONFactory"
+          />
+
+    </configure>
+
+    <!-- Configure plone.restapi field factory if installed -->
+    <configure zcml:condition="installed plone.restapi">
+      <adapter factory=".adapters.SlateJSONFieldSchemaProvider" />
+    </configure>
+
+    <!-- Configure z3c.form -->
+    <configure zcml:condition="installed z3c.form">
+      <adapter 
+        for="eea.schema.slate.field.ISlateJSONField plone.app.z3cform.interfaces.IPloneFormLayer"
+        factory="plone.schema.browser.jsonfield.JSONFieldWidget"
+        provides="z3c.form.interfaces.IFieldWidget"
+        />
+
+      <adapter 
+        for="eea.schema.slate.field.ISlateJSONField z3c.form.interfaces.IWidget"
+        factory="plone.schema.browser.jsonfield.JSONDataConverter"
+        provides="z3c.form.interfaces.IDataConverter"
+        />
+    </configure>
+
+</configure>
