@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<q:quakeml xmlns="http://quakeml.org/xmlns/bed/1.2" xmlns:q="http://quakeml.org/xmlns/quakeml/1.2">
+    <eventParameters publicID="smi:org.gfz-potsdam.de/geofon/EventParameters"> 
+        {% for event in events %} 
+        <event publicID="{{ event.eventID }}">
+            <creationInfo>
+                <agencyID>{{ agencyID }}</agencyID>
+                <author>{{ author }}</author>
+            </creationInfo>
+
+            <magnitude publicID="{{ event.magnitudeID }}">
+                <creationInfo>
+                    <agencyID>{{ agencyID }}</agencyID>
+                    <author>{{ author }}</author>
+                </creationInfo>
+                <mag>
+                    {{'<value>{}</value>'.format(event.magnitude) if not event.magnitude is nan and event.magnitude is defined else '' -}}
+                    {{'<uncertainty>{}</uncertainty>'.format(event.magnitude_uncertainty) if not event.magnitude_uncertainty is nan and event.magnitude_uncertainty is defined else '' -}}
+                </mag>
+                <type>{{ event.magnitude_type }}</type>
+                <originID>{{ event.originID }}</originID>
+            </magnitude>
+
+            {% for type, magnitude in event.sec_mags.items() %}
+            <magnitude publicID="{{ magnitude.magnitude_magnitudeID }}">
+                <creationInfo>
+                    <agencyID>{{ agencyID }}</agencyID>
+                    <author>{{ author }}</author>
+                </creationInfo>
+                <mag>
+                    {{'<value>{}</value>'.format(magnitude.magnitude) if not magnitude.magnitude is nan and magnitude.magnitude is defined else '' -}}
+                    {{'<uncertainty>{}</uncertainty>'.format(magnitude.magnitude_uncertainty) if not magnitude.magnitude_uncertainty is nan and magnitude.magnitude_uncertainty is defined else '' -}}
+                </mag>
+                <type>{{ type }}</type>
+                <originID>{{ event.originID }}</originID>
+            </magnitude>
+            {% endfor %}
+
+            <origin publicID="{{ event.originID }}">
+                <time>
+                    <value>{{ event.time.strftime('%Y-%m-%dT%H:%M:%S.%fZ') }}</value>
+                </time>
+                <longitude>
+                    {{'<value>{}</value>'.format(event.longitude) if not event.longitude is nan and event.longitude is defined else '' -}}
+                    {{'<uncertainty>{}</uncertainty>'.format(event.longitude_uncertainty) if not event.longitude_uncertainty is nan and event.longitude_uncertainty is defined else '' -}}
+                </longitude>
+                <latitude>
+                    {{'<value>{}</value>'.format(event.latitude) if not event.latitude is nan and event.latitude is defined else '' -}}
+                    {{'<uncertainty>{}</uncertainty>'.format(event.latitude_uncertainty) if not event.latitude_uncertainty is nan and event.latitude_uncertainty is defined else '' -}}
+                </latitude>
+                <evaluationMode>{{ event.evaluationmode }}</evaluationMode>
+                <creationInfo>
+                    <agencyID>{{ agencyID }}</agencyID>
+                    <author>{{ author }}</author>
+                </creationInfo>
+                <depth>
+                    {{'<value>{}</value>'.format(event.depth) if not event.depth is nan and event.depth is defined else '' -}}
+                    {{'<uncertainty>{}</uncertainty>'.format(event.depth_uncertainty) if not event.depth_uncertainty is nan and event.depth_uncertainty is defined else '' -}}
+                </depth>
+                <quality>
+                    {{'<associatedPhaseCount>{}</associatedPhaseCount>'.format(event.associatedphasecount|int) if not event.associatedphasecount is nan and event.associatedphasecount is defined else '' -}}
+                    {{'<usedPhaseCount>{}</usedPhaseCount>'.format(event.usedphasecount|int) if not event.usedphasecount is nan and event.usedphasecount is defined else ''-}}
+                    {{'<associatedStationCount>{}</associatedStationCount>'.format(event.associatedstationcount|int) if not event.associatedstationcount is nan and event.associatedstationcount is defined else ''-}}
+                    {{'<usedStationCount>{}</usedStationCount>'.format(event.usedstationcount|int) if not event.usedstationcount is nan and event.usedstationcount is defined else ''-}}
+                    {{'<depthPhaseCount>{}</depthPhaseCount>'.format(event.depthphasecount|int) if not event.depthphasecount is nan and event.depthphasecount is defined else ''-}}
+                    {{'<standardError>{}</standardError>'.format(event.standarderror) if not event.standarderror is nan and event.standarderror is defined else ''-}}
+                    {{'<azimuthalGap>{}</azimuthalGap>'.format(event.azimuthalgap) if not event.azimuthalgap is nan and event.azimuthalgap is defined else ''-}}
+                    {{'<secondaryAzimuthalGap>{}</secondaryAzimuthalGap>'.format(event.secondaryazimuthalgap) if not event.secondaryazimuthalgap is nan and event.secondaryazimuthalgap is defined else ''-}}
+                    {{'<maximumDistance>{}</maximumDistance>'.format(event.maximumdistance) if not event.maximumdistance is nan and event.maximumdistance is defined else ''-}}
+                    {{'<minimumDistance>{}</minimumDistance>'.format(event.minimumdistance) if not event.minimumdistance is nan and event.minimumdistance is defined else ''-}}
+                    {{'<medianDistance>{}</medianDistance>'.format(event.mediandistance) if not event.mediandistance is nan and event.mediandistance is defined else ''-}}
+                </quality>
+            </origin>
+
+            <preferredOriginID>{{ event.originID }}</preferredOriginID>
+            <preferredMagnitudeID>{{ event.magnitudeID }}</preferredMagnitudeID>
+            <type>{{ event.event_type }}</type>
+
+        </event> 
+        {% endfor %} 
+        </eventParameters>
+</q:quakeml>
