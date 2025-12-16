@@ -1,0 +1,69 @@
+ # Monitor progress through task completion
+ #
+ # Run with:
+ #   massgen --config @examples/configs/tools/todo/example_task_todo.yaml "Create a website about Bob Dylan"
+
+ agents:
+  - id: "agent_a"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-pro"
+      cwd: "workspace1"
+    system_message: |
+     You are a helpful AI assistant working on tasks efficiently.
+
+     ## ⚡ EFFICIENCY GUIDELINES - Use Batch Operations:
+
+     When you need to read multiple files, ALWAYS use read_multiple_files instead of
+     calling read_file multiple times. This is much faster!
+
+     **Example - Reading 3 files:**
+     ❌ DON'T: Call read_file three times (slow, sequential)
+     ✅ DO: Call read_multiple_files once with all paths:
+        read_multiple_files(paths=["file1.txt", "file2.txt", "file3.txt"])
+
+     **Other batch operations available:**
+     - read_multiple_files: Read multiple files simultaneously
+     - copy_files_batch: Copy multiple files at once
+     - delete_files_batch: Delete multiple files at once
+     - list_directory_with_sizes: Get directory info with sizes
+     - search_files: Find files matching patterns
+
+     Always think about how to minimize tool calls by batching operations!
+
+  # - id: "agent_b"
+  #   backend:
+  #     type: "openai"
+  #     model: "gpt-5-mini"
+  #     cwd: "workspace2"
+  #   system_message: |
+  #    You are a helpful AI assistant working on tasks efficiently.
+
+  #    ## ⚡ EFFICIENCY GUIDELINES - Use Batch Operations:
+
+  #    When you need to read multiple files, ALWAYS use read_multiple_files instead of
+  #    calling read_file multiple times. This is much faster!
+
+  #    **Example - Reading 3 files:**
+  #    ❌ DON'T: Call read_file three times (slow, sequential)
+  #    ✅ DO: Call read_multiple_files once with all paths:
+  #       read_multiple_files(paths=["file1.txt", "file2.txt", "file3.txt"])
+
+  #    **Other batch operations available:**
+  #    - read_multiple_files: Read multiple files simultaneously
+  #    - copy_files_batch: Copy multiple files at once
+  #    - delete_files_batch: Delete multiple files at once
+  #    - list_directory_with_sizes: Get directory info with sizes
+  #    - search_files: Find files matching patterns
+
+  #    Always think about how to minimize tool calls by batching operations!
+
+ orchestrator:
+    snapshot_storage: "snapshots"
+    agent_temporary_workspace: "temp_workspaces"
+    # coordination:
+    #   enable_agent_task_planning: true
+
+ ui:
+   display_type: "rich_terminal"
+   logging_enabled: true

@@ -1,0 +1,14 @@
+{
+  "name": "Git Merge Conflicts - Two Different Valid Approaches",
+  "description": "Multiple valid solutions to the same problem. Tests voting on equally good answers.",
+  "original_message": "How do I resolve merge conflicts in Git?",
+  "existing_answers": {
+    "agent_a": "To resolve merge conflicts in Git:\n\n**1. Identify the conflict:**\n```bash\ngit status  # Shows files with conflicts\n```\n\n**2. Open conflicted files - you'll see markers:**\n```\n<<<<<<< HEAD\nYour changes\n=======\nTheir changes\n>>>>>>> branch-name\n```\n\n**3. Edit the file to resolve:**\n- Remove the conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`)\n- Keep the code you want (yours, theirs, or a combination)\n- Save the file\n\n**4. Mark as resolved:**\n```bash\ngit add <file>  # Stage the resolved file\n```\n\n**5. Complete the merge:**\n```bash\ngit commit  # Finalize the merge\n```\n\n**Example resolution:**\n```python\n# Before (conflict)\n<<<<<<< HEAD\ndef calculate_total(items):\n    return sum(item.price for item in items)\n=======\ndef calculate_total(items):\n    return sum(item.cost for item in items)\n>>>>>>> feature-branch\n\n# After (resolved - kept both logic paths)\ndef calculate_total(items):\n    # Support both 'price' and 'cost' attributes\n    return sum(getattr(item, 'price', None) or getattr(item, 'cost', 0) for item in items)\n```\n\n**Pro tip:** Use a merge tool for complex conflicts:\n```bash\ngit mergetool  # Opens visual merge tool\n```",
+    "agent_b": "Here's how to handle Git merge conflicts:\n\n**Using VS Code (visual approach):**\n\n1. When you have a conflict, VS Code highlights it:\n   - Click \"Accept Current Change\" for your version\n   - Click \"Accept Incoming Change\" for their version  \n   - Click \"Accept Both Changes\" to keep both\n   - Or manually edit\n\n2. After resolving, stage and commit:\n```bash\ngit add .\ngit commit -m \"Resolved merge conflicts\"\n```\n\n**Using command line:**\n```bash\n# See which files have conflicts\ngit diff --name-only --diff-filter=U\n\n# For each file, choose a strategy:\n\n# Option 1: Keep your version\ngit checkout --ours <file>\ngit add <file>\n\n# Option 2: Keep their version\ngit checkout --theirs <file>\ngit add <file>\n\n# Option 3: Manual resolution\nvim <file>  # Edit manually\ngit add <file>\n\n# Complete the merge\ngit commit\n```\n\n**Prevent conflicts:**\n- Pull frequently: `git pull --rebase`\n- Keep commits small and focused\n- Communicate with team about overlapping work\n\n**If things go wrong:**\n```bash\ngit merge --abort  # Cancel the merge\n```"
+  },
+  "expected_behavior": {
+    "lenient": "vote (both answers are good and complementary)",
+    "balanced": "vote (different approaches, both valid, covers visual and CLI)",
+    "strict": "vote or new_answer (could combine best of both, add rebase strategy, three-way merge explanation, merge strategies)"
+  }
+}

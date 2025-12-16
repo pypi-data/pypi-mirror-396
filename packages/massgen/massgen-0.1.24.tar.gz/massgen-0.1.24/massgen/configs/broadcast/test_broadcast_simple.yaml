@@ -1,0 +1,22 @@
+# Simple broadcast test config (no docker)
+# uv run massgen --config test_broadcast_simple.yaml --automation "What is 2+2? Please use ask_others to get input."
+
+agents:
+  - id: agent_a
+    backend:
+      type: openai
+      model: gpt-4.1-mini
+
+  - id: agent_b
+    backend:
+      type: openai
+      model: gpt-4.1-mini
+
+orchestrator:
+  # Enable agent-to-agent communication
+  coordination:
+    broadcast: "agents"
+    broadcast_sensitivity: "high"
+    broadcast_timeout: 60
+    broadcast_wait_by_default: true
+    max_broadcasts_per_agent: 5

@@ -1,0 +1,38 @@
+# Subagent Demo Configuration
+# Demonstrates how to enable subagent capabilities for parallel task execution
+# and context isolation.
+
+agents:
+  - id: "orchestrator"
+    backend:
+      type: "openai"
+      model: "gpt-4o"
+      cwd: "workspace"
+      enable_mcp_command_line: true
+      command_line_execution_mode: "local"  # or "docker" for isolation
+    system_message: |
+      You are a task orchestrator that can delegate work to subagents.
+      When faced with complex tasks that can be parallelized, consider
+      using subagents to work on independent parts simultaneously.
+
+orchestrator:
+  # Enable subagent spawning
+  enable_subagents: true
+  subagent_default_timeout: 300  # 5 minutes per subagent
+  subagent_max_concurrent: 3    # Up to 3 subagents at once
+
+  # Task planning (recommended for complex orchestration)
+  enable_agent_task_planning: true
+  task_planning_filesystem_mode: true
+
+  # Shared temporary workspace for cross-agent visibility
+  agent_temporary_workspace: "temp_workspaces"
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
+
+# Example usage:
+# 1. Run: massgen -c massgen/configs/features/subagent_demo.yaml
+# 2. Ask: "Build a simple web app with frontend and backend"
+# 3. The agent can spawn subagents for frontend and backend work in parallel

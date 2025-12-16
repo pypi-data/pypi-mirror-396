@@ -1,0 +1,13 @@
+{
+  "name": "Docker Production - Missing Best Practices",
+  "description": "Basic Docker setup that works but lacks production-ready practices.",
+  "original_message": "How do I containerize my Node.js application with Docker for production?",
+  "existing_answers": {
+    "agent_a": "Here's how to containerize your Node.js app with Docker:\n\n**Dockerfile:**\n```dockerfile\nFROM node:18\n\n# Set working directory\nWORKDIR /app\n\n# Copy package files\nCOPY package*.json ./\n\n# Install dependencies\nRUN npm install\n\n# Copy application code\nCOPY . .\n\n# Expose port\nEXPOSE 3000\n\n# Start application\nCMD [\"npm\", \"start\"]\n```\n\n**Build and run:**\n```bash\n# Build image\ndocker build -t my-app .\n\n# Run container\ndocker run -p 3000:3000 my-app\n```\n\nThis creates a Docker image with your Node.js app and runs it on port 3000. The app will be accessible at `http://localhost:3000`."
+  },
+  "expected_behavior": {
+    "lenient": "new_answer (works but not production-ready: uses root user, no multi-stage build, installs devDependencies, no health checks)",
+    "balanced": "new_answer (missing: non-root user, multi-stage builds, .dockerignore, production npm install, health checks, proper logging)",
+    "strict": "new_answer (needs: Alpine base image, multi-stage build, non-root user, security scanning, health checks, proper signal handling, resource limits, secrets management, monitoring, logging configuration)"
+  }
+}

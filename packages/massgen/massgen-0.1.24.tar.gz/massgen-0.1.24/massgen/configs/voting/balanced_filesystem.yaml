@@ -1,0 +1,54 @@
+# MassGen Balanced Evaluation with Filesystem Access
+#
+# Use Case: Thorough code/file generation with balanced evaluation
+#
+# This configuration demonstrates:
+# - Balanced voting sensitivity for thorough evaluation
+# - Filesystem access for code/file generation tasks
+# - Moderate new answer limit (max 2) for quality without excessive rounds
+# - Balanced novelty requirements for meaningful improvements
+# - Cost-effective models (GPT-5-nano, Gemini Flash)
+#
+# Run with:
+#   massgen \
+#     --config configs/voting/balanced_filesystem.yaml \
+#     "Create a Python script that analyzes CSV files and generates visualizations"
+
+agents:
+  - id: "agent_a"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      cwd: "workspace1"
+
+  - id: "agent_b"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-flash"
+      cwd: "workspace2"
+
+orchestrator:
+  # Balanced voting for thorough evaluation
+  # Agents apply detailed criteria (comprehensive, accurate, complete?) before voting
+  voting_sensitivity: "balanced"
+
+  # Allow up to 2 new answers per agent for quality refinement
+  max_new_answers_per_agent: 2
+
+  # Balanced novelty requirement - must provide meaningful differences
+  answer_novelty_requirement: "balanced"
+
+  # Workspace directories for filesystem operations
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
+
+# What happens:
+# 1. Agents create files in their separate workspaces
+# 2. Agents apply detailed criteria before voting (balanced threshold)
+# 3. Each agent can provide up to 2 new answers to improve quality
+# 4. New answers must be meaningfully different (balanced novelty)
+# 5. Agents can review each other's files and iterate

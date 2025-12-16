@@ -1,0 +1,50 @@
+# uv run massgen --config test_broadcast_polling.yaml "Create a REST API design for a todo app"
+
+task: |
+  Create a REST API design for a simple todo application with endpoints for:
+  - Creating todos
+  - Listing todos
+  - Updating todos
+  - Deleting todos
+
+  Include OpenAPI specification.
+
+agents:
+  - id: api_designer
+    backend:
+      type: openai
+      model: gpt-5-nano
+      cwd: workspace_designer
+      enable_mcp_command_line: true
+      command_line_execution_mode: docker
+    system_message: |
+      You are an API design specialist. You design RESTful APIs and write
+      OpenAPI specs. Use ask_others() to get feedback on your design choices.
+
+  - id: security_reviewer
+    backend:
+      type: openai
+      model: gpt-5-nano
+      cwd: workspace_security
+      enable_mcp_command_line: true
+      command_line_execution_mode: docker
+    system_message: |
+      You are a security specialist. You review APIs for security issues.
+      Use ask_others() to ask clarifying questions about the design.
+
+orchestrator:
+  # Workspace configuration
+  snapshot_storage: snapshots
+  agent_temporary_workspace: temp_workspaces
+  session_storage: sessions
+
+  # Enable polling mode (non-blocking)
+  coordination:
+    broadcast: "agents"
+    broadcast_timeout: 300
+    broadcast_wait_by_default: false  # Polling mode!
+    max_broadcasts_per_agent: 10
+
+    enable_agent_task_planning: true
+
+output_path: "broadcast_polling_test_output"
