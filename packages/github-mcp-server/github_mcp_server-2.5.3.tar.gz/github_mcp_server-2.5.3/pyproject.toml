@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "github-mcp-server"
+version = "2.5.3"
+description = "A comprehensive Model Context Protocol server for GitHub integration"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "MCP Labs", email = "licensing@mcplabs.co.uk" }]
+license = { text = "AGPL-3.0-or-later" }
+keywords = ["mcp", "model-context-protocol", "github", "api", "assistant", "claude"]
+dependencies = [
+  "mcp>=1.0.0,<2.0.0",
+  "httpx>=0.25.0",
+  "pydantic>=2.0.0",
+  "PyJWT>=2.8.0",
+  "python-dotenv>=1.0.0",
+  "click>=8.0.0",
+]
+
+[project.urls]
+"Bug Reports" = "https://github.com/crypto-ninja/mcp-server-for-Github/issues"
+"Source" = "https://github.com/crypto-ninja/mcp-server-for-Github"
+"Documentation" = "https://github.com/crypto-ninja/mcp-server-for-Github/blob/main/README.md"
+"Website" = "https://mcplabs.co.uk"
+"Licensing" = "https://github.com/crypto-ninja/mcp-server-for-Github/blob/main/LICENSING.md"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0",
+    "pytest-httpx>=0.21.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+    "pip-audit>=2.6.0",
+]
+
+[project.scripts]
+github-mcp = "github_mcp:main"
+github-mcp-cli = "src.github_mcp.cli:cli"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.ruff]
+exclude = [
+    ".github",
+    "*.yml",
+    "*.yaml",
+]
+
+[tool.ruff.lint]
+# Allow module-level imports after sys.path modifications (needed for tests)
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["E402"]
+
