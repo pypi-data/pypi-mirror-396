@@ -1,0 +1,108 @@
+[build-system]
+requires = ["setuptools >= 64.0, != 67.2.0", "wheel", "numpy", "pyccel >= 2.0.1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name            = "feectools"
+version         = "0.1.1"
+description     = "Slimmed-down fork of Psydac (https://github.com/pyccel/psydac) with less functionality and fewer dependencies."
+readme          = "README.md"
+requires-python = ">= 3.10"
+license         = {file = "LICENSE"}
+authors         = [
+    {name = "Psydac development team", email = "psydac@googlegroups.com"}
+]
+maintainers = [
+    {name = "Stefan Possanner", email = "stefan.possanner@ipp.mpg.de"},
+    {name = "Max Lindqvist", email = "max.lindqvist@ipp.mpg.de"},
+    {name = "Yaman Güçlü", email = "yaman.guclu@gmail.com"},
+    {name = "Martin Campos Pinto", email = "martin.campos-pinto@ipp.mpg.de"},
+    {name = "Ahmed Ratnani", email = "ratnaniahmed@gmail.com"},
+]
+keywords     = ["FEM", "IGA", "B-spline", "NURBS"]
+classifiers  = ["Programming Language :: Python :: 3"]
+dependencies = [
+    # Third-party packages from PyPi
+    'numpy >= 1.16',
+    'scipy >= 1.12',
+    'sympy >= 1.5',
+    'matplotlib',
+    'pyyaml >= 5.1',
+    'packaging',
+    'pyevtk',
+
+    # Our packages from PyPi
+    'pyccel >= 2.1.0',
+    'h5py',
+
+    # When pyccel is run in parallel with MPI, it uses tblib to pickle
+    # tracebacks, which allows mpi4py to broadcast exceptions
+    'tblib',
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest-cov >= 5.0.0",
+    'pytest >= 4.5',
+    'pytest-xdist >= 1.16',
+    'pytest-testmon',
+    'Pillow',  # Python Imaging Library (PIL) fork
+]
+mpi = [
+    'mpi4py >= 4',
+]
+
+[project.urls]
+Homepage      = "https://github.com/struphy-hub/psydac-for-struphy"
+Documentation = "https://github.com/struphy-hub/psydac-for-struphy"
+Repository    = "https://github.com/struphy-hub/psydac-for-struphy"
+
+[project.scripts]
+psydac-mesh = "feectools.cmd.mesh:main"
+psydac-accelerate = "feectools.accelerate.accelerate:main"
+[tool.setuptools.packages.find]
+include = ["feectools*"]
+exclude = ["*__psydac__*"]
+namespaces = false
+
+[tool.setuptools.package-data]
+"*" = ["*.txt"]
+feectools = ['accelerate/compile_psydac.mk']
+
+[tool.coverage.run]
+branch = true
+omit = [
+    # Exclude pyccelised kernels
+    "*/__psydac__/*",
+
+    # Examples don't need to be covered
+    "*/examples/*",
+
+    # Unit tests shouldn't be included
+    "*/tests/*",
+]
+
+[tool.coverage.report]
+# Regexes for lines to exclude from consideration
+exclude_also = [
+    # Don't complain about missing debug-only code:
+    "def __repr__",
+    "if self\\.debug",
+
+    # Don't complain if tests don't hit defensive assertion code:
+    "raise AssertionError",
+    "raise NotImplementedError",
+
+    # Don't complain if non-runnable code isn't run:
+    "if False:",
+    "if __name__ == .__main__.:",
+
+    # Don't complain about abstract methods, they aren't run:
+    "@(abc\\.)?abstractmethod",
+]
+
+# Ignore source code that can’t be found, emitting a warning instead of an exception.
+ignore_errors = true
+
+[tool.coverage.html]
+directory = "coverage_html_report"
