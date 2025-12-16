@@ -1,0 +1,63 @@
+# CollabNet
+
+[![Documentation Status](https://readthedocs.org/projects/collabnet/badge/?version=latest)](https://collabnet.readthedocs.io/en/latest/?badge=latest)
+
+This Python package allows to generate co-authorship and co-country networks.
+The source data (currently from OpenAlex) can be works for the same journal,
+institution or topic. The data is transformed into a suitable format to facilitate
+the network creation. Networks are generated and saved as GRAPHML files.
+
+In addition the app allows to calculate the Adjusted International Collaboration Index,
+as defined in Lalli 2025.
+
+![Gephi Lite plot of Co-authorship network for 1980 with interval 3](docs/_static/gephi_lite_coauthors-1980-interval-3.png)
+
+[Gephi Lite](https://lite.gephi.org) plot of Co-authorship network for 1980 with interval 3 with 738 nodes and 2402 edges.
+Layout in ForceAtlas2 design, colors related to Louvain modularity class. Node size by degree. The selected node with label has
+degree 16.
+
+Documentation is available on [ReadTheDocs](https://collabnet.readthedocs.io).
+
+## Installation
+
+tl;dr Use pip
+
+~~~bash
+pip install collabnet
+~~~
+
+Consider using a clean virtual environment to keep your main packages separated.
+Create a new virtual environment and install the package
+
+~~~bash
+python3 -m venv env
+source env/bin/activate
+pip install collabnet
+~~~
+
+## Example
+
+You can find an example Jupyter Notebook showing the use of package by demonstrating a query for data, transforming the data, and generate networks in the [examples folder](../example/collab_pipeline.ipynb).
+
+## Testing
+
+Tests can be run by running
+
+~~~bash
+uv run pytest --cov-report=term-missing --cov=src/collabnet
+~~~
+which installs the `test` dependency group and runs the files. Coverage of testing is shown.
+
+## Building documentation
+
+The documentation is build using _sphinx_. Install of the _doc_ dependency group is automated with `uv`:
+
+~~~bash
+uv run sphinx-build -c docs -b html docs docs/_build/html
+~~~
+
+## Funding information
+
+This work is part of a collaboration between the department for
+Structural Changes of the Technosphere, Max Planck Institute of Geoanthropology, Jena, Germany and
+DIMEAS - Department of Mechanical and Aerospace Engineering, Politecnico di Torino, Torino, Italy.
