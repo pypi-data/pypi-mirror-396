@@ -1,0 +1,229 @@
+from datetime import datetime
+from decimal import Decimal
+import statistics
+
+from trd_utils.types_helper.base_model import BaseModel
+
+
+class UnifiedPositionInfo(BaseModel):
+    # The id of the position.
+    position_id: str = None
+
+    # The pnl (profit) of the position.
+    position_pnl: Decimal = None
+
+    # The position side, either "LONG" or "SHORT".
+    position_side: str = None
+
+    # The position's leverage.
+    position_leverage: Decimal = None
+
+    # The margin mode; e.g. cross or isolated. Please note that
+    # different exchanges might provide different kinds of margin modes,
+    # depending on what they support, that's why we can't support a unified
+    # enum type for this as of yet.
+    margin_mode: str = None
+
+    # The formatted pair string of this position.
+    # e.g. BTC/USDT.
+    position_pair: str = None
+
+    # The open time of this position.
+    # Note that not all public APIs might provide this field.
+    open_time: datetime = None
+
+    # Open price of the position.
+    open_price: Decimal = None
+
+    # The base unit that the open-price is based on (e.g. USD, USDT, USDC)
+    open_price_unit: str | None = None
+
+    # The total position size.
+    position_size: Decimal | None = None
+
+    # The initial amount of open_price_unit that the trader has put to open
+    # this position.
+    # Note that not all public APIs might provide this field.
+    initial_margin: Decimal | None = None
+
+    # The last price of this pair on the target exchange.
+    # not all exchanges support this yet, so use it with caution.
+    last_price: Decimal | None = None
+
+    # The last volume of this pair being traded on the target exchange.
+    # not all exchanges support this yet, so use it with caution.
+    last_volume: Decimal | None = None
+
+    def recalculate_pnl(self) -> tuple[Decimal, Decimal]:
+        """
+        Recalculates the PnL based on the available data.
+        This requires `last_price`, `open_price`, `initial_margin`,
+        and `position_leverage` to be set.
+
+        Returns:
+            The recalculated (PnL, percentage) as a Decimal, or None if calculation
+            is not possible with the current data.
+        """
+        if not self.position_leverage:
+            self.position_leverage = 1
+
+        if not all([self.last_price, self.open_price, self.initial_margin]):
+            # Not enough data to calculate PnL.
+            return None
+
+        price_change_percentage = (self.last_price - self.open_price) / self.open_price
+        if self.position_side == "SHORT":
+            # For a short position, profit is made when the price goes down.
+            price_change_percentage *= -1
+
+        pnl_percentage = self.position_leverage * price_change_percentage
+        # PnL = Initial Margin * Leverage * Price Change %
+        pnl = self.initial_margin * pnl_percentage
+        self.position_pnl = pnl
+        return (pnl, pnl_percentage)
+
+    def __str__(self):
+        parts = []
+
+        # Add position pair and ID
+        parts.append(
+            f"Position: {self.position_pair or 'Unknown'} (ID: {self.position_id or 'N/A'})"
+        )
+
+        # Add side and leverage
+        side_str = f"Side: {self.position_side or 'Unknown'}"
+        if self.position_leverage is not None:
+            side_str += f", {self.position_leverage}x"
+        parts.append(side_str)
+
+        # Add margin mode if available
+        if self.margin_mode:
+            parts.append(f"Margin: {self.margin_mode}")
+
+        # Add open price if available
+        price_str = "Open price: "
+        if self.open_price is not None:
+            price_str += f"{self.open_price}"
+            if self.open_price_unit:
+                price_str += f" {self.open_price_unit}"
+        else:
+            price_str += "N/A"
+        parts.append(price_str)
+
+        # Add open time if available
+        if self.open_time:
+            parts.append(f"Opened: {self.open_time.strftime('%Y-%m-%d %H:%M:%S')}")
+
+        # Add PNL if available
+        if self.position_pnl is not None:
+            parts.append(f"PNL: {self.position_pnl}")
+
+        return " | ".join(parts)
+
+    def __repr__(self):
+        return self.__str__()
+
+
+class UnifiedTraderPositions(BaseModel):
+    positions: list[UnifiedPositionInfo] = None
+
+
+class UnifiedTraderInfo(BaseModel):
+    # Trader's id. Either int or str. In DEXes (such as HyperLiquid),
+    # this might be wallet address of the trader.
+    trader_id: int | str = None
+
+    # Name of the trader
+    trader_name: str = None
+
+    # The URL in which we can see the trader's profile
+    trader_url: str = None
+
+    # Trader's win-rate. Not all exchanges might support this field.
+    win_rate: Decimal = None
+
+    def get_win_rate_str(self) -> str:
+        return str(round(self.win_rate, 2)) if self.win_rate is not None else "N/A"
+
+    def __str__(self):
+        return (
+            f"{self.trader_name} ({self.trader_id})"
+            f" | Win Rate: {self.get_win_rate_str()}"
+            f" | Profile: {self.trader_url}"
+        )
+
+    def __repr__(self):
+        return self.__str__()
+
+class UnifiedMarketStatistics(BaseModel):
+    mean_change_24h: Decimal = None
+    stdev_change_24h: Decimal = None
+    median_volume_24h: Decimal = None
+
+class UnifiedSingleFutureMarketInfo(BaseModel):
+    name: str = None
+    pair: str = None
+    price: Decimal = None
+    previous_day_price: Decimal = None
+    absolute_change_24h: Decimal = None
+    percentage_change_24h: Decimal = None
+    funding_rate: Decimal = None
+    daily_volume: Decimal = None
+    open_interest: Decimal = None
+
+    def __str__(self):
+        return (
+            f"{self.name} | Price: {round(self.price, 4)} "
+            f"| 24h Change: {round(self.percentage_change_24h, 4)}% "
+            f"| 24h Volume: {round(self.daily_volume, 4)} "
+            f"| Funding Rate: {round(self.funding_rate, 6)}% "
+            f"| Preferred Side: {self.get_preferred_position_side()}"
+        )
+    
+    def __repr__(self):
+        return self.__str__()
+    
+    def get_preferred_position_side(self) -> str:
+        return "LONG" if self.funding_rate <= 0 else "SHORT"
+    
+    def get_z_score_24h(self, market_stats: UnifiedMarketStatistics) -> Decimal | None:
+        if not market_stats.stdev_change_24h:
+            return None
+        
+        z_score = (
+            self.percentage_change_24h - market_stats.mean_change_24h
+        ) / market_stats.stdev_change_24h
+        return z_score
+
+class UnifiedFuturesMarketInfo(BaseModel):
+    sorted_markets: list[UnifiedSingleFutureMarketInfo] = None
+
+    def __str__(self):
+        return f"Total Markets: {len(self.sorted_markets) if self.sorted_markets else 0}"
+    
+    def __repr__(self):
+        return self.__str__()
+    
+    def find_market_by_name(
+        self,
+        name: str,
+    ) -> UnifiedSingleFutureMarketInfo | None:
+        if not self.sorted_markets:
+            return None
+        
+        for market in self.sorted_markets:
+            if market.name.lower() == name.lower():
+                return market
+        
+        return None
+
+    def get_statistics(self) -> UnifiedMarketStatistics:
+        changes_24h = [m.percentage_change_24h for m in self.sorted_markets]
+        volumes_24h = [m.daily_volume for m in self.sorted_markets]
+
+        s_obj = UnifiedMarketStatistics()
+        s_obj.mean_change_24h = statistics.mean(changes_24h)
+        s_obj.stdev_change_24h = statistics.stdev(changes_24h)
+        s_obj.median_volume_24h = statistics.median(volumes_24h) 
+
+        return s_obj
