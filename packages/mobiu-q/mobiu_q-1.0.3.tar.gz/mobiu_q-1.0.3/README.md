@@ -1,0 +1,127 @@
+# Mobiu-Q
+
+**Mobiu-Q** is a next-generation optimizer built on *Soft Algebra* and *Demeasurement* theory, enabling stable and efficient optimization in quantum variational algorithms (VQE, QAOA).
+
+### ✨ Features
+- Soft Algebra update rule for stable convergence  
+- **New:** SPSA Demeasurement for noisy hardware  
+- **New:** Adaptive "Noisy Mode" presets
+
+---
+
+## 📦 Installation
+```bash
+pip install mobiu-q
+```
+
+
+## 🚀 Quick Start (Simulation)
+Best for clean simulations or statevector backends.
+
+```python
+import numpy as np
+from mobiu_q import MobiuQCore, Demeasurement
+
+# Initialize in standard mode (aggressive learning)
+opt = MobiuQCore(mode="standard") 
+
+params = np.random.uniform(-np.pi, np.pi, 4)
+
+for step in range(50):
+    # 1. Calculate Energy
+    E = energy_fn(params)
+    
+    # 2. Exact Gradient (Finite Difference)
+    grad = Demeasurement.finite_difference(energy_fn, params)
+    
+    # 3. Step
+    params = opt.step(params, grad, E)
+```
+
+## ⚡ Noise Resilience (Real Hardware)
+When running on noisy quantum computers (IBM, IonQ) or noisy simulators, use SPSA and noisy mode.
+
+```python
+# Initialize in noisy mode (robust learning, lower LR)
+opt = MobiuQCore(mode="noisy") 
+
+for step in range(100):
+    # Demeasurement.spsa returns BOTH gradient and estimated energy
+    # This saves 50% of measurement cost compared to separate calls.
+    grad, estimated_energy = Demeasurement.spsa(energy_fn, params, c_shift=0.1)
+    
+    params = opt.step(params, grad, estimated_energy)
+```
+
+## 📚 Built-in Problems
+
+```python
+from mobiu_q import list_problems, get_energy_function
+
+print(list_problems())
+# ['h2_molecule', 'lih_molecule', 'transverse_ising', ...]
+
+energy_fn = get_energy_function("lih_molecule")
+```
+
+## ⚙️ API Reference
+
+### MobiuQCore
+
+```python
+MobiuQCore(
+    license_key=None,       # Your license key (or use MOBIU_Q_LICENSE_KEY env var)
+    mode="standard",        # 'standard' (0.05 LR) or 'noisy' (0.02 LR)
+    base_lr=None,           # Custom learning rate (overrides mode default)
+    verbose=True            # Print session status messages
+)
+```
+
+### 💡 Choosing the Right Mode
+
+| Mode | Learning Rate | Use When |
+|------|---------------|----------|
+| `standard` | 0.05 | Simulators (Qiskit Aer, PennyLane, Cirq) |
+| `noisy` | 0.02 | Real quantum hardware (IBM, IonQ, Rigetti) |
+
+### 💡 Important Note on Modes
+The `mode` parameter (`"standard"` / `"noisy"`) only configures the optimizer's internal stability (Learning Rate, Soft Algebra decay).
+* It **does not** automatically calculate gradients.
+* For noisy environments, you must explicitly call `Demeasurement.spsa(...)` in your loop to generate robust gradients.
+
+### Demeasurement
+- `Demeasurement.finite_difference(fn, params)`: Accurate, requires 2*N measurements.
+- `Demeasurement.spsa(fn, params)`: Noisy-resistant, requires only 2 measurements total.
+
+## 🔥 Full Demo: Clean vs. Noisy
+See how Mobiu-Q adapts to different environments. This script compares:
+1.  **Clean Simulation:** Using `mode="standard"` and Finite Difference gradients.
+2.  **Noisy Simulation:** Using `mode="noisy"` and SPSA (robust against shot noise).
+
+```python
+import numpy as np
+from mobiu_q import MobiuQCore, Demeasurement, get_energy_function
+
+# Load problem
+energy_fn = get_energy_function("h2_molecule")
+
+# --- 1. Clean Run ---
+opt_clean = MobiuQCore(mode="standard")
+params = np.random.uniform(-0.5, 0.5, 4)
+
+# Run standard optimization loop...
+
+# --- 2. Noisy Run (Simulated) ---
+def noisy_fn(p):
+    return energy_fn(p) + np.random.normal(0, 0.05) # Add noise
+
+opt_noisy = MobiuQCore(mode="noisy") # Auto-tunes LR for noise
+
+for step in range(100):
+    # Use SPSA for robust gradient estimation (only 2 measurements!)
+    grad, est_energy = Demeasurement.spsa(noisy_fn, params)
+    params = opt_noisy.step(params, grad, est_energy)
+```
+
+
+© Mobiu Technologies, 2025
