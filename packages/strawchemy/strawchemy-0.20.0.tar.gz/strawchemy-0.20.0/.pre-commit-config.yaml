@@ -1,0 +1,87 @@
+default_language_version:
+  python: "3.10"
+
+default_stages:
+  - pre-commit
+  - pre-push
+
+repos:
+  # General hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-toml
+      - id: check-yaml
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+      - id: detect-private-key
+      - id: debug-statements
+      - id: end-of-file-fixer
+        exclude: "^.*__snapshots__/.*$"
+      - id: trailing-whitespace
+        exclude: "^.*__snapshots__/.*$"
+
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.4.1
+    hooks:
+      - id: codespell
+        exclude: "^CHANGELOG.md$"
+        additional_dependencies:
+          - "tomli"
+        args:
+          - --toml=./pyproject.toml
+
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.7
+    hooks:
+      - id: actionlint
+        args: [ "-shellcheck", "" ]
+
+  # Commitizen
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v4.9.0
+    hooks:
+      - id: commitizen
+
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.21.2
+    hooks:
+      - id: pyupgrade
+        types: [ python ]
+        args: [ "--py310-plus" ]
+
+  - repo: https://github.com/provinzkraut/unasyncd
+    rev: v0.9.0
+    hooks:
+      - id: unasyncd
+        additional_dependencies: [ "ruff" ]
+
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: v0.13.0
+    hooks:
+      - id: ruff-check
+        types_or: [ python, pyi ]
+        args: [ --fix ]
+      - id: ruff-format
+        types_or: [ python, pyi ]
+
+  - repo: local
+    hooks:
+      - id: lint
+        name: lint
+        entry: mise run lint:pre-commit
+        language: python
+        types: [ python ]
+        require_serial: true
+
+  - repo: local
+    hooks:
+      - id: task-docs
+        name: Tasks documentation
+        entry: mise run render:usage
+        language: system
+        files: ^mise.toml$
+        pass_filenames: false
+        require_serial: true
