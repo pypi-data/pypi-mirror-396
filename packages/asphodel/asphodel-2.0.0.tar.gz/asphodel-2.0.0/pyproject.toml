@@ -1,0 +1,78 @@
+[build-system]
+requires = ["scikit-build-core", "ziglang==0.15.1"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "asphodel"
+dynamic = ["version"]
+description="Python wrapper for the Asphodel library"
+readme = "README.md"
+license = "ISC"
+license-files = ["LICENSE.txt"]
+authors = [{ name = "Suprock Technologies", email = "inquiries@suprocktech.com" }]
+requires-python = ">=3.10"
+keywords = ["asphodel", "suprock"]
+dependencies = [
+    "numpy",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Topic :: System :: Hardware",
+]
+
+[project.urls]
+Repository = "https://bitbucket.org/suprocktech/asphodel_py"
+
+[project.scripts]
+nvmeditor = "asphodel.nvmeditor:main"
+
+[tool.scikit-build]
+build.verbose = true
+logging.level = "INFO"
+metadata.version.provider = "scikit_build_core.metadata.setuptools_scm"
+cmake.args = ["-G", "Ninja"]
+sdist.cmake = true
+sdist.exclude = ["*"]
+sdist.include = [
+    "/asphodel/*.py", "/CMakeLists.txt", "/LICENSE.txt", "/MANIFEST.in",
+    "/mypy.ini", "/pyproject.toml", "/README.md", "/setup.py",
+    "/lib/asphodel/apple-sdk",
+    "/lib/asphodel/inc",
+    "/lib/asphodel/libusb",
+    "/lib/asphodel/sqlite3",
+    "/lib/asphodel/src",
+    "/lib/asphodel/unpack",
+    "/lib/asphodel/build-info.zig",
+    "/lib/asphodel/build.zig",
+    "/lib/asphodel/build.zig.zon",
+    "/lib/asphodel/CMakeLists.txt",
+    "/lib/asphodel/libasphodel.map",
+    "/include/version_autogen.h",
+]
+wheel.exclude = ["/asphodel/include", "/asphodel/lib/asphodel.lib"]
+ninja.make-fallback = false
+wheel.py-api = "py310"
+
+[tool.setuptools_scm]
+write_to = "asphodel/version.py"
+local_scheme = "no-local-version"
+
+[tool.cibuildwheel]
+build-verbosity = 3
+# Only build on CPython 3.10
+build = "cp310-*"
+skip = "pp*"
+
+[tool.cibuildwheel.linux]
+manylinux-x86_64-image = "manylinux_2_28"
+manylinux-aarch64-image = "manylinux_2_28"
+before-all = [
+    "dnf -y --setopt=tsflags=nodocs update",
+    "dnf -y --setopt=tsflags=nodocs install cmake ninja-build"
+]
+
+[tool.isort]
+known_first_party = ["acheron", "asphodel", "asphodeltest", "firmutil", "hyperborea", "lemuria", "mondo"]
+force_sort_within_sections = true
+honor_noqa = true
