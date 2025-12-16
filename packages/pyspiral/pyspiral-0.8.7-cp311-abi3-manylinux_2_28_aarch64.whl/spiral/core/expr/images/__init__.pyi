@@ -1,0 +1,3 @@
+from .. import Expr
+
+def encode_(images: Expr, format: str) -> Expr: ...

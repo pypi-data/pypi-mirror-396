@@ -1,0 +1,3 @@
+from .. import Expr
+
+def get(expr: Expr, abort_on_error: bool) -> Expr: ...
