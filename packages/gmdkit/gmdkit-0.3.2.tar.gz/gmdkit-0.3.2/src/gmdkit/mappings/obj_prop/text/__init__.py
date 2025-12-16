@@ -1,0 +1,2 @@
+DATA = 31
+KERNING = 488

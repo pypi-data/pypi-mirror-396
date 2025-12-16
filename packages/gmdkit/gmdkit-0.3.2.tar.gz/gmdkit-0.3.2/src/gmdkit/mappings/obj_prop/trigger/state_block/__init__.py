@@ -1,0 +1,2 @@
+STATE_ON = 51
+STATE_OFF = 71

@@ -1,0 +1,4 @@
+RED = 'kS4'
+GREEN = 'kS5'
+BLUE = 'kS6'
+PLAYER_COLOR = 'kS17'
