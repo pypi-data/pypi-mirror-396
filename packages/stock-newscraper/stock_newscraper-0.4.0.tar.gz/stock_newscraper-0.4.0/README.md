@@ -1,0 +1,179 @@
+# Release Guide
+
+## English
+
+### Overview
+- The module is powered by `pygooglenews` to query Google News (country=`TW`, language=`zh-Hant`). `pygooglenews` does not ship binaries and relies on `aiohttp`/`lxml`; install it in a modern Python environment and make sure `pip` can compile its dependencies (e.g., upgrade `pip`, `setuptools`, and install `wheel` first).
+- Search responses are capped at roughly 100 articles per query; to widen coverage we interpolate large date ranges and split the crawl into smaller segments, collecting candidates until we saturate the per-query window.
+- The crawler runs multiple workers via `ThreadPoolExecutor` and Playwright; each worker handles a single article fetch while respecting `worker_delay`, so the actual throughput is controlled but parallelized when `worker_count` > 1.
+
+### Prerequisites
+
+Install the runtime dependencies before running the collector or publishing packages:
+
+```bash
+pip install feedparser
+pip install pygooglenews --no-deps
+pip install "stock-newscraper" --no-deps
+```
+
+### Targets and symbol mapping
+- Stock tickers automatically resolve into their company names by looking up `GetStockNews/symbol_lookup.json`. Provide raw numbers or keywords, and `run_collection` will normalize them via `fetch_symbol_mapping`; calling this helper also refreshes the list from the Taiwan Stock Exchange, so running it before a collection keeps the lookup current.
+
+### Worker controls & Google RSS redirects
+- The crawler keeps `worker_count` relative to the CPU count (default is CPU cores × 2, capped by the number of queued entries) so the Playwright pool scales without overloading the host. `worker_delay` spaces out worker launches to reduce the chance of triggering Google News rate limits or bot challenges while navigating `news.google.com` RSS links.
+- Each RSS entry points to `news.google.com/rss/articles/...`; we open them in Playwright to follow Google’s redirect chain and land on the publisher page before scraping title/content, ensuring we record the final destination instead of the intermediary RSS link.
+
+### Configurable Parameters (call `run_collection` or the CLI)
+| Parameter | Description | Default |
+| --- | --- | --- |
+| `folder` | Local directory where each search result’s news files and logs are saved during collection. | Current working directory |
+| `from_date` / `to_date` | ISO date range for the Google News query window. | `2025-12-06` / `2025-12-07` (fallback) |
+| `limit` | Max number of articles to keep per target; set `None` to collect everything within the segmented queries. | `None` |
+| `fetch_all` | When `True`, the query ignores `limit` and keeps requesting more until all candidates in the segment are processed (subject to Google’s ~100-entry cap); otherwise the `limit` controls how many entries are kept. | `False` |
+| `targets` | List of stock symbols or keywords; defaults to the symbol map in `GetStockNews/symbol_lookup.json`. | `['2330']` fallback |
+| `update_latest` | When `True`, the collector checks the most recent saved published date per target and only fetches from the next day through today, keeping historical data intact. | `False` |
+| `output_format` | `csv` or `parquet`. | `parquet` |
+| `search_delay` | Seconds to wait before each Google News query to avoid rate caps (default `0`; `run_news_scraper_example.py` shows `2`). | `0` |
+ | `worker_delay` | Seconds each Playwright worker pauses after opening a browser before navigating (default `0`; `run_news_scraper_example.py` shows `1`). | `0` |
+| `worker_count` | Maximum concurrent Playwright workers. | `10` |
+| `proxy` | Optional HTTP proxy for routing Playwright traffic. | `None` |
+
+_Note: `update_latest` defaults to `False`; set it to `True` when you want the collector to extend each target up to today instead of re-running the fixed date window._
+
+### Example usage
+Copy `run_news_scraper_example.py` into your workspace and update the parameter block before running. The script shows the same argument order as above and invokes `fetch_symbol_mapping()` so the symbol list stays synced with the Taiwan Stock Exchange; the sample uses `search_delay=2` and `worker_delay=1` to stagger the queries.
+```python
+import os
+from typing import Optional, Union
+
+from GetStockNews import OutputFormat, fetch_symbol_mapping, run_collection
+
+# Example values illustrate how to pass minimal inputs before running the collector.
+folder = os.getcwd()
+from_date: Optional[str] = "2020-01-01"
+to_date: Optional[str] = "2025-12-10"
+limit: Optional[int] = None
+fetch_all: bool = True
+symbol_map = fetch_symbol_mapping()
+# targets = list(symbol_map.keys())
+targets = ["8358"]
+update_latest = False
+output_format: Optional[Union[str, OutputFormat]] = OutputFormat.PARQUET
+search_delay: float = 2
+worker_delay: float = 1
+worker_count: Optional[int] = 10
+proxy: Optional[str] = None
+
+run_collection(
+    folder=folder,
+    from_date=from_date,
+    to_date=to_date,
+    limit=limit,
+    fetch_all=fetch_all,
+    targets=targets,
+    update_latest=update_latest,
+    output_format=output_format,
+    search_delay=search_delay,
+    worker_delay=worker_delay,
+    worker_count=worker_count,
+    proxy=proxy,
+)
+```
+
+### Notebook compatibility note
+The scraper relies on Playwright’s synchronous API (`playwright.sync_api`), which manages its own asyncio event loop internally. Jupyter notebooks already run an event loop in the background, so attempting to import or run Playwright from a notebook results in conflicts and runtime errors; run this package from a standard Python script or CLI instead.
+
+### Crawling Strategy
+- Date interpolation: when a query returns near the maximum results, the code bisects the date range (midpoint splitting) and retries each half so the `limit` and Google’s per-query cap never stop progress.
+- Article de-duplication: seen URLs are tracked per session so workers skip duplicates even when the same link appears across segments.
+- Playwright workers fetch the landing page, extract structured fields (title, content, published date) and respect `ADAPTIVE_SPLIT_THRESHOLD`/`GOOGLE_RESULTS_PAGE_LIMIT` to throttle further splits.
+- Delay warning: setting `search_delay` or `worker_delay` too short risks triggering Google or publisher rate limits/bans, so keep them high enough for stable crawling.
+
+## 中文
+### 前置套件安裝
+
+在執行爬蟲或發佈套件前先安裝基本環境：
+
+```bash
+pip install feedparser
+pip install pygooglenews --no-deps
+pip install "stock-newscraper" --no-deps
+```
+
+### 概述
+- Google News 每次查詢最多回傳約 100 筆候選資料，為了抓更多新聞，會將跨越時間範圍的搜尋拆成多段（內插而非逐日），依照候選數量動態分割。
+- 網頁擷取採用多 worker 並行（`ThreadPoolExecutor` + Playwright），每個 worker 負責一筆連結，透過 `worker_count`、`worker_delay` 控制整體吞吐量。
+
+### 目標與代碼對應
+- 提供的股票代碼會透過 `GetStockNews/symbol_lookup.json` 轉成公司名稱；`run_collection` 會呼叫 `fetch_symbol_mapping` 處理這份清單，並且這個函式會從台灣證交所抓取最新代號，因此在啟動爬蟲前執行一次可以確保資料更新。
+
+### Worker 設計與 Google RSS 轉向
+- `worker_count` 會依照 CPU 數量（預設為核心 × 2）動態調整，搭配佇列長度上限，讓 Playwright worker 數量在不浪費資源的前提下盡量平行運作；`worker_delay` 用來拉開每個 worker 的啟動節奏，避免在 Google News RSS 頁面造成過度頻繁的訪問。
+- Google News 回傳的是 `news.google.com/rss/articles/...` 的 RSS 連結，我們透過 Playwright 開啟它並跟隨 Google 的轉向，將最後的出版者網址（而非 RSS 連結）做為 `resolved_link`，再從中擷取標題與內容。
+
+### 參數說明（`run_collection` 或 CLI）
+| 參數 | 說明 | 預設值 |
+| --- | --- | --- |
+| `folder` | 用來存放每個搜尋結果的新聞資料與 log 的資料夾。 | 目前工作目錄 |
+| `from_date` / `to_date` | ISO 格式的查詢起迄日期。 | 分別為 `2025-12-06` / `2025-12-07` |
+| `limit` | 每個目標保留的文章數量上限；輸入 `None` 則在拆分後盡量收集所有候選。 | `None` |
+| `fetch_all` | 設為 `True` 時不再受 `limit` 控制，會在目前時間區段內把可用候選資料盡量抓完（仍受 ~100 筆上限）；若為 `False`，則以 `limit` 來決定保留數量。 | `False` |
+| `targets` | 股票代碼或關鍵字清單，預設來自 `GetStockNews/symbol_lookup.json`。 | fallback `['2330']` |
+| `update_latest` | 設為 `True` 會先讀取該目標現有資料的最新發布日，從下一天開始抓到今天，避免重複抓取先前區間。 | `False` |
+| `output_format` | `csv` 或 `parquet`。 | `parquet` |
+ | `search_delay` | 每次呼叫 Google News 的間隔秒數（預設 `0`，範例使用 `2`）。 | `0` |
+ | `worker_delay` | 每個 Playwright worker 在導航前的暫停秒數（預設 `0`，範例使用 `1`）。 | `0` |
+| `worker_count` | 同步啟動可用的 Playwright worker 數量上限。 | `10` |
+| `proxy` | 可選的 HTTP 代理設定。 | `None` |
+
+_備註：`update_latest` 預設為 `False`，開啟後會將每個目標向前延伸到今天，而不是重跑固定區間。_
+
+### 範例用法
+將 `run_news_scraper_example.py` 拷貝到專案中、以表格中的參數順序更新設定即可運行。範例中會呼叫 `fetch_symbol_mapping()` 同步台灣證交所的符號清單，並以 `search_delay=2`、`worker_delay=1` 讓查詢節奏更緩。
+```python
+import os
+from typing import Optional, Union
+
+from GetStockNews import OutputFormat, fetch_symbol_mapping, run_collection
+
+# Example values illustrate how to pass minimal inputs before running the collector.
+folder = os.getcwd()
+from_date: Optional[str] = "2020-01-01"
+to_date: Optional[str] = "2025-12-10"
+limit: Optional[int] = None
+fetch_all: bool = True
+symbol_map = fetch_symbol_mapping()
+# targets = list(symbol_map.keys())
+targets = ["8358"]
+update_latest = False
+output_format: Optional[Union[str, OutputFormat]] = OutputFormat.PARQUET
+search_delay: float = 2
+worker_delay: float = 1
+worker_count: Optional[int] = 10
+proxy: Optional[str] = None
+
+run_collection(
+    folder=folder,
+    from_date=from_date,
+    to_date=to_date,
+    limit=limit,
+    fetch_all=fetch_all,
+    targets=targets,
+    update_latest=update_latest,
+    output_format=output_format,
+    search_delay=search_delay,
+    worker_delay=worker_delay,
+    worker_count=worker_count,
+    proxy=proxy,
+)
+```
+
+### Notebook 相容性說明
+本套件透過 Playwright 的同步 API (`playwright.sync_api`) 操作瀏覽器，而 Playwright 會自行管理 asyncio event loop。Jupyter Notebook 也在背景運行 event loop，兩者會衝突並導致錯誤，因此建議從標準 Python 檔案或 CLI 執行本程式，而非在 notebook 中直接 import/執行。
+
+### 爬蟲策略補充
+- 內插分段：若候選筆數接近上限（`ADAPTIVE_SPLIT_THRESHOLD`/`GOOGLE_RESULTS_PAGE_LIMIT`），會自動將時間區間切成兩段、逐段查詢。
+- 去重機制：每次採集時都會記錄已見 URL，避免重複處理相同文章。
+- Playwright worker 會擷取標題、時間、內容，並根據 `ADAPTIVE_SPLIT_THRESHOLD`/`GOOGLE_RESULTS_PAGE_LIMIT` 去決定是否再細分查詢區間。
+- 延遲提醒：`search_delay` 或 `worker_delay` 設太短容易被 Google 或各家新聞網站的頻率限制封鎖，建議適度拉長間隔以維持穩定。
