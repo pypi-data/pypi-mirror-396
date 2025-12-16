@@ -1,0 +1,70 @@
+[project]
+name = "obscure"
+version = "1.0.4"
+description = "Create reversible transformations to obscure sequential ID numbers."
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+license-files = ["LICENSE*"]
+authors = [{ name = "Clinton James", email = "clinton+obscure@jidn.com" }]
+keywords = ["obfuscate", "feistel", "ids"]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/jidn/obscure"
+Documentation = "https://github.com/jidn/obscure#readme"
+Issues = "https://github.com/jidn/obscure/issues"
+Source = "https://github.com/jidn/obscure"
+
+# uv-native workflow groups: `uv sync --group dev`, etc.
+[dependency-groups]
+test = ["pytest", "pytest-cov"]
+lint = ["ruff", "pre-commit"]
+pkg = ["build", "twine"]
+dev = [
+  { include-group = "test" },
+  { include-group = "lint" },
+  { include-group = "pkg" },
+]
+
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-rfEX --strict-markers --doctest-modules"
+minversion = "6.0"
+testpaths = ["src", "tests"]
+
+[tool.coverage.run]
+source = ["src"]
+
+[tool.coverage.paths]
+source = ["src", "tests"]
+
+[tool.ruff]
+line-length = 88
+
+lint.select = ["C", "F", "E", "W", "B", "I"]
+lint.ignore = ["C901", "E501"]
+
+[tool.ruff.format]
+indent-style = "space"
+quote-style = "double"
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
