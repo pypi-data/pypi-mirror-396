@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+    <title>Stlite App</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@stlite/browser@{{ config.stlite_default_version }}/build/stlite.css"
+    />
+    <script
+      type="module"
+      src="https://cdn.jsdelivr.net/npm/@stlite/browser@{{ config.stlite_default_version }}/build/stlite.js"
+    ></script>
+  </head>
+  <body>
+    <streamlit-app>
+      <app-file name="streamlit_app.py" entrypoint>
+{{ app.code }}
+      </app-file>
+      {%- if app.config %}
+      <app-file name=".streamlit/config.json">
+        {{ app.config|tojson }}
+      </app-file>
+      {%- endif %}
+      {%- if app.requirements %}
+      <app-requirements>
+        {% for req in app.requirements %}
+        {{ req }}
+        {% endfor %}
+      </app-requirements>
+      {%- endif %}
+    </streamlit-app>
+  </body>
+</html>
