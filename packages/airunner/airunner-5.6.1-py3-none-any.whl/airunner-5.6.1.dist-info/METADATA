@@ -1,0 +1,1357 @@
+Metadata-Version: 2.4
+Name: airunner
+Version: 5.6.1
+Summary: Run local opensource AI models (Stable Diffusion, LLMs, TTS, STT, chatbots) in a lightweight Python GUI
+Home-page: https://github.com/Capsize-Games/airunner
+Author: Capsize LLC
+Author-email: contact@capsizegames.com
+License: Apache-2.0
+Keywords: llm,pyside6,gui,local llm,stable diffusion,generative ai,local chatgpt,text-to-speech,speech-to-text,open source chatbot,python ai runner
+Requires-Python: >=3.13.3
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: pip==25.3
+Requires-Dist: torch
+Requires-Dist: torchvision
+Requires-Dist: torchaudio
+Requires-Dist: torchao
+Requires-Dist: accelerate==1.7.0
+Requires-Dist: huggingface-hub<1.0,>=0.24.0
+Requires-Dist: tokenizers==0.22.0
+Requires-Dist: optimum==1.25.1
+Requires-Dist: numpy==2.2.5
+Requires-Dist: pillow==12.0.0
+Requires-Dist: alembic==1.15.2
+Requires-Dist: aiosqlite==0.21.0
+Requires-Dist: sqlalchemy==2.0.38
+Requires-Dist: setuptools==80.9.0
+Requires-Dist: etils[epath]==1.12.2
+Requires-Dist: jinja2==3.1.6
+Requires-Dist: pyyaml==6.0.2
+Requires-Dist: fastapi==0.115.0
+Requires-Dist: uvicorn[standard]==0.34.0
+Provides-Extra: nvidia
+Requires-Dist: nvidia-cuda-runtime; extra == "nvidia"
+Provides-Extra: huggingface
+Requires-Dist: diffusers==0.35.1; extra == "huggingface"
+Requires-Dist: controlnet_aux==0.0.10; extra == "huggingface"
+Requires-Dist: safetensors==0.6.2; extra == "huggingface"
+Requires-Dist: compel==2.1.1; extra == "huggingface"
+Requires-Dist: transformers==4.57.3; extra == "huggingface"
+Requires-Dist: datasets==4.0.0; extra == "huggingface"
+Requires-Dist: peft==0.17.1; extra == "huggingface"
+Provides-Extra: gui
+Requires-Dist: PySide6==6.9.0; extra == "gui"
+Requires-Dist: PySide6_Addons==6.9.0; extra == "gui"
+Requires-Dist: PySide6_Essentials==6.9.0; extra == "gui"
+Provides-Extra: linux
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: pytest-timeout; extra == "dev"
+Requires-Dist: responses>=0.25.0; extra == "dev"
+Requires-Dist: python-dotenv==1.0.1; extra == "dev"
+Requires-Dist: coverage==7.8.0; extra == "dev"
+Requires-Dist: black==25.1.0; extra == "dev"
+Requires-Dist: pyinstaller==6.12.0; extra == "dev"
+Requires-Dist: flake8==7.2.0; extra == "dev"
+Requires-Dist: mypy==1.16.0; extra == "dev"
+Requires-Dist: autoflake==2.3.1; extra == "dev"
+Requires-Dist: pandas>=2.0.0; extra == "dev"
+Requires-Dist: pyarrow>=14.0.0; extra == "dev"
+Requires-Dist: tqdm>=4.0.0; extra == "dev"
+Provides-Extra: art
+Requires-Dist: DeepCache==0.1.1; extra == "art"
+Requires-Dist: tomesd==0.1.3; extra == "art"
+Requires-Dist: gguf==0.17.1; extra == "art"
+Provides-Extra: llm
+Requires-Dist: bitsandbytes==0.45.5; extra == "llm"
+Requires-Dist: sentence_transformers==3.4.1; extra == "llm"
+Requires-Dist: sounddevice==0.5.1; extra == "llm"
+Requires-Dist: pyttsx3==2.91; extra == "llm"
+Requires-Dist: cryptography==44.0.3; extra == "llm"
+Requires-Dist: faster-whisper>=1.0.0; extra == "llm"
+Requires-Dist: llama-cpp-python==0.3.16; extra == "llm"
+Requires-Dist: sumy==0.11.0; extra == "llm"
+Requires-Dist: sentencepiece==0.2.0; extra == "llm"
+Requires-Dist: lingua-language-detector==2.1.0; extra == "llm"
+Requires-Dist: markdown==3.8; extra == "llm"
+Requires-Dist: libzim==3.7.0; extra == "llm"
+Requires-Dist: mistral_common>=1.8.5; extra == "llm"
+Requires-Dist: rank-bm25>=0.2.2; extra == "llm"
+Requires-Dist: llama-index==0.12.36; extra == "llm"
+Requires-Dist: llama-index-readers-file==0.4.0; extra == "llm"
+Requires-Dist: llama-index-embeddings-huggingface==0.4.0; extra == "llm"
+Requires-Dist: llama-cloud==0.1.23; extra == "llm"
+Requires-Dist: llama-index-core==0.12.36; extra == "llm"
+Requires-Dist: llama-index-embeddings-openai==0.3.0; extra == "llm"
+Requires-Dist: llama-index-question-gen-openai==0.3.0; extra == "llm"
+Requires-Dist: llama-index-program-openai==0.3.0; extra == "llm"
+Requires-Dist: llama-index-multi-modal-llms-openai==0.4.0; extra == "llm"
+Requires-Dist: llama-index-cli==0.4.1; extra == "llm"
+Requires-Dist: llama-index-agent-openai==0.4.8; extra == "llm"
+Requires-Dist: llama-index-indices-managed-llama-cloud==0.7.1; extra == "llm"
+Requires-Dist: langchain==1.0.0; extra == "llm"
+Requires-Dist: langchain-core==1.0.0; extra == "llm"
+Requires-Dist: langchain-community>=0.4.0; extra == "llm"
+Requires-Dist: langchain-huggingface>=0.1.0; extra == "llm"
+Requires-Dist: langgraph==1.0.0; extra == "llm"
+Requires-Dist: langsmith>=0.1.0; extra == "llm"
+Requires-Dist: langchain-ollama==1.0.0; extra == "llm"
+Requires-Dist: EbookLib==0.19; extra == "llm"
+Requires-Dist: html2text==2025.4.15; extra == "llm"
+Requires-Dist: rake_nltk==1.0.6; extra == "llm"
+Requires-Dist: markdownify>=0.13.1; extra == "llm"
+Provides-Extra: llm-weather
+Requires-Dist: requests-cache==1.2.1; extra == "llm-weather"
+Requires-Dist: retry-requests==2.0.0; extra == "llm-weather"
+Requires-Dist: openmeteo_requests==1.4.0; extra == "llm-weather"
+Requires-Dist: uszipcode==1.0.1; extra == "llm-weather"
+Provides-Extra: tts
+Requires-Dist: inflect==7.5.0; extra == "tts"
+Requires-Dist: pycountry==24.6.1; extra == "tts"
+Requires-Dist: librosa==0.11.0; extra == "tts"
+Requires-Dist: torchcodec>=0.8.0; extra == "tts"
+Provides-Extra: rabbitmq
+Requires-Dist: pika; extra == "rabbitmq"
+Provides-Extra: openvoice
+Requires-Dist: librosa==0.11.0; extra == "openvoice"
+Requires-Dist: pydub==0.25.1; extra == "openvoice"
+Requires-Dist: wavmark==0.0.3; extra == "openvoice"
+Requires-Dist: eng_to_ipa==0.0.2; extra == "openvoice"
+Requires-Dist: inflect==7.5.0; extra == "openvoice"
+Requires-Dist: unidecode==1.4.0; extra == "openvoice"
+Requires-Dist: langid==1.1.6; extra == "openvoice"
+Provides-Extra: melotts
+Requires-Dist: txtsplit==1.0.0; extra == "melotts"
+Requires-Dist: cached_path==1.7.3; extra == "melotts"
+Requires-Dist: num2words==0.5.14; extra == "melotts"
+Requires-Dist: g2p_en==2.1.0; extra == "melotts"
+Requires-Dist: anyascii==0.3.2; extra == "melotts"
+Requires-Dist: loguru==0.7.3; extra == "melotts"
+Provides-Extra: openvoice-cn
+Requires-Dist: pypinyin==0.54.0; extra == "openvoice-cn"
+Requires-Dist: jieba==0.42.1; extra == "openvoice-cn"
+Requires-Dist: cn2an==0.5.23; extra == "openvoice-cn"
+Provides-Extra: openvoice-jp
+Requires-Dist: unidic_lite==1.0.8; extra == "openvoice-jp"
+Requires-Dist: unidic==1.1.0; extra == "openvoice-jp"
+Requires-Dist: mecab-python3==1.0.10; extra == "openvoice-jp"
+Requires-Dist: fugashi==1.4.0; extra == "openvoice-jp"
+Requires-Dist: pykakasi==2.3.0; extra == "openvoice-jp"
+Provides-Extra: openvoice-kr
+Requires-Dist: jamo==0.4.1; extra == "openvoice-kr"
+Requires-Dist: python-mecab-ko==1.3.7; extra == "openvoice-kr"
+Requires-Dist: python-mecab-ko-dic==2.1.1.post2; extra == "openvoice-kr"
+Provides-Extra: openvoice-tw
+Requires-Dist: g2pkk>=0.1.2; extra == "openvoice-tw"
+Provides-Extra: gruut-support
+Requires-Dist: gruut[de,es,fr]==2.4.0; extra == "gruut-support"
+Requires-Dist: networkx==3.4.2; extra == "gruut-support"
+Provides-Extra: search
+Requires-Dist: ddgs>=9.0.0; extra == "search"
+Requires-Dist: aiohttp>=3.11.0; extra == "search"
+Requires-Dist: google-api-python-client>=2.170.0; extra == "search"
+Requires-Dist: wikipedia>=1.4.0; extra == "search"
+Requires-Dist: scrapy==2.13.1; extra == "search"
+Requires-Dist: trafilatura==2.0.0; extra == "search"
+Provides-Extra: computer-use
+Requires-Dist: pyautogui>=0.9.54; extra == "computer-use"
+Requires-Dist: pillow>=12.0.0; extra == "computer-use"
+Requires-Dist: pyscreeze>=1.0.1; extra == "computer-use"
+Requires-Dist: python-xlib>=0.33; platform_system == "Linux" and extra == "computer-use"
+Requires-Dist: pygetwindow>=0.0.9; extra == "computer-use"
+Provides-Extra: all
+Requires-Dist: nvidia-cuda-runtime; extra == "all"
+Requires-Dist: diffusers==0.35.1; extra == "all"
+Requires-Dist: controlnet_aux==0.0.10; extra == "all"
+Requires-Dist: safetensors==0.6.2; extra == "all"
+Requires-Dist: compel==2.1.1; extra == "all"
+Requires-Dist: transformers==4.57.3; extra == "all"
+Requires-Dist: datasets==4.0.0; extra == "all"
+Requires-Dist: peft==0.17.1; extra == "all"
+Requires-Dist: PySide6==6.9.0; extra == "all"
+Requires-Dist: PySide6_Addons==6.9.0; extra == "all"
+Requires-Dist: PySide6_Essentials==6.9.0; extra == "all"
+Requires-Dist: DeepCache==0.1.1; extra == "all"
+Requires-Dist: tomesd==0.1.3; extra == "all"
+Requires-Dist: gguf==0.17.1; extra == "all"
+Requires-Dist: bitsandbytes==0.45.5; extra == "all"
+Requires-Dist: sentence_transformers==3.4.1; extra == "all"
+Requires-Dist: sounddevice==0.5.1; extra == "all"
+Requires-Dist: pyttsx3==2.91; extra == "all"
+Requires-Dist: cryptography==44.0.3; extra == "all"
+Requires-Dist: faster-whisper>=1.0.0; extra == "all"
+Requires-Dist: llama-cpp-python==0.3.16; extra == "all"
+Requires-Dist: sumy==0.11.0; extra == "all"
+Requires-Dist: sentencepiece==0.2.0; extra == "all"
+Requires-Dist: lingua-language-detector==2.1.0; extra == "all"
+Requires-Dist: markdown==3.8; extra == "all"
+Requires-Dist: libzim==3.7.0; extra == "all"
+Requires-Dist: mistral_common>=1.8.5; extra == "all"
+Requires-Dist: rank-bm25>=0.2.2; extra == "all"
+Requires-Dist: llama-index==0.12.36; extra == "all"
+Requires-Dist: llama-index-readers-file==0.4.0; extra == "all"
+Requires-Dist: llama-index-embeddings-huggingface==0.4.0; extra == "all"
+Requires-Dist: llama-cloud==0.1.23; extra == "all"
+Requires-Dist: llama-index-core==0.12.36; extra == "all"
+Requires-Dist: llama-index-embeddings-openai==0.3.0; extra == "all"
+Requires-Dist: llama-index-question-gen-openai==0.3.0; extra == "all"
+Requires-Dist: llama-index-program-openai==0.3.0; extra == "all"
+Requires-Dist: llama-index-multi-modal-llms-openai==0.4.0; extra == "all"
+Requires-Dist: llama-index-cli==0.4.1; extra == "all"
+Requires-Dist: llama-index-agent-openai==0.4.8; extra == "all"
+Requires-Dist: llama-index-indices-managed-llama-cloud==0.7.1; extra == "all"
+Requires-Dist: langchain==1.0.0; extra == "all"
+Requires-Dist: langchain-core==1.0.0; extra == "all"
+Requires-Dist: langchain-community>=0.4.0; extra == "all"
+Requires-Dist: langchain-huggingface>=0.1.0; extra == "all"
+Requires-Dist: langgraph==1.0.0; extra == "all"
+Requires-Dist: langsmith>=0.1.0; extra == "all"
+Requires-Dist: langchain-ollama==1.0.0; extra == "all"
+Requires-Dist: EbookLib==0.19; extra == "all"
+Requires-Dist: html2text==2025.4.15; extra == "all"
+Requires-Dist: rake_nltk==1.0.6; extra == "all"
+Requires-Dist: markdownify>=0.13.1; extra == "all"
+Requires-Dist: requests-cache==1.2.1; extra == "all"
+Requires-Dist: retry-requests==2.0.0; extra == "all"
+Requires-Dist: openmeteo_requests==1.4.0; extra == "all"
+Requires-Dist: uszipcode==1.0.1; extra == "all"
+Requires-Dist: inflect==7.5.0; extra == "all"
+Requires-Dist: pycountry==24.6.1; extra == "all"
+Requires-Dist: librosa==0.11.0; extra == "all"
+Requires-Dist: torchcodec>=0.8.0; extra == "all"
+Requires-Dist: pika; extra == "all"
+Requires-Dist: librosa==0.11.0; extra == "all"
+Requires-Dist: pydub==0.25.1; extra == "all"
+Requires-Dist: wavmark==0.0.3; extra == "all"
+Requires-Dist: eng_to_ipa==0.0.2; extra == "all"
+Requires-Dist: inflect==7.5.0; extra == "all"
+Requires-Dist: unidecode==1.4.0; extra == "all"
+Requires-Dist: langid==1.1.6; extra == "all"
+Requires-Dist: txtsplit==1.0.0; extra == "all"
+Requires-Dist: cached_path==1.7.3; extra == "all"
+Requires-Dist: num2words==0.5.14; extra == "all"
+Requires-Dist: g2p_en==2.1.0; extra == "all"
+Requires-Dist: anyascii==0.3.2; extra == "all"
+Requires-Dist: loguru==0.7.3; extra == "all"
+Requires-Dist: pypinyin==0.54.0; extra == "all"
+Requires-Dist: jieba==0.42.1; extra == "all"
+Requires-Dist: cn2an==0.5.23; extra == "all"
+Requires-Dist: unidic_lite==1.0.8; extra == "all"
+Requires-Dist: unidic==1.1.0; extra == "all"
+Requires-Dist: mecab-python3==1.0.10; extra == "all"
+Requires-Dist: fugashi==1.4.0; extra == "all"
+Requires-Dist: pykakasi==2.3.0; extra == "all"
+Requires-Dist: jamo==0.4.1; extra == "all"
+Requires-Dist: python-mecab-ko==1.3.7; extra == "all"
+Requires-Dist: python-mecab-ko-dic==2.1.1.post2; extra == "all"
+Requires-Dist: g2pkk>=0.1.2; extra == "all"
+Requires-Dist: gruut[de,es,fr]==2.4.0; extra == "all"
+Requires-Dist: networkx==3.4.2; extra == "all"
+Requires-Dist: ddgs>=9.0.0; extra == "all"
+Requires-Dist: aiohttp>=3.11.0; extra == "all"
+Requires-Dist: google-api-python-client>=2.170.0; extra == "all"
+Requires-Dist: wikipedia>=1.4.0; extra == "all"
+Requires-Dist: scrapy==2.13.1; extra == "all"
+Requires-Dist: trafilatura==2.0.0; extra == "all"
+Requires-Dist: pyautogui>=0.9.54; extra == "all"
+Requires-Dist: pillow>=12.0.0; extra == "all"
+Requires-Dist: pyscreeze>=1.0.1; extra == "all"
+Requires-Dist: python-xlib>=0.33; platform_system == "Linux" and extra == "all"
+Requires-Dist: pygetwindow>=0.0.9; extra == "all"
+Requires-Dist: nvidia-cuda-runtime; extra == "all"
+Requires-Dist: diffusers==0.35.1; extra == "all"
+Requires-Dist: controlnet_aux==0.0.10; extra == "all"
+Requires-Dist: safetensors==0.6.2; extra == "all"
+Requires-Dist: compel==2.1.1; extra == "all"
+Requires-Dist: transformers==4.57.3; extra == "all"
+Requires-Dist: datasets==4.0.0; extra == "all"
+Requires-Dist: peft==0.17.1; extra == "all"
+Requires-Dist: PySide6==6.9.0; extra == "all"
+Requires-Dist: PySide6_Addons==6.9.0; extra == "all"
+Requires-Dist: PySide6_Essentials==6.9.0; extra == "all"
+Requires-Dist: pytest; extra == "all"
+Requires-Dist: pytest-timeout; extra == "all"
+Requires-Dist: responses>=0.25.0; extra == "all"
+Requires-Dist: python-dotenv==1.0.1; extra == "all"
+Requires-Dist: coverage==7.8.0; extra == "all"
+Requires-Dist: black==25.1.0; extra == "all"
+Requires-Dist: pyinstaller==6.12.0; extra == "all"
+Requires-Dist: flake8==7.2.0; extra == "all"
+Requires-Dist: mypy==1.16.0; extra == "all"
+Requires-Dist: autoflake==2.3.1; extra == "all"
+Requires-Dist: pandas>=2.0.0; extra == "all"
+Requires-Dist: pyarrow>=14.0.0; extra == "all"
+Requires-Dist: tqdm>=4.0.0; extra == "all"
+Requires-Dist: DeepCache==0.1.1; extra == "all"
+Requires-Dist: tomesd==0.1.3; extra == "all"
+Requires-Dist: gguf==0.17.1; extra == "all"
+Requires-Dist: bitsandbytes==0.45.5; extra == "all"
+Requires-Dist: sentence_transformers==3.4.1; extra == "all"
+Requires-Dist: sounddevice==0.5.1; extra == "all"
+Requires-Dist: pyttsx3==2.91; extra == "all"
+Requires-Dist: cryptography==44.0.3; extra == "all"
+Requires-Dist: faster-whisper>=1.0.0; extra == "all"
+Requires-Dist: llama-cpp-python==0.3.16; extra == "all"
+Requires-Dist: sumy==0.11.0; extra == "all"
+Requires-Dist: sentencepiece==0.2.0; extra == "all"
+Requires-Dist: lingua-language-detector==2.1.0; extra == "all"
+Requires-Dist: markdown==3.8; extra == "all"
+Requires-Dist: libzim==3.7.0; extra == "all"
+Requires-Dist: mistral_common>=1.8.5; extra == "all"
+Requires-Dist: rank-bm25>=0.2.2; extra == "all"
+Requires-Dist: llama-index==0.12.36; extra == "all"
+Requires-Dist: llama-index-readers-file==0.4.0; extra == "all"
+Requires-Dist: llama-index-embeddings-huggingface==0.4.0; extra == "all"
+Requires-Dist: llama-cloud==0.1.23; extra == "all"
+Requires-Dist: llama-index-core==0.12.36; extra == "all"
+Requires-Dist: llama-index-embeddings-openai==0.3.0; extra == "all"
+Requires-Dist: llama-index-question-gen-openai==0.3.0; extra == "all"
+Requires-Dist: llama-index-program-openai==0.3.0; extra == "all"
+Requires-Dist: llama-index-multi-modal-llms-openai==0.4.0; extra == "all"
+Requires-Dist: llama-index-cli==0.4.1; extra == "all"
+Requires-Dist: llama-index-agent-openai==0.4.8; extra == "all"
+Requires-Dist: llama-index-indices-managed-llama-cloud==0.7.1; extra == "all"
+Requires-Dist: langchain==1.0.0; extra == "all"
+Requires-Dist: langchain-core==1.0.0; extra == "all"
+Requires-Dist: langchain-community>=0.4.0; extra == "all"
+Requires-Dist: langchain-huggingface>=0.1.0; extra == "all"
+Requires-Dist: langgraph==1.0.0; extra == "all"
+Requires-Dist: langsmith>=0.1.0; extra == "all"
+Requires-Dist: langchain-ollama==1.0.0; extra == "all"
+Requires-Dist: EbookLib==0.19; extra == "all"
+Requires-Dist: html2text==2025.4.15; extra == "all"
+Requires-Dist: rake_nltk==1.0.6; extra == "all"
+Requires-Dist: markdownify>=0.13.1; extra == "all"
+Requires-Dist: requests-cache==1.2.1; extra == "all"
+Requires-Dist: retry-requests==2.0.0; extra == "all"
+Requires-Dist: openmeteo_requests==1.4.0; extra == "all"
+Requires-Dist: uszipcode==1.0.1; extra == "all"
+Requires-Dist: inflect==7.5.0; extra == "all"
+Requires-Dist: pycountry==24.6.1; extra == "all"
+Requires-Dist: librosa==0.11.0; extra == "all"
+Requires-Dist: torchcodec>=0.8.0; extra == "all"
+Requires-Dist: pika; extra == "all"
+Requires-Dist: librosa==0.11.0; extra == "all"
+Requires-Dist: pydub==0.25.1; extra == "all"
+Requires-Dist: wavmark==0.0.3; extra == "all"
+Requires-Dist: eng_to_ipa==0.0.2; extra == "all"
+Requires-Dist: inflect==7.5.0; extra == "all"
+Requires-Dist: unidecode==1.4.0; extra == "all"
+Requires-Dist: langid==1.1.6; extra == "all"
+Requires-Dist: txtsplit==1.0.0; extra == "all"
+Requires-Dist: cached_path==1.7.3; extra == "all"
+Requires-Dist: num2words==0.5.14; extra == "all"
+Requires-Dist: g2p_en==2.1.0; extra == "all"
+Requires-Dist: anyascii==0.3.2; extra == "all"
+Requires-Dist: loguru==0.7.3; extra == "all"
+Requires-Dist: pypinyin==0.54.0; extra == "all"
+Requires-Dist: jieba==0.42.1; extra == "all"
+Requires-Dist: cn2an==0.5.23; extra == "all"
+Requires-Dist: unidic_lite==1.0.8; extra == "all"
+Requires-Dist: unidic==1.1.0; extra == "all"
+Requires-Dist: mecab-python3==1.0.10; extra == "all"
+Requires-Dist: fugashi==1.4.0; extra == "all"
+Requires-Dist: pykakasi==2.3.0; extra == "all"
+Requires-Dist: jamo==0.4.1; extra == "all"
+Requires-Dist: python-mecab-ko==1.3.7; extra == "all"
+Requires-Dist: python-mecab-ko-dic==2.1.1.post2; extra == "all"
+Requires-Dist: g2pkk>=0.1.2; extra == "all"
+Requires-Dist: gruut[de,es,fr]==2.4.0; extra == "all"
+Requires-Dist: networkx==3.4.2; extra == "all"
+Requires-Dist: ddgs>=9.0.0; extra == "all"
+Requires-Dist: aiohttp>=3.11.0; extra == "all"
+Requires-Dist: google-api-python-client>=2.170.0; extra == "all"
+Requires-Dist: wikipedia>=1.4.0; extra == "all"
+Requires-Dist: scrapy==2.13.1; extra == "all"
+Requires-Dist: trafilatura==2.0.0; extra == "all"
+Requires-Dist: pyautogui>=0.9.54; extra == "all"
+Requires-Dist: pillow>=12.0.0; extra == "all"
+Requires-Dist: pyscreeze>=1.0.1; extra == "all"
+Requires-Dist: python-xlib>=0.33; platform_system == "Linux" and extra == "all"
+Requires-Dist: pygetwindow>=0.0.9; extra == "all"
+Requires-Dist: nvidia-cuda-runtime; extra == "all"
+Requires-Dist: diffusers==0.35.1; extra == "all"
+Requires-Dist: controlnet_aux==0.0.10; extra == "all"
+Requires-Dist: safetensors==0.6.2; extra == "all"
+Requires-Dist: compel==2.1.1; extra == "all"
+Requires-Dist: transformers==4.57.3; extra == "all"
+Requires-Dist: datasets==4.0.0; extra == "all"
+Requires-Dist: peft==0.17.1; extra == "all"
+Requires-Dist: PySide6==6.9.0; extra == "all"
+Requires-Dist: PySide6_Addons==6.9.0; extra == "all"
+Requires-Dist: PySide6_Essentials==6.9.0; extra == "all"
+Requires-Dist: DeepCache==0.1.1; extra == "all"
+Requires-Dist: tomesd==0.1.3; extra == "all"
+Requires-Dist: gguf==0.17.1; extra == "all"
+Requires-Dist: bitsandbytes==0.45.5; extra == "all"
+Requires-Dist: sentence_transformers==3.4.1; extra == "all"
+Requires-Dist: sounddevice==0.5.1; extra == "all"
+Requires-Dist: pyttsx3==2.91; extra == "all"
+Requires-Dist: cryptography==44.0.3; extra == "all"
+Requires-Dist: faster-whisper>=1.0.0; extra == "all"
+Requires-Dist: llama-cpp-python==0.3.16; extra == "all"
+Requires-Dist: sumy==0.11.0; extra == "all"
+Requires-Dist: sentencepiece==0.2.0; extra == "all"
+Requires-Dist: lingua-language-detector==2.1.0; extra == "all"
+Requires-Dist: markdown==3.8; extra == "all"
+Requires-Dist: libzim==3.7.0; extra == "all"
+Requires-Dist: mistral_common>=1.8.5; extra == "all"
+Requires-Dist: rank-bm25>=0.2.2; extra == "all"
+Requires-Dist: llama-index==0.12.36; extra == "all"
+Requires-Dist: llama-index-readers-file==0.4.0; extra == "all"
+Requires-Dist: llama-index-embeddings-huggingface==0.4.0; extra == "all"
+Requires-Dist: llama-cloud==0.1.23; extra == "all"
+Requires-Dist: llama-index-core==0.12.36; extra == "all"
+Requires-Dist: llama-index-embeddings-openai==0.3.0; extra == "all"
+Requires-Dist: llama-index-question-gen-openai==0.3.0; extra == "all"
+Requires-Dist: llama-index-program-openai==0.3.0; extra == "all"
+Requires-Dist: llama-index-multi-modal-llms-openai==0.4.0; extra == "all"
+Requires-Dist: llama-index-cli==0.4.1; extra == "all"
+Requires-Dist: llama-index-agent-openai==0.4.8; extra == "all"
+Requires-Dist: llama-index-indices-managed-llama-cloud==0.7.1; extra == "all"
+Requires-Dist: langchain==1.0.0; extra == "all"
+Requires-Dist: langchain-core==1.0.0; extra == "all"
+Requires-Dist: langchain-community>=0.4.0; extra == "all"
+Requires-Dist: langchain-huggingface>=0.1.0; extra == "all"
+Requires-Dist: langgraph==1.0.0; extra == "all"
+Requires-Dist: langsmith>=0.1.0; extra == "all"
+Requires-Dist: langchain-ollama==1.0.0; extra == "all"
+Requires-Dist: EbookLib==0.19; extra == "all"
+Requires-Dist: html2text==2025.4.15; extra == "all"
+Requires-Dist: rake_nltk==1.0.6; extra == "all"
+Requires-Dist: markdownify>=0.13.1; extra == "all"
+Requires-Dist: requests-cache==1.2.1; extra == "all"
+Requires-Dist: retry-requests==2.0.0; extra == "all"
+Requires-Dist: openmeteo_requests==1.4.0; extra == "all"
+Requires-Dist: uszipcode==1.0.1; extra == "all"
+Requires-Dist: inflect==7.5.0; extra == "all"
+Requires-Dist: pycountry==24.6.1; extra == "all"
+Requires-Dist: librosa==0.11.0; extra == "all"
+Requires-Dist: torchcodec>=0.8.0; extra == "all"
+Requires-Dist: pika; extra == "all"
+Requires-Dist: librosa==0.11.0; extra == "all"
+Requires-Dist: pydub==0.25.1; extra == "all"
+Requires-Dist: wavmark==0.0.3; extra == "all"
+Requires-Dist: eng_to_ipa==0.0.2; extra == "all"
+Requires-Dist: inflect==7.5.0; extra == "all"
+Requires-Dist: unidecode==1.4.0; extra == "all"
+Requires-Dist: langid==1.1.6; extra == "all"
+Requires-Dist: txtsplit==1.0.0; extra == "all"
+Requires-Dist: cached_path==1.7.3; extra == "all"
+Requires-Dist: num2words==0.5.14; extra == "all"
+Requires-Dist: g2p_en==2.1.0; extra == "all"
+Requires-Dist: anyascii==0.3.2; extra == "all"
+Requires-Dist: loguru==0.7.3; extra == "all"
+Requires-Dist: pypinyin==0.54.0; extra == "all"
+Requires-Dist: jieba==0.42.1; extra == "all"
+Requires-Dist: cn2an==0.5.23; extra == "all"
+Requires-Dist: unidic_lite==1.0.8; extra == "all"
+Requires-Dist: unidic==1.1.0; extra == "all"
+Requires-Dist: mecab-python3==1.0.10; extra == "all"
+Requires-Dist: fugashi==1.4.0; extra == "all"
+Requires-Dist: pykakasi==2.3.0; extra == "all"
+Requires-Dist: jamo==0.4.1; extra == "all"
+Requires-Dist: python-mecab-ko==1.3.7; extra == "all"
+Requires-Dist: python-mecab-ko-dic==2.1.1.post2; extra == "all"
+Requires-Dist: g2pkk>=0.1.2; extra == "all"
+Requires-Dist: gruut[de,es,fr]==2.4.0; extra == "all"
+Requires-Dist: networkx==3.4.2; extra == "all"
+Requires-Dist: ddgs>=9.0.0; extra == "all"
+Requires-Dist: aiohttp>=3.11.0; extra == "all"
+Requires-Dist: google-api-python-client>=2.170.0; extra == "all"
+Requires-Dist: wikipedia>=1.4.0; extra == "all"
+Requires-Dist: scrapy==2.13.1; extra == "all"
+Requires-Dist: trafilatura==2.0.0; extra == "all"
+Requires-Dist: pyautogui>=0.9.54; extra == "all"
+Requires-Dist: pillow>=12.0.0; extra == "all"
+Requires-Dist: pyscreeze>=1.0.1; extra == "all"
+Requires-Dist: python-xlib>=0.33; platform_system == "Linux" and extra == "all"
+Requires-Dist: pygetwindow>=0.0.9; extra == "all"
+Provides-Extra: all-dev
+Requires-Dist: nvidia-cuda-runtime; extra == "all-dev"
+Requires-Dist: diffusers==0.35.1; extra == "all-dev"
+Requires-Dist: controlnet_aux==0.0.10; extra == "all-dev"
+Requires-Dist: safetensors==0.6.2; extra == "all-dev"
+Requires-Dist: compel==2.1.1; extra == "all-dev"
+Requires-Dist: transformers==4.57.3; extra == "all-dev"
+Requires-Dist: datasets==4.0.0; extra == "all-dev"
+Requires-Dist: peft==0.17.1; extra == "all-dev"
+Requires-Dist: PySide6==6.9.0; extra == "all-dev"
+Requires-Dist: PySide6_Addons==6.9.0; extra == "all-dev"
+Requires-Dist: PySide6_Essentials==6.9.0; extra == "all-dev"
+Requires-Dist: pytest; extra == "all-dev"
+Requires-Dist: pytest-timeout; extra == "all-dev"
+Requires-Dist: responses>=0.25.0; extra == "all-dev"
+Requires-Dist: python-dotenv==1.0.1; extra == "all-dev"
+Requires-Dist: coverage==7.8.0; extra == "all-dev"
+Requires-Dist: black==25.1.0; extra == "all-dev"
+Requires-Dist: pyinstaller==6.12.0; extra == "all-dev"
+Requires-Dist: flake8==7.2.0; extra == "all-dev"
+Requires-Dist: mypy==1.16.0; extra == "all-dev"
+Requires-Dist: autoflake==2.3.1; extra == "all-dev"
+Requires-Dist: pandas>=2.0.0; extra == "all-dev"
+Requires-Dist: pyarrow>=14.0.0; extra == "all-dev"
+Requires-Dist: tqdm>=4.0.0; extra == "all-dev"
+Requires-Dist: DeepCache==0.1.1; extra == "all-dev"
+Requires-Dist: tomesd==0.1.3; extra == "all-dev"
+Requires-Dist: gguf==0.17.1; extra == "all-dev"
+Requires-Dist: bitsandbytes==0.45.5; extra == "all-dev"
+Requires-Dist: sentence_transformers==3.4.1; extra == "all-dev"
+Requires-Dist: sounddevice==0.5.1; extra == "all-dev"
+Requires-Dist: pyttsx3==2.91; extra == "all-dev"
+Requires-Dist: cryptography==44.0.3; extra == "all-dev"
+Requires-Dist: faster-whisper>=1.0.0; extra == "all-dev"
+Requires-Dist: llama-cpp-python==0.3.16; extra == "all-dev"
+Requires-Dist: sumy==0.11.0; extra == "all-dev"
+Requires-Dist: sentencepiece==0.2.0; extra == "all-dev"
+Requires-Dist: lingua-language-detector==2.1.0; extra == "all-dev"
+Requires-Dist: markdown==3.8; extra == "all-dev"
+Requires-Dist: libzim==3.7.0; extra == "all-dev"
+Requires-Dist: mistral_common>=1.8.5; extra == "all-dev"
+Requires-Dist: rank-bm25>=0.2.2; extra == "all-dev"
+Requires-Dist: llama-index==0.12.36; extra == "all-dev"
+Requires-Dist: llama-index-readers-file==0.4.0; extra == "all-dev"
+Requires-Dist: llama-index-embeddings-huggingface==0.4.0; extra == "all-dev"
+Requires-Dist: llama-cloud==0.1.23; extra == "all-dev"
+Requires-Dist: llama-index-core==0.12.36; extra == "all-dev"
+Requires-Dist: llama-index-embeddings-openai==0.3.0; extra == "all-dev"
+Requires-Dist: llama-index-question-gen-openai==0.3.0; extra == "all-dev"
+Requires-Dist: llama-index-program-openai==0.3.0; extra == "all-dev"
+Requires-Dist: llama-index-multi-modal-llms-openai==0.4.0; extra == "all-dev"
+Requires-Dist: llama-index-cli==0.4.1; extra == "all-dev"
+Requires-Dist: llama-index-agent-openai==0.4.8; extra == "all-dev"
+Requires-Dist: llama-index-indices-managed-llama-cloud==0.7.1; extra == "all-dev"
+Requires-Dist: langchain==1.0.0; extra == "all-dev"
+Requires-Dist: langchain-core==1.0.0; extra == "all-dev"
+Requires-Dist: langchain-community>=0.4.0; extra == "all-dev"
+Requires-Dist: langchain-huggingface>=0.1.0; extra == "all-dev"
+Requires-Dist: langgraph==1.0.0; extra == "all-dev"
+Requires-Dist: langsmith>=0.1.0; extra == "all-dev"
+Requires-Dist: langchain-ollama==1.0.0; extra == "all-dev"
+Requires-Dist: EbookLib==0.19; extra == "all-dev"
+Requires-Dist: html2text==2025.4.15; extra == "all-dev"
+Requires-Dist: rake_nltk==1.0.6; extra == "all-dev"
+Requires-Dist: markdownify>=0.13.1; extra == "all-dev"
+Requires-Dist: requests-cache==1.2.1; extra == "all-dev"
+Requires-Dist: retry-requests==2.0.0; extra == "all-dev"
+Requires-Dist: openmeteo_requests==1.4.0; extra == "all-dev"
+Requires-Dist: uszipcode==1.0.1; extra == "all-dev"
+Requires-Dist: inflect==7.5.0; extra == "all-dev"
+Requires-Dist: pycountry==24.6.1; extra == "all-dev"
+Requires-Dist: librosa==0.11.0; extra == "all-dev"
+Requires-Dist: torchcodec>=0.8.0; extra == "all-dev"
+Requires-Dist: pika; extra == "all-dev"
+Requires-Dist: librosa==0.11.0; extra == "all-dev"
+Requires-Dist: pydub==0.25.1; extra == "all-dev"
+Requires-Dist: wavmark==0.0.3; extra == "all-dev"
+Requires-Dist: eng_to_ipa==0.0.2; extra == "all-dev"
+Requires-Dist: inflect==7.5.0; extra == "all-dev"
+Requires-Dist: unidecode==1.4.0; extra == "all-dev"
+Requires-Dist: langid==1.1.6; extra == "all-dev"
+Requires-Dist: txtsplit==1.0.0; extra == "all-dev"
+Requires-Dist: cached_path==1.7.3; extra == "all-dev"
+Requires-Dist: num2words==0.5.14; extra == "all-dev"
+Requires-Dist: g2p_en==2.1.0; extra == "all-dev"
+Requires-Dist: anyascii==0.3.2; extra == "all-dev"
+Requires-Dist: loguru==0.7.3; extra == "all-dev"
+Requires-Dist: pypinyin==0.54.0; extra == "all-dev"
+Requires-Dist: jieba==0.42.1; extra == "all-dev"
+Requires-Dist: cn2an==0.5.23; extra == "all-dev"
+Requires-Dist: unidic_lite==1.0.8; extra == "all-dev"
+Requires-Dist: unidic==1.1.0; extra == "all-dev"
+Requires-Dist: mecab-python3==1.0.10; extra == "all-dev"
+Requires-Dist: fugashi==1.4.0; extra == "all-dev"
+Requires-Dist: pykakasi==2.3.0; extra == "all-dev"
+Requires-Dist: jamo==0.4.1; extra == "all-dev"
+Requires-Dist: python-mecab-ko==1.3.7; extra == "all-dev"
+Requires-Dist: python-mecab-ko-dic==2.1.1.post2; extra == "all-dev"
+Requires-Dist: g2pkk>=0.1.2; extra == "all-dev"
+Requires-Dist: gruut[de,es,fr]==2.4.0; extra == "all-dev"
+Requires-Dist: networkx==3.4.2; extra == "all-dev"
+Requires-Dist: ddgs>=9.0.0; extra == "all-dev"
+Requires-Dist: aiohttp>=3.11.0; extra == "all-dev"
+Requires-Dist: google-api-python-client>=2.170.0; extra == "all-dev"
+Requires-Dist: wikipedia>=1.4.0; extra == "all-dev"
+Requires-Dist: scrapy==2.13.1; extra == "all-dev"
+Requires-Dist: trafilatura==2.0.0; extra == "all-dev"
+Requires-Dist: pyautogui>=0.9.54; extra == "all-dev"
+Requires-Dist: pillow>=12.0.0; extra == "all-dev"
+Requires-Dist: pyscreeze>=1.0.1; extra == "all-dev"
+Requires-Dist: python-xlib>=0.33; platform_system == "Linux" and extra == "all-dev"
+Requires-Dist: pygetwindow>=0.0.9; extra == "all-dev"
+Requires-Dist: nvidia-cuda-runtime; extra == "all-dev"
+Requires-Dist: diffusers==0.35.1; extra == "all-dev"
+Requires-Dist: controlnet_aux==0.0.10; extra == "all-dev"
+Requires-Dist: safetensors==0.6.2; extra == "all-dev"
+Requires-Dist: compel==2.1.1; extra == "all-dev"
+Requires-Dist: transformers==4.57.3; extra == "all-dev"
+Requires-Dist: datasets==4.0.0; extra == "all-dev"
+Requires-Dist: peft==0.17.1; extra == "all-dev"
+Requires-Dist: PySide6==6.9.0; extra == "all-dev"
+Requires-Dist: PySide6_Addons==6.9.0; extra == "all-dev"
+Requires-Dist: PySide6_Essentials==6.9.0; extra == "all-dev"
+Requires-Dist: pytest; extra == "all-dev"
+Requires-Dist: pytest-timeout; extra == "all-dev"
+Requires-Dist: responses>=0.25.0; extra == "all-dev"
+Requires-Dist: python-dotenv==1.0.1; extra == "all-dev"
+Requires-Dist: coverage==7.8.0; extra == "all-dev"
+Requires-Dist: black==25.1.0; extra == "all-dev"
+Requires-Dist: pyinstaller==6.12.0; extra == "all-dev"
+Requires-Dist: flake8==7.2.0; extra == "all-dev"
+Requires-Dist: mypy==1.16.0; extra == "all-dev"
+Requires-Dist: autoflake==2.3.1; extra == "all-dev"
+Requires-Dist: pandas>=2.0.0; extra == "all-dev"
+Requires-Dist: pyarrow>=14.0.0; extra == "all-dev"
+Requires-Dist: tqdm>=4.0.0; extra == "all-dev"
+Requires-Dist: DeepCache==0.1.1; extra == "all-dev"
+Requires-Dist: tomesd==0.1.3; extra == "all-dev"
+Requires-Dist: gguf==0.17.1; extra == "all-dev"
+Requires-Dist: bitsandbytes==0.45.5; extra == "all-dev"
+Requires-Dist: sentence_transformers==3.4.1; extra == "all-dev"
+Requires-Dist: sounddevice==0.5.1; extra == "all-dev"
+Requires-Dist: pyttsx3==2.91; extra == "all-dev"
+Requires-Dist: cryptography==44.0.3; extra == "all-dev"
+Requires-Dist: faster-whisper>=1.0.0; extra == "all-dev"
+Requires-Dist: llama-cpp-python==0.3.16; extra == "all-dev"
+Requires-Dist: sumy==0.11.0; extra == "all-dev"
+Requires-Dist: sentencepiece==0.2.0; extra == "all-dev"
+Requires-Dist: lingua-language-detector==2.1.0; extra == "all-dev"
+Requires-Dist: markdown==3.8; extra == "all-dev"
+Requires-Dist: libzim==3.7.0; extra == "all-dev"
+Requires-Dist: mistral_common>=1.8.5; extra == "all-dev"
+Requires-Dist: rank-bm25>=0.2.2; extra == "all-dev"
+Requires-Dist: llama-index==0.12.36; extra == "all-dev"
+Requires-Dist: llama-index-readers-file==0.4.0; extra == "all-dev"
+Requires-Dist: llama-index-embeddings-huggingface==0.4.0; extra == "all-dev"
+Requires-Dist: llama-cloud==0.1.23; extra == "all-dev"
+Requires-Dist: llama-index-core==0.12.36; extra == "all-dev"
+Requires-Dist: llama-index-embeddings-openai==0.3.0; extra == "all-dev"
+Requires-Dist: llama-index-question-gen-openai==0.3.0; extra == "all-dev"
+Requires-Dist: llama-index-program-openai==0.3.0; extra == "all-dev"
+Requires-Dist: llama-index-multi-modal-llms-openai==0.4.0; extra == "all-dev"
+Requires-Dist: llama-index-cli==0.4.1; extra == "all-dev"
+Requires-Dist: llama-index-agent-openai==0.4.8; extra == "all-dev"
+Requires-Dist: llama-index-indices-managed-llama-cloud==0.7.1; extra == "all-dev"
+Requires-Dist: langchain==1.0.0; extra == "all-dev"
+Requires-Dist: langchain-core==1.0.0; extra == "all-dev"
+Requires-Dist: langchain-community>=0.4.0; extra == "all-dev"
+Requires-Dist: langchain-huggingface>=0.1.0; extra == "all-dev"
+Requires-Dist: langgraph==1.0.0; extra == "all-dev"
+Requires-Dist: langsmith>=0.1.0; extra == "all-dev"
+Requires-Dist: langchain-ollama==1.0.0; extra == "all-dev"
+Requires-Dist: EbookLib==0.19; extra == "all-dev"
+Requires-Dist: html2text==2025.4.15; extra == "all-dev"
+Requires-Dist: rake_nltk==1.0.6; extra == "all-dev"
+Requires-Dist: markdownify>=0.13.1; extra == "all-dev"
+Requires-Dist: requests-cache==1.2.1; extra == "all-dev"
+Requires-Dist: retry-requests==2.0.0; extra == "all-dev"
+Requires-Dist: openmeteo_requests==1.4.0; extra == "all-dev"
+Requires-Dist: uszipcode==1.0.1; extra == "all-dev"
+Requires-Dist: inflect==7.5.0; extra == "all-dev"
+Requires-Dist: pycountry==24.6.1; extra == "all-dev"
+Requires-Dist: librosa==0.11.0; extra == "all-dev"
+Requires-Dist: torchcodec>=0.8.0; extra == "all-dev"
+Requires-Dist: pika; extra == "all-dev"
+Requires-Dist: librosa==0.11.0; extra == "all-dev"
+Requires-Dist: pydub==0.25.1; extra == "all-dev"
+Requires-Dist: wavmark==0.0.3; extra == "all-dev"
+Requires-Dist: eng_to_ipa==0.0.2; extra == "all-dev"
+Requires-Dist: inflect==7.5.0; extra == "all-dev"
+Requires-Dist: unidecode==1.4.0; extra == "all-dev"
+Requires-Dist: langid==1.1.6; extra == "all-dev"
+Requires-Dist: txtsplit==1.0.0; extra == "all-dev"
+Requires-Dist: cached_path==1.7.3; extra == "all-dev"
+Requires-Dist: num2words==0.5.14; extra == "all-dev"
+Requires-Dist: g2p_en==2.1.0; extra == "all-dev"
+Requires-Dist: anyascii==0.3.2; extra == "all-dev"
+Requires-Dist: loguru==0.7.3; extra == "all-dev"
+Requires-Dist: pypinyin==0.54.0; extra == "all-dev"
+Requires-Dist: jieba==0.42.1; extra == "all-dev"
+Requires-Dist: cn2an==0.5.23; extra == "all-dev"
+Requires-Dist: unidic_lite==1.0.8; extra == "all-dev"
+Requires-Dist: unidic==1.1.0; extra == "all-dev"
+Requires-Dist: mecab-python3==1.0.10; extra == "all-dev"
+Requires-Dist: fugashi==1.4.0; extra == "all-dev"
+Requires-Dist: pykakasi==2.3.0; extra == "all-dev"
+Requires-Dist: jamo==0.4.1; extra == "all-dev"
+Requires-Dist: python-mecab-ko==1.3.7; extra == "all-dev"
+Requires-Dist: python-mecab-ko-dic==2.1.1.post2; extra == "all-dev"
+Requires-Dist: g2pkk>=0.1.2; extra == "all-dev"
+Requires-Dist: gruut[de,es,fr]==2.4.0; extra == "all-dev"
+Requires-Dist: networkx==3.4.2; extra == "all-dev"
+Requires-Dist: ddgs>=9.0.0; extra == "all-dev"
+Requires-Dist: aiohttp>=3.11.0; extra == "all-dev"
+Requires-Dist: google-api-python-client>=2.170.0; extra == "all-dev"
+Requires-Dist: wikipedia>=1.4.0; extra == "all-dev"
+Requires-Dist: scrapy==2.13.1; extra == "all-dev"
+Requires-Dist: trafilatura==2.0.0; extra == "all-dev"
+Requires-Dist: pyautogui>=0.9.54; extra == "all-dev"
+Requires-Dist: pillow>=12.0.0; extra == "all-dev"
+Requires-Dist: pyscreeze>=1.0.1; extra == "all-dev"
+Requires-Dist: python-xlib>=0.33; platform_system == "Linux" and extra == "all-dev"
+Requires-Dist: pygetwindow>=0.0.9; extra == "all-dev"
+Requires-Dist: nvidia-cuda-runtime; extra == "all-dev"
+Requires-Dist: diffusers==0.35.1; extra == "all-dev"
+Requires-Dist: controlnet_aux==0.0.10; extra == "all-dev"
+Requires-Dist: safetensors==0.6.2; extra == "all-dev"
+Requires-Dist: compel==2.1.1; extra == "all-dev"
+Requires-Dist: transformers==4.57.3; extra == "all-dev"
+Requires-Dist: datasets==4.0.0; extra == "all-dev"
+Requires-Dist: peft==0.17.1; extra == "all-dev"
+Requires-Dist: PySide6==6.9.0; extra == "all-dev"
+Requires-Dist: PySide6_Addons==6.9.0; extra == "all-dev"
+Requires-Dist: PySide6_Essentials==6.9.0; extra == "all-dev"
+Requires-Dist: pytest; extra == "all-dev"
+Requires-Dist: pytest-timeout; extra == "all-dev"
+Requires-Dist: responses>=0.25.0; extra == "all-dev"
+Requires-Dist: python-dotenv==1.0.1; extra == "all-dev"
+Requires-Dist: coverage==7.8.0; extra == "all-dev"
+Requires-Dist: black==25.1.0; extra == "all-dev"
+Requires-Dist: pyinstaller==6.12.0; extra == "all-dev"
+Requires-Dist: flake8==7.2.0; extra == "all-dev"
+Requires-Dist: mypy==1.16.0; extra == "all-dev"
+Requires-Dist: autoflake==2.3.1; extra == "all-dev"
+Requires-Dist: pandas>=2.0.0; extra == "all-dev"
+Requires-Dist: pyarrow>=14.0.0; extra == "all-dev"
+Requires-Dist: tqdm>=4.0.0; extra == "all-dev"
+Requires-Dist: DeepCache==0.1.1; extra == "all-dev"
+Requires-Dist: tomesd==0.1.3; extra == "all-dev"
+Requires-Dist: gguf==0.17.1; extra == "all-dev"
+Requires-Dist: bitsandbytes==0.45.5; extra == "all-dev"
+Requires-Dist: sentence_transformers==3.4.1; extra == "all-dev"
+Requires-Dist: sounddevice==0.5.1; extra == "all-dev"
+Requires-Dist: pyttsx3==2.91; extra == "all-dev"
+Requires-Dist: cryptography==44.0.3; extra == "all-dev"
+Requires-Dist: faster-whisper>=1.0.0; extra == "all-dev"
+Requires-Dist: llama-cpp-python==0.3.16; extra == "all-dev"
+Requires-Dist: sumy==0.11.0; extra == "all-dev"
+Requires-Dist: sentencepiece==0.2.0; extra == "all-dev"
+Requires-Dist: lingua-language-detector==2.1.0; extra == "all-dev"
+Requires-Dist: markdown==3.8; extra == "all-dev"
+Requires-Dist: libzim==3.7.0; extra == "all-dev"
+Requires-Dist: mistral_common>=1.8.5; extra == "all-dev"
+Requires-Dist: rank-bm25>=0.2.2; extra == "all-dev"
+Requires-Dist: llama-index==0.12.36; extra == "all-dev"
+Requires-Dist: llama-index-readers-file==0.4.0; extra == "all-dev"
+Requires-Dist: llama-index-embeddings-huggingface==0.4.0; extra == "all-dev"
+Requires-Dist: llama-cloud==0.1.23; extra == "all-dev"
+Requires-Dist: llama-index-core==0.12.36; extra == "all-dev"
+Requires-Dist: llama-index-embeddings-openai==0.3.0; extra == "all-dev"
+Requires-Dist: llama-index-question-gen-openai==0.3.0; extra == "all-dev"
+Requires-Dist: llama-index-program-openai==0.3.0; extra == "all-dev"
+Requires-Dist: llama-index-multi-modal-llms-openai==0.4.0; extra == "all-dev"
+Requires-Dist: llama-index-cli==0.4.1; extra == "all-dev"
+Requires-Dist: llama-index-agent-openai==0.4.8; extra == "all-dev"
+Requires-Dist: llama-index-indices-managed-llama-cloud==0.7.1; extra == "all-dev"
+Requires-Dist: langchain==1.0.0; extra == "all-dev"
+Requires-Dist: langchain-core==1.0.0; extra == "all-dev"
+Requires-Dist: langchain-community>=0.4.0; extra == "all-dev"
+Requires-Dist: langchain-huggingface>=0.1.0; extra == "all-dev"
+Requires-Dist: langgraph==1.0.0; extra == "all-dev"
+Requires-Dist: langsmith>=0.1.0; extra == "all-dev"
+Requires-Dist: langchain-ollama==1.0.0; extra == "all-dev"
+Requires-Dist: EbookLib==0.19; extra == "all-dev"
+Requires-Dist: html2text==2025.4.15; extra == "all-dev"
+Requires-Dist: rake_nltk==1.0.6; extra == "all-dev"
+Requires-Dist: markdownify>=0.13.1; extra == "all-dev"
+Requires-Dist: requests-cache==1.2.1; extra == "all-dev"
+Requires-Dist: retry-requests==2.0.0; extra == "all-dev"
+Requires-Dist: openmeteo_requests==1.4.0; extra == "all-dev"
+Requires-Dist: uszipcode==1.0.1; extra == "all-dev"
+Requires-Dist: inflect==7.5.0; extra == "all-dev"
+Requires-Dist: pycountry==24.6.1; extra == "all-dev"
+Requires-Dist: librosa==0.11.0; extra == "all-dev"
+Requires-Dist: torchcodec>=0.8.0; extra == "all-dev"
+Requires-Dist: pika; extra == "all-dev"
+Requires-Dist: librosa==0.11.0; extra == "all-dev"
+Requires-Dist: pydub==0.25.1; extra == "all-dev"
+Requires-Dist: wavmark==0.0.3; extra == "all-dev"
+Requires-Dist: eng_to_ipa==0.0.2; extra == "all-dev"
+Requires-Dist: inflect==7.5.0; extra == "all-dev"
+Requires-Dist: unidecode==1.4.0; extra == "all-dev"
+Requires-Dist: langid==1.1.6; extra == "all-dev"
+Requires-Dist: txtsplit==1.0.0; extra == "all-dev"
+Requires-Dist: cached_path==1.7.3; extra == "all-dev"
+Requires-Dist: num2words==0.5.14; extra == "all-dev"
+Requires-Dist: g2p_en==2.1.0; extra == "all-dev"
+Requires-Dist: anyascii==0.3.2; extra == "all-dev"
+Requires-Dist: loguru==0.7.3; extra == "all-dev"
+Requires-Dist: pypinyin==0.54.0; extra == "all-dev"
+Requires-Dist: jieba==0.42.1; extra == "all-dev"
+Requires-Dist: cn2an==0.5.23; extra == "all-dev"
+Requires-Dist: unidic_lite==1.0.8; extra == "all-dev"
+Requires-Dist: unidic==1.1.0; extra == "all-dev"
+Requires-Dist: mecab-python3==1.0.10; extra == "all-dev"
+Requires-Dist: fugashi==1.4.0; extra == "all-dev"
+Requires-Dist: pykakasi==2.3.0; extra == "all-dev"
+Requires-Dist: jamo==0.4.1; extra == "all-dev"
+Requires-Dist: python-mecab-ko==1.3.7; extra == "all-dev"
+Requires-Dist: python-mecab-ko-dic==2.1.1.post2; extra == "all-dev"
+Requires-Dist: g2pkk>=0.1.2; extra == "all-dev"
+Requires-Dist: gruut[de,es,fr]==2.4.0; extra == "all-dev"
+Requires-Dist: networkx==3.4.2; extra == "all-dev"
+Requires-Dist: ddgs>=9.0.0; extra == "all-dev"
+Requires-Dist: aiohttp>=3.11.0; extra == "all-dev"
+Requires-Dist: google-api-python-client>=2.170.0; extra == "all-dev"
+Requires-Dist: wikipedia>=1.4.0; extra == "all-dev"
+Requires-Dist: scrapy==2.13.1; extra == "all-dev"
+Requires-Dist: trafilatura==2.0.0; extra == "all-dev"
+Requires-Dist: pyautogui>=0.9.54; extra == "all-dev"
+Requires-Dist: pillow>=12.0.0; extra == "all-dev"
+Requires-Dist: pyscreeze>=1.0.1; extra == "all-dev"
+Requires-Dist: python-xlib>=0.33; platform_system == "Linux" and extra == "all-dev"
+Requires-Dist: pygetwindow>=0.0.9; extra == "all-dev"
+Provides-Extra: windows
+Requires-Dist: nvidia-cuda-runtime; extra == "windows"
+Requires-Dist: diffusers==0.35.1; extra == "windows"
+Requires-Dist: controlnet_aux==0.0.10; extra == "windows"
+Requires-Dist: safetensors==0.6.2; extra == "windows"
+Requires-Dist: compel==2.1.1; extra == "windows"
+Requires-Dist: transformers==4.57.3; extra == "windows"
+Requires-Dist: datasets==4.0.0; extra == "windows"
+Requires-Dist: peft==0.17.1; extra == "windows"
+Requires-Dist: PySide6==6.9.0; extra == "windows"
+Requires-Dist: PySide6_Addons==6.9.0; extra == "windows"
+Requires-Dist: PySide6_Essentials==6.9.0; extra == "windows"
+Requires-Dist: pytest; extra == "windows"
+Requires-Dist: pytest-timeout; extra == "windows"
+Requires-Dist: responses>=0.25.0; extra == "windows"
+Requires-Dist: python-dotenv==1.0.1; extra == "windows"
+Requires-Dist: coverage==7.8.0; extra == "windows"
+Requires-Dist: black==25.1.0; extra == "windows"
+Requires-Dist: pyinstaller==6.12.0; extra == "windows"
+Requires-Dist: flake8==7.2.0; extra == "windows"
+Requires-Dist: mypy==1.16.0; extra == "windows"
+Requires-Dist: autoflake==2.3.1; extra == "windows"
+Requires-Dist: pandas>=2.0.0; extra == "windows"
+Requires-Dist: pyarrow>=14.0.0; extra == "windows"
+Requires-Dist: tqdm>=4.0.0; extra == "windows"
+Requires-Dist: DeepCache==0.1.1; extra == "windows"
+Requires-Dist: tomesd==0.1.3; extra == "windows"
+Requires-Dist: gguf==0.17.1; extra == "windows"
+Requires-Dist: bitsandbytes==0.45.5; extra == "windows"
+Requires-Dist: sentence_transformers==3.4.1; extra == "windows"
+Requires-Dist: sounddevice==0.5.1; extra == "windows"
+Requires-Dist: pyttsx3==2.91; extra == "windows"
+Requires-Dist: cryptography==44.0.3; extra == "windows"
+Requires-Dist: faster-whisper>=1.0.0; extra == "windows"
+Requires-Dist: llama-cpp-python==0.3.16; extra == "windows"
+Requires-Dist: sumy==0.11.0; extra == "windows"
+Requires-Dist: sentencepiece==0.2.0; extra == "windows"
+Requires-Dist: lingua-language-detector==2.1.0; extra == "windows"
+Requires-Dist: markdown==3.8; extra == "windows"
+Requires-Dist: libzim==3.7.0; extra == "windows"
+Requires-Dist: mistral_common>=1.8.5; extra == "windows"
+Requires-Dist: rank-bm25>=0.2.2; extra == "windows"
+Requires-Dist: llama-index==0.12.36; extra == "windows"
+Requires-Dist: llama-index-readers-file==0.4.0; extra == "windows"
+Requires-Dist: llama-index-embeddings-huggingface==0.4.0; extra == "windows"
+Requires-Dist: llama-cloud==0.1.23; extra == "windows"
+Requires-Dist: llama-index-core==0.12.36; extra == "windows"
+Requires-Dist: llama-index-embeddings-openai==0.3.0; extra == "windows"
+Requires-Dist: llama-index-question-gen-openai==0.3.0; extra == "windows"
+Requires-Dist: llama-index-program-openai==0.3.0; extra == "windows"
+Requires-Dist: llama-index-multi-modal-llms-openai==0.4.0; extra == "windows"
+Requires-Dist: llama-index-cli==0.4.1; extra == "windows"
+Requires-Dist: llama-index-agent-openai==0.4.8; extra == "windows"
+Requires-Dist: llama-index-indices-managed-llama-cloud==0.7.1; extra == "windows"
+Requires-Dist: langchain==1.0.0; extra == "windows"
+Requires-Dist: langchain-core==1.0.0; extra == "windows"
+Requires-Dist: langchain-community>=0.4.0; extra == "windows"
+Requires-Dist: langchain-huggingface>=0.1.0; extra == "windows"
+Requires-Dist: langgraph==1.0.0; extra == "windows"
+Requires-Dist: langsmith>=0.1.0; extra == "windows"
+Requires-Dist: langchain-ollama==1.0.0; extra == "windows"
+Requires-Dist: EbookLib==0.19; extra == "windows"
+Requires-Dist: html2text==2025.4.15; extra == "windows"
+Requires-Dist: rake_nltk==1.0.6; extra == "windows"
+Requires-Dist: markdownify>=0.13.1; extra == "windows"
+Requires-Dist: requests-cache==1.2.1; extra == "windows"
+Requires-Dist: retry-requests==2.0.0; extra == "windows"
+Requires-Dist: openmeteo_requests==1.4.0; extra == "windows"
+Requires-Dist: uszipcode==1.0.1; extra == "windows"
+Requires-Dist: inflect==7.5.0; extra == "windows"
+Requires-Dist: pycountry==24.6.1; extra == "windows"
+Requires-Dist: librosa==0.11.0; extra == "windows"
+Requires-Dist: torchcodec>=0.8.0; extra == "windows"
+Requires-Dist: pika; extra == "windows"
+Requires-Dist: librosa==0.11.0; extra == "windows"
+Requires-Dist: pydub==0.25.1; extra == "windows"
+Requires-Dist: wavmark==0.0.3; extra == "windows"
+Requires-Dist: eng_to_ipa==0.0.2; extra == "windows"
+Requires-Dist: inflect==7.5.0; extra == "windows"
+Requires-Dist: unidecode==1.4.0; extra == "windows"
+Requires-Dist: langid==1.1.6; extra == "windows"
+Requires-Dist: txtsplit==1.0.0; extra == "windows"
+Requires-Dist: cached_path==1.7.3; extra == "windows"
+Requires-Dist: num2words==0.5.14; extra == "windows"
+Requires-Dist: g2p_en==2.1.0; extra == "windows"
+Requires-Dist: anyascii==0.3.2; extra == "windows"
+Requires-Dist: loguru==0.7.3; extra == "windows"
+Requires-Dist: pypinyin==0.54.0; extra == "windows"
+Requires-Dist: jieba==0.42.1; extra == "windows"
+Requires-Dist: cn2an==0.5.23; extra == "windows"
+Requires-Dist: unidic_lite==1.0.8; extra == "windows"
+Requires-Dist: unidic==1.1.0; extra == "windows"
+Requires-Dist: mecab-python3==1.0.10; extra == "windows"
+Requires-Dist: fugashi==1.4.0; extra == "windows"
+Requires-Dist: pykakasi==2.3.0; extra == "windows"
+Requires-Dist: jamo==0.4.1; extra == "windows"
+Requires-Dist: python-mecab-ko==1.3.7; extra == "windows"
+Requires-Dist: python-mecab-ko-dic==2.1.1.post2; extra == "windows"
+Requires-Dist: g2pkk>=0.1.2; extra == "windows"
+Requires-Dist: gruut[de,es,fr]==2.4.0; extra == "windows"
+Requires-Dist: networkx==3.4.2; extra == "windows"
+Requires-Dist: ddgs>=9.0.0; extra == "windows"
+Requires-Dist: aiohttp>=3.11.0; extra == "windows"
+Requires-Dist: google-api-python-client>=2.170.0; extra == "windows"
+Requires-Dist: wikipedia>=1.4.0; extra == "windows"
+Requires-Dist: scrapy==2.13.1; extra == "windows"
+Requires-Dist: trafilatura==2.0.0; extra == "windows"
+Requires-Dist: pyautogui>=0.9.54; extra == "windows"
+Requires-Dist: pillow>=12.0.0; extra == "windows"
+Requires-Dist: pyscreeze>=1.0.1; extra == "windows"
+Requires-Dist: python-xlib>=0.33; platform_system == "Linux" and extra == "windows"
+Requires-Dist: pygetwindow>=0.0.9; extra == "windows"
+Dynamic: author
+Dynamic: author-email
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: keywords
+Dynamic: license
+Dynamic: license-file
+Dynamic: provides-extra
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+# AI Runner
+
+```
+Support development. Send crypto: 0x02030569e866e22C9991f55Db0445eeAd2d646c8
+```
+
+## Your new favorite local AI platform
+
+AI Runner is an all-in-one, offline-first desktop application, headless server, and Python library for local LLMs, TTS, STT, and image generation.
+
+
+<img src="./images/art_interface.png" alt="AI Runner Logo" />
+
+
+[![Discord](https://img.shields.io/discord/839511291466219541?color=5865F2&logo=discord&logoColor=white)](https://discord.gg/ukcgjEpc5f) ![GitHub](https://img.shields.io/github/license/Capsize-Games/airunner) [![PyPi](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml/badge.svg)](https://github.com/Capsize-Games/airunner/actions/workflows/pypi-dispatch.yml) ![GitHub last commit](https://img.shields.io/github/last-commit/Capsize-Games/airunner)
+
+[🐞 Report Bug](https://github.com/Capsize-Games/airunner/issues/new?template=bug_report.md) · [✨ Request Feature](https://github.com/Capsize-Games/airunner/issues/new?template=feature_request.md) · [🛡️ Report Vulnerability](https://github.com/Capsize-Games/airunner/issues/new?template=vulnerability_report.md) · [📖 Wiki](https://github.com/Capsize-Games/airunner/wiki)
+
+---
+
+## ✨ Key Features
+
+| Feature | Description |
+|---------|-------------|
+| **🗣️ Voice Chat** | Real-time conversations with LLMs using espeak or OpenVoice |
+| **🤖 Custom AI Agents** | Configurable personalities, moods, and RAG-enhanced knowledge |
+| **🎨 Visual Workflows** | Drag-and-drop LangGraph workflow builder with runtime execution |
+| **🖼️ Image Generation** | Stable Diffusion (SD 1.5, SDXL) and FLUX models with drawing tools, LoRA, inpainting, and filters |
+| **🔒 Privacy First** | Runs locally with no external APIs by default, configurable guardrails |
+| **⚡ Fast Generation** | Uses GGUF and quantization for faster inference and lower VRAM usage |
+
+### 🌍 Language Support
+
+| Language | TTS | LLM | STT | GUI |
+|----------|-----|-----|-----|-----|
+| English | ✅ | ✅ | ✅ | ✅ |
+| Japanese | ✅ | ✅ | ❌ | ✅ |
+| Spanish/French/Chinese/Korean | ✅ | ✅ | ❌ | ❌ |
+
+---
+
+## ⚙️ System Requirements
+
+| | Minimum | Recommended |
+|---|---------|-------------|
+| **OS** | Ubuntu 22.04, Windows 10 | Ubuntu 22.04 (Wayland) |
+| **CPU** | Ryzen 2700K / i7-8700K | Ryzen 5800X / i7-11700K |
+| **RAM** | 16 GB | 32 GB |
+| **GPU** | NVIDIA RTX 3060 | NVIDIA RTX 5080 |
+| **Storage** | 22 GB - 100 GB+ (actual usage varies, SSD recommended) | 100 GB+ |
+
+---
+
+## 💾 Installation
+
+### Docker (Recommended)
+
+**GUI Mode:**
+```bash
+xhost +local:docker && docker compose run --rm airunner
+```
+
+**Headless API Server:**
+```bash
+docker compose run --rm --service-ports airunner --headless
+```
+
+> **Note:** `--service-ports` is required to expose port 8080 for the API.
+
+The headless server exposes an HTTP API on port 8080 with endpoints:
+- `GET /health` - Health check and service status
+- `POST /llm` - LLM inference
+- `POST /art` - Image generation
+
+### Manual Installation (Ubuntu/Debian)
+
+**Python 3.13+ required.** We recommend using `pyenv` and `venv`.
+
+1. **Install system dependencies:**
+   ```bash
+   sudo apt update && sudo apt install -y \
+     build-essential cmake git curl wget \
+     nvidia-cuda-toolkit pipewire libportaudio2 libxcb-cursor0 \
+     espeak espeak-ng-espeak qt6-qpa-plugins qt6-wayland \
+     mecab libmecab-dev mecab-ipadic-utf8 libxslt-dev mkcert
+   ```
+
+2. **Create data directory:**
+   ```bash
+   mkdir -p ~/.local/share/airunner
+   ```
+
+3. **Install AI Runner:**
+   ```bash
+   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+   pip install airunner[all_dev]
+   ```
+
+4. **Install llama-cpp-python with CUDA (Python 3.13, RTX 5080):**
+  ```bash
+  CMAKE_ARGS="-DGGML_CUDA=on -DGGML_CUDA_ARCHITECTURES=90" FORCE_CMAKE=1 \
+    pip install --no-binary=:all: --no-cache-dir "llama-cpp-python==0.3.16"
+  ```
+  - Uses GGML_CUDA (CUBLAS flag is deprecated).
+  - `90` matches RTX 5080 class GPUs; drop `-DGGML_CUDA_ARCHITECTURES` if you are unsure and let it auto-detect.
+  - On Python 3.12 you may instead use the prebuilt wheel: `--extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu121 "llama-cpp-python==0.3.16+cu121"`.
+
+4. **Run:**
+   ```bash
+   airunner
+   ```
+
+For detailed instructions, see the [Installation Wiki](https://github.com/Capsize-Games/airunner/wiki/Installation-instructions).
+
+---
+
+## 🤖 Models
+
+AI Runner downloads essential TTS/STT models automatically. LLM and image models must be configured:
+
+| Category | Model | Size |
+|----------|-------|------|
+| **LLM (default)** | Llama 3.1 8B Instruct (4bit) | ~4 GB |
+| **Image** | Stable Diffusion 1.5 | ~2 GB |
+| **Image** | SDXL 1.0 | ~6 GB |
+| **Image** | FLUX.1 Dev/Schnell (GGUF) | 8-12 GB |
+| **TTS** | OpenVoice | 654 MB |
+| **STT** | Whisper Tiny | 155 MB |
+
+**LLM Providers:** Local (HuggingFace), Ollama, OpenRouter, OpenAI
+
+**Art Models:** Place your models in `~/.local/share/airunner/art/models/`
+
+---
+
+## 🛠️ CLI Commands
+
+| Command | Description |
+|---------|-------------|
+| `airunner` | Launch GUI |
+| `airunner-headless` | Start headless API server |
+| `airunner-hf-download` | Download/manage models from HuggingFace |
+| `airunner-civitai-download` | Download models from CivitAI |
+| `airunner-build-ui` | Rebuild UI from `.ui` files |
+| `airunner-tests` | Run test suite |
+| `airunner-generate-cert` | Generate SSL certificate |
+
+**Note:** To download models, use *Tools → Download Models* from the main application menu, or use `airunner-hf-download` / `airunner-civitai-download` from the command line.
+
+---
+
+## 🖥️ Headless Server
+
+AI Runner can run as a headless HTTP API server, enabling remote access to LLM, image generation, TTS, and STT capabilities. This is useful for:
+
+- Running AI services on a remote server
+- Integration with other applications via REST API
+- VS Code integration as an Ollama/OpenAI replacement
+- Automated pipelines and scripting
+
+### Quick Start
+
+```bash
+# Start with defaults (port 8080, LLM only)
+airunner-headless
+
+# Start with a specific LLM model
+airunner-headless --model /path/to/Qwen2.5-7B-Instruct-4bit
+
+# Run as Ollama replacement for VS Code (port 11434)
+airunner-headless --ollama-mode
+
+# Don't preload models - load on first request
+airunner-headless --no-preload
+```
+
+### Command Line Options
+
+| Option | Description |
+|--------|-------------|
+| `--host HOST` | Host address to bind to (default: `0.0.0.0`) |
+| `--port PORT` | Port to listen on (default: `8080`, or `11434` in ollama-mode) |
+| `--ollama-mode` | Run as Ollama replacement on port 11434 |
+| `--model, -m PATH` | Path to LLM model to load |
+| `--art-model PATH` | Path to Stable Diffusion model to load |
+| `--tts-model PATH` | Path to TTS model to load |
+| `--stt-model PATH` | Path to STT model to load |
+| `--enable-llm` | Enable LLM service |
+| `--enable-art` | Enable Stable Diffusion/art service |
+| `--enable-tts` | Enable TTS service |
+| `--enable-stt` | Enable STT service |
+| `--no-preload` | Don't preload models at startup |
+
+### Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `AIRUNNER_LLM_MODEL_PATH` | Path to LLM model |
+| `AIRUNNER_ART_MODEL_PATH` | Path to art model |
+| `AIRUNNER_TTS_MODEL_PATH` | Path to TTS model |
+| `AIRUNNER_STT_MODEL_PATH` | Path to STT model |
+| `AIRUNNER_NO_PRELOAD` | Set to `1` to disable model preloading |
+| `AIRUNNER_LLM_ON` | Enable LLM service (`1` or `0`) |
+| `AIRUNNER_SD_ON` | Enable Stable Diffusion (`1` or `0`) |
+| `AIRUNNER_TTS_ON` | Enable TTS service (`1` or `0`) |
+| `AIRUNNER_STT_ON` | Enable STT service (`1` or `0`) |
+
+### API Endpoints
+
+#### Native AIRunner Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/health` | Health check and service status |
+| POST | `/llm` | LLM text generation (streaming) |
+| POST | `/llm/generate` | LLM text generation |
+| POST | `/art` | Image generation |
+| POST | `/tts` | Text-to-speech |
+| POST | `/stt` | Speech-to-text |
+
+#### Ollama-Compatible Endpoints (port 11434)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/tags` | List available models |
+| GET | `/api/version` | Get version info |
+| GET | `/api/ps` | List running models |
+| POST | `/api/generate` | Text generation |
+| POST | `/api/chat` | Chat completion |
+| POST | `/api/show` | Show model info |
+
+#### OpenAI-Compatible Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/v1/models` | List models |
+| POST | `/v1/chat/completions` | Chat completion with tool support |
+
+### Example: LLM Request
+
+```bash
+curl -X POST http://localhost:8080/llm \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "What is the capital of France?",
+    "stream": true,
+    "temperature": 0.7,
+    "max_tokens": 100
+  }'
+```
+
+### Example: Image Generation (Art)
+
+```bash
+# Requires: airunner-headless --enable-art
+curl -X POST http://localhost:8080/art \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "A beautiful sunset over mountains",
+    "negative_prompt": "blurry, low quality",
+    "width": 512,
+    "height": 512,
+    "steps": 20,
+    "seed": 42
+  }'
+# Returns: {"images": ["base64_png_data..."], "count": 1, "seed": 42}
+```
+
+### Example: Text-to-Speech (TTS)
+
+```bash
+# Requires: airunner-headless --enable-tts
+curl -X POST http://localhost:8080/tts \
+  -H "Content-Type: application/json" \
+  -d '{"text": "Hello, world!"}'
+# Returns: {"status": "queued", "message": "Text queued for speech synthesis"}
+# Audio plays through system speakers
+```
+
+### Example: Speech-to-Text (STT)
+
+```bash
+# Requires: airunner-headless --enable-stt
+# Audio must be base64-encoded WAV (16kHz mono recommended)
+curl -X POST http://localhost:8080/stt \
+  -H "Content-Type: application/json" \
+  -d '{"audio": "UklGRi4AAABXQVZFZm10IBAAAAABAAEA..."}'
+# Returns: {"transcription": "Hello world", "status": "success"}
+```
+
+### Example: Ollama Mode with VS Code
+
+1. Start the headless server in Ollama mode:
+   ```bash
+   airunner-headless --ollama-mode --model /path/to/your/model
+   ```
+
+2. Configure VS Code Continue extension to use `http://localhost:11434`
+
+3. The server will respond to Ollama API calls, allowing seamless integration.
+
+### Auto-Loading Models
+
+When `--no-preload` is used, models are automatically loaded on the first request to the corresponding endpoint. This is useful for:
+
+- Reducing startup time
+- Running multiple services without loading all models upfront
+- Memory-constrained environments
+
+---
+
+## 📦 Model Management
+
+### Download Models
+
+```bash
+# List available models
+airunner-hf-download
+
+# List only LLM models
+airunner-hf-download list --type llm
+
+# Download a model (GGUF by default)
+airunner-hf-download qwen3-8b
+
+# Download full safetensors version
+airunner-hf-download --full qwen3-8b
+
+# Download any HuggingFace model
+airunner-hf-download Qwen/Qwen3-8B
+
+# List downloaded models
+airunner-hf-download --downloaded
+```
+
+### Delete Models
+
+```bash
+# Delete a model (with confirmation)
+airunner-hf-download --delete Qwen3-8B
+
+# Delete without confirmation (for scripts)
+airunner-hf-download --delete Qwen3-8B --force
+```
+
+### Download from CivitAI
+
+```bash
+# Download a model from CivitAI URL
+airunner-civitai-download https://civitai.com/models/995002/70s-sci-fi-movie
+
+# Download a specific version
+airunner-civitai-download https://civitai.com/models/995002?modelVersionId=1880417
+
+# Download to a custom directory
+airunner-civitai-download <url> --output-dir /path/to/models
+
+# Use API key for authentication (for gated models)
+airunner-civitai-download <url> --api-key your_api_key
+
+# Or set CIVITAI_API_KEY environment variable
+export CIVITAI_API_KEY=your_api_key
+airunner-civitai-download <url>
+```
+
+---
+
+## 🔒 HTTPS Configuration
+
+AI Runner's local server uses HTTPS by default. Certificates are auto-generated in `~/.local/share/airunner/certs/`.
+
+For browser-trusted certificates, install [mkcert](https://github.com/FiloSottile/mkcert):
+```bash
+sudo apt install libnss3-tools
+mkcert -install
+```
+
+---
+
+## ⚖️ Colorado AI Act Notice
+
+**Effective February 1, 2026**, the [Colorado AI Act (SB 24-205)](https://leg.colorado.gov/bills/sb24-205) regulates high-risk AI systems.
+
+**Your Responsibility:** If you use AI Runner for decisions with legal or significant effects on individuals (employment screening, loan eligibility, insurance, housing), you may be classified as a **deployer of a high-risk AI system** and must:
+- Implement a risk management policy
+- Complete impact assessments
+- Provide consumer notice and appeal mechanisms
+- Report algorithmic discrimination to the Colorado Attorney General
+
+**AI Runner's Design:** AI Runner is designed with privacy as a core principle—it runs entirely locally with no external data transmission by default. However, certain optional features connect to external services:
+
+- **Model Downloads:** Connecting to HuggingFace or CivitAI to download models
+- **Web Search / Deep Research:** Search queries sent to DuckDuckGo; web pages scraped for research
+- **Weather Prompt:** Location coordinates sent to Open-Meteo API if enabled
+- **External LLM Providers:** Prompts sent to OpenRouter or OpenAI if configured
+
+**We recommend using a VPN** when using features that connect to external services. See our full [Privacy Policy](src/airunner/components/downloader/gui/windows/setup_wizard/user_agreement/privacy_policy.md) for details.
+
+---
+
+## 🧪 Testing
+
+```bash
+# Run headless-safe tests
+pytest src/airunner/utils/tests/
+
+# Run display-required tests (Qt/GUI)
+xvfb-run -a pytest src/airunner/utils/tests/xvfb_required/
+```
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) and the [Development Wiki](https://github.com/Capsize-Games/airunner/wiki/Development).
+
+## Documentation
+
+- [Wiki](https://github.com/Capsize-Games/airunner/wiki)
+- [API Service Layer](src/airunner/components/application/api/README.md)
+- [ORM Models](src/airunner/components/data/models/README.md)
+
+---
+
+<a href="https://airunner.org">
+   <img src="https://airunner.org/logo.png" alt="AI Runner Logo" width="100"/>
+</a>
+

@@ -1,0 +1,620 @@
+# -*- coding: utf-8 -*-
+
+################################################################################
+## Form generated from reading UI file 'llm_settings.ui'
+##
+## Created by: Qt User Interface Compiler version 6.9.0
+##
+## WARNING! All changes made in this file will be lost when recompiling UI file!
+################################################################################
+
+from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
+    QMetaObject, QObject, QPoint, QRect,
+    QSize, QTime, QUrl, Qt)
+from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
+    QFont, QFontDatabase, QGradient, QIcon,
+    QImage, QKeySequence, QLinearGradient, QPainter,
+    QPalette, QPixmap, QRadialGradient, QTransform)
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox,
+    QFrame, QGridLayout, QGroupBox, QHBoxLayout,
+    QHeaderView, QLabel, QLayout, QLineEdit,
+    QPushButton, QScrollArea, QSizePolicy, QSpacerItem,
+    QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
+
+from airunner.components.application.gui.widgets.slider.slider_widget import SliderWidget
+
+class Ui_llm_settings_widget(object):
+    def setupUi(self, llm_settings_widget):
+        if not llm_settings_widget.objectName():
+            llm_settings_widget.setObjectName(u"llm_settings_widget")
+        llm_settings_widget.resize(581, 742)
+        self.gridLayout_4 = QGridLayout(llm_settings_widget)
+        self.gridLayout_4.setObjectName(u"gridLayout_4")
+        self.gridLayout_4.setHorizontalSpacing(0)
+        self.gridLayout_4.setVerticalSpacing(10)
+        self.gridLayout_4.setContentsMargins(10, 10, 10, 10)
+        self.scrollArea = QScrollArea(llm_settings_widget)
+        self.scrollArea.setObjectName(u"scrollArea")
+        self.scrollArea.setFrameShadow(QFrame.Shadow.Plain)
+        self.scrollArea.setLineWidth(0)
+        self.scrollArea.setWidgetResizable(True)
+        self.scrollAreaWidgetContents = QWidget()
+        self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 559, 499))
+        self.gridLayout = QGridLayout(self.scrollAreaWidgetContents)
+        self.gridLayout.setObjectName(u"gridLayout")
+        self.gridLayout.setHorizontalSpacing(0)
+        self.gridLayout.setVerticalSpacing(10)
+        self.gridLayout.setContentsMargins(0, 0, 0, 0)
+        self.prompt_template_container = QWidget(self.scrollAreaWidgetContents)
+        self.prompt_template_container.setObjectName(u"prompt_template_container")
+        self.gridLayout_17 = QGridLayout(self.prompt_template_container)
+        self.gridLayout_17.setObjectName(u"gridLayout_17")
+        self.gridLayout_17.setHorizontalSpacing(0)
+        self.gridLayout_17.setVerticalSpacing(10)
+        self.gridLayout_17.setContentsMargins(0, 0, 0, 0)
+
+        self.gridLayout.addWidget(self.prompt_template_container, 0, 0, 1, 1)
+
+        self.verticalSpacer = QSpacerItem(20, 263, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+        self.gridLayout.addItem(self.verticalSpacer, 2, 0, 1, 1)
+
+        self.override_parameters = QGroupBox(self.scrollAreaWidgetContents)
+        self.override_parameters.setObjectName(u"override_parameters")
+        font = QFont()
+        font.setPointSize(9)
+        font.setBold(True)
+        self.override_parameters.setFont(font)
+        self.override_parameters.setCheckable(True)
+        self.override_parameters.setChecked(True)
+        self.gridLayout_12 = QGridLayout(self.override_parameters)
+        self.gridLayout_12.setSpacing(10)
+        self.gridLayout_12.setObjectName(u"gridLayout_12")
+        self.gridLayout_12.setContentsMargins(10, 10, 10, 10)
+        self.widget_19 = QWidget(self.override_parameters)
+        self.widget_19.setObjectName(u"widget_19")
+        self.gridLayout_2 = QGridLayout(self.widget_19)
+        self.gridLayout_2.setObjectName(u"gridLayout_2")
+        self.gridLayout_2.setHorizontalSpacing(10)
+        self.gridLayout_2.setVerticalSpacing(0)
+        self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
+        self.seed = QLineEdit(self.widget_19)
+        self.seed.setObjectName(u"seed")
+        self.seed.setMinimumSize(QSize(0, 20))
+
+        self.gridLayout_2.addWidget(self.seed, 0, 0, 1, 1)
+
+        self.random_seed = QCheckBox(self.widget_19)
+        self.random_seed.setObjectName(u"random_seed")
+        self.random_seed.setMinimumSize(QSize(0, 20))
+
+        self.gridLayout_2.addWidget(self.random_seed, 0, 1, 1, 1)
+
+
+        self.gridLayout_12.addWidget(self.widget_19, 6, 0, 1, 1)
+
+        self.horizontalLayout_3 = QHBoxLayout()
+        self.horizontalLayout_3.setSpacing(10)
+        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
+        self.length_penalty = SliderWidget(self.override_parameters)
+        self.length_penalty.setObjectName(u"length_penalty")
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.length_penalty.sizePolicy().hasHeightForWidth())
+        self.length_penalty.setSizePolicy(sizePolicy)
+        self.length_penalty.setMinimumSize(QSize(0, 0))
+        self.length_penalty.setProperty(u"slider_minimum", -100)
+        self.length_penalty.setProperty(u"slider_maximum", 1000)
+        self.length_penalty.setProperty(u"spinbox_minimum", 0.000000000000000)
+        self.length_penalty.setProperty(u"spinbox_maximum", 1.000000000000000)
+        self.length_penalty.setProperty(u"display_as_float", True)
+        self.length_penalty.setProperty(u"slider_single_step", 1)
+        self.length_penalty.setProperty(u"slider_page_step", 10)
+        self.length_penalty.setProperty(u"spinbox_single_step", 0.010000000000000)
+        self.length_penalty.setProperty(u"spinbox_page_step", 0.100000000000000)
+
+        self.horizontalLayout_3.addWidget(self.length_penalty)
+
+        self.num_beams = SliderWidget(self.override_parameters)
+        self.num_beams.setObjectName(u"num_beams")
+        sizePolicy.setHeightForWidth(self.num_beams.sizePolicy().hasHeightForWidth())
+        self.num_beams.setSizePolicy(sizePolicy)
+        self.num_beams.setMinimumSize(QSize(0, 0))
+        self.num_beams.setProperty(u"slider_minimum", 1)
+        self.num_beams.setProperty(u"slider_maximum", 100)
+        self.num_beams.setProperty(u"spinbox_minimum", 0.000000000000000)
+        self.num_beams.setProperty(u"spinbox_maximum", 100.000000000000000)
+        self.num_beams.setProperty(u"display_as_float", False)
+        self.num_beams.setProperty(u"slider_single_step", 1)
+        self.num_beams.setProperty(u"slider_page_step", 10)
+        self.num_beams.setProperty(u"spinbox_single_step", 0.010000000000000)
+        self.num_beams.setProperty(u"spinbox_page_step", 0.100000000000000)
+
+        self.horizontalLayout_3.addWidget(self.num_beams)
+
+
+        self.gridLayout_12.addLayout(self.horizontalLayout_3, 3, 0, 1, 1)
+
+        self.horizontalLayout = QHBoxLayout()
+        self.horizontalLayout.setSpacing(10)
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.horizontalLayout.setSizeConstraint(QLayout.SizeConstraint.SetDefaultConstraint)
+        self.top_p = SliderWidget(self.override_parameters)
+        self.top_p.setObjectName(u"top_p")
+        sizePolicy.setHeightForWidth(self.top_p.sizePolicy().hasHeightForWidth())
+        self.top_p.setSizePolicy(sizePolicy)
+        self.top_p.setMinimumSize(QSize(0, 0))
+        self.top_p.setProperty(u"slider_minimum", 1)
+        self.top_p.setProperty(u"slider_maximum", 1000)
+        self.top_p.setProperty(u"spinbox_minimum", 0.000000000000000)
+        self.top_p.setProperty(u"spinbox_maximum", 1.000000000000000)
+        self.top_p.setProperty(u"display_as_float", True)
+        self.top_p.setProperty(u"slider_single_step", 1)
+        self.top_p.setProperty(u"slider_page_step", 10)
+        self.top_p.setProperty(u"spinbox_single_step", 0.010000000000000)
+        self.top_p.setProperty(u"spinbox_page_step", 0.100000000000000)
+
+        self.horizontalLayout.addWidget(self.top_p)
+
+        self.max_new_tokens = SliderWidget(self.override_parameters)
+        self.max_new_tokens.setObjectName(u"max_new_tokens")
+        sizePolicy.setHeightForWidth(self.max_new_tokens.sizePolicy().hasHeightForWidth())
+        self.max_new_tokens.setSizePolicy(sizePolicy)
+        self.max_new_tokens.setMinimumSize(QSize(0, 0))
+        self.max_new_tokens.setProperty(u"slider_minimum", 1)
+        self.max_new_tokens.setProperty(u"slider_maximum", 2556)
+        self.max_new_tokens.setProperty(u"spinbox_minimum", 1.000000000000000)
+        self.max_new_tokens.setProperty(u"spinbox_maximum", 2556.000000000000000)
+        self.max_new_tokens.setProperty(u"display_as_float", False)
+        self.max_new_tokens.setProperty(u"slider_single_step", 1)
+        self.max_new_tokens.setProperty(u"slider_page_step", 2556)
+        self.max_new_tokens.setProperty(u"spinbox_single_step", 1)
+        self.max_new_tokens.setProperty(u"spinbox_page_step", 2556)
+
+        self.horizontalLayout.addWidget(self.max_new_tokens)
+
+
+        self.gridLayout_12.addLayout(self.horizontalLayout, 0, 0, 1, 1)
+
+        self.line = QFrame(self.override_parameters)
+        self.line.setObjectName(u"line")
+        self.line.setFrameShape(QFrame.Shape.HLine)
+        self.line.setFrameShadow(QFrame.Shadow.Sunken)
+
+        self.gridLayout_12.addWidget(self.line, 9, 0, 1, 1)
+
+        self.horizontalLayout_6 = QHBoxLayout()
+        self.horizontalLayout_6.setSpacing(10)
+        self.horizontalLayout_6.setObjectName(u"horizontalLayout_6")
+        self.sequences = SliderWidget(self.override_parameters)
+        self.sequences.setObjectName(u"sequences")
+        sizePolicy.setHeightForWidth(self.sequences.sizePolicy().hasHeightForWidth())
+        self.sequences.setSizePolicy(sizePolicy)
+        self.sequences.setMinimumSize(QSize(0, 0))
+        self.sequences.setProperty(u"slider_minimum", 1)
+        self.sequences.setProperty(u"slider_maximum", 100)
+        self.sequences.setProperty(u"spinbox_minimum", 0.000000000000000)
+        self.sequences.setProperty(u"spinbox_maximum", 100.000000000000000)
+        self.sequences.setProperty(u"display_as_float", False)
+        self.sequences.setProperty(u"slider_single_step", 1)
+        self.sequences.setProperty(u"slider_page_step", 10)
+        self.sequences.setProperty(u"spinbox_single_step", 0.010000000000000)
+        self.sequences.setProperty(u"spinbox_page_step", 0.100000000000000)
+
+        self.horizontalLayout_6.addWidget(self.sequences)
+
+        self.top_k = SliderWidget(self.override_parameters)
+        self.top_k.setObjectName(u"top_k")
+        sizePolicy.setHeightForWidth(self.top_k.sizePolicy().hasHeightForWidth())
+        self.top_k.setSizePolicy(sizePolicy)
+        self.top_k.setMinimumSize(QSize(0, 0))
+        self.top_k.setProperty(u"slider_minimum", 0)
+        self.top_k.setProperty(u"slider_maximum", 256)
+        self.top_k.setProperty(u"spinbox_minimum", 0.000000000000000)
+        self.top_k.setProperty(u"spinbox_maximum", 256.000000000000000)
+        self.top_k.setProperty(u"display_as_float", False)
+        self.top_k.setProperty(u"slider_single_step", 1)
+        self.top_k.setProperty(u"slider_page_step", 10)
+        self.top_k.setProperty(u"spinbox_single_step", 1)
+        self.top_k.setProperty(u"spinbox_page_step", 10)
+
+        self.horizontalLayout_6.addWidget(self.top_k)
+
+
+        self.gridLayout_12.addLayout(self.horizontalLayout_6, 5, 0, 1, 1)
+
+        self.horizontalLayout_5 = QHBoxLayout()
+        self.horizontalLayout_5.setSpacing(10)
+        self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
+        self.ngram_size = SliderWidget(self.override_parameters)
+        self.ngram_size.setObjectName(u"ngram_size")
+        sizePolicy.setHeightForWidth(self.ngram_size.sizePolicy().hasHeightForWidth())
+        self.ngram_size.setSizePolicy(sizePolicy)
+        self.ngram_size.setMinimumSize(QSize(0, 0))
+        self.ngram_size.setProperty(u"slider_minimum", 0)
+        self.ngram_size.setProperty(u"slider_maximum", 20)
+        self.ngram_size.setProperty(u"spinbox_minimum", 0.000000000000000)
+        self.ngram_size.setProperty(u"spinbox_maximum", 20.000000000000000)
+        self.ngram_size.setProperty(u"display_as_float", False)
+        self.ngram_size.setProperty(u"slider_single_step", 1)
+        self.ngram_size.setProperty(u"slider_page_step", 1)
+        self.ngram_size.setProperty(u"spinbox_single_step", 1.000000000000000)
+        self.ngram_size.setProperty(u"spinbox_page_step", 1.000000000000000)
+
+        self.horizontalLayout_5.addWidget(self.ngram_size)
+
+        self.temperature = SliderWidget(self.override_parameters)
+        self.temperature.setObjectName(u"temperature")
+        sizePolicy.setHeightForWidth(self.temperature.sizePolicy().hasHeightForWidth())
+        self.temperature.setSizePolicy(sizePolicy)
+        self.temperature.setMinimumSize(QSize(0, 0))
+        self.temperature.setProperty(u"slider_minimum", 1)
+        self.temperature.setProperty(u"slider_maximum", 10000)
+        self.temperature.setProperty(u"spinbox_minimum", 0.000100000000000)
+        self.temperature.setProperty(u"spinbox_maximum", 1.000000000000000)
+        self.temperature.setProperty(u"display_as_float", True)
+        self.temperature.setProperty(u"slider_single_step", 1)
+        self.temperature.setProperty(u"slider_page_step", 10)
+        self.temperature.setProperty(u"spinbox_single_step", 0.010000000000000)
+        self.temperature.setProperty(u"spinbox_page_step", 0.100000000000000)
+
+        self.horizontalLayout_5.addWidget(self.temperature)
+
+
+        self.gridLayout_12.addLayout(self.horizontalLayout_5, 4, 0, 1, 1)
+
+        self.gridLayout_3 = QGridLayout()
+        self.gridLayout_3.setObjectName(u"gridLayout_3")
+        self.gridLayout_3.setHorizontalSpacing(0)
+        self.gridLayout_3.setVerticalSpacing(10)
+        self.early_stopping = QCheckBox(self.override_parameters)
+        self.early_stopping.setObjectName(u"early_stopping")
+
+        self.gridLayout_3.addWidget(self.early_stopping, 0, 0, 1, 1)
+
+        self.use_cache = QCheckBox(self.override_parameters)
+        self.use_cache.setObjectName(u"use_cache")
+
+        self.gridLayout_3.addWidget(self.use_cache, 0, 2, 1, 1)
+
+        self.do_sample = QCheckBox(self.override_parameters)
+        self.do_sample.setObjectName(u"do_sample")
+
+        self.gridLayout_3.addWidget(self.do_sample, 0, 1, 1, 1)
+
+
+        self.gridLayout_12.addLayout(self.gridLayout_3, 8, 0, 1, 1)
+
+        self.gridLayout_mode_routing = QGridLayout()
+        self.gridLayout_mode_routing.setObjectName(u"gridLayout_mode_routing")
+        self.gridLayout_mode_routing.setHorizontalSpacing(0)
+        self.gridLayout_mode_routing.setVerticalSpacing(10)
+        self.use_mode_routing = QCheckBox(self.override_parameters)
+        self.use_mode_routing.setObjectName(u"use_mode_routing")
+
+        self.gridLayout_mode_routing.addWidget(self.use_mode_routing, 0, 0, 1, 1)
+
+        self.enable_trajectory_logging = QCheckBox(self.override_parameters)
+        self.enable_trajectory_logging.setObjectName(u"enable_trajectory_logging")
+
+        self.gridLayout_mode_routing.addWidget(self.enable_trajectory_logging, 0, 1, 1, 1)
+
+        self.horizontalLayout_mode_override = QHBoxLayout()
+        self.horizontalLayout_mode_override.setObjectName(u"horizontalLayout_mode_override")
+        self.label_mode_override = QLabel(self.override_parameters)
+        self.label_mode_override.setObjectName(u"label_mode_override")
+
+        self.horizontalLayout_mode_override.addWidget(self.label_mode_override)
+
+        self.mode_override = QComboBox(self.override_parameters)
+        self.mode_override.addItem("")
+        self.mode_override.addItem("")
+        self.mode_override.addItem("")
+        self.mode_override.addItem("")
+        self.mode_override.addItem("")
+        self.mode_override.addItem("")
+        self.mode_override.setObjectName(u"mode_override")
+
+        self.horizontalLayout_mode_override.addWidget(self.mode_override)
+
+        self.horizontalSpacer_mode = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_mode_override.addItem(self.horizontalSpacer_mode)
+
+
+        self.gridLayout_mode_routing.addLayout(self.horizontalLayout_mode_override, 1, 0, 1, 2)
+
+
+        self.gridLayout_12.addLayout(self.gridLayout_mode_routing, 9, 0, 1, 1)
+
+        self.pushButton = QPushButton(self.override_parameters)
+        self.pushButton.setObjectName(u"pushButton")
+        font1 = QFont()
+        font1.setPointSize(9)
+        font1.setBold(False)
+        self.pushButton.setFont(font1)
+
+        self.gridLayout_12.addWidget(self.pushButton, 11, 0, 1, 1)
+
+        self.horizontalLayout_2 = QHBoxLayout()
+        self.horizontalLayout_2.setSpacing(10)
+        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
+        self.repetition_penalty = SliderWidget(self.override_parameters)
+        self.repetition_penalty.setObjectName(u"repetition_penalty")
+        sizePolicy.setHeightForWidth(self.repetition_penalty.sizePolicy().hasHeightForWidth())
+        self.repetition_penalty.setSizePolicy(sizePolicy)
+        self.repetition_penalty.setMinimumSize(QSize(0, 0))
+        self.repetition_penalty.setProperty(u"slider_minimum", 1)
+        self.repetition_penalty.setProperty(u"slider_maximum", 10000)
+        self.repetition_penalty.setProperty(u"spinbox_minimum", 0.010000000000000)
+        self.repetition_penalty.setProperty(u"spinbox_maximum", 100.000000000000000)
+        self.repetition_penalty.setProperty(u"display_as_float", True)
+        self.repetition_penalty.setProperty(u"slider_single_step", 0)
+        self.repetition_penalty.setProperty(u"slider_page_step", 1)
+        self.repetition_penalty.setProperty(u"spinbox_single_step", 1.000000000000000)
+        self.repetition_penalty.setProperty(u"spinbox_page_step", 10.000000000000000)
+
+        self.horizontalLayout_2.addWidget(self.repetition_penalty)
+
+        self.min_length = SliderWidget(self.override_parameters)
+        self.min_length.setObjectName(u"min_length")
+        sizePolicy.setHeightForWidth(self.min_length.sizePolicy().hasHeightForWidth())
+        self.min_length.setSizePolicy(sizePolicy)
+        self.min_length.setMinimumSize(QSize(0, 0))
+        self.min_length.setProperty(u"slider_minimum", 1)
+        self.min_length.setProperty(u"slider_maximum", 2556)
+        self.min_length.setProperty(u"spinbox_minimum", 1.000000000000000)
+        self.min_length.setProperty(u"spinbox_maximum", 2556.000000000000000)
+        self.min_length.setProperty(u"display_as_float", False)
+        self.min_length.setProperty(u"slider_single_step", 1)
+        self.min_length.setProperty(u"slider_page_step", 2556)
+        self.min_length.setProperty(u"spinbox_single_step", 1)
+        self.min_length.setProperty(u"spinbox_page_step", 2556)
+
+        self.horizontalLayout_2.addWidget(self.min_length)
+
+
+        self.gridLayout_12.addLayout(self.horizontalLayout_2, 2, 0, 1, 1)
+
+
+        self.gridLayout.addWidget(self.override_parameters, 1, 0, 1, 1)
+
+        self.scrollArea.setWidget(self.scrollAreaWidgetContents)
+
+        self.gridLayout_4.addWidget(self.scrollArea, 4, 0, 1, 1)
+
+        self.label_2 = QLabel(llm_settings_widget)
+        self.label_2.setObjectName(u"label_2")
+        font2 = QFont()
+        font2.setPointSize(11)
+        font2.setBold(True)
+        self.label_2.setFont(font2)
+
+        self.gridLayout_4.addWidget(self.label_2, 0, 0, 1, 1)
+
+        self.line_2 = QFrame(llm_settings_widget)
+        self.line_2.setObjectName(u"line_2")
+        self.line_2.setFrameShape(QFrame.Shape.HLine)
+        self.line_2.setFrameShadow(QFrame.Shadow.Sunken)
+
+        self.gridLayout_4.addWidget(self.line_2, 1, 0, 1, 1)
+
+        self.groupBox = QGroupBox(llm_settings_widget)
+        self.groupBox.setObjectName(u"groupBox")
+        font3 = QFont()
+        font3.setPointSize(10)
+        font3.setBold(True)
+        self.groupBox.setFont(font3)
+        self.verticalLayout = QVBoxLayout(self.groupBox)
+        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.verticalLayout.setContentsMargins(9, 9, 9, 9)
+        self.model_service = QComboBox(self.groupBox)
+        self.model_service.setObjectName(u"model_service")
+
+        self.verticalLayout.addWidget(self.model_service)
+
+
+        self.gridLayout_4.addWidget(self.groupBox, 2, 0, 1, 1)
+
+        self.model_selection_group = QGroupBox(llm_settings_widget)
+        self.model_selection_group.setObjectName(u"model_selection_group")
+        self.model_selection_group.setFont(font3)
+        self.verticalLayout_2 = QVBoxLayout(self.model_selection_group)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.verticalLayout_2.setContentsMargins(9, 9, 9, 9)
+        self.model_dropdown = QComboBox(self.model_selection_group)
+        self.model_dropdown.setObjectName(u"model_dropdown")
+        self.model_dropdown.setEditable(True)
+
+        self.verticalLayout_2.addWidget(self.model_dropdown)
+
+        self.model_path = QLineEdit(self.model_selection_group)
+        self.model_path.setObjectName(u"model_path")
+
+        self.verticalLayout_2.addWidget(self.model_path)
+
+        self.quantization_layout = QVBoxLayout()
+        self.quantization_layout.setObjectName(u"quantization_layout")
+        self.quantization_label = QLabel(self.model_selection_group)
+        self.quantization_label.setObjectName(u"quantization_label")
+        self.quantization_label.setFont(font1)
+
+        self.quantization_layout.addWidget(self.quantization_label)
+
+        self.quantization_dropdown = QComboBox(self.model_selection_group)
+        self.quantization_dropdown.addItem("")
+        self.quantization_dropdown.addItem("")
+        self.quantization_dropdown.addItem("")
+        self.quantization_dropdown.addItem("")
+        self.quantization_dropdown.setObjectName(u"quantization_dropdown")
+        self.quantization_dropdown.setEnabled(False)
+        self.quantization_dropdown.setFont(font1)
+
+        self.quantization_layout.addWidget(self.quantization_dropdown)
+
+
+        self.verticalLayout_2.addLayout(self.quantization_layout)
+
+        self.model_info_label = QLabel(self.model_selection_group)
+        self.model_info_label.setObjectName(u"model_info_label")
+        font4 = QFont()
+        font4.setPointSize(9)
+        font4.setBold(False)
+        font4.setItalic(True)
+        self.model_info_label.setFont(font4)
+        self.model_info_label.setWordWrap(True)
+
+        self.verticalLayout_2.addWidget(self.model_info_label)
+
+        self.download_model_button = QPushButton(self.model_selection_group)
+        self.download_model_button.setObjectName(u"download_model_button")
+        self.download_model_button.setEnabled(False)
+
+        self.verticalLayout_2.addWidget(self.download_model_button)
+
+        self.start_quantize_button = QPushButton(self.model_selection_group)
+        self.start_quantize_button.setObjectName(u"start_quantize_button")
+        self.start_quantize_button.setEnabled(False)
+
+        self.verticalLayout_2.addWidget(self.start_quantize_button)
+
+        self.delete_buttons_layout = QHBoxLayout()
+        self.delete_buttons_layout.setObjectName(u"delete_buttons_layout")
+        self.delete_safetensors_button = QPushButton(self.model_selection_group)
+        self.delete_safetensors_button.setObjectName(u"delete_safetensors_button")
+        self.delete_safetensors_button.setEnabled(False)
+
+        self.delete_buttons_layout.addWidget(self.delete_safetensors_button)
+
+        self.delete_quantized_button = QPushButton(self.model_selection_group)
+        self.delete_quantized_button.setObjectName(u"delete_quantized_button")
+        self.delete_quantized_button.setEnabled(False)
+
+        self.delete_buttons_layout.addWidget(self.delete_quantized_button)
+
+
+        self.verticalLayout_2.addLayout(self.delete_buttons_layout)
+
+
+        self.gridLayout_4.addWidget(self.model_selection_group, 3, 0, 1, 1)
+
+        self.adapters_group = QGroupBox(llm_settings_widget)
+        self.adapters_group.setObjectName(u"adapters_group")
+        self.adapters_group.setFont(font3)
+        self.verticalLayout_3 = QVBoxLayout(self.adapters_group)
+        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.verticalLayout_3.setContentsMargins(9, 9, 9, 9)
+        self.adapters_table = QTableWidget(self.adapters_group)
+        if (self.adapters_table.columnCount() < 3):
+            self.adapters_table.setColumnCount(3)
+        __qtablewidgetitem = QTableWidgetItem()
+        self.adapters_table.setHorizontalHeaderItem(0, __qtablewidgetitem)
+        __qtablewidgetitem1 = QTableWidgetItem()
+        self.adapters_table.setHorizontalHeaderItem(1, __qtablewidgetitem1)
+        __qtablewidgetitem2 = QTableWidgetItem()
+        self.adapters_table.setHorizontalHeaderItem(2, __qtablewidgetitem2)
+        self.adapters_table.setObjectName(u"adapters_table")
+        self.adapters_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.adapters_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.adapters_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+
+        self.verticalLayout_3.addWidget(self.adapters_table)
+
+        self.refresh_adapters_button = QPushButton(self.adapters_group)
+        self.refresh_adapters_button.setObjectName(u"refresh_adapters_button")
+
+        self.verticalLayout_3.addWidget(self.refresh_adapters_button)
+
+
+        self.gridLayout_4.addWidget(self.adapters_group, 5, 0, 1, 1)
+
+        QWidget.setTabOrder(self.seed, self.random_seed)
+
+        self.retranslateUi(llm_settings_widget)
+        self.override_parameters.toggled.connect(llm_settings_widget.override_parameters_toggled)
+        self.early_stopping.toggled.connect(llm_settings_widget.early_stopping_toggled)
+        self.pushButton.clicked.connect(llm_settings_widget.reset_settings_to_default_clicked)
+        self.do_sample.toggled.connect(llm_settings_widget.do_sample_toggled)
+        self.use_cache.clicked["bool"].connect(llm_settings_widget.toggle_use_cache)
+        self.quantization_dropdown.currentIndexChanged.connect(llm_settings_widget.on_quantization_changed)
+
+        QMetaObject.connectSlotsByName(llm_settings_widget)
+    # setupUi
+
+    def retranslateUi(self, llm_settings_widget):
+        llm_settings_widget.setWindowTitle(QCoreApplication.translate("llm_settings_widget", u"Form", None))
+        self.override_parameters.setTitle(QCoreApplication.translate("llm_settings_widget", u"Override Prameters", None))
+        self.random_seed.setText(QCoreApplication.translate("llm_settings_widget", u"Random seed", None))
+        self.length_penalty.setProperty(u"settings_property", QCoreApplication.translate("llm_settings_widget", u"llm_generator_settings.length_penalty", None))
+        self.length_penalty.setProperty(u"label_text", QCoreApplication.translate("llm_settings_widget", u"Length Penalty", None))
+        self.num_beams.setProperty(u"settings_property", QCoreApplication.translate("llm_settings_widget", u"llm_generator_settings.num_beams", None))
+        self.num_beams.setProperty(u"label_text", QCoreApplication.translate("llm_settings_widget", u"Num Beams", None))
+        self.top_p.setProperty(u"settings_property", QCoreApplication.translate("llm_settings_widget", u"llm_generator_settings.top_p", None))
+        self.top_p.setProperty(u"label_text", QCoreApplication.translate("llm_settings_widget", u"Top P", None))
+        self.max_new_tokens.setProperty(u"settings_property", QCoreApplication.translate("llm_settings_widget", u"llm_generator_settings.max_new_tokens", None))
+        self.max_new_tokens.setProperty(u"label_text", QCoreApplication.translate("llm_settings_widget", u"Max New Tokens", None))
+        self.sequences.setProperty(u"settings_property", QCoreApplication.translate("llm_settings_widget", u"llm_generator_settings.sequences", None))
+        self.sequences.setProperty(u"label_text", QCoreApplication.translate("llm_settings_widget", u"Sequences", None))
+        self.top_k.setProperty(u"settings_property", QCoreApplication.translate("llm_settings_widget", u"llm_generator_settings.top_k", None))
+        self.top_k.setProperty(u"label_text", QCoreApplication.translate("llm_settings_widget", u"Top K", None))
+        self.ngram_size.setProperty(u"settings_property", QCoreApplication.translate("llm_settings_widget", u"llm_generator_settings.ngram_size", None))
+        self.ngram_size.setProperty(u"label_text", QCoreApplication.translate("llm_settings_widget", u"Ngram Size", None))
+        self.temperature.setProperty(u"settings_property", QCoreApplication.translate("llm_settings_widget", u"llm_generator_settings.temperature", None))
+        self.temperature.setProperty(u"label_text", QCoreApplication.translate("llm_settings_widget", u"Temperature", None))
+        self.early_stopping.setText(QCoreApplication.translate("llm_settings_widget", u"Early stopping", None))
+        self.use_cache.setText(QCoreApplication.translate("llm_settings_widget", u"Use Cache", None))
+        self.do_sample.setText(QCoreApplication.translate("llm_settings_widget", u"Do sample", None))
+        self.use_mode_routing.setText(QCoreApplication.translate("llm_settings_widget", u"Enable Mode-Based Routing", None))
+#if QT_CONFIG(tooltip)
+        self.use_mode_routing.setToolTip(QCoreApplication.translate("llm_settings_widget", u"Use specialized agents for author, code, research, and QA tasks", None))
+#endif // QT_CONFIG(tooltip)
+        self.enable_trajectory_logging.setText(QCoreApplication.translate("llm_settings_widget", u"Log Trajectories (Debug)", None))
+#if QT_CONFIG(tooltip)
+        self.enable_trajectory_logging.setToolTip(QCoreApplication.translate("llm_settings_widget", u"Enable detailed logging of agent trajectories for debugging", None))
+#endif // QT_CONFIG(tooltip)
+        self.label_mode_override.setText(QCoreApplication.translate("llm_settings_widget", u"Force Mode:", None))
+        self.mode_override.setItemText(0, QCoreApplication.translate("llm_settings_widget", u"Auto (Default)", None))
+        self.mode_override.setItemText(1, QCoreApplication.translate("llm_settings_widget", u"Author", None))
+        self.mode_override.setItemText(2, QCoreApplication.translate("llm_settings_widget", u"Code", None))
+        self.mode_override.setItemText(3, QCoreApplication.translate("llm_settings_widget", u"Research", None))
+        self.mode_override.setItemText(4, QCoreApplication.translate("llm_settings_widget", u"QA", None))
+        self.mode_override.setItemText(5, QCoreApplication.translate("llm_settings_widget", u"General", None))
+
+#if QT_CONFIG(tooltip)
+        self.mode_override.setToolTip(QCoreApplication.translate("llm_settings_widget", u"Override automatic mode detection (leave empty for automatic)", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton.setText(QCoreApplication.translate("llm_settings_widget", u"Reset Settings to Default", None))
+        self.repetition_penalty.setProperty(u"settings_property", QCoreApplication.translate("llm_settings_widget", u"llm_generator_settings.repetition_penalty", None))
+        self.repetition_penalty.setProperty(u"label_text", QCoreApplication.translate("llm_settings_widget", u"Repetition Penalty", None))
+        self.min_length.setProperty(u"settings_property", QCoreApplication.translate("llm_settings_widget", u"llm_generator_settings.min_length", None))
+        self.min_length.setProperty(u"label_text", QCoreApplication.translate("llm_settings_widget", u"Min Length", None))
+        self.label_2.setText(QCoreApplication.translate("llm_settings_widget", u"LLM Settings", None))
+        self.groupBox.setTitle(QCoreApplication.translate("llm_settings_widget", u"Provider", None))
+        self.model_selection_group.setTitle(QCoreApplication.translate("llm_settings_widget", u"Model", None))
+        self.model_path.setPlaceholderText(QCoreApplication.translate("llm_settings_widget", u"Model path or identifier", None))
+        self.quantization_label.setText(QCoreApplication.translate("llm_settings_widget", u"Quantization:", None))
+        self.quantization_dropdown.setItemText(0, QCoreApplication.translate("llm_settings_widget", u"2-bit (50% VRAM, -15% quality)", None))
+        self.quantization_dropdown.setItemText(1, QCoreApplication.translate("llm_settings_widget", u"4-bit (balanced, recommended)", None))
+        self.quantization_dropdown.setItemText(2, QCoreApplication.translate("llm_settings_widget", u"8-bit (200% VRAM, best quality)", None))
+        self.quantization_dropdown.setItemText(3, QCoreApplication.translate("llm_settings_widget", u"GGUF Q4_K_M (smallest, fastest)", None))
+
+        self.model_info_label.setText(QCoreApplication.translate("llm_settings_widget", u"VRAM: -- GB | Context: -- tokens | Tool Calling: --", None))
+        self.download_model_button.setText(QCoreApplication.translate("llm_settings_widget", u"Download Model from HuggingFace", None))
+        self.start_quantize_button.setText(QCoreApplication.translate("llm_settings_widget", u"Start Manual Quantization", None))
+#if QT_CONFIG(tooltip)
+        self.start_quantize_button.setToolTip(QCoreApplication.translate("llm_settings_widget", u"Manually quantize model to disk (creates separate files). Automatic quantization during loading is recommended instead.", None))
+#endif // QT_CONFIG(tooltip)
+        self.delete_safetensors_button.setText(QCoreApplication.translate("llm_settings_widget", u"Delete Original Files", None))
+        self.delete_quantized_button.setText(QCoreApplication.translate("llm_settings_widget", u"Delete Quantized", None))
+        self.adapters_group.setTitle(QCoreApplication.translate("llm_settings_widget", u"LoRA Adapters", None))
+        ___qtablewidgetitem = self.adapters_table.horizontalHeaderItem(0)
+        ___qtablewidgetitem.setText(QCoreApplication.translate("llm_settings_widget", u"Enabled", None));
+        ___qtablewidgetitem1 = self.adapters_table.horizontalHeaderItem(1)
+        ___qtablewidgetitem1.setText(QCoreApplication.translate("llm_settings_widget", u"Adapter Name", None));
+        ___qtablewidgetitem2 = self.adapters_table.horizontalHeaderItem(2)
+        ___qtablewidgetitem2.setText(QCoreApplication.translate("llm_settings_widget", u"Path", None));
+        self.refresh_adapters_button.setText(QCoreApplication.translate("llm_settings_widget", u"Refresh Adapters", None))
+    # retranslateUi
+
