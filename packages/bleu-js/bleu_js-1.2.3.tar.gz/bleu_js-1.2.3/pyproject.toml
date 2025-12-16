@@ -1,0 +1,199 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "bleu-js"
+version = "1.2.3"
+description = "Advanced AI and Quantum Computing Framework"
+authors = ["Bleujs Team <support@helloblue.ai>"]
+readme = "README.md"
+license = "MIT"
+packages = [{include = "bleujs", from = "src"}]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Quantum Computing",
+]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+# Core AI/ML - Fixed versions for compatibility
+numpy = "^2.2.6"
+pandas = "^2.0.0"
+scikit-learn = "^1.2.2"
+
+# Web Framework - Pinned for stability
+fastapi = "^0.116.1"
+uvicorn = "0.27.1"
+pydantic = {extras = ["email"], version = "^2.7.0"}
+
+# Security - Fixed versions
+urllib3 = "^2.2.3"
+requests = "^2.32.4"
+cryptography = "^45.0.6"  # Updated to fix OpenSSL vulnerability (Issue #299)
+setuptools = "^78.1.1"
+
+# Database - Pinned versions
+sqlalchemy = "2.0.44"
+alembic = "1.13.1"
+psycopg2-binary = "2.9.11"
+
+# AWS
+boto3 = "^1.24.0"
+
+# Utilities
+python-dotenv = "^0.21.0"
+httpx = "^0.28.1"
+aiohttp = "^3.12.14"
+aiofiles = "^24.1.0"
+h11 = "0.16.0"
+sparse = "^0.17.0"
+pydantic-settings = "^2.10.1"
+pyjwt = "^2.10.1"
+prometheus-client = "^0.23.1"
+xgboost = "^3.0.2"
+python-jose = {extras = ["cryptography"], version = "^3.5.0"}  # Use cryptography backend to avoid ecdsa dependency
+passlib = "^1.7.4"
+redis = "^6.2.0"
+python-multipart = "^0.0.20"
+jinja2 = "^3.1.6"
+gputil = "^1.4.0"
+psutil = "^7.0.0"
+torch = "^2.7.1"
+shap = "^0.48.0"
+pennylane = "^0.42.1"
+qiskit = "^2.1.1"
+qiskit-algorithms = "^0.3.0"
+optuna = "^4.4.0"
+opentelemetry-api = "^1.35.0"
+opentelemetry-sdk = "^1.35.0"
+ray = ">=2.9.0"
+qiskit-aer = "^0.17.1"
+tensorflow = "^2.19.0"
+# ecdsa removed - not used in source code and has unfixed Minerva timing attack vulnerability (Issue #295)
+# Use cryptography library for ECDSA operations if needed
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^9.0.2"
+pytest-cov = "^4.0.0"
+pytest-asyncio = "^0.21.0"
+black = "^25.1.0"
+isort = "^5.0.0"
+flake8 = "^4.0.0"
+mypy = "^0.900"
+pre-commit = "^2.0.0"
+ruff = "^0.14.8"
+bandit = "^1.7.0"
+types-pyyaml = "^6.0.12.20250516"
+types-aiofiles = "^25.1.0.20251011"
+
+[tool.poetry.scripts]
+bleu-js = "src.bleujs.cli:main"
+
+[tool.black]
+line-length = 88
+target-version = ['py310']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--cov=src",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+]
+
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.bandit]
+exclude_dirs = ["tests", "venv", ".venv"]
+skips = ["B101", "B601"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+]
+ignore = [
+    "E501",  # line too long, handled by black
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
