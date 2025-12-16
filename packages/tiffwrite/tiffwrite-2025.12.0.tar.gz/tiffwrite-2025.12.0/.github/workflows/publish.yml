@@ -1,0 +1,178 @@
+name: Publish
+
+on: [push, pull_request, workflow_call]
+
+permissions:
+  contents: read
+
+jobs:
+  publish_pytest:
+    uses: ./.github/workflows/pytest.yml
+  linux:
+    needs: [ publish_pytest ]
+    runs-on: ${{ matrix.platform.runner }}
+    strategy:
+      matrix:
+        platform:
+          - runner: ubuntu-latest
+            target: x86_64
+          - runner: ubuntu-latest
+            target: x86
+          - runner: ubuntu-latest
+            target: aarch64
+          - runner: ubuntu-latest
+            target: armv7
+          - runner: ubuntu-latest
+            target: s390x
+          - runner: ubuntu-latest
+            target: ppc64le
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.platform.target }}
+          args: --release --out dist
+          sccache: 'true'
+          manylinux: auto
+      - name: Upload wheels
+        uses: actions/upload-artifact@v6
+        with:
+          name: wheels-linux-${{ matrix.platform.target }}
+          path: dist
+
+  windows:
+    needs: [ publish_pytest ]
+    runs-on: ${{ matrix.platform.runner }}
+    strategy:
+      matrix:
+        platform:
+          - runner: windows-latest
+            target: x64
+#          - runner: windows-latest
+#            target: x86
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+          architecture: ${{ matrix.platform.target }}
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.platform.target }}
+          args: --release --out dist
+          sccache: 'true'
+      - name: Upload wheels
+        uses: actions/upload-artifact@v6
+        with:
+          name: wheels-windows-${{ matrix.platform.target }}
+          path: dist
+
+  macos:
+    needs: [ publish_pytest ]
+    runs-on: ${{ matrix.platform.runner }}
+    strategy:
+      matrix:
+        platform:
+          - runner: macos-latest
+            target: x86_64
+          - runner: macos-14
+            target: aarch64
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.platform.target }}
+          args: --release --out dist
+          sccache: 'true'
+      - name: Upload wheels
+        uses: actions/upload-artifact@v6
+        with:
+          name: wheels-macos-${{ matrix.platform.target }}
+          path: dist
+
+  sdist:
+    needs: [ publish_pytest ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build sdist
+        uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: --out dist
+      - name: Upload sdist
+        uses: actions/upload-artifact@v6
+        with:
+          name: wheels-sdist
+          path: dist
+
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    needs: [linux, windows, macos, sdist]
+    steps:
+      - uses: actions/download-artifact@v7
+      - name: Publish to PyPI
+        uses: PyO3/maturin-action@v1
+        env:
+          MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        with:
+          command: upload
+          args: --non-interactive --skip-existing wheels-*/*
+
+  crates_io_publish:
+    name: Publish (crates.io)
+    needs: [ publish_pytest ]
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: cargo-release Cache
+        id: cargo_release_cache
+        uses: actions/cache@v5
+        with:
+          path: ~/.cargo/bin/cargo-release
+          key: ${{ runner.os }}-cargo-release
+
+      - run: cargo install cargo-release
+        if: steps.cargo_release_cache.outputs.cache-hit != 'true'
+
+      - name: cargo login
+        run: cargo login ${{ secrets.CRATES_IO_API_TOKEN }}
+
+      # allow-branch HEAD is because GitHub actions switches
+      # to the tag while building, which is a detached head
+
+      # Publishing is currently messy, because:
+      #
+      # * `peace_rt_model_core` exports `NativeError` or `WebError` depending on the target.
+      # * `peace_rt_model_web` fails to build when publishing the workspace for a native target.
+      # * `peace_rt_model_web` still needs its dependencies to be published before it can be
+      #    published.
+      # * `peace_rt_model_hack` needs `peace_rt_model_web` to be published before it can be
+      #    published.
+      #
+      # We *could* pass through `--no-verify` so `cargo` doesn't build the crate before publishing,
+      # which is reasonable, since this job only runs after the Linux, Windows, and WASM builds
+      # have passed.
+      - name: "cargo release publish"
+        run: |-
+          cargo release \
+            publish \
+            --workspace \
+            --all-features \
+            --allow-branch "main" \
+            --no-confirm \
+            --no-verify \
+            --execute

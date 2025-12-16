@@ -1,0 +1,39 @@
+[package]
+name = "tiffwrite"
+version = "2025.12.0"
+edition = "2024"
+rust-version = "1.85.1"
+authors = ["Wim Pomp <w.pomp@nki.nl>"]
+license = "MIT OR Apache-2.0"
+description = "Write BioFormats/ImageJ compatible tiffs with zstd compression in parallel."
+homepage = "https://github.com/wimpomp/tiffwrite"
+repository = "https://github.com/wimpomp/tiffwrite"
+documentation = "https://docs.rs/tiffwrite"
+readme = "README.md"
+keywords = ["bioformats", "tiff", "ndarray", "zstd", "fiji"]
+categories = ["multimedia::images", "science"]
+
+[lib]
+name = "tiffwrite"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+colorcet = "0.2"
+colorgrad = "0.8"
+chrono = "0.4"
+css-color = "0.2"
+flate2 = "1"
+ndarray = "0.17"
+num = "0.4"
+numpy = { version = "0.27", optional = true }
+rayon = "1"
+thiserror = "2"
+zstd = "0.13"
+
+[dependencies.pyo3]
+version = "0.27"
+features = ["extension-module", "abi3-py310", "generate-import-lib", "anyhow", "multiple-pymethods"]
+optional = true
+
+[features]
+python = ["dep:pyo3", "dep:numpy"]
