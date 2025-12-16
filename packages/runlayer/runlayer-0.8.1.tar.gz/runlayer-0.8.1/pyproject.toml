@@ -1,0 +1,67 @@
+[project]
+name = "runlayer"
+version = "0.8.1"
+description = "A command-line interface for running MCP servers via HTTP transport"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "Runlayer", email = "engineering@runlayer.com" }]
+keywords = ["mcp", "cli", "runlayer", "anysource", "agent", "llm"]
+classifiers = [
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Internet :: WWW/HTTP",
+]
+dependencies = [
+  "fastmcp>=2.12.3",
+  "typer>=0.17.4",
+  "mcp>=1.0.0",
+  "structlog>=25.4.0",
+  "httpx>=0.27.0",
+  "pyyaml>=6.0.0",
+  "docker>=7.0.0",
+  "rich>=13.0.0",
+  "python-dotenv>=1.0.0",
+]
+
+[project.urls]
+Homepage = "https://runlayer.com"
+Documentation = "https://docs.runlayer.com/"
+
+[[tool.uv.index]]
+name = "testpypi"
+url = "https://test.pypi.org/simple/"
+publish-url = "https://test.pypi.org/legacy/"
+explicit = true
+
+[dependency-groups]
+dev = [
+  "pytest<9.0.0,>=8.0.0",
+  "pytest-asyncio>=1",
+  "ty>=0.0.1a13",
+  "ruff<1.0.0,>=0.2.2",
+  "freezegun>=1.5.0",
+]
+
+[project.scripts]
+runlayer = "runlayer_cli.main:cli"
+
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["runlayer_cli"]
+
+[tool.ty.environment]
+python-version = "3.13"
+
+[tool.ty.rules]
+# Downgrade some stricter rules to warnings for gradual migration from mypy
+unknown-argument = "warn"
