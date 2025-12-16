@@ -1,0 +1,129 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kadoa_sdk"
+version = "0.17.4rc1"
+description = "Official Kadoa SDK for Python - Web data extraction and automation"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+authors = [
+    {name = "Kadoa", email = "support@kadoa.com"}
+]
+keywords = ["kadoa", "api", "sdk", "client", "python"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "certifi",
+    "python-dateutil",
+    "python-dotenv",
+    "pydantic",
+    "pydantic-settings",
+    "urllib3",
+    "websockets",
+    "aiohttp",
+    "aiohttp-retry",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "pytest-timeout",
+    "pytest-asyncio",
+    "black",
+    "mypy",
+    "ruff",
+    "pip-audit",
+]
+test = [
+    "pytest",
+    "pytest-cov",
+    "pytest-timeout",
+    "pytest-asyncio",
+]
+
+[project.urls]
+Homepage = "https://github.com/kadoa-org/kadoa-sdks"
+Repository = "https://github.com/kadoa-org/kadoa-sdks.git"
+Documentation = "https://docs.kadoa.com"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["kadoa_sdk*", "openapi_client*"]
+exclude = ["tests*", "kadoa_sdk.tests*"]
+
+[tool.setuptools.package-data]
+kadoa_sdk = ["py.typed"]
+
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+include = ["*.py"]
+exclude = [
+    ".git",
+    "__pycache__",
+    "build",
+    "dist",
+    "*.egg-info",
+    ".venv",
+    "venv",
+    "openapi_client",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short --strict-markers"
+markers = [
+    "e2e: End-to-end tests",
+    "integration: Integration tests",
+    "unit: Unit tests",
+    "timeout: Test timeout in seconds",
+]
+log_cli = true
+log_cli_level = "INFO"
+
+[tool.coverage.run]
+source = ["kadoa_sdk"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__pycache__/*",
+    "*/openapi_client/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
