@@ -1,0 +1,26 @@
+# Invalid: Cube with flipped winding order for the top face
+#usda 1.0
+(
+    metersPerUnit = 1.0
+    upAxis = "Z"
+)
+
+def Xform "World"
+{
+    def Mesh "Cube"
+    {
+        point3f[] points = [(-0.5, -0.5, -0.5), (0.5, -0.5, -0.5), (0.5, 0.5, -0.5), (-0.5, 0.5, -0.5), (-0.5, -0.5, 0.5), (0.5, -0.5, 0.5), (0.5, 0.5, 0.5), (-0.5, 0.5, 0.5)]
+        int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+
+        # Indices for each quad face, CCW by default
+        # Let's flip the winding order for the top face (face 5)
+        int[] faceVertexIndices = [
+            0, 1, 2, 3,      # Bottom (-Z)
+            3, 2, 6, 7,      # Front (+Y)
+            2, 1, 5, 6,      # Right (+X)
+            1, 0, 4, 5,      # Back (-Y)
+            0, 3, 7, 4,      # Left (-X)
+            4, 7, 6, 5       # Top (+Z) -- FLIPPED WINDING
+        ]
+    }
+}
