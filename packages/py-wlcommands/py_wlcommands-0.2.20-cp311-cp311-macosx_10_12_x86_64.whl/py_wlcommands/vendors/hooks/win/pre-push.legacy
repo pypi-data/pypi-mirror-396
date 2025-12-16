@@ -1,0 +1,54 @@
+@echo off
+:: Pre-push hook to prevent direct pushes to main and develop branches
+
+:: Read all input at once
+set "input="
+for /f "tokens=*" %%i in ('findstr /r ".*"') do (
+    set "input=%input% %%i"
+)
+
+:: Extract all lines into an array
+setlocal enabledelayedexpansion
+set "line_count=0"
+for %%a in (%input%) do (
+    set /a line_count+=1
+    set "line[!line_count!]=%%a"
+)
+
+:: Check if we have enough lines
+if %line_count% lss 4 (
+    exit /b 0
+)
+
+:: Extract remote ref (should be in the format refs/heads/*)
+set "remote_ref="
+for /l %%i in (1,1,%line_count%) do (
+    if "!line[%%i]:~0,11!"=="refs/heads/" (
+        set "remote_ref=!line[%%i]!"
+        goto :remote_ref_found
+    )
+)
+
+:remote_ref_found
+:: If no remote ref found, exit
+if "%remote_ref%"=="" (
+    exit /b 0
+)
+
+:: Extract remote branch name
+set "remote_branch=%remote_ref:refs/heads/=%"
+
+:: Check if we're pushing to main or develop
+if "%remote_branch%"=="main" (
+    echo ERROR: Direct pushes to %remote_branch% branch are not allowed.
+    echo Please create a feature/fix branch and submit a Pull Request instead.
+    exit /b 1
+)
+
+if "%remote_branch%"=="develop" (
+    echo ERROR: Direct pushes to %remote_branch% branch are not allowed.
+    echo Please create a feature/fix branch and submit a Pull Request instead.
+    exit /b 1
+)
+
+exit /b 0

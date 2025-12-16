@@ -1,0 +1,6 @@
+class ErrorCode:
+    SUCCESS: int
+    COMMAND_NOT_FOUND: int
+    COMMAND_EXECUTION_FAILED: int
+    INVALID_ARGUMENT: int
+    MISSING_DEPENDENCY: int

@@ -1,0 +1,13 @@
+from ....utils.logging import log_info as log_info
+from .log_manager import performance_monitor as performance_monitor
+from _typeshed import Incomplete
+
+class VenvManager:
+    env: Incomplete
+    def __init__(self, env: dict[str, str]) -> None: ...
+    @performance_monitor
+    def create_venv_windows(self, venv_path: str, python_version: str) -> bool: ...
+    @performance_monitor
+    def create_venv_unix(self, venv_path: str, python_version: str, env: dict[str, str]) -> bool: ...
+    @performance_monitor
+    def sync_environment(self, venv_path: str = '.venv') -> bool: ...

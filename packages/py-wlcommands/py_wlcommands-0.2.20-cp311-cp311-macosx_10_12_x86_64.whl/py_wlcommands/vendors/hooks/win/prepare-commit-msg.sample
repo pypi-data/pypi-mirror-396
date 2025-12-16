@@ -1,0 +1,43 @@
+@echo off
+:: An example hook script to prepare the commit log message for Windows
+:: Called by "git commit" with the name of the file that has the
+:: commit message, followed by the description of the commit
+:: message's source.  The hook's purpose is to edit the commit
+:: message file.  If the hook fails with a non-zero status,
+:: the commit is aborted.
+::
+:: To enable this hook, rename this file to "prepare-commit-msg".
+
+set "COMMIT_MSG_FILE=%1"
+set "COMMIT_SOURCE=%2"
+set "SHA1=%3"
+
+:: This hook removes the "# Please enter the commit message..." help message
+set "temp_file=%COMMIT_MSG_FILE%.bak"
+setlocal enabledelayedexpansion
+set "in_help_section=false"
+
+>"%temp_file%" (
+    for /f "tokens=* delims=^" %%l in ('type "%COMMIT_MSG_FILE%"') do (
+        set "line=%%l"
+        if "!line:~0,2!"=="# " (
+            if "!line:~2,26!"=="Please enter the commit message" (
+                set "in_help_section=true"
+            )
+        )
+
+        if "!line!"=="#" (
+            set "in_help_section=false"
+        )
+
+        if not "!in_help_section!"=="true" (
+            echo(!line!
+        )
+    )
+)
+
+:: Replace the original file with the processed one
+del "%COMMIT_MSG_FILE%"
+rename "%temp_file%" "%COMMIT_MSG_FILE%"
+
+exit /b 0
