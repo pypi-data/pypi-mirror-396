@@ -1,0 +1,69 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fyodoros"
+version = "0.8.0"
+authors = [
+  { name="Kiy-K", email="khoitruong071510@gmail.com" },
+]
+description = "FyodorOS: A Compiled AI Microkernel with Native Desktop Interface"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "openai",
+    "google-generativeai",
+    "anthropic",
+    "gradio",
+    "ddgs",
+    "playwright==1.41.2",
+    "rich",
+    "typer",
+    "requests",
+    "psutil",
+    "cryptography",
+    "argon2-cffi",
+    "docker>=6.0.0",
+    "kubernetes>=28.0.0",
+    "chromadb>=0.4.0",
+    "pytest",
+    "pytest-cov",
+    "pytest-mock",
+    "nuitka",
+    "ordered-set",
+]
+
+[project.scripts]
+fyodor = "fyodoros.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# Include NASM runtime binaries in the package
+[tool.setuptools.package-data]
+fyodoros = [
+    "runtime/nasm/linux-x64/*",
+    "runtime/nasm/darwin-x64/*",
+    "runtime/nasm/darwin-arm64/*",
+    "runtime/nasm/win-x64/*",
+    "extensions/*.so",
+    "extensions/*.dll",
+    "extensions/*.dylib",
+]
+
+# Exclude development and build artifacts
+[tool.setuptools.exclude-package-data]
+"*" = [
+    "*.pyc",
+    "*.pyo",
+    "__pycache__",
+    "*.c",
+    "*.cpp",
+    "*.h",
+]
