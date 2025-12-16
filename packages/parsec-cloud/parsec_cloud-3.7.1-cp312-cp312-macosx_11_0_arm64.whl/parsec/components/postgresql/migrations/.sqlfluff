@@ -1,0 +1,45 @@
+[sqlfluff]
+
+# Supported dialects https://docs.sqlfluff.com/en/stable/dialects.html
+# Or run 'sqlfluff dialects'
+dialect = postgres
+
+# Comma-separated list of rules to exclude when checking SQL files in server.
+# NOTE: this is overriden in `misc/lint_sql.py` when checking SQL in python files.
+# See https://docs.sqlfluff.com/en/stable/configuration/rule_configuration.html
+# exclude_rules =
+
+# The standard max_line_length is 80 in line with the convention of other tools and several style guides.
+# We set it to something a little longer to avoid having to fix lines for the moment.
+# Set to zero or negative to disable checks.
+max_line_length = 120
+
+# Typically we find users rely on syntax highlighting rather than capitalisation to distinguish
+# between keywords and identifiers. Clearly, if your project has already settled on lowercase/uppercase
+# formatting for any of these syntax elements then set them to "lower"/"upper" accordingly.
+# See https://stackoverflow.com/questions/608196/why-should-i-capitalize-my-sql-keywords-is-there-a-good-reason
+[sqlfluff:rules:capitalisation.keywords]
+capitalisation_policy = upper
+[sqlfluff:rules:capitalisation.identifiers]
+extended_capitalisation_policy = lower
+[sqlfluff:rules:capitalisation.functions]
+extended_capitalisation_policy = upper
+[sqlfluff:rules:capitalisation.literals]
+capitalisation_policy = upper
+[sqlfluff:rules:capitalisation.types]
+extended_capitalisation_policy = upper
+
+# Quick context about SQL keywords and identifiers:
+# - Identifiers for table/column can be quoted or unquoted
+# - Keywords can be "reserved" (CANNOT use them as unquoted identifiers) or "non-reserved" (CAN be used as
+#   quoted/unquoted identifiers). The idea behind "non-reserved" keywords is that these are words that
+#   have meaning in some specific SQL contexts.
+#
+# SQLFluff suggests to avoid using (non-reserved) keywords where possible to avoid any misunderstandings.
+# See https://docs.sqlfluff.com/en/stable/reference/rules.html#rule-RF04
+[sqlfluff:rules:references.keywords]
+# In Parsec, the PostgreSQL database already uses some non-reserved keywords for columns identifiers
+# (access, account, configuration, data, index, label, name, role, type, version)
+# Therefore, instead of disabling the policy check with 'none', we set it to 'table_aliases' to warn
+# in case keywords are used as table identifiers.
+unquoted_identifiers_policy = table_aliases

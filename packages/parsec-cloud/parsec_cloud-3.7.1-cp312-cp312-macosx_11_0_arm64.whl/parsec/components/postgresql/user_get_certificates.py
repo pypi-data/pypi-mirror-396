@@ -1,0 +1,384 @@
+# Parsec Cloud (https://parsec.cloud) Copyright (c) BUSL-1.1 2016-present Scille SAS
+from __future__ import annotations
+
+from parsec._parsec import (
+    DateTime,
+    DeviceID,
+    OrganizationID,
+    UserProfile,
+    VlobID,
+)
+from parsec.components.postgresql import AsyncpgConnection
+from parsec.components.postgresql.queries import (
+    AuthNoLockBadOutcome,
+    AuthNoLockData,
+    auth_no_lock,
+)
+from parsec.components.postgresql.utils import Q
+from parsec.components.user import (
+    CertificatesBundle,
+    UserGetCertificatesAsUserBadOutcome,
+)
+
+# Extract from the main query the SQL fragments used to fetch all certificates.
+# This is because this operation is complex (as it involves multiple tables and
+# must be updated whenever we add another type of certificate) and is also needed
+# in `realm_export_do_certificates`
+
+sql_fragment_all_common_certificates = """
+    -- User certificate
+    (
+        SELECT
+            -- Certificates must be returned ordered by timestamp, however there is a trick
+            -- for the common certificates: when a new user is created, the corresponding
+            -- user and device certificates have the same timestamp, but we must return
+            -- the user certificate first (given device references the user).
+            -- Hence this priority field used to order with tuple (timestamp, priority).
+            0 AS priority,
+            created_on AS certificate_timestamp,
+            (CASE WHEN $redacted THEN redacted_user_certificate ELSE user_certificate END) AS certificate
+        FROM user_
+        WHERE organization = $organization_internal_id
+    )
+    UNION
+    -- Device certificate
+    (
+        SELECT
+            1 AS priority,
+            created_on AS certificate_timestamp,
+            (CASE WHEN $redacted THEN redacted_device_certificate ELSE device_certificate END) AS certificate
+        FROM device
+        WHERE
+            organization = $organization_internal_id
+    )
+    UNION
+    -- User revoked certificate
+    (
+        SELECT
+            1 AS priority,
+            revoked_on AS certificate_timestamp,
+            revoked_user_certificate AS certificate
+        FROM user_
+        WHERE
+            organization = $organization_internal_id
+            AND revoked_on IS NOT NULL
+    )
+    UNION
+    -- User update certificate
+    (
+        SELECT
+            1 AS priority,
+            profile.certified_on AS certificate_timestamp,
+            profile.profile_certificate AS certificate
+        FROM profile
+        INNER JOIN user_ ON profile.user_ = user_._id
+        WHERE
+            user_.organization = $organization_internal_id
+    )
+"""
+
+
+sql_fragment_all_sequester_certificates = """
+    (
+        SELECT
+            _bootstrapped_on AS certificate_timestamp,
+            sequester_authority_certificate AS certificate
+        FROM organization
+        WHERE
+            _id = $organization_internal_id
+            AND sequester_authority_certificate IS NOT NULL
+
+    )
+    UNION
+    (
+        SELECT
+            created_on AS certificate_timestamp,
+            service_certificate AS certificate
+        FROM sequester_service
+        WHERE
+            organization = $organization_internal_id
+    )
+    UNION
+    (
+        SELECT
+            revoked_on AS certificate_timestamp,
+            sequester_revoked_service_certificate AS certificate
+        FROM sequester_service
+        WHERE
+            organization = $organization_internal_id
+            AND sequester_revoked_service_certificate IS NOT NULL
+    )
+"""
+
+
+sql_fragment_all_realm_certificates = """
+    -- Realm role certificate
+    (
+        SELECT
+            realm,
+            certified_on AS certificate_timestamp,
+            certificate
+        FROM realm_user_role
+    )
+    UNION
+    -- Realm key rotation certificate
+    (
+        SELECT
+            realm,
+            certified_on AS certificate_timestamp,
+            realm_key_rotation_certificate AS certificate
+        FROM realm_keys_bundle
+    )
+    UNION
+    -- Realm name certificate
+    (
+        SELECT
+            realm,
+            certified_on AS certificate_timestamp,
+            realm_name_certificate AS certificate
+        FROM realm_name
+    )
+"""
+
+
+_q_get_certificates = Q(f"""
+WITH
+-- Note those fragments contain `$organization_internal_id` & `$redacted`
+
+all_common_certificates AS ({sql_fragment_all_common_certificates}),
+
+all_sequester_certificates AS ({sql_fragment_all_sequester_certificates}),
+
+all_realm_certificates AS ({sql_fragment_all_realm_certificates}),
+
+-- Retrieve the last role for each realm the user is or used to be part of
+my_realms_last_roles AS (
+    SELECT DISTINCT ON (realm)
+        realm,
+        certified_on,
+        (role IS NOT NULL) AS currently_have_access
+    FROM realm_user_role
+    WHERE user_ = $user_internal_id
+    ORDER BY realm ASC, certified_on DESC
+),
+
+my_realm_certificates AS (
+    SELECT
+        all_realm_certificates.certificate,
+        all_realm_certificates.certificate_timestamp,
+        (
+            SELECT realm.realm_id
+            FROM realm
+            WHERE realm._id = all_realm_certificates.realm
+        ) AS realm_id
+    FROM all_realm_certificates
+    INNER JOIN my_realms_last_roles ON all_realm_certificates.realm = my_realms_last_roles.realm
+    WHERE
+        -- User can see all certificates from the realms he is part of...
+        my_realms_last_roles.currently_have_access
+        -- ...and all the certificates until he got revoked for realm he is not longer part of
+        OR all_realm_certificates.certificate_timestamp <= my_realms_last_roles.certified_on
+),
+
+realm_after AS (
+    SELECT
+        UNNEST($realm_after_ids::UUID []) AS realm_id,
+        UNNEST($realm_after_timestamps::TIMESTAMPTZ []) AS realm_after
+),
+
+my_all_certificates AS (
+    (
+        SELECT
+            'sequester' AS topic,
+            NULL::TEXT AS discriminant,
+            0 AS priority,
+            certificate_timestamp,
+            certificate
+        FROM all_sequester_certificates
+        WHERE COALESCE(certificate_timestamp > $sequester_after, TRUE)
+        ORDER BY certificate_timestamp ASC
+    )
+
+    UNION ALL
+
+    (
+        SELECT
+            'realm' AS topic,
+            my_realm_certificates.realm_id::TEXT AS discriminant,
+            0 AS priority,
+            my_realm_certificates.certificate_timestamp,
+            my_realm_certificates.certificate
+        FROM my_realm_certificates
+        LEFT JOIN realm_after ON my_realm_certificates.realm_id = realm_after.realm_id
+        WHERE COALESCE(my_realm_certificates.certificate_timestamp > realm_after.realm_after, TRUE)
+    )
+
+    UNION ALL
+
+    -- Shamir recovery brief certificates
+
+    (
+        SELECT DISTINCT ON (shamir_recovery_setup._id)
+            'shamir_recovery' AS topic,
+            NULL::TEXT AS discriminant,
+            0 AS priority,
+            shamir_recovery_setup.created_on,
+            shamir_recovery_setup.brief_certificate
+        FROM shamir_recovery_setup
+        INNER JOIN shamir_recovery_share ON shamir_recovery_setup._id = shamir_recovery_share.shamir_recovery
+        WHERE
+            shamir_recovery_setup.organization = $organization_internal_id
+            AND (
+                shamir_recovery_setup.user_ = $user_internal_id
+                OR shamir_recovery_share.recipient = $user_internal_id
+            )
+            AND COALESCE(shamir_recovery_setup.created_on > $shamir_recovery_after, TRUE)
+    )
+
+    UNION ALL
+
+    -- Shamir recovery deletion certificates
+    (
+        SELECT DISTINCT ON (shamir_recovery_setup._id)
+            'shamir_recovery' AS topic,
+            NULL::TEXT AS discriminant,
+            0 AS priority,
+            shamir_recovery_setup.deleted_on,
+            shamir_recovery_setup.deletion_certificate
+        FROM shamir_recovery_setup
+        INNER JOIN shamir_recovery_share ON shamir_recovery_setup._id = shamir_recovery_share.shamir_recovery
+        WHERE
+            shamir_recovery_setup.organization = $organization_internal_id
+            AND (
+                shamir_recovery_setup.user_ = $user_internal_id
+                OR shamir_recovery_share.recipient = $user_internal_id
+            )
+            AND shamir_recovery_setup.deleted_on IS NOT NULL
+            AND shamir_recovery_setup.deletion_certificate IS NOT NULL
+            AND COALESCE(shamir_recovery_setup.deleted_on > $shamir_recovery_after, TRUE)
+    )
+
+    UNION ALL
+
+    -- Shamir recovery share certificates
+    (
+        SELECT
+            'shamir_recovery' AS topic,
+            NULL::TEXT AS discriminant,
+            1 AS priority, -- This must come after the corresponding brief certificate
+            shamir_recovery_setup.created_on,
+            shamir_recovery_share.share_certificate
+        FROM shamir_recovery_setup
+        INNER JOIN shamir_recovery_share ON shamir_recovery_setup._id = shamir_recovery_share.shamir_recovery
+        WHERE
+            shamir_recovery_setup.organization = $organization_internal_id
+            AND shamir_recovery_share.recipient = $user_internal_id
+            AND COALESCE(shamir_recovery_setup.created_on > $shamir_recovery_after, TRUE)
+    )
+
+    UNION ALL
+
+    -- Common must be fetch last given other topics depend on it.
+    (
+        SELECT
+            'common' AS topic,
+            NULL::TEXT AS discriminant,
+            priority,
+            certificate_timestamp,
+            certificate
+        FROM all_common_certificates
+        WHERE COALESCE(certificate_timestamp > $common_after, TRUE)
+    )
+)
+
+SELECT
+    topic,
+    discriminant,
+    certificate
+FROM my_all_certificates
+-- ORDER BY must be done here given there is no guarantee on rows order after UNION
+ORDER BY
+    certificate_timestamp ASC,
+    priority ASC
+""")
+
+
+async def user_get_certificates(
+    conn: AsyncpgConnection,
+    organization_id: OrganizationID,
+    author: DeviceID,
+    common_after: DateTime | None,
+    sequester_after: DateTime | None,
+    shamir_recovery_after: DateTime | None,
+    realm_after: dict[VlobID, DateTime],
+) -> CertificatesBundle | UserGetCertificatesAsUserBadOutcome:
+    match await auth_no_lock(conn, organization_id, author):
+        case AuthNoLockData() as db_auth:
+            need_redacted = db_auth.user_current_profile == UserProfile.OUTSIDER
+        case AuthNoLockBadOutcome.ORGANIZATION_NOT_FOUND:
+            return UserGetCertificatesAsUserBadOutcome.ORGANIZATION_NOT_FOUND
+        case AuthNoLockBadOutcome.ORGANIZATION_EXPIRED:
+            return UserGetCertificatesAsUserBadOutcome.ORGANIZATION_EXPIRED
+        case AuthNoLockBadOutcome.AUTHOR_NOT_FOUND:
+            return UserGetCertificatesAsUserBadOutcome.AUTHOR_NOT_FOUND
+        case AuthNoLockBadOutcome.AUTHOR_REVOKED:
+            return UserGetCertificatesAsUserBadOutcome.AUTHOR_REVOKED
+
+    rows = await conn.fetch(
+        *_q_get_certificates(
+            redacted=need_redacted,
+            organization_internal_id=db_auth.organization_internal_id,
+            user_internal_id=db_auth.user_internal_id,
+            common_after=common_after,
+            sequester_after=sequester_after,
+            shamir_recovery_after=shamir_recovery_after,
+            realm_after_ids=realm_after.keys(),
+            realm_after_timestamps=realm_after.values(),
+        )
+    )
+
+    common_certificates = []
+    sequester_certificates = []
+    realm_items = {}
+    shamir_recovery_certificates = []
+
+    for row in rows:
+        match row["certificate"]:
+            case bytes() as certificate:
+                pass
+            case _:
+                assert False, row
+
+        match row["discriminant"]:
+            case str() | None as discriminant:
+                pass
+            case _:
+                assert False, row
+
+        match row["topic"]:
+            # Note the rows are already ordered by timestamp
+            case "common":
+                assert discriminant is None, row
+                common_certificates.append(certificate)
+            case "sequester":
+                assert discriminant is None, row
+                sequester_certificates.append(certificate)
+            case "realm":
+                assert discriminant is not None, row
+                realm_id = VlobID.from_hex(discriminant)
+                try:
+                    realm_items[realm_id].append(certificate)
+                except KeyError:
+                    realm_items[realm_id] = [certificate]
+            case "shamir_recovery":
+                assert discriminant is None, row
+                shamir_recovery_certificates.append(certificate)
+            case _:
+                assert False, row
+
+    return CertificatesBundle(
+        common=common_certificates,
+        sequester=sequester_certificates,
+        realm=realm_items,
+        shamir_recovery=shamir_recovery_certificates,
+    )
