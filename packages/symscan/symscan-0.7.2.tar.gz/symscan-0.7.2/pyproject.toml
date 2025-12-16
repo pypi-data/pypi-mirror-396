@@ -1,0 +1,62 @@
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "symscan"
+requires-python = ">=3.10"
+authors = [
+  { name = "Yuta Nagano", email = "yutanagano51@proton.me" },
+  { name = "Matthew Cowley", email = "matthew.v.cowley@gmail.com" },
+]
+maintainers = [{ name = "Yuta Nagano", email = "yutanagano51@proton.me" }]
+description = "Fast discovery of similar strings in bulk"
+readme = "README.md"
+keywords = [
+  "edit-distance",
+  "levenshtein-distance",
+  "string-matching",
+  "string-search",
+  "string-similarity",
+  "symspell",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: MacOS",
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Topic :: Text Processing",
+  "Topic :: Scientific/Engineering",
+]
+dependencies = ["numpy~=2.3"]
+
+[project.optional-dependencies]
+dev = ["sphinx", "esbonio", "shibuya", "numpydoc", "pandas"]
+
+[project.urls]
+Homepage = "https://github.com/yutanagano/symscan"
+Documentation = "https://symscan.readthedocs.io"
+Repository = "https://github.com/yutanagano/symscan"
+Issues = "https://github.com/yutanagano/symscan/issues"
+
+[tool.maturin]
+manifest-path = "symscan-py/Cargo.toml"
+include = ["LICENSE-MIT", "LICENSE-APACHE"]
+profile = "release"
+
+[tool.cibuildwheel]
+skip = ["*-musllinux_i686"]
+
+[tool.cibuildwheel.linux]
+before-all = "curl -sSf https://sh.rustup.rs | sh -s -- -y"
+environment = { PATH = "$HOME/.cargo/bin:$PATH" }
+
+[tool.cibuildwheel.macos]
+environment = { MACOSX_DEPLOYMENT_TARGET = "10.12" }
+
+[tool.cibuildwheel.windows]
+before-all = "rustup target add i686-pc-windows-msvc"
