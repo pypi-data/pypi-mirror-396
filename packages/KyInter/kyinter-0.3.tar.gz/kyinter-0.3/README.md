@@ -1,0 +1,48 @@
+# What is it?
+**KyInter** is an addon for **tkinter**
+
+# What is it use for?
+**KyInter** can create your personalization window fast
+
+# How to download it?
+enter in your cmd  
+`pip install KyInter`  
+  
+if it fails, you can try to enter  
+`python -m pip install KyInter`  
+or enter  
+`python3 -m pip install KyInter`
+
+# Give me a example code.
+```python
+# import KyInter
+from KyInter.KySetups import Setup
+from KyInter.KyWidgets import MainWindow, Font, Label
+
+# if you want a high definition, enter this
+Setup.setHighDefinition()
+
+# create a simple window
+mainWindow = MainWindow()
+mainWindow.setTitle("MyWindow") # set title
+mainWindow.setSize(400, 300) # set size
+
+# create a font
+# family is modern "Microsoft YaHei" (Chinese)
+# size is 12
+# enable bold, italic, underline and overstrike
+font = Font(family="Microsoft YaHei", 
+            size=12, 
+            bold=True, 
+            italic=True, 
+            underline=True, 
+            overstrike=True
+            )
+
+# create a label
+# use newly created font
+label = Label(mainWindow, "yes优化的字体", font)
+
+# finally, exec
+mainWindow.exec()
+```
