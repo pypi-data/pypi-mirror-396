@@ -1,0 +1,108 @@
+Metadata-Version: 2.4
+Name: autocmd-cli
+Version: 0.2.2
+Summary: Natural language to shell command.
+Project-URL: Homepage, https://github.com/dvirzg/autocmd
+Project-URL: Repository, https://github.com/dvirzg/autocmd
+Project-URL: Issues, https://github.com/dvirzg/autocmd/issues
+Author: Dvir Zagury-Grynbaum
+License: MIT
+License-File: LICENSE
+Keywords: ai,claude,cli,shell
+Classifier: Development Status :: 4 - Beta
+Classifier: Environment :: Console
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Requires-Python: >=3.8
+Requires-Dist: anthropic>=0.39.0
+Requires-Dist: openai>=1.0.0
+Requires-Dist: python-dotenv>=0.9.9
+Description-Content-Type: text/markdown
+
+# autocmd
+
+Natural language to shell command.
+
+![Demo](./autocmd-demo.gif)
+
+## Installation
+
+```bash
+uv tool install autocmd-cli
+```
+
+## Quick start
+
+First run triggers setup for shell integration and LLM provider:
+
+```bash
+autocmd "check git status"
+```
+
+After setup, commands appear on your prompt ready to edit:
+
+```bash
+autocmd "git fetch all updates from remote"
+# → git fetch --all
+
+autocmd "show git log for last 5 commits"
+autocmd "find all python files modified today"
+autocmd "kill process on port 3000"
+```
+
+### Multiline prompts
+
+Use triple quotes for multiline prompts or prompts with quotes:
+
+```bash
+autocmd '"""find all log files
+that contain "ERROR"
+modified in the last hour"""'
+
+autocmd '"""search for files with 'important' in the name"""'
+```
+
+## Providers
+
+Supports multiple LLM providers:
+- **Anthropic** (Claude) - default
+- **OpenAI** (GPT)
+- **Groq** (Llama)
+- **Grok** (xAI)
+- **Deepseek**
+- **Openrouter**
+
+Configure via `autocmd --settings` or environment variables:
+
+```bash
+export AUTOCMD_PROVIDER=groq
+export GROQ_API_KEY=your_key_here
+export AUTOCMD_MODEL=llama-3.3-70b-versatile  # optional
+```
+
+## Configuration
+
+```bash
+autocmd --settings  # Configure provider, API key, model, and streaming
+autocmd --reset     # Reset all configuration
+```
+
+## Development
+
+```bash
+git clone https://github.com/dvirzg/autocmd.git
+cd autocmd
+./dev-setup.sh
+source ~/.zshrc  # or ~/.bashrc
+
+# Always uses the local code
+autocmd-dev "check git status"
+```
+
+## Uninstall
+
+```bash
+uv tool uninstall autocmd
+```
+
+Then remove the `autocmd` line from your shell config if you want to fully clean it up.
