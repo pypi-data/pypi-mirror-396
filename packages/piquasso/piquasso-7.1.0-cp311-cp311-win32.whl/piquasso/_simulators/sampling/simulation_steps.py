@@ -1,0 +1,256 @@
+#
+# Copyright 2021-2025 Budapest Quantum Computing Group
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from functools import partial
+from typing import Tuple, List
+
+import numpy as np
+
+from fractions import Fraction
+
+from piquasso._simulators.sampling.state import SamplingState
+
+from piquasso.instructions import gates
+
+from piquasso.api.exceptions import InvalidState, NotImplementedCalculation
+from piquasso.api.branch import Branch
+from piquasso.api.instruction import Instruction
+
+from piquasso._simulators.fock.pure.simulation_steps import (
+    imperfect_post_select_photons as pure_fock_imperfect_post_select_photons,
+)
+
+from .utils import (
+    generate_samples,
+    generate_lossy_samples,
+)
+from piquasso._utils import get_counts
+
+
+def vacuum(state: SamplingState, instruction: Instruction, shots: int) -> List[Branch]:
+    state._occupation_numbers.append(np.zeros(state.d, dtype=int))
+    state._coefficients.append(1.0)
+
+    return [Branch(state=state)]
+
+
+def create(state: SamplingState, instruction: Instruction, shots: int) -> List[Branch]:
+    modes = instruction.modes
+
+    for i in range(len(state._occupation_numbers)):
+        state._occupation_numbers[i][modes,] += 1
+
+    return [Branch(state=state)]
+
+
+def state_vector(
+    state: SamplingState, instruction: Instruction, shots: int
+) -> List[Branch]:
+    coefficient = instruction._get_all_params(state._connector)["coefficient"]
+
+    if "occupation_numbers" in instruction._get_all_params(state._connector):
+        occupation_numbers = instruction._get_all_params(state._connector)[
+            "occupation_numbers"
+        ]
+        if state._config.validate and len(occupation_numbers) != state.d:
+            raise InvalidState(
+                f"The occupation numbers '{occupation_numbers}' are not well-defined "
+                f"on '{state.d}' modes: instruction={instruction}"
+            )
+
+        state._occupation_numbers.append(np.rint(occupation_numbers).astype(int))
+        state._coefficients.append(coefficient)
+
+    elif "fock_amplitude_map" in instruction._get_all_params(state._connector):
+        for occupation_numbers, amplitude in instruction._get_all_params(
+            state._connector
+        )["fock_amplitude_map"].items():
+
+            if state._config.validate and len(occupation_numbers) != state.d:
+                raise InvalidState(
+                    f"The occupation numbers '{occupation_numbers}' "
+                    f"are not well-defined "
+                    f"on '{state.d}' modes: instruction={instruction}"
+                )
+
+            state._occupation_numbers.append(np.rint(occupation_numbers).astype(int))
+            state._coefficients.append(coefficient * amplitude)
+
+    return [Branch(state=state)]
+
+
+def passive_linear(
+    state: SamplingState, instruction: gates._PassiveLinearGate, shots: int
+) -> List[Branch]:
+    r"""Applies an interferometer to the circuit.
+
+    This can be interpreted as placing another interferometer in the network, just
+    before performing the sampling. This instruction is realized by multiplying
+    current effective interferometer matrix with new interferometer matrix.
+
+    Do note, that new interferometer matrix works as interferometer matrix on
+    qumodes (provided as the arguments) and as an identity on every other mode.
+    """
+    _apply_matrix_on_modes(
+        state=state,
+        matrix=instruction._get_passive_block(state._connector, state._config),
+        modes=instruction.modes,
+    )
+
+    return [Branch(state=state)]
+
+
+def _apply_matrix_on_modes(
+    state: SamplingState, matrix: np.ndarray, modes: Tuple[int, ...]
+) -> None:
+    connector = state._connector
+    np = connector.np
+    fallback_np = connector.fallback_np
+
+    embedded = np.identity(len(state.interferometer), dtype=state._config.complex_dtype)
+
+    actual_modes = fallback_np.array(state._get_active_modes())[modes,]
+
+    embedded = connector.assign(
+        embedded, fallback_np.ix_(actual_modes, actual_modes), matrix
+    )
+
+    state.interferometer = embedded @ state.interferometer
+
+
+def loss(state: SamplingState, instruction: Instruction, shots: int) -> List[Branch]:
+    state.is_lossy = True
+
+    _apply_matrix_on_modes(
+        state=state,
+        matrix=np.array(
+            [[instruction._get_all_params(state._connector)["transmissivity"]]]
+        ),
+        modes=instruction.modes,
+    )
+
+    return [Branch(state=state)]
+
+
+def lossy_interferometer(
+    state: SamplingState, instruction: Instruction, shots: int
+) -> List[Branch]:
+    state.is_lossy = True
+
+    _apply_matrix_on_modes(
+        state=state,
+        matrix=instruction._get_all_params(state._connector)["matrix"],
+        modes=instruction.modes,
+    )
+
+    return [Branch(state=state)]
+
+
+def particle_number_measurement(
+    state: SamplingState, instruction: Instruction, shots: int
+) -> List[Branch]:
+    """
+    Simulates a boson sampling using generalized Clifford & Clifford algorithm
+    from [Brod, Oszmaniec 2020] see
+    `this article <https://arxiv.org/abs/1906.06696>`_ for more details.
+
+    This is a contribution implementation from `theboss`, see
+    https://github.com/Tomev-CTP/theboss.
+
+    This method assumes that initial_state is given in the second quantization
+    description (mode occupation).
+
+    Generalized Cliffords simulation strategy form [Brod, Oszmaniec 2020] was used
+    as it allows effective simulation of broader range of input states than original
+    algorithm.
+    """
+
+    if (
+        state._can_validate_variable(state._coefficients[0])
+        and len(state._occupation_numbers) != 1
+        and not np.isclose(state._coefficients[0], 1.0)
+    ):
+        raise NotImplementedCalculation(
+            f"The instruction {instruction} is not supported for states defined using "
+            "multiple 'StateVector' instructions.\n"
+            "If you need this feature to be implemented, please create an issue at "
+            "https://github.com/Budapest-Quantum-Computing-Group/piquasso/issues"
+        )
+
+    initial_state = state._occupation_numbers[0]
+
+    interferometer_svd = np.linalg.svd(state.interferometer)
+
+    rng = state._config.rng
+
+    singular_values = interferometer_svd[1]
+
+    postselect_data = (
+        state._get_postselected_modes(),
+        state._get_postselected_photons(),
+        state._config.max_sample_generation_trials,
+    )
+
+    if not state.is_lossy:
+        partial_generate_samples = partial(
+            generate_samples,
+            interferometer=state.interferometer,
+            reject_condition=lambda: False,
+        )
+    elif np.all(np.isclose(singular_values, singular_values[0])):
+        uniform_transmission_probability = singular_values[0] ** 2
+
+        partial_generate_samples = partial(
+            generate_samples,
+            interferometer=state.interferometer,
+            reject_condition=lambda: rng.uniform() > uniform_transmission_probability,
+        )
+    else:
+        partial_generate_samples = partial(
+            generate_lossy_samples,
+            interferometer_svd=interferometer_svd,
+        )
+
+    samples = partial_generate_samples(
+        initial_state,
+        shots,
+        calculate_permanent_laplace=state._connector.permanent_laplace,
+        rng=rng,
+        postselect_data=postselect_data,
+    )
+
+    binned_samples = get_counts(samples)
+
+    branches = [
+        Branch(state=None, outcome=outcome, frequency=Fraction(multiplicity, shots))
+        for outcome, multiplicity in binned_samples.items()
+    ]
+
+    return branches
+
+
+def post_select_photons(
+    state: SamplingState, instruction: Instruction, shots: int
+) -> List[Branch]:
+    modes = instruction.modes
+
+    photon_counts = instruction.params["photon_counts"]
+
+    state._set_postselection(modes, photon_counts)
+
+    return [Branch(state=state)]
+
+
+imperfect_post_select_photons = pure_fock_imperfect_post_select_photons
