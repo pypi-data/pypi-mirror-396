@@ -1,0 +1,173 @@
+Metadata-Version: 2.4
+Name: tbusd
+Version: 0.1.0
+Summary: Python SDK for TBUSD gasless transfers
+Author-email: TBUSD <support@tbusd.io>
+License: MIT
+Project-URL: Homepage, https://tbusd.io
+Project-URL: Documentation, https://tbusd.io/developers
+Project-URL: Repository, https://github.com/tbusd/tbusd-python
+Keywords: tbusd,stablecoin,ethereum,base,gasless,web3
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: requests>=2.25.0
+Requires-Dist: eth-account>=0.8.0
+Requires-Dist: eth-abi>=4.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.20.0; extra == "dev"
+Dynamic: license-file
+
+# TBUSD Python SDK
+
+Gasless TBUSD transfers on Base L2. No ETH required.
+
+## Installation
+
+```bash
+pip install tbusd
+```
+
+## Quick Start
+
+```python
+from tbusd import Client
+
+# Initialize with your API key and wallet
+client = Client(
+    api_key="tbusd_your_api_key",      # Get one at https://tbusd.io/developers
+    private_key="0x..."                 # Your wallet's private key
+)
+
+# Send TBUSD - no gas needed!
+tx = client.transfer(to="0xRecipient...", amount=10.0)
+print(f"Sent! TX: {tx['txHash']}")
+
+# Check balance
+balance = client.balance()
+print(f"Balance: {balance} TBUSD")
+
+# Check API usage
+usage = client.usage()
+print(f"Today: {usage['today']['used']}/{usage['today']['limit']} transactions")
+```
+
+## Features
+
+- **Gasless transfers** - We pay the gas, you just need TBUSD
+- **Simple API** - No Web3 complexity, just `transfer(to, amount)`
+- **EIP-712 signing** - Secure, standard meta-transactions
+- **Rate limited** - 20 transactions/day per API key
+
+## API Reference
+
+### `Client(api_key, private_key, rpc_url=None)`
+
+Create a new TBUSD client.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `api_key` | str | Your TBUSD API key |
+| `private_key` | str | Your wallet's private key (0x...) |
+| `rpc_url` | str | Optional custom RPC URL (defaults to Base public RPC) |
+
+### `client.transfer(to, amount) -> dict`
+
+Send TBUSD to an address.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `to` | str | Recipient address (0x...) |
+| `amount` | float | Amount of TBUSD to send |
+
+Returns: `{"success": True, "txHash": "0x...", "gasUsed": "85000"}`
+
+### `client.balance(address=None) -> float`
+
+Get TBUSD balance. Defaults to your wallet if no address provided.
+
+### `client.usage() -> dict`
+
+Check your API usage and remaining daily limit.
+
+Returns:
+```python
+{
+    "email": "you@example.com",
+    "total_transactions": 142,
+    "today": {
+        "used": 5,
+        "remaining": 15,
+        "limit": 20
+    }
+}
+```
+
+### `client.health() -> bool`
+
+Check if the relayer service is operational.
+
+## Exceptions
+
+```python
+from tbusd import TBUSDError, RateLimitError, InsufficientBalanceError
+
+try:
+    tx = client.transfer(to="0x...", amount=100)
+except RateLimitError:
+    print("Daily limit reached, try again tomorrow")
+except InsufficientBalanceError:
+    print("Not enough TBUSD in wallet")
+except TBUSDError as e:
+    print(f"Error: {e}")
+```
+
+## Example: AI Agent Wallet
+
+```python
+import os
+from tbusd import Client
+
+# Agent's petty cash wallet
+agent = Client(
+    api_key=os.environ["TBUSD_API_KEY"],
+    private_key=os.environ["AGENT_PRIVATE_KEY"]
+)
+
+def pay_for_service(service_address: str, amount: float) -> str:
+    """Pay for an API call or service"""
+    tx = agent.transfer(to=service_address, amount=amount)
+    return tx["txHash"]
+
+# Pay 5 cents for a search query
+tx_hash = pay_for_service("0xSearchProvider...", 0.05)
+```
+
+## Rate Limits
+
+| Limit | Value |
+|-------|-------|
+| Transactions per day | 20 |
+| Minimum transfer | $1 TBUSD |
+| Reset time | Midnight UTC |
+
+## Links
+
+- [Get API Key](https://tbusd.io/developers)
+- [API Documentation](https://tbusd.io/developers#docs)
+- [TBUSD Website](https://tbusd.io)
+
+## License
+
+MIT
