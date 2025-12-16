@@ -1,0 +1,38 @@
+{% extends "django_zooy/carbon/modal.html" %}
+
+
+{# Carbon Form Panel - extends Modal with form-specific structure #}
+
+{# cds-modal-body: Form is the main modal body content #}
+{% block cds-modal-body %}
+
+    <form method="post" id="{{ form_id }}">
+        {% csrf_token %}
+        {% for hidden in form.hidden_fields %}
+            {{ hidden }}
+        {% endfor %}
+
+        {# cds-form-group #}
+        <cds-form-group legend-text="{% block cds-form-group__legend-text %}{% endblock %}">
+            {# cds-stack: vertical spacing for form fields #}
+            <cds-stack gap="7">
+                {# Django form fields - rendered by Carbon widgets #}
+                {% for field in form.visible_fields %}
+                    {{ field }}
+                {% endfor %}
+            </cds-stack>
+        </cds-form-group>
+    </form>
+{% endblock cds-modal-body %}
+
+{# cds-modal-footer: Submit button outside form (HTML5 form attribute) #}
+{% block cds-modal-footer %}
+    <cds-modal-footer>
+        <cds-modal-footer-button kind="secondary" data-modal-close="">
+            {% block cds-button__cancel %}{% block cds-button__secondary %}Cancel{% endblock %}{% endblock %}
+        </cds-modal-footer-button>
+        <cds-modal-footer-button kind="{% block cds-button__submit_kind %}primary{% endblock %}" type="submit" form="{{ form_id }}">
+            {% block cds-button__submit %}{% endblock %}
+        </cds-modal-footer-button>
+    </cds-modal-footer>
+{% endblock cds-modal-footer %}
