@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "orange3-data-helpers"
+version = "0.1.5"
+description = "Data Helpers – Add-on Orange untuk Database Administrator: koneksi, schema, size, query."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Devi Ardiana", email = "deviardn@gmail.com" }]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
+
+dependencies = [
+  "orange3>=3.36.0",
+  "pandas>=1.5.0",
+  "numpy>=1.22.0",
+  "sqlalchemy>=2.0",
+  "PyQt5>=5.15",
+  "PyQtWebEngine>=5.15",
+  "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+postgresql = ["psycopg2-binary>=2.9"]
+mysql = ["pymysql>=1.0"]
+mssql = ["pyodbc>=4.0"]
+clickhouse = ["clickhouse-connect>=0.7"]
+oracle = ["cx-Oracle>=8.3"]
+
+[project.urls]
+Homepage = "https://github.com/deviardn/orange3-data-helpers"
+
+# Entry points Orange (nama di kiri adalah judul kategori di Canvas)
+[project.entry-points."orange.widgets"]
+"Data Helpers" = "orangecontrib.datahelpers.widgets"
+
+[project.entry-points."orange.addons"]
+"Data Helpers" = "orangecontrib.datahelpers"
+
+[tool.setuptools.package-data]
+"orangecontrib.datahelpers" = [
+  "widgets/icons/*.png",
+  "widgets/icons/*.svg",
+  "icons/*.png",
+  "icons/*.svg"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["orangecontrib*"]
