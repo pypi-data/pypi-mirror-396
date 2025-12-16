@@ -1,0 +1,365 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: "Build only, don't publish"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_TOOLCHAIN: nightly-2025-12-04
+
+jobs:
+  # ============================================================================
+  # STAGE 1: Verify VERSION file matches all package files
+  # ============================================================================
+
+  verify:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify all versions match VERSION file
+        id: version
+        run: |
+          set -e
+          VERSION=$(cat VERSION | tr -d '\n')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "VERSION file: $VERSION"
+          echo ""
+
+          # Check all 9 version locations match VERSION
+          ERRORS=0
+
+          CARGO_V=$(grep '^version = ' Cargo.toml | head -1 | cut -d'"' -f2)
+          CORE_V=$(grep '^version = ' omendb-core/Cargo.toml | head -1 | cut -d'"' -f2)
+          PYTHON_V=$(grep '^version = ' python/Cargo.toml | head -1 | cut -d'"' -f2)
+          INIT_V=$(grep '__version__' python/omendb/__init__.py | cut -d'"' -f2)
+          FFI_V=$(grep 'static VERSION' src/ffi.rs | sed 's/.*b"\([0-9.]*\).*/\1/' || echo "")
+          NODE_CARGO_V=$(grep '^version = ' node/Cargo.toml | head -1 | cut -d'"' -f2)
+          NODE_V=$(jq -r .version node/package.json)
+          NODE_OPT=$(jq -r '.optionalDependencies["@omendb/omendb-darwin-arm64"]' node/package.json)
+          WRAPPER_V=$(jq -r .version node/wrapper/package.json)
+          WRAPPER_DEP=$(jq -r '.dependencies["@omendb/omendb"]' node/wrapper/package.json)
+
+          echo "Checking versions against VERSION file ($VERSION):"
+
+          check_version() {
+            local file=$1
+            local actual=$2
+            if [ "$actual" = "$VERSION" ]; then
+              echo "  [OK] $file: $actual"
+            else
+              echo "  [MISMATCH] $file: $actual (expected $VERSION)"
+              ERRORS=$((ERRORS + 1))
+            fi
+          }
+
+          check_version "Cargo.toml" "$CARGO_V"
+          check_version "omendb-core/Cargo.toml" "$CORE_V"
+          check_version "python/Cargo.toml" "$PYTHON_V"
+          check_version "python/omendb/__init__.py" "$INIT_V"
+          check_version "src/ffi.rs" "$FFI_V"
+          check_version "node/Cargo.toml" "$NODE_CARGO_V"
+          check_version "node/package.json" "$NODE_V"
+          check_version "node/package.json (optionalDeps)" "$NODE_OPT"
+          check_version "node/wrapper version" "$WRAPPER_V"
+          check_version "node/wrapper @omendb" "$WRAPPER_DEP"
+
+          if [ "$ERRORS" -gt 0 ]; then
+            echo ""
+            echo "ERROR: $ERRORS version mismatch(es) found!"
+            echo ""
+            echo "Fix locally: ./scripts/sync-version.sh"
+            exit 1
+          fi
+
+          echo ""
+          echo "All 9 version locations match: $VERSION"
+
+      - name: Check not already published
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+
+          PYPI_V=$(curl -sf https://pypi.org/pypi/omendb/json | jq -r '.info.version' || echo "0.0.0")
+          CRATES_V=$(curl -sf https://crates.io/api/v1/crates/omendb | jq -r '.versions[0].num' || echo "0.0.0")
+
+          echo "Published versions:"
+          echo "  PyPI:      $PYPI_V"
+          echo "  crates.io: $CRATES_V"
+          echo ""
+
+          if [ "$VERSION" = "$PYPI_V" ]; then
+            echo "ERROR: Version $VERSION already published to PyPI"
+            exit 1
+          fi
+          if [ "$VERSION" = "$CRATES_V" ]; then
+            echo "ERROR: Version $VERSION already published to crates.io"
+            exit 1
+          fi
+
+          echo "Version $VERSION is new - proceeding with release"
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          components: rustfmt, clippy
+
+      - name: Check formatting
+        run: cargo fmt --check
+
+      - name: Clippy
+        run: cargo clippy -- -D warnings
+
+      - name: Test
+        run: cargo test --lib
+
+  # ============================================================================
+  # STAGE 2: Build all artifacts (parallel)
+  # ============================================================================
+
+  build-python-linux:
+    needs: [verify]
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: true
+      matrix:
+        target: [x86_64, aarch64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          args: --release --out dist --find-interpreter -m python/Cargo.toml
+          manylinux: auto
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-linux-${{ matrix.target }}
+          path: dist
+
+  build-python-macos:
+    needs: [verify]
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - runner: macos-15
+            target: x86_64
+          - runner: macos-14
+            target: aarch64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          args: --release --out dist --find-interpreter -m python/Cargo.toml
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-macos-${{ matrix.target }}
+          path: dist
+
+  build-python-sdist:
+    needs: [verify]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build sdist
+        uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: --out dist -m python/Cargo.toml
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-sdist
+          path: dist
+
+  build-node:
+    needs: [verify]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            build: |
+              npm run build -- --target x86_64-apple-darwin --platform
+              strip -x *.node
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            build: |
+              sudo rm -Rf /Library/Developer/CommandLineTools/SDKs/*
+              export CC=$(xcrun -f clang)
+              export CXX=$(xcrun -f clang++)
+              SYSROOT=$(xcrun --sdk macosx --show-sdk-path)
+              export CFLAGS="-isysroot $SYSROOT -isystem $SYSROOT"
+              npm run build -- --target aarch64-apple-darwin --platform
+              strip -x *.node
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            build: npm run build -- --target x86_64-unknown-linux-gnu --platform --use-napi-cross
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            build: npm run build -- --target aarch64-unknown-linux-gnu --platform --use-napi-cross
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          targets: ${{ matrix.target }}
+      - run: npm install
+        working-directory: node
+      - run: ${{ matrix.build }}
+        shell: bash
+        working-directory: node
+      - uses: actions/upload-artifact@v4
+        with:
+          name: node-${{ matrix.target }}
+          path: node/*.node
+          if-no-files-found: error
+
+  # ============================================================================
+  # STAGE 3: Publish (sequential, skip if dry-run)
+  # ============================================================================
+
+  publish-crates:
+    needs:
+      [
+        verify,
+        build-python-linux,
+        build-python-macos,
+        build-python-sdist,
+        build-node,
+      ]
+    if: ${{ !inputs.dry-run }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+      - name: Get crates.io token via OIDC
+        uses: rust-lang/crates-io-auth-action@v1
+        id: crates-io-auth
+      - name: Publish omendb-core to crates.io
+        continue-on-error: true
+        run: cargo publish -p omendb-core --token ${{ steps.crates-io-auth.outputs.token }}
+
+      - name: Wait for crates.io index update
+        run: sleep 30
+
+      - name: Publish omendb to crates.io
+        continue-on-error: true
+        run: cargo publish -p omendb --token ${{ steps.crates-io-auth.outputs.token }}
+
+  publish-pypi:
+    needs: [verify, publish-crates]
+    if: ${{ !inputs.dry-run }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          path: dist
+          merge-multiple: true
+      - name: List wheels
+        run: ls -la dist/
+      - name: Publish to PyPI
+        continue-on-error: true
+        uses: PyO3/maturin-action@v1
+        with:
+          command: upload
+          args: --non-interactive --skip-existing dist/*
+
+  publish-npm:
+    needs: [verify, publish-pypi]
+    if: ${{ !inputs.dry-run }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install -g npm@latest
+      - run: npm install
+        working-directory: node
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: node-*
+          path: node/artifacts
+
+      - name: Setup artifacts
+        run: |
+          for dir in artifacts/node-*/; do
+            target=$(basename "$dir" | sed 's/node-//')
+            mkdir -p "artifacts/bindings-$target"
+            cp "$dir"*.node "artifacts/bindings-$target/"
+          done
+          ls -R artifacts/
+        working-directory: node
+
+      - name: Create npm packages
+        run: npm exec napi create-npm-dirs -- --npm-dir npm
+        working-directory: node
+
+      - name: Move artifacts to packages
+        run: npm exec napi artifacts -- --output-dir ./artifacts --npm-dir ./npm
+        working-directory: node
+
+      - name: Determine npm tag
+        id: npm-tag
+        run: |
+          VERSION=${{ needs.verify.outputs.version }}
+          if [[ "$VERSION" == *"-"* ]]; then
+            echo "tag=--tag alpha" >> $GITHUB_OUTPUT
+          else
+            echo "tag=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Publish platform packages
+        continue-on-error: true
+        run: |
+          for dir in npm/*/; do
+            echo "Publishing $dir"
+            npm publish "$dir" --provenance --access public ${{ steps.npm-tag.outputs.tag }} || true
+          done
+        working-directory: node
+
+      - name: Publish @omendb/omendb
+        continue-on-error: true
+        run: npm publish --provenance --access public ${{ steps.npm-tag.outputs.tag }}
+        working-directory: node
+
+      - name: Publish omendb wrapper
+        continue-on-error: true
+        run: npm publish --provenance --access public ${{ steps.npm-tag.outputs.tag }}
+        working-directory: node/wrapper
