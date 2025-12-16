@@ -1,0 +1,97 @@
+[build-system]
+requires = ["hatchling", "uv-dynamic-versioning"]
+build-backend = "hatchling.build"
+
+[project]
+name = "marsilea"
+description = "Declarative creation of composable visualizations"
+authors = [
+    {name = "Yimin Zheng", email = "yzheng@cemm.at"},
+    {name = "Zhihang Zheng", email = "zhihang.zheng@connect.polyu.hk"},
+]
+license = {file = "LICENSE"}
+readme = "README.md"
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Framework :: Matplotlib",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Visualization",
+]
+dynamic = ["version"]
+requires-python = ">=3.8"
+urls = { Home="https://github.com/Marsilea-viz/marsilea", Documentation="https://marsilea.readthedocs.io"}
+dependencies = [
+    "numpy",
+    "pandas[parquet]",
+    "matplotlib>=3.6",
+    "seaborn",
+    "scipy",
+    "legendkit",
+    "platformdirs",
+]
+
+[tool.hatch.version]
+source = "uv-dynamic-versioning"
+
+[tool.hatch.build.hooks.version]
+path = "src/marsilea/_version.py"
+template = '''
+version = "{version}"
+'''
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/marsilea", "src/oncoprinter"]
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "docs",
+    "app",
+    "data",
+    "img",
+    "tests",
+    "scripts",
+    "readthedocs.yaml",
+]
+include = [
+    "README.md",
+    "LICENSE",
+    "pyproject.toml",
+    "setup.py",
+    "src/marsilea",
+    "src/oncoprinter",
+]
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"docs/*" = ["E402", "E731"]
+"scripts/*" = ["E402", "E731"]
+
+[tool.taskipy.tasks]
+hello = "echo Hello, World!"
+test = "pytest tests"
+doc-build = "sphinx-build -b html docs/source docs/build"
+doc-clean-build = "python docs/clean_up.py && sphinx-build -b html docs/source docs/build"
+doc-serve = "python -m http.server -d docs/build"
+fmt = "ruff format docs/source wsidata tests"
+
+[dependency-groups]
+dev = [
+    "sphinx>=7.1.2",
+    "ruff",
+    "pytest",
+    "scikit-learn",
+    "sphinx",
+    "numpydoc",
+    "sphinx_design",
+    "pydata-sphinx-theme",
+    "sphinx-copybutton",
+    "sphinx_gallery",
+    "mpl_fontkit",
+    "pre-commit",
+    "taskipy",
+    "emoji>=2.14.1",
+]
