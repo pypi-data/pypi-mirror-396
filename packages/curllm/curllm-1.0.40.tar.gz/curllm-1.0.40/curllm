@@ -1,0 +1,1255 @@
+#!/bin/bash
+#============================================================================
+# curllm - Browser Automation with Local LLM (8GB GPU compatible)
+# Author: Softreck (2025)
+# Version: 1.0.0
+#============================================================================
+
+# Load .env if present
+if [ -f ".env" ]; then
+    set -a
+    . ./.env
+    set +a
+fi
+
+# Default configuration
+CURLLM_API_HOST="${CURLLM_API_HOST:-http://localhost:8000}"
+CURLLM_OLLAMA_HOST="${CURLLM_OLLAMA_HOST:-http://localhost:11434}"
+CURLLM_MODEL="${CURLLM_MODEL:-qwen2.5:7b}"
+CURLLM_BROWSERLESS="${CURLLM_BROWSERLESS:-false}"
+CURLLM_DEBUG="${CURLLM_DEBUG:-false}"
+CURLLM_AUTO_RESTART_OLD_MODEL="${CURLLM_AUTO_RESTART_OLD_MODEL:-false}"
+
+if [[ "$CURLLM_API_HOST" == "http://localhost:8000" ]] && [ -f /tmp/curllm_api_port ]; then
+    CURLLM_API_HOST="http://localhost:$(cat /tmp/curllm_api_port)"
+fi
+if [[ "$CURLLM_OLLAMA_HOST" == "http://localhost:11434" ]] && [ -f /tmp/ollama_port ]; then
+    CURLLM_OLLAMA_HOST="http://localhost:$(cat /tmp/ollama_port)"
+fi
+
+# Color codes
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Version info
+VERSION="1.0.0"
+
+# Debug logger
+dbg() {
+    if [ "$CURLLM_DEBUG" = "true" ] || [ "$VERBOSE" = true ]; then
+        echo -e "${YELLOW}[DEBUG]${NC} $*"
+    fi
+}
+
+# Parse command line arguments
+METHOD="GET"
+URL=""
+DATA=""
+HEADERS=()
+OUTPUT_FILE=""
+EXPORT_HTML=false
+EXPORT_XML=false
+EXPORT_CSV=false
+EXPORT_XLS=false
+EXPORT_YAML=false
+EXPORT_JSON=false
+EXPORT_MD=false
+VERBOSE=false
+VISUAL_MODE=false
+STEALTH_MODE=false
+CAPTCHA_SOLVER=false
+USE_BQL=false
+USE_V1=false  # v2 is now default, use --v1 for legacy
+PROXY_ARG=""
+SESSION_ID=""
+
+# Help function
+show_help() {
+    cat << EOF
+curllm - Browser automation with Local LLM support
+
+Usage: curllm [OPTIONS] <URL or INSTRUCTION>
+
+OPTIONS:
+    -X, --request METHOD     HTTP method (GET, POST, PUT, DELETE)
+    -d, --data DATA         JSON data or natural language instruction
+    -H, --header HEADER     Add header (can be used multiple times)
+    -o, --output FILE       Save output to file
+    -v, --verbose           Verbose output
+    
+AUTOMATION OPTIONS:
+    --visual                Enable visual mode (screenshots + vision analysis)
+    --stealth              Enable stealth mode (anti-bot detection)
+    --captcha              Enable CAPTCHA solving
+    --bql                  Use BQL (Browser Query Language) mode
+    --v1                   Use legacy v1 API (hardcoded selectors, deprecated)
+    --model MODEL          LLM model to use (default: qwen2.5:7b)
+    --auto-restart-old-model
+                          If the run log or /health shows old default model (qwen2.5:7b),
+                          automatically restart services and print /health.
+    --proxy VALUE         Proxy config:
+                          - rotate:public | rotate:registry
+                          - file:/path/to/list.txt | /path/to/list.txt
+                          - http://user:pass@host:port[,http://host2:port]
+    --session ID          Persist cookies under this session id
+    --html                 Export response data to HTML file
+    --xml                  Export response data to XML file
+    --csv                  Export response data to CSV file
+    --xls|--excel          Export response data to Excel-compatible .xls
+    --yaml|--yml           Export response data to YAML file
+    --json                 Export response data to pretty-printed JSON
+    --md|--markdown        Export response data to Markdown table
+    
+    Note: Format is auto-detected from -o filename extension:
+          products.yaml, products.html, products.csv, etc.
+    
+SERVICE OPTIONS:
+    --start-services, --start    Start required services (Ollama, API server)
+    --stop-services, --stop      Stop all services
+    --status, --status-services  Check service status
+    --install                    Install dependencies
+    --test, --test-docker        Run tests in Docker (full integration tests)
+    --test-unit                  Run unit tests locally (fast, no browser)
+    
+EXAMPLES:
+    # Simple web extraction
+    curllm "https://example.com" -d "extract all email addresses"
+    
+    # Complex workflow with authentication
+    curllm -X POST --visual --stealth \\
+        -d '{"instruction": "Login and download invoice", 
+             "credentials": {"user": "john", "pass": "secret"}}' \\
+        https://app.example.com
+    
+    # BQL mode for structured extraction
+    curllm --bql -d 'query { page(url: "https://example.com") { 
+        title text links { href text } }}' 
+
+    # With CAPTCHA support
+    curllm --visual --captcha -d "Fill form and submit" https://form.example.com
+
+EOF
+    exit 0
+}
+
+# Function to check if services are running
+check_services() {
+    local all_good=true
+    
+    # Check Ollama
+    local OLLAMA_OK=false
+    dbg "Checking Ollama at ${CURLLM_OLLAMA_HOST}"
+    if curl -s "${CURLLM_OLLAMA_HOST}/api/tags" > /dev/null 2>&1; then
+        echo -e "${GREEN}✓ Ollama is running${NC}"
+        OLLAMA_OK=true
+    else
+        dbg "Primary Ollama check failed. Probing candidates..."
+        dbg "Candidates: ${CURLLM_OLLAMA_PORT} $(cat /tmp/ollama_port 2>/dev/null) 11434 11435 11436"
+        for p in "${CURLLM_OLLAMA_PORT}" $(cat /tmp/ollama_port 2>/dev/null) 11434 11435 11436; do
+            dbg "Probing http://localhost:${p}/api/tags"
+            if [ -n "$p" ] && curl -s "http://localhost:${p}/api/tags" > /dev/null 2>&1; then
+                CURLLM_OLLAMA_HOST="http://localhost:${p}"
+                echo ${p} > /tmp/ollama_port
+                [ -f .env ] || touch .env
+                if grep -q '^CURLLM_OLLAMA_PORT=' .env; then sed -i "s/^CURLLM_OLLAMA_PORT=.*/CURLLM_OLLAMA_PORT=${p}/" .env; else echo "CURLLM_OLLAMA_PORT=${p}" >> .env; fi
+                if grep -q '^CURLLM_OLLAMA_HOST=' .env; then sed -i "s#^CURLLM_OLLAMA_HOST=.*#CURLLM_OLLAMA_HOST=http://localhost:${p}#" .env; else echo "CURLLM_OLLAMA_HOST=http://localhost:${p}" >> .env; fi
+                dbg "Detected existing Ollama at port ${p}. .env updated."
+                echo -e "${GREEN}✓ Ollama is running${NC}"
+                OLLAMA_OK=true
+                break
+            fi
+        done
+        if [ "$OLLAMA_OK" != true ]; then
+            echo -e "${RED}✗ Ollama is not running${NC}"
+            echo "  Run: ollama serve"
+            all_good=false
+        fi
+    fi
+    
+    # Check API server (with fallback to detected port)
+    local API_OK=false
+    dbg "Checking API at ${CURLLM_API_HOST}/health"
+    if curl -s "${CURLLM_API_HOST}/health" > /dev/null 2>&1; then
+        API_OK=true
+    else
+        dbg "Primary API check failed. Trying fallback from /tmp/curllm_api_port"
+        if [ -f /tmp/curllm_api_port ]; then
+            local ap=$(cat /tmp/curllm_api_port)
+            dbg "Probing http://localhost:${ap}/health"
+            if curl -s "http://localhost:${ap}/health" > /dev/null 2>&1; then
+                CURLLM_API_HOST="http://localhost:${ap}"
+                [ -f .env ] || touch .env
+                if grep -q '^CURLLM_API_PORT=' .env; then sed -i "s/^CURLLM_API_PORT=.*/CURLLM_API_PORT=${ap}/" .env; else echo "CURLLM_API_PORT=${ap}" >> .env; fi
+                if grep -q '^CURLLM_API_HOST=' .env; then sed -i "s#^CURLLM_API_HOST=.*#CURLLM_API_HOST=http://localhost:${ap}#" .env; else echo "CURLLM_API_HOST=http://localhost:${ap}" >> .env; fi
+                dbg ".env API updated to port ${ap}"
+                API_OK=true
+            fi
+        fi
+    fi
+    if [ "$API_OK" = true ]; then
+        echo -e "${GREEN}✓ curllm API is running${NC}"
+    else
+        echo -e "${RED}✗ curllm API server is not running${NC}"
+        echo "  Run: curllm --start-services"
+        all_good=false
+    fi
+    
+    # Check if model exists
+    if command -v ollama > /dev/null 2>&1; then
+        if ! ollama list | grep -q "$CURLLM_MODEL"; then
+            echo -e "${YELLOW}⚠ Model $CURLLM_MODEL not found${NC}"
+            echo "  Run: ollama pull $CURLLM_MODEL"
+            all_good=false
+        else
+            echo -e "${GREEN}✓ Model $CURLLM_MODEL is available${NC}"
+        fi
+    fi
+    
+    if [ "$all_good" = false ]; then
+        return 1
+    fi
+    return 0
+}
+
+# Function to start services
+start_services() {
+    echo -e "${BLUE}Starting curllm services...${NC}"
+    
+    # Prefer reusing an already running API server port, if reachable
+    SKIP_API_START=false
+    if [ -f /tmp/curllm_api_port ]; then
+        ap=$(cat /tmp/curllm_api_port)
+        dbg "Probing existing API at http://localhost:${ap}/health"
+        if [ -n "$ap" ] && curl -s "http://localhost:${ap}/health" > /dev/null 2>&1; then
+            PORT=$ap
+            SKIP_API_START=true
+            dbg "Detected running API at port ${PORT}; will not start a new instance"
+        fi
+    fi
+    # If no running API was detected, choose a free port (starting from .env or default)
+    if [ "$SKIP_API_START" = false ]; then
+        PORT=${CURLLM_API_PORT:-$(if [ -f /tmp/curllm_api_port ]; then cat /tmp/curllm_api_port; else echo 8000; fi)}
+        INIT_PORT=$PORT
+        while ss -ltn | grep -q ":${PORT}\b"; do PORT=$((PORT+1)); done
+        if [ "$PORT" != "$INIT_PORT" ]; then dbg "API port ${INIT_PORT} busy; selected ${PORT}"; fi
+    fi
+    OPORT=${CURLLM_OLLAMA_PORT:-$(if [ -f /tmp/ollama_port ]; then cat /tmp/ollama_port; else echo 11434; fi)}
+    INIT_OPORT=$OPORT
+    while ss -ltn | grep -q ":${OPORT}\b"; do OPORT=$((OPORT+1)); done
+    if [ "$OPORT" != "$INIT_OPORT" ]; then dbg "Ollama port ${INIT_OPORT} busy; selected ${OPORT}"; fi
+    echo ${PORT} > /tmp/curllm_api_port
+    echo ${OPORT} > /tmp/ollama_port
+    dbg "Persisted /tmp/curllm_api_port=${PORT}, /tmp/ollama_port=${OPORT}"
+    # Persist selected ports and hosts to .env ONLY if not already set
+    if [ ! -f .env ]; then touch .env; fi
+    if ! grep -q '^CURLLM_API_PORT=' .env; then
+        echo "CURLLM_API_PORT=${PORT}" >> .env
+        dbg "Added CURLLM_API_PORT=${PORT} to .env"
+    else
+        dbg "CURLLM_API_PORT already set in .env, keeping existing value"
+    fi
+    if ! grep -q '^CURLLM_OLLAMA_PORT=' .env; then
+        echo "CURLLM_OLLAMA_PORT=${OPORT}" >> .env
+        dbg "Added CURLLM_OLLAMA_PORT=${OPORT} to .env"
+    else
+        dbg "CURLLM_OLLAMA_PORT already set in .env, keeping existing value"
+    fi
+    if ! grep -q '^CURLLM_API_HOST=' .env; then
+        echo "CURLLM_API_HOST=http://localhost:${PORT}" >> .env
+        dbg "Added CURLLM_API_HOST to .env"
+    else
+        dbg "CURLLM_API_HOST already set in .env, keeping existing value"
+    fi
+    if ! grep -q '^CURLLM_OLLAMA_HOST=' .env; then
+        echo "CURLLM_OLLAMA_HOST=http://localhost:${OPORT}" >> .env
+        dbg "Added CURLLM_OLLAMA_HOST to .env"
+    else
+        dbg "CURLLM_OLLAMA_HOST already set in .env, keeping existing value"
+    fi
+
+    # Prepare workspace directories to avoid permission issues (with fallbacks and suppressed stderr)
+    WS_DEFAULT="${CURLLM_WORKSPACE:-$PWD/workspace}"
+    if ! mkdir -p "$WS_DEFAULT"/sessions "$WS_DEFAULT"/storage "$WS_DEFAULT"/proxy 2>/dev/null; then
+        WS_FALLBACK1="${HOME}/.cache/curllm/workspace"
+        if ! mkdir -p "$WS_FALLBACK1"/sessions "$WS_FALLBACK1"/storage "$WS_FALLBACK1"/proxy 2>/dev/null; then
+            WS_FALLBACK2="/tmp/curllm/workspace"
+            mkdir -p "$WS_FALLBACK2"/sessions "$WS_FALLBACK2"/storage "$WS_FALLBACK2"/proxy 2>/dev/null || true
+            WS_DEFAULT="$WS_FALLBACK2"
+        else
+            WS_DEFAULT="$WS_FALLBACK1"
+        fi
+    fi
+    if [ ! -f .env ]; then touch .env; fi
+    if grep -q '^CURLLM_WORKSPACE=' .env; then
+        sed -i "s#^CURLLM_WORKSPACE=.*#CURLLM_WORKSPACE=$WS_DEFAULT#" .env
+    else
+        echo "CURLLM_WORKSPACE=$WS_DEFAULT" >> .env
+    fi
+    if grep -q '^CURLLM_STORAGE_DIR=' .env; then
+        sed -i "s#^CURLLM_STORAGE_DIR=.*#CURLLM_STORAGE_DIR=$WS_DEFAULT/storage#" .env
+    else
+        echo "CURLLM_STORAGE_DIR=$WS_DEFAULT/storage" >> .env
+    fi
+
+    if ! pgrep -x "ollama" > /dev/null; then
+        echo "Starting Ollama..."
+        OLLAMA_HOST="127.0.0.1:${OPORT}" ollama serve > /tmp/ollama.log 2>&1 &
+        sleep 2
+    else
+        # Detect existing Ollama port (prefer current env/.env, then common defaults)
+        dbg "Ollama process already running; probing ports to detect host..."
+        for p in "${CURLLM_OLLAMA_PORT}" $(cat /tmp/ollama_port 2>/dev/null) 11434 11435 11436; do
+            dbg "Probing http://localhost:${p}/api/tags"
+            if [ -n "$p" ] && curl -s "http://localhost:${p}/api/tags" > /dev/null 2>&1; then
+                OPORT="$p"
+                echo ${OPORT} > /tmp/ollama_port
+                if ! grep -q '^CURLLM_OLLAMA_PORT=' .env; then
+                    echo "CURLLM_OLLAMA_PORT=${OPORT}" >> .env
+                    dbg "Added CURLLM_OLLAMA_PORT=${OPORT} to .env"
+                else
+                    dbg "CURLLM_OLLAMA_PORT already set in .env, keeping existing value"
+                fi
+                if ! grep -q '^CURLLM_OLLAMA_HOST=' .env; then
+                    echo "CURLLM_OLLAMA_HOST=http://localhost:${OPORT}" >> .env
+                    dbg "Added CURLLM_OLLAMA_HOST to .env"
+                else
+                    dbg "CURLLM_OLLAMA_HOST already set in .env, keeping existing value"
+                fi
+                dbg "Detected existing Ollama at port ${OPORT}"
+                break
+            fi
+        done
+    fi
+    
+    # Pull model if needed
+    if ! ollama list | grep -q "$CURLLM_MODEL"; then
+        echo "Pulling model $CURLLM_MODEL..."
+        ollama pull "$CURLLM_MODEL"
+    fi
+    
+    # Start API server (only if not already running)
+    if [ "$SKIP_API_START" = false ] && ! curl -s "http://localhost:${PORT}/health" > /dev/null 2>&1; then
+        echo "Starting curllm API server..."
+        # Use new curllm_core.server entrypoint directly
+        CURLLM_API_PORT=${PORT} CURLLM_OLLAMA_HOST="http://localhost:${OPORT}" CURLLM_DEBUG=false python3 -m curllm_core.server > /tmp/curllm.log 2>&1 &
+        echo $! > /tmp/curllm.pid
+        sleep 3
+    fi
+    
+    # Start Browserless if enabled
+    if [ "$CURLLM_BROWSERLESS" = "true" ]; then
+        if ! docker ps | grep -q "browserless"; then
+            echo "Starting Browserless container..."
+            docker run -d \
+                --name browserless \
+                -p 3000:3000 \
+                -e "MAX_CONCURRENT_SESSIONS=10" \
+                -e "ENABLE_STEALTH=true" \
+                browserless/chrome:latest
+        fi
+    fi
+    
+    echo -e "${GREEN}Services started successfully!${NC}"
+    check_status
+}
+
+# Function to stop services
+stop_services() {
+    echo -e "${BLUE}Stopping curllm services...${NC}"
+    
+    # Stop API server
+    if [ -f /tmp/curllm.pid ]; then
+        kill $(cat /tmp/curllm.pid) 2>/dev/null
+        rm /tmp/curllm.pid
+        echo "Stopped curllm API server"
+    fi
+    # Additionally, kill any Python process bound to the API port (handles Flask reloader children)
+    # Determine port candidates
+    PORTS=()
+    if [ -f /tmp/curllm_api_port ]; then PORTS+=("$(cat /tmp/curllm_api_port)"); fi
+    if [ -n "$CURLLM_API_PORT" ]; then PORTS+=("$CURLLM_API_PORT"); fi
+    # De-duplicate
+    UNIQUE_PORTS=($(printf "%s\n" "${PORTS[@]}" | awk '!seen[$0]++'))
+    for p in "${UNIQUE_PORTS[@]}"; do
+        [ -z "$p" ] && continue
+        # Find PIDs via ss
+        PIDS=$(ss -ltnp 2>/dev/null | awk -v port=":${p} " 'index($4, port){print $7}' | sed -E 's/.*pid=([0-9]+).*/\1/' | sort -u)
+        for pid in $PIDS; do
+            if ps -p "$pid" -o comm= | grep -q "python"; then
+                kill "$pid" 2>/dev/null || true
+                sleep 0.2
+                kill -9 "$pid" 2>/dev/null || true
+                echo "Killed API server process PID=$pid on port $p"
+            fi
+        done
+    done
+    
+    # Stop Browserless
+    docker stop browserless 2>/dev/null
+    docker rm browserless 2>/dev/null
+    
+    echo -e "${GREEN}Services stopped${NC}"
+}
+
+# Function to check status
+check_status() {
+    # Check if all services are running first
+    local all_ok=true
+    if ! check_services > /dev/null 2>&1; then
+        all_ok=false
+    fi
+    
+    if [ "$all_ok" = true ]; then
+        echo -e "${GREEN}Services started successfully!${NC}"
+    fi
+    
+    echo -e "${BLUE}=== curllm Service Status ===${NC}"
+    check_services
+    
+    # Show GPU info if nvidia-smi available
+    if command -v nvidia-smi > /dev/null 2>&1; then
+        echo ""
+        echo -e "${BLUE}GPU Status:${NC}"
+        nvidia-smi --query-gpu=name,memory.used,memory.total --format=csv,noheader
+    fi
+}
+
+# Function to run tests in Docker
+run_tests_docker() {
+    echo -e "${BLUE}Running curllm tests in Docker...${NC}"
+    
+    # Find script directory to locate docker-compose.test.yml
+    SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
+    SCRIPT_DIR="$( dirname "${SCRIPT_PATH}" )"
+    
+    # Check for docker-compose.test.yml
+    COMPOSE_FILE=""
+    for path in "$SCRIPT_DIR/docker-compose.test.yml" "$PWD/docker-compose.test.yml"; do
+        if [ -f "$path" ]; then
+            COMPOSE_FILE="$path"
+            break
+        fi
+    done
+    
+    if [ -z "$COMPOSE_FILE" ]; then
+        echo -e "${RED}Error: docker-compose.test.yml not found${NC}"
+        echo "Make sure you're in the curllm directory or the script is properly installed"
+        exit 1
+    fi
+    
+    echo -e "${YELLOW}Using: $COMPOSE_FILE${NC}"
+    
+    # Check if Docker is available
+    if ! command -v docker > /dev/null 2>&1; then
+        echo -e "${RED}Error: Docker is not installed${NC}"
+        echo "Install Docker: https://docs.docker.com/get-docker/"
+        exit 1
+    fi
+    
+    # Check if docker-compose is available
+    COMPOSE_CMD=""
+    if command -v docker-compose > /dev/null 2>&1; then
+        COMPOSE_CMD="docker-compose"
+    elif docker compose version > /dev/null 2>&1; then
+        COMPOSE_CMD="docker compose"
+    else
+        echo -e "${RED}Error: docker-compose is not installed${NC}"
+        exit 1
+    fi
+    
+    # Build and run tests
+    echo -e "${BLUE}Building test environment...${NC}"
+    $COMPOSE_CMD -f "$COMPOSE_FILE" build
+    
+    echo -e "${BLUE}Running tests...${NC}"
+    $COMPOSE_CMD -f "$COMPOSE_FILE" up --abort-on-container-exit
+    TEST_EXIT_CODE=$?
+    
+    # Cleanup
+    echo -e "${BLUE}Cleaning up...${NC}"
+    $COMPOSE_CMD -f "$COMPOSE_FILE" down
+    
+    # Report results
+    if [ $TEST_EXIT_CODE -eq 0 ]; then
+        echo -e "${GREEN}✓ All tests passed!${NC}"
+    else
+        echo -e "${RED}✗ Some tests failed (exit code: $TEST_EXIT_CODE)${NC}"
+    fi
+    
+    # Check for test report
+    REPORT_DIR="$SCRIPT_DIR/test_results"
+    if [ -f "$REPORT_DIR/report.html" ]; then
+        echo -e "${BLUE}Test report available at:${NC} $REPORT_DIR/report.html"
+    fi
+    
+    exit $TEST_EXIT_CODE
+}
+
+# Function to run unit tests locally
+run_tests_unit() {
+    echo -e "${BLUE}Running unit tests locally...${NC}"
+    
+    # Find script directory
+    SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
+    SCRIPT_DIR="$( dirname "${SCRIPT_PATH}" )"
+    
+    # Check for tests directory
+    TESTS_DIR=""
+    for path in "$SCRIPT_DIR/tests" "$PWD/tests"; do
+        if [ -d "$path" ]; then
+            TESTS_DIR="$path"
+            break
+        fi
+    done
+    
+    if [ -z "$TESTS_DIR" ]; then
+        echo -e "${RED}Error: tests directory not found${NC}"
+        exit 1
+    fi
+    
+    # Check for pytest
+    if ! python3 -m pytest --version > /dev/null 2>&1; then
+        echo -e "${RED}Error: pytest is not installed${NC}"
+        echo "Install with: pip install pytest"
+        exit 1
+    fi
+    
+    # Run unit tests (excluding integration tests that need browsers)
+    cd "$SCRIPT_DIR" || cd "$PWD"
+    PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest tests/ --ignore=tests/integration -v
+    exit $?
+}
+
+# Function to install dependencies
+install_dependencies() {
+    echo -e "${BLUE}Installing curllm dependencies...${NC}"
+    
+    # Check for Python 3
+    if ! command -v python3 > /dev/null 2>&1; then
+        echo -e "${RED}Python 3 is required${NC}"
+        exit 1
+    fi
+    
+    # Install Python packages
+    echo "Installing Python packages..."
+    pip3 install --user \
+        browser-use \
+        langchain \
+        langchain-ollama \
+        playwright \
+        flask \
+        flask-cors \
+        pillow \
+        opencv-python \
+        pytesseract \
+        aiohttp
+    
+    # Install Playwright browsers
+    echo "Installing Playwright browsers..."
+    python3 -m playwright install chromium
+    
+    # Install Ollama if not present
+    if ! command -v ollama > /dev/null 2>&1; then
+        echo "Installing Ollama..."
+        curl -fsSL https://ollama.ai/install.sh | sh
+    fi
+    
+    # Create config directory
+    mkdir -p ~/.config/curllm
+    
+    echo -e "${GREEN}Installation complete!${NC}"
+    echo "Run 'curllm --start-services' to begin"
+}
+
+print_kv() {
+    printf '%s: %s\n' "$1" "$2"
+}
+print_verbose_env() {
+    echo -e "${BLUE}Environment (.env) in use:${NC}"
+    print_kv "CURLLM_API_HOST" "${CURLLM_API_HOST}"
+    print_kv "CURLLM_API_PORT" "${CURLLM_API_PORT}"
+    print_kv "CURLLM_OLLAMA_HOST" "${CURLLM_OLLAMA_HOST}"
+    print_kv "CURLLM_OLLAMA_PORT" "${CURLLM_OLLAMA_PORT}"
+    print_kv "CURLLM_MODEL" "${CURLLM_MODEL}"
+    print_kv "CURLLM_BROWSERLESS" "${CURLLM_BROWSERLESS}"
+    print_kv "BROWSERLESS_URL" "${BROWSERLESS_URL}"
+    print_kv "CURLLM_DEBUG" "${CURLLM_DEBUG}"
+    print_kv "CURLLM_HEADLESS" "${CURLLM_HEADLESS}"
+    print_kv "CURLLM_NUM_CTX" "${CURLLM_NUM_CTX}"
+    print_kv "CURLLM_NUM_PREDICT" "${CURLLM_NUM_PREDICT}"
+    print_kv "CURLLM_TEMPERATURE" "${CURLLM_TEMPERATURE}"
+    print_kv "CURLLM_TOP_P" "${CURLLM_TOP_P}"
+    print_kv "CURLLM_LOCALE" "${CURLLM_LOCALE}"
+    print_kv "CURLLM_TIMEZONE" "${CURLLM_TIMEZONE}"
+    print_kv "CURLLM_VALIDATION" "${CURLLM_VALIDATION}"
+    print_kv "CURLLM_PROXY" "${CURLLM_PROXY}"
+    print_kv "HTTPS_PROXY" "${HTTPS_PROXY}"
+    print_kv "HTTP_PROXY" "${HTTP_PROXY}"
+    print_kv "CAPTCHA_API_KEY" "${CAPTCHA_API_KEY}"
+    echo -e "${BLUE}Runtime (.env)${NC}"
+    print_kv "CURLLM_INCLUDE_DOM_HTML" "${CURLLM_INCLUDE_DOM_HTML}"
+    print_kv "CURLLM_DOM_MAX_CHARS" "${CURLLM_DOM_MAX_CHARS}"
+    print_kv "CURLLM_DOM_MAX_CAP" "${CURLLM_DOM_MAX_CAP}"
+    print_kv "CURLLM_SMART_CLICK" "${CURLLM_SMART_CLICK}"
+    print_kv "CURLLM_ACTION_TIMEOUT_MS" "${CURLLM_ACTION_TIMEOUT_MS}"
+    print_kv "CURLLM_WAIT_AFTER_CLICK_MS" "${CURLLM_WAIT_AFTER_CLICK_MS}"
+    print_kv "CURLLM_WAIT_AFTER_NAV_MS" "${CURLLM_WAIT_AFTER_NAV_MS}"
+    print_kv "CURLLM_NO_CLICK" "${CURLLM_NO_CLICK}"
+    print_kv "CURLLM_SCROLL_LOAD" "${CURLLM_SCROLL_LOAD}"
+    print_kv "CURLLM_FASTPATH" "${CURLLM_FASTPATH}"
+    print_kv "CURLLM_REFINE_INSTRUCTION" "${CURLLM_REFINE_INSTRUCTION}"
+    print_kv "CURLLM_USE_EXTERNAL_SLIDER_SOLVER" "${CURLLM_USE_EXTERNAL_SLIDER_SOLVER}"
+    print_kv "CURLLM_STALL_LIMIT" "${CURLLM_STALL_LIMIT}"
+    print_kv "CURLLM_PLANNER_BASE_CHARS" "${CURLLM_PLANNER_BASE_CHARS}"
+    print_kv "CURLLM_PLANNER_GROWTH_PER_STEP" "${CURLLM_PLANNER_GROWTH_PER_STEP}"
+    print_kv "CURLLM_PLANNER_MAX_CAP" "${CURLLM_PLANNER_MAX_CAP}"
+    print_kv "CURLLM_STORE_RESULTS" "${CURLLM_STORE_RESULTS}"
+    print_kv "CURLLM_RESULT_KEY" "${CURLLM_RESULT_KEY}"
+    print_kv "CURLLM_DIFF_MODE" "${CURLLM_DIFF_MODE}"
+    print_kv "CURLLM_DIFF_FIELDS" "${CURLLM_DIFF_FIELDS}"
+    print_kv "CURLLM_KEEP_HISTORY" "${CURLLM_KEEP_HISTORY}"
+    print_kv "CURLLM_INCLUDE_PREV_RESULTS" "${CURLLM_INCLUDE_PREV_RESULTS}"
+    print_kv "CURLLM_RUNTIME_PRESET" "${CURLLM_RUNTIME_PRESET}"
+    print_kv "CURLLM_AUTO_RESTART_OLD_MODEL" "${CURLLM_AUTO_RESTART_OLD_MODEL}"
+    echo -e "${BLUE}Logging (.env)${NC}"
+    print_kv "CURLLM_LOG_PREVIEW_CHARS" "${CURLLM_LOG_PREVIEW_CHARS}"
+    print_kv "CURLLM_LOG_PROMPT_CHARS" "${CURLLM_LOG_PROMPT_CHARS}"
+    echo -e "${BLUE}Workspace (.env)${NC}"
+    print_kv "CURLLM_WORKSPACE" "${CURLLM_WORKSPACE}"
+    print_kv "CURLLM_STORAGE_DIR" "${CURLLM_STORAGE_DIR}"
+    print_kv "CURLLM_SCREENSHOT_DIR" "${CURLLM_SCREENSHOT_DIR}"
+    echo -e "${BLUE}Flags (this run)${NC}"
+    print_kv "VISUAL_MODE" "${VISUAL_MODE}"
+    print_kv "STEALTH_MODE" "${STEALTH_MODE}"
+    print_kv "CAPTCHA_SOLVER" "${CAPTCHA_SOLVER}"
+    print_kv "USE_BQL" "${USE_BQL}"
+    print_kv "PROXY_ARG" "${PROXY_ARG}"
+    print_kv "SESSION_ID" "${SESSION_ID}"
+}
+#############################################
+# Export helpers (require jq)
+#############################################
+
+need_jq() {
+    if ! command -v jq >/dev/null 2>&1; then
+        echo -e "${RED}Export requires 'jq' installed. Please install jq and retry.${NC}" 1>&2
+        return 1
+    fi
+    return 0
+}
+
+# Detect an array of rows to tabulate. Prefer common keys under .result or root.
+# If an array of scalars is found, convert to objects with a single 'value' column.
+# Also handles specifications (dict) format for technical specs.
+json_select_rows() {
+    jq -r '
+      def first_array(s): limit(1; s | .. | arrays);
+      def dict_to_array: if type == "object" then [to_entries[] | {key: .key, value: .value}] else . end;
+      def pick:
+        . as $root
+        | ($root.result? // $root) as $b
+        | (
+            # Handle specifications (dict format) - convert to array of key-value pairs
+            if ($b.specifications? | type) == "object" then
+              $b.specifications | dict_to_array
+            elif ($b.result?.specifications? | type) == "object" then
+              $b.result.specifications | dict_to_array
+            else
+              # Standard array formats
+              $b.articles?
+              // (try ($b.page.links) catch null)
+              // $b.products? // $b.items? // $b.links? // $b.data? // $b.emails? // $b.phones?
+              // (try ($root.page.links) catch null)
+              // first_array($b)
+              // first_array($root)
+            end
+          );
+      def to_objects($arr):
+        if ($arr|type=="array" and ($arr|length>0) and (($arr[0]|type)!="object"))
+        then [ $arr[] | {value:.} ] else $arr end;
+      (pick // []) as $arr
+      | to_objects($arr)
+    '
+}
+
+export_csv() {
+    local outfile="$1"; shift || true
+    need_jq || return 1
+    printf '%s' "$RESPONSE" | json_select_rows | jq -r '
+      def headers: (map(keys) | add | unique);
+      . as $rows | ($rows | headers) as $h
+      | ($h | @csv),
+        ($rows[] | [ $h[] as $k | (.[ $k ] // "") ] | @csv)
+    ' > "$outfile"
+    echo -e "${GREEN}✓ CSV exported to${NC} $outfile" 1>&2
+}
+
+export_html() {
+    local outfile="$1"; shift || true
+    need_jq || return 1
+    local table
+    if ! table=$(printf '%s' "$RESPONSE" | json_select_rows | jq -r '
+      def headers: (map(keys) | add | unique);
+      def esc($s): ($s|tostring|gsub("&";"&amp;")|gsub("<";"&lt;")|gsub(">";"&gt;")|gsub("\"";"&quot;"));
+      . as $rows | ($rows | headers) as $h
+      | "<table border=\"1\" cellspacing=\"0\" cellpadding=\"4\"><thead><tr>"
+        + ($h | map("<th>" + (esc(.)) + "</th>") | join(""))
+        + "</tr></thead><tbody>"
+        + ($rows
+            | map(
+                . as $r
+                | "<tr>" + (
+                    $h | map("<td>" + (esc(($r[.] // ""))) + "</td>") | join("")
+                  ) + "</tr>"
+              )
+            | join("")
+          )
+        + "</tbody></table>"
+    '); then
+        echo -e "${RED}Failed to generate HTML export (jq error).${NC}" 1>&2
+        return 1
+    fi
+    {
+      echo "<!DOCTYPE html>"
+      echo "<html><head><meta charset=\"utf-8\"><title>curllm export</title>"
+      echo "<style>table{border-collapse:collapse;font-family:sans-serif}th,td{border:1px solid #999;padding:4px 6px}</style>"
+      echo "</head><body>"
+      echo "$table"
+      echo "</body></html>"
+    } > "$outfile"
+    echo -e "${GREEN}✓ HTML exported to${NC} $outfile" 1>&2
+}
+
+export_xml() {
+    local outfile="$1"; shift || true
+    need_jq || return 1
+    {
+        echo '<?xml version="1.0" encoding="UTF-8"?>'
+        echo '<data>'
+        printf '%s' "$RESPONSE" | json_select_rows | jq -r '
+          def esc($s): ($s|tostring|gsub("&";"&amp;")|gsub("<";"&lt;")|gsub(">";"&gt;")|gsub("\"";"&quot;"));
+          .[] | "<item>" + ( to_entries | map("<" + .key + ">" + esc(.value) + "</" + .key + ">") | join("") ) + "</item>"
+        '
+        echo '</data>'
+    } > "$outfile"
+    echo -e "${GREEN}✓ XML exported to${NC} $outfile" 1>&2
+}
+
+export_xls() {
+    local outfile="$1"; shift || true
+    # Generate HTML table but save with .xls extension for Excel compatibility
+    export_html "$outfile"
+}
+
+export_yaml() {
+    local outfile="$1"; shift || true
+    need_jq || return 1
+    
+    # Try using Python for proper YAML output
+    if command -v python3 > /dev/null 2>&1; then
+        printf '%s' "$RESPONSE" | json_select_rows | python3 -c "
+import sys, json
+try:
+    import yaml
+    data = json.load(sys.stdin)
+    # Handle specifications format (dict)
+    if isinstance(data, dict):
+        print(yaml.dump(data, allow_unicode=True, default_flow_style=False, sort_keys=False))
+    else:
+        print(yaml.dump({'items': data}, allow_unicode=True, default_flow_style=False, sort_keys=False))
+except ImportError:
+    # Fallback without pyyaml
+    data = json.load(sys.stdin)
+    def to_yaml(obj, indent=0):
+        prefix = '  ' * indent
+        if isinstance(obj, dict):
+            lines = []
+            for k, v in obj.items():
+                if isinstance(v, (dict, list)):
+                    lines.append(f'{prefix}{k}:')
+                    lines.append(to_yaml(v, indent + 1))
+                else:
+                    lines.append(f'{prefix}{k}: {json.dumps(v, ensure_ascii=False)}')
+            return '\n'.join(lines)
+        elif isinstance(obj, list):
+            lines = []
+            for item in obj:
+                item_yaml = to_yaml(item, indent + 1)
+                lines.append(f'{prefix}- ' + item_yaml.lstrip())
+            return '\n'.join(lines)
+        else:
+            return f'{prefix}{json.dumps(obj, ensure_ascii=False)}'
+    print(to_yaml(data))
+" > "$outfile"
+    else
+        # Fallback to jq-based conversion
+        printf '%s' "$RESPONSE" | json_select_rows | jq -r '
+          def to_yaml:
+            to_entries | map("  " + .key + ": " + (.value | @json)) | join("\n");
+          . as $rows | ($rows | to_entries | map(
+            "- # item " + (.key | tostring) + "\n" + (.value | to_yaml)
+          ) | join("\n"))
+        ' > "$outfile"
+    fi
+    echo -e "${GREEN}✓ YAML exported to${NC} $outfile" 1>&2
+}
+
+export_json() {
+    local outfile="$1"; shift || true
+    need_jq || return 1
+    # Pretty-print JSON data
+    printf '%s' "$RESPONSE" | json_select_rows | jq '.' > "$outfile"
+    echo -e "${GREEN}✓ JSON exported to${NC} $outfile" 1>&2
+}
+
+export_markdown() {
+    local outfile="$1"; shift || true
+    need_jq || return 1
+    # Create markdown table using Python for reliability
+    if command -v python3 > /dev/null 2>&1; then
+        printf '%s' "$RESPONSE" | json_select_rows | python3 -c "
+import sys, json
+from datetime import datetime
+
+data = json.load(sys.stdin)
+if isinstance(data, dict) and not isinstance(data, list):
+    # Handle specs/dict format
+    print('# curllm export\n')
+    print('| Key | Value |')
+    print('| --- | --- |')
+    for k, v in data.items():
+        print(f'| {k} | {v} |')
+else:
+    # Handle list of items
+    if not data:
+        print('# curllm export\n\nNo data.')
+        sys.exit(0)
+    
+    # Get all keys
+    keys = []
+    for item in data:
+        if isinstance(item, dict):
+            for k in item.keys():
+                if k not in keys:
+                    keys.append(k)
+    
+    print('# curllm export\n')
+    print('| ' + ' | '.join(keys) + ' |')
+    print('| ' + ' | '.join(['---'] * len(keys)) + ' |')
+    
+    for item in data:
+        if isinstance(item, dict):
+            values = [str(item.get(k, '')) for k in keys]
+            print('| ' + ' | '.join(values) + ' |')
+
+print(f'\n_Generated: {datetime.now()}_')
+" > "$outfile"
+    else
+        # Fallback to jq
+        local table
+        if ! table=$(printf '%s' "$RESPONSE" | json_select_rows | jq -r '
+          def headers: (map(keys) | add | unique);
+          . as $rows | ($rows | headers) as $h
+          | ("| " + ($h | join(" | ")) + " |"),
+            ("| " + ($h | map("---") | join(" | ")) + " |"),
+            ($rows[] | "| " + ([ $h[] as $k | (.[$k] // "") | tostring ] | join(" | ")) + " |")
+        '); then
+            echo -e "${RED}Failed to generate Markdown export.${NC}" 1>&2
+            return 1
+        fi
+        {
+            echo "# curllm export"
+            echo ""
+            echo "$table"
+            echo ""
+            echo "_Generated: $(date)_"
+        } > "$outfile"
+    fi
+    echo -e "${GREEN}✓ Markdown exported to${NC} $outfile" 1>&2
+}
+
+# Detect format from output file extension
+detect_format_from_extension() {
+    local file="$1"
+    case "${file##*.}" in
+        yaml|yml) echo "yaml" ;;
+        json) echo "json" ;;
+        html|htm) echo "html" ;;
+        xml) echo "xml" ;;
+        csv) echo "csv" ;;
+        xls|xlsx) echo "xls" ;;
+        md|markdown) echo "md" ;;
+        *) echo "json" ;;
+    esac
+}
+
+## Argument parsing (after functions are defined so function calls work)
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -X|--request)
+            METHOD="$2"; shift 2;;
+        -d|--data)
+            DATA="$2"; shift 2;;
+        -H|--header)
+            HEADERS+=("$2"); shift 2;;
+        -o|--output)
+            OUTPUT_FILE="$2"; shift 2;;
+        -v|--verbose)
+            VERBOSE=true; shift;;
+        --visual)
+            VISUAL_MODE=true; shift;;
+        --stealth)
+            STEALTH_MODE=true; shift;;
+        --captcha)
+            CAPTCHA_SOLVER=true; shift;;
+        --bql)
+            USE_BQL=true; shift;;
+        --v1)
+            USE_V1=true; shift;;
+        --model)
+            CURLLM_MODEL="$2"; shift 2;;
+        --auto-restart-old-model)
+            CURLLM_AUTO_RESTART_OLD_MODEL=true; shift;;
+        --proxy)
+            PROXY_ARG="$2"; shift 2;;
+        --session)
+            SESSION_ID="$2"; shift 2;;
+        --start-services|--start)
+            start_services; exit 0;;
+        --stop-services|--stop)
+            stop_services; exit 0;;
+        --status|--status-services)
+            check_status; exit 0;;
+        --install)
+            install_dependencies; exit 0;;
+        --test|--test-docker)
+            run_tests_docker; exit 0;;
+        --test-unit)
+            run_tests_unit; exit 0;;
+        --html)
+            EXPORT_HTML=true; shift;;
+        --xml)
+            EXPORT_XML=true; shift;;
+        --csv)
+            EXPORT_CSV=true; shift;;
+        --xls|--excel)
+            EXPORT_XLS=true; shift;;
+        --yaml|--yml)
+            EXPORT_YAML=true; shift;;
+        --json)
+            EXPORT_JSON=true; shift;;
+        --md|--markdown)
+            EXPORT_MD=true; shift;;
+        -h|--help)
+            show_help;;
+        --version)
+            echo "curllm version $VERSION"; exit 0;;
+        *)
+            URL="$1"; shift;;
+    esac
+done
+
+# Function to check if input is a natural language command (not a URL)
+is_natural_language_command() {
+    local input="$1"
+    
+    # If it starts with http:// or https://, it's a URL
+    if [[ "$input" =~ ^https?:// ]]; then
+        return 1
+    fi
+    
+    # If it looks like a domain (xxx.yyy), it might be a URL
+    if [[ "$input" =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
+        return 1
+    fi
+    
+    # Check for Polish/English natural language patterns
+    local patterns=(
+        "wejdź" "wejdz" "otwórz" "otworz" "przejdź" "przejdz"
+        "znajdź" "znajdz" "wyślij" "wyslij" "wypełnij" "wypelnij"
+        "napisz" "zaloguj" "zarejestruj" "dodaj" "usuń" "usun"
+        "pobierz" "sprawdź" "sprawdz" "kliknij" "wyszukaj"
+        "go to" "open" "find" "send" "fill" "submit" "click" "search"
+        "login" "register" "download" "check"
+    )
+    
+    local input_lower=$(echo "$input" | tr '[:upper:]' '[:lower:]')
+    
+    for pattern in "${patterns[@]}"; do
+        if [[ "$input_lower" == *"$pattern"* ]]; then
+            return 0
+        fi
+    done
+    
+    # If input contains spaces and doesn't look like a URL, treat as NL
+    if [[ "$input" == *" "* ]] && [[ ! "$input" =~ ^[a-zA-Z0-9./-]+$ ]]; then
+        return 0
+    fi
+    
+    return 1
+}
+
+# Function to run orchestrator for natural language commands
+run_orchestrator() {
+    local command="$1"
+    
+    # Find script directory
+    SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
+    SCRIPT_DIR="$( dirname "${SCRIPT_PATH}" )"
+    
+    echo -e "${BLUE}🚀 Detected natural language command. Using Smart Orchestrator...${NC}"
+    
+    # Build orchestrator arguments
+    local ORCH_ARGS=()
+    
+    if [ "$STEALTH_MODE" != "true" ]; then
+        ORCH_ARGS+=("--no-stealth")
+    fi
+    
+    if [ "$VISUAL_MODE" = "true" ]; then
+        ORCH_ARGS+=("--visible")
+    fi
+    
+    # Run the orchestrator
+    # cd "$SCRIPT_DIR"  <-- Removed to preserve CWD
+    python3 -m curllm_core.cli_orchestrator "${ORCH_ARGS[@]}" "$command"
+    return $?
+}
+
+# Main execution
+main() {
+    # Check if URL or instruction is provided
+    if [ -z "$URL" ] && [ -z "$DATA" ]; then
+        echo -e "${RED}Error: URL or instruction required${NC}"
+        echo "Use 'curllm --help' for usage information"
+        exit 1
+    fi
+    
+    # Check if this is a natural language command
+    if is_natural_language_command "$URL"; then
+        run_orchestrator "$URL"
+        exit $?
+    fi
+    
+    # Check services before running
+    if ! check_services > /dev/null 2>&1; then
+        { echo -e "${YELLOW}Services not ready. Checking status...${NC}"; check_services; } 1>&2
+        exit 1
+    fi
+    
+    # Build request payload
+    DATA_JSON=$( [ -z "$DATA" ] && echo '""' || printf '%s' "$DATA" | jq -Rs '.' )
+    if [ ${#HEADERS[@]} -eq 0 ]; then
+        HEADERS_JSON='[]'
+    else
+        HEADERS_JSON=$(printf '%s\n' "${HEADERS[@]}" | jq -R . | jq -s .)
+    fi
+    # Build proxy JSON
+    PROXY_JSON="null"
+    if [ -n "$PROXY_ARG" ]; then
+        if [[ "$PROXY_ARG" == rotate:public ]]; then
+            PROXY_JSON='{"rotate":"public"}'
+        elif [[ "$PROXY_ARG" == rotate:registry ]]; then
+            PROXY_JSON='{"rotate":"registry"}'
+        elif [[ "$PROXY_ARG" == file:* ]]; then
+            PTH="${PROXY_ARG#file:}"
+            ESC_PTH=$(printf '%s' "$PTH" | jq -Rs '.')
+            PROXY_JSON=$(printf '{"rotate":true,"file":%s}' "$ESC_PTH")
+        elif [ -f "$PROXY_ARG" ]; then
+            ABS=$(readlink -f "$PROXY_ARG")
+            ESC_ABS=$(printf '%s' "$ABS" | jq -Rs '.')
+            PROXY_JSON=$(printf '{"rotate":true,"file":%s}' "$ESC_ABS")
+        elif [[ "$PROXY_ARG" == *","* ]]; then
+            # Comma-separated list -> JSON array
+            LIST_JSON=$(printf '%s' "$PROXY_ARG" | awk -F, '{for(i=1;i<=NF;i++){print $i}}' | jq -Rs 'split("\n") | map(select(length>0))')
+            PROXY_JSON=$(printf '{"rotate":true,"list":%s}' "$LIST_JSON")
+        else
+            # Single proxy string -> JSON string
+            PROXY_JSON=$(printf '%s' "$PROXY_ARG" | jq -Rs '.')
+        fi
+    fi
+
+    # Calculate timestamp for log path
+    TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+    EXPECTED_LOG="logs/run-${TIMESTAMP}.md"
+    
+    PAYLOAD=$(cat <<EOF
+{
+    "method": "$METHOD",
+    "url": "$URL",
+    "log": "$EXPECTED_LOG",
+    "data": $DATA_JSON,
+    "visual_mode": $VISUAL_MODE,
+    "stealth_mode": $STEALTH_MODE,
+    "captcha_solver": $CAPTCHA_SOLVER,
+    "use_bql": $USE_BQL,
+    "use_v1": $USE_V1,
+    "model": "$CURLLM_MODEL",
+    "headers": $HEADERS_JSON,
+    "proxy": $PROXY_JSON,
+    "session_id": $(printf '%s' "$SESSION_ID" | jq -Rs '.')
+}
+EOF
+    )
+    
+    # Show verbose output if requested (to stderr)
+    if [ "$VERBOSE" = true ]; then
+        { 
+            print_verbose_env
+            echo -e "${BLUE}Request:${NC}"
+            echo "$PAYLOAD" | jq .
+            echo -e "${YELLOW}Expected run log:${NC} ${EXPECTED_LOG}"
+        } 1>&2
+    fi
+    
+    # Make API request
+    RESPONSE=$(curl -s -X POST \
+        "${CURLLM_API_HOST}/api/execute" \
+        -H "Content-Type: application/json" \
+        -d "$PAYLOAD")
+    
+    # Check for errors
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}Error: Failed to connect to curllm API${NC}"
+        exit 1
+    fi
+    
+    # Always output pure JSON on stdout; verbose info goes to stderr
+    if [ "$VERBOSE" = true ]; then
+        { echo -e "${BLUE}Response:${NC}"; echo "$RESPONSE" | jq .; } 1>&2
+        # Attempt to print used configuration from run log header
+        RUN_LOG=$(printf '%s' "$RESPONSE" | jq -r '.run_log // empty')
+        if [ -n "$RUN_LOG" ] && [ -f "$RUN_LOG" ]; then
+            { echo -e "${BLUE}Run header (used config):${NC}";
+              awk '/^## curllm run:/{flag=1;next}/^## /{flag=0}flag' "$RUN_LOG" | sed -n '1,160p' | grep -E '^- ' || true;
+            } 1>&2
+        fi
+    fi
+    echo "$RESPONSE"
+    # Auto-restart services if run used old default model (qwen2.5:7b)
+    if [ "$CURLLM_AUTO_RESTART_OLD_MODEL" = true ]; then
+        # Prefer run log check
+        RUN_LOG=$(printf '%s' "$RESPONSE" | jq -r '.run_log // empty')
+        NEED_RESTART=false
+        if [ -n "$RUN_LOG" ] && [ -f "$RUN_LOG" ]; then
+            if grep -qE "(- Model: qwen2\.5:7b|- CURLLM_MODEL: qwen2\.5:7b)" "$RUN_LOG"; then
+                NEED_RESTART=true
+            fi
+        else
+            # Fallback to /health check
+            HL=$(curl -s "${CURLLM_API_HOST}/health" | jq -r '.model // empty')
+            if [ "$HL" = "qwen2.5:7b" ]; then
+                NEED_RESTART=true
+            fi
+        fi
+        if [ "$NEED_RESTART" = true ]; then
+            { echo -e "${YELLOW}Detected old default model in use (qwen2.5:7b). Restarting services...${NC}"; } 1>&2
+            stop_services
+            start_services
+            { echo -e "${BLUE}/health after restart:${NC}"; curl -s "${CURLLM_API_HOST}/health" | jq .; } 1>&2
+        fi
+    fi
+
+    # Detect server error and skip export
+    # Check for .success == false OR .error OR .result.error (navigation errors)
+    if printf '%s' "$RESPONSE" | jq -e '(.success == false) or (.error != null) or (.result.error != null)' >/dev/null 2>&1; then
+        { echo -e "${RED}Server returned an error; skipping formatted export.${NC}"; } 1>&2
+        if [ -n "$OUTPUT_FILE" ]; then
+            # Still try to export in requested format if possible
+            DETECTED_FORMAT=$(detect_format_from_extension "$OUTPUT_FILE")
+            case "$DETECTED_FORMAT" in
+                yaml)
+                    printf '%s' "$RESPONSE" | python3 -c "
+import sys, json
+try:
+    import yaml
+    data = json.load(sys.stdin)
+    print(yaml.dump(data, allow_unicode=True, default_flow_style=False, sort_keys=False))
+except ImportError:
+    print(json.dumps(json.load(sys.stdin), indent=2, ensure_ascii=False))
+" > "$OUTPUT_FILE"
+                    ;;
+                *)
+                    echo "$RESPONSE" | jq '.' > "$OUTPUT_FILE" 2>/dev/null || echo "$RESPONSE" > "$OUTPUT_FILE"
+                    ;;
+            esac
+            { echo -e "${YELLOW}Error response saved to: $OUTPUT_FILE${NC}"; } 1>&2
+        fi
+        exit 1
+    fi
+
+    # Export handling
+    HAS_EXPORT=false
+    if [ "$EXPORT_HTML" = true ] || [ "$EXPORT_XML" = true ] || [ "$EXPORT_CSV" = true ] || \
+       [ "$EXPORT_XLS" = true ] || [ "$EXPORT_YAML" = true ] || [ "$EXPORT_JSON" = true ] || \
+       [ "$EXPORT_MD" = true ]; then
+        HAS_EXPORT=true
+    fi
+    
+    # Auto-detect format from output file extension if no explicit format flag
+    if [ "$HAS_EXPORT" = false ] && [ -n "$OUTPUT_FILE" ]; then
+        DETECTED_FORMAT=$(detect_format_from_extension "$OUTPUT_FILE")
+        case "$DETECTED_FORMAT" in
+            yaml) EXPORT_YAML=true; HAS_EXPORT=true ;;
+            json) EXPORT_JSON=true; HAS_EXPORT=true ;;
+            html) EXPORT_HTML=true; HAS_EXPORT=true ;;
+            xml) EXPORT_XML=true; HAS_EXPORT=true ;;
+            csv) EXPORT_CSV=true; HAS_EXPORT=true ;;
+            xls) EXPORT_XLS=true; HAS_EXPORT=true ;;
+            md) EXPORT_MD=true; HAS_EXPORT=true ;;
+        esac
+        if [ "$HAS_EXPORT" = true ]; then
+            { echo -e "${BLUE}Auto-detected format: $DETECTED_FORMAT${NC}"; } 1>&2
+        fi
+    fi
+    
+    if [ "$HAS_EXPORT" = true ]; then
+        # Determine output filenames
+        TS=$(date +%Y%m%d-%H%M%S)
+        if [ "$EXPORT_HTML" = true ]; then
+            OUT_HTML=${OUTPUT_FILE:-curllm_export_${TS}.html}
+            export_html "$OUT_HTML"
+        fi
+        if [ "$EXPORT_XML" = true ]; then
+            OUT_XML=${OUTPUT_FILE:-curllm_export_${TS}.xml}
+            export_xml "$OUT_XML"
+        fi
+        if [ "$EXPORT_CSV" = true ]; then
+            OUT_CSV=${OUTPUT_FILE:-curllm_export_${TS}.csv}
+            export_csv "$OUT_CSV"
+        fi
+        if [ "$EXPORT_XLS" = true ]; then
+            OUT_XLS=${OUTPUT_FILE:-curllm_export_${TS}.xls}
+            export_xls "$OUT_XLS"
+        fi
+        if [ "$EXPORT_YAML" = true ]; then
+            OUT_YAML=${OUTPUT_FILE:-curllm_export_${TS}.yaml}
+            export_yaml "$OUT_YAML"
+        fi
+        if [ "$EXPORT_JSON" = true ]; then
+            OUT_JSON=${OUTPUT_FILE:-curllm_export_${TS}.json}
+            export_json "$OUT_JSON"
+        fi
+        if [ "$EXPORT_MD" = true ]; then
+            OUT_MD=${OUTPUT_FILE:-curllm_export_${TS}.md}
+            export_markdown "$OUT_MD"
+        fi
+    else
+        # Save raw JSON to file if requested and no export flags were used
+        if [ -n "$OUTPUT_FILE" ]; then
+            echo "$RESPONSE" > "$OUTPUT_FILE"
+            { echo -e "${GREEN}Output saved to: $OUTPUT_FILE${NC}"; } 1>&2
+        fi
+    fi
+}
+
+# Handle Ctrl+C gracefully
+trap 'echo -e "\n${YELLOW}Interrupted${NC}"; exit 130' INT
+
+# Run main function if not sourced
+if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
+    main
+fi
