@@ -1,0 +1,313 @@
+# Community DevOps Agent API - boto3 Service Integration
+
+[![Python Version](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![PyPI version](https://badge.fury.io/py/devopsagent-api.svg)](https://pypi.org/project/devopsagent-api/)
+
+A Python client library that provides native boto3 integration for AWS DevOps services. This library registers multiple custom boto3 services, enabling familiar AWS SDK patterns for DevOps operations.
+
+## 🎉 **NEW: AWS DevOps Agent Control Plane Service Integration**
+
+**✅ Fully Functional**: The library now includes complete boto3 integration for the **AWS DevOps Agent Control Plane** service (`community-aidevops`), providing access to Agent Spaces, Service Associations, and Operator Applications.
+
+**🚀 Key Features:**
+- **23 API Operations** across Agent Spaces, Associations, Services, and Operators
+- **Native boto3 Client**: `boto3.client('community-aidevops', region_name='us-east-1')`
+- **Full Pagination Support** with automatic paginators
+- **Comprehensive Error Handling** with specific exception types
+- **Production Ready** with proper endpoint configuration
+
+**📋 Available Operations:**
+- **Agent Space Operations** (5): `create_agent_space`, `get_agent_space`, `update_agent_space`, `delete_agent_space`, `list_agent_spaces`
+- **Association Operations** (3): `associate_service`, `disassociate_service`, `get_association`
+- **Service Operations** (9): `register_service`, `deregister_service`, `get_service`, `list_services`, `search_service_accessible_resource`, etc.
+- **Operator Operations** (4): `enable_operator_app`, `disable_operator_app`, `update_operator_app_teams`, `get_operator_app_teams`
+
+**🔧 Quick Start with DevOps Agent Control Plane:**
+```python
+import devopsagent_api  # Registers all services
+import boto3
+
+# Create client for AWS DevOps Agent Control Plane
+client = boto3.client('community-aidevops', region_name='us-east-1')
+
+# List agent spaces
+response = client.list_agent_spaces()
+for space in response['agentSpaces']:
+    print(f"Agent Space: {space['name']} (ID: {space['agentSpaceId']})")
+
+# Create a new agent space
+response = client.create_agent_space(
+    name='my-devops-space',
+    description='Development operations workspace'
+)
+print(f"Created agent space: {response['agentSpace']['agentSpaceId']}")
+```
+
+---
+
+## 📋 **Service Overview**
+
+This library provides boto3 integration for **two AWS DevOps services**:
+
+### 1. **Community DevOps Agent** (`community-devops-agent`)
+- **Service**: Original DevOps Agent API for task management, goals, and recommendations
+- **API Version**: 2025-12-09
+- **Use Case**: AI-powered DevOps operations and automation
+
+### 2. **AWS DevOps Agent Control Plane** (`community-aidevops`)
+- **Service**: AWS DevOps Agent Control Plane for managing agent spaces and service associations
+- **API Version**: 2018-05-10
+- **Use Case**: Infrastructure management for DevOps agents and service integrations
+
+## 🚀 Quick Start
+
+### Basic Usage
+
+```python
+import devopsagent_api  # Registers the service
+import boto3
+
+# Create a client using standard boto3 patterns
+client = boto3.client('community-devops-agent', region_name='us-east-1')
+
+# List tasks with filtering
+response = client.list_tasks(
+    agentSpaceId='your-agent-space-uuid',
+    filter={'status': ['IN_PROGRESS', 'PENDING_START']}
+)
+
+for task in response['tasks']:
+    print(f"Task: {task['title']} - Status: {task['status']}")
+```
+
+### Using Configuration Module (Recommended)
+
+```python
+import devopsagent_api  # Registers the service
+from examples.config import get_config
+
+# Get configuration with environment variable support
+config = get_config()
+
+# Create configured client
+client = config.get_client()
+
+# List tasks using configured settings
+response = client.list_tasks(
+    agentSpaceId=config.agent_space_id,
+    filter={'status': ['IN_PROGRESS', 'PENDING_START']}
+)
+
+for task in response['tasks']:
+    print(f"Task: {task['title']} - Status: {task['status']}")
+```
+
+## 📦 Installation
+
+### From PyPI (Recommended)
+```bash
+pip install devopsagent-api
+```
+
+### From Source
+```bash
+git clone https://github.com/stefansaftic/community-devops-agent.git
+cd devopsagent-api
+pip install -e .
+```
+
+### Development Installation
+```bash
+pip install -e ".[dev]"
+```
+
+## 🔧 Requirements
+
+- Python 3.8+
+- AWS credentials configured (via AWS CLI, environment variables, or IAM roles)
+- Access to AWS DevOps Agent service
+
+## ⚙️ Configuration
+
+### Environment Variables
+
+The library supports configuration through environment variables for flexible deployment:
+
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `AGENT_SPACE_ID` | Your DevOps Agent space UUID | None | Yes (for API calls) |
+| `AWS_REGION` | AWS region for API calls | `us-east-1` | No |
+| `AWS_PROFILE` | AWS CLI profile to use | Default profile | No |
+| `USER_ID` | User ID for chat messages UUID | `4be32b4a-9675-4dc0-97ff-7126ad28457c` | No |
+| `POLL_INTERVAL` | Polling interval in seconds | `2` | No |
+| `DEFAULT_LIMIT` | Default pagination limit | `10` | No |
+| `TIMEOUT_SECONDS` | Default timeout in seconds | `60` | No |
+| `MAX_CHECKS` | Maximum number of status checks | `10` | No |
+
+### AWS Credentials Setup
+
+**Option 1: AWS CLI (Recommended)**
+```bash
+aws configure
+# Enter your AWS Access Key ID, Secret Access Key, and default region
+```
+
+**Option 2: Environment Variables**
+```bash
+export AWS_ACCESS_KEY_ID=your-access-key
+export AWS_SECRET_ACCESS_KEY=your-secret-key
+export AWS_REGION=us-east-1
+```
+
+**Option 3: AWS Credentials File**
+```bash
+# ~/.aws/credentials
+[default]
+aws_access_key_id = your-access-key
+aws_secret_access_key = your-secret-key
+
+# ~/.aws/config
+[default]
+region = us-east-1
+```
+
+### Configuration Module
+
+All examples use a centralized configuration module (`examples/config.py`) that provides:
+
+- **Dynamic service discovery**: Automatically detects available waiters, paginators, and operations
+- **Environment variable support**: All configuration values can be overridden via environment variables
+- **Validation**: Checks for required settings and service registration
+- **Consistent defaults**: Sensible defaults for all configuration options
+
+**Usage:**
+```python
+from examples.config import get_config
+
+config = get_config()
+config.print_configuration()  # Shows current settings
+
+client = config.get_client()  # Creates configured boto3 client
+```
+
+## 📚 Documentation
+
+- [API Reference](https://community-devops-agent.readthedocs.io/en/latest/)
+- [Examples](./examples/) - Complete examples with configuration module usage
+
+## 🎯 Features
+
+### Native boto3 Integration
+- Standard boto3 client creation: `boto3.client('community-devops-agent')`
+- Automatic pagination with `client.get_paginator()`
+- Waiters for long-running operations: `client.get_waiter()`
+- Built-in retry logic and error handling
+
+### Complete API Coverage
+- **Task Management**: Create, list, get, and update tasks
+- **Goal Management**: Automated workflow management
+- **Recommendation Engine**: AI-generated improvement suggestions
+- **Journal API**: Execution history and investigation records
+- **Topology API**: GraphQL infrastructure discovery
+- **Support Integration**: AWS Support case management
+
+### Type Safety & Validation
+- Full Pydantic model validation
+- Type hints throughout the codebase
+- IDE autocomplete support
+- Runtime data validation
+
+## 🛠️ Development
+
+### Setup Development Environment
+```bash
+# Clone the repository
+git clone https://github.com/stefansaftic/community-devops-agent.git
+cd devopsagent-api
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install development dependencies
+pip install -e ".[dev]"
+
+# Run tests
+pytest
+
+# Run linting
+black devopsagent_api/
+flake8 devopsagent_api/
+mypy devopsagent_api/
+```
+
+### Project Structure
+```
+community-devops-agent/
+├── devopsagent_api/              # Main library package
+│   ├── __init__.py               # Service registration & exports
+│   ├── auth.py                   # Custom credential provider
+│   ├── models.py                 # Pydantic data models
+│   ├── exceptions.py             # Custom exception classes
+│   ├── data/                     # boto3 service model data
+│   │   ├── community-devops-agent/    # Original DevOps Agent API
+│   │   │   └── 2025-12-09/            # API version directory
+│   │   │       ├── service-2.json
+│   │   │       ├── paginators-1.json
+│   │   │       ├── waiters-2.json
+│   │   │       └── endpoint-rule-set-1.json
+│   │   └── community-aidevops/        # AWS DevOps Agent Control Plane
+│   │       └── 2018-05-10/            # API version directory
+│   │           ├── service-2.json
+│   │           ├── paginators-1.json
+│   │           ├── waiters-2.json
+│   │           └── endpoint-rule-set-1.json
+│   └── loaders/                  # Custom service loader
+├── examples/                     # Usage examples
+│   ├── list_agent_spaces.py      # NEW: DevOps Agent Control Plane example
+│   └── ...                       # Other examples
+├── tests/                        # Test suite
+├── docs/                         # Sphinx documentation
+├── devopsagent_api.egg-info/      # Package metadata
+├── test_venv/                    # Test virtual environment
+├── LICENSE                       # Apache 2.0 license
+├── requirements.txt              # Python dependencies
+├── pyproject.toml                # Modern Python packaging
+├── setup.py                      # Traditional packaging
+├── README.md                     # This file
+├── publish.py                    # Publishing utilities
+├── .readthedocs.yaml             # ReadTheDocs configuration
+└── .gitignore                    # Git ignore patterns
+```
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+### Development Workflow
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/your-feature`
+3. Make your changes and add tests
+4. Run the test suite: `pytest`
+5. Format code: `black devopsagent_api/`
+6. Check types: `mypy devopsagent_api/`
+7. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+This library is built upon the AWS DevOps Agent API and integrates with the boto3 ecosystem to provide a seamless experience for AWS developers.
+
+## 📞 Support
+
+- **Issues**: [GitHub Issues](https://github.com/stefansaftic/community-devops-agent/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/stefansaftic/community-devops-agent/discussions)
+- **Documentation**: [ReadTheDocs](https://community-devops-agent.readthedocs.io/en/latest/)
+
+---
+
+**Note**: This is a community-built client library for the AWS DevOps Agent API. It is not an official AWS product.
