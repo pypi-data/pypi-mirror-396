@@ -1,0 +1,265 @@
+Metadata-Version: 2.4
+Name: serena-vbnet
+Version: 1.0.1
+Summary: Visual Basic .NET language support for Serena MCP Server
+Author: LaunchCG
+License: MIT
+Project-URL: Homepage, https://github.com/LaunchCG/serena-vbnet
+Project-URL: Repository, https://github.com/LaunchCG/serena-vbnet
+Project-URL: Issues, https://github.com/LaunchCG/serena-vbnet/issues
+Project-URL: Documentation, https://github.com/LaunchCG/serena-vbnet#readme
+Keywords: vb.net,visual-basic,language-server,serena,mcp,ai
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Software Development :: Code Generators
+Classifier: Topic :: Software Development :: Compilers
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: click>=8.0.0
+Requires-Dist: requests>=2.28.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: black>=22.0.0; extra == "dev"
+Requires-Dist: mypy>=0.990; extra == "dev"
+Requires-Dist: build>=0.10.0; extra == "dev"
+Requires-Dist: twine>=4.0.0; extra == "dev"
+Dynamic: license-file
+
+# serena-vbnet
+
+[![PyPI version](https://badge.fury.io/py/serena-vbnet.svg)](https://badge.fury.io/py/serena-vbnet)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+**Visual Basic .NET language support for [Serena MCP Server](https://github.com/oraios/serena)**
+
+Enable AI-assisted development for VB.NET codebases with full language intelligence:
+- ✅ Symbol extraction (Module, Class, Sub, Function, Property)
+- ✅ Go-to-definition
+- ✅ Find references
+- ✅ Code completion
+- ✅ Diagnostics
+
+## Quick Start
+
+```bash
+# Install Serena and VB.NET plugin
+pip install serena-agent serena-vbnet
+
+# Setup VB.NET support (one-time)
+serena-vbnet setup
+
+# Use with your VB.NET project
+cd my-vbnet-project
+serena init
+# Edit .serena/project.yml: add "vbnet" to languages list
+serena start-mcp-server
+```
+
+That's it! Your VB.NET project now has AI-assisted development capabilities through Claude Code, Cursor, or other tools that support MCP.
+
+## Installation
+
+### Prerequisites
+
+- Python 3.11 or later
+- Serena MCP Server: `pip install serena-agent`
+
+### Install Plugin
+
+```bash
+pip install serena-vbnet
+```
+
+### Setup VB.NET Support
+
+```bash
+serena-vbnet setup
+```
+
+This command:
+1. Downloads pre-built Roslyn LanguageServer with VB.NET support (~25MB)
+2. Installs to `~/.serena/language_servers/roslyn_vbnet/`
+3. Configures Serena to recognize VB.NET projects
+
+**Build from source** (optional):
+```bash
+serena-vbnet setup --build
+```
+
+Requires .NET 8 SDK and takes 10-15 minutes.
+
+## Usage
+
+### Configure Your VB.NET Project
+
+```bash
+cd /path/to/your/vbnet-project
+serena init
+```
+
+Edit `.serena/project.yml`:
+```yaml
+languages:
+  - vbnet
+```
+
+### Start Serena
+
+```bash
+serena start-mcp-server
+```
+
+### Use with AI Tools
+
+**Claude Code**:
+- Configure MCP server in `.mcp.json`
+- Serena automatically provides VB.NET intelligence
+
+**Cursor / other IDEs**:
+- Connect to Serena via MCP protocol
+- Get code completion, go-to-definition, find-references for VB.NET
+
+## CLI Commands
+
+```bash
+serena-vbnet setup          # Install and configure VB.NET support
+serena-vbnet verify         # Verify installation
+serena-vbnet info           # Show installation information
+serena-vbnet update         # Update to latest version
+serena-vbnet uninstall      # Remove VB.NET support
+serena-vbnet --help         # Show all commands
+```
+
+## What Makes This Work
+
+Microsoft's Roslyn LanguageServer has full VB.NET support in source code, but the distributed NuGet packages **don't include VB.NET workspace services**.
+
+This plugin uses a custom-built Roslyn LanguageServer with VB.NET enabled. Pre-built binaries are available for all platforms, or you can build from source.
+
+See [Why a custom build?](https://github.com/LaunchCG/roslyn-vbnet-languageserver/blob/main/docs/WHY_CUSTOM_BUILD.md) for technical details.
+
+## Features
+
+### Symbol Extraction
+Extracts VB.NET-specific constructs:
+- `Module` (similar to static class)
+- `Class` / `Interface` / `Structure`
+- `Sub` (void method) / `Function` (method with return value)
+- `Property` / `Field`
+- `Enum` / `Event` / `Delegate`
+
+### Code Intelligence
+- **Go-to-definition**: Jump to symbol declarations
+- **Find references**: Find all usages of symbols
+- **Code completion**: IntelliSense for VB.NET
+- **Diagnostics**: Real-time compiler errors and warnings
+
+### Project Support
+Recognizes VB.NET projects:
+- `.vb` source files
+- `.vbproj` project files
+- `.sln` solution files
+
+## Example Project Structure
+
+```
+my-vbnet-app/
+├── .serena/
+│   └── project.yml           # Add "vbnet" to languages
+├── MyApp.sln
+├── MyApp/
+│   ├── MyApp.vbproj
+│   ├── Program.vb
+│   ├── Module1.vb
+│   └── Class1.vb
+└── Tests/
+    ├── Tests.vbproj
+    └── UnitTests.vb
+```
+
+## Troubleshooting
+
+### "Serena not found"
+
+```bash
+pip install serena-agent
+```
+
+### "Language server not installed"
+
+```bash
+serena-vbnet setup --force
+```
+
+### Build from source failing
+
+Ensure .NET 8 SDK is installed:
+```bash
+dotnet --version  # Should show 8.0.x or later
+```
+
+Download from: https://dot.net
+
+### Verification
+
+```bash
+serena-vbnet verify
+```
+
+This checks:
+- Language server installation
+- VB.NET assemblies present
+- Serena configuration
+
+## Architecture
+
+```
+serena-vbnet (PyPI Plugin)
+    ↓
+Downloads from: roslyn-vbnet-languageserver (GitHub Releases)
+    ↓
+Installs to: ~/.serena/language_servers/roslyn_vbnet/
+    ↓
+Patches: Serena's ls_config.py
+    ↓
+Serena recognizes: .vb files and provides VB.NET intelligence
+```
+
+## Contributing
+
+Contributions welcome! Please:
+1. Report issues on [GitHub Issues](https://github.com/LaunchCG/serena-vbnet/issues)
+2. Submit PRs for improvements
+3. Help improve documentation
+
+## Related Projects
+
+- **[roslyn-vbnet-languageserver](https://github.com/LaunchCG/roslyn-vbnet-languageserver)** - Build automation for Roslyn LS with VB.NET
+- **[Serena MCP Server](https://github.com/oraios/serena)** - AI-assisted development framework
+- **[Roslyn](https://github.com/dotnet/roslyn)** - .NET Compiler Platform (upstream)
+
+## License
+
+MIT License - See [LICENSE](LICENSE)
+
+## Support
+
+- **Issues**: [GitHub Issues](https://github.com/LaunchCG/serena-vbnet/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/LaunchCG/serena-vbnet/discussions)
+- **Serena Docs**: [oraios.github.io/serena](https://oraios.github.io/serena)
+
+## Acknowledgments
+
+- Microsoft for the excellent Roslyn compiler platform
+- Serena team for the MCP server framework
+- VB.NET community for keeping the language alive
+
+---
+
+**Made with ❤️ for the VB.NET community**
