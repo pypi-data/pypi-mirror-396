@@ -1,0 +1,15 @@
+config {
+  type: "table",
+  schema: "marts",
+  description: "Fact table for sales analysis"
+}
+
+SELECT 
+  o.order_id,
+  c.customer_id,
+  c.customer_name,
+  o.order_date,
+  o.total_amount
+FROM ${ref("stg_orders")} o
+LEFT JOIN ${ref("stg_customers")} c
+  ON o.customer_id = c.customer_id
