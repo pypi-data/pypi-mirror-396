@@ -1,0 +1,136 @@
+{#
+  Copyright DB InfraGO AG and contributors
+  SPDX-License-Identifier: Apache-2.0
+#}
+{%
+  from 'common_macros.html.j2' import
+  show_other_attributes,
+  description,
+  render_reqs_by_type,
+  linked_name,
+  linked_name_with_icon,
+  render_data_flow_and_involved_activities,
+  render_related_diagrams,
+  render_constraints,
+  display_traceability
+%}
+
+<h1>{{ object.name }}</h1>
+{{ description(object) | safe }}
+
+<b>Pre-condition</b>:
+{% if object.precondition %}
+  <p>{{ object.precondition.specification['capella:linkedText']|safe }}</p>
+{% else %}
+  <p style="color:red">No pre-condition defined</p>
+{% endif %}
+
+<b>Post-condition</b>:
+{% if object.postcondition %}
+  <p>{{ object.postcondition.specification['capella:linkedText']|safe }}</p>
+{% else %}
+  <p style="color:red">No post-condition defined</p>
+{% endif %}
+
+{% if object.extends %}
+  <p>
+    The capability {{ object.name }} extends the following operational
+    capabilities:
+  </p>
+  <ul>
+    {%- for ext in object.extends -%}
+      <li>{{ linked_name_with_icon(ext.target) | safe }}</li>
+    {%- endfor -%}
+  </ul>
+{% endif %}
+
+{% if object.extended_by %}
+  <p>
+    The capability {{ object.name }} is further extended by the following
+    operational capabilities:
+  </p>
+  <ul>
+    {%- for ext in object.extended_by -%}
+      <li>{{ linked_name_with_icon(ext.source) | safe }}</li>
+    {%- endfor -%}
+  </ul>
+{% endif %}
+
+<h2>Context Diagram</h2>
+<p>
+  The diagram below provides an overview of the entities immediately involved
+  in the Capability and related Capabilities.
+</p>
+{{ render_diagram(object, "context_diagram") }}
+
+<h2>Involved Entities and Activities</h2>
+{%-
+  set entities = (
+    object.involved_entities | list
+    + object.involved_activities | map(attribute="owner") | list
+  ) | unique(attribute="uuid") | list
+-%}
+{{
+  render_data_flow_and_involved_activities(
+    object,
+    object.involved_activities,
+    entities,
+    "The diagram below provides an overview of the operational activities that are required to realise the Capability.",
+    "To enable the Capability, the following entities and activities are involved:",
+    "operational Capability",
+    "activities",
+    "entities",
+    "Entity"
+  )
+}}
+{%- set related_processes = (object.involved_processes + object.owned_processes) | unique(attribute="uuid") | list -%}
+{%- if related_processes -%}
+  <h2>Related Processes</h2>
+  <p>
+    The following operational processes are related to the Capability
+    {{ object.name }}:
+  </p>
+  <ul>
+    {%- for process in related_processes -%}
+      <li>{{ linked_name_with_icon(process) | safe }}</li>
+    {%- endfor -%}
+  </ul>
+{%- endif -%}
+
+{{ render_related_diagrams(object) | safe }}
+
+{{ render_constraints(object) | safe }}
+
+{% if object.requirements %}
+  <h2>Linked Requirement objects</h2>
+  {% set types = model.search("RequirementType") | map(attribute="long_name") | unique | list %}
+  {{ render_reqs_by_type(object.requirements, types) | safe }}
+{% endif %}
+
+{{ display_traceability(object)| safe }}
+
+<h2>Other object attributes</h2>
+
+{%-
+  set excluded = [
+    "constraints",
+    "context_diagram",
+    "data_flow_view",
+    "description",
+    "diagrams",
+    "entity_involvements",
+    "involved_activities",
+    "involved_entities",
+    "involved_processes",
+    "name",
+    "owned_processes",
+    "parent",
+    "postcondition",
+    "precondition",
+    "realizing_capabilities",
+    "requirements",
+    "visible_on_diagrams",
+    "xtype",
+  ]
+-%}
+{{ show_other_attributes(object, excluded=excluded) | safe }}
