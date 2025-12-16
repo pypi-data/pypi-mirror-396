@@ -1,0 +1,81 @@
+name,construct,severity,info
+Assertions,assert,Low,Assertions are for debugging and development. Assertions can be disabled during runtime. Use in production can introduce vulnerabilities.
+Insecure Network Binding,s.bind,Medium,Binding to all interfaces can expose the service to a wider network attack surface.
+OS File Permissions,os.chmod,High,Changing permissions carelessly can expose sensitive files.
+Directory Creation,os.makedirs,Low,Direct file system calls require careful input validation to prevent vulnerabilities.
+Directory Creation,os.mkdir,Low,Direct file system calls require careful input validation to prevent vulnerabilities.
+Directory Creation,os.mkfifo,Low,Direct file system calls require careful input validation to prevent vulnerabilities.
+Directory Creation,os.mknod,Low,Direct file system calls require careful input validation to prevent vulnerabilities.
+Directory Creation,os.makedev,Low,Direct file system calls require careful input validation to prevent vulnerabilities.
+OS Forking,os.fork,Low,"On macOS use of this function is unsafe when mixed with using higher-level system APIs, and that includes using urllib.request."
+Dangerous Built-in: eval,eval,High,This function can execute arbitrary code. Never safe with untrusted input.
+Input Function,input,Low,User input must be strictly sanitized and validated to prevent injection vulnerabilities.
+Overly Broad Exception Handling,pass,Low,Using `pass` in an `except` block can silently ignore critical security exceptions.
+Overly Broad Exception Handling,continue,Low,Skipping over exceptions can mask critical errors and security risks.
+Dangerous Built-in: exec,exec,High,This function can execute arbitrary code and should be used only with validated constructs.
+Dangerous Built-in: compile,compile,High,This function can be used to execute arbitrary code or crash the Python interpreter.
+Dynamic Imports,__import__,Medium,"Importing modules dynamically can load untrusted code."
+Dynamic Imports,importlib.import_module,Medium,"Importing modules dynamically can load untrusted code."
+Insecure Hashing Algorithm,hashlib.md5,High,MD5 is cryptographically broken and should not be used for security purposes.
+Insecure Hashing Algorithm,hashlib.sha1,High,SHA-1 is cryptographically broken and should not be used for security purposes.
+Logging Configuration,logging.config,Medium,Parsing untrusted logging configurations can lead to vulnerabilities if not handled correctly.
+Pickle Usage,pickle.loads,High,Deserializing untrusted data with `pickle` can lead to arbitrary code execution.
+Pickle Usage,pickle.load,High,Deserializing untrusted data with `pickle` can lead to arbitrary code execution.
+Pickle Usage,pickle.Unpickler,High,Deserializing untrusted data with `pickle` can lead to arbitrary code execution.
+OS Execution,os.system,High,Direct OS function calls can have significant security implications and require careful review.
+OS Execution,os.execl,High,Direct OS function calls can have significant security implications and require careful review.
+OS Execution,os.execle,High,Direct OS function calls can have significant security implications and require careful review.
+OS Execution,os.execlp,High,Direct OS function calls can have significant security implications and require careful review.
+OS Execution,os.execlpe,High,Direct OS function calls can have significant security implications and require careful review.
+OS Execution,os.execv,High,Direct OS function calls can have significant security implications and require careful review.
+OS Execution,os.execve,High,Direct OS function calls can have significant security implications and require careful review.
+OS Execution,os.execvp,High,Direct OS function calls can have significant security implications and require careful review.
+OS Execution,os.execvpe,High,Direct OS function calls can have significant security implications and require careful review.
+OS Execution,os.popen,High,Direct OS function calls can have significant security implications and require careful review.
+Sys Calls,sys.call_tracing,Medium,Provides low-level access to interpreter execution; dangerous if exposed.
+Sys Calls,sys.setprofile,Medium,Provides low-level access to interpreter execution; dangerous if exposed.
+Sys Calls,sys.settrace,Medium,Provides low-level access to interpreter execution; dangerous if exposed.
+OS Access,os.access,High,Direct OS function calls can have significant security implications and require careful review.
+OS File Operations,os.write,Low,"Writing to unvalidated or unintended file descriptors can lead to data corruption, privilege escalation, or denial of service."
+OS File Operations,os.writev,Low,"Writing to unvalidated or unintended file descriptors can lead to data corruption, privilege escalation, or denial of service."
+OS Interfaces,os.forkpty,Low,Use of forkpty can be unsafe when used on MacOS.
+OS File Operations,os.read,Low,"Reading from unvalidated file descriptors can lead to information disclosure."
+Tempfile,tempfile.mktemp,Low,This function is deprecated because of race conditions that can lead to security vulnerabilities.
+Marshal Usage,marshal.loads,High,This module is not secure and should not be used to deserialize data from untrusted sources.
+Marshal Usage,marshal.load,High,This module is not secure and should not be used to deserialize data from untrusted sources.
+Subprocess Usage,subprocess.call,High,Requires careful input validation to prevent command injection vulnerabilities.
+Subprocess Usage,subprocess.check_call,High,Requires careful input validation to prevent command injection vulnerabilities.
+Subprocess Usage,subprocess.Popen,Medium,Requires careful input validation to prevent command injection vulnerabilities.
+Subprocess Usage,subprocess.run,Medium,Requires careful input validation to prevent command injection vulnerabilities.
+Tarfile Extraction,tarfile.TarFile,High,Vulnerable to path traversal attacks if used with untrusted archives.
+Base64 Encoding ,base64,Low,"Base64 encoding is not for security. It only visually hides data and provides no confidentiality. Often used to obfuscate malware in code."
+XML-RPC Client,xmlrpc.client,High,Vulnerable to denial-of-service via decompression bombs.
+XML-RPC Server,xmlrpc.server.SimpleXMLRPCServer,High,Vulnerable to denial-of-service via decompression bombs.
+Cryptographically Unsafe Randomness,random.random,Low,The pseudo-random generators in this module are not suitable for security purposes. 
+Cryptographically Unsafe Randomness,random.Random,Low,The pseudo-random generators in this module are not suitable for security purposes. 
+Cryptographically Unsafe Randomness,random.randrange,Low,The pseudo-random generators in this module are not suitable for security purposes. 
+Cryptographically Unsafe Randomness,random.randint,Low,The pseudo-random generators in this module are not suitable for security purposes. 
+Cryptographically Unsafe Randomness,random.uniform,Low,The pseudo-random generators in this module are not suitable for security purposes. 
+Cryptographically Unsafe Randomness,random.triangular,Low,The pseudo-random generators in this module are not suitable for security purposes. 
+Cryptographically Unsafe Randomness,random.seed,Low,The pseudo-random generators in this module are not suitable for security purposes. 
+Cryptographically Unsafe Randomness,random.randbytes,Low,The pseudo-random generators in this module are not suitable for security purposes. 
+Shelve Usage,shelve.open,High,"The `shelve` module uses `pickle` internally, making it unsafe for untrusted data."
+Shelve Usage,shelve.DbfilenameShelf,High,"The `shelve` module uses `pickle` internally, making it unsafe for untrusted data."
+Unsafe Deserialization: multiprocessing,connection.recv,High,"Uses pickle, which can execute arbitrary code when receiving data. "
+Unsafe Deserialization: multiprocessing,multiprocessing.connection.Connection,High,Relies on pickle; dangerous with untrusted data. 
+Zipfile Extraction,zipfile.ZipFile,High,Vulnerable to path traversal attacks if used with untrusted archives.
+Zstandard (zstd) decompression,compression.zstd.open,High,Vulnerable to path traversal attacks if used with untrusted archives.
+Zstandard (zstd) decompression,compression.zstd.decompress,High,Vulnerable to path traversal attacks if used with untrusted archives.
+Gzip File Handling,gzip.open,Medium,Risk of decompression bombs or resource exhaustion with untrusted data.
+BZ2 File Handling,bz2.open,Medium,Decompressing untrusted data can lead to resource exhaustion attacks. 
+BZ2 File Handling,bz2.BZ2File,Medium,Decompressing untrusted data can lead to resource exhaustion attacks. 
+LZMA File Handling,lzma.open,Medium,Risk of decompression bombs or resource exhaustion with untrusted data.
+LZMA File Handling,lzma.LZMAFile,Medium,Risk of decompression bombs or resource exhaustion with untrusted data.
+Shutil Extraction,shutil.unpack_archive,Medium,Untrusted archives can contain malicious paths or payloads.
+Shutil Copying,shutil.copy,Medium,Files may be copied without authorization if paths are not validated.
+Shutil Copying,shutil.copy2,Medium,Files may be copied without authorization if paths are not validated.
+Shutil Copying,shutil.copytree,Medium,Files may be copied without authorization if paths are not validated.
+Shutil Operations,shutil.chown,Medium,Changing file ownership can introduce vulnerabilities.
+Shutil Removal,shutil.rmtree,Medium,Vulnerable to path traversal attacks if not used carefully.
+HTTP Server (Base Handler),http.server.BaseHTTPRequestHandler,High,These modules are for development only and are not secure for production use.
+HTTP Server,http.server.HTTPServer,High,These modules are for development only and are not secure for production use.
