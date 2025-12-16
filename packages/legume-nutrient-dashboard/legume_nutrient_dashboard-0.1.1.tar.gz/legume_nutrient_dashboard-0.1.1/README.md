@@ -1,0 +1,63 @@
+# Legume Nutrient Dashboard
+
+The Legume Nutrient Dashboard is an interactive Streamlit app created for a STAT 386 final project. It collects Foundation-food data from the USDA FoodData Central API (category: "Legumes and Legume Products"), extracts and cleans nutrient information, and provides interactive visualizations for exploration.
+
+---
+
+## Quickstart
+
+Prerequisites:
+- A working Python environment (see `pyproject.toml` / `myenv`).
+- A USDA API key saved in a file named `api.txt` at the project root (one-line file containing the key).
+
+1) Sync environment & run tests (project uses `uv` for environment management):
+
+```bash
+uv sync
+uv run pytest
+```
+
+2) Generate the cleaned dataset
+
+The main script fetches data from the USDA API, extracts nutrients, and writes `legus_cleaned.csv`.
+
+```bash
+uv run python main.py
+```
+
+3) Launch the Streamlit dashboard
+
+```bash
+uv run streamlit run src/legume_nutrient_dashboard/streamlit_app.py
+```
+
+**Important:** Always run from the project root directory so the app can locate `legus_cleaned.csv`.
+
+## Notes
+- The pipeline filters for Data Type: `Foundation` and Category: `Legumes and Legume Products`.
+- Ensure `api.txt` exists in the project root before running `main.py`.
+
+## Dashboard Features
+
+- **Legume Selector:** pick a legume category from the sidebar to filter results.
+- **Radar Chart:** compares average nutrient content across groups (e.g., Protein, Fat, Carbs, Starch, and selected minerals).
+- **Correlation Heatmap:** interactive Plotly heatmap showing nutrient correlations across the dataset.
+- **Dataset Preview:** table view of the cleaned `legus_cleaned.csv` for inspection.
+
+## Technologies Used
+
+- **Python:** 3.11+ (project environment in `myenv`)
+- **Streamlit:** dashboard UI
+- **pandas:** data manipulation
+- **requests:** USDA API calls
+- **regex:** nutrient and category extraction
+- **seaborn / matplotlib:** static charts
+- **plotly:** interactive visualizations
+- **uv:** environment & dependency management
+
+## Files of interest
+
+- `main.py` — main pipeline to fetch, clean, and save data
+- `legus_cleaned.csv` — cleaned dataset output
+- `src/legume_nutrient_dashboard/streamlit_app.py` — Streamlit dashboard
+
