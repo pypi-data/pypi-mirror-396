@@ -1,0 +1,73 @@
+# This workflow installs Python dependencies, runs tests, type checks with mypy, and lints with Ruff using uv.
+# It can be tested locally using https://github.com/nektos/act with the command `act push --container-architecture linux/amd64 -j build`
+
+name: Python Tests
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.12", "3.13"]
+      fail-fast: false
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v6
+      with:
+        submodules: recursive  # Ensures submodules are fetched
+
+    - name: Install OpenCL (Qrack dependency) on Ubuntu
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt update
+        sudo apt install -y ocl-icd-opencl-dev
+
+    - name: Install OpenCL (Qrack dependency) on macOS
+      if: matrix.os == 'macos-latest'
+      run: |
+        brew install opencl-headers ocl-icd
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v6
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v7
+      with:
+        version: "0.8.22"
+
+    - name: Initialize and update submodules
+      run: |
+        git submodule update --init --recursive
+
+    - name: Sync dependencies
+      run: |
+        uv sync --group dev --frozen
+
+    - name: Lint with Ruff
+      run: |
+        uv run ruff check
+
+    - name: Type checking with MyPy
+      # Running mypy with numpy > 2.0 is broken. 
+      # This is a fix for stubgen: https://github.com/python/mypy/issues/17396
+      run: |
+        uv run stubgen --no-analysis
+        uv run mypy
+
+    - name: Run tests
+      run: |
+        uv run pytest
