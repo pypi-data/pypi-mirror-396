@@ -1,0 +1,178 @@
+Metadata-Version: 2.4
+Name: aptabase
+Version: 0.0.4
+Summary: Python SDK for Aptabase analytics
+Project-URL: Documentation, https://github.com/aptabase/aptabase-python
+Project-URL: Issues, https://github.com/aptabase/aptabase-python/issues
+Project-URL: Source, https://github.com/aptabase/aptabase-python
+Author-email: Aptabase <support@aptabase.com>
+License-Expression: MIT
+License-File: LICENSE
+Keywords: analytics,aptabase,async,privacy
+Classifier: Intended Audience :: Developers
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Topic :: Software Development :: Build Tools
+Requires-Python: >=3.11
+Requires-Dist: httpx>=0.28.1
+Description-Content-Type: text/markdown
+
+# Aptabase Python SDK
+
+[![PyPI downloads](https://img.shields.io/pypi/dm/aptabase.svg)](https://pypi.org/project/aptabase/)
+[![PyPI - Version](https://img.shields.io/pypi/v/aptabase)](https://img.shields.io/pypi/v/aptabase)
+[![Python versions](https://img.shields.io/pypi/pyversions/aptabase.svg)](https://pypi.org/project/aptabase/)
+
+
+Python SDK for [Aptabase](https://aptabase.com/) - privacy-first analytics for mobile, desktop and web applications.
+
+## Features
+
+- 🚀 **Fully async** - Built with `httpx` and `asyncio`
+- 🔒 **Privacy-first** - No personal data collection
+- 🏃 **Modern Python** - Requires Python 3.11+
+- 🔄 **Auto-batching** - Efficient event batching and flushing
+- ⚡ **Lightweight** - Minimal dependencies
+
+## Installation
+
+```bash
+uv add aptabase
+# or
+pip install aptabase
+```
+
+## Quick Start
+
+```python
+import asyncio
+from aptabase import Aptabase
+
+async def main():
+    async with Aptabase("A-EU-1234567890") as client:
+        # Track a simple event
+        await client.track("app_started")
+
+        # Track an event with properties
+        await client.track("user_action", {
+            "action": "button_click",
+            "button_id": "login",
+            "screen": "home"
+        })
+
+        # Events are automatically flushed, but you can force it
+        await client.flush()
+
+asyncio.run(main())
+```
+
+## Samples
+
+- [Simple Script](https://github.com/aptabase/aptabase-python/tree/main/samples/simple-script)
+- [Textual Counter App](https://github.com/aptabase/aptabase-python/tree/main/samples/textual-counter)
+- [Textual Dashboard App](https://github.com/aptabase/aptabase-python/tree/main/samples/textual-dashboard)
+
+## Configuration
+
+```python
+client = Aptabase(
+    app_key="A-EU-1234567890",          # Your Aptabase app key
+    app_version="1.2.3",                # Your app version
+    is_debug=False,                     # Enable debug mode
+    max_batch_size=25,                  # Max events per batch (max 25)
+    flush_interval=10.0,                # Auto-flush interval in seconds
+    timeout=30.0                        # HTTP timeout in seconds
+)
+```
+
+## App Key Format
+
+Your app key determines the server region:
+- `A-EU-*` - European servers
+- `A-US-*` - US servers
+
+Get your app key from the [Aptabase dashboard](https://aptabase.com/).
+
+## Event Tracking
+
+### Simple Events
+
+```python
+await client.track("page_view")
+```
+
+### Events with Properties
+
+```python
+await client.track("purchase", {
+    "product_id": "abc123",
+    "price": 29.99,
+    "currency": "USD"
+})
+```
+
+## Lifecycle
+
+### Context Manager
+
+```python
+async with Aptabase("A-EU-1234567890") as client:
+    await client.track("event")
+    # Automatically handles start/stop and flushing
+```
+
+### Manual
+
+```python
+client = Aptabase("A-EU-1234567890")
+await client.start()
+try:
+    await client.track("event")
+finally:
+    await client.stop()  # Ensures all events are flushed
+```
+
+## Error Handling
+
+```python
+from aptabase import Aptabase, AptabaseError, NetworkError
+
+try:
+    async with Aptabase("A-EU-1234567890") as client:
+        await client.track("event")
+except NetworkError as e:
+    print(f"Network error: {e}, status: {e.status_code}")
+except AptabaseError as e:
+    print(f"Aptabase error: {e}")
+```
+
+## Development
+
+Install development dependencies:
+
+```bash
+uv sync --dev
+```
+
+Run tests:
+
+```bash
+uv run pytest
+```
+
+Code formatting:
+
+```bash
+uv run ruff check .
+```
+
+Type checking:
+
+```bash
+uv run mypy .
+```
+
+## License
+
+[MIT License](LICENSE)
