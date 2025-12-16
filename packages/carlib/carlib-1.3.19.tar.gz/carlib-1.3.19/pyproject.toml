@@ -1,0 +1,129 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "carlib"
+dynamic = ["version"]
+description = "Dataset tokenization and CAR format conversion library for efficient neural network training"
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Rightsify", email = "dev@rightsify.com"},
+]
+maintainers = [
+    {name = "Rightsify Development Team", email = "dev@rightsify.com"},
+]
+keywords = [
+    "machine learning",
+    "neural networks", 
+    "dataset conversion",
+    "car format",
+    "data preprocessing",
+    "audio processing",
+    "image processing",
+    "video processing",
+    "webdataset",
+    "hdf5",
+    "tfrecord",
+    "encodec",
+    "compression",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Information Technology",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Topic :: Multimedia :: Graphics",
+    "Topic :: Multimedia :: Video",
+    "Topic :: System :: Archiving :: Compression",
+    "Topic :: Utilities",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "torch",
+    "torchaudio", 
+    "transformers",
+    "PyYAML",
+    "tqdm",
+    "librosa",
+    "descript-audio-codec",
+    "snac",
+    "opencv-python",
+    "boto3",
+    "numpy<2"
+]
+
+[project.optional-dependencies]
+webdataset = ["webdataset"]
+hdf5 = ["h5py"]
+jax = ["jax", "jaxlib"]
+grain = ["grain", "jax", "jaxlib"]
+all = [
+    "webdataset",
+    "h5py",
+    "jax",
+    "jaxlib",
+    "grain",
+]
+dev = [
+    "pytest>=6.0.0",
+    "pytest-cov>=2.10.0",
+    "black>=21.0.0",
+    "flake8>=3.8.0",
+    "mypy>=0.800",
+    "twine>=3.0.0",
+    "wheel>=0.36.0",
+    "build>=0.7.0",
+]
+
+[project.scripts]
+carlib = "carlib.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/gcxrightsify/carlib"
+"Bug Reports" = "https://github.com/gcxrightsify/carlib/issues"
+Source = "https://github.com/gcxrightsify/carlib"
+Documentation = "https://github.com/gcxrightsify/carlib/blob/main/README.md"
+Repository = "https://github.com/gcxrightsify/carlib.git"
+Changelog = "https://github.com/gcxrightsify/carlib/blob/main/CHANGELOG.md"
+
+[tool.setuptools]
+packages = ["carlib"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+carlib = ["configs/*.yaml", "configs/*.md"]
+
+[tool.setuptools.dynamic]
+version = {attr = "carlib.__version__"}
+
+[tool.black]
+line-length = 100
+target-version = ['py38']
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --cov=carlib --cov-report=html --cov-report=term"
