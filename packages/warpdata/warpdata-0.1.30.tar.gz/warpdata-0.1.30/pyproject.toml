@@ -1,0 +1,188 @@
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "warpdata"
+version = "0.1.30"
+description = "A High-Performance Pythonic Data SDK for Analytics and ML"
+requires-python = ">=3.9"
+authors = [
+    {name = "warpdata contributors"}
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "fsspec>=2023.1.0",
+    "s3fs>=2023.1.0",
+    "boto3",  # No version pin - let pip resolve with aiobotocore
+    "aiohttp>=3.8.0",
+    "duckdb>=0.9.0",
+    "numpy>=1.20.0",
+    "pyarrow>=10.0.0",
+    "toml>=0.10.0",
+    "lz4>=4.0.0",
+]
+
+[project.optional-dependencies]
+polars = ["polars>=0.19.0"]
+pandas = ["pandas>=1.5.0"]
+embeddings = [
+    "sentence-transformers>=2.2.0",
+    "openai>=1.0.0",
+]
+faiss = ["faiss-cpu>=1.7.0"]
+all = [
+    "polars>=0.19.0",
+    "pandas>=1.5.0",
+    "sentence-transformers>=2.2.0",
+    "openai>=1.0.0",
+    "faiss-cpu>=1.7.0",
+]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+]
+
+[project.scripts]
+warp = "warpdata.cli.main:main"
+warpdata = "warpdata.cli.main:main"
+
+[project.entry-points."warp.datasets"]
+"warp.dataset.gsm8k" = "warpdata.modules.providers.gsm8k:GSM8KModule"
+"warp.dataset.gsm8k_symbolized" = "warpdata.modules.providers.gsm8k_symbolized:GSM8KSymbolizedModule"
+"warp.dataset.gsm8k_symbolized_steps" = "warpdata.modules.providers.gsm8k_symbolized_steps:GSM8KSymbolizedStepsModule"
+"warp.dataset.logician" = "warpdata.modules.providers.logician:LogicianModule"
+"warp.dataset.coco" = "warpdata.modules.providers.coco:CocoModule"
+"warp.dataset.coco_train" = "warpdata.modules.providers.coco:CocoTrainModule"
+"warp.dataset.coco_val" = "warpdata.modules.providers.coco:CocoValModule"
+"warp.dataset.imagenet_1k" = "warpdata.modules.providers.imagenet:ImageNet1KModule"
+"warp.dataset.imagenet_1k_sample" = "warpdata.modules.providers.imagenet:ImageNet1KSampleModule"
+"warp.dataset.ag_news" = "warpdata.modules.providers.nlp:AGNewsModule"
+"warp.dataset.imdb" = "warpdata.modules.providers.nlp:IMDBModule"
+"warp.dataset.openhermes" = "warpdata.modules.providers.nlp:OpenHermesModule"
+"warp.dataset.truthfulqa" = "warpdata.modules.providers.nlp:TruthfulQAModule"
+"warp.dataset.yelp_polarity" = "warpdata.modules.providers.nlp:YelpPolarityModule"
+"warp.dataset.mmlu" = "warpdata.modules.providers.eval:MMLUModule"
+"warp.dataset.arxiv_papers" = "warpdata.modules.providers.arxiv:ArxivPapersModule"
+"warp.dataset.mbpp" = "warpdata.modules.providers.code:MBPPModule"
+"warp.dataset.hellaswag" = "warpdata.modules.providers.reasoning:HellaSwagModule"
+"warp.dataset.vctk" = "warpdata.modules.providers.audio:VCTKModule"
+"warp.dataset.vctk_speakers" = "warpdata.modules.providers.audio:VCTKSpeakersModule"
+"warp.dataset.lincs" = "warpdata.modules.providers.bio:LINCSModule"
+"warp.dataset.lincs_genes" = "warpdata.modules.providers.bio:LINCSGenesModule"
+"warp.dataset.lincs_samples" = "warpdata.modules.providers.bio:LINCSSamplesModule"
+"warp.dataset.wine" = "warpdata.modules.providers.uci:WineModule"
+"warp.dataset.arcagi" = "warpdata.modules.providers.arc:ArcAGIModule"
+"warp.dataset.arcagi2" = "warpdata.modules.providers.arc:ArcAGI2Module"
+"warp.dataset.celeba_attrs" = "warpdata.modules.providers.vision_extra:CelebAAttrsModule"
+"warp.dataset.dream1k" = "warpdata.modules.providers.video:Dream1KModule"
+"warp.dataset.dream1k_events" = "warpdata.modules.providers.video:Dream1KEventsModule"
+"warp.dataset.dmt_brains" = "warpdata.modules.providers.neuro:DMTBrainsModule"
+"warp.dataset.math_hendrycks" = "warpdata.modules.providers.math:MathHendrycksModule"
+"warp.dataset.mathvision" = "warpdata.modules.providers.math:MathVisionModule"
+"warp.dataset.mathvista" = "warpdata.modules.providers.math:MathVistaModule"
+"warp.dataset.mathx_100k" = "warpdata.modules.providers.math:MathX100KModule"
+"warp.dataset.numina_lean" = "warpdata.modules.providers.math:NuminaLeanModule"
+"warp.dataset.hyperliquid_l2_book" = "warpdata.modules.providers.hyperliquid:HyperliquidL2BookModule"
+"warp.dataset.hyperliquid_asset_ctxs" = "warpdata.modules.providers.hyperliquid:HyperliquidAssetCtxsModule"
+"warp.dataset.hyperliquid_trades" = "warpdata.modules.providers.hyperliquid:HyperliquidTradesModule"
+"warp.dataset.hyperliquid_explorer_blocks" = "warpdata.modules.providers.hyperliquid:HyperliquidExplorerBlocksModule"
+"warp.dataset.hyperliquid_replica_cmds" = "warpdata.modules.providers.hyperliquid:HyperliquidReplicaCmdsModule"
+
+[project.entry-points."forgelab.modules.dataset"]
+"warp.dataset.gsm8k" = "warpdata.modules.providers.gsm8k:GSM8KModule"
+"warp.dataset.gsm8k_symbolized" = "warpdata.modules.providers.gsm8k_symbolized:GSM8KSymbolizedModule"
+"warp.dataset.gsm8k_symbolized_steps" = "warpdata.modules.providers.gsm8k_symbolized_steps:GSM8KSymbolizedStepsModule"
+"warp.dataset.logician" = "warpdata.modules.providers.logician:LogicianModule"
+"warp.dataset.coco" = "warpdata.modules.providers.coco:CocoModule"
+"warp.dataset.coco_train" = "warpdata.modules.providers.coco:CocoTrainModule"
+"warp.dataset.coco_val" = "warpdata.modules.providers.coco:CocoValModule"
+"warp.dataset.imagenet_1k" = "warpdata.modules.providers.imagenet:ImageNet1KModule"
+"warp.dataset.imagenet_1k_sample" = "warpdata.modules.providers.imagenet:ImageNet1KSampleModule"
+"warp.dataset.ag_news" = "warpdata.modules.providers.nlp:AGNewsModule"
+"warp.dataset.imdb" = "warpdata.modules.providers.nlp:IMDBModule"
+"warp.dataset.openhermes" = "warpdata.modules.providers.nlp:OpenHermesModule"
+"warp.dataset.truthfulqa" = "warpdata.modules.providers.nlp:TruthfulQAModule"
+"warp.dataset.yelp_polarity" = "warpdata.modules.providers.nlp:YelpPolarityModule"
+"warp.dataset.mmlu" = "warpdata.modules.providers.eval:MMLUModule"
+"warp.dataset.arxiv_papers" = "warpdata.modules.providers.arxiv:ArxivPapersModule"
+"warp.dataset.mbpp" = "warpdata.modules.providers.code:MBPPModule"
+"warp.dataset.hellaswag" = "warpdata.modules.providers.reasoning:HellaSwagModule"
+"warp.dataset.vctk" = "warpdata.modules.providers.audio:VCTKModule"
+"warp.dataset.vctk_speakers" = "warpdata.modules.providers.audio:VCTKSpeakersModule"
+"warp.dataset.lincs" = "warpdata.modules.providers.bio:LINCSModule"
+"warp.dataset.lincs_genes" = "warpdata.modules.providers.bio:LINCSGenesModule"
+"warp.dataset.lincs_samples" = "warpdata.modules.providers.bio:LINCSSamplesModule"
+"warp.dataset.wine" = "warpdata.modules.providers.uci:WineModule"
+"warp.dataset.arcagi" = "warpdata.modules.providers.arc:ArcAGIModule"
+"warp.dataset.arcagi2" = "warpdata.modules.providers.arc:ArcAGI2Module"
+"warp.dataset.celeba_attrs" = "warpdata.modules.providers.vision_extra:CelebAAttrsModule"
+"warp.dataset.dream1k" = "warpdata.modules.providers.video:Dream1KModule"
+"warp.dataset.dream1k_events" = "warpdata.modules.providers.video:Dream1KEventsModule"
+"warp.dataset.dmt_brains" = "warpdata.modules.providers.neuro:DMTBrainsModule"
+"warp.dataset.math_hendrycks" = "warpdata.modules.providers.math:MathHendrycksModule"
+"warp.dataset.mathvision" = "warpdata.modules.providers.math:MathVisionModule"
+"warp.dataset.mathvista" = "warpdata.modules.providers.math:MathVistaModule"
+"warp.dataset.mathx_100k" = "warpdata.modules.providers.math:MathX100KModule"
+"warp.dataset.numina_lean" = "warpdata.modules.providers.math:NuminaLeanModule"
+"warp.dataset.hyperliquid_l2_book" = "warpdata.modules.providers.hyperliquid:HyperliquidL2BookModule"
+"warp.dataset.hyperliquid_asset_ctxs" = "warpdata.modules.providers.hyperliquid:HyperliquidAssetCtxsModule"
+"warp.dataset.hyperliquid_trades" = "warpdata.modules.providers.hyperliquid:HyperliquidTradesModule"
+"warp.dataset.hyperliquid_explorer_blocks" = "warpdata.modules.providers.hyperliquid:HyperliquidExplorerBlocksModule"
+"warp.dataset.hyperliquid_replica_cmds" = "warpdata.modules.providers.hyperliquid:HyperliquidReplicaCmdsModule"
+
+[project.urls]
+Homepage = "https://github.com/warpdata/warpdata"
+Documentation = "https://docs.warpdata.dev"
+Repository = "https://github.com/warpdata/warpdata"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["warpdata*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+    "--cov=warpdata",
+    "--cov-report=term-missing",
+]
+
+[tool.black]
+line-length = 100
+target-version = ["py39", "py310", "py311"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+select = ["E", "F", "I", "N", "W", "UP"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
