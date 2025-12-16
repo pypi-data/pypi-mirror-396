@@ -1,0 +1,610 @@
+Metadata-Version: 2.4
+Name: serialcables-hydra
+Version: 1.3.0
+Summary: Python library for controlling Serial Cables PCIe Gen6 HYDRA JBOF System
+Author-email: Serial Cables Engineering <hydra@serialcables.com>
+License-Expression: MIT
+Project-URL: Homepage, https://www.serialcables.com/products/hydra
+Project-URL: Repository, https://github.com/serialcables/hydra-controller
+Project-URL: Issues, https://github.com/serialcables/hydra-controller/issues
+Keywords: PCIe,JBOF,NVMe,storage,monitoring,hardware
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Topic :: System :: Hardware :: Hardware Drivers
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: pyserial>=3.5
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0; extra == "dev"
+Requires-Dist: black>=22.0; extra == "dev"
+Requires-Dist: flake8>=5.0; extra == "dev"
+Requires-Dist: mypy>=0.990; extra == "dev"
+Requires-Dist: types-pyserial>=3.0; extra == "dev"
+Requires-Dist: build>=0.9; extra == "dev"
+Requires-Dist: twine>=4.0; extra == "dev"
+Dynamic: license-file
+
+# Serial Cables HYDRA Controller
+
+Python library for controlling Serial Cables PCIe Gen6 HYDRA JBOF Systems.
+
+[![PyPI version](https://badge.fury.io/py/serialcables-hydra.svg)](https://badge.fury.io/py/serialcables-hydra)
+[![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+A comprehensive Python library for controlling and monitoring Serial Cables PCIe Gen6 HYDRA 8-Bay Passive JBOF enclosures via serial CLI interface.
+
+## Features
+
+- **Full CLI Command Support**: Complete implementation of all documented MCU commands
+- **Environmental Monitoring**: Temperature, voltage, current, and power monitoring for all slots
+- **Slot Management**: Individual and bulk control of SSD slots
+- **LED Control**: Host and fault LED management
+- **Fan Control**: PWM speed control and monitoring
+- **I2C/SMBus Communication**: Direct device access for advanced diagnostics
+- **NVMe-MI over MCTP**: Send NVMe Management Interface commands via MCTP protocol
+- **Comprehensive Logging**: CSV data logging for long-term monitoring
+- **Alert System**: Configurable thresholds for temperature, voltage, and fan speed alerts
+
+## Hardware Compatibility
+
+- Serial Cables PCIe Gen6 8-Bay Passive JBOF (Model: PCle Gen6 8Bays JBOF)
+- Firmware Version: 0.0.2 and above
+- Connection: USB Type-C serial interface (115200 baud, 8N1)
+
+## Installation
+
+### From PyPI (Recommended)
+
+```bash
+pip install serialcables-hydra
+```
+
+### Requirements
+
+- Python 3.7+
+- pyserial >= 3.5
+
+## Quick Start
+
+### Basic Usage
+
+```python
+from serialcables_hydra import JBOFController, PowerState
+
+# Initialize controller
+controller = JBOFController(port='/dev/ttyUSB0')  # Linux
+# controller = JBOFController(port='COM3')        # Windows
+
+# Alternative import (both class names work identically)
+# from serialcables_hydra import HydraController
+# controller = HydraController(port='/dev/ttyUSB0')
+
+# Connect to HYDRA system
+if controller.connect():
+    # Get system information
+    sys_info = controller.get_system_info()
+    print(f"Model: {sys_info.model}")
+    print(f"Firmware: {sys_info.firmware_version}")
+    
+    # Check slot status
+    slots = controller.show_slot_info()
+    for slot in slots:
+        if slot.present:
+            print(f"Slot {slot.slot_number}: SSD present")
+    
+    # Get environmental data
+    env_data = controller.get_environmental_data()
+    print(f"PSU Voltage: {env_data['voltages']['psu_12v']} V")
+    
+    # Control slot power
+    controller.slot_power(1, PowerState.OFF)  # Power off slot 1
+    controller.slot_power(1, PowerState.ON)   # Power on slot 1
+    
+    # Disconnect
+    controller.disconnect()
+```
+
+### Command Line Tools
+
+After installation, you get access to command-line tools:
+
+```bash
+# Monitor with default settings
+hydra-monitor --port /dev/ttyUSB0
+
+# Monitor with custom interval and logging  
+hydra-monitor --port /dev/ttyUSB0 --interval 10 --log hydra_data.csv
+
+# CLI interface for system status
+hydra-cli --port /dev/ttyUSB0 status
+
+# Legacy compatibility (if using direct script)
+python -m serialcables_hydra.monitor --port /dev/ttyUSB0
+```
+
+### Available Commands
+
+- **hydra-monitor**: Continuous system monitoring with alerting
+- **hydra-cli**: Command-line interface for system control and status
+
+## Testing
+
+### Running Tests
+
+```bash
+# Run all tests
+python -m pytest
+
+# Run with coverage
+python -m pytest --cov=serialcables_hydra
+
+# Run specific test
+python -m pytest tests/test_controller.py::TestJBOFController::test_connect
+```
+
+### Development Setup
+
+```bash
+# Clone repository
+git clone https://github.com/serialcables/hydra-controller.git
+cd hydra-controller
+
+# Install development dependencies
+pip install -e .[dev]
+
+# Run tests
+python -m pytest
+
+# Format code
+black .
+
+# Lint code
+flake8 .
+```
+
+## API Reference
+
+### Core Classes
+
+#### HydraController / JBOFController
+
+Main controller class for HYDRA JBOF interaction. Both class names are equivalent for compatibility.
+
+##### Constructor
+
+```python
+HydraController(port: str, baudrate: int = 115200, timeout: float = 1.0)
+# or
+JBOFController(port: str, baudrate: int = 115200, timeout: float = 1.0)
+```
+
+**Parameters:**
+- `port`: Serial port path (e.g., '/dev/ttyUSB0' or 'COM3')
+- `baudrate`: Serial baud rate (default: 115200)
+- `timeout`: Command timeout in seconds (default: 1.0)
+
+### System Control Methods
+
+#### connect() -> bool
+Establish serial connection to the JBOF.
+
+#### disconnect()
+Close the serial connection.
+
+#### system_power(state: PowerState) -> bool
+Control main system power (ON/OFF).
+
+#### reset() -> bool
+Perform soft reset of the MCU.
+
+### Slot Management Methods
+
+#### slot_power(slot: Union[int, str], state: PowerState) -> bool
+Control power for specific slot(s).
+- `slot`: Slot number (1-8) or "all"
+- `state`: PowerState.ON or PowerState.OFF
+
+#### get_slot_power_status() -> Dict[int, str]
+Get current power status for all slots.
+
+#### show_slot_info() -> List[SlotInfo]
+Get detailed information about all slots including:
+- Paddle card type
+- Interposer type
+- EDSFF drive type
+- Drive presence status
+
+#### smbus_reset(slot: Union[int, str]) -> bool
+Send SMBus reset signal to selected slot(s).
+
+#### ssd_reset(slot: Union[int, str], channel: Optional[str] = None) -> bool
+Send PERST# reset signal to selected slot(s).
+- `channel`: Optional 'a' or 'b' (both if None)
+
+### Environmental Monitoring Methods
+
+#### get_environmental_data() -> Dict
+Returns dictionary containing:
+- `temperatures`: MCU and slot temperatures
+- `fan_speeds`: RPM for system fans
+- `voltages`: PSU and slot voltages
+- `currents`: Slot current readings
+- `powers`: Slot power consumption
+
+#### get_system_info() -> SystemInfo
+Get comprehensive system information including all environmental and configuration data.
+
+### LED Control Methods
+
+#### control_host_led(slot: Union[int, str], state: PowerState) -> bool
+Control host LED on EDSFF drives.
+
+#### control_fault_led(slot: Union[int, str], state: PowerState) -> bool
+Control fault LED indicators.
+
+### Fan Control Methods
+
+#### set_fan_speed(fan_id: int, duty_cycle: int) -> bool
+Set fan PWM duty cycle.
+- `fan_id`: Fan number (1 or 2)
+- `duty_cycle`: PWM percentage (0-100)
+
+### Advanced Features
+
+#### send_mctp_packet(dest_eid: int, mctp_frame: List[int], timeout: Optional[float] = None) -> MCTPResponse
+Send a raw NVMe-MI packet via MCTP to a destination endpoint.
+- `dest_eid`: Destination Endpoint ID (slot number)
+- `mctp_frame`: Raw MCTP frame bytes as a list of integers (0-255)
+- `timeout`: Optional timeout override for this command (seconds)
+
+Returns an `MCTPResponse` object containing success status, packets sent count, and response packet data.
+
+#### mctp_get_serial_number(slot: int, timeout: Optional[float] = None) -> NVMeSerialNumber
+Get NVMe drive serial number via MCTP.
+- `slot`: Slot number (1-8)
+- `timeout`: Optional timeout override (seconds)
+
+Returns an `NVMeSerialNumber` object containing the drive's serial number.
+
+#### mctp_get_health_status(slot: int, timeout: Optional[float] = None) -> NVMeHealthStatus
+Get NVMe drive health status via MCTP.
+- `slot`: Slot number (1-8)
+- `timeout`: Optional timeout override (seconds)
+
+Returns an `NVMeHealthStatus` object containing temperature, available spare, percentage used, and critical warnings. Note: Not all drives support this command.
+
+#### mctp_pause(slot: int, timeout: Optional[float] = None) -> MCTPResponse
+Send MCTP pause command to a slot.
+
+#### mctp_resume(slot: int, timeout: Optional[float] = None) -> MCTPResponse
+Send MCTP resume command to a slot.
+
+#### mctp_abort(slot: int, timeout: Optional[float] = None) -> MCTPResponse
+Send MCTP abort command to a slot.
+
+#### mctp_status(slot: int, timeout: Optional[float] = None) -> MCTPResponse
+Get MCTP status for a slot.
+
+#### mctp_replay(slot: int, timeout: Optional[float] = None) -> MCTPResponse
+Send MCTP replay command to a slot.
+
+#### i2c_write(address: int, slot: int, data: List[int]) -> bool
+Write data to I2C/SMBus device.
+
+#### i2c_read(address: int, slot: int, register: int, length: int) -> List[int]
+Read data from I2C/SMBus device.
+
+#### set_dual_port(slot: Union[int, str], enabled: bool) -> bool
+Control SSD dual-port enable line.
+
+#### set_pwrdis(slot: Union[int, str], level: SignalLevel) -> bool
+Control PWRDIS signal (HIGH = disable, LOW = enable).
+
+#### control_buzzer(state: BuzzerState) -> bool
+Control system buzzer (ON/OFF/ENABLE/DISABLE).
+
+#### check_clock_input() -> Dict[int, bool]
+Check clock input status for all slots.
+
+#### run_diagnostics() -> Dict[str, str]
+Run on-board device diagnostics.
+
+## Data Classes
+
+### SlotInfo
+```python
+@dataclass
+class SlotInfo:
+    slot_number: int
+    paddle_card: str
+    interposer: str
+    edsff_type: str
+    present: bool
+    power_status: str
+    temperature: float
+    voltage: float
+    current: float
+    power: float
+```
+
+### SystemInfo
+```python
+@dataclass
+class SystemInfo:
+    company: str
+    model: str
+    serial_number: str
+    firmware_version: str
+    build_time: str
+    slots: List[SlotInfo]
+    fan1_rpm: int
+    fan2_rpm: int
+    psu_voltage: float
+```
+
+### MCTPResponse
+```python
+@dataclass
+class MCTPResponse:
+    success: bool                        # True if command sent successfully
+    packets_sent: int                    # Number of packets sent
+    response_packets: List[List[int]]    # List of response packet byte arrays
+    raw_response: str                    # Raw CLI response for debugging
+```
+
+### NVMeSerialNumber
+```python
+@dataclass
+class NVMeSerialNumber:
+    slot: int                            # Slot number queried
+    serial_number: str                   # Drive serial number (20 chars max)
+    success: bool                        # True if retrieval was successful
+    raw_packets: List[List[int]]         # Raw MCTP response packets
+    error: Optional[str]                 # Error message if failed
+```
+
+### NVMeHealthStatus
+```python
+@dataclass
+class NVMeHealthStatus:
+    slot: int                            # Slot number queried
+    success: bool                        # True if retrieval was successful
+    raw_packets: List[List[int]]         # Raw MCTP response packets
+    composite_temperature: Optional[int] # Temperature in Kelvin
+    composite_temperature_celsius: Optional[float]  # Temperature in Celsius
+    available_spare: Optional[int]       # Available spare percentage
+    available_spare_threshold: Optional[int]  # Spare threshold percentage
+    percentage_used: Optional[int]       # Drive life used percentage
+    critical_warning: Optional[int]      # Critical warning bit field
+    error: Optional[str]                 # Error message if failed/unsupported
+```
+
+## Enumerations
+
+### PowerState
+- `PowerState.ON`: Power on
+- `PowerState.OFF`: Power off
+
+### BuzzerState
+- `BuzzerState.ON`: Turn buzzer on
+- `BuzzerState.OFF`: Turn buzzer off
+- `BuzzerState.ENABLE`: Enable buzzer alerts
+- `BuzzerState.DISABLE`: Disable buzzer alerts
+
+### SignalLevel
+- `SignalLevel.HIGH`: High signal level
+- `SignalLevel.LOW`: Low signal level
+
+## Monitoring and Alerts
+
+The monitoring utility (`jbof_monitor.py`) provides:
+
+- Real-time status display
+- Configurable alert thresholds
+- CSV data logging
+- Continuous or duration-based monitoring
+
+### Alert Thresholds (Default)
+
+- **Temperature Warning**: 45°C
+- **Temperature Critical**: 55°C
+- **Voltage Range**: 11.5V - 12.5V
+- **Minimum Fan Speed**: 3000 RPM
+
+## Troubleshooting
+
+### Connection Issues
+
+1. **Verify Port**: Ensure the correct serial port is specified
+   - Linux: Usually `/dev/ttyUSB0` or `/dev/ttyACM0`
+   - Windows: `COM3`, `COM4`, etc.
+   - macOS: `/dev/tty.usbserial-*`
+
+2. **Check Permissions** (Linux):
+   ```bash
+   sudo chmod 666 /dev/ttyUSB0
+   # OR add user to dialout group
+   sudo usermod -a -G dialout $USER
+   ```
+
+3. **Verify Cable**: Ensure USB Type-C cable is properly connected
+
+### Communication Errors
+
+- Increase timeout value if commands are timing out
+- Check baud rate matches device configuration (115200)
+- Ensure no other application is using the serial port
+
+## Examples
+
+### Complete System Check
+
+```python
+from serialcables_hydra import HydraController, PowerState
+import time
+
+def system_check(port):
+    hydra = HydraController(port=port)
+    
+    if not hydra.connect():
+        print("Connection failed!")
+        return
+    
+    # Run diagnostics
+    print("Running diagnostics...")
+    diag = hydra.run_diagnostics()
+    failures = [d for d, status in diag.items() if status != 'OK']
+    
+    if failures:
+        print(f"Diagnostic failures: {failures}")
+    else:
+        print("All diagnostics passed")
+    
+    # Check temperatures
+    env = hydra.get_environmental_data()
+    for loc, temp in env['temperatures'].items():
+        if temp > 50:
+            print(f"High temperature warning: {loc} = {temp}°C")
+    
+    # Test each populated slot
+    slots = hydra.show_slot_info()
+    for slot in slots:
+        if slot.present:
+            # Power cycle the slot
+            print(f"Testing slot {slot.slot_number}...")
+            hydra.slot_power(slot.slot_number, PowerState.OFF)
+            time.sleep(2)
+            hydra.slot_power(slot.slot_number, PowerState.ON)
+            
+    hydra.disconnect()
+
+# Run the check
+system_check('/dev/ttyUSB0')
+```
+
+### Custom Monitoring Loop
+
+```python
+from serialcables_hydra import HydraController, BuzzerState
+import time
+
+def custom_monitor(port, duration=60):
+    hydra = HydraController(port=port)
+    hydra.connect()
+    
+    start_time = time.time()
+    max_temps = {}
+    
+    while time.time() - start_time < duration:
+        env = hydra.get_environmental_data()
+        
+        # Track maximum temperatures
+        for loc, temp in env['temperatures'].items():
+            if loc not in max_temps or temp > max_temps[loc]:
+                max_temps[loc] = temp
+        
+        # Alert on fan failure
+        for fan, rpm in env['fan_speeds'].items():
+            if rpm < 1000:
+                print(f"ALERT: {fan} failure - {rpm} RPM")
+                hydra.control_buzzer(BuzzerState.ON)
+                
+        time.sleep(5)
+    
+    print(f"Maximum temperatures observed: {max_temps}")
+    hydra.disconnect()
+
+# Monitor for 5 minutes
+custom_monitor('/dev/ttyUSB0', duration=300)
+```
+
+### NVMe-MI over MCTP
+
+```python
+from serialcables_hydra import JBOFController
+
+def query_nvme_drives(port):
+    controller = JBOFController(port=port)
+    controller.connect()
+
+    # Query all slots for drive information
+    slots = controller.show_slot_info()
+
+    for slot in slots:
+        if not slot.present:
+            continue
+
+        print(f"\n--- Slot {slot.slot_number} ---")
+
+        # Get drive serial number
+        sn_result = controller.mctp_get_serial_number(slot=slot.slot_number)
+        if sn_result.success:
+            print(f"Serial Number: {sn_result.serial_number}")
+        else:
+            print(f"Serial Number: Error - {sn_result.error}")
+
+        # Get drive health status
+        health = controller.mctp_get_health_status(slot=slot.slot_number)
+        if health.success:
+            print(f"Temperature: {health.composite_temperature_celsius}°C")
+            print(f"Available Spare: {health.available_spare}%")
+            print(f"Percentage Used: {health.percentage_used}%")
+            if health.critical_warning:
+                print(f"WARNING: Critical warning flags = 0x{health.critical_warning:02x}")
+        else:
+            print(f"Health Status: {health.error}")
+
+    controller.disconnect()
+
+# Query all drives
+query_nvme_drives('/dev/ttyUSB0')
+```
+
+## Contributing
+
+Contributions are welcome! Please submit pull requests or issues on GitHub.
+
+## License
+
+MIT License - See LICENSE file for details
+
+## Support
+
+For support, please contact:
+- Serial Cables HYDRA Support: hydra@serialcables.com  
+- General Support: support@serialcables.com
+
+## Version History
+
+- **1.3.0** (2025-12): Additional MCTP subcommands
+  - Added `mctp_pause()`, `mctp_resume()`, `mctp_abort()`, `mctp_status()`, `mctp_replay()` methods
+  - Fixed `_send_command()` to wait for full response on MCTP commands (was exiting early on "success")
+
+- **1.2.0** (2025-12): High-level MCTP commands for NVMe drive management
+  - Added `mctp_get_serial_number()` method to retrieve NVMe drive serial numbers
+  - Added `mctp_get_health_status()` method for drive health monitoring
+  - New `NVMeSerialNumber` and `NVMeHealthStatus` dataclasses
+  - Requires firmware v0.0.6 or later for MCTP commands
+
+- **1.1.0** (2025-12): NVMe-MI over MCTP support
+  - Added `send_mctp_packet()` method for raw NVMe-MI commands via MCTP protocol
+  - New `MCTPResponse` dataclass for structured packet responses
+
+- **1.0.0** (2025-01): Initial release with full CLI command support
+  - Complete HYDRA JBOF hardware interface
+  - Environmental monitoring and alerting
+  - SSD slot management and power control
+  - LED and buzzer control
+  - I2C/SMBus communication
+  - Command-line tools (hydra-monitor, hydra-cli)
+  - Comprehensive test suite and hardware validation
