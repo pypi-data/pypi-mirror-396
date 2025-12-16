@@ -1,0 +1,24 @@
+stages:
+  - build
+  - tests
+  - other
+
+build:
+  stage: build
+  image: $GITLAB_DOCKER_IMAGE
+  tags:
+    - docker
+  before_script:
+    - echo "update submodules (only public subs)"
+    - git config --global http.sslverify false
+    - git submodule sync
+    - git submodule update --init --recursive
+  script:
+    - echo "make begin"
+    - make
+    - echo "make done"
+  artifacts:
+    paths:
+      - output/*/*.exe
+      - output/*/*.elf
+      - output/*/*.bin
