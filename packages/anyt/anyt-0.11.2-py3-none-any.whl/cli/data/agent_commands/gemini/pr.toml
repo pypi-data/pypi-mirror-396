@@ -1,0 +1,94 @@
+description = "Run quality checks, commit, and create a pull request"
+prompt = """
+Run quality checks, commit changes, and create a pull request for the current task.
+
+**Workflow:**
+
+1. **Discover project quality check commands:**
+   - Look for quality check commands in the project:
+     - `Makefile` (e.g., `make lint`, `make test`, `make typecheck`, `make format`)
+     - `package.json` scripts (e.g., `npm run lint`, `npm test`, `npm run build`)
+     - `pyproject.toml` or `setup.py` (e.g., `pytest`, `ruff check`, `mypy`)
+     - CI config files (`.github/workflows/`, `.gitlab-ci.yml`)
+   - Identify commands for: formatting, linting, type checking, testing
+
+2. **Run quality checks:**
+   - Execute the discovered quality check commands in order:
+     1. Format code (if formatter exists)
+     2. Run linting
+     3. Run type checking (if applicable)
+     4. Run tests
+   - If any check fails:
+     - Attempt to fix automatically (formatting, simple lint fixes)
+     - If unfixable, stop and inform the user of the issue
+   - Continue only when all checks pass
+
+3. **Check git status and commit:**
+   - Run `git status` to see changes
+   - Run `git diff` to review what will be committed
+   - If there are uncommitted changes:
+     - Stage relevant files with `git add`
+     - Create a descriptive commit message based on changes
+     - Commit with standard footer
+
+4. **Check for active AnyTask task:**
+   - Run `anyt task active --json` to get the currently picked task
+   - If a task is active, extract:
+     - Task identifier (e.g., "DEV-42")
+     - Task title
+     - Task description and objectives
+   - If no active task, proceed with generic PR creation
+
+5. **Read task context (if active task exists):**
+   - Check if `.anyt/tasks/{IDENTIFIER}/` exists locally
+   - Read `task.md` for description and acceptance criteria
+   - Read `.meta.json` for status and labels
+
+6. **Create pull request:**
+   - Push current branch to remote: `git push -u origin HEAD`
+   - Use `gh pr create` with appropriate context
+
+   **With active task:**
+   - Title: "[{IDENTIFIER}] {Task Title}"
+   - Body: Include objectives, changes, acceptance criteria, and test plan
+
+   **Without active task:**
+   - Title: Descriptive title from commits
+   - Body: Summary of changes and test plan
+
+7. **Register PR with task (if active):**
+   - After PR is created successfully, register it with AnyTask:
+     ```bash
+     # Extract PR info from gh pr create output
+     PR_URL=$(gh pr view --json url -q .url)
+     PR_NUMBER=$(gh pr view --json number -q .number)
+     HEAD_BRANCH=$(git branch --show-current)
+     BASE_BRANCH=main  # or the target branch
+     HEAD_SHA=$(git rev-parse HEAD)
+
+     # Register the PR
+     anyt task pr register {IDENTIFIER} \
+       --pr-number $PR_NUMBER \
+       --pr-url $PR_URL \
+       --head-branch $HEAD_BRANCH \
+       --base-branch $BASE_BRANCH \
+       --head-sha $HEAD_SHA
+     ```
+   - Add a comment noting the PR was created:
+     ```bash
+     anyt comment add {IDENTIFIER} -m "PR created: {PR_URL}"
+     ```
+
+8. **Return result:**
+   - Show the PR URL to the user
+   - Summarize what was done
+
+**Important:**
+- Always run quality checks before committing
+- Do NOT push directly to main/master branch
+- Include task context in PR when available
+- Use descriptive commit messages following conventional commits style
+- Return the PR URL when complete
+
+Create the PR now.
+"""
