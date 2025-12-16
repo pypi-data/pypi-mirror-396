@@ -1,0 +1,62 @@
+# Copyright (c) 2023-2025 Arista Networks, Inc.
+# Use of this source code is governed by the Apache License 2.0
+# that can be found in the LICENSE file.
+from __future__ import annotations
+
+from ipaddress import IPv4Address, ip_address
+from typing import TYPE_CHECKING
+
+from anta.input_models.avt import AVTPath
+from anta.tests.avt import VerifyAVTSpecificPath
+
+from pyavd._anta.logs import LogMessage
+from pyavd.j2filters import natural_sort
+
+from ._base_classes import AntaTestInputFactory
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+
+class VerifyAVTSpecificPathInputFactory(AntaTestInputFactory[VerifyAVTSpecificPath.Input]):
+    """
+    Input factory class for the `VerifyAVTSpecificPath` test.
+
+    It constructs a list of static peer addresses for each device by searching through
+    `router_path_selection.path_groups.static_peers`.
+    """
+
+    def create(self) -> Iterator[VerifyAVTSpecificPath.Input]:
+        """Generate the inputs for the `VerifyAVTSpecificPath` test."""
+        avt_vrfs = self.structured_config.router_adaptive_virtual_topology.vrfs
+        path_groups = self.structured_config.router_path_selection.path_groups
+        static_peers: set[IPv4Address] = set()
+
+        for path_group in path_groups:
+            if not path_group.static_peers:
+                self.logger_adapter.debug(LogMessage.PATH_GROUP_NO_STATIC_PEERS, path_group=path_group.name)
+                continue
+            for static_peer in path_group.static_peers:
+                static_peer_ip = ip_address(static_peer.router_ip)
+                if isinstance(static_peer_ip, IPv4Address):
+                    static_peers.add(static_peer_ip)
+                else:
+                    self.logger_adapter.debug(LogMessage.PATH_GROUP_IPV6_STATIC_PEER, peer=static_peer.router_ip, path_group=path_group.name)
+
+        if not static_peers:
+            self.logger_adapter.debug(LogMessage.NO_STATIC_PEERS)
+            return
+
+        avt_paths: list[AVTPath] = [
+            AVTPath(avt_name=avt_profile.name, vrf=vrf.name, destination=dst_address, next_hop=dst_address)
+            for vrf in avt_vrfs
+            for avt_profile in vrf.profiles
+            if avt_profile.name
+            for dst_address in static_peers
+        ]
+
+        if not avt_paths:
+            self.logger_adapter.debug(LogMessage.NO_INPUTS_GENERATED)
+            return
+
+        yield VerifyAVTSpecificPath.Input(avt_paths=natural_sort(avt_paths, sort_key="avt_name"))
