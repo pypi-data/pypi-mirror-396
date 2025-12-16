@@ -1,0 +1,147 @@
+Metadata-Version: 2.4
+Name: jnkn
+Version: 0.0.0rc4
+Summary: The Pre-Flight Impact Analysis Engine for Engineering Teams.
+Project-URL: Documentation, https://bordumb.github.io/jnkn/
+Project-URL: Repository, https://github.com/bordumb/jnkn
+Project-URL: Issues, https://github.com/bordumb/jnkn/issuess
+Author-email: Bordumb <bordumbb@gmail.com>
+License: MIT
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Software Development :: Build Tools
+Requires-Python: >=3.12
+Requires-Dist: click>=8.1.7
+Requires-Dist: openlineage-python>=1.40.1
+Requires-Dist: pydantic>=2.5.0
+Requires-Dist: pyyaml>=6.0.0
+Requires-Dist: rich>=13.7.0
+Requires-Dist: rustworkx>=0.17.1
+Provides-Extra: dev
+Requires-Dist: pytest-cov>=4.1.0; extra == 'dev'
+Requires-Dist: pytest>=7.4.0; extra == 'dev'
+Requires-Dist: ruff>=0.1.0; extra == 'dev'
+Provides-Extra: docs
+Requires-Dist: mike; extra == 'docs'
+Requires-Dist: mkdocs-gen-files; extra == 'docs'
+Requires-Dist: mkdocs-literate-nav; extra == 'docs'
+Requires-Dist: mkdocs-material; extra == 'docs'
+Requires-Dist: mkdocs-redirects; extra == 'docs'
+Requires-Dist: mkdocs-section-index; extra == 'docs'
+Requires-Dist: mkdocstrings-python; extra == 'docs'
+Provides-Extra: full
+Requires-Dist: httpx>=0.27.0; extra == 'full'
+Requires-Dist: sqlglot>=20.0.0; extra == 'full'
+Requires-Dist: tree-sitter-languages>=1.10.2; extra == 'full'
+Requires-Dist: tree-sitter==0.21.3; extra == 'full'
+Requires-Dist: xxhash>=3.4.1; extra == 'full'
+Description-Content-Type: text/markdown
+
+# jnkn
+
+**The Pre-Flight Impact Analysis Engine for Engineering Teams.**
+
+[![PyPI version](https://badge.fury.io/py/jnkn.svg)](https://badge.fury.io/py/jnkn)
+[![Documentation](https://img.shields.io/badge/docs-docs.jnkn.io-blue)](https://bordumb.github.io/jnkn/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+**jnkn** (pronounced "Jenkin") prevents production outages by stitching together the hidden dependencies between your **Infrastructure** (Terraform), **Data Pipelines** (dbt), and **Application Code** (Python/JS).
+
+---
+
+## 📚 [Read the Full Documentation](https://bordumb.github.io/jnkn/)
+
+---
+
+## The Blind Spot
+
+Most tools operate in silos. Terraform sees resources, dbt sees tables, code sees imports. **jnkn sees the glue.**
+
+It detects the invisible, cross-domain breaking changes that slip through every other tool:
+
+```mermaid
+graph LR
+    subgraph "The Gap"
+        TF[Terraform Change] --"Breaks"--> CODE[App Configuration]
+        CODE --"Breaks"--> DATA[Data Pipeline]
+    end
+    
+    style TF fill:#ff6b6b,color:#fff
+    style DATA fill:#ff6b6b,color:#fff
+````
+
+## 🚀 Quick Start
+
+Get running in less than 2 minutes.
+
+### 1\. Installation
+
+```bash
+pip install jnkn
+```
+
+### 2\. Initialize & Scan
+
+Navigate to your project root (monorepo or service).
+
+```bash
+# Detects your stack (Python, Terraform, etc.)
+jnkn init
+
+# Builds the dependency graph
+jnkn scan
+```
+
+### 3\. Find Impact
+
+Simulate a change to see what breaks downstream.
+
+```bash
+# If I rename this env var, what code breaks?
+jnkn blast env:DATABASE_URL
+
+# If I modify this Terraform resource, what app fails?
+jnkn blast infra:payment_db_host
+```
+
+-----
+
+## 🤖 CI/CD Integration
+
+Block breaking changes in Pull Requests before they merge.
+
+```yaml
+# .github/workflows/jnkn.yml
+steps:
+  - uses: actions/checkout@v4
+  - name: Run Jnkan Gate
+    run: |
+      pip install jnkn
+      # Blocks if critical dependencies are broken
+      jnkn check --git-diff origin/main HEAD
+```
+
+-----
+
+## Supported Stacks
+
+| Domain | Supported Patterns |
+|--------|-------------------|
+| **Python** | `os.getenv`, Pydantic Settings, Click/Typer, django-environ |
+| **Terraform** | Resources, variables, outputs, data sources |
+| **Kubernetes** | ConfigMaps, Secrets, environment variables |
+| **dbt** | `ref()`, `source()`, manifest parsing |
+| **JavaScript** | `process.env`, dotenv, Vite |
+
+-----
+
+## Contributing
+
+We welcome contributions\! Please see our [Contributing Guide](https://www.google.com/search?q=https://docs.jnkn.io/community/contributing/) for details on how to set up your development environment.
+
+## License
+
+MIT
