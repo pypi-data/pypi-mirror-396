@@ -1,0 +1,91 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - master
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+
+  lint:
+    if: "!contains(github.event.head_commit.message, '[skip tests]')" # skip the job if the commit message contains "[skip tests]"
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+      - name: Install uv
+        run: pip install uv
+      - name: Install dependencies
+        run: uv pip install ".[docs]" --system
+      - name: Run lint checks
+        run: uv run ruff check
+
+  test:
+    if: "!contains(github.event.head_commit.message, '[skip tests]')" # skip the job if the commit message contains "[skip tests]"
+    name: Test (${{ matrix.platform }} Python ${{ matrix.python-version }})
+    runs-on: ${{ matrix.platform }}
+    strategy:
+      matrix:
+        platform: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install uv
+        run: pip install uv
+      - name: Install dependencies
+        run: uv pip install ".[docs]" --system
+      - name: Run tests
+        run: uv run pytest tests --ignore=tests/test_wetlands.py --ignore=tests/test_installer.py
+
+  deploy:
+    if: always() # if: always() ensures the deploy job runs even if lint and test were skipped — but still requires them to finish successfully if they did run.
+    name: Deploy
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure Git Credentials
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+
+      - name: Set up cache
+        run: echo "cache_id=$(date --utc '+%V')" >> $GITHUB_ENV
+
+      - uses: actions/cache@v4
+        with:
+          key: mkdocs-material-${{ env.cache_id }}
+          path: .cache
+          restore-keys: |
+            mkdocs-material-
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install docs dependencies
+        run: uv pip install ".[docs]" --system
+
+      - name: Get gh-pages branch
+        run: git fetch origin gh-pages --depth=1
+
+      - name: Set version default
+        run: mike set-default --push latest
+
+      - name: Deploy version with mike (update gh-pages branch and push it)
+        run: mike deploy --push --update-aliases 0.4.8 latest
+
