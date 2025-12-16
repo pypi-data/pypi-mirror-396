@@ -1,0 +1,75 @@
+[build-system]
+requires = ["poetry-core>=1.9.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "stella-logger"
+version = "1.0.1"
+readme = "README.md"
+description = "Strict and safe logging SDK."
+license = "MIT"
+authors = ["ricky-rehivo <ricky.rehivo@gmail.com>"]
+keywords = ["logging"]
+homepage = "https://github.com/stellavoid-org/stella-logger"
+
+packages = [{ include = "stella_logger", from = "src" }]
+
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Topic :: System :: Logging",
+  "Typing :: Typed"
+]
+
+[tool.poetry.dependencies]
+python = ">=3.10"
+pydantic = ">=2.6.0"
+typing-extensions = ">=4.9.0"
+
+[tool.poetry.urls]
+Repository = "https://github.com/stellavoid-org/stella-loggger"
+Issues = "https://github.com/stellavoid-org/stella-logger/issues"
+Changelog = "https://github.com/stellavoid-org/stella-logger/releases"
+
+[tool.poetry-dynamic-versioning]
+enable = true
+style = "semver"
+vcs = "git"
+dirty = true
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0"
+pytest-cov = "^6.0"
+freezegun = "^1.5.0"
+ruff = "^0.5.0"
+mypy = "^1.10.0"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "--ignore=tests/deprecated -ra --cov=src/stella_logger --cov-report=term-missing --cov-fail-under=90"
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "e2e: End-to-end tests"
+]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+extend-select = ["I"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+warn_unused_ignores = true
+mypy_path = "src"
