@@ -1,0 +1,352 @@
+# Python Semantic Splitter
+
+[![PyPI version](https://badge.fury.io/py/python-semantic-splitter.svg)](https://badge.fury.io/py/python-semantic-splitter)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+**Intelligent Python code splitting for AI/RAG pipelines** - Split Python code into semantic chunks while preserving code structure and context.
+
+##  Why Python Semantic Splitter?
+
+Traditional text splitters break code at arbitrary points, destroying semantic meaning. Python Semantic Splitter understands Python syntax and splits code intelligently:
+
+-  **Preserves semantic meaning** - Functions and classes stay intact
+-  **Rich metadata extraction** - Function signatures, docstrings, dependencies
+-  **Configurable chunking** - Control what gets included and how
+-  **Zero dependencies** - Pure Python, no external requirements
+-  **RAG-ready output** - Optimized for embedding and retrieval
+
+##  Quick Start
+
+### Installation
+
+```bash
+pip install python-semantic-splitter
+```
+
+### Basic Usage
+
+```python
+from python_semantic_splitter import PythonSplitter
+
+# Initialize the splitter
+splitter = PythonSplitter()
+
+# Split a Python file
+chunks = splitter.split_file("my_code.py")
+
+# Each chunk contains:
+for chunk in chunks:
+    print(f"Type: {chunk.chunk_type}")  # 'function', 'class', or 'module'
+    print(f"Content: {chunk.content}")  # The actual code
+    print(f"Metadata: {chunk.metadata}")  # Rich metadata
+    print(f"Lines: {chunk.start_line}-{chunk.end_line}")
+```
+
+### Configuration
+
+```python
+from python_semantic_splitter import PythonSplitter, SplitterConfig
+
+# Custom configuration
+config = SplitterConfig(
+    max_chunk_size=1500,
+    min_chunk_size=100,
+    preserve_functions=True,
+    preserve_classes=True,
+    include_docstrings=True,
+    include_imports=True,
+    include_global_vars=True
+)
+
+splitter = PythonSplitter(config)
+chunks = splitter.split_file("my_code.py")
+```
+
+##  What You Get
+
+### Semantic Chunks with Complete Code Content
+
+Each chunk contains **complete, executable Python code** - not just metadata! The splitter creates three types of semantic chunks:
+
+1. **Module chunks** - Complete imports, global variables, and module docstrings
+2. **Function chunks** - Entire functions with docstrings, decorators, and full implementation
+3. **Class chunks** - Complete classes with all methods, properties, and inheritance
+
+### Example Chunk Content
+
+**Function Chunk:**
+```python
+# Function: calculate_metrics (lines 45-67)
+def calculate_metrics(data: List[Dict], config: Dict = None) -> Dict:
+    """
+    Calculate performance metrics from data.
+    
+    Args:
+        data: List of data dictionaries
+        config: Optional configuration parameters
+        
+    Returns:
+        Dictionary containing calculated metrics
+    """
+    if not data:
+        return {}
+    
+    metrics = {
+        'count': len(data),
+        'avg_value': sum(d.get('value', 0) for d in data) / len(data)
+    }
+    
+    if config and config.get('include_details'):
+        metrics['details'] = data
+    
+    return metrics
+```
+
+**Class Chunk:**
+```python
+# Class: DataProcessor (lines 15-89)
+class DataProcessor:
+    """A comprehensive data processing class."""
+    
+    def __init__(self, name: str):
+        self.name = name
+        self.processed_count = 0
+    
+    def process(self, data):
+        """Process the input data."""
+        # Complete method implementation...
+        return processed_data
+    
+    # All other methods included...
+```
+
+### Rich Metadata
+
+Each chunk also includes comprehensive metadata for filtering and context:
+
+```python
+{
+    'chunk_type': 'function',
+    'function_name': 'calculate_metrics',
+    'file_path': '/path/to/file.py',
+    'docstring': 'Calculate performance metrics...',
+    'parameters': ['data', 'config'],
+    'line_count': 25,
+    'has_decorators': True,
+    'is_async': False
+}
+```
+
+### Why This Matters for RAG
+
+Unlike text splitters that break code arbitrarily:
+
+ **Bad splitting (destroys code):**
+```python
+def important_function(data):
+    """Process important data"""
+    result = complex_calculation(
+        data.get('values'),
+        config={'mode': 'fast'}
+    )
+    return resu
+```
+
+ **Semantic splitting (preserves complete code):**
+```python
+# Function: important_function (lines 23-31)
+def important_function(data):
+    """Process important data"""
+    result = complex_calculation(
+        data.get('values'),
+        config={'mode': 'fast'}
+    )
+    return result
+```
+
+**Each chunk contains complete, valid Python code that can be:**
+- Executed directly
+- Understood by LLMs
+- Embedded with full context
+- Retrieved with semantic meaning intact
+
+##  Advanced Usage
+
+### Split Text Directly
+
+```python
+code = """
+def hello_world():
+    '''A simple greeting function.'''
+    return "Hello, World!"
+
+class Greeter:
+    def greet(self, name):
+        return f"Hello, {name}!"
+"""
+
+chunks = splitter.split_text(code, file_name="example.py")
+```
+
+### Batch Processing
+
+```python
+# Process entire directories
+results = splitter.split_directory(
+    "./src", 
+    pattern="*.py",
+    recursive=True
+)
+
+# results is a dict: {file_path: [chunks]}
+for file_path, chunks in results.items():
+    print(f"{file_path}: {len(chunks)} chunks")
+```
+
+### Filtering and Analysis
+
+```python
+# Filter chunks by type
+functions_only = splitter.filter_chunks(chunks, chunk_type="function")
+
+# Filter by size
+large_chunks = splitter.filter_chunks(chunks, min_size=500)
+
+# Get statistics
+stats = splitter.get_stats(chunks)
+print(f"Total chunks: {stats['total_chunks']}")
+print(f"Chunk types: {stats['chunk_types']}")
+```
+
+### Export Results
+
+```python
+# Export to JSON
+splitter.export_chunks(chunks, "output.json", format="json")
+
+# Export to YAML (requires PyYAML)
+splitter.export_chunks(chunks, "output.yaml", format="yaml")
+```
+
+##  Command Line Interface
+
+The package includes a powerful CLI tool:
+
+```bash
+# Split a single file
+python-splitter split my_code.py --verbose
+
+# Split with custom settings
+python-splitter split --max-size 1500 --no-docstrings my_code.py
+
+# Process entire directory
+python-splitter split-dir ./src --output results.json
+
+# Analyze without splitting
+python-splitter analyze my_code.py --verbose
+```
+
+### CLI Options
+
+- `--max-size`: Maximum chunk size in characters
+- `--min-size`: Minimum chunk size in characters  
+- `--no-functions`: Don't preserve function boundaries
+- `--no-classes`: Don't preserve class boundaries
+- `--no-docstrings`: Don't include docstrings
+- `--no-imports`: Don't include import statements
+- `--verbose`: Show detailed output
+
+##  Perfect for RAG Applications
+
+This splitter is specifically designed for RAG (Retrieval-Augmented Generation) pipelines:
+
+```python
+# Example: Prepare code for embedding
+chunks = splitter.split_file("large_codebase.py")
+
+# Filter for functions with docstrings (better for Q&A)
+documented_functions = splitter.filter_chunks(
+    chunks, 
+    chunk_type="function",
+    has_docstring=True
+)
+
+# Each chunk is now ready for embedding
+for chunk in documented_functions:
+    # The chunk.content contains complete, valid Python code
+    # The chunk.metadata contains rich context for filtering
+    embedding = embed_text(chunk.content)
+    store_in_vector_db(embedding, chunk.metadata)
+```
+
+##  Chunk Types and Metadata
+
+### Function Chunks
+```python
+{
+    'chunk_type': 'function',
+    'function_name': 'process_data',
+    'docstring': 'Process the input data...',
+    'parameters': ['data', 'options'],
+    'decorators': ['@staticmethod'],
+    'returns_annotation': 'Dict[str, Any]',
+    'is_async': False,
+    'line_count': 15
+}
+```
+
+### Class Chunks
+```python
+{
+    'chunk_type': 'class',
+    'class_name': 'DataProcessor',
+    'docstring': 'Main data processing class...',
+    'methods': ['__init__', 'process', 'validate'],
+    'method_count': 3,
+    'base_classes': ['BaseProcessor'],
+    'line_count': 45
+}
+```
+
+### Module Chunks
+```python
+{
+    'chunk_type': 'module',
+    'imports_count': 5,
+    'global_vars_count': 2,
+    'has_docstring': True
+}
+```
+
+## 🔧 Configuration Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `max_chunk_size` | 1000 | Maximum characters per chunk |
+| `min_chunk_size` | 100 | Minimum characters per chunk |
+| `preserve_functions` | True | Keep functions as complete chunks |
+| `preserve_classes` | True | Keep classes as complete chunks |
+| `include_docstrings` | True | Include docstrings in chunks |
+| `include_imports` | True | Include import statements |
+| `include_global_vars` | True | Include global variables |
+
+##  Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+##  License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- Built with Python's powerful `ast` module
+- Inspired by the need for better code understanding in AI applications
+- Designed for the growing RAG/AI community
+
+---
+
+**Made with ❤️ for the AI/RAG community**
+
+*If you find this useful, please consider giving it a star! ⭐*
