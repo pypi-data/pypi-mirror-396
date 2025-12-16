@@ -1,0 +1,68 @@
+Metadata-Version: 2.4
+Name: actio
+Version: 0.1.3
+Summary: Pure Python actor system for building concurrent and distributed applications with async/await support for Python 3.11+
+License: MIT
+License-File: LICENSE
+Author: Semenets V. Pavel
+Author-email: p.semenets@gmail.com
+Requires-Python: >=3.11
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
+Classifier: Topic :: Communications
+Classifier: Topic :: Software Development :: Libraries
+Classifier: Topic :: System :: Hardware
+Requires-Dist: pydantic (>=2.12.4,<3.0.0)
+Project-URL: Documentation, https://github.com/xDarkmanx/actio#readme
+Project-URL: Homepage, https://github.com/xDarkmanx/actio
+Project-URL: Repository, https://github.com/xDarkmanx/actio
+Description-Content-Type: text/markdown
+
+### Actio Project
+
+Pure Python actor system for building concurrent and distributed applications with async/await support.
+
+### Features
+
+**Async/await native** - Built on Python 3.11+ asyncio
+
+**Hierarchical actors** - Parent-child relationships with supervision
+
+**Message routing** - Path-based message delivery between actors
+
+**Lifecycle management** - Started/receive/stopped hooks with error handling
+
+**Type safe** - Full type annotations with Pylance/MyPy support
+
+### Quick Start
+
+```python
+import asyncio
+from actio import Actor, ActorSystem, actio
+
+@actio()
+class MyActor(Actor):
+    async def receive(self, sender, message):
+        print(f"Received: {message}")
+
+async def main():
+    system = ActorSystem()
+    actor_ref = system.create(MyActor())
+    
+    system.tell(actor_ref, "Hello World!")
+    await asyncio.sleep(0.1)
+    system.shutdown()
+
+asyncio.run(main())
+```
+
+### License
+MIT License - see LICENSE file for details.
+
