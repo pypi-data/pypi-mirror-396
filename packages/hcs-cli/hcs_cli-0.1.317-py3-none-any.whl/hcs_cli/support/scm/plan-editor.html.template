@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Weekly Capacity UI</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+    }
+    .day-row {
+      margin-bottom: 40px;
+      position: relative;
+    }
+    .label {
+      font-weight: bold;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .label-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .apply-calculated {
+      font-size: 10px;
+      color: #666;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+    .apply-calculated:hover {
+      color: #333;
+    }
+    .bar-container {
+      display: flex;
+      position: relative;
+      align-items: flex-end;
+      height: 200px;
+      border-left: 1px solid #ccc;
+      position: relative;
+      border-bottom: 1px solid #ccc;
+      width: 768px;
+      margin-left: 20px;
+    }
+    .bar-wrapper {
+      position: relative;
+      height: 100%;
+      width: 16px;
+      cursor: pointer;
+      background-color: #f0f0f0;
+      transition: background-color 0.2s ease;
+    }
+    .bar-wrapper:hover {
+      background-color: #e0e0e0;
+    }
+    .bar-wrapper:hover .bar {
+      opacity: 0.8;
+    }
+    .bar {
+      width: 100%;
+      margin: 0;
+      background-color: #7eb0d5;
+      position: absolute;
+      bottom: 0;
+      transition: height 0.1s ease, opacity 0.2s ease;
+    }
+    .dot {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      left: 1px;
+      z-index: 2;
+    }
+    .forecast-dot {
+      background-color: #ff6b6b;
+    }
+    .calculated-dot {
+      background-color: #51cf66;
+    }
+    .connector {
+      position: absolute;
+      width: 2px;
+      left: 3px;
+      z-index: 1;
+    }
+    .y-axis-label {
+      position: absolute;
+      top: 30px;
+      left: -10px;
+      font-size: 10px;
+      font-weight: normal;
+    }
+    .x-tick {
+      position: absolute;
+      width: 1px;
+      height: 8px;
+      background: #333;
+      bottom: -12px;
+    }
+    .x-tick-label {
+      position: absolute;
+      font-size: 10px;
+      bottom: -24px;
+      transform: translateX(-50%);
+    }
+    .tooltip {
+      position: absolute;
+      background: white;
+      border: 1px solid #ccc;
+      padding: 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      z-index: 1000;
+      pointer-events: none;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      min-width: 200px;
+    }
+    .day-stats {
+      font-size: 10px;
+      color: #666;
+    }
+    .needed-vm {
+      color: #ff6b6b;
+    }
+    .saved-vm {
+      color: #51cf66;
+    }
+    h2 {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .week-stats {
+      font-size: 14px;
+      display: flex;
+      gap: 20px;
+      justify-content: flex-end;
+      margin-bottom: 20px;
+    }
+    .stats-group {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: flex-end;
+    }
+    .stats-label {
+      font-size: 12px;
+      color: #666;
+      margin-right: 4px;
+      text-align: right;
+    }
+    .net-value {
+      font-weight: bold;
+    }
+    .net-positive {
+      color: #ff6b6b;
+    }
+    .net-negative {
+      color: #51cf66;
+    }
+    .details {
+      font-size: 12px;
+      color: #666;
+    }
+    .warning-icon {
+      position: absolute;
+      top: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #ff6b6b;
+      font-size: 14px;
+      font-weight: bold;
+      z-index: 10;
+    }
+    .container {
+      width: 834px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding: 0 20px;
+    }
+    .timezone-selector {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .timezone-selector select {
+      padding: 4px 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background-color: white;
+    }
+    .chart-container {
+      width: 100%;
+    }
+    /* Tab styles */
+    .tab-container {
+      margin-top: 20px;
+    }
+    .tab-buttons {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 10px;
+    }
+    .tab-button {
+      padding: 8px 16px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      color: #666;
+      border-bottom: 2px solid transparent;
+    }
+    .tab-button.active {
+      color: #333;
+      border-bottom: 2px solid #333;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    /* Code formatting styles */
+    .code-container {
+      background-color: #f5f5f5;
+      padding: 20px;
+      border-radius: 4px;
+      font-family: monospace;
+      white-space: pre;
+      overflow-x: auto;
+      position: relative;
+      min-height: 200px;
+    }
+    .code-container .key {
+      color: #0000ff;
+    }
+    .code-container .string {
+      color: #a31515;
+    }
+    .code-container .number {
+      color: #098658;
+    }
+    .copy-button {
+      padding: 6px 12px;
+      background-color: #f0f0f0;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background-color 0.2s ease;
+      margin-bottom: 10px;
+    }
+    .copy-button:hover {
+      background-color: #e0e0e0;
+    }
+    #config-json {
+      padding-top: 40px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h2>Weekly Capacity Planner</h2>
+    <div class="timezone-selector">
+      <span>Timezone:</span>
+      <select id="timezone-select">
+        <option value="UTC">UTC</option>
+        <option value="America/New_York">America/New_York</option>
+        <option value="America/Los_Angeles">America/Los_Angeles</option>
+        <option value="Europe/London">Europe/London</option>
+        <option value="Europe/Paris">Europe/Paris</option>
+        <option value="Asia/Tokyo">Asia/Tokyo</option>
+        <option value="Australia/Sydney">Australia/Sydney</option>
+      </select>
+    </div>
+  </div>
+  
+  <div class="tab-container">
+    <div class="tab-buttons">
+      <button class="tab-button active" data-tab="capacity">Capacity</button>
+      <button class="tab-button" data-tab="configuration">Configuration</button>
+      <button class="tab-button" data-tab="history">History</button>
+    </div>
+    
+    <div class="tab-content active" id="capacity-tab">
+      <div class="week-stats"></div>
+      <div class="chart-container">
+        <div id="chart"></div>
+      </div>
+    </div>
+    
+    <div class="tab-content" id="configuration-tab">
+      <button class="copy-button" id="copy-config">Copy to Clipboard</button>
+      <div class="code-container" id="config-json"></div>
+    </div>
+
+    <div class="tab-content" id="history-tab">
+      <!-- History content will go here -->
+    </div>
+  </div>
+</div>
+
+<script>
+  const weekdays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const timeSlots = Array.from({ length: 48 }, (_, i) => {
+    const h = String(Math.floor(i / 2)).padStart(2, '0');
+    const m = i % 2 === 0 ? '00' : '30';
+    return `${h}:${m}`;
+  });
+
+  let calendarData = {
+    calendar: {
+      "monday/08:00": { idealCapacity: 100, forecastCapacity: 120, calculatedCapacity: 130 },
+      "monday/08:30": { idealCapacity: 120, forecastCapacity: 110, calculatedCapacity: 115 },
+      "tuesday/08:00": { idealCapacity: 130, forecastCapacity: 140, calculatedCapacity: 120 },
+      "tuesday/08:30": { idealCapacity: 140, forecastCapacity: 130, calculatedCapacity: 150 }
+    },
+    meta: {
+      maxCapacity: 200,
+    },
+    timezone: 'UTC'
+  };
+
+  calendarData = {{PLAN_DATA}}
+
+  const maxCapacity = calendarData['meta']['maxCapacity'];
+
+  function updateBarColor(bar, idealCapacity, calculatedCapacity) {
+    const effectiveCalculatedCapacity = calculatedCapacity === undefined ? 0 : calculatedCapacity;
+    
+    if (idealCapacity < effectiveCalculatedCapacity) {
+      bar.style.backgroundColor = '#ffa3a3'; // light red
+    } else if (idealCapacity > effectiveCalculatedCapacity * 1.1) {
+      bar.style.backgroundColor = '#ffd700'; // darker yellow
+    } else {
+      bar.style.backgroundColor = '#4CAF50'; // darker green
+    }
+  }
+
+  function updateWeekStats() {
+    let neededVmHours = 0;
+    let savedVmHours = 0;
+    let actualNeededVmHours = 0;
+    let actualSavedVmHours = 0;
+
+    weekdays.forEach(day => {
+      timeSlots.forEach(time => {
+        const slotKey = `${day}/${time}`;
+        const slotRecord = calendarData.calendar[slotKey] || {};
+        const forecastCapacity = slotRecord.forecastCapacity || 0;
+        const calculatedCapacity = slotRecord.calculatedCapacity || 0;
+        const idealCapacity = slotRecord.idealCapacity || 0;
+        
+        // Calculate delta between calculated and forecast
+        const delta = calculatedCapacity - forecastCapacity;
+        if (delta > 0) {
+          neededVmHours += delta;
+        } else if (delta < 0) {
+          savedVmHours += Math.abs(delta);
+        }
+
+        // Calculate delta between ideal and forecast
+        const actualDelta = idealCapacity - forecastCapacity;
+        if (actualDelta > 0) {
+          actualNeededVmHours += actualDelta;
+        } else if (actualDelta < 0) {
+          actualSavedVmHours += Math.abs(actualDelta);
+        }
+      });
+    });
+
+    const calculatedNet = neededVmHours - savedVmHours;
+    const actualNet = actualNeededVmHours - actualSavedVmHours;
+
+    const weekStats = document.querySelector('.week-stats');
+    weekStats.innerHTML = `
+      <div class="stats-group">
+        <span class="stats-label">Calculated:</span>
+        <span class="net-value ${calculatedNet > 0 ? 'net-positive' : 'net-negative'}">${calculatedNet > 0 ? '+' : ''}${calculatedNet} VMh</span>
+        <span class="details">(+${neededVmHours} -${savedVmHours})</span>
+      </div>
+      <div class="stats-group">
+        <span class="stats-label">Actual:</span>
+        <span class="net-value ${actualNet > 0 ? 'net-positive' : 'net-negative'}">${actualNet > 0 ? '+' : ''}${actualNet} VMh</span>
+        <span class="details">(+${actualNeededVmHours} -${actualSavedVmHours})</span>
+      </div>
+    `;
+  }
+
+  function renderChart() {
+    const chart = document.getElementById('chart');
+    chart.innerHTML = '';
+
+    weekdays.forEach(weekday => {
+      const row = document.createElement('div');
+      row.className = 'day-row';
+
+      const label = document.createElement('div');
+      label.className = 'label';
+      
+      const labelLeft = document.createElement('div');
+      labelLeft.className = 'label-left';
+      
+      const dayName = document.createElement('span');
+      dayName.textContent = weekday.charAt(0).toUpperCase() + weekday.slice(1);
+      labelLeft.appendChild(dayName);
+
+      const applyCalculated = document.createElement('span');
+      applyCalculated.className = 'apply-calculated';
+      applyCalculated.textContent = 'apply calculated';
+      applyCalculated.onclick = function() {
+        timeSlots.forEach((time, index) => {
+          const slotKey = `${weekday}/${time}`;
+          const slotRecord = calendarData.calendar[slotKey] || {};
+          const calculatedCapacity = slotRecord.calculatedCapacity;
+          
+          // Initialize slot if it doesn't exist
+          if (!calendarData.calendar[slotKey]) {
+            calendarData.calendar[slotKey] = {};
+          }
+          
+          // Set idealCapacity to calculatedCapacity (0 if undefined)
+          calendarData.calendar[slotKey].idealCapacity = calculatedCapacity || 0;
+          
+          // Update the bar height and color
+          const bar = document.querySelector(`[data-key="${slotKey}"] .bar`);
+          const barWrapper = document.querySelector(`[data-key="${slotKey}"]`);
+          if (bar) {
+            bar.style.height = `${((calculatedCapacity || 0) / maxCapacity) * 100}%`;
+            updateBarColor(bar, calculatedCapacity || 0, calculatedCapacity || 0);
+
+            // Update warning icon
+            const existingWarning = barWrapper.querySelector('.warning-icon');
+            if (existingWarning) {
+              existingWarning.remove();
+            }
+            if (calculatedCapacity !== undefined && (calculatedCapacity || 0) < calculatedCapacity) {
+              const warningIcon = document.createElement('div');
+              warningIcon.className = 'warning-icon';
+              warningIcon.textContent = '!';
+              barWrapper.appendChild(warningIcon);
+            }
+          }
+        });
+        updateWeekStats();
+      };
+      labelLeft.appendChild(applyCalculated);
+      
+      label.appendChild(labelLeft);
+
+      // Add day stats
+      const dayStats = document.createElement('span');
+      dayStats.className = 'day-stats';
+      label.appendChild(dayStats);
+
+      function updateDayStats(day) {
+        let neededVmHours = 0;
+        let savedVmHours = 0;
+
+        timeSlots.forEach(time => {
+          const slotKey = `${day}/${time}`;
+          const slotRecord = calendarData.calendar[slotKey] || {};
+          const forecastCapacity = slotRecord.forecastCapacity || 0;
+          const calculatedCapacity = slotRecord.calculatedCapacity || 0;
+          
+          const delta = calculatedCapacity - forecastCapacity;
+          if (delta > 0) {
+            neededVmHours += delta;
+          } else if (delta < 0) {
+            savedVmHours += Math.abs(delta);
+          }
+        });
+
+        dayStats.innerHTML = `
+          <span class="needed-vm">+${neededVmHours} VMh</span>
+          <span class="saved-vm">-${savedVmHours} VMh</span>
+        `;
+      }
+
+      // Initial stats update
+      updateWeekStats();
+
+      const yLabel = document.createElement('div');
+      yLabel.className = 'y-axis-label';
+      yLabel.textContent = maxCapacity;
+      row.appendChild(yLabel);
+
+      const barContainer = document.createElement('div');
+      barContainer.className = 'bar-container';
+
+      // Add x-axis line
+      const xAxisLine = document.createElement('div');
+      xAxisLine.style.position = 'absolute';
+      xAxisLine.style.bottom = '0';
+      xAxisLine.style.left = '0';
+      xAxisLine.style.width = '100%';
+      xAxisLine.style.height = '1px';
+      xAxisLine.style.background = '#ccc';
+      xAxisLine.style.zIndex = '3';
+      barContainer.appendChild(xAxisLine);
+
+      timeSlots.forEach((time, index) => {
+        const key = `${weekday}/${time}`;
+        const slotData = calendarData.calendar[key] || { idealCapacity: 0 };
+        const slotRecord = calendarData.calendar[key] || {};
+        const idealCapacity = slotRecord.idealCapacity || 0;
+        const forecastCapacity = slotRecord.forecastCapacity;
+        const calculatedCapacity = slotRecord.calculatedCapacity === undefined ? 0 : slotRecord.calculatedCapacity;
+        
+        // Create gauge container
+        const barWrapper = document.createElement('div');
+        barWrapper.className = 'bar-wrapper';
+        barWrapper.style.position = 'relative';
+        barWrapper.style.height = '100%';
+        barWrapper.style.width = '16px';
+        barWrapper.setAttribute('data-key', key);
+
+        // Create the bar (value indicator)
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        bar.style.height = `${(idealCapacity / maxCapacity) * 100}%`;
+        bar.style.bottom = '0';
+        updateBarColor(bar, idealCapacity, calculatedCapacity);
+
+        // Add warning icon if idealCapacity is lower than calculatedCapacity
+        if (calculatedCapacity !== undefined && idealCapacity < calculatedCapacity) {
+          const warningIcon = document.createElement('div');
+          warningIcon.className = 'warning-icon';
+          warningIcon.textContent = '!';
+          barWrapper.appendChild(warningIcon);
+        }
+
+        // Add click handler to the gauge
+        barWrapper.onclick = function(e) {
+          const rect = barWrapper.getBoundingClientRect();
+          const clickY = e.clientY - rect.top;
+          const ratio = 1 - (clickY / rect.height);
+          const newValue = Math.round(ratio * maxCapacity);
+          
+          if (!calendarData.calendar[key]) {
+            calendarData.calendar[key] = {};
+          }
+          calendarData.calendar[key].idealCapacity = newValue;
+          bar.style.height = `${(newValue / maxCapacity) * 100}%`;
+          updateBarColor(bar, newValue, calculatedCapacity);
+          updateWeekStats();
+
+          // Update warning icon
+          const existingWarning = barWrapper.querySelector('.warning-icon');
+          if (calculatedCapacity !== undefined && newValue < calculatedCapacity) {
+            if (!existingWarning) {
+              const warningIcon = document.createElement('div');
+              warningIcon.className = 'warning-icon';
+              warningIcon.textContent = '!';
+              barWrapper.appendChild(warningIcon);
+            }
+          } else if (existingWarning) {
+            existingWarning.remove();
+          }
+
+          // Update tooltip content if it's visible
+          if (tooltip.style.display === 'block') {
+            updateTooltipContent(e, key);
+          }
+        };
+
+        // Add drag functionality to the gauge
+        barWrapper.onmousedown = function(e) {
+          const rect = barWrapper.getBoundingClientRect();
+          const clickY = e.clientY - rect.top;
+          const ratio = 1 - (clickY / rect.height);
+          const newValue = Math.round(ratio * maxCapacity);
+          
+          if (!calendarData.calendar[key]) {
+            calendarData.calendar[key] = {};
+          }
+          calendarData.calendar[key].idealCapacity = newValue;
+          bar.style.height = `${(newValue / maxCapacity) * 100}%`;
+          updateBarColor(bar, newValue, calculatedCapacity);
+          updateWeekStats();
+
+          // Update warning icon
+          const existingWarning = barWrapper.querySelector('.warning-icon');
+          if (calculatedCapacity !== undefined && newValue < calculatedCapacity) {
+            if (!existingWarning) {
+              const warningIcon = document.createElement('div');
+              warningIcon.className = 'warning-icon';
+              warningIcon.textContent = '!';
+              barWrapper.appendChild(warningIcon);
+            }
+          } else if (existingWarning) {
+            existingWarning.remove();
+          }
+
+          // Update tooltip content
+          const tooltip = barWrapper.nextElementSibling;
+          if (tooltip && tooltip.classList.contains('tooltip')) {
+            const timeEnd = timeSlots[index + 1] || '24:00';
+            tooltip.innerHTML = `
+              <div><strong>Time:</strong> ${time} - ${timeEnd}</div>
+              <div><strong>Ideal Capacity:</strong> ${newValue}</div>
+              ${forecastCapacity !== undefined ? `<div><strong>Forecast Capacity:</strong> ${forecastCapacity}</div>` : ''}
+              ${calculatedCapacity !== undefined ? `<div><strong>Calculated Capacity:</strong> ${calculatedCapacity}</div>` : ''}
+            `;
+          }
+
+          function onMouseMove(ev) {
+            const newY = ev.clientY - rect.top;
+            const ratio = 1 - (newY / rect.height);
+            let newValue = Math.round(ratio * maxCapacity);
+            newValue = Math.max(0, Math.min(maxCapacity, newValue));
+            bar.style.height = `${(newValue / maxCapacity) * 100}%`;
+            calendarData.calendar[key].idealCapacity = newValue;
+            updateBarColor(bar, newValue, calculatedCapacity);
+            updateWeekStats();
+
+            // Update warning icon during drag
+            const existingWarning = barWrapper.querySelector('.warning-icon');
+            if (calculatedCapacity !== undefined && newValue < calculatedCapacity) {
+              if (!existingWarning) {
+                const warningIcon = document.createElement('div');
+                warningIcon.className = 'warning-icon';
+                warningIcon.textContent = '!';
+                barWrapper.appendChild(warningIcon);
+              }
+            } else if (existingWarning) {
+              existingWarning.remove();
+            }
+
+            // Update tooltip content during drag
+            const tooltip = barWrapper.nextElementSibling;
+            if (tooltip && tooltip.classList.contains('tooltip')) {
+              const timeEnd = timeSlots[index + 1] || '24:00';
+              tooltip.innerHTML = `
+                <div><strong>Time:</strong> ${time} - ${timeEnd}</div>
+                <div><strong>Ideal Capacity:</strong> ${newValue}</div>
+                ${forecastCapacity !== undefined ? `<div><strong>Forecast Capacity:</strong> ${forecastCapacity}</div>` : ''}
+                ${calculatedCapacity !== undefined ? `<div><strong>Calculated Capacity:</strong> ${calculatedCapacity}</div>` : ''}
+              `;
+            }
+          }
+
+          function onMouseUp() {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+          }
+
+          document.addEventListener('mousemove', onMouseMove);
+          document.addEventListener('mouseup', onMouseUp);
+        };
+
+        // Create tooltip
+        const tooltip = document.createElement('div');
+        tooltip.className = 'tooltip';
+        tooltip.style.display = 'none';
+        document.body.appendChild(tooltip);
+
+        function updateTooltipContent(e, slotKey) {
+          const slotData = calendarData.calendar[slotKey] || {};
+          const timeEnd = timeSlots[index + 1] || '24:00';
+          tooltip.innerHTML = `
+            <div><strong>Time:</strong> ${time} - ${timeEnd}</div>
+            <div><strong>Ideal Capacity:</strong> ${slotData.idealCapacity || 0}</div>
+            ${slotData.forecastCapacity !== undefined ? `<div><strong>Forecast Capacity:</strong> ${slotData.forecastCapacity}</div>` : ''}
+            ${slotData.calculatedCapacity !== undefined ? `<div><strong>Calculated Capacity:</strong> ${slotData.calculatedCapacity}</div>` : ''}
+          `;
+          tooltip.style.left = (e.pageX + 10) + 'px';
+          tooltip.style.top = (e.pageY - tooltip.offsetHeight - 10) + 'px';
+        }
+
+        barWrapper.onmouseenter = function(e) {
+          barWrapper.style.backgroundColor = '#e0e0e0';
+          updateTooltipContent(e, key);
+          tooltip.style.display = 'block';
+        };
+
+        barWrapper.onmousemove = function(e) {
+          updateTooltipContent(e, key);
+        };
+
+        barWrapper.onmouseleave = function() {
+          barWrapper.style.backgroundColor = '#f0f0f0';
+          tooltip.style.display = 'none';
+        };
+
+        barWrapper.appendChild(bar);
+
+        if (forecastCapacity !== undefined) {
+          const dot = document.createElement('div');
+          dot.className = 'dot forecast-dot';
+          dot.style.position = 'absolute';
+          dot.style.bottom = `${(forecastCapacity / maxCapacity) * 100}%`;
+          barWrapper.appendChild(dot);
+        }
+
+        if (calculatedCapacity !== undefined && idealCapacity > 0) {
+          const dot = document.createElement('div');
+          dot.className = 'dot calculated-dot';
+          dot.style.position = 'absolute';
+          dot.style.bottom = `${(calculatedCapacity / maxCapacity) * 100}%`;
+          barWrapper.appendChild(dot);
+        }
+
+        if (forecastCapacity !== undefined && calculatedCapacity !== undefined && idealCapacity > 0) {
+          const connector = document.createElement('div');
+          connector.className = 'connector';
+          const minY = Math.min(forecastCapacity, calculatedCapacity);
+          const maxY = Math.max(forecastCapacity, calculatedCapacity);
+          connector.style.position = 'absolute';
+          connector.style.bottom = `${(minY / maxCapacity) * 100}%`;
+          connector.style.height = `${((maxY - minY) / maxCapacity) * 100}%`;
+          connector.style.background = forecastCapacity > calculatedCapacity ? '#51cf66' : '#ff6b6b';
+          barWrapper.appendChild(connector);
+        }
+
+        barContainer.appendChild(barWrapper);
+
+        if (index % 8 === 0) {
+          const tick = document.createElement('div');
+          tick.className = 'x-tick';
+          tick.style.left = `${(index * 8)}px`;
+          barContainer.appendChild(tick);
+
+          const tickLabel = document.createElement('div');
+          tickLabel.className = 'x-tick-label';
+          tickLabel.style.left = `${(index * 8)}px`;
+          tickLabel.textContent = time;
+          barContainer.appendChild(tickLabel);
+        }
+      });
+
+      row.appendChild(label);
+      row.appendChild(barContainer);
+      chart.appendChild(row);
+    });
+  }
+
+  function formatJsonForDisplay(obj) {
+    const jsonString = JSON.stringify(obj, null, 2);
+    const container = document.getElementById('config-json');
+    container.textContent = jsonString;
+  }
+
+  function updateConfigDisplay() {
+    const configJson = document.getElementById('config-json');
+    formatJsonForDisplay(calendarData);
+  }
+
+  // Add tab switching functionality
+  document.querySelectorAll('.tab-button').forEach(button => {
+    button.addEventListener('click', () => {
+      // Remove active class from all buttons and contents
+      document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+      
+      // Add active class to clicked button and corresponding content
+      button.classList.add('active');
+      document.getElementById(`${button.dataset.tab}-tab`).classList.add('active');
+      
+      // Update config display when switching to config tab
+      if (button.dataset.tab === 'configuration') {
+        updateConfigDisplay();
+      }
+    });
+  });
+
+  // Initialize timezone selector
+  document.addEventListener('DOMContentLoaded', () => {
+    renderChart();
+    updateConfigDisplay();
+    
+    const timezoneSelect = document.getElementById('timezone-select');
+    timezoneSelect.value = calendarData.timezone;
+    
+    timezoneSelect.addEventListener('change', (e) => {
+      calendarData.timezone = e.target.value;
+      updateConfigDisplay();
+    });
+
+    // Add copy to clipboard functionality
+    const copyButton = document.getElementById('copy-config');
+    copyButton.addEventListener('click', () => {
+      const jsonString = JSON.stringify(calendarData, null, 2);
+      navigator.clipboard.writeText(jsonString).then(() => {
+        const originalText = copyButton.textContent;
+        copyButton.textContent = 'Copied!';
+        setTimeout(() => {
+          copyButton.textContent = originalText;
+        }, 2000);
+      }).catch(err => {
+        console.error('Failed to copy text: ', err);
+      });
+    });
+  });
+</script>
+
+</body>
+</html>
