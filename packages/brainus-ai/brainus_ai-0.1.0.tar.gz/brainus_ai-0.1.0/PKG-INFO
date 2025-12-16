@@ -1,0 +1,349 @@
+Metadata-Version: 2.4
+Name: brainus-ai
+Version: 0.1.0
+Summary: Official Python SDK for Brainus AI - RAG-powered educational content API
+Project-URL: Homepage, https://developer.brainus.lk
+Project-URL: Documentation, https://developer.brainus.lk/docs
+Project-URL: Repository, https://github.com/brainus/brainus-ai-python
+Project-URL: Issues, https://github.com/brainus/brainus-ai-python/issues
+Project-URL: Changelog, https://github.com/brainus/brainus-ai-python/blob/main/CHANGELOG.md
+Author-email: Brainus Team <dev@brainus.lk>
+License: MIT
+Keywords: ai,api,brainus,education,rag,sdk
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Typing :: Typed
+Requires-Python: >=3.11
+Requires-Dist: httpx>=0.27.0
+Requires-Dist: pydantic>=2.9.0
+Requires-Dist: typing-extensions>=4.12.0; python_version < '3.13'
+Provides-Extra: dev
+Requires-Dist: build>=1.2.0; extra == 'dev'
+Requires-Dist: mypy>=1.11.0; extra == 'dev'
+Requires-Dist: pytest-asyncio>=0.24.0; extra == 'dev'
+Requires-Dist: pytest-httpx>=0.30.0; extra == 'dev'
+Requires-Dist: pytest>=8.3.0; extra == 'dev'
+Requires-Dist: ruff>=0.6.0; extra == 'dev'
+Requires-Dist: twine>=5.1.0; extra == 'dev'
+Description-Content-Type: text/markdown
+
+# Brainus AI Python SDK
+
+Official Python SDK for the Brainus AI API - RAG-powered educational content queries with citations.
+
+[![PyPI version](https://badge.fury.io/py/brainus-ai.svg)](https://badge.fury.io/py/brainus-ai)
+[![Python Support](https://img.shields.io/pypi/pyversions/brainus-ai.svg)](https://pypi.org/project/brainus-ai/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+## Features
+
+- ✅ **Async-first** - Built with `httpx` for modern async/await patterns
+- ✅ **Type-safe** - Full type hints with Pydantic models
+- ✅ **Automatic retries** - Configurable retry logic for resilience
+- ✅ **Error handling** - Custom exceptions for different error cases
+- ✅ **Citation support** - Get source documents with page numbers
+- ✅ **Usage tracking** - Monitor your API usage and quotas
+
+## Installation
+
+```bash
+pip install brainus-ai
+```
+
+## Quick Start
+
+```python
+import asyncio
+from brainus_ai import BrainusAI
+
+async def main():
+    # Initialize client with your API key
+    async with BrainusAI(api_key="sk_live_your_key_here") as client:
+        # Query the AI
+        response = await client.query(
+            query="What is Object-Oriented Programming?",
+            # store_id is optional - uses default if not provided
+        )
+
+        # Print answer
+        print(response.answer)
+
+        # Print citations
+        for citation in response.citations:
+            print(f"Source: {citation.document_name}, Pages: {citation.pages}")
+
+asyncio.run(main())
+```
+
+## Authentication
+
+Get your API key from the [Brainus Developer Portal](https://developer.brainus.lk/dashboard/keys).
+
+```python
+from brainus_ai import BrainusAI
+
+client = BrainusAI(api_key="sk_live_your_key_here")
+```
+
+**Best Practice:** Store your API key in an environment variable:
+
+```python
+import os
+from brainus_ai import BrainusAI
+
+api_key = os.getenv("BRAINUS_API_KEY")
+client = BrainusAI(api_key=api_key)
+```
+
+## Usage
+
+### Query with Filters
+
+```python
+from brainus_ai import QueryFilters
+
+response = await client.query(
+    query="Explain inheritance in programming",
+    store_id="abc123",  # Optional - uses default if not provided
+    model="gemini-2.5-flash",  # Optional - must be in your plan's allowed_models
+    filters=QueryFilters(
+        subject="ICT",
+        grade="12",
+        language="English"
+    )
+)
+
+print(response.answer)
+```
+
+### Get Usage Statistics
+
+```python
+stats = await client.get_usage()
+print(f"Total requests: {stats.total_requests}")
+print(f"Quota used: {stats.quota_percentage}%")
+print(f"Remaining: {stats.quota_remaining}")
+```
+
+### List Available Plans
+
+```python
+plans = await client.get_plans()
+for plan in plans:
+    print(f"{plan.name}: {plan.rate_limit_per_minute} req/min")
+```
+
+### Error Handling
+
+```python
+from brainus_ai import (
+    BrainusAI,
+    AuthenticationError,
+    RateLimitError,
+    QuotaExceededError,
+    APIError
+)
+
+try:
+    response = await client.query(
+        query="What is Python?",
+        store_id="abc123"  # Optional
+    )
+except AuthenticationError:
+    print("Invalid API key")
+except RateLimitError as e:
+    print(f"Rate limited. Retry after {e.retry_after} seconds")
+except QuotaExceededError:
+    print("Monthly quota exceeded")
+except APIError as e:
+    print(f"API error: {e}")
+```
+
+### Context Manager
+
+```python
+async with BrainusAI(api_key="sk_live_...") as client:
+    response = await client.query(...)
+    # Client automatically closes after exiting context
+```
+
+## Configuration
+
+```python
+client = BrainusAI(
+    api_key="sk_live_...",
+    base_url="https://api.brainus.lk",  # Default
+    timeout=30.0,  # Request timeout in seconds
+    max_retries=3  # Maximum retry attempts
+)
+```
+
+## API Reference
+
+### `BrainusAI`
+
+Main client class for interacting with the Brainus AI API.
+
+#### Methods
+
+**`async query(query: str, store_id: str | None = None, filters: QueryFilters | dict | None = None, model: str | None = None) -> QueryResponse`**
+
+Query the AI system with optional metadata filters.
+
+**`async get_usage() -> UsageStats`**
+
+Get current usage statistics for your API key.
+
+**`async get_plans() -> list[Plan]`**
+
+Get list of available API plans.
+
+**`async close() -> None`**
+
+Close the HTTP client connection.
+
+### Models
+
+#### `QueryResponse`
+
+```python
+class QueryResponse:
+    answer: str                   # The generated answer
+    citations: list[Citation]     # Source citations
+    has_citations: bool           # Whether citations are available
+```
+
+#### `Citation`
+
+```python
+class Citation:
+    document_id: str              # Unique document ID
+    document_name: str            # Document filename
+    pages: list[int]              # Referenced page numbers
+    metadata: dict[str, Any]      # Document metadata
+    chunk_text: str | None        # Relevant text chunk
+```
+
+#### `UsageStats`
+
+```python
+class UsageStats:
+    total_requests: int                  # Total API requests
+    total_tokens: int | None             # Total tokens used
+    total_cost_usd: float | None         # Total cost in USD
+    by_endpoint: dict[str, int]          # Requests per endpoint
+    quota_remaining: int | None          # Remaining quota
+    quota_percentage: float | None       # Quota used percentage
+    plan: PlanInfo | None                # Plan information
+    period_start: str | None             # Period start date
+    period_end: str | None               # Period end date
+```
+
+#### `Plan`
+
+```python
+class Plan:
+    id: str                              # Plan ID
+    name: str                            # Plan name
+    description: str | None              # Description
+    rate_limit_per_minute: int           # Rate limit (req/min)
+    rate_limit_per_day: int              # Daily limit
+    monthly_quota: int | None            # Monthly quota (null = unlimited)
+    price_lkr: float | None              # Price in LKR (null = free)
+    allowed_models: list[str]            # Allowed models for this plan
+    features: dict[str, Any]             # Additional features
+    is_active: bool                      # Whether plan is active
+```
+
+### Exceptions
+
+- **`BrainusError`** - Base exception for all SDK errors
+- **`AuthenticationError`** - Invalid or missing API key (401)
+- **`RateLimitError`** - Rate limit exceeded (429)
+- **`QuotaExceededError`** - Monthly quota exceeded (403)
+- **`APIError`** - General API errors (4xx, 5xx)
+
+## Development
+
+### Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/brainus/brainus-ai-python.git
+cd brainus-ai-python
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # or `venv\Scripts\activate` on Windows
+
+# Install dev dependencies
+pip install -e ".[dev]"
+```
+
+### Testing
+
+```bash
+pytest tests/ -v
+```
+
+### Type Checking
+
+```bash
+mypy src/brainus_ai
+```
+
+### Linting
+
+```bash
+ruff check src/
+ruff format src/
+```
+
+### Building
+
+```bash
+python -m build
+```
+
+### Publishing
+
+```bash
+twine upload dist/*
+```
+
+## Examples
+
+See the [examples](https://github.com/brainus/brainus-ai-python/tree/main/examples) directory for more usage examples:
+
+- `basic_usage.py` - Simple query examples
+- `error_handling.py` - Error handling patterns
+- `filters.py` - Using metadata filters
+- `usage_tracking.py` - Monitoring API usage
+
+## Support
+
+- **Documentation:** [developer.brainus.lk/docs](https://developer.brainus.lk/docs)
+- **API Reference:** [developer.brainus.lk/docs/api-reference](https://developer.brainus.lk/docs/api-reference)
+- **Issues:** [GitHub Issues](https://github.com/brainus/brainus-ai-python/issues)
+- **Email:** dev@brainus.lk
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+## Links
+
+- [Brainus AI Website](https://brainus.lk)
+- [Developer Portal](https://developer.brainus.lk)
+- [API Documentation](https://developer.brainus.lk/docs)
+- [Pricing](https://developer.brainus.lk/pricing)
+
+---
+
+Made with ❤️ by the Brainus team
