@@ -1,0 +1,151 @@
+Metadata-Version: 2.4
+Name: securezy-cli
+Version: 0.1.5
+Summary: Lightweight security utility CLI (port scan, vault, crypto, hashing, reports, plugins).
+Project-URL: Homepage, https://github.com/akashkokare2910/securezy-cli
+Project-URL: Repository, https://github.com/akashkokare2910/securezy-cli
+Project-URL: Issues, https://github.com/akashkokare2910/securezy-cli/issues
+Author: Akash
+License: MIT License
+        
+        Copyright (c) 2020 Parinz
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+License-File: LICENSE
+Keywords: audit,cli,encryption,hashing,network,security
+Classifier: Development Status :: 3 - Alpha
+Classifier: Environment :: Console
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Security
+Requires-Python: >=3.9
+Requires-Dist: rich>=13.0.0
+Requires-Dist: typer>=0.9.0
+Provides-Extra: crypto
+Requires-Dist: cryptography>=41.0.0; extra == 'crypto'
+Provides-Extra: dev
+Requires-Dist: pytest>=7.4.0; extra == 'dev'
+Requires-Dist: ruff>=0.3.0; extra == 'dev'
+Provides-Extra: vault
+Requires-Dist: cryptography>=41.0.0; extra == 'vault'
+Description-Content-Type: text/markdown
+
+# Securezy CLI (`securezy-cli`)
+
+Securezy CLI is a lightweight, pip-installable Python command-line toolkit for common security tasks: port scanning, TLS checks, JWT inspection, webhook signing/verification, security headers auditing, password/token generation, vault storage, file crypto, hashing, reports, and plugins.
+
+PyPI: `securezy-cli` (CLI command: `securezy`)
+
+## Install
+
+```bash
+python -m pip install "securezy-cli[crypto,vault]"
+securezy --help
+```
+
+## Quickstart
+
+```bash
+securezy scan ports -t 127.0.0.1 -p 1-1024
+securezy tls check example.com
+securezy vault init
+securezy crypto encrypt -i secret.txt -o secret.txt.sz
+securezy hash text --algo sha256 "hello"
+```
+
+## Examples (by feature)
+
+### Port scan
+
+```bash
+securezy scan ports -t 127.0.0.1 -p 1-1024
+securezy scan ports -t 127.0.0.1 -p 22,80,443 --json
+```
+
+### TLS certificate check
+
+```bash
+securezy tls check example.com
+securezy tls check --from-file targets.txt --report-dir reports
+```
+
+### JWT inspection
+
+```bash
+securezy jwt inspect "<token>" --json
+securezy jwt inspect --from-file tokens.txt --report jwt.md --report-format md
+```
+
+### Webhook signing and verification (HMAC)
+
+```bash
+echo -n '{"id": 1}' | securezy webhook sign --stdin --secret env:WEBHOOK_SECRET --encoding hex
+securezy webhook verify --sig "<signature>" --file payload.json --secret vault:stripe --encoding hex
+```
+
+### Security headers audit
+
+```bash
+securezy headers check https://example.com --json
+securezy headers check --from-file urls.txt --report-dir reports
+```
+
+### Password / token generator
+
+```bash
+securezy pwgen --preset site --len 24 --no-ambiguous
+securezy pwgen --preset base64url --bytes 32 --count 5 --json
+```
+
+### Vault, crypto, and hashing
+
+```bash
+securezy vault init
+securezy vault add github --username akash --password prompt
+securezy vault get github
+securezy crypto encrypt -i secret.txt -o secret.txt.sz
+securezy crypto decrypt -i secret.txt.sz -o secret.txt
+securezy hash file -i secret.txt --algo sha256
+```
+
+## Reports and automation
+
+Most audit-style commands support:
+
+```bash
+--json
+--report <path> --report-format json|md|csv
+--report-dir <dir> --report-formats "json,md,csv"
+--overwrite-report
+```
+
+## Plugins
+
+Plugins are discovered via Python entry points group `securezy.plugins`.
+
+```bash
+securezy plugins list
+securezy plugins scaffold my-plugin -o .
+```
