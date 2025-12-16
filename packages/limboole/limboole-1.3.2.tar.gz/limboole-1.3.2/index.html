@@ -1,0 +1,131 @@
+<html>
+    <head>
+        <title>Limboole on the Go!</title>
+        <meta charset="utf-8"/>
+
+        <link href="css/bootstrap.css" rel="stylesheet" />
+        <style>
+            #input.hover {
+                color: #495057;
+                background-color: #fff;
+                border-color: #ffc107;
+                outline: 0;
+                box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25);
+            }
+        </style>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+    </head>
+    <body class="d-flex flex-column h-100">
+        <main role="main">
+            <div class="container">
+                <h1>Limboole on the Go!</h1>
+
+                <p>Uses <a href="http://fmv.jku.at/limboole/">Limboole</a> (MIT licensed), 
+                    <a href="http://fmv.jku.at/picosat/">PicoSAT</a> (MIT licensed),
+                    and <a href="https://lonsing.github.io/depqbf/">DepQBF</a> (GPLv3 licensed) to parse
+                    an easy SAT and QBF DSL (instead of relying on DIMACS).
+                    Compiled using <a href="https://emscripten.org/">Emscripten</a>,
+                    <a href="https://github.com/maximaximal/limboole">Source Code and Modifications are available on GitHub</a>.
+                    Created by <a href="https://maxheisinger.at">Max Heisinger</a>. Support on GitHub.</p>
+                <button class="btn btn-secondary btn-block" type="button" data-toggle="collapse"
+                        data-target="#howto-collapse" aria-expanded="false" aria-controls="howto-collapse">
+                    Open How-To
+                </button>
+
+
+                <p></p>
+
+                <div class="collapse" id="howto-collapse">
+                    <h2>How-To</h2>
+                    <h3>Usage</h3>
+                    <p>
+                        Write formulas into the left text input, press the button and get results on the right side.
+                        The formula can also be analyzed using <kbd><kbd>Shift</kbd> + <kbd>Enter</kbd></kbd>.
+                        Every time a formula is 
+                        analyzed, the link in your URL-bar (awesome-bar, location-bar or some other name) updates and can
+                        be copied. This link can be opened at other browsers and directly
+                        executes the given formula. <a href="#1Hello%2FWorld" target="_blank">Give it a try!</a> Additionally, 
+                        Drag &#38; Drop support works by dragging and dropping an input file onto the input area on the 
+                        left hand side. Browser support is required and indicated by the grey box next to the 
+                        input heading if available.
+                    </p>
+                    <h3>Modes</h3>
+                    <table class="table table-striped">
+                        <tbody>
+                            <tr>
+                                <td>Validity Check</td>
+                                <td>Check if the formula is valid, i.e. all possible combinations of variables satisfy the formula.</td>
+                            </tr>
+                            <tr>
+                                <td>Satisfiability Check</td>
+                                <td>Check if there is any assignment of variables so that the formula is satisfied.</td>
+                            </tr>
+                            <!-- Deactivated until further fixes arrive... 
+                            <tr>
+                                <td>QBF Validity Check</td>
+                                <td>Same as Validity Check, but with expanded input language adding ∀ (written as #) and ∃ (written as ?). Uses DepQBF.</td>
+                            </tr>
+                            -->
+                            <tr>
+                                <td>QBF Satisfiability Check</td>
+                                <td>Same as Satisfiability Check, but with expanded input language adding ∀ (written as #) and ∃ (written as ?). Uses DepQBF.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <h3>Syntax</h3>
+                    <p>The input format has the following syntax in EBNF ( [ ... ] means optional,  { ... } means repeated arbitrary many times).</p>
+                    <pre>expr ::= iff
+iff ::= implies { '<->' implies }
+implies ::= or [ '->' or | '<-' or ]
+or ::= and { ('|' | '/') and }
+and ::= not { '&' not }
+not ::= basic | '!' not
+basic ::= var | '(' expr ')'</pre><p><code>var</code> is a string over letters, digits and the following characters: <code>- _ . [ ] $ @</code>.
+                        The last character of <code>var</code> should be different from <code>-</code>.
+                        Compared to classical Limboole, the syntax is improved for mobile devices: The <code>/</code> symbol also counts as OR (same as <code>|</code>). </p>
+                </div>
+
+                <form style="height: 3em;">
+                    <div class="row">
+                        <div class="col">
+                            <select tabindex="1" id="select_wrapper" class="form-control"></select>
+                        </div>
+                        <div class="col">
+                            <div class="progress" id="loading-indicator" style="height: 3em;">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%">Loading and Processing WebAssembly of Limboole...</div>
+                            </div>
+                            <button tabindex="0" type="button" class="btn btn-primary btn-block invisible" onclick="run_();" id="run-btn">Run (or Shift+Enter in input area)</button>
+                        </div>
+                    </div>
+                </form>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <h2>Input <span style="" class="badge badge-secondary hide d-none d-md-inline-block d-lg-inline-block" id="input_annotation"></span></h2>
+                        <textarea tabindex="2" class="form-control js-auto-size" id="input"></textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <div id="stdout_area">
+                            <h2>Output</h2>
+                            <textarea tabindex="3" class="form-control js-auto-size" id="stdout"></textarea>
+                        </div>
+                        <div id="stderr_area">
+                            <h2>Errors</h2>
+                            <textarea tabindex="4" class="form-control js-auto-size" id="stderr"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <script src="js/jquery-3.5.1.slim.min.js"></script>
+        <script src="js/bootstrap.bundle.min.js"></script>
+        <script src="limboole.js"></script>
+        <script src="main.js"></script>
+
+        <script>
+         $("#input").focus();
+        </script>
+    </body>
+</html>
+
