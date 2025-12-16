@@ -1,0 +1,167 @@
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "table-remodeler"
+version = "0.1.0"
+description = "Tabular file remodeling and reorganizing tools for event files and datasets."
+readme = "README.md"
+authors = [
+    { name = "Monique Dennisen", email = "moniquedenissen.95@gmail.com" },
+    { name = "Kay Robbins", email = "Kay.Robbins@utsa.edu" },
+]
+maintainers = [
+    { name = "Monique Dennisen", email = "moniquedenissen.95@gmail.com" },
+    { name = "Kay Robbins", email = "Kay.Robbins@utsa.edu" },
+]
+license = {text = "MIT"}
+keywords = ["remodeling", "tabular data", "event files", "neuroscience", "BIDS", "HED", "data transformation"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Operating System :: OS Independent",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "License :: OSI Approved :: MIT License",
+]
+
+requires-python = ">=3.10"
+
+dependencies = [
+    "hedtools>=0.8.1",
+    "jsonschema>=4.23.0",
+    "numpy>=2.0.2",
+    "openpyxl>=3.1.5",
+    "pandas>=2.2.3",
+    "semantic-version>=2.10.0",
+]
+
+[project.urls]
+"Homepage" = "https://www.hedtags.org/table-remodeler/"
+"Documentation" = "https://www.hedtags.org/table-remodeler/"
+"Repository" = "https://github.com/hed-standard/table-remodeler"
+"Bug Tracker" = "https://github.com/hed-standard/table-remodeler/issues"
+"Changelog" = "https://github.com/hed-standard/table-remodeler/blob/main/CHANGELOG.md"
+"HED Resources" = "https://www.hedtags.org/hed-resources"
+
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.8.0",
+    "codespell>=2.2.0",
+    "black>=24.0.0",
+    "linkchecker>=10.0.0",
+    "mdformat>=0.7.0",
+    "mdformat-myst>=0.1.5",
+    "mdformat-tables>=0.4.0",
+]
+docs = [
+    "sphinx>=7.0.0",
+    "furo>=2023.9.10",
+    "sphinx-copybutton>=0.5.2",
+    "myst-parser>=2.0.0",
+    "sphinx-autodoc-typehints>=1.24.0",
+    "linkify-it-py>=2.0.0",
+]
+test = [
+    "coverage>=7.0.0",
+]
+
+[project.scripts]
+run_remodel = "remodel.cli.run_remodel:main"
+run_remodel_backup = "remodel.cli.run_remodel_backup:main"
+run_remodel_restore = "remodel.cli.run_remodel_restore:main"
+
+[tool.setuptools.packages.find]
+where = [""]
+include = ["remodel*"]
+namespaces = false
+
+[tool.codespell]
+skip = '*.git,*.pdf,*.svg,venv*,*.tsv,*.yaml,*.yml,*.json,*.rdf,*.jsonld,*.xml,*.mediawiki,*.omn,*.toml'
+ignore-words-list = 'te,parms,assertIn'
+
+[tool.ruff]
+# Target Python 3.10+
+target-version = "py310"
+line-length = 127
+
+# Exclude common directories
+exclude = [
+    ".git",
+    ".venv",
+    "venv",
+    "__pycache__",
+    "build",
+    "dist",
+    "*.egg-info",
+    "status",
+]
+
+[tool.ruff.lint]
+# Enable flake8-style checks plus additional rules
+select = [
+    "E",     # pycodestyle errors
+    "W",     # pycodestyle warnings
+    "F",     # pyflakes
+    "N",     # pep8-naming
+    "B",     # flake8-bugbear
+    "C4",    # flake8-comprehensions
+]
+
+ignore = [
+    "E501",   # Line too long (handled by formatter)
+    "N802",   # Function name should be lowercase (many test methods use camelCase)
+    "N803",   # Argument name should be lowercase (DataFrame df is common)
+    "N806",   # Variable in function should be lowercase (common in scientific code)
+    # Style rules that are too opinionated
+    "SIM108", # if-else-block-instead-of-if-exp (ternary operator preference)
+    "SIM105", # suppressible-exception (use contextlib.suppress)
+    "SIM118", # in-dict-keys (x in dict vs x in dict.keys())
+    "SIM102", # collapsible-if (nested if statements)
+    "SIM103", # needless-bool (return bool vs if/else return True/False)
+    "SIM110", # reimplemented-builtin (any/all reimplementation)
+    "SIM101", # duplicate-isinstance-call
+    # Python 3.10+ features
+    "UP007",  # Use X | Y for Union types (requires 3.10+)
+    "UP008",  # Use super() without parameters (we're okay with explicit)
+    "UP031",  # Use format strings over %-formatting (legacy code compatibility)
+    "UP028",  # yield in for loop
+    "UP045",  # Use X | None for Optional (requires 3.10+)
+]
+
+# Allow unused imports in __init__.py files
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+
+[tool.ruff.lint.mccabe]
+# Maximum complexity
+max-complexity = 10
+
+[tool.ruff.lint.isort]
+known-first-party = ["remodel"]
+
+[tool.black]
+line-length = 127
+target-version = ["py310", "py311", "py312", "py313"]
+exclude = '''
+/(
+    \.git
+  | \.venv
+  | venv
+  | __pycache__
+  | build
+  | dist
+  | \.eggs
+  | .*\.egg-info
+  | status
+)/
+'''
