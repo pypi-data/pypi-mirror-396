@@ -1,0 +1,93 @@
+"""
+An example for NVT equilibration and sampling of argon
+"""
+from builtins use len 
+from virtmat.functions use var, sqrt, mean, correlate
+from virtmat.constants use k_B, N_A
+from virtmat.builders use bulk, repeat
+
+# struct_in = Structure from file '/home/ubuntu/work/vre-language/examples/ar_box.cif'
+struct_in = repeat(ar4, ((rep: (5, 5, 5))))
+ar4 = bulk(((name: 'Ar'), (crystalstructure: 'fcc'), (cubic: true), (a: 5.207) [angstrom]))
+
+density = struct_in.number_of_atoms[0]/struct_in.cell_volume[0]
+print('density:', density)  # density = 0.02834 [particles / angstrom**3] # corresponds to 1880 [kg/m**3] Ar
+
+calc = Calculator lj ((sigma: 3.405 [angstrom]),
+                      (epsilon: 119.8 [kelvin] * 1 [boltzmann_constant]))
+algo_eq = Algorithm Langevin ((timestep: 2) [fs], (steps: 10), (trajectory: true),
+                              (temperature_K: 350.0) [K], (friction: 0.05 [1/fs]))
+prop_eq = Property trajectory ((calculator: calc), (structure: struct_in), (algorithm: algo_eq))
+
+"""
+traj_eq = prop_eq.trajectory[0]
+struct_eq_traj = traj_eq.structure
+kin_eq = struct_eq_traj.kinetic_energy:array
+corr = correlate(kin_eq, kin_eq, 'full')  # Type error: only scalar quantities accepted
+corr_0 = corr[0]
+corr_t = corr[-1]
+print(corr_t/corr_0)
+"""
+
+struct_eq = prop_eq.output_structure
+algo_samp = Algorithm Langevin ((timestep: 1) [fs], (steps: 2000), (interval: 5),
+                                (temperature_K: 350.0) [K], (friction: 0.001 [1/fs]),
+                                (trajectory: true), (logfile: true))
+prop_samp = Property energy, forces, trajectory (
+                     (calculator: calc),
+                     (structure: struct_eq),
+                     (algorithm: algo_samp))
+
+traj_samp = prop_samp.trajectory[0]
+
+
+struct_samp = traj_samp.structure
+stress = traj_samp.properties.stress
+
+energy = traj_samp.properties.energy
+kin_samp = struct_samp.kinetic_energy
+freeh = traj_samp.properties.free_energy
+natoms = traj_samp.properties.natoms[0]  # NVT has constant number of atoms
+cells = struct_in.cell
+cell = cells[0]  # NVT has constant cell
+print(info(cell), info(cell[0]))
+cell_param = cell[0][0]
+print(cell_param)
+
+
+interval = traj_samp.description.interval[0]
+timestep = interval*traj_samp.description.timestep[0]
+time = map((x: x*timestep), range(0, len(struct_samp.atoms), 1))
+temperature = struct_samp.temperature
+temp_mean = mean(temperature)
+temp_var = var(temperature)
+energy_var = var(energy)
+
+
+pressure = map((x: -(x[0]+x[1]+x[2])/3), stress)
+
+heat_cap = (mean(map((x: x**2), energy))-mean(energy)**2)/(k_B * temp_mean**2)
+heat_cap_numpy = energy_var/(k_B * temp_mean**2)
+spec_heat_cap = heat_cap/natoms*N_A
+spec_heat_cap_numpy = heat_cap_numpy/natoms*N_A
+
+# long-form data
+long_form_data = Table(time, pressure, temperature, energy, kin_samp)
+long_form_units = (units: 'fs', 'GPa', 'celsius', 'eV', 'eV')
+"""
+view lineplot (long_form_data, 'time', 'pressure', long_form_units)
+view lineplot (long_form_data, 'time', 'kinetic_energy', long_form_units)
+view lineplot (long_form_data, 'time', 'temperature', long_form_units)
+view lineplot (long_form_data, 'time', 'energy', long_form_units)
+"""
+# wide-form data
+# view lineplot (pressure [GPa], time [fs])
+algo_rdf = Algorithm RDF, many_to_one ((nbins: 100))
+prop_rdf = Property rdf, rdf_distance ((structure: struct_samp), (algorithm: algo_rdf))
+
+distance = prop_rdf.rdf_distance[0:1]
+rdf = prop_rdf.rdf
+
+# view lineplot (rdf, distance [angstrom], (legend: 'RDF'))
+# view lineplot (rdf:array, distance:array [angstrom], (legend: 'RDF'))
+view structure (struct_in)
