@@ -1,0 +1,87 @@
+Metadata-Version: 2.4
+Name: saudi-dialect-eou
+Version: 0.1.0
+Summary: Arabic End-of-Utterance detection plugin for LiveKit Agents - Saudi dialect optimized
+Author: Salma Mohammed Hamed
+License: Apache-2.0
+Keywords: livekit,agents,arabic,eou,turn-detection,voice-ai
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Multimedia :: Sound/Audio
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Requires-Dist: livekit-agents>=1.0.0
+Requires-Dist: transformers>=4.35.0
+Requires-Dist: torch>=2.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: black>=23.0.0; extra == "dev"
+Requires-Dist: mypy>=1.0.0; extra == "dev"
+
+# Arabic End-of-Utterance Plugin for LiveKit Agents
+
+This plugin provides Arabic end-of-utterance (EOU) detection for LiveKit Agents, optimized for Saudi Arabic dialect.
+
+## Installation
+
+```bash
+pip install saudi-dialect-eou
+```
+
+## Usage
+
+```python
+from livekit.agents import AgentSession
+from saudi_dialect_eou import ArabicEOUModel
+from livekit.plugins import deepgram, silero
+
+session = AgentSession(
+    turn_detection=ArabicEOUModel(),
+    vad=silero.VAD.load(),
+    stt=deepgram.STT(language="ar"),
+    # ... other plugins
+)
+```
+
+## Download Model Files
+
+Before running your agent, download the model files:
+
+```bash
+python your_agent.py download-files
+```
+
+## Configuration
+
+```python
+ArabicEOUModel(
+    model_path="hams-ai/arabic-turn-detector",  # HuggingFace model path
+    unlikely_threshold=0.3,  # Threshold for incomplete detection
+    device="cuda",  # or "cpu"
+)
+```
+
+## Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `model_path` | str | `"hams-ai/arabic-turn-detector"` | HuggingFace model path |
+| `unlikely_threshold` | float | `0.3` | Probability below which user is still speaking |
+| `device` | str | `None` | Device for inference (auto-detected if None) |
+
+## How It Works
+
+The model takes conversation context with `[SEP]` tokens and predicts:
+- **1 (complete)**: User has finished speaking → Agent should respond
+- **0 (incomplete)**: User is still speaking → Wait for more input
+
+## License
+
+Apache-2.0
