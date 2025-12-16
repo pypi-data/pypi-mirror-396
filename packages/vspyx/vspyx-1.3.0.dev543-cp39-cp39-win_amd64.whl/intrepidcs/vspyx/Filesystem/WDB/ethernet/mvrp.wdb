@@ -1,0 +1,34 @@
+MRPDU_AttributeListType_Enabled = false
+MRPDU_FourPack_Enabled = 'false'
+MRPDU_FourPack_States = []
+
+[setup]
+	version = '2.1.0'
+	include = ['builtin://WDB/ethernet/mrp.wdb']
+
+	[[setup.hooks]]
+		expression = 'eth.type == 0x88F5'
+		location = 'eth.payload'
+		protocol = '#MVRP'
+
+#MVRP
+
+[MVRP]
+	name = 'Multiple VLAN Registration Protocol'
+	tag = 'mrp-mvrp'
+
+	[[MVRP.fields]]
+		name = 'MVRP-MRP'
+		inherit = '#MRPDU'
+
+# MRP Parameters
+
+[[MRPDU_Messagess_States]]
+	name = 'VLAN Identifier'
+	value = 1
+
+
+[MRPDU_FirstValue_Field]
+	[[MRPDU_FirstValue_Field.fields]]
+		name = 'VLAN ID'
+		length = 16

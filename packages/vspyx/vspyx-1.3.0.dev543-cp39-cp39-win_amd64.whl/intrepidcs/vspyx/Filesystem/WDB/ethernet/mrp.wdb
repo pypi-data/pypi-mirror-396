@@ -1,0 +1,184 @@
+[setup]
+	version = '2.1.0'
+	expect_no_hooks = true
+	parameters = [
+		'MRPDU_Messagess_States',
+		'MRPDU_FourPack_Enabled',
+		'MRPDU_FourPack_States',
+		'MRPDU_FirstValue_Field',
+		'MRPDU_AttributeListType_Enabled'
+	]
+
+[MRPDU]
+	visible = false
+
+	[[MRPDU.fields]]
+		name = 'Protocol Version'
+		length = 8
+
+	[[MRPDU.fields]]
+		name = 'Messages'
+		while = '.attributetype != 0'
+		inherit = '#MRPDU_Messagess'
+
+	[[MRPDU.fields]]
+		name = 'End Mark'
+		length = 16
+
+[MRPDU_Messagess]
+
+	[[MRPDU_Messagess.fields]]
+		name = 'Attribute Type'
+		tag = 'attributetype'
+		states = '#MRPDU_Messagess_States'
+		length = 8
+
+	[[MRPDU_Messagess.fields]]
+		name = 'Attribute Length'
+		length = 8
+
+	[[MRPDU_Messagess.fields]]
+		name = 'Attribute List Length'
+		enable = '#MRPDU_AttributeListType_Enabled'
+		length = 16
+
+	[[MRPDU_Messagess.fields]]
+		name = 'Vector Attribute'
+		tag = 'vectorattribute'
+		inherit = '#MRPDU_VectorAttribute'
+		while = '.vectorheader != 0'
+
+	[[MRPDU_Messagess.fields]]
+		name = 'End Mark'
+		length = 16
+
+[MRPDU_VectorAttribute]
+
+	[[MRPDU_VectorAttribute.fields]]
+		name = 'Vector Header'
+		inherit = '#MRPDU_VectorHeader'
+		tag = 'vectorheader'
+
+	[[MRPDU_VectorAttribute.fields]]
+		name = 'First Value'
+		inherit = '#MRPDU_FirstValue_Field'
+
+	[[MRPDU_VectorAttribute.fields]]
+		name = 'threepack'
+		enable = '^.vectorheader.numofvalues != 0'
+		loop = '( ( ^.vectorheader.numofvalues + 2 ) / 3 ) - 1'
+		inherit = '#MRPDU_ThreePack'
+
+	[[MRPDU_VectorAttribute.fields]]
+		name = 'threepack_confitional'
+		enable = '^.vectorheader.numofvalues != 0'
+		inherit = '#MRPDU_ThreePack_Conditional'
+
+	[[MRPDU_VectorAttribute.fields]]
+		name = 'fourpack'
+		enable = '#MRPDU_FourPack_Enabled'
+		loop = '^.vectorheader.numofvalues'
+		inherit = '#MRPDU_FourPack'
+
+	[[MRPDU_VectorAttribute.fields]]
+		name = 'padding'
+		visible = false
+		enable = '#MRPDU_FourPack_Enabled && ^.vectorheader.numofvalues % 4 != 0'
+		length = '( 4 - ^.vectorheader.numofvalues % 4 ) * 2'
+
+
+[MRPDU_VectorHeader]
+
+	[[MRPDU_VectorHeader.fields]]
+		name = 'Leave All Events'
+		length = 3
+
+		[[MRPDU_VectorHeader.fields.states]]
+			name = 'Null Leave All Event'
+			value = 0
+
+		[[MRPDU_VectorHeader.fields.states]]
+			name = 'Leave All'
+			value = 1
+
+	[[MRPDU_VectorHeader.fields]]
+		name = 'Number Of Values'
+		tag = 'numofvalues'
+		length = 13
+
+
+
+[MRPDU_ThreePack]
+	type = 'three_pack'
+	length = 8
+
+	[[MRPDU_ThreePack._states]]
+		name = 'New'
+		value = 0
+
+	[[MRPDU_ThreePack._states]]
+		name = 'JoinIn'
+		value = 1
+
+	[[MRPDU_ThreePack._states]]
+		name = 'In'
+		value = 2
+
+	[[MRPDU_ThreePack._states]]
+		name = 'JoinMt'
+		value = 3
+
+	[[MRPDU_ThreePack._states]]
+		name = 'Mt'
+		value = 4
+
+	[[MRPDU_ThreePack._states]]
+		name = 'Lv'
+		value = 5
+
+	[[MRPDU_ThreePack.fields]]
+		name = 'Attribute Event'
+		tag = 'attributeevent'
+		states = '#MRPDU_ThreePack._states'
+
+	[[MRPDU_ThreePack.fields]]
+		name = 'Attribute Event'
+		tag = 'attributeevent'
+		states = '#MRPDU_ThreePack._states'
+
+	[[MRPDU_ThreePack.fields]]
+		name = 'Attribute Event'
+		tag = 'attributeevent'
+		states = '#MRPDU_ThreePack._states'
+
+
+[MRPDU_ThreePack_Conditional]
+	type = 'three_pack'
+	length = 8
+
+	[[MRPDU_ThreePack_Conditional.fields]]
+		name = 'Attribute Event'
+		tag = 'attributeevent'
+		states = '#MRPDU_ThreePack._states'
+
+	[[MRPDU_ThreePack_Conditional.fields]]
+		name = 'Attribute Event'
+		tag = 'attributeevent'
+		states = '#MRPDU_ThreePack._states'
+		enable = '^.vectorheader.numofvalues % 3 != 1'
+
+	[[MRPDU_ThreePack_Conditional.fields]]
+		name = 'Attribute Event'
+		tag = 'attributeevent'
+		states = '#MRPDU_ThreePack._states'
+		enable = '^.vectorheader.numofvalues % 3 == 0'
+
+[MRPDU_FourPack]
+
+	[[MRPDU_FourPack.fields]]
+		name = 'Decleration Event'
+		tag = 'declerationevent'
+		states = '#MRPDU_FourPack_States'
+		length = 2
+
+

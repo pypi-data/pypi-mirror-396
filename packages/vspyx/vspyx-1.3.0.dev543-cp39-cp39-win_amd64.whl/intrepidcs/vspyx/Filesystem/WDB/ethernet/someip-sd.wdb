@@ -1,0 +1,365 @@
+[setup]
+	version = '2.1.0'
+	include = ['builtin://WDB/ethernet/ipv4.wdb', 'builtin://WDB/ethernet/ipv6.wdb']
+
+	[setup.defaults.fields]
+		format = 'decimal'
+
+	[[setup.hooks]]
+		expression = 'someip.messageid.id == 0xffff8100'
+		location = 'someip.payload'
+		protocol = '#SomeIPSD'
+
+
+[SomeIPSD]
+	name = 'SOME/IP-SD'
+	tag = 'someipsd'
+
+	[[SomeIPSD.fields]]
+		name = 'Flags'
+
+		[[SomeIPSD.fields.fields]]
+			name = 'Reboot'
+			short_name = 'Reboot'
+			length = 1
+			summary = true
+			format = 'tf'
+
+		[[SomeIPSD.fields.fields]]
+			name = 'Unicast'
+			short_name = 'Unicast'
+			length = 1
+			summary = true
+			format = 'tf'
+
+		[[SomeIPSD.fields.fields]]
+			name = 'Reserved'
+			length = 6
+			format = 'hex'
+
+	[[SomeIPSD.fields]]
+		name = 'Reserved'
+		length = 24
+		format = 'hex'
+
+	[[SomeIPSD.fields]]
+		name = 'Length of Entries Array'
+		tag = 'entries_len'
+		length = 32
+
+	[[SomeIPSD.fields]]
+		inherit = '#Entries'
+		loop = '^.entries_len / 16'
+
+	[[SomeIPSD.fields]]
+		name = 'Length of Options Array'
+		tag = 'options_len'
+		length = 32
+
+	[[SomeIPSD.fields]]
+		inherit = '#Options'
+		length = '^.options_len * 8'
+
+
+
+[Entries]
+	name = 'entries'
+	type = 'else_if'
+
+	[[Entries.fields]]
+		inherit = '#Type1Entry'
+		name = 'Type1Entry'
+		enable = '.type == 0 || .type == 1'
+
+	[[Entries.fields]]
+		inherit = '#Type2Entry'
+		name = 'Type2Entry'
+		enable = '.type == 6 || .type == 7'
+
+
+
+[Type1Entry]
+
+	[[Type1Entry.fields]]
+		name = 'Type'
+		short_name = 'Type'
+		length = 8
+		summary = true
+
+		[[Type1Entry.fields.states]]
+			name = 'FindService'
+			value = 0x00
+	
+		[[Type1Entry.fields.states]]
+			name = 'OfferService'
+			value = 0x01
+	
+	[[Type1Entry.fields]]
+		name = 'Index 1st options'
+		length = 8
+
+	[[Type1Entry.fields]]
+		name = 'Index 2nd options'
+		length = 8
+
+	[[Type1Entry.fields]]
+		name = 'Number of option 1'
+		length = 4
+
+	[[Type1Entry.fields]]
+		name = 'Number of option 2'
+		length = 4
+
+	[[Type1Entry.fields]]
+		name = 'Service ID'
+		short_name = 'Service'
+		length = 16
+		format = 'hex'
+		summary = true
+
+	[[Type1Entry.fields]]
+		name = 'Instance ID'
+		length = 16
+		format = 'hex'
+
+	[[Type1Entry.fields]]
+		name = 'Major Version'
+		length = 8
+
+	[[Type1Entry.fields]]
+		name = 'TTL'
+		length = 24
+
+	[[Type1Entry.fields]]
+		name = 'Minor Version'
+		length = 32
+
+
+[Type2Entry]
+
+	[[Type2Entry.fields]]
+		name = 'Type'
+		short_name = 'Type'
+		length = 8
+		summary = true
+
+		[[Type2Entry.fields.states]]
+			name = 'SubscribeEventgroup'
+			value = 0x06
+	
+		[[Type2Entry.fields.states]]
+			name = 'SubscribeEventgroupAck'
+			value = 0x07
+	
+	[[Type2Entry.fields]]
+		name = 'Index 1st options'
+		length = 8
+
+	[[Type2Entry.fields]]
+		name = 'Index 2nd options'
+		length = 8
+
+	[[Type2Entry.fields]]
+		name = 'Number of option 1'
+		length = 4
+
+	[[Type2Entry.fields]]
+		name = 'Number of option 2'
+		length = 4
+
+	[[Type2Entry.fields]]
+		name = 'Service ID'
+		short_name = 'Service'
+		length = 16
+		format = 'hex'
+		summary = true
+
+	[[Type2Entry.fields]]
+		name = 'Instance ID'
+		length = 16
+		format = 'hex'
+
+	[[Type2Entry.fields]]
+		name = 'Major Version'
+		length = 8
+
+	[[Type2Entry.fields]]
+		name = 'TTL'
+		length = 24
+
+	[[Type2Entry.fields]]
+		name = 'Reserved'
+		length = 12
+
+	[[Type2Entry.fields]]
+		name = 'Counter'
+		length = 4
+
+	[[Type2Entry.fields]]
+		name = 'Eventgroup ID'
+		length = 16
+		format = 'hex'
+		summary = true
+		short_name = 'Eventgroup'
+
+
+
+[Options]
+	name = 'options'
+	type = 'else_if'
+
+	[[Options.fields]]
+		inherit = '#ConfigurationOption'
+		name = 'Option'
+		tag = 'config'
+		enable = '.type == 1'
+
+	[[Options.fields]]
+		inherit = '#IPv4Option'
+		aliases = ['someipsd.options.entry']
+		name = 'ipv4options'
+		tag = 'ipv4'
+		enable = '.type == 0x04 || .type == 0x14 || .type == 0x24'
+
+	[[Options.fields]]
+		inherit = '#IPv6Option'		
+		aliases = ['someipsd.options.entry']
+		name = 'ipv6options'
+		tag = 'ipv6'
+		enable = '.type == 0x06 || .type == 0x16 || .type == 0x26'
+
+
+
+[ConfigurationOption]
+
+	[[ConfigurationOption.fields]]
+		name = 'Length'
+		length = 16
+
+	[[ConfigurationOption.fields]]
+		name = 'Type'
+		short_name = 'Type'
+		length = 8
+		summary = true
+
+		[[ConfigurationOption.fields.states]]
+			name = 'Configuration'
+			value = 0x01
+
+	[[ConfigurationOption.fields]]
+		name = 'Reserved'
+		length = 8
+		format = 'hex'
+
+	[[ConfigurationOption.fields]]
+		name = 'Zero-terminated Configuration String'
+		length = '.length - 24'
+		format = 'hex'
+
+
+[IPv4Option]
+
+	[[IPv4Option.fields]]
+		name = 'Length'
+		length = 16
+
+	[[IPv4Option.fields]]
+		name = 'Type'
+		short_name = 'Type'
+		length = 8
+		summary = true
+
+		[[IPv4Option.fields.states]]
+			name = 'IPv4 Endpoint'
+			value = 0x04
+
+		[[IPv4Option.fields.states]]
+			name = 'IPv4 Multicast'
+			value = 0x14
+
+		[[IPv4Option.fields.states]]
+			name = 'IPv4 SD'
+			value = 0x24
+
+	[[IPv4Option.fields]]
+		name = 'Reserved'
+		length = 8
+		format = 'hex'
+
+	[[IPv4Option.fields]]
+		name = 'IPv4 Address'
+		short_name = 'Address'
+		inherit = '#IPV4Address'
+		summary = true
+
+	[[IPv4Option.fields]]
+		name = 'Reserved'
+		length = 8
+		format = 'hex'
+
+	[[IPv4Option.fields]]
+		name = 'Layer 4 Protocol'
+		short_name = 'Protocol'
+		length = 8
+		states = '#IPv4.$proto.states'
+		summary = true
+
+	[[IPv4Option.fields]]
+		name = 'Port Number'
+		short_name = 'Port'
+		length = 16
+		summary = true
+
+
+[IPv6Option]
+
+	[[IPv6Option.fields]]
+		name = 'Length'
+		length = 16
+
+	[[IPv6Option.fields]]
+		name = 'Type'
+		short_name = 'Type'
+		length = 8
+		summary = true
+
+		[[IPv6Option.fields.states]]
+			name = 'IPv6 Endpoint'
+			value = 0x06
+
+		[[IPv6Option.fields.states]]
+			name = 'IPv6 Multicast'
+			value = 0x16
+
+		[[IPv6Option.fields.states]]
+			name = 'IPv6 SD'
+			value = 0x26
+
+	[[IPv6Option.fields]]
+		name = 'Reserved'
+		length = 8
+		format = 'hex'
+
+	[[IPv6Option.fields]]
+		name = 'IPv6 Address'
+		short_name = 'Address'
+		inherit = '#IPV6Address'
+		summary = true
+
+	[[IPv6Option.fields]]
+		name = 'Reserved'
+		length = 8
+		format = 'hex'
+
+	[[IPv6Option.fields]]
+		name = 'Layer 4 Protocol'
+		short_name = 'Protocol'
+		length = 8
+		states = '#IPv6.$nxt.states'
+		summary = true
+
+	[[IPv6Option.fields]]
+		name = 'Port Number'
+		short_name = 'Port'
+		length = 16
+		summary = true

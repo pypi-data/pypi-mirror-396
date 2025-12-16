@@ -1,0 +1,1194 @@
+[setup]
+	#this protocol is not complate we need to impliment all the TLV in spec 1588-2008 section 14 15 and 16
+	version = '2.1.0'
+	include = ['builtin://WDB/ethernet/ethernet.wdb']
+
+	[[setup.hooks]]
+		expression = 'eth.type == 0x88F7'
+		location = 'eth.payload'
+		protocol = '#PTP'
+
+	[[setup.hooks]]
+		expression = 'udp.srcport == 319'
+		location = 'udp.payload'
+		protocol = '#PTP'
+
+	[[setup.hooks]]
+		expression = 'udp.srcport == 320'
+		location = 'udp.payload'
+		protocol = '#PTP'
+
+[PTP]
+	type = 'else_if'
+	long_name = 'Precision Time Protocol (IEEE1588)'
+	name = 'PTP'
+	visible = false
+
+	[PTP.fields]
+		long_name = 'Precision Time Protocol (IEEE1588)'
+		name = 'PTP'
+		tag = 'ptp.v2'
+		enable = '.header.version == 2'
+		inherit = '#PTPv2'
+	
+
+[PTPv2]
+
+	[[PTPv2.fields]]
+		tag = 'header'
+		inherit = '#PTPv2Header'
+
+	[[PTPv2.fields]]
+		inherit = '#Payload'
+
+
+[PTPv2Header]
+	visible = 'false'
+	length = 272
+
+	[[PTPv2Header.fields]]
+		name = 'Transport specific'
+		inherit = '#TransportSpecific'
+
+	[[PTPv2Header.fields]]
+		name = 'Message Type'
+		tag = 'messagetype'
+		length = 4
+
+		[[PTPv2Header.fields.states]]
+			name = 'Sync'
+			value = 0
+
+		[[PTPv2Header.fields.states]]
+			name = 'Delay_Req'
+			value = 1
+
+		[[PTPv2Header.fields.states]]
+			name = 'PDelay_Req'
+			value = 2
+
+		[[PTPv2Header.fields.states]]
+			name = 'PDelay_Resp'
+			value = 3
+
+		[[PTPv2Header.fields.states]]
+			name = 'reserved'
+			start = 4
+			end = 7
+
+		[[PTPv2Header.fields.states]]
+			name = 'Follow_Up'
+			value = 8
+
+		[[PTPv2Header.fields.states]]
+			name = 'Delay_Resp'
+			value = 9
+
+		[[PTPv2Header.fields.states]]
+			name = 'PDelay_Resp_Follow_Up'
+			value = 10
+
+		[[PTPv2Header.fields.states]]
+			name = 'Announce'
+			value = 11
+
+		[[PTPv2Header.fields.states]]
+			name = 'Signaling'
+			value = 12
+
+		[[PTPv2Header.fields.states]]
+			name = 'Management'
+			value = 14
+
+		[[PTPv2Header.fields.states]]
+			name = 'reserved'
+			start = 15
+			end = 16
+
+
+	[[PTPv2Header.fields]]
+		name = 'reserved1'
+		length = 4
+
+	[[PTPv2Header.fields]]
+		name = 'Version'
+		length = 4
+		format = 'decimal'
+
+	[[PTPv2Header.fields]]
+		name = 'Message Length'
+		tag = 'messagelength'
+		length = 16
+		format = 'decimal'
+
+	[[PTPv2Header.fields]]
+		name = 'Domain Number'
+		length = 8
+		format = 'decimal'
+
+	[[PTPv2Header.fields]]
+		name = 'reserved2'
+		length = 8
+
+	[[PTPv2Header.fields]]
+		name = 'Flags'
+		inherit = '#PTPv2Flags'
+
+	[[PTPv2Header.fields]]
+		name = 'Correction'
+		length = 64
+		inherit = 'int'
+
+	[[PTPv2Header.fields]]
+		name = 'reserved'
+		length = 32
+
+	[[PTPv2Header.fields]]
+		name = 'Source Port Identity'
+		inherit = '#PortIdentity'
+
+	[[PTPv2Header.fields]]
+		name = 'Sequence ID'
+		length = 16
+
+	[[PTPv2Header.fields]]
+		name = 'Control Field'
+		length = 8
+
+	[[PTPv2Header.fields]]
+		name = 'Log message interval'
+		length = 8
+		inherit = 'int'
+
+
+
+[TransportSpecific]
+	name = 'Transport Specific'
+	mask_type = 'all'
+	length = 4
+	summary = true
+
+	[[TransportSpecific.fields]]
+		name = 'reserved'
+		length = 3
+		visible = false
+
+	[[TransportSpecific.fields]]
+		name = '802.1as Conform'
+		length = 1
+
+
+
+[PTPv2Flags]
+	mask_type = 'all'
+	summary = true
+	length = 16
+
+	[[PTPv2Flags.fields]]
+		name = 'reserved0'
+		length = 1
+		visible = false
+
+	[[PTPv2Flags.fields]]
+		name = 'Security'
+		length = 1
+
+	[[PTPv2Flags.fields]]
+		name = 'Pro Specific 2'
+		length = 1
+
+	[[PTPv2Flags.fields]]
+		name = 'Pro Specific 1'
+		length = 1
+
+	[[PTPv2Flags.fields]]
+		name = 'reserved1'
+		length = 3
+		visible = false
+
+	[[PTPv2Flags.fields]]
+		name = 'Unicast'
+		length = 1
+
+	[[PTPv2Flags.fields]]
+		name = 'Two Step'
+		length = 1
+
+	[[PTPv2Flags.fields]]
+		name = 'Alternate Master'
+		length = 1
+
+	[[PTPv2Flags.fields]]
+		name = 'Frequency Traceable'
+		length = 1
+
+	[[PTPv2Flags.fields]]
+		name = 'Time Traceabl'
+		length = 1
+
+	[[PTPv2Flags.fields]]
+		name = 'Time Scale'
+		length = 1
+
+	[[PTPv2Flags.fields]]
+		name = 'UTC Reasonable'
+		length = 1
+
+	[[PTPv2Flags.fields]]
+		name = 'LI59'
+		length = 1
+
+	[[PTPv2Flags.fields]]
+		name = 'LI61'
+		length = 1
+
+
+
+[Payload]
+	type = 'switch'
+
+	[[Payload.fields]]
+		inherit = '#Sync'
+		enable = 'ptp.v2.messagetype == #PTPv2Header.$messagetype.$Sync.value'
+
+	[[Payload.fields]]
+		inherit = '#Delay_Req'
+		enable = 'ptp.v2.messagetype == #PTPv2Header.$messagetype.$Delay_Req.value'
+
+	[[Payload.fields]]
+		inherit = '#PDelay_Req'
+		enable = 'ptp.v2.messagetype == #PTPv2Header.$messagetype.$PDelay_Req.value'
+
+	[[Payload.fields]]
+		inherit = '#PDelay_Resp'
+		enable = 'ptp.v2.messagetype == #PTPv2Header.$messagetype.$PDelay_Resp.value'
+
+	[[Payload.fields]]
+		inherit = '#Follow_Up'
+		enable = 'ptp.v2.messagetype == #PTPv2Header.$messagetype.$Follow_Up.value'
+
+	[[Payload.fields]]
+		inherit = '#Delay_Resp'
+		enable = 'ptp.v2.messagetype == #PTPv2Header.$messagetype.$Delay_Resp.value'
+
+	[[Payload.fields]]
+		inherit = '#PDelay_Resp_Follow_Up'
+		enable = 'ptp.v2.messagetype == #PTPv2Header.$messagetype.$PDelay_Resp_Follow_Up.value'
+
+	[[Payload.fields]]
+		inherit = '#Announce'
+		enable = 'ptp.v2.messagetype == #PTPv2Header.$messagetype.$Announce.value'
+
+	[[Payload.fields]]
+		inherit = '#Signaling'
+		enable = 'ptp.v2.messagetype == #PTPv2Header.$messagetype.$Signaling.value'
+
+	[[Payload.fields]]
+		inherit = '#Management'
+		enable = 'ptp.v2.messagetype == #PTPv2Header.$messagetype.$Management.value'
+
+
+
+[Announce]
+	visible = 'false'
+
+	[[Announce.fields]]
+		name= 'Origin Timestamp'
+		inherit = '#Timestamp'
+
+	[[Announce.fields]]
+		name = 'Current Utc Offset'
+		length = 16
+
+	[[Announce.fields]]
+		name = 'reserved'
+		length = 8
+		visible = false
+
+	[[Announce.fields]]
+		name = 'Grandmaster Priority 1'
+		length = 8
+
+	[[Announce.fields]]
+		name = 'Grandmaster Clock Quality'
+		inherit = '#ClockQuality'
+
+	[[Announce.fields]]
+		name = 'Grandmaster Priority 2'
+		length = 8
+
+	[[Announce.fields]]
+		name = 'Grandmaster Identity'
+		inherit = '#ClockIdentity'
+
+	[[Announce.fields]]
+		name = 'Steps Removed'
+		length = 16
+
+	[[Announce.fields]]
+		name = 'Time Source'
+		length = 8
+
+
+
+[Sync]
+	visible = 'false'
+
+	[[Sync.fields]]
+		name = 'Origin Timestamp'
+		inherit = '#Timestamp'
+
+
+
+[Delay_Req]
+	visible = 'false'
+
+	[[Delay_Req.fields]]
+		name = 'Origin Timestamp'
+		inherit = '#Timestamp'
+
+
+
+[Follow_Up]
+	visible = 'false'
+
+	[[Follow_Up.fields]]
+		name = 'Precise Origin Timestamp'
+		inherit = '#Timestamp'
+
+
+
+[Delay_Resp]
+	visible = 'false'
+
+	[[Delay_Resp.fields]]
+		name = 'Recieve Timestamp'
+		inherit = '#Timestamp'
+
+	[[Delay_Resp.fields]]
+		name = 'Requestion Port Identity'
+		inherit = '#PortIdentity'
+
+
+
+[PDelay_Req]
+	visible = 'false'
+
+	[[PDelay_Req.fields]]
+		name = 'Origin Timestamp'
+		inherit = '#Timestamp'
+
+	[[PDelay_Req.fields]]
+		name = 'reserved'
+		length = 80
+
+
+
+[PDelay_Resp]
+	visible = 'false'
+
+	[[PDelay_Resp.fields]]
+		name = 'Request Recept Timestamp'
+		inherit = '#Timestamp'
+
+	[[PDelay_Resp.fields]]
+		name = 'Request Receipt Timestamp'
+		inherit = '#PortIdentity'
+
+
+
+[PDelay_Resp_Follow_Up]
+	visible = 'false'
+
+	[[PDelay_Resp_Follow_Up.fields]]
+		name = 'Response Origin Timestamp'
+		inherit = '#Timestamp'
+
+	[[PDelay_Resp_Follow_Up.fields]]
+		name = 'Response Port identity'
+		inherit = '#PortIdentity'
+
+
+
+[Signaling]
+
+	[[Signaling.fields]]
+		name = 'Target Port Identity'
+		inherit = '#PortIdentity'
+
+	[[Signaling.fields]]
+		name = 'TLV'
+		inherit = '#TLV'
+		length = '( ptp.v2.messagelength * 8 ) - #PTPv2Header.length'
+
+
+
+
+[Management]
+
+	[[Management.fields]]
+		name = 'Target Prot Identity'
+		inherit = '#PortIdentity'
+
+	[[Management.fields]]
+		name = 'Starting Boudary Hops'
+		length = 8
+
+	[[Management.fields]]
+		name = 'Boundary Hops'
+		length = 8
+
+	[[Management.fields]]
+		name = 'reserved0'
+		visible = false
+		length = 4
+
+	[[Management.fields]]
+		name = 'Action'
+		length = 4
+
+		[[Management.fields.states]]
+			name = 'GET'
+			value = 0
+
+		[[Management.fields.states]]
+			name = 'SET'
+			value = 1
+
+		[[Management.fields.states]]
+			name = 'RESPONSE'
+			value = 2
+
+		[[Management.fields.states]]
+			name = 'COMMAND'
+			value = 3
+
+		[[Management.fields.states]]
+			name = 'ACKNOWLEDGE'
+			value = 4
+
+		[[Management.fields.states]]
+			name = 'Reserved'
+			start = 5
+			end = 0xf
+
+	[[Management.fields]]
+		name = 'reserved1'
+		visible = false
+		length = 8
+
+	[[Management.fields]]
+		name = 'Management TLV'
+		inherit = '#ManagementTLV'
+
+
+[TLV]
+
+	[[TLV.fields]]
+		name = 'TLV Type'
+		tag = 'type'
+		length = 16
+
+		[[TLV.fields.states]]
+			name = 'Reserved'
+			value = 0x0000
+
+		[[TLV.fields.states]]
+			name = 'MANAGEMENT'
+			value = 0x0001 
+
+		[[TLV.fields.states]]
+			name = 'MANAGEMENT_ERROR_STATUS'
+			value = 0x0002 
+
+		[[TLV.fields.states]]
+			name = 'ORGANIZATION_EXTENSION'
+			value = 0x0003 
+
+		[[TLV.fields.states]]
+			name = 'REQUEST_UNICAST_TRANSMISSION'
+			value = 0x0004 
+
+		[[TLV.fields.states]]
+			name = 'GRANT_UNICAST_TRANSMISSION'
+			value = 0x0005 
+
+		[[TLV.fields.states]]
+			name = 'CANCEL_UNICAST_TRANSMISSION'
+			value = 0x0006 
+
+		[[TLV.fields.states]]
+			name = 'ACKNOWLEDGE_CANCEL_UNICAST_TRANSMISSION'
+			value = 0x0007
+
+		[[TLV.fields.states]]
+			name = 'PATH_TRACE'
+			value = 0x0008
+
+		[[TLV.fields.states]]
+			name = 'ALTERNATE_TIME_OFFSET_INDICATOR'
+			value = 0x0009 
+
+		[[TLV.fields.states]]
+			name = 'RESERVED_FOR_STANDARD_TLV'
+			start = 0x000A
+			end = 0x1FFF
+
+		[[TLV.fields.states]]
+			name = 'AUTHENTICATION'
+			value = 0x2000
+
+		[[TLV.fields.states]]
+			name = 'AUTHENTICATION_CHALLENGE'
+			value = 0x2001
+
+		[[TLV.fields.states]]
+			name = 'SECURITY_ASSOCIATION_UPDATE'
+			value = 0x2002
+
+		[[TLV.fields.states]]
+			name = 'CUM_FREQ_SCALE_FACTOR_OFFSET'
+			value = 0x2003
+
+		[[TLV.fields.states]]
+			name = 'RESERVED_FOR_EXPERIMENTAL_TLVS'
+			start = 0x2004
+			end = 0x3FFF
+
+		[[TLV.fields.states]]
+			name = 'RESERVED'
+			start = 0x4000
+			end = 0xFFFF
+
+	[[TLV.fields]]
+		name = 'Length'
+		tag = 'length'
+		length = 16
+
+	[[TLV.fields]]
+		enable = '^.type == #TLV.$type.$MANAGEMENT.value'
+		inherit = '#ManagementTLV'
+
+	[[TLV.fields]]
+		enable = '^.type == #TLV.$type.$ORGANIZATION_EXTENSION.value'
+		inherit = '#OrganizationExtensionTLV'
+
+	[[TLV.fields]]
+		enable = '^.type == #TLV.$type.$MANAGEMENT_ERROR_STATUS.value'
+		inherit = '#ManagementErrorStatusTLV'
+
+
+
+[ManagementTLV]
+
+	[[ManagementTLV.fields]]
+		inherit = '#ManagementId'
+
+	[[ManagementTLV.fields]]
+			name = 'data'
+			length = '( ^.^.length - 2 ) * 8'
+
+
+[ManagementId]
+
+	[[ManagementId.fields]]
+		name = 'Management ID'
+		length = 16
+
+		[[ManagementId.fields.states]]
+			name = 'NULL_MANAGEMENT'
+			value = 0x0000
+
+		[[ManagementId.fields.states]]
+			name = 'CLOCK_DESCRIPTION'
+			value = 0x0001
+
+		[[ManagementId.fields.states]]
+			name = 'USER_DESCRIPTION'
+			value = 0x0002
+
+		[[ManagementId.fields.states]]
+			name = 'SAVE_IN_NON_VOLATILE_STORAGE'
+			value = 0x0003
+
+		[[ManagementId.fields.states]]
+			name = 'RESET_NON_VOLATILE_STORAGE'
+			value = 0x0004
+
+		[[ManagementId.fields.states]]
+			name = 'INITIALIZE'
+			value = 0x0005
+
+		[[ManagementId.fields.states]]
+			name = 'FAULT_LOG'
+			value = 0x0006
+
+		[[ManagementId.fields.states]]
+			name = 'FAULT_LOG_RESET'
+			value = 0x0007
+
+		[[ManagementId.fields.states]]
+			name = 'Reserved'
+			start = 0x0008
+			end = 0x1FFF
+
+		[[ManagementId.fields.states]]
+			name = 'DEFAULT_DATA_SET'
+			value = 0x2000
+
+		[[ManagementId.fields.states]]
+			name = 'CURRENT_DATA_SET'
+			value = 0x2001
+
+		[[ManagementId.fields.states]]
+			name = 'PARENT_DATA_SET'
+			value = 0x2002
+
+		[[ManagementId.fields.states]]
+			name = 'TIME_PROPERTIES_DATA_SET'
+			value = 0x2003
+
+		[[ManagementId.fields.states]]
+			name = 'PORT_DATA_SET'
+			value = 0x2004
+
+		[[ManagementId.fields.states]]
+			name = 'PRIORITY1'
+			value = 0x2005
+
+		[[ManagementId.fields.states]]
+			name = 'PRIORITY2'
+			value = 0x2006
+
+		[[ManagementId.fields.states]]
+			name = 'DOMAIN'
+			value = 0x2007
+
+		[[ManagementId.fields.states]]
+			name = 'SLAVE_ONLY'
+			value = 0x2008
+
+		[[ManagementId.fields.states]]
+			name = 'LOG_ANNOUNCE_INTERVAL'
+			value = 0x2009
+
+		[[ManagementId.fields.states]]
+			name = 'ANNOUNCE_RECEIPT_TIMEOUT'
+			value = 0x200A
+
+		[[ManagementId.fields.states]]
+			name = 'LOG_SYNC_INTERVAL'
+			value = 0x200B
+
+		[[ManagementId.fields.states]]
+			name = 'VERSION_NUMBER'
+			value = 0x200C
+
+		[[ManagementId.fields.states]]
+			name = 'ENABLE_PORT'
+			value = 0x200D
+
+		[[ManagementId.fields.states]]
+			name = 'DISABLE_PORT'
+			value = 0x200E
+
+		[[ManagementId.fields.states]]
+			name = 'TIME'
+			value = 0x200F
+
+		[[ManagementId.fields.states]]
+			name = 'CLOCK_ACCURACY'
+			value = 0x2010
+
+		[[ManagementId.fields.states]]
+			name = 'UTC_PROPERTIES'
+			value = 0x2011
+
+		[[ManagementId.fields.states]]
+			name = 'TRACEABILITY_PROPERTIES'
+			value = 0x2012
+
+		[[ManagementId.fields.states]]
+			name = 'TIMESCALE_PROPERTIES'
+			value = 0x2013
+
+		[[ManagementId.fields.states]]
+			name = 'UNICAST_NEGOTIATION_ENABLE'
+			value = 0x2014
+
+		[[ManagementId.fields.states]]
+			name = 'PATH_TRACE_LIST'
+			value = 0x2015
+
+		[[ManagementId.fields.states]]
+			name = 'PATH_TRACE_ENABLE'
+			value = 0x2016
+
+		[[ManagementId.fields.states]]
+			name = 'GRANDMASTER_CLUSTER_TABLE'
+			value = 0x2017
+
+		[[ManagementId.fields.states]]
+			name = 'UNICAST_MASTER_TABLE'
+			value = 0x2018
+
+		[[ManagementId.fields.states]]
+			name = 'UNICAST_MASTER_MAX_TABLE_SIZE'
+			value = 0x2019
+
+		[[ManagementId.fields.states]]
+			name = 'ACCEPTABLE_MASTER_TABLE'
+			value = 0x201A
+
+		[[ManagementId.fields.states]]
+			name = 'ACCEPTABLE_MASTER_TABLE_ENABLED'
+			value = 0x201B
+
+		[[ManagementId.fields.states]]
+			name = 'ACCEPTABLE_MASTER_MAX_TABLE_SIZE'
+			value = 0x201C
+
+		[[ManagementId.fields.states]]
+			name = 'ALTERNATE_MASTER'
+			value = 0x201D
+
+		[[ManagementId.fields.states]]
+			name = 'ALTERNATE_TIME_OFFSET_ENABLE'
+			value = 0x201E
+
+		[[ManagementId.fields.states]]
+			name = 'ALTERNATE_TIME_OFFSET_NAME'
+			value = 0x201F
+
+		[[ManagementId.fields.states]]
+			name = 'ALTERNATE_TIME_OFFSET_MAX_KEY'
+			value = 0x2020
+
+		[[ManagementId.fields.states]]
+			name = 'ALTERNATE_TIME_OFFSET_PROPERTIES'
+			value = 0x2021
+
+		[[ManagementId.fields.states]]
+			name = 'Reserved'
+			start = 0x2022
+			end = 0x3FFF
+
+		[[ManagementId.fields.states]]
+			name = 'TRANSPARENT_CLOCK_DEFAULT_DATA_SET'
+			value = 0x4000
+
+		[[ManagementId.fields.states]]
+			name = 'TRANSPARENT_CLOCK_PORT_DATA_SET'
+			value = 0x4001
+
+		[[ManagementId.fields.states]]
+			name = 'PRIMARY_DOMAIN'
+			value = 0x4002
+
+		[[ManagementId.fields.states]]
+			name = 'Reserved'
+			start = 0x4003
+			end = 0x5FFF
+
+		[[ManagementId.fields.states]]
+			name = 'DELAY_MECHANISM'
+			value = 0x6000
+
+		[[ManagementId.fields.states]]
+			name = 'LOG_MIN_PDELAY_REQ_INTERVAL'
+			value = 0x6001
+
+		[[ManagementId.fields.states]]
+			name = 'Reserved'
+			start = 0x6002
+			end = 0xBFFF
+
+		[[ManagementId.fields.states]]
+			name = 'implementation_specific'
+			start = 0xC000
+			end = 0xDFFF
+
+		[[ManagementId.fields.states]]
+			name = 'alternate PTP'
+			start = 0xE000
+			end = 0xFFFE
+
+		[[ManagementId.fields.states]]
+			name = 'Reserved'
+			value = 0xFFFF
+
+
+[ManagementErrorStatusTLV]
+
+	[[ManagementErrorStatusTLV.fields]]
+		name = 'Managemernt Error Id'
+		length = 16
+
+		[[ManagementErrorStatusTLV.fields.status]]
+			name = 'Reserved'
+			value =  0x0000
+
+		[[ManagementErrorStatusTLV.fields.status]]
+			name = 'RESPONSE_TOO_BIG'
+			value =  0x0001 
+
+		[[ManagementErrorStatusTLV.fields.status]]
+			name = 'NO_SUCH_ID'
+			value =  0x0002 
+
+		[[ManagementErrorStatusTLV.fields.status]]
+			name = 'WRONG_LENGTH'
+			value =  0x0003 
+
+		[[ManagementErrorStatusTLV.fields.status]]
+			name = 'WRONG_VALUE'
+			value =  0x0004 
+
+		[[ManagementErrorStatusTLV.fields.status]]
+			name = 'NOT_SETABLE'
+			value =  0x0005 
+
+		[[ManagementErrorStatusTLV.fields.status]]
+			name = 'NOT_SUPPORTED'
+			value =  0x0006
+
+		[[ManagementErrorStatusTLV.fields.status]]
+			name = 'Reserved'
+			start =  0x0007
+			end = 0xBFFF
+
+		[[ManagementErrorStatusTLV.fields.status]]
+			name = 'Implementation_specific'
+			start =  0xC000
+			end = 0xDFFF
+
+		[[ManagementErrorStatusTLV.fields.status]]
+			name = 'PTP Profile Defined'
+			start =  0xE000
+			end = 0xFFFD
+
+		[[ManagementErrorStatusTLV.fields.status]] 
+			name = 'GENERAL_ERROR'
+			value =  0xFFFE
+
+		[[ManagementErrorStatusTLV.fields.status]] 
+			name = 'Reserved'
+			value =  0xFFFF
+
+	[[ManagementErrorStatusTLV.fields]]
+		inherit = '#ManagementId'
+
+	[[ManagementErrorStatusTLV.fields]]
+		name = 'reserved'
+		length = 32
+
+	[[ManagementErrorStatusTLV.fields]]
+		name = 'Display Data'
+		tag = 'text'
+		inherit = '#PTPv2Text'
+	
+	[[ManagementErrorStatusTLV.fields]]
+		name = 'pad'
+		length = '( ( ^.^.length - 8 ) - ^.text:lenght ) * 8 '
+
+
+[OrganizationExtensionTLV]
+
+	[[OrganizationExtensionTLV.fields]]
+		name = 'Organization Id'
+		length = 24
+
+	[[OrganizationExtensionTLV.fields]]
+		name = 'Organization Subtype'
+		length = 24
+
+	[[OrganizationExtensionTLV.fields]]
+		name = 'Data'
+		length = '( ^.^.length - 6 ) * 8'
+
+
+[PathTraceTLV]
+
+	[[PathTraceTLV.fields]]
+		name = 'Path Sequence'
+		inherit = '#ClockIdentity'
+		length = '^.^.length / 8'
+
+
+
+[AlternateTimeOffsetTLV]
+
+	[[AlternateTimeOffsetTLV.fields]]
+		name = 'Key Field'
+		length = 8
+
+	[[AlternateTimeOffsetTLV.fields]]
+		name = 'Current Offset'
+		length = 32
+		type = 'int'
+
+	[[AlternateTimeOffsetTLV.fields]]
+		name = 'Jump Seconds'
+		length = 32
+		type = 'int'
+
+	[[AlternateTimeOffsetTLV.fields]]
+		name = 'Time Of Next Jump'
+		length = 48
+
+	[[AlternateTimeOffsetTLV.fields]]
+		name = 'Display Name'
+		inherit = '#PTPv2Text'
+
+
+
+[AuthenticationTLV]
+
+	[[AuthenticationTLV.fields]]
+		name = 'Lifetime ld'
+		length = 16
+
+	[[AuthenticationTLV.fields]]
+		name = 'Replay Counter'
+		length = 32
+
+	[[AuthenticationTLV.fields]]
+		name = 'Key Id'
+		length = 16
+
+	[[AuthenticationTLV.fields]]
+		name = 'Algorithm Id'
+		tag = 'algorithmid'
+		length = 8
+
+		[[AuthenticationTLV.fields.states]]
+			name = 'NULL'
+			value = 0x0
+
+		[[AuthenticationTLV.fields.states]]
+			name = 'HMAC-SHA 1-96'
+			tag = 'hmacsha1'
+			value = 0x1
+
+		[[AuthenticationTLV.fields.states]]
+			name = 'HMAC-SHA 256-96'
+			tag = 'hmacsha256'
+			value = 0x2
+
+		[[AuthenticationTLV.fields.states]]
+			name = 'Reserved'
+			start = 0x3
+			end = 0x80
+
+		[[AuthenticationTLV.fields.states]]
+			name = 'Implementation_Specific'
+			start = 0x81
+			end = 0xFF
+
+	[[AuthenticationTLV.fields]]
+		name = 'Reserved'
+		length = 8
+
+	[[AuthenticationTLV.fields]]
+		name = 'pad'
+		enabled = '^.algorithmid == #AuthenticationTLV.$algorithmid.$NULL.value'
+		length = 16
+
+	[[AuthenticationTLV.fields]]
+		name = 'pad'
+		enabled = '^.algorithmid == #AuthenticationTLV.$algorithmid.$hmacsha1.value'
+		length = 4
+
+
+[AuthenticationChallengeTLV]
+
+	[[AuthenticationChallengeTLV.fields]]
+		name = 'challengeType'
+		length = 8
+
+	[[AuthenticationChallengeTLV.fields]]
+		name = 'reserved'
+		length = 8
+
+	[[AuthenticationChallengeTLV.fields]]
+		name = 'request Nonce'
+		length = 32
+
+	[[AuthenticationChallengeTLV.fields]]
+		name = 'Response nonce'
+		length = 32
+
+
+
+[SecurityAssociationUpdateTLV]
+
+	[[SecurityAssociationUpdateTLV.fields]]
+		name = 'address Type'
+		length = 8
+
+		[[SecurityAssociationUpdateTLV.fields.states]]
+			name = 'All'
+			value = 0
+
+		[[SecurityAssociationUpdateTLV.fields.states]]
+			name = 'Multicast'
+			value = 1
+
+		[[SecurityAssociationUpdateTLV.fields.states]]
+			name = 'P-Multicast'
+			value = 2
+
+		[[SecurityAssociationUpdateTLV.fields.states]]
+			name = 'Unicast'
+			value = 3
+
+		[[SecurityAssociationUpdateTLV.fields.states]]
+			name = 'Reserved'
+			start = 4
+			end = 0xFF
+
+	[[SecurityAssociationUpdateTLV.fields]]
+		name = 'reserved'
+		length = 8
+
+	[[SecurityAssociationUpdateTLV.fields]]
+		name = 'Next key Id'
+		length = 16
+
+	[[SecurityAssociationUpdateTLV.fields]]
+		name = 'Next Lifetime Id'
+		length = 16
+
+
+
+[CumFreqScaleFactorOffset]
+
+	[[CumFreqScaleFactorOffset.fields]]
+		name = 'Cumulative Frequecy Scale Daactor offset'
+		length = 32
+
+
+ 
+
+# ------------- types ------------
+
+[TimeInterval]
+
+	[[TimeInterval.fields]]
+		name = 'Time Interval'
+		length = 64
+		type = 'int'
+		unit = 'ns'
+
+
+
+[Timestamp]
+	length = 80
+
+	[[Timestamp.fields]]
+		name = 'Seconds'
+		length = 48
+		summary = true
+		unit = 's'
+
+	[[Timestamp.fields]]
+		name = 'Nanoseconds'
+		length = 32
+		summary = true
+		unit = 'ns'
+
+
+
+[ClockIdentity]
+	visible = 'false'
+
+	[[ClockIdentity.fields]]
+		name = 'Clock Identity'
+		length = 64
+
+
+
+[PortIdentity]
+	visible = 'false'
+
+	[[PortIdentity.fields]]
+		inherit = '#ClockIdentity'
+
+	[[PortIdentity.fields]]
+		name = 'Port Number'
+		length = 16
+
+
+
+[PortAddress]
+
+	[[PortAddress.fields]]
+		name = 'networkProtocol'
+		length = 16
+
+	[[PortAddress.fields]]
+		name = 'Address Length'
+		tag = 'addresslength'
+		length = 16
+
+	[[PortAddress.fields]]
+		name = 'Address Field'
+		length = '^.addresslength'
+
+
+
+[ClockQuality]
+	visible = 'false'
+
+	[[ClockQuality.fields]]
+		name = 'Clock Class'
+		length = 8
+
+	[[ClockQuality.fields]]
+		name = 'Clock Accuracy'
+		length = 8
+
+	[[ClockQuality.fields]]
+		name = 'Offset Scaled Log Variance'
+		length = 16
+
+
+
+[PTPv2Text]
+
+	[[PTPv2Text.fields]]
+		name = 'Length'
+		tag = 'length'
+		length = 8
+
+	[[PTPv2Text.fields]]
+		name = 'Value'
+		length = '^.length'
+
+
+
+[FaultRecord]
+
+	[[FaultRecord.fields]]
+		name = 'Fault Record Length'
+		length = 16
+
+	[[FaultRecord.fields]]
+		name = 'Fault Time'
+		inherit = '#Timestamp'
+
+	[[FaultRecord.fields]]
+		name = 'Severrity Code'
+		length = 8
+
+	[[FaultRecord.fields]]
+		name = 'Fault Name'
+		inherit = '#PTPv2Text'
+
+	[[FaultRecord.fields]]
+		name = 'Fault Value'
+		inherit = '#PTPv2Text'
+
+	[[FaultRecord.fields]]
+		name = 'Fault Description'
+		inherit = '#PTPv2Text'

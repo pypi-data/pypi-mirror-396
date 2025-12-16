@@ -1,0 +1,329 @@
+[setup]
+	version = '2.1.0'
+	include = ['builtin://WDB/ethernet/ethernet.wdb']
+
+	[setup.defaults.fields]
+		endian = 'little'
+
+	[[setup.hooks]]
+		expression = 'eth.type == 0x88A4'
+		location = 'eth.payload'
+		protocol = '#EtherCat'
+
+	[[setup.hooks]]
+		expression = 'udp.port == 0x88A4'
+		location = 'udp.payload'
+		protocol = '#EtherCat'
+
+[EtherCat]
+	name = 'EtherCAT'
+
+	[[EtherCat.fields]]
+		name = 'Length'
+		length = 11
+
+	[[EtherCat.fields]]
+		name = 'reserved'
+		# visible = false
+		length = 1
+
+
+	[[EtherCat.fields]]
+		name = 'Type'
+		length = 4
+
+		[[EtherCat.fileds.states]]
+			name = 'EtherCat DLPDUs'
+			value = 0x01
+		
+		[[EtherCat.fileds.states]]
+			name = 'Network Variables'
+			value = 0x04
+
+		[[EtherCat.fileds.states]]
+			name = 'Mailbox'
+			value = 0x05
+
+
+	[[EtherCat.fields]]
+		name = 'EtherCat PDU'
+		tag = 'pdu'
+		inherit = '#PDU'
+		enable = '^.type == 1'
+		do_while = '.next'
+
+	[[EtherCat.fields]]
+		name = 'Network Variables'
+		inherit = '#PublisherHeader'
+		enable = '^.type == 4'
+
+	[[EtherCat.fields]]
+		name = 'mailbox'
+		inherit = '#Mailbox'
+		enable = '^.type == 5'
+
+
+[PDU]
+
+	[[PDU.fields]]
+		long_name = 'Command'
+		name = 'CMD'
+		length = 8
+
+		[[PDU.fields.states]]
+			description = 'Auto Increment Physical Read'
+			name = 'APRD'
+			value = 1
+
+		[[PDU.fields.states]]
+			description = 'Auto Increment Physical Write'
+			name = 'APWR'
+			value = 2
+
+		[[PDU.fields.states]]
+			description = 'Auto Increment Physical Read Write'
+			name = 'APRW'
+			value = 3
+
+		[[PDU.fields.states]]
+			description = 'Configured Addrss Physical Read'
+			name = 'FPRD'
+			value = 4
+
+		[[PDU.fields.states]]
+			description = 'Configured Addrss Physical Write'
+			name = 'FPWR'
+			value = 5
+
+		[[PDU.fields.states]]
+			description = 'Configured Addrss Physical Read Write'
+			name = 'FPRW'
+			value = 6
+
+		[[PDU.fields.states]]
+			description = 'Broadcast Read'
+			name = 'BRD'
+			value = 7
+
+		[[PDU.fields.states]]
+			description = 'Broadcast Write'
+			name = 'BWR'
+			value = 8
+
+		[[PDU.fields.states]]
+			description = 'Broadcast Read Write'
+			name = 'BRW'
+			value = 9
+
+		[[PDU.fields.states]]
+			description = 'Logical Memory Read'
+			name = 'LRD'
+			value = 0xA
+
+		[[PDU.fields.states]]
+			description = 'Logical Memory Write'
+			name = 'LWR'
+			value = 0xB
+
+		[[PDU.fields.states]]
+			description = 'Logical Memory Read Write'
+			name = 'LRW'
+			value = 0xC
+
+		[[PDU.fields.states]]
+			description = 'Auto Increment Physical read Multiple Write'
+			name = 'ARMW'
+			value = 0xD
+
+		[[PDU.fields.states]]
+			description = 'Configured Address Physical Read Multiple Write'
+			name = 'FRMW'
+			value = 0xE
+
+	[[PDU.fields]]
+		long_name = 'Index'
+		name = 'IDX'
+		length = 8
+
+	[[PDU.fields]]
+		long_name = 'Auto Increment Address'
+		name = 'ADP'
+		length = 16
+		enable = '^.cmd == #PDU.$CMD.$APRD.value || ^.cmd == #PDU.$CMD.$FPRD.value || ^.cmd == #PDU.$CMD.$BRD.value || ^.cmd == #PDU.$CMD.$APWR.value || ^.cmd == #PDU.$CMD.$FPWR.value || ^.cmd == #PDU.$CMD.$BWR.value || ^.cmd == #PDU.$CMD.$APRW.value || ^.cmd == #PDU.$CMD.$FPRW.value || ^.cmd == #PDU.$CMD.$BRW.value || ^.cmd == #PDU.$CMD.$ARMW.value || ^.cmd == #PDU.$CMD.$FRMW.value'
+
+	[[PDU.fields]]
+		long_name = 'Physical Memory/Register Address'
+		name = 'ADO'
+		length = 16
+		enable =  '^.cmd == #PDU.$CMD.$APRD.value || ^.cmd == #PDU.$CMD.$FPRD.value || ^.cmd == #PDU.$CMD.$BRD.value || ^.cmd == #PDU.$CMD.$APWR.value || ^.cmd == #PDU.$CMD.$FPWR.value || ^.cmd == #PDU.$CMD.$BWR.value || ^.cmd == #PDU.$CMD.$APRW.value || ^.cmd == #PDU.$CMD.$FPRW.value || ^.cmd == #PDU.$CMD.$BRW.value || ^.cmd == #PDU.$CMD.$ARMW.value || ^.cmd == #PDU.$CMD.$FRMW.value'
+
+	[[PDU.fields]]
+		long_name = 'Logical Address'
+		name = 'ADR'
+		length = 32
+		enable = '^.cmd == #PDU.$CMD.$LRD.value || ^.cmd == #PDU.$CMD.$LWR.value || ^.cmd == #PDU.$CMD.$LRW.value'
+
+	[[PDU.fields]]
+		long_name = 'Length'
+		name = 'LEN'
+		length = 11
+
+	[[PDU.fields]]
+		name = 'reserved'
+		length = 3
+		visible = false
+
+	[[PDU.fields]]
+		long_name = 'Circulating Frame'
+		name = 'C'
+		length = 1
+
+	[[PDU.fields]]
+		long_name = 'EtherCat PDU Follows'
+		name = 'NEXT'
+		length = 1
+
+	[[PDU.fields]]
+		long_name = 'reserved'
+		name = 'IRQ'
+		length = 16
+
+	[[PDU.fields]]
+		name = 'data'
+		length = '^.len * 8'
+
+	[[PDU.fields]]
+		long_name = 'Working Counter'
+		name = 'WKC'
+		length = 16
+
+
+
+[PublisherHeader]
+
+	[[PublisherHeader.fields]]
+		long_name = 'Publisher ID'
+		name = 'PubID'
+		length = 48
+
+	[[PublisherHeader.fields]]
+		long_name = 'Number Of Network Variabes'
+		name = 'CntNV'
+		length = 16
+
+	[[PublisherHeader.fields]]
+		long_name = 'Cycle Number'
+		name = 'CYC'
+		length = 16
+
+	[[PublisherHeader.fields]]
+		name = 'reserved'
+		length = 16
+		visible = false
+
+	[[PublisherHeader.fields]]
+		name = 'Network Variable'
+		inherit = '#NetworkVar'
+		loop = '^.cntnv'
+
+
+
+[NetworkVar]
+
+	[[NetworkVar.fields]]
+		name = 'Index'
+		tag = 'index'
+		length = 16
+
+	[[NetworkVar.fields]]
+		long_name = 'Hash Algorithm'
+		name = 'HASH'
+		length = 16
+
+	[[NetworkVar.fields]]
+		long_name = 'Length'
+		name = 'LEN'
+		length = 16
+
+	[[NetworkVar.fields]]
+		long_name = 'Quality'
+		name = 'Q'
+		length = 16
+
+	[[NetworkVar.fields]]
+		name = 'Data'
+		length = '^.len * 8'
+
+
+
+[Mailbox]
+
+	[[Mailbox.fields]]
+		name = 'Length'
+		length = 16
+
+	[[Mailbox.fields]]
+		name = 'Address'
+		length = 16
+
+	[[Mailbox.fields]]
+		name = 'Channel'
+		length = 6
+
+	[[Mailbox.fields]]
+		name = 'Priority'
+		length = 2
+
+	[[Mailbox.fields]]
+		name = 'Type'
+		length = 4
+
+		[[Mailbox.fields.states]]
+			name = 'error'
+			value = 0
+	
+		[[Mailbox.fields.states]]
+			name = 'reserved'
+			value = 1
+	
+		[[Mailbox.fields.states]]
+			name = 'Ethernet Over EtherCat'
+			value = 2
+
+		[[Mailbox.fields.states]]
+			name = 'CAN application protocol over EtherCAT'
+			value = 3
+
+		[[Mailbox.fields.states]]
+			name = 'File Access over EtherCAT'
+			value = 4
+
+		[[Mailbox.fields.states]]
+			name = 'Servo profile over EtherCAT'
+			value = 5
+
+		[[Mailbox.fields.states]]
+			name = 'reserved'
+			start = 0x6
+			end = 0xe
+
+		[[Mailbox.fields.states]]
+			name = 'Vendor Specific'
+			value = 0xf
+
+	[[Mailbox.fields]]
+		name = 'Cnt'
+		length = 3
+
+	[[Mailbox.fields]]
+		name = 'reserved'
+		length = 1
+
+	[[Mailbox.fields]]
+		name = 'Service Data'
+		length = '^.length * 8'
+
+
+
+
+

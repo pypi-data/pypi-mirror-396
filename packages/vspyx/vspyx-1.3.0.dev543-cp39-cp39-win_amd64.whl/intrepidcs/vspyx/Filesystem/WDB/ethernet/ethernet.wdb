@@ -1,0 +1,968 @@
+[setup]
+	version = '2.1.0'
+	include = ['builtin://WDB/core/frame.wdb']
+
+	[[setup.hooks]]
+		expression = 'frame.protocol == #FrameType.Ethernet'
+		location = 'frame.payload'
+		protocol = '#Ethernet'
+
+[Ethernet]
+	display_struct = true
+	name = 'Ethernet'
+	tag = 'eth'
+
+	[[Ethernet.fields]]
+		long_name = 'Destination MAC Address'
+		name = 'Destination'
+		inherit = '#MACAddress'
+		summary = true
+
+	[[Ethernet.fields]]
+		long_name = 'Source MAC Address'
+		name = 'source'
+		inherit = '#MACAddress'
+		summary = true
+
+	[[Ethernet.fields]]
+		name = 'Ether Type'
+		tag = 'rawtype'
+		aliases = ['eth.type']
+		length = 16
+
+
+		[[Ethernet.fields.states]]
+			name = 'IEEE802.3 Length Field'
+			start = 0x0000
+			end = 0x05DC
+
+		[[Ethernet.fields.states]]
+			name = 'Experimental'
+			start = 0x0101
+			end = 0x01FF
+
+		[[Ethernet.fields.states]]
+			name = 'XEROX PUP (see 0A00)'
+			value = 0x200
+
+		[[Ethernet.fields.states]]
+			name = 'PUP Addr Trans (see 0A01)'
+			value = 0x201
+
+		[[Ethernet.fields.states]]
+			name = 'Nixdorf'
+			value = 0x400
+
+		[[Ethernet.fields.states]]
+			name = 'XEROX NS IDP'
+			value = 0x600
+
+		[[Ethernet.fields.states]]
+			name = 'DLOG'
+			start = 0x660
+			end = 0x661
+
+		[[Ethernet.fields.states]]
+			name = 'Internet Protocol version 4 (IPv4)'
+			value = 0x800
+
+		[[Ethernet.fields.states]]
+			name = 'X.75 Internet'
+			value = 0x801
+
+		[[Ethernet.fields.states]]
+			name = 'NBS Internet'
+			value = 0x802
+
+		[[Ethernet.fields.states]]
+			name = 'ECMA Internet'
+			value = 0x803
+
+		[[Ethernet.fields.states]]
+			name = 'Chaosnet'
+			value = 0x804
+
+		[[Ethernet.fields.states]]
+			name = 'X.25 Level 3'
+			value = 0x805
+
+		[[Ethernet.fields.states]]
+			name = 'Address Resolution Protocol (ARP)'
+			value = 0x806
+
+		[[Ethernet.fields.states]]
+			name = 'XNS Compatability'
+			value = 0x807
+
+		[[Ethernet.fields.states]]
+			name = 'Frame Relay ARP'
+			value = 0x808
+
+		[[Ethernet.fields.states]]
+			name = 'Symbolics Private'
+			value = 0x081C
+
+		[[Ethernet.fields.states]]
+			name = 'Xyplex'
+			start = 0x0888
+			end = 0x088A
+
+		[[Ethernet.fields.states]]
+			name = 'Ungermann-Bass net debugr'
+			value = 0x900
+
+		[[Ethernet.fields.states]]
+			name = 'Xerox IEEE802.3 PUP'
+			value = 0x0A00
+
+		[[Ethernet.fields.states]]
+			name = 'PUP Addr Trans'
+			value = 0x0A01
+
+		[[Ethernet.fields.states]]
+			name = 'Banyan VINES'
+			value = 0x0BAD
+
+		[[Ethernet.fields.states]]
+			name = 'VINES Loopback'
+			value = 0x0BAE
+
+		[[Ethernet.fields.states]]
+			name = 'VINES Echo'
+			value = 0x0BAF
+
+		[[Ethernet.fields.states]]
+			name = 'Berkeley Trailer nego'
+			value = 0x1000
+
+		[[Ethernet.fields.states]]
+			name = 'Berkeley Trailer encap/IP'
+			start = 0x1001
+			end = 0x100F
+
+		[[Ethernet.fields.states]]
+			name = 'Valid Systems'
+			value = 0x1600
+
+		[[Ethernet.fields.states]]
+			name = 'TRILL'
+			value = 0x22F3
+
+		[[Ethernet.fields.states]]
+			name = 'L2-IS-IS'
+			value = 0x22F4
+
+		[[Ethernet.fields.states]]
+			name = 'PCS Basic Block Protocol'
+			value = 0x4242
+
+		[[Ethernet.fields.states]]
+			name = 'BBN Simnet'
+			value = 0x5208
+
+		[[Ethernet.fields.states]]
+			name = 'DEC Unassigned (Exp.)'
+			value = 0x6000
+
+		[[Ethernet.fields.states]]
+			name = 'DEC MOP Dump/Load'
+			value = 0x6001
+
+		[[Ethernet.fields.states]]
+			name = 'DEC MOP Remote Console'
+			value = 0x6002
+
+		[[Ethernet.fields.states]]
+			name = 'DEC DECNET Phase IV Route'
+			value = 0x6003
+
+		[[Ethernet.fields.states]]
+			name = 'DEC LAT'
+			value = 0x6004
+
+		[[Ethernet.fields.states]]
+			name = 'DEC Diagnostic Protocol'
+			value = 0x6005
+
+		[[Ethernet.fields.states]]
+			name = 'DEC Customer Protocol'
+			value = 0x6006
+
+		[[Ethernet.fields.states]]
+			name = 'DEC LAVC, SCA'
+			value = 0x6007
+
+		[[Ethernet.fields.states]]
+			name = 'DEC Unassigned'
+			start = 0x6008
+			end = 0x6009
+
+		[[Ethernet.fields.states]]
+			name = '3Com Corporation'
+			start = 0x6010
+			end = 0x6014
+
+		[[Ethernet.fields.states]]
+			name = 'Trans Ether Bridging'
+			value = 0x6558
+
+		[[Ethernet.fields.states]]
+			name = 'Raw Frame Relay'
+			value = 0x6559
+
+		[[Ethernet.fields.states]]
+			name = 'Ungermann-Bass download'
+			value = 0x7000
+
+		[[Ethernet.fields.states]]
+			name = 'Ungermann-Bass dia/loop'
+			value = 0x7002
+
+		[[Ethernet.fields.states]]
+			name = 'LRT'
+			start = 0x7020
+			end = 0x7029
+
+		[[Ethernet.fields.states]]
+			name = 'Proteon'
+			value = 0x7030
+
+		[[Ethernet.fields.states]]
+			name = 'Cabletron'
+			value = 0x7034
+
+		[[Ethernet.fields.states]]
+			name = 'Cronus VLN'
+			value = 0x8003
+
+		[[Ethernet.fields.states]]
+			name = 'Cronus Direct'
+			value = 0x8004
+
+		[[Ethernet.fields.states]]
+			name = 'HP Probe'
+			value = 0x8005
+
+		[[Ethernet.fields.states]]
+			name = 'Nestar'
+			value = 0x8006
+
+		[[Ethernet.fields.states]]
+			name = 'AT&T_0'
+			value = 0x8008
+
+		[[Ethernet.fields.states]]
+			name = 'Excelan'
+			value = 0x8010
+
+		[[Ethernet.fields.states]]
+			name = 'SGI diagnostics'
+			value = 0x8013
+
+		[[Ethernet.fields.states]]
+			name = 'SGI network games'
+			value = 0x8014
+
+		[[Ethernet.fields.states]]
+			name = 'SGI reserved'
+			value = 0x8015
+
+		[[Ethernet.fields.states]]
+			name = 'SGI bounce server'
+			value = 0x8016
+
+		[[Ethernet.fields.states]]
+			name = 'Apollo Domain'
+			value = 0x8019
+
+		[[Ethernet.fields.states]]
+			name = 'Tymshare'
+			value = 0x802E
+
+		[[Ethernet.fields.states]]
+			name = 'Tigan, Inc.'
+			value = 0x802F
+
+		[[Ethernet.fields.states]]
+			name = 'Reverse Address Resolution Protocol (RARP)'
+			value = 0x8035
+
+		[[Ethernet.fields.states]]
+			name = 'Aeonic Systems'
+			value = 0x8036
+
+		[[Ethernet.fields.states]]
+			name = 'DEC LANBridge'
+			value = 0x8038
+
+		[[Ethernet.fields.states]]
+			name = 'DEC Unassigned'
+			start = 0x8039
+			end = 0x803C
+
+		[[Ethernet.fields.states]]
+			name = 'DEC Ethernet Encryption'
+			value = 0x803D
+
+		[[Ethernet.fields.states]]
+			name = 'DEC Unassigned'
+			value = 0x803E
+
+		[[Ethernet.fields.states]]
+			name = 'DEC LAN Traffic Monitor'
+			value = 0x803F
+
+		[[Ethernet.fields.states]]
+			name = 'DEC Unassigned'
+			start = 0x8040
+			end = 0x8042
+
+		[[Ethernet.fields.states]]
+			name = 'Planning Research Corp.'
+			value = 0x8044
+
+		[[Ethernet.fields.states]]
+			name = 'AT&T_1'
+			start = 0x8046
+			end = 0x8047
+
+		[[Ethernet.fields.states]]
+			name = 'ExperData'
+			value = 0x8049
+
+		[[Ethernet.fields.states]]
+			name = 'Stanford V Kernel exp.'
+			value = 0x805B
+
+		[[Ethernet.fields.states]]
+			name = 'Stanford V Kernel prod.'
+			value = 0x805C
+
+		[[Ethernet.fields.states]]
+			name = 'Evans & Sutherland'
+			value = 0x805D
+
+		[[Ethernet.fields.states]]
+			name = 'Little Machines'
+			value = 0x8060
+
+		[[Ethernet.fields.states]]
+			name = 'Counterpoint Computers'
+			value = 0x8062
+
+		[[Ethernet.fields.states]]
+			name = 'Univ. of Mass. @ Amherst'
+			start = 0x8065
+			end = 0x8066
+
+		[[Ethernet.fields.states]]
+			name = 'Veeco Integrated Auto.'
+			value = 0x8067
+
+		[[Ethernet.fields.states]]
+			name = 'General Dynamics'
+			value = 0x8068
+
+		[[Ethernet.fields.states]]
+			name = 'AT&T_2'
+			value = 0x8069
+
+		[[Ethernet.fields.states]]
+			name = 'Autophon'
+			value = 0x806A
+
+		[[Ethernet.fields.states]]
+			name = 'ComDesign'
+			value = 0x806C
+
+		[[Ethernet.fields.states]]
+			name = 'Computgraphic Corp.'
+			value = 0x806D
+
+		[[Ethernet.fields.states]]
+			name = 'Landmark Graphics Corp.'
+			start = 0x806E
+			end = 0x8077
+
+		[[Ethernet.fields.states]]
+			name = 'Matra'
+			value = 0x807A
+
+		[[Ethernet.fields.states]]
+			name = 'Dansk Data Elektronik'
+			value = 0x807B
+
+		[[Ethernet.fields.states]]
+			name = 'Merit Internodal'
+			value = 0x807C
+
+		[[Ethernet.fields.states]]
+			name = 'Vitalink Communications'
+			start = 0x807D
+			end = 0x807F
+
+		[[Ethernet.fields.states]]
+			name = 'Vitalink TransLAN III'
+			value = 0x8080
+
+		[[Ethernet.fields.states]]
+			name = 'Counterpoint Computers'
+			start = 0x8081
+			end = 0x8083
+
+		[[Ethernet.fields.states]]
+			name = 'Appletalk'
+			value = 0x809B
+
+		[[Ethernet.fields.states]]
+			name = 'Datability'
+			start = 0x809C
+			end = 0x809E
+
+		[[Ethernet.fields.states]]
+			name = 'Spider Systems Ltd.'
+			value = 0x809F
+
+		[[Ethernet.fields.states]]
+			name = 'Nixdorf Computers'
+			value = 0x80A3
+
+		[[Ethernet.fields.states]]
+			name = 'Siemens Gammasonics Inc.'
+			start = 0x80A4
+			end = 0x80B3
+
+		[[Ethernet.fields.states]]
+			name = 'DCA Data Exchange Cluster'
+			start = 0x80C0
+			end = 0x80C3
+
+		[[Ethernet.fields.states]]
+			name = 'Banyan Systems'
+			start = 0x80C4
+			end = 0x80C5
+
+		[[Ethernet.fields.states]]
+			name = 'Pacer Software'
+			value = 0x80C6
+
+		[[Ethernet.fields.states]]
+			name = 'Applitek Corporation'
+			value = 0x80C7
+
+		[[Ethernet.fields.states]]
+			name = 'Intergraph Corporation'
+			start = 0x80C8
+			end = 0x80CC
+
+		[[Ethernet.fields.states]]
+			name = 'Harris Corporation'
+			start = 0x80CD
+			end = 0x80CE
+
+		[[Ethernet.fields.states]]
+			name = 'Taylor Instrument'
+			start = 0x80CF
+			end = 0x80D2
+
+		[[Ethernet.fields.states]]
+			name = 'Rosemount Corporation'
+			start = 0x80D3
+			end = 0x80D4
+
+		[[Ethernet.fields.states]]
+			name = 'IBM SNA Service on Ether'
+			value = 0x80D5
+
+		[[Ethernet.fields.states]]
+			name = 'Varian Associates'
+			value = 0x80DD
+
+		[[Ethernet.fields.states]]
+			name = 'Integrated Solutions TRFS'
+			start = 0x80DE
+			end = 0x80DF
+
+		[[Ethernet.fields.states]]
+			name = 'Allen-Bradley'
+			start = 0x80E0
+			end = 0x80E3
+
+		[[Ethernet.fields.states]]
+			name = 'Datability'
+			start = 0x80E4
+			end = 0x80F0
+
+		[[Ethernet.fields.states]]
+			name = 'Retix'
+			value = 0x80F2
+
+		[[Ethernet.fields.states]]
+			name = 'AppleTalk AARP (Kinetics)'
+			value = 0x80F3
+
+		[[Ethernet.fields.states]]
+			name = 'Kinetics'
+			start = 0x80F4
+			end = 0x80F5
+
+		[[Ethernet.fields.states]]
+			name = 'Apollo Computer'
+			value = 0x80F7
+
+		[[Ethernet.fields.states]]
+			name = 'Wellfleet Communications'
+			value = 0x80FF
+
+		[[Ethernet.fields.states]]
+			name = '802.1Q Virtual LAN'
+			value = 0x8100
+
+		[[Ethernet.fields.states]]
+			name = 'Wellfleet Communications'
+			start = 0x8101
+			end = 0x8103
+
+		[[Ethernet.fields.states]]
+			name = 'Symbolics Private'
+			start = 0x8107
+			end = 0x8109
+
+		[[Ethernet.fields.states]]
+			name = 'Hayes Microcomputers'
+			value = 0x8130
+
+		[[Ethernet.fields.states]]
+			name = 'VG Laboratory Systems'
+			value = 0x8131
+
+		[[Ethernet.fields.states]]
+			name = 'Bridge Communications'
+			start = 0x8132
+			end = 0x8136
+
+		[[Ethernet.fields.states]]
+			name = 'Novell, Inc.'
+			start = 0x8137
+			end = 0x8138
+
+		[[Ethernet.fields.states]]
+			name = 'KTI'
+			start = 0x8139
+			end = 0x813D
+
+		[[Ethernet.fields.states]]
+			name = 'Logicraft'
+			value = 0x8148
+
+		[[Ethernet.fields.states]]
+			name = 'Network Computing Devices'
+			value = 0x8149
+
+		[[Ethernet.fields.states]]
+			name = 'Alpha Micro'
+			value = 0x814A
+
+		[[Ethernet.fields.states]]
+			name = 'SNMP'
+			value = 0x814C
+
+		[[Ethernet.fields.states]]
+			name = 'BIIN'
+			start = 0x814D
+			end = 0x814E
+
+		[[Ethernet.fields.states]]
+			name = 'Technically Elite Concept'
+			value = 0x814F
+
+		[[Ethernet.fields.states]]
+			name = 'Rational Corp'
+			value = 0x8150
+
+		[[Ethernet.fields.states]]
+			name = 'Qualcomm'
+			start = 0x8151
+			end = 0x8153
+
+		[[Ethernet.fields.states]]
+			name = 'Computer Protocol Pty Ltd'
+			start = 0x815C
+			end = 0x815E
+
+		[[Ethernet.fields.states]]
+			name = 'Charles River Data System'
+			start = 0x8164
+			end = 0x8166
+
+		[[Ethernet.fields.states]]
+			name = 'XTP'
+			value = 0x817D
+
+		[[Ethernet.fields.states]]
+			name = 'SGI/Time Warner prop.'
+			value = 0x817E
+
+		[[Ethernet.fields.states]]
+			name = 'HIPPI-FP encapsulation'
+			value = 0x8180
+
+		[[Ethernet.fields.states]]
+			name = 'STP, HIPPI-ST'
+			value = 0x8181
+
+		[[Ethernet.fields.states]]
+			name = 'Reserved for HIPPI-6400'
+			start = 0x8182
+			end = 0x8183
+
+		[[Ethernet.fields.states]]
+			name = 'Silicon Graphics prop.'
+			start = 0x8184
+			end = 0x818C
+
+		[[Ethernet.fields.states]]
+			name = 'Motorola Computer'
+			value = 0x818D
+
+		[[Ethernet.fields.states]]
+			name = 'Qualcomm'
+			start = 0x819A
+			end = 0x81A3
+
+		[[Ethernet.fields.states]]
+			name = 'ARAI Bunkichi'
+			value = 0x81A4
+
+		[[Ethernet.fields.states]]
+			name = 'RAD Network Devices'
+			start = 0x81A5
+			end = 0x81AE
+
+		[[Ethernet.fields.states]]
+			name = 'Xyplex'
+			start = 0x81B7
+			end = 0x81B9
+
+		[[Ethernet.fields.states]]
+			name = 'Apricot Computers'
+			start = 0x81CC
+			end = 0x81D5
+
+		[[Ethernet.fields.states]]
+			name = 'Artisoft'
+			start = 0x81D6
+			end = 0x81DD
+
+		[[Ethernet.fields.states]]
+			name = 'Polygon'
+			start = 0x81E6
+			end = 0x81EF
+
+		[[Ethernet.fields.states]]
+			name = 'Comsat Labs'
+			start = 0x81F0
+			end = 0x81F2
+
+		[[Ethernet.fields.states]]
+			name = 'SAIC'
+			start = 0x81F3
+			end = 0x81F5
+
+		[[Ethernet.fields.states]]
+			name = 'VG Analytical'
+			start = 0x81F6
+			end = 0x81F8
+
+		[[Ethernet.fields.states]]
+			name = 'Quantum Software'
+			start = 0x8203
+			end = 0x8205
+
+		[[Ethernet.fields.states]]
+			name = 'Ascom Banking Systems'
+			start = 0x8221
+			end = 0x8222
+
+		[[Ethernet.fields.states]]
+			name = 'Advanced Encryption Syste'
+			start = 0x823E
+			end = 0x8240
+
+		[[Ethernet.fields.states]]
+			name = 'Athena Programming'
+			start = 0x827F
+			end = 0x8282
+
+		[[Ethernet.fields.states]]
+			name = 'Charles River Data System'
+			start = 0x8263
+			end = 0x826A
+
+		[[Ethernet.fields.states]]
+			name = 'Inst Ind Info Tech'
+			start = 0x829A
+			end = 0x829B
+
+		[[Ethernet.fields.states]]
+			name = 'Taurus Controls'
+			start = 0x829C
+			end = 0x82AB
+
+		[[Ethernet.fields.states]]
+			name = 'Walker Richer & Quinn'
+			start = 0x82AC
+			end = 0x8693
+
+		[[Ethernet.fields.states]]
+			name = 'Idea Courier'
+			start = 0x8694
+			end = 0x869D
+
+		[[Ethernet.fields.states]]
+			name = 'Computer Network Tech'
+			start = 0x869E
+			end = 0x86A1
+
+		[[Ethernet.fields.states]]
+			name = 'Gateway Communications'
+			start = 0x86A3
+			end = 0x86AC
+
+		[[Ethernet.fields.states]]
+			name = 'SECTRA'
+			value = 0x86DB
+
+		[[Ethernet.fields.states]]
+			name = 'Delta Controls'
+			value = 0x86DE
+
+		[[Ethernet.fields.states]]
+			name = 'Internet Protocol version 6 (IPv6)'
+			value = 0x86DD
+
+		[[Ethernet.fields.states]]
+			name = 'ATOMIC'
+			value = 0x86DF
+
+		[[Ethernet.fields.states]]
+			name = 'Landis & Gyr Powers'
+			start = 0x86E0
+			end = 0x86EF
+
+		[[Ethernet.fields.states]]
+			name = 'Motorola'
+			start = 0x8700
+			end = 0x8710
+
+		[[Ethernet.fields.states]]
+			name = 'TCP/IP Compression'
+			value = 0x876B
+
+		[[Ethernet.fields.states]]
+			name = 'IP Autonomous Systems'
+			value = 0x876C
+
+		[[Ethernet.fields.states]]
+			name = 'Secure Data'
+			value = 0x876D
+
+		[[Ethernet.fields.states]]
+			name = 'IEEE Std 802.3 - Ethernet Passive Optical Network (EPON)'
+			value = 0x8808
+
+		[[Ethernet.fields.states]]
+			name = 'Point-to-Point Protocol (PPP)'
+			value = 0x880B
+
+		[[Ethernet.fields.states]]
+			name = 'General Switch Management Protocol (GSMP)'
+			value = 0x880C
+
+		[[Ethernet.fields.states]]
+			name = 'MPLS'
+			value = 0x8847
+
+		[[Ethernet.fields.states]]
+			name = 'MPLS with upstream-assigned label'
+			value = 0x8848
+
+		[[Ethernet.fields.states]]
+			name = 'Multicast Channel Allocation Protocol (MCAP)'
+			value = 0x8861
+
+		[[Ethernet.fields.states]]
+			name = 'PPP over Ethernet (PPPoE) Discovery Stage'
+			value = 0x8863
+
+		[[Ethernet.fields.states]]
+			name = 'PPP over Ethernet (PPPoE) Session Stage'
+			value = 0x8864
+
+		[[Ethernet.fields.states]]
+			name = 'IEEE Std 802.1X - Port-based network access control'
+			value = 0x888E
+
+		[[Ethernet.fields.states]]
+			name = 'IEEE Std 802.1Q - Service VLAN tag identifier (S-Tag)'
+			value = 0x88A8
+
+		[[Ethernet.fields.states]]
+			name = 'Invisible Software'
+			start = 0x8A96
+			end = 0x8A97
+
+		[[Ethernet.fields.states]]
+			name = 'IEEE Std 802 - Local Experimental Ethertype'
+			start = 0x88B5
+			end = 0x88B6
+
+		[[Ethernet.fields.states]]
+			name = 'IEEE Std 802 - OUI Extended Ethertype'
+			value = 0x88B7
+
+		[[Ethernet.fields.states]]
+			name = 'IEEE Std 802.11 - Pre-Authentication (802.11i)'
+			value = 0x88C7
+
+		[[Ethernet.fields.states]]
+			name = 'IEEE Std 802.1AB - Link Layer Discovery Protocol (LLDP)'
+			value = 0x88CC
+
+		[[Ethernet.fields.states]]
+			name = 'IEEE Std 802.1AE - Media Access Control Security'
+			value = 0x88E5
+
+		[[Ethernet.fields.states]]
+			name = 'Provider Backbone Bridging Instance tag'
+			value = 0x88E7
+
+		[[Ethernet.fields.states]]
+			name = 'IEEE Std 802.1Q  - Multiple VLAN Registration Protocol (MVRP)'
+			value = 0x88F5
+
+		[[Ethernet.fields.states]]
+			name = 'IEEE Std 802.1Q - Multiple Multicast Registration Protocol (MMRP)'
+			value = 0x88F6
+
+		[[Ethernet.fields.states]]
+			name = 'IEEE Std 802.11 - Fast Roaming Remote Request (802.11r)'
+			value = 0x890D
+
+		[[Ethernet.fields.states]]
+			name = 'IEEE Std 802.21 - Media Independent Handover Protocol'
+			value = 0x8917
+
+		[[Ethernet.fields.states]]
+			name = 'IEEE Std 802.1Qbe - Multiple I-SID Registration Protocol'
+			value = 0x8929
+
+		[[Ethernet.fields.states]]
+			name = 'TRILL Fine Grained Labeling (FGL)'
+			value = 0x893B
+
+		[[Ethernet.fields.states]]
+			name = 'IEEE Std 802.1Qbg - ECP Protocol (also used in 802.1BR)'
+			value = 0x8940
+
+		[[Ethernet.fields.states]]
+			name = 'TRILL RBridge Channel'
+			value = 0x8946
+
+		[[Ethernet.fields.states]]
+			name = 'GeoNetworking as defined in ETSI EN 302 636-4-1'
+			value = 0x8947
+
+		[[Ethernet.fields.states]]
+			name = 'NSH (Network Service Header)'
+			value = 0x894F
+
+		[[Ethernet.fields.states]]
+			name = 'Loopback'
+			value = 0x9000
+
+		[[Ethernet.fields.states]]
+			name = '3Com(Bridge) XNS Sys Mgmt'
+			value = 0x9001
+
+		[[Ethernet.fields.states]]
+			name = '3Com(Bridge) TCP-IP Sys'
+			value = 0x9002
+
+		[[Ethernet.fields.states]]
+			name = '3Com(Bridge) loop detect'
+			value = 0x9003
+
+		[[Ethernet.fields.states]]
+			name = 'Multi-Topology'
+			value = 0x9A22
+
+		[[Ethernet.fields.states]]
+			name = 'LoWPAN encapsulation'
+			value = 0xA0ED
+
+		[[Ethernet.fields.states]]
+			name = """The Ethertype will be used to identify a 'Channel' 
+       in which control messages are encapsulated as payload of GRE packets. 
+       When a GRE packet tagged with the Ethertype is received, the payload 
+       will be handed to the network processor for processing."""
+			value = 0xB7EA
+
+		[[Ethernet.fields.states]]
+			name = 'BBN VITAL-LanBridge cache'
+			value = 0xFF00
+
+		[[Ethernet.fields.states]]
+			name = 'ISC Bunker Ramo'
+			start = 0xFF00
+			end = 0xFF0F
+
+		[[Ethernet.fields.states]]
+				name = 'Reserved'
+				value = 0xFFFF
+
+	[[Ethernet.fields]]
+		name = 'Payload'
+		tag = 'rawpayload'
+		aliases = ['eth.payload']
+		length = '( frame.length - 14 ) * 8' # Expecting no FCS at the end of the payload
+		type = 'hook'
+
+# ---------- Types -------- 
+
+[MACAddress]
+	length = 48
+
+	[[MACAddress.fields]]
+		name = 'MAC Address'
+		length = 48
+		format = "mac_address"
+	
+	[[MACAddress.fields]]
+		name = 'LG'
+		start = 6
+		length = 1
+
+		[[MACAddress.fields.states]]
+			name = 'Globally unique address'
+			value = 0
+		
+		[[MACAddress.fields.states]]
+			name = 'Locally administered address'
+			value = 1
+
+	[[MACAddress.fields]]
+		name = 'IG'
+		start = 7
+		length = 1
+
+		[[MACAddress.fields.states]]
+			name = 'Individual address'
+			value = 0
+		
+		[[MACAddress.fields.states]]
+			name = 'Group address'
+			value = 1
+
+
+

@@ -1,0 +1,533 @@
+[setup]
+	version = '2.1.0'
+	include = ['builtin://WDB/ethernet/ethernet.wdb']
+
+	[[setup.hooks]]
+		expression = '( ( tcp.dstport == 13400 ) || ( tcp.srcport == 13400 ) ) && ( tcp.payload:length > 6 )'
+		location = 'tcp.payload'
+		protocol = '#DoIP'
+
+	[[setup.hooks]]
+		expression = '( ( udp.dstport == 13400 ) || ( udp.srcport == 13400 ) ) && ( udp.payload:length > 6 )'
+		location = 'udp.payload'
+		protocol = '#DoIP'
+
+[DoIP]
+	long_name = 'Diagnostic over IP (ISO-13400)'
+	short_name = 'DoIP'
+	tag = 'doip'
+
+	[[DoIP.fields]]
+		name = 'Protocol Version'
+		length = 8
+
+	[[DoIP.fields]]
+		name = 'Inverted Protocol Version'
+		length = 8
+
+	[[DoIP.fields]]
+		long_name = 'Payload Type'
+		summary = true
+		name = 'type'
+		length = 16
+
+		[[DoIP.fields.states]]
+			name = 'Generic DoIP header negative acknowledge'
+			value = 0x0000
+
+		[[DoIP.fields.states]]
+			name = 'Vehicle identifcation request message '
+			value = 0x0001
+
+		[[DoIP.fields.states]]
+			name = 'Vehicle identifcation request message with EID'
+			value = 0x0002
+
+		[[DoIP.fields.states]]
+			name = 'Vehicle identifcation request message with VIN'
+			value = 0x0003
+
+		[[DoIP.fields.states]]
+			name = 'Vehicle announcement message/vehicle identifcation response message'
+			value = 0x0004
+
+		[[DoIP.fields.states]]
+			name = 'Routing activation request'
+			value = 0x0005
+
+		[[DoIP.fields.states]]
+			name = 'Routing activation response'
+			value = 0x0006
+
+		[[DoIP.fields.states]]
+			name = 'Alive check request'
+			value = 0x0007
+
+		[[DoIP.fields.states]]
+			name = 'Alive check response'
+			value = 0x0008
+
+		[[DoIP.fields.states]]
+			name = 'Reserved by this part of ISO 13400'
+			start = 0x0009
+			end = 0x4000
+
+		[[DoIP.fields.states]]
+			name = 'DoIP entity status request '
+			value = 0x4001
+
+		[[DoIP.fields.states]]
+			name = 'DoIP entity status response'
+			value = 0x4002
+
+		[[DoIP.fields.states]]
+			name = 'Diagnostic power mode information request'
+			value = 0x4003
+
+		[[DoIP.fields.states]]
+			name = 'Diagnostic power mode information response'
+			value = 0x4004
+
+		[[DoIP.fields.states]]
+			name = 'Reserved by this part of ISO 13400'
+			start = 0x4005
+			end = 0x8000
+
+		[[DoIP.fields.states]]
+			name = 'Diagnostic message'
+			value = 0x8001
+
+		[[DoIP.fields.states]]
+			name = 'Diagnostic message positive acknowledgement'
+			value = 0x8002
+
+		[[DoIP.fields.states]]
+			name = 'Diagnostic message negative acknowledgement'
+			value = 0x8003
+
+		[[DoIP.fields.states]]
+			name = 'Reserved by this part of ISO 13400'
+			start = 0x8004
+			end = 0xEFFF
+
+		[[DoIP.fields.states]]
+			name = 'Reserved for manufacturer-specifc use'
+			start = 0xF000
+			end = 0xFFFF
+
+	[[DoIP.fields]]
+		long_name = 'Payload length'
+		name = 'payloadlength'
+		length = 32
+		format = 'decimal'
+
+	[[DoIP.fields]]
+		name = 'Payload'
+		inherit = '#DoIPPayload'
+
+[DoIPPayload]
+	type = 'switch'
+	switch = '^.type'
+	
+	[[DoIPPayload.fields]]
+		case = 0x0000
+		name = 'Generic DoIP header NACK code'
+		length = 8
+
+		[[DoIPPayload.fields.states]] 
+			name = 'Incorrect pattern format'
+			value = 0x00
+
+		[[DoIPPayload.fields.states]] 
+			name = 'Unknown payload type'
+			value = 0x01
+
+		[[DoIPPayload.fields.states]] 
+			name = 'Message too large'
+			value = 0x02
+
+		[[DoIPPayload.fields.states]] 
+			name = 'Out of memory'
+			value = 0x03
+
+		[[DoIPPayload.fields.states]] 
+			name = 'Invalid payload length'
+			value = 0x04
+
+		[[DoIPPayload.fields.states]] 
+			name = 'Reserved by this part of ISO 13400'
+			start = 0x05
+			end = 0xFF
+
+	[[DoIPPayload.fields]]
+		case = 0x0002
+		name = 'EID'
+		inherit = '#MACAddress'
+
+	[[DoIPPayload.fields]]
+		case = 0x0003
+		name = 'VIN'
+		length = 136
+
+	[[DoIPPayload.fields]]
+		case = 0x0004
+		name = 'Announcement'
+		inherit = '#Announcement'
+
+	[[DoIPPayload.fields]]
+		case = 0x0005
+		name = 'Routing Activation request'
+		inherit = '#RoutingActivationRequest'
+
+	[[DoIPPayload.fields]]
+		case = 0x0006
+		name = 'Routing Activation request'
+		inherit = '#RoutingActivationResponse'
+
+	[[DoIPPayload.fields]]
+		case = 0x8001
+		name = 'Diagnostic message'
+		inherit = '#DiagnosticMessage'
+
+	[[DoIPPayload.fields]]
+		case = 0x8002
+		name = 'Diagnostic message ACK'
+		inherit = '#DiagnosticMessagePositiveACK'
+
+	[[DoIPPayload.fields]]
+		case = 0x8003
+		name = 'Diagnostic message NACK'
+		inherit = '#DiagnosticMessageNegativeACK'
+
+	[[DoIPPayload.fields]]
+		case = 0x0008
+		name = 'Alive check response'
+		inherit = '#AliveCheckResponse'
+		
+	[[DoIPPayload.fields]]
+		case = 0x4004
+		name = 'Diagnostic power mode information response'
+		inherit = '#DiagnosticInformationReesponse'
+
+	[[DoIPPayload.fields]]
+		case = 0x4002
+		name = 'DoIP entity status response'
+		inherit = '#EntityStatusResponse'
+
+[Announcement]
+	[[Announcement.fields]]
+		name = 'VIN'
+		length = 136
+
+	[[Announcement.fields]]
+		name = 'Logical Address'
+		length = 16
+
+	[[Announcement.fields]]
+		name = 'EID'
+		inherit = '#MACAddress'
+
+	[[Announcement.fields]]
+		name = 'GID'
+		length = 48
+
+	[[Announcement.fields]]
+		name = 'Further Action required'
+		length = 8
+
+		[[Announcement.fields.states]] 
+			name =  'No further action required'
+			value = 0x00
+
+		[[Announcement.fields.states]] 
+			name =  'Reserved by this part of ISO 13400'
+			start = 0x01
+			end = 0x0F
+
+		[[Announcement.fields.states]] 
+			name =  'Routing activation required to initiate central security.'
+			value = 0x10
+
+		[[Announcement.fields.states]] 
+			name = 'Available for additional OEM-specifc use.'
+			start = 0x11
+			end = 0xFF
+
+
+	[[Announcement.fields]]
+		name = 'VIN/GID sync status'
+		enable = 'doip.payloadlength > 32'
+		length = 8
+
+
+		[[Announcement.fields.states]] 
+			name = 'VIN and/or GID are synchronized'
+			value = 0x00
+			
+		[[Announcement.fields.states]] 
+			name = 'Reserved by this part of ISO 13400'
+			start = 0x01
+			end = 0x0F
+
+		[[Announcement.fields.states]] 
+			name = 'Incomplete: VIN and GID are NOT synchronized.'
+			value = 0x10
+
+		[[Announcement.fields.states]] 
+			name = 'Reserved by this part of ISO 13400'
+			start = 0x11
+			end = 0xFF
+
+[RoutingActivationRequest]
+	[[RoutingActivationRequest.fields]]
+		name = 'Source Address'
+		tag = 'sa'
+		length = 16
+
+	[[RoutingActivationRequest.fields]]
+		name = 'Acrivation Type'
+		length = 8
+	
+		[[RoutingActivationRequest.fields.states]]
+			value = 0x00
+			name = 'Default'
+
+		[[RoutingActivationRequest.fields.states]]
+			value = 0x01
+			name = 'WWH-OBD'
+
+		[[RoutingActivationRequest.fields.states]]
+			start = 0x02
+			end = 0xDF
+			name = 'ISO/SAE reserved'
+
+		[[RoutingActivationRequest.fields.states]]
+			value = 0xE0
+			name = 'Central security'
+
+		[[RoutingActivationRequest.fields.states]]
+			start = 0xE1
+			end = 0xFF
+			name = 'Available for additional OEM-specifc use'
+
+
+	[[RoutingActivationRequest.fields]]
+		name = 'Reserved ISO 13400'
+		length = 32
+
+	[[RoutingActivationRequest.fields]]
+		name = 'Reserved OEM specific'
+		enable = 'doip.payloadlength > 7'
+		length = 32
+
+[RoutingActivationResponse]
+	[[RoutingActivationResponse.fields]]
+		name = 'Logical address of external test equipment'
+		length = 16
+
+	[[RoutingActivationResponse.fields]]
+		name = 'Logical address of DoIP entity'
+		length = 16
+
+	[[RoutingActivationResponse.fields]]
+		name = 'Routing activation response code'
+		length = 8
+
+		[[RoutingActivationResponse.fields.states]]
+			name = 'Routing activation denied due to unknown source address.'
+			value = 0x00
+
+		[[RoutingActivationResponse.fields.states]]
+			name = 'Routing activation denied because all concurrently supported TCP_DATA sockets are registered and active.'
+			value = 0x01
+
+		[[RoutingActivationResponse.fields.states]]
+			name = 'Routing activation denied because an SA different from the table connection entry was received on the already activated TCP_DATA socket.'
+			value = 0x02
+
+		[[RoutingActivationResponse.fields.states]]
+			name = 'Routing activation denied because the SA is already registered and active on a different TCP_DATA socket.'
+			value = 0x03
+
+		[[RoutingActivationResponse.fields.states]]
+			name = 'Routing activation denied due to missing authentication.'
+			value = 0x04
+
+		[[RoutingActivationResponse.fields.states]]
+			name = 'Routing activation denied due to rejected confrmation.'
+			value = 0x05
+
+		[[RoutingActivationResponse.fields.states]]
+			name = 'Routing activation denied due to unsupported routing activation type.'
+			value = 0x06
+
+		[[RoutingActivationResponse.fields.states]]
+			name = 'Reserved by this part of ISO 13400.'
+			start = 0x07
+			end = 0x0F
+
+		[[RoutingActivationResponse.fields.states]]
+			name = 'Routing successfully activated.'
+			value = 0x10
+
+		[[RoutingActivationResponse.fields.states]]
+			name = 'Routing will be activated; confrmation required.'
+			value = 0x11
+
+		[[RoutingActivationResponse.fields.states]]
+			name = 'Reserved by this part of ISO 13400.'
+			start = 0x12
+			end = 0xDF
+
+		[[RoutingActivationResponse.fields.states]]
+			name = 'Vehicle-manufacturer specifc.'
+			value = 0xE0
+			end = 0xFE
+
+		[[RoutingActivationResponse.fields.states]]
+			name = 'Reserved by this part of ISO 13400.'
+			value = 0xFF
+
+
+	[[RoutingActivationResponse.fields]]
+		name = 'Reserved ISO 13400'
+		length = 32
+
+	[[RoutingActivationResponse.fields]]
+		name = 'Reserved OEM specific'
+		enable = 'doip.payloadlength > 9'
+		length = 32
+
+[DiagnosticMessage]
+	[[DiagnosticMessage.fields]]
+		name = 'Source Address'
+		tag = 'sa'
+		length = 16
+
+	[[DiagnosticMessage.fields]]
+		name = 'Target Address'
+		tag = 'ta'
+		length = 16
+
+	[[DiagnosticMessage.fields]]
+		name = 'User Data'
+		length = '( doip.payloadlength - 4 ) * 8'
+
+[DiagnosticMessagePositiveACK]
+	[[DiagnosticMessagePositiveACK.fields]]
+		name = 'Source Address'
+		tag = 'sa'
+		length = 16
+
+	[[DiagnosticMessagePositiveACK.fields]]
+		name = 'Target Address'
+		tag = 'ta'
+		length = 16
+
+	[[DiagnosticMessagePositiveACK.fields]]
+		name = 'ACK Code'
+		length = 8
+
+		[[DiagnosticMessagePositiveACK.fields.states]]
+			value = 0x00
+			name = 'Routing confrmation acknowledge (ACK) message indicating that the diagnostic message was correctly received, processed and put into the transmission buffer of the destination network.'
+		
+		[[DiagnosticMessagePositiveACK.fields.states]]
+			start = 0x01
+			end = 0xFF
+			name = 'Reserved ISO 13400'
+	
+	[[DiagnosticMessagePositiveACK.fields]]
+		name = 'Previous User Data'
+		enable = 'doip.payloadlength > 5'
+		length = '( doip.payloadlength - 5 ) * 8'
+
+
+[DiagnosticMessageNegativeACK]
+	[[DiagnosticMessageNegativeACK.fields]]
+		name = 'Source Address'
+		tag = 'sa'
+		length = 16
+
+	[[DiagnosticMessageNegativeACK.fields]]
+		name = 'Target Address'
+		tag = 'ta'
+		length = 16
+
+	[[DiagnosticMessageNegativeACK.fields]]
+		name = 'NACK Code'
+		length = 8
+
+		[[DiagnosticMessageNegativeACK.fields.states]]
+			name = 'Reserved by this part of ISO 13400'
+			start = 0x00
+			end = 0x01
+
+		[[DiagnosticMessageNegativeACK.fields.states]]
+			name = 'Invalid source address'
+			value = 0x02
+
+		[[DiagnosticMessageNegativeACK.fields.states]]
+			name = 'Unknown target address'
+			value = 0x03
+
+		[[DiagnosticMessageNegativeACK.fields.states]]
+			name = 'Diagnostic message too large'
+			value = 0x04
+
+		[[DiagnosticMessageNegativeACK.fields.states]]
+			name = 'Out of memory'
+			value = 0x05
+
+		[[DiagnosticMessageNegativeACK.fields.states]]
+			name = 'Target unreachable'
+			value = 0x06
+
+		[[DiagnosticMessageNegativeACK.fields.states]]
+			name = 'Unknown network'
+			value = 0x07
+
+		[[DiagnosticMessageNegativeACK.fields.states]]
+			name = 'Transport protocol error'
+			value = 0x08
+
+		[[DiagnosticMessageNegativeACK.fields.states]]
+			name = 'Reserved by this part of ISO 13400'
+			start = 0x09
+			end = 0xFF
+	
+	[[DiagnosticMessageNegativeACK.fields]]
+		name = 'Previous User Data'
+		enable = 'doip.payloadlength > 5'
+		length = '( doip.payloadlength - 5 ) * 8'
+
+
+[AliveCheckResponse]
+	[[AliveCheckResponse.fields]]
+		name = 'Source Address'
+		length = 16
+
+[DiagnosticInformationReesponse]
+	[[DiagnosticInformationReesponse.fields]]
+		name = 'Diagnostic power mode'
+		length = 8
+
+[EntityStatusResponse]
+	[[EntityStatusResponse.fields]]
+		name = 'Node type'
+		length = 8
+
+	[[EntityStatusResponse.fields]]
+		long_name = 'Max. concurrent TCP_DATA socket'
+		name = 'MCTS'
+		length = 8
+
+	[[EntityStatusResponse.fields]]
+		long_name = 'Currently open TCP_DATA sockets'
+		name = 'NCTS'
+		length = 8
+
+	[[EntityStatusResponse.fields]]
+		long_name = 'Max. data size'
+		name = 'MDS'
+		length = 32
