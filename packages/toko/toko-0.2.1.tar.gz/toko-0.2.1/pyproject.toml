@@ -1,0 +1,128 @@
+[project]
+name = "toko"
+version = "0.2.1"
+description = "A token counting cli tool and package"
+readme = "README.md"
+authors = [
+    { name = "Hugh Wimberly", email = "hugh.wimberly@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "genai-prices>=0.0.48",
+    "httpx>=0.28.1",
+    "pathspec>=0.12.1",
+    "rich>=14.2.0",
+    "tiktoken>=0.12.0",
+    "typer>=0.20.0",
+]
+
+[dependency-groups]
+dev = [
+    "codespell>=2.4.1",
+    "commitizen>=4.9.1",
+    "detect-secrets[gibberish]>=1.5.0",
+    "icecream>=2.1.8",
+    "lefthook>=2.0.1",
+    "mdformat-config>=0.2.1",
+    "mdformat-gfm>=1.0.0",
+    "mdformat-ruff>=0.1.3",
+    "mdformat-simple-breaks>=0.0.1",
+    "mdformat>=0.7.22",
+    "ruff>=0.14.2",
+    "ty>=0.0.1a24",
+    "uv-sort>=0.6.1",
+]
+test = [
+    "pytest-asyncio>=1.2.0",
+    "pytest-cov>=7.0.0",
+    "pytest>=8.4.2",
+    "respx>=0.22.0",
+]
+
+[project.scripts]
+toko = "toko.cli:app"
+
+[project.optional-dependencies]
+# HuggingFace transformers for Llama, DeepSeek, Qwen
+transformers = [
+    "transformers>=4.57.1",
+]
+# Mistral official tokenizer (includes sentencepiece for actual tokenization)
+mistral = [
+    "mistral-common[sentencepiece]>=1.8.5",
+]
+all = [
+    "mistral-common[sentencepiece]>=1.8.5",
+    "transformers>=4.57.1",
+]
+
+[build-system]
+requires = ["uv_build>=0.8.15,<0.9.0"]
+build-backend = "uv_build"
+
+[tool.ruff.format]
+docstring-code-format = true
+skip-magic-trailing-comma = true
+
+[tool.ruff.lint]
+# Selecting 'ALL' is very aggressive; add exceptions for any unhelpful annoyances.
+select = ["ALL"]
+ignore = [
+    "ANN4",
+    "B008",
+    "BLE",
+    "C9",
+    "COM",
+    "D1",
+    "E501",
+    "EM",
+    "ERA",
+    "FBT",
+    "FIX",
+    "G",
+    "PLR",
+    "S101",
+    "S608",
+    "T2",
+    "TD",
+    "TRY003",
+]
+
+[tool.ruff.lint.isort]
+split-on-trailing-comma=false
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**.py" = ["ANN"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+asyncio_mode = "auto"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
+filterwarnings = [
+    "ignore:builtin type SwigPyPacked has no __module__ attribute:DeprecationWarning",
+    "ignore:builtin type SwigPyObject has no __module__ attribute:DeprecationWarning",
+    "ignore:builtin type swigvarlink has no __module__ attribute:DeprecationWarning",
+    "ignore:Calling `MistralTokenizer.from_model\\(\\.\\.\\., strict=False\\)` is deprecated:FutureWarning",
+]
+
+[tool.coverage.run]
+source = ["src"]
+
+[tool.coverage.report]
+exclude_also = [
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]
+show_missing = true
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+tag_format = "$version"
+version_scheme = "semver2"
+version_provider = "uv"
+update_changelog_on_bump = true
