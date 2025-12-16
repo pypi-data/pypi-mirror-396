@@ -1,0 +1,107 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "envlog"
+version = "1.0.0"
+description = "Rust RUST_LOG-style environment variable configuration for Python logging"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "Martin Bartlett", email = "martin.j.bartlett@gmail.com"}
+]
+keywords = ["logging", "rust", "environment", "configuration", "dictconfig"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Logging",
+]
+
+[project.urls]
+Homepage = "https://github.com/bassmanitram/python-envlog"
+Repository = "https://github.com/bassmanitram/python-envlog.git"
+"Bug Tracker" = "https://github.com/bassmanitram/python-envlog/issues"
+
+[project.optional-dependencies]
+test = [
+    "pytest>=6.0",
+    "pytest-cov>=3.0.0",
+]
+dev = [
+    "black>=22.0.0",
+    "isort>=5.0.0",
+    "flake8>=4.0.0",
+    "mypy>=0.991",
+    "build>=0.8.0",
+    "twine>=4.0.0",
+    "pre-commit>=3.0.0",
+    "bandit>=1.7.0",
+    "safety>=2.0.0",
+]
+
+[tool.setuptools]
+packages = ["envlog"]
+
+[tool.setuptools.package-data]
+envlog = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+[tool.coverage.run]
+source = ["envlog"]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.black]
+line-length = 100
+target-version = ['py38']
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.mypy]
+warn_return_any = false
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+no_implicit_optional = false
+warn_no_return = false
+warn_unreachable = false
+strict_equality = false
+check_untyped_defs = false
+exclude = [
+    "^build/",
+    "^dist/",
+    "^\\.venv/",
+    "^\\.tox/",
+    "^venv/",
+]
+files = ["envlog"]
