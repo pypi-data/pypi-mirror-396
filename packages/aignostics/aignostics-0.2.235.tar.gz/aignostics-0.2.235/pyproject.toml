@@ -1,0 +1,592 @@
+[project]
+name = "aignostics"
+version = "0.2.235"
+description = "🔬 Python SDK providing access to the Aignostics Platform. Includes Aignostics Launchpad (Desktop Application), Aignostics CLI (Command-Line Interface), example notebooks, and Aignostics Client Library."
+readme = "README.md"
+authors = [
+    { name = "Helmut Hoffer von Ankershoffen", email = "helmut@aignostics.com" },
+    { name = "Andreas Kunft", email = "andreas@aignostics.com" },
+]
+license = { file = "LICENSE" }
+
+keywords = [
+    "aignostics",
+    "atlas",
+    "whole-slide-imaging",
+    "machine-learning",
+    "digital-pathology",
+    "medical-imaging",
+    "qupath",
+    "dicom",
+    "pydicom",
+    "openslide",
+    "image-data-commons",
+    "act",
+    "codecov",
+    "copier",
+    "cyclonedx",
+    "devcontainer",
+    "detect-secrets",
+    "docker",
+    "git-cliff",
+    "jupyter",
+    "marimo",
+    "mypy",
+    "nox",
+    "nicegui",
+    "oe-python-template",
+    "pip-audit",
+    "pip-licenses",
+    "pre-commit",
+    "pydantic",
+    "pytest",
+    "python",
+    "pypi",
+    "readthedocs",
+    "ruff",
+    "sonarqube",
+    "sonarcloud",
+    "sphinx",
+    "typer",
+    "uv",
+]
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: Microsoft :: Windows",
+    "Framework :: Pydantic",
+    "Framework :: Pytest",
+    "Typing :: Typed",
+    "Natural Language :: English",
+]
+
+# WARNING: The upper bound of requires-python is *not* respected by uvx
+requires-python = ">=3.11, <3.15"
+
+dependencies = [
+    # From Template
+    "fastapi[all,standard]>=0.123.10",
+    "humanize>=4.14.0,<5",
+    "nicegui[native]>=3.4.0,<4",
+    "packaging>=25.0,<26",
+    "platformdirs>=4.5.1,<5",
+    "psutil>=7.1.3,<8",
+    "pydantic-settings>=2.12.0,<3",
+    "pywin32>=311,<312; sys_platform == 'win32'",
+    "pyyaml>=6.0.3,<7",
+    "sentry-sdk>=2.47.0,<3",
+    "typer>=0.20.0,<1",
+    "uptime>=3.0.1,<4",
+    # Custom
+    "boto3>=1.42.4,<2",
+    "certifi>=2025.11.12",
+    "defusedxml>=0.7.1",
+    "dicom-validator>=0.7.3,<1",
+    "dicomweb-client[gcp]>=0.59.3,<1",
+    "duckdb>=1.4.2,<=2",
+    "google-cloud-storage>=3.6.0,<4",
+    "crc32c>=2.8,<3", # TODO(Helmut): Remove and back to google_crc32c when that supports Python 3.14
+    "highdicom>=0.26.1,<1; python_version < '3.14'", # transitive dependency pyjpegls not yet supporting Python 3.14
+    "html-sanitizer>=2.6.0,<3",
+    "httpx>=0.28.1,<1",
+    "idc-index-data==23.0.2",
+    "ijson>=3.4.0.post0,<4",
+    "jsf>=0.11.2,<1",
+    "jsonschema[format-nongpl]>=4.25.1,<5",
+    "loguru>=0.7.3,<1",
+    "openslide-bin>=4.0.0.10,<5",
+    "openslide-python>=1.4.3,<2",
+    "pandas>=2.3.3,<3",
+    "platformdirs>=4.3.2,<5",
+    "procrastinate>=3.5.3",
+    "fastparquet>=2024.11.0; python_version < '3.14'",
+    "pyarrow>=22.0.0,<23; python_version >= '3.14'",
+    "pyjwt[crypto]>=2.10.1,<3",
+    "python-dateutil>=2.9.0.post0,<3",
+    # "pywebview[qt6]>=5.4,<6; sys_platform == 'linux'",
+    "requests>=2.32.5,<3",
+    "requests-oauthlib>=2.0.0,<3",
+    "s5cmd>=0.3.3,<1",
+    "semver>=3.0.4,<4",
+    "shapely>=2.1.2,<3",
+    "tenacity>=9.1.2,<10",
+    "tqdm>=4.67.1,<5",
+    "truststore>=0.10.4,<1",
+    "urllib3>=2.6.1,<3",
+    "wsidicom>=0.28.1,<1",
+    # Transitive overrides
+    # WARNING: one cannot negate or downgrade a dependency required here. use override-dependencies for that.
+    "rfc3987; sys_platform == 'never'", # GPLv3
+    "h11>=0.16.0",                      # CVE-2025-43859
+    "tornado>=6.5.0",                   # CVE-2025-47287
+    "urllib3>=2.5.0",                   # CVE-2025-50181, CVE-2025-50182,
+    "pillow>=11.3.0",                   # CVE-2025-48379,
+    "aiohttp>=3.12.14",                 # CVE-2025-53643
+    "starlette>=0.47.2",                # CVE-2025-54121
+    "starlette>=0.49.1",                # GHSA-7f5h-v6xp-fcq8
+    "lxml>=6.0.2",                      # For python 3.14 pre-built wheels
+]
+
+[project.optional-dependencies]
+pyinstaller = ["pyinstaller>=6.14.0,<7"]
+jupyter = [
+    "jupyter>=1.1.1,<2",    
+    # Transitive overrides
+    # WARNING: one cannot negate or downgrade a dependency required here. use override-dependencies for that.
+    "jupyter-core>=5.8.1",              # CVE-2025-30167
+    "jupyterlab>=4.4.9",                # CVE-2025-59842
+]
+marimo = [
+    "cloudpathlib>=0.23.0,<1",
+    "ipython>=9.8.0,<10",
+    "marimo>=0.18.4,<1",
+    "matplotlib>=3.10.7,<4",
+    "shapely>=2.1.0,<3",
+]
+qupath = []
+[dependency-groups]
+dev = [
+    "autodoc-pydantic>=2.2.0,<3",
+    "bump-my-version>=1.2.4,<2",
+    "cyclonedx-py>=1.0.1,<2",
+    "detect-secrets>=1.5.0,<2",
+    "enum-tools>=0.13.0,<1",
+    "furo>=2025.9.25",
+    "git-cliff>=2.10.1,<3",
+    "mypy>=1.19.0,<2",
+    "myst-parser>=4.0.1,<5",
+    "nox[uv]>=2025.11.12",
+    "pip-audit>=2.10.0,<3",
+    "pip-licenses @ git+https://github.com/neXenio/pip-licenses.git@master", # https://github.com/raimon49/pip-licenses/pull/224
+    "pre-commit>=4.5.0,<5",
+    "pyright>=1.1.406,<1.1.407", # Regression in 1.1.407, see https://github.com/microsoft/pyright/issues/11060
+    "pytest>=9.0.2,<10",
+    "pytest-asyncio>=1.3.0,<2",
+    "pytest-cov>=7.0.0,<8",
+    "pytest-docker>=3.2.5,<4",
+    "pytest-durations>=1.6.1,<2",
+    "pytest-env>=1.2.0,<2",
+    "pytest-md-report>=0.7.0,<1",
+    "pytest-regressions>=2.8.3,<3",
+    "pytest-retry>=1.7.0,<2",
+    "pytest-selenium>=4.1.0,<5",
+    "pytest-subprocess>=1.5.3,<2",
+    "pytest-timeout>=2.4.0,<3",
+    "pytest-watcher>=0.4.3,<1",
+    "pytest-xdist[psutil]>=3.8.0,<4",
+    "ruff>=0.14.8,<1",
+    "scalene>=1.5.55,<2",
+    "sphinx>=8.2.3,<9",
+    "sphinx-autobuild>=2025.8.25,<2026",
+    "sphinx-click>=6.2.0,<7",
+    "sphinx-copybutton>=0.5.2,<1",
+    "sphinx-inline-tabs>=2023.4.21,<2024",
+    "linkify-it-py>=2.0.3,<3",
+    "sphinx-rtd-theme>=3.0.2,<4",
+    "sphinx_selective_exclude>=1.0.3,<2",
+    "sphinx-toolbox>=4.1.0,<5",
+    "sphinxcontrib.mermaid",  # https://github.com/mgaitan/sphinxcontrib-mermaid
+    "sphinxext.opengraph>=0.9.1,<1",
+    "swagger-plugin-for-sphinx>=6.1.0,<7",
+    "tomli>=2.3.0,<3",
+    "types-pyyaml>=6.0.12.20250915,<7",
+    "types-requests>=2.32.4.20250913,<3",
+    "watchdog>=6.0.0,<7",
+    # Transitive overrides
+    # WARNING: one cannot negate or downgrade a dependency required here. use override-dependencies for that.
+    "pip>=5.3",                         # CVE-2025-8869  
+    "uv>=0.9.7",                        # CVE-2025-54368, GHSA-w476-p2h3-79g9, GHSA-pqhf-p39g-3x64
+    "fonttools>=4.60.2",                # CVE-2025-66034 (GHSA-768j-98cg-p3fv), dep of matplotlib
+]
+
+[tool.uv]
+required-version = ">=0.9.7" # CVE-2025-54368, GHSA-w476-p2h3-79g9, GHSA-pqhf-p39g-3x64
+# WARNING: override-dependencies is *not* respected by uvx
+override-dependencies = [ # https://github.com/astral-sh/uv/issues/4422
+    "pytest>=9.0.1",    # pytest-md-report depends on pytest<9 unnecessarily
+]
+
+[tool.uv.sources]
+# No additional sources outside of src/ yet
+
+[project.scripts]
+aignostics = "aignostics.cli:cli"
+
+[project.urls]
+Homepage = "https://aignostics.readthedocs.io/en/latest/"
+Documentation = "https://aignostics.readthedocs.io/en/latest/"
+Source = "https://github.com/aignostics/python-sdk"
+Changelog = "https://github.com/aignostics/python-sdk/releases"
+Issues = "https://github.com/aignostics/python-sdk/issues"
+
+[build-system]
+requires = ["hatchling==1.28.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+include = ["src/*", "codegen/out/*", "examples"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/aignostics", "codegen/out/aignx", "examples"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.ruff]
+target-version = "py311"
+preview = true
+fix = true
+line-length = 120
+extend-exclude = [
+    ".fixme",
+    "notebook.py",
+    "_notebook.py",
+    "template/*.py",
+    "**/third_party/*.py",
+    "examples/*.py",
+    "examples/*.ipynb",
+    "codegen",
+]
+
+[tool.ruff.lint]
+select = ["ALL"]
+
+ignore = [
+    "ANN002",   # missing type annotation for `*args` -> provides no value
+    "ANN003",   # missing type annotation for `**kwargs`` -> provides no value
+    "ASYNC109", # async function definition with a `timeout` parameter  -> as mentioned by ruff, "This rule is highly opinionated and may not be suitable for all use cases."
+    "CPY001",   # missing copyright notice -> not for OSS
+    "DOC502",   # docstrings with exceptions not raised in the code of the function -> not always necessary
+    "D203",     # incomptatible with D211 -> prefer D211
+    "D212",     # incompatible with D213 -> prefer D213
+    "FBT001",   # boolean positional arguments -> disagree
+    "FBT002",   # boolean defautl value positionl arguments -> disagree
+    "FBT003",   # boolean positional value in function call -> disagree
+    "PGH003",   # use specific rule codes when ignoring type issues -> quite a hassle, no value
+    "TRY300",   # else instead of return before except. -> strongly disagree, hinders readabilty.
+    "COM812",   # conflicts with ruff formatter -> not feasible nor recommended
+    "ISC001",   # conflicts with ruff formatter -> not feasible nor recommended
+    "S404",     # subprocess` module is possibly insecure -> as mentioned by ruff, unstable and preview
+    "FIX002",   # line contains todo -> yes, that's what todo's are for?!
+    "TD003",    # missing issue link for todo -> not in OSS
+    "PTH123",   # use of open to be replaced with Path.open,
+    "T201",     # Remove `print`
+    "INP001",   # Checks for packages that are missing an __init__.py file.
+    "BLE001",   # Accept for now TODO(Helmut): Add proper exception handling later
+    "ASYNC240"  # Aiopath broken in Python 3.11 which we want to support
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**/*.py" = [
+    # we are more relaxed in tests, while sill applying hundreds of rules
+    "S101",     # asserts allowed in tests...
+    "ARG",      # unused function args -> fixtures nevertheless are functionally relevant...
+    "FBT",      # don't care about booleans as positional arguments in tests, e.g. via @pytest.mark.parametrize()
+    "PLR2004",  # magic value used in comparison, ...
+    "PT011",    # exception to broad
+    "PLC2701",  # private import, but required for unit testing
+    "PLC0415",  # local import
+    "PT012",    # exception to broad
+    "S311",     # standard pseudo-random generators are not suitable for cryptographic purposes
+    "SLF001",   # private member access required for unit testing
+    "S603",     # check for execution of untrusted input
+    "ANN001",   # missing type annotation for function argument
+    "ANN002",   # missing type annotation
+    "ANN003",   # missing type annotation
+    "ANN202",   # missing return type annotation
+    "DOC201",   # `return` is not documented in docstring
+    "ASYNC230", # async functions should not open files with blocking methods like `open`
+    "S104",     # bind to all ports
+    "S607",     # subprocess with partial path
+]
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.mypy] # https://mypy.readthedocs.io/en/latest/config_file.html
+exclude = ["src/aignostics/third_party", "_notebook.py", "_pydicom_handler.py"]
+junit_xml = "reports/mypy_junit.xml"
+plugins = "pydantic.mypy"
+strict = true
+disallow_subclassing_any = false
+disallow_untyped_decorators = false
+ignore_missing_imports = true
+pretty = true
+show_column_numbers = true
+show_error_codes = true
+show_error_context = true
+warn_unreachable = true
+
+[tool.pydantic-mypy] # https://docs.pydantic.dev/latest/integrations/mypy/#configuring-the-plugin
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+warn_untyped_fields = true
+
+[tool.pytest.ini_options]
+main_file = "tests/main.py"
+testpaths = ["tests"]
+python_files = ["*_test.py", "test_*.py"]
+addopts = "-p nicegui.testing.plugin -v --strict-markers --log-disable=aignostics --cov=aignostics --cov-report=term-missing --cov-report=xml:reports/coverage.xml --cov-report=html:reports/coverage_html"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+timeout = 10 # We use a rather short default timeout. Override with @pytest.mark.timeout(timeout=N)
+# timeout_method="signal" 
+env = [
+    "COVERAGE_FILE=.coverage",
+    "COVERAGE_PROCESS_START=pyproject.toml",
+    "AIGNOSTICS_CONSOLE_WIDTH=10000",  # Prevent Rich console from wrapping text, which can break string assertions
+]
+markers = [
+    # From Template
+    "no_extras: Tests that do require no extras installed.",
+    "scheduled: Tests to run on a schedule. They will still be part on non-scheduled test executions.",
+    "scheduled_only: Tests to run on a schedule only.",
+    "sequential: Exclude from parallel test execution.",
+    "skip_with_act: Don't run with act.",
+    "stress: Tests to run as part of 5 minute stress test schedule.",
+    "stress_only: Tests to run as part of 5 minute stress test schedule only.",
+    "docker: That require Docker.",
+    "long_running: Tests with a test timeout >=5 min and < 60 min. CI/CD will run long running tests with one Python version only. When calling `make` long running tests are excluded - use `make test_long_running` instead.",
+    "very_long_running: Tests with a test timeout >= 60 min. CI/CD will run very long running tests with one Python version only. When calling `make` very long runing tests are excluded - use `make test_very_long_running` instead.",
+    # Test Categories (following Martin Fowler's Solitary vs Sociable unit test distinction)
+    "unit: Solitary unit tests - test a layer of a module in isolation with all dependencies mocked, except interaction with shared utils and the systems module. Unit tests must be able to pass offline, i.e. not calls to external services. The timeout should not be bigger than the default 10s, and must be <5 min.",
+    "integration: Sociable integration tests - test interactions across architectural layers (e.g. CLI/GUI→Service, Service→Utils) or between modules (e.g. Application→Platform), using real SDK collaborators, real file I/O, real subprocesses, and real Docker containers. Integration test must be able to pass offline, i.e. mock external services (Aignostics Platform API, Auth0, S3/GCS buckets, IDC). The timeout should not be bigger than the default 10s, and must be <5 min.",
+    "e2e: End-to-end tests - test complete workflows with real external network services (Aignostics Platform API, cloud storage, IDC, etc). If the test timeout is >= 5 min and < 60 min, additionally mark as `long_running`, if >= 60min mark as 'very_long_running'.",
+]
+md_report = true
+md_report_output = "reports/pytest.md"
+md_report_verbose = 1
+md_report_flavor = "github"
+md_report_color = "never"
+md_report_exclude_outcomes = ["passed", "skipped"]
+
+[tool.coverage.run]
+sigterm = true
+relative_files = true
+source = ["src"]
+omit = [
+    "src/aignostics/aignostics.py",
+    "src/aignostics/third_party/*",
+    "src/aignostics/notebook/_notebook.py",
+    "src/aignostics/wsi/_pydicom_handler.py",
+    "src/aignostics/wsi/_openslide_handler.py",
+]
+branch = true
+parallel = true
+concurrency = ["thread", "multiprocessing"]
+
+[tool.coverage.paths]
+source = ["src/"]
+
+
+[tool.bumpversion]
+current_version = "0.2.235"
+parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)"
+serialize = ["{major}.{minor}.{patch}"]
+search = "{current_version}"
+replace = "{new_version}"
+regex = false
+ignore_missing_version = false
+ignore_missing_files = false
+tag = true
+sign_tags = false
+tag_name = "v{new_version}"
+allow_dirty = false
+commit = true
+commit_args = "--no-verify"
+tag_message = "Bump version: {current_version} → {new_version}"
+message = "Bump version: {current_version} → {new_version}"
+# Note: Uncomment the following line to avoid running tests and ketryx during version bumps
+#message = "Bump version: {current_version} → {new_version} [skip:test:all,skip:ketryx]"
+#tag_message = "Bump version: {current_version} → {new_version} [skip:test:all,skip:ketryx]"
+setup_hooks = []
+pre_commit_hooks = [
+    "uv sync",
+    "git add uv.lock",
+    "uv run git-cliff --tag $BVHOOK_NEW_VERSION",
+    "rm -f CHANGELOG.md.tmp",
+    "git add CHANGELOG.md",
+]
+post_commit_hooks = []
+
+[[tool.bumpversion.files]]
+filename = "pyproject.toml"
+search = """
+[project]
+name = \"aignostics\"
+version = \"{current_version}\""""
+replace = """
+[project]
+name = \"aignostics\"
+version = \"{new_version}\""""
+
+[[tool.bumpversion.files]]
+filename = "VERSION"
+
+[[tool.bumpversion.files]]
+filename = "sonar-project.properties"
+
+[[tool.bumpversion.files]]
+filename = "docs/source/conf.py"
+
+[[tool.bumpversion.files]]
+filename = "examples/notebook.py"
+
+[[tool.bumpversion.files]]
+filename = "aignostics.spec"
+search = "version='{current_version}'"
+replace = "version='{new_version}'"
+
+[[tool.bumpversion.files]]
+filename = "CLI_REFERENCE.md"
+search = "🔬 Aignostics Python SDK v{current_version}"
+replace = "🔬 Aignostics Python SDK v{new_version}"
+
+[tool.git-cliff.remote.github]
+owner = "aignostics"
+repo = "python-sdk"
+
+[tool.git-cliff.changelog]
+output = "CHANGELOG.md"
+render = true
+# template for the changelog header
+header = """
+[🔬 Aignostics Python SDK](https://aignostics.readthedocs.io/en/latest/)\n
+"""
+# template for the changelog body
+# https://keats.github.io/tera/docs/#introduction
+body = """
+
+{%- macro remote_url() -%}
+https://github.com/{{ remote.github.owner }}/{{ remote.github.repo }}
+{%- endmacro -%}
+
+{% macro print_commit(commit) -%}
+- {% if commit.scope %}*({{ commit.scope }})* {% endif %}\
+        {% if commit.breaking %}[**breaking**] {% endif %}\
+        {{ commit.message | upper_first }} - \
+        ([{{ commit.id | truncate(length=7, end="") }}]({{ self::remote_url() }}/commit/{{ commit.id }}))\
+{% endmacro -%}
+
+{% if version %}\
+    {% if previous.version %}\
+        # [{{ version }}]({{ self::remote_url() }}/compare/{{ previous.version }}..{{ version }}) - {{ timestamp | date(format="%Y-%m-%d") }}
+    {% else %}\
+    {% endif %}\
+{% else %}\
+
+{% endif %}\
+
+{% for group, commits in commits | group_by(attribute="group") %}
+    ### {{ group | striptags | trim | upper_first }}
+    {% for commit in commits
+    | unique(attribute="message")
+    | filter(attribute="scope")
+    | sort(attribute="scope") %}
+        {{ self::print_commit(commit=commit) }}
+    {%- endfor %}
+    {% for commit in commits
+    | unique(attribute="message") %}
+        {%- if not commit.scope -%}
+            {{ self::print_commit(commit=commit) }}
+        {% endif -%}
+    {% endfor -%}
+{% endfor -%}
+{%- if github -%}
+{% if github.contributors | filter(attribute="is_first_time", value=true) | length != 0 %}
+
+{% endif %}\
+{% for contributor in github.contributors | filter(attribute="is_first_time", value=true) %}
+  * @{{ contributor.username }} made their first contribution
+    {%- if contributor.pr_number %} in \
+[#{{ contributor.pr_number }}]({{ self::remote_url() }}/pull/{{ contributor.pr_number }}) \
+    {%- endif %}
+{%- endfor -%}
+{%- endif %}
+
+
+"""
+# template for the changelog footer
+footer = """
+"""
+
+## [{{ version | trim_start_matches(pat="v") }}]\
+## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
+## [unreleased]
+### {{ group | striptags | trim | upper_first }}
+## New Contributors ❤️
+## [{{ version | trim_start_matches(pat="v") }}]\
+## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
+## [unreleased]
+### {{ group | striptags | trim | upper_first }}
+## New Contributors ❤️
+# remove the leading and trailing whitespace from the templates
+trim = true
+# postprocessors
+postprocessors = [
+    { pattern = '<REPO>', replace = "https://github.com/orhun/git-cliff" }, # replace repository URL
+]
+
+
+[tool.git-cliff.git]
+# parse the commits based on https://www.conventionalcommits.org
+conventional_commits = true
+# filter out the commits that are not conventional
+filter_unconventional = true
+# process each line of a commit as an individual commit
+split_commits = true
+# regex for preprocessing the commit messages
+commit_preprocessors = [
+    { pattern = '\((\w+\s)?#([0-9]+)\)', replace = "([#${2}](<REPO>/issues/${2}))" },
+    { pattern = '^[-*]?\s+(\w+)\s+\(([^)]+)\):', replace = "* ${1}(${2}):" },
+    { pattern = '^[-*]\s+', replace = "" },
+]
+# regex for parsing and grouping commits
+commit_parsers = [
+    { message = "^feat|^feature", group = "<!-- 0 -->⛰️  Features" },
+    { message = ".*security.*", group = "<!-- 8 -->🛡️ Security" },
+    { message = "^sec", group = "<!-- 8 -->🛡️ Security" },
+    { message = "^fix", group = "<!-- 1 -->🐛 Bug Fixes" },
+    { message = "^doc|^documentation", group = "<!-- 3 -->📚 Documentation" },
+    { message = "^perf|^performance", group = "<!-- 4 -->⚡ Performance" },
+    { message = "^refactor\\(clippy\\)", skip = true },
+    { message = "^refactor", group = "<!-- 2 -->🚜 Refactor" },
+    { message = "^style", group = "<!-- 5 -->🎨 Styling" },
+    { message = "^test|^testing", group = "<!-- 6 -->🧪 Testing" },
+    { message = "^chore\\(release\\): prepare for", skip = true },
+    { message = "^chore\\(pr\\)", skip = true },
+    { message = "^chore\\(pull\\)", skip = true },
+    { message = "^chore\\(npm\\).*yarn\\.lock", skip = true },
+    { message = "^chore|^ci", group = "<!-- 7 -->⚙️ Miscellaneous Tasks" },
+    { body = ".*security", group = "<!-- 8 -->🛡️ Security" },
+    { message = "^revert", group = "<!-- 9 -->◀️ Revert" },
+]
+# protect breaking changes from being skipped due to matching a skipping commit_parser
+protect_breaking_commits = false
+# filter out the commits that are not matched by commit parsers
+filter_commits = false
+# regex for matching git tags
+tag_pattern = "v[0-9].*"
+# regex for skipping tags
+skip_tags = "beta|alpha"
+# regex for ignoring tags
+ignore_tags = "rc"
+# sort the tags topologically
+topo_order = false
+# sort the commits inside sections by oldest/newest order
+sort_commits = "newest"
