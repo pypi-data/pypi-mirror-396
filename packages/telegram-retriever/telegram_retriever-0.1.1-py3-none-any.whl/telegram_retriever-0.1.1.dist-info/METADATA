@@ -1,0 +1,51 @@
+Metadata-Version: 2.4
+Name: telegram-retriever
+Version: 0.1.1
+Summary: A Human-in-the-Loop retriever for LangChain that pauses execution to wait for a Telegram reply.
+Project-URL: Documentation, https://github.com/l3onlau/telegram-retriever#readme
+Project-URL: Issues, https://github.com/l3onlau/telegram-retriever/issues
+Project-URL: Source, https://github.com/l3onlau/telegram-retriever
+Author: l3onlau
+License: Copyright (c) 2025 l3onlau
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+License-File: LICENSE
+Keywords: agent,human-in-the-loop,langchain,retriever,telegram
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Requires-Python: >=3.9
+Requires-Dist: httpx>=0.24.0
+Requires-Dist: langchain-core>=0.1.0
+Requires-Dist: pydantic>=2.0.0
+Description-Content-Type: text/markdown
+
+# telegram-retriever
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+
+**telegram-retriever** is a lightweight Python library designed to integrate "Human-in-the-Loop" capabilities into LangChain workflows. 
+
+Unlike standard retrievers that search databases, this tool allows an LLM agent to **pause execution**, send a query to a specific Telegram user, and **synchronously wait** for a text-based reply. The user's reply is returned to the agent as the retrieved context.
+
+## Key Features
+
+- **Interactive Retrieval:** The `invoke()` method blocks until a human replies.
+- **Strict Threading:** Validates that the incoming message is an explicit "Reply To" the bot's question.
+- **Zero Infrastructure:** Uses Long Polling. No webhooks, public IPs, or databases required.
+- **Text-Only:** Filters out stickers, photos, and voice notes to ensure clean LLM input.
+
+## Installation
+
+```bash
+pip install telegram-retriever
