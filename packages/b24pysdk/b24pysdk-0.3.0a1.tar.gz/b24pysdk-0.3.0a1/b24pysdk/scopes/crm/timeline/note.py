@@ -1,0 +1,158 @@
+from typing import Text
+
+from ....bitrix_api.requests import BitrixAPIRequest
+from ....utils.functional import type_checker
+from ....utils.types import Timeout
+from .._base_crm import BaseCRM
+
+__all__ = [
+    "Note",
+]
+
+
+class Note(BaseCRM):
+    """The methods provide capabilities for working with Notes in timeline.
+
+    Documentation: https://apidocs.bitrix24.com/api-reference/crm/timeline/note/index.html
+    """
+
+    @type_checker
+    def get(
+            self,
+            *,
+            entity_type_id: int,
+            entity_id: int,
+            item_type: int,
+            item_id: int,
+            timeout: Timeout = None,
+    ) -> BitrixAPIRequest:
+        """Get Information about note.
+
+        Documentation: https://apidocs.bitrix24.com/api-reference/crm/timeline/note/crm-timeline-note-get.html
+
+        This method returns information about a note related to a timeline record.
+
+        Args:
+            entity_type_id: Identifier of the entity type to which the record belongs;
+
+            entity_id: Identifier of the entity to which the record belongs;
+
+            item_type: Type of the record to which the note should be applied:
+
+                - 1 — history record
+                - 2 — deal;
+
+            item_id: Identifier of the record to which the note should be applied;
+
+            timeout: Timeout in seconds.
+
+        Returns:
+            Instance of BitrixAPIRequest
+        """
+
+        params = {
+            "entityTypeId": entity_type_id,
+            "entityId": entity_id,
+            "itemType": item_type,
+            "itemId": item_id,
+        }
+
+        return self._make_bitrix_api_request(
+            api_wrapper=self.get,
+            params=params,
+            timeout=timeout,
+        )
+
+    @type_checker
+    def delete(
+            self,
+            *,
+            entity_type_id: int,
+            entity_id: int,
+            item_type: int,
+            item_id: int,
+            timeout: Timeout = None,
+    ) -> BitrixAPIRequest:
+        """Delete note.
+
+        Documentation: https://apidocs.bitrix24.com/api-reference/crm/timeline/note/crm-timeline-note-delete.html
+
+        Args:
+            entity_type_id: Identifier of the entity type to which the record belongs;
+
+            entity_id: Identifier of the entity to which the record belongs;
+
+            item_type: Type of the record to which the note should be applied:
+
+                - 1 — history record
+                - 2 — deal;
+
+            item_id: Identifier of the record to which the note should be applied;
+
+            timeout: Timeout in seconds.
+
+        Returns:
+            Instance of BitrixAPIRequest
+        """
+
+        params = {
+            "entityTypeId": entity_type_id,
+            "entityId": entity_id,
+            "itemType": item_type,
+            "itemId": item_id,
+        }
+
+        return self._make_bitrix_api_request(
+            api_wrapper=self.delete,
+            params=params,
+            timeout=timeout,
+        )
+
+    @type_checker
+    def save(
+            self,
+            *,
+            entity_type_id: int,
+            entity_id: int,
+            item_type: int,
+            item_id: int,
+            text: Text,
+            timeout: Timeout = None,
+    ) -> BitrixAPIRequest:
+        """Save note.
+
+        Documentation: https://apidocs.bitrix24.com/api-reference/crm/timeline/note/crm-timeline-note-save.html
+
+        Args:
+            entity_type_id: Identifier of the entity type to which the record belongs;
+
+            entity_id: Identifier of the entity to which the record belongs;
+
+            item_type: Type of the record to which the note should be applied:
+
+                - 1 — history record
+                - 2 — deal;
+
+            item_id: Identifier of the record to which the note should be applied;
+
+            text: Note text;
+
+            timeout: Timeout in seconds.
+
+        Returns:
+            Instance of BitrixAPIRequest
+        """
+
+        params = {
+            "entityTypeId": entity_type_id,
+            "entityId": entity_id,
+            "itemType": item_type,
+            "itemId": item_id,
+            "text": text,
+        }
+
+        return self._make_bitrix_api_request(
+            api_wrapper=self.save,
+            params=params,
+            timeout=timeout,
+        )
