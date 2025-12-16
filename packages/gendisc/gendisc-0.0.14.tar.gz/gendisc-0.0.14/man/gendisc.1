@@ -1,0 +1,297 @@
+.\" Man page generated from reStructuredText.
+.
+.
+.nr rst2man-indent-level 0
+.
+.de1 rstReportMargin
+\\$1 \\n[an-margin]
+level \\n[rst2man-indent-level]
+level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
+-
+\\n[rst2man-indent0]
+\\n[rst2man-indent1]
+\\n[rst2man-indent2]
+..
+.de1 INDENT
+.\" .rstReportMargin pre:
+. RS \\$1
+. nr rst2man-indent\\n[rst2man-indent-level] \\n[an-margin]
+. nr rst2man-indent-level +1
+.\" .rstReportMargin post:
+..
+.de UNINDENT
+. RE
+.\" indent \\n[an-margin]
+.\" old: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.nr rst2man-indent-level -1
+.\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.in \\n[rst2man-indent\\n[rst2man-indent-level]]u
+..
+.TH "GENDISC" "1" "May 24, 2025" "0.0.14" "gendisc"
+.SH NAME
+gendisc \- gendisc v0.0.14
+.sp
+Generate scripts to create disc ISOs from a directory structure (mostly) maximising use of the available
+space on each disc. This is useful for creating backups of large amounts of data that do not fit on
+a single disc. Directories larger than a disc are split into multiple discs.
+.SH COMMANDS
+.SS gendisc
+.sp
+Make a file listing filling up discs.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.EX
+gendisc [OPTIONS] PATH
+.EE
+.UNINDENT
+.UNINDENT
+.sp
+Options
+.INDENT 0.0
+.TP
+.B \-\-cross\-fs
+Allow crossing file systems.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-D, \-\-drive <drive>
+Drive path.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-d, \-\-debug
+Enable debug logging.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-i, \-\-starting\-index <INDEX>
+Index to start with (defaults to 1).
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-o, \-\-output\-dir <output_dir>
+Output directory. Will be created if it does not exist.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-p, \-\-prefix <prefix>
+Prefix for volume ID and files.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-r, \-\-delete
+Unlink instead of sending to trash.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-no\-labels
+Do not create labels.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-cd\-write\-speed <cd_write_speed>
+CD\-R write speed.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-dvd\-write\-speed <dvd_write_speed>
+DVD\-R write speed.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-dvd\-dl\-write\-speed <dvd_dl_write_speed>
+DVD\-R DL write speed.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-bd\-write\-speed <bd_write_speed>
+BD\-R write speed.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-bd\-dl\-write\-speed <bd_dl_write_speed>
+BD\-R DL write speed.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-bd\-tl\-write\-speed <bd_tl_write_speed>
+BD\-R TL write speed.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-bd\-xl\-write\-speed <bd_xl_write_speed>
+BD\-R XL write speed.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-preparer <preparer>
+Preparer string (128 characters).
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-publisher <publisher>
+Publisher string (128 characters).
+.UNINDENT
+.sp
+Arguments
+.INDENT 0.0
+.TP
+.B PATH
+Required argument
+.UNINDENT
+.SS Output
+.sp
+The output consists of a series of shell scripts (1 for each disc) that perform the following steps:
+.INDENT 0.0
+.IP \(bu 2
+Generate the ISO image for the current set using \fBmkisofs\fP\&.
+.IP \(bu 2
+Save a SHA256 checksum of the image for verification.
+.IP \(bu 2
+Save a directory tree listing (requires \fBtree\fP).
+.IP \(bu 2
+Save a file listing using \fBfind\fP\&.
+.IP \(bu 2
+Prompt to insert a blank disc. It will tell you the kind of disc to use.
+.IP \(bu 2
+Burn the image to disc using \fBcdrecord\fP\&.
+.IP \(bu 2
+Eject and re\-insert the disc.
+.IP \(bu 2
+Verify the disc.
+.IP \(bu 2
+Delete or move the source files to the bin.
+.IP \(bu 2
+Eject the disc.
+.IP \(bu 2
+Prompt to move the disc to a label printer.
+.IP \(bu 2
+Open GIMP if you have it installed to the printer dialogue.
+.UNINDENT
+.sp
+If you have \fImogrify\fP (ImageMagick) and Inkscape installed, a label will be generated. This label
+can be opened in a tool that supports disc printing (such as GIMP). The image should be ready for
+printing (under \fIImage Settings\fP you should see it is exactly 12 cm at DPI 600).
+.sp
+Many of the steps above can be skipped by passing flags to the script. Currently the script supports
+these options:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.EX
+Usage: script.sh [\-h] [\-G] [\-K] [\-k] [\-O] [\-s] [\-S] [\-V]
+All flags default to no.
+  \-h: Show this help message.
+  \-G: Do not open GIMP on completion (if label file exists).
+  \-K: Keep ISO image after burning.
+  \-k: Keep source files after burning.
+  \-O: Only create ISO image.
+  \-s: Skip clean\-up of .directory files.
+  \-S: Skip ejecting tray for blank disc (assume already inserted).
+  \-V: Skip verification of burnt disc.
+.EE
+.UNINDENT
+.UNINDENT
+.SH LABEL GENERATION
+.SS genlabel
+.sp
+Generate an image intended for printing on disc consisting of text in a spiral.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.EX
+genlabel [OPTIONS] [TEXT]...
+.EE
+.UNINDENT
+.UNINDENT
+.sp
+Options
+.INDENT 0.0
+.TP
+.B \-E, \-\-end\-theta <end_theta>
+End theta.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-H, \-\-height <height>
+Height of the image.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-S, \-\-space\-per\-loop <space_per_loop>
+Space per loop.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-T, \-\-start\-theta <start_theta>
+Start theta.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-V, \-\-view\-box <view_box>
+SVG view box.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-dpi <dpi>
+Dots per inch.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-keep\-svg
+When generating the PNG, keep the SVG file.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-c, \-\-center <center>
+Center of the spiral.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-d, \-\-debug
+Enable debug logging.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-f, \-\-font\-size <font_size>
+Font size.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-g, \-\-svg
+Output SVG.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-o, \-\-output <output>
+Output file name.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-r, \-\-start\-radius <start_radius>
+Start radius.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-t, \-\-theta\-step <theta_step>
+Theta step.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-w, \-\-width <width>
+Width of the image.
+.UNINDENT
+.sp
+Arguments
+.INDENT 0.0
+.TP
+.B TEXT
+Optional argument(s)
+.UNINDENT
+.SH AUTHOR
+Andrew Udvare <audvare@gmail.com>
+.SH COPYRIGHT
+2025
+.\" Generated by docutils manpage writer.
+.
