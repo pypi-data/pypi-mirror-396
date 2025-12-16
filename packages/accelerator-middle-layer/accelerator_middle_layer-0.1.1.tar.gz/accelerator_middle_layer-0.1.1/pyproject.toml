@@ -1,0 +1,106 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "pyaml/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+  "/.github",
+  "/docs",
+  "/tests",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["pyaml"]
+
+[project]
+name = "accelerator-middle-layer"
+description = "Python Accelerator Middle Layer"
+readme = "README.md"
+requires-python = ">=3.9"
+dynamic = ["version"]
+#license = {file = "LICENSE"}
+keywords = ["Accelerator", "Synchrotron", "Operation", "Tuning", "Digital Twin", "Commissioning", ]
+maintainers = [
+    {name = "Simone Maria Liuzzo", email = "simone.liuzzo@esrf.fr"}
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Natural Language :: English",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+
+dependencies = [
+    "numpy>=1.21.0",
+    "scipy>=1.7.3",
+    "accelerator-toolbox>=0.6.1",
+    "PyYAML>=6.0.2",
+    "pydantic>=2.11.7",
+    "h5py",
+    "matplotlib"
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.4",
+    "pytest-cov>=3.0",
+]
+doc = [
+    "sphinx",
+    "travis-sphinx",
+    "sphinx-rtd-theme"
+]
+
+dev = [
+    "pre-commit",
+    "ruff",
+    "mypy",
+    "pytest",
+]
+
+[project.urls]
+Homepage = "https://github.com/python-accelerator-middle-layer/pyaml"
+Documentation = "https://python-accelerator-middle-layer.github.io/pyaml/"
+Repository = "https://github.com/python-accelerator-middle-layer/pyaml.git"
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+# Basic, sane default set: pycodestyle (E,W), pyflakes (F),
+# bugbear (B), imports (I), etc.
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "B",  # flake8-bugbear
+    "I",  # isort-style import sorting
+]
+ignore = [
+    "E203",  # so it's compatible with black-style formatting
+    "F401",  # unused imports
+    "F841",  # unused local variables
+    "E741",  # ambiguous variable name
+    "B024",  # abstract class with no methods
+]
+
+[tool.ruff.format]
+line-ending = "lf"
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+
+[tool.mypy]
+python_version = "3.11"
+strict = false
+ignore_missing_imports = true
