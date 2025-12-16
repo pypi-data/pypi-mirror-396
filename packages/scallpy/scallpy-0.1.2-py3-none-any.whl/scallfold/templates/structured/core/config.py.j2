@@ -1,0 +1,16 @@
+from pydantic import BaseSettings
+
+class Settings(BaseSettings):
+    app_name: str = "{{ project_name }}"
+    env: str = "dev"
+    debug: bool = True
+{% if use_db %}
+    # Database configuration
+    # Example: PostgreSQL -> "postgresql://user:password@host:port/dbname"
+    # Example: SQLite -> "sqlite:///./sql_app.db"
+    # database_url: str = "sqlite:///./sql_app.db"
+{% endif %}
+    class Config:
+        env_file = ".env"
+
+settings = Settings()
