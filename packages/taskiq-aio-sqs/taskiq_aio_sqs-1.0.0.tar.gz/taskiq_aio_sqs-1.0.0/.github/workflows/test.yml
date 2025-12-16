@@ -1,0 +1,43 @@
+name: Testing taskiq-aio-sqs
+
+on:
+  pull_request:
+      branches:
+          - main
+          - develop
+  schedule:
+    - cron: "0 0 * * 0" # Runs every Sunday at midnight UTC
+
+permissions:
+  pull-requests: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: setup-uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Run typing/linting check
+        run: make check
+      - run: uv build
+      - name: Smoke test (wheel)
+        run: uv run --isolated --no-project --with dist/*.whl tests/smoke_test.py
+      - name: Smoke test (source distribution)
+        run: uv run --isolated --no-project --with dist/*.tar.gz tests/smoke_test.py
+  pytest:
+    strategy:
+      matrix:
+        py_version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: actions/checkout@v4
+      - id: setup-uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          python-version: ${{ matrix.py_version }}
+      - name: Run pytest check for Python ${{ matrix.py_version }}
+        run: make test
