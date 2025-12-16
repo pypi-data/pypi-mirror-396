@@ -1,0 +1,273 @@
+#!/usr/bin/env bash
+#
+# Git Pre-Commit Hook for RBAC Enforcement
+# =========================================
+#
+# This hook enforces Role-Based Access Control (RBAC) for feature_list.json
+# modifications. Only QA Agent (AGENT_TYPE=QA) can modify the 'passes' field.
+#
+# Installation:
+#   cp hooks/pre-commit .git/hooks/pre-commit
+#   chmod +x .git/hooks/pre-commit
+#
+# Emergency bypass (use with caution):
+#   git commit --no-verify -m "message"
+#
+
+set -e
+
+# ============================================================================
+# Configuration
+# ============================================================================
+
+FEATURE_LIST_FILE="feature_list.json"
+LOG_FILE=".git/hooks/pre-commit.log"
+PROTECTED_FIELDS=("passes" "qa_validated" "last_qa_run" "qa_notes" "qa_report_path")
+
+# ============================================================================
+# Logging Functions
+# ============================================================================
+
+log_message() {
+    local level="$1"
+    local message="$2"
+    local timestamp
+    timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+    # Ensure log directory exists
+    mkdir -p "$(dirname "$LOG_FILE")" 2>/dev/null || true
+
+    # Append to log file
+    echo "${timestamp} | LEVEL=${level} | AGENT=${AGENT_TYPE:-UNKNOWN} | ${message}" >> "$LOG_FILE" 2>/dev/null || true
+}
+
+log_info() {
+    log_message "INFO" "$1"
+}
+
+log_warn() {
+    log_message "WARN" "$1"
+}
+
+log_error() {
+    log_message "ERROR" "$1"
+}
+
+# ============================================================================
+# AGENT_TYPE Detection (T077)
+# ============================================================================
+
+get_agent_type() {
+    # Check AGENT_TYPE environment variable
+    if [ -n "$AGENT_TYPE" ]; then
+        echo "$AGENT_TYPE"
+        return 0
+    fi
+
+    # Fallback: Check for agent-specific markers in environment
+    if [ -n "$QA_AGENT_SESSION" ]; then
+        echo "QA"
+        return 0
+    fi
+
+    if [ -n "$DEV_AGENT_SESSION" ]; then
+        echo "DEV"
+        return 0
+    fi
+
+    # Unknown agent type
+    echo "UNKNOWN"
+    return 0
+}
+
+# ============================================================================
+# Git Diff Parsing (T078)
+# ============================================================================
+
+is_feature_list_modified() {
+    # Check if feature_list.json is in the staged files
+    git diff --cached --name-only | grep -q "^${FEATURE_LIST_FILE}$"
+    return $?
+}
+
+get_feature_list_diff() {
+    # Get the diff for feature_list.json (staged changes only)
+    git diff --cached -- "$FEATURE_LIST_FILE" 2>/dev/null
+}
+
+# ============================================================================
+# Passes Field Change Detection (T079)
+# ============================================================================
+
+detect_protected_field_changes() {
+    local diff_output="$1"
+    local changed_fields=()
+
+    # Check for each protected field in the diff
+    for field in "${PROTECTED_FIELDS[@]}"; do
+        # Look for lines that add or remove the field (+ or - at start)
+        # Pattern matches: "passes": true or "passes": false
+        if echo "$diff_output" | grep -E "^[+-].*\"${field}\"[[:space:]]*:" | grep -v "^[+-][+-]" > /dev/null 2>&1; then
+            changed_fields+=("$field")
+        fi
+    done
+
+    # Return space-separated list of changed fields
+    echo "${changed_fields[*]}"
+}
+
+detect_passes_field_changes() {
+    local diff_output="$1"
+
+    # Specifically check for 'passes' field changes
+    # Match patterns like: "passes": true, "passes": false, "passes" : true
+    if echo "$diff_output" | grep -E "^[+-].*\"passes\"[[:space:]]*:" | grep -v "^[+-][+-]" > /dev/null 2>&1; then
+        return 0  # Changes detected
+    fi
+
+    return 1  # No changes detected
+}
+
+extract_changed_feature_ids() {
+    local diff_output="$1"
+    local feature_ids=()
+
+    # Extract feature IDs from the diff context
+    # Look for "id": N patterns near passes changes
+    echo "$diff_output" | grep -E "\"id\"[[:space:]]*:[[:space:]]*[0-9]+" | \
+        sed -E 's/.*"id"[[:space:]]*:[[:space:]]*([0-9]+).*/\1/' | \
+        sort -u
+}
+
+# ============================================================================
+# RBAC Validation Logic (T080)
+# ============================================================================
+
+validate_rbac() {
+    local agent_type="$1"
+    local changed_fields="$2"
+
+    # If no protected fields changed, allow the commit
+    if [ -z "$changed_fields" ]; then
+        return 0
+    fi
+
+    # QA Agent can modify all protected fields
+    if [ "$agent_type" = "QA" ]; then
+        log_info "QA Agent modifying protected fields: ${changed_fields}"
+        return 0
+    fi
+
+    # INITIALIZER can set initial values (during project setup)
+    if [ "$agent_type" = "INITIALIZER" ]; then
+        log_info "Initializer setting up feature_list.json fields: ${changed_fields}"
+        return 0
+    fi
+
+    # Dev Agent and others cannot modify protected fields
+    log_error "RBAC VIOLATION: Agent ${agent_type} attempted to modify protected fields: ${changed_fields}"
+    return 1
+}
+
+# ============================================================================
+# Error Messaging (T081)
+# ============================================================================
+
+print_error_message() {
+    local agent_type="$1"
+    local changed_fields="$2"
+
+    echo ""
+    echo "============================================================"
+    echo "  RBAC VIOLATION - Commit Blocked"
+    echo "============================================================"
+    echo ""
+    echo "  Agent Type:        ${agent_type}"
+    echo "  Protected Fields:  ${changed_fields}"
+    echo "  File:              ${FEATURE_LIST_FILE}"
+    echo ""
+    echo "  REASON: Only QA Agent (AGENT_TYPE=QA) can modify the"
+    echo "  following fields in feature_list.json:"
+    echo ""
+    for field in "${PROTECTED_FIELDS[@]}"; do
+        echo "    - ${field}"
+    done
+    echo ""
+    echo "  RESOLUTION OPTIONS:"
+    echo ""
+    echo "    1. If you are the QA Agent, set the environment variable:"
+    echo "       export AGENT_TYPE=QA"
+    echo ""
+    echo "    2. If you are the Dev Agent, do not modify these fields."
+    echo "       The QA Agent will update them after validation."
+    echo ""
+    echo "    3. Emergency bypass (use with caution):"
+    echo "       git commit --no-verify -m \"message\""
+    echo ""
+    echo "  For more information, see docs/rbac-enforcement.md"
+    echo ""
+    echo "============================================================"
+    echo ""
+}
+
+print_success_message() {
+    local agent_type="$1"
+    local changed_fields="$2"
+
+    if [ -n "$changed_fields" ]; then
+        echo "[RBAC] ${agent_type} Agent: Protected field modification allowed (${changed_fields})"
+    fi
+}
+
+# ============================================================================
+# Main Hook Logic
+# ============================================================================
+
+main() {
+    local agent_type
+    local diff_output
+    local changed_fields
+
+    # Get agent type (T077)
+    agent_type=$(get_agent_type)
+
+    # Check if feature_list.json is being modified (T078)
+    if ! is_feature_list_modified; then
+        # feature_list.json not modified, allow commit
+        exit 0
+    fi
+
+    # Get the diff for feature_list.json
+    diff_output=$(get_feature_list_diff)
+
+    if [ -z "$diff_output" ]; then
+        # No actual changes, allow commit
+        exit 0
+    fi
+
+    # Detect protected field changes (T079)
+    changed_fields=$(detect_protected_field_changes "$diff_output")
+
+    # Log the modification attempt (T084)
+    if [ -n "$changed_fields" ]; then
+        log_info "MODIFIED=${FEATURE_LIST_FILE} | FIELDS=${changed_fields}"
+    else
+        log_info "MODIFIED=${FEATURE_LIST_FILE} | FIELDS=none_protected"
+    fi
+
+    # Validate RBAC (T080)
+    if ! validate_rbac "$agent_type" "$changed_fields"; then
+        # RBAC violation - block commit (T081)
+        print_error_message "$agent_type" "$changed_fields"
+        log_error "VIOLATION=YES | MSG=Blocked ${agent_type} from modifying ${changed_fields}"
+        exit 1
+    fi
+
+    # RBAC passed
+    print_success_message "$agent_type" "$changed_fields"
+    log_info "VIOLATION=NO | MSG=Allowed ${agent_type} to modify ${changed_fields:-no_protected_fields}"
+    exit 0
+}
+
+# Run main function
+main "$@"

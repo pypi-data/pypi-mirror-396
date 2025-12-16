@@ -1,0 +1,56 @@
+# Orchestrator Systemd Service File (Linux)
+# ==========================================
+#
+# Installation:
+#   1. Copy this file to /etc/systemd/system/orchestrator.service
+#   2. Edit the paths and user settings below
+#   3. Run: sudo systemctl daemon-reload
+#   4. Run: sudo systemctl enable orchestrator
+#   5. Run: sudo systemctl start orchestrator
+#
+# Commands:
+#   - Check status: sudo systemctl status orchestrator
+#   - View logs: sudo journalctl -u orchestrator -f
+#   - Stop: sudo systemctl stop orchestrator
+#   - Restart: sudo systemctl restart orchestrator
+
+[Unit]
+Description=Autonomous Coding Orchestrator Agent
+Documentation=https://github.com/anthropics/claude-quickstarts
+After=network.target
+
+[Service]
+Type=simple
+User=YOUR_USERNAME
+Group=YOUR_GROUP
+WorkingDirectory=/path/to/autonomous-coding
+
+# Environment variables
+Environment="PYTHONUNBUFFERED=1"
+Environment="AGENT_TYPE=ORCHESTRATOR"
+# Add API keys here or use EnvironmentFile
+# Environment="ANTHROPIC_API_KEY_1=your-key-here"
+# EnvironmentFile=/path/to/.env
+
+# Start command
+ExecStart=/usr/bin/python3 orchestrator.py --project-dir /path/to/project
+
+# Restart policy
+Restart=on-failure
+RestartSec=10
+
+# Stop grace period
+TimeoutStopSec=30
+
+# Logging
+StandardOutput=append:/var/log/orchestrator/stdout.log
+StandardError=append:/var/log/orchestrator/stderr.log
+
+# Security hardening (optional)
+# NoNewPrivileges=true
+# ProtectSystem=strict
+# ProtectHome=read-only
+# PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
