@@ -1,0 +1,138 @@
+name: Test
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+env:
+  TEST_MATCH_ID_1: "8461956309"
+  TEST_MATCH_ID_2: "8594217096"
+  REPLAY_DIR: ~/dota2/replays
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --group dev
+
+      - name: Lint with ruff
+        run: uv run ruff check src/ tests/ dota_match_mcp_server.py
+
+      - name: Type check with mypy
+        run: uv run mypy src/ dota_match_mcp_server.py --ignore-missing-imports
+
+      - name: Restore replay cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/dota2/replays
+          key: replays-all-v1
+          restore-keys: |
+            replay-${{ env.TEST_MATCH_ID_1 }}-v2
+            replay-
+
+      - name: Restore parsed cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/mcp_dota2/parsed_replays_v2
+          key: parsed-all-matches-v1
+          restore-keys: |
+            parsed-${{ env.TEST_MATCH_ID_1 }}-v4
+            parsed-
+
+      - name: Download missing replays
+        run: |
+          mkdir -p ~/dota2/replays
+          for MATCH_ID in ${{ env.TEST_MATCH_ID_1 }} ${{ env.TEST_MATCH_ID_2 }}; do
+            if [ ! -f ~/dota2/replays/${MATCH_ID}.dem ]; then
+              echo "Downloading replay ${MATCH_ID}..."
+              uv run python -c "
+          import asyncio
+          from src.utils.replay_downloader import ReplayDownloader
+          downloader = ReplayDownloader()
+          asyncio.run(downloader.download_replay(${MATCH_ID}))
+          "
+            else
+              echo "Replay ${MATCH_ID} already cached"
+            fi
+          done
+
+      - name: Verify replay files
+        run: |
+          for MATCH_ID in ${{ env.TEST_MATCH_ID_1 }} ${{ env.TEST_MATCH_ID_2 }}; do
+            REPLAY_FILE=~/dota2/replays/${MATCH_ID}.dem
+            if [ ! -f "$REPLAY_FILE" ]; then
+              echo "ERROR: Replay file $MATCH_ID not found!"
+              exit 1
+            fi
+            SIZE=$(stat -c%s "$REPLAY_FILE")
+            echo "Replay $MATCH_ID size: $SIZE bytes"
+            if [ "$SIZE" -lt 100000000 ]; then
+              echo "ERROR: Replay file $MATCH_ID too small, likely corrupted"
+              exit 1
+            fi
+          done
+          echo "All replay files verified OK"
+
+      - name: Check and parse missing matches
+        timeout-minutes: 15
+        run: |
+          echo "Checking which matches need parsing..."
+          uv run python << 'EOF'
+          import asyncio
+          import os
+          from diskcache import Cache
+
+          cache_dir = os.path.expanduser('~/.cache/mcp_dota2/parsed_replays_v2')
+          os.makedirs(cache_dir, exist_ok=True)
+
+          matches_to_parse = []
+          try:
+              cache = Cache(cache_dir)
+              for match_id in [8461956309, 8594217096]:
+                  if match_id not in cache:
+                      print(f"Match {match_id} not in cache, will parse")
+                      matches_to_parse.append(match_id)
+                  else:
+                      print(f"Match {match_id} already cached")
+              cache.close()
+          except Exception as e:
+              print(f"Cache error: {e}")
+              matches_to_parse = [8461956309, 8594217096]
+
+          if matches_to_parse:
+              from src.services.replay.replay_service import ReplayService
+              rs = ReplayService()
+              for match_id in matches_to_parse:
+                  print(f"Parsing match {match_id}...")
+                  data = asyncio.run(rs.get_parsed_data(match_id))
+                  print(f"Parsed {len(data.combat_log_entries)} combat log entries")
+          else:
+              print("All matches already cached!")
+          EOF
+
+      - name: Run tests
+        timeout-minutes: 15
+        run: uv run pytest tests/ -v
+
+      - name: Save updated caches
+        if: always()
+        run: |
+          echo "Caches will be saved automatically by actions/cache"
