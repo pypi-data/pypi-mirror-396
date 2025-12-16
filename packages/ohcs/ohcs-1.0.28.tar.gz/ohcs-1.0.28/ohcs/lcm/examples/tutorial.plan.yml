@@ -1,0 +1,98 @@
+deploymentId: tutorial
+var:
+  providerId: "{{providerId}}"
+  edgeId: "{{edgeId}}"
+resource:
+  myAD:
+    kind: hcs/ad
+    data:
+      orgId: ${profile.csp.orgId}
+      name: tutorial-ad
+      defaultOU: OU=HV2-Desktops
+      dnsDomainName: tutorial.demo.local
+      netBIOSName: tutorial
+      joinAccounts:
+        primary:
+          username: admin1
+          password:
+            - x
+        auxiliary:
+          username: admin2
+          password:
+            - x
+      bindAccounts:
+        primary:
+          username: admin1
+          password:
+            - x
+        auxiliary:
+          username: admin2
+          password:
+            - x
+      primaryDNS: 127.0.0.1
+      secondaryDNS: 127.0.0.2
+  myPoolDedicated:
+    kind: hcs/pool-template
+    data:
+      orgId: ${profile.csp.orgId}
+      name: tutorial-dedicated
+      vmNamePattern: d-
+      templateType: DEDICATED
+      providerInstanceId: ${var.providerId}
+      # uagDeploymentId: ${myUAG.id}
+      edgeDeploymentId: ${var.edgeId}
+      applicationProperties:
+        # azureActiveDirectoryJoined: "false"
+        lcmExtensionName: ""
+        lcmCustomVariables: "my custom variables"
+        lcmCustomTemplate: "my custom template"
+        continuousErrorThreshold: 2
+        new-task-engine: true
+        simulateAgentStatus: AVAILABLE
+      imageReference:
+        sourceResource:
+          kind: sourceImage
+          id: "00000000-0000-0000-0000-000000000000"
+        markerId: "00000000-0000-0000-0000-000000000000"
+      licenseProvided: true
+      desktopAdminUsername: hcsadmin
+      desktopAdminPassword: DemoPassword1!
+      diskEncryption:
+        enabled: false
+      sparePolicy:
+        limit: 10
+        max: 1
+        min: 1
+      powerPolicy:
+        enabled: false
+        min: -1
+        minUnit: PERCENTAGE
+        occupancyPresetMode: DISABLED
+        powerSchedules: []
+        powerOffProtectTimeMins: 30
+      sessionsPerVm: 1
+      vmLicenseType: WINDOWS_CLIENT
+      diskSizeInGB: 127
+      infrastructure:
+        vmSkus:
+          - kind: vmSkus
+            id: Standard_D2_v4
+            data:
+              name: Standard_D2_v4
+              osVhdSizeMb: 1047552
+              maxDataDiskCount: 4
+              maxResourceVolumeMb: 51200
+              maxNetworkInterfaces: 2
+              memoryGb: 8
+              vCPUs: 2
+              premiumIO: false
+      networks:
+        - kind: networks
+          id: 00000000-0000-0000-0000-000000000000
+          data:
+            name: TutorialNetwork1
+      activeDirectoryId: ${myAD.id}
+      computerAccountOU: ${resource.myAD.data.defaultOU}
+      flags:
+        uagDeploymentRequired: false
+        infrastructureManagementDisabled: true
