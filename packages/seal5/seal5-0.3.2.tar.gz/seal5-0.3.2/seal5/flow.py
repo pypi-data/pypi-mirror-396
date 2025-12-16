@@ -1,0 +1,1110 @@
+#
+# Copyright (c) 2023 TUM Department of Electrical and Computer Engineering.
+#
+# This file is part of Seal5.
+# See https://github.com/tum-ei-eda/seal5.git for further info.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+"""Seal5 Flow API."""
+import os
+import sys
+import time
+import glob
+import tarfile
+import atexit
+from pathlib import Path
+from typing import Optional, List, Dict, Tuple, Union
+
+
+import git
+import seal5.logging
+
+from seal5.logging import (
+    Logger,
+    check_logging_server,
+    initialize_logging_server,
+    stop_logging_server,
+    update_rotary_logger,
+)
+from seal5.types import Seal5State, PatchStage
+from seal5.settings import Seal5Settings, PatchSettings, DEFAULT_SETTINGS, LLVMConfig, LLVMVersion, FileLoggingSettings
+
+from seal5.dependencies import CDSL2LLVMDependency
+from seal5 import utils
+from seal5.tools import llvm, cdsl2llvm, inject_patches
+from seal5.resources.resources import get_patches, get_test_cfg
+from seal5.passes import Seal5Pass, PassType, PassScope, PassManager, filter_passes
+import seal5.pass_list as passes
+from seal5.testgen_utils import collect_generated_test_files
+from seal5.build_cache import combine_hashes, hash_arguments, get_patch_id, query_build_cache
+
+
+logger = Logger("flow")
+
+TRANSFORM_PASS_MAP = [
+    # TODO: Global -> Model
+    ("convert_models", passes.convert_models, {}),
+    ("filter_models", passes.filter_model, {}),
+    ("drop_unused", passes.drop_unused, {}),
+    ("eliminate_mod_rfs", passes.eliminate_mod_rfs, {}),
+    ("eliminate_rd_cmp_zero", passes.eliminate_rd_cmp_zero, {}),
+    ("drop_unused2", passes.drop_unused, {}),
+    ("inline_functions", passes.inline_functions, {}),
+    ("optimize_model", passes.optimize_model, {}),
+    ("infer_types", passes.infer_types, {}),
+    ("simplify_trivial_slices", passes.simplify_trivial_slices, {}),
+    ("explicit_truncations", passes.explicit_truncations, {}),
+    # ("process_settings", passes.process_settings, {}),
+    # ("write_yaml", passes.write_yaml, {}),
+    # ("process_settings2", passes.process_settings, {}),
+    ("detect_behavior_constraints", passes.detect_behavior_constraints, {}),
+    ("detect_registers", passes.detect_registers, {}),
+    ("collect_register_operands", passes.collect_register_operands, {}),
+    ("collect_immediate_operands", passes.collect_immediate_operands, {}),
+    ("collect_operand_types", passes.collect_operand_types, {}),
+    ("process_settings", passes.process_settings, {}),
+    ("write_yaml2", passes.write_yaml, {}),
+    ("process_settings3", passes.process_settings, {}),
+    ("detect_side_effects", passes.detect_side_effects, {}),
+    ("detect_inouts", passes.detect_inouts, {}),
+    ("detect_imm_leafs", passes.detect_imm_leafs, {}),
+    ("detect_calls", passes.detect_calls, {}),
+    ("detect_loops", passes.detect_loops, {}),
+    ("annotate_opcodes", passes.annotate_opcodes, {}),
+    ("check_pattern_support", passes.check_pattern_support, {}),
+    ("write_cdsl_full", passes.write_cdsl, {"split": False, "compat": False}),
+    # TODO: determine static constraints (xlen,...) -> subtargetvmap
+    # detect memory adressing modes
+    # self.detect_adressing_modes(verbose)  # TODO
+    # detect legal GMIR ops (and map to selectiondag?)
+    # self.detect_legal_ops(verbose=verbose)  # TODO
+    # extract costs/heuristics
+    # self.extract_costs_and_heuristics(verbose)  # TODO
+    # ("split_models", passes.split_models, {"by_set": False, "by_instr": False}),
+]
+
+GENERATE_PASS_MAP = [
+    ("seal5_td", passes.gen_seal5_td, {}),
+    # ("model_td", passes.gen_model_td, {}),
+    ("set_td", passes.gen_set_td, {}),
+    ("riscv_features", passes.gen_riscv_features_patch, {}),
+    ("riscv_isa_infos", passes.gen_riscv_isa_info_patch, {}),
+    # ("riscv_instr_formats", passes.gen_riscv_instr_formats_patch, {}),
+    ("riscv_register_info", passes.gen_riscv_register_info_patch, {}),
+    ("riscv_field_types", passes.gen_riscv_field_types_patch, {}),
+    ("riscv_instr_info", passes.gen_riscv_instr_info_patch, {}),
+    ("riscv_intrinsics", passes.gen_riscv_intrinsics, {}),
+    # subtarget_tests
+    # register_types
+    # operand_types
+    # instruction_formats
+    # instruction_infos
+    # disassembler
+    # mc_tests
+    # selection_dag_legalizer
+    # scalar_costs
+    # simd_costs
+    # isel_patterns
+    # codegen_test
+    ("riscv_gisel_legalizer", passes.gen_riscv_gisel_legalizer_patch, {}),
+    # TODO: nested pass lists?
+    ("pattern_gen", passes.pattern_gen_pass, {}),
+]
+
+
+def lookup_manual_patch(patch: PatchSettings, allow_missing=False):
+    """Lookup manual Seal5 patch."""
+    patches = get_patches(patch_name=patch.name, target=patch.target, allow_empty=allow_missing)
+    if len(patches) == 0:
+        # fallback (undefined target)
+        patches = get_patches(patch_name=patch.name, target=None, allow_empty=allow_missing)
+    if len(patches) == 0:
+        raise RuntimeError(f"Manual patch '{patch.name}' not found!")
+    assert len(patches) == 1, "Too many matches"
+    res = patches[0]
+    if patch.target is None:
+        target = res.parent.name
+        patch.target = str(target)
+    if patch.file is None:
+        patch.file = str(res)
+    return res
+
+
+def handle_directory(directory: Optional[Path]):
+    """Process passed directory."""
+    # TODO: handle environment vars
+    if directory is None:
+        home_dir = os.getenv("SEAL5_HOME")
+        if home_dir is None:
+            raise RuntimeError("Unable to resolve SEAL5_HOME")
+        directory = home_dir
+    if not isinstance(directory, Path):
+        directory = Path(directory)
+    return directory.resolve()
+
+
+def handle_meta_dir(meta_dir: Optional[Union[str, Path]], directory: Union[str, Path], _name: str):
+    """Handle selection of meta directory."""
+    # TODO: handle environment vars
+    if meta_dir is None:
+        meta_dir = os.getenv("SEAL5_META_DIR")
+        if meta_dir is None:
+            meta_dir = "default"
+    if meta_dir == "default":
+        if not isinstance(directory, Path):
+            assert isinstance(directory, str)
+            directory = Path(directory)
+        meta_dir = directory / ".seal5"
+    elif meta_dir == "user":
+        # config_dir = get_seal5_user_config_dir()
+        raise NotImplementedError("store meta dirs in .config/seal5/meta")
+    if not isinstance(meta_dir, Path):
+        assert isinstance(meta_dir, str)
+        meta_dir = Path(meta_dir)
+    return meta_dir.resolve()
+
+
+def create_seal5_directories(path: Path, directories: list):
+    """Create Seal5 directories."""
+    logger.debug("Creating Seal5 directories")
+    if not isinstance(path, Path):
+        path = Path(path)
+    if not path.is_dir():
+        raise RuntimeError(f"Not a diretory: {path}")
+    for directory in directories:
+        (path / directory).mkdir(parents=True, exist_ok=True)
+
+
+def add_test_cfg(tests_dir: Path):
+    """Add LLVM lit testing config."""
+    dest = tests_dir / "lit.cfg.py"
+    logger.debug("Creating test cfg %s", dest)
+    src = get_test_cfg()
+    utils.copy(src, dest)
+
+
+class Seal5Flow:
+    """Seal5 Flow."""
+
+    def __init__(
+        self, directory: Optional[Path] = None, meta_dir: Optional[Union[str, Path]] = None, name: Optional[str] = None
+    ):
+        self.directory: Path = handle_directory(directory)
+        self.meta_dir: Path = handle_meta_dir(meta_dir, self.directory, name)
+        self.name: str = name
+        self.state: Seal5State = Seal5State.UNKNOWN
+        self.passes: List[Seal5Pass] = []
+        self.repo: Optional[git.Repo] = (
+            git.Repo(self.directory) if self.directory.is_dir() and utils.is_populated(self.directory) else None
+        )
+        self.check()
+        self.settings: Seal5Settings = Seal5Settings.from_dict({"meta_dir": str(self.meta_dir), **DEFAULT_SETTINGS})
+        # self.settings: Seal5Settings = Seal5Settings(directory=self.directory)
+        self.settings.directory = str(self.directory)
+        if self.settings.settings_file.is_file():
+            self.settings = Seal5Settings.from_yaml_file(self.settings.settings_file)
+            self.meta_dir = self.settings._meta_dir
+        if self.settings.logs_dir.is_dir():
+            initialize_logging_server(
+                [
+                    FileLoggingSettings(
+                        filename=self.settings.log_file_path,
+                        level=self.settings.logging.file.level,
+                        rotate=self.settings.logging.file.rotate,
+                        limit=self.settings.logging.file.limit,
+                    )
+                ],
+                self.settings.logging.console.level,
+            )
+        self.logger = Logger("flow")
+        atexit.register(self.close_servers)
+        self.name = self.settings.name if name is None else name
+        self.name = "default" if self.name is None else self.name
+        self.settings.name = self.name
+        self.settings.name = self.settings.name if name is None else name
+        self.reset_passes()
+        self.create_passes()
+        # self.init_global_model()
+
+    # def init_global_model(self, name: str = "Seal5"):
+    #     dest = self.inputs_dir / f"{name}.seal5model"
+    #     args = [
+    #         "-",
+    #         "-o",
+    #         dest,
+    #     ]
+    #     utils.python(
+    #         "-m",
+    #         "seal5.frontends.dummy.writer",
+    #         *args,
+    #         env=env,
+    #         print_func=logger.info if verbose else logger.debug,
+    #         live=True,
+    #     )
+
+    #     self.update_global_model(name=name)
+
+    # def update_global_model(self, name: str = "Seal5"):
+    #     self.process_settings(name)
+
+    def reset_passes(self):
+        """Reset Seal5 passes."""
+        self.passes = []
+
+    def add_pass(self, pass_: Seal5Pass):
+        """Add Seal5 pass."""
+        pass_names = [p.name for p in self.passes]
+        assert pass_.name not in pass_names, f"Duplicate pass name: {pass_.name}"
+        self.passes.append(pass_)
+
+    def add_passes(self, pass_list: List[Seal5Pass]):
+        """Add multiple Seal5 passes."""
+        for pass_ in pass_list:
+            self.add_pass(pass_)
+
+    def create_passes(self):
+        """Creation of Seal5 pass pipelines."""
+        # Transforms
+        for pass_name, pass_handler, pass_options in TRANSFORM_PASS_MAP:
+            pass_scope = PassScope.MODEL
+            self.add_pass(Seal5Pass(pass_name, PassType.TRANSFORM, pass_scope, pass_handler, options=pass_options))
+
+        # Generates
+        for pass_name, pass_handler, pass_options in GENERATE_PASS_MAP:
+            if pass_name in ["seal5_td", "riscv_gisel_legalizer", "riscv_field_types"]:  # TODO: refactor
+                pass_scope = PassScope.GLOBAL
+            else:
+                pass_scope = PassScope.MODEL
+            self.add_pass(Seal5Pass(pass_name, PassType.GENERATE, pass_scope, pass_handler, options=pass_options))
+
+    def check(self):
+        """Check/validate Seal5 flow."""
+
+    def initialize(
+        self,
+        interactive: bool = False,
+        clone: bool = False,
+        clone_url: Optional[str] = None,
+        clone_ref: Optional[str] = None,
+        clone_depth: Optional[int] = None,
+        progress: bool = False,
+        force: bool = False,
+        verbose: bool = False,
+        ignore_llvm_imm_types: bool = False,
+    ):
+        """Initialize Seal5 flow."""
+        del verbose  # unused
+        update_rotary_logger()
+        self.logger.info("Initializing Seal5")
+        start = time.time()
+        metrics = {}
+        sha = None
+        version_info = None
+        if not self.directory.is_dir():
+            if clone is False and not utils.ask_user("Clone LLVM repository?", default=False, interactive=interactive):
+                self.logger.error("Target directory does not exist! Aborting...")
+                sys.exit(1)
+            self.logger.info("Cloning LLVM Repository")
+            self.repo, sha, version_info = llvm.clone_llvm_repo(
+                self.directory,
+                clone_url,
+                ref=clone_ref,
+                label=self.name,
+                git_settings=self.settings.git,
+                depth=int(clone_depth) if clone_depth is not None else self.settings.llvm.clone_depth,
+                progress=progress,
+            )
+        else:
+            if force:
+                self.logger.info("Updating LLVM Repository")
+                self.repo, sha, version_info = llvm.clone_llvm_repo(
+                    self.directory,
+                    clone_url,
+                    ref=clone_ref,
+                    refresh=True,
+                    label=self.name,
+                    git_settings=self.settings.git,
+                    depth=clone_depth or self.settings.llvm.clone_depth,
+                )
+        if self.meta_dir.is_dir():
+            if force is False and not utils.ask_user(
+                "Overwrite existing .seal5 diretcory?", default=False, interactive=interactive
+            ):
+                self.logger.error("Directory %s already exists! Aborting...", self.meta_dir)
+                sys.exit(1)
+        self.meta_dir.mkdir(exist_ok=True)
+        create_seal5_directories(
+            self.meta_dir,
+            ["deps", "models", "logs", "build", "install", "temp", "inputs", "gen", "patches", "tests", "cache"],
+        )
+        if not check_logging_server() and self.settings.logs_dir.is_dir():
+            initialize_logging_server(
+                [
+                    FileLoggingSettings(
+                        filename=self.settings.log_file_path,
+                        level=self.settings.logging.file.level,
+                        rotate=self.settings.logging.file.rotate,
+                        limit=self.settings.logging.file.limit,
+                    )
+                ],
+                self.settings.logging.console.level,
+            )
+        add_test_cfg(self.settings.tests_dir)
+        if version_info:
+            llvm_version = LLVMVersion(**version_info)
+            self.settings.llvm.state.version = llvm_version
+        if sha:
+            self.settings.llvm.state.base_commit = sha
+        if not ignore_llvm_imm_types:
+            supported_imm_types = llvm.detect_llvm_imm_types(self.directory)
+            self.settings.llvm.state.supported_imm_types = list(supported_imm_types)
+        self.settings.save()
+        end = time.time()
+        diff = end - start
+        metrics["start"] = start
+        metrics["end"] = end
+        metrics["time_s"] = diff
+        self.settings.metrics.append({"initialize": metrics})
+        self.settings.save()
+        self.logger.info("Completed initialization of Seal5")
+
+    def setup(
+        self,
+        interactive: bool = False,
+        force: bool = False,
+        progress: bool = False,
+        verbose: bool = False,
+        skip_patterns: bool = False,
+    ):
+        """Setup Seal5 dependencies."""
+        del interactive  # unused
+        del verbose  # unused
+        self.logger.info("Installing Seal5 dependencies")
+        start = time.time()
+        metrics = {}
+        self.logger.info("Generating default patches")
+        gitignore_patch_settings = PatchSettings(
+            name="gitignore",
+            stage=int(PatchStage.PHASE_0),
+            generated=False,
+            target="llvm",
+            weak=True,
+            priority=100,  # This patch has to be applied first!
+        )
+        self.settings.add_patch(gitignore_patch_settings)
+        llvm_version = self.settings.llvm.state.version
+        major = llvm_version.major
+        inject_markers_patch_settings = PatchSettings(
+            name=f"insert_markers_llvm{major}",
+            stage=int(PatchStage.PHASE_0),
+            generated=False,
+            target="llvm",
+            weak=True,
+            priority=90,  # This patch has to be applied before patterngen patch!
+        )
+        self.settings.add_patch(inject_markers_patch_settings)
+        if not skip_patterns:
+            self.logger.info("Cloning CDSL2LLVM")
+            # cdsl2llvm_dependency.clone(self.settings.deps_dir / "cdsl2llvm", overwrite=force, depth=1)
+            pattern_gen_settings = self.settings.tools.pattern_gen
+            kwargs = {}
+            if pattern_gen_settings.clone_url is not None:
+                kwargs["clone_url"] = pattern_gen_settings.clone_url
+            if pattern_gen_settings.ref is not None:
+                kwargs["ref"] = pattern_gen_settings.ref
+            llvm_version = self.settings.llvm.state.version
+            if llvm_version is not None:
+                kwargs["llvm_version"] = llvm_version
+            cdsl2llvm_dependency = CDSL2LLVMDependency(**kwargs)
+            cdsl2llvm_dependency.clone(
+                self.settings.deps_dir / "cdsl2llvm",
+                overwrite=force,
+                depth=pattern_gen_settings.clone_depth,
+                sparse=pattern_gen_settings.sparse_checkout,
+                progress=progress,
+            )
+            integrated_pattern_gen = self.settings.tools.pattern_gen.integrated
+            if integrated_pattern_gen:
+                has_patterngen_patch = any(patch.name == "pattern_gen_support" for patch in self.settings.patches)
+                if not has_patterngen_patch:
+                    self.logger.info("Adding PatternGen to target LLVM")
+                    patch_settings = cdsl2llvm.get_pattern_gen_patches(
+                        self.settings.deps_dir / "cdsl2llvm",
+                        self.settings.temp_dir,
+                    )
+                    self.settings.add_patch(patch_settings)
+            else:
+                self.logger.info("Building PatternGen")
+                llvm_config = LLVMConfig(
+                    options={
+                        "CMAKE_BUILD_TYPE": "Release",
+                        "LLVM_BUILD_TOOLS": False,
+                        "LLVM_ENABLE_ASSERTIONS": False,
+                        "LLVM_OPTIMIZED_TABLEGEN": True,
+                        "LLVM_ENABLE_PROJECT": [],
+                        "LLVM_TARGETS_TO_BUILD": ["RISCV"],
+                    }
+                )
+                cmake_options = llvm_config.options
+                cdsl2llvm.build_pattern_gen(
+                    self.settings.deps_dir / "cdsl2llvm",
+                    self.settings.deps_dir / "cdsl2llvm" / "llvm" / "build",
+                    cmake_options=cmake_options,
+                    use_ninja=self.settings.llvm.ninja,
+                )
+                self.logger.info("Completed build of PatternGen")
+                self.logger.info("Building llc")
+                cdsl2llvm.build_llc(
+                    self.settings.deps_dir / "cdsl2llvm",
+                    self.settings.deps_dir / "cdsl2llvm" / "llvm" / "build",
+                    cmake_options=cmake_options,
+                    use_ninja=self.settings.llvm.ninja,
+                )
+                self.logger.info("Completed build of llc")
+        end = time.time()
+        diff = end - start
+        metrics["start"] = start
+        metrics["end"] = end
+        metrics["time_s"] = diff
+        self.settings.metrics.append({"setup": metrics})
+        self.settings.save()
+        self.logger.info("Completed installation of Seal5 dependencies")
+
+    def load_cfg(self, file: Path, overwrite: bool = False):
+        """Load YAML cfg."""
+        assert file.is_file(), f"File does not exist: {file}"
+        new_settings: Seal5Settings = Seal5Settings.from_yaml_file(file)
+        self.settings.merge(new_settings, overwrite=overwrite, inplace=True)
+        self.settings.save()
+
+    def load_test(self, file: Path, overwrite: bool = True):
+        """Load test file."""
+        assert file.is_file(), f"File does not exist: {file}"
+        filename: str = file.name
+        dest = self.settings.tests_dir / filename
+        if dest.is_file() and not overwrite:
+            raise RuntimeError(f"File {filename} already loaded!")
+        utils.copy(file, dest)
+        if str(dest) not in self.settings.test.paths:
+            self.settings.test.paths.append(str(dest))
+            self.settings.save()
+
+    def prepare_environment(self):
+        """Prepare Seal5 environment."""
+        env = os.environ.copy()
+        # env["PYTHONPATH"] = str(self.settings.deps_dir / "M2-ISA-R")
+        cdsl2llvm_build_dir = None
+        integrated_pattern_gen = self.settings.tools.pattern_gen.integrated
+        if integrated_pattern_gen:
+            cdsl2llvm_build_dir = self.settings.get_llvm_build_dir(fallback=True, check=False)
+        else:
+            cdsl2llvm_build_dir = self.settings.deps_dir / "cdsl2llvm" / "llvm" / "build"
+        if cdsl2llvm_build_dir.is_dir():
+            cdsl2llvm_build_dir = str(cdsl2llvm_build_dir)
+            env["CDSL2LLVM_DIR"] = cdsl2llvm_build_dir
+        if seal5.logging.SEAL5_INTERNALS_LOGGING_PORT is not None:
+            env["SEAL5_INTERNALS_LOGGING_PORT"] = str(seal5.logging.SEAL5_INTERNALS_LOGGING_PORT)
+        return env
+
+    def parse_coredsl(self, file, out_dir, verbose: bool = False, log_level: str = "warning"):
+        """Parse CDSL file."""
+        args = [
+            file,
+            "-o",
+            out_dir,
+            "--log",
+            log_level,
+        ]
+        utils.python(
+            "-m",
+            "seal5.frontends.coredsl2_seal5.parser",
+            *args,
+            env=self.prepare_environment(),
+            print_func=self.logger.info if verbose else self.logger.debug,
+            live=verbose,
+        )
+
+    def load_cdsl(self, file: Path, verbose: bool = False, overwrite: bool = False):
+        """Load CDSL file."""
+        assert file.is_file(), f"File does not exist: {file}"
+        filename: str = file.name
+        dest = self.settings.inputs_dir / filename
+        if dest.is_file() and not overwrite:
+            raise RuntimeError(f"File {filename} already loaded!")
+        # Add file to inputs directory and settings
+        utils.copy(file, dest)
+        self.settings.inputs.append(filename)
+        # Parse CoreDSL file with M2-ISA-R (TODO: Standalone)
+        dest = self.settings.models_dir
+        self.parse_coredsl(file, dest, verbose=verbose)
+        self.settings.save()
+
+    def load(self, files: List[Path], verbose: bool = False, overwrite: bool = False):
+        """Load files into Seal5 flow."""
+        self.logger.info("Loading Seal5 inputs")
+        # Expand glob patterns
+
+        def glob_helper(file):
+            res = glob.glob(str(file))
+            assert len(res) > 0, f"No files found for pattern: {file}"
+            return list(map(Path, res))
+
+        files = sum([glob_helper(file) for file in files], [])
+        for file in files:
+            self.logger.info("Processing file: %s", file)
+            ext = file.suffix
+            if ext.lower() in [".yml", ".yaml"]:
+                self.load_cfg(file, overwrite=overwrite)
+            elif ext.lower() in [".core_desc"]:
+                self.load_cdsl(file, verbose=verbose, overwrite=overwrite)
+            elif ext.lower() in [".ll", ".c", ".cc", ".cpp", ".s", ".mir", ".gmir"]:
+                self.load_test(file, overwrite=overwrite)
+            else:
+                raise RuntimeError(f"Unsupported input type: {ext}")
+        # TODO: only allow single instr set for now and track inputs in settings
+        self.logger.info("Completed load of Seal5 inputs")
+
+    def build(self, config=None, target="all", verbose: bool = False, **kwargs):
+        """Build Seal5 LLVM."""
+        self.logger.info("Building Seal5 LLVM (%s)", target)
+        start = time.time()
+        metrics = {}
+        if config is None:
+            config = self.settings.llvm.default_config
+        llvm_config = self.settings.llvm.configs.get(config, None)
+        assert llvm_config is not None, f"Invalid llvm config: {config}"
+        build_dir = self.settings.get_llvm_build_dir(config=config, fallback=True, check=False)
+        cmake_options = llvm_config.options
+        ccache_settings = self.settings.llvm.ccache
+        if kwargs.get("enable_ccache", False):
+            ccache_settings.enable = True
+        use_build_cache = False
+        if kwargs.get("enable_build_cache", False):
+            use_build_cache = True
+        cached = False
+        if use_build_cache:
+            build_hash = combine_hashes(
+                hash_arguments(), get_patch_id(Path(self.settings.directory), self.settings.llvm.state.base_commit)
+            )
+            cache_dir = self.settings.cache_dir
+            cached = query_build_cache(build_dir, cache_dir)
+
+        if cached:
+            assert build_hash is not None
+            logger.info("Using cache %s", build_hash)
+        else:
+            llvm.build_llvm(
+                Path(self.settings.directory),
+                build_dir,
+                cmake_options=cmake_options,
+                target=target,
+                use_ninja=self.settings.llvm.ninja or kwargs.get("use_ninja", False),
+                ccache_settings=ccache_settings,
+                verbose=verbose,
+            )
+        end = time.time()
+        diff = end - start
+        metrics["start"] = start
+        metrics["end"] = end
+        metrics["time_s"] = diff
+        self.settings.metrics.append({"build": metrics})
+        self.settings.save()
+        self.logger.info("Completed build of Seal5 LLVM (%s)", target)
+
+    def install(self, dest: Optional[Union[str, Path]] = None, config=None, verbose: bool = False, **kwargs):
+        """Install Seal5 LLVM."""
+        start = time.time()
+        metrics = {}
+        if config is None:
+            config = self.settings.llvm.default_config
+        # TODO: implement compress?
+        if dest is None:
+            dest = self.settings.install_dir / config
+        if not isinstance(dest, Path):
+            dest = Path(dest)
+        dest.mkdir(exist_ok=True)
+        self.logger.info("Installing Seal5 LLVM to: %s", dest)
+        llvm_config = self.settings.llvm.configs.get(config, None)
+        assert llvm_config is not None, f"Invalid llvm config: {config}"
+        cmake_options = llvm_config.options
+        ccache_settings = self.settings.llvm.ccache
+        if kwargs.get("enable_ccache", False):
+            ccache_settings.enable = True
+        llvm.build_llvm(
+            Path(self.settings.directory),
+            self.settings.get_llvm_build_dir(config=config, fallback=True, check=True),
+            cmake_options=cmake_options,
+            use_ninja=self.settings.llvm.ninja or kwargs.get("use_ninja", False),
+            ccache_settings=ccache_settings,
+            target=None,
+            install=True,
+            install_dir=dest,
+            verbose=verbose,
+        )
+        end = time.time()
+        diff = end - start
+        metrics["start"] = start
+        metrics["end"] = end
+        metrics["time_s"] = diff
+        self.settings.metrics.append({"build": metrics})
+        self.settings.save()
+        self.logger.info("Completed install of Seal5 LLVM")
+
+    def transform(self, verbose: bool = False, skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+        """Transform Seal5 models."""
+        self.logger.info("Tranforming Seal5 models")
+        start = time.time()
+        metrics = {"passes": []}
+        passes_settings = self.settings.passes
+        assert passes_settings is not None
+        default_skip = passes_settings.skip
+        if skip is None and default_skip:
+            skip = default_skip
+        default_only = passes_settings.only
+        if only is None and default_only:
+            only = default_only
+        # inplace = True
+        # if not inplace:
+        #     raise NotImplementedError()
+
+        input_models = self.settings.model_names
+        transform_passes = filter_passes(self.passes, pass_type=PassType.TRANSFORM)
+        with PassManager("transform_passes", transform_passes, skip=skip, only=only) as pm:
+            result = pm.run(input_models, settings=self.settings, env=self.prepare_environment(), verbose=verbose)
+            if result:
+                metrics_ = result.metrics
+                if metrics_:
+                    metrics["passes"].append({pm.name: metrics_})
+
+        end = time.time()
+        diff = end - start
+        metrics["start"] = start
+        metrics["end"] = end
+        metrics["time_s"] = diff
+        self.settings.metrics.append({"transform": metrics})
+        self.settings.save()
+        self.logger.info("Completed tranformation of Seal5 models")
+
+    def generate(self, verbose: bool = False, skip: Optional[List[str]] = None, only: Optional[List[str]] = None):
+        """Generate Seal5 patches."""
+        self.logger.info("Generating Seal5 patches")
+        start = time.time()
+        metrics = {"passes": []}
+        generate_passes = filter_passes(self.passes, pass_type=PassType.GENERATE)
+        # TODO: User, Global, PerInstr
+        input_models = self.settings.model_names
+        with PassManager("generate_passes", generate_passes, skip=skip, only=only) as pm:
+            result = pm.run(input_models, settings=self.settings, env=self.prepare_environment(), verbose=verbose)
+            if result:
+                metrics_ = result.metrics
+                if metrics_:
+                    metrics["passes"].append({pm.name: metrics_})
+
+        end = time.time()
+        diff = end - start
+        metrics["start"] = start
+        metrics["end"] = end
+        metrics["time_s"] = diff
+        self.settings.metrics.append({"generate": metrics})
+        self.settings.save()
+        self.logger.info("Completed generation of Seal5 patches")
+
+    # def collect_patches(self, stage: Optional[PatchStage]):
+    #     return ret
+
+    def collect_patches(self, ignore_priorities: bool = False):
+        """Collect Seal5 patches."""
+        # generated patches
+        temp: Dict[Tuple[str, str], PatchSettings] = {}
+
+        # user-defined patches
+        patches_settings = self.settings.patches
+        for patch_settings in patches_settings:
+            if patch_settings.stage is None:
+                patch_settings.stage = int(PatchStage.PHASE_0)
+                self.logger.warning("Undefined patch stage for patch %s. Defaulting to PHASE_0", patch_settings.name)
+                # raise NotImplementedError("Undefined patch stage!")
+            if patch_settings.generated:  # not manual
+                if patch_settings.target != "llvm":
+                    raise NotImplementedError("Only supporting llvm patches so far")
+                if patch_settings.file is None:
+                    assert patch_settings.index
+                    name = patch_settings.name
+                    target = patch_settings.target
+                    key = (target, name)
+                    dest = self.settings.patches_dir / target
+                    dest.mkdir(exist_ok=True)
+                    patch_settings.to_yaml_file(dest / f"{name}.yml")
+                    # assert key not in temp
+                    if key in temp:
+                        # override
+                        self.logger.debug("Overriding existing patch settings")
+                        new = temp[key]
+                        new.merge(patch_settings, inplace=True)
+                        temp[key] = new
+                    else:
+                        temp[key] = patch_settings
+                else:
+                    raise NotImplementedError("Only supporting index based patches so far")
+            else:
+                patch_file = lookup_manual_patch(patch_settings, allow_missing=True)
+                # print("patch_file", patch_file)
+                target = patch_settings.target
+                name = patch_settings.name
+                key = (target, name)
+                if key in temp:
+                    # override
+                    self.logger.debug("Overriding existing patch settings")
+                    new = temp[key]
+                    new.merge(patch_settings, inplace=True)
+                    temp[key] = new
+                else:
+                    temp[key] = patch_settings
+                if patch_file:
+                    self.logger.debug("Copying custom patch_file %s", patch_file)
+                    dest = self.settings.patches_dir / target
+                    dest.mkdir(exist_ok=True)
+                    # print("dest", dest)
+                    utils.copy(patch_file, dest / f"{name}.patch")
+                    patch_settings.to_yaml_file(dest / f"{name}.yml")
+        ret = {}
+        for patch_settings in temp.values():
+            if patch_settings.stage not in ret:
+                ret[patch_settings.stage] = []
+            ret[patch_settings.stage].append(patch_settings)
+        if not ignore_priorities:
+            ret = {
+                # Pythons sort should be stable, which means patched of equal/default prio will
+                # be applied in the order thay havee been added
+                stage: list(sorted(patches, key=lambda patch: patch.get_priority(), reverse=True))
+                for stage, patches in ret.items()
+            }
+        return ret
+
+    def resolve_patch_file(self, path):
+        """Resolve Seal5 patch file."""
+        assert path is not None, "Patch path undefined"
+        if isinstance(path, str):
+            path = Path(path)
+        assert isinstance(path, Path)
+        ret = path
+        if ret.is_file():
+            return path.resolve()
+        ret = self.settings.patches_dir / path
+        if ret.is_file():
+            return ret.resolve()
+        raise RuntimeError(f"Patch file {path} not found!")
+
+    def apply_patch(self, patch: PatchSettings, force: bool = False):
+        """Apply Seal5 patch."""
+        name = patch.name
+        target = patch.target
+        if patch.enable:
+            if patch.check_enabled(self.settings):
+                self.logger.info("Applying patch '%s' on '%s'", name, target)
+            else:
+                return
+        else:
+            self.logger.info("Skipping patch '%s' on '%s'", name, target)
+            return
+        if patch.index:
+            # use inject_extensions_script
+            file = self.settings.patches_dir / target / f"{name}.patch"
+            # assert not file.is_file(), f"Patch already exists: {file}"
+            prefix = self.settings.git.prefix
+            comment = patch.comment
+            msg = f"{prefix} {comment}"
+            llvm_dir = self.directory
+            generated_test_files = collect_generated_test_files(patch.index)
+            # TODO: maybe move to pass_list?
+            if len(generated_test_files) > 0:
+                self.settings.test.paths.extend(generated_test_files)
+            inject_patches.generate_patch(
+                patch.index,
+                llvm_dir=llvm_dir,
+                out_file=file,
+                author=self.settings.git.author,
+                mail=self.settings.git.mail,
+                msg=msg,
+                append=True,
+            )
+
+        else:
+            file = self.resolve_patch_file(patch.file)
+        dest = None
+        if target == "llvm":
+            dest = self.directory
+            repo = git.Repo(dest)
+            if not llvm.check_llvm_repo(dest):
+                if force:
+                    repo.git.reset(".")
+                    repo.git.restore(".")
+                else:
+                    raise RuntimeError("LLVM repository is not clean!")
+        if dest is None:
+            raise RuntimeError(f"Unsupported patch target: {target}")
+        # TODO: check if clean
+        repo.git.apply(file)
+        author = self.settings.git.author
+        mail = self.settings.git.mail
+        actor = git.Actor(author, mail)
+        prefix = self.settings.git.prefix
+        msg = patch.comment
+        if not msg:
+            msg = f"Apply patch: {patch.name}"
+        if prefix:
+            msg = prefix + " " + msg
+        repo.git.add(A=True)
+        repo.index.commit(msg, author=actor)
+        patch.applied = True
+        self.settings.save()
+        # TODO: commit
+
+    def patch(self, verbose: bool = False, stages: List[PatchStage] = None, force: bool = False):
+        """Patch Seal5 LLVM."""
+        del verbose  # unused
+        self.logger.info("Applying Seal5 patches")
+        start = time.time()
+        metrics = {}
+        if stages is None:
+            stages = list(map(PatchStage, range(PatchStage.PHASE_5 + 1)))
+        assert len(stages) > 0
+        patches_per_stage = self.collect_patches()
+        stages_metrics = {}
+        for stage in stages:
+            self.logger.info("Current stage: %s", stage)
+            patches = patches_per_stage.get(stage, [])
+            # print("patches", patches)
+            for patch in patches:
+                if patch.applied:
+                    # skipping
+                    continue
+                self.apply_patch(patch, force=force)
+            assert self.repo is not None
+            tag_name = f"seal5-{self.name}-stage{int(stage)}"
+            tag_msg = f"Patched Seal5 LLVM after stage {stage}"
+            # author = git_.get_author(self.settings.git)
+            # self.repo.create_tag(tag_name, message=tag_msg, force=True, author=author)
+            self.repo.create_tag(tag_name, message=tag_msg, force=True)
+            base_tag = f"seal5-{self.name}-base"
+            if int(stage) > 0:
+                prev_tag = f"seal5-{self.name}-stage{int(stage)-1}"
+            else:
+                prev_tag = base_tag
+            n_files_changed, n_insertions, n_deletions = inject_patches.analyze_diff(
+                self.repo, cur=tag_name, base=prev_tag
+            )
+            stage_metrics = {}
+            stage_metrics["n_files_changed"] = n_files_changed
+            stage_metrics["n_insertions"] = n_insertions
+            stage_metrics["n_deletions"] = n_deletions
+            stages_metrics[PatchStage(stage).name] = stage_metrics
+        end = time.time()
+        diff = end - start
+        metrics["start"] = start
+        metrics["end"] = end
+        metrics["time_s"] = diff
+        metrics["stages"] = stages_metrics
+        self.settings.metrics.append({"patch": metrics})
+        self.settings.save()
+        self.logger.info("Completed application of Seal5 patches")
+
+    def test(
+        self, debug: bool = False, verbose: bool = False, ignore_error: bool = False, config: Optional[str] = None
+    ):
+        """Test Seal5 LLVM."""
+        del debug  # unused
+        self.logger.info("Testing Seal5 LLVM")
+        start = time.time()
+        metrics = {}
+        if config is None:
+            config = self.settings.llvm.default_config
+        test_paths = self.settings.test.paths
+        if len(test_paths) == 0:
+            self.logger.warning("No test paths have been specified!")
+            passed_tests = []
+            failing_tests = []
+            score = None
+        else:
+            passed_tests, failing_tests = llvm.test_llvm(
+                self.directory / "llvm" / "test",
+                self.settings.get_llvm_build_dir(config=config, fallback=True, check=True),
+                test_paths,
+                verbose=verbose,
+            )
+            num_tests = len(passed_tests) + len(failing_tests)
+            if num_tests == 0:
+                self.logger.warning("No tests have been executed!")
+                score = None
+            else:
+                if len(passed_tests) > 0:
+                    self.logger.info("%d tests passed: %s", len(passed_tests), ", ".join(passed_tests))
+                if len(failing_tests) > 0:
+                    self.logger.error("%d tests failed: %s", len(failing_tests), ", ".join(failing_tests))
+                    if not ignore_error:
+                        raise RuntimeError("Tests failed!")
+                score = len(passed_tests) / num_tests
+        end = time.time()
+        diff = end - start
+        metrics["start"] = start
+        metrics["end"] = end
+        metrics["time_s"] = diff
+        metrics["failing"] = failing_tests
+        metrics["passed"] = passed_tests
+        metrics["score"] = f"{score*100:.2f}%" if score is not None else None
+        self.settings.metrics.append({"test": metrics})
+        self.settings.save()
+        self.logger.info("Completed test of Seal5 LLVM")
+
+    def deploy(self, dest: Path, verbose: bool = False, stage: PatchStage = PatchStage.PHASE_5):
+        """Deploy Seal5 LLVM."""
+        del verbose  # unused
+        assert dest is not None
+        # Archive source files
+        self.logger.info("Deploying Seal5 LLVM")
+        start = time.time()
+        metrics = {}
+        # TODO: move to different file
+        base_tag = f"seal5-{self.name}-base"
+        tag_name = f"seal5-{self.name}-stage{int(stage)}"
+        n_files_changed, n_insertions, n_deletions = inject_patches.analyze_diff(self.repo, cur=tag_name, base=base_tag)
+        self.repo.git.archive(tag_name, "-o", dest)
+        end = time.time()
+        diff = end - start
+        metrics["n_files_changed"] = n_files_changed
+        metrics["n_insertions"] = n_insertions
+        metrics["n_deletions"] = n_deletions
+        metrics["start"] = start
+        metrics["end"] = end
+        metrics["time_s"] = diff
+        self.settings.metrics.append({"deploy": metrics})
+        self.settings.save()
+        self.logger.info("Completed deployment of Seal5 LLVM")
+
+    def export(self, dest: Path, verbose: bool = False, temp: bool = False):
+        """Export Seal5 artifacts."""
+        del verbose  # unused
+        self.logger.info("Exporting Seal5 artifacts")
+        start = time.time()
+        metrics = {}
+        assert dest is not None
+        if isinstance(dest, str):
+            dest = Path(dest)
+        suffix = dest.suffix
+        if suffix != ".gz":
+            raise NotImplementedError("Only .tar.gz export is supported!")
+        artifacts = [
+            self.settings.inputs_dir,
+            self.settings.gen_dir,
+            self.settings.patches_dir,
+            self.settings.inputs_dir,
+            self.settings.tests_dir,
+            self.settings.models_dir,
+            self.settings.logs_dir,
+            self.settings.settings_file,
+        ]
+        if temp:
+            artifacts.append(self.settings.temp_dir)
+        with tarfile.open(dest, mode="w:gz") as archive:
+            for artifact in artifacts:
+                name = str(artifact)
+                assert str(self.meta_dir) in name
+                name = name.replace(f"{self.meta_dir}/", "")
+                if artifact.is_file():
+                    archive.add(artifact, arcname=name)
+                elif artifact.is_dir():
+                    archive.add(artifact, arcname=name, recursive=True)
+
+        end = time.time()
+        diff = end - start
+        metrics["start"] = start
+        metrics["end"] = end
+        metrics["time_s"] = diff
+        self.settings.metrics.append({"export": metrics})
+        self.settings.save()
+        self.logger.info("Completed export of Seal5 artifacts")
+
+    def reset(self, settings: bool = True, verbose: bool = False, interactive: bool = False):
+        """Reset Seal5 flow."""
+        del verbose  # unused
+        self.logger.info("Cleaning Seal5 state")
+        start = time.time()
+        metrics = {}
+        if interactive:
+            raise NotImplementedError
+        if settings:
+            self.settings.reset()
+        end = time.time()
+        diff = end - start
+        metrics["start"] = start
+        metrics["end"] = end
+        metrics["time_s"] = diff
+        self.settings.metrics.append({"reset": metrics})
+        if self.meta_dir.is_dir():
+            self.settings.save()
+        self.logger.info("Completed clean of Seal5 settings")
+
+    def clean(
+        self,
+        temp: bool = False,
+        patches: bool = False,
+        models: bool = False,
+        inputs: bool = False,
+        logs: bool = False,
+        install: bool = False,
+        build: bool = False,
+        deps: bool = False,
+        verbose: bool = False,
+        interactive: bool = False,
+    ):
+        """Cleanup Seal5 flow."""
+        del verbose  # unused
+        self.logger.info("Cleaning Seal5 directories")
+        start = time.time()
+        metrics = {}
+        to_clean = []
+        if temp:
+            to_clean.append(self.settings.temp_dir)
+        if patches:
+            to_clean.append(self.settings.patches_dir)
+        if models:
+            to_clean.append(self.settings.models_dir)
+        if inputs:
+            to_clean.append(self.settings.inputs_dir)
+        if logs:
+            to_clean.append(self.settings.logs_dir)
+        if install:
+            to_clean.append(self.settings.install_dir)
+        if build:
+            to_clean.append(self.settings.build_dir)
+        if deps:
+            to_clean.append(self.settings.deps_dir)
+        # TODO: cleanup settings.test.paths or self.settings.tests_dir
+        # if gen:
+        #     to_clean.append(self.settings.gen_dir)
+        for path in to_clean:
+            utils.clean_path(path, interactive=interactive)
+        # self.reset(verbose=verbose, interactive=interactive)
+        end = time.time()
+        diff = end - start
+        metrics["start"] = start
+        metrics["end"] = end
+        metrics["time_s"] = diff
+        self.settings.metrics.append({"clean": metrics})
+        if self.meta_dir.is_dir():
+            self.settings.save()
+        self.logger.info("Completed clean of Seal5 directories")
+
+    def close_servers(self):
+        stop_logging_server()
