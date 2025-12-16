@@ -1,0 +1,1 @@
+import{a2 as r,as as s,e as c,f as e,i as l,w as i,a7 as a,aA as u,aB as _}from"./index-BHd9xypC.js";const f={};function m(o,p){const t=s("router-view");return e(),c("div",null,[l(t,null,{default:i(({Component:n})=>[(e(),a(u,null,[(e(),a(_(n),{key:o.$route.fullPath}))],1024))]),_:1})])}const v=r(f,[["render",m]]);export{v as default};
