@@ -1,0 +1,81 @@
+# This configuration file specifies the default values if they are not filled in the
+# per-experiment config.toml file.
+
+expid = ""
+data_directory = "."  # path or "."
+
+[files]
+[files.pickup]
+# Pickup coil binary file
+ext = ".pu"
+header = 2
+precision = 4       # number of bytes/element
+endian = "<"        # endian, ">" for big-endian, "<" for little-endian
+order = "F"         # order style in the binary file, "F" for Fortran, "C" for C
+[files.oscillo]
+# Oscilloscope binary file
+ext = ".tdo"
+header = 2
+precision = 4 # number of bytes/element
+endian = "<"  # endian, ">" for big-endian, "<" for little-endian
+order = "F"   # order style in the binary file, "F" for Fortran, "C" for C
+
+[measurements]
+# Measurements settings
+# Link a physical measurement to a channel of the oscilloscope
+# For oscillo data saved with LabVIEW, they correspond to the columns in the file (0-based)
+signal = 0
+
+# Parameters are values that should be fixed once and for all for a given experiment
+[parameters]
+pickup_surface = 1  # surface of the pickup coil (m²)
+
+pickup_number = 1  # number of pickup(s) used and save in the pickup bin file
+pickup_index = 0  # index of the pickup to use for analysis, 0-based
+
+# Settings are analysis-specific and can be changed afterwards
+[settings]
+# Settings for TDO signal extraction from raw data
+max_time = 1                # crop signals until this time in seconds
+barycenters_fwindow = 732421.875  # half size of the window to use around frequency maxima in spectrogram
+barycenters_fast = true     # use fast algo to find barycenters or not
+noise_window = [0, 0.05]    # noise analysis time window in seconds
+spectro_nperseg = 1024      # spectrogram : number of points per segment
+spectro_win_size = 4096     # spectrogram : fft window size
+spectro_noverlap = -1       # size of windows overlap, set to -1 to be nperseg / 2
+
+# Settings for TDO signal analysis
+poly_window = [60, 84]              # field-range in which to do the polynomial fit
+poly_deg = 3                        # polynomial degree
+npoints_interp_inverse = 100000     # number of points for interpolation in 1/B
+fft_window = [-1, -1]               # field-range in which to do the FFT, set to [-1, -1] to use the same as poly_window
+fft_pad_mult = 100                  # multiplier of signal size to adjust 0-padding size for FFT
+max_bfreq = 70000                    # maximum B-frequency (in T) to plot and save
+
+# Settings for display/plotting
+offset = 1000                       # offset B up/down curves to see them better
+
+[metadata]
+# Parameters on how to handle binary files headers
+[metadata.index_map]
+# map a metadata to its index in the header (0-based)
+samplerate = 0
+temperature = 1
+[metadata.conversion_map]
+# determine whether conversion to numeric is required
+samplerate = true
+temperature = true
+
+[nx]
+# NeXus file consolidation
+
+[nexus]
+[nexus.groups]
+# NeXus groups attributes
+root = {name = ""}
+# processed/analysis
+analysis = {}
+# data
+data = {}
+[nexus.datasets]
+# NeXus datasets attributes
