@@ -1,0 +1,99 @@
+# 🕵️‍♂️ Code Inspector AI
+
+> **Your Multi-Agent Senior Engineer for the Terminal.**
+
+[![PyPI version](https://badge.fury.io/py/codeinspector.svg)](https://badge.fury.io/py/codeinspector)
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+Code Inspector is a **local-first, multi-agent CLI** that automates the entire code review workflow. Unlike simple linters, it uses a team of specialized AI agents to perform deep architectural reviews, generate commits and write PR descriptions.
+
+## 🤖 The Multi-Agent Team
+
+You aren't just running a script; you're hiring a digital squad:
+
+*   **The Architect (Senior Reviewer)**: The heavy hitter. It reads full files, understands your system's design, and catches the expensive mistakes that linters miss.
+*   **The Scribe (Commit Agent)**: Watches your staged changes and crafts precise, Conventional Commit messages so you never write "wip" again.
+*   **The Communicator (PR Agent)**: Reads your entire branch history and writes a beautiful Pull Request description that your manager will love.
+
+
+## Installation
+
+```bash
+pip install codeinspector
+```
+
+## ⚡ Quick Start
+
+### 1. Set your API Key
+You need a Google Gemini API key (Free tier works great).
+
+```bash
+# Windows (PowerShell)
+$env:GOOGLE_API_KEY = "your_api_key_here"
+
+# Linux/Mac
+export GOOGLE_API_KEY="your_api_key_here"
+```
+
+### 2. Configure Your Engineer (Optional)
+Pick your preferred model (e.g., `gemini-1.5-pro` for reasoning, `gemini-2.0-flash` for speed).
+
+```bash
+codeinspector config model
+```
+
+### 3. Review Your Code
+Stage your changes and let the agents get to work.
+
+```bash
+git add .
+codeinspector review --interactive
+```
+
+## 📖 The "Bad Cop" Story: Why Rules Matter
+
+Every engineering team has "Unwritten Rules" that cause endless debates in Pull Requests (e.g., *"No DB calls in controllers"* or *"No N+1 queries"*).
+
+**Code Inspector ends the debate.** By defining your "Team Constitution" in `codeinspector.yaml`, you turn the AI into your designated **Bad Cop**.
+
+**How to set it up:**
+
+1.  **Initialize the Rules**:
+    ```bash
+    codeinspector config rules init
+    ```
+    *(This creates a `codeinspector.yaml` with best-practice defaults)*
+
+2.  **Add Your Own**:
+    ```bash
+    codeinspector config rules add "SECURITY: All internal APIs must check for 'X-Internal-Token'."
+    ```
+
+Now, when a developer runs `codeinspector review`, the AI will strictly enforce *your* specific architectural standards before a human ever looks at the code.
+
+## Commands Cheat Sheet
+
+| Command | Description |
+| :--- | :--- |
+| **Review** | |
+| `codeinspector review` | Run an architectural review on staged changes. |
+| `codeinspector review --interactive` | **Chat Mode**: Discuss the feedback with the AI. |
+| **Configuration** | |
+| `codeinspector config model` | Select your Gemini model (Flash, Pro, Ultra). |
+| `codeinspector config rules init` | Generate a starter `codeinspector.yaml`. |
+| `codeinspector config rules add "..."`| Add a new rule to your config file. |
+| **Automation** | |
+| `codeinspector commit` | Generate a Conventional Commit message. |
+| `codeinspector pr` | Generate a PR description & create it on GitHub. |
+| `codeinspector preview` | See what the AI *would* generate without acting. |
+
+## 🤝 Contributing
+
+1.  Fork the repo
+2.  `codeinspector config rules init` (To use our own rules on the project!)
+3.  `codeinspector review --interactive` (To verify your code before pushing)
+
+## 📄 License
+
+Distributed under the MIT License.
