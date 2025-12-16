@@ -1,0 +1,95 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "jupyter-databricks-kernel"
+dynamic = ["version"]
+description = "A Jupyter kernel for complete remote execution on Databricks clusters"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.11"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: Jupyter",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+    "databricks-sdk>=0.30.0,<1.0.0",
+    "ipykernel>=6.20.0",
+    "jupyter-client>=8.0.0",
+    "pathspec>=0.11.0",
+]
+
+[dependency-groups]
+dev = [
+    "jupyterlab>=4.0.0",
+    "mypy>=1.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest>=7.0.0",
+    "ruff>=0.14.0",
+]
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "src/jupyter_databricks_kernel/_version.py"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # Pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "UP",   # pyupgrade
+    "S",    # flake8-bandit (security)
+    "PERF", # Perflint
+]
+ignore = [
+    "S101",  # assert is fine in tests
+    "S108",  # /tmp is used for DBFS paths, not local temp files
+    "S110",  # try-except-pass is acceptable for cleanup code
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["jupyter_databricks_kernel"]
+
+[tool.mypy]
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = "ipykernel.*"
+ignore_missing_imports = true
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "jupyter_databricks_kernel.kernel"
+disallow_untyped_calls = false
+warn_unused_ignores = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v"
+pythonpath = ["src"]
+markers = [
+    "integration: marks tests as integration tests (require real Databricks cluster)",
+    "slow: marks tests as slow-running (deselect with '-m \"not slow\"')",
+]
