@@ -1,0 +1,449 @@
+Metadata-Version: 2.4
+Name: memorybox
+Version: 1.0.0
+Summary: Official Python SDK for Memory Box - Universal AI Memory Management
+Author-email: Memory Box Team <support@hawltechs.com>
+License-Expression: MIT
+Project-URL: Homepage, https://memorybox.hawltechs.com
+Project-URL: Documentation, https://memorybox.hawltechs.com/docs
+Project-URL: Repository, https://github.com/ChonghaoSu/Memory-Box-Website
+Project-URL: Issues, https://github.com/ChonghaoSu/Memory-Box-Website/issues
+Keywords: memorybox,ai,memory,llm,chatgpt,claude,api,sdk
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: requests>=2.25.0
+Provides-Extra: dev
+Requires-Dist: pytest>=6.0; extra == "dev"
+Requires-Dist: pytest-cov>=2.0; extra == "dev"
+Requires-Dist: black>=21.0; extra == "dev"
+Requires-Dist: isort>=5.0; extra == "dev"
+Requires-Dist: mypy>=0.900; extra == "dev"
+Requires-Dist: responses>=0.20.0; extra == "dev"
+Dynamic: license-file
+
+# Memory Box Python SDK
+
+Official Python SDK for [Memory Box](https://memorybox.hawltechs.com) - Universal AI Memory Management.
+
+[![PyPI version](https://badge.fury.io/py/memorybox.svg)](https://badge.fury.io/py/memorybox)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+## Installation
+
+```bash
+pip install memorybox
+```
+
+## Quick Start
+
+```python
+from memorybox import MemoryBox
+
+# Initialize with your API key
+mb = MemoryBox(api_key="mb_live_your_api_key_here")
+
+# List all memories
+memories = mb.memories.list()
+for memory in memories:
+    print(f"[{memory.platform}] {memory.content[:100]}...")
+
+# Create a new memory
+memory = mb.memories.create(
+    content="Important insight about machine learning models",
+    platform="custom",
+    role="assistant",
+    metadata={"tags": ["ml", "important"]}
+)
+
+# Search memories
+results = mb.memories.search("machine learning")
+for result in results:
+    print(result.content)
+```
+
+## Getting an API Key
+
+1. Go to [Memory Box](https://memorybox.hawltechs.com)
+2. Log in to your account
+3. Navigate to **Settings** → **API Keys**
+4. Click **Create New API Key**
+5. Copy your key (it won't be shown again!)
+
+## Features
+
+### List Memories
+
+```python
+# Get all memories
+memories = mb.memories.list()
+
+# Filter by platform
+chatgpt_memories = mb.memories.list(platform="chatgpt")
+
+# Pagination
+page1 = mb.memories.list(limit=50, offset=0)
+page2 = mb.memories.list(limit=50, offset=50)
+
+# Sort by oldest first
+oldest = mb.memories.list(sort="oldest")
+
+# Text search
+results = mb.memories.list(search="python programming")
+```
+
+### Get a Specific Memory
+
+```python
+memory = mb.memories.get(
+    message_id="abc123",
+    platform="chatgpt"
+)
+print(memory.content)
+```
+
+### Create Memories
+
+```python
+# Simple creation
+memory = mb.memories.create(
+    content="AI models are improving rapidly",
+    platform="api"  # or "custom", "sdk", etc.
+)
+
+# With all options
+memory = mb.memories.create(
+    content="Detailed conversation content...",
+    platform="custom",
+    role="assistant",  # or "user"
+    thread_id="my-conversation-123",
+    metadata={
+        "tags": ["important", "ml"],
+        "source": "research-notes"
+    }
+)
+```
+
+### Update Memories
+
+```python
+# Update content
+memory = mb.memories.update(
+    message_id="abc123",
+    platform="chatgpt",
+    content="Updated content here"
+)
+
+# Update metadata only
+memory = mb.memories.update(
+    message_id="abc123",
+    platform="chatgpt",
+    metadata={"reviewed": True}
+)
+```
+
+### Delete Memories
+
+```python
+# Delete single memory
+mb.memories.delete(message_id="abc123", platform="chatgpt")
+
+# Bulk delete (up to 100 at once)
+mb.memories.bulk_delete([
+    {"message_id": "abc123", "platform": "chatgpt"},
+    {"message_id": "def456", "platform": "claude"},
+    {"message_id": "ghi789", "platform": "gemini"},
+])
+```
+
+### Search
+
+The SDK supports three search modes:
+
+#### 1. Hybrid Search (Recommended)
+
+Combines keyword matching and semantic similarity for best results:
+
+```python
+results = mb.memories.search(
+    query="machine learning best practices",
+    top_k=10,
+    mode="hybrid",  # default
+    keyword_weight=0.3,
+    semantic_weight=0.7
+)
+
+for memory in results:
+    score = memory.metadata.get('_score', 0)
+    print(f"[{score:.2f}] {memory.content[:80]}...")
+```
+
+#### 2. Semantic Similarity Search
+
+Find conceptually similar memories using TF-IDF based similarity:
+
+```python
+# Using convenience method
+results = mb.memories.search_by_similarity(
+    query="how do neural networks learn from data",
+    top_k=5,
+    min_score=0.1  # optional minimum similarity threshold
+)
+
+# Or using search() with mode parameter
+results = mb.memories.search(
+    query="explain transformers in NLP",
+    mode="semantic",
+    top_k=10
+)
+```
+
+#### 3. Keyword Matching Search
+
+Find memories with exact or partial keyword matches:
+
+```python
+# Match ANY keyword (OR)
+results = mb.memories.search_by_keywords(
+    query="python async await",
+    match_mode="any"
+)
+
+# Match ALL keywords (AND)
+results = mb.memories.search_by_keywords(
+    query="machine learning python",
+    match_mode="all"
+)
+
+# Match EXACT phrase
+results = mb.memories.search_by_keywords(
+    query="gradient descent",
+    match_mode="exact"
+)
+```
+
+#### Search with Platform Filter
+
+```python
+# Search only in ChatGPT memories
+results = mb.memories.search(
+    query="code review",
+    platform="chatgpt",
+    top_k=5
+)
+```
+
+#### Working with Search Results
+
+```python
+results = mb.memories.search("machine learning", top_k=10)
+
+# Iterate results
+for memory in results:
+    print(memory.content)
+
+# Get top N
+top_3 = results.top(3)
+
+# Access scores
+scores = results.get_scores()
+
+# Index access
+first = results[0]
+
+# Check metadata
+print(f"Mode: {results.mode}")
+print(f"Total: {results.total}")
+```
+
+### Statistics
+
+```python
+# Get memory statistics
+stats = mb.get_stats()
+
+print(f"Total memories: {stats.total_memories}")
+print(f"By platform: {stats.by_platform}")
+print(f"By role: {stats.by_role}")
+
+# Quick count
+total = mb.memories.count()
+chatgpt_count = mb.memories.count(platform="chatgpt")
+```
+
+## API Key Scopes
+
+Memory Box supports two API key scopes:
+
+| Scope | Permissions |
+|-------|-------------|
+| `read_only` | List, get, search memories |
+| `read_write` | All read operations + create, update, delete |
+
+## Error Handling
+
+```python
+from memorybox import (
+    MemoryBox,
+    AuthenticationError,
+    NotFoundError,
+    RateLimitError,
+    ValidationError,
+    PermissionError,
+)
+
+mb = MemoryBox(api_key="mb_live_...")
+
+try:
+    memory = mb.memories.get("nonexistent", platform="chatgpt")
+except AuthenticationError:
+    print("Invalid or expired API key")
+except NotFoundError:
+    print("Memory not found")
+except PermissionError:
+    print("API key doesn't have permission for this operation")
+except RateLimitError as e:
+    print(f"Rate limited. Retry after {e.retry_after} seconds")
+except ValidationError as e:
+    print(f"Invalid request: {e.message}")
+```
+
+## Configuration
+
+```python
+# Use development server
+mb = MemoryBox(
+    api_key="mb_test_...",
+    base_url="http://localhost:5000"
+)
+
+# Custom timeout
+mb = MemoryBox(
+    api_key="mb_live_...",
+    timeout=60  # seconds
+)
+```
+
+## Pagination
+
+The SDK returns `PaginatedResponse` objects for list operations:
+
+```python
+response = mb.memories.list(limit=50)
+
+# Access memories
+for memory in response:
+    print(memory.content)
+
+# Pagination info
+print(f"Total: {response.pagination.total}")
+print(f"Has more: {response.pagination.has_more}")
+
+# Get all pages
+all_memories = []
+offset = 0
+while True:
+    response = mb.memories.list(limit=100, offset=offset)
+    all_memories.extend(response.items)
+    if not response.pagination.has_more:
+        break
+    offset += 100
+```
+
+## Testing
+
+### Quick Test
+
+```bash
+# Install the SDK locally
+cd Memory-Box-Website/memorybox-sdk
+pip install -e .
+
+# Run the test script (shows usage without API key)
+python examples/test_search_features.py
+
+# Run with your API key
+$env:API_KEY = "mb_live_your_key_here"  # PowerShell
+python examples/test_search_features.py
+```
+
+### Unit Tests
+
+```bash
+# Install dev dependencies
+pip install -e ".[dev]"
+
+# Run all tests
+pytest tests/ -v
+
+# Run specific test file
+pytest tests/test_search.py -v
+
+# Run with coverage
+pytest tests/ --cov=memorybox --cov-report=html
+```
+
+### Live Integration Test
+
+```python
+from memorybox import MemoryBox
+
+# Initialize with your API key
+mb = MemoryBox(api_key="mb_live_your_key")
+
+# Check connection
+print(mb.health_check())
+
+# Get your stats
+stats = mb.get_stats()
+print(f"Total memories: {stats.total_memories}")
+
+# Test semantic search
+results = mb.memories.search_by_similarity("test query", top_k=3)
+print(f"Found {len(results)} similar memories")
+
+# Test keyword search  
+results = mb.memories.search_by_keywords("test", match_mode="any")
+print(f"Found {len(results)} keyword matches")
+```
+
+## Development
+
+```bash
+# Clone the repository
+git clone https://github.com/ChonghaoSu/Memory-Box-Website.git
+cd Memory-Box-Website/memorybox-sdk
+
+# Install development dependencies
+pip install -e ".[dev]"
+
+# Run tests
+pytest
+
+# Format code
+black src/
+isort src/
+```
+
+## Support
+
+- **Documentation**: [memorybox.hawltechs.com/docs](https://memorybox.hawltechs.com/docs)
+- **Issues**: [GitHub Issues](https://github.com/ChonghaoSu/Memory-Box-Website/issues)
+- **Email**: support@hawltechs.com
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
