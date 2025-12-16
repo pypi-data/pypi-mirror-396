@@ -1,0 +1,165 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tensor-truth"
+version = "0.1.1"
+description = "Local RAG pipeline for fixing LLM hallucinations using high-precision documentation indexing."
+readme = "README.md"
+requires-python = ">=3.13"
+license = { text = "MIT" }
+authors = [
+    { name = "Relja Ljubobratovic", email = "ljubobratovic.relja@gmail.com" },
+]
+keywords = ["rag", "deepseek", "ollama", "pytorch", "llm", "local-ai"]
+
+dependencies = [
+    # --- Orchestration & RAG ---
+    "llama-index>=0.10.0",
+    "llama-index-core",
+    "llama-index-llms-ollama",
+    "llama-index-embeddings-huggingface",
+    "llama-index-vector-stores-chroma",
+    "llama-index-readers-file",
+
+    # --- Vector Database ---
+    "chromadb>=1.3.5",
+
+    # --- ML / Embeddings (GPU Support) ---
+    # Note: Torch often defaults to CPU on pip install.
+    # Ensure your venv has the CUDA version installed.
+    "torch>=2.0",
+    "transformers",
+    "sentence-transformers",
+    "psutil",  # For system memory detection
+
+    # --- Web App ---
+    "streamlit",
+    "watchdog",  # For auto-reloading during development
+
+    # --- Documentation Scraper ---
+    "requests",
+    "semanticscholar",
+    "beautifulsoup4",
+    "markdownify",
+    "sphobjinv",      # Essential for parsing Sphinx inventory files
+    "tqdm",           # Progress bars
+    "arxiv",
+    "pymupdf4llm",
+    "gdown",          # Google Drive downloads
+] # The Core Stack
+
+[project.scripts]
+tensor-truth = "tensortruth.cli:main"
+tensor-truth-papers = "tensortruth.cli:fetch_paper"
+tensor-truth-docs = "tensortruth.cli:scrape_docs"
+tensor-truth-build = "tensortruth.cli:build_db"
+
+[project.optional-dependencies]
+# Development and testing dependencies
+dev = [
+    # Testing Framework
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.11.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-xdist>=3.3.0",  # For parallel test execution
+
+    # Property-based Testing
+    "hypothesis>=6.82.0",
+
+    # HTTP Mocking
+    "responses>=0.23.0",
+
+    # Test Data Generation
+    "faker>=19.2.0",
+
+    # Code Quality
+    "black>=23.7.0",
+    "ruff>=0.1.0",
+    "flake8>=6.0.0",
+    "mypy>=1.4.0",
+    "isort>=5.12.0",
+
+    # Coverage Reporting
+    "coverage[toml]>=7.2.0",
+
+    # Debugging & Experimentation
+    "ipdb>=0.13.13",
+    "ipykernel",  # Jupyter support
+]
+
+[tool.setuptools.packages.find]
+where = ["src"] # Tells python that your code lives in 'src/'
+
+# Tool Configurations
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.black]
+line-length = 88
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.pytest.ini_options]
+# Test discovery patterns
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+# Directories to search for tests
+testpaths = ["tests"]
+
+# Add src to Python path
+pythonpath = ["src"]
+
+# Asyncio configuration
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+# Markers for categorizing tests
+markers = [
+    "unit: Unit tests (fast, isolated)",
+    "integration: Integration tests (moderate speed, local resources)",
+    "e2e: End-to-end tests (slow, full system)",
+    "slow: Tests that take significant time",
+    "requires_gpu: Tests requiring CUDA/MPS",
+    "requires_ollama: Tests requiring Ollama server",
+    "requires_network: Tests requiring internet connection",
+]
+
+# Output options
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+    "--disable-warnings",
+    "--color=yes",
+    "-ra",
+]
+
+[tool.coverage.run]
+source = ["src/tensortruth"]
+omit = [
+    "*/tests/*",
+    "*/venv/*",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
