@@ -1,0 +1,79 @@
+{# NOTE: Expected to be nested under an <ul> element #}
+{% load rules %}
+{% load projectroles_tags %}
+{% load projectroles_common_tags %}
+{% get_django_setting 'PROJECTROLES_KIOSK_MODE' as kiosk_mode %}
+
+{# Responsive replacement for user dropdown #}
+{% get_user_links request as user_links %}
+{% for link in user_links %}
+  <li class="nav-item sodar-navbar-alt-item {% if link.active %}active{% endif %}">
+    {% if link.method == 'POST' %}
+      <form action="{{ link.url }}" method="POST">
+        {% csrf_token %}
+        <button type="submit"
+                class="nav-item sodar-nav-item-submit
+                       {% if link.name == 'logout' %}text-danger{% endif %}"
+                id="sodar-navbar-nav-link-{{ link.name }}">
+          <i class="iconify" data-icon="{{ link.icon }}"></i> {{ link.label }}
+        </button>
+      </form>
+    {% else %}
+    <a class="nav-link {% if link.name == 'login' %}text-white{% endif %}"
+       href="{{ link.url }}"
+       id="sodar-navbar-nav-link-{{ link.name }}">
+      <i class="iconify" data-icon="{{ link.icon }}"></i> {{ link.label }}
+    </a>
+    {% endif %}
+{% endfor %}
+{# Actual user dropdown #}
+
+<li class="nav-item sodar-navbar-user-dropdown">
+  <a class="nav-link sodar-nav-link-last dropdown-toggle"
+     id="sodar-navbar-user-dropdown"
+     data-toggle="dropdown">
+    {% if request.user.is_superuser %}
+      <i class="iconify" data-icon="mdi:shield-account"></i>
+    {% elif request.user.is_authenticated %}
+      <i class="iconify" data-icon="mdi:user"></i>
+    {% else %}
+      <i class="iconify" data-icon="mdi:incognito"></i>
+    {% endif %}
+  </a>
+  <div class="dropdown-menu dropdown-menu-right sodar-navbar-user-dropdown">
+    <div class="dropdown-header" id="sodar-navbar-user-legend">
+      {% if request.user.is_authenticated %}
+        {% if request.user.name %}
+          {{ request.user.name }}<br />
+        {% endif %}
+        {{ request.user.username }}
+      {% else %}
+        Anonymous
+      {% endif %}
+    </div>
+    <div class="dropdown-divider"></div>
+
+    {% for link in user_links %}
+      {% if link.name == 'admin' or link.name == 'logout' or link.name == 'login' %}
+        <div class="dropdown-divider"></div>
+      {% endif %}
+      {% if link.method == 'POST' %}
+        <form action="{{ link.url }}" method="POST">
+          {% csrf_token %}
+          <button type="submit"
+                  class="dropdown-item {% if link.name == 'logout' %}text-danger{% endif %}"
+                  id="sodar-navbar-link-{{ link.name }}">
+            <i class="iconify" data-icon="{{ link.icon }}"></i> {{ link.label }}
+          </button>
+        </form>
+      {% else %}
+        <a class="dropdown-item {% if link.active %}active{% endif %}
+                  {% if link.name == 'login' %}text-primary{% endif %}"
+           {% if link.url %}href="{{ link.url }}"{% endif %}
+           id="sodar-navbar-link-{{ link.name }}">
+          <i class="iconify" data-icon="{{ link.icon }}"></i> {{ link.label }}
+        </a>
+      {% endif %}
+    {% endfor %}
+  </div>
+</li>
