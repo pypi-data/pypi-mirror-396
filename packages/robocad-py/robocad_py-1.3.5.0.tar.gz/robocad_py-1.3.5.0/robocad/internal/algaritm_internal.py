@@ -1,0 +1,385 @@
+import struct
+import sys
+import os
+import time
+import numpy
+from threading import Thread
+
+from funcad.funcad import Funcad
+
+from .common.shared import LibHolder
+from .common.robot import Robot
+from .common.connection_base import ConnectionBase
+from .common.connection_sim import ConnectionSim
+from .common.connection_real import ConnectionReal
+from .common.updaters import RepkaUpdater
+from .common.robot_configuration import DefaultAlgaritmConfiguration
+
+
+class AlgaritmInternal:
+    def __init__(self, robot: Robot, conf: DefaultAlgaritmConfiguration):
+        self.__robot = robot
+
+        # from Titan
+        self.speed_motor_0: float = 0.0
+        self.speed_motor_1: float = 0.0
+        self.speed_motor_2: float = 0.0
+        self.speed_motor_3: float = 0.0
+        self.enc_motor_0: int = 0
+        self.enc_motor_1: int = 0
+        self.enc_motor_2: int = 0
+        self.enc_motor_3: int = 0
+        self.limit_l_0: bool = False
+        self.limit_h_0: bool = False
+        self.limit_l_1: bool = False
+        self.limit_h_1: bool = False
+        self.limit_l_2: bool = False
+        self.limit_h_2: bool = False
+        self.limit_l_3: bool = False
+        self.limit_h_3: bool = False
+        self.additional_servo_1: float = 0.0
+        self.additional_servo_2: float = 0.0
+        self.is_step_1_busy: bool = False
+        self.is_step_2_busy: bool = False
+        self.step_motor_1_steps: int = 0
+        self.step_motor_2_steps: int = 0
+        self.step_motor_1_steps_per_s: int = 0
+        self.step_motor_2_steps_per_s: int = 0
+        self.step_motor_1_direction: bool = False
+        self.step_motor_2_direction: bool = False
+        self.use_pid: bool = False
+        self.p_pid: float = 0.14
+        self.i_pid: float = 0.1
+        self.d_pid: float = 0.0
+
+        # from vmx
+        self.yaw: float = 0
+        self.yaw_unlim: float = 0
+        self.pitch: float = 0
+        self.pitch_unlim: float = 0
+        self.roll: float = 0
+        self.roll_unlim: float = 0
+        self.ultrasound_1: float = 0
+        self.ultrasound_2: float = 0
+        self.ultrasound_3: float = 0
+        self.ultrasound_4: float = 0
+        self.analog_1: int = 0
+        self.analog_2: int = 0
+        self.analog_3: int = 0
+        self.analog_4: int = 0
+        self.analog_5: int = 0
+        self.analog_6: int = 0
+        self.analog_7: int = 0
+        self.analog_8: int = 0
+
+        self.servo_angles: list = [0.0] * 8
+
+        self.__connection: ConnectionBase = None
+        if not self.__robot.on_real_robot:
+            pass
+            # self.__connection = ConnectionSim(self.__robot)
+            # self.__robocad_conn = RobocadConnection()
+            # self.__robocad_conn.start(self.__connection, self.__robot, self)
+        else:
+            updater = RepkaUpdater(self.__robot)
+            self.__connection = ConnectionReal(self.__robot, updater, conf)
+            self.__titan = TitanCOM()
+            self.__titan.start_com(self.__connection, self.__robot, self, conf)
+            self.__vmx = VMXSPI()
+            self.__vmx.start_spi(self.__connection, self.__robot, self, conf)
+
+    def stop(self):
+        self.__connection.stop()
+        if not self.__robot.on_real_robot:
+            pass
+            # if self.__robocad_conn is not None:
+                # self.__robocad_conn.stop()
+        else:
+            if self.__titan is not None:
+                self.__titan.stop()
+            if self.__vmx is not None:
+                self.__vmx.stop()
+
+    def get_camera(self):
+        return self.__connection.get_camera()
+    
+    def get_lidar(self):
+        return self.__connection.get_lidar()
+    
+    def set_servo_angle(self, angle: float, pin: int):
+        self.servo_angles[pin] = angle
+
+    def step_motor_move(self, num, steps: int, steps_per_second: int, direction: bool):
+        if num == 1:
+            self.step_motor_1_steps = steps
+            self.step_motor_1_steps_per_s = steps_per_second
+            self.step_motor_1_direction = direction
+        elif num == 2:
+            self.step_motor_2_steps = steps
+            self.step_motor_2_steps_per_s = steps_per_second
+            self.step_motor_2_direction = direction
+
+    
+class TitanCOM:
+    def __init__(self):
+        self.__th: Thread = None
+        self.__stop_th: bool = False
+
+    def start_com(self, connection: ConnectionReal, robot: Robot, robot_internal: AlgaritmInternal, conf: DefaultAlgaritmConfiguration) -> None:
+        self.__connection: ConnectionReal = connection
+        self.__robot: Robot = robot
+        self.__robot_internal: AlgaritmInternal = robot_internal
+        self.__conf: DefaultAlgaritmConfiguration = conf
+
+        self.__stop_th: bool = False
+        self.__th: Thread = Thread(target=self.com_loop)
+        self.__th.daemon = True
+        self.__th.start()
+
+    def stop(self):
+        self.__stop_th = True
+        if self.__th is not None:
+            self.__th.join()
+
+    def com_loop(self) -> None:
+        try:
+            com_result = self.__connection.com_ini(self.__conf.titan_port, self.__conf.titan_baud)
+            if com_result != 0:
+                self.__robot.write_log("Failed to open COM")
+                return
+
+            start_time: int = round(time.time() * 10000)
+            send_count_time: float = time.time()
+            comm_counter = 0
+            while not self.__stop_th:
+                tx_time: float = round(time.time() * 10000)
+                tx_data = self.set_up_tx_data()
+                self.__robot.robot_info.tx_com_time_dev = round(time.time() * 10000) - tx_time
+
+                rx_data: bytearray = self.__connection.com_rw(tx_data)
+
+                rx_time: float = round(time.time() * 10000)
+                self.set_up_rx_data(rx_data)
+                self.__robot.robot_info.rx_com_time_dev = round(time.time() * 10000) - rx_time
+
+                comm_counter += 1
+                if time.time() - send_count_time > 1:
+                    send_count_time = time.time()
+                    self.__robot.robot_info.com_count_dev = comm_counter
+                    comm_counter = 0
+
+                time.sleep(0.001)
+                self.__robot.robot_info.com_time_dev = round(time.time() * 10000) - start_time
+                start_time = round(time.time() * 10000)
+        except Exception as e:
+            self.__connection.com_stop()
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            file_name = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            self.__robot.write_log(" ".join(map(str, [exc_type, file_name, exc_tb.tb_lineno])))
+            self.__robot.write_log(str(e))
+
+    def set_up_rx_data(self, data: bytearray) -> None:
+        if data[0] == 1:
+            if data[40] == 222:
+                self.__robot_internal.enc_motor_0 = ((data[4] & 0xff) << 24) | ((data[3] & 0xff) << 16) | ((data[2] & 0xff) << 8) | (data[1] & 0xff)
+                self.__robot_internal.enc_motor_1 = ((data[8] & 0xff) << 24) | ((data[7] & 0xff) << 16) | ((data[6] & 0xff) << 8) | (data[5] & 0xff)
+                self.__robot_internal.enc_motor_2 = ((data[12] & 0xff) << 24) | ((data[11] & 0xff) << 16) | ((data[10] & 0xff) << 8) | (data[9] & 0xff)
+                self.__robot_internal.enc_motor_3 = ((data[16] & 0xff) << 24) | ((data[15] & 0xff) << 16) | ((data[14] & 0xff) << 8) | (data[13] & 0xff)
+
+                self.__robot_internal.limit_l_0 = Funcad.access_bit(data[17], 0)
+                self.__robot_internal.limit_h_0 = Funcad.access_bit(data[17], 1)
+                self.__robot_internal.limit_l_1 = Funcad.access_bit(data[17], 2)
+                self.__robot_internal.limit_h_1 = Funcad.access_bit(data[17], 3)
+                self.__robot_internal.limit_l_2 = Funcad.access_bit(data[17], 4)
+                self.__robot_internal.limit_h_2 = Funcad.access_bit(data[17], 5)
+                self.__robot_internal.limit_l_3 = Funcad.access_bit(data[17], 6)
+                self.__robot_internal.limit_h_3 = Funcad.access_bit(data[17], 7)
+
+                self.__robot_internal.is_step_1_busy = (data[18] != 0)
+                self.__robot_internal.is_step_2_busy = (data[19] != 0)
+        else:
+            self.__robot.write_log("received wrong data " + " ".join(map(str, data)))
+
+    def set_up_tx_data(self) -> bytearray:
+        tx_data: bytearray = bytearray([0] * 48)
+        tx_data[0] = 1
+
+        tx_data[1] = int(numpy.clip(self.__robot_internal.speed_motor_0, -100, 100)).to_bytes(1, 'big', signed = True)[0]
+        tx_data[2] = int(numpy.clip(self.__robot_internal.speed_motor_1, -100, 100)).to_bytes(1, 'big', signed = True)[0]
+        tx_data[3] = int(numpy.clip(self.__robot_internal.speed_motor_2, -100, 100)).to_bytes(1, 'big', signed = True)[0]
+        tx_data[4] = int(numpy.clip(self.__robot_internal.speed_motor_3, -100, 100)).to_bytes(1, 'big', signed = True)[0]
+
+        # for ProgramIsRunning and directions
+        tx_data[5] = int('11' +
+                        ("1" if self.__robot_internal.step_motor_1_direction else "0") +
+                        ("1" if self.__robot_internal.step_motor_2_direction else "0") + 
+                        ("1" if self.__robot_internal.use_pid else "0") + '001', 2)
+        
+        tx_data[6] = int(self.__robot_internal.additional_servo_1)
+        tx_data[7] = int(self.__robot_internal.additional_servo_2)
+
+        step1_steps: bytearray = Funcad.int_to_4_bytes(abs(self.__robot_internal.step_motor_1_steps))
+        tx_data[8] = step1_steps[0]
+        tx_data[9] = step1_steps[1]
+        tx_data[10] = step1_steps[2]
+        tx_data[11] = step1_steps[3]
+        step2_steps: bytearray = Funcad.int_to_4_bytes(abs(self.__robot_internal.step_motor_2_steps))
+        tx_data[12] = step2_steps[0]
+        tx_data[13] = step2_steps[1]
+        tx_data[14] = step2_steps[2]
+        tx_data[15] = step2_steps[3]
+
+        step1_steps_ps: bytearray = Funcad.int_to_4_bytes(abs(self.__robot_internal.step_motor_1_steps_per_s))
+        tx_data[16] = step1_steps_ps[0]
+        tx_data[17] = step1_steps_ps[1]
+        tx_data[18] = step1_steps_ps[2]
+        tx_data[19] = step1_steps_ps[3]
+        step2_steps_ps: bytearray = Funcad.int_to_4_bytes(abs(self.__robot_internal.step_motor_2_steps_per_s))
+        tx_data[20] = step2_steps_ps[0]
+        tx_data[21] = step2_steps_ps[1]
+        tx_data[22] = step2_steps_ps[2]
+        tx_data[23] = step2_steps_ps[3]
+
+        packed_p = struct.pack('<f', self.__robot_internal.p_pid)
+        tx_data[24] = packed_p[0]
+        tx_data[25] = packed_p[1]
+        tx_data[26] = packed_p[2]
+        tx_data[27] = packed_p[3]
+        packed_i = struct.pack('<f', self.__robot_internal.i_pid)
+        tx_data[28] = packed_i[0]
+        tx_data[29] = packed_i[1]
+        tx_data[30] = packed_i[2]
+        tx_data[31] = packed_i[3]
+        packed_d = struct.pack('<f', self.__robot_internal.d_pid)
+        tx_data[32] = packed_d[0]
+        tx_data[33] = packed_d[1]
+        tx_data[34] = packed_d[2]
+        tx_data[35] = packed_d[3]
+
+        tx_data[40] = 222
+
+        return tx_data
+    
+class VMXSPI:
+    def __init__(self):
+        self.__th: Thread = None
+        self.__stop_th: bool = False
+
+    def start_spi(self, connection: ConnectionReal, robot: Robot, robot_internal: AlgaritmInternal, conf: DefaultAlgaritmConfiguration) -> None:
+        self.__connection: ConnectionReal = connection
+        self.__robot: Robot = robot
+        self.__robot_internal: AlgaritmInternal = robot_internal
+        self.__conf: DefaultAlgaritmConfiguration = conf
+
+        self.__toggler: int = 0
+        self.__stop_th: bool = False
+        self.__th: Thread = Thread(target=self.spi_loop)
+        self.__th.daemon = True
+        self.__th.start()
+
+    def stop(self):
+        self.__stop_th = True
+        if self.__th is not None:
+            self.__th.join()
+
+    def spi_loop(self) -> None:
+        try:
+            spi_result = self.__connection.spi_ini(self.__conf.vmx_port, self.__conf.vmx_ch, self.__conf.vmx_speed, self.__conf.vmx_mode)
+            if spi_result != 0:
+                self.__robot.write_log("Failed to open SPI")
+                return
+
+            start_time: float = round(time.time() * 10000)
+            send_count_time: float = time.time()
+            comm_counter = 0
+            while not self.__stop_th:
+                tx_time: float = round(time.time() * 10000)
+                tx_list = self.set_up_tx_data()
+                self.__robot.robot_info.tx_spi_time_dev = round(time.time() * 10000) - tx_time
+
+                rx_list: bytearray = self.__connection.spi_rw(tx_list)
+
+                rx_time: float = round(time.time() * 10000)
+                self.set_up_rx_data(rx_list)
+                self.__robot.robot_info.rx_spi_time_dev = round(time.time() * 10000) - rx_time
+
+                comm_counter += 1
+                if time.time() - send_count_time > 1:
+                    send_count_time = time.time()
+                    self.__robot.robot_info.spi_count_dev = comm_counter
+                    comm_counter = 0
+
+                time.sleep(0.002)
+                self.__robot.robot_info.spi_time_dev = round(time.time() * 10000) - start_time
+                start_time = round(time.time() * 10000)
+        except (Exception, EOFError) as e:
+            self.__connection.spi_stop()
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            file_name = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            self.__robot.write_log(" ".join(map(str, [exc_type, file_name, exc_tb.tb_lineno])))
+            self.__robot.write_log(str(e))
+
+    def set_up_rx_data(self, data: bytearray) -> None:
+        if data[0] == 1:
+            self.__robot_internal.analog_1 = (data[2] & 0xff) << 8 | (data[1] & 0xff)
+            self.__robot_internal.analog_2 = (data[4] & 0xff) << 8 | (data[3] & 0xff)
+            self.__robot_internal.analog_3 = (data[6] & 0xff) << 8 | (data[5] & 0xff)
+            self.__robot_internal.analog_4 = (data[8] & 0xff) << 8 | (data[7] & 0xff)
+            self.__robot_internal.analog_5 = (data[10] & 0xff) << 8 | (data[9] & 0xff)
+            self.__robot_internal.analog_6 = (data[12] & 0xff) << 8 | (data[11] & 0xff)
+            self.__robot_internal.analog_7 = (data[14] & 0xff) << 8 | (data[13] & 0xff)
+        elif data[0] == 2:
+            self.__robot_internal.analog_8 = (data[2] & 0xff) << 8 | (data[1] & 0xff)
+
+            us1_ui: int = (data[4] & 0xff) << 8 | (data[3] & 0xff)
+            self.__robot_internal.ultrasound_1 = us1_ui / 100
+            us2_ui: int = (data[6] & 0xff) << 8 | (data[5] & 0xff)
+            self.__robot_internal.ultrasound_2 = us2_ui / 100
+            us3_ui: int = (data[8] & 0xff) << 8 | (data[7] & 0xff)
+            self.__robot_internal.ultrasound_3 = us3_ui / 100
+            us4_ui: int = (data[10] & 0xff) << 8 | (data[9] & 0xff)
+            self.__robot_internal.ultrasound_4 = us4_ui / 100
+        elif data[0] == 3:
+            yaw_ui: int = (data[2] & 0xff) << 8 | (data[1] & 0xff)
+            new_yaw = (yaw_ui / 100) * (1 if Funcad.access_bit(data[7], 1) else -1)
+            self.__robot_internal.yaw_unlim += self.calc_angle_unlim(new_yaw, self.__robot_internal.yaw)
+            self.__robot_internal.yaw = new_yaw
+
+            pitch_ui: int = (data[4] & 0xff) << 8 | (data[3] & 0xff)
+            new_pitch = (pitch_ui / 100) * (1 if Funcad.access_bit(data[7], 2) else -1)
+            self.__robot_internal.pitch_unlim += self.calc_angle_unlim(new_pitch, self.__robot_internal.pitch)
+            self.__robot_internal.pitch = new_pitch
+
+            roll_ui: int = (data[6] & 0xff) << 8 | (data[5] & 0xff)
+            new_roll = (roll_ui / 100) * (1 if Funcad.access_bit(data[7], 3) else -1)
+            self.__robot_internal.roll_unlim += self.calc_angle_unlim(new_roll, self.__robot_internal.roll)
+            self.__robot_internal.roll = new_roll
+
+            power: float = ((data[8] & 0xff) << 8 | (data[7] & 0xff)) / 100
+            self.__robot.power = power
+
+    def set_up_tx_data(self) -> bytearray:
+        tx_list: bytearray = bytearray([0x00] * 16)
+
+        if self.__toggler == 0:
+            tx_list[0] = 1
+
+            tx_list[1] = int(self.__robot_internal.servo_angles[0])
+            tx_list[2] = int(self.__robot_internal.servo_angles[1])
+            tx_list[3] = int(self.__robot_internal.servo_angles[2])
+            tx_list[4] = int(self.__robot_internal.servo_angles[3])
+            tx_list[5] = int(self.__robot_internal.servo_angles[4])
+            tx_list[6] = int(self.__robot_internal.servo_angles[5])
+            tx_list[7] = int(self.__robot_internal.servo_angles[6])
+            tx_list[8] = int(self.__robot_internal.servo_angles[7])
+        return tx_list
+
+    def calc_angle_unlim(self, new_angle: float, old_angle: float) -> float:
+        delta_angle = new_angle - old_angle
+        if delta_angle < -180:
+            delta_angle = 180 - old_angle
+            delta_angle += 180 + new_angle
+        elif delta_angle > 180:
+            delta_angle = (180 + old_angle) * -1
+            delta_angle += (180 - new_angle) * -1
+        return delta_angle
