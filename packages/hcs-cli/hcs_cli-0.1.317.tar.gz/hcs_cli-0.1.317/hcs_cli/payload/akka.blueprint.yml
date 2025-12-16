@@ -1,0 +1,445 @@
+deploymentId: 1
+var:
+  orgId: ${profile.csp.orgId}
+  region: westus2
+default:
+  name: akka-${deploymentId}
+resource:
+  myProvider:
+    kind: hcs/provider
+    data:
+      orgId: ${var.orgId}
+      providerLabel: akka
+      name: ${default.name}
+      edgeGatewayNeeded: true
+      providerDetails:
+        method: ByEndpoint
+        data:
+          applicationId: dummy-app-id
+          applicationKey: dummy-app-key
+          endpoint: http://20.114.50.188
+  mySite:
+    kind: hcs/site
+    data:
+      orgId: ${var.orgId}
+      name: ${default.name}
+      description: ${var.region}
+  myEdge:
+    kind: hcs/edge
+    data:
+      orgId: ${var.orgId}
+      name: ${default.name}
+      description: "I'm a little teapot."
+      providerInstanceId: ${myProvider.id}
+      siteId: ${mySite.id}
+      fqdn: ${default.name}.titan.omnissa.com
+  myGoldPattern:
+    kind: hcs/gold_pattern
+    data:
+      goldPattern:
+        providerInstanceId: ${myProvider.id}
+        orgId: ${var.orgId}
+        goldPatternDetails:
+          method: ByAkkaGalleryImage
+          data:
+            galleryName: horizonv2_image_gallery
+            galleryImageName: single-session-img
+            galleryImageVersionName: latest
+            osType: WINDOWS
+            multisession: false
+  myUAG:
+    kind: hcs/uag
+    after:
+      - myEdge
+    data:
+      numberOfGateways: 2
+      name: ${default.name}
+      orgId: ${var.orgId}
+      providerInstanceId: ${myProvider.id}
+      description: "Akka UAG created by HCS CLI."
+      fqdn: test.titan.vmware.com
+      internalFqdn: inttest.titan.vmware.com
+      infrastructure:
+        dmzNetwork: null
+        managementNetwork: null
+        desktopNetwork: null
+      sslCertificate:
+        data:
+          certificate: "-----BEGIN CERTIFICATE-----
+
+          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
+
+          W3Sv8/8dlLvDtY7d0voC
+
+          -----END CERTIFICATE-----
+
+          -----BEGIN CERTIFICATE-----
+
+          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
+
+          -----END CERTIFICATE-----
+
+          -----BEGIN PRIVATE KEY-----
+
+          MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDF+BvZXGFl7rOM
+
+          YLPPEmlJD4zvfe7YRxhc92uId11/Zc4ZrxzAddRiFKpMhIwMn3IC7DGQD1SbhUqH
+
+          eqP6Ugwh3Txqwe/CZf2vprnuGzobHZ70oLHmF3hwe0duVRC33lurX1vdERK3gMT5
+
+          YiRMkgH7SPpMDLyKpDdbhtW2Rb3TheF4sj7bGGdYYEV/3HhxlBJvL2Sh8oJ8BVKV
+
+          aKP20fQxBi8qiMjjAQc2un7r/FjFVD/SStUXWaqfUtaT0Dgy6NzHYTIidT5XSCm3
+
+          mxl5pw/SttaAWQDT1Gfsc6+z35UPYZFBSu/JlV648c01XplwwCz7ErhLXnVsNwLR
+
+          MQgPJkQZAgMBAAECggEASgUSpJrd7/boOzyM/oerxh2CXKmBfGxYt6nrEwNOeive
+
+          e8v1vCBSYLnJUwLcOnwDbQRTI8IXqG6WB0HbveSflKnbxS7uLolj6SE1s8mKWEki
+
+          /eR3n8h2x9fQRXiY36bML69f8bBIh0QmYfhICjktdH881uKMPGpaKGap0ZUR/NwR
+
+          rHgOV2WvhyCS+dF8XKD6DRJyimP6gTtJfIt+hik1C2bhPA7dZC1ATUHBBnlJgNld
+
+          4ngoQJSgnI1nMSCMRin0W2r5FZuOdB9W7yBTy/7u2mFj4I9k09FUI9vAWHcBniGP
+
+          aSotGO5uEXfRZpZ1GsPeIObWfxRbJ/KB8vfhfWrr4QKBgQDkX/y6qxCNNDnrdrMX
+
+          3TiibgXnrJRm9wOH3A/7H0QC0hcAawHFwUvi8SHESVvdTKOsF+gwRmnOrfJLf5Z/
+
+          9KwP4jMAIS0V95Qr57ueVWHKLp3VvAL1VQEE5cWq4T519FnbRgvlLbOyjUToXOls
+
+          +e1ZeqqAG9RZo8HAvm/iOSXsYwKBgQDd6o5J8Hgb3fFsu3iLeY5vGwY44BIVco8t
+
+          g+NIoE/k8/8uYhX/1yDTwoZGtb38U6J3MBV5A3NmFdaEPa7XA2q99lIrpaG2Cs+K
+
+          Uq45EdrY5F3jvrPDat6rmfIXVUTUVUA8Q1uPTHIFxHp3X/B/HDbxijeqtacWOM/A
+
+          40NQ6CzgUwKBgQDhvK+HpEe8C3+k67OjRxwQEkjr837NOCTZSgDR7NnBIAF0fFFI
+
+          NATa0hbaeti/Kl4uYYM1FKTJks8JKZiN6j+Zg7F9001JhWuE6o5dt2/t9Z42Ap25
+
+          +sgDG0wD2Jlw5pNbVyWy5zXUrCcMt6pT+cdOxx15fAiuglumNZdKOcrumQKBgGDZ
+
+          j0PhuOmgkU78+n0Ujf8bcjm8QOgvWSFqH/WAUZ4Ahuv9TtCbWO5SRTvy8XmAHrWZ
+
+          vKVVxjVVbovER9v618kUCYSXAt5qFW2u6+5oRnTGJdvRTK8KoyeNRkS8qA9rLV+f
+
+          ngQKPvEZcMFMk69F5wy/X9AW+1cNcE4kYSqcSYmVAoGAKWrhEZ8WGhWX28qJUnF2
+
+          Dab49CX/YUkaLP/8LfpVR07cpI19x4WgYM3QQAHvWDJdbBo0bgPjbBxzo4TSUgpB
+
+          8U0QQ/VncZTMpzhHP05CiroNDfQJPCPeTffAGVQvF1CLRSP3DKtR33j/Syc2+oKR
+
+          B7sJSUAA9OS2rHyIy4ohG50=
+
+          -----END PRIVATE KEY-----
+
+          "
+          certificatePassword: "testpassword"
+        type: PEM
+      type: INTERNAL_AND_EXTERNAL
+
+  myAD:
+    kind: hcs/ad
+    data:
+      orgId: ${var.orgId}
+      name: ${default.name}
+      defaultOU: OU=HV2-Desktops
+      dnsDomainName: nanw.demo.local
+      netBIOSName: nanw
+      joinAccounts:
+        primary:
+          username: admin1
+          password:
+            - x
+        auxiliary:
+          username: admin2
+          password:
+            - x
+      bindAccounts:
+        primary:
+          username: admin1
+          password:
+            - x
+        auxiliary:
+          username: admin2
+          password:
+            - x
+      primaryDNS: 127.0.0.1
+      secondaryDNS: 127.0.0.2
+
+  myTemplateDedicated:
+    kind: hcs/pool-template
+    data:
+      orgId: ${var.orgId}
+      name: ${default.name}-dedicated
+      vmNamePattern: ${default.name}-d-
+      templateType: DEDICATED
+      providerInstanceId: ${myProvider.id}
+      uagDeploymentId: ${myUAG.id}
+      edgeDeploymentId: ${myEdge.id}
+      applicationProperties:
+        azureActiveDirectoryJoined: "false"
+      # networks:
+      # - kind: subnets
+      #   id: ${mySubnet.id}
+      #   data:
+      #     parent: ${mySubnet.id}
+      #     name: ${mySubnet.name}
+      #     availableIpAddresses: 250
+      #     cidr: ${tenantPrep.cidr}
+      imageReference:
+        streamId: ${myGoldPattern.streamId}
+        versionId: ${myGoldPattern.versionId}
+      licenseProvided: true
+      desktopAdminUsername: hcsadmin
+      desktopAdminPassword: Thereisnosp00n
+      diskEncryption:
+        enabled: false
+      sparePolicy:
+        limit: 10
+        max: 4
+        min: 2
+      powerPolicy:
+        enabled: true
+        min: -1
+        minUnit: PERCENTAGE
+        occupancyPresetMode: DISABLED
+        powerSchedules: []
+        powerOffProtectTimeMins: 30
+      sessionsPerVm: 1
+      vmLicenseType: WINDOWS_CLIENT
+      diskSizeInGB: 127
+      infrastructure:
+        vmSkus:
+        - kind: vmSkus
+          id: Standard_D2_v4
+          data:
+            name: Standard_D2_v4
+            osVhdSizeMb: 1047552
+            maxDataDiskCount: 4
+            maxResourceVolumeMb: 51200
+            maxNetworkInterfaces: 2
+            memoryGb: 8
+            vCPUs: 2
+            premiumIO: false
+      networks:
+      - kind: networks
+        id: 00000000-0000-0000-0000-000000000000
+        data:
+          name: AkkaNetwork1
+      activeDirectoryId: ${myAD.id}
+      computerAccountOU: ${resource.myAD.data.defaultOU}
+  myTemplateFloating:
+    kind: hcs/pool-template
+    data:
+      orgId: ${var.orgId}
+      name: ${default.name}-floating
+      vmNamePattern: ${default.name}-f-
+      templateType: FLOATING
+      providerInstanceId: ${myProvider.id}
+      uagDeploymentId: ${myUAG.id}
+      edgeDeploymentId: ${myEdge.id}
+      applicationProperties:
+        azureActiveDirectoryJoined: "false"
+      # networks:
+      # - kind: subnets
+      #   id: ${mySubnet.id}
+      #   data:
+      #     parent: ${mySubnet.id}
+      #     name: ${mySubnet.name}
+      #     availableIpAddresses: 250
+      #     cidr: ${tenantPrep.cidr}
+      imageReference:
+        streamId: ${myGoldPattern.streamId}
+        versionId: ${myGoldPattern.versionId}
+      licenseProvided: true
+      desktopAdminUsername: hcsadmin
+      desktopAdminPassword: Thereisnosp00n
+      diskEncryption:
+        enabled: false
+      sparePolicy:
+        limit: 10
+        max: 4
+        min: 2
+      powerPolicy:
+        enabled: true
+        min: -1
+        minUnit: PERCENTAGE
+        occupancyPresetMode: DISABLED
+        powerSchedules: []
+        powerOffProtectTimeMins: 30
+      sessionsPerVm: 1
+      vmLicenseType: WINDOWS_CLIENT
+      diskSizeInGB: 127
+      infrastructure:
+        vmSkus:
+        - kind: vmSkus
+          id: Standard_D2_v4
+          data:
+            name: Standard_D2_v4
+            osVhdSizeMb: 1047552
+            maxDataDiskCount: 4
+            maxResourceVolumeMb: 51200
+            maxNetworkInterfaces: 2
+            memoryGb: 8
+            vCPUs: 2
+            premiumIO: false
+      networks:
+      - kind: networks
+        id: 00000000-0000-0000-0000-000000000000
+        data:
+          name: AkkaNetwork1
+      activeDirectoryId: ${myAD.id}
+      computerAccountOU: ${resource.myAD.data.defaultOU}
+
+  myPoolDedicated:
+    kind: hcs/pool-group
+    data:
+      orgId: ${var.orgId}
+      name: ${default.name}-dedicated
+      type: DESKTOP
+      templateType: DEDICATED
+      connectionAffinity: NEAREST_SITE
+      scope: ALL_SITES
+      enableSSO: false
+      preferredClientType: HORIZON_CLIENT
+      protocols:
+      - name: BLAST
+        defaultProtocol: true
+      templates:
+      - id: ${myTemplateDedicated.id}
+
+  myPoolFloating:
+    kind: hcs/pool-group
+    data:
+      orgId: ${var.orgId}
+      name: ${default.name}-floating
+      type: DESKTOP
+      templateType: FLOATING
+      connectionAffinity: NEAREST_SITE
+      scope: ALL_SITES
+      enableSSO: false
+      preferredClientType: HORIZON_CLIENT
+      protocols:
+      - name: BLAST
+        defaultProtocol: true
+      templates:
+      - id: ${myTemplateFloating.id}
