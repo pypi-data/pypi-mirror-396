@@ -1,0 +1,3 @@
+from windowManagerTab import *
+
+startWindowManagerConsole()
