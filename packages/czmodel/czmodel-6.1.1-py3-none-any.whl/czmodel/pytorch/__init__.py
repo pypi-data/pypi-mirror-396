@@ -1,0 +1,22 @@
+# CZModel provides simple-to-use conversion tools to generate a CZANN
+# Copyright 2025 Carl Zeiss Microscopy GmbH
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# To obtain a commercial version please contact Carl Zeiss Microscopy GmbH.
+"""Pytorch specific Package."""
+from czmodel.pytorch.convert import DefaultConverter, LegacyConverter
+from czmodel.pytorch.legacy_model_spec import ModelSpec as LegacyModelSpec
+from czmodel.pytorch.model_spec import ModelSpec
+
+__all__ = ["DefaultConverter", "LegacyConverter", "ModelSpec", "LegacyModelSpec"]
