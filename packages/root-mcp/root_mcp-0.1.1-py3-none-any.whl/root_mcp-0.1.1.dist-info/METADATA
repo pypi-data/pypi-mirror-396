@@ -1,0 +1,159 @@
+Metadata-Version: 2.4
+Name: root-mcp
+Version: 0.1.1
+Summary: Production-grade MCP server for CERN ROOT file analysis
+Author: Mohamed Elashri
+Maintainer: Mohamed Elashri
+License: MIT License
+        
+        Copyright (c) 2025 Mohamed Elashri
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR DEALINGS IN THE
+        SOFTWARE.
+        
+Project-URL: Homepage, https://github.com/MohamedElashri/root-mcp
+Project-URL: Repository, https://github.com/MohamedElashri/root-mcp
+Project-URL: Issues, https://github.com/MohamedElashri/root-mcp/issues
+Project-URL: Documentation, https://github.com/MohamedElashri/root-mcp/tree/main/docs
+Project-URL: Changelog, https://github.com/MohamedElashri/root-mcp/blob/main/CHANGELOG.md
+Keywords: ROOT,CERN,HEP,MCP,particle physics
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
+Classifier: Topic :: Scientific/Engineering :: Physics
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: uproot<6.0.0,>=5.0.0
+Requires-Dist: awkward<3.0.0,>=2.0.0
+Requires-Dist: numpy<2.0.0,>=1.24.0
+Requires-Dist: pandas<3.0.0,>=2.0.0
+Requires-Dist: mcp>=0.9.0
+Requires-Dist: pydantic<3.0.0,>=2.0.0
+Requires-Dist: pydantic-settings>=2.0.0
+Requires-Dist: aiofiles>=23.0.0
+Requires-Dist: fsspec>=2023.0.0
+Requires-Dist: pyarrow>=14.0.0
+Requires-Dist: pyyaml>=6.0
+Requires-Dist: xxhash>=3.0.0
+Requires-Dist: scipy>=1.10.0
+Requires-Dist: matplotlib>=3.7.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.21.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0.0; extra == "dev"
+Requires-Dist: black>=23.0.0; extra == "dev"
+Requires-Dist: ruff>=0.1.0; extra == "dev"
+Requires-Dist: mypy>=1.0.0; extra == "dev"
+Requires-Dist: types-PyYAML>=6.0.0.0; extra == "dev"
+Requires-Dist: pre-commit>=3.0.0; extra == "dev"
+Requires-Dist: build>=1.0.0; extra == "dev"
+Requires-Dist: twine>=4.0.0; extra == "dev"
+Provides-Extra: xrootd
+Requires-Dist: XRootD>=5.5.0; extra == "xrootd"
+Dynamic: license-file
+
+# MCP Server for CERN ROOT Files
+
+[![CI](https://github.com/MohamedElashri/root-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/MohamedElashri/root-mcp/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/root-mcp.svg)](https://pypi.org/project/root-mcp/)
+[![License](https://img.shields.io/pypi/l/root-mcp.svg)](LICENSE)
+[![Language](https://img.shields.io/badge/language-Python-blue.svg)](https://www.python.org/)
+
+A Model Context Protocol (`MCP`) server that provides AI models with safe, high-level access to CERN `ROOT` files and their contents (`TFile`, `TDirectory`, `TTree`, `TBranch`, histograms). Enables declarative, tool-based interaction with `ROOT` data without requiring users to write low-level C++ or `PyROOT` code.
+
+## Quick Start
+
+### Install
+
+```bash
+pip install root-mcp
+```
+
+Optional XRootD support:
+
+```bash
+pip install "root-mcp[xrootd]"
+```
+
+### Generate sample ROOT files
+
+```bash
+python examples/create_sample_data.py
+```
+
+### Configure
+
+Create a config (example):
+
+```yaml
+resources:
+  - name: "local_data"
+    uri: "file:///absolute/path/to/data/root_files"
+    description: "Sample ROOT files"
+    allowed_patterns: ["*.root"]
+
+security:
+  allowed_roots:
+    - "/absolute/path/to/data/root_files"
+    - "/tmp/root_mcp_output"
+  allowed_protocols: ["file"]
+```
+
+You can start from the repository example config at `config.yaml`.
+
+### Run
+
+```bash
+ROOT_MCP_CONFIG=/path/to/config.yaml root-mcp
+```
+
+## Documentation
+
+- `docs/README.md`: complete documentation (tools reference, configuration, Claude Desktop)
+- `docs/ARCHITECTURE.md`: architecture and design notes
+- `docs/CONTRIBUTING.md`: contributing guidelines
+
+## Citation
+
+If you use ROOT-MCP in your research, please cite:
+
+```bibtex
+@software{root_mcp,
+  title = {ROOT-MCP: Production-Grade MCP Server for CERN ROOT Files},
+  author = {Mohamed Elashri},
+  year = {2025},
+  url = {https://github.com/MohamedElashri/root-mcp}
+}
+```
+
+## References
+
+- [Model Context Protocol](https://modelcontextprotocol.io/)
+- [CERN ROOT](https://root.cern/)
+- [uproot](https://github.com/scikit-hep/uproot5)
+- [awkward-array](https://github.com/scikit-hep/awkward)
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details.
