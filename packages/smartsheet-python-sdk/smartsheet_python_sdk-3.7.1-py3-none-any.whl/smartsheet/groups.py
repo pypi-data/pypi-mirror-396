@@ -1,0 +1,190 @@
+# pylint: disable=C0111,R0902,R0913
+# Smartsheet Python SDK.
+#
+# Copyright 2018 Smartsheet.com, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"): you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+from __future__ import absolute_import
+
+from typing import Union, List
+
+import logging
+
+from .util import fresh_operation
+from .models import Error, Group, GroupMember, IndexResult, Result
+
+
+class Groups:
+
+    """Class for handling Groups operations."""
+
+    def __init__(self, smartsheet_obj):
+        """Init Groups with base Smartsheet object."""
+        self._base = smartsheet_obj
+        self._log = logging.getLogger(__name__)
+
+    def add_members(self, group_id, group_member_obj) -> Union[Result[Union[GroupMember, List[GroupMember]]], Error]:
+        """Add one or more members to a Group.
+
+        Args:
+            group_id (int): Group ID
+            group_member_obj (GroupMember): Group member
+                object(s).
+
+        Returns:
+            Union[Result[Union[GroupMember, List[GroupMember]]], Error]: The result of the operation - either a list or
+            a single object, or an Error object if the request fails.
+        """
+        _op = fresh_operation("add_members")
+        _op["method"] = "POST"
+        _op["path"] = "/groups/" + str(group_id) + "/members"
+        _op["json"] = group_member_obj
+
+        expected = ["Result", "GroupMember"]
+
+        prepped_request = self._base.prepare_request(_op)
+        response = self._base.request(prepped_request, expected, _op)
+
+        return response
+
+    def create_group(self, group_obj) -> Union[Result[Group], Error]:
+        """Create a new Group
+
+        Args:
+            group_obj (Group): Group object.
+
+        Returns:
+            Union[Result[Group], Error]: The result of the operation, or an Error object if the request fails.
+        """
+        _op = fresh_operation("create_group")
+        _op["method"] = "POST"
+        _op["path"] = "/groups"
+        _op["json"] = group_obj
+
+        expected = ["Result", "Group"]
+
+        prepped_request = self._base.prepare_request(_op)
+        response = self._base.request(prepped_request, expected, _op)
+
+        return response
+
+    def delete_group(self, group_id) -> Union[Result[None], Error]:
+        """Delete the specified Group.
+
+        Args:
+            group_id (int): Group ID
+
+        Returns:
+            Union[Result[None], Error]: The result of the operation, or an Error object if the request fails.
+        """
+        _op = fresh_operation("delete_group")
+        _op["method"] = "DELETE"
+        _op["path"] = "/groups/" + str(group_id)
+
+        expected = ["Result", None]
+        prepped_request = self._base.prepare_request(_op)
+        response = self._base.request(prepped_request, expected, _op)
+
+        return response
+
+    def get_group(self, group_id) -> Union[Group, Error]:
+        """Get the specified Group.
+
+        Args:
+            group_id (int): Group ID
+
+        Returns:
+            Union[Group, Error]: The result of the operation, or an Error object if the request fails.
+        """
+        _op = fresh_operation("get_group")
+        _op["method"] = "GET"
+        _op["path"] = "/groups/" + str(group_id)
+
+        expected = "Group"
+        prepped_request = self._base.prepare_request(_op)
+        response = self._base.request(prepped_request, expected, _op)
+
+        return response
+
+    def list_groups(self, page_size=None, page=None, include_all=None) -> Union[IndexResult[Group], Error]:
+        """Get all Groups in an organization.
+
+        Get the list of all Groups in an organization. To fetch the
+        members of an individual group, use the getGroup operation.
+
+        Args:
+            page_size (int): The maximum number of items to
+                return per page.
+            page (int): Which page to return.
+            include_all (bool): If true, include all results
+                (i.e. do not paginate).
+
+        Returns:
+            Union[IndexResult[Group], Error]: The result of the operation, or an Error object if the request fails.
+        """
+        _op = fresh_operation("list_groups")
+        _op["method"] = "GET"
+        _op["path"] = "/groups"
+        _op["query_params"]["pageSize"] = page_size
+        _op["query_params"]["page"] = page
+        _op["query_params"]["includeAll"] = include_all
+
+        expected = ["IndexResult", "Group"]
+
+        prepped_request = self._base.prepare_request(_op)
+        response = self._base.request(prepped_request, expected, _op)
+
+        return response
+
+    def remove_member(self, group_id, user_id) -> Union[Result[None], Error]:
+        """Removes a member from the specified Group.
+
+        Args:
+            group_id (int): Group ID
+            user_id (int): User ID
+
+        Returns:
+            Union[Result[None], Error]: The result of the operation, or an Error object if the request fails.
+        """
+        _op = fresh_operation("remove_member")
+        _op["method"] = "DELETE"
+        _op["path"] = "/groups/" + str(group_id) + "/members/" + str(user_id)
+
+        expected = ["Result", None]
+        prepped_request = self._base.prepare_request(_op)
+        response = self._base.request(prepped_request, expected, _op)
+
+        return response
+
+    def update_group(self, group_id, group_obj) -> Union[Result[Group], Error]:
+        """Updates the specified Group.
+
+        Args:
+            group_id (int): Group ID
+            group_obj (Group): Group object.
+
+        Returns:
+            Union[Result[Group], Error]: The result of the operation, or an Error object if the request fails.
+        """
+        _op = fresh_operation("update_group")
+        _op["method"] = "PUT"
+        _op["path"] = "/groups/" + str(group_id)
+        _op["json"] = group_obj
+
+        expected = ["Result", "Group"]
+
+        prepped_request = self._base.prepare_request(_op)
+        response = self._base.request(prepped_request, expected, _op)
+
+        return response
