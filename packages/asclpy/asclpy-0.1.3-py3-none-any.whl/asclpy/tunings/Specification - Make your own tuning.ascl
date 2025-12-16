@@ -1,0 +1,137 @@
+! ASCL Specification
+!
+! ASCL is an Ableton-specific extension to the SCL file format originally developed for
+! use with the Scala software to store tuning system information. It is a backwards
+! -compatible format where all Ableton-specific extensions are stored in SCL comments
+! (whose lines start with !). That means that any ASCL file can be read by software
+! capable of reading SCL files.
+!
+! This specification is itself an ASCL file.
+!
+! To start with, the file contains a single line text description, an integer number of notes
+! per octave and a list of pitches for each of these notes in either cents (expects a decimal
+! number) or integer ratio (e.g. 5/4). These notes are defined in relation to an implied
+! but not written zeroeth index. The last number gives the size of the psuedo-octave.
+! This format is described in more detail by the official SCL file documentation:
+!
+!   https://www.huygens-fokker.org/scala/scl_format.html
+!
+! When loaded in Ableton Live, the following single line will be displayed as the Info Text for this tuning:
+An example documenting the ASCL format. Open the source file of this tuning for a detailed specification regarding how to make your own tuning file. Or, load this tuning and click on the "Open Tuning System Link" in the upper right of the Tuning View for a tutorial on making your own tuning file.
+!
+! Number of notes in the pseudo-octave:
+ 12
+!
+ 100.0      ! First note within the octave above the zeroeth index
+ 200.0
+ 300.0
+ 400.0
+ 500.0
+ 600.0
+ 700.0
+ 800.0
+ 900.0
+ 1000.0
+ 1100.0
+ 2/1        ! Size of the pseudo-octave
+!
+!
+! # General notes for Ableton extensions
+!
+!   All extended data is stored in comment lines with the prefix @ABL which come after
+!   the list of note pitches. All arguments to these definitions are separated by spaces.
+!   If you wish your argument to include a space in it, surround it with double-quotes:
+!   `"`
+!
+!   All Scala files that implement Ableton extensions must be in UTF-8 format. A
+!   compliant parser for ABL extensions must reject any file that contains Ableton
+!   extensions but is not in UTF-8 format.
+!
+!   Note, if you wish to temporarily disable a directive, simply add an extra ! sign at
+!   the beginning of the line, and it will be ignored.
+!
+!
+! # Supported directives:
+!
+! -- REFERENCE_PITCH - set a reference pitch for this tuning
+!     Arguments:
+!       Octave number (integer from -2 to 8)
+!       Note index within the octave- what note pitch are we setting the frequency for
+!         (positive integer, 0-indexed, less than the number of note pitches in this
+!         tuning system. The zeroeth pitch is the implied 0-cent first note pitch.)
+!       Frequency (nonzero positive float, in Hz)
+!
+! @ABL REFERENCE_PITCH 4 9 440.0
+!
+!
+! -- NOTE_NAMES - set default names for the pitch classes in this tuning
+!     Arguments:
+!      A sequence of note names for every note pitch in the tuning system. The first
+!        entry in the sequence applies to the zeroeth note.
+!
+! @ABL NOTE_NAMES C C♯/D♭ D D♯/E♭ E F F♯/G♭ G G♯/A♭ A A♯/B♭ B
+!
+!
+! ## Note range directives:
+!
+!   These directives set the range of notes considered valid in the tuning system. You
+!   can use one of either of these directives.  It is optional to include a NOTE_RANGE
+!   directive. It is an error to provide more than one NOTE_RANGE_BY_XXX directive in
+!   a file.
+!
+! -- NOTE_RANGE_BY_FREQUENCY
+!     Arguments:
+!       Minimum frequency in Hz (float from 4.0 to 21000.0)
+!       Maximum frequency in Hz (float from 4.0 to 21000.0, optional)
+!
+! -- NOTE_RANGE_BY_INDEX
+!     Arguments:
+!      Minimum octave (-99 to 99)
+!      Minimum note pitch index within the octave (integer)
+!      Maximum octave (-99 to 99, optional)
+!      Maximum note pitch index within the octave (integer, optional)
+!!
+! Without a NOTE_RANGE directive, the notes available in the tuning system will be
+! centered around A3 440.0 Hz (MIDI note number 69) unless the tuning system has 12 notes
+! per pseudo-octave. All other notes in the tuning system will be calculated on either
+! side accordingly: 64 notes below the center point, and 63 notes above it.
+!
+! If there are 12 notes per pseudo-octave it sets the note closest to A3 440.0 Hz
+! to note index 69 in the tuning. The 12 notes per pseudo-octave special case is
+! implemented in order for the tuning system note indicies to match the default MIDI note
+! numbers and thus remain MIDI keyboard compatible by default for 12 note keyboard
+! based tuning systems.
+!
+! Providing only a minimum note without a maximum note is allowed. If a NOTE_RANGE
+! directive is used, the lowest usable note in the tuning system will be set to the one
+! specified by the minimum note and octave index (NOTE_RANGE_BY_INDEX), or to the first
+! note at or above the minimum frequency (NOTE_RANGE_BY_FREQUENCY). The maximum playable
+! pitch will be either the maximum note and octave index specified by the directive, or
+! 127 steps above the minimum note, or the note closest to and below 21kHz, whichever
+! comes first.
+!
+! NOTE_RANGE_BY_INDEX can only be used if there is an already a declared REFERENCE_PITCH
+! as the frequency of the minimum (and maximum) pitches are calculated in relation to the
+! octave, pitch class index, and frequency given by the reference pitch.
+!
+! @ABL NOTE_RANGE_BY_FREQUENCY 8.0
+!
+!
+! ## Documentation directives:
+!
+! -- SOURCE
+!     Arguments:
+!      Text until end of line
+!
+! Source text is used to document where a tuning system came from or who maintains the
+! file. May show in the associated Info Text if space is available.
+!
+! @ABL SOURCE Example by Ableton AG
+!
+! -- LINK
+!     Arguments
+!      A URL where someone can learn more information about the tuning system. Note that
+!      for security reasons, Ableton software may not provide direct access within
+!      applications to this link.
+!
+! @ABL LINK https://www.ableton.com/learn-more/tuning-systems/make-your-own-tuning
