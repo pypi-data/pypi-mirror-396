@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>
+        {{ app_config['web_page']['title']|e }}
+    </title>
+    {% include "_head_meta.html.j2" %}
+    <script type="module" src="/static/webplayer.js"></script>
+    <style>
+        #podcast_select,
+        #podcast-player-cover,
+        .file-list {
+            display: none;
+        }
+    </style>
+    <noscript>
+        <style>
+            #file_list,
+            #breadcrumb {
+                display: block !important;
+            }
+        </style>
+    </noscript>
+</head>
+
+<body>
+    <main class="contained-content">
+        <h1>{{ app_config['web_page']['title']|e }}</h1>
+        {{ header | safe }}
+        <noscript>
+            <p>This does not work without Javascript enabled!</p>
+        </noscript>
+        <p>Use a podcast app per the guide if you want to track what you have listened to.</p>
+        <div class="custom-select">
+            <select id="podcast_select" onchange="loadPodcast(event)">
+                <option value="">Select a podcast</option>
+                {% for podcast in podcasts %}<option
+                    value="{{app_config['inet_path']}}rss/{{ podcast['name_one_word']}}">{{ podcast['new_name'] }}
+                </option>{% endfor %}
+            </select>
+        </div>
+        <ul id="podcast-episode-list" class="file-list"></ul>
+    </main>
+    <div class="podcast-player-offset"></div>
+    <div class="podcast-player-footer">
+        <div class="podcast-player">
+            <hr>
+            <div id="podcast-player-cover-container">
+                <img id="podcast-player-cover" src="/static/transparent.png" alt="Podcast cover">
+            </div>
+            <div id="episode-name-and-player-container">
+                <p class="podcast-player-text" id="podcast_player_podcast_name">-</p>
+                <p class="podcast-player-text" id="podcast_player_episode_name">No episode loaded</p>
+                <audio id="podcast-audio-player" class="contained-content" controls preload="metadata" />
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
