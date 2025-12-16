@@ -1,0 +1,166 @@
+[build-system]
+requires = ["hatchling>=1.8.0", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "faststrap"
+dynamic = ["version"]
+description = "Modern Bootstrap 5 components for FastHTML - Build beautiful UIs in pure Python"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Olorundare Micheal", email = "meshelleva@gmail.com"}
+]
+keywords = [
+    "fasthtml",
+    "bootstrap",
+    "bootstrap5",
+    "ui-components",
+    "web-framework",
+    "htmx",
+    "python-web",
+    "no-javascript"
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: FastAPI",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: User Interfaces",
+    "Typing :: Typed",
+]
+dependencies = [
+    "python-fasthtml>=0.6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov>=4.0",
+    "mypy>=1.5",
+    "black>=24.0",
+    "ruff>=0.5.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/Evayoung/Faststrap"
+Repository = "https://github.com/Evayoung/Faststrap"
+Issues = "https://github.com/Evayoung/Faststrap/issues"
+Documentation = "https://github.com/Evayoung/Faststrap#readme"
+Changelog = "https://github.com/Evayoung/Faststrap/blob/main/CHANGELOG.md"
+
+# ============================================================================
+# Build Configuration
+# ============================================================================
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/faststrap"]
+# Include static assets in the wheel
+artifacts = [
+    "static/**/*",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/static",
+    "/tests",
+    "/examples",
+    "/*.md",
+    "/LICENSE",
+]
+
+# ============================================================================
+# Testing Configuration
+# ============================================================================
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = [
+    "--cov=faststrap",
+    "--cov-report=html",
+    "--cov-report=term-missing",
+    "--cov-report=xml",
+    "-v",
+]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+# ============================================================================
+# Type Checking Configuration
+# ============================================================================
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+files = ["src/faststrap"]
+exclude = [
+    "src/faststrap/templates",  # Exclude template files
+    "tests/",
+    "examples/",
+]
+
+[[tool.mypy.overrides]]
+module = ["fasthtml.*", "starlette.*"]
+ignore_missing_imports = true
+
+# ============================================================================
+# Code Formatting Configuration
+# ============================================================================
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312"]
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+    \.git
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+# ============================================================================
+# Linting Configuration
+# ============================================================================
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort
+    "W",   # pycodestyle warnings
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+]
+ignore = [
+    "E501",  # Line too long (handled by black)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]  # Unused imports OK in __init__
+"**/components/**/*.py" = ["N802"]  # Allow PascalCase for components
+"tests/**/*.py" = ["S101"]  # Allow assert in tests
+
+[tool.ruff.lint.isort]
+known-first-party = ["faststrap"]
