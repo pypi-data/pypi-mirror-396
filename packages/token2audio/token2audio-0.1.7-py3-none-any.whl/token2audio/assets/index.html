@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Token2Audio 测试</title>
+    <style>
+        .tab-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 10px;
+        }
+        
+        .tab-buttons {
+            display: flex;
+            border-bottom: 2px solid #ddd;
+            margin-bottom: 10px;
+        }
+        
+        .tab-button {
+            padding: 8px 16px;
+            background-color: #f5f5f5;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .tab-button.active {
+            background-color: #fff;
+            border-bottom-color: #4CAF50;
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        
+        .tab-button:hover {
+            background-color: #e8f5e8;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background-color: #fff;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 8px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 3px;
+            font-weight: bold;
+            font-size: 13px;
+        }
+        
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            font-size: 13px;
+        }
+        
+        .form-group textarea {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            font-size: 13px;
+            min-height: 50px;
+            resize: vertical;
+        }
+        
+        .button-group {
+            margin: 8px 0;
+        }
+        
+        .button-group button {
+            padding: 6px 12px;
+            margin-right: 6px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background-color 0.3s;
+        }
+        
+        .btn-primary {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #45a049;
+        }
+        
+        .btn-secondary {
+            background-color: #2196F3;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #1976D2;
+        }
+        
+        .btn-danger {
+            background-color: #f44336;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background-color: #d32f2f;
+        }
+        
+        .btn-warning {
+            background-color: #ff9800;
+            color: white;
+        }
+        
+        .btn-warning:hover {
+            background-color: #f57c00;
+        }
+        
+        .stats-container {
+            display: flex;
+            gap: 15px;
+            margin: 8px 0;
+            padding: 6px;
+            background-color: #f9f9f9;
+            border-radius: 3px;
+        }
+        
+        .stats-container p {
+            margin: 0;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        
+        .audio-grid {
+            margin-top: 10px;
+        }
+        
+        .audio-grid h3 {
+            margin-bottom: 6px;
+            color: #333;
+            font-size: 14px;
+        }
+        
+        #audioGrid {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        
+        .audio-chunk-item {
+            width: 100%;
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 6px;
+            margin-bottom: 3px;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            transition: background-color 0.3s;
+        }
+        
+        .audio-chunk-info {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            flex: 1;
+        }
+        
+        .audio-chunk-title {
+            font-weight: bold;
+            font-size: 12px;
+            color: #333;
+        }
+        
+        .audio-chunk-stats {
+            display: flex;
+            gap: 10px;
+            font-size: 11px;
+            color: #666;
+        }
+        
+        .audio-chunk-tokens {
+            font-size: 11px;
+            color: #666;
+            word-break: break-all;
+            max-height: 30px;
+            overflow-y: auto;
+        }
+        
+        .play-button {
+            width: 60px;
+            height: 30px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .play-button:hover {
+            background-color: #45a049;
+        }
+        
+        .result-message {
+            margin: 6px 0;
+            padding: 6px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        
+        .result-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .result-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .result-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="tab-container">
+        <h1>Token2Audio 测试</h1>
+        
+        <!-- Tab 按钮 -->
+        <div class="tab-buttons">
+            <button class="tab-button active" onclick="switchTab('sync')">同步接口</button>
+            <button class="tab-button" onclick="switchTab('async')">异步接口 (WebSocket)</button>
+        </div>
+        
+        <!-- 同步接口 Tab -->
+        <div id="syncTab" class="tab-content active">
+            <div class="form-group">
+                <label for="syncVoiceId">Voice ID:</label>
+                <select id="syncVoiceId">
+                    <option value="venchi">venchi</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="syncTokens">Tokens:</label>
+                <textarea id="syncTokens" placeholder="输入 tokens，用逗号分隔"></textarea>
+            </div>
+            
+            <div class="button-group">
+                <button class="btn-primary" onclick="testSyncAPI()">测试同步接口</button>
+            </div>
+            
+            <div id="syncResult"></div>
+            <audio id="syncAudio" controls style="display:none;"></audio>
+        </div>
+        
+        <!-- 异步接口 Tab -->
+        <div id="asyncTab" class="tab-content">
+            
+            <div class="form-group">
+                <label for="asyncVoiceId">Voice ID:</label>
+                <select id="asyncVoiceId">
+                    <option value="">加载中...</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="asyncTokens">Tokens:</label>
+                <textarea id="asyncTokens" placeholder="输入 tokens，用逗号分隔"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="sendMode">发送模式:</label>
+                <select id="sendMode">
+                    <option value="single">单 token</option>
+                    <option value="batch">批量 tokens (一次20个)</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="sendInterval">发送间隔:</label>
+                <select id="sendInterval">
+                    <option value="20">20ms</option>
+                    <option value="40">40ms</option>
+                    <option value="80">80ms</option>
+                    <option value="160">160ms</option>
+                    <option value="400">400ms</option>
+                </select>
+            </div>
+            
+            <div class="button-group">
+                <button class="btn-warning" onclick="playAllAudioChunks()">播放全部音频</button>
+                <button class="btn-danger" onclick="clearAudioChunks()">清空音频</button>
+            </div>
+            
+            <div class="button-group">
+                <button class="btn-secondary" onclick="toggleWebSocketConnection()" id="connectBtn">连接 WebSocket</button>
+                <button class="btn-primary" onclick="startAsyncTest()" id="startBtn" disabled>开始测试</button>
+                <button class="btn-danger" onclick="stopAsyncTest()" id="stopBtn" disabled style="display: none;">停止测试</button>
+            </div>
+            
+            <div class="stats-container">
+                <p>已发送包数: <span id="sentCount">0</span></p>
+                <p>已接收包数: <span id="receivedCount">0</span></p>
+                <p>音频块数: <span id="audioChunkCount">0</span></p>
+            </div>
+            
+            <div id="asyncResult"></div>
+            
+            <!-- 音频块网格 -->
+            <div class="audio-grid">
+                <h3>音频块网格</h3>
+                <div id="audioGrid"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const tokens = [1493, 4299, 4218, 2049, 528, 2752, 4850, 4569, 4575, 6372, 2127, 4068, 2312, 4993, 4769, 2300, 226, 2175, 2160, 2152, 6311, 6065, 4859, 5102, 4615, 6534, 6426, 1763, 2249, 2209, 5938, 1725, 6048, 3816, 6058, 958, 63, 4460, 5914, 2379, 735, 5319, 4593, 2328, 890, 35, 751, 1483, 1484, 1483, 2112, 303, 4753, 2301, 5507, 5588, 5261, 5744, 5501, 2341, 2001, 2252, 2344, 1860, 2031, 414, 4366, 4366, 6059, 5300, 4814, 5092, 5100, 1923, 3054, 4320, 4296, 2148, 4371, 5831, 5084, 5027, 4946, 4946, 2678, 575, 575, 521, 518, 638, 1367, 2804, 3402, 4299]
+
+        // Tab 切换功能
+        function switchTab(tabName) {
+            // 隐藏所有 tab 内容
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // 移除所有 tab 按钮的 active 状态
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            // 显示选中的 tab 内容
+            document.getElementById(tabName + 'Tab').classList.add('active');
+            
+            // 激活选中的 tab 按钮
+            event.target.classList.add('active');
+        }
+
+        // 加载可用的语音列表
+        async function loadVoiceList() {
+            try {
+                const response = await fetch(`${window.location.origin}/v1/voices`);
+                const data = await response.json();
+                
+                // 更新同步接口的 select
+                const syncSelect = document.getElementById('syncVoiceId');
+                syncSelect.innerHTML = '';
+                data.voices.forEach(voice => {
+                    const option = document.createElement('option');
+                    option.value = voice.voice_id;
+                    option.textContent = voice.voice_id;
+                    syncSelect.appendChild(option);
+                });
+                
+                // 更新异步接口的 select
+                const asyncSelect = document.getElementById('asyncVoiceId');
+                asyncSelect.innerHTML = '';
+                data.voices.forEach(voice => {
+                    const option = document.createElement('option');
+                    option.value = voice.voice_id;
+                    option.textContent = voice.voice_id;
+                    asyncSelect.appendChild(option);
+                });
+                
+                console.log('语音列表加载成功:', data.voices);
+            } catch (error) {
+                console.error('加载语音列表失败:', error);
+                // 如果加载失败，显示错误信息
+                // document.getElementById('syncVoiceId').innerHTML = '<option value="">加载失败</option>';
+                // document.getElementById('asyncVoiceId').innerHTML = '<option value="">加载失败</option>';
+            }
+        }
+
+        // 页面加载时获取语音列表
+        document.addEventListener('DOMContentLoaded', function() {
+            loadVoiceList();
+        });
+
+        document.getElementById('asyncTokens').value = tokens.join(',');
+        document.getElementById('syncTokens').value = tokens.join(',');
+
+        let websocket = null;
+        let isTestRunning = false;
+        let audioChunks = []; // 存储音频块数据
+        let audioChunkElements = []; // 存储音频块元素
+        let audioContext = null;
+        
+        // 统计计数器
+        let sentCount = 0;
+        let receivedCount = 0;
+        let audioChunkCount = 0;
+
+        // 更新统计显示
+        function updateStats() {
+            document.getElementById('sentCount').textContent = sentCount;
+            document.getElementById('receivedCount').textContent = receivedCount;
+            document.getElementById('audioChunkCount').textContent = audioChunkCount;
+        }
+
+        // 重置统计
+        function resetStats() {
+            sentCount = 0;
+            receivedCount = 0;
+            audioChunkCount = 0;
+            updateStats();
+        }
+
+        // 同步接口测试
+        async function testSyncAPI() {
+            const voiceId = document.getElementById('syncVoiceId').value;
+            const tokensStr = document.getElementById('syncTokens').value;
+            const resultDiv = document.getElementById('syncResult');
+            const audioElement = document.getElementById('syncAudio');
+            
+            if (!voiceId || !tokensStr) {
+                resultDiv.innerHTML = '<div class="result-message result-error">请填写 Voice ID 和 Tokens</div>';
+                return;
+            }
+            
+            try {
+                const tokens = tokensStr.split(',').map(t => parseInt(t.trim()));
+                resultDiv.innerHTML = '<div class="result-message result-info">正在处理...</div>';
+                
+                const response = await fetch(`${window.location.origin}/v1/token2audio`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', },
+                    body: JSON.stringify({ voice_id: voiceId, tokens: tokens })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                resultDiv.innerHTML = `<div class="result-message result-success">成功！音频时长: ${result.duration}秒</div>`;
+                
+                // 播放音频
+                audioElement.src = `data:audio/wav;base64,${result.audio}`;
+                audioElement.style.display = 'block';
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result-message result-error">错误: ${error.message}</div>`;
+            }
+        }
+
+        // WebSocket 连接/断开切换
+        function toggleWebSocketConnection() {
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                disconnectWebSocket();
+            } else {
+                connectWebSocket();
+            }
+        }
+
+        // WebSocket 连接
+        function connectWebSocket() {
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                alert('WebSocket 已连接');
+                return;
+            }
+            
+            // 动态获取当前页面的端口
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const host = window.location.host;
+            const wsUrl = `${protocol}//${host}/v1/token2audio`;
+            
+            websocket = new WebSocket(wsUrl);
+            
+            websocket.onopen = function(event) {
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('connectBtn').textContent = '断开连接';
+                document.getElementById('connectBtn').className = 'btn-danger';
+                document.getElementById('asyncResult').innerHTML = '<div class="result-message result-success">WebSocket 连接成功</div>';
+                resetStats(); // 重置统计
+            };
+            
+            websocket.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                handleWebSocketMessage(data);
+            };
+            
+            websocket.onclose = function(event) {
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('stopBtn').disabled = true;
+                document.getElementById('stopBtn').style.display = 'none';
+                document.getElementById('connectBtn').textContent = '连接 WebSocket';
+                document.getElementById('connectBtn').className = 'btn-secondary';
+                document.getElementById('asyncResult').innerHTML += '<div class="result-message result-info">WebSocket 连接已关闭</div>';
+            };
+            
+            websocket.onerror = function(error) {
+                document.getElementById('asyncResult').innerHTML = '<div class="result-message result-error">WebSocket 错误: ' + error + '</div>';
+            };
+        }
+
+        // 断开 WebSocket
+        function disconnectWebSocket() {
+            if (websocket) {
+                websocket.close();
+                websocket = null;
+            }
+        }
+
+        // 处理 WebSocket 消息
+        function handleWebSocketMessage(data) {
+            const resultDiv = document.getElementById('asyncResult');
+            receivedCount++; // 增加接收计数
+            updateStats(); // 更新统计显示
+            
+            if (data.type === 'response.created') {
+                resultDiv.innerHTML += `<div class="result-message result-success">会话创建成功: ${data.data.id}</div>`;
+            } else if (data.type === 'response.audio.delta') {
+                if (data.data.audio) {
+                    audioChunks.push({
+                        audio: data.data.audio,
+                        duration: data.data.duration,
+                        inferenceTime: data.data.inference_time || 0, // 推理耗时（毫秒）
+                        tokens: data.data.audio_tokens || [], // 音频块所用的 tokens
+                        index: audioChunks.length
+                    });
+                    audioChunkCount++; // 增加音频块计数
+                    updateStats(); // 更新统计显示
+                    resultDiv.innerHTML += `<div class="result-message result-info">收到音频块 ${audioChunks.length}, 时长: ${data.data.duration}秒, 推理耗时: ${data.data.inference_time || 0}ms</div>`;
+                    
+                    // 创建音频块网格项
+                    createAudioChunkElement(audioChunks.length - 1);
+                }
+            } else if (data.type === 'response.audio.flush') {
+                resultDiv.innerHTML += '<div class="result-message result-info">音频流结束</div>';
+                playCombinedAudio();
+            } else if (data.type === 'response.audio.done') {
+                resultDiv.innerHTML += '<div class="result-message result-success">处理完成</div>';
+                isTestRunning = false;
+                document.getElementById('stopBtn').disabled = true;
+                document.getElementById('stopBtn').style.display = 'none';
+            } else if (data.type === 'response.error') {
+                resultDiv.innerHTML += `<div class="result-message result-error">错误: ${data.data.message}</div>`;
+                isTestRunning = false;
+                document.getElementById('stopBtn').disabled = true;
+                document.getElementById('stopBtn').style.display = 'none';
+            }
+        }
+
+        // 创建音频块元素
+        function createAudioChunkElement(index) {
+            const audioChunk = audioChunks[index];
+            const audioGrid = document.getElementById('audioGrid');
+            
+            // 创建音频元素
+            const audioElement = document.createElement('audio');
+            audioElement.src = `data:audio/wav;base64,${audioChunk.audio}`;
+            audioElement.controls = true;
+            audioElement.style.display = 'none';
+            
+            // 创建网格项容器
+            const gridItemContainer = document.createElement('div');
+            gridItemContainer.className = 'audio-chunk-item';
+            
+            // 左侧信息区域
+            const infoArea = document.createElement('div');
+            infoArea.className = 'audio-chunk-info';
+            
+            // 音频块编号
+            const titleDiv = document.createElement('div');
+            titleDiv.className = 'audio-chunk-title';
+            titleDiv.textContent = `音频块 ${index + 1}`;
+            
+            // 时长和推理耗时在同一行
+            const statsDiv = document.createElement('div');
+            statsDiv.className = 'audio-chunk-stats';
+            
+            const durationSpan = document.createElement('span');
+            durationSpan.textContent = `时长: ${audioChunk.duration.toFixed(3)}秒`;
+            
+            const inferenceSpan = document.createElement('span');
+            inferenceSpan.textContent = `推理耗时: ${audioChunk.inferenceTime}ms`;
+            
+            statsDiv.appendChild(durationSpan);
+            statsDiv.appendChild(inferenceSpan);
+            
+            // Tokens 信息（显示全部）
+            const tokensDiv = document.createElement('div');
+            tokensDiv.className = 'audio-chunk-tokens';
+            const tokensText = audioChunk.tokens && audioChunk.tokens.length > 0 
+                ? `Tokens: [${audioChunk.tokens.join(', ')}] (${audioChunk.tokens.length}个)`
+                : 'Tokens: 无';
+            tokensDiv.textContent = tokensText;
+            
+            infoArea.appendChild(titleDiv);
+            infoArea.appendChild(statsDiv);
+            infoArea.appendChild(tokensDiv);
+            
+            // 右侧播放按钮
+            const playButton = document.createElement('button');
+            playButton.className = 'play-button';
+            playButton.textContent = '▶';
+            
+            gridItemContainer.appendChild(infoArea);
+            gridItemContainer.appendChild(playButton);
+            
+            // 播放按钮点击事件
+            playButton.addEventListener('click', (e) => {
+                e.stopPropagation(); // 阻止事件冒泡
+                audioElement.play().catch(error => {
+                    console.log('音频播放失败:', error);
+                });
+            });
+            
+            // 添加到网格
+            audioGrid.appendChild(gridItemContainer);
+            audioGrid.appendChild(audioElement);
+            
+            // 存储元素引用
+            audioChunkElements.push({
+                gridItem: gridItemContainer,
+                audioElement: audioElement
+            });
+        }
+
+        // 播放全部音频块
+        function playAllAudioChunks() {
+            if (audioChunkElements.length === 0) return;
+            
+            // 依次播放每个音频块
+            let currentIndex = 0;
+            
+            function playNext() {
+                if (currentIndex >= audioChunkElements.length) return;
+                
+                const audioElement = audioChunkElements[currentIndex].audioElement;
+                const gridItem = audioChunkElements[currentIndex].gridItem;
+                
+                // 高亮当前播放的块
+                gridItem.style.backgroundColor = '#FF9800';
+                
+                audioElement.addEventListener('ended', () => {
+                    // 恢复颜色
+                    gridItem.style.backgroundColor = '#f5f5f5';
+                    currentIndex++;
+                    playNext();
+                }, { once: true });
+                
+                audioElement.play().catch(error => {
+                    console.log('音频播放失败:', error);
+                    gridItem.style.backgroundColor = '#f5f5f5';
+                    currentIndex++;
+                    playNext();
+                });
+            }
+            
+            playNext();
+        }
+
+        // 清空音频块
+        function clearAudioChunks() {
+            const audioGrid = document.getElementById('audioGrid');
+            audioGrid.innerHTML = '';
+            audioChunks = [];
+            audioChunkElements = [];
+            audioChunkCount = 0;
+            updateStats();
+        }
+
+        // 开始异步测试
+        function startAsyncTest() {
+            if (!websocket || websocket.readyState !== WebSocket.OPEN) {
+                alert('请先连接 WebSocket');
+                return;
+            }
+            
+            const voiceId = document.getElementById('asyncVoiceId').value;
+            const tokensStr = document.getElementById('asyncTokens').value;
+            const sendMode = document.getElementById('sendMode').value;
+            
+            if (!voiceId || !tokensStr) {
+                alert('请填写 Voice ID 和 Tokens');
+                return;
+            }
+            
+            const tokens = tokensStr.split(',').map(t => parseInt(t.trim()));
+            clearAudioChunks(); // 清空之前的音频块
+            isTestRunning = true;
+            document.getElementById('stopBtn').disabled = false;
+            document.getElementById('stopBtn').style.display = 'inline-block';
+            document.getElementById('asyncResult').innerHTML = '<div class="result-message result-info">开始测试...</div>';
+            
+            // 发送创建请求
+            websocket.send(JSON.stringify({
+                event_id: 'create_' + Date.now(),
+                type: 'token2audio.create',
+                data: {
+                    voice_id: voiceId
+                }
+            }));
+            sentCount++; // 增加发送计数
+            updateStats(); // 更新统计显示
+            
+            // 根据模式发送 tokens
+            if (sendMode === 'single') {
+                sendTokensOneByOne(tokens);
+            } else {
+                sendTokensInBatch(tokens);
+            }
+        }
+
+        // 逐个发送 tokens
+        function sendTokensOneByOne(tokens) {
+            let index = 0;
+            const sendInterval = parseInt(document.getElementById('sendInterval').value);
+            const interval = setInterval(() => {
+                if (!isTestRunning || index >= tokens.length) {
+                    clearInterval(interval);
+                    if (isTestRunning) {
+                        // 发送完成信号
+                        websocket.send(JSON.stringify({
+                            event_id: 'done_' + Date.now(),
+                            type: 'token2audio.done',
+                            data: {}
+                        }));
+                    }
+                    return;
+                }
+                
+                websocket.send(JSON.stringify({
+                    event_id: 'delta_' + Date.now(),
+                    type: 'token2audio.delta',
+                    data: { tokens: [tokens[index]] }
+                }));
+                sentCount++; // 增加发送计数
+                updateStats(); // 更新统计显示
+                
+                index++;
+            }, sendInterval); // 使用可选择的发送间隔
+        }
+
+        // 批量发送 tokens
+        function sendTokensInBatch(tokens) {
+            const batchSize = 20;
+            let index = 0;
+            const sendInterval = parseInt(document.getElementById('sendInterval').value);
+            
+            const sendBatch = () => {
+                if (!isTestRunning || index >= tokens.length) {
+                    if (isTestRunning) {
+                        // 发送完成信号
+                        websocket.send(JSON.stringify({
+                            event_id: 'done_' + Date.now(),
+                            type: 'token2audio.done',
+                            data: {}
+                        }));
+                    }
+                    return;
+                }
+                
+                const batch = tokens.slice(index, index + batchSize);
+                websocket.send(JSON.stringify({
+                    event_id: 'delta_' + Date.now(),
+                    type: 'token2audio.delta',
+                    data: { tokens: batch }
+                }));
+                sentCount++; // 增加发送计数
+                updateStats(); // 更新统计显示
+                
+                index += batchSize;
+                
+                // 继续发送下一批
+                setTimeout(sendBatch, sendInterval); // 使用可选择的发送间隔
+            };
+            
+            sendBatch();
+        }
+
+        // 停止测试
+        function stopAsyncTest() {
+            isTestRunning = false;
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('stopBtn').style.display = 'none';
+            
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                websocket.send(JSON.stringify({
+                    event_id: 'flush_' + Date.now(),
+                    type: 'token2audio.flush',
+                    data: {}
+                }));
+                sentCount++; // 增加发送计数
+                updateStats(); // 更新统计显示
+            }
+        }
+
+        // 断开 WebSocket
+        function disconnectWebSocket() {
+            if (websocket) {
+                websocket.close();
+                websocket = null;
+            }
+        }
+    </script>
+</body>
+</html>
