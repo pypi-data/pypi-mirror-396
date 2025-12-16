@@ -1,0 +1,107 @@
+Metadata-Version: 2.4
+Name: lacrei-models
+Version: 2.6.0
+Summary: Modelos de domínio do projeto Lacrei.
+Author: Kaio
+Author-email: kaioherculano12@gmail.com
+Requires-Python: >=3.11,<4
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
+Requires-Dist: celery (>=5.5.3,<6.0.0)
+Requires-Dist: django (>=4.0)
+Requires-Dist: django-allauth (>=65.4.1,<66.0.0)
+Requires-Dist: django-environ (>=0.12.0,<0.13.0)
+Requires-Dist: django-phonenumber-field (>=8.1.0,<9.0.0)
+Requires-Dist: django-watson (>=1.6.3,<2.0.0)
+Requires-Dist: djangorestframework (>=3.16.1,<4.0.0)
+Requires-Dist: dnspython (>=2.8.0,<3.0.0)
+Requires-Dist: inlinestyler (>=0.2.5,<0.3.0)
+Requires-Dist: phonenumbers (>=9.0.14,<10.0.0)
+Requires-Dist: psycopg2-binary (>=2.9.10,<3.0.0)
+Requires-Dist: pydantic (>=2.11.9,<3.0.0)
+Requires-Dist: requests (>=2.32.3,<3.0.0)
+Description-Content-Type: text/markdown
+
+# Lacrei Models
+
+Pacote centralizado para os modelos de domínio (`models.py`) do ecossistema Lacrei.
+
+[![Python Version](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+
+---
+
+## 🎯 Objetivo
+
+Centralizar todos os modelos do Django utilizados pelas aplicações Lacrei, permitindo:
+
+- **Modularidade:** Desacoplar a camada de dados da lógica de aplicação.
+- **Reuso:** Serviços diferentes podem consumir os mesmos modelos de forma consistente.
+- **Governança e Consistência:** Ponto único de verdade para estrutura de dados.
+
+É uma dependência interna, destinada a ser usada por aplicações como `lacrei-api`.
+
+---
+
+### Configurações Iniciais
+
+1.  **Clone o Repositório, na mesmo local onde se encontra a lacrei-api e a lacrei-migrations:**
+```bash
+    git clone https://github.com/Lacrei/lacrei-models.git
+    cd lacrei-models
+```
+
+2.  **Instale as Dependências:**
+```bash
+    make install
+    poetry add lacrei-models
+```
+---
+
+## ⚙️ Uso
+
+Para testar localmente as mudanças na models antes de pubicar no PyPI:
+```bash
+poetry add --editable C:/local onde se encontra o lacrei-models
+```
+
+Importe os modelos no código:
+
+```python
+from lacrei_models.address.models import Address
+from lacrei_models.client.models import User
+from lacrei_models.appointments.models import Appointment
+from lacrei_models.professional.models import Professional
+from lacrei_models.notification.models import Notification
+from lacrei_models.payment.models import Payment
+from lacrei_models.sync.models import GoogleAccount
+```
+
+---
+
+
+
+**Comandos principais:**
+
+```bash
+make test      # Rodar testes
+make format    # Formatar código
+make lint      # Verificar estilo e erros
+make quality   # Rodar todas as verificações
+```
+
+---
+
+## 🚀 Publicação no PyPI
+
+Enviar atualizações para o github em uma nova branch e criar o PR
+```bash
+    git push origin branch
+```
+1- Ir até o actions dentro do repositório lacrei-models
+2- Clicar em publish package
+3- e depois ir em run workflow e selecionar a sua branch
+4- A versão to publish deve ser uma versão acima da atual. Verificar no PyPI a ultima versão para evitar conflitos.
+
