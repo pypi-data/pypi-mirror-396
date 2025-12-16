@@ -1,0 +1,96 @@
+Metadata-Version: 2.4
+Name: forecast-in-a-box
+Version: 0.4.3
+Summary: Weather Forecast in a Box
+Author-email: "European Centre for Medium-Range Weather Forecasts (ECMWF)" <software.support@ecmwf.int>
+License-Expression: Apache-2.0
+Project-URL: Source code, https://github.com/ecmwf/forecast-in-a-box
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: aiosqlite
+Requires-Dist: anemoi-inference==0.8.3
+Requires-Dist: anemoi-plugins-ecmwf-inference[opendata,polytope]>=0.1.17
+Requires-Dist: anemoi-utils>=0.4.36
+Requires-Dist: apscheduler
+Requires-Dist: cloudpickle
+Requires-Dist: earthkit-workflows>=0.4.7
+Requires-Dist: earthkit-workflows-anemoi>=0.3.12
+Requires-Dist: earthkit-workflows-pproc
+Requires-Dist: fastapi
+Requires-Dist: fastapi-users[oauth]
+Requires-Dist: fastapi-users-db-sqlalchemy
+Requires-Dist: httpx<1
+Requires-Dist: httpx-oauth
+Requires-Dist: jinja2
+Requires-Dist: mir-python==1.27.10.5
+Requires-Dist: multiolib==2.7.1.5
+Requires-Dist: orjson
+Requires-Dist: pproc
+Requires-Dist: psutil
+Requires-Dist: pydantic-settings
+Requires-Dist: pyrsistent
+Requires-Dist: python-multipart
+Requires-Dist: qubed==0.1.12
+Requires-Dist: sse-starlette
+Requires-Dist: toml
+Requires-Dist: uvicorn
+Provides-Extra: all
+Requires-Dist: forecast-in-a-box[dev,plots,thermo]; extra == "all"
+Provides-Extra: plots
+Requires-Dist: earthkit-plots>=0.3.5; extra == "plots"
+Requires-Dist: earthkit-plots-default-styles>=0.1; extra == "plots"
+Provides-Extra: thermo
+Requires-Dist: thermofeel>=2.1.1; extra == "thermo"
+Provides-Extra: webmars
+Requires-Dist: ecmwf-api-client>=1.6.5; extra == "webmars"
+Dynamic: license-file
+
+See project's [readme](https://github.com/ecmwf/forecast-in-a-box/blob/main/README.md).
+
+# Development
+
+## Setup
+There are two options:
+1. create manually a `venv` and install this as an editable package into it,
+2. use the [`fiab.sh`](../scripts/fiab.sh) script.
+
+The first gives you more control, the second brings more automation -- but both choices are ultimately fine and lead to the same result.
+
+For the first option, active your venv of choice, and then:
+```
+mkdir -p ~/.fiab
+uv pip install --prerelease=allow --upgrade -e .[test] # the --prerelease will eventually disapper, check whether pyproject contains any `dev` pins
+pytest backend # just to ensure all is good
+```
+
+For the second option, check the `fiab.sh` first -- it is configurable via envvars which are listed at the script's start.
+In particular, you can change the directory which will contain the venv, and whether it does a PyPI-released or local-editable install.
+Note however that in case of the local-editable installs, you *must* execute the `fiab.sh` with cwd being the `backend`, as there is `pip install -e.`.
+
+### Frontend Required
+The frontend is actually expected to be present as artifact _inside_ the backend in case of the editable install.
+See the [`justfile`](../justfile)'s `fiabwheel` recipe for instruction how to build the frontend and create a symlink inside the backend.
+
+Backend wheels on pypi do contain a frontend copy -- you can alternatively pull a wheel and extract the built frontend into the local install.
+
+## Developer Flow
+Primary means is running `pytest`, presumably with the `pytest.ini` section from `pyproject.toml` activated.
+
+Type annotations are mostly present, though not enforced at the moment during CI (but expected to in the near future).
+
+In the [`bigtest.py`](../scripts/bigtest.py) there is a larger integration test, triggered at CI in addition to the regular `pytest` -- see the [github action](../.github/workflows/bigtest.yml) for execution.
+
+## Architecture Overview
+Consists of a four primary components:
+1. JavaScript frontend as a stateless page, basically "user form → backend request" -- located at [frontend](../frontend),
+2. FastAPI/Uvicorn application with multiple routes, organized by domain: auth, job submission & status, model download & status, gateway interaction, ...
+3. standalone "gateway" process, expected to be launched at the beginning together with the Uvicorn process, which is the gateway to the [earthkit-workflows](https://github.com/ecmwf/earthkit-workflows),
+4. persistence, based on a local `sqlite` database.
+
+Configuration is handled by the `config.py` using pydantic's BaseSettings, meaning most behaviour is configurable via envvars -- see `fiab.sh` or tests for examples.
+See [tuning and configuration](tuningAndConfiguration.md) guide for more.
