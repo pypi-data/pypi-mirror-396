@@ -1,0 +1,119 @@
+import os
+import pandas as pd
+import pickle
+import numpy as np
+from .analyze import file_to_list, map_samples
+import gseapy as gp
+from matplotlib import pyplot as plt
+from pathlib import Path
+
+__author__ = 'Nolan Newman'
+__contact__ = 'nolankn@uio.no'
+    
+def perform_gsea(genefile: str, gmtfile: str, geneset: str, outdir: str):
+    """
+    Description:
+        This code performs a survival analysis between two user-defined groups and outputs
+        both the survival plot and the statistics for the comparison(s)
+        
+    Parameters:
+    -----------
+        - genefile: str, Path to file (.rnk format, which is two column, tab delimited, no header) 
+                         containing the genes and test statistics to do enrichment on
+        - gmtfile: str, Path to the gene set file in gmt format
+        - geneset: str, The gene set type used for gmtfile
+        - outdir: str, Path to directory to output file to
+        
+    Returns:
+    -----------
+        - list of the output file paths
+    """
+    
+    # Create output directory if one does not already exist
+    os.makedirs(outdir, exist_ok=True)
+    
+    # Make user specified directory if it does not already exist
+    if not os.path.exists(outdir):
+        os.makedirs(outdir)
+    
+    rnk = pd.read_csv(genefile, header=None, index_col=0, sep="\t")
+    print("rnk format")
+    print(rnk)
+    
+    # Run GSEA on a pre-ranked list of genes
+    pre_res = gp.prerank(rnk=genefile,
+                     gene_sets=gmtfile,
+                     threads=4,
+                     min_size=5,
+                     max_size=1000,
+                     permutation_num=1000, # reduce number to speed up testing
+                     outdir=outdir,
+                     seed=6,
+                     verbose=True, # see what's going on behind the scenes
+                    )
+    
+    pre_res_df = pd.DataFrame(pre_res.res2d)
+    pre_res_df = pre_res_df.sort_values('NOM p-val', ascending = True)
+    print(pre_res_df)
+
+    file_basename = Path(genefile).stem
+    res_file_name = os.path.join(outdir, f"{file_basename}_prerank_GSEA_{geneset}_results.txt")
+    pre_res_df.to_csv(res_file_name, sep = "\t", index = False)
+    
+    terms = pre_res.res2d.Term
+    
+    # Plot top 5 terms in basic GSEA plot
+    plt.subplots_adjust(left=0.3, right=0.9, bottom=0.3, top=0.9)
+    ax = pre_res.plot(terms=terms[1:6],
+                   show_ranking=True,
+                   figsize=(15,20)
+                  )
+    
+    gsea_plot_name = os.path.join(outdir, f"{file_basename}_GSEA_{geneset}_basic_enrichment_plot.png")
+    ax.figure.savefig(gsea_plot_name, bbox_inches = "tight")
+    
+    # Plot significant GSEA terms
+    from gseapy import dotplot
+    ax = dotplot(pre_res.res2d,
+                column="FDR q-val",
+                title=geneset,
+                cmap=plt.cm.viridis,
+                size=10,
+                figsize=(10,20), 
+                cutoff=0.25, 
+                show_ring=False)
+
+
+    # Modify the legend to make the text more visible
+    legend = ax.get_legend()
+    ax.get_legend().get_title().set_fontsize(20)
+    
+    legend.get_title().set_multialignment('center') 
+    for text in legend.get_texts():
+        text.set_fontsize(16) 
+        
+    original_cbar = ax.collections[0].colorbar 
+
+    # Make a copy of the cbar that gsea provides, since there seems to be an issue with trying to modify it directly
+    new_cbar = plt.colorbar(ax.collections[0], ax=ax, shrink=0.25, aspect=10, pad=0.01)
+    original_cbar.remove() # Remove the original cbar 
+    new_cbar.ax.tick_params(labelsize=18) 
+    new_cbar.ax.title.set_bbox(dict(facecolor='none', edgecolor='none', boxstyle='round,pad=0')) 
+    new_cbar.ax.set_position([0.96, 0.08, 0.04, 0.9])  # [left, bottom, width, height]
+     
+    # Create a text box for the title of the cbar. There was an issue with modifying the ubilt-in cbar title, where
+    # you would specify the y-value for the location but the title wouldn't move, so this is the workaround for it
+    ax.text(3.7, 6.5, "Log10(FDR)", fontsize=22, 
+        bbox=dict(facecolor='white', edgecolor='none', alpha = 0, boxstyle='round,pad=0.5'),
+        ha='center', va='center')
+     
+    dotplot_name_png = os.path.join(outdir, f"{file_basename}_GSEA_{geneset}_basic_enrichment_dotplot.png")
+    dotplot_name_pdf = os.path.join(outdir, f"{file_basename}_GSEA_{geneset}_basic_enrichment_dotplot.pdf")
+    ax.figure.savefig(dotplot_name_png, bbox_inches = "tight")
+    ax.figure.savefig(dotplot_name_pdf, bbox_inches = "tight")
+
+    print("\nDone!")
+    print(f"Files created:\n{res_file_name}\n{gsea_plot_name}\n{dotplot_name_png}\n")
+    print(f"Files created:\n{res_file_name}\n{gsea_plot_name}\n{dotplot_name_pdf}\n")
+
+    return([res_file_name, gsea_plot_name, dotplot_name_png])
