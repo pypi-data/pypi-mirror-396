@@ -1,0 +1,68 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "llm-flaky"
+version = "0.1.0"
+description = "Pytest plugin for running non-deterministic LLM tests with automatic retry and beautiful reports"
+readme = "README.md"
+license = "MIT"
+authors = [
+    { name = "Ilyas Salikhov", email = "salikhoff@gmail.com" }
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: Pytest",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+keywords = ["pytest", "flaky", "testing", "llm", "ai", "openai", "langchain", "retry"]
+requires-python = ">=3.9"
+dependencies = [
+    "pytest>=7.0.0",
+    "flaky>=3.7.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest-xdist",
+    "ruff",
+    "build",
+    "twine",
+]
+
+[project.urls]
+Homepage = "https://github.com/retailcrm/llm-flaky"
+Repository = "https://github.com/retailcrm/llm-flaky"
+Issues = "https://github.com/retailcrm/llm-flaky/issues"
+Changelog = "https://github.com/retailcrm/llm-flaky/blob/main/CHANGELOG.md"
+
+[project.entry-points.pytest11]
+llm_flaky = "llm_flaky.plugin"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/llm_flaky"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/README.md",
+    "/LICENSE",
+    "/CHANGELOG.md",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
