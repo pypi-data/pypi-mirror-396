@@ -1,0 +1,42 @@
+repos:
+  - repo: local
+    hooks:
+      - id: sort imports
+        name: ruff sort imports
+        entry: uv run ruff check --select I --fix
+        language: system
+        types: [python]
+        pass_filenames: true
+        stages: [pre-commit]
+
+      - id: ruff
+        name: ruff
+        entry: uv run ruff check
+        language: system
+        types: [python]
+        pass_filenames: true
+        stages: [pre-commit]
+        
+      - id: type-check
+        name: type check
+        entry: uv run ty check
+        language: system
+        types: [python]
+        pass_filenames: true
+        stages: [pre-commit]
+        
+      - id: unit
+        name: pytest unit
+        entry: uv run pytest tests/unit
+        language: system
+        types: [python]
+        pass_filenames: true
+        stages: [pre-commit]
+      
+      - id: integration
+        name: pytest integration
+        entry: uv run pytest tests/integration
+        language: system
+        types: [python]
+        pass_filenames: true
+        stages: [pre-commit]
