@@ -1,0 +1,40 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "volviz"
+version = "0.1.0"
+authors = [
+  { name="Robert J. Paneque-Yunta", email="rpaneque@ucm.es" },
+]
+description = "Interactive 3D volume slicer for Jupyter Notebooks"
+readme = "README.md"
+requires-python = ">=3.7"
+license = { file = "LICENSE" }  # <--- Recommended: Helps PyPI display the license text
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Framework :: Jupyter",     # <--- Optional: Helps Jupyter users find it
+]
+dependencies = [
+    "numpy",
+    "matplotlib",
+    "ipywidgets",
+    "ipympl"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/RJPaneque/volviz"
+"Bug Tracker" = "https://github.com/RJPaneque/volviz/issues" # <--- Good practice
+
+# --- Configuration to handle the 'examples' folder correctly ---
+[tool.hatch.build.targets.sdist]
+include = [
+  "/src",
+  "/examples",   # Ensures the demo notebook is included in the source download
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/volviz"] # Ensures only the code is installed, not the notebooks
