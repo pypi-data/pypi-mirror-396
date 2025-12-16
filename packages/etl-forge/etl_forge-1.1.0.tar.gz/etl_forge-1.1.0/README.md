@@ -1,0 +1,550 @@
+# ETLForge
+
+[![PyPI version](https://img.shields.io/pypi/v/etl-forge?style=flat)](https://pypi.org/project/etl-forge/)
+[![docs](https://readthedocs.org/projects/etlforge/badge/?version=latest)](https://etlforge.readthedocs.io/en/latest/)
+[![build](https://github.com/kkartas/ETLForge/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/kkartas/ETLForge/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/kkartas/ETLForge/branch/main/graph/badge.svg)](https://codecov.io/gh/kkartas/ETLForge)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/etl-forge)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![status](https://joss.theoj.org/papers/f98ffb03b77e3023e1710d6e77d9a9bb/status.svg)](https://joss.theoj.org/papers/f98ffb03b77e3023e1710d6e77d9a9bb)
+[![PyPI Downloads](https://static.pepy.tech/badge/etl-forge)](https://pepy.tech/projects/etl-forge)
+
+A Python library for generating synthetic test data and validating ETL (Extract, Transform, Load) outputs for **tabular data** (pandas DataFrames). ETL processes are fundamental data workflows that extract data from various sources, transform it according to business rules, and load it into target systems like data warehouses or databases. ETLForge focuses specifically on tabular/dataframe data structures, providing both command-line tools and library functions to help you create realistic test datasets and validate data quality throughout your ETL pipelines.
+
+## Features
+
+### Test Data Generator
+- Generate synthetic data based on YAML/JSON schema definitions
+- Support for multiple data types: `int`, `float`, `string`, `date`, `category`
+- Advanced constraints: ranges, uniqueness, nullable fields, categorical values
+- Integration with Faker for realistic string generation
+- Export to CSV or Excel formats
+
+### Data Validator
+- Validate CSV/Excel files against schema definitions
+- Comprehensive validation checks:
+  - Column existence
+  - Data type matching
+  - Value constraints (ranges, categories)
+  - Uniqueness validation
+  - Null value validation
+  - Date format validation
+- Generate detailed reports of invalid rows
+
+### Dual Interface
+- **Command-line interface** for quick operations
+- **Python library** for integration into existing workflows
+
+### Schema Standards Support
+ETLForge supports established schema standards for improved interoperability:
+- **[Frictionless Table Schema](https://specs.frictionlessdata.io/table-schema/)** - A widely-adopted standard for describing tabular data
+- **[JSON Schema](https://json-schema.org/)** - The popular standard for describing JSON data structures
+
+Schemas are automatically detected and converted, allowing you to use existing schema definitions from other tools.
+
+**Example with Frictionless Table Schema:**
+```python
+from etl_forge import DataGenerator, DataValidator
+
+# Use Frictionless Table Schema directly
+frictionless_schema = {
+    "fields": [
+        {"name": "id", "type": "integer", "constraints": {"required": True, "minimum": 1}},
+        {"name": "status", "type": "string", "constraints": {"enum": ["active", "inactive"]}}
+    ]
+}
+
+generator = DataGenerator(frictionless_schema)
+df = generator.generate_data(100)
+
+validator = DataValidator(frictionless_schema)
+result = validator.validate(df)
+```
+
+**Example with JSON Schema:**
+```python
+from etl_forge import DataGenerator, DataValidator
+
+# Use JSON Schema directly
+json_schema = {
+    "type": "object",
+    "properties": {
+        "user_id": {"type": "integer", "minimum": 1, "maximum": 10000},
+        "email": {"type": "string", "format": "email"},
+        "role": {"type": "string", "enum": ["admin", "user", "guest"]}
+    },
+    "required": ["user_id", "email"]
+}
+
+generator = DataGenerator(json_schema)
+df = generator.generate_data(100)
+```
+
+You can also programmatically convert between formats:
+```python
+from etl_forge import FrictionlessAdapter, JsonSchemaAdapter
+
+# Convert ETLForge schema to Frictionless
+etl_schema = {"fields": [{"name": "id", "type": "int", "nullable": False}]}
+frictionless = FrictionlessAdapter.to_frictionless(etl_schema)
+
+# Convert ETLForge schema to JSON Schema
+json_schema = JsonSchemaAdapter.to_jsonschema(etl_schema)
+```
+
+## Installation
+
+### Prerequisites
+- Python 3.9 or higher
+- pip package manager
+
+### Install from PyPI (Recommended)
+```bash
+pip install etl-forge
+```
+
+### Install from Source
+For development or latest features:
+```bash
+git clone https://github.com/kkartas/etl-forge.git
+cd etl-forge
+pip install -e ".[dev]"
+```
+
+### Run Tests with uv
+```bash
+uv sync --extra dev
+uv run pytest
+```
+
+### Dependencies
+**Core dependencies** (5 total, automatically installed):
+- `pandas>=1.3.0` - Data manipulation and analysis
+- `pyyaml>=5.4.0` - YAML parsing for schema files
+- `click>=8.0.0` - Command-line interface framework
+- `numpy>=1.21.0` - Numerical computing
+- `psutil>=5.9.0` - System monitoring for benchmarks
+
+**Optional dependencies** for enhanced features:
+```bash
+# For realistic data generation using Faker templates
+pip install etl-forge[faker]
+
+# For Excel file support in CLI (required for reading/writing Excel files)
+pip install etl-forge[excel]
+
+# For development (testing, linting, documentation)
+pip install etl-forge[dev]
+```
+
+### Verify Installation
+```bash
+# CLI verification (may require adding Scripts directory to PATH on Windows)
+etl-forge --version
+
+# Alternative CLI access (works on all platforms)
+python -m etl_forge.cli --version
+
+# Library verification
+python -c "from etl_forge import DataGenerator, DataValidator; print('Installation verified')"
+```
+
+### CLI Access Note
+On some systems (especially Windows), the `etl-forge` command may not be directly accessible. In such cases, use:
+```bash
+python -m etl_forge.cli [command] [options]
+```
+
+## Complete Example
+
+For a comprehensive demonstration of ETLForge's capabilities, see the included [`example.py`](example.py) file:
+
+```bash
+# Run the complete example
+python example.py
+```
+
+This example demonstrates:
+- Schema-driven data generation with realistic data (using Faker)
+- Data validation with the same schema
+- Error detection and reporting
+- Complete ETL testing workflow
+
+**Key snippet from `example.py`:**
+
+```python
+from etl_forge import DataGenerator, DataValidator
+
+# Single schema drives both generation and validation
+schema = {
+    "fields": [
+        {"name": "customer_id", "type": "int", "unique": True, "range": {"min": 1, "max": 10000}},
+        {"name": "name", "type": "string", "faker_template": "name"},
+        {"name": "email", "type": "string", "unique": True, "faker_template": "email"},
+        {"name": "purchase_amount", "type": "float", "range": {"min": 10.0, "max": 5000.0}, "nullable": True},
+        {"name": "customer_tier", "type": "category", "values": ["Bronze", "Silver", "Gold", "Platinum"]}
+    ]
+}
+
+# Generate test data
+generator = DataGenerator(schema)
+df = generator.generate_data(1000)
+generator.save_data(df, 'customer_test_data.csv')
+
+# Validate with the same schema
+import pandas as pd
+validator = DataValidator(schema)
+df = pd.read_csv('customer_test_data.csv')
+result = validator.validate(df)
+print(f"Validation passed: {result.is_valid}")
+```
+
+This demonstrates ETLForge's key advantage: **single schema, dual purpose** - the same schema definition drives both data generation and validation, ensuring perfect synchronization between test data and validation rules.
+
+## Quick Start
+
+### 1. Create a Schema
+
+Create a `schema.yaml` file defining your data structure:
+
+```yaml
+fields:
+  - name: id
+    type: int
+    unique: true
+    nullable: false
+    range:
+      min: 1
+      max: 10000
+
+  - name: name
+    type: string
+    nullable: false
+    faker_template: name
+
+  - name: department
+    type: category
+    nullable: false
+    values:
+      - Engineering
+      - Marketing
+      - Sales
+```
+
+### 2. Generate Test Data
+
+**Command Line:**
+```bash
+# Direct CLI command (if available)
+etl-forge generate --schema schema.yaml --rows 500 --output sample.csv
+
+# Alternative CLI access (works on all platforms)
+python -m etl_forge.cli generate --schema schema.yaml --rows 500 --output sample.csv
+```
+
+**Python Library:**
+```python
+from etl_forge import DataGenerator
+
+generator = DataGenerator('schema.yaml')
+df = generator.generate_data(500)
+generator.save_data(df, 'sample.csv')
+```
+
+### 3. Validate Data
+
+**Command Line:**
+```bash
+# Direct CLI command (if available)
+etl-forge check --input sample.csv --schema schema.yaml --report invalid_rows.csv
+
+# Alternative CLI access (works on all platforms)
+python -m etl_forge.cli check --input sample.csv --schema schema.yaml --report invalid_rows.csv
+```
+
+**Python Library:**
+```python
+from etl_forge import DataValidator
+import pandas as pd
+
+validator = DataValidator('schema.yaml')
+df = pd.read_csv('sample.csv')
+result = validator.validate(df)
+print(f"Validation passed: {result.is_valid}")
+```
+
+## Schema Definition
+
+### Supported Field Types
+
+#### Integer (`int`)
+```yaml
+- name: age
+  type: int
+  nullable: false
+  range:
+    min: 18
+    max: 65
+  unique: false
+```
+
+#### Float (`float`)
+```yaml
+- name: salary
+  type: float
+  nullable: true
+  range:
+    min: 30000.0
+    max: 150000.0
+  precision: 2
+  null_rate: 0.1
+```
+
+#### String (`string`)
+```yaml
+- name: email
+  type: string
+  nullable: false
+  unique: true
+  length:
+    min: 10
+    max: 50
+  faker_template: email  # Optional: uses Faker library
+```
+
+#### Date (`date`)
+```yaml
+- name: hire_date
+  type: date
+  nullable: false
+  range:
+    start: '2020-01-01'
+    end: '2024-12-31'
+  format: '%Y-%m-%d'
+```
+
+#### Category (`category`)
+```yaml
+- name: status
+  type: category
+  nullable: false
+  values:
+    - Active
+    - Inactive
+    - Pending
+```
+
+### Schema Constraints
+
+- **`nullable`**: Allow null values (default: `false`)
+- **`unique`**: Ensure all values are unique (default: `false`)
+- **`range`**: Define min/max values for numeric types or start/end dates
+- **`values`**: List of allowed values for categorical fields
+- **`length`**: Min/max length for string fields
+- **`precision`**: Decimal places for float fields
+- **`format`**: Date format string (default: `'%Y-%m-%d'`)
+- **`faker_template`**: Faker method name for realistic string generation
+- **`null_rate`**: Probability of null values when `nullable: true` (default: 0.1)
+
+## Command Line Interface
+
+### Generate Data
+```bash
+# Direct CLI command (if available)
+etl-forge generate [OPTIONS]
+
+# Alternative CLI access (works on all platforms)
+python -m etl_forge.cli generate [OPTIONS]
+
+Options:
+  -s, --schema PATH     Path to schema file (YAML or JSON) [required]
+  -r, --rows INTEGER    Number of rows to generate (default: 100)
+  -o, --output PATH     Output file path (CSV or Excel) [required]
+  -f, --format [csv|excel]  Output format (auto-detected if not specified)
+```
+
+### Validate Data
+```bash
+# Direct CLI command (if available)
+etl-forge check [OPTIONS]
+
+# Alternative CLI access (works on all platforms)
+python -m etl_forge.cli check [OPTIONS]
+
+Options:
+  -i, --input PATH      Path to input data file [required]
+  -s, --schema PATH     Path to schema file [required]
+  -r, --report PATH     Path to save invalid rows report (optional)
+  -v, --verbose         Show detailed validation errors
+```
+
+### Create Example Schema
+```bash
+# Direct CLI command (if available)
+etl-forge create-schema example_schema.yaml
+
+# Alternative CLI access (works on all platforms)
+python -m etl_forge.cli create-schema example_schema.yaml
+```
+
+## Library Usage
+
+### Data Generation
+
+```python
+from etl_forge import DataGenerator
+
+# Initialize with schema
+generator = DataGenerator('schema.yaml')
+
+# Generate data
+df = generator.generate_data(1000)
+
+# Save to file
+generator.save_data(df, 'output.csv')
+
+# Or do both in one step
+df = generator.generate_and_save(1000, 'output.xlsx', 'excel')
+```
+
+### Data Validation
+
+```python
+from etl_forge import DataValidator
+import pandas as pd
+
+# Initialize validator
+validator = DataValidator('schema.yaml')
+
+# Load data into DataFrame
+df = pd.read_csv('data.csv')
+
+# Validate data
+result = validator.validate(df)
+
+# Check results
+if result.is_valid:
+    print("Data is valid!")
+else:
+    print(f"Found {len(result.errors)} validation errors")
+    print(f"Invalid rows: {len(result.invalid_rows)}")
+
+# Generate report
+result = validator.validate_and_report(df, 'errors.csv')
+
+# Print summary
+validator.print_validation_summary(result)
+```
+
+### Advanced Usage
+
+```python
+# Use schema as dictionary
+schema_dict = {
+    'fields': [
+        {'name': 'id', 'type': 'int', 'unique': True},
+        {'name': 'name', 'type': 'string', 'faker_template': 'name'}
+    ]
+}
+
+generator = DataGenerator(schema_dict)
+validator = DataValidator(schema_dict)
+
+# Validate DataFrame directly
+import pandas as pd
+df = pd.read_csv('data.csv')
+result = validator.validate(df)
+```
+
+## Faker Integration
+
+When the `faker` library is installed, you can use realistic data generation:
+
+```yaml
+- name: first_name
+  type: string
+  faker_template: first_name
+
+- name: address
+  type: string
+  faker_template: address
+
+- name: phone
+  type: string
+  faker_template: phone_number
+```
+
+Common Faker templates:
+- `name`, `first_name`, `last_name`
+- `email`, `phone_number`
+- `address`, `city`, `country`
+- `company`, `job`
+- `date`, `time`
+- And many more! See [Faker documentation](https://faker.readthedocs.io/)
+
+## Testing
+
+Run the test suite:
+
+```bash
+pytest tests/
+```
+
+Run with coverage:
+
+```bash
+pytest tests/ --cov=etl_forge --cov-report=html
+```
+
+## Performance
+
+Performance benchmarks are available in [`BENCHMARKS.md`](BENCHMARKS.md). To reproduce them, run:
+
+```bash
+python benchmark.py
+```
+
+Then, to visualize the results: 
+
+```bash
+python plot_benchmark.py
+```
+
+## Troubleshooting
+
+### Running Examples from Cloned Repository
+
+If you've cloned the repository and encounter `ModuleNotFoundError: No module named 'yaml'` when running `python example.py`, this is because Python is importing the local `etl_forge` module instead of the installed package.
+
+**Solution 1: Install in Development Mode** (if you want to modify the source code)
+```bash
+git clone https://github.com/kkartas/ETLForge.git
+cd ETLForge
+pip install -e .  # Or pip install -e ".[faker]" for full features
+python example.py
+```
+
+**Solution 2: Use the PyPI Package** (if you just want to run the example)
+```bash
+# Install from PyPI
+pip install etl-forge[faker]
+
+# Download and run the example from outside the repository
+curl -O https://raw.githubusercontent.com/kkartas/ETLForge/main/example.py
+python example.py
+```
+
+### Common Issues
+
+**Issue**: `etl-forge` command not found
+- **Solution**: Use `python -m etl_forge.cli` instead, or add Python's Scripts directory to PATH
+
+**Issue**: Faker templates not working
+- **Solution**: Install with faker support: `pip install etl-forge[faker]`
+
+**Issue**: Excel files not supported
+- **Solution**: Excel file support requires the optional `openpyxl` dependency. Install it with: `pip install etl-forge[excel]` or `pip install openpyxl`
+
+## Citation
+
+If you use `ETLForge` in your research or work, please cite it using the information in `CITATION.cff`.
