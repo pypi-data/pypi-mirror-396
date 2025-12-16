@@ -1,0 +1,356 @@
+Metadata-Version: 2.4
+Name: midi-utils
+Version: 1.3.3
+Summary: Lightweight, pure-python utility for generating scales of midi notes. Includes support for microtunings via asclpy
+Project-URL: Homepage, https://gitlab.com/gltd/midi-utils
+Project-URL: Repository, https://gitlab.com/gltd/midi-utils
+Project-URL: Issues, https://gitlab.com/gltd/midi-utils/-/issues
+Author-email: Brian Abelson <brian@abelson.live>
+License: MIT
+License-File: LICENSE
+Keywords: arpeggio,audio,chord,midi,music,scale
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Topic :: Multimedia :: Sound/Audio :: MIDI
+Requires-Python: >=3.13
+Requires-Dist: asclpy>=0.1.0
+Description-Content-Type: text/markdown
+
+# midi-utils 
+
+`midi-utils` is a lightweight, pure-Python utility for working with MIDI notes, scales, chords, arpeggios, and alternative tuning systems. It provides tools for music theory operations, data sonification, and microtonal composition.
+
+## Features
+
+- **Scale Generation** - Generate MIDI note scales in various modes (major, minor, pentatonic, etc.)
+- **Chord Construction** - Build chords with inversions and extensions
+- **Arpeggiation** - Create complex arpeggio patterns with multiple styles
+- **Tuning Systems** - Support for 150+ alternative tuning systems via [asclpy](https://github.com/abelsonlive/asclpy)
+- **MIDI/Frequency Conversion** - Convert between note names, MIDI numbers, and frequencies
+- **ADSR Envelopes** - Generate amplitude envelopes for audio synthesis
+- **Data Sonification** - Map arbitrary data ranges to musical scales
+
+## Installation 
+
+```bash
+pip install midi-utils
+```
+
+## Quick Start
+
+```python
+from midi_utils import midi_scale, midi_chord, midi_arp
+
+# Generate a C major scale
+scale = midi_scale('C', 'MAJOR', 'C3', 'C5')
+# >>> [60, 62, 64, 65, 67, 69, 71, 72, 74, 76, 77, 79, 81, 83, 84]
+
+# Create a C minor chord
+chord = midi_chord('C3', 'MIN')
+# >>> [60, 63, 67]
+
+# Arpeggiate the chord
+arp = list(midi_arp(chord, octaves=[0, 1], duration=1000, styles=['updown']))
+# >>> [{'note': 60, 'duration': 166.67, ...}, {'note': 63, ...}, ...]
+```
+
+## Module Overview
+
+### `midi_scale` - Scale Generation
+
+Generate scales in any key and mode over a specified MIDI range.
+
+```python
+from midi_utils import midi_scale, SCALES
+
+# Major scale from C3 to E5
+midi_scale('C', 'MAJOR', 'C3', 'E5')
+# >>> [60, 62, 64, 65, 67, 69, 71, 72, 74, 76, 77, 79, 81, 83, 84, 86, 88]
+
+# Natural minor scale
+midi_scale('A', 'MINOR', 'A2', 'A4')
+# >>> [45, 47, 48, 50, 52, 53, 55, 57, 59, 60, 62, 64, 65, 67, 69]
+
+# Pentatonic scale with MIDI numbers
+midi_scale(60, 'PENTATONIC', 48, 72)
+# >>> [48, 50, 52, 55, 57, 60, 62, 64, 67, 69, 72]
+
+# See all available scales
+print(list(SCALES.keys()))
+```
+
+### `map_to_midi_scale` - Data Sonification
+
+Map values from any range to notes in a musical scale.
+
+```python
+from midi_utils import midi_scale, map_to_midi_scale
+
+# Map RGB values (0-255) to a C minor scale
+c_min_scale = midi_scale('C', 'MINOR', 'C3', 'C5')
+map_to_midi_scale(155, c_min_scale, 0, 255)
+# >>> 77
+
+# Map temperature readings to a scale
+temps = [32, 45, 68, 82, 95]
+notes = [map_to_midi_scale(t, c_min_scale, 30, 100) for t in temps]
+# >>> [60, 63, 72, 79, 84]
+```
+
+### `midi_chord` - Chord Construction
+
+Build chords with inversions and voicing options.
+
+```python
+from midi_utils import midi_chord, CHORDS
+
+# Basic major chord
+midi_chord('C3', 'MAJ')
+# >>> [60, 64, 67]
+
+# Dominant 7th chord
+midi_chord('G3', 'DOM7')
+# >>> [67, 71, 74, 77]
+
+# First inversion
+midi_chord('C3', 'MAJ', inversion=1)
+# >>> [64, 67, 72]
+
+# Stack up (add octaves above)
+midi_chord('C3', 'MIN', stack_up=1)
+# >>> [60, 63, 67, 72, 75, 79]
+
+# See all available chords
+print(list(CHORDS.keys()))
+```
+
+### `midi_arp` - Arpeggiation
+
+Create complex arpeggio patterns from chord sequences.
+
+```python
+from midi_utils import midi_chord, midi_arp
+
+chord = midi_chord('C3', 'MAJ')
+
+# Simple arpeggio
+arp = list(midi_arp(chord, duration=1000, styles=['up']))
+
+# Each note is a dict with timing info
+arp[0]
+# >>> {'note': 60, 'duration': 333.33, 'start_time': 0.0, 'velocity': 100}
+
+# Multiple octaves with various styles
+arp = list(midi_arp(
+    chord,
+    octaves=[0, 1, 2],
+    duration=2000,
+    styles=['updown', 'thumb_up', 'middle_up'],
+    beat_bpm=120,
+    beat_count=1/16
+))
+
+# Available styles: 'up', 'down', 'updown', 'downup', 'thumb_up', 'thumb_down',
+# 'middle_up', 'middle_down', 'pinky_up', 'pinky_down', 'random_shuffle', etc.
+```
+
+### `ADSR` - Envelope Generation
+
+Generate amplitude envelopes for audio synthesis.
+
+```python
+from midi_utils import ADSR
+
+# Create an ADSR envelope
+envelope = ADSR(
+    attack=0.1,    # 10% of samples for attack
+    decay=0.2,     # 20% for decay
+    sustain=0.7,   # Sustain level (70% of max)
+    release=0.3,   # 30% for release
+    samples=1000   # Total samples
+)
+
+# Get amplitude values
+amplitudes = list(envelope)
+# >>> [0.0, 0.02, 0.04, ..., 0.7, 0.7, ..., 0.35, 0.0]
+
+# Or iterate for real-time use
+for amp in ADSR(attack=0.2, decay=0.3, sustain=0.6, release=0.2):
+    # Apply amplitude to audio sample
+    pass
+```
+
+### Utility Functions
+
+#### MIDI/Note Conversions
+
+```python
+from midi_utils import note_to_midi, midi_to_note, note_to_freq, midi_to_freq
+
+# Note name to MIDI number
+note_to_midi('A4')
+# >>> 69
+
+# MIDI number to note name
+midi_to_note(60)
+# >>> 'C3'
+
+# Note name to frequency
+note_to_freq('A4')
+# >>> 440.0
+
+# MIDI to frequency (standard 12-TET)
+midi_to_freq(69)
+# >>> 440.0
+
+# MIDI to frequency with alternative tuning
+midi_to_freq(69, tuning='19_edo')  # 19-tone equal temperament
+# >>> 264.02...
+
+# See available tunings
+import asclpy
+print(asclpy.list_tunings()[:10])
+# >>> ['11_edo', '12_tet_edo', '13_edo', '19_edo', '22_edo', ...]
+```
+
+#### Tuning Systems
+
+The `midi_to_freq()` function now supports 150+ alternative tuning systems via [asclpy](https://github.com/abelsonlive/asclpy):
+
+```python
+from midi_utils import midi_to_freq
+
+# Standard 12-TET (default, backwards compatible)
+midi_to_freq(60)  # C4
+# >>> 261.63
+
+# 19-tone equal temperament
+midi_to_freq(60, tuning='19_edo')
+# >>> 190.13
+
+# 31-tone equal temperament
+midi_to_freq(60, tuning='31_edo')
+# >>> 265.99
+
+# Historical temperaments
+midi_to_freq(60, tuning='pythagorean_c')
+# >>> 260.74
+
+# Arabic Maqam tunings
+midi_to_freq(60, tuning='rast_1')
+# >>> 261.63
+
+# See all tunings with details
+import asclpy
+asclpy.cli.list()  # Or: asclpy list (command-line)
+```
+
+#### Other Utilities
+
+```python
+from midi_utils import midi_to_octave, freq_to_octave, sharp_to_flat
+
+# Transpose MIDI note by octaves
+midi_to_octave(60, 1)   # Up one octave
+# >>> 72
+
+# Transpose frequency by octaves
+freq_to_octave(440.0, 1)  # Up one octave
+# >>> 880.0
+
+# Convert sharps to flats
+sharp_to_flat('C#4')
+# >>> 'DB4'
+```
+
+### Constants
+
+Access comprehensive mappings and lookup tables:
+
+```python
+from midi_utils import (
+    NOTE_TO_MIDI,      # Note name → MIDI number
+    MIDI_TO_NOTE,      # MIDI number → Note name
+    NOTE_TO_FREQ,      # Note name → Frequency
+    MIDI_TO_FREQ,      # MIDI number → Frequency
+    ROOT_TO_MIDI,      # Root name → MIDI class (0-11)
+    CHORDS,            # Chord name → Interval pattern
+    SCALES,            # Scale name → Interval pattern
+    NOTE_EQUIVALENTS   # Sharp → Flat equivalents
+)
+
+# Example: Get frequency of C4
+NOTE_TO_FREQ['C3']
+# >>> 261.63
+
+# Get intervals for major scale
+SCALES['MAJOR']
+# >>> [0, 2, 4, 5, 7, 9, 11]
+```
+
+## Development
+
+### Setup
+
+```bash
+git clone git@gitlab.com:gltd/midi-utils.git
+cd midi-utils
+uv sync --dev  # Install all dependencies including dev tools
+```
+
+This project uses [uv](https://github.com/astral-sh/uv) for fast, reliable Python package management.
+
+### Running Tests
+
+```bash
+# Run all tests
+uv run pytest
+
+# Run with verbose output
+uv run pytest -vv
+
+# Run specific test file
+uv run pytest tests/test_midi_to_freq_tuning.py
+
+# Or use make
+make test
+```
+
+### Linting and Formatting
+
+```bash
+# Run linter and formatter
+make lint
+
+# Or manually
+uv run ruff check --fix midi_utils/ tests/
+uv run ruff format midi_utils/ tests/
+```
+
+### Project Structure
+
+```bash
+midi-utils/
+├── midi_utils/
+│   ├── __init__.py      # Public API exports
+│   ├── scale.py         # Scale generation
+│   ├── chord.py         # Chord construction
+│   ├── arp.py           # Arpeggiation patterns
+│   ├── utils.py         # Conversion utilities
+│   ├── adsr.py          # Envelope generator
+│   └── constants.py     # Scales, chords, note mappings
+├── tests/               # Test suite
+├── pyproject.toml       # Package configuration
+└── README.md
+```
+
+## License
+
+MIT License - see LICENSE file for details.
+
+## Related Projects
+
+- [asclpy](https://github.com/abelsonlive/asclpy) - Ableton Scala tuning file parser with 150+ tuning systems
