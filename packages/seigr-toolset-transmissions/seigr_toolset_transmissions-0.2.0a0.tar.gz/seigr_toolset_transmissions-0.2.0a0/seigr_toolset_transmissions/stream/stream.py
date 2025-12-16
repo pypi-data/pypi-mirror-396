@@ -1,0 +1,319 @@
+"""
+STT Stream management for multiplexed data streams.
+"""
+
+import asyncio
+import time
+from typing import Optional, Dict, List, TYPE_CHECKING
+from collections import deque
+
+from ..crypto.stc_wrapper import STCWrapper
+from ..utils.exceptions import STTStreamError
+
+
+class STTStream:
+    """
+    Multiplexed stream within an STT session.
+    """
+    
+    def __init__(self, session_id: bytes, stream_id: int, stc_wrapper: STCWrapper):
+        """
+        Initialize stream.
+        
+        Args:
+            session_id: Parent session identifier
+            stream_id: Unique stream identifier within session
+            stc_wrapper: STC wrapper for stream encryption
+        """
+        self.session_id = session_id
+        self.stream_id = stream_id
+        self.stc_wrapper = stc_wrapper
+        self.current_priority = 500  # Default mid-range (0-1000)
+        
+        # Stream state
+        self.is_active = True
+        self.sequence = 0
+        self.created_at = time.time()
+        self.last_activity = time.time()
+        
+        # Flow control
+        self.send_window = 65536  # 64KB initial window
+        self.receive_window = 65536
+        
+        # Statistics
+        self.bytes_sent = 0
+        self.bytes_received = 0
+        self.messages_sent = 0
+        self.messages_received = 0
+        
+        # Performance metrics
+        self.send_latencies = []  # Message send latencies
+        self.max_latency_samples = 100
+        self.frame_queue_depth = 0
+        self.max_queue_depth_seen = 0
+        
+        # Buffering
+        self.receive_buffer = deque()
+        self.send_buffer = deque()
+        
+        # Sequence tracking for ordered delivery
+        self.expected_sequence = 0
+        self.out_of_order_buffer: Dict[int, bytes] = {}
+        
+        # Async support
+        self._receive_event = asyncio.Event()
+        
+        # Create StreamingContext for this stream (cached in stc_wrapper)
+        self._stc_context = stc_wrapper.create_stream_context(session_id, stream_id)
+    
+    @property
+    def stc_context(self):
+        """Get StreamingContext for this stream (for test compatibility)."""
+        return self._stc_context
+    
+    async def send(self, data: bytes, session: Optional['STTSession'] = None) -> None:
+        """
+        Send data on stream.
+        
+        Args:
+            data: Data to send
+            session: Optional session for priority calculation
+        """
+        if not self.is_active:
+            raise STTStreamError("Stream is closed")
+        
+        # Update statistics
+        self.bytes_sent += len(data)
+        self.messages_sent += 1
+        self.sequence += 1
+        self.last_activity = time.time()
+        
+        # In real implementation, this would create frames with priority and send
+        # For now, just update stats
+        await asyncio.sleep(0)  # Yield control
+    
+    async def receive(self, timeout: Optional[float] = None) -> bytes:
+        """
+        Receive data from stream.
+        
+        Args:
+            timeout: Receive timeout in seconds
+            
+        Returns:
+            Received data
+        """
+        if not self.is_active:
+            raise STTStreamError("Stream is closed")
+        
+        # Wait for data with timeout
+        try:
+            if timeout:
+                await asyncio.wait_for(self._receive_event.wait(), timeout)
+            else:
+                await self._receive_event.wait()
+        except asyncio.TimeoutError:
+            raise STTStreamError("Receive timeout")
+        
+        # Get data from buffer
+        if self.receive_buffer:
+            data = self.receive_buffer.popleft()
+            self.bytes_received += len(data)
+            self.messages_received += 1
+            self.last_activity = time.time()
+            
+            # Clear event if buffer empty
+            if not self.receive_buffer:
+                self._receive_event.clear()
+            
+            return data
+        
+        return b''
+    
+    def _deliver_data(self, data: bytes) -> None:
+        """
+        Internal method to deliver received data to buffer.
+        
+        Args:
+            data: Received data
+        """
+        self.receive_buffer.append(data)
+        self._receive_event.set()
+    
+    async def _handle_incoming(self, data: bytes, sequence: int) -> None:
+        """
+        Handle incoming data with sequence ordering.
+        
+        Args:
+            data: Received data
+            sequence: Sequence number for ordering
+        """
+        if not self.is_active:
+            raise STTStreamError("Stream is closed")
+        
+        self.last_activity = time.time()
+        
+        # Update statistics
+        self.bytes_received += len(data)
+        self.messages_received += 1
+        
+        # Check if this is the expected sequence
+        if sequence == self.expected_sequence:
+            # Deliver in order
+            self._deliver_data(data)
+            self.expected_sequence += 1
+            
+            # Check if we have buffered out-of-order messages that can now be delivered
+            while self.expected_sequence in self.out_of_order_buffer:
+                buffered_data = self.out_of_order_buffer.pop(self.expected_sequence)
+                self._deliver_data(buffered_data)
+                self.expected_sequence += 1
+        elif sequence > self.expected_sequence:
+            # Future sequence - buffer it
+            self.out_of_order_buffer[sequence] = data
+        # else: duplicate or old sequence - ignore
+    
+    def is_expired(self, max_idle: float) -> bool:
+        """
+        Check if stream has expired due to inactivity.
+        
+        Args:
+            max_idle: Maximum idle time in seconds
+            
+        Returns:
+            True if stream has been idle longer than max_idle
+        """
+        return (time.time() - self.last_activity) > max_idle
+    
+    @property
+    def receive_window_size(self) -> int:
+        """Get current receive window size."""
+        return self.receive_window
+    
+    def receive_buffer_empty(self) -> bool:
+        """Check if receive buffer is empty."""
+        return len(self.receive_buffer) == 0
+    
+    async def close(self) -> None:
+        """Close stream."""
+        self.is_active = False
+        self._receive_event.set()  # Wake up any waiters
+    
+    def is_closed(self) -> bool:
+        """Check if stream is closed."""
+        return not self.is_active
+    
+    def get_stats(self) -> Dict:
+        """Get comprehensive stream statistics including performance metrics."""
+        avg_latency = sum(self.send_latencies) / len(self.send_latencies) if self.send_latencies else 0
+        
+        return {
+            'session_id': self.session_id.hex(),
+            'stream_id': self.stream_id,
+            'is_active': self.is_active,
+            'sequence': self.sequence,
+            'bytes_sent': self.bytes_sent,
+            'bytes_received': self.bytes_received,
+            'messages_sent': self.messages_sent,
+            'messages_received': self.messages_received,
+            'send_window': self.send_window,
+            'receive_window': self.receive_window,
+            
+            # Performance metrics
+            'avg_send_latency_ms': round(avg_latency * 1000, 3) if avg_latency else 0,
+            'current_queue_depth': self.frame_queue_depth,
+            'max_queue_depth': self.max_queue_depth_seen,
+            'priority': self.current_priority,
+        }
+    
+    def get_statistics(self) -> Dict:
+        """Get stream statistics (alias for compatibility)."""
+        return self.get_stats()
+
+
+class StreamManager:
+    """Manages multiple streams within a session."""
+    
+    def __init__(self, session_id: bytes, stc_wrapper: STCWrapper):
+        """
+        Initialize stream manager.
+        
+        Args:
+            session_id: Parent session identifier
+            stc_wrapper: STC wrapper for crypto
+        """
+        self.session_id = session_id
+        self.stc_wrapper = stc_wrapper
+        self.streams: Dict[int, STTStream] = {}
+        self.next_stream_id = 1
+    
+    async def create_stream(self, stream_id: Optional[int] = None) -> STTStream:
+        """
+        Create new stream.
+        
+        Args:
+            stream_id: Optional stream ID (auto-assigned if None)
+            
+        Returns:
+            New stream instance
+        """
+        if stream_id is None:
+            stream_id = self.next_stream_id
+            self.next_stream_id += 1
+        
+        if stream_id in self.streams:
+            raise STTStreamError(f"Stream {stream_id} already exists")
+        
+        stream = STTStream(self.session_id, stream_id, self.stc_wrapper)
+        self.streams[stream_id] = stream
+        return stream
+    
+    def get_stream(self, stream_id: int) -> Optional[STTStream]:
+        """Get stream by ID."""
+        return self.streams.get(stream_id)
+    
+    def close_stream(self, stream_id: int) -> None:
+        """Close and remove stream."""
+        stream = self.streams.get(stream_id)
+        if stream:
+            stream.close()
+            del self.streams[stream_id]
+    
+    def has_stream(self, stream_id: int) -> bool:
+        """Check if stream exists."""
+        return stream_id in self.streams
+    
+    async def close_all(self) -> None:
+        """Close all streams."""
+        for stream in list(self.streams.values()):
+            stream.close()
+        self.streams.clear()
+    
+    def list_streams(self) -> List[int]:
+        """List all stream IDs."""
+        return list(self.streams.keys())
+    
+    async def cleanup_inactive(self, timeout: float = 300) -> int:
+        """
+        Remove inactive streams.
+        
+        Args:
+            timeout: Inactivity timeout in seconds
+            
+        Returns:
+            Number of streams cleaned up
+        """
+        now = time.time()
+        to_remove = []
+        
+        for stream_id, stream in self.streams.items():
+            if not stream.is_active or (now - stream.last_activity) > timeout:
+                to_remove.append(stream_id)
+        
+        for stream_id in to_remove:
+            self.close_stream(stream_id)
+        
+        return len(to_remove)
+    
+    def get_next_stream_id(self) -> int:
+        """Get next available stream ID."""
+        return self.next_stream_id
