@@ -1,0 +1,654 @@
+# Copyright (c) 2024, RTE (https://www.rte-france.com)
+#
+# See AUTHORS.txt
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# SPDX-License-Identifier: MPL-2.0
+#
+# This file is part of the Antares project.
+from dataclasses import replace
+from pathlib import Path, PurePath
+from types import MappingProxyType
+from typing import Dict, List, Optional, cast
+
+import pandas as pd
+
+from antares.craft import (
+    APIconf,
+    PlaylistParameters,
+    ScenarioBuilder,
+    STStorageAdditionalConstraintUpdate,
+    STStoragePropertiesUpdate,
+    ThematicTrimmingParameters,
+)
+from antares.craft.exceptions.exceptions import (
+    LinkCreationError,
+    ReferencedObjectDeletionNotAllowed,
+    UnsupportedStudyVersion,
+    XpansionConfigurationMissingError,
+)
+from antares.craft.model.area import Area, AreaProperties, AreaPropertiesUpdate, AreaUi
+from antares.craft.model.binding_constraint import (
+    BindingConstraint,
+    BindingConstraintProperties,
+    BindingConstraintPropertiesUpdate,
+    ClusterData,
+    ConstraintTerm,
+    LinkData,
+)
+from antares.craft.model.commons import STUDY_VERSION_8_8, STUDY_VERSION_9_2, STUDY_VERSION_9_3
+from antares.craft.model.link import Link, LinkProperties, LinkPropertiesUpdate, LinkUi
+from antares.craft.model.output import Output
+from antares.craft.model.renewable import RenewableCluster, RenewableClusterPropertiesUpdate
+from antares.craft.model.settings.study_settings import StudySettings, StudySettingsUpdate
+from antares.craft.model.simulation import AntaresSimulationParameters, Job
+from antares.craft.model.st_storage import STStorage
+from antares.craft.model.thermal import ThermalCluster, ThermalClusterPropertiesUpdate
+from antares.craft.model.xpansion.xpansion_configuration import XpansionConfiguration
+from antares.craft.service.base_services import BaseLinkService, BaseStudyService, StudyServices
+from antares.study.version import StudyVersion
+
+"""
+The study module defines the data model for antares study.
+It represents a power system involving areas and power flows
+between these areas.
+Optional attribute _api_id defined for studies being stored in web
+_study_path if stored in a disk
+"""
+
+SUPPORTED_STUDY_VERSIONS: set[StudyVersion] = {STUDY_VERSION_8_8, STUDY_VERSION_9_2, STUDY_VERSION_9_3}
+
+
+class Study:
+    """
+    Represents an antares study.
+
+    That interface allows to inspect a study data and to edit it,
+    including study settings, areas, thermal clusters, hydro modeling,
+    short-term storages, and generic binding constraints.
+
+    It also allows to launch antares-simulations.
+
+    A study should not be created through its constructor, please use
+    one of the factory methods instead:
+
+     - [create_study_api][antares.craft.create_study_api]
+     - [read_study_api][antares.craft.read_study_api]
+     - [import_study_api][antares.craft.import_study_api]
+     - [create_study_local][antares.craft.create_study_local]
+     - [read_study_local][antares.craft.read_study_local]
+    """
+
+    def __init__(
+        self,
+        name: str,
+        version: str,
+        services: StudyServices,
+        path: PurePath = PurePath("."),
+        solver_path: Optional[Path] = None,
+    ):
+        self.name = name
+        self.path = path
+        self._study_service = services.study_service
+        self._area_service = services.area_service
+        self._link_service = services.link_service
+        self._run_service = services.run_service
+        self._binding_constraints_service = services.bc_service
+        self._settings_service = services.settings_service
+        self._xpansion_service = services.xpansion_service
+        self._xpansion_configuration: XpansionConfiguration | None = None
+        self._settings = StudySettings()
+        self._areas: dict[str, Area] = {}
+        self._links: dict[str, Link] = {}
+        self._binding_constraints: dict[str, BindingConstraint] = {}
+        self._outputs: dict[str, Output] = {}
+        self._solver_path: Optional[Path] = solver_path
+
+        study_version = StudyVersion.parse(version)
+        if study_version not in SUPPORTED_STUDY_VERSIONS:
+            raise UnsupportedStudyVersion(version, SUPPORTED_STUDY_VERSIONS)
+        self._version = study_version
+
+    @property
+    def service(self) -> BaseStudyService:
+        return self._study_service
+
+    def update_settings(self, settings: StudySettingsUpdate) -> None:
+        """
+        Updates the study settings.
+
+        Parameters:
+            settings: StudySettingsUpdate: New settings to be applied to the study configuration.
+        """
+        new_settings = self._settings_service.edit_study_settings(settings, self._settings, self._version)
+        self._settings = new_settings
+
+    def set_playlist(self, playlist: dict[int, PlaylistParameters]) -> None:
+        self._settings_service.set_playlist(playlist)
+        self._settings.playlist_parameters = playlist
+
+    def set_thematic_trimming(self, thematic_trimming: ThematicTrimmingParameters) -> None:
+        trimming = self._settings_service.set_thematic_trimming(thematic_trimming)
+        self._settings.thematic_trimming_parameters = trimming
+
+    def get_areas(self) -> MappingProxyType[str, Area]:
+        """
+        Retrieve a dictionary of the study areas.
+        """
+        return MappingProxyType(dict(sorted(self._areas.items())))
+
+    def get_links(self) -> MappingProxyType[str, Link]:
+        """
+        Retrieve a dictionary of the study links.
+        """
+        return MappingProxyType(self._links)
+
+    def get_settings(self) -> StudySettings:
+        """
+        Retrieve the study settings.
+        """
+        return self._settings
+
+    def get_binding_constraints(self) -> MappingProxyType[str, BindingConstraint]:
+        """
+        Retrieve a dictionary of the binding constraints.
+        """
+        return MappingProxyType(self._binding_constraints)
+
+    def create_area(
+        self, area_name: str, *, properties: Optional[AreaProperties] = None, ui: Optional[AreaUi] = None
+    ) -> Area:
+        """
+        Adds a new area to the study.
+
+        Parameters:
+            area_name: the name of the new area
+            properties: optional values for the properties of the area. If none are provided,
+                        the default values are used.
+            ui: optional values for the UI properties of the area. If none are provided,
+                the default values are used.
+
+        Returns:
+            the newly created area.
+        """
+        area = self._area_service.create_area(area_name, properties, ui)
+        self._areas[area.id] = area
+        return area
+
+    def delete_area(self, area: Area) -> None:
+        """
+        Deletes the specified area.
+        """
+        # Check area is not referenced in any binding constraint
+        referencing_binding_constraints = []
+        for bc in self._binding_constraints.values():
+            for term in bc._terms.values():
+                data = term.data
+                if (isinstance(data, ClusterData) and data.area == area.id) or (
+                    isinstance(data, LinkData) and (data.area1 == area.id or data.area2 == area.id)
+                ):
+                    referencing_binding_constraints.append(bc.name)
+                    break
+        if referencing_binding_constraints:
+            raise ReferencedObjectDeletionNotAllowed(area.id, referencing_binding_constraints, object_type="Area")
+
+        # Delete the area
+        self._area_service.delete_area(area.id)
+        self._areas.pop(area.id)
+
+    def create_link(
+        self,
+        *,
+        area_from: str,
+        area_to: str,
+        properties: Optional[LinkProperties] = None,
+        ui: Optional[LinkUi] = None,
+    ) -> Link:
+        """
+        Adds a new link to the study.
+
+        Parameters:
+            area_from: the id of the area from which the link starts
+            area_to: the id of the area to which the link connects
+            properties: optional values for the properties of the link. If none are provided,
+                        the default values are used.
+            ui: optional values for the UI properties of the link. If none are provided,
+                the default values are used.
+
+        Returns:
+            the newly created link.
+        """
+
+        temp_link = Link(area_from, area_to, link_service=cast(BaseLinkService, None))
+        area_from, area_to = sorted([area_from, area_to])
+        area_from_id = temp_link.area_from_id
+        area_to_id = temp_link.area_to_id
+
+        if area_from_id == area_to_id:
+            raise LinkCreationError(area_from, area_to, "A link cannot start and end at the same area")
+
+        missing_areas = [area for area in [area_from_id, area_to_id] if area not in self._areas]
+        if missing_areas:
+            raise LinkCreationError(area_from, area_to, f"{', '.join(missing_areas)} does not exist")
+
+        if temp_link.id in self._links:
+            raise LinkCreationError(area_from, area_to, f"A link from {area_from} to {area_to} already exists")
+
+        link = self._link_service.create_link(area_from_id, area_to_id, properties, ui)
+        self._links[link.id] = link
+        return link
+
+    def delete_link(self, link: Link) -> None:
+        """
+        Deletes the specified link.
+        """
+        # Check link is not referenced in any binding constraint
+        referencing_binding_constraints = []
+        for bc in self._binding_constraints.values():
+            for term in bc._terms.values():
+                data = term.data
+                if isinstance(data, LinkData) and data.area1 == link.area_from_id and data.area2 == link.area_to_id:
+                    referencing_binding_constraints.append(bc.name)
+                    break
+        if referencing_binding_constraints:
+            raise ReferencedObjectDeletionNotAllowed(link.id, referencing_binding_constraints, object_type="Link")
+
+        # Delete the link
+        self._link_service.delete_link(link)
+        self._links.pop(link.id)
+
+    def create_binding_constraint(
+        self,
+        *,
+        name: str,
+        properties: Optional[BindingConstraintProperties] = None,
+        terms: Optional[List[ConstraintTerm]] = None,
+        less_term_matrix: Optional[pd.DataFrame] = None,
+        equal_term_matrix: Optional[pd.DataFrame] = None,
+        greater_term_matrix: Optional[pd.DataFrame] = None,
+    ) -> BindingConstraint:
+        """
+        Create a new binding constraint.
+
+        Parameters:
+            name: The name of the binding constraint.
+            properties: Optional properties for the constraint.
+            terms: Optional list of terms for the constraint.
+            less_term_matrix: Optional less-than term matrix.
+            equal_term_matrix: Optional equality term matrix.
+            greater_term_matrix: Optional greater-than term matrix.
+
+        Returns:
+            The newly created binding constraint.
+        """
+        binding_constraint = self._binding_constraints_service.create_binding_constraint(
+            name, properties, terms, less_term_matrix, equal_term_matrix, greater_term_matrix
+        )
+        self._binding_constraints[binding_constraint.id] = binding_constraint
+        return binding_constraint
+
+    def delete_binding_constraint(self, constraint: BindingConstraint) -> None:
+        """
+        Deletes the specified binding constraint.
+        """
+        self._study_service.delete_binding_constraint(constraint)
+        self._binding_constraints.pop(constraint.id)
+
+    def delete(self, children: bool = False) -> None:
+        """
+        Deletes this study.
+
+        Parameters:
+            children: If True, also delete all children studies. That parameter only makes sense for
+                      variant studies on antares-web.
+        """
+        self._study_service.delete(children)
+
+    def create_variant(self, variant_name: str) -> "Study":
+        """
+        Creates a new variant for the study
+
+        Args:
+            variant_name: the name of the new variant
+        Returns:
+            The variant in the form of a Study object
+        """
+        return self._study_service.create_variant(variant_name)
+
+    def run_antares_simulation(self, parameters: Optional[AntaresSimulationParameters] = None) -> Job:
+        """
+        Runs the Antares simulation.
+
+        This method starts an antares simulation with the given parameters
+
+        Returns:
+            A job representing the simulation task
+        """
+        return self._run_service.run_antares_simulation(parameters, self._solver_path)
+
+    def wait_job_completion(self, job: Job, time_out: int = 172800) -> None:
+        """
+        Waits for the completion of a job
+
+        Args:
+            job: The job to wait for
+            time_out: Time limit for waiting (seconds), default: 172800s
+
+        Raises:
+            SimulationTimeOutError: if exceeded timeout
+        """
+        self._run_service.wait_job_completion(job, time_out)
+        self._read_outputs()
+
+    def _read_outputs(self) -> None:
+        """
+        Load outputs into current study.
+        We're not just replacing existing outputs by new ones as this method is also used outside the factory.
+        Instead, we're updating the current ones with new values to avoid any user issue.
+        """
+        outputs = self._study_service.read_outputs()
+
+        # Updates in memory objects rather than replacing them
+        existing_ids = set()
+        for output_name, output in outputs.items():
+            existing_ids.add(output_name)
+            if output_name not in self._outputs:
+                self._outputs[output_name] = output
+            else:
+                current_output = self._outputs[output_name]
+                current_output._archived = output.archived
+
+        # Deletes objects stored in memory but do not exist anymore
+        for output_name in list(self._outputs.keys()):
+            if output_name not in existing_ids:
+                del self._outputs[output_name]
+
+    def get_outputs(self) -> MappingProxyType[str, Output]:
+        """
+        Get outputs of current study
+
+        Returns:
+            read-only proxy of the (output_id, Output) mapping
+        """
+        return MappingProxyType(self._outputs)
+
+    def get_output(self, output_id: str) -> Output:
+        """
+        Get a specific output
+
+        Args:
+            output_id: id of the output to get
+
+        Returns:
+            Output with the output_id
+
+        Raises:
+            KeyError if it doesn't exist
+        """
+        return self._outputs[output_id]
+
+    def delete_outputs(self) -> None:
+        """
+        Deletes all simulation outputs.
+        """
+        self._study_service.delete_outputs()
+        self._outputs.clear()
+
+    def delete_output(self, output_name: str) -> None:
+        """
+        Deletes the specified output.
+
+        Parameters:
+            output_name: the name of the output to delete
+        """
+        self._study_service.delete_output(output_name)
+        self._outputs.pop(output_name)
+
+    def move(self, parent_path: Path) -> None:
+        """
+        Moves the study to another directory.
+        """
+        self.path = self._study_service.move_study(parent_path)
+
+    def generate_thermal_timeseries(self, nb_years: int) -> None:
+        """
+        Generates timeseries for thermal clusters availability, based on timeseries generation parameters.
+
+        Parameters:
+            nb_years: number of scenarios (years) to generate timeseries for.
+        """
+        seed = self._settings.seed_parameters.seed_tsgen_thermal
+        self._study_service.generate_thermal_timeseries(nb_years, self._areas, seed)
+        # Copies objects to bypass the fact that the class is frozen
+        self._settings.general_parameters = replace(self._settings.general_parameters, nb_timeseries_thermal=nb_years)
+
+    def update_areas(self, new_properties: Dict[Area, AreaPropertiesUpdate]) -> None:
+        """
+        Update existing areas properties.
+
+        Parameters:
+            new_properties: a mapping from area its new properties
+        """
+        new_areas_props = self._area_service.update_areas_properties(new_properties)
+        for area_prop in new_areas_props:
+            self._areas[area_prop]._properties = new_areas_props[area_prop]
+
+    def update_thermal_clusters(self, new_properties: dict[ThermalCluster, ThermalClusterPropertiesUpdate]) -> None:
+        """
+        Update existing thermal cluster properties.
+
+        Parameters:
+            new_properties: a dictionary of cluster to cluster update data
+        """
+        new_thermal_clusters_props = self._area_service.thermal_service.update_thermal_clusters_properties(
+            new_properties
+        )
+        for thermal in new_thermal_clusters_props:
+            self._areas[thermal.area_id]._thermals[thermal.id]._properties = new_thermal_clusters_props[thermal]
+
+    def update_renewable_clusters(
+        self, new_properties: dict[RenewableCluster, RenewableClusterPropertiesUpdate]
+    ) -> None:
+        """
+        Update existing renewable cluster properties.
+
+        Parameters:
+            new_properties: a dictionary of cluster to cluster update data
+        """
+        new_renewable_clusters_props = self._area_service.renewable_service.update_renewable_clusters_properties(
+            new_properties
+        )
+        for renewable in new_renewable_clusters_props:
+            self._areas[renewable.area_id]._renewables[renewable.id]._properties = new_renewable_clusters_props[
+                renewable
+            ]
+
+    def update_links(self, new_properties: Dict[str, LinkPropertiesUpdate]) -> None:
+        """
+        Update existing links.
+
+        Args:
+            new_properties: a dictionary of link ID to link update data
+        """
+        new_links_props = self._link_service.update_links_properties(new_properties)
+        for link_props in new_links_props:
+            self._links[link_props]._properties = new_links_props[link_props]
+
+    def update_binding_constraints(self, new_properties: Dict[str, BindingConstraintPropertiesUpdate]) -> None:
+        """
+        Update existing binding constraints.
+
+        Args:
+            new_properties: a dictionary of binding constraint ID to binding constraint update data
+        """
+        new_bc_props = self._binding_constraints_service.update_binding_constraints_properties(new_properties)
+        for bc_props in new_bc_props:
+            self._binding_constraints[bc_props]._properties = new_bc_props[bc_props]
+
+    def update_st_storages(self, new_properties: dict[STStorage, STStoragePropertiesUpdate]) -> None:
+        new_st_props = self._area_service.storage_service.update_st_storages_properties(new_properties)
+
+        for storage in new_st_props:
+            self._areas[storage.area_id]._st_storages[storage.id]._properties = new_st_props[storage]
+
+    def update_st_storages_constraints(
+        self, new_constraints: dict[STStorage, dict[str, STStorageAdditionalConstraintUpdate]]
+    ) -> None:
+        new_st_constraints = self._area_service.storage_service.update_st_storages_constraints(new_constraints)
+        for area_id, value in new_st_constraints.items():
+            for storage_id, values in value.items():
+                for constraint_id, constraint in values.items():
+                    self._areas[area_id]._st_storages[storage_id]._constraints[constraint_id] = constraint
+
+    def get_scenario_builder(self) -> ScenarioBuilder:
+        sc_builder = self._study_service.get_scenario_builder(self._settings.general_parameters.nb_years, self._version)
+        sc_builder.validate_against_version(self._version)
+        sc_builder._set_study(self)
+        return sc_builder
+
+    def set_scenario_builder(self, scenario_builder: ScenarioBuilder) -> None:
+        scenario_builder.validate_against_version(self._version)
+        self._study_service.set_scenario_builder(scenario_builder)
+
+    @property
+    def xpansion(self) -> XpansionConfiguration:
+        if self._xpansion_configuration is None:
+            raise XpansionConfigurationMissingError(self._study_service.study_id)
+        return self._xpansion_configuration
+
+    @property
+    def has_an_xpansion_configuration(self) -> bool:
+        return self._xpansion_configuration is not None
+
+    def create_xpansion_configuration(self) -> XpansionConfiguration:
+        configuration = self._xpansion_service.create_xpansion_configuration()
+        self._xpansion_configuration = configuration
+        return configuration
+
+    def delete_xpansion_configuration(self) -> None:
+        self._xpansion_service.delete()
+        self._xpansion_configuration = None
+
+
+# Design note:
+# all following methods are entry points for study creation.
+# They use methods defined in "local" and "API" implementation services,
+# that we inject here.
+# Generally speaking, implementations should reference the API, not the
+# opposite. Here we perform dependency injection, and because of python
+# import mechanics, we need to use local imports to avoid circular dependencies.
+
+
+def create_study_local(
+    study_name: str, version: str, parent_directory: "Path", solver_path: Optional[Path] = None
+) -> "Study":
+    """
+    Creates a new study on your filesystem.
+
+    You may define a path to an antares-solver executable, if you want to run
+    simulations on this study.
+
+    Parameters:
+        study_name: the name of the created study
+        version: the study version, for example "8.8"
+        parent_directory: the directory where the new study will be created
+        solver_path: path to antares-solver executable, if you wish to run a simulation
+
+    Returns:
+        a Study object representing the newly created study
+    """
+    from antares.craft.service.local_services.factory import create_study_local
+
+    return create_study_local(study_name, version, parent_directory, solver_path)
+
+
+def read_study_local(study_path: "Path", solver_path: Optional[Path] = None) -> "Study":
+    """
+    Reads an existing study on your filesystem.
+
+    You may define a path to an antares-solver executable, if you want to run
+    simulations on this study.
+
+    Parameters:
+        study_path: the path to the existing study on your filesystem
+        solver_path: path to antares-solver executable, if you wish to run a simulation
+
+    Returns:
+        a Study object representing the study on disk
+    """
+    from antares.craft.service.local_services.factory import read_study_local
+
+    return read_study_local(study_path, solver_path)
+
+
+def create_study_api(
+    study_name: str, version: str, api_config: APIconf, parent_path: "Optional[Path]" = None
+) -> "Study":
+    """
+    Creates a study on antares-web server.
+
+    Parameters:
+        study_name: the name of the created study
+        version: the study version, for example "8.8"
+        api_config: configuration to connect to antares-web server
+        parent_path: an optional directory where the study will be stored in antares-web
+
+    Returns:
+        a Study object representing the newly created study
+    """
+    from antares.craft.service.api_services.factory import create_study_api
+
+    return create_study_api(study_name, version, api_config, parent_path)
+
+
+def import_study_api(api_config: APIconf, study_path: "Path", destination_path: "Optional[Path]" = None) -> "Study":
+    """
+    Creates a study on antares-web server, by importing an existing study archive from your filesystem.
+
+    Parameters:
+        api_config: configuration to connect to antares-web server
+        study_path: path to your study, either as a .zip or .7z file
+        destination_path: an optional directory where the study will be stored in antares-web
+
+    Returns:
+        a Study object representing the newly created study
+    """
+    from antares.craft.service.api_services.factory import import_study_api
+
+    return import_study_api(api_config, study_path, destination_path)
+
+
+def read_study_api(api_config: APIconf, study_id: str) -> "Study":
+    """
+    Reads an existing study from antares-web server.
+
+    Parameters:
+        api_config: configuration to connect to antares-web server
+        study_id: the ID of the study on antares-web
+
+    Returns:
+        a Study object representing the study on antares-web
+    """
+    from antares.craft.service.api_services.factory import read_study_api
+
+    return read_study_api(api_config, study_id)
+
+
+def create_variant_api(api_config: APIconf, study_id: str, variant_name: str) -> "Study":
+    """
+    Creates a new variant of an existing study, on antares-web server.
+
+    Parameters:
+        api_config: configuration to connect to antares-web server
+        study_id: the ID of the base study on antares-web
+        variant_name: the name of the newly created variant on antares-web
+
+    Returns:
+        a Study object representing the newly created variant on antares-web
+    """
+    from antares.craft.service.api_services.factory import create_variant_api
+
+    return create_variant_api(api_config, study_id, variant_name)
