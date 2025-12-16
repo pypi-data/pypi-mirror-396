@@ -1,0 +1,60 @@
+from kirin import ir, types
+from kirin.analysis import const
+from kirin.dialects import py, ilist
+from kirin.rewrite.abc import RewriteRule, RewriteResult
+
+
+class FlattenAdd(RewriteRule):
+
+    def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
+        if not (
+            isinstance(node, py.binop.Add)
+            and (lhs_type := node.lhs.type).is_subseteq(ilist.IListType)
+            and (rhs_type := node.rhs.type).is_subseteq(ilist.IListType)
+            and not lhs_type.is_structurally_equal(types.Bottom)
+            and not rhs_type.is_structurally_equal(types.Bottom)
+        ):
+            return RewriteResult()
+
+        assert isinstance(rhs_type, types.Generic), "Expecting generic type for IList"
+        assert isinstance(lhs_type, types.Generic), "Expecting generic type for IList"
+
+        # check if we are adding two ilist.New objects
+        new_data = ()
+
+        # lhs:
+        lhs = node.lhs
+        rhs = node.rhs
+
+        if (
+            (lhs_parent := lhs.owner.parent) is None
+            or (rhs_parent := rhs.owner.parent) is None
+            or lhs_parent is not rhs_parent
+        ):
+            # do not flatten across different blocks/regions
+            return RewriteResult()
+
+        if isinstance(lhs.owner, ilist.New):
+            new_data += lhs.owner.values
+        elif (
+            not isinstance(const_lhs := lhs.hints.get("const"), const.Value)
+            or len(const_lhs.data) > 0
+        ):
+            return RewriteResult()
+
+        # rhs:
+        if isinstance(rhs.owner, ilist.New):
+            new_data += rhs.owner.values
+        elif (
+            not isinstance(const_rhs := rhs.hints.get("const"), const.Value)
+            or len(const_rhs.data) > 0
+        ):
+            return RewriteResult()
+
+        lhs_elem_type = lhs_type.vars[0]
+        rhs_elem_type = rhs_type.vars[0]
+
+        result_elem_type = lhs_elem_type.join(rhs_elem_type)
+        node.replace_by(ilist.New(values=new_data, elem_type=result_elem_type))
+
+        return RewriteResult(has_done_something=True)
