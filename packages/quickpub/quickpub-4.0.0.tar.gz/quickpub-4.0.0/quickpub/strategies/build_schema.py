@@ -1,0 +1,21 @@
+import logging
+from abc import abstractmethod
+from typing import Any
+
+from .quickpub_strategy import QuickpubStrategy
+
+logger = logging.getLogger(__name__)
+
+
+class BuildSchema(QuickpubStrategy):
+    """Base class for build schema implementations. Subclass this to define custom build strategies."""
+
+    def __init__(self, verbose: bool = True) -> None:
+        self.verbose = verbose
+        logger.debug("BuildSchema initialized with verbose=%s", verbose)
+
+    @abstractmethod
+    def build(self, *args: Any, **kwargs: Any) -> None: ...
+
+
+__all__ = ["BuildSchema"]
