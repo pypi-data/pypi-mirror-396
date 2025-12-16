@@ -1,0 +1,159 @@
+[setup]
+	version = '2.1.0'
+	include = ['builtin://WDB/ethernet/ipv4.wdb']
+
+	[[setup.hooks]]
+		expression = 'ip.proto == 0x2'
+		location = 'ip.payload'
+		protocol = '#IGMP'
+
+[IGMP]
+	short_name = 'IGMP'
+	tag = 'igmp'
+	long_name = 'Internet Group Management Protocol'
+
+	[[IGMP.fields]]
+		name = 'Type'
+		length = 8
+
+	[[IGMP.fields]]
+		name = 'payload'
+		type = 'switch'
+		switch = '^.Type'
+
+		[[IGMP.fields.fields]]
+			case = '0x11'
+			name = 'Message Query'
+			inherit = '#MessageQuery'
+
+		[[IGMP.fields.fields]]
+			case = '0x22'
+			name = 'Report Query'
+			inherit = '#ReportMessage'
+
+		[[IGMP.fields.fields]]
+			case = '0x16'
+			aliases = ['igmp.type.request']
+			name = 'Request Query 16'
+			inherit = '#Request'
+
+		[[IGMP.fields.fields]]
+			case = '0x17'
+			aliases = ['igmp.type.request']
+			name = 'Request Query 17'
+			inherit = '#Request'
+
+		[[IGMP.fields.fields]]
+			case = '0x12'
+			aliases = ['igmp.type.request']
+			name = 'Request Query 12'
+			inherit = '#Request'
+
+[MessageQuery]
+
+	[[MessageQuery.fields]]
+		name = 'max Resp Code'
+		length = 8
+
+	[[MessageQuery.fields]]
+		name = 'Checksum'
+		length = 8
+
+	[[MessageQuery.fields]]
+		name = 'Group Address'
+		inherit = '#IPV4Address'
+
+	[[MessageQuery.fields]]
+		name = 'Resv'
+		length = 4
+
+	[[MessageQuery.fields]]
+		name = 'S'
+		length = 1
+
+	[[MessageQuery.fields]]
+		name = 'QRV'
+		length = 3
+
+	[[MessageQuery.fields]]
+		name = 'QQIC'
+		length = 8
+
+	[[MessageQuery.fields]]
+		name = 'Number of Sources'
+		tag = 'nos'
+		length = 16
+
+	[[MessageQuery.fields]]
+		name = 'SourceAddrss'
+		loop = '^.nos'
+		inherit = '#IPV4Address'
+
+[ReportMessage]
+	visible = false
+
+	[[ReportMessage.fields]]
+		name = 'reserved'
+		length = 8
+
+	[[ReportMessage.fields]]
+		name = 'Checksum'
+		length = 8
+
+	[[ReportMessage.fields]]
+		name = 'Reserved'
+		length = 16
+
+	[[ReportMessage.fields]]
+		name = 'Number Of Groups records'
+		tag = 'nogr'
+		length = 16
+
+	[[ReportMessage.fields]]
+		name = 'Group Record'
+		loop = '^.nogr'
+		inherit = '#GroupRecord'
+
+[GroupRecord]
+	
+	[[GroupRecord.fields]]
+		name = 'Record Type'
+		length = 8
+
+	[[GroupRecord.fields]]
+		name = 'Aux Data Len'
+		tag = 'adl'
+		length = 8
+
+	[[GroupRecord.fields]]
+		name = 'Number Of Sources'
+		length = 16
+		tag = 'nos'
+
+	[[GroupRecord.fields]]
+		name = 'Multicast Address'
+		length = 32
+		
+	[[GroupRecord.fields]]
+		name = 'Source Address'
+		inherit = '#IPV4Address'
+		loop = '^.nos'
+
+	[[GroupRecord.fields]]
+		name = 'Auxiliary Data'
+		length = '^.adl * 32'
+
+[Request]
+	visible = false
+
+	[[Request.fields]]
+		name = 'max Resp Code'
+		length = 8
+
+	[[Request.fields]]
+		name = 'Checksum'
+		length = 8
+
+	[[Request.fields]]
+		name = 'Group Address'
+		inherit = '#IPV4Address'
