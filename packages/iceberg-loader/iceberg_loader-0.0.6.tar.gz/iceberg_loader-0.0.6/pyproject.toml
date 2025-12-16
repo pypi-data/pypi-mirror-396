@@ -1,0 +1,200 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "iceberg-loader"
+dynamic = ["version"]
+description = 'A convenience wrapper around PyIceberg for simplified data loading into Apache Iceberg tables'
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+keywords = ["iceberg", "arrow", "etl", "pyarrow", "data-loading", "schema-evolution", "upsert"]
+authors = [
+  { name = "Ivan Matveev", email = "vndvtech@gmail.com" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "License :: OSI Approved :: MIT License",
+  "Typing :: Typed",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Operating System :: OS Independent",
+  "Topic :: Database",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+  "pyarrow>=18.0.0",
+  "pyiceberg>=0.7.1",
+]
+
+[project.optional-dependencies]
+hive = [
+  "pyiceberg[hive]>=0.6.0",
+]
+s3 = [
+  "pyiceberg[s3fs]>=0.6.0",
+]
+all = [
+  "pyiceberg[hive,s3fs,pyiceberg-core]>=0.6.0",
+]
+test = [
+  "pytest>=7.0",
+  "pytest-cov>=4.0",
+]
+dev = [
+  "ruff>=0.5.0",
+  "mypy>=1.10.0",
+  "pytest>=7.0",
+  "pytest-cov>=4.0",
+  "pre-commit>=3.5.0",
+  "twine>=5.0.0",
+  "tox>=4.32.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/vndvtech/iceberg-loader"
+Documentation = "https://github.com/vndvtech/iceberg-loader"
+Repository = "https://github.com/vndvtech/iceberg-loader"
+"Bug Tracker" = "https://github.com/vndvtech/iceberg-loader/issues"
+Changelog = "https://github.com/vndvtech/iceberg-loader/releases"
+
+[tool.hatch.version]
+path = "src/iceberg_loader/__about__.py"
+
+[tool.hatch.envs.default]
+features = ["all"]
+dependencies = [
+  "pytest>=7.0",
+  "pytest-cov>=4.0",
+  "ruff>=0.5.0",
+  "mypy>=1.10.0",
+  "pre-commit>=3.5.0",
+]
+[tool.hatch.envs.default.scripts]
+test = "pytest {args:tests}"
+lint = "ruff check"
+format = "ruff format"
+
+[tool.hatch.envs.types]
+extra-dependencies = [
+  "mypy>=1.0.0",
+]
+
+[tool.hatch.envs.types.scripts]
+check = "mypy --install-types --non-interactive {args:src/iceberg_loader tests}"
+
+[tool.coverage.run]
+source_pkgs = ["iceberg_loader", "tests"]
+branch = true
+parallel = true
+omit = [
+  "src/iceberg_loader/__about__.py",
+]
+
+[tool.coverage.paths]
+iceberg_loader = ["src/iceberg_loader", "*/iceberg-loader/src/iceberg_loader"]
+tests = ["tests", "*/iceberg-loader/tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+log_level = "INFO"
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
+
+[tool.ruff]
+line-length = 120
+indent-width = 4
+target-version = "py310"
+exclude = [
+  ".bzr",
+  ".direnv",
+  ".eggs",
+  ".git",
+  ".git-rewrite",
+  ".hg",
+  ".ipynb_checkpoints",
+  ".mypy_cache",
+  ".nox",
+  ".pants.d",
+  ".pyenv",
+  ".pytest_cache",
+  ".pytype",
+  ".ruff_cache",
+  ".svn",
+  ".tox",
+  ".venv",
+  ".vscode",
+  "__pypackages__",
+  "_build",
+  "buck-out",
+  "build",
+  "dist",
+  "node_modules",
+  "site-packages",
+  "venv",
+  "examples",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "N", "TID", "S", "C4", "PIE", "RET", "PTH", "RUF"]
+ignore = ["BLE001", "UP017"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [
+    "S101",
+    "D103",
+    "PLR2004",
+]
+"examples/*" = [
+    "D103",
+    "T201",
+    "S101",
+]
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.12"
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_return_any = false
+strict_optional = true
+disallow_untyped_defs = true
+disallow_untyped_calls = false
+follow_imports = "normal"
+show_error_codes = true
+exclude = ["examples/"]
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+warn_return_any = false
+
+[[tool.mypy.overrides]]
+module = ["pyarrow", "pyarrow.*", "pyiceberg.*", "requests"]
+ignore_missing_imports = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/iceberg_loader"]
+include = [
+  "src/iceberg_loader/py.typed",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "src/iceberg_loader/py.typed",
+]
+
