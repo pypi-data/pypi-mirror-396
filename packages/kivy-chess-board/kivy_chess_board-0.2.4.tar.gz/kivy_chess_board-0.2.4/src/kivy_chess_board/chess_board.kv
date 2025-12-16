@@ -1,0 +1,54 @@
+#:import Clock kivy.clock.Clock
+#:import Factory kivy.factory.Factory
+#:import HighlightSquare kivy_chess_board._highlight_square.HighlightSquare
+
+<ChessBoard>:  # The actual board, ensuring it's square
+    height: self.width
+    width: self.parent.width if self.parent else 0
+    size_hint: None, None
+
+    on_board: self._update_image()
+    on_inverted: self._update_image()
+    on_inverted: self._update_highlighted_squares()
+    on_moves_to_be_highlighted: self._update_arrows()
+    on_squares_to_be_highlighted: self._update_highlighted_squares()
+    on_move_selector: self._update_arrows()
+
+    # Since the arrows are drawn using the absolute positions of the
+    # buttons, we need to redraw them if we are given a new size.
+    on_size: Clock.schedule_once(lambda dt: self._update_arrows())
+    on_pos:  Clock.schedule_once(lambda dt: self._update_arrows())
+    on_kv_post: Clock.schedule_once(lambda dt: root._update_arrows())
+
+    Image:
+        source: "board_inverted.png" if root.inverted else "board.png"
+    
+    RelativeLayout:
+        size_hint: 0.925, 0.925  # To account for the coordinate bar
+        pos_hint: {"center_x": 0.5, "center_y": 0.5}
+
+        GridLayout:  # Light up if piece is hovered or selected
+            id: highlight
+            cols: 8
+            orientation: "rl-tb"
+            #on_kv_post: for _ in range(64): self.add_widget(Factory.HighlightSquare())
+
+        GridLayout:  # The buttons representing the squares
+            cb_root: root
+            id: board
+            orientation: "rl-tb"
+            cols: 8
+
+<_ChessButton>:  # Button and Image for each square on the board
+    drag_rectangle: self.x, self.y, self.width, self.height
+    drag_timeout: 10000000
+    drag_distance: 0
+
+<HighlightSquare>:  # Highlight square for hover/selection
+    highlighted: False
+    canvas.before:
+        Color:
+            rgba: self.rgba
+        Rectangle:
+            pos: self.pos
+            size: self.size
