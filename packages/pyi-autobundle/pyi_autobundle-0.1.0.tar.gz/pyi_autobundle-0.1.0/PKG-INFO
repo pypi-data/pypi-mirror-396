@@ -1,0 +1,95 @@
+Metadata-Version: 2.4
+Name: pyi-autobundle
+Version: 0.1.0
+Summary: Automatic hook and data file bundler for PyInstaller.
+Author-email: Aizhee <aizharjamilano@gmail.com>
+License: MIT
+Keywords: pyinstaller,build,automation
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: pyinstaller
+Dynamic: license-file
+
+ # pyi-autobundle
+
+Automatic hook and data file bundler for PyInstaller — a tool to help
+generate hooks, collect package assets, and produce PyInstaller spec files
+automatically so you can build portable binaries with a single command.
+
+**Key Features**
+- Static AST import scanning and basic dynamic import detection.
+- Optional runtime import tracing to capture imports that only appear at runtime.
+- Package inspection to collect datas (images, JSON, templates, ML models) and native binaries.
+- Automatic generation of PyInstaller `hook-*.py` files and a working `.spec` file.
+- One-command CLI: `pybundle` (entrypoint: `pyi_autobundle.cli:main`).
+- Centralized configuration via `pyproject.toml` under `[tool.pyi-autobundle]`.
+- `.buildignore` support to exclude files, directories, or patterns from inclusion.
+- Built-in hidden-imports database for common problematic packages (numpy, pandas, torch, PIL).
+- `--dry-run` mode to audit what would be included without building.
+
+Installation
+------------
+Install in editable/development mode or as a package in your Python environment:
+
+```cmd
+python -m pip install -e .
+python -m pip install pyinstaller
+```
+
+CLI Usage
+---------
+Basic one-command build:
+
+```cmd
+pybundle path\to\main.py --trace
+```
+
+Common flags:
+- `--trace` : run the runtime import tracer in addition to static scanning
+- `--onefile` : build a single-file executable (PyInstaller `--onefile`)
+- `--windowed` : create a windowed app (no console)
+- `--hooks-dir` : directory to write generated hooks (default: `.pyi-hooks`)
+- `--buildignore` : path to a `.buildignore` file to exclude assets
+- `--dry-run` : list files/modules that would be included and exit
+
+Configuration (pyproject.toml)
+------------------------------
+You can set default build options in `pyproject.toml` under the `tool.pyi-autobundle` table. Example:
+
+```toml
+[tool.pyi-autobundle]
+onefile = true
+windowed = false
+name = "myapp"
+icon = "assets/app.ico"
+```
+
+The CLI will merge values from this config with any flags you pass on the command line.
+
+.buildignore
+-----------
+Place a `.buildignore` file in your project root to exclude files or patterns from being collected.
+Lines starting with `#` are treated as comments. Example:
+
+```
+# exclude tests and dataset
+tests/
+data/raw/
+*.log
+```
+
+Resource discovery
+------------------
+If your code uses a helper like `get_resource_path("assets/icon.png")`, the static scanner
+attempts to detect literal calls and automatically include referenced files in the build.
+
+Dry-run audit
+-------------
+Use `--dry-run` to print a report of `datas`, `binaries`, and `hiddenimports` that would
+be included by the build process without invoking PyInstaller.
