@@ -1,0 +1,18 @@
+- project:
+    check:
+      jobs:
+        - pkgcheck-devstack:
+            voting: false
+        - openstack-tox-py36:
+            voting: false
+
+- job:
+    name: pkgcheck-devstack
+    parent: legacy-base
+    run: playbooks/legacy/pkgcheck-devstack/run.yaml
+    timeout: 3600
+    required-projects:
+      - openstack/requirements
+      - openstack-dev/devstack
+      - openstack-infra/devstack-gate
+
