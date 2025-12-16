@@ -1,0 +1,4659 @@
+"""A suite of tests for Mailgun Python SDK functionality."""
+
+from __future__ import annotations
+
+import json
+import os
+import string
+import unittest
+import random
+from typing import Any
+from datetime import datetime, timedelta
+
+import pytest
+
+from mailgun.client import Client, AsyncClient
+
+
+class MessagesTests(unittest.TestCase):
+    """Tests for Mailgun Messages API.
+
+    This class provides setup and teardown functionality for tests involving the
+    messages functionality, with authentication and client initialization handled
+    in `setUp`. Each test in this suite operates with the configured Mailgun client
+    instance to simulate API interactions.
+
+    """
+    def setUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: Client = Client(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+        self.data: dict[str, str] = {
+            "from": os.environ["MESSAGES_FROM"],
+            "to": os.environ["MESSAGES_TO"],
+            # TODO: Check it:
+            # Domain $DOMAIN is not allowed to send: Free accounts are for test purposes only.
+            # Please upgrade or add the address to authorized recipients in Account Settings.
+            # "cc": os.environ["MESSAGES_CC"],
+            "subject": "Hello Vasyl Bodaj",
+            "text": "Congratulations!, you just sent an email with Mailgun! You are truly awesome!",
+            "o:tag": "Python test",
+        }
+
+    @pytest.mark.order(1)
+    def test_post_right_message(self) -> None:
+        req = self.client.messages.create(data=self.data, domain=self.domain)
+        self.assertEqual(req.status_code, 200)
+
+    @pytest.mark.order(1)
+    def test_post_wrong_message(self) -> None:
+        req = self.client.messages.create(data={"from": "sdsdsd"}, domain=self.domain)
+        self.assertEqual(req.status_code, 400)
+
+
+class DomainTests(unittest.TestCase):
+    """Tests for Mailgun Domain API.
+
+    This class provides setup and teardown functionality for tests involving the
+    messages functionality, with authentication and client initialization handled
+    in `setUp`. Each test in this suite operates with the configured Mailgun client
+    instance to simulate API interactions.
+
+    All the tests of this part will work only on fresh setup, or if you change self.test_domain variable every time you're running this again.
+
+    It's happening because domain name is not deleting permanently after API call, so every new create will cause an error,
+    as that domain is still exists. To avoid the problems we use a random domain name generator.
+
+    """
+
+    def setUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: Client = Client(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+        random_domain_name = "".join(
+            random.choice(string.ascii_lowercase + string.digits) for _ in range(10)
+        )
+        self.test_domain: str = f"mailgun.wrapper.{random_domain_name}"
+        self.post_domain_data: dict[str, str] = {
+            "name": self.test_domain,
+        }
+        self.put_domain_data: dict[str, str] = {
+            "spam_action": "disabled",
+        }
+        self.post_domain_creds: dict[str, str] = {
+            "login": f"alice_bob@{self.domain}",
+            "password": "test_new_creds123",  # pragma: allowlist secret
+        }
+
+        self.put_domain_creds: dict[str, str] = {
+            "password": "test_new_creds",  # pragma: allowlist secret
+        }
+
+        self.put_domain_connections_data: dict[str, str] = {
+            "require_tls": "false",
+            "skip_verification": "false",
+        }
+
+        self.put_domain_tracking_data: dict[str, str] = {
+            "active": "yes",
+            "skip_verification": "false",
+        }
+        # fmt: off
+        self.put_domain_unsubscribe_data: dict[str, str] = {
+            "active": "yes",
+            "html_footer": "\n<br>\n<p><a href=\"%unsubscribe_url%\">UnSuBsCrIbE</a></p>\n",
+            "text_footer": "\n\nTo unsubscribe here click: <%unsubscribe_url%>\n\n",
+        }
+        # fmt: on
+
+        self.put_domain_dkim_authority_data: dict[str, str] = {
+            "self": "false",
+        }
+
+        self.put_domain_webprefix_data: dict[str, str] = {
+            "web_prefix": "python",
+        }
+
+        self.put_dkim_selector_data: dict[str, str] = {
+            "dkim_selector": "s",
+        }
+
+    def tearDown(self) -> None:
+        # We should be confident that the test domain has been deleted after DomainTests are complete,
+        # otherwise, test_delete_domain and test_verify_domain will fail with a new run of tests
+        self.client.domains.delete(domain=self.test_domain)
+
+    @pytest.mark.order(1)
+    def test_post_domain(self) -> None:
+        self.client.domains.delete(domain=self.test_domain)
+        request = self.client.domains.create(data=self.post_domain_data)
+        self.assertEqual(request.status_code, 200)
+        self.assertIn("Domain DNS records have been created", request.json()["message"])
+
+    @pytest.mark.order(1)
+    def test_post_domain_creds(self) -> None:
+        request = self.client.domains_credentials.create(
+            domain=self.domain,
+            data=self.post_domain_creds,
+        )
+        self.assertEqual(request.status_code, 200)
+        self.assertIn("message", request.json())
+
+    @pytest.mark.order(2)
+    def test_update_simple_domain(self) -> None:
+        self.client.domains.delete(domain=self.test_domain)
+        self.client.domains.create(data=self.post_domain_data)
+        data = {"spam_action": "disabled"}
+        request = self.client.domains.put(data=data, domain=self.post_domain_data['name'])
+        self.assertEqual(request.status_code, 200)
+        self.assertEqual(request.json()["message"], "Domain has been updated")
+
+    @pytest.mark.order(2)
+    def test_put_domain_creds(self) -> None:
+        self.client.domains_credentials.create(
+            domain=self.domain,
+            data=self.post_domain_creds,
+        )
+        request = self.client.domains_credentials.put(
+            domain=self.domain,
+            data=self.put_domain_creds,
+            login="alice_bob",
+        )
+
+        self.assertEqual(request.status_code, 200)
+        self.assertIn("message", request.json())
+
+    @pytest.mark.order(2)
+    def test_put_mailboxes_credentials(self) -> None:
+        """Test to update Mailgun SMTP credentials: Happy Path with valid data."""
+        self.client.domains_credentials.create(
+            domain=self.domain,
+            data=self.post_domain_creds,
+        )
+        name = "alice_bob"
+        req = self.client.mailboxes.put(domain=self.domain, login=f"{name}@{self.domain}")
+
+        expected_keys = [
+            "message",
+            "note",
+            "credentials",
+        ]
+        expected_credentials_keys = [
+            f"{name}@{self.domain}",
+        ]
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 200)
+        [self.assertIn(key, expected_keys) for key in req.json().keys()]  # type: ignore[func-returns-value]
+        self.assertIn("Password changed", req.json()["message"])
+        [self.assertIn(key, expected_credentials_keys) for key in req.json()["credentials"]]  # type: ignore[func-returns-value]
+
+    @pytest.mark.order(3)
+    def test_get_domain_list(self) -> None:
+        req = self.client.domainlist.get()
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("items", req.json())
+
+    @pytest.mark.order(3)
+    def test_get_smtp_creds(self) -> None:
+        request = self.client.domains_credentials.get(domain=self.domain)
+        self.assertEqual(request.status_code, 200)
+        self.assertIn("items", request.json())
+
+    @pytest.mark.order(3)
+    def test_get_sending_queues(self) -> None:
+        self.client.domains.delete(domain=self.test_domain)
+        self.client.domains.create(data=self.post_domain_data)
+        request = self.client.domains_sendingqueues.get(domain=self.post_domain_data["name"])
+        self.assertEqual(request.status_code, 200)
+        self.assertIn("scheduled", request.json())
+
+    @pytest.mark.order(4)
+    @pytest.mark.skip("The test can fail because the domain name is a random string")
+    def test_get_single_domain(self) -> None:
+        self.client.domains.create(data=self.post_domain_data)
+        req = self.client.domains.get(domain_name=self.post_domain_data["name"])
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("domain", req.json())
+
+    @pytest.mark.order(5)
+    @pytest.mark.skip("The test can fail because the domain name is a random string")
+    def test_verify_domain(self) -> None:
+        self.client.domains.create(data=self.post_domain_data)
+        req = self.client.domains.put(domain=self.post_domain_data["name"], verify=True)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("domain", req.json())
+
+    @pytest.mark.order(6)
+    def test_put_domain_connections(self) -> None:
+        request = self.client.domains_connection.put(
+            domain=self.domain,
+            data=self.put_domain_connections_data,
+        )
+
+        self.assertEqual(request.status_code, 200)
+        self.assertIn("message", request.json())
+
+    @pytest.mark.order(6)
+    def test_put_domain_tracking_open(self) -> None:
+        request = self.client.domains_tracking_open.put(
+            domain=self.domain,
+            data=self.put_domain_tracking_data,
+        )
+        self.assertEqual(request.status_code, 200)
+        self.assertIn("message", request.json())
+
+    @pytest.mark.order(6)
+    def test_put_domain_tracking_click(self) -> None:
+        request = self.client.domains_tracking_click.put(
+            domain=self.domain,
+            data=self.put_domain_tracking_data,
+        )
+        self.assertEqual(request.status_code, 200)
+        self.assertIn("message", request.json())
+
+    @pytest.mark.order(6)
+    def test_put_domain_unsubscribe(self) -> None:
+        request = self.client.domains_tracking_unsubscribe.put(
+            domain=self.domain,
+            data=self.put_domain_unsubscribe_data,
+        )
+        self.assertEqual(request.status_code, 200)
+        self.assertIn("message", request.json())
+
+    @pytest.mark.order(6)
+    def test_put_dkim_authority(self) -> None:
+        self.client.domains.create(data=self.post_domain_data)
+        request = self.client.domains_dkimauthority.put(
+            domain=self.test_domain,
+            data=self.put_domain_dkim_authority_data,
+        )
+        self.assertIn("message", request.json())
+
+    @pytest.mark.order(6)
+    def test_put_webprefix(self) -> None:
+        self.client.domains.create(data=self.post_domain_data)
+        request = self.client.domains_webprefix.put(
+            domain=self.test_domain,
+            data=self.put_domain_webprefix_data,
+        )
+        self.assertIn("message", request.json())
+
+    @pytest.mark.order(6)
+    def test_put_dkim_selector(self) -> None:
+        self.client.domains.create(data=self.post_domain_data)
+        request = self.client.domains_dkimselector.put(
+            domain=self.domain,
+            data=self.put_dkim_selector_data,
+        )
+        self.assertIn("message", request.json())
+
+    @pytest.mark.order(7)
+    def test_delete_domain_creds(self) -> None:
+        self.client.domains_credentials.create(
+            domain=self.domain,
+            data=self.post_domain_creds,
+        )
+        request = self.client.domains_credentials.delete(
+            domain=self.domain,
+            login="alice_bob",
+        )
+
+        self.assertEqual(request.status_code, 200)
+
+    # @pytest.mark.skip("If all credentials are deleted then test_update_simple_domain fails")
+    @pytest.mark.order(7)
+    def test_delete_all_domain_credentials(self) -> None:
+        self.client.domains_credentials.create(
+            domain=self.domain,
+            data=self.post_domain_creds,
+        )
+        request = self.client.domains_credentials.delete(domain=self.domain)
+        self.assertEqual(request.status_code, 200)
+        self.assertIn(request.json()['message'],
+                      "All domain credentials have been deleted")
+
+    @pytest.mark.order(8)
+    def test_delete_domain(self) -> None:
+        self.client.domains.create(data=self.post_domain_data)
+        request = self.client.domains.delete(domain=self.test_domain)
+        self.assertEqual(
+            request.json()["message"],
+            "Domain will be deleted in the background",
+        )
+        self.assertEqual(request.status_code, 200)
+
+
+@pytest.mark.skip(
+    "Dedicated IPs should be enabled for the domain, see https://app.mailgun.com/settings/dedicated-ips"
+)
+class IpTests(unittest.TestCase):
+    """Tests for Mailgun IP API.
+
+    This class provides setup and teardown functionality for tests involving the
+    messages functionality, with authentication and client initialization handled
+    in `setUp`. Each test in this suite operates with the configured Mailgun client
+    instance to simulate API interactions.
+
+    """
+    def setUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: Client = Client(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+        self.ip_data: dict[str, str] = {
+            "ip": os.environ["DOMAINS_DEDICATED_IP"],
+        }
+
+    def test_get_ip_from_domain(self) -> None:
+        req = self.client.ips.get(domain=self.domain, params={"dedicated": "true"})
+        self.assertIn("items", req.json())
+        self.assertEqual(req.status_code, 200)
+
+    def test_get_ip_by_address(self) -> None:
+        self.client.domains_ips.create(domain=self.domain, data=self.ip_data)
+        req = self.client.ips.get(domain=self.domain, ip=self.ip_data["ip"])
+        self.assertIn("ip", req.json())
+        self.assertEqual(req.status_code, 200)
+
+    def test_create_ip(self) -> None:
+        request = self.client.domains_ips.create(domain=self.domain, data=self.ip_data)
+        self.assertEqual("success", request.json()["message"])
+        self.assertEqual(request.status_code, 200)
+
+    def test_delete_ip(self) -> None:
+        request = self.client.domains_ips.delete(
+            domain=self.domain,
+            ip=self.ip_data["ip"],
+        )
+        self.assertEqual("success", request.json()["message"])
+        self.assertEqual(request.status_code, 200)
+
+
+@pytest.mark.skip(
+    "This feature can be disabled for an account, see https://app.mailgun.com/settings/ip-pools"
+)
+class IpPoolsTests(unittest.TestCase):
+    """Tests for Mailgun IP POOLS API.
+
+    This class provides setup and teardown functionality for tests involving the
+    messages functionality, with authentication and client initialization handled
+    in `setUp`. Each test in this suite operates with the configured Mailgun client
+    instance to simulate API interactions.
+
+    """
+    def setUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: Client = Client(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+        self.data: dict[str, str] = {
+            "name": "test_pool",
+            "description": "Test",
+            "add_ip": os.environ["DOMAINS_DEDICATED_IP"],
+        }
+        self.patch_data: dict[str, str] = {
+            "name": "test_pool1",
+            "description": "Test1",
+        }
+        self.ippool_id: Any = ""
+
+    def test_get_ippools(self) -> None:
+        self.client.ippools.create(domain=self.domain, data=self.data)
+        req = self.client.ippools.get(domain=self.domain)
+        self.assertIn("ip_pools", req.json())
+        self.assertEqual(req.status_code, 200)
+
+    def test_patch_ippool(self) -> None:
+        req_post = self.client.ippools.create(domain=self.domain, data=self.data)
+        self.ippool_id = req_post.json()["pool_id"]
+
+        req = self.client.ippools.patch(
+            domain=self.domain,
+            data=self.patch_data,
+            pool_id=self.ippool_id,
+        )
+        self.assertEqual("success", req.json()["message"])
+        self.assertEqual(req.status_code, 200)
+
+    def test_link_domain_ippool(self) -> None:
+        pool_create = self.client.ippools.create(domain=self.domain, data=self.data)
+        self.ippool_id = pool_create.json()["pool_id"]
+        self.client.ippools.patch(
+            domain=self.domain,
+            data=self.patch_data,
+            pool_id=self.ippool_id,
+        )
+        data = {
+            "pool_id": self.ippool_id,
+        }
+        req = self.client.domains_ips.create(domain=self.domain, data=data)
+
+        self.assertIn("message", req.json())
+
+    def test_delete_ippool(self) -> None:
+        req = self.client.ippools.create(domain=self.domain, data=self.data)
+        self.ippool_id = req.json()["pool_id"]
+        req_del = self.client.ippools.delete(domain=self.domain, pool_id=self.ippool_id)
+        self.assertEqual("started", req_del.json()["message"])
+
+
+class EventsTests(unittest.TestCase):
+    """Tests for Mailgun Events API.
+
+    This class provides setup and teardown functionality for tests involving the
+    messages functionality, with authentication and client initialization handled
+    in `setUp`. Each test in this suite operates with the configured Mailgun client
+    instance to simulate API interactions.
+
+    """
+    def setUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: Client = Client(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+        self.params: dict[str, str] = {
+            "event": "rejected",
+        }
+
+    def test_events_get(self) -> None:
+        req = self.client.events.get(domain=self.domain)
+        self.assertIn("items", req.json())
+        self.assertEqual(req.status_code, 200)
+
+    def test_event_params(self) -> None:
+        req = self.client.events.get(domain=self.domain, filters=self.params)
+
+        self.assertIn("items", req.json())
+        self.assertEqual(req.status_code, 200)
+
+
+class TagsTests(unittest.TestCase):
+    """Tests for Mailgun Tags API.
+
+    This class provides setup and teardown functionality for tests involving the
+    messages functionality, with authentication and client initialization handled
+    in `setUp`. Each test in this suite operates with the configured Mailgun client
+    instance to simulate API interactions.
+
+    """
+    def setUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: Client = Client(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+        self.data: dict[str, str] = {
+            "description": "Tests running",
+        }
+        self.put_tags_data: dict[str, str] = {
+            "description": "Python testtt",
+        }
+        self.stats_params: dict[str, str] = {
+            "event": "accepted",
+        }
+        self.tag_name: str = "Python test"
+
+    def test_get_tags(self) -> None:
+        req = self.client.tags.get(domain=self.domain)
+        self.assertIn("items", req.json())
+        self.assertEqual(req.status_code, 200)
+
+    def test_tag_get_by_name(self) -> None:
+        req = self.client.tags.get(domain=self.domain, tag_name=self.tag_name)
+        self.assertIn("tag", req.json())
+        self.assertEqual(req.status_code, 200)
+
+    def test_tag_put(self) -> None:
+        req = self.client.tags.put(
+            domain=self.domain,
+            tag_name=self.tag_name,
+            data=self.put_tags_data,
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+
+    def test_tags_stats_get(self) -> None:
+        req = self.client.tags_stats.get(
+            domain=self.domain,
+            filters=self.stats_params,
+            tag_name=self.tag_name,
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("tag", req.json())
+
+    def test_tags_stats_aggregate_get(self) -> None:
+        req = self.client.tags_stats_aggregates_devices.get(
+            domain=self.domain,
+            filters=self.stats_params,
+            tag_name=self.tag_name,
+        )
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("tag", req.json())
+
+    @pytest.mark.skip("it deletes tags and test_tag_get_by_name will fail")
+    def test_delete_tags(self) -> None:
+        req = self.client.tags.delete(domain=self.domain, tag_name=self.tag_name)
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+
+
+class BouncesTests(unittest.TestCase):
+    """Tests for Mailgun Bounces API.
+
+    This class provides setup and teardown functionality for tests involving the
+    messages functionality, with authentication and client initialization handled
+    in `setUp`. Each test in this suite operates with the configured Mailgun client
+    instance to simulate API interactions.
+
+    """
+    def setUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: Client = Client(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+        self.bounces_data: dict[str, int | str] = {
+            "address": "test30@gmail.com",
+            "code": 550,
+            "error": "Test error",
+        }
+
+        self.bounces_json_data: str = """[{
+        "address": "test121@i.ua",
+        "code": "550",
+        "error": "Test error2312"
+    },
+        {
+            "address": "test122@gmail.com",
+            "code": "550",
+            "error": "Test error"
+        }]"""
+
+    def test_bounces_get(self) -> None:
+        req = self.client.bounces.get(domain=self.domain)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("items", req.json())
+
+    def test_bounces_create(self) -> None:
+        req = self.client.bounces.create(data=self.bounces_data, domain=self.domain)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("address", req.json())
+
+    def test_bounces_get_address(self) -> None:
+        self.client.bounces.create(data=self.bounces_data, domain=self.domain)
+        req = self.client.bounces.get(
+            domain=self.domain,
+            bounce_address=self.bounces_data["address"],
+        )
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("address", req.json())
+
+    def test_bounces_create_json(self) -> None:
+        json_data = json.loads(self.bounces_json_data)
+        for address in json_data:
+            req = self.client.bounces.create(
+                data=address,
+                domain=self.domain,
+                headers={"Content-type": "application/json"},
+            )
+            self.assertEqual(req.status_code, 200)
+            self.assertIn("message", req.json())
+
+    def test_bounces_delete_single(self) -> None:
+        self.client.bounces.create(data=self.bounces_data, domain=self.domain)
+        req = self.client.bounces.delete(
+            domain=self.domain,
+            bounce_address=self.bounces_data["address"],
+        )
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+
+    def test_bounces_delete_all(self) -> None:
+        req = self.client.bounces.delete(domain=self.domain)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+
+
+class UnsubscribesTests(unittest.TestCase):
+    """Tests for Mailgun Unsubscribes API.
+
+    This class provides setup and teardown functionality for tests involving the
+    messages functionality, with authentication and client initialization handled
+    in `setUp`. Each test in this suite operates with the configured Mailgun client
+    instance to simulate API interactions.
+
+    """
+    def setUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: Client = Client(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+        self.unsub_data: dict[str, str] = {
+            "address": "test@gmail.com",
+            "tag": "unsub_test_tag",
+        }
+
+        self.unsub_json_data: str = """[{
+                "address": "test1@gmail.com",
+                "tags": ["some tag"],
+                "error": "Test error2312"
+            },
+            {
+                "address": "test2@gmail.com",
+                "code": ["*"],
+                "error": "Test error"
+            },
+            {
+                "address": "test3@gmail.com"
+            }]"""
+
+    def test_unsub_create(self) -> None:
+        req = self.client.unsubscribes.create(data=self.unsub_data, domain=self.domain)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+
+    def test_unsub_get(self) -> None:
+        req = self.client.unsubscribes.get(domain=self.domain)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("items", req.json())
+
+    def test_unsub_get_single(self) -> None:
+        req = self.client.unsubscribes.get(
+            domain=self.domain,
+            unsubscribe_address=self.unsub_data["address"],
+        )
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("address", req.json())
+
+    def test_unsub_create_multiple(self) -> None:
+        json_data = json.loads(self.unsub_json_data)
+        for address in json_data:
+            req = self.client.unsubscribes.create(
+                data=address,
+                domain=self.domain,
+                headers={"Content-type": "application/json"},
+            )
+
+            self.assertEqual(req.status_code, 200)
+            self.assertIn("message", req.json())
+
+    def test_unsub_delete(self) -> None:
+        req = self.client.bounces.delete(
+            domain=self.domain,
+            unsubscribe_address=self.unsub_data["address"],
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+
+    def test_unsub_delete_all(self) -> None:
+        req = self.client.bounces.delete(domain=self.domain)
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+
+
+class ComplaintsTests(unittest.TestCase):
+    """Tests for Mailgun Complaints API.
+
+    This class provides setup and teardown functionality for tests involving the
+    messages functionality, with authentication and client initialization handled
+    in `setUp`. Each test in this suite operates with the configured Mailgun client
+    instance to simulate API interactions.
+
+    """
+    def setUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: Client = Client(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+        self.compl_data: dict[str, str] = {
+            "address": "test@gmail.com",
+            "tag": "compl_test_tag",
+        }
+
+        self.compl_json_data: str = """[{
+                "address": "test1@gmail.com",
+                "tags": ["some tag"],
+                "error": "Test error2312"
+            },
+            {
+                "address": "test3@gmail.com"}]"""
+
+    def test_compl_create(self) -> None:
+        req = self.client.complaints.create(data=self.compl_data, domain=self.domain)
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+
+    def test_get_single_complaint(self) -> None:
+        req = self.client.complaints.get(data=self.compl_data, domain=self.domain)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("items", req.json())
+
+    def test_compl_get_all(self) -> None:
+        req = self.client.complaints.get(domain=self.domain)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("items", req.json())
+
+    def test_compl_get_single(self) -> None:
+        self.client.complaints.create(data=self.compl_data, domain=self.domain)
+        req = self.client.complaints.get(
+            domain=self.domain,
+            complaint_address=self.compl_data["address"],
+        )
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("address", req.json())
+
+    def test_compl_create_multiple(self) -> None:
+        json_data = json.loads(self.compl_json_data)
+        for address in json_data:
+            req = self.client.complaints.create(
+                data=address,
+                domain=self.domain,
+                headers={"Content-type": "application/json"},
+            )
+
+            self.assertEqual(req.status_code, 200)
+            self.assertIn("message", req.json())
+
+    def test_compl_delete_single(self) -> None:
+        self.client.complaints.create(
+            data=self.compl_json_data,
+            domain=self.domain,
+            headers="application/json",
+        )
+        req = self.client.complaints.delete(
+            domain=self.domain,
+            unsubscribe_address=self.compl_data["address"],
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+
+    def test_compl_delete_all(self) -> None:
+        req = self.client.complaints.delete(domain=self.domain)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+
+
+class WhiteListTests(unittest.TestCase):
+    """Tests for Mailgun WhiteList API.
+
+    This class provides setup and teardown functionality for tests involving the
+    messages functionality, with authentication and client initialization handled
+    in `setUp`. Each test in this suite operates with the configured Mailgun client
+    instance to simulate API interactions.
+
+    """
+    def setUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: Client = Client(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+        self.whitel_data: dict[str, str] = {
+            "address": "test@gmail.com",
+            "tag": "whitel_test",
+        }
+
+        self.whitl_json_data: list[dict[str, str]] = [
+            {
+                "address": "test1@gmail.com",
+                "domain": self.domain,
+            },
+            {
+                "address": "test3@gmail.com",
+                "domain": self.domain,
+            },
+        ]
+
+    def test_whitel_create(self) -> None:
+        req = self.client.whitelists.create(data=self.whitel_data, domain=self.domain)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+
+    def test_whitel_get_simple(self) -> None:
+        self.client.whitelists.create(data=self.whitel_data, domain=self.domain)
+
+        req = self.client.whitelists.get(
+            domain=self.domain,
+            whitelist_address=self.whitel_data["address"],
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("value", req.json())
+
+    def test_whitel_delete_simple(self) -> None:
+        self.client.whitelists.create(data=self.whitel_data, domain=self.domain)
+        req = self.client.whitelists.delete(
+            domain=self.domain,
+            whitelist_address=self.whitel_data["address"],
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+
+
+class RoutesTests(unittest.TestCase):
+    """Tests for Mailgun Routes API.
+
+    This class provides setup and teardown functionality for tests involving the
+    messages functionality, with authentication and client initialization handled
+    in `setUp`. Each test in this suite operates with the configured Mailgun client
+    instance to simulate API interactions.
+
+    """
+    def setUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: Client = Client(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+        self.sender: str = os.environ["MESSAGES_FROM"]
+        self.routes_data: dict[str, int | str | list[str]] = {
+            "priority": 0,
+            "description": "Sample route",
+            "expression": f"match_recipient('.*@{self.domain}')",
+            "action": ["forward('http://myhost.com/messages/')", "stop()"],
+        }
+        self.routes_params: dict[str, int] = {
+            "skip": 1,
+            "limit": 1,
+        }
+        self.routes_put_data: dict[str, int] = {
+            "priority": 2,
+        }
+
+    # 'Routes quota (1) is exceeded for a free plan'
+    def test_routes_create(self) -> None:
+        params = {"skip": 0, "limit": 1}
+        req1 = self.client.routes.get(domain=self.domain, filters=params)
+        self.client.routes.delete(
+            domain=self.domain,
+            route_id=req1.json()["items"][0]["id"],
+        )
+        req = self.client.routes.create(domain=self.domain, data=self.routes_data)
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+
+    def test_routes_get_all(self) -> None:
+        params = {"skip": 0, "limit": 1}
+        req1 = self.client.routes.get(domain=self.domain, filters=params)
+        #  IndexError: list index out of range
+        if len(req1.json()["items"]) > 0:
+            self.client.routes.delete(
+                domain=self.domain,
+                route_id=req1.json()["items"][0]["id"],
+            )
+            self.client.routes.create(domain=self.domain, data=self.routes_data)
+            req = self.client.routes.get(domain=self.domain, filters=self.routes_params)
+        else:
+            self.client.routes.create(domain=self.domain, data=self.routes_data)
+            req = self.client.routes.get(domain=self.domain, filters=self.routes_params)
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("items", req.json())
+
+    def test_get_route_by_id(self) -> None:
+        params = {"skip": 0, "limit": 1}
+        req1 = self.client.routes.get(domain=self.domain, filters=params)
+        if len(req1.json()["items"]) > 0:
+            self.client.routes.delete(
+                domain=self.domain,
+                route_id=req1.json()["items"][0]["id"],
+            )
+
+            req_post = self.client.routes.create(
+                domain=self.domain, data=self.routes_data
+            )
+            self.client.routes.create(domain=self.domain, data=self.routes_data)
+            req = self.client.routes.get(
+                domain=self.domain, route_id=req_post.json()["route"]["id"]
+            )
+        else:
+            req_post = self.client.routes.create(
+                domain=self.domain, data=self.routes_data
+            )
+            self.client.routes.create(domain=self.domain, data=self.routes_data)
+            req = self.client.routes.get(
+                domain=self.domain, route_id=req_post.json()["route"]["id"]
+            )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("route", req.json())
+
+    def test_routes_put(self) -> None:
+        params = {"skip": 0, "limit": 1}
+        req1 = self.client.routes.get(domain=self.domain, filters=params)
+        if len(req1.json()["items"]) > 0:
+            self.client.routes.delete(
+                domain=self.domain,
+                route_id=req1.json()["items"][0]["id"],
+            )
+            req_post = self.client.routes.create(
+                domain=self.domain, data=self.routes_data
+            )
+            req = self.client.routes.put(
+                domain=self.domain,
+                data=self.routes_put_data,
+                route_id=req_post.json()["route"]["id"],
+            )
+        else:
+            req_post = self.client.routes.create(
+                domain=self.domain, data=self.routes_data
+            )
+            req = self.client.routes.put(
+                domain=self.domain,
+                data=self.routes_put_data,
+                route_id=req_post.json()["route"]["id"],
+            )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+
+    def test_routes_delete(self) -> None:
+        params = {"skip": 0, "limit": 1}
+        req1 = self.client.routes.get(domain=self.domain, filters=params)
+        if len(req1.json()["items"]) > 0:
+            self.client.routes.delete(
+                domain=self.domain,
+                route_id=req1.json()["items"][0]["id"],
+            )
+            req_post = self.client.routes.create(
+                domain=self.domain, data=self.routes_data
+            )
+
+            req = self.client.routes.delete(
+                domain=self.domain, route_id=req_post.json()["route"]["id"]
+            )
+        else:
+            req_post = self.client.routes.create(
+                domain=self.domain, data=self.routes_data
+            )
+
+            req = self.client.routes.delete(
+                domain=self.domain, route_id=req_post.json()["route"]["id"]
+            )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+
+    def test_get_routes_match(self) -> None:
+        """Test to match address to route: Happy Path with valid data."""
+
+        query = {"address": self.sender}
+        req = self.client.routes_match.get(domain=self.domain, filters=query)
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("route", req.json())
+
+        expected_keys = ["actions", "created_at", "description", "expression", "id", "priority"]
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 200)
+        [self.assertIn(key, expected_keys) for key in req.json()["route"].keys()]  # type: ignore[func-returns-value]
+
+
+class WebhooksTests(unittest.TestCase):
+    """Tests for Mailgun Webhooks API.
+
+    This class provides setup and teardown functionality for tests involving the
+    messages functionality, with authentication and client initialization handled
+    in `setUp`. Each test in this suite operates with the configured Mailgun client
+    instance to simulate API interactions.
+
+    """
+    def setUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: Client = Client(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+        self.webhooks_data: dict[str, str | list[str]] = {
+            "id": "clicked",
+            "url": ["https://i.ua"],
+        }
+
+        self.webhooks_data_put: dict[str, str] = {
+            "url": "https://twitter.com",
+        }
+
+    def test_webhooks_create(self) -> None:
+        req = self.client.domains_webhooks.create(
+            domain=self.domain,
+            data=self.webhooks_data,
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+        self.client.domains_webhooks_clicked.delete(domain=self.domain)
+
+    def test_webhooks_get(self) -> None:
+        req = self.client.domains_webhooks.get(domain=self.domain)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("webhooks", req.json())
+
+    def test_webhook_put(self) -> None:
+        self.client.domains_webhooks.create(domain=self.domain, data=self.webhooks_data)
+        req = self.client.domains_webhooks_clicked.put(
+            domain=self.domain,
+            data=self.webhooks_data_put,
+        )
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+        self.client.domains_webhooks_clicked.delete(domain=self.domain)
+
+    def test_webhook_get_simple(self) -> None:
+        self.client.domains_webhooks.create(domain=self.domain, data=self.webhooks_data)
+        req = self.client.domains_webhooks_clicked.get(domain=self.domain)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("webhook", req.json())
+        self.client.domains_webhooks_clicked.delete(domain=self.domain)
+
+    def test_webhook_delete(self) -> None:
+        self.client.domains_webhooks.create(domain=self.domain, data=self.webhooks_data)
+        req = self.client.domains_webhooks_clicked.delete(domain=self.domain)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+
+
+class MailingListsTests(unittest.TestCase):
+    """Tests for Mailgun Mailing Lists API.
+
+    This class provides setup and teardown functionality for tests involving the
+    messages functionality, with authentication and client initialization handled
+    in `setUp`. Each test in this suite operates with the configured Mailgun client
+    instance to simulate API interactions.
+
+    """
+    def setUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: Client = Client(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+        self.maillist_address: str = os.environ["MAILLIST_ADDRESS"]
+        self.mailing_lists_data: dict[str, str] = {
+            "address": f"python_sdk@{self.domain}",
+            "description": "Mailgun developers list",
+        }
+
+        self.mailing_lists_data_update: dict[str, str] = {
+            "description": "Mailgun developers list 121212",
+        }
+
+        self.mailing_lists_members_data: dict[str, bool | str] = {
+            "subscribed": True,
+            "address": "bar@example.com",
+            "name": "Bob Bar",
+            "description": "Developer",
+            "vars": '{"age": 26}',
+        }
+
+        self.mailing_lists_members_put_data: dict[str, bool | str] = {
+            "subscribed": True,
+            "address": "bar@example.com",
+            "name": "Bob Bar",
+            "description": "Developer",
+            "vars": '{"age": 28}',
+        }
+
+        self.mailing_lists_members_data_mult: dict[str, bool | str] = {
+            "upsert": True,
+            "members": '[{"address": "Alice <alice@example.com>", "vars": {"age": 26}},'
+            '{"name": "Bob", "address": "bob2@example.com", "vars": {"age": 34}}]',
+        }
+
+    def test_maillist_pages_get(self) -> None:
+        req = self.client.lists_pages.get(domain=self.domain)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("items", req.json())
+
+    def test_maillist_lists_get(self) -> None:
+        req = self.client.lists.get(domain=self.domain, address=self.maillist_address)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("list", req.json())
+
+    def test_maillist_lists_create(self) -> None:
+        self.client.lists.delete(
+            domain=self.domain,
+            address=f"python_sdk@{self.domain}",
+        )
+        req = self.client.lists.create(domain=self.domain, data=self.mailing_lists_data)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("list", req.json())
+
+    def test_maillists_lists_put(self) -> None:
+        self.client.lists.create(domain=self.domain, data=self.mailing_lists_data)
+        req = self.client.lists.put(
+            domain=self.domain,
+            data=self.mailing_lists_data_update,
+            address=f"python_sdk@{self.domain}",
+        )
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("list", req.json())
+
+    def test_maillists_lists_delete(self) -> None:
+        self.client.lists.create(domain=self.domain, data=self.mailing_lists_data)
+        req = self.client.lists.delete(
+            domain=self.domain,
+            address=f"python_sdk@{self.domain}",
+        )
+        self.assertEqual(req.status_code, 200)
+        # Recreate the mailing list so the other member lists tests succeed
+        self.client.lists.create(domain=self.domain, data=self.mailing_lists_data)
+
+    @pytest.mark.skip("Email Validations are only available for paid accounts")
+    def test_maillists_lists_validate_create(self) -> None:
+        req = self.client.lists.create(
+            domain=self.domain,
+            address=self.maillist_address,
+            validate=True,
+        )
+
+        self.assertEqual(req.status_code, 202)
+        self.assertIn("message", req.json())
+
+    @pytest.mark.skip("Email Validations are only available for paid accounts")
+    def test_maillists_lists_validate_get(self) -> None:
+        req = self.client.lists.get(
+            domain=self.domain,
+            address=self.maillist_address,
+            validate=True,
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("id", req.json())
+
+    @pytest.mark.skip("Email Validations are only available for paid accounts")
+    def test_maillists_lists_validate_delete(self) -> None:
+        self.client.lists.create(
+            domain=self.domain,
+            address=self.maillist_address,
+            validate=True,
+        )
+        req = self.client.lists.get(
+            domain=self.domain,
+            address=self.maillist_address,
+            validate=True,
+        )
+
+        self.assertEqual(req.status_code, 200)
+
+    def test_maillists_lists_members_pages_get(self) -> None:
+        req = self.client.lists_members_pages.get(
+            domain=self.domain,
+            address=self.maillist_address,
+        )
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("items", req.json())
+
+    def test_maillists_lists_members_create(self) -> None:
+        self.client.lists_members.delete(
+            domain=self.domain,
+            address=self.maillist_address,
+            member_address=self.mailing_lists_members_data["address"],
+        )
+        req = self.client.lists_members.create(
+            domain=self.domain,
+            address=self.maillist_address,
+            data=self.mailing_lists_members_data,
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("member", req.json())
+
+    def test_maillists_lists_members_get(self) -> None:
+        req = self.client.lists_members.get(domain=self.domain, address=self.maillist_address)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("items", req.json())
+
+    def test_maillists_lists_members_update(self) -> None:
+        self.client.lists_members.create(
+            domain=self.domain,
+            address=self.maillist_address,
+            data=self.mailing_lists_members_data,
+        )
+
+        req = self.client.lists_members.put(
+            domain=self.domain,
+            address=self.maillist_address,
+            data=self.mailing_lists_members_put_data,
+            member_address=self.mailing_lists_members_data["address"],
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("member", req.json())
+
+    def test_maillists_lists_members_delete(self) -> None:
+        self.client.lists_members.create(
+            domain=self.domain,
+            address=self.maillist_address,
+            data=self.mailing_lists_members_data,
+        )
+
+        req = self.client.lists_members.delete(
+            domain=self.domain,
+            address=self.maillist_address,
+            member_address=self.mailing_lists_members_data["address"],
+        )
+        self.assertEqual(req.status_code, 200)
+
+    def test_maillists_lists_members_create_mult(self) -> None:
+        req = self.client.lists_members.create(
+            domain=self.domain,
+            address=self.maillist_address,
+            data=self.mailing_lists_members_data_mult,
+            multiple=True,
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+
+
+class TemplatesTests(unittest.TestCase):
+    """Tests for Mailgun Templates API.
+
+    This class provides setup and teardown functionality for tests involving the
+    messages functionality, with authentication and client initialization handled
+    in `setUp`. Each test in this suite operates with the configured Mailgun client
+    instance to simulate API interactions.
+
+    """
+    def setUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: Client = Client(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+        self.post_template_data: dict[str, str] = {
+            "name": "template.name20",
+            "description": "template description",
+            "template": "{{fname}} {{lname}}",
+            "engine": "handlebars",
+            "comment": "version comment",
+        }
+
+        self.put_template_data: dict[str, str] = {
+            "description": "new template description",
+        }
+
+        self.post_template_version_data: dict[str, str] = {
+            "tag": "v11",
+            "template": "{{fname}} {{lname}}",
+            "engine": "handlebars",
+            "active": "no",
+        }
+        self.put_template_version_data: dict[str, str] = {
+            "template": "{{fname}} {{lname}}",
+            "comment": "Updated version comment",
+            "active": "no",
+        }
+
+        self.put_template_version: str = "v11"
+
+    def test_create_template(self) -> None:
+        self.client.templates.delete(
+            domain=self.domain,
+            template_name=self.post_template_data["name"],
+        )
+
+        req = self.client.templates.create(
+            data=self.post_template_data,
+            domain=self.domain,
+        )
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("template", req.json())
+
+    def test_get_template(self) -> None:
+        params = {"active": "yes"}
+        self.client.templates.create(data=self.post_template_data, domain=self.domain)
+        req = self.client.templates.get(
+            domain=self.domain,
+            filters=params,
+            template_name=self.post_template_data["name"],
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("template", req.json())
+
+    def test_put_template(self) -> None:
+        self.client.templates.create(data=self.post_template_data, domain=self.domain)
+        req = self.client.templates.put(
+            domain=self.domain,
+            data=self.put_template_data,
+            template_name=self.post_template_data["name"],
+        )
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("template", req.json())
+
+    def test_delete_template(self) -> None:
+        self.client.templates.create(data=self.post_template_data, domain=self.domain)
+        req = self.client.templates.delete(
+            domain=self.domain,
+            template_name=self.post_template_data["name"],
+        )
+
+        self.assertEqual(req.status_code, 200)
+
+    def test_post_version_template(self) -> None:
+        self.client.templates.create(data=self.post_template_data, domain=self.domain)
+
+        self.client.templates.delete(
+            domain=self.domain,
+            template_name=self.post_template_data["name"],
+            versions=True,
+            tag=self.put_template_version,
+        )
+
+        req = self.client.templates.create(
+            data=self.post_template_version_data,
+            domain=self.domain,
+            template_name=self.post_template_data["name"],
+            versions=True,
+        )
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("template", req.json())
+
+    def test_get_version_template(self) -> None:
+        self.client.templates.create(data=self.post_template_data, domain=self.domain)
+
+        self.client.templates.create(
+            data=self.post_template_version_data,
+            domain=self.domain,
+            template_name=self.post_template_data["name"],
+            versions=True,
+        )
+
+        req = self.client.templates.get(
+            domain=self.domain,
+            template_name=self.post_template_data["name"],
+            versions=True,
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("template", req.json())
+
+    def test_put_version_template(self) -> None:
+        self.client.templates.create(data=self.post_template_data, domain=self.domain)
+
+        self.client.templates.create(
+            data=self.post_template_version_data,
+            domain=self.domain,
+            template_name=self.post_template_data["name"],
+            versions=True,
+        )
+
+        req = self.client.templates.put(
+            domain=self.domain,
+            data=self.put_template_version_data,
+            template_name=self.post_template_data["name"],
+            versions=True,
+            tag=self.put_template_version,
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("template", req.json())
+
+    def test_delete_version_template(self) -> None:
+        self.client.templates.create(data=self.post_template_data, domain=self.domain)
+
+        self.post_template_version_data["tag"] = "v0"
+        self.post_template_version_data["active"] = "no"
+        self.client.templates.create(
+            data=self.post_template_version_data,
+            domain=self.domain,
+            template_name=self.post_template_data["name"],
+            versions=True,
+        )
+
+        req = self.client.templates.delete(
+            domain=self.domain,
+            template_name=self.post_template_data["name"],
+            versions=True,
+            tag="v0",
+        )
+
+        self.client.templates.delete(
+            domain=self.domain,
+            template_name=self.post_template_data["name"],
+            versions=True,
+            tag=self.put_template_version,
+        )
+
+        self.assertEqual(req.status_code, 200)
+
+    def test_update_template_version_copy(self) -> None:
+        """Test to copy an existing version into a new version with the provided name: Happy Path with valid data."""
+        data = {"comment": "An updated version comment"}
+
+        req = self.client.templates.put(
+            domain=self.domain,
+            filters=data,
+            template_name="template.name1",
+            versions=True,
+            tag="v2",
+            copy=True,
+            new_tag="v3",
+        )
+
+        expected_keys = [
+            "message",
+            "version",
+            "template",
+        ]
+        expected_template_keys = [
+            "tag",
+            "template",
+            "engine",
+            "mjml",
+            "createdAt",
+            "comment",
+            "active",
+            "id",
+            "headers",
+        ]
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 200)
+        [self.assertIn(key, expected_keys) for key in req.json().keys()]  # type: ignore[func-returns-value]
+        self.assertIn("tag", req.json()["version"])
+        self.assertIn("version has been copied", req.json()["message"])
+        [self.assertIn(key, expected_template_keys) for key in req.json()["template"]]  # type: ignore[func-returns-value]
+
+
+@pytest.mark.skip(
+    "Email Validation is only available through Mailgun paid plans, see https://www.mailgun.com/pricing/"
+)
+class EmailValidationTests(unittest.TestCase):
+    """Tests for Mailgun Email Validation API.
+
+    This class provides setup and teardown functionality for tests involving the
+    messages functionality, with authentication and client initialization handled
+    in `setUp`. Each test in this suite operates with the configured Mailgun client
+    instance to simulate API interactions.
+
+    """
+    def setUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: Client = Client(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+        self.validation_address_1: str = os.environ["VALIDATION_ADDRESS_1"]
+        self.validation_address_2: str = os.environ["VALIDATION_ADDRESS_2"]
+
+        self.get_params_address_validate: dict[str, str] = {
+            "address": self.validation_address_1,
+            "provider_lookup": "false",
+        }
+
+        self.post_params_address_validate: dict[str, str] = {
+            "provider_lookup": "false",
+        }
+        self.post_address_validate: dict[str, str] = {
+            "address": self.validation_address_1,
+        }
+
+    def test_post_address_validate(self) -> None:
+        req = self.client.addressvalidate.create(
+            domain=self.domain,
+            data=self.post_address_validate,
+            filters=self.post_params_address_validate,
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("address", req.json())
+
+    def test_get_address_validate(self) -> None:
+        req = self.client.addressvalidate.get(
+            domain=self.domain,
+            filters=self.get_params_address_validate,
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("address", req.json())
+
+    def test_get_bulk_address_validate_status(self) -> None:
+        params = {"limit": 1}
+        req = self.client.addressvalidate_bulk.get(domain=self.domain, filters=params)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("jobs", req.json())
+
+
+@pytest.mark.skip(
+    "Inbox Placement is only available through Mailgun Optimize plans, see https://help.mailgun.com/hc/en-us/articles/360034702773-Inbox-Placement"
+)
+class InboxPlacementTests(unittest.TestCase):
+    """Tests for Mailgun Inbox Placement API.
+
+    This class provides setup and teardown functionality for tests involving the
+    messages functionality, with authentication and client initialization handled
+    in `setUp`. Each test in this suite operates with the configured Mailgun client
+    instance to simulate API interactions.
+
+    """
+    def setUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: Client = Client(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+
+        self.post_inbox_test: dict[str, str] = {
+            "domain": "domain.com",
+            "from": "user@sending_domain.com",
+            "subject": "testSubject",
+            "html": "<html>HTML version of the body</html>",
+        }
+
+    def test_post_inbox_tests(self) -> None:
+        req = self.client.inbox_tests.create(
+            domain=self.domain,
+            data=self.post_inbox_test,
+        )
+
+        self.assertEqual(req.status_code, 201)
+        self.assertIn("tid", req.json())
+
+    def test_get_inbox_tests(self) -> None:
+        self.client.inbox_tests.create(domain=self.domain, data=self.post_inbox_test)
+        req = self.client.inbox_tests.get(domain=self.domain)
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("tests", req.json())
+
+    def test_get_simple_inbox_tests(self) -> None:
+        test_id = self.client.inbox_tests.create(
+            domain=self.domain,
+            data=self.post_inbox_test,
+        )
+        req = self.client.inbox_tests.get(
+            domain=self.domain,
+            test_id=test_id.json()["tid"],
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertEqual(req.json()["tid"], test_id.json()["tid"])
+
+    def test_delete_inbox_tests(self) -> None:
+        test_id = self.client.inbox_tests.create(
+            domain=self.domain,
+            data=self.post_inbox_test,
+        )
+
+        req = self.client.inbox_tests.delete(
+            domain=self.domain,
+            test_id=test_id.json()["tid"],
+        )
+
+        self.assertEqual(req.status_code, 200)
+
+    def test_get_counters_inbox_tests(self) -> None:
+        test_id = self.client.inbox_tests.create(
+            domain=self.domain,
+            data=self.post_inbox_test,
+        )
+
+        req = self.client.inbox_tests.get(
+            domain=self.domain,
+            test_id=test_id.json()["tid"],
+            counters=True,
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("counters", req.json())
+
+    def test_get_checks_inbox_tests(self) -> None:
+        test_id = self.client.inbox_tests.create(
+            domain=self.domain,
+            data=self.post_inbox_test,
+        )
+
+        req = self.client.inbox_tests.get(
+            domain=self.domain,
+            test_id=test_id.json()["tid"],
+            checks=True,
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("checks", req.json())
+
+
+class MetricsTest(unittest.TestCase):
+    """Tests for Mailgun Inbox Placement API, https://api.mailgun.net/v1/analytics/metrics.
+
+    This class provides setup functionality for tests
+    with authentication and client initialization handled
+    in `setUp`. Each test in this suite operates with the configured Mailgun client
+    instance to simulate API interactions.
+
+    """
+    # "https://api.mailgun.net/v1/analytics/metrics"
+
+    def setUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: Client = Client(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+
+        self.invalid_account_metrics_data = {
+            "start": "Sun, 08 Jun 2025 00:00:00 +0000",
+            "end": "Tue, 08 Jul 2025 00:00:00 +0000",
+            "resolution": "century",
+            "duration": "1c",
+            "dimensions": ["time"],
+            "metrics": [
+                "accepted_count",
+                "delivered_count",
+                "clicked_rate",
+                "opened_rate",
+            ],
+            "filter": {
+                "AND": [
+                    {
+                        "attribute": "domain",
+                        "comparator": "=",
+                        "values": [{"label": self.domain, "value": self.domain}],
+                    }
+                ]
+            },
+            "include_subaccounts": True,
+            "include_aggregates": True,
+        }
+        self.account_metrics_data = {
+            "start": "Sun, 08 Jun 2025 00:00:00 +0000",
+            "end": "Tue, 08 Jul 2025 00:00:00 +0000",
+            "resolution": "day",
+            "duration": "1m",
+            "dimensions": ["time"],
+            "metrics": [
+                "accepted_count",
+                "delivered_count",
+                "clicked_rate",
+                "opened_rate",
+            ],
+            "filter": {
+                "AND": [
+                    {
+                        "attribute": "domain",
+                        "comparator": "=",
+                        "values": [{"label": self.domain, "value": self.domain}],
+                    }
+                ]
+            },
+            "include_subaccounts": True,
+            "include_aggregates": True,
+        }
+
+        self.invalid_account_usage_metrics_data = {
+            "start": "Sun, 08 Jun 2025 00:00:00 +0000",
+            "end": "Tue, 08 Jul 2025 00:00:00 +0000",
+            "resolution": "century",
+            "duration": "1c",
+            "dimensions": ["time"],
+            "metrics": [
+                "accessibility_count",
+                "accessibility_failed_count",
+                "domain_blocklist_monitoring_count",
+            ],
+            "include_subaccounts": True,
+            "include_aggregates": True,
+        }
+
+        self.account_usage_metrics_data = {
+            "start": "Sun, 08 Jun 2025 00:00:00 +0000",
+            "end": "Tue, 08 Jul 2025 00:00:00 +0000",
+            "resolution": "day",
+            "duration": "1m",
+            "dimensions": ["time"],
+            "metrics": [
+                "accessibility_count",
+                "accessibility_failed_count",
+                "domain_blocklist_monitoring_count",
+                "email_preview_count",
+                "email_preview_failed_count",
+                "email_validation_bulk_count",
+                "email_validation_count",
+                "email_validation_list_count",
+                "email_validation_mailgun_count",
+                "email_validation_mailjet_count",
+                "email_validation_public_count",
+                "email_validation_single_count",
+                "email_validation_valid_count",
+                "image_validation_count",
+                "image_validation_failed_count",
+                "ip_blocklist_monitoring_count",
+                "link_validation_count",
+                "link_validation_failed_count",
+                "processed_count",
+                "seed_test_count",
+            ],
+            "include_subaccounts": True,
+            "include_aggregates": True,
+        }
+
+    def test_post_query_get_account_metrics(self) -> None:
+        """Happy Path with valid data."""
+        req = self.client.analytics_metrics.create(
+            data=self.account_metrics_data,
+        )
+        expected_keys = [
+            "start",
+            "end",
+            "resolution",
+            "duration",
+            "dimensions",
+            "pagination",
+            "items",
+            "aggregates",
+        ]
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 200)
+        [self.assertIn(key, expected_keys) for key in req.json().keys()]  # type: ignore[func-returns-value]
+        self.assertIn("metrics", req.json()["items"][0])
+        self.assertIn("dimensions", req.json()["items"][0])
+        self.assertIn("delivered_count", req.json()["items"][0]["metrics"])
+
+    def test_post_query_get_account_metrics_invalid_data(self) -> None:
+        """Expected failure with invalid data."""
+        req = self.client.analytics_metrics.create(
+            data=self.invalid_account_metrics_data,
+        )
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 400)
+        self.assertNotIn("items", req.json())
+        self.assertIn("'resolution' attribute is invalid", req.json()["message"])
+
+    def test_post_query_get_account_metrics_invalid_url(self) -> None:
+        """Expected failure with an invalid URL https://api.mailgun.net/v1/analytics_metric (without 's' at the end)"""
+        req = self.client.analytics_metric.create(
+            data=self.account_metrics_data,
+        )
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 404)
+
+    def test_post_query_get_account_metrics_invalid_url_without_underscore(
+        self,
+    ) -> None:
+        """Expected failure with an invalid URL https://api.mailgun.net/v1/analyticsmetric (without '_' in the middle)"""
+        with self.assertRaises(KeyError) as cm:
+            self.client.analyticsmetric.create(
+                data=self.account_metrics_data,
+            )
+        self.assertEqual(str(cm.exception), "'analyticsmetric'")
+
+    def test_post_query_get_account_usage_metrics(self) -> None:
+        req = self.client.analytics_usage_metrics.create(
+            data=self.account_usage_metrics_data,
+        )
+        expected_keys = [
+            "start",
+            "end",
+            "resolution",
+            "duration",
+            "dimensions",
+            "pagination",
+            "items",
+            "aggregates",
+        ]
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 200)
+        [self.assertIn(key, expected_keys) for key in req.json().keys()]  # type: ignore[func-returns-value]
+        self.assertIn("metrics", req.json()["items"][0])
+        self.assertIn("dimensions", req.json()["items"][0])
+        self.assertIn("email_validation_count", req.json()["items"][0]["metrics"])
+
+    def test_post_query_get_account_usage_metrics_invalid_data(self) -> None:
+        """Expected failure with invalid data."""
+        req = self.client.analytics_usage_metrics.create(
+            data=self.invalid_account_usage_metrics_data,
+        )
+        from pprint import pprint
+
+        pprint(req.json())
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 400)
+        self.assertNotIn("items", req.json())
+        self.assertIn("'resolution' attribute is invalid", req.json()["message"])
+
+    def test_post_query_get_account_usage_metrics_invalid_url(self) -> None:
+        """Expected failure with an invalid URL https://api.mailgun.net/v1/analytics_usage_metric (without 's' at the end)"""
+        req = self.client.analytics_usage_metric.create(
+            data=self.invalid_account_usage_metrics_data,
+        )
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 404)
+
+    def test_post_query_get_account_usage_metrics_invalid_url_without_underscore(
+        self,
+    ) -> None:
+        """Expected failure with an invalid URL https://api.mailgun.net/v1/analyticsusagemetrics (without '_' in the middle)"""
+        with self.assertRaises(KeyError) as cm:
+            self.client.analyticsusagemetrics.create(
+                data=json.dumps(self.invalid_account_usage_metrics_data),
+            )
+        self.assertEqual(str(cm.exception), "'analyticsusagemetrics'")
+
+
+class LogsTests(unittest.TestCase):
+    """Tests for Mailgun Inbox Placement API, https://api.mailgun.net/v1/analytics/logs.
+
+    This class provides setup and teardown functionality for tests
+    with authentication and client initialization handled
+    in `setUp`. Each test in this suite operates with the configured Mailgun client
+    instance to simulate API interactions.
+
+    """
+    def setUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: Client = Client(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+
+        now = datetime.now()
+        now_formatted = now.strftime("%a, %d %b %Y %H:%M:%S +0000")
+        yesterday = now - timedelta(days=1)
+        yesterday_formatted = yesterday.strftime("%a, %d %b %Y %H:%M:%S +0000")  # noqa: FURB184
+
+        self.invalid_account_logs_data = {
+            "start": yesterday_formatted,
+            "end": now_formatted,
+            "filter": {
+                "AND": [
+                    {
+                        "attribute": "test",
+                        "comparator": "=",
+                        "values": [{"label": "", "value": ""}],
+                    }
+                ]
+            },
+            "include_subaccounts": True,
+            "pagination": {
+                "sort": "timestamp:asc",
+                "limit": 0,
+            },
+        }
+
+        self.account_logs_data = {
+            "start": yesterday_formatted,
+            "end": now_formatted,
+            "filter": {
+                "AND": [
+                    {
+                        "attribute": "domain",
+                        "comparator": "=",
+                        "values": [{"label": self.domain, "value": self.domain}],
+                    }
+                ]
+            },
+            "include_subaccounts": True,
+            "pagination": {
+                "sort": "timestamp:asc",
+                "limit": 50,
+            },
+        }
+
+    def test_post_query_get_account_logs(self) -> None:
+        """Happy Path with valid data."""
+        req = self.client.analytics_logs.create(
+            data=self.account_logs_data,
+        )
+
+        expected_keys = [
+            "start",
+            "end",
+            "pagination",
+            "items",
+            "aggregates",
+        ]
+        expected_items_keys = [
+            "@timestamp",
+            "account",
+            "api-key-id",
+            "domain",
+            "envelope",
+            "event",
+            "flags",
+            "id",
+            "log-level",
+            "message",
+            "method",
+            "originating-ip",
+            "recipient",
+            "recipient-domain",
+            "storage",
+            "tags",
+            "user-variables",
+        ]
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 200)
+        [self.assertIn(key, expected_keys) for key in req.json().keys()]  # type: ignore[func-returns-value]
+        self.assertIn("event", req.json()["items"][0])
+        self.assertIn("account", req.json()["items"][0])
+        [self.assertIn(key, expected_items_keys) for key in req.json()["items"][0]]  # type: ignore[func-returns-value]
+
+    def test_post_query_get_account_logs_invalid_data(self) -> None:
+        """Expected failure with invalid data."""
+        req = self.client.analytics_logs.create(
+            data=self.invalid_account_logs_data,
+        )
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 400)
+        self.assertNotIn("items", req.json())
+        self.assertIn(
+            "'test' is not a valid filter predicate attribute", req.json()["message"]
+        )
+
+    def test_post_query_get_account_logs_invalid_url(self) -> None:
+        """Expected failure with an invalid URL https://api.mailgun.net/v1/analytics_log (without 's' at the end)"""
+        req = self.client.analytics_log.create(
+            data=self.account_logs_data,
+        )
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 404)
+
+    def test_post_query_get_account_logs_invalid_url_without_underscore(
+        self,
+    ) -> None:
+        """Expected failure with an invalid URL https://api.mailgun.net/v1/analyticslogs (without '_' in the middle)"""
+        with self.assertRaises(KeyError) as cm:
+            self.client.analyticslogs.create(
+                data=self.account_logs_data,
+            )
+        self.assertEqual(str(cm.exception), "'analyticslogs'")
+
+
+class TagsNewTests(unittest.TestCase):
+    """Tests for Mailgun new Tags API, https://api.mailgun.net/v1/analytics/tags.
+
+    This class provides setup functionality for tests involving
+    with authentication and client initialization handled
+    in `setUp`. Each test in this suite operates with the configured Mailgun client
+    instance to simulate API interactions.
+
+    """
+
+    def setUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: Client = Client(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+
+        self.account_tags_data = {
+            "pagination": {"sort": "lastseen:desc", "limit": 10},
+            "include_subaccounts": True,
+        }
+
+        self.account_tag_info = '{"tag": "Python test", "description": "updated tag description"}'
+        self.account_tag_invalid_info = '{"tag": "test", "description": "updated tag description"}'
+
+    # Make sure that the message has been created in MessagesTests before running this test.
+    @pytest.mark.order(2)
+    def test_update_account_tag(self) -> None:
+        """Test to update account tag: Happy Path with valid data."""
+
+        req = self.client.analytics_tags.put(
+            data=self.account_tag_info,
+        )
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+        self.assertIn("Tag updated", req.json()["message"])
+
+    @pytest.mark.order(2)
+    def test_update_account_invalid_tag(self) -> None:
+        """Test to update account nonexistent tag: Unhappy Path with invalid data."""
+
+        req = self.client.analytics_tags.put(
+            data=self.account_tag_invalid_info,
+        )
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 404)
+        self.assertIn("message", req.json())
+        self.assertIn("Tag not found", req.json()["message"])
+
+    @pytest.mark.order(1)
+    def test_post_query_get_account_tags(self) -> None:
+        """Test to post query to list account tags or search for single tag: Happy Path with valid data."""
+        req = self.client.analytics_tags.create(
+            data=self.account_tags_data,
+        )
+
+        expected_keys = [
+            "pagination",
+            "items",
+        ]
+        expected_pagination_keys = [
+            "sort",
+            "limit",
+        ]
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 200)
+        [self.assertIn(key, expected_keys) for key in req.json().keys()]  # type: ignore[func-returns-value]
+        [self.assertIn(key, expected_pagination_keys) for key in req.json()["pagination"]]  # type: ignore[func-returns-value]
+
+    @pytest.mark.order(1)
+    def test_post_query_get_account_tags_with_incorrect_url(self) -> None:
+        """Test to post query to list account tags or search for single tag: Wrong Path with an invalid URL."""
+        req = self.client.analytics_tag.create(
+            data=self.account_tags_data,
+        )
+
+        expected_keys = ["error"]
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 404)
+        [self.assertIn(key, expected_keys) for key in req.json().keys()]  # type: ignore[func-returns-value]
+
+    # Make sure that the message has been created in MessagesTests before running this test.
+    @pytest.mark.order(4)
+    def test_delete_account_tag(self) -> None:
+        """Test to delete account tag: Happy Path with valid data."""
+
+        req = self.client.analytics_tags.delete(
+            data=self.account_tag_info,
+        )
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+        self.assertIn("Tag deleted", req.json()["message"])
+
+    @pytest.mark.order(4)
+    def test_delete_account_nonexistent_tag(self) -> None:
+        """Test to delete account nonexistent tag: Unhappy Path with invalid data."""
+
+        req = self.client.analytics_tags.delete(
+            data=self.account_tag_invalid_info,
+        )
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 404)
+        self.assertIn("message", req.json())
+        self.assertIn("Tag not found", req.json()["message"])
+
+    @pytest.mark.order(4)
+    def test_delete_account_tag_with_invalid_url(self) -> None:
+        """Test to delete account tag: Wrong Path with invalid URL."""
+
+        req = self.client.analytics_tag.delete(
+            data=self.account_tag_invalid_info,
+        )
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 404)
+        self.assertIn("error", req.json())
+        self.assertIn("not found", req.json()["error"])
+
+    @pytest.mark.order(3)
+    def test_get_account_tag_limit_information(self) -> None:
+        """Test to get account tag limit information: Happy Path with valid data."""
+        req = self.client.analytics_tags_limits.get()
+
+        expected_keys = ["limit", "count", "limit_reached"]
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 200)
+        [self.assertIn(key, expected_keys) for key in req.json().keys()]  # type: ignore[func-returns-value]
+
+    @pytest.mark.order(3)
+    def test_get_account_tag_incorrect_url_without_limits_part(self) -> None:
+        """Test to get account tag limit information without the limits URL part: Wrong Path with an invalid URL."""
+        req = self.client.analytics_tags.get()
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 404)
+        self.assertIn("error", req.json())
+        self.assertIn("not found", req.json()["error"])
+
+
+class UsersTests(unittest.TestCase):
+    """Tests for Mailgun Users API, https://api.mailgun.net/v5/users.
+
+    This class provides setup functionality for tests involving
+    with authentication and client initialization handled
+    in `setUp`. Each test in this suite operates with the configured Mailgun client
+    instance to simulate API interactions.
+
+    """
+
+    def setUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.secret: tuple[str, str] = (
+            "api",
+            os.environ["SECRET"],
+        )
+        self.client: Client = Client(auth=self.auth)
+        self.client_with_secret_key = Client(auth=self.secret)
+        self.domain: str = os.environ["DOMAIN"]
+        self.mailgun_email = os.environ["MAILGUN_EMAIL"]
+
+    def test_get_users(self) -> None:
+        """Test to get account's users details: Happy Path with valid data."""
+        query = {"role": "admin", "limit": "0", "skip": "0"}
+        req = self.client.users.get(filters=query)
+
+        expected_keys = [
+            "total",
+            "users",
+        ]
+
+        expected_users_keys = [
+            "account_id",
+            "activated",
+            "auth",
+            "email",
+            "email_details",
+            "github_user_id",
+            "id",
+            "is_disabled",
+            "is_master",
+            "metadata",
+            "migration_status",
+            "name",
+            "opened_ip",
+            "password_updated_at",
+            "preferences",
+            "role",
+            "salesforce_user_id",
+            "tfa_active",
+            "tfa_created_at",
+            "tfa_enabled",
+        ]
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 200)
+        [self.assertIn(key, expected_keys) for key in req.json()]  # type: ignore[func-returns-value]
+        [self.assertIn(key, expected_users_keys) for key in req.json()["users"][0]]  # type: ignore[func-returns-value]
+
+    def test_get_user_invalid_url(self) -> None:
+        """Test to get account's users details: expected failure with invalid URL."""
+        query = {"role": "admin", "limit": "0", "skip": "0"}
+
+        with self.assertRaises(KeyError) as cm:
+            self.client.user.get(filters=query)
+
+    @pytest.mark.xfail
+    def test_own_user_details(self) -> None:
+        req = self.client_with_secret_key.users.get(user_id="me")
+
+        expected_users_keys = [
+            "account_id",
+            "activated",
+            "auth",
+            "email",
+            "email_details",
+            "github_user_id",
+            "id",
+            "is_disabled",
+            "is_master",
+            "metadata",
+            "migration_status",
+            "name",
+            "opened_ip",
+            "password_updated_at",
+            "preferences",
+            "role",
+            "salesforce_user_id",
+            "tfa_active",
+            "tfa_created_at",
+            "tfa_enabled",
+        ]
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 200)
+        [self.assertIn(key, expected_users_keys) for key in req.json()]  # type: ignore[func-returns-value]
+
+    def test_get_user_details(self) -> None:
+        """Test to get account's users details: happy path."""
+        query = {"role": "admin", "limit": "0", "skip": "0"}
+        req1 = self.client.users.get(filters=query)
+        users = req1.json()["users"]
+
+        for user in users:
+            if self.mailgun_email == user["email"]:
+                req2 = self.client.users.get(user_id=user["id"])
+
+                expected_users_keys = [
+                    "account_id",
+                    "activated",
+                    "auth",
+                    "email",
+                    "email_details",
+                    "github_user_id",
+                    "id",
+                    "is_disabled",
+                    "is_master",
+                    "metadata",
+                    "migration_status",
+                    "name",
+                    "opened_ip",
+                    "password_updated_at",
+                    "preferences",
+                    "role",
+                    "salesforce_user_id",
+                    "tfa_active",
+                    "tfa_created_at",
+                    "tfa_enabled",
+                ]
+
+                self.assertIsInstance(req2.json(), dict)
+                self.assertEqual(req2.status_code, 200)
+                [self.assertIn(key, expected_users_keys) for key in req2.json()]  # type: ignore[func-returns-value]
+            break
+
+    def test_get_invalid_user_details(self) -> None:
+        """Test to get user details: expected failure with invalid user_id."""
+        query = {"role": "admin", "limit": "0", "skip": "0"}
+        req1 = self.client.users.get(filters=query)
+        users = req1.json()["users"]
+
+        for user in users:
+            if self.mailgun_email == user["email"]:
+                req2 = self.client.users.get(user_id="xxxxxxx")
+
+                self.assertIsInstance(req2.json(), dict)
+                self.assertEqual(req2.status_code, 404)
+
+# ============================================================================
+# Async Test Classes (using AsyncClient and AsyncEndpoint)
+# ============================================================================
+
+
+class AsyncMessagesTests(unittest.IsolatedAsyncioTestCase):
+    """Async tests for Mailgun Messages API using AsyncClient."""
+
+    async def asyncSetUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: AsyncClient = AsyncClient(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+        self.data: dict[str, str] = {
+            "from": os.environ["MESSAGES_FROM"],
+            "to": os.environ["MESSAGES_TO"],
+            "subject": "Hello Vasyl Bodaj",
+            "text": "Congratulations!, you just sent an email with Mailgun! You are truly awesome!",
+            "o:tag": "Python test",
+        }
+
+    async def asyncTearDown(self) -> None:
+        await self.client.aclose()
+
+    @pytest.mark.order(1)
+    async def test_post_right_message(self) -> None:
+        req = await self.client.messages.create(data=self.data, domain=self.domain)
+        self.assertEqual(req.status_code, 200)
+
+    @pytest.mark.order(1)
+    async def test_post_wrong_message(self) -> None:
+        req = await self.client.messages.create(data={"from": "sdsdsd"}, domain=self.domain)
+        self.assertEqual(req.status_code, 400)
+
+
+class AsyncDomainTests(unittest.IsolatedAsyncioTestCase):
+    """Async tests for Mailgun Domain API using AsyncClient."""
+
+    async def asyncSetUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: AsyncClient = AsyncClient(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+        random_domain_name = "".join(
+            random.choice(string.ascii_lowercase + string.digits) for _ in range(10)
+        )
+        self.test_domain: str = f"mailgun.wrapper.{random_domain_name}"
+        self.post_domain_data: dict[str, str] = {
+            "name": self.test_domain,
+        }
+        self.put_domain_data: dict[str, str] = {
+            "spam_action": "disabled",
+        }
+        self.post_domain_creds: dict[str, str] = {
+            "login": f"alice_bob@{self.domain}",
+            "password": "test_new_creds123",  # pragma: allowlist secret
+        }
+
+        self.put_domain_creds: dict[str, str] = {
+            "password": "test_new_creds",  # pragma: allowlist secret
+        }
+
+        self.put_domain_connections_data: dict[str, str] = {
+            "require_tls": "false",
+            "skip_verification": "false",
+        }
+
+        self.put_domain_tracking_data: dict[str, str] = {
+            "active": "yes",
+            "skip_verification": "false",
+        }
+        # fmt: off
+        self.put_domain_unsubscribe_data: dict[str, str] = {
+            "active": "yes",
+            "html_footer": "\n<br>\n<p><a href=\"%unsubscribe_url%\">UnSuBsCrIbE</a></p>\n",
+            "text_footer": "\n\nTo unsubscribe here click: <%unsubscribe_url%>\n\n",
+        }
+        # fmt: on
+
+        self.put_domain_dkim_authority_data: dict[str, str] = {
+            "self": "false",
+        }
+
+        self.put_domain_webprefix_data: dict[str, str] = {
+            "web_prefix": "python",
+        }
+
+        self.put_dkim_selector_data: dict[str, str] = {
+            "dkim_selector": "s",
+        }
+
+    async def asyncTearDown(self) -> None:
+        await self.client.domains.delete(domain=self.test_domain)
+        await self.client.aclose()
+
+    @pytest.mark.order(1)
+    async def test_post_domain(self) -> None:
+        await self.client.domains.delete(domain=self.test_domain)
+        request = await self.client.domains.create(data=self.post_domain_data)
+        self.assertEqual(request.status_code, 200)
+        self.assertIn("Domain DNS records have been created", request.json()["message"])
+
+    @pytest.mark.order(1)
+    async def test_post_domain_creds(self) -> None:
+        request = await self.client.domains_credentials.create(
+            domain=self.domain,
+            data=self.post_domain_creds,
+        )
+        self.assertEqual(request.status_code, 200)
+        self.assertIn("message", request.json())
+
+    @pytest.mark.order(2)
+    async def test_update_simple_domain(self) -> None:
+        await self.client.domains.delete(domain=self.test_domain)
+        await self.client.domains.create(data=self.post_domain_data)
+        data = {"spam_action": "disabled"}
+        request = await self.client.domains.put(data=data, domain=self.post_domain_data["name"])
+        self.assertEqual(request.status_code, 200)
+        self.assertEqual(request.json()["message"], "Domain has been updated")
+
+    @pytest.mark.order(2)
+    async def test_put_domain_creds(self) -> None:
+        await self.client.domains_credentials.create(
+            domain=self.domain,
+            data=self.post_domain_creds,
+        )
+        request = await self.client.domains_credentials.put(
+            domain=self.domain,
+            data=self.put_domain_creds,
+            login="alice_bob",
+        )
+
+        self.assertEqual(request.status_code, 200)
+        self.assertIn("message", request.json())
+
+    @pytest.mark.order(2)
+    async def test_put_mailboxes_credentials(self) -> None:
+        """Test to update Mailgun SMTP credentials: Happy Path with valid data."""
+        await self.client.domains_credentials.create(
+            domain=self.domain,
+            data=self.post_domain_creds,
+        )
+        name = "alice_bob"
+        req = await self.client.mailboxes.put(domain=self.domain, login=f"{name}@{self.domain}")
+        print(req)
+        print(req.json())
+
+        expected_keys = [
+            "message",
+            "note",
+            "credentials",
+        ]
+        expected_credentials_keys = [
+            f"{name}@{self.domain}",
+        ]
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 200)
+        [self.assertIn(key, expected_keys) for key in req.json().keys()]  # type: ignore[func-returns-value]
+        self.assertIn("Password changed", req.json()["message"])
+        [self.assertIn(key, expected_credentials_keys) for key in req.json()["credentials"]]  # type: ignore[func-returns-value]
+
+    @pytest.mark.order(3)
+    async def test_get_domain_list(self) -> None:
+        req = await self.client.domainlist.get()
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("items", req.json())
+
+    @pytest.mark.order(3)
+    async def test_get_smtp_creds(self) -> None:
+        request = await self.client.domains_credentials.get(domain=self.domain)
+        self.assertEqual(request.status_code, 200)
+        self.assertIn("items", request.json())
+
+    @pytest.mark.order(3)
+    async def test_get_sending_queues(self) -> None:
+        await self.client.domains.delete(domain=self.test_domain)
+        await self.client.domains.create(data=self.post_domain_data)
+        request = await self.client.domains_sendingqueues.get(domain=self.post_domain_data["name"])
+        self.assertEqual(request.status_code, 200)
+        self.assertIn("scheduled", request.json())
+
+    @pytest.mark.order(4)
+    @pytest.mark.skip("The test can fail because the domain name is a random string")
+    async def test_get_single_domain(self) -> None:
+        await self.client.domains.create(data=self.post_domain_data)
+        req = await self.client.domains.get(domain_name=self.post_domain_data["name"])
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("domain", req.json())
+
+    @pytest.mark.order(5)
+    @pytest.mark.skip("The test can fail because the domain name is a random string")
+    async def test_verify_domain(self) -> None:
+        await self.client.domains.create(data=self.post_domain_data)
+        req = await self.client.domains.put(domain=self.post_domain_data["name"], verify=True)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("domain", req.json())
+
+    @pytest.mark.order(6)
+    async def test_put_domain_connections(self) -> None:
+        request = await self.client.domains_connection.put(
+            domain=self.domain,
+            data=self.put_domain_connections_data,
+        )
+
+        self.assertEqual(request.status_code, 200)
+        self.assertIn("message", request.json())
+
+    @pytest.mark.order(6)
+    async def test_put_domain_tracking_open(self) -> None:
+        request = await self.client.domains_tracking_open.put(
+            domain=self.domain,
+            data=self.put_domain_tracking_data,
+        )
+        self.assertEqual(request.status_code, 200)
+        self.assertIn("message", request.json())
+
+    @pytest.mark.order(6)
+    async def test_put_domain_tracking_click(self) -> None:
+        request = await self.client.domains_tracking_click.put(
+            domain=self.domain,
+            data=self.put_domain_tracking_data,
+        )
+        self.assertEqual(request.status_code, 200)
+        self.assertIn("message", request.json())
+
+    @pytest.mark.order(6)
+    async def test_put_domain_unsubscribe(self) -> None:
+        request = await self.client.domains_tracking_unsubscribe.put(
+            domain=self.domain,
+            data=self.put_domain_unsubscribe_data,
+        )
+        self.assertEqual(request.status_code, 200)
+        self.assertIn("message", request.json())
+
+    @pytest.mark.order(6)
+    async def test_put_dkim_authority(self) -> None:
+        await self.client.domains.create(data=self.post_domain_data)
+        request = await self.client.domains_dkimauthority.put(
+            domain=self.test_domain,
+            data=self.put_domain_dkim_authority_data,
+        )
+        self.assertIn("message", request.json())
+
+    @pytest.mark.order(6)
+    async def test_put_webprefix(self) -> None:
+        await self.client.domains.create(data=self.post_domain_data)
+        request = await self.client.domains_webprefix.put(
+            domain=self.test_domain,
+            data=self.put_domain_webprefix_data,
+        )
+        self.assertIn("message", request.json())
+
+    @pytest.mark.order(6)
+    async def test_put_dkim_selector(self) -> None:
+        await self.client.domains.create(data=self.post_domain_data)
+        request = await self.client.domains_dkimselector.put(
+            domain=self.domain,
+            data=self.put_dkim_selector_data,
+        )
+        self.assertIn("message", request.json())
+
+    @pytest.mark.order(7)
+    async def test_delete_domain_creds(self) -> None:
+        await self.client.domains_credentials.create(
+            domain=self.domain,
+            data=self.post_domain_creds,
+        )
+        request = await self.client.domains_credentials.delete(
+            domain=self.domain,
+            login="alice_bob",
+        )
+
+        self.assertEqual(request.status_code, 200)
+
+    @pytest.mark.order(7)
+    async def test_delete_all_domain_credentials(self) -> None:
+        await self.client.domains_credentials.create(
+            domain=self.domain,
+            data=self.post_domain_creds,
+        )
+        request = await self.client.domains_credentials.delete(domain=self.domain)
+        self.assertEqual(request.status_code, 200)
+        self.assertIn(request.json()["message"], "All domain credentials have been deleted")
+
+    @pytest.mark.order(8)
+    async def test_delete_domain(self) -> None:
+        await self.client.domains.create(data=self.post_domain_data)
+        request = await self.client.domains.delete(domain=self.test_domain)
+        self.assertEqual(
+            request.json()["message"],
+            "Domain will be deleted in the background",
+        )
+        self.assertEqual(request.status_code, 200)
+
+
+@pytest.mark.skip(
+    "Dedicated IPs should be enabled for the domain, see https://app.mailgun.com/settings/dedicated-ips"
+)
+class AsyncIpTests(unittest.IsolatedAsyncioTestCase):
+    """Async tests for Mailgun IP API using AsyncClient."""
+
+    async def asyncSetUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: AsyncClient = AsyncClient(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+        self.ip_data: dict[str, str] = {
+            "ip": os.environ["DOMAINS_DEDICATED_IP"],
+        }
+
+    async def asyncTearDown(self) -> None:
+        await self.client.aclose()
+
+    async def test_get_ip_from_domain(self) -> None:
+        req = await self.client.ips.get(domain=self.domain, params={"dedicated": "true"})
+        self.assertIn("items", req.json())
+        self.assertEqual(req.status_code, 200)
+
+    async def test_get_ip_by_address(self) -> None:
+        await self.client.domains_ips.create(domain=self.domain, data=self.ip_data)
+        req = await self.client.ips.get(domain=self.domain, ip=self.ip_data["ip"])
+        self.assertIn("ip", req.json())
+        self.assertEqual(req.status_code, 200)
+
+    async def test_create_ip(self) -> None:
+        request = await self.client.domains_ips.create(domain=self.domain, data=self.ip_data)
+        self.assertEqual("success", request.json()["message"])
+        self.assertEqual(request.status_code, 200)
+
+    async def test_delete_ip(self) -> None:
+        request = await self.client.domains_ips.delete(
+            domain=self.domain,
+            ip=self.ip_data["ip"],
+        )
+        self.assertEqual("success", request.json()["message"])
+        self.assertEqual(request.status_code, 200)
+
+
+@pytest.mark.skip(
+    "This feature can be disabled for an account, see https://app.mailgun.com/settings/ip-pools"
+)
+class AsyncIpPoolsTests(unittest.IsolatedAsyncioTestCase):
+    """Async tests for Mailgun IP POOLS API using AsyncClient."""
+
+    async def asyncSetUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: AsyncClient = AsyncClient(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+        self.data: dict[str, str] = {
+            "name": "test_pool",
+            "description": "Test",
+            "add_ip": os.environ["DOMAINS_DEDICATED_IP"],
+        }
+        self.patch_data: dict[str, str] = {
+            "name": "test_pool1",
+            "description": "Test1",
+        }
+        self.ippool_id: Any = ""
+
+    async def asyncTearDown(self) -> None:
+        await self.client.aclose()
+
+    async def test_get_ippools(self) -> None:
+        await self.client.ippools.create(domain=self.domain, data=self.data)
+        req = await self.client.ippools.get(domain=self.domain)
+        self.assertIn("ip_pools", req.json())
+        self.assertEqual(req.status_code, 200)
+
+    async def test_patch_ippool(self) -> None:
+        req_post = await self.client.ippools.create(domain=self.domain, data=self.data)
+        self.ippool_id = req_post.json()["pool_id"]
+
+        req = await self.client.ippools.patch(
+            domain=self.domain,
+            data=self.patch_data,
+            pool_id=self.ippool_id,
+        )
+        self.assertEqual("success", req.json()["message"])
+        self.assertEqual(req.status_code, 200)
+
+    async def test_link_domain_ippool(self) -> None:
+        pool_create = await self.client.ippools.create(domain=self.domain, data=self.data)
+        self.ippool_id = pool_create.json()["pool_id"]
+        await self.client.ippools.patch(
+            domain=self.domain,
+            data=self.patch_data,
+            pool_id=self.ippool_id,
+        )
+        data = {
+            "pool_id": self.ippool_id,
+        }
+        req = await self.client.domains_ips.create(domain=self.domain, data=data)
+
+        self.assertIn("message", req.json())
+
+    async def test_delete_ippool(self) -> None:
+        req = await self.client.ippools.create(domain=self.domain, data=self.data)
+        self.ippool_id = req.json()["pool_id"]
+        req_del = await self.client.ippools.delete(domain=self.domain, pool_id=self.ippool_id)
+        self.assertEqual("started", req_del.json()["message"])
+
+
+class AsyncEventsTests(unittest.IsolatedAsyncioTestCase):
+    """Async tests for Mailgun Events API using AsyncClient."""
+
+    async def asyncSetUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: AsyncClient = AsyncClient(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+        self.params: dict[str, str] = {
+            "event": "rejected",
+        }
+
+    async def asyncTearDown(self) -> None:
+        await self.client.aclose()
+
+    async def test_events_get(self) -> None:
+        req = await self.client.events.get(domain=self.domain)
+        self.assertIn("items", req.json())
+        self.assertEqual(req.status_code, 200)
+
+    async def test_event_params(self) -> None:
+        req = await self.client.events.get(domain=self.domain, filters=self.params)
+
+        self.assertIn("items", req.json())
+        self.assertEqual(req.status_code, 200)
+
+
+class AsyncTagsTests(unittest.IsolatedAsyncioTestCase):
+    """Async tests for Mailgun Tags API using AsyncClient."""
+
+    async def asyncSetUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: AsyncClient = AsyncClient(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+        self.data: dict[str, str] = {
+            "description": "Tests running",
+        }
+        self.put_tags_data: dict[str, str] = {
+            "description": "Python testtt",
+        }
+        self.stats_params: dict[str, str] = {
+            "event": "accepted",
+        }
+        self.tag_name: str = "Python test"
+
+    async def asyncTearDown(self) -> None:
+        await self.client.aclose()
+
+    async def test_get_tags(self) -> None:
+        req = await self.client.tags.get(domain=self.domain)
+        self.assertIn("items", req.json())
+        self.assertEqual(req.status_code, 200)
+
+    async def test_tag_get_by_name(self) -> None:
+        req = await self.client.tags.get(domain=self.domain, tag_name=self.tag_name)
+        self.assertIn("tag", req.json())
+        self.assertEqual(req.status_code, 200)
+
+    async def test_tag_put(self) -> None:
+        req = await self.client.tags.put(
+            domain=self.domain,
+            tag_name=self.tag_name,
+            data=self.put_tags_data,
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+
+    async def test_tags_stats_get(self) -> None:
+        req = await self.client.tags_stats.get(
+            domain=self.domain,
+            filters=self.stats_params,
+            tag_name=self.tag_name,
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("tag", req.json())
+
+    async def test_tags_stats_aggregate_get(self) -> None:
+        req = await self.client.tags_stats_aggregates_devices.get(
+            domain=self.domain,
+            filters=self.stats_params,
+            tag_name=self.tag_name,
+        )
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("tag", req.json())
+
+    @pytest.mark.skip("it deletes tags and test_tag_get_by_name will fail")
+    async def test_delete_tags(self) -> None:
+        req = await self.client.tags.delete(domain=self.domain, tag_name=self.tag_name)
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+
+
+class AsyncBouncesTests(unittest.IsolatedAsyncioTestCase):
+    """Async tests for Mailgun Bounces API using AsyncClient."""
+
+    async def asyncSetUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: AsyncClient = AsyncClient(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+        self.bounces_data: dict[str, int | str] = {
+            "address": "test30@gmail.com",
+            "code": 550,
+            "error": "Test error",
+        }
+
+        self.bounces_json_data: str = """[{
+        "address": "test121@i.ua",
+        "code": "550",
+        "error": "Test error2312"
+    },
+        {
+            "address": "test122@gmail.com",
+            "code": "550",
+            "error": "Test error"
+        }]"""
+
+    async def asyncTearDown(self) -> None:
+        await self.client.aclose()
+
+    async def test_bounces_get(self) -> None:
+        req = await self.client.bounces.get(domain=self.domain)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("items", req.json())
+
+    async def test_bounces_create(self) -> None:
+        req = await self.client.bounces.create(data=self.bounces_data, domain=self.domain)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("address", req.json())
+
+    async def test_bounces_get_address(self) -> None:
+        await self.client.bounces.create(data=self.bounces_data, domain=self.domain)
+        req = await self.client.bounces.get(
+            domain=self.domain,
+            bounce_address=self.bounces_data["address"],
+        )
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("address", req.json())
+
+    async def test_bounces_create_json(self) -> None:
+        json_data = json.loads(self.bounces_json_data)
+        for address in json_data:
+            req = await self.client.bounces.create(
+                data=address,
+                domain=self.domain,
+                headers={"Content-type": "application/json"},
+            )
+            self.assertEqual(req.status_code, 200)
+            self.assertIn("message", req.json())
+
+    async def test_bounces_delete_single(self) -> None:
+        await self.client.bounces.create(data=self.bounces_data, domain=self.domain)
+        req = await self.client.bounces.delete(
+            domain=self.domain,
+            bounce_address=self.bounces_data["address"],
+        )
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+
+    async def test_bounces_delete_all(self) -> None:
+        req = await self.client.bounces.delete(domain=self.domain)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+
+
+class AsyncUnsubscribesTests(unittest.IsolatedAsyncioTestCase):
+    """Async tests for Mailgun Unsubscribes API using AsyncClient."""
+
+    async def asyncSetUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: AsyncClient = AsyncClient(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+        self.unsub_data: dict[str, str] = {
+            "address": "test@gmail.com",
+            "tag": "unsub_test_tag",
+        }
+
+        self.unsub_json_data: str = """[{
+                "address": "test1@gmail.com",
+                "tags": ["some tag"],
+                "error": "Test error2312"
+            },
+            {
+                "address": "test2@gmail.com",
+                "code": ["*"],
+                "error": "Test error"
+            },
+            {
+                "address": "test3@gmail.com"
+            }]"""
+
+    async def asyncTearDown(self) -> None:
+        await self.client.aclose()
+
+    async def test_unsub_create(self) -> None:
+        req = await self.client.unsubscribes.create(data=self.unsub_data, domain=self.domain)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+
+    async def test_unsub_get(self) -> None:
+        req = await self.client.unsubscribes.get(domain=self.domain)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("items", req.json())
+
+    async def test_unsub_get_single(self) -> None:
+        req = await self.client.unsubscribes.get(
+            domain=self.domain,
+            unsubscribe_address=self.unsub_data["address"],
+        )
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("address", req.json())
+
+    async def test_unsub_create_multiple(self) -> None:
+        json_data = json.loads(self.unsub_json_data)
+        for address in json_data:
+            req = await self.client.unsubscribes.create(
+                data=address,
+                domain=self.domain,
+                headers={"Content-type": "application/json"},
+            )
+
+            self.assertEqual(req.status_code, 200)
+            self.assertIn("message", req.json())
+
+    async def test_unsub_delete(self) -> None:
+        req = await self.client.bounces.delete(
+            domain=self.domain,
+            unsubscribe_address=self.unsub_data["address"],
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+
+    async def test_unsub_delete_all(self) -> None:
+        req = await self.client.bounces.delete(domain=self.domain)
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+
+
+class AsyncComplaintsTests(unittest.IsolatedAsyncioTestCase):
+    """Async tests for Mailgun Complaints API using AsyncClient."""
+
+    async def asyncSetUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: AsyncClient = AsyncClient(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+        self.compl_data: dict[str, str] = {
+            "address": "test@gmail.com",
+            "tag": "compl_test_tag",
+        }
+
+        self.compl_json_data: str = """[{
+                "address": "test1@gmail.com",
+                "tags": ["some tag"],
+                "error": "Test error2312"
+            },
+            {
+                "address": "test3@gmail.com"}]"""
+
+    async def asyncTearDown(self) -> None:
+        await self.client.aclose()
+
+    async def test_compl_create(self) -> None:
+        req = await self.client.complaints.create(data=self.compl_data, domain=self.domain)
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+
+    async def test_get_single_complaint(self) -> None:
+        req = await self.client.complaints.get(data=self.compl_data, domain=self.domain)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("items", req.json())
+
+    async def test_compl_get_all(self) -> None:
+        req = await self.client.complaints.get(domain=self.domain)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("items", req.json())
+
+    async def test_compl_get_single(self) -> None:
+        await self.client.complaints.create(data=self.compl_data, domain=self.domain)
+        req = await self.client.complaints.get(
+            domain=self.domain,
+            complaint_address=self.compl_data["address"],
+        )
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("address", req.json())
+
+    async def test_compl_create_multiple(self) -> None:
+        json_data = json.loads(self.compl_json_data)
+        for address in json_data:
+            req = await self.client.complaints.create(
+                data=address,
+                domain=self.domain,
+                headers={"Content-type": "application/json"},
+            )
+
+            self.assertEqual(req.status_code, 200)
+            self.assertIn("message", req.json())
+
+    async def test_compl_delete_single(self) -> None:
+        await self.client.complaints.create(
+            data=self.compl_json_data,
+            domain=self.domain,
+            headers="application/json",
+        )
+        req = await self.client.complaints.delete(
+            domain=self.domain,
+            unsubscribe_address=self.compl_data["address"],
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+
+    async def test_compl_delete_all(self) -> None:
+        req = await self.client.complaints.delete(domain=self.domain)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+
+
+class AsyncWhiteListTests(unittest.IsolatedAsyncioTestCase):
+    """Async tests for Mailgun WhiteList API using AsyncClient."""
+
+    async def asyncSetUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: AsyncClient = AsyncClient(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+        self.whitel_data: dict[str, str] = {
+            "address": "test@gmail.com",
+            "tag": "whitel_test",
+        }
+
+        self.whitl_json_data: list[dict[str, str]] = [
+            {
+                "address": "test1@gmail.com",
+                "domain": self.domain,
+            },
+            {
+                "address": "test3@gmail.com",
+                "domain": self.domain,
+            },
+        ]
+
+    async def asyncTearDown(self) -> None:
+        await self.client.aclose()
+
+    async def test_whitel_create(self) -> None:
+        req = await self.client.whitelists.create(data=self.whitel_data, domain=self.domain)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+
+    async def test_whitel_get_simple(self) -> None:
+        await self.client.whitelists.create(data=self.whitel_data, domain=self.domain)
+
+        req = await self.client.whitelists.get(
+            domain=self.domain,
+            whitelist_address=self.whitel_data["address"],
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("value", req.json())
+
+    async def test_whitel_delete_simple(self) -> None:
+        await self.client.whitelists.create(data=self.whitel_data, domain=self.domain)
+        req = await self.client.whitelists.delete(
+            domain=self.domain,
+            whitelist_address=self.whitel_data["address"],
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+
+
+class AsyncRoutesTests(unittest.IsolatedAsyncioTestCase):
+    """Async tests for Mailgun Routes API using AsyncClient."""
+
+    async def asyncSetUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: AsyncClient = AsyncClient(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+        self.sender: str = os.environ["MESSAGES_FROM"]
+        self.routes_data: dict[str, int | str | list[str]] = {
+            "priority": 0,
+            "description": "Sample route",
+            "expression": f"match_recipient('.*@{self.domain}')",
+            "action": ["forward('http://myhost.com/messages/')", "stop()"],
+        }
+        self.routes_params: dict[str, int] = {
+            "skip": 1,
+            "limit": 1,
+        }
+        self.routes_put_data: dict[str, int] = {
+            "priority": 2,
+        }
+
+    async def asyncTearDown(self) -> None:
+        await self.client.aclose()
+
+    async def test_routes_create(self) -> None:
+        params = {"skip": 0, "limit": 1}
+        req1 = await self.client.routes.get(domain=self.domain, filters=params)
+        await self.client.routes.delete(
+            domain=self.domain,
+            route_id=req1.json()["items"][0]["id"],
+        )
+        req = await self.client.routes.create(domain=self.domain, data=self.routes_data)
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+
+    async def test_routes_get_all(self) -> None:
+        params = {"skip": 0, "limit": 1}
+        req1 = await self.client.routes.get(domain=self.domain, filters=params)
+        if len(req1.json()["items"]) > 0:
+            await self.client.routes.delete(
+                domain=self.domain,
+                route_id=req1.json()["items"][0]["id"],
+            )
+            await self.client.routes.create(domain=self.domain, data=self.routes_data)
+            req = await self.client.routes.get(domain=self.domain, filters=self.routes_params)
+        else:
+            await self.client.routes.create(domain=self.domain, data=self.routes_data)
+            req = await self.client.routes.get(domain=self.domain, filters=self.routes_params)
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("items", req.json())
+
+    async def test_get_route_by_id(self) -> None:
+        params = {"skip": 0, "limit": 1}
+        req1 = await self.client.routes.get(domain=self.domain, filters=params)
+        if len(req1.json()["items"]) > 0:
+            await self.client.routes.delete(
+                domain=self.domain,
+                route_id=req1.json()["items"][0]["id"],
+            )
+
+            req_post = await self.client.routes.create(domain=self.domain, data=self.routes_data)
+            await self.client.routes.create(domain=self.domain, data=self.routes_data)
+            req = await self.client.routes.get(
+                domain=self.domain, route_id=req_post.json()["route"]["id"]
+            )
+        else:
+            req_post = await self.client.routes.create(domain=self.domain, data=self.routes_data)
+            await self.client.routes.create(domain=self.domain, data=self.routes_data)
+            req = await self.client.routes.get(
+                domain=self.domain, route_id=req_post.json()["route"]["id"]
+            )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("route", req.json())
+
+    async def test_routes_put(self) -> None:
+        params = {"skip": 0, "limit": 1}
+        req1 = await self.client.routes.get(domain=self.domain, filters=params)
+        if len(req1.json()["items"]) > 0:
+            await self.client.routes.delete(
+                domain=self.domain,
+                route_id=req1.json()["items"][0]["id"],
+            )
+            req_post = await self.client.routes.create(domain=self.domain, data=self.routes_data)
+            req = await self.client.routes.put(
+                domain=self.domain,
+                data=self.routes_put_data,
+                route_id=req_post.json()["route"]["id"],
+            )
+        else:
+            req_post = await self.client.routes.create(domain=self.domain, data=self.routes_data)
+            req = await self.client.routes.put(
+                domain=self.domain,
+                data=self.routes_put_data,
+                route_id=req_post.json()["route"]["id"],
+            )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+
+    async def test_routes_delete(self) -> None:
+        params = {"skip": 0, "limit": 1}
+        req1 = await self.client.routes.get(domain=self.domain, filters=params)
+        if len(req1.json()["items"]) > 0:
+            await self.client.routes.delete(
+                domain=self.domain,
+                route_id=req1.json()["items"][0]["id"],
+            )
+            req_post = await self.client.routes.create(domain=self.domain, data=self.routes_data)
+
+            req = await self.client.routes.delete(
+                domain=self.domain, route_id=req_post.json()["route"]["id"]
+            )
+        else:
+            req_post = await self.client.routes.create(domain=self.domain, data=self.routes_data)
+
+            req = await self.client.routes.delete(
+                domain=self.domain, route_id=req_post.json()["route"]["id"]
+            )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+
+    async def test_get_routes_match(self) -> None:
+        """Test to match address to route: Happy Path with valid data."""
+        params = {"skip": 0, "limit": 1}
+        query = {"address": self.sender}
+        req1 = await self.client.routes.get(domain=self.domain, filters=params)
+        print('len(req1.json()["items"]): ', len(req1.json()["items"]))
+        if len(req1.json()["items"]) > 0:
+            await self.client.routes.delete(
+                domain=self.domain,
+                route_id=req1.json()["items"][0]["id"],
+            )
+
+            await self.client.routes.create(domain=self.domain, data=self.routes_data)
+            req = await self.client.routes_match.get(domain=self.domain, filters=query)
+        else:
+            await self.client.routes.create(domain=self.domain, data=self.routes_data)
+            req = await self.client.routes_match.get(domain=self.domain, filters=query)
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("route", req.json())
+
+        expected_keys = ["actions", "created_at", "description", "expression", "id", "priority"]
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 200)
+        [self.assertIn(key, expected_keys) for key in req.json()["route"].keys()]  # type: ignore[func-returns-value]
+
+
+class AsyncWebhooksTests(unittest.IsolatedAsyncioTestCase):
+    """Async tests for Mailgun Webhooks API using AsyncClient."""
+
+    async def asyncSetUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: AsyncClient = AsyncClient(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+        self.webhooks_data: dict[str, str | list[str]] = {
+            "id": "clicked",
+            "url": ["https://i.ua"],
+        }
+
+        self.webhooks_data_put: dict[str, str] = {
+            "url": "https://twitter.com",
+        }
+
+    async def asyncTearDown(self) -> None:
+        await self.client.aclose()
+
+    async def test_webhooks_create(self) -> None:
+        req = await self.client.domains_webhooks.create(
+            domain=self.domain,
+            data=self.webhooks_data,
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+        await self.client.domains_webhooks_clicked.delete(domain=self.domain)
+
+    async def test_webhooks_get(self) -> None:
+        req = await self.client.domains_webhooks.get(domain=self.domain)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("webhooks", req.json())
+
+    async def test_webhook_put(self) -> None:
+        await self.client.domains_webhooks.create(domain=self.domain, data=self.webhooks_data)
+        req = await self.client.domains_webhooks_clicked.put(
+            domain=self.domain,
+            data=self.webhooks_data_put,
+        )
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+        await self.client.domains_webhooks_clicked.delete(domain=self.domain)
+
+    async def test_webhook_get_simple(self) -> None:
+        await self.client.domains_webhooks.create(domain=self.domain, data=self.webhooks_data)
+        req = await self.client.domains_webhooks_clicked.get(domain=self.domain)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("webhook", req.json())
+        await self.client.domains_webhooks_clicked.delete(domain=self.domain)
+
+    async def test_webhook_delete(self) -> None:
+        await self.client.domains_webhooks.create(domain=self.domain, data=self.webhooks_data)
+        req = await self.client.domains_webhooks_clicked.delete(domain=self.domain)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+
+
+class AsyncMailingListsTests(unittest.IsolatedAsyncioTestCase):
+    """Async tests for Mailgun Mailing Lists API using AsyncClient."""
+
+    async def asyncSetUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: AsyncClient = AsyncClient(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+        self.maillist_address: str = os.environ["MAILLIST_ADDRESS"]
+        self.mailing_lists_data: dict[str, str] = {
+            "address": f"python_sdk@{self.domain}",
+            "description": "Mailgun developers list",
+        }
+
+        self.mailing_lists_data_update: dict[str, str] = {
+            "description": "Mailgun developers list 121212",
+        }
+
+        self.mailing_lists_members_data: dict[str, bool | str] = {
+            "subscribed": True,
+            "address": "bar@example.com",
+            "name": "Bob Bar",
+            "description": "Developer",
+            "vars": '{"age": 26}',
+        }
+
+        self.mailing_lists_members_put_data: dict[str, bool | str] = {
+            "subscribed": True,
+            "address": "bar@example.com",
+            "name": "Bob Bar",
+            "description": "Developer",
+            "vars": '{"age": 28}',
+        }
+
+        self.mailing_lists_members_data_mult: dict[str, bool | str] = {
+            "upsert": True,
+            "members": '[{"address": "Alice <alice@example.com>", "vars": {"age": 26}},'
+            '{"name": "Bob", "address": "bob2@example.com", "vars": {"age": 34}}]',
+        }
+
+    async def asyncTearDown(self) -> None:
+        await self.client.aclose()
+
+    async def test_maillist_pages_get(self) -> None:
+        req = await self.client.lists_pages.get(domain=self.domain)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("items", req.json())
+
+    async def test_maillist_lists_get(self) -> None:
+        req = await self.client.lists.get(domain=self.domain, address=self.maillist_address)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("list", req.json())
+
+    async def test_maillist_lists_create(self) -> None:
+        await self.client.lists.delete(
+            domain=self.domain,
+            address=f"python_sdk@{self.domain}",
+        )
+        req = await self.client.lists.create(domain=self.domain, data=self.mailing_lists_data)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("list", req.json())
+
+    async def test_maillists_lists_put(self) -> None:
+        await self.client.lists.create(domain=self.domain, data=self.mailing_lists_data)
+        req = await self.client.lists.put(
+            domain=self.domain,
+            data=self.mailing_lists_data_update,
+            address=f"python_sdk@{self.domain}",
+        )
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("list", req.json())
+
+    async def test_maillists_lists_delete(self) -> None:
+        await self.client.lists.create(domain=self.domain, data=self.mailing_lists_data)
+        req = await self.client.lists.delete(
+            domain=self.domain,
+            address=f"python_sdk@{self.domain}",
+        )
+        self.assertEqual(req.status_code, 200)
+        await self.client.lists.create(domain=self.domain, data=self.mailing_lists_data)
+
+    @pytest.mark.skip("Email Validations are only available for paid accounts")
+    async def test_maillists_lists_validate_create(self) -> None:
+        req = await self.client.lists.create(
+            domain=self.domain,
+            address=self.maillist_address,
+            validate=True,
+        )
+
+        self.assertEqual(req.status_code, 202)
+        self.assertIn("message", req.json())
+
+    @pytest.mark.skip("Email Validations are only available for paid accounts")
+    async def test_maillists_lists_validate_get(self) -> None:
+        req = await self.client.lists.get(
+            domain=self.domain,
+            address=self.maillist_address,
+            validate=True,
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("id", req.json())
+
+    @pytest.mark.skip("Email Validations are only available for paid accounts")
+    async def test_maillists_lists_validate_delete(self) -> None:
+        await self.client.lists.create(
+            domain=self.domain,
+            address=self.maillist_address,
+            validate=True,
+        )
+        req = await self.client.lists.get(
+            domain=self.domain,
+            address=self.maillist_address,
+            validate=True,
+        )
+
+        self.assertEqual(req.status_code, 200)
+
+    async def test_maillists_lists_members_pages_get(self) -> None:
+        req = await self.client.lists_members_pages.get(
+            domain=self.domain,
+            address=self.maillist_address,
+        )
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("items", req.json())
+
+    async def test_maillists_lists_members_create(self) -> None:
+        await self.client.lists_members.delete(
+            domain=self.domain,
+            address=self.maillist_address,
+            member_address=self.mailing_lists_members_data["address"],
+        )
+        req = await self.client.lists_members.create(
+            domain=self.domain,
+            address=self.maillist_address,
+            data=self.mailing_lists_members_data,
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("member", req.json())
+
+    async def test_maillists_lists_members_get(self) -> None:
+        req = await self.client.lists_members.get(domain=self.domain, address=self.maillist_address)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("items", req.json())
+
+    async def test_maillists_lists_members_update(self) -> None:
+        await self.client.lists_members.create(
+            domain=self.domain,
+            address=self.maillist_address,
+            data=self.mailing_lists_members_data,
+        )
+
+        req = await self.client.lists_members.put(
+            domain=self.domain,
+            address=self.maillist_address,
+            data=self.mailing_lists_members_put_data,
+            member_address=self.mailing_lists_members_data["address"],
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("member", req.json())
+
+    async def test_maillists_lists_members_delete(self) -> None:
+        await self.client.lists_members.create(
+            domain=self.domain,
+            address=self.maillist_address,
+            data=self.mailing_lists_members_data,
+        )
+
+        req = await self.client.lists_members.delete(
+            domain=self.domain,
+            address=self.maillist_address,
+            member_address=self.mailing_lists_members_data["address"],
+        )
+        self.assertEqual(req.status_code, 200)
+
+    async def test_maillists_lists_members_create_mult(self) -> None:
+        req = await self.client.lists_members.create(
+            domain=self.domain,
+            address=self.maillist_address,
+            data=self.mailing_lists_members_data_mult,
+            multiple=True,
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+
+
+class AsyncTemplatesTests(unittest.IsolatedAsyncioTestCase):
+    """Async tests for Mailgun Templates API using AsyncClient."""
+
+    async def asyncSetUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: AsyncClient = AsyncClient(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+        self.post_template_data: dict[str, str] = {
+            "name": "template.name20",
+            "description": "template description",
+            "template": "{{fname}} {{lname}}",
+            "engine": "handlebars",
+            "comment": "version comment",
+        }
+
+        self.put_template_data: dict[str, str] = {
+            "description": "new template description",
+        }
+
+        self.post_template_version_data: dict[str, str] = {
+            "tag": "v11",
+            "template": "{{fname}} {{lname}}",
+            "engine": "handlebars",
+            "active": "no",
+        }
+        self.put_template_version_data: dict[str, str] = {
+            "template": "{{fname}} {{lname}}",
+            "comment": "Updated version comment",
+            "active": "no",
+        }
+
+        self.put_template_version: str = "v11"
+
+    async def asyncTearDown(self) -> None:
+        await self.client.aclose()
+
+    async def test_create_template(self) -> None:
+        await self.client.templates.delete(
+            domain=self.domain,
+            template_name=self.post_template_data["name"],
+        )
+
+        req = await self.client.templates.create(
+            data=self.post_template_data,
+            domain=self.domain,
+        )
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("template", req.json())
+
+    async def test_get_template(self) -> None:
+        params = {"active": "yes"}
+        await self.client.templates.create(data=self.post_template_data, domain=self.domain)
+        req = await self.client.templates.get(
+            domain=self.domain,
+            filters=params,
+            template_name=self.post_template_data["name"],
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("template", req.json())
+
+    async def test_put_template(self) -> None:
+        await self.client.templates.create(data=self.post_template_data, domain=self.domain)
+        req = await self.client.templates.put(
+            domain=self.domain,
+            data=self.put_template_data,
+            template_name=self.post_template_data["name"],
+        )
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("template", req.json())
+
+    async def test_delete_template(self) -> None:
+        await self.client.templates.create(data=self.post_template_data, domain=self.domain)
+        req = await self.client.templates.delete(
+            domain=self.domain,
+            template_name=self.post_template_data["name"],
+        )
+
+        self.assertEqual(req.status_code, 200)
+
+    async def test_post_version_template(self) -> None:
+        await self.client.templates.create(data=self.post_template_data, domain=self.domain)
+
+        await self.client.templates.delete(
+            domain=self.domain,
+            template_name=self.post_template_data["name"],
+            versions=True,
+            tag=self.put_template_version,
+        )
+
+        req = await self.client.templates.create(
+            data=self.post_template_version_data,
+            domain=self.domain,
+            template_name=self.post_template_data["name"],
+            versions=True,
+        )
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("template", req.json())
+
+    async def test_get_version_template(self) -> None:
+        await self.client.templates.create(data=self.post_template_data, domain=self.domain)
+
+        await self.client.templates.create(
+            data=self.post_template_version_data,
+            domain=self.domain,
+            template_name=self.post_template_data["name"],
+            versions=True,
+        )
+
+        req = await self.client.templates.get(
+            domain=self.domain,
+            template_name=self.post_template_data["name"],
+            versions=True,
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("template", req.json())
+
+    async def test_put_version_template(self) -> None:
+        await self.client.templates.create(data=self.post_template_data, domain=self.domain)
+
+        await self.client.templates.create(
+            data=self.post_template_version_data,
+            domain=self.domain,
+            template_name=self.post_template_data["name"],
+            versions=True,
+        )
+
+        req = await self.client.templates.put(
+            domain=self.domain,
+            data=self.put_template_version_data,
+            template_name=self.post_template_data["name"],
+            versions=True,
+            tag=self.put_template_version,
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("template", req.json())
+
+    async def test_delete_version_template(self) -> None:
+        await self.client.templates.create(data=self.post_template_data, domain=self.domain)
+
+        self.post_template_version_data["tag"] = "v0"
+        self.post_template_version_data["active"] = "no"
+        await self.client.templates.create(
+            data=self.post_template_version_data,
+            domain=self.domain,
+            template_name=self.post_template_data["name"],
+            versions=True,
+        )
+
+        req = await self.client.templates.delete(
+            domain=self.domain,
+            template_name=self.post_template_data["name"],
+            versions=True,
+            tag="v0",
+        )
+
+        await self.client.templates.delete(
+            domain=self.domain,
+            template_name=self.post_template_data["name"],
+            versions=True,
+            tag=self.put_template_version,
+        )
+
+        self.assertEqual(req.status_code, 200)
+
+    async def test_update_template_version_copy(self) -> None:
+        """Test to copy an existing version into a new version with the provided name: Happy Path with valid data."""
+        await self.client.templates.create(data=self.post_template_data, domain=self.domain)
+
+        await self.client.templates.create(
+            data=self.post_template_version_data,
+            domain=self.domain,
+            template_name=self.post_template_data["name"],
+            versions=True,
+        )
+
+        data = {"comment": "An updated version comment"}
+
+        req = await self.client.templates.put(
+            domain=self.domain,
+            filters=data,
+            template_name="template.name1",
+            versions=True,
+            tag="v2",
+            copy=True,
+            new_tag="v3",
+        )
+
+        expected_keys = [
+            "message",
+            "version",
+            "template",
+        ]
+        expected_template_keys = [
+            "tag",
+            "template",
+            "engine",
+            "mjml",
+            "createdAt",
+            "comment",
+            "active",
+            "id",
+            "headers",
+        ]
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 200)
+        [self.assertIn(key, expected_keys) for key in req.json().keys()]  # type: ignore[func-returns-value]
+        self.assertIn("tag", req.json()["version"])
+        self.assertIn("version has been copied", req.json()["message"])
+        [self.assertIn(key, expected_template_keys) for key in req.json()["template"]]  # type: ignore[func-returns-value]
+
+
+@pytest.mark.skip(
+    "Email Validation is only available through Mailgun paid plans, see https://www.mailgun.com/pricing/"
+)
+class AsyncEmailValidationTests(unittest.IsolatedAsyncioTestCase):
+    """Async tests for Mailgun Email Validation API using AsyncClient."""
+
+    async def asyncSetUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: AsyncClient = AsyncClient(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+        self.validation_address_1: str = os.environ["VALIDATION_ADDRESS_1"]
+        self.validation_address_2: str = os.environ["VALIDATION_ADDRESS_2"]
+
+        self.get_params_address_validate: dict[str, str] = {
+            "address": self.validation_address_1,
+            "provider_lookup": "false",
+        }
+
+        self.post_params_address_validate: dict[str, str] = {
+            "provider_lookup": "false",
+        }
+        self.post_address_validate: dict[str, str] = {
+            "address": self.validation_address_1,
+        }
+
+    async def asyncTearDown(self) -> None:
+        await self.client.aclose()
+
+    async def test_post_address_validate(self) -> None:
+        req = await self.client.addressvalidate.create(
+            domain=self.domain,
+            data=self.post_address_validate,
+            filters=self.post_params_address_validate,
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("address", req.json())
+
+    async def test_get_address_validate(self) -> None:
+        req = await self.client.addressvalidate.get(
+            domain=self.domain,
+            filters=self.get_params_address_validate,
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("address", req.json())
+
+    async def test_get_bulk_address_validate_status(self) -> None:
+        params = {"limit": 1}
+        req = await self.client.addressvalidate_bulk.get(domain=self.domain, filters=params)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("jobs", req.json())
+
+
+@pytest.mark.skip(
+    "Inbox Placement is only available through Mailgun Optimize plans, see https://help.mailgun.com/hc/en-us/articles/360034702773-Inbox-Placement"
+)
+class AsyncInboxPlacementTests(unittest.IsolatedAsyncioTestCase):
+    """Async tests for Mailgun Inbox Placement API using AsyncClient."""
+
+    async def asyncSetUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: AsyncClient = AsyncClient(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+
+        self.post_inbox_test: dict[str, str] = {
+            "domain": "domain.com",
+            "from": "user@sending_domain.com",
+            "subject": "testSubject",
+            "html": "<html>HTML version of the body</html>",
+        }
+
+    async def asyncTearDown(self) -> None:
+        await self.client.aclose()
+
+    async def test_post_inbox_tests(self) -> None:
+        req = await self.client.inbox_tests.create(
+            domain=self.domain,
+            data=self.post_inbox_test,
+        )
+
+        self.assertEqual(req.status_code, 201)
+        self.assertIn("tid", req.json())
+
+    async def test_get_inbox_tests(self) -> None:
+        await self.client.inbox_tests.create(domain=self.domain, data=self.post_inbox_test)
+        req = await self.client.inbox_tests.get(domain=self.domain)
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("tests", req.json())
+
+    async def test_get_simple_inbox_tests(self) -> None:
+        test_id = await self.client.inbox_tests.create(
+            domain=self.domain,
+            data=self.post_inbox_test,
+        )
+        req = await self.client.inbox_tests.get(
+            domain=self.domain,
+            test_id=test_id.json()["tid"],
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertEqual(req.json()["tid"], test_id.json()["tid"])
+
+    async def test_delete_inbox_tests(self) -> None:
+        test_id = await self.client.inbox_tests.create(
+            domain=self.domain,
+            data=self.post_inbox_test,
+        )
+
+        req = await self.client.inbox_tests.delete(
+            domain=self.domain,
+            test_id=test_id.json()["tid"],
+        )
+
+        self.assertEqual(req.status_code, 200)
+
+    async def test_get_counters_inbox_tests(self) -> None:
+        test_id = await self.client.inbox_tests.create(
+            domain=self.domain,
+            data=self.post_inbox_test,
+        )
+
+        req = await self.client.inbox_tests.get(
+            domain=self.domain,
+            test_id=test_id.json()["tid"],
+            counters=True,
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("counters", req.json())
+
+    async def test_get_checks_inbox_tests(self) -> None:
+        test_id = await self.client.inbox_tests.create(
+            domain=self.domain,
+            data=self.post_inbox_test,
+        )
+
+        req = await self.client.inbox_tests.get(
+            domain=self.domain,
+            test_id=test_id.json()["tid"],
+            checks=True,
+        )
+
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("checks", req.json())
+
+
+class AsyncMetricsTest(unittest.IsolatedAsyncioTestCase):
+    """Async tests for Mailgun Metrics API using AsyncClient."""
+
+    async def asyncSetUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: AsyncClient = AsyncClient(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+
+        self.invalid_account_metrics_data = {
+            "start": "Sun, 08 Jun 2025 00:00:00 +0000",
+            "end": "Tue, 08 Jul 2025 00:00:00 +0000",
+            "resolution": "century",
+            "duration": "1c",
+            "dimensions": ["time"],
+            "metrics": [
+                "accepted_count",
+                "delivered_count",
+                "clicked_rate",
+                "opened_rate",
+            ],
+            "filter": {
+                "AND": [
+                    {
+                        "attribute": "domain",
+                        "comparator": "=",
+                        "values": [{"label": self.domain, "value": self.domain}],
+                    }
+                ]
+            },
+            "include_subaccounts": True,
+            "include_aggregates": True,
+        }
+        self.account_metrics_data = {
+            "start": "Sun, 08 Jun 2025 00:00:00 +0000",
+            "end": "Tue, 08 Jul 2025 00:00:00 +0000",
+            "resolution": "day",
+            "duration": "1m",
+            "dimensions": ["time"],
+            "metrics": [
+                "accepted_count",
+                "delivered_count",
+                "clicked_rate",
+                "opened_rate",
+            ],
+            "filter": {
+                "AND": [
+                    {
+                        "attribute": "domain",
+                        "comparator": "=",
+                        "values": [{"label": self.domain, "value": self.domain}],
+                    }
+                ]
+            },
+            "include_subaccounts": True,
+            "include_aggregates": True,
+        }
+
+        self.invalid_account_usage_metrics_data = {
+            "start": "Sun, 08 Jun 2025 00:00:00 +0000",
+            "end": "Tue, 08 Jul 2025 00:00:00 +0000",
+            "resolution": "century",
+            "duration": "1c",
+            "dimensions": ["time"],
+            "metrics": [
+                "accessibility_count",
+                "accessibility_failed_count",
+                "domain_blocklist_monitoring_count",
+            ],
+            "include_subaccounts": True,
+            "include_aggregates": True,
+        }
+
+        self.account_usage_metrics_data = {
+            "start": "Sun, 08 Jun 2025 00:00:00 +0000",
+            "end": "Tue, 08 Jul 2025 00:00:00 +0000",
+            "resolution": "day",
+            "duration": "1m",
+            "dimensions": ["time"],
+            "metrics": [
+                "accessibility_count",
+                "accessibility_failed_count",
+                "domain_blocklist_monitoring_count",
+                "email_preview_count",
+                "email_preview_failed_count",
+                "email_validation_bulk_count",
+                "email_validation_count",
+                "email_validation_list_count",
+                "email_validation_mailgun_count",
+                "email_validation_mailjet_count",
+                "email_validation_public_count",
+                "email_validation_single_count",
+                "email_validation_valid_count",
+                "image_validation_count",
+                "image_validation_failed_count",
+                "ip_blocklist_monitoring_count",
+                "link_validation_count",
+                "link_validation_failed_count",
+                "processed_count",
+                "seed_test_count",
+            ],
+            "include_subaccounts": True,
+            "include_aggregates": True,
+        }
+
+    async def asyncTearDown(self) -> None:
+        await self.client.aclose()
+
+    async def test_post_query_get_account_metrics(self) -> None:
+        """Happy Path with valid data."""
+        req = await self.client.analytics_metrics.create(
+            data=self.account_metrics_data,
+        )
+        expected_keys = [
+            "start",
+            "end",
+            "resolution",
+            "duration",
+            "dimensions",
+            "pagination",
+            "items",
+            "aggregates",
+        ]
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 200)
+        [self.assertIn(key, expected_keys) for key in req.json().keys()]  # type: ignore[func-returns-value]
+        self.assertIn("metrics", req.json()["items"][0])
+        self.assertIn("dimensions", req.json()["items"][0])
+        self.assertIn("delivered_count", req.json()["items"][0]["metrics"])
+
+    async def test_post_query_get_account_metrics_invalid_data(self) -> None:
+        """Expected failure with invalid data."""
+        req = await self.client.analytics_metrics.create(
+            data=self.invalid_account_metrics_data,
+        )
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 400)
+        self.assertNotIn("items", req.json())
+        self.assertIn("'resolution' attribute is invalid", req.json()["message"])
+
+    async def test_post_query_get_account_metrics_invalid_url(self) -> None:
+        """Expected failure with an invalid URL https://api.mailgun.net/v1/analytics_metric (without 's' at the end)"""
+        req = await self.client.analytics_metric.create(
+            data=self.account_metrics_data,
+        )
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 404)
+
+    async def test_post_query_get_account_metrics_invalid_url_without_underscore(
+        self,
+    ) -> None:
+        """Expected failure with an invalid URL https://api.mailgun.net/v1/analyticsmetric (without '_' in the middle)"""
+        with self.assertRaises(KeyError) as cm:
+            await self.client.analyticsmetric.create(
+                data=self.account_metrics_data,
+            )
+        self.assertEqual(str(cm.exception), "'analyticsmetric'")
+
+    async def test_post_query_get_account_usage_metrics(self) -> None:
+        req = await self.client.analytics_usage_metrics.create(
+            data=self.account_usage_metrics_data,
+        )
+        expected_keys = [
+            "start",
+            "end",
+            "resolution",
+            "duration",
+            "dimensions",
+            "pagination",
+            "items",
+            "aggregates",
+        ]
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 200)
+        [self.assertIn(key, expected_keys) for key in req.json().keys()]  # type: ignore[func-returns-value]
+        self.assertIn("metrics", req.json()["items"][0])
+        self.assertIn("dimensions", req.json()["items"][0])
+        self.assertIn("email_validation_count", req.json()["items"][0]["metrics"])
+
+    async def test_post_query_get_account_usage_metrics_invalid_data(self) -> None:
+        """Expected failure with invalid data."""
+        req = await self.client.analytics_usage_metrics.create(
+            data=self.invalid_account_usage_metrics_data,
+        )
+        from pprint import pprint
+
+        pprint(req.json())
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 400)
+        self.assertNotIn("items", req.json())
+        self.assertIn("'resolution' attribute is invalid", req.json()["message"])
+
+    async def test_post_query_get_account_usage_metrics_invalid_url(self) -> None:
+        """Expected failure with an invalid URL https://api.mailgun.net/v1/analytics_usage_metric (without 's' at the end)"""
+        req = await self.client.analytics_usage_metric.create(
+            data=self.invalid_account_usage_metrics_data,
+        )
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 404)
+
+    async def test_post_query_get_account_usage_metrics_invalid_url_without_underscore(
+        self,
+    ) -> None:
+        """Expected failure with an invalid URL https://api.mailgun.net/v1/analyticsusagemetrics (without '_' in the middle)"""
+        with self.assertRaises(KeyError) as cm:
+            await self.client.analyticsusagemetrics.create(
+                data=json.dumps(self.invalid_account_usage_metrics_data),
+            )
+        self.assertEqual(str(cm.exception), "'analyticsusagemetrics'")
+
+
+class AsyncLogsTests(unittest.IsolatedAsyncioTestCase):
+    """Async tests for Mailgun Logs API using AsyncClient."""
+
+    async def asyncSetUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: AsyncClient = AsyncClient(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+
+        now = datetime.now()
+        now_formatted = now.strftime("%a, %d %b %Y %H:%M:%S +0000")
+        yesterday = now - timedelta(days=1)
+        yesterday_formatted = yesterday.strftime("%a, %d %b %Y %H:%M:%S +0000")  # noqa: FURB184
+
+        self.invalid_account_logs_data = {
+            "start": yesterday_formatted,
+            "end": now_formatted,
+            "filter": {
+                "AND": [
+                    {
+                        "attribute": "test",
+                        "comparator": "=",
+                        "values": [{"label": "", "value": ""}],
+                    }
+                ]
+            },
+            "include_subaccounts": True,
+            "pagination": {
+                "sort": "timestamp:asc",
+                "limit": 0,
+            },
+        }
+
+        self.account_logs_data = {
+            "start": yesterday_formatted,
+            "end": now_formatted,
+            "filter": {
+                "AND": [
+                    {
+                        "attribute": "domain",
+                        "comparator": "=",
+                        "values": [{"label": self.domain, "value": self.domain}],
+                    }
+                ]
+            },
+            "include_subaccounts": True,
+            "pagination": {
+                "sort": "timestamp:asc",
+                "limit": 50,
+            },
+        }
+
+    async def asyncTearDown(self) -> None:
+        await self.client.aclose()
+
+    async def test_post_query_get_account_logs(self) -> None:
+        """Happy Path with valid data."""
+        req = await self.client.analytics_logs.create(
+            data=self.account_logs_data,
+        )
+
+        expected_keys = [
+            "start",
+            "end",
+            "pagination",
+            "items",
+            "aggregates",
+        ]
+        expected_items_keys = [
+            "@timestamp",
+            "account",
+            "api-key-id",
+            "domain",
+            "envelope",
+            "event",
+            "flags",
+            "id",
+            "log-level",
+            "message",
+            "method",
+            "originating-ip",
+            "recipient",
+            "recipient-domain",
+            "storage",
+            "tags",
+            "user-variables",
+        ]
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 200)
+        [self.assertIn(key, expected_keys) for key in req.json().keys()]  # type: ignore[func-returns-value]
+        self.assertIn("event", req.json()["items"][0])
+        self.assertIn("account", req.json()["items"][0])
+        [self.assertIn(key, expected_items_keys) for key in req.json()["items"][0]]  # type: ignore[func-returns-value]
+
+    async def test_post_query_get_account_logs_invalid_data(self) -> None:
+        """Expected failure with invalid data."""
+        req = await self.client.analytics_logs.create(
+            data=self.invalid_account_logs_data,
+        )
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 400)
+        self.assertNotIn("items", req.json())
+        self.assertIn("'test' is not a valid filter predicate attribute", req.json()["message"])
+
+    async def test_post_query_get_account_logs_invalid_url(self) -> None:
+        """Expected failure with an invalid URL https://api.mailgun.net/v1/analytics_log (without 's' at the end)"""
+        req = await self.client.analytics_log.create(
+            data=self.account_logs_data,
+        )
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 404)
+
+    async def test_post_query_get_account_logs_invalid_url_without_underscore(
+        self,
+    ) -> None:
+        """Expected failure with an invalid URL https://api.mailgun.net/v1/analyticslogs (without '_' in the middle)"""
+        with self.assertRaises(KeyError) as cm:
+            await self.client.analyticslogs.create(
+                data=self.account_logs_data,
+            )
+        self.assertEqual(str(cm.exception), "'analyticslogs'")
+
+
+class AsyncTagsNewTests(unittest.IsolatedAsyncioTestCase):
+    """Async tests for Mailgun new Tags API using AsyncClient."""
+
+    async def asyncSetUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: AsyncClient = AsyncClient(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+
+        self.account_tags_data = {
+            "pagination": {"sort": "lastseen:desc", "limit": 10},
+            "include_subaccounts": True,
+        }
+
+        self.account_tag_info = '{"tag": "Python test", "description": "updated tag description"}'
+        self.account_tag_invalid_info = '{"tag": "test", "description": "updated tag description"}'
+
+    async def asyncTearDown(self) -> None:
+        await self.client.aclose()
+
+    @pytest.mark.order(2)
+    async def test_update_account_tag(self) -> None:
+        """Test to update account tag: Happy Path with valid data."""
+
+        req = await self.client.analytics_tags.put(
+            data=self.account_tag_info,
+        )
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+        self.assertIn("Tag updated", req.json()["message"])
+
+    @pytest.mark.order(2)
+    async def test_update_account_invalid_tag(self) -> None:
+        """Test to update account nonexistent tag: Unhappy Path with invalid data."""
+
+        req = await self.client.analytics_tags.put(
+            data=self.account_tag_invalid_info,
+        )
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 404)
+        self.assertIn("message", req.json())
+        self.assertIn("Tag not found", req.json()["message"])
+
+    @pytest.mark.order(1)
+    async def test_post_query_get_account_tags(self) -> None:
+        """Test to post query to list account tags or search for single tag: Happy Path with valid data."""
+        req = await self.client.analytics_tags.create(
+            data=self.account_tags_data,
+        )
+
+        expected_keys = [
+            "pagination",
+            "items",
+        ]
+        expected_pagination_keys = [
+            "sort",
+            "limit",
+        ]
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 200)
+        [self.assertIn(key, expected_keys) for key in req.json().keys()]  # type: ignore[func-returns-value]
+        [self.assertIn(key, expected_pagination_keys) for key in req.json()["pagination"]]  # type: ignore[func-returns-value]
+
+    @pytest.mark.order(1)
+    async def test_post_query_get_account_tags_with_incorrect_url(self) -> None:
+        """Test to post query to list account tags or search for single tag: Wrong Path with an invalid URL."""
+        req = await self.client.analytics_tag.create(
+            data=self.account_tags_data,
+        )
+
+        expected_keys = ["error"]
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 404)
+        [self.assertIn(key, expected_keys) for key in req.json().keys()]  # type: ignore[func-returns-value]
+
+    @pytest.mark.order(4)
+    async def test_delete_account_tag(self) -> None:
+        """Test to delete account tag: Happy Path with valid data."""
+
+        req = await self.client.analytics_tags.delete(
+            data=self.account_tag_info,
+        )
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 200)
+        self.assertIn("message", req.json())
+        self.assertIn("Tag deleted", req.json()["message"])
+
+    @pytest.mark.order(4)
+    async def test_delete_account_nonexistent_tag(self) -> None:
+        """Test to delete account nonexistent tag: Unhappy Path with invalid data."""
+
+        req = await self.client.analytics_tags.delete(
+            data=self.account_tag_invalid_info,
+        )
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 404)
+        self.assertIn("message", req.json())
+        self.assertIn("Tag not found", req.json()["message"])
+
+    @pytest.mark.order(4)
+    async def test_delete_account_tag_with_invalid_url(self) -> None:
+        """Test to delete account tag: Wrong Path with invalid URL."""
+
+        req = await self.client.analytics_tag.delete(
+            data=self.account_tag_invalid_info,
+        )
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 404)
+        self.assertIn("error", req.json())
+        self.assertIn("not found", req.json()["error"])
+
+    @pytest.mark.order(3)
+    async def test_get_account_tag_limit_information(self) -> None:
+        """Test to get account tag limit information: Happy Path with valid data."""
+        req = await self.client.analytics_tags_limits.get()
+
+        expected_keys = ["limit", "count", "limit_reached"]
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 200)
+        [self.assertIn(key, expected_keys) for key in req.json().keys()]  # type: ignore[func-returns-value]
+
+    @pytest.mark.order(3)
+    async def test_get_account_tag_incorrect_url_without_limits_part(self) -> None:
+        """Test to get account tag limit information without the limits URL part: Wrong Path with an invalid URL."""
+        req = await self.client.analytics_tags.get()
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 404)
+        self.assertIn("error", req.json())
+        self.assertIn("not found", req.json()["error"])
+
+
+class AsyncUsersTests(unittest.IsolatedAsyncioTestCase):
+    """Async tests for Mailgun Users API using AsyncClient."""
+
+    async def asyncSetUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.secret: tuple[str, str] = (
+            "api",
+            os.environ["SECRET"],
+        )
+        self.client: AsyncClient = AsyncClient(auth=self.auth)
+        self.client_with_secret_key: AsyncClient = AsyncClient(auth=self.secret)
+        self.domain: str = os.environ["DOMAIN"]
+        self.mailgun_email = os.environ["MAILGUN_EMAIL"]
+
+    async def asyncTearDown(self) -> None:
+        await self.client.aclose()
+
+    async def test_get_users(self) -> None:
+        """Test to get account's users: happy path."""
+        query = {"role": "admin", "limit": "0", "skip": "0"}
+        req = await self.client.users.get(filters=query)
+
+        expected_keys = [
+            "total",
+            "users",
+        ]
+
+        expected_users_keys = [
+            "account_id",
+            "activated",
+            "auth",
+            "email",
+            "email_details",
+            "github_user_id",
+            "id",
+            "is_disabled",
+            "is_master",
+            "metadata",
+            "migration_status",
+            "name",
+            "opened_ip",
+            "password_updated_at",
+            "preferences",
+            "role",
+            "salesforce_user_id",
+            "tfa_active",
+            "tfa_created_at",
+            "tfa_enabled",
+        ]
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 200)
+        [self.assertIn(key, expected_keys) for key in req.json()]  # type: ignore[func-returns-value]
+        [self.assertIn(key, expected_users_keys) for key in req.json()["users"][0]]  # type: ignore[func-returns-value]
+
+    async def test_get_user_invalid_url(self) -> None:
+        """Test to get account's users details: expected failure with invalid URL."""
+        query = {"role": "admin", "limit": "0", "skip": "0"}
+
+        with self.assertRaises(KeyError) as cm:
+            await self.client.user.get(filters=query)
+
+    @pytest.mark.xfail
+    async def test_own_user_details(self) -> None:
+        req = await self.client_with_secret_key.users.get(user_id="me")
+
+        expected_users_keys = [
+            "account_id",
+            "activated",
+            "auth",
+            "email",
+            "email_details",
+            "github_user_id",
+            "id",
+            "is_disabled",
+            "is_master",
+            "metadata",
+            "migration_status",
+            "name",
+            "opened_ip",
+            "password_updated_at",
+            "preferences",
+            "role",
+            "salesforce_user_id",
+            "tfa_active",
+            "tfa_created_at",
+            "tfa_enabled",
+        ]
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 200)
+        [self.assertIn(key, expected_users_keys) for key in req.json()]  # type: ignore[func-returns-value]
+
+    async def test_get_user_details(self) -> None:
+        """Test to get user details: happy path."""
+        """
+        GET /v5/users/{user_id}
+        :return:
+        """
+        query = {"role": "admin", "limit": "0", "skip": "0"}
+        req1 = await self.client.users.get(filters=query)
+        users = req1.json()["users"]
+
+        for user in users:
+            if self.mailgun_email == user["email"]:
+                req2 = await self.client.users.get(user_id=user["id"])
+
+                expected_users_keys = [
+                    "account_id",
+                    "activated",
+                    "auth",
+                    "email",
+                    "email_details",
+                    "github_user_id",
+                    "id",
+                    "is_disabled",
+                    "is_master",
+                    "metadata",
+                    "migration_status",
+                    "name",
+                    "opened_ip",
+                    "password_updated_at",
+                    "preferences",
+                    "role",
+                    "salesforce_user_id",
+                    "tfa_active",
+                    "tfa_created_at",
+                    "tfa_enabled",
+                ]
+
+                self.assertIsInstance(req2.json(), dict)
+                self.assertEqual(req2.status_code, 200)
+                [self.assertIn(key, expected_users_keys) for key in req2.json()]  # type: ignore[func-returns-value]
+            break
+
+    async def test_get_invalid_user_details(self) -> None:
+        """Test to get user details: expected failure with invalid user_id."""
+        query = {"role": "admin", "limit": "0", "skip": "0"}
+        req1 = await self.client.users.get(filters=query)
+        users = req1.json()["users"]
+
+        for user in users:
+            if self.mailgun_email == user["email"]:
+                req2 = await self.client.users.get(user_id="xxxxxxx")
+
+                self.assertIsInstance(req2.json(), dict)
+                self.assertEqual(req2.status_code, 404)
+
+
+class BounceClassificationTests(unittest.TestCase):
+    """Tests for Mailgun Bounce Classification API, https://api.mailgun.net/v2/bounce-classification/metrics.
+
+    This class provides setup functionality for tests involving the
+    functionality with authentication and client initialization handled
+    in `setUp`. Each test in this suite operates with the configured Mailgun client
+    instance to simulate API interactions.
+
+    """
+
+    def setUp(self) -> None:
+        self.auth: tuple[str, str] = (
+            "api",
+            os.environ["APIKEY"],
+        )
+        self.client: Client = Client(auth=self.auth)
+        self.domain: str = os.environ["DOMAIN"]
+
+        now = datetime.now()
+        now_formatted = now.strftime("%a, %d %b %Y %H:%M:%S +0000")
+        yesterday = now - timedelta(days=1)
+        yesterday_formatted = yesterday.strftime("%a, %d %b %Y %H:%M:%S +0000")  # noqa: FURB184
+
+        self.payload = {
+            "start": yesterday_formatted,
+            "end": now_formatted,
+            "resolution": "day",
+            "duration": "24h0m0s",
+            "dimensions": ["entity-name", "domain.name"],
+            "metrics": [
+                "critical_bounce_count",
+                "non_critical_bounce_count",
+                "critical_delay_count",
+                "non_critical_delay_count",
+                "delivered_smtp_count",
+                "classified_failures_count",
+                "critical_bounce_rate",
+                "non_critical_bounce_rate",
+                "critical_delay_rate",
+                "non_critical_delay_rate",
+            ],
+            "filter": {
+                "AND": [
+                    {
+                        "attribute": "domain.name",
+                        "comparator": "=",
+                        "values": [{"value": self.domain}],
+                    }
+                ]
+            },
+            "include_subaccounts": True,
+            "pagination": {"sort": "entity-name:asc", "limit": 10},
+        }
+        self.payload_without_dimensions = {
+            "start": yesterday_formatted,
+            "end": now_formatted,
+            "metrics": [
+                "critical_bounce_count",
+            ],
+            "pagination": {"sort": "entity-name:asc", "limit": 10},
+        }
+        self.payload_with_old_dates = {
+            "start": "Wed, 12 Nov 2000 23:00:00 UTC",
+            "end": "Thu, 13 Nov 2000 23:00:00 UTC",
+            "dimensions": ["entity-name", "domain.name"],
+            "metrics": [
+                "critical_bounce_count",
+            ],
+            "pagination": {"sort": "entity-name:asc", "limit": 10},
+        }
+        self.empty_payload: dict[str, str] = {}
+
+    def test_post_list_statistic(self) -> None:
+        """Test to post query to list statistic: Happy Path with valid data."""
+        req = self.client.bounceclassification_metrics.create(data=self.payload)
+
+        expected_keys: list[str] = [
+            "start",
+            "end",
+            "resolution",
+            "duration",
+            "dimensions",
+            "pagination",
+            "items",
+        ]
+        expected_dimensions_elements: list[str] = [
+            "entity-name",
+            "domain.name",
+        ]
+        expected_pagination_keys: list[str] = [
+            "sort",
+            "skip",
+            "limit",
+            "total",
+        ]
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 200)
+        [self.assertIn(key, expected_keys) for key in req.json().keys()]  # type: ignore[func-returns-value]
+        [self.assertIn(key, expected_dimensions_elements) for key in req.json()["dimensions"]]  # type: ignore[func-returns-value]
+        [self.assertIn(key, expected_pagination_keys) for key in req.json()["pagination"]]  # type: ignore[func-returns-value]
+
+    def test_post_list_statistic_without_dimensions(self) -> None:
+        """Test to post query to list statistic: Wrong Path with invalid data."""
+        req = self.client.bounceclassification_metrics.create(data=self.payload_without_dimensions)
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 400)
+        [self.assertIn(key, "message") for key in req.json().keys()]  # type: ignore[func-returns-value]
+        self.assertIn("sort should be either one of metrics or dimensions", req.json()["message"])
+
+    def test_post_list_statistic_with_old_dates(self) -> None:
+        """Test to post query to list statistic: Wrong Path with invalid data."""
+        req = self.client.bounceclassification_metrics.create(data=self.payload_with_old_dates)
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 400)
+        [self.assertIn(key, "message") for key in req.json().keys()]  # type: ignore[func-returns-value]
+        self.assertIn("is out of permitted log retention", req.json()["message"])
+
+    def test_post_list_statistic_with_empty_payload(self) -> None:
+        """Test to post query to list statistic: Wrong Path with invalid data."""
+        req = self.client.bounceclassification_metrics.create(data=self.empty_payload)
+
+        self.assertIsInstance(req.json(), dict)
+        self.assertEqual(req.status_code, 400)
+        [self.assertIn(key, "message") for key in req.json().keys()]  # type: ignore[func-returns-value]
+        self.assertIn("is out of permitted log retention", req.json()["message"])
+
+
+if __name__ == "__main__":
+    unittest.main()
