@@ -1,0 +1,79 @@
+[project]
+name = "yarobot"
+version = "0.5.2"
+authors = [{ name = "ogre2007", email = "oogre@vk.com" }]
+
+requires-python = ">=3.10"
+description = "YARA generator inspired by yarGen"
+readme = "README.md"
+license = "GPL-3.0-only"
+dependencies = [
+    "flask>=3.1.2",
+    "click>=8.3.0",
+    "lxml>=4.9.0",
+    "orjson>=3.11",
+    "stringzz>=0.4.3",
+    #"stringzz @ file:///D:\\dev\\stringzz"
+]
+
+# Example using hatchling
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/yarobot"] # Ensure your package directory is included
+include = [
+    "src/yarobot/3dparty/*", # Example: Include all JSON files in a data subdirectory
+    "src/yarobot/templates/*", # Example: Include a templates directory
+]
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.scripts]
+app = "yarobot.app:main"
+yarobot = "yarobot.generate:generate"
+
+[project.urls]
+Homepage = "https://github.com/ogre2007/yarobot"
+Issues = "https://github.com/ogre2007/issues"
+
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--verbose",
+    "--strict-markers",
+    "--strict-config",
+    "--disable-warnings",
+    "--tb=short",
+    "--import-mode=importlib",
+]
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "http: HTTP service tests",
+]
+
+
+pythonpath = ["."]
+
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.2",
+    "pytest-cov>=7.0.0",
+    "lxml>=4.9.0",
+    "pytest-datadir>=1.8.0",
+    "yara-python>=4.5.4",
+    "orjson>=3.11",
+    "click>=8.3.0",
+    "flask>=3.1.2",
+    "Werkzeug>=2.3.0",
+]
