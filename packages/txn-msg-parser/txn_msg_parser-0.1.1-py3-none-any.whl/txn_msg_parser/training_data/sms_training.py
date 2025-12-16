@@ -1,0 +1,226 @@
+sms_training_data = [
+    {
+        "input": {
+            "sender": "PPOOJA-S(smsft)",
+            "text": "Payment of Rs. 243 with order no. 67891 has been done successfully at Green Garden Cafe.Remaining balance: Rs.2134.00 - Petpooja",
+            "date": "2025-11-19 15:14:09",
+            "type": "sms",
+        },
+        "output": {
+            "account": "PPOOJA",
+            "amount": 24300,
+            "txn_type": "debit",
+            "payee": "Green Garden Cafe",
+            "payer": None,
+            "category": "Food",
+        },
+    },
+    {
+        "input": {
+            "sender": "PPOOJA-S(smsft)",
+            "text": "Payment of Rs. 185 with order no. 67823 has been done successfully at Green Garden Cafe.Remaining balance: Rs.2377.00 - Petpooja",
+            "date": "2025-11-18 19:52:34",
+            "type": "sms",
+        },
+        "output": {
+            "account": "PPOOJA",
+            "amount": 18500,
+            "txn_type": "debit",
+            "payee": "Green Garden Cafe",
+            "payer": None,
+            "category": "Food",
+        },
+    },
+    {
+        "input": {
+            "sender": "HDFCBK-S(smsft)",
+            "text": "Sent Rs.165.00\nFrom HDFC Bank A/C *8945\nTo Priya\nOn 17/11/25 \nRef 114298765432\nNot You?\nCall 18002586161/SMS BLOCK UPI to 7308080808",
+            "date": "2025-11-17 17:49:11",
+            "type": "sms",
+        },
+        "output": {
+            "account": "HDFC",
+            "amount": 16500,
+            "txn_type": "debit",
+            "payee": "Priya",
+            "payer": None,
+            "category": "Transfer",
+        },
+    },
+    {
+        "input": {
+            "sender": "HDFCBK-S(smsft)",
+            "text": "Credit Alert!\nRs.312.00 credited to HDFC Bank A/c XX8945 on 17-11-25 from VPA sample-user-7@okaxis (UPI 532189876543)",
+            "date": "2025-11-17 7:52:28",
+            "type": "sms",
+        },
+        "output": {
+            "account": "HDFC",
+            "amount": 31200,
+            "txn_type": "credit",
+            "payee": None,
+            "payer": "sample-user-7@okaxis",
+            "category": "Transfer",
+        },
+    },
+    {
+        "input": {
+            "sender": "SBIUPI-S(smsft)",
+            "text": "Dear UPI user A/C X4567 debited by 150.0 on date 16Nov25 trf to SHARMA ANJALI Refno 532067823456 If not u? call-1800111109 for other services-18001234-SBI",
+            "date": "2025-11-16 23:25:18",
+            "type": "sms",
+        },
+        "output": {
+            "account": "SBI",
+            "amount": 15000,
+            "txn_type": "debit",
+            "payee": "SHARMA ANJALI",
+            "payer": None,
+            "category": "Transfer",
+        },
+    },
+    {
+        "input": {
+            "sender": "CBSSBI-S(smsft)",
+            "text": "Dear Customer, Your A/C XXXXX234567 has a debit by NACH of Rs 8,456.00 on 03/11/25. Avl Bal Rs 112,345.78. Download YONO - SBI",
+            "date": "2025-11-03 10:59:37",
+            "type": "sms",
+        },
+        "output": {
+            "account": "SBI",
+            "amount": 845600,
+            "txn_type": "debit",
+            "payee": "NACH",
+            "payer": None,
+            "category": "EMI",
+        },
+    },
+    {
+        "input": {
+            "sender": "SBIPSG-S(smsft)",
+            "text": "Dear Customer, INR 421.00 credited to your A/c No XX4567 on 30/10/2025 through NEFT with UTR HSBCN30398765432 by TECH SOLUTIONS PVT LTD, INFO: BATCHID:0023 /ACC/NEFT//IN-HSBC-021-445678-051 SALARY PAYMENT-SBI",
+            "date": "2025-10-30 17:34:24",
+            "type": "sms",
+        },
+        "output": {
+            "account": "SBI",
+            "amount": 42100,
+            "txn_type": "credit",
+            "payee": None,
+            "payer": "TECH SOLUTIONS PVT LTD",
+            "category": "Salary",
+        },
+    },
+    {
+        "input": {
+            "sender": "AX-ATMSBI-S(smsft_fi)",
+            "text": "Dear SBI Customer, Rs.5000 withdrawn at HDF ATM S1WXYZ89 from A/cX4567 on 05Aug25 Transaction Number 521718934567. Available Balance Rs.107654.32. If not withdrawn by you, forward this SMS to 7400165218 / call 1800111109 or 09449112211 to block your card. Call 18001234 if cash not received.",
+            "date": "2025-08-05 8:41:29",
+            "type": "sms",
+        },
+        "output": {
+            "account": "SBI",
+            "amount": 500000,
+            "txn_type": "debit",
+            "payee": "ATM Withdrawal",
+            "payer": None,
+            "category": "ATM",
+        },
+    },
+    {
+        "input": {
+            "sender": "ICICIT-S(smsft)",
+            "text": "Dear Customer, Acct XX1234 is credited with Rs 178.00 on 18-Oct-25 from MEHTA RAJESH. UPI:529177654321-ICICI Bank.",
+            "date": "2025-10-18 13:06:05",
+            "type": "sms",
+        },
+        "output": {
+            "account": "ICICI",
+            "amount": 17800,
+            "txn_type": "credit",
+            "payee": None,
+            "payer": "MEHTA RAJESH",
+            "category": "Transfer",
+        },
+    },
+    {
+        "input": {
+            "sender": "ICICIT-S(smsft_fi)",
+            "text": "ICICI Bank Acct XX1234 debited for Rs 6000.00 on 29-Sep-25; KUMAR PRADEEP credited. UPI:527308765432. Call 18002662 for dispute. SMS BLOCK 1234 to 9215676766.",
+            "date": "2025-09-29 17:51:16",
+            "type": "sms",
+        },
+        "output": {
+            "account": "ICICI",
+            "amount": 600000,
+            "txn_type": "debit",
+            "payee": "KUMAR PRADEEP",
+            "payer": None,
+            "category": "Transfer",
+        },
+    },
+    {
+        "input": {
+            "sender": "OneCrd-S(smsft)",
+            "text": "Your bill of Rs. 1,234.00 at Bharti Airtel Ltd has been cleared with your Federal One Credit Card ending in XX5678. To dispute this payment, click: m.1crd.in/OneCrd/shcut",
+            "date": "45979.4890393519",
+            "type": "sms",
+        },
+        "output": {
+            "account": "OneCard",
+            "amount": 123400,
+            "txn_type": "debit",
+            "payee": "Bharti Airtel Ltd",
+            "payer": None,
+            "category": "Bills",
+        },
+    },
+    {
+        "input": {
+            "sender": "OneCrd-S(smsft)",
+            "text": "Tasty choice! You've spent Rs. 427.89 at Zomato Limited with your Federal One Credit Card ending in XX5678. Reward points served on the side. To dispute this payment, click: m.1crd.in/OneCrd/shcut",
+            "date": "45978.833275463",
+            "type": "sms",
+        },
+        "output": {
+            "account": "OneCard",
+            "amount": 42789,
+            "txn_type": "debit",
+            "payee": "Zomato Limited",
+            "payer": None,
+            "category": "Food",
+        },
+    },
+    {
+        "input": {
+            "sender": "OneCrd-S(smsft)",
+            "text": "Fresh picks! You've spent Rs. 512.00 at Blinkit with your Federal One Credit Card ending in XX5678. Reward points are now in your basket. To dispute this payment, click: m.1crd.in/OneCrd/shcut",
+            "date": "45978.4354282407",
+            "type": "sms",
+        },
+        "output": {
+            "account": "OneCard",
+            "amount": 51200,
+            "txn_type": "debit",
+            "payee": "Blinkit",
+            "payer": None,
+            "category": "Groceries",
+        },
+    },
+    {
+        "input": {
+            "sender": "OneCrd-S(smsft)",
+            "text": "Hola! that was sweet. We have received payment against your OneCard for Rs. 52,789.00 on 31 Oct 2025",
+            "date": "45961.740474537",
+            "type": "sms",
+        },
+        "output": {
+            "account": "OneCard",
+            "amount": 5278900,
+            "txn_type": "credit",
+            "payee": None,
+            "payer": "Payment Received",
+            "category": "Payment",
+        },
+    },
+]

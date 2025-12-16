@@ -1,0 +1,169 @@
+Metadata-Version: 2.4
+Name: txn-msg-parser
+Version: 0.1.1
+Summary: A Python package for parsing transaction SMS messages into structured transaction dictionaries
+Author-email: Vandan Rogheliya <vandan.rogheliya@gmail.com>
+License-Expression: MIT
+Project-URL: Homepage, https://github.com/VandanRogheliya/txn_msg_parser
+Project-URL: Repository, https://github.com/VandanRogheliya/txn_msg_parser
+Project-URL: Issues, https://github.com/VandanRogheliya/txn_msg_parser/issues
+Keywords: transaction,sms,parser,banking
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: ollama>=0.1.0
+Provides-Extra: dev
+Requires-Dist: build>=1.0.0; extra == "dev"
+
+# Transaction SMS Parser
+
+A Python package for parsing transaction SMS messages into structured transaction dictionaries using AI.
+
+## Features
+
+- Parse transaction SMS messages from various banks
+- Extract transaction details like amount, type, payee/payer, category
+- Configurable accounts and categories
+- Uses AI (Ollama) for intelligent parsing
+
+## Installation
+
+### From PyPI (once published)
+
+```bash
+pip install txn-msg-parser
+```
+
+### From source
+
+```bash
+git clone https://github.com/yourusername/txn_msg_parser.git
+cd txn_msg_parser
+pip install -e .
+```
+
+## Requirements
+
+- Python 3.8+
+- Ollama installed and running locally (see [Ollama installation](https://ollama.ai/download))
+- Ollama model: `deepseek-r1:8b` (or configure your own)
+
+The package automatically installs the Python `ollama` library as a dependency.
+
+## Usage
+
+### Basic Example
+
+```python
+from txn_msg_parser import TextParser, TxnText
+
+# Initialize the parser with your bank accounts
+accounts = ["HDFCBK", "SBIUPI"]
+parser = TextParser(accounts=accounts)
+
+# Create a transaction text object
+txn_text = TxnText()
+txn_text.sender = "HDFCBK-S(smsft)"
+txn_text.text = "Sent Rs.437.00 From HDFC Bank A/C *5232 To BLINKIT COMMERCE PRIVATE LIMITED On 21/10/25"
+txn_text.date = "2025-10-21 21:08:15"
+txn_text.type = "sms"
+txn_text.id = "unique-id"
+
+# Parse the transaction
+txn = parser.parse_text(txn_text)
+
+# Access transaction details
+print(f"Account: {txn.account}")
+print(f"Amount: {txn.amount}")  # Amount in paise (multiplied by 100)
+print(f"Type: {txn.txn_type}")  # 'debit' or 'credit'
+print(f"Payee: {txn.payee}")
+print(f"Category: {txn.category}")
+```
+
+### Batch Processing
+
+```python
+from txn_msg_parser import TextParser, TxnText
+
+accounts = ["HDFCBK", "SBIUPI"]
+parser = TextParser(accounts=accounts)
+
+# Parse multiple messages
+texts = [txn_text1, txn_text2, txn_text3]
+transactions = parser.parse_texts(texts)
+
+for txn in transactions:
+    print(f"{txn.date}: {txn.amount} - {txn.category}")
+```
+
+### Custom Categories
+
+```python
+from txn_msg_parser import TextParser
+
+custom_categories = ["Salary", "Rent", "Groceries", "Entertainment", "Utilities"]
+accounts = ["HDFCBK", "SBIUPI"]
+
+parser = TextParser(accounts=accounts, categories=custom_categories)
+```
+
+## Configuration
+
+### Default Model
+
+The package uses `deepseek-r1:8b` by default. You can change this:
+
+```python
+parser = TextParser(accounts=accounts, model="your-ollama-local-model")
+```
+
+### Default Categories
+
+Default categories include: `["Salary", "EMI", "Food", "Travel", "Bills", "Shopping"]`
+
+## Output Format
+
+The `Txn` object contains:
+
+- `account`: Bank account identifier
+- `amount`: Transaction amount in paise (cents)
+- `txn_type`: "debit" or "credit"
+- `payee`: Recipient of payment (for debit transactions)
+- `payer`: Sender of payment (for credit transactions)
+- `category`: Transaction category
+- `full_text`: Original SMS text
+- `date`: Transaction date
+- `id`: Unique transaction identifier
+
+## Development
+
+### Setup Development Environment
+
+```bash
+git clone https://github.com/yourusername/txn_msg_parser.git
+cd txn_msg_parser
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -e .
+```
+
+### Running Tests
+
+```bash
+python test.py
+```
+
+## License
+
+MIT License
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
