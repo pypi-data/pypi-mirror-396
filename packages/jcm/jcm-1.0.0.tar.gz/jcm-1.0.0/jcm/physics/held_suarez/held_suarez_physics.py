@@ -1,0 +1,103 @@
+import jax.numpy as jnp
+from typing import Tuple
+from dinosaur.scales import units
+from dinosaur import coordinate_systems
+from jcm.utils import get_coords
+from jcm.geometry import Geometry
+from jcm.forcing import ForcingData
+from jcm.physics_interface import PhysicsState, PhysicsTendency, Physics
+from jcm.model import PHYSICS_SPECS
+from jcm.date import DateData
+
+Quantity = units.Quantity
+
+class HeldSuarezPhysics(Physics):
+    def __init__(self,
+        coords: coordinate_systems.CoordinateSystem = get_coords(),
+        sigma_b: Quantity = 0.7,
+        kf: Quantity = 1 / (1 * units.day),
+        ka: Quantity = 1 / (40 * units.day),
+        ks: Quantity = 1 / (4 * units.day),
+        minT: Quantity = 200 * units.degK,
+        maxT: Quantity = 315 * units.degK,
+        dTy: Quantity = 60 * units.degK,
+        dThz: Quantity = 10 * units.degK,
+    ) -> None:
+        """Initialize Held-Suarez.
+
+        Args:
+            coords: horizontal and vertical discretization
+            sigma_b: sigma level of effective planetary boundary layer.
+            kf: coefficient of friction for Rayleigh drag.
+            ka: coefficient of thermal relaxation in upper atmosphere.
+            ks: coefficient of thermal relaxation at earth surface on the equator.
+            minT: lower temperature bound of radiative equilibrium.
+            maxT: upper temperature bound of radiative equilibrium.
+            dTy: horizontal temperature variation of radiative equilibrium.
+            dThz: vertical temperature variation of radiative equilibrium.
+
+        """
+        self.coords = coords
+        self.sigma_b = sigma_b
+        self.kf = PHYSICS_SPECS.nondimensionalize(kf)
+        self.ka = PHYSICS_SPECS.nondimensionalize(ka)
+        self.ks = PHYSICS_SPECS.nondimensionalize(ks)
+        self.minT = PHYSICS_SPECS.nondimensionalize(minT)
+        self.maxT = PHYSICS_SPECS.nondimensionalize(maxT)
+        self.dTy = PHYSICS_SPECS.nondimensionalize(dTy)
+        self.dThz = PHYSICS_SPECS.nondimensionalize(dThz)
+        # Coordinates
+        self.sigma = self.coords.vertical.centers
+        self.lat = self.coords.horizontal.latitudes
+
+    def equilibrium_temperature(self, normalized_surface_pressure):
+        p_over_p0 = (
+            self.sigma[:, jnp.newaxis, jnp.newaxis] * normalized_surface_pressure
+        )
+        temperature = p_over_p0**PHYSICS_SPECS.kappa * (
+            self.maxT
+            - self.dTy * jnp.sin(self.lat) ** 2
+            - self.dThz * jnp.log(p_over_p0) * jnp.cos(self.lat) ** 2
+        )
+        return jnp.maximum(self.minT, temperature)
+
+    def kv(self):
+        kv_coeff = self.kf * (
+            jnp.maximum(0, (self.sigma - self.sigma_b) / (1 - self.sigma_b))
+        )
+        return kv_coeff[:, jnp.newaxis, jnp.newaxis]
+
+    def kt(self):
+        cutoff = jnp.maximum(0, (self.sigma - self.sigma_b) / (1 - self.sigma_b))
+        return self.ka + (self.ks - self.ka) * (
+            cutoff[:, jnp.newaxis, jnp.newaxis] * jnp.cos(self.lat) ** 4
+    )
+
+    def compute_tendencies(
+        self,
+        state: PhysicsState,
+        forcing: ForcingData,
+        geometry: Geometry,
+        date: DateData,
+    ) -> Tuple[PhysicsTendency, None]:
+        """Compute the physical tendencies given the current state and data structs. Tendencies are computed as a Held-Suarez forcing.
+
+        Args:
+            state: Current state variables
+            forcing: Forcing data (unused)
+            geometry: Geometry data (unused)
+            date: Date data (unused)
+
+        Returns:
+            Physical tendencies in PhysicsTendency format
+            Object containing physics data (unused)
+
+        """
+        Teq = self.equilibrium_temperature(state.normalized_surface_pressure)
+        d_temperature = -self.kt() * (state.temperature - Teq)
+
+        d_v_wind = -self.kv() * state.v_wind
+        d_u_wind = -self.kv() * state.u_wind
+        d_spec_humidity = jnp.zeros_like(state.temperature) # just keep the same specific humidity?
+
+        return PhysicsTendency(d_u_wind, d_v_wind, d_temperature, d_spec_humidity), None
