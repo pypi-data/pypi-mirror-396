@@ -1,0 +1,281 @@
+Metadata-Version: 2.4
+Name: sarhash
+Version: 0.1.0
+Classifier: Programming Language :: Rust
+Classifier: Programming Language :: Python :: Implementation :: CPython
+Classifier: Programming Language :: Python :: Implementation :: PyPy
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Topic :: Security :: Cryptography
+Requires-Dist: mypy>=1.0 ; extra == 'dev'
+Requires-Dist: pytest>=7.0 ; extra == 'dev'
+Requires-Dist: black>=23.0 ; extra == 'dev'
+Requires-Dist: ruff>=0.1.0 ; extra == 'dev'
+Provides-Extra: dev
+License-File: LICENSE
+Summary: Fast password hashing library powered by Rust
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown; charset=UTF-8; variant=GFM
+Project-URL: Homepage, https://github.com/3sarojbhattarai/sarhash
+Project-URL: Repository, https://github.com/3sarojbhattarai/sarhash
+
+# Sarhash
+
+Fast and secure password hashing library powered by Rust with Python bindings.
+
+## Features
+
+- 🚀 **Blazing Fast**: Rust-powered performance (via `sarhash-core`)
+- 🔒 **Secure**: Industry-standard strength
+- 🎯 **Simple API**: Easy-to-use Python interface
+- 💪 **Type Safe**: Complete type hints with `.pyi` stubs
+- 📊 **Password Strength**: Built-in strength checking
+- 🔄 **Batch Operations**: Efficient multi-password hashing
+
+## Installation
+
+### Prerequisites
+
+- Python 3.11+
+- Rust toolchain
+- uv (recommended) or pip
+
+### Step-by-Step Setup
+
+#### 1. Install Rust
+
+Sarhash uses Rust for its core implementation. Install Rust using rustup:
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+
+After installation, restart your terminal and verify:
+
+```bash
+rustc --version
+cargo --version
+```
+
+#### 2. Install uv
+
+uv is a fast Python package installer and resolver.
+
+**macOS/Linux:**
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+**Or using pip:**
+```bash
+pip install uv
+```
+
+#### 3. Setup Project
+
+```bash
+# Create virtual environment
+uv venv --python 3.11
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install maturin
+uv pip install maturin
+
+# Build and install
+maturin develop --release
+```
+
+## Quick Start
+```python
+import sarhash
+
+# Hash a password
+hashed = sarhash.hash_password("my_secure_password")
+
+# Verify a password
+is_valid = sarhash.verify_password("my_secure_password", hashed)
+print(is_valid)  # True
+```
+
+## Tutorial
+
+### Basic Usage
+
+#### Hashing a Password
+
+Hash a password using the default strong algorithm:
+
+```python
+import sarhash
+
+password = "user_password_123"
+hashed = sarhash.hash_password(password)
+
+print(hashed)
+# Output: $argon2id$v=19$m=19456,t=2,p=1$...
+```
+
+#### Verifying a Password
+
+To verify a password against a stored hash:
+
+```python
+import sarhash
+
+# Stored hash from database
+stored_hash = "$argon2id$v=19$m=19456,t=2,p=1$..."
+
+# User input
+user_input = "user_password_123"
+
+# Verify
+if sarhash.verify_password(user_input, stored_hash):
+    print("Password is correct!")
+else:
+    print("Invalid password")
+```
+
+### Password Strength Checking
+
+Check password strength before hashing:
+
+```python
+import sarhash
+
+password = "MyP@ssw0rd2024"
+strength = sarhash.check_password_strength(password)
+
+print(f"Score: {strength.score}/4")
+print(f"Is strong: {strength.is_strong}")
+print(f"Feedback: {strength.feedback}")
+```
+
+### Batch Operations
+
+Hash multiple passwords efficiently:
+
+```python
+import sarhash
+
+passwords = ["user1_pass", "user2_pass", "user3_pass"]
+hashes = sarhash.hash_multiple(passwords)
+
+for pwd, hash in zip(passwords, hashes):
+    print(f"{pwd} -> {hash[:50]}...")
+```
+
+## API Reference
+
+### Core Functions
+
+#### `hash_password(password: str) -> str`
+
+Hash a password using the default algorithm.
+
+**Parameters:**
+- `password` (str): The password to hash
+
+**Returns:**
+- str: The hashed password in PHC format
+
+**Raises:**
+- `ValueError`: If password is empty or hashing fails
+
+#### `verify_password(password: str, hash: str) -> bool`
+
+Verify a password against a hash.
+
+**Parameters:**
+- `password` (str): The password to verify
+- `hash` (str): The hash to verify against
+
+**Returns:**
+- bool: `True` if password matches, `False` otherwise
+
+**Raises:**
+- `ValueError`: If hash format is invalid
+
+### Enhanced Features
+
+#### `check_password_strength(password: str) -> PasswordStrength`
+
+Check password strength with detailed feedback.
+
+**Parameters:**
+- `password` (str): Password to evaluate
+
+**Returns:**
+- `PasswordStrength`: Object with `score` (0-4), `feedback` (list), and `is_strong` property
+
+#### `hash_multiple(passwords: list[str]) -> list[str]`
+
+Hash multiple passwords efficiently.
+
+**Parameters:**
+- `passwords` (list[str]): List of passwords to hash
+
+**Returns:**
+- list[str]: List of hashed passwords
+
+## Development
+
+### Building a Wheel Package
+
+To build a distributable wheel package:
+
+```bash
+maturin build --release
+```
+
+The wheel will be created in `target/wheels/`.
+
+To install the wheel:
+
+```bash
+uv pip install target/wheels/sarhash-*.whl
+```
+
+### Development Workflow
+
+When developing:
+
+1. Make changes to Rust code in `src/`
+2. Rebuild: `maturin develop`
+3. Test your changes: `python examples/basic_usage.py`
+4. Run type checking: `mypy python/sarhash`
+5. Format code: `black python/`
+
+## Project Structure
+
+```
+.
+├── Cargo.toml              # Rust package configuration
+├── pyproject.toml          # Python package configuration
+├── .python-version         # Python version for uv
+├── src/
+│   └── lib.rs             # Rust implementation binding to sarhash-core
+├── python/
+│   └── sarhash/
+│       ├── __init__.py    # Python wrapper with enhanced features
+│       ├── __init__.pyi   # Type stubs
+│       └── py.typed       # PEP 561 marker
+└── examples/
+    └── basic_usage.py     # Usage examples
+```
+
+## Security Best Practices
+
+1. **Always use the latest version** - Keep sarhash updated
+2. **Never store plain text passwords** - Always hash before storing
+3. **Check password strength** - Use `check_password_strength()` before hashing
+4. **Use HTTPS** - Always transmit passwords over encrypted connections
+5. **Implement rate limiting** - Prevent brute-force attacks
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
