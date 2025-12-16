@@ -1,0 +1,132 @@
+{%- import "cloudevents.jinja.include" as cloudEvents -%}
+{%- import "kafka.jinja.include" as kafka -%}
+{%- import "util.jinja.include" as util -%}
+{{ util.CommonFileHeader() }}
+
+{%- set messagegroups = root.messagegroups %}
+{%- set package_name = project_name | lower | replace('-', '_') %}
+
+package {{ package_name }};
+
+import org.junit.jupiter.api.*;
+import org.testcontainers.containers.KafkaContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.serialization.ByteArrayDeserializer;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+
+import java.net.URI;
+import java.time.Duration;
+import java.util.*;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+/**
+ * Integration tests for Kafka producer using Testcontainers
+ */
+@Testcontainers
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+public class {{ class_name | strip_namespace }} {
+    private static final Logger logger = LogManager.getLogger({{ class_name | strip_namespace }}.class);
+    
+    @Container
+    private static final KafkaContainer kafkaContainer = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.5.0"))
+        .withEmbeddedZookeeper();
+    
+    private List<URI> bootstrapServers;
+    
+    @BeforeAll
+    public void setUp() {
+        String bootstrapServer = kafkaContainer.getBootstrapServers();
+        bootstrapServers = List.of(URI.create("kafka://" + bootstrapServer.replace("PLAINTEXT://", "")));
+        logger.info("Kafka container started at: {}", bootstrapServers.get(0));
+    }
+    
+    private KafkaConsumer<byte[], byte[]> createConsumer(String topic) {
+        Properties props = new Properties();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaContainer.getBootstrapServers());
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "test-group-" + UUID.randomUUID());
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        
+        KafkaConsumer<byte[], byte[]> consumer = new KafkaConsumer<>(props);
+        consumer.subscribe(Collections.singletonList(topic));
+        return consumer;
+    }
+    
+    {%- for messagegroupid, messagegroup in messagegroups.items() %}
+    {%- set pascal_group_name = messagegroupid | pascal %}
+    {%- set producer_class = (pascal_group_name | strip_namespace) + "Producer" %}
+    {%- set group_package = (package_name ~ "." ~ messagegroupid) | lower | replace('-', '_') %}
+    
+    {%- for messageid, message in messagegroup.messages.items() %}
+    {%- set messagename = messageid | pascal | strip_namespace %}
+    {%- set message_body_type = util.get_data_type(data_project_name, root, message) %}
+    {%- set topic = kafka.get_topic(message) or messageid %}
+    
+    @Test
+    @DisplayName("Test {{ messagename }} message production")
+    public void test{{ messagename }}Message() throws Exception {
+        logger.info("Starting test{{ messagename }}Message");
+        
+        // Create producer
+        {{ group_package }}.{{ producer_class }} producer = {{ group_package }}.{{ producer_class }}.create(bootstrapServers);
+        
+        try {
+            // Create test data using generated test helper
+            {%- if message_body_type == "byte[]" %}
+            {{ message_body_type }} testData = new byte[0];
+            {%- else %}
+            {{ message_body_type }} testData = {{ message_body_type }}.createTestInstance();
+            {%- endif %}
+            
+            // Send 5 messages to test proper message handling
+            for (int i = 0; i < 5; i++) {
+                producer.send{{ messagename }}(testData).get();
+            }
+            producer.flush();
+            
+            logger.info("5 messages sent, waiting for consumption");
+            
+            // Consume and verify all 5 messages
+            KafkaConsumer<byte[], byte[]> consumer = createConsumer("{{ topic }}");
+            try {
+                int messagesReceived = 0;
+                int attempts = 0;
+                
+                while (messagesReceived < 5 && attempts < 15) {
+                    ConsumerRecords<byte[], byte[]> records = consumer.poll(Duration.ofSeconds(2));
+                    if (!records.isEmpty()) {
+                        for (ConsumerRecord<byte[], byte[]> record : records) {
+                            logger.info("Received message {} from topic {} partition {} offset {}", 
+                                messagesReceived, record.topic(), record.partition(), record.offset());
+                            
+                            assertNotNull(record.value(), "Message value should not be null");
+                            assertTrue(record.value().length > 0, "Message should have content");
+                            messagesReceived++;
+                        }
+                    }
+                    attempts++;
+                }
+                
+                assertEquals(5, messagesReceived, "Should receive all 5 {{ messagename }} messages");
+                logger.info("All 5 {{ messagename }} messages test completed successfully");
+                
+            } finally {
+                consumer.close();
+            }
+        } finally {
+            producer.close();
+        }
+    }
+    
+    {% endfor %}
+    {% endfor %}
+}
