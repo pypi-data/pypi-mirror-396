@@ -1,0 +1,98 @@
+<!--
+SEE COPYRIGHT, LICENCE, and DOCUMENTATION NOTICES: files
+README-COPYRIGHT-utf8.txt, README-LICENCE-utf8.txt, and README-DOCUMENTATION-utf8.txt
+at project source root.
+-->
+
+{% extends "bootstrap/base.html" %}
+{% import "bootstrap/wtf.html" as wtfm %}
+
+{% block title %}
+{{ title }}
+{% endblock %}
+
+{% block styles %}
+    {{ super() }}
+    <link
+        rel="icon"
+        href="data:,"
+    />
+    <link
+        rel="stylesheet"
+        type="text/css"
+        href="{{ url_for('static', filename='main.css') }}"
+    />
+{% endblock %}
+
+{% block content %}
+<div class="h_centered">
+    <h2 style="margin-top: 18pt"><b>{{ name }}</b>: {{ name_meaning }}</h2>
+
+    {% if about %}
+        <hr/>
+        <h3>About {{ name }}: <small>See Below</small></h3>
+        <hr/>
+    {% endif %}
+
+    <h3>Inputs</h3>
+
+    <p style="color:DarkGoldenRod">
+        Note: Uploaded files are limited in size to {{ max_file_size }} MB each.
+    </p>
+    <p style="color:DarkGoldenRod">
+        Byte Stream Example:<br/>
+        F?iamadKul!FYnvXe0x}2|Q8~!vmgRl!P!OhbaA&lt;aWn=-V_-A}Mq^+=X#oDN(G&<br/>
+        (Copy and paste into Byte Stream text area, then convert to piecewise-constant array)
+    </p>
+
+    <!-- https://pythonhosted.org/Flask-Bootstrap/forms.html -->
+    <form
+        role="form"
+        method="post"
+        action=""
+        enctype="multipart/form-data"
+        class="form"
+    >
+        {{ form.hidden_tag() }}
+        {{ wtfm.form_errors(form, hiddens="only") }}
+
+        <div class="two_columns">
+            <div><b>{{ form.array.label }}</b></div>
+            <div><b>{{ form.stream.label }}</b></div>
+            <div>{{ form.array() }}</div>
+            <div>{{ form.stream() }}</div>
+            <div style="margin-top: 16pt; margin-bottom: 8pt">
+                {{ wtfm.form_field(form.submit_to_str) }}
+            </div>
+            <div style="margin-top: 16pt; margin-bottom: 8pt">
+                {{ wtfm.form_field(form.submit_to_ary) }}
+            </div>
+        </div>
+    </form>
+
+    {% if form.errors %}
+        <br style="clear:both"/>
+        {% for field, errors in form.errors.items() %}
+            <p class="field_error">
+                {{ form[field].label }}: {{ ', '.join(errors) }}
+            </p>
+        {% endfor %}
+    {% endif %}
+
+    <hr/>
+
+    {% if outputs %}
+        <h3>Results</h3>
+
+        {{ outputs | safe }}
+        {{ data_management | safe }}
+    {% endif %}
+
+    {% if about %}
+        <hr/>
+        <h3>About {{ name }}</h3>
+
+        {{ about | safe }}
+    {% endif %}
+</div>
+{% endblock %}
