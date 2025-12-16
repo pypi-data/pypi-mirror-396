@@ -1,0 +1,335 @@
+"""
+Core database engine implementation
+"""
+
+import json
+import time
+import weakref
+from typing import Any, Dict, List, Optional, Tuple
+
+from kybra_simple_logging import get_logger
+
+from .storage import MemoryStorage, Storage
+
+logger = get_logger(__name__)
+
+
+class Database:
+    """Main database class providing high-level operations"""
+
+    _instance = None
+    _audit_enabled = False
+
+    @classmethod
+    def get_instance(cls) -> "Database":
+        if not cls._instance:
+            cls._instance = cls.init(audit_enabled=True)
+        return cls._instance
+
+    @classmethod
+    def init(
+        cls,
+        audit_enabled: bool = False,
+        db_storage: Storage = None,
+        db_audit: Storage = None,
+    ) -> "Database":
+        if cls._instance:
+            raise RuntimeError("Database instance already exists")
+        cls._instance = cls(audit_enabled, db_storage, db_audit)
+        return cls._instance
+
+    def __init__(
+        self,
+        audit_enabled: bool = False,
+        db_storage: Storage = None,
+        db_audit: Storage = None,
+    ):
+        self._db_storage = db_storage if db_storage else MemoryStorage()
+        self._audit_enabled = audit_enabled
+        self._db_audit = None
+        if self._audit_enabled:
+            self._db_audit = db_audit if db_audit else MemoryStorage()
+
+        if self._db_audit:
+            self._db_audit.insert("_min_id", "0")
+            self._db_audit.insert("_max_id", "0")
+
+            logger.debug(
+                f"Audit database initialized with {len(list(self._db_audit.items()))} items"
+            )
+
+        self._entity_types = {}
+        # Entity registry: {(type_name, entity_id): weakref to entity instance}
+        self._entity_registry = {}
+
+    def as_user(self, user_id: str):
+        """Context manager for running operations as a specific user.
+
+        Usage:
+            with db.as_user("alice"):
+                doc = Document(title="My Doc")  # Owner is alice
+
+        Args:
+            user_id: ID of the user to impersonate
+
+        Returns:
+            Context manager that sets and resets caller ID
+        """
+        from .context import get_caller_id, set_caller_id
+
+        class UserContext:
+            def __init__(self, user_id):
+                self.user_id = user_id
+                self.previous_caller = None
+
+            def __enter__(self):
+                self.previous_caller = get_caller_id()
+                set_caller_id(self.user_id)
+                return self
+
+            def __exit__(self, *args):
+                set_caller_id(self.previous_caller)
+
+        return UserContext(user_id)
+
+    def clear(self):
+        keys = list(self._db_storage.keys())
+        for key in keys:
+            self._db_storage.remove(key)
+
+        # Also clear the entity registry
+        self.clear_registry()
+
+        if not self._db_audit:
+            return
+
+        keys = list(self._db_audit.keys())
+        for key in keys:
+            self._db_audit.remove(key)
+
+        self._db_audit.insert("_min_id", "0")
+        self._db_audit.insert("_max_id", "0")
+
+    def register_entity(self, entity_instance):
+        """Register an entity instance in the identity map."""
+        key = (entity_instance._type, entity_instance._id)
+        # Use weak reference to allow garbage collection
+        self._entity_registry[key] = weakref.ref(entity_instance)
+
+    def get_entity(self, type_name: str, entity_id: str):
+        """Get entity from registry if it exists."""
+        key = (type_name, entity_id)
+        if key in self._entity_registry:
+            entity_ref = self._entity_registry[key]
+            entity = entity_ref()  # Get object from weak reference
+            if entity is not None:
+                return entity
+            else:
+                # Clean up dead reference
+                del self._entity_registry[key]
+        return None
+
+    def clear_registry(self):
+        """Clear the entity registry (useful for testing)."""
+        self._entity_registry.clear()
+
+    def unregister_entity(self, type_name: str, entity_id: str):
+        """Remove an entity from the registry (used when deleting)."""
+        key = (type_name, entity_id)
+        if key in self._entity_registry:
+            del self._entity_registry[key]
+
+    def _audit(self, op: str, key: str, data: Any) -> None:
+        if self._db_audit and self._audit_enabled:
+            timestamp = int(time.time() * 1000)
+            id = self._db_audit.get("_max_id")
+            logger.debug(f"Audit: Recording {op} operation with ID {id}")
+            self._db_audit.insert(str(id), json.dumps([op, timestamp, key, data]))
+            self._db_audit.insert("_max_id", str(int(id) + 1))
+
+    def save(self, type_name: str, id: str, data: dict) -> None:
+        """Store the data under the given key
+
+        Args:
+            type_name: Type of the entity
+            id: ID of the entity
+            data: Data to store
+        """
+        key = f"{type_name}@{id}"
+        self._db_storage.insert(key, json.dumps(data))
+        self._audit("save", key, data)
+
+    def load(self, type_name: str, id: str) -> Optional[dict]:
+        """Load and return the data associated with the key
+
+        Args:
+            type_name: Type of the entity
+            id: ID of the entity
+
+        Returns:
+            Dict if found, None otherwise
+        """
+        key = f"{type_name}@{id}"
+        data = self._db_storage.get(key)
+        if data:
+            return json.loads(data)
+        return None
+
+    def delete(self, type_name: str, entity_id: str) -> None:
+        """Delete the data associated with the key
+
+        Args:
+            type_name: Type of the entity
+            id: ID of the entity
+        """
+        logger.debug(f"Database: Deleting entity {type_name}@{entity_id}")
+        key = f"{type_name}@{entity_id}"
+        data = self._db_storage.get(key)
+        self._db_storage.remove(key)
+        self._audit("delete", key, data)
+        logger.debug(f"Database: Deleted entity {type_name}@{entity_id}")
+
+    def update(self, type_name: str, id: str, field: str, value: Any) -> None:
+        """Update a specific field in the stored data
+
+        Args:
+            type_name: Type of the entity
+            id: ID of the entity
+            field: Field to update
+            value: New value
+        """
+        data = self.load(type_name, id)
+        if data:
+            data[field] = value
+            self.save(type_name, id, data)
+            self._audit("update", f"{type_name}@{id}", data)
+
+    def get_all(self) -> Dict[str, Any]:
+        """Return all stored data"""
+        return {k: json.loads(v) for k, v in self._db_storage.items()}
+
+    def _extract_class_name(self, type_name: str) -> str:
+        """Extract the class name from a potentially namespaced type name.
+
+        Args:
+            type_name: Type name, possibly with namespace (e.g., "app::User")
+
+        Returns:
+            The class name without namespace (e.g., "User")
+        """
+        if "::" in type_name:
+            return type_name.split("::")[-1]
+        return type_name
+
+    def register_entity_type(self, type_obj, type_name: str = None):
+        """Register an entity type with the database.
+
+        Args:
+            type_obj: Type object to register
+            type_name: Optional full type name (including namespace). If not provided, uses class name.
+        """
+        if type_name is None:
+            type_name = type_obj.__name__
+        logger.debug(
+            f"Registering type {type_name} (class: {type_obj.__name__}) with bases {[b.__name__ for b in type_obj.__bases__]}"
+        )
+
+        # Always register under the full type name
+        self._entity_types[type_name] = type_obj
+
+        # For backward compatibility, also register under class name if:
+        # 1. No namespace (type_name == class name) - allows non-namespaced lookups, OR
+        # 2. Class name slot is available (no collision) - allows simple name lookups
+        # This dual registration enables both "User" and "app::User" lookups while
+        # preventing collisions when multiple namespaced entities share a class name
+        if (
+            type_name == type_obj.__name__
+            or type_obj.__name__ not in self._entity_types
+        ):
+            self._entity_types[type_obj.__name__] = type_obj
+        else:
+            # Class name already registered - log warning about potential collision
+            existing = self._entity_types[type_obj.__name__]
+            if existing != type_obj:
+                logger.warning(
+                    f"Class name '{type_obj.__name__}' collision: '{type_name}' not registered under class name. "
+                    f"Existing registration: '{getattr(existing, '__module__', 'unknown')}.{existing.__name__}'. "
+                    f"Use full type name '{type_name}' in relations."
+                )
+
+    def is_subclass(self, type_name, parent_type):
+        """Check if a type is a subclass of another type.
+
+        Args:
+            type_name: Name of the type to check (may include namespace)
+            parent_type: Parent type to check against
+
+        Returns:
+            bool: True if type_name is a subclass of parent_type
+        """
+        type_obj = self._entity_types.get(type_name)
+        if not type_obj:
+            # Try to extract class name from namespaced type (e.g., "app::User" -> "User")
+            class_name = self._extract_class_name(type_name)
+            type_obj = self._entity_types.get(class_name)
+        logger.debug(f"Type check: {type_name} -> {parent_type.__name__}")
+        return type_obj and issubclass(type_obj, parent_type)
+
+    def dump_json(self, pretty: bool = False) -> str:
+        """Dump the entire database as a JSON string.
+
+        Args:
+            pretty: If True, format the JSON with indentation for readability
+
+        Returns:
+            JSON string containing all database data organized by type
+        """
+        result = {}
+        for key in self._db_storage.keys():
+            if key.startswith("_"):  # Skip internal keys
+                continue
+            try:
+                type_name, id = key.split("@")
+                if type_name not in result:
+                    result[type_name] = {}
+                result[type_name][id] = json.loads(self._db_storage.get(key))
+            except (ValueError, json.JSONDecodeError):
+                continue  # Skip invalid entries
+
+        if pretty:
+            return json.dumps(result, indent=2)
+        return json.dumps(result)
+
+    def raw_dump_json(self, pretty: bool = False) -> str:
+        """Dump the raw contents of the storage as a JSON string.
+
+        Args:
+            pretty: If True, format the JSON with indentation for readability
+
+        Returns:
+            A JSON string representation of the raw storage contents
+        """
+        result = {}
+        for key in self._db_storage.keys():
+            result[key] = self._db_storage.get(key)
+        if pretty:
+            return json.dumps(result, indent=2)
+        return json.dumps(result)
+
+    def get_audit(
+        self, id_from: Optional[int] = None, id_to: Optional[int] = None
+    ) -> Dict[str, str]:
+        """Get audit log entries between the specified IDs"""
+        if not self._db_audit:
+            return {}
+
+        id_from = id_from or int(self._db_audit.get("_min_id"))
+        id_to = id_to or int(self._db_audit.get("_max_id"))
+
+        ret = {}
+        for id in range(id_from, id_to):
+            id_str = str(id)
+            entry = self._db_audit.get(id_str)
+            if entry:
+                ret[id_str] = json.loads(entry)
+        return ret
