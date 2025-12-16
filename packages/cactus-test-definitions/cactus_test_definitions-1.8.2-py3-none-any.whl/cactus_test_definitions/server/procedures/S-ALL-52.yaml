@@ -1,0 +1,35 @@
+Description: LFDI Doesn't Match Certificate
+Category: Edge Cases
+Classes:
+ - A
+
+TargetVersions:
+ - v1.2
+
+Preconditions:
+  required_clients:
+    - id: CLIENT-A
+    - id: CLIENT-B
+
+Steps:
+  - id: PRECONDITION - register end device on clientA.
+    client: CLIENT-A
+    repeat_until_pass: true
+    instructions:
+      - Create an EndDevice registration for clientA.
+    action:
+      type: discovery
+      parameters:
+        resources:
+          - EndDevice
+    checks:
+      - type: end-device # This will be the check that will block UNTIL there is an existing EndDevice registration
+        parameters:
+          matches_client: true
+
+  - id: Step 1 - Attempt to upsert end device with that the client doesnt own - expect rejection
+    client: CLIENT-B
+    action:
+      type: insert-end-device
+      parameters:
+          expect_rejection: true 
