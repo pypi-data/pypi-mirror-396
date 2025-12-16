@@ -1,0 +1,264 @@
+# NeutroLab
+
+[![PyPI version](https://badge.fury.io/py/neutrolab.svg)](https://badge.fury.io/py/neutrolab)
+[![Python Version](https://img.shields.io/pypi/pyversions/neutrolab.svg)](https://pypi.org/project/neutrolab/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+**A unified library for neutrosophic learning, configuration analysis, and logical machines.**
+
+NeutroLab is a comprehensive Python library for transforming crisp data into neutrosophic values using various data-driven and model-based methods. It implements the methods described in the paper:
+
+> *"A Comparative Analysis of Data-Driven and Model-Based Neutrosophication Methods: Advancing True Neutrosophic Logic in Medical Data Transformation"*
+
+## Overview
+
+**Neutrosophication** is the process of converting crisp (deterministic) values into neutrosophic triplets (T, I, F), where:
+
+- **T (Truth)**: Degree of truth/membership
+- **I (Indeterminacy)**: Degree of indeterminacy/uncertainty  
+- **F (Falsity)**: Degree of falsity/non-membership
+
+Unlike fuzzy logic where T + F = 1, **true neutrosophic logic** allows T, I, and F to be **independent**, enabling more nuanced modeling of uncertainty.
+
+## Features
+
+### Current Implementation
+- **5 Neutrosophication Methods**: K-Means (proposed), Parabolic, Threshold, KDE, Fuzzy
+- **True Neutrosophic Independence**: K-Means method achieves independent T, I, F components
+- **Data-driven Adaptability**: Methods automatically adapt to data distribution
+- **Consistent API**: All methods follow the same interface (fit/transform)
+- **Comprehensive Statistics**: Metrics from the paper (T+F consistency, entropy, etc.)
+
+### Planned Extensions
+- 🔮 Neutrosophic Qualitative Comparative Analysis (QCA)
+- 🔮 Neutrosophic Tsatlin Machine
+- 🔮 Single-Valued Neutrosophic Sets (SVNS) Operations
+- 🔮 Interval-Valued Neutrosophic Sets
+- 🔮 Neutrosophic Cognitive Maps
+
+## Installation
+
+```bash
+pip install neutrolab
+```
+
+For development:
+```bash
+pip install neutrolab[dev]
+```
+
+For visualization:
+```bash
+pip install neutrolab[viz]
+```
+
+## Quick Start
+
+```python
+import numpy as np
+from neutrolab import KMeansNeutrosophic, ParabolicNeutrosophic, normalize_data
+
+# Sample data (e.g., clinical measurements)
+raw_data = np.array([29, 45, 54, 62, 77])  # Age values
+
+# Normalize to [0, 1] using Min-Max scaling (Eq. 1 from paper)
+data = normalize_data(raw_data)
+
+# Method 1: K-Means Clustering (PROPOSED - True Neutrosophic)
+kmeans = KMeansNeutrosophic(random_state=42)
+T, I, F = kmeans.fit_transform(data)
+
+# K-Means achieves TRUE INDEPENDENCE: T+I+F ≠ 1
+print(f"K-Means T+I+F sum: {np.mean(T + I + F):.3f}")  # ≈ 0.639
+
+# Method 2: Parabolic (Classical - Fuzzy-like)
+parabolic = ParabolicNeutrosophic(alpha=0.5)
+T, I, F = parabolic.fit_transform(data)
+
+# Parabolic enforces T+F=1 (fuzzy complementarity)
+print(f"Parabolic T+I+F sum: {np.mean(T + I + F):.3f}")  # ≈ 1.331
+```
+
+## Available Methods
+
+### 1. K-Means Clustering (Proposed) ⭐
+
+**Data-driven approach achieving TRUE neutrosophic independence.**
+
+```python
+from neutrolab import KMeansNeutrosophic
+
+method = KMeansNeutrosophic(random_state=42)
+T, I, F = method.fit_transform(data)
+```
+
+**Mathematical Formulation:**
+- T(x) = 1 / (1 + exp(-10·(x - c_high)/(σ_high + ε)))
+- I(x) = 1 / (1 + |x - c_mid|/(σ_mid + ε))
+- F(x) = 1 / (1 + exp(10·(x - c_low)/(σ_low + ε)))
+
+**Key Properties:**
+- ✅ TRUE independence of T, I, F (T+I+F ≈ 0.639)
+- ✅ Data-driven: learns from data distribution
+- ✅ High indeterminacy range (0.894)
+- ✅ Moderate entropy (2.149)
+
+### 2. Parabolic Method (Classical)
+
+**Parameter-free model-based approach.**
+
+```python
+from neutrolab import ParabolicNeutrosophic
+
+method = ParabolicNeutrosophic(alpha=0.5)
+T, I, F = method.fit_transform(data)
+```
+
+**Mathematical Formulation:**
+- T(x) = x
+- I(x) = 4·x·(1-x)·α
+- F(x) = 1 - x
+
+**Best for:** Speed-critical or real-time scenarios
+
+### 3. Threshold Distance (Semi-novel)
+
+**Threshold-based approach with Gaussian indeterminacy.**
+
+```python
+from neutrolab import ThresholdNeutrosophic
+
+method = ThresholdNeutrosophic(theta=0.5, lambda_=5.0)
+T, I, F = method.fit_transform(data)
+```
+
+**Mathematical Formulation:**
+- T(x) = 1 / (1 + exp(-10·(x - θ)))
+- I(x) = exp(-λ·(x - θ)²)
+- F(x) = 1 - T(x)
+
+**Best for:** Threshold-based decision making
+
+### 4. Kernel Density Estimation (KDE)
+
+**Density-based approach for anomaly detection.**
+
+```python
+from neutrolab import KDENeutrosophic
+
+method = KDENeutrosophic(kernel='gaussian')
+T, I, F = method.fit_transform(data)
+```
+
+**Key Property:** High indeterminacy in sparse regions (low density)
+
+**Best for:** Anomaly detection and sparse region identification
+
+### 5. Fuzzy Membership (Classical)
+
+**Triangular membership functions for interpretability.**
+
+```python
+from neutrolab import FuzzyNeutrosophic
+
+method = FuzzyNeutrosophic()
+T, I, F = method.fit_transform(data)
+```
+
+**Predefined Fuzzy Sets:**
+- Low: (-0.5, 0.0, 0.5)
+- Medium: (0.25, 0.5, 0.75)
+- High: (0.5, 1.0, 1.5)
+
+**Best for:** Interpretability-focused expert systems
+
+## Method Comparison
+
+| Method | T+I+F Sum | T+F Consistency | Independence | Best Use Case |
+|--------|-----------|-----------------|--------------|---------------|
+| **K-Means** | 0.639 | 0.291 | ✅ TRUE | Complex data, true neutrosophic |
+| Parabolic | 1.331 | 1.000 | ❌ Forced | Real-time processing |
+| Threshold | 1.711 | 1.000 | ❌ Forced | Threshold decisions |
+| KDE | 1.260 | 1.000 | ❌ Forced | Anomaly detection |
+| Fuzzy | 1.349 | 1.000 | ❌ Forced | Expert systems |
+
+## Comparing Methods
+
+```python
+from neutrolab import (
+    KMeansNeutrosophic, ParabolicNeutrosophic, 
+    ThresholdNeutrosophic, KDENeutrosophic, FuzzyNeutrosophic,
+    compare_methods, normalize_data
+)
+import numpy as np
+
+# Prepare data
+raw_data = np.random.random(100)
+data = normalize_data(raw_data)
+
+# Fit all methods
+methods = {
+    'K-Means': KMeansNeutrosophic(random_state=42),
+    'Parabolic': ParabolicNeutrosophic(),
+    'Threshold': ThresholdNeutrosophic(),
+    'KDE': KDENeutrosophic(),
+    'Fuzzy': FuzzyNeutrosophic()
+}
+
+results = {}
+for name, method in methods.items():
+    results[name] = method.fit_transform(data)
+
+# Generate comparison table
+comparison = compare_methods(results)
+print(comparison[['Method', 'mean_sum', 'tf_consistency', 'entropy_I']])
+```
+
+## Requirements
+
+- Python >= 3.8
+- NumPy >= 1.20.0
+- Pandas >= 1.3.0
+- SciPy >= 1.7.0
+
+## Citation
+
+If you use NeutroLab in your research, please cite:
+
+```bibtex
+@article{leyvavazquez2024neutrosophication,
+  title={A Comparative Analysis of Data-Driven and Model-Based Neutrosophication 
+         Methods: Advancing True Neutrosophic Logic in Medical Data Transformation},
+  author={Leyva-V{\'a}zquez, Maikel Yelandi and Smarandache, Florentin},
+  journal={},
+  year={2024}
+}
+```
+
+## Authors
+
+- **Maikel Yelandi Leyva-Vázquez** - Universidad de Guayaquil, Ecuador
+  - ORCID: [0000-0001-7911-5879](https://orcid.org/0000-0001-7911-5879)
+- **Florentin Smarandache** - University of New Mexico, USA
+  - ORCID: [0000-0002-5560-5926](https://orcid.org/0000-0002-5560-5926)
+
+## References
+
+1. Smarandache, F. (1998). *Neutrosophy/neutrosophic probability, set, and logic*.
+2. Smarandache, F. (2014). *Introduction to Neutrosophic Statistics*.
+3. Wang, H., et al. (2010). Single valued neutrosophic sets.
+4. Zadeh, L. A. (1965). Fuzzy sets. *Information and Control*, 8(3), 338-353.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
