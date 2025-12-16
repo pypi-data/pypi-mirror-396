@@ -1,0 +1,36 @@
+from dataclasses import dataclass
+import json
+import os
+
+DATA_DIR = "data/"
+
+@dataclass
+class InterpretersData:
+    FILE_PATH: str
+    
+    interpreters: list[str] | None = None
+    global_interpreter: str | None = None
+    
+    def is_empty(self) -> bool:
+        return self.interpreters is None and self.global_interpreter is None
+    
+    def save(self) -> None:
+        SAVE_PATH = os.path.join(DATA_DIR, self.FILE_PATH)
+        os.makedirs(DATA_DIR, exist_ok=True)
+        with open(SAVE_PATH, "w", encoding="utf-8") as f:
+            json.dump(self.__dict__, f, indent=4)
+            
+    def __init__(self, file_path) -> None:
+        self.FILE_PATH = file_path
+        
+        LOAD_PATH = os.path.join(DATA_DIR, self.FILE_PATH)
+        if os.path.exists(LOAD_PATH):
+            with open(LOAD_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                self.interpreters = data.get("interpreters")
+                self.global_interpreter = data.get("global_interpreter")
+        else:
+            self.interpreters = None
+            self.global_interpreter = None
+
+interpreters_data = InterpretersData("interpreters.json")
