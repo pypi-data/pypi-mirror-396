@@ -1,0 +1,192 @@
+# 🌐 atlas-browser-mcp
+
+Visual web browsing for AI agents via Model Context Protocol (MCP).
+
+[![PyPI version](https://badge.fury.io/py/atlas-browser-mcp.svg)](https://pypi.org/project/atlas-browser-mcp/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+## ✨ Features
+
+- **📸 Visual-First**: Navigate the web through screenshots, not DOM parsing
+- **🏷️ Set-of-Mark**: Interactive elements labeled with clickable `[0]`, `[1]`, `[2]`... markers
+- **🎭 Humanized**: Bezier curve mouse movements, natural typing rhythms
+- **🧩 CAPTCHA-Ready**: Multi-click support for image selection challenges
+- **🛡️ Anti-Detection**: Built-in measures to avoid bot detection
+
+## 🚀 Quick Start
+
+### Installation
+
+```bash
+pip install atlas-browser-mcp
+playwright install chromium
+```
+
+### Use with Claude Desktop
+
+Add to your Claude Desktop config (`claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "browser": {
+      "command": "atlas-browser-mcp"
+    }
+  }
+}
+```
+
+Then ask Claude:
+> "Navigate to https://news.ycombinator.com and tell me the top 3 stories"
+
+## 🛠️ Available Tools
+
+| Tool | Description |
+|------|-------------|
+| `navigate` | Go to URL, returns labeled screenshot |
+| `screenshot` | Capture current page with labels |
+| `click` | Click element by label ID `[N]` |
+| `multi_click` | Click multiple elements (for CAPTCHA) |
+| `type` | Type text, optionally press Enter |
+| `scroll` | Scroll page up or down |
+
+## 📖 Usage Examples
+
+### Basic Navigation
+
+```
+User: Go to google.com
+AI: [calls navigate(url="https://google.com")]
+AI: I see the Google homepage. The search box is labeled [3].
+
+User: Search for "MCP protocol"
+AI: [calls click(label_id=3)]
+AI: [calls type(text="MCP protocol", submit=true)]
+AI: Here are the search results...
+```
+
+### CAPTCHA Handling
+
+```
+User: Select all images with traffic lights
+AI: [Looking at the CAPTCHA grid]
+AI: I can see traffic lights in images [2], [5], and [8].
+AI: [calls multi_click(label_ids=[2, 5, 8])]
+```
+
+## 🔧 Configuration
+
+### Headless Mode
+
+For servers without display:
+
+```python
+from atlas_browser_mcp.browser import VisualBrowser
+
+browser = VisualBrowser(
+    headless=True,   # No visible browser window
+    humanize=False   # Faster, less human-like
+)
+```
+
+### Custom Viewport
+
+```python
+browser = VisualBrowser()
+browser.VIEWPORT = {"width": 1920, "height": 1080}
+```
+
+## 🏗️ How It Works
+
+1. **Navigate**: Browser loads the page
+2. **Inject SoM**: JavaScript labels all interactive elements
+3. **Screenshot**: Capture the labeled page
+4. **AI Sees**: The screenshot shows `[0]`, `[1]`, `[2]`... on buttons, links, inputs
+5. **AI Acts**: "Click `[5]`" → Browser clicks the element at that position
+6. **Repeat**: New screenshot with updated labels
+
+```
+┌─────────────────────────────────────┐
+│  [0] Logo    [1] Search   [2] Menu  │
+│                                     │
+│  [3] Article Title                  │
+│  [4] Read More                      │
+│                                     │
+│  [5] Subscribe    [6] Share         │
+└─────────────────────────────────────┘
+```
+
+## 🤝 Integration
+
+### With Cline (VS Code)
+
+```json
+{
+  "mcpServers": {
+    "browser": {
+      "command": "atlas-browser-mcp"
+    }
+  }
+}
+```
+
+### Programmatic Use
+
+```python
+from atlas_browser_mcp.browser import VisualBrowser
+
+browser = VisualBrowser()
+
+# Navigate
+result = browser.execute("navigate", url="https://example.com")
+print(f"Page title: {result.data['title']}")
+print(f"Found {result.data['element_count']} interactive elements")
+
+# Click element [0]
+result = browser.execute("click", label_id=0)
+
+# Type in focused field
+result = browser.execute("type", text="Hello world", submit=True)
+
+# Cleanup
+browser.execute("close")
+```
+
+## 📋 Requirements
+
+- Python 3.10+
+- Playwright with Chromium
+
+## 🐛 Troubleshooting
+
+### "Playwright not installed"
+
+```bash
+pip install playwright
+playwright install chromium
+```
+
+### "Browser closed unexpectedly"
+
+Try running with `headless=False` to see what's happening:
+
+```python
+browser = VisualBrowser(headless=False)
+```
+
+### Elements not being detected
+
+Some dynamic pages need more wait time. The browser waits 1.5s after navigation, but complex SPAs may need longer.
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE)
+
+## 🙏 Credits
+
+Built for [Atlas](https://github.com/NotLing/Atlas), an autonomous AI agent.
+
+Inspired by:
+- [anthropic/mcp](https://github.com/anthropics/mcp) - Model Context Protocol
+- [AskUI](https://www.askui.com/) - Visual testing approach
+- [Set-of-Mark prompting](https://arxiv.org/abs/2310.11441) - Visual grounding technique
