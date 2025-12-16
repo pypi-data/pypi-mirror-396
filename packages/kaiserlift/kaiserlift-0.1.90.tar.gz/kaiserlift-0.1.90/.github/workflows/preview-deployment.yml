@@ -1,0 +1,152 @@
+name: Preview Deployment
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  pages: write
+  id-token: write
+
+jobs:
+  deploy-preview:
+    name: Deploy Preview
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}pr-${{ github.event.pull_request.number }}/
+    concurrency:
+      group: pages-deployment
+      cancel-in-progress: false
+
+    steps:
+      # First, build the main site from main branch
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          path: main-site
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Build main site
+        working-directory: main-site
+        run: |
+          uv venv
+          uv pip install -e .
+          uv run --with setuptools-scm python scripts/inject_version.py
+          uv run python scripts/preprocess_data.py
+          uv run python tests/example_use/generate_example_html.py
+
+      # Now build the PR preview
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          path: pr-site
+
+      - name: Build PR preview
+        working-directory: pr-site
+        run: |
+          uv venv
+          uv pip install -e .
+          uv run --with setuptools-scm python scripts/inject_version.py
+          uv run python scripts/preprocess_data.py
+          uv run python tests/example_use/generate_example_html.py
+
+      # Combine main site + PR preview
+      - name: Prepare combined deployment
+        run: |
+          mkdir -p deployment
+
+          # Copy main site to root
+          cp -r main-site/tests/example_use/build/* deployment/
+
+          # Copy PR preview to pr-X directory
+          mkdir -p deployment/pr-${{ github.event.pull_request.number }}
+          cp -r pr-site/tests/example_use/build/* deployment/pr-${{ github.event.pull_request.number }}/
+
+          echo "Deployment contents:"
+          ls -la deployment/
+          echo "PR preview contents:"
+          ls -la deployment/pr-${{ github.event.pull_request.number }}/
+
+      # Upload as artifact for download
+      - name: Upload preview artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: preview-pr-${{ github.event.pull_request.number }}
+          path: deployment/pr-${{ github.event.pull_request.number }}
+          retention-days: 30
+
+      # Deploy to GitHub Pages
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: deployment
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      # Comment on PR with preview link
+      - name: Comment preview link
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = ${{ github.event.pull_request.number }};
+            const runId = ${{ github.run_id }};
+            const pageUrl = '${{ steps.deployment.outputs.page_url }}';
+            const previewUrl = `${pageUrl}pr-${prNumber}/`;
+
+            const body = `## 🌐 Preview Deployment
+
+            ### 🔍 PR Preview
+            **[View Preview](${previewUrl})**
+
+            ### 📊 Direct Links
+            - 🏋️ [Lifting Example](${previewUrl}lifting/)
+            - 🏃 [Running Example](${previewUrl}running/)
+
+            ### 🏠 Main Site (for comparison)
+            - [Landing Page](${pageUrl})
+            - [Lifting Demo](${pageUrl}lifting/)
+            - [Running Demo](${pageUrl}running/)
+
+            ---
+            <sub>Updated: ${new Date().toISOString()} | [Workflow Run](https://github.com/${{ github.repository }}/actions/runs/${runId})</sub>`;
+
+            // Find existing preview comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+            });
+
+            const previewComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('Preview Deployment')
+            );
+
+            if (previewComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: previewComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: body
+              });
+            }
