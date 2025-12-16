@@ -1,0 +1,99 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "django-activitypub-toolkit"
+version = "0.1.5"
+requires-python = ">= 3.9,<4"
+description = "Django pluggable application to ActivityPub servers"
+authors = [{name = "Raphael Lullis", email = "raphael@mushroomlabs.com"}]
+keywords = ["django", "activitypub"]
+license = {text = "BSD-3-Clause"}
+readme = "README.md"
+classifiers = [
+  "Environment :: Web Environment",
+  "Framework :: Django",
+  "Framework :: Django :: 4.2",
+  "Framework :: Django :: 5.0",
+  "Framework :: Django :: 5.1",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: BSD License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Internet :: WWW/HTTP",
+]
+
+dependencies = [
+  "django >= 4.2.26",
+  "django-model-utils >= 4.2",
+  "djangorestframework >= 3.13",
+  "celery >= 5.4",
+  "pyld >= 2.0.4",
+  "rdflib >= 7.0.0",
+  "requests-http-message-signatures >= 0.3.1",
+  "django-celery-beat >= 2.7.0",
+  "python-ulid (>=3.0.0,<4.0.0)",
+]
+
+[project.optional-dependencies]
+dev = [
+  "factory-boy",
+  "pytest",
+  "pytest-django",
+  "pytest-env",
+  "pytest-socket",
+  "httpretty",
+]
+
+docs = [
+  "mkdocs",
+  "mkdocs-material",
+  "mkdocs-macros-plugin",
+  "mkdocstrings[python]"
+]
+
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["activitypub*"]
+
+[tool.black]
+line-length = 99
+target-version = ['py311', 'py312', 'py313']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.mypy_cache
+  | \.tox
+  | build
+  | dist
+)/
+  '''
+
+[tool.ruff]
+fix = true
+line-length = 99
+exclude = ["build", "dist", ".git", "migrations"]
+
+[tool.ruff.lint]
+ignore = ["B011", "E203", "E402", "E731"]
+select = ["E", "F", "W", "I"]
+extend-select = ["I"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["activitypub"]
+
+
+[tool.mypy]
+ignore_missing_imports = true
+check_untyped_defs = true
+disallow_untyped_defs = false
+warn_unused_configs = true
+warn_unused_ignores = true
