@@ -1,0 +1,40 @@
+
+name: Build docs
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        fetch-depth: 0  # setuptools-scm needs to access git tags
+        ref: ${{ github.sha }}  # lock to triggered commit (github.ref is dynamic)
+    - name: Set up Python 3.14
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.14"
+    - name: Install deps
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .[docs]
+    - name: Build docs
+      run: |
+        make -C docs
+    - name: Tar docs
+      if: ${{ github.event_name != 'pull_request' }}
+      run: |
+        cd docs/build/html && tar -zcf ../../../docs.tar.gz *
+    - name: Upload html
+      if: ${{ github.event_name != 'pull_request' }}
+      env:
+        USER: ${{ secrets.DOCS_USERNAME }}
+        PASS: ${{ secrets.DOCS_PASSWORD }}
+      run: |
+        curl --data-binary "@docs.tar.gz" -XPUT "https://$USER:$PASS@docs.icecube.aq/api/upload?path=$GITHUB_REPOSITORY/${{ github.ref_name }}"
