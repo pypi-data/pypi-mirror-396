@@ -1,0 +1,136 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "domolibrary2"
+version = "2.3.0"
+description = "A Python library for interacting with Domo APIs"
+authors = [
+    { name = "Jae Wilson", email = "jaewilson07@gmail.com" }
+]
+license = "Apache-2.0"
+readme = "README.md"
+requires-python = ">=3.13"
+keywords = ["jupyter", "notebook", "python", "domo", "api"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3.13"]
+dependencies = [
+    "pandas",
+    "aiohttp",
+    "dc_logger",
+    "requests",
+    "twine",
+    "orjson",
+    "httpx",
+    "python-dotenv",
+    "sqlparse",
+    "sqlglot",
+    "bs4",
+    "nbqa",
+    "black",
+    "aenum",
+    "pillow",
+    "xkcdpass",
+    "sql_metadata",
+    "dc-logger",
+    "beautifulsoup4",
+    "IPython",
+
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "bandit",
+    "pylint",
+    "ruff",
+    "black",
+    "isort",
+    "mypy",
+    "pytest-cov",
+    "pre-commit",
+]
+
+postman = ["requests", "pydantic-ai"]
+
+mcp = ["mcp[cli]", "pydantic>=2.0"]
+
+codegraph_mcp = [
+    "neo4j>=5.0.0",
+    "watchdog>=3.0.0",
+]
+
+[tool.ruff]
+exclude = [
+    "examples/",
+    "implementation/",
+    "scripts/",
+    "tests/",
+    ".venv/",
+    "__pycache__/",
+    "*.egg-info/",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+ignore = [
+    "E402",  # Module level import not at top of file (allow docstrings first)
+    "F403",  # Star imports (used in __init__.py re-exports)
+    "F404",  # __future__ imports after docstrings
+    "F405",  # Names from star imports (used in __init__.py)
+
+    "E501",  # Line too long (handled by black)
+    "F403",  # Unable to detect undefined names from star imports (intentional re-exports)
+    "F405",  # Name may be undefined from star imports (intentional re-exports)
+    "F841",  # Local variable assigned but never used (tolerate in utility code)
+    "N801",  # class name should use CapWords convention
+    "N802",  # function name should be lowercase (descriptive names)
+    "N803",  # argument name should be lowercase (API naming)
+    "N806",  # variable in function should be lowercase (acronyms)
+    "N811",  # constant imported as non-constant (intentional aliasing)
+    "N813",  # Camelcase imported as lowercase (intentional pattern)
+    "N815",  # variable in class scope should not be mixedCase (API fields)
+    "N999",  # Invalid module name (legacy module names)
+    "UP036",  # Outdated version block (intentional compatibility)
+]
+exclude = [
+    "src/postman/_postman_staging/**",
+]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+force-wrap-aliases = true
+split-on-trailing-comma = true
+
+[tool.black]
+line-length = 88
+target-version = ['py313']
+
+[tool.isort]
+profile = "black"
+line_length = 88
+multi_line_output = 3
+force_grid_wrap = 0
+combine_as_imports = true
+remove_redundant_aliases = true
+split_on_trailing_comma = true
+include_trailing_comma = true
+
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+mypy_path = "src"
+
+[[tool.mypy.overrides]]
+module = "domolibrary2.*"
+ignore_missing_imports = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
