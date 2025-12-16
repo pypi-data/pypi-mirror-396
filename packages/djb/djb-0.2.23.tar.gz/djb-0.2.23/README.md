@@ -1,0 +1,248 @@
+# djb - Django + Bun Platform
+
+<a href="https://github.com/kajicom/djb">
+  <img src="./docs/djb.svg" alt="djb mascot" width="300px" align="right">
+</a>
+
+`djb` is a deployment platform for Django applications with frontend tooling (Bun). It provides utilities for secrets management, deployment, and development workflows.
+
+djb structure:
+
+```
+djb/
+├── src/djb/
+│   ├── __init__.py      # Package initialization + logging exports
+│   ├── config.py        # User configuration (name, email)
+│   ├── project.py       # Project utilities
+│   ├── cli/             # Command-line interface
+│   │   ├── djb.py       # Main CLI entry point
+│   │   ├── init.py      # Environment initialization
+│   │   ├── secrets.py   # Secrets management commands
+│   │   ├── deploy.py    # Heroku deployment
+│   │   ├── publish.py   # Package publishing
+│   │   ├── superuser.py # Django Superuser syncing
+│   │   ├── editable.py  # Editable djb management
+│   │   ├── logging.py   # CLI logging utilities
+│   │   └── utils.py     # Shared utilities
+│   ├── core/            # Core utilities
+│   │   └── exceptions.py
+│   ├── management/      # Django management commands
+│   │   └── commands/
+│   │       └── sync_superuser.py
+│   └── secrets/         # Encrypted secrets management
+│       ├── __init__.py  # Public API exports
+│       ├── core.py      # Encryption/decryption
+│       └── init.py      # Secrets initialization
+└── pyproject.toml
+```
+
+## Installation
+
+If you don't have uv installed yet:
+
+```bash
+# macOS/Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Windows
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+Install djb as a dependency in your project:
+
+```bash
+# Add djb to your project
+uv add djb
+
+# Verify djb is available
+djb --help
+```
+
+For local development of djb alongside your project:
+
+```bash
+# Clone djb into your project as a subdirectory
+git clone https://github.com/kajicom/djb
+
+# Install in editable mode
+djb editable-djb
+```
+
+## Features
+
+### Initialization
+
+One-command setup for development environment:
+
+```bash
+# Full initialization
+djb init
+
+# Initialize with options
+djb init --skip-brew          # Skip Homebrew dependencies
+djb init --skip-frontend      # Skip frontend setup
+djb init --skip-secrets       # Skip secrets initialization
+djb init --project-root /path # Specify project directory
+```
+
+This installs:
+- System dependencies via Homebrew (age, SOPS, PostgreSQL, GDAL, Bun)
+- Python dependencies (`uv sync`)
+- Frontend dependencies (`bun install`)
+- Encrypted secrets management
+
+### Secrets Management
+
+Age + SOPS encrypted secrets for secure configuration:
+
+```bash
+# Initialize secrets (creates .age/keys.txt in project root)
+djb secrets init
+
+# Edit environment secrets
+djb secrets edit dev
+djb secrets edit heroku_prod
+
+# View secrets
+djb secrets view dev
+djb secrets list
+
+# Backup private key to clipboard (store in password manager!)
+djb secrets export-key | pbcopy
+```
+
+Each project has its own encryption key stored in `.age/keys.txt`. 
+Make sure to back up your key securely. If lost, you won't be able to decrypt existing secrets.
+Copy your private Age key to the clipboard: 
+```bash
+djb secrets export-key | pbcopy
+```
+
+**Documentation**: See [docs/SECRETS_GUIDE.md](../docs/SECRETS_GUIDE.md)
+
+### Deployment
+
+Heroku deployment with frontend builds, secrets sync, and migrations:
+
+```bash
+# Deploy to Heroku (uses DJB_APP_NAME from Django settings)
+djb deploy heroku
+
+# Or specify app explicitly
+djb deploy heroku --app myapp
+
+# Deploy with options
+djb deploy heroku --local-build --skip-secrets
+
+# Configure Heroku app (buildpacks, postgres, git remote)
+djb deploy heroku setup
+
+# Revert to previous deployment
+djb deploy heroku revert
+
+# Revert to specific commit
+djb deploy heroku revert abc1234
+```
+
+**App Name Auto-Detection**: If `DJB_APP_NAME` is set in your Django settings, deployment commands will use it automatically. You can still override with `--app`.
+
+```python
+# In settings.py
+DJB_APP_NAME = "myapp"
+```
+
+## Usage
+
+### Command Line
+
+Run djb commands directly:
+
+```bash
+djb <command>
+```
+
+### Python API
+
+Import djb modules directly in Python code:
+
+```python
+from djb.secrets import load_secrets, SecretsManager
+from pathlib import Path
+
+# Load secrets for current environment
+secrets = load_secrets()
+api_key = secrets['api_keys']['stripe']
+
+# Encrypt/decrypt programmatically (requires SOPS and age)
+manager = SecretsManager(secrets_dir=Path('secrets'))
+secrets = manager.load_secrets('dev')
+```
+
+## Development
+
+### Adding New Commands
+
+1. Create a new subcommand module in `djb/cli/`
+2. Define your Click command group
+3. Register it in `djb/cli/djb.py`:
+
+```python
+from djb.cli.mycommand import mycommand
+
+djb_cli.add_command(mycommand)
+```
+
+### Adding New Features
+
+1. Implement the feature in an appropriate module under `djb/`
+2. Export public API in `djb/__init__.py` if needed
+3. Add CLI commands if applicable
+4. Update documentation
+
+## Architecture Decisions
+
+### Why Integrated Development
+
+djb can be embedded within projects as a subdirectory and installed in editable mode.
+This allows:
+
+1. Rapid iteration on both the platform and application
+2. Project-specific customization
+3. Simplified dependency management during development
+
+For production deployments, djb is installed from PyPI.
+
+## Future Plans
+
+Planned djb features:
+
+- [x] Environment initialization - `djb init`
+- [x] Deployment commands (Heroku) - `djb deploy heroku`, `djb deploy heroku revert`
+- [x] Heroku setup - `djb deploy heroku setup` (buildpacks, postgres, git remote)
+- [x] App name auto-detection from Django settings (`DJB_APP_NAME`)
+- [x] Git hooks setup via `djb init` (pre-commit hook for editable djb check)
+- [x] Multi-recipient secret encryption
+- [x] Secret rotation automation
+- [ ] Deployment commands (Kubernetes)
+- [ ] Development server management
+- [ ] Database migration utilities
+- [ ] Environment variable syncing
+
+## References
+
+- [Secrets Guide](../docs/SECRETS_GUIDE.md) - User guide for secrets management
+- [Age Encryption](https://age-encryption.org/) - Encryption specification
+- [Click](https://click.palletsprojects.com/) - CLI framework
+
+## License
+
+djb is licensed under the MIT License.
+
+## Mascot Attribution
+
+The djb mascot (dj_bun) was created for this project and is distributed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/deed.en).
+
+<br>
+
+---
+/**dj_bun**: playin' dev and deploy since 1984 🎶
