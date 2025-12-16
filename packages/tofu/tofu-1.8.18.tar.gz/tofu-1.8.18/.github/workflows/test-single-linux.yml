@@ -1,0 +1,63 @@
+name: Ubuntu, py 3.11, pip
+
+on:
+  push:
+    branches-ignore:
+      - master
+      - devel
+      - deploy-test
+  pull_request:
+    branches-ignore:
+      - master
+      - devel
+      - deploy-test
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 5
+    steps:
+
+    # Install latex
+    - name: Install latex for matplotlib
+      run: |
+          sudo apt update
+          sudo apt install texlive texlive-latex-extra texlive-fonts-recommended dvipng cm-super
+
+    # git checkout
+    - name: git checkout
+      uses: actions/checkout@v5
+      with:
+        # https://github.com/marketplace/actions/checkout#usage
+        fetch-depth: 0   # to fetch all history from all branches
+        fetch-tags: true
+
+    # Install uv
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+          python-version: 3.11
+
+    # Build dist
+    - name: Build the project
+      run: |
+        uv build
+    
+    # Create and activate env
+    - name: Create and activate env
+      run: |
+        uv venv venv --python 3.11
+        source .venv/bin/activate
+        uv pip install latex
+    
+    # Install library
+    - name: Install the project
+      run: |
+        uv pip install ./dist/*.whl
+    
+    # Run tests
+    - name: Test with pytest and coverage
+      run: |
+        cd ./dist/
+        pytest --pyargs tofu.tests -xv --durations=10
