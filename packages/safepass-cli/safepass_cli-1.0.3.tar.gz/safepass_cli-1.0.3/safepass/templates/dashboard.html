@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Dashboard - SafePass{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/components/sidebar.css' %}">
+<link rel="stylesheet" href="{% static 'css/components/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'css/components/buttons.css' %}">
+<link rel="stylesheet" href="{% static 'css/components/forms.css' %}">
+{% endblock %}
+
+{% block body_class %}with-sidebar{% endblock %}
+
+{% block content %}
+{% include "partials/sidebar.html" %}
+
+<!-- Main Content -->
+<main class="main-content">
+    <div class="page-header">
+        <h1>📈 Dashboard</h1>
+        <p>Güvenlik seviyenizin anlık özeti.</p>
+    </div>
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">🔑</div>
+            <div class="stat-content">
+                <div class="stat-value">{{ stats.total_cards }}</div>
+                <div class="stat-label">Toplam Şifre</div>
+            </div>
+        </div>
+        
+        <div class="stat-card stat-success">
+            <div class="stat-icon">🛡️</div>
+            <div class="stat-content">
+                <div class="stat-value">{{ stats.strong_count }}</div>
+                <div class="stat-label">Güçlü Şifre</div>
+            </div>
+        </div>
+        
+        <div class="stat-card stat-warning">
+            <div class="stat-icon">⚠️</div>
+            <div class="stat-content">
+                <div class="stat-value">{{ stats.medium_count }}</div>
+                <div class="stat-label">Orta Şifre</div>
+            </div>
+        </div>
+        
+        <div class="stat-card stat-danger">
+            <div class="stat-icon">🔴</div>
+            <div class="stat-content">
+                <div class="stat-value">{{ stats.weak_count }}</div>
+                <div class="stat-label">Zayıf Şifre</div>
+            </div>
+        </div>
+        
+        <div class="stat-card stat-duplicate">
+            <div class="stat-icon">🔁</div>
+            <div class="stat-content">
+                <div class="stat-value">{{ stats.duplicate_count }}</div>
+                <div class="stat-label">Tekrar Eden</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="dashboard-sections">
+        <div class="section">
+            <h2>🔒 Güvenlik Skoru</h2>
+            <div class="security-score">
+                <div class="score-circle" data-score="{{ stats.security_score }}">
+                    <span class="score-value">{{ stats.security_score }}</span>
+                    <span class="score-max">/100</span>
+                </div>
+                <p class="score-label">{{ stats.security_label }}</p>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>📋 Son Eklenenler</h2>
+            <div class="recent-cards">
+                {% for card in recent_cards %}
+                <a href="/passwords/{{ card.id }}/edit" class="card-item card-link">
+                    <div class="card-icon">🔐</div>
+                    <div class="card-info">
+                        <div class="card-name">{{ card.app_name }}</div>
+                        <div class="card-username">{{ card.username }}</div>
+                    </div>
+                    <div class="card-date">{{ card.created_at|date:"d.m.Y" }}</div>
+                </a>
+                {% empty %}
+                <p class="text-muted">Henüz şifre kartı eklenmemiş</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    {% if stats.duplicate_count > 0 %}
+    <div class="warning-section">
+        <h2>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            Tekrar Eden Şifreler
+        </h2>
+        <p class="warning-text">Aynı şifre birden fazla hesapta kullanılıyor. Güvenlik riski!</p>
+        <div class="duplicate-list">
+            {% for dup in stats.duplicate_passwords %}
+            <div class="duplicate-item">
+                <div class="duplicate-icon">🔁</div>
+                <div class="duplicate-info">
+                    <div class="duplicate-apps">{{ dup.apps|join:", " }}</div>
+                    <div class="duplicate-count">{{ dup.apps|length }} hesapta aynı şifre</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/modules/dashboard.js"></script>
+{% endblock %}
