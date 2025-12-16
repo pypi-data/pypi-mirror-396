@@ -1,0 +1,148 @@
+[project]
+name = "dataeval-plots"
+dynamic = ["version"]
+description = "DataEval companion package for plotting utilities"
+authors = [
+  { name = "Andrew Weng", email = "andrew.weng@ariacoustics.com" },
+  { name = "Ryan Wood", email = "ryan.wood@ariacoustics.com" },
+  { name = "Shaun Jullens", email = "shaun.jullens@ariacoustics.com" },
+]
+requires-python = ">=3.10,<3.14"
+readme = "README.md"
+license = "MIT"
+maintainers = [
+  { name = "ARiA", email = "dataeval@ariacoustics.com" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Operating System :: OS Independent",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering",
+]
+dependencies = [
+  "numpy>=1.24.2,<2.3; python_version<'3.12'",
+  "numpy>=1.26.2,<2.3; python_version>='3.12'",
+  "matplotlib>=3.7.1",
+  "polars>=1.0.0",
+]
+
+[project.optional-dependencies]
+seaborn = ["seaborn>=0.12"]
+plotly = ["plotly>=5.0"]
+altair = ["altair>=5.0"]
+opencv = ["opencv-python-headless>=4.12.0.88"]
+all = [
+  "seaborn>=0.12",
+  "plotly>=5.0",
+  "altair>=5.0",
+]
+
+[dependency-groups]
+base = [
+  "nox>=2025.5.1",
+  "nox-uv>=0.6.2",
+  "uv>=0.8.0",
+]
+lint = [
+  { include-group = "base" },
+  "ruff>=0.11",
+  "codespell[toml]>=2.3",
+]
+test = [
+  { include-group = "base" },
+  "pytest>=8.3",
+  "pytest-cov>=6.1",
+  "coverage[toml]>=7.6",
+]
+type = [
+  { include-group = "base" },
+  "pyright[nodejs]>=1.1.400",
+]
+dev = [
+  { include-group = "base" },
+  { include-group = "lint" },
+  { include-group = "test" },
+  { include-group = "type" },
+]
+
+[project.urls]
+Homepage = "https://dataeval.ai/"
+Repository = "https://github.com/aria-ml/dataeval/"
+Documentation = "https://dataeval.readthedocs.io/"
+
+[tool.hatch.build.targets.sdist]
+include = ["src/dataeval_plots"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dataeval_plots"]
+
+[tool.hatch.build.targets.wheel.sources]
+"src/dataeval_plots" = "dataeval_plots"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "src/dataeval_plots/_version.py"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = [
+  "--pythonwarnings=ignore::DeprecationWarning",
+  "--verbose",
+]
+
+[tool.coverage.run]
+source = ["src/dataeval_plots"]
+branch = true
+omit = ["src/dataeval_plots/_version.py"]
+
+[tool.coverage.report]
+exclude_also = [
+  "raise NotImplementedError",
+  ": \\.\\.\\.",
+  "_version.py",
+]
+include = ["*/src/dataeval_plots/*"]
+fail_under = 80
+
+[tool.codespell]
+skip = './*env*,./output,uv.lock'
+
+[tool.ruff]
+exclude = [
+  ".github",
+  ".vscode",
+  "*env*",
+  ".nox",
+]
+line-length = 120
+indent-width = 4
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["A", "ANN", "C4", "C90", "E", "F", "I", "NPY", "S", "SIM", "RET", "RUF100", "UP"]
+ignore = ["ANN401", "C901", "NPY002"]
+fixable = ["ALL"]
+unfixable = []
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+per-file-ignores = { "!src/*" = ["ANN", "S", "RET"]}
+
+[tool.ruff.lint.isort]
+known-first-party = ["dataeval_plots"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
