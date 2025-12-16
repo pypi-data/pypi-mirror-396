@@ -1,0 +1,23 @@
+[project]
+name = "cat-cafe-client"
+version = "0.0.2"
+description = "Python client for CAT Cafe - Continuous Alignment Testing platform for LLM observability"
+readme = "README.md"
+authors = [{ name = "Kurtis Seebaldt", email = "kurtisseebaldt@artium.ai" }]
+requires-python = ">=3.12"
+dependencies = ["httpx>=0.24.0", "typing-extensions>=4.0.0"]
+
+[dependency-groups]
+dev = ["pytest>=7.0.0", "pytest-asyncio>=0.21.0", "respx>=0.20.0"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+include = ["src/cat/**/*.py", "src/cat/**/*.pyi", "README.md"]
+[tool.hatch.build.hooks.custom]
+path = "hatch_build.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cat"]
