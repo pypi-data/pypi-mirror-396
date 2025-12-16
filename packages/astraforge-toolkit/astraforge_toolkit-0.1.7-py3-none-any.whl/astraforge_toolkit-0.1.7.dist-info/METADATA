@@ -1,0 +1,140 @@
+Metadata-Version: 2.4
+Name: astraforge-toolkit
+Version: 0.1.7
+Summary: HTTP client and sandbox backend for AstraForge DeepAgent.
+Author-email: AstraForge Contributors <jeremy.jouvance@gmail.com>
+License: MIT License
+        
+        Copyright (c) 2024 AstraForge Contributors
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+        
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: 3.11
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: requests>=2.32
+Requires-Dist: deepagents>=0.2.8
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: types-requests; extra == "dev"
+Dynamic: license-file
+
+# AstraForge Toolkit
+
+Lightweight Python package for using AstraForge DeepAgent and sandboxes from another project.
+
+Contents:
+- `astraforge_toolkit.SandboxBackend`: DeepAgents backend that executes via the remote AstraForge sandbox API.
+- `astraforge_toolkit.DeepAgentClient`: HTTP client for DeepAgent conversations, sandbox sessions (create/list/heartbeat/stop/delete), file upload/download/export, and streaming replies.
+- Remote sandbox tools: `sandbox_shell`, `sandbox_python_repl`, `sandbox_open_url_with_playwright`,
+  `sandbox_view_image` — all execute inside the sandbox via HTTP.
+
+## Install
+
+```bash
+pip install astraforge-toolkit
+```
+
+## Quick start
+
+### Create a sandbox-backed DeepAgent
+
+```python
+from deepagents import create_deep_agent
+from langchain_openai import ChatOpenAI
+from astraforge_toolkit import (
+    SandboxBackend,
+    sandbox_shell,
+    sandbox_python_repl,
+    sandbox_open_url_with_playwright,
+    sandbox_view_image,
+)
+
+def backend_factory(rt):
+    return SandboxBackend(
+        rt,
+        base_url="https://your.astra.forge/api",
+        api_key="your-api-key",
+        # optional: session_params={"image": "astraforge/codex-cli:latest"},
+    )
+
+model = ChatOpenAI(model="gpt-4o", api_key="...")
+agent = create_deep_agent(model=model, backend=backend_factory)
+
+# Optional: register sandbox tools with your agent/tool registry
+tools = [sandbox_shell, sandbox_python_repl, sandbox_open_url_with_playwright, sandbox_view_image]
+```
+
+### Create a sandbox session (no DeepAgent conversation)
+
+```python
+from astraforge_toolkit import DeepAgentClient
+
+client = DeepAgentClient(base_url="https://your.astra.forge/api", api_key="your-api-key")
+sandbox = client.create_sandbox_session(session_params={"image": "astraforge/codex-cli:latest"})
+
+# Upload text (or bytes) into the sandbox workspace
+client.upload_file(sandbox.session_id, "/workspace/hello.txt", content="hello from toolkit!\n")
+
+# Download the file back; omit encoding to get raw bytes
+print(client.get_file_content(sandbox.session_id, "/workspace/hello.txt", encoding="utf-8"))
+
+# Export a file as an artifact (resolves download URL when configured)
+artifact = client.export_file(
+    sandbox.session_id,
+    "/workspace/hello.txt",
+    filename="hello.txt",
+    content_type="text/plain",
+)
+print("artifact id:", artifact.artifact_id, "download:", artifact.download_url)
+
+# Keep the sandbox alive or clean it up when finished
+client.heartbeat_sandbox_session(sandbox.session_id)
+client.stop_sandbox_session(sandbox.session_id)  # or client.delete_sandbox_session(...)
+```
+
+### Call DeepAgent over HTTP
+
+```python
+from astraforge_toolkit import DeepAgentClient
+
+client = DeepAgentClient(base_url="https://your.astra.forge/api", api_key="your-api-key")
+conv = client.create_conversation()
+
+for chunk in client.stream_message(conv.conversation_id, "Hello, sandbox!"):
+    print(chunk)
+```
+
+## Build & publish
+
+```bash
+cd astraforge-python-package
+python -m build
+python -m twine upload dist/*  # or use --repository testpypi
+```
+
+Configure `~/.pypirc` or set `TWINE_USERNAME=__token__` and `TWINE_PASSWORD=<pypi-token>` for uploads.
+
+## Examples
+
+See `examples/local_api_test.ipynb` for a quick notebook that exercises the client against a local
+`http://localhost:8001/api` instance.
