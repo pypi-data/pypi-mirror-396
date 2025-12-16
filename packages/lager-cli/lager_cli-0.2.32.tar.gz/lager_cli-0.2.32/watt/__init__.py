@@ -1,0 +1,3 @@
+"""
+Watt meter CLI commands.
+"""
