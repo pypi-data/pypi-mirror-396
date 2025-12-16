@@ -1,0 +1,338 @@
+# CLI Reference
+
+The `pbir-utils` command-line interface provides access to all utilities after installation.
+
+!!! tip "Summary Mode"
+    Use the `--summary` flag with any command to get concise count-based output instead of detailed messages.
+
+## Sanitize Report
+
+Sanitize a Power BI report by removing unused or unwanted components. Runs default actions from config when no `--actions` specified.
+
+```bash
+# Run default actions from config (--actions all is optional)
+pbir-utils sanitize "C:\Reports\MyReport.Report" --dry-run
+
+# Run specific actions only
+pbir-utils sanitize "C:\Reports\MyReport.Report" --actions remove_unused_measures --dry-run
+
+# Exclude specific actions from defaults
+pbir-utils sanitize "C:\Reports\MyReport.Report" --exclude set_first_page_as_active --dry-run
+
+# Include additional actions beyond defaults
+pbir-utils sanitize "C:\Reports\MyReport.Report" --include standardize_pbir_folders set_page_size --dry-run
+
+# Concise output
+pbir-utils sanitize "C:\Reports\MyReport.Report" --summary
+```
+
+### YAML Configuration
+
+Create a `pbir-sanitize.yaml` file to customize defaults. You only need to specify what you want to **change** - defaults are inherited:
+
+```yaml
+# pbir-sanitize.yaml - extends package defaults
+
+# Define or override action implementations and parameters
+definitions:
+  set_page_size_hd:         # Custom action name
+    description: Set page size to HD (1920x1080)  # Human-readable description for CLI output
+    implementation: set_page_size
+    params:
+      width: 1920
+      height: 1080
+      exclude_tooltip: true
+
+# Override default action list (replaces, does not merge)
+actions:
+  - cleanup_invalid_bookmarks
+  - remove_unused_measures
+  - set_page_size_hd          # Use our custom definition
+
+# Or use include/exclude to modify defaults
+include:
+  - standardize_pbir_folders  # Add to defaults
+
+exclude:
+  - set_first_page_as_active  # Remove from defaults
+
+options:
+  summary: true               # Override default options
+```
+
+### Config Resolution Priority
+
+Configuration is resolved in the following order (highest to lowest):
+
+1. CLI flags (`--dry-run`, `--exclude`, etc.)
+2. User config (`pbir-sanitize.yaml` in CWD or report folder)
+3. Package defaults (`defaults/sanitize.yaml`)
+
+---
+
+## Extract Metadata
+
+Export attribute metadata from PBIR to CSV.
+
+```bash
+pbir-utils extract-metadata "C:\Reports\MyReport.Report" "C:\Output\metadata.csv"
+```
+
+---
+
+## Visualize Wireframes
+
+Display report wireframes using Dash and Plotly.
+
+```bash
+pbir-utils visualize "C:\Reports\MyReport.Report"
+pbir-utils visualize "C:\Reports\MyReport.Report" --pages "Overview" "Detail"
+```
+
+---
+
+## Batch Update
+
+Batch update attributes in PBIR project using a mapping CSV.
+
+```bash
+pbir-utils batch-update "C:\PBIR\Project" "C:\Mapping.csv" --dry-run
+```
+
+---
+
+## Disable Interactions
+
+Disable visual interactions between visuals.
+
+```bash
+pbir-utils disable-interactions "C:\Reports\MyReport.Report" --dry-run
+pbir-utils disable-interactions "C:\Reports\MyReport.Report" --pages "Overview" --source-visual-types slicer
+```
+
+---
+
+## Remove Measures
+
+Remove report-level measures.
+
+```bash
+pbir-utils remove-measures "C:\Reports\MyReport.Report" --dry-run
+pbir-utils remove-measures "C:\Reports\MyReport.Report" --measure-names "Measure1" "Measure2"
+```
+
+---
+
+## Measure Dependencies
+
+Generate a dependency tree for measures.
+
+```bash
+pbir-utils measure-dependencies "C:\Reports\MyReport.Report"
+```
+
+---
+
+## Update Filters
+
+Update report-level filters.
+
+```bash
+pbir-utils update-filters "C:\Reports" '[{"Table": "Sales", "Column": "Region", "Condition": "In", "Values": ["North", "South"]}]' --dry-run
+```
+
+---
+
+## Sort Filters
+
+Sort report-level filter pane items.
+
+```bash
+pbir-utils sort-filters "C:\Reports" --sort-order Ascending --dry-run
+pbir-utils sort-filters "C:\Reports" --sort-order Custom --custom-order "Region" "Date"
+```
+
+---
+
+## Configure Filter Pane
+
+Configure filter pane visibility and expanded state.
+
+```bash
+pbir-utils configure-filter-pane "C:\Reports\MyReport.Report" --dry-run
+pbir-utils configure-filter-pane "C:\Reports\MyReport.Report" --visible false --dry-run
+pbir-utils configure-filter-pane "C:\Reports\MyReport.Report" --expanded true --dry-run
+```
+
+---
+
+## Clear Filters
+
+Inspect and clear filter conditions from Power BI reports at report, page, or visual level.
+
+```bash
+# Inspect all report-level filters (dry-run by default)
+pbir-utils clear-filters "C:\\Reports\\MyReport.Report" --dry-run
+
+# Clear all report-level filters (remove --dry-run to apply)
+pbir-utils clear-filters "C:\\Reports\\MyReport.Report"
+
+# Inspect page-level filters (all pages)
+pbir-utils clear-filters "C:\\Reports\\MyReport.Report" --page --dry-run
+
+# Target a specific page by name or ID
+pbir-utils clear-filters "C:\\Reports\\MyReport.Report" --page "Overview" --dry-run
+
+# Inspect visual-level filters including slicers
+pbir-utils clear-filters "C:\\Reports\\MyReport.Report" --visual --dry-run
+
+# Filter by table name (supports wildcards)
+pbir-utils clear-filters "C:\\Reports\\MyReport.Report" --table "Date*" "Sales" --dry-run
+
+# Filter by column name (supports wildcards)
+pbir-utils clear-filters "C:\\Reports\\MyReport.Report" --column "Year" "*Date" --dry-run
+
+# Filter by full field reference
+pbir-utils clear-filters "C:\\Reports\\MyReport.Report" --field "'Sales'[Amount]" --dry-run
+```
+
+### CLI Options
+
+| Option | Description |
+|--------|-------------|
+| `--page [NAME]` | Target pages. If no value, includes all pages. If value given, targets specific page by displayName or ID. |
+| `--visual [NAME]` | Target visuals. If no value, includes all visuals. If value given, targets specific visual by name or type. |
+| `--table` | Filter by table name(s), supports wildcards (e.g., `Date*`) |
+| `--column` | Filter by column name(s), supports wildcards (e.g., `*Amount`) |
+| `--field` | Filter by full field reference(s), supports wildcards (e.g., `'Sales'[*]`) |
+| `--all` | Explicitly clear all matching filters |
+| `--dry-run` | Preview which filters would be cleared without modifying files |
+
+### YAML Configuration
+
+Use `clear_filters` in your `pbir-sanitizer.yaml` to include it in sanitization pipelines:
+
+```yaml
+definitions:
+  clear_all_report_filters:
+    description: Clear all report-level filter conditions
+    implementation: clear_filters
+    params:
+      clear_all: true
+      dry_run: false
+
+  clear_date_filters:
+    description: Clear filters on Date tables
+    implementation: clear_filters
+    params:
+      include_tables:
+        - "Date*"
+      clear_all: true
+
+  clear_page_filters:
+    description: Clear all page-level filters
+    implementation: clear_filters
+    params:
+      show_page_filters: true
+      clear_all: true
+
+actions:
+  - clear_all_report_filters  # Add to your action list
+```
+
+---
+
+## Set Display Option
+
+Set the display option for pages in a Power BI report. Controls how pages are rendered in the viewer.
+
+```bash
+# Set all pages to FitToWidth (dry run)
+pbir-utils set-display-option "C:\\Reports\\MyReport.Report" --option FitToWidth --dry-run
+
+# Set a specific page by display name
+pbir-utils set-display-option "C:\\Reports\\MyReport.Report" --page "Trends" --option ActualSize
+
+# Set a specific page by internal name/ID
+pbir-utils set-display-option "C:\\Reports\\MyReport.Report" --page "bb40336091625ae0070a" --option FitToPage
+
+# Apply to all pages with summary output
+pbir-utils set-display-option "C:\\Reports\\MyReport.Report" --option FitToPage --summary
+```
+
+### Display Options
+
+| Option | Description |
+|--------|-------------|
+| `ActualSize` | Pages display at their actual pixel dimensions |
+| `FitToPage` | Pages scale to fit the entire page in the viewport |
+| `FitToWidth` | Pages scale to fit the width of the viewport |
+
+### CLI Options
+
+| Option | Description |
+|--------|-------------|
+| `--page NAME` | Target specific page by displayName or internal name. If omitted, applies to all pages. |
+| `--option` | **Required.** Display option to set (`ActualSize`, `FitToPage`, `FitToWidth`). |
+| `--dry-run` | Preview changes without modifying files. |
+| `--summary` | Show count-based summary instead of detailed messages. |
+| `--error-on-change` | Exit with error code 1 if changes would be made (CI/CD mode). |
+
+### YAML Configuration
+
+Use display option actions in your `pbir-sanitize.yaml`:
+
+```yaml
+definitions:
+  # These are already defined in package defaults
+  set_display_option_fit_to_page:
+    description: Set all pages to FitToPage display
+    implementation: set_page_display_option
+    params:
+      display_option: FitToPage
+
+  set_display_option_fit_to_width:
+    description: Set all pages to FitToWidth display
+    implementation: set_page_display_option
+    params:
+      display_option: FitToWidth
+
+  set_display_option_actual_size:
+    description: Set all pages to ActualSize display
+    implementation: set_page_display_option
+    params:
+      display_option: ActualSize
+
+actions:
+  - set_display_option_fit_to_page  # Add to your sanitization pipeline
+```
+
+---
+
+## Consolidated Actions
+
+!!! note "Sanitize Command"
+    Many individual commands have been consolidated into the `sanitize` command.
+    Use `pbir-utils sanitize --actions <action_name>` for actions like:
+
+    - `remove_unused_bookmarks`, `cleanup_invalid_bookmarks`
+    - `remove_unused_custom_visuals`, `disable_show_items_with_no_data`
+    - `hide_tooltip_pages`, `hide_drillthrough_pages`
+    - `set_first_page_as_active`, `remove_empty_pages`
+    - `standardize_pbir_folders`, `reset_filter_pane_width`
+
+---
+
+## CI/CD Integration
+
+The `--error-on-change` flag enables automated validation in CI/CD pipelines. When used with `--dry-run`, the CLI exits with code 1 if any changes would be made, allowing builds to fail automatically when reports don't meet standards.
+
+### Usage
+
+```bash
+# Fail if standardize_pbir_folders would make changes
+pbir-utils sanitize "MyReport.Report" --actions standardize_pbir_folders --dry-run --error-on-change standardize_pbir_folders
+
+# For sanitize: specify which actions should trigger failure
+pbir-utils sanitize "MyReport.Report" --dry-run --error-on-change set_first_page_as_active remove_empty_pages
+```
