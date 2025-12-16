@@ -1,0 +1,146 @@
+type: object
+properties:
+  kind:
+    description: The "kind" or type of resource
+    type: string
+  apiVersion:
+    description: The version of the resource
+    type: string
+  versionInPath:
+    description: Whether to prepend to all paths version to the path, e.g. /v1.0
+    type: boolean
+  metadata:
+    type: object
+    properties:
+      name:
+        description: The name of the resource
+        type: string
+      description:
+        description: The description of the resource
+        type: string
+  asyncapi:
+    type: object
+    description: Configuration for asyncapi generation
+    properties:
+      servers:
+        description: A dictionary of servers by environment
+        type: object
+      channels:
+        description: A dictionary of channels
+        type: object
+    additionalProperties: false
+  default_query_params:
+    type: array
+    description: A list dictionaries
+  descriptions:
+    type: object
+    description: A dictionary of resource type, their HTTP methods and their descriptions
+  methods:
+    type: object
+    description: A dictionary of resource type and their HTTP methods
+    properties:
+      resource: &http_methods
+        description: A list of methods to expose, else all for this level of resource exposure
+        type: array
+        items:
+          type: string
+          enum:
+            - delete
+            - get
+            - head
+            - options
+            - patch
+            - post
+            - put
+      instance: *http_methods
+      instance_attrs: *http_methods
+  security:
+    type: object
+    description: A dictionary of resource type, their HTTP methods, and authentication method
+    properties:
+      scheme:
+        type: object
+        patternProperties:
+          ^.*$:
+            type: object
+            properties:
+              type:
+                type: string
+                enum:
+                  - apiKey
+                  - http
+                  - oauth2
+                  - openIdConnect
+              scheme:
+                type: string
+                enum:
+                  - basic
+                  - bearer
+        additionalProperties: false
+      resource: *http_methods
+      instance: *http_methods
+      instance_attrs: *http_methods
+      additionalProperties: false
+  schema:
+    description: The schema of the resource
+    type: object
+    properties:
+      key:
+        description: The unique identifier for the resource
+        type: object
+      query_params:
+        description: Query params to be added to select HTTP methods
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+            description:
+              type: string
+            schema:
+              type: object
+            methods: *http_methods
+      descriptions:
+        description: An overrideble dictionary of descriptions, per HTTP method, for the resource
+        type: object
+        properties:
+          get:
+            type: string
+          head:
+            type: string
+          patch:
+            type: string
+          post:
+            type: string
+      items:
+        type: object
+        properties:
+          descriptions:
+            description: An overrideble dictionary of descriptions, per HTTP method, for a resource instance
+            type: object
+            properties:
+              get:
+                type: string
+              head:
+                type: string
+              patch:
+                type: string
+              post:
+                type: string
+          properties:
+            description: A list of properties this resource has
+            type: object
+          additionalProperties: true
+        required:
+          - properties
+        additionalProperties: true
+    required:
+      - key
+      - items
+    additionalProperties: true
+required:
+  - kind
+  - apiVersion
+  - schema
+additionalProperties: false
