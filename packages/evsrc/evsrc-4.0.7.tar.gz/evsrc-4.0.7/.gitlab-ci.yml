@@ -1,0 +1,91 @@
+
+stages:
+  - test
+  - merge
+  - publish
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  POETRY_CACHE_DIR: "$CI_PROJECT_DIR/.cache/poetry"
+  UV_VERSION: "0.5.11"
+  PYTHON_VERSION: "3.13"
+
+# Default image for all jobs
+default:
+  image: python:${PYTHON_VERSION}-slim
+
+# Cache poetry dependencies
+cache:
+  key: "${CI_JOB_NAME}"
+  paths:
+    - .cache/pip
+    - .cache/poetry
+    - .venv
+
+
+# Install uv before script for jobs that need it
+.install_uv: &install_uv
+  - apt-get update && apt-get install -y git curl
+  - curl -LsSf https://astral.sh/uv/install.sh | sh
+  - export PATH="/root/.local/bin:$PATH"
+  - uv sync
+
+
+# Job 1: Test on all branches
+test:
+  stage: test
+  script:
+    - *install_uv
+    - ./run-all-tests.sh
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH'
+
+# Job 2: Merge release branch to main
+merge-to-main:
+  stage: merge
+  script:
+    - apt-get update && apt-get install -y git
+    - git config --global user.email "gitlab-ci@example.com"
+    - git config --global user.name "GitLab CI"
+    - git remote set-url origin "https://oauth2:${GIT_ACCESS_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
+    - git fetch origin main release --unshallow
+    - git checkout main
+    - >
+      git merge origin/release --no-ff
+      -m "chore: Merge release into main"
+    - git push origin main
+    - git checkout release
+    - git merge main --no-ff -m "sync release with main [skip ci]"
+    - git push origin release
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "release"'
+      when: on_success
+  needs:
+    - test
+
+# # Job 3: Publish to PyPI (bump version, tag, and publish)
+publish-to-pypi:
+  stage: publish
+  id_tokens:
+    PYPI_ID_TOKEN:
+      aud: https://gitlab.com
+  before_script:
+    - *install_uv
+  script:
+    - apt-get update && apt-get install -y git
+    - git config --global user.email "gitlab-ci@example.com"
+    - git config --global user.name "GitLab CI"
+    - git remote set-url origin "https://oauth2:${GIT_ACCESS_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
+    - git fetch origin main
+    - git checkout main
+    - uv run cz bump --yes 
+    - git push origin main
+    - git push origin --tags
+    - uv build
+    - uv publish --token ${PYPI_TOKEN}
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" && $CI_COMMIT_MESSAGE !~ /\[skip ci\]/'
+      when: on_success
+  needs:
+    - test

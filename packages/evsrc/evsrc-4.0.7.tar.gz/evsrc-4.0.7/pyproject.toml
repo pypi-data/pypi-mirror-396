@@ -1,0 +1,56 @@
+[project]
+name = "evsrc"
+version = "4.0.7"
+description = "Event Sourcing library using python"
+readme = "README.md"
+authors = [
+    { name = "Salvador Ruiz", email = "salvador.ruiz.r@gmail.com" }
+] 
+license =  { text = "LGPL-3.0-or-later" }
+requires-python = ">=3.13"
+dependencies = [
+    "dcjdict>=0.2.0",
+]
+
+[dependency-groups]
+dev = [
+    "commitizen>=4.10.0",
+    "ipython>=9.8.0",
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "pytest-cov>=7.0.0",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "\\.\\.\\.",  # Matches ellipses (...)
+    "pragma: no cover",  # Matches pragma-based exclusions
+]
+
+[build-system]
+requires = ["hatchling"]  
+build-backend = "hatchling.build"  # Handles modern packaging
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q"
+testpaths = [
+    "tests"
+]
+python_files = "test_* feat_*"
+python_classes = "A_* An_* UseCase_* Test*"
+python_functions = "should_* scenario_* test_*"
+markers = [
+    "integration: tests comunication to simulated external systems(devel mode)",
+    "acceptance: test application layer as external user",
+    "skip_publish: Skip publishing coverage data"
+]
+asyncio_mode = "auto"
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+bump_message = "bump: version $current_version → $new_version [skip ci]"
+tag_format = "v$version"
+version_scheme = "pep440"
+version_provider = "pep621"
+update_changelog_on_bump = true
