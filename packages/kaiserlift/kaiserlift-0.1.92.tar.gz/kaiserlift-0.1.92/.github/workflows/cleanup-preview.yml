@@ -1,0 +1,60 @@
+name: Cleanup PR Preview
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  redeploy-main:
+    name: Redeploy main site (remove PR preview)
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages-deployment
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Build main site
+        run: |
+          uv venv
+          uv pip install -e .
+          uv run --with setuptools-scm python scripts/inject_version.py
+          uv run python scripts/preprocess_data.py
+          uv run python tests/example_use/generate_example_html.py
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: tests/example_use/build
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Add cleanup summary
+        run: |
+          {
+            echo "### 🧹 Preview Cleanup Complete";
+            echo "";
+            echo "PR #${{ github.event.pull_request.number }} was closed.";
+            echo "";
+            echo "Main site redeployed to: ${{ steps.deployment.outputs.page_url }}";
+          } >> "$GITHUB_STEP_SUMMARY"
