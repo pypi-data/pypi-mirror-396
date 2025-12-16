@@ -1,0 +1,479 @@
+# 💻 Infiltrator - WiFi Auditing Suite
+
+**Developer:** LAKSHMIKANTHAN K (letchupkt)  
+**Version:** 1.0.0  
+**Platform:** Linux Only  
+**License:** MIT (Educational/Authorized Testing Only)
+
+---
+
+## ⚠️ Disclaimer
+
+**THIS TOOL IS FOR EDUCATIONAL AND AUTHORIZED SECURITY TESTING ONLY.**
+
+Unauthorized access to computer networks is **ILLEGAL**. The developers assume **NO LIABILITY** for misuse of this software. Always obtain proper written authorization before conducting any security assessments.
+
+---
+
+## 🎯 Overview
+
+**Infiltrator** is a comprehensive, modular WiFi penetration testing framework built in Python. It follows standard Red Team methodology with three main operational phases:
+
+1. **Reconnaissance & Intelligence Gathering**
+2. **Exploitation & Attack Automation**
+3. **Post-Attack Operations & Management**
+
+### Key Features
+
+✅ **Modular Architecture** - Easy feature integration and customization  
+✅ **CLI-Based Menu System** - Intuitive menu-driven interface  
+✅ **Multi-Adapter Support** - Coordinate multiple wireless adapters  
+✅ **Automated Attack Chains** - Multi-stage attack automation  
+✅ **Stealth & OPSEC** - MAC randomization, panic wipe, operational security  
+✅ **Advanced Attacks** - WPA3 downgrade, 802.1X phishing, WPS exploits  
+
+---
+
+## 📋 Requirements
+
+### System Requirements
+
+- **OS:** Linux Only (Ubuntu 20.04+, Debian 11+, Kali Linux 2023+, Arch Linux, Fedora 35+)
+- **Python:** 3.8+ (3.10+ recommended)
+- **Privileges:** Root/sudo required for wireless operations
+- **Hardware:** USB wireless adapter with monitor mode support
+- **Architecture:** x86_64 (amd64), ARM64, i386
+
+### Quick Installation
+
+```bash
+# From PyPI (Recommended)
+pip3 install infiltrator-wifi
+sudo apt install -y aircrack-ng reaver hashcat john tshark macchanger hostapd dnsmasq wireless-tools net-tools iw
+
+# From DEB Package (Debian/Ubuntu/Kali)
+wget https://github.com/letchupkt/infiltrator/releases/latest/download/infiltrator-wifi_1.0.0-1_all.deb
+sudo apt install ./infiltrator-wifi_1.0.0-1_all.deb
+
+# From Source
+git clone https://github.com/letchupkt/infiltrator.git
+cd infiltrator && sudo ./install.sh
+
+# Run Infiltrator
+sudo infiltrator
+```
+
+### Recommended Wireless Adapters
+
+- **Chipsets:** Atheros AR9271, Ralink RT3070, Realtek RTL8812AU
+- **Models:** Alfa AWUS036NHA, TP-Link TL-WN722N v1, Panda PAU09
+
+### System Dependencies
+
+```bash
+# Debian/Ubuntu/Kali
+sudo apt update
+sudo apt install -y \
+    aircrack-ng \
+    reaver \
+    hashcat \
+    john \
+    tshark \
+    macchanger \
+    hostapd \
+    dnsmasq \
+    wireless-tools \
+    net-tools \
+    iw
+
+# Optional (for advanced features)
+sudo apt install -y \
+    hostapd-wpe \
+    freeradius-wpe \
+    gpsd \
+    gpsd-clients
+```
+
+### Python Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+## 🚀 Installation
+
+### Quick Start
+```bash
+# Install from PyPI
+pip3 install infiltrator-wifi
+
+# Install system dependencies (Ubuntu/Debian/Kali)
+sudo apt update && sudo apt install -y aircrack-ng reaver hashcat john tshark macchanger hostapd dnsmasq wireless-tools net-tools iw
+
+# Run Infiltrator
+sudo infiltrator
+```
+
+### Complete Installation Options
+
+| Method | Command | Best For |
+|--------|---------|----------|
+| **PyPI** | `pip3 install infiltrator-wifi` | Most users |
+| **DEB Package** | `sudo apt install ./infiltrator-wifi_1.0.0-1_all.deb` | Debian/Ubuntu/Kali |
+| **Source** | `git clone ... && sudo ./install.sh` | Developers |
+| **Docker** | `docker-compose run --rm infiltrator` | Isolated testing |
+
+📖 **Detailed Instructions:** See [INSTALL.md](INSTALL.md) for complete installation guide.
+
+---
+
+## 🎮 Usage
+
+### Starting Infiltrator
+
+```bash
+sudo python3 infiltrator.py
+```
+
+On first run, Infiltrator will:
+1. Detect wireless adapters
+2. Offer to enable monitor mode
+3. Configure initial settings
+
+### Main Menu Structure
+
+```
+INFILTRATOR MAIN MENU
+├── [1] Reconnaissance & Intelligence Gathering
+│   ├── Passive Scanner & Analyzer
+│   ├── Client Probe Monitor
+│   ├── Target Tracker
+│   ├── Geo-Spatial Mapper (War-Driving)
+│   └── Protocol Fingerprinter
+│
+├── [2] Exploitation & Attack Automation
+│   ├── Deauth Attack Suite
+│   ├── Handshake/PMKID Capture
+│   ├── Multi-Adapter Evil Twin (MiTM)
+│   ├── WPS Brute-Forcer
+│   ├── WPA3-SAE Downgrade Attack
+│   └── 802.1X EAP Phishing Suite
+│
+├── [3] Post-Attack Operations & Management
+│   ├── Offline Cracking Integration
+│   ├── Automated Chain Execution
+│   ├── Stealth & OPSEC Tools
+│   └── Cloud Cracking API
+│
+├── [4] Adapter Management
+└── [5] Settings & Configuration
+```
+
+---
+
+## 📖 Feature Documentation
+
+### I. Reconnaissance & Intelligence Gathering
+
+#### Passive Scanner & Analyzer (Basic)
+- Monitors 2.4GHz and 5GHz bands
+- Collects BSSID, SSID, encryption, signal strength
+- Channel hopping for comprehensive coverage
+
+#### Client Probe Monitor (Basic)
+- Captures probe requests from devices
+- Builds network history profiles
+- Identifies preferred networks
+
+#### Target Tracker (Advanced)
+- Real-time monitoring of specific MAC addresses
+- Alerts on target detection
+- Tracks connection information
+
+#### Geo-Spatial Mapper (Advanced)
+- GPS-enabled war-driving
+- Outputs to KML/GPX formats
+- Physical AP location mapping
+
+#### Protocol Fingerprinter (Legendary)
+- Vendor-specific Information Element analysis
+- AP make/model/firmware identification
+- Zero-day targeting intelligence
+
+---
+
+### II. Exploitation & Attack Automation
+
+#### Deauth Attack Suite (Basic)
+- Disconnect clients from target AP
+- Customizable packet count
+- Broadcast or targeted attacks
+
+#### Handshake/PMKID Capture (Basic)
+- WPA/WPA2 4-way handshake capture
+- PMKID extraction
+- Automated deauth integration
+
+#### Multi-Adapter Evil Twin (MiTM) (Advanced)
+- Coordinated multi-adapter attacks
+- Rogue AP with DNS/ARP spoofing
+- Traffic interception and analysis
+
+#### WPS Brute-Forcer (Advanced)
+- Pixie Dust attacks
+- PIN brute-forcing
+- Optimized for low-noise operation
+
+#### WPA3-SAE Downgrade Attack (Legendary)
+- Targets WPA3 transition mode
+- Forces WPA2 downgrade
+- SAE handshake handling
+
+#### 802.1X EAP Phishing Suite (Legendary)
+- Rogue RADIUS server simulation
+- PEAP/EAP-TTLS credential harvesting
+- NTLMv2 hash extraction
+
+---
+
+### III. Post-Attack Operations & Management
+
+#### Offline Cracking Integration (Basic)
+- Hashcat GPU-accelerated cracking
+- John the Ripper CPU cracking
+- Aircrack-ng WPA/WPA2 cracking
+- Wordlist and rule management
+
+#### Automated Chain Execution (Advanced)
+- **Full WPA2 Crack:** Scan → Deauth → Capture → Crack
+- **Evil Twin Chain:** Scan → Clone → Deauth → Phish
+- **WPS Chain:** Scan WPS → Pixie → PIN Brute
+- **Custom Chains:** User-defined sequences
+
+#### Stealth & OPSEC Tools (Legendary)
+- Automatic MAC randomization
+- Manual MAC spoofing/restoration
+- **Panic Wipe:** Emergency cleanup
+  - Kills all attack processes
+  - Restores adapters to managed mode
+  - Restores original MACs
+  - Clears temporary files
+  - Clears terminal history
+
+#### Cloud Cracking API (Legendary)
+- AWS/GCP GPU cluster integration
+- Unlimited computational power
+- Secure file upload/download
+
+---
+
+## ⚙️ Configuration
+
+Configuration is stored in `~/.infiltrator/config.json`
+
+### Key Settings
+
+```json
+{
+  "adapters": {
+    "primary_adapter": "wlan0",
+    "secondary_adapter": "wlan1"
+  },
+  "attacks": {
+    "deauth_count": 0,
+    "handshake_timeout": 120,
+    "evil_twin_channel": 6
+  },
+  "stealth": {
+    "mac_randomization": true,
+    "channel_hopping": true,
+    "hop_interval": 0.5
+  },
+  "cracking": {
+    "default_wordlist": "/usr/share/wordlists/rockyou.txt",
+    "hashcat_path": "hashcat"
+  }
+}
+```
+
+---
+
+## 🔒 Operational Security (OPSEC)
+
+### Best Practices
+
+1. **Always use MAC randomization** when conducting assessments
+2. **Enable panic wipe hotkey** for emergency situations
+3. **Encrypt captured data** at rest
+4. **Use VPN/proxy** when uploading to cloud services
+5. **Document authorization** before each engagement
+6. **Secure physical access** to testing equipment
+
+### Panic Wipe Function
+
+In emergency situations, use the **Panic Wipe** feature:
+- Menu: `[3] Post-Attack Operations` → `[3] Stealth & OPSEC` → `[4] Panic Wipe`
+- Instantly cleans all traces of operation
+- Restoration of network adapters to normal state
+
+---
+
+## 📝 Example Workflows
+
+### Quick WPA2 Handshake Capture
+
+```
+1. Start Infiltrator: sudo python3 infiltrator.py
+2. Enable monitor mode (auto-prompted)
+3. Navigate: [2] Exploitation → [2] Handshake Capture
+4. Enter target BSSID and channel
+5. Confirm deauth attack (y)
+6. Wait for handshake
+7. Optional: Crack immediately or save for later
+```
+
+### Automated WPA2 Crack Chain
+
+```
+1. Navigate: [3] Post-Attack → [2] Automated Chain
+2. Select: [1] Full WPA2 Crack
+3. Enter: Target BSSID, channel, wordlist
+4. Confirm execution (y)
+5. Wait for automated: Scan → Deauth → Capture → Crack
+```
+
+### Stealth Reconnaissance
+
+```
+1. Navigate: [3] Post-Attack → [3] Stealth & OPSEC
+2. Select: [2] Randomize All MACs
+3. Navigate: [1] Reconnaissance → [1] Passive Scanner
+4. Scan target environment
+5. Return: [3] Post-Attack → [3] Stealth & OPSEC
+6. Select: [3] Restore Original MACs
+```
+
+---
+
+## 🐛 Troubleshooting
+
+### Adapter Not Found
+- Ensure adapter is connected
+- Check driver support: `lsusb` and `iwconfig`
+- Try manual monitor mode: `sudo airmon-ng start wlan0`
+
+### Monitor Mode Fails
+- Kill interfering processes: `sudo airmon-ng check kill`
+- Update drivers: `sudo apt install linux-headers-$(uname -r)`
+- Check for hard/soft blocks: `rfkill list`
+
+### Permissions Denied
+- Always run with root: `sudo python3 infiltrator.py`
+- Check file permissions: `ls -la ~/.infiltrator/`
+
+### Capture Files Empty
+- Verify monitor mode is active
+- Check correct channel is set
+- Ensure adapter supports packet injection: `sudo aireplay-ng --test wlan0mon`
+
+---
+
+## 🎓 Learning Resources
+
+- **WiFi Security Basics:** Understanding WPA/WPA2/WPA3 protocols
+- **802.11 Frame Analysis:** Wireshark packet captures
+- **OSCP/OSWP Certifications:** Offensive Security training
+- **Bug Bounty Programs:** HackerOne, Bugcrowd (authorized testing)
+
+---
+
+## 🔧 Building from Source
+
+Infiltrator includes a comprehensive build system for Linux:
+
+```bash
+# Automated build (recommended)
+chmod +x build.sh
+./build.sh
+
+# Using Makefile
+make all                    # Build all packages
+make build-python          # Python wheel/source
+make build-deb             # Debian package
+make install               # Install from source
+
+# Manual build
+python3 -m build          # Python package
+dpkg-buildpackage -b      # Debian package
+```
+
+### Build Outputs
+- **Python Package:** `dist/infiltrator-wifi-1.0.0.tar.gz` and `.whl`
+- **Debian Package:** `../infiltrator-wifi_1.0.0-1_all.deb`
+- **Docker Image:** `infiltrator-wifi:latest`
+
+📖 **Build Documentation:** See [BUILD.md](BUILD.md) for complete build system guide.
+
+## 🤝 Contributing
+
+This is a modular framework designed for easy extension:
+
+### Development Setup
+```bash
+git clone https://github.com/letchupkt/infiltrator.git
+cd infiltrator
+make setup-dev              # Set up development environment
+source venv/bin/activate
+```
+
+### Adding Features
+1. Create module in `modules/` directory
+2. Follow existing module structure  
+3. Add menu entry in `core/cli.py`
+4. Update documentation and tests
+5. Test on multiple Linux distributions
+
+### Code Quality
+```bash
+make format                 # Format with black
+make lint                   # Lint with flake8  
+make test                   # Run tests
+```
+
+---
+
+## 📄 License
+
+**Educational/Authorized Testing Only**
+
+This software is provided "AS IS" without warranty. Users are solely responsible for ensuring legal compliance. Unauthorized network access is a criminal offense in most jurisdictions.
+
+---
+
+## 🙏 Credits
+
+**Developer:** LAKSHMIKANTHAN K (letchupkt)
+
+**Tools Integrated:**
+- Aircrack-ng suite
+- Reaver/Pixie-WPS
+- Hashcat
+- John the Ripper
+- Scapy
+
+**Inspired by:** WiFi Pineapple, Wifite2, Fluxion
+
+---
+
+## 📧 Contact
+
+For authorized security testing inquiries only.
+
+**Developer:** letchupkt  
+**Purpose:** Educational security research
+
+---
+
+**Remember: With great power comes great responsibility. Always hack ethically.** 🛡️
