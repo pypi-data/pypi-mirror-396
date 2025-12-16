@@ -1,0 +1,109 @@
+name: In pull request
+on:
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: pr-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check_python_linting:
+    name: Ruff Linting & Formatting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: chartboost/ruff-action@v1
+        with:
+          src: "./"
+          version: 0.3.3
+          args: "format --force-exclude"
+      - uses: chartboost/ruff-action@v1
+        with:
+          src: "./"
+          version: 0.3.3
+          args: "format --check --force-exclude"
+
+  test_compatibility:
+    name: Test Package Compatibility
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            python-version: "3.9"
+            dependency-set: minimum
+          - os: macos-15-intel # We need x86 as ARM is python>= 3.11 only.
+            # https://github.com/actions/setup-python/issues/855
+            python-version: "3.9"
+            dependency-set: minimum
+          - os: ubuntu-latest
+            python-version: "3.13"
+            dependency-set: maximum
+          - os: macos-latest
+            python-version: "3.13"
+            dependency-set: maximum
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: x64
+
+      - name: Install workflow Python deps
+        run: python -m pip install pip-tools tomli
+
+      - name: Generate requirements file for minimum dependencies
+        if: matrix.dependency-set == 'minimum'
+        run: python scripts/gen_requirements.py min requirements-generated.txt
+
+      - name: Generate requirements file for maximum dependencies
+        if: matrix.dependency-set == 'maximum'
+        run: python scripts/gen_requirements.py max requirements-generated.txt
+
+      - name: Generate requirements file for dev dependencies
+        run: python scripts/gen_requirements.py --dev passthrough dev-requirements-generated.txt
+
+      # Caching based on dependency set and python version. It needs to be done post any operations that modifies the file (like `write`, `touch`, etc.) that can change the hash of the dependency file and lead to a cache miss.
+      # REFER: https://github.com/actions/setup-python#caching-packages-dependencies
+      - name: Setup pip cache
+        id: pip-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ matrix.dependency-set }}-${{ hashFiles('pyproject.toml', 'requirements-generated.txt', 'dev-requirements-generated.txt')}}
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ matrix.dependency-set }}-
+            ${{ runner.os }}-pip-${{ matrix.python-version }}-
+
+      - name: Install dependencies
+        id: install-deps
+        run: |
+          echo "::group::Installing dependencies"
+          START_TIME=$(date +%s%N)
+          python -m pip install --upgrade pip
+          pip install -e . --no-deps
+          pip install -r requirements-generated.txt
+          pip install -r dev-requirements-generated.txt
+          END_TIME=$(date +%s%N)
+          DURATION=$((($END_TIME - $START_TIME)/1000000))
+          echo "duration=$DURATION" >> $GITHUB_OUTPUT
+          echo "Dependencies installation took $DURATION ms"
+          echo "::endgroup::"
+
+      - name: Initialize submodules
+        run: git submodule update --init --recursive
+
+      - name: Report cache status
+        run: |
+          echo "Cache status: ${{ steps.pip-cache.outputs.cache-hit == 'true' && 'HIT' || 'MISS'}}"
+          echo "Installation time: ${{ steps.install-deps.outputs.duration }} ms"
+
+      - name: Run Tests
+        run: |
+          pytest
