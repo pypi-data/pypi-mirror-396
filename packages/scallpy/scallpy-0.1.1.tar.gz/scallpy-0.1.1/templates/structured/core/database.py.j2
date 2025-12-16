@@ -1,0 +1,24 @@
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+
+{% if db_url %}
+SQLALCHEMY_DATABASE_URL = "{{ db_url }}"
+{% else %}
+# Default to SQLite for simplicity if no URL is provided
+SQLALCHEMY_DATABASE_URL = "sqlite:///./sql_app.db"
+{% endif %}
+
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+Base = declarative_base()
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
