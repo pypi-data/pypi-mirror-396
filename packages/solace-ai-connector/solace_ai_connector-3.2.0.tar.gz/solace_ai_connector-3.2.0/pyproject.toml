@@ -1,0 +1,411 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+
+[project]
+name = "solace_ai_connector"
+#version = "0.0.1" # Commented out for workaround
+dynamic = ["version"] # Commented out for workaround
+authors = [
+  { name="Edward Funnekotter", email="edward.funnekotter@solace.com" },
+]
+description = "Solace AI Connector - make it easy to connect Solace PubSub+ Event Brokers to AI/ML frameworks"
+readme = "README.md"
+requires-python = ">=3.10.16"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "PyYAML==6.0.2",
+    "requests==2.32.5",
+    "solace_pubsubplus==1.9.0",
+    "SQLAlchemy==2.0.40",
+    'pywin32==311; sys_platform == "win32"',
+    "gevent==25.8.2",
+    "gevent-websocket==0.10.1",
+    "python-json-logger==4.0.0",
+    "urllib3==2.6.0"
+]
+
+[project.optional-dependencies]
+# Basic LLM functionality
+llm = [
+    "litellm==1.74.3",
+]
+
+# OpenAI specific dependencies
+openai = [
+    "openai==1.72.0",
+    "langchain-openai==0.3.8",
+]
+
+# AWS integration (Bedrock, etc.)
+aws = [
+    "boto3==1.39.0",
+    "langchain_aws==0.2.19",
+    "requests_aws4auth>=1.3.1",
+]
+
+# Vector stores
+chromadb-vector-store = [
+    "chromadb==1.0.15",
+    "langchain-chroma==0.2.4",
+]
+
+qdrant-vector-store = [
+    "langchain-qdrant==0.2.0",
+]
+
+milvus-vector-store = [
+    "langchain_milvus==0.1.8",
+    "pymilvus==2.5.6",
+]
+
+# PostgreSQL vector database
+pgvector-vector-store = [
+    "pgvector==0.3.6",
+    "langchain-postgres==0.0.15",
+    "psycopg-binary==3.2.6",
+]
+
+# LangChain core and utilities
+langchain = [
+    "langchain==0.3.21",
+]
+
+# Web search capabilities
+webscraping = [
+    "playwright==1.51.0",
+    "beautifulsoup4==4.13.3",
+    "Brotli==1.2.0",
+]
+
+# RAG (Retrieval Augmented Generation)
+splitter = [
+    "langchain-text-splitters==0.3.9",
+]
+
+# Mongo database
+mongodb = [
+    "pymongo==4.10.1",
+]
+
+# SQL database
+sql = [
+    "mysql_connector_python==9.3.0",
+    "psycopg2-binary==2.9.10",
+]
+
+# Web Socket
+websocket = [
+    "Flask==3.0.3",
+    "Flask-SocketIO==5.4.1",
+    "Flask-WTF==1.2.2",
+]
+
+llm_ext_release = [
+    "aiohappyeyeballs==2.6.1",
+    "aiohttp==3.12.14",
+    "aiosignal>=1.4.0",
+    "annotated-types==0.7.0",
+    "anyio==4.9.0",
+    "attrs==25.3.0",
+    "certifi==2025.1.31",
+    "charset-normalizer==3.4.1",
+    "click==8.1.8",
+    "distro==1.9.0",
+    "filelock==3.18.0",
+    "frozenlist==1.5.0",
+    "fsspec==2025.3.2",
+    "h11==0.16.0",
+    "httpcore==1.0.9",
+    "httpx==0.28.1",
+    "huggingface-hub==0.30.2",
+    "idna==3.10",
+    "importlib_metadata==8.6.1",
+    "Jinja2==3.1.6",
+    "jiter==0.9.0",
+    "jsonschema==4.23.0",
+    "jsonschema-specifications==2024.10.1",
+    "litellm==1.74.3",
+    "MarkupSafe==3.0.2",
+    "multidict==6.2.0",
+    "openai==1.72.0",
+    "packaging==24.2",
+    "propcache==0.3.1",
+    "pydantic==2.11.3",
+    "pydantic_core==2.33.1",
+    "python-dotenv==1.1.1",
+    "dotenv==0.9.9",
+    "PyYAML==6.0.2",
+    "referencing==0.36.2",
+    "regex==2024.11.6",
+    "rpds-py==0.24.0",
+    "sniffio==1.3.1",
+    "tiktoken==0.9.0",
+    "tokenizers==0.21.1",
+    "tqdm==4.67.1",
+    "typing_extensions==4.13.1",
+    "typing-inspection==0.4.0",
+    "yarl==1.19.0",
+    "zipp==3.21.0",
+]
+
+openai_ext_release = [
+    "annotated-types==0.7.0",
+    "anyio==4.9.0",
+    "certifi==2025.1.31",
+    "charset-normalizer==3.4.1",
+    "distro==1.9.0",
+    "h11==0.16.0",
+    "httpcore==1.0.9",
+    "httpx==0.28.1",
+    "idna==3.10",
+    "jiter==0.9.0",
+    "jsonpatch==1.33",
+    "jsonpointer==3.0.0",
+    "langchain-core==0.3.80",
+    "langchain-openai==0.3.8",
+    "langsmith==0.3.45",
+    "openai==1.72.0",
+    "orjson==3.10.16",
+    "packaging==24.2",
+    "pydantic==2.11.3",
+    "pydantic_core==2.33.1",
+    "PyYAML==6.0.2",
+    "regex==2024.11.6",
+    "requests-toolbelt==1.0.0",
+    "sniffio==1.3.1",
+    "tenacity==9.1.2",
+    "tiktoken==0.9.0",
+    "tqdm==4.67.1",
+    "typing_extensions==4.13.1",
+    "typing-inspection==0.4.0",
+    "zstandard==0.23.0",
+]
+
+qdrant_ext_release = [
+    "annotated-types==0.7.0",
+    "anyio==4.9.0",
+    "certifi==2025.1.31",
+    "charset-normalizer==3.4.1",
+    "grpcio==1.73.1",
+    "grpcio-tools==1.73.1",
+    "h11==0.16.0",
+    "h2==4.3.0",
+    "hpack==4.1.0",
+    "httpcore==1.0.9",
+    "httpx==0.28.1",
+    "hyperframe==6.1.0",
+    "idna==3.10",
+    "jsonpatch==1.33",
+    "jsonpointer==3.0.0",
+    "langchain-core==0.3.80",
+    "langchain-qdrant==0.2.0",
+    "langsmith==0.3.45",
+    "orjson==3.10.16",
+    "packaging==24.2",
+    "portalocker==2.10.1",
+    "protobuf==6.31.1",
+    "pydantic==2.11.3",
+    "pydantic_core==2.33.1",
+    "PyYAML==6.0.2",
+    "qdrant-client==1.14.3",
+    "requests==2.32.5",
+    "requests-toolbelt==1.0.0",
+    "setuptools==78.1.1",
+    "sniffio==1.3.1",
+    "tenacity==9.1.2",
+    "typing_extensions==4.13.1",
+    "typing-inspection==0.4.0",
+    "zstandard==0.23.0",
+]
+
+splitter_ext_release = [
+    "annotated-types==0.7.0",
+    "anyio==4.9.0",
+    "certifi==2025.1.31",
+    "charset-normalizer==3.4.1",
+    "h11==0.16.0",
+    "httpcore==1.0.9",
+    "httpx==0.28.1",
+    "idna==3.10",
+    "jsonpatch==1.33",
+    "jsonpointer==3.0.0",
+    "langchain-core==0.3.80",
+    "langchain-text-splitters==0.3.9",
+    "langsmith==0.3.45",
+    "orjson==3.10.16",
+    "packaging==24.2",
+    "pydantic==2.11.3",
+    "pydantic_core==2.33.1",
+    "PyYAML==6.0.2",
+    "requests-toolbelt==1.0.0",
+    "sniffio==1.3.1",
+    "tenacity==9.1.2",
+    "typing_extensions==4.13.1",
+    "typing-inspection==0.4.0",
+    "zstandard==0.23.0",
+]
+
+# Test specific dependencies
+test = [
+    "pytest>=8.0.0", # Example version, adjust as needed
+    "pytest-mock>=3.0.0", # Example version
+    "pytest-cov>=4.0.0", # If you use coverage
+    "pytest-asyncio>=1.2.0",
+    # Add other test-specific dependencies here
+]
+
+# Integration test dependencies
+integration-test = [
+    "trustme>=0.9.0",  # For generating test certificates
+    "aiohttp>=3.8.0",  # For creating mock servers
+    "bcrypt>=4.1.2,<5.0.0",
+    "passlib>=1.7.4,<1.8.0",    
+    "requests-mock>=1.10.0",
+    "mitmproxy>=9.0.0",  # For SSL proxy testing
+    "pytest-mock>=3.0.0",
+    "pytest-asyncio>=0.21.0",  # For async testing support
+ #  "proxy-py @ git+https://github.com/abhinavsingh/proxy.py.git@master" - temporary, to allow release
+]
+
+
+# All dependencies
+all = [
+    "numpy",
+    "python-dotenv==1.1.1",
+    "dotenv==0.9.9",
+
+    # From langchain
+    "langchain==0.3.21",
+
+    # From llm
+    "litellm==1.74.3",
+    
+    # From openai
+    "openai==1.72.0",
+    "langchain-openai==0.3.8",
+    
+    # From aws
+    "boto3==1.39.0",
+    "langchain_aws==0.2.19",
+    "requests_aws4auth>=1.3.1",
+    
+    # From chromadb-vector-store
+    "chromadb==1.0.15",
+    "langchain-chroma==0.2.4",
+    
+    # From qdrant-vector-store
+    "langchain-qdrant==0.2.0",
+    "qdrant-client==1.14.3",
+    
+    # From milvus-vector-store
+    "langchain_milvus==0.1.8",
+    "pymilvus==2.5.6",
+    
+    # From pgvector-vector-store
+    "pgvector==0.3.6",
+    "langchain-postgres==0.0.15",
+    "psycopg-binary==3.2.6",
+    
+    # From webscraping
+    "playwright==1.51.0",
+    "beautifulsoup4==4.13.3",
+    "Brotli==1.2.0",
+    "python-dotenv==1.1.1",
+    
+    # From splitter
+    "langchain-text-splitters==0.3.9",
+    
+    # From mongodb
+    "pymongo==4.10.1",
+
+    # From sql
+    "mysql_connector_python==9.3.0",
+    "psycopg2-binary==2.9.10",
+    
+    # From websocket
+    "Flask==3.0.3",
+    "Flask-SocketIO==5.4.1",
+    "Flask-WTF==1.2.2",
+]
+
+
+[project.urls]
+homepage = "https://github.com/SolaceLabs/solace-ai-connector"
+repository = "https://github.com/SolaceLabs/solace-ai-connector"
+documentation = "https://github.com/SolaceLabs/solace-ai-connector/blob/main/docs/index.md"
+
+
+[project.scripts]
+solace-ai-connector = "solace_ai_connector.main:main"
+solace-ai-connector-gen-docs = "solace_ai_connector.tools.gen_component_docs:main"
+
+[tool.hatch.envs.hatch-test]
+installer = "pip"
+dependencies = [
+  "pytest>=8.0.0",
+  "pytest-mock>=3.0.0",
+  "pytest-cov>=4.0.0",
+  "pytest-xdist>=3.5.0",
+  "pytest-asyncio>=1.2.0"
+]
+features = ["all"]
+
+# Specify minimum and maximum Python versions to test
+[[tool.hatch.envs.hatch-test.matrix]]
+python = ["3.10", "3.13"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/solace_ai_connector"]
+
+[tool.hatch.version] # Commented out for workaround
+path = "src/solace_ai_connector/__init__.py" # Commented out for workaround
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.ruff]
+lint.select = ["E4", "E7", "E9", "F"]
+lint.ignore = ["F401", "E731"]
+
+[tool.pytest.ini_options]
+# Register pytest-mock plugin explicitly
+addopts = "-p pytest_mock --ignore=tests/integration/"
+testpaths = ["tests"]
+
+log_cli = true
+log_cli_level = "DEBUG"
+log_cli_format = "%(asctime)s | %(levelname)-6s | %(name)s | %(message)s"
+log_cli_date_format = "%Y-%m-%d %H:%M:%S"
+
+log_file = "tests.log"
+log_file_level = "DEBUG"
+log_file_format = "%(asctime)s | %(levelname)-6s | %(name)s | %(message)s"
+log_file_date_format = "%Y-%m-%d %H:%M:%S"
+log_file_mode = "a"
+
+[tool.coverage.run]
+source = ["src"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+
+[tool.coverage.xml]
+output = "coverage.xml"
