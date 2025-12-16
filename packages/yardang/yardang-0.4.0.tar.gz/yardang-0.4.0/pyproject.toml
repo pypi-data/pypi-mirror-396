@@ -1,0 +1,177 @@
+[build-system]
+requires = ["hatchling"]
+build-backend="hatchling.build"
+
+[project]
+name = "yardang"
+authors = [{name = "the yardang authors", email = "t.paine154@gmail.com"}]
+description = "Easily generate sphinx documentation"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+version = "0.4.0"
+requires-python = ">=3.10"
+keywords = []
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+
+dependencies = [
+    "autodoc-pydantic",
+    "furo",
+    "myst-nb",
+    "packaging",
+    "rich",
+    "sphinx>=7.2.6,<9",
+    "sphinx-autoapi",
+    "sphinx-copybutton",
+    "sphinx-design",
+    "sphinxcontrib-mermaid>=2.0.0rc0,<2.1",
+    "sphinx-reredirects",
+    "toml",
+    "typer",
+]
+
+[project.optional-dependencies]
+develop = [
+    "build",
+    "bump-my-version",
+    "check-manifest",
+    "codespell>=2.4,<2.5",
+    "hatchling",
+    "mdformat>=0.7.22,<1.1",
+    "mdformat-tables>=1",
+    "pytest",
+    "pytest-cov",
+    "ruff>=0.9,<0.15",
+    "twine",
+    "uv",
+    "wheel",
+]
+
+[project.scripts]
+yardang = "yardang.cli:main"
+
+[project.urls]
+Repository = "https://github.com/python-project-templates/yardang"
+Homepage = "https://github.com/python-project-templates/yardang"
+
+[tool.bumpversion]
+current_version = "0.4.0"
+commit = true
+tag = true
+commit_args = "-s"
+
+[[tool.bumpversion.files]]
+filename = "yardang/__init__.py"
+search = '__version__ = "{current_version}"'
+replace = '__version__ = "{new_version}"'
+
+[[tool.bumpversion.files]]
+filename = "pyproject.toml"
+search = 'version = "{current_version}"'
+replace = 'version = "{new_version}"'
+
+[tool.check-manifest]
+ignore = [
+    ".copier-answers.yaml",
+    "Makefile",
+    "docs/**/*",
+]
+
+[tool.coverage.run]
+branch = true
+omit = [
+    "yardang/tests/integration/",
+]
+[tool.coverage.report]
+exclude_also = [
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "@(abc\\.)?abstractmethod",
+]
+ignore_errors = true
+fail_under = 50
+
+[tool.hatch.build]
+artifacts = []
+
+[tool.hatch.build.sources]
+src = "/"
+
+[tool.hatch.build.targets.sdist]
+packages = ["yardang"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["yardang"]
+
+[tool.hatch.build.targets.wheel.shared-data]
+
+[tool.pytest.ini_options]
+addopts = ["-vvv", "--junitxml=junit.xml"]
+testpaths = "yardang/tests"
+
+[tool.ruff]
+line-length = 150
+
+[tool.ruff.lint]
+extend-select = ["I"]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+default-section = "third-party"
+known-first-party = ["yardang"]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401", "F403"]
+
+[tool.yardang]
+root = "docs/src/home.md"
+cname = "yardang.python-templates.dev"
+pages = [
+    "docs/src/overview.md",
+    "docs/src/installation.md",
+    "docs/src/configuration.md",
+]
+use-autoapi = true
+
+# Below are defaults, just to ensure working
+# sphinx
+html_theme_options = {"switcher" = { "json_url" = "https://mysite.org/en/latest/_static/switcher.json"}}
+html_static_path = ["test"]
+html_css_files = []
+html_js_files = []
+source_suffix = []
+exclude_patterns = []
+language = "en"
+pygments_style = "sphinx"
+
+# myst/myst-nb
+myst_enable_extensions = ["amsmath", "colon_fence", "dollarmath", "html_image"]
+myst_fence_as_directive = ["mermaid"]
+nb_execution_mode = "off"
+nb_execution_excludepatterns = []
+
+# autodoc/autodoc-pydantic
+autodoc_pydantic_model_show_config_summary = false
+autodoc_pydantic_model_show_validator_summary = false
+autodoc_pydantic_model_show_validator_members = false
+autodoc_pydantic_field_list_validators = false
+autodoc_pydantic_field_show_constraints = false
+autodoc_pydantic_model_member_order = "bysource"
+autodoc_pydantic_model_show_json = true
+autodoc_pydantic_settings_show_json = false
+autodoc_pydantic_model_show_field_summary = false
+
+# redirects
+redirects = {"docs/src/testredirect"="home.html", "toplevel"="docs/src/home.html"}
