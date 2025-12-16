@@ -1,0 +1,18 @@
+# amd-lightgbm
+LightGBM is a gradient boosting framework that uses tree based learning algorithms. It is designed to be distributed and efficient with the following advantages:
+
+- Faster training speed and higher efficiency.
+- Lower memory usage.
+- Better accuracy.
+- Support of parallel, distributed, and GPU learning.
+- Capable of handling large-scale data. 
+
+## Information
+- **Homepage**: https://github.com/rocm/lightgbm
+- **License**: Apache 2.0 
+
+## Installation
+
+```bash
+pip install amd-lightgbm
+```
