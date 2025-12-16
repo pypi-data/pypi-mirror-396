@@ -1,0 +1,258 @@
+Metadata-Version: 2.4
+Name: genecast
+Version: 0.1.1
+Summary: A comprehensive CLI tool for genomic similarity network fusion and analysis.
+Author: Genecast Team
+License-Expression: MIT
+Classifier: Programming Language :: Python :: 3
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: numpy
+Requires-Dist: pandas
+Requires-Dist: scipy
+Requires-Dist: scikit-learn
+Requires-Dist: matplotlib
+Requires-Dist: umap-learn
+Requires-Dist: pycirclize
+Dynamic: license-file
+
+# GeneCast: A Scalable and Lightweight Framework for High-Throughput Gene Family Analysis and Function Prediction
+
+**Authors:** GeneCast Team from iZJU
+
+---
+
+## Abstract
+
+We introduce **GeneCast**, a scalable framework that overcomes computational bottlenecks in large-scale gene analysis. By fusing nucleotide and protein features via Similarity Network Fusion (SNF) and employing efficient hierarchical clustering, GeneCast achieves rapid, high-accuracy annotation transfer with low algorithmic complexity.
+
+## Table of Contents
+
+- [Introduction](#introduction)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Usage Workflow](#usage-workflow)
+  - [1. Data Preparation](#1-data-preparation)
+  - [2. Preprocessing (Feature Extraction)](#2-preprocessing-feature-extraction)
+  - [3. Similarity Network Fusion (SNF)](#3-similarity-network-fusion-snf)
+  - [4. Clustering & Tree Construction](#4-clustering--tree-construction)
+  - [5. Visualization & Reporting](#5-visualization--reporting)
+- [Input/Output](#inputoutput)
+- [Key Algorithms](#key-algorithms)
+- [Technical Details](#technical-details)
+
+---
+
+## Introduction
+
+Gene replication and species differentiation have generated large numbers of homologous genes. Orthologs usually keep similar functions across species, while paralogs may diverge after duplication. For gene families with incomplete or inconsistent annotations, using sequence and evolutionary information to make systematic functional predictions remains challenging.
+
+GeneCast proposes a gene family analysis framework based on vectorized sequence representations. By extracting features from DNA and protein sequences and computing their similarities, the framework identifies potential family structures, clusters related genes, and builds interpretable trees for functional inference. This lightweight and reproducible pipeline supports gene family classification and function prediction, offering a practical tool for comparative genomics and paralog studies.
+
+![Workflow](workflow.png)
+*> Overview of the GeneCast Workflow: The pipeline integrates dual-pathway feature extraction (nucleotide and protein) via SNF, followed by hierarchical clustering and dynamic tree cutting for functional annotation.*
+
+---
+
+## Installation
+
+### Dependencies
+GeneCast requires Python 3 (>=3.11) and the following libraries, which `pip` will automatically install:
+- `numpy`
+- `pandas`
+- `scipy`
+- `scikit-learn`
+- `matplotlib`
+- `umap-learn`
+- `pycirclize`
+
+### Setup
+It is highly recommended to install GeneCast within a virtual environment.
+
+1.  **Get into the Repository:**
+    ```bash
+    cd GeneCast # Change into the cloned project directory
+    ```
+2.  **Create and Activate a Virtual Environment:**
+    ```bash
+    conda create -n genecast python=3.11
+    conda activate genecast
+    # Or using venv (standard Python virtual environments):
+    # python -m venv .venv
+    # source .venv/bin/activate # On Windows: .venv\Scripts\activate
+    ```
+3.  **Install the Package:**
+    GeneCast uses `pyproject.toml` for modern Python packaging. Install it in editable mode for development, or as a regular package:
+    ```bash
+    # For development (editable install, changes to source code are immediately reflected)
+    # pip install -e .
+
+    # For a standard installation
+    # pip install .
+
+    # Install the pre-build pypi .whl package
+    pip install ./dist/genecast-0.1.0-py3-none-any.whl
+    ```
+
+---
+
+## Quick Start
+
+GeneCast comes with a built-in demo command to run the full pipeline on internal test data (Actin gene family).
+
+```bash
+genecast demo
+```
+
+This will:
+1. Load the included `actin_nuc.fa` dataset.
+2. Run the complete pipeline (Dist -> SNF -> Ward -> Viz -> Report).
+3. Save results to `output/demo_actin`.
+
+To run the full pipeline on your own data in one go:
+
+```bash
+genecast all --fasta "data/*.fa" --outdir results/my_analysis --prefix my_genes
+```
+
+---
+
+## Usage Workflow
+
+The `genecast` CLI offers a modular approach. You can run the entire pipeline using `genecast all` or execute individual steps for finer control.
+
+### 1. Data Preparation
+GeneCast accepts multi-FASTA files (`.fasta`, `.fa`, `.fna`).
+- **Input Requirement**: Nucleotide Coding Sequences (CDS).
+- **Integrity**: Sequences should ideally begin with a start codon (e.g., `ATG`), end with a stop codon, and have a length divisible by three. The pipeline performs internal translation for protein feature extraction.
+
+### 2. Preprocessing (Feature Extraction)
+Compute distance matrices for Nucleotide and Protein features separately.
+
+**Command:** `dist`
+
+```bash
+# Step 2a: Nucleotide Processing (k-mer features)
+genecast dist --fasta "data/*.fa" --mode nuc --kmer 5 --outdir results --prefix dataset_nuc
+
+# Step 2b: Protein Processing (Physicochemical properties)
+genecast dist --fasta "data/*.fa" --mode prot --win 3 --outdir results --prefix dataset_prot
+```
+
+**Parameters:**
+- `--mode`: `nuc` for nucleotide k-mers, `prot` for amino acid properties.
+- `--kmer`: Length of nucleotide k-mers (default: 5). *Note: The paper suggests k=7 for larger datasets.*
+- `--win`: Sliding window size for protein properties (default: 3). *Note: The paper suggests w=4.*
+
+### 3. Similarity Network Fusion (SNF)
+Fuse the nucleotide and protein distance matrices into a single similarity network.
+
+**Command:** `snf`
+
+```bash
+genecast snf \
+  --dist-matrices results/dataset_nuc_dist.csv results/dataset_prot_dist.csv \
+  --output-file results/fused_similarity.csv \
+  --K-values 10 20 40 \
+  --t-iter 20
+```
+
+**Parameters:**
+- `--K-values`: List of K neighbors for multi-scale SNF (default: `10 20 40`).
+- `--t-iter`: Number of diffusion iterations (default: 20).
+
+### 4. Clustering & Tree Construction
+Perform Ward hierarchical clustering and estimate the optimal number of clusters ($k^*$) using the Eigengap Heuristic.
+
+**Command:** `ward`
+
+```bash
+genecast ward \
+  --input results/fused_similarity.csv \
+  --labels results/dataset_nuc_labels.csv \
+  --is-similarity \
+  --outdir results \
+  --prefix analysis
+```
+
+**Parameters:**
+- `--is-similarity`: Flag to indicate input is an SNF similarity matrix (not distance).
+- `--max-k`: Maximum $k$ to search for auto-estimation (default: 15).
+- `--no-outlier`: Disable outlier detection if desired.
+
+### 5. Visualization & Reporting
+Generate comprehensive plots (Heatmaps, Dendrograms, t-SNE) and an HTML report.
+
+**Command:** `viz`
+
+```bash
+genecast viz \
+  --nuc-dist results/dataset_nuc_dist.csv \
+  --prot-dist results/dataset_prot_dist.csv \
+  --fused-similarity results/fused_similarity.csv \
+  --labels-path results/dataset_nuc_labels.csv \
+  --outdir results/plots \
+  --tree results/analysis_ward_clean.nwk
+```
+
+**Command:** `report`
+
+```bash
+genecast report --outdir results --prefix analysis
+```
+
+---
+
+## Key Algorithms
+
+### 1. Feature Extraction
+- **Nucleotide**: Decomposes DNA into overlapping $k$-mers. Features are normalized frequency vectors.
+- **Protein**: Translates CDS to protein. Maps amino acids to physicochemical properties (Hydrophobicity, Volume, Charge). Averages these over a sliding window $w$ to form a property-based feature space.
+
+### 2. Distance Metric
+We compute pairwise **Cosine Distance**.
+- For nucleotides, we apply a squared transformation ($D = 1 - S^2$) to amplify divergence among closely related paralogs.
+- Mathematical definition:
+  $$
+  D_{\text{nuc}}(\mathbf{A}, \mathbf{B}) = 1 - S(\mathbf{A}, \mathbf{B})^2 = 1 - \left( \frac{\mathbf{A} \cdot \mathbf{B}}{\|\mathbf{A}\| \|\mathbf{B}\|} \right)^2
+  $$
+
+### 3. Multi-scale Similarity Network Fusion (SNF)
+Adapts the SNF framework (Wang et al., 2014) for multi-omics sequences.
+- **Metric**: Uses Cosine distance instead of Euclidean.
+- **Multi-scale**: Executes cross-diffusion across a spectrum of $K$ values (e.g., 10, 20, 40) and averages the result to minimize parameter bias.
+
+### 4. Outlier Detection
+Calculates an anomaly score based on the average distance to $k$ nearest neighbors. Uses Tukey's fence ($Q_3 + \alpha \cdot \mathrm{IQR}$) to flag and exclude noise.
+
+### 5. Optimal Cluster Number Estimation
+Uses the **Eigengap Heuristic** on the Laplacian eigenvalues of the fused network. We extract the leading eigenvalues $0 \approx \lambda_1 \le \dots \le \lambda_{k_{max}}$ of the normalized Laplacian. The optimal number of clusters is identified by selecting the $k$ that maximizes the drop in affinity between consecutive eigenvalues:
+$$
+k^* = \operatorname*{argmax}_{2 \le k < k_{max}} (\lambda_{k+1} - \lambda_k)
+$$
+
+### 6. Hierarchical Clustering
+Constructs a dendrogram using **Ward's minimum variance method** on the fused distance matrix. The tree is partitioned into $k^*$ clusters.
+
+---
+
+## Technical Details
+
+### Performance
+The framework is designed to be lightweight.
+- **Complexity**: Feature extraction is linear with sequence length. SNF and clustering operations are optimized for matrix operations (using `numpy`/`scipy`).
+- **Running Time**: Dependent on dataset size ($N$). SNF is roughly $O(N^2)$, but efficient for typical gene family sizes ($N < 5000$).
+
+### Accuracy Measures
+- **External Validation**: Adjusted Rand Index (ARI), Normalized Mutual Information (NMI).
+- **Internal Validation**: Eigengap size, Silhouette scores (in reports).
+
+---
+
+## References
+
+1. **SNF**: Wang, B., et al. (2014). Similarity network fusion for aggregating data types on a genomic scale. *Nature methods*.
+2. **Ward's Method**: Ward Jr, J. H. (1963). Hierarchical grouping to optimize an objective function. *Journal of the American statistical association*.
+3. **Genecast Team**: 3016, 3087, 3092, psj, qhx.
