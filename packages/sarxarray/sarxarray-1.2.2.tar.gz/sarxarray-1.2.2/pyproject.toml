@@ -1,0 +1,103 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sarxarray"
+version = "1.2.2"
+requires-python = ">=3.10"
+dependencies = [
+    "dask[complete]",
+    "xarray",
+    "numpy",
+    "distributed",
+    "zarr",
+]
+description = "Xarray extension for Synthetic Aperture Radar (SAR) data"
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Ou Ku", email = "o.ku@esciencecenter.nl"},
+    {name = "Fakhereh Sarah Alidoost"},
+    {name = "Simon van Diepen"},
+    {name = "Pranav Chandramouli"},
+    {name = "Francesco Nattino"},
+    {name = "Freek van Leijen"},
+]
+keywords = ["radar", "sar", "insar", "earth observation", "distributed computing"]
+classifiers=[
+    'Development Status :: 3 - Alpha',
+    'Intended Audience :: Developers',
+    'License :: OSI Approved :: Apache Software License',
+    'Natural Language :: English',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
+]
+
+[project.urls]
+repository = "https://github.com/TUDelftGeodesy/sarxarray"
+doi = "https://doi.org/10.5281/zenodo.7717112"
+documentation = "https://tudelftgeodesy.github.io/sarxarray/"
+changelog = "https://tudelftgeodesy.github.io/sarxarray/CHANGELOG/"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "pycodestyle",
+    "ruff",
+    "pre-commit",
+]
+docs = [
+    "mkdocs",
+    "mkdocs-material",
+    "mkdocs-jupyter",
+    "mkdocstrings[python]",
+    "mkdocs-gen-files",
+]
+demo = [
+    "jupyterlab",
+    "matplotlib",
+]
+
+[tool.setuptools]
+packages = ["sarxarray"]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "--cov --cov-report term"
+testpaths = [
+    "tests",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["sarxarray"]
+
+[tool.ruff]
+lint.select = [
+  "E",  # pycodestyle
+  "F",  # pyflakes
+  "B",  # flake8-bugbear
+  "D",  # pydocstyle
+  "I",  # isort
+  "N",  # PEP8-naming
+  "UP",  # pyupgrade (upgrade syntax to current syntax)
+  "PLE",  # Pylint error https://github.com/charliermarsh/ruff#error-ple
+]
+lint.ignore = [
+"D100", "D101", "D104", "D105", "D106", "D107", "D203", "D213", "D413"
+] # docstring style
+# Allow unused variables when underscore-prefixed.
+lint.dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+line-length = 88
+exclude = ["docs", "build", "examples"]
+target-version = "py310"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
