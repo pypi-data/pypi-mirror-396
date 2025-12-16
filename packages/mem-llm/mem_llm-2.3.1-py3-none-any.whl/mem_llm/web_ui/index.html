@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neural Nexus | Mem-LLM</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --sidebar-bg: rgba(30, 41, 59, 0.7);
+            --card-bg: rgba(30, 41, 59, 0.4);
+            --accent: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.3);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+            background-image: radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.1) 0%, transparent 40%);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: var(--sidebar-bg);
+            backdrop-filter: blur(12px);
+            border-right: 1px solid var(--border-color);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo span {
+            color: var(--accent);
+        }
+
+        .nav-items {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .nav-item {
+            padding: 12px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            background: var(--accent);
+            color: white;
+            box-shadow: 0 4px 12px var(--accent-glow);
+        }
+
+        .config-section {
+            margin-top: auto;
+            border-top: 1px solid var(--border-color);
+            padding-top: 24px;
+        }
+
+        /* Forms */
+        .input-group {
+            margin-bottom: 16px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .input-group input,
+        .input-group select {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            border-radius: 8px;
+            color: var(--text-primary);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .input-group input:focus,
+        .input-group select:focus {
+            border-color: var(--accent);
+        }
+
+        /* Main Content */
+        .main {
+            flex: 1;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Tabs Views */
+        .view {
+            display: none;
+            flex: 1;
+            height: 100%;
+            flex-direction: column;
+        }
+
+        .view.active {
+            display: flex;
+        }
+
+        /* Chat View */
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 32px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .message {
+            max-width: 70%;
+            padding: 16px 20px;
+            border-radius: 16px;
+            line-height: 1.5;
+            font-size: 15px;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background: var(--accent);
+            color: white;
+            border-bottom-right-radius: 4px;
+            box-shadow: 0 4px 12px var(--accent-glow);
+        }
+
+        .message.bot {
+            align-self: flex-start;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-bottom-left-radius: 4px;
+        }
+
+        .welcome {
+            text-align: center;
+            margin-top: 100px;
+            color: var(--text-secondary);
+        }
+
+        .welcome h2 {
+            color: var(--text-primary);
+            margin-bottom: 12px;
+        }
+
+        .input-area {
+            padding: 24px;
+            background: var(--bg-color);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 12px;
+        }
+
+        .chat-input {
+            flex: 1;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 14px 20px;
+            border-radius: 12px;
+            color: white;
+            outline: none;
+            font-size: 15px;
+        }
+
+        .send-btn {
+            background: var(--accent);
+            border: none;
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            cursor: pointer;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .send-btn:hover {
+            box-shadow: 0 0 15px var(--accent-glow);
+            transform: scale(1.05);
+        }
+
+        /* Graph View */
+        #cy {
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 1) 100%);
+        }
+
+        /* Workflow View */
+        .workflow-grid {
+            padding: 32px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 24px;
+        }
+
+        .workflow-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 24px;
+            border-radius: 16px;
+            transition: all 0.2s;
+        }
+
+        .workflow-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .workflow-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .workflow-desc {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .run-btn {
+            width: 100%;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .run-btn:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        /* Status & Toast */
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #ef4444;
+            border-radius: 50%;
+            margin-right: 8px;
+            box-shadow: 0 0 8px #ef4444;
+        }
+
+        .status-dot.connected {
+            background: #22c55e;
+            box-shadow: 0 0 8px #22c55e;
+        }
+
+        .status-bar {
+            display: flex;
+            align-items: center;
+            font-size: 12px;
+            color: var(--text-secondary);
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 24px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="sidebar">
+        <div class="logo">
+            <span>⚡</span> Neural Nexus
+        </div>
+
+        <div class="status-bar">
+            <div id="statusDot" class="status-dot"></div>
+            <span id="statusText">Disconnected</span>
+        </div>
+
+        <div class="nav-items">
+            <div class="nav-item active" onclick="switchTab('chat')">💬 Chat</div>
+            <div class="nav-item" onclick="switchTab('workflows')">⚡ Workflows</div>
+            <div class="nav-item" onclick="switchTab('graph')">🕸️ Knowledge Graph</div>
+        </div>
+
+        <div class="config-section">
+            <div class="input-group">
+                <label>User ID</label>
+                <input type="text" id="userId" value="user1">
+            </div>
+            <div class="input-group">
+                <button class="run-btn" onclick="connect()">Connect System</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="main">
+
+        <!-- Chat View -->
+        <div id="chat-view" class="view active">
+            <div class="chat-container" id="chatContainer">
+                <div class="welcome">
+                    <h2>Neural Nexus v2.3.0</h2>
+                    <p>Start a conversation or select a workflow.</p>
+                </div>
+            </div>
+            <div class="input-area">
+                <input type="text" id="messageInput" class="chat-input" placeholder="Type your message..."
+                    autocomplete="off">
+                <button class="send-btn" onclick="sendMessage()">➤</button>
+            </div>
+        </div>
+
+        <!-- Workflow View -->
+        <div id="workflows-view" class="view">
+            <div class="workflow-grid" id="workflowGrid">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+
+        <!-- Graph View -->
+        <div id="graph-view" class="view">
+            <div id="cy"></div>
+            <div style="position: absolute; bottom: 20px; right: 20px;">
+                <button class="run-btn" style="width: auto; background: var(--card-bg);" onclick="loadGraph()">Refresh
+                    Graph</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- State ---
+        let ws = null;
+        let cy = null;
+        let currentUserId = 'user1';
+
+        // --- Tabs ---
+        function switchTab(tab) {
+            document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+
+            document.getElementById(`${tab}-view`).classList.add('active');
+            // Find nav item by text content approx or index, simple fix:
+            const tabs = ['chat', 'workflows', 'graph'];
+            document.querySelectorAll('.nav-item')[tabs.indexOf(tab)].classList.add('active');
+
+            if (tab === 'graph') loadGraph();
+            if (tab === 'workflows') loadWorkflows();
+        }
+
+        // --- Connection ---
+        function connect() {
+            currentUserId = document.getElementById('userId').value;
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/chat/${currentUserId}`;
+
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                document.getElementById('statusDot').className = 'status-dot connected';
+                document.getElementById('statusText').innerText = 'Connected';
+            };
+
+            ws.onclose = () => {
+                document.getElementById('statusDot').className = 'status-dot';
+                document.getElementById('statusText').innerText = 'Disconnected';
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'start') {
+                    addMessage('', 'bot', true);
+                } else if (data.type === 'chunk') {
+                    appendBotMessage(data.content);
+                } else if (data.type === 'error') {
+                    addMessage(`Error: ${data.content}`, 'bot');
+                }
+            };
+        }
+
+        // --- Chat ---
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                alert("Please connect first.");
+                return;
+            }
+
+            addMessage(text, 'user');
+            ws.send(JSON.stringify({ message: text, metadata: {} }));
+            input.value = '';
+        }
+
+        let currentBotMsgDiv = null;
+
+        function addMessage(text, type, isStreamStart = false) {
+            const container = document.getElementById('chatContainer');
+            // Remove welcome
+            const welcome = document.querySelector('.welcome');
+            if (welcome) welcome.remove();
+
+            const div = document.createElement('div');
+            div.className = `message ${type}`;
+            div.innerText = text;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+
+            if (isStreamStart) {
+                currentBotMsgDiv = div;
+            }
+        }
+
+        function appendBotMessage(chunk) {
+            if (currentBotMsgDiv) {
+                currentBotMsgDiv.innerText += chunk;
+                document.getElementById('chatContainer').scrollTop = document.getElementById('chatContainer').scrollHeight;
+            }
+        }
+
+        document.getElementById('messageInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        // --- Workflows ---
+        async function loadWorkflows() {
+            const res = await fetch('/api/v1/workflows');
+            const data = await res.json();
+            const grid = document.getElementById('workflowGrid');
+            grid.innerHTML = '';
+
+            data.workflows.forEach(wf => {
+                const card = document.createElement('div');
+                card.className = 'workflow-card';
+                card.innerHTML = `
+                    <div class="workflow-title">${wf.name}</div>
+                    <div class="workflow-desc">${wf.description}</div>
+                    <button class="run-btn" onclick="runWorkflow('${wf.id}')">Run Workflow</button>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        async function runWorkflow(id) {
+            const topic = prompt("Enter topic for workflow (e.g. 'AI Trends 2024'):", "Artificial Intelligence");
+            if (!topic) return;
+
+            // Create a bubble for the workflow output
+            const outputDiv = document.createElement('div');
+            outputDiv.className = 'message bot-message';
+            outputDiv.innerHTML = `<strong>⚙️ Running Workflow: ${id}...</strong><br><div class="workflow-log" style="font-family: monospace; font-size: 0.9em; color: #e2e8f0; margin-top: 5px;">Initializing...</div>`;
+            document.getElementById('chatContainer').appendChild(outputDiv);
+            document.getElementById('chatContainer').scrollTop = document.getElementById('chatContainer').scrollHeight;
+
+            const logDiv = outputDiv.querySelector('.workflow-log');
+
+            const eventSource = new EventSource(`/api/v1/workflow/stream/${id}?user_id=${currentUserId}&topic=${encodeURIComponent(topic)}`);
+
+            eventSource.onmessage = function (event) {
+                const data = JSON.parse(event.data);
+
+                if (data.type === 'start') {
+                    logDiv.innerHTML += `<div>🚀 Workflow Started</div>`;
+                } else if (data.type === 'step_start') {
+                    logDiv.innerHTML += `<div style="margin-top:5px">▶️ <strong>${data.step}</strong>: ${data.description || ''}</div>`;
+                } else if (data.type === 'step_complete') {
+                    // Show truncated output
+                    const preview = data.output.length > 100 ? data.output.substring(0, 100) + '...' : data.output;
+                    logDiv.innerHTML += `<div style="color:#94a3b8; margin-left:15px; font-size:0.85em; margin-bottom: 2px;">"${preview}"</div>`;
+                    logDiv.innerHTML += `<div>✅ Step Complete</div>`;
+                } else if (data.type === 'complete') {
+                    logDiv.innerHTML += `<div style="color:#4ade80; margin-top:10px"><strong>✅ Workflow Completed Successfully!</strong></div>`;
+                    // Pretty print results
+                    let resultHtml = '<div style="background: rgba(0,0,0,0.2); padding: 10px; margin-top: 10px; border-radius: 5px;">';
+                    for (const [key, value] of Object.entries(data.results)) {
+                        resultHtml += `<strong>[${key}]</strong>:<br>${value}<br><br>`;
+                    }
+                    resultHtml += '</div>';
+                    outputDiv.innerHTML += resultHtml;
+                    eventSource.close();
+                } else if (data.type === 'error') {
+                    logDiv.innerHTML += `<div style="color:#ef4444">❌ Error: ${data.error}</div>`;
+                    eventSource.close();
+                } else if (data.type === 'step_error') {
+                    logDiv.innerHTML += `<div style="color:#ef4444">❌ Step Error: ${data.error}</div>`;
+                    eventSource.close();
+                }
+
+                document.getElementById('chatContainer').scrollTop = document.getElementById('chatContainer').scrollHeight;
+            };
+
+            eventSource.onerror = function (err) {
+                console.error("EventSource failed:", err);
+                eventSource.close();
+            };
+        }
+
+        // --- File Upload ---
+        async function uploadFile() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('user_id', currentUserId);
+
+                try {
+                    const res = await fetch('/api/v1/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await res.json();
+                    alert(data.message);
+                    addMessage(`📂 Uploaded file: ${file.name}`, false);
+                } catch (e) {
+                    console.error(e);
+                    alert("Upload failed");
+                }
+            };
+            input.click();
+        }
+
+        // Add Upload Button locally to UI (simplified)
+        window.addEventListener('load', () => {
+            const chatInputContainer = document.querySelector('.chat-input-container');
+            const uploadBtn = document.createElement('button');
+            uploadBtn.innerText = '📎';
+            uploadBtn.className = 'send-btn'; // reuse style
+            uploadBtn.style.marginRight = '10px';
+            uploadBtn.onclick = uploadFile;
+            chatInputContainer.insertBefore(uploadBtn, document.getElementById('messageInput'));
+        });
+
+        // --- Graph ---
+        async function loadGraph() {
+            const res = await fetch(`/api/v1/graph/data?user_id=${currentUserId}`);
+            const data = await res.json();
+
+            if (cy) cy.destroy();
+
+            cy = cytoscape({
+                container: document.getElementById('cy'),
+                elements: {
+                    nodes: data.nodes.map(n => ({ data: { id: n.id, label: n.id } })),
+                    edges: data.links.map(e => ({ data: { source: e.source, target: e.target, label: e.relation } }))
+                },
+                style: [
+                    { selector: 'node', style: { 'background-color': '#6366f1', 'label': 'data(id)', 'color': '#fff', 'text-outline-width': 2, 'text-outline-color': '#6366f1' } },
+                    { selector: 'edge', style: { 'width': 2, 'line-color': '#94a3b8', 'target-arrow-shape': 'triangle', 'target-arrow-color': '#94a3b8', 'curve-style': 'bezier', 'label': 'data(label)', 'color': '#ccc', 'font-size': 10 } }
+                ],
+                layout: { name: 'cose', animate: true }
+            });
+        }
+    </script>
+</body>
+
+</html>
