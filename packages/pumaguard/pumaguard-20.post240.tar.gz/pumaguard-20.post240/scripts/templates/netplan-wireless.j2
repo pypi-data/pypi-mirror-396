@@ -1,0 +1,15 @@
+network:
+  version: 2
+  wifis:
+    wlan0:
+      optional: true
+      dhcp4: true
+      access-points:
+        {% for network in wireless_networks %}
+        "{{ network.ssid }}":
+          {% if network.password %}
+          password: "{{ network.password }}"
+          {% else %}
+          {}
+          {% endif %}
+        {% endfor %}
