@@ -1,0 +1,70 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: dapla-toolbelt-metadata
+  title: "Dapla Toolbelt: Metadata"
+  description: |
+    Tools and clients for working with the Dapla Metadata system.
+  tags:
+    - dapla
+    - metadata
+    - python
+  annotations:
+    github.com/project-slug: statisticsnorway/dapla-toolbelt-metadata
+spec:
+  type: library
+  owner: dapla-metadata-developers
+  lifecycle: production
+  dependsOn:
+    - component:ssb-datadoc-model
+    - component:dapla-auth-client
+    - resource:statistical-subjects-structure
+  consumesApis:
+    - klass-api
+    - vardef-internal-api
+  system: metadata
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: vardef-forvaltning
+  title: "Vardef Forvaltning"
+  description: |
+    A service allowing statisticians to maintain variable definitions in Vardef. The service runs on Dapla Lab, based on the standard JupyterLab service but with a set of custom Notebooks in place and the Python dependencies and Jupyter kernel pre-installed to make it easy to work with.
+  tags:
+    - dapla
+    - dapla-lab
+    - metadata
+    - python
+    - jupyter
+  annotations:
+    github.com/project-slug: statisticsnorway/dapla-toolbelt-metadata
+spec:
+  type: service
+  owner: dapla-metadata-developers
+  lifecycle: production
+  dependsOn:
+    - component:dapla-toolbelt-metadata
+    - system:dapla-lab
+  consumesApis:
+    - vardef-internal-api
+  system: metadata
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: statistical-subjects-structure
+  title: Statistical subjects structure
+  description: |
+    Document defining the heirarchy of statistical subjects and the placement of statistical products within the heirarchy.
+  links:
+    - title: Location
+      url: https://www.ssb.no/xp/_/service/mimir/subjectStructurStatistics
+  tags:
+    - xml
+    - metadata
+spec:
+  type: document
+  system: SSBNO
+  owner: ssbno-developers
+  lifecycle: production
