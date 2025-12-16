@@ -1,0 +1,88 @@
+"""Cleanup Stale Vms"""
+
+from __future__ import annotations
+
+from typing import Any
+
+import httpx
+
+from plato._generated.errors import raise_for_status
+from plato._generated.models.cleanup_stale_vms_request import CleanupStaleVMsRequest
+from plato._generated.models.cleanup_stale_vms_response import CleanupStaleVMsResponse
+
+
+def _build_request_args(
+    body: CleanupStaleVMsRequest,
+) -> dict[str, Any]:
+    """Build request arguments."""
+    url = "/api/v1/cluster/cleanup/stale-vms"
+
+    return {
+        "method": "POST",
+        "url": url,
+        "json": body.to_dict(),
+    }
+
+
+def sync(
+    client: httpx.Client,
+    body: CleanupStaleVMsRequest,
+) -> CleanupStaleVMsResponse:
+    """Clean up stale VMs that haven't sent heartbeats recently.
+
+    Requires internal service authentication.
+
+    A VM is considered stale if its last_server_heartbeat is older than
+    the specified threshold (default: 10 minutes).
+
+    This endpoint will:
+    1. Scan all VM records in Redis
+    2. Identify VMs with stale heartbeats
+    3. Send forced shutdown requests to each stale VM
+    4. Delete the VM records from Redis
+
+    Args:
+        cleanup_request: Cleanup parameters (threshold)
+
+    Returns:
+        CleanupStaleVMsResponse with cleanup results"""
+
+    request_args = _build_request_args(
+        body=body,
+    )
+
+    response = client.request(**request_args)
+    raise_for_status(response)
+    return CleanupStaleVMsResponse.from_dict(response.json())
+
+
+async def asyncio(
+    client: httpx.AsyncClient,
+    body: CleanupStaleVMsRequest,
+) -> CleanupStaleVMsResponse:
+    """Clean up stale VMs that haven't sent heartbeats recently.
+
+    Requires internal service authentication.
+
+    A VM is considered stale if its last_server_heartbeat is older than
+    the specified threshold (default: 10 minutes).
+
+    This endpoint will:
+    1. Scan all VM records in Redis
+    2. Identify VMs with stale heartbeats
+    3. Send forced shutdown requests to each stale VM
+    4. Delete the VM records from Redis
+
+    Args:
+        cleanup_request: Cleanup parameters (threshold)
+
+    Returns:
+        CleanupStaleVMsResponse with cleanup results"""
+
+    request_args = _build_request_args(
+        body=body,
+    )
+
+    response = await client.request(**request_args)
+    raise_for_status(response)
+    return CleanupStaleVMsResponse.from_dict(response.json())
