@@ -1,0 +1,45 @@
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = [
+    "larray_editor"
+]
+addopts = [
+    "-v",
+    "--doctest-modules",
+    # this test is not automation-friendly
+    "--ignore=larray_editor/tests/test_api_larray.py",
+    # this test cannot be run with pytest (must be run from within PyCharm)
+    "--ignore=larray_editor/tests/run_with_console.py",
+#    "--cov",
+]
+
+filterwarnings = [
+    # turn warnings into errors (unless they are explicitly handled in tests or ignored here)
+    "error",
+    "ignore:Jupyter is migrating its paths to use standard platformdirs.*:DeprecationWarning:jupyter_client.connect.*:",
+]
+
+
+[tool.ruff]
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".eggs",
+    ".git",
+    ".ruff_cache",
+    ".venv",
+    "__pypackages__",
+    "build",
+    "dist",
+]
+line-length = 120
+
+[tool.ruff.lint]
+# Enable Pyflakes `E` and `F` codes by default.
+select = ["E", "F"]
+ignore = []
+
+# Allow autofix for all enabled rules (when `--fix`) is provided.
+# fixable = ["A", "B", "C", "D", "E", "F", "..."]
+# unfixable = []
+
+per-file-ignores = {}
