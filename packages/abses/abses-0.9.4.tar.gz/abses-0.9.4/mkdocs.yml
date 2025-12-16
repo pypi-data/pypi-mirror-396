@@ -1,0 +1,199 @@
+site_name: ABSESpy
+
+nav:
+    - Home:
+        - AB-SESpy: index.md
+        - Installation: home/Installation.md
+        - Guide Checklist: home/guide_checklist.md
+        - Getting started: home/get_started.md
+        - Dependencies: home/dependencies.md
+        - License: home/license.md
+        - Contributions: home/contribution.md
+        - Acknowledge: home/acknowledge.md
+        # - RoadMap: home/roadmap.md
+    - Wiki:
+        - Wiki: wiki/wiki.md
+        - Refers: wiki/about.md
+        - Materials: wiki/materials.md
+        - Concepts: wiki/concepts.md
+        - Paper: paper/paper.md
+    - Tutorials:
+        - Tutorial: tutorial/tutorial.md
+        - Start from ABM: tutorial/tutorial_guide_from_ABM.md
+        - Start from SES: tutorial/tutorial_guide_from_SES.md
+        - Beginner Level:
+          - B01: tutorial/beginner/get_started.ipynb
+          - B02: tutorial/beginner/organize_model_structure.ipynb
+          - B03: tutorial/beginner/time_control.ipynb
+          - B04: tutorial/beginner/manage_parameters.ipynb
+          - B05: tutorial/beginner/actors.ipynb
+          - B06: tutorial/beginner/movement.ipynb
+          - B07: tutorial/beginner/predation_tutorial.ipynb
+          - B08: tutorial/beginner/hotelling_tutorial.ipynb
+        - Intermediate Level:
+          - I01: tutorial/intermediate/linking_actors.ipynb
+        - Advanced Level:
+          - A01: tutorial/advanced/geodata.ipynb
+          - A02: tutorial/advanced/viz_model.ipynb
+          # - A02: tutorial/advanced/human_behavior_simulation.ipynb  # File not found
+        - Complete Examples:
+          - C01: tutorial/completing/fire_tutorial.ipynb
+          - C02: tutorial/completing/linking_actors.ipynb
+          - C03: tutorial/completing/random_seed.ipynb
+          # moved to Intermediate Level as I03
+    - Examples:
+        - Official Examples: examples/official.md
+        - Gallery: examples/gallery.md
+        - Community Examples: examples/community.md
+    - API references:
+        - API: api/api.md
+        - Model structure:
+          - Main Model: api/model.md
+          - Natural Modules: api/nature.md
+          - PatchModule (layer): api/layer.md
+          - Human Modules: api/human.md
+          - Cells: api/cells.md
+        - Actors' Operation:
+          - Actor (Agent): api/agents.md
+          - Actors Container: api/container.md
+          - Actors List: api/sequences.md
+          - Movements: api/move.md
+          - Interlinks: api/links.md
+        - Workflow Control:
+          - Time Control: api/time.md
+          - Random: api/random.md
+          - Experiment: api/experiment.md
+
+theme:
+    name: "material"
+    logo: "https://songshgeo-picgo-1302043007.cos.ap-beijing.myqcloud.com/uPic/logo_abses.svg"
+    extra_css:
+      - assets/_mkdocstrings.css
+      - assets/notebook-styles.css
+    palette:
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    language: en
+    features:
+        - header.autohide
+        - navigation.tabs
+        - navigation.tracking
+        - toc.follow
+        - content.tooltips  # only sponsor
+        - content.code.copy
+        - content.tooltips
+plugins:
+    - search
+    - mkdocs-jupyter
+    - mkdocstrings:
+        handlers:
+          python:
+            paths: ["."]
+            inventories:
+              - https://docs.python.org/3/objects.inv
+            options:
+              members_order: source
+              separate_signature: true
+              filters: ["!^_"]
+              docstring_options:
+                ignore_init_summary: true
+              merge_init_into_class: true
+              show_root_heading: true
+              show_source: true
+              find_stubs_package: true
+    - exclude:
+        glob:
+          - plugins/*
+          - __pycache__/*
+    - bibtex:
+        bib_file: "docs/refs.bib"
+    # - mkdocs-simple-hooks:  # Temporarily disabled - docs.plugins.checks module missing
+    #     hooks:
+    #       on_pre_build: 'docs.plugins.checks:on_pre_build'
+    - macros
+    - callouts
+    - glightbox
+    # https://squidfunk.github.io/mkdocs-material/setup/setting-up-tags/
+    - tags
+    - mike:
+        alias_type: symlink
+        canonical_version: latest
+    # - typeset
+
+markdown_extensions:
+  - attr_list
+  - admonition
+  - md_in_html
+  - pymdownx.details
+
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - footnotes
+  - toc:
+      baselevel: 2
+      separator: "-"
+      permalink: true
+      title: Page contents
+  - attr_list
+  - md_in_html
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - abbr
+
+  # https://squidfunk.github.io/mkdocs-material/reference/icons-emojis/#search
+  # 表情符号拓展
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+  # 以下配置参考 https://github.com/pydantic/pydantic/blob/main/mkdocs.yml#L6C6-L6C6
+  - tables
+  - admonition
+  - pymdownx.details
+  - pymdownx.extra
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.snippets:
+      auto_append:
+        - includes/abbreviations.md
+
+  # Mermaid diagram support
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+extra:
+  version:
+    - provider: mike
+  tags:
+    model: tag
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/SongshGeoLab/ABSESpy
+    # - icon: fontawesome/brands/web
+    #   link: https://cv.songshgeo.com/
+
+# Add JavaScript for Mermaid diagrams
+extra_javascript:
+  - https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js
+  - javascripts/mermaid-init.js
+
+repo_url: https://github.com/SongshGeoLab/ABSESpy

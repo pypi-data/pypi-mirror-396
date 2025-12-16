@@ -1,0 +1,39 @@
+name: test-notebooks
+
+on:
+  pull_request:
+  push:
+    branches: [ dev, master, main ]
+
+jobs:
+  nbmake:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install deps
+        run: |
+          # Need docs stack to execute notebooks via mkdocs-jupyter/nbmake
+          uv sync --group docs --dev
+
+      - name: Run nbmake
+        env:
+          ABSESPY_PROJECT_ROOT: ${{ github.workspace }}
+        run: |
+          set -e
+          NB_LIST=$(git ls-files 'docs/**/*.ipynb' | grep -v '^site/' || true)
+          if [ -z "$NB_LIST" ]; then
+            echo "No notebooks found under docs/. Skipping nbmake."
+            exit 0
+          fi
+          echo "Notebooks to test:" && echo "$NB_LIST"
+          uv run pytest --nbmake $NB_LIST -v --tb=short --ignore=site
