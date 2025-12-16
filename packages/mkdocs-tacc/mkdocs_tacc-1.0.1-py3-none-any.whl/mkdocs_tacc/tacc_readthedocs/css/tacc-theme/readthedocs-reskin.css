@@ -1,0 +1,304 @@
+/* SIDE NAV */
+/* https://github.com/mkdocs/mkdocs/blob/1.4.2/mkdocs/themes/readthedocs/css/theme.css */
+
+
+/* to prevent decresing font size in nav */
+.wy-menu-vertical a,
+.wy-menu-vertical p.caption {
+  font-size: var(--global-font-size--small);
+}
+
+
+/* to undo capitalization on nav headers */
+.wy-menu-vertical p.caption {
+  text-transform: unset;
+}
+
+
+/* to set automatic size for an SVG logo */
+
+.wy-side-nav-search .wy-dropdown > a.logo :is(img, svg),
+.wy-side-nav-search > a.logo :is(img, svg) {
+  width: 100%;
+  padding: unset;
+}
+
+
+/* to define re-usable spacing */
+
+.wy-nav-side {
+  --pad-horz: 25px; /* NOTE: design is 24.5px (left) and 11.5px (right) */
+  --link-pad-vert: 0.375em; /* NOTE: design is 25px */
+  --link-pad-horz: 25px; /* NOTE: dev tweaked until everyone said ok */
+}
+
+
+/* to re-color navigation */
+
+.wy-nav-side {
+  color: unset;
+  background: var(--global-color-primary--x-light);
+  border-right: var(--global-border-width--normal) solid var(--global-color-primary--dark);
+}
+.wy-menu-vertical * {
+  color: unset;
+}
+.wy-menu-vertical a:hover {
+  background: #e3e3e3; /* copied from .wy-menu-vertical li.current */;
+}
+.wy-menu-vertical li.current {
+  background: unset;
+}
+.wy-menu-vertical li.current a {
+  border-right: unset;
+}
+.wy-menu-vertical li.toctree-l1.current > a {
+  border-bottom: unset;
+  border-top: unset;
+}
+.wy-menu-vertical li.toctree-l2.current > a,
+.wy-menu-vertical li.toctree-l2.current li.toctree-l3 > a {
+  background: unset;
+}
+.wy-menu-vertical li.toctree-l3.current > a,
+.wy-menu-vertical li.toctree-l3.current li.toctree-l4 > a {
+  background: unset;
+}
+.wy-menu-vertical a:not(.current) {
+  font-weight: var(--medium);
+}
+.wy-menu-vertical a.current {
+  color: var(--global-color-primary--xxx-dark);
+  font-weight: var(--bold);
+}
+.wy-menu-vertical li.current > a,
+.wy-menu-vertical li.on a {
+    background: unset; /* to undo theme.css */
+}
+/* to distinguish nav heading from nav active link */
+.wy-menu-vertical li.current > a:not(:has(+ ul li.current)) {
+    background: #e3e3e3; /* copied from .wy-menu-vertical li.current */;
+}
+
+
+/* to separate sections of navigation */
+
+.wy-menu-vertical p.caption {
+  color: var(--global-color-primary--xxx-dark);
+}
+.wy-menu-vertical p.caption:not(:first-child) {
+  border-top: var(--global-border-width--normal) solid var(--global-color-primary--dark);
+  margin-top: 20px; /* NOTE: dsign is 18.75px */
+  padding-top: 20px; /* NOTE: dsign is 19.5px */
+}
+
+
+/* to adapt nav layout to design */
+
+.wy-menu-vertical {
+  padding-inline: var(--pad-horz);
+  padding-bottom: 25px; /* NOTE: developer addition */
+}
+.wy-menu-vertical a {
+  padding: var(--link-pad-vert) var(--link-pad-horz); /* overwrite theme.css */
+}
+.wy-menu-vertical li.on ul,
+.wy-menu-vertical li.current:has(li) ul {
+  padding-left: var(--link-pad-horz);
+  padding-bottom: 10px;
+}
+/* .wy-menu-vertical header, *//* NOTE: not seen in markup yet */
+.wy-menu-vertical p.caption {
+  height: unset; /* to undo theme.css */
+  line-height: unset; /* to undo theme.css */
+  margin: 0 0 15px; /* NOTE: design is 13px */
+  padding-left: var(--link-pad-horz);
+}
+
+
+/* to position open/close buttons */
+/* to make whole link clickable, not just button */
+
+.wy-menu-vertical {
+  --button-width: 1ch; /* estimate, based on icon (e.g. ▾, ▸) */
+  --button-margin: 0.5em;
+  --button-buffer: calc( var(--button-margin) * 2 );
+  --button-space: calc( var(--button-width) + var(--button-buffer) );
+}
+.wy-menu-vertical li a {
+  position: relative; /* support `position: absolute` child */
+}
+.wy-menu-vertical li:not(:has(li)) a button.toctree-expand {
+  display: none;
+}
+.wy-menu-vertical li a .fa,
+.wy-menu-vertical li:has(li) a button.toctree-expand {
+  margin-left: unset; /* to undo theme.css */
+
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+
+  box-sizing: content-box;
+  padding-inline: var(--button-margin);
+  padding-block: var(--link-pad-vert);
+  width: var(--button-width);
+  text-align: center;
+}
+.wy-menu-vertical li:has(li) a,
+.wy-menu-vertical li a:not(.internal) {
+  padding-left: var(--button-space);
+}
+.wy-menu-vertical li a .fa::before,
+.wy-menu-vertical li button.toctree-expand::before {
+  /* to move icon upward, inline with first line of mult-line text */
+  height: 100%;
+}
+.wy-menu-vertical li a .fa::before {
+  /* to move icon downward, vertically-aligned center with first line of text */
+  transform: translateY(0.125em);
+}
+
+
+/* to change icons */
+
+.wy-menu-vertical li:not(.on, .current) button.toctree-expand::before {
+  content: "\f0da";
+}
+.wy-menu-vertical li.current > a button.toctree-expand::before,
+.wy-menu-vertical li.on a button.toctree-expand::before {
+  content: "\f0d7";
+}
+
+
+
+/* to hide sidebar bottom "« Previous" and "Next »" */
+
+/* NOTE: This also hides repo link, but that already exists on every page */
+.rst-versions {
+  display: none;
+}
+/* Remove extra spce for `.rst-versions` */
+.wy-nav-side {
+  padding-bottom: unset; /* to undo theme_extra.css and theme.css */
+}
+
+
+/* to adapt search to design */
+
+.wy-side-nav-search {
+  padding-block: calc( var(--pad-horz) + var(--link-pad-horz) );
+  padding-inline: unset; /* to undo theme.css */
+
+  margin-bottom: unset; /* to undo theme.css */
+  background-color: unset; /* to undo theme.css */
+}
+.wy-side-nav-search > * {
+  padding-inline: calc( var(--pad-horz) + var(--link-pad-horz) );
+}
+.wy-side-nav-search .nav-name {
+  font-family: var(--global-font-family--sans);
+  font-size: var(--global-font-size--large);
+  color: var(--global-color-primary--x-dark);
+}
+
+/* to remove space (margin, padding, whitespace) around logo */
+.wy-side-nav-search a,
+.wy-side-nav-search a.logo > svg {
+  display: block;
+}
+.wy-side-nav-search > a.logo {
+  padding-block: unset; /* to undo theme.css */
+}
+
+/* to demarcate link to CMS */
+.wy-side-nav-search .cms-link {
+  font-size: var(--global-font-size--small);
+
+  padding-top: unset; /* to undo theme.css */
+
+  /* to add border and space bewteen logo and search */
+  padding-bottom: 15px; /* NOTE: design is 15.5px */
+  border-bottom: var(--global-border-width--normal) solid var(--global-color-primary--x-dark);
+  margin-bottom: 25px; /* NOTE: design is 22.5px */
+}
+
+.wy-side-nav-search .icon-home {
+  display: none;
+}
+
+.wy-side-nav-search input[type=search] /* TACC */,
+.wy-side-nav-search input[type=text] /* orignal */ {
+  width: unset; /* to undo theme.css *//* .wy-form does this via display: grid */
+  border: var(--global-border-width--normal) solid var(--global-color-primary--light);
+  border-radius: 5px;
+  font-size: unset; /* to undo theme.css */
+  box-shadow: unset; /* to undo theme.css */
+  transition: unset; /* to undo theme.css */
+}
+
+.wy-form {
+  display: grid;
+}
+
+
+
+/* BREADCRUMBS */
+
+/* to hide dangling separator */
+/* The `.wy-breadcrumbs-aside` is where repository links would show */
+/* https://github.com/mkdocs/mkdocs/blob/1.4.2/mkdocs/themes/readthedocs/breadcrumbs.html#L14-L30 */
+.rst-content [role="navigation"] li.wy-breadcrumbs-aside {
+  margin-left: auto;;
+}
+.rst-content [role="navigation"] li.wy-breadcrumbs-aside::before {
+  content: unset;
+}
+
+/* to hide the <hr> from ReadTheDocs theme markup */
+.rst-content [role="navigation"] hr {
+  display: none;
+}
+
+/* to hide the ≫ from ReadTheDocs theme markup */
+.rst-content [role="navigation"] li::before {
+  margin-left: -1.25ch;
+  background-color: var(--global-color-primary--xx-light);
+}
+
+/* to hide link to home */
+/* FAQ: The link is not in design (cuz it is redundant cuz side nav has link) */
+.rst-content [role="navigation"] li:first-child {
+  display: none;
+}
+.rst-content [role="navigation"] li:nth-child(2)::before {
+  content: unset;
+}
+
+/* to bold last child */
+/* FAQ: The core-styles.docs.css bolds :last-child, but that does not work here,
+        because last list item is .wy-breadcrumbs-aside (used for repo links) */
+.rst-content [role="navigation"] li:nth-last-child(2) {
+  font-weight: var(--bold);
+}
+
+
+
+
+/* CONTENT */
+/* https://github.com/mkdocs/mkdocs/blob/1.4.2/mkdocs/themes/readthedocs/css/theme.css */
+
+
+/* to increase content width */
+.wy-nav-content {
+  max-width: 1200px;
+}
+
+
+/* to remove two-tone background */
+@media screen and (min-width: 1100px) {
+  .wy-nav-content-wrap {
+    background: #fcfcfc; /* to mimic theme.css non-media query background */
+  }
+}
