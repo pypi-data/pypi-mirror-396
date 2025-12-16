@@ -1,0 +1,43 @@
+[package]
+name = "tachyon-engine"
+version = "0.1.0"
+edition = "2021"
+authors = ["Juan Manuel Panozzo Zenere"]
+description = "High-performance ASGI framework - Rust-powered alternative to Starlette"
+license = "MIT"
+readme = "README.md"
+
+[lib]
+name = "tachyon_engine"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["extension-module"]
+extension-module = ["pyo3/extension-module"]
+
+[dependencies]
+tokio = { version = "1.35", features = ["full"] }
+hyper = { version = "0.14", features = ["full"] }
+pyo3 = { version = "0.20", features = ["abi3-py38"] }
+pyo3-asyncio = { version = "0.20", features = ["tokio-runtime", "attributes"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+bytes = "1.5"
+http = "0.2"
+matchit = "0.7"
+tokio-tungstenite = "0.21"
+multer = "3.0"
+reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls"] }
+futures = "0.3"
+async-trait = "0.1"
+thiserror = "1.0"
+once_cell = "1.19"
+
+[dev-dependencies]
+tokio-test = "0.4"
+criterion = "0.5"
+
+[[bench]]
+name = "routing_benchmark"
+harness = false
+
