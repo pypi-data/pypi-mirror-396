@@ -1,0 +1,554 @@
+# -*- coding: utf-8 -*-
+"""System Service
+
+The system service is responible for:
+* CRUD operations of `System` records
+* Rescanning directory for Local Plugins
+* Reloading Local Plugins
+* Handling System Events
+"""
+
+import copy
+import logging
+from typing import List, Sequence
+
+from brewtils.errors import (
+    BrewtilsException,
+    ModelValidationError,
+    PluginError,
+    RequestPublishException,
+)
+from brewtils.models import Command, Event, Events, Instance, System
+from brewtils.schemas import SystemSchema
+from packaging.version import InvalidVersion, parse
+
+import beer_garden.config as config
+import beer_garden.db.api as db
+import beer_garden.local_plugins.manager as lpm
+import beer_garden.queue.api as queue
+from beer_garden.errors import NotFoundException, NotUniqueException
+from beer_garden.events import publish_event
+from beer_garden.plugin import publish_stop
+
+REQUEST_FIELDS = set(SystemSchema.get_attribute_names())
+
+logger = logging.getLogger(__name__)
+
+
+def get_system(system_id: str) -> System:
+    """Retrieve an individual System
+
+    Args:
+        system_id: The System ID
+
+    Returns:
+        The System
+
+    """
+    return db.query_unique(System, id=system_id)
+
+
+def get_systems(**kwargs) -> List[System]:
+    """Search for Systems
+
+    Keyword Args:
+        Parameters to be passed to the DB query
+
+    Returns:
+        The list of Systems that matched the query
+
+    """
+    filter_latest = kwargs.pop("filter_latest", False)
+    filter_running = kwargs.pop("filter_running", False)
+    systems = db.query(System, **kwargs)
+
+    if not (filter_latest or filter_running) or not systems:
+        return systems
+
+    group_systems = {}
+
+    for system in systems:
+        system_key = f"{system.namespace}.{system.name}"
+        if system_key not in group_systems:
+            group_systems[system_key] = [system]
+        else:
+            group_systems[system_key].append(system)
+
+    running_groups = {}
+    running_systems = []
+    latest_systems = []
+
+    if filter_running:
+        for group_key in group_systems:
+            systems = group_systems[group_key]
+            running_groups[group_key] = []
+            for system in systems:
+                # Only include systems with current namespace/name that have running instances
+                # This allows filter latest to select only from pool of running systems
+                if system.instances and any(
+                    "RUNNING" == instance.status for instance in system.instances
+                ):
+                    running_groups[group_key].append(system)
+                    running_systems.append(system)
+            # If no running systems with current namespace/name then add them anyway
+            # This allows filter latest to still return a system even if not running
+            if not running_groups[group_key]:
+                running_groups[group_key] = [system for system in systems]
+        group_systems = running_groups
+
+    if filter_latest:
+        for group_key in group_systems:
+            if len(group_systems[group_key]) == 1:
+                latest_systems.append(group_systems[group_key][0])
+            else:
+                latest_systems.append(determine_latest(group_systems[group_key]))
+    else:
+        return running_systems
+
+    return latest_systems
+
+
+def determine_latest(systems):
+    # type: (Iterable[System]) -> Optional[System]
+    """Returns the system with the latest version from the provided list of Systems.
+    Any version adhering to PEP440 is treated as "later" than a version that does
+    not adhere to that standard.
+    """
+    versions = []
+    legacy_versions = []
+    system_versions_map = {}
+
+    for system in systems:
+        try:
+            versions.append(parse(system.version))
+            system_versions_map[str(parse(system.version))] = system
+        except InvalidVersion:
+            legacy_versions.append(system.version)
+            system_versions_map[system.version] = system
+
+    eligible_versions = versions if versions else legacy_versions
+
+    if eligible_versions:
+        latest_version = sorted(eligible_versions, reverse=True)[0]
+        return system_versions_map.get(str(latest_version))
+    else:
+        return None
+
+
+@publish_event(Events.SYSTEM_CREATED)
+def create_system(system: System) -> System:
+    """Create a new System
+
+    Args:
+        system: The System to create
+
+    Returns:
+        The created System
+
+    """
+    if system.namespace is None:
+        system.namespace = config.get("garden.name")
+
+    # Create in the database
+    system = db.create(system)
+
+    # Also need to let the routing module know
+    from beer_garden.router import add_routing_system
+
+    add_routing_system(system=system)
+
+    return system
+
+
+@publish_event(Events.SYSTEM_UPDATED)
+def update_system(
+    system_id: str = None,
+    system: System = None,
+    new_commands: Sequence[Command] = None,
+    add_instances: Sequence[Instance] = None,
+    description: str = None,
+    display_name: str = None,
+    icon_name: str = None,
+    metadata: dict = None,
+    template: str = None,
+    groups: list = None,
+    requires: list = None,
+    requires_timeout: int = None,
+) -> System:
+    """Update an already existing System
+
+    Args:
+        system_id: The ID of the System to be updated
+        system: The System to be updated
+        new_commands: List of commands to overwrite existing commands
+        add_instances: List of new instances that will be added to the current list
+        description: Replacement description
+        display_name: Replacement display_name
+        icon_name: Replacement icon_name
+        metadata: Dictionary that will be incorporated into current metadata
+        template: Replacement template
+        groups: List of group labels
+        requires: List of system dependencies
+        requires_timeout: Max time to wait for dependencies
+
+    Returns:
+        The updated System
+
+    """
+    updates = {}
+    system = system or db.query_unique(System, id=system_id)
+
+    if new_commands is not None:
+        # Convert these to DB form and back to make sure all defaults are correct
+        mongo_commands = [db.from_brewtils(command) for command in new_commands]
+        brew_commands = db.to_brewtils(mongo_commands)
+
+        if (
+            system.commands
+            and not config.get("plugin.allow_command_updates")
+            and "dev" not in system.version
+            and system.has_different_commands(brew_commands)
+        ):
+            raise ModelValidationError(
+                f"System {system} already exists with different commands"
+            )
+
+        updates["commands"] = mongo_commands
+
+    # If we set an attribute to None mongoengine marks that attribute for deletion
+    # That's why we explicitly test each of these
+    if description is not None:
+        updates["description"] = description
+
+    if display_name is not None:
+        updates["display_name"] = display_name
+
+    if icon_name is not None:
+        updates["icon_name"] = icon_name
+
+    if template is not None:
+        updates["template"] = template
+
+    if groups is not None:
+        updates["groups"] = groups
+
+    if requires is not None:
+        updates["requires"] = requires
+
+    if requires_timeout is not None:
+        updates["requires_timeout"] = requires_timeout
+
+    if metadata:
+        metadata_update = copy.deepcopy(system.metadata)
+        metadata_update.update(metadata)
+
+        updates["metadata"] = metadata_update
+
+    if add_instances:
+        if -1 < system.max_instances < len(system.instances) + len(add_instances):
+            raise ModelValidationError(
+                f"Unable to add instance(s) to {system} - would exceed "
+                f"the system instance limit of {system.max_instances}"
+            )
+
+        updates["push_all__instances"] = []
+        instance_names = system.instance_names
+
+        for instance in add_instances:
+            if instance.name in instance_names:
+                raise ModelValidationError(
+                    f"Unable to add Instance {instance} to System {system}: Duplicate "
+                    "instance names"
+                )
+
+            updates["push_all__instances"].append(db.from_brewtils(instance))
+
+    system = db.modify(system, **updates)
+
+    # Also need to let the routing module know
+    from beer_garden.router import add_routing_system
+
+    add_routing_system(system=system)
+
+    return system
+
+
+def upsert(system: System) -> System:
+    """Helper to create or update a system
+
+    Args:
+        system: The system to create or update
+
+    Returns:
+        The created / updated system
+    """
+    try:
+        return create_system(system, _publish_error=False)
+    except NotUniqueException:
+        existing = db.query_unique(
+            System, namespace=system.namespace, name=system.name, version=system.version
+        )
+
+        return update_system(
+            system=existing,
+            new_commands=system.commands,
+            add_instances=system.instances,
+            description=system.description,
+            display_name=system.display_name,
+            icon_name=system.icon_name,
+            metadata=system.metadata,
+        )
+
+
+def reload_system(system_id: str = None, system: System = None) -> None:
+    """Reload a local plugin System
+
+    Args:
+        system_id: The System ID
+        system: The System
+
+    Returns:
+        None
+    """
+    system = system or db.query_unique(System, id=system_id)
+
+    lpm.reload(system=system)
+
+    return system
+
+
+@publish_event(Events.SYSTEM_REMOVED)
+def remove_system(system_id: str = None, system: System = None) -> System:
+    """Remove a system
+
+    Args:
+        system_id: The System ID
+        system: The System
+
+    Returns:
+        The removed System
+
+    """
+    system = system or db.query_unique(System, id=system_id)
+
+    db.delete(system)
+
+    # Also need to let the routing module know
+    from beer_garden.router import remove_routing_system
+
+    remove_routing_system(system=system)
+
+    return system
+
+
+def purge_system(
+    system_id: str = None, system: System = None, force: bool = False
+) -> System:
+    """Convenience method for *completely* removing a system
+
+    This will:
+    - Stop all instances of the system
+    - Remove all message queues associated with the system
+    - Remove the system from the database
+
+    Args:
+        system_id: The System ID
+        system: The System
+
+    Returns:
+        The purged system
+
+    """
+    system = system or db.query_unique(System, id=system_id)
+
+    if force and not system.local:
+        return remove_system(system=system)
+
+    for instance in system.instances:
+        if lpm.has_instance_id(instance.id):
+            try:
+                lpm.remove(instance_id=instance.id)
+            except Exception as ex:
+                if not force:
+                    raise PluginError(
+                        f"Error attempting to stop {system}[{instance.name}]"
+                    ) from ex
+
+                logger.warning(
+                    f"Error while stopping instance {system}[{instance.name}]. "
+                    "Force flag was specified so system delete will continue. "
+                    f"Underlying exception was: {ex}"
+                )
+        else:
+            if instance.status not in ("STOPPED", "DEAD"):
+                try:
+                    # TODO - It would be nice to wait for the instance to stop
+                    publish_stop(system, instance=instance)
+                except Exception as ex:
+                    if not force:
+                        raise RequestPublishException(
+                            "Error attempting to publish stop message for "
+                            f"{system}[{instance.name}"
+                        ) from ex
+
+                    logger.warning(
+                        "Error while publishing stop message for "
+                        f"{system}[{instance.name}]. Force flag was specified so "
+                        f"system delete will continue. Underlying exception was: {ex}"
+                    )
+
+        request_queue = ""
+        try:
+            request_queue = instance.queue_info.get("request", {}).get("name")
+            if request_queue:
+                queue.remove(request_queue, force_disconnect=force, clear_queue=True)
+        except Exception as ex:
+            if not force:
+                raise PluginError(
+                    f"Error attempting to remove request queue '{request_queue}' for "
+                    f"{system}[{instance.name}]"
+                ) from ex
+
+            logger.warning(
+                f"Error while removing request queue '{request_queue}' for "
+                f"{system}[{instance.name}]. Force flag was specified so system delete "
+                f"will continue. Underlying exception was: {ex}"
+            )
+
+        admin_queue = ""
+        try:
+            admin_queue = instance.queue_info.get("admin", {}).get("name")
+            if admin_queue:
+                queue.remove(admin_queue, force_disconnect=force, clear_queue=False)
+        except Exception as ex:
+            if not force:
+                raise PluginError(
+                    f"Error attempting to remove admin queue '{admin_queue}' for "
+                    f"{system}[{instance.name}]"
+                ) from ex
+
+            logger.warning(
+                f"Error while removing admin queue '{admin_queue}' for "
+                f"{system}[{instance.name}]. Force flag was specified so system delete "
+                f"will continue. Underlying exception was: {ex}"
+            )
+
+    # Finally, actually delete the system
+    return remove_system(system=system)
+
+
+def get_instance(
+    instance_id: str = None,
+    system_id: str = None,
+    instance_name: str = None,
+    instance: Instance = None,
+    **_,
+) -> Instance:
+    """Retrieve an individual Instance
+
+    Args:
+        instance_id: The Instance ID
+        system_id: The System ID
+        instance_name: The Instance name
+        instance: The Instance
+
+    Returns:
+        The Instance
+
+    """
+    if instance:
+        return instance
+
+    if system_id and instance_name:
+        system = db.query_unique(System, raise_missing=True, id=system_id)
+
+        try:
+            return system.get_instance_by_name(instance_name, raise_missing=True)
+        except BrewtilsException:
+            raise NotFoundException(
+                f"System {system} does not have an instance with name '{instance_name}'"
+            ) from None
+
+    elif instance_id:
+        system = db.query_unique(System, raise_missing=True, instances__id=instance_id)
+
+        try:
+            return system.get_instance_by_id(instance_id, raise_missing=True)
+        except BrewtilsException:
+            raise NotFoundException(
+                f"System {system} does not have an instance with id '{instance_id}'"
+            ) from None
+
+    raise NotFoundException()
+
+
+def remove_instance(
+    *_, system: System = None, instance: Instance = None, **__
+) -> Instance:
+    """Removes an Instance
+
+    Args:
+        system: The System
+        instance: The Instance
+
+    Returns:
+        The deleted Instance
+    """
+    db.modify(system, pull__instances=instance)
+
+    return instance
+
+
+def handle_event(event: Event) -> None:
+    """Handle SYSTEM events
+
+    When creating or updating a system, make sure to mark as non-local first.
+
+    It's possible that we see SYSTEM_UPDATED events for systems that we don't currently
+    know about. This will happen if a new system is created on the child while the child
+    is operating in standalone mode. To handle that, just create the system.
+
+    Args:
+        event: The event to handle
+    """
+    if event.garden != config.get("garden.name"):
+        if event.name in (Events.SYSTEM_CREATED.name, Events.SYSTEM_UPDATED.name):
+            # Skip non local events that would override Local plugins
+            if (
+                db.count(
+                    System,
+                    namespace=event.payload.namespace,
+                    name=event.payload.name,
+                    version=event.payload.version,
+                    local=True,
+                )
+                < 1
+            ):
+                event.payload.local = False
+
+                # Update if the ID matches
+                if db.count(System, id=event.payload.id) > 0:
+                    db.update(event.payload)
+                # Find and update if payload was missing ID
+                elif (
+                    db.count(
+                        System,
+                        namespace=event.payload.namespace,
+                        name=event.payload.name,
+                        version=event.payload.version,
+                    )
+                    > 0
+                ):
+                    event.payload.id = db.query_unique(
+                        System,
+                        namespace=event.payload.namespace,
+                        name=event.payload.name,
+                        version=event.payload.version,
+                    ).id
+                    db.update(event.payload)
+                # Create object
+                else:
+                    db.create(event.payload)
+
+        elif event.name == Events.SYSTEM_REMOVED.name:
+            db.delete(event.payload)
