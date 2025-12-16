@@ -1,0 +1,4 @@
+from .core import BoxClustering
+
+__version__ = "0.3.3"
+__all__ = ["BoxClustering"]
