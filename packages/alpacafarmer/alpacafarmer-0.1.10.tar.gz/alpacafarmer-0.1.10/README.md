@@ -1,0 +1,801 @@
+# 🦙 AlpacaFarmer
+
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![PyPI version](https://img.shields.io/pypi/v/alpacafarmer.svg)](https://pypi.org/project/alpacafarmer/)
+
+**A modern, async-first Python wrapper for the Alpaca Markets API with full Pydantic v2 validation.**
+
+AlpacaFarmer provides a clean, type-safe interface to Alpaca's Trading, Broker, and Market Data APIs with comprehensive validation, async support, and intuitive error handling.
+
+---
+
+## ✨ Features
+
+- 🔄 **Async-first design** - Built with `httpx` for high-performance async operations
+- 📊 **Pydantic v2 validation** - All request/response models with strict type checking
+- 🎯 **Full API coverage** - Trader, Broker, and Market Data APIs
+- 🔒 **Type hints throughout** - Complete type annotations for IDE support
+- 🌍 **Environment-aware** - Easy switching between paper and live trading
+- ⚠️ **Comprehensive error handling** - Typed exceptions for all error scenarios
+- 🧩 **35+ Pydantic models** - Complete data models for all API responses
+- 🏷️ **18 type-safe enums** - No magic strings, full autocomplete support
+
+---
+
+## 📦 Installation
+
+### Using pip
+
+```bash
+pip install alpacafarmer
+```
+
+### Using UV (recommended)
+
+```bash
+uv add alpacafarmer
+```
+
+### Development Installation
+
+```bash
+git clone https://github.com/alpacafarmer/alpacafarmer.git
+cd alpacafarmer
+uv sync
+```
+
+---
+
+## 🚀 Quick Start
+
+### Basic Setup
+
+```python
+import asyncio
+from alpacafarmer import AlpacaAuth, TraderClient, Environment
+
+async def main():
+    # Initialize authentication
+    auth = AlpacaAuth(
+        api_key="your-api-key",
+        api_secret="your-api-secret",
+        environment=Environment.PAPER  # Use LIVE for production
+    )
+    
+    # Use the client with async context manager
+    async with TraderClient(auth) as client:
+        account = await client.get_account()
+        print(f"Account ID: {account.id}")
+        print(f"Buying Power: ${account.buying_power}")
+        print(f"Portfolio Value: ${account.portfolio_value}")
+
+asyncio.run(main())
+```
+
+### Using Environment Variables
+
+```bash
+export ALPACA_API_KEY="your-api-key"
+export ALPACA_SECRET_KEY="your-api-secret"
+```
+
+```python
+from alpacafarmer import AlpacaAuth, TraderClient
+
+# Credentials loaded automatically from environment
+auth = AlpacaAuth()
+```
+
+---
+
+## 📈 TraderClient API
+
+The `TraderClient` is for individual traders using Alpaca's Trading API.
+
+### Getting Account Information
+
+```python
+from alpacafarmer import AlpacaAuth, TraderClient
+
+async with TraderClient(AlpacaAuth()) as client:
+    # Get account details
+    account = await client.get_account()
+    
+    print(f"Cash: ${account.cash}")
+    print(f"Buying Power: ${account.buying_power}")
+    print(f"Day Trading BP: ${account.daytrading_buying_power}")
+    print(f"Pattern Day Trader: {account.pattern_day_trader}")
+```
+
+### Creating Orders
+
+```python
+from alpacafarmer import (
+    AlpacaAuth, TraderClient, OrderRequest,
+    OrderSide, OrderType, TimeInForce
+)
+
+async with TraderClient(AlpacaAuth()) as client:
+    # Market order
+    market_order = await client.create_order(OrderRequest(
+        symbol="AAPL",
+        qty=10,
+        side=OrderSide.BUY,
+        type=OrderType.MARKET,
+        time_in_force=TimeInForce.DAY
+    ))
+    print(f"Market Order ID: {market_order.id}")
+    
+    # Limit order
+    limit_order = await client.create_order(OrderRequest(
+        symbol="MSFT",
+        qty=5,
+        side=OrderSide.BUY,
+        type=OrderType.LIMIT,
+        time_in_force=TimeInForce.GTC,
+        limit_price=350.00
+    ))
+    print(f"Limit Order ID: {limit_order.id}")
+    
+    # Stop-loss order
+    stop_order = await client.create_order(OrderRequest(
+        symbol="GOOGL",
+        qty=2,
+        side=OrderSide.SELL,
+        type=OrderType.STOP,
+        time_in_force=TimeInForce.GTC,
+        stop_price=140.00
+    ))
+    print(f"Stop Order ID: {stop_order.id}")
+    
+    # Notional order (dollar amount instead of shares)
+    notional_order = await client.create_order(OrderRequest(
+        symbol="TSLA",
+        notional=1000.00,  # Buy $1000 worth
+        side=OrderSide.BUY,
+        type=OrderType.MARKET,
+        time_in_force=TimeInForce.DAY
+    ))
+```
+
+### Managing Orders
+
+```python
+from alpacafarmer import ListOrdersRequest, OrderUpdate
+
+async with TraderClient(AlpacaAuth()) as client:
+    # List open orders
+    open_orders = await client.list_orders(ListOrdersRequest(
+        status="open",
+        limit=100
+    ))
+    
+    # Get specific order
+    order = await client.get_order("order-id")
+    
+    # Replace/modify an order
+    updated_order = await client.replace_order(
+        order_id="order-id",
+        request=OrderUpdate(
+            qty=15,
+            limit_price=355.00
+        )
+    )
+    
+    # Cancel an order
+    await client.cancel_order("order-id")
+    
+    # Cancel all orders
+    cancelled = await client.cancel_all_orders()
+```
+
+### Managing Positions
+
+```python
+from decimal import Decimal
+
+async with TraderClient(AlpacaAuth()) as client:
+    # List all positions
+    positions = await client.list_positions()
+    for pos in positions:
+        print(f"{pos.symbol}: {pos.qty} shares @ ${pos.avg_entry_price}")
+        print(f"  P/L: ${pos.unrealized_pl} ({pos.unrealized_plpc}%)")
+    
+    # Get specific position
+    aapl_position = await client.get_position("AAPL")
+    
+    # Close a position completely
+    close_order = await client.close_position("AAPL")
+    
+    # Close partial position (by quantity)
+    partial_close = await client.close_position("MSFT", qty=Decimal("5"))
+    
+    # Close partial position (by percentage)
+    half_close = await client.close_position("GOOGL", percentage=Decimal("50"))
+    
+    # Close all positions
+    await client.close_all_positions(cancel_orders=True)
+```
+
+### Listing Assets
+
+```python
+from alpacafarmer import ListAssetsRequest, AssetClass, AssetStatus
+
+async with TraderClient(AlpacaAuth()) as client:
+    # List all tradable US equities
+    assets = await client.list_assets(ListAssetsRequest(
+        asset_class=AssetClass.US_EQUITY,
+        status=AssetStatus.ACTIVE
+    ))
+    
+    # Get specific asset info
+    aapl = await client.get_asset("AAPL")
+    print(f"Name: {aapl.name}")
+    print(f"Tradable: {aapl.tradable}")
+    print(f"Fractionable: {aapl.fractionable}")
+    print(f"Shortable: {aapl.shortable}")
+```
+
+---
+
+## 🏦 BrokerClient API
+
+The `BrokerClient` is for broker-dealers managing customer accounts via Alpaca's Broker API.
+
+### Creating Customer Accounts
+
+```python
+from datetime import datetime, timezone
+from alpacafarmer import (
+    AlpacaAuth, BrokerClient, Environment,
+    CreateAccountRequest, Contact, Identity, Disclosures, Agreement
+)
+
+auth = AlpacaAuth(
+    api_key="broker-api-key",
+    api_secret="broker-api-secret",
+    environment=Environment.PAPER  # Uses sandbox for paper
+)
+
+async with BrokerClient(auth) as client:
+    account = await client.create_account(CreateAccountRequest(
+        contact=Contact(
+            email_address="john.doe@example.com",
+            phone_number="555-123-4567",
+            street_address=["123 Main St"],
+            city="New York",
+            state="NY",
+            postal_code="10001"
+        ),
+        identity=Identity(
+            given_name="John",
+            family_name="Doe",
+            date_of_birth="1990-01-15",
+            tax_id="123-45-6789",
+            country_of_citizenship="USA",
+            country_of_tax_residence="USA"
+        ),
+        disclosures=Disclosures(
+            is_control_person=False,
+            is_affiliated_exchange_or_finra=False,
+            is_politically_exposed=False,
+            immediate_family_exposed=False
+        ),
+        agreements=[
+            Agreement(
+                agreement="customer_agreement",
+                signed_at=datetime.now(timezone.utc),
+                ip_address="192.168.1.1"
+            )
+        ]
+    ))
+    print(f"Created account: {account.id}")
+```
+
+### Managing Accounts
+
+```python
+from alpacafarmer import ListAccountsRequest
+
+async with BrokerClient(auth) as client:
+    # List all accounts
+    accounts = await client.list_accounts()
+    
+    # List with filtering
+    recent_accounts = await client.list_accounts(ListAccountsRequest(
+        query="john",
+        created_after=datetime(2024, 1, 1)
+    ))
+    
+    # Get specific account
+    account = await client.get_account("account-id")
+    
+    # Delete/close account
+    await client.delete_account("account-id")
+```
+
+### Trading on Behalf of Accounts
+
+```python
+from alpacafarmer import OrderRequest, OrderSide, OrderType, TimeInForce
+
+async with BrokerClient(auth) as client:
+    # Create order for customer account
+    order = await client.create_order(
+        account_id="customer-account-id",
+        request=OrderRequest(
+            symbol="AAPL",
+            qty=10,
+            side=OrderSide.BUY,
+            type=OrderType.MARKET,
+            time_in_force=TimeInForce.DAY
+        )
+    )
+    
+    # Get orders for account
+    orders = await client.get_orders("customer-account-id")
+    
+    # Cancel order for account
+    await client.cancel_order("customer-account-id", "order-id")
+```
+
+### Fund Transfers (ACH)
+
+```python
+from alpacafarmer import (
+    ACHRelationshipRequest, TransferRequest,
+    BankAccountType, TransferType, TransferDirection
+)
+
+async with BrokerClient(auth) as client:
+    # Create ACH relationship
+    ach = await client.create_ach_relationship(
+        account_id="customer-account-id",
+        request=ACHRelationshipRequest(
+            account_owner_name="John Doe",
+            bank_account_type=BankAccountType.CHECKING,
+            bank_account_number="123456789",
+            bank_routing_number="021000021",
+            nickname="Primary Checking"
+        )
+    )
+    
+    # List ACH relationships
+    relationships = await client.get_ach_relationships("customer-account-id")
+    
+    # Create deposit transfer
+    transfer = await client.create_transfer(
+        account_id="customer-account-id",
+        request=TransferRequest(
+            transfer_type=TransferType.ACH,
+            relationship_id=ach.id,
+            amount=1000.00,
+            direction=TransferDirection.INCOMING
+        )
+    )
+    
+    # Get transfers
+    transfers = await client.get_transfers("customer-account-id")
+```
+
+### Journal Entries
+
+```python
+from alpacafarmer import JournalRequest, JournalEntryType
+
+async with BrokerClient(auth) as client:
+    # Cash journal between accounts
+    journal = await client.create_journal(JournalRequest(
+        from_account="source-account-id",
+        to_account="destination-account-id",
+        entry_type=JournalEntryType.JNLC,  # Cash journal
+        amount=500.00,
+        description="Account transfer"
+    ))
+    
+    # Security journal (transfer shares)
+    security_journal = await client.create_journal(JournalRequest(
+        from_account="source-account-id",
+        to_account="destination-account-id",
+        entry_type=JournalEntryType.JNLS,  # Security journal
+        symbol="AAPL",
+        qty=10,
+        description="Share transfer"
+    ))
+    
+    # Get all journals
+    journals = await client.get_journals()
+```
+
+---
+
+## 📊 MarketDataClient API
+
+The `MarketDataClient` provides access to real-time and historical market data.
+
+### Historical Bars (OHLCV)
+
+```python
+from datetime import datetime, timedelta
+from alpacafarmer import (
+    AlpacaAuth, MarketDataClient,
+    BarsRequest, Timeframe, DataFeed
+)
+
+async with MarketDataClient(AlpacaAuth()) as client:
+    # Get historical bars for multiple symbols
+    bars = await client.get_bars(BarsRequest(
+        symbols=["AAPL", "MSFT", "GOOGL"],
+        timeframe=Timeframe.DAY_1,
+        start=datetime.now() - timedelta(days=30),
+        end=datetime.now(),
+        limit=1000,
+        feed=DataFeed.IEX
+    ))
+    
+    for symbol, symbol_bars in bars.items():
+        print(f"\n{symbol}:")
+        for bar in symbol_bars[-5:]:  # Last 5 bars
+            print(f"  {bar.t}: O={bar.o} H={bar.h} L={bar.l} C={bar.c} V={bar.v}")
+    
+    # Get bars for single symbol
+    aapl_bars = await client.get_bars_single("AAPL", BarsRequest(
+        timeframe=Timeframe.HOUR_1,
+        start=datetime.now() - timedelta(days=7)
+    ))
+    
+    # Get latest bars
+    latest = await client.get_latest_bars(
+        symbols=["AAPL", "MSFT"],
+        feed=DataFeed.SIP
+    )
+```
+
+### Latest Quotes
+
+```python
+async with MarketDataClient(AlpacaAuth()) as client:
+    # Get latest quotes
+    quotes = await client.get_latest_quotes(
+        symbols=["AAPL", "MSFT", "GOOGL"],
+        feed=DataFeed.SIP
+    )
+    
+    for symbol, quote in quotes.items():
+        spread = quote.ap - quote.bp
+        print(f"{symbol}: Bid={quote.bp} x {quote.bs}, Ask={quote.ap} x {quote.as_}")
+        print(f"  Spread: ${spread:.2f}")
+```
+
+### Market Snapshots
+
+```python
+async with MarketDataClient(AlpacaAuth()) as client:
+    # Get comprehensive snapshot
+    snapshot = await client.get_snapshot("AAPL")
+    
+    if snapshot.latest_trade:
+        print(f"Latest Trade: ${snapshot.latest_trade.p} ({snapshot.latest_trade.s} shares)")
+    
+    if snapshot.latest_quote:
+        print(f"Latest Quote: {snapshot.latest_quote.bp} x {snapshot.latest_quote.ap}")
+    
+    if snapshot.daily_bar:
+        print(f"Today: O={snapshot.daily_bar.o} H={snapshot.daily_bar.h} "
+              f"L={snapshot.daily_bar.l} C={snapshot.daily_bar.c}")
+    
+    # Get multiple snapshots
+    snapshots = await client.get_snapshots(
+        symbols=["AAPL", "MSFT", "GOOGL", "TSLA"],
+        feed=DataFeed.SIP
+    )
+```
+
+### Historical Trades
+
+```python
+from alpacafarmer import TradesRequest
+
+async with MarketDataClient(AlpacaAuth()) as client:
+    # Get historical trades
+    trades = await client.get_trades(TradesRequest(
+        symbols=["AAPL"],
+        start=datetime.now() - timedelta(hours=1),
+        limit=100
+    ))
+    
+    # Get latest trades
+    latest_trades = await client.get_latest_trades(
+        symbols=["AAPL", "MSFT"]
+    )
+```
+
+---
+
+## 🏗️ Pydantic Models
+
+AlpacaFarmer provides 35+ Pydantic models for complete type safety and validation.
+
+### Key Models
+
+| Category | Models |
+|----------|--------|
+| **Account** | `Account`, `AccountConfiguration` |
+| **Orders** | `OrderRequest`, `Order`, `OrderUpdate`, `ListOrdersRequest` |
+| **Positions** | `Position`, `ListPositionsRequest` |
+| **Assets** | `Asset`, `ListAssetsRequest` |
+| **Market Data** | `Bar`, `Quote`, `Trade`, `Snapshot`, `BarsRequest`, `QuotesRequest`, `TradesRequest` |
+| **Broker** | `BrokerAccount`, `CreateAccountRequest`, `Contact`, `Identity`, `Disclosures`, `Agreement`, `TrustedContact` |
+| **Transfers** | `Transfer`, `TransferRequest`, `ACHRelationship`, `ACHRelationshipRequest` |
+| **Journals** | `Journal`, `JournalRequest` |
+
+### Validation Example
+
+```python
+from pydantic import ValidationError
+from alpacafarmer import OrderRequest, OrderSide, OrderType, TimeInForce
+
+# Validation catches errors before API calls
+try:
+    order = OrderRequest(
+        symbol="",  # Invalid: empty symbol
+        qty=-10,    # Invalid: negative quantity
+        side=OrderSide.BUY,
+        type=OrderType.MARKET,
+        time_in_force=TimeInForce.DAY
+    )
+except ValidationError as e:
+    print("Validation errors:")
+    for error in e.errors():
+        print(f"  {error['loc']}: {error['msg']}")
+```
+
+### Type-Safe Enums
+
+```python
+from alpacafarmer import (
+    OrderSide, OrderType, TimeInForce, OrderStatus,
+    AssetClass, AssetStatus, PositionSide, AccountStatus,
+    Timeframe, DataFeed,
+    TransferDirection, TransferType, TransferStatus,
+    BankAccountType, JournalEntryType, JournalStatus,
+    FundingSource, TaxIdType
+)
+
+# Full IDE autocomplete support
+order_type = OrderType.LIMIT  # Not "limit" string
+timeframe = Timeframe.HOUR_1  # Not "1Hour" string
+```
+
+---
+
+## ⚠️ Error Handling
+
+AlpacaFarmer provides typed exceptions for all error scenarios:
+
+```python
+from alpacafarmer import (
+    AlpacaError,
+    APIError,
+    AuthenticationError,
+    RateLimitError,
+    ValidationError,
+    TraderClient,
+    AlpacaAuth
+)
+
+async with TraderClient(AlpacaAuth()) as client:
+    try:
+        account = await client.get_account()
+        
+    except AuthenticationError as e:
+        # Invalid or missing API credentials
+        print(f"Auth failed: {e.message}")
+        
+    except RateLimitError as e:
+        # API rate limit exceeded
+        print(f"Rate limited: {e.message}")
+        if e.retry_after:
+            print(f"Retry after {e.retry_after} seconds")
+            
+    except APIError as e:
+        # HTTP API error with status code
+        print(f"API Error [{e.status_code}]: {e.message}")
+        print(f"Response: {e.response_body}")
+        
+    except ValidationError as e:
+        # Request validation failed
+        print(f"Validation failed: {e.message}")
+        for error in e.errors:
+            print(f"  - {error}")
+            
+    except AlpacaError as e:
+        # Base exception for all Alpaca errors
+        print(f"Error: {e.message}")
+```
+
+---
+
+## ⚙️ Configuration
+
+### Environment Options
+
+| Environment | Trading URL | Data URL | Broker URL |
+|-------------|-------------|----------|------------|
+| `PAPER` | `paper-api.alpaca.markets` | `data.alpaca.markets` | `broker-api.sandbox.alpaca.markets` |
+| `LIVE` | `api.alpaca.markets` | `data.alpaca.markets` | `broker-api.alpaca.markets` |
+
+### Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `ALPACA_API_KEY` | API key for authentication |
+| `ALPACA_SECRET_KEY` | Secret key for authentication |
+| `ALPACA_OAUTH_TOKEN` | OAuth token (alternative to API key/secret) |
+
+### Authentication Methods
+
+```python
+from alpacafarmer import AlpacaAuth, Environment
+
+# Method 1: Direct credentials
+auth = AlpacaAuth(
+    api_key="your-key",
+    api_secret="your-secret",
+    environment=Environment.PAPER
+)
+
+# Method 2: Environment variables
+auth = AlpacaAuth()  # Reads from ALPACA_API_KEY and ALPACA_SECRET_KEY
+
+# Method 3: OAuth token
+auth = AlpacaAuth(oauth_token="your-oauth-token")
+
+# Check environment
+if auth.is_paper:
+    print("Using paper trading environment")
+```
+
+---
+
+## 🛠️ Development
+
+### Clone and Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/alpacafarmer/alpacafarmer.git
+cd alpacafarmer
+
+# Install with UV (recommended)
+uv sync
+
+# Or with pip
+pip install -e ".[dev]"
+```
+
+### Running Tests
+
+```bash
+# Run all tests
+uv run pytest
+
+# Run with coverage
+uv run pytest --cov=alpacafarmer
+
+# Run specific test file
+uv run pytest tests/test_trader_client.py
+
+# Run with verbose output
+uv run pytest -v
+```
+
+### Code Quality
+
+```bash
+# Type checking
+uv run mypy src/alpacafarmer
+
+# Linting
+uv run ruff check src/
+
+# Formatting
+uv run ruff format src/
+```
+
+---
+
+## 📤 Building and Publishing
+
+### Build with UV
+
+```bash
+# Build the package
+uv build
+
+# This creates:
+# - dist/alpacafarmer-0.1.0.tar.gz
+# - dist/alpacafarmer-0.1.0-py3-none-any.whl
+```
+
+### Publish to PyPI
+
+```bash
+# Publish to PyPI (requires credentials)
+uv publish
+
+# Publish to TestPyPI first
+uv publish --repository testpypi
+```
+
+---
+
+## 📋 API Coverage
+
+| API | Category | Status |
+|-----|----------|--------|
+| **Trader** | Account | ✅ Complete |
+| | Orders (create, list, get, cancel, replace) | ✅ Complete |
+| | Positions (list, get, close) | ✅ Complete |
+| | Assets (list, get) | ✅ Complete |
+| **Broker** | Accounts (create, list, get, update, delete) | ✅ Complete |
+| | Trading (orders on behalf of accounts) | ✅ Complete |
+| | ACH Relationships | ✅ Complete |
+| | Transfers | ✅ Complete |
+| | Journals | ✅ Complete |
+| **Market Data** | Bars (historical, latest) | ✅ Complete |
+| | Quotes (historical, latest) | ✅ Complete |
+| | Trades (historical, latest) | ✅ Complete |
+| | Snapshots | ✅ Complete |
+
+---
+
+## 📚 Resources
+
+- 📖 [Alpaca API Documentation](https://docs.alpaca.markets/)
+- 🔑 [Get API Keys](https://app.alpaca.markets/)
+- 💬 [Alpaca Community](https://forum.alpaca.markets/)
+- 🐛 [Report Issues](https://github.com/alpacafarmer/alpacafarmer/issues)
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Add tests for new functionality
+5. Ensure all tests pass (`uv run pytest`)
+6. Commit your changes (`git commit -m 'Add amazing feature'`)
+7. Push to the branch (`git push origin feature/amazing-feature`)
+8. Open a Pull Request
+
+### Guidelines
+
+- Follow existing code style
+- Add type hints to all functions
+- Write docstrings for public APIs
+- Include tests for new features
+- Update documentation as needed
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## ⚠️ Disclaimer
+
+This library is not affiliated with, endorsed by, or connected to Alpaca Markets, Inc. Use at your own risk. Always test thoroughly with paper trading before using real money. The authors are not responsible for any financial losses incurred through the use of this software.
+
+---
+
+<p align="center">
+  Made with ❤️ for the trading community
+</p>
