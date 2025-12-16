@@ -1,0 +1,98 @@
+exclude: "^swh/web/tests/resources/"
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: >
+          (?x)^(
+              ^.*\.eml$
+          )$
+      - id: check-json
+      - id: check-yaml
+
+  - repo: https://github.com/python/black
+    rev: 25.9.0
+    hooks:
+      - id: black
+
+  - repo: https://github.com/PyCQA/isort
+    rev: 6.1.0
+    hooks:
+      - id: isort
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.3.0
+    hooks:
+      - id: flake8
+        additional_dependencies: [flake8-bugbear==24.12.12, flake8-pyproject]
+
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.4.1
+    hooks:
+      - id: codespell
+        name: Check source code spelling
+        exclude: >
+          (?x)^(
+              cypress/integration/directory.spec.js|
+              yarn.lock|
+              package.json|
+              swh/web/browse/tests/data/content_iso-8859-7_encoded|
+              swh/web/add_forge_now/migrations/swh-afn-urls-canonicalise.txt
+          )$
+        args: [-L edn, -L crate, -L THIRDPARTY, -L thirdparty]
+        stages: [pre-commit]
+      - id: codespell
+        name: Check commit message spelling
+        stages: [commit-msg]
+
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy
+        entry: env DJANGO_SETTINGS_MODULE=swh.web.settings.development mypy
+        args: [swh]
+        pass_filenames: false
+        language: system
+        types: [python]
+      - id: twine-check
+        name: twine check
+        description: call twine check when pushing an annotated release tag
+        entry: bash -c "ref=$(git describe) &&
+          [[ $ref =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] &&
+          (python3 -m build --sdist && twine check $(ls -t dist/* | head -1)) || true"
+        pass_filenames: false
+        stages: [pre-push]
+        language: python
+        additional_dependencies: [twine, build]
+
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v9.39.1
+    hooks:
+      - id: eslint
+        additional_dependencies:
+          - eslint@9.39.1
+          - '@eslint/compat@2.0.0'
+          - eslint-plugin-cypress@5.2.0
+          - eslint-plugin-import@2.32.0
+          - eslint-plugin-node@11.1.0
+          - eslint-plugin-promise@7.2.1
+          - eslint-plugin-standard@5.0.0
+
+  - repo: https://github.com/Riverside-Healthcare/djLint
+    rev: v1.36.4
+    hooks:
+      - id: djlint-django
+        name: Django templates formatter
+        args:
+          - --reformat
+          - --quiet
+
+  - repo: https://github.com/Riverside-Healthcare/djLint
+    rev: v1.36.4
+    hooks:
+      - id: djlint-django
+        name: Django templates linter
+        args:
+          - --quiet
