@@ -1,0 +1,343 @@
+"""
+    lager.defaults.commands
+
+    Default settings management commands
+"""
+import click
+from texttable import Texttable
+from ..config import read_config_file, write_config_file
+from ..dut_storage import load_duts
+
+
+@click.group(invoke_without_command=True)
+@click.pass_context
+def defaults(ctx):
+    """
+        Manage default settings
+    """
+    if ctx.invoked_subcommand is None:
+        # Default behavior: list defaults
+        config = read_config_file()
+
+        if not config.has_section('LAGER') or not config.options('LAGER'):
+            click.echo("No defaults are currently set. Add one with: lager defaults add")
+            return
+
+        table = Texttable()
+        table.set_deco(Texttable.HEADER)
+        table.set_cols_dtype(['t', 't'])
+        table.set_cols_align(["l", "l"])
+        table.add_row(['Default', 'Value'])
+
+        for key in config.options('LAGER'):
+            value = config.get('LAGER', key)
+            # Make the display name more user-friendly
+            if key == 'gateway_id':
+                display_name = 'dut'
+            elif key == 'serial_device':
+                display_name = 'serial-port'
+            elif key.startswith('net_'):
+                # Convert net_power_supply to supply-net (special case for power supply)
+                net_type = key[4:]  # Remove 'net_' prefix
+                if net_type == 'power_supply':
+                    display_name = 'supply-net'
+                else:
+                    display_name = f"{net_type.replace('_', '-')}-net"
+            else:
+                display_name = key.replace('_', '-')
+            table.add_row([display_name, value])
+
+        click.echo(table.draw())
+
+
+@defaults.command()
+@click.option("--box", required=False, help="Set default box")
+@click.option('--dut', required=False, hidden=True, help='Lagerbox name or IP (deprecated: use --box)')
+@click.option('--serial-port', required=False, help='Set default serial port path')
+@click.option('--supply-net', required=False, help='Set default supply net name')
+@click.option('--battery-net', required=False, help='Set default battery net name')
+@click.option('--solar-net', required=False, help='Set default solar net name')
+@click.option('--scope-net', required=False, help='Set default scope net name')
+@click.option('--logic-net', required=False, help='Set default logic net name')
+@click.option('--adc-net', required=False, help='Set default ADC net name')
+@click.option('--dac-net', required=False, help='Set default DAC net name')
+@click.option('--gpio-net', required=False, help='Set default GPIO net name')
+@click.option('--debug-net', required=False, help='Set default debug net name')
+@click.option('--eload-net', required=False, help='Set default electronic load net name')
+@click.option('--usb-net', required=False, help='Set default USB hub net name')
+@click.option('--webcam-net', required=False, help='Set default webcam net name')
+@click.option('--watt-meter-net', required=False, help='Set default watt meter net name')
+@click.option('--thermocouple-net', required=False, help='Set default thermocouple net name')
+@click.option('--uart-net', required=False, help='Set default UART net name')
+@click.option('--arm-net', required=False, help='Set default robotic arm net name')
+def add(box, dut, serial_port, supply_net, battery_net, solar_net, scope_net, logic_net,
+        adc_net, dac_net, gpio_net, debug_net, eload_net, usb_net, webcam_net,
+        watt_meter_net, thermocouple_net, uart_net, arm_net):
+    """
+        Set default values
+    """
+    # Resolve box/dut (box takes precedence, dut is for backward compatibility)
+    dut = box or dut
+
+    # Check if at least one option is provided
+    if all(v is None for v in [dut, serial_port, supply_net, battery_net, solar_net,
+                                scope_net, logic_net, adc_net, dac_net, gpio_net, debug_net,
+                                eload_net, usb_net, webcam_net, watt_meter_net, thermocouple_net,
+                                uart_net, arm_net]):
+        click.echo(click.style("Error: You must specify at least one setting", fg='red'), err=True)
+        raise click.Abort()
+
+    config = read_config_file()
+    changes = []
+
+    # Handle DUT default
+    if dut is not None:
+        # Validate that the DUT exists in saved DUTs
+        duts = load_duts()
+        if dut not in duts:
+            click.secho(f"Error: DUT '{dut}' does not exist in saved DUTs.", fg='red', err=True)
+            click.echo("Available DUTs:", err=True)
+            if duts:
+                for name in duts.keys():
+                    click.echo(f"  - {name}", err=True)
+            else:
+                click.echo("  (No DUTs saved)", err=True)
+            click.echo(f"\nUse 'lager duts add --name <name> --ip <ip>' to add a new DUT first.", err=True)
+            raise click.Abort()
+
+        config.set('LAGER', 'gateway_id', dut)
+        changes.append(f"dut: {dut}")
+
+    # Handle serial port default
+    if serial_port is not None:
+        config.set('LAGER', 'serial_device', serial_port)
+        changes.append(f"serial-port: {serial_port}")
+
+    # Handle net defaults
+    net_defaults = {
+        'supply_net': ('net_power_supply', supply_net),
+        'battery_net': ('net_battery', battery_net),
+        'solar_net': ('net_solar', solar_net),
+        'scope_net': ('net_scope', scope_net),
+        'logic_net': ('net_logic', logic_net),
+        'adc_net': ('net_adc', adc_net),
+        'dac_net': ('net_dac', dac_net),
+        'gpio_net': ('net_gpio', gpio_net),
+        'debug_net': ('net_debug', debug_net),
+        'eload_net': ('net_eload', eload_net),
+        'usb_net': ('net_usb', usb_net),
+        'webcam_net': ('net_webcam', webcam_net),
+        'watt_meter_net': ('net_watt_meter', watt_meter_net),
+        'thermocouple_net': ('net_thermocouple', thermocouple_net),
+        'uart_net': ('net_uart', uart_net),
+        'arm_net': ('net_arm', arm_net),
+    }
+
+    for display_name, (config_key, value) in net_defaults.items():
+        if value is not None:
+            config.set('LAGER', config_key, value)
+            # Convert display name to hyphenated format (e.g., power_supply_net -> power-supply-net)
+            display = display_name.replace('_', '-')
+            changes.append(f"{display}: {value}")
+
+    write_config_file(config)
+
+    # Display success message
+    if len(changes) == 1:
+        click.secho(f"Set default {changes[0]}", fg='green')
+    else:
+        click.secho(f"Set defaults:", fg='green')
+        for change in changes:
+            click.echo(f"  - {change}")
+
+
+@defaults.command('list')
+@click.pass_context
+def list_defaults(ctx):
+    """
+        List default settings
+    """
+    # Reuse the default behavior
+    ctx.invoke(defaults)
+
+
+@defaults.group()
+def delete():
+    """
+        Delete default settings
+    """
+    pass
+
+
+@delete.command()
+@click.option('--yes', is_flag=True, help='Skip confirmation prompt')
+def dut(yes):
+    """
+        Delete default DUT
+    """
+    config = read_config_file()
+
+    # Check if gateway_id is set
+    if not config.has_option('LAGER', 'gateway_id'):
+        click.echo("No default DUT is currently set.")
+        return
+
+    # Get value to display
+    value = config.get('LAGER', 'gateway_id')
+
+    # Display what will be deleted and ask for confirmation unless --yes flag is provided
+    if not yes:
+        click.echo(f"\nYou are about to delete the following default:")
+        click.echo(f"  dut: {value}")
+        click.echo()
+
+        if not click.confirm("Delete this default?", default=False):
+            click.echo("Cancelled. Default not deleted.")
+            return
+
+    # Remove the gateway_id option
+    config.remove_option('LAGER', 'gateway_id')
+
+    write_config_file(config)
+    click.secho(f"Deleted default DUT '{value}'", fg='green')
+
+
+@delete.command()
+@click.option('--yes', is_flag=True, help='Skip confirmation prompt')
+def serial_port(yes):
+    """
+        Delete default serial port
+    """
+    config = read_config_file()
+
+    # Check if serial_device is set
+    if not config.has_option('LAGER', 'serial_device'):
+        click.echo("No default serial port is currently set.")
+        return
+
+    # Get value to display
+    value = config.get('LAGER', 'serial_device')
+
+    # Display what will be deleted and ask for confirmation unless --yes flag is provided
+    if not yes:
+        click.echo(f"\nYou are about to delete the following default:")
+        click.echo(f"  serial-port: {value}")
+        click.echo()
+
+        if not click.confirm("Delete this default?", default=False):
+            click.echo("Cancelled. Default not deleted.")
+            return
+
+    # Remove the serial_device option
+    config.remove_option('LAGER', 'serial_device')
+
+    write_config_file(config)
+    click.secho(f"Deleted default serial port '{value}'", fg='green')
+
+
+# Helper function to create delete commands for net types
+def _create_net_delete_command(net_type, config_key, display_name):
+    """Create a delete command for a specific net type"""
+    @delete.command(name=net_type, help=f"Delete default {display_name}")
+    @click.option('--yes', is_flag=True, help='Skip confirmation prompt')
+    def delete_net(yes):
+        config = read_config_file()
+
+        if not config.has_option('LAGER', config_key):
+            click.echo(f"No default {display_name} is currently set.")
+            return
+
+        value = config.get('LAGER', config_key)
+
+        if not yes:
+            click.echo(f"\nYou are about to delete the following default:")
+            click.echo(f"  {net_type}: {value}")
+            click.echo()
+
+            if not click.confirm("Delete this default?", default=False):
+                click.echo("Cancelled. Default not deleted.")
+                return
+
+        config.remove_option('LAGER', config_key)
+        write_config_file(config)
+        click.secho(f"Deleted default {display_name} '{value}'", fg='green')
+
+    return delete_net
+
+
+# Create delete commands for all net types
+_net_types = [
+    ('supply-net', 'net_power_supply', 'supply net'),
+    ('battery-net', 'net_battery', 'battery net'),
+    ('solar-net', 'net_solar', 'solar net'),
+    ('scope-net', 'net_scope', 'scope net'),
+    ('logic-net', 'net_logic', 'logic net'),
+    ('adc-net', 'net_adc', 'ADC net'),
+    ('dac-net', 'net_dac', 'DAC net'),
+    ('gpio-net', 'net_gpio', 'GPIO net'),
+    ('debug-net', 'net_debug', 'debug net'),
+    ('eload-net', 'net_eload', 'electronic load net'),
+    ('usb-net', 'net_usb', 'USB hub net'),
+    ('webcam-net', 'net_webcam', 'webcam net'),
+    ('watt-meter-net', 'net_watt_meter', 'watt meter net'),
+    ('thermocouple-net', 'net_thermocouple', 'thermocouple net'),
+    ('uart-net', 'net_uart', 'UART net'),
+    ('arm-net', 'net_arm', 'robotic arm net'),
+]
+
+for net_type, config_key, display_name in _net_types:
+    _create_net_delete_command(net_type, config_key, display_name)
+
+
+@defaults.command('delete-all')
+@click.option('--yes', is_flag=True, help='Skip confirmation prompt')
+def delete_all(yes):
+    """
+        Delete all defaults
+    """
+    config = read_config_file()
+
+    # Check if there are any defaults set
+    if not config.has_section('LAGER') or not config.options('LAGER'):
+        click.echo("No defaults are currently set.")
+        return
+
+    # Count the defaults
+    defaults_list = []
+    for key in config.options('LAGER'):
+        value = config.get('LAGER', key)
+        if key == 'gateway_id':
+            display_name = 'dut'
+        elif key == 'serial_device':
+            display_name = 'serial-port'
+        elif key.startswith('net_'):
+            # Convert net_power_supply to supply-net (special case for power supply)
+            net_type = key[4:]  # Remove 'net_' prefix
+            if net_type == 'power_supply':
+                display_name = 'supply-net'
+            else:
+                display_name = f"{net_type.replace('_', '-')}-net"
+        else:
+            display_name = key.replace('_', '-')
+        defaults_list.append((display_name, value))
+
+    defaults_count = len(defaults_list)
+
+    # Display warning and defaults list
+    click.echo(click.style(f"\n⚠ WARNING: You are about to delete ALL {defaults_count} default(s):", fg='yellow', bold=True))
+    click.echo()
+    for display_name, value in defaults_list:
+        click.echo(f"  - {display_name}: {value}")
+    click.echo()
+
+    # Ask for confirmation unless --yes flag is provided (default is No)
+    if not yes and not click.confirm("Are you sure you want to delete ALL defaults?", default=False):
+        click.echo("Cancelled. No defaults were deleted.")
+        return
+
+    # Remove all options from LAGER section
+    config.remove_section('LAGER')
+    config.add_section('LAGER')
+
+    write_config_file(config)
+    click.secho(f"✓ Deleted all {defaults_count} default(s)", fg='green')
