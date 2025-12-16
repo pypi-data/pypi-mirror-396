@@ -1,0 +1,34 @@
+# Example input_examples for Linear MCP tools
+# These examples help Claude understand how to call tools correctly
+
+server: linear
+
+tools:
+  create_issue:
+    - title: Fix login button not responding
+      team: ENG
+      priority: 2
+    - title: Update API documentation
+      team: DOCS
+
+  list_issues:
+    - team: ENG
+      status: in_progress
+      limit: 10
+
+  search_issues:
+    - query: "authentication bug"
+    - query: "performance regression"
+      limit: 5
+
+  update_issue:
+    # To change status: use stateId (UUID), NOT status (name)
+    # UUIDs are team-specific - first call list_issue_statuses(team) to get them
+    - id: ENG-123
+      stateId: "<UUID-from-list_issue_statuses>"
+    - id: ENG-456
+      title: "Updated: Fix critical auth bug"
+      priority: 1
+    - id: ENG-789
+      stateId: "<UUID-from-list_issue_statuses>"
+      description: "## Progress Update\n\nImplementation started"
