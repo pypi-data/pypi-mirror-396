@@ -1,0 +1,45 @@
+# Development overrides for docker-compose
+
+# Development overrides for docker-compose
+# This file is automatically loaded by docker-compose and provides
+# development-specific configuration
+
+services:
+  openhab-mcp-server:
+    # Development build configuration
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime  # Use the runtime stage
+    
+    # Development environment variables
+    environment:
+      LOG_LEVEL: DEBUG
+      LOG_FORMAT: text  # More readable for development
+      
+    # Development volume mounts
+    volumes:
+      # Mount source code for development (if needed)
+      - ./src:/app/src:ro
+      # Mount tests for development
+      - ./tests:/app/tests:ro
+      # Development configuration
+      - ./docker/dev-config.json:/app/config.json:ro
+    
+    # Development port mappings
+    ports:
+      - "8081:8081"  # Health check
+      - "9000:9000"  # Optional: debugging port
+    
+    # Development command override
+    command: ["openhab-mcp-server", "--log-level", "DEBUG", "--log-format", "text"]
+    
+    # Development resource limits (more generous)
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'

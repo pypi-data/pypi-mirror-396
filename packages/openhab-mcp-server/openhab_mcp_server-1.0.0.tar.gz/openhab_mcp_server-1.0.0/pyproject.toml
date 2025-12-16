@@ -1,0 +1,153 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel", "setuptools-scm>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openhab-mcp-server"
+version = "1.0.0"
+description = "Model Context Protocol server for openHAB home automation"
+readme = "README.md"
+license = "MIT"
+authors = [
+    {name = "openHAB MCP Server Contributors", email = "info@example.com"}
+]
+maintainers = [
+    {name = "openHAB MCP Server Contributors", email = "info@example.com"}
+]
+keywords = [
+    "openhab",
+    "mcp", 
+    "model-context-protocol",
+    "home-automation",
+    "ai-assistant",
+    "smart-home",
+    "iot"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Home Automation",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Hardware",
+    "Topic :: Communications",
+    "Typing :: Typed"
+]
+requires-python = ">=3.8"
+dependencies = [
+    "mcp>=1.0.0",
+    "aiohttp>=3.8.0",
+    "pydantic>=2.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/openhab/openhab-mcp-server"
+Documentation = "https://github.com/openhab/openhab-mcp-server#readme"
+Repository = "https://github.com/openhab/openhab-mcp-server.git"
+Issues = "https://github.com/openhab/openhab-mcp-server/issues"
+Changelog = "https://github.com/openhab/openhab-mcp-server/blob/main/CHANGELOG.md"
+
+[project.scripts]
+openhab-mcp-server = "openhab_mcp_server.cli:main"
+
+[project.entry-points."mcp.servers"]
+openhab = "openhab_mcp_server.server:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "aioresponses>=0.7.4",
+    "hypothesis>=6.0.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+]
+test = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "aioresponses>=0.7.4",
+    "hypothesis>=6.0.0",
+]
+lint = [
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["openhab_mcp_server*"]
+exclude = ["tests*"]
+
+[tool.setuptools.package-data]
+openhab_mcp_server = ["py.typed"]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.ruff]
+target-version = "py38"
+line-length = 88
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+]
+ignore = [
+    "E501",  # line too long, handled by black
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+]
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["F401"]
+
+[tool.mypy]
+python_version = "3.8"
+check_untyped_defs = true
+disallow_any_generics = true
+disallow_incomplete_defs = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_return_any = true
+strict_equality = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]

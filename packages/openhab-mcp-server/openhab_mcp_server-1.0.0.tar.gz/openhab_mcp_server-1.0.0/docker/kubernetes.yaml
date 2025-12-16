@@ -1,0 +1,226 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openhab-mcp
+  labels:
+    name: openhab-mcp
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openhab-mcp-config
+  namespace: openhab-mcp
+data:
+  config.json: |
+    {
+      "openhab_url": "http://openhab.openhab.svc.cluster.local:8080",
+      "timeout": 30,
+      "log_level": "INFO",
+      "health_check": {
+        "enabled": true,
+        "port": 8081,
+        "interval": 30,
+        "timeout": 10,
+        "retries": 3
+      },
+      "security": {
+        "validate_ssl": true,
+        "max_request_size": "10MB"
+      },
+      "features": {
+        "script_execution": {
+          "enabled": true,
+          "timeout": 30,
+          "memory_limit": "100MB"
+        },
+        "documentation_cache": {
+          "enabled": true,
+          "ttl": 3600
+        }
+      }
+    }
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: openhab-mcp-secrets
+  namespace: openhab-mcp
+type: Opaque
+data:
+  # Base64 encoded openHAB API token
+  # Replace with: echo -n "your-token" | base64
+  openhab-token: eW91ci1vcGVuaGFiLXRva2VuLWhlcmU=
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: openhab-mcp-data
+  namespace: openhab-mcp
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: standard
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openhab-mcp-server
+  namespace: openhab-mcp
+  labels:
+    app: openhab-mcp-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: openhab-mcp-server
+  template:
+    metadata:
+      labels:
+        app: openhab-mcp-server
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      
+      containers:
+      - name: openhab-mcp-server
+        image: openhab-mcp-server:latest
+        imagePullPolicy: IfNotPresent
+        
+        env:
+        - name: OPENHAB_URL
+          value: "http://openhab.openhab.svc.cluster.local:8080"
+        - name: OPENHAB_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: openhab-mcp-secrets
+              key: openhab-token
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: LOG_FORMAT
+          value: "json"
+        - name: HEALTH_CHECK_PORT
+          value: "8081"
+        
+        ports:
+        - name: health
+          containerPort: 8081
+          protocol: TCP
+        
+        volumeMounts:
+        - name: config
+          mountPath: /app/config.json
+          subPath: config.json
+          readOnly: true
+        - name: data
+          mountPath: /app/data
+        - name: logs
+          mountPath: /app/logs
+        
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+        
+        livenessProbe:
+          httpGet:
+            path: /
+            port: health
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /
+            port: health
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          capabilities:
+            drop:
+            - ALL
+      
+      volumes:
+      - name: config
+        configMap:
+          name: openhab-mcp-config
+      - name: data
+        persistentVolumeClaim:
+          claimName: openhab-mcp-data
+      - name: logs
+        emptyDir: {}
+      
+      restartPolicy: Always
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: openhab-mcp-server
+  namespace: openhab-mcp
+  labels:
+    app: openhab-mcp-server
+spec:
+  type: ClusterIP
+  ports:
+  - name: health
+    port: 8081
+    targetPort: health
+    protocol: TCP
+  selector:
+    app: openhab-mcp-server
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: openhab-mcp-network-policy
+  namespace: openhab-mcp
+spec:
+  podSelector:
+    matchLabels:
+      app: openhab-mcp-server
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 8081
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: openhab
+    ports:
+    - protocol: TCP
+      port: 8080
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
