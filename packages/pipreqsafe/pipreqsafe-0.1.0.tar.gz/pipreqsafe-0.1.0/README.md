@@ -1,0 +1,44 @@
+## pipreqsafe
+
+Generate an Environment snapshot and writes to `requirements.txt` using `pip list` semantics.
+
+### Why?
+`pip freeze` captures the entire environment and often breaks
+cross-platform builds (e.g. AWS, Docker).
+
+`pipreqsafe` lists installed packages (just like "pip list") and writes a minimal
+requirements file from that list => no runtime third-party deps..
+
+### Usage
+```bash
+pipreqsafe
+pipreqsafe --no-version
+pipreqsafe --stdout
+```
+### Behaviour
+| Command                            | Terminal       | File          |
+| ---------------------------------- | -------------- | ------------- |
+| `pipreqsafe`                       | name + version | name==version |
+| `pipreqsafe --no-version`          | name only      | name only     |
+| `pipreqsafe --stdout`              | name + version | ❌            |
+| `pipreqsafe --stdout --no-version` | **name only**  | ❌            |
+| `pipreqsafe --output deps.txt`     | name + version | name==version |
+
+
+### What it does NOT do
+
+- No dependency graph analysis
+- No project import scanning
+- No platform heuristics
+
+### ❌ Why this is NOT pip freeze
+| Concept            | pip freeze | pipreqsafe (Option B) |
+| ------------------ | ---------- | --------------------- |
+| Direct deps        | ✅          | ✅                     |
+| Transitive deps    | ✅          | ❌                     |
+| Resolver lock      | ✅          | ❌                     |
+| Tooling noise      | Often      | ❌                     |
+| Platform pins      | Yes        | ❌                     |
+| Expresses *intent* | ❌          | ✅                     |
+
+#### `pipreqsafe` works on Python ≥3.8
