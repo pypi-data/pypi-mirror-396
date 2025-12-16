@@ -1,0 +1,72 @@
+{% load wagtailcore_tags wagtailimages_tags %}
+{% load static %}
+{% block content %}
+{% if self.background_image %}
+    {% image self.background_image original format-webp preserve-svg as bg_image %}
+    <div class="banner" style="background-image: url({{ bg_image.url }})">
+        {% if self.overlay %}
+            <div class="banner__overlay"></div>
+        {% endif %}
+        <div class="banner__content">
+            <div class="wrapper-texts-banner">
+                <img src="{% static 'enap_designsystem/icons/grafismo.svg' %}" alt="Grafismo" class="grafismo">
+                
+                <h2 class="banner__title">{{ self.title }}</h1>
+                {% if self.description %}
+                    <h3 class="banner__description">{{ self.description }}</h3>
+                {% endif %}
+
+                <!-- Links/Botões adicionais (até 3) -->
+            {% if value.links %}
+            <div class="texto-imagem-block__links-container">
+                {% for link in value.links %}
+                    {% if link.block_type == 'button' %}
+                        <a href="{{ link.value.url }}" 
+                           class="btn {{ link.value.type_class }} {{ link.value.size_class }}"
+                           {% if link.value.target_blank %}target="_blank" rel="noopener noreferrer"{% endif %}>
+                            
+                            {% if link.value.icone_bool and link.value.icone_posicao == 'antes' %}
+                                <i class="fa-solid fa-circle-chevron-right"></i>
+                            {% endif %}
+                            
+                            {{ link.value.get_title }}
+                            
+                            {% if link.value.icone_bool and link.value.icone_posicao == 'depois' %}
+                                <i class="fa-solid fa-circle-chevron-right"></i>
+                            {% endif %}
+                            
+                            {% if link.value.target_blank %}
+                                <span class="sr-only">(abre em nova aba)</span>
+                            {% endif %}
+                        </a>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        {% endif %}
+            </div>
+        </div>
+    </div>
+{% else %}
+    <div class="banner" style="background-image: url({% static 'enap_designsystem/blocks/suap/default_1.png' %})">
+        {% if self.overlay %}
+            <div class="banner__overlay"></div>
+        {% endif %}
+        <div class="banner__content">
+            <div class="wrapper-texts-banner">
+                <img src="{% static 'enap_designsystem/icons/grafismo.svg' %}" alt="Grafismo" class="grafismo">
+
+                <h2 class="banner__title">{{ self.title }}</h1>
+                {% if self.description %}
+                    <h3 class="banner__description">{{ self.description }}</h3>
+                {% endif %}
+
+                {% if self.button.button_title %}
+                    <div class="banner__button">
+                        {% include_block self.button %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}

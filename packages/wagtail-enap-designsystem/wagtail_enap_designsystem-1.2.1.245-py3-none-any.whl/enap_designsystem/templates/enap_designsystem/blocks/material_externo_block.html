@@ -1,0 +1,211 @@
+{% load wagtailimages_tags %}
+
+<div class="material-externo-card">
+    <a href="{{ self.url }}" target="_blank" rel="noopener noreferrer" class="material-externo-card__link">
+        <div class="material-externo-card__content">
+            <div class="material-externo-card__tipo" data-tipo="{{ self.tipo }}">
+                {% if self.tipo == 'curso' %}
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                    </svg>
+                {% elif self.tipo == 'publicacao' %}
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                {% elif self.tipo == 'video' %}
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+                        <line x1="7" y1="2" x2="7" y2="22"></line>
+                        <line x1="17" y1="2" x2="17" y2="22"></line>
+                        <line x1="2" y1="12" x2="22" y2="12"></line>
+                        <line x1="2" y1="7" x2="7" y2="7"></line>
+                        <line x1="2" y1="17" x2="7" y2="17"></line>
+                        <line x1="17" y1="17" x2="22" y2="17"></line>
+                        <line x1="17" y1="7" x2="22" y2="7"></line>
+                    </svg>
+                {% elif self.tipo == 'guia' %}
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                    </svg>
+                {% else %}
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                        <polyline points="15 3 21 3 21 9"></polyline>
+                        <line x1="10" y1="14" x2="21" y2="3"></line>
+                    </svg>
+                {% endif %}
+            </div>
+            
+            <div class="material-externo-card__info">
+                <h3 class="material-externo-card__title">{{ self.titulo }}</h3>
+                
+                {% if self.descricao %}
+                    <p class="material-externo-card__description">{{ self.descricao }}</p>
+                {% endif %}
+                
+                <span class="btn primary large">
+                    {% if self.tipo == 'curso' %}
+                        Acessar curso
+                    {% elif self.tipo == 'publicacao' %}
+                        Ler publicação
+                    {% elif self.tipo == 'video' %}
+                        Assistir vídeo
+                    {% elif self.tipo == 'guia' %}
+                        Consultar guia
+                    {% else %}
+                        Acessar material
+                    {% endif %}
+                    <i class="fa-solid fa-circle-chevron-right"></i>
+                </span>
+            </div>
+        </div>
+    </a>
+</div>
+
+<style>
+    /* Estilos para o card de material externo */
+    .material-externo-card {
+        background-color: white;
+        border-radius: 10px;
+        border: 1px solid #eaeaea;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+    
+    .material-externo-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        border-color: var(--rota-color, #0066cc);
+    }
+    
+    .material-externo-card__link {
+        display: block;
+        text-decoration: none;
+        color: inherit;
+        height: 100%;
+    }
+    
+    .material-externo-card__content {
+        padding: 1.25rem;
+        display: flex;
+        flex-wrap: wrap;
+        height: 100%;
+    }
+    
+    .material-externo-card__tipo {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        margin-right: 1rem;
+        flex-shrink: 0;
+        background-color: var(--rota-color-light, rgba(0, 102, 204, 0.1));
+        color: var(--rota-color, #0066cc);
+    }
+    
+    .material-externo-card__tipo svg {
+        width: 20px;
+        height: 20px;
+    }
+    
+    .material-externo-card__info {
+        flex-grow: 1;
+        width: calc(100% - 180px);
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .material-externo-card__image {
+        width: 120px;
+        height: 120px;
+        flex-shrink: 0;
+        margin-left: 1rem;
+        border-radius: 6px;
+        overflow: hidden;
+    }
+    
+    .material-externo-card__image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .material-externo-card__title {
+        font-size: 1.125rem;
+        margin-bottom: 0.5rem;
+        color: #333;
+    }
+    
+    .material-externo-card__description {
+        font-size: 0.9375rem;
+        color: #666;
+        margin-bottom: 1rem;
+        flex-grow: 1;
+    }
+    
+    .material-externo-card__link-text {
+        display: flex;
+        align-items: center;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--rota-color, #0066cc);
+    }
+    
+    .material-externo-card__link-text svg {
+        margin-left: 0.5rem;
+        transition: transform 0.2s ease;
+    }
+    
+    .material-externo-card:hover .material-externo-card__link-text svg {
+        transform: translateX(3px);
+    }
+    
+    /* Estilos para diferentes tipos de materiais */
+    .material-externo-card__tipo[data-tipo="curso"] {
+        background-color: rgba(230, 57, 70, 0.1);
+        color: #e63946;
+    }
+    
+    .material-externo-card__tipo[data-tipo="publicacao"] {
+        background-color: rgba(46, 196, 182, 0.1);
+        color: #2ec4b6;
+    }
+    
+    .material-externo-card__tipo[data-tipo="video"] {
+        background-color: rgba(255, 183, 3, 0.1);
+        color: #ffb703;
+    }
+    
+    .material-externo-card__tipo[data-tipo="guia"] {
+        background-color: rgba(17, 138, 178, 0.1);
+        color: #118ab2;
+    }
+    
+    /* Responsividade */
+    @media (max-width: 576px) {
+        .material-externo-card__content {
+            flex-direction: column;
+        }
+        
+        .material-externo-card__info {
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+        
+        .material-externo-card__image {
+            width: 100%;
+            height: 180px;
+            margin-left: 0;
+            margin-top: 1rem;
+        }
+    }
+</style>

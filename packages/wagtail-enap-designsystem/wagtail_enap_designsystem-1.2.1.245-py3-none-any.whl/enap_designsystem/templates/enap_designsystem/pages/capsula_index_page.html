@@ -1,0 +1,644 @@
+{% extends "enap_designsystem/base.html" %}
+{% load static %}
+{% load wagtailcore_tags wagtailimages_tags %}
+{% load wagtailcore_tags %}
+{% block metadata %}
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Adicionando novo CSS com nomes de classes personalizados -->
+    <link rel="stylesheet" href="{% static 'enap_designsystem/css/acess-capsulas-custom.css' %}">
+    <!-- Adicionar fonte de ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+{% endblock %}
+
+{% block title %}
+    <title>{{ page.title }}</title>
+{% endblock %}
+
+{%block govnavbar %}
+    <div style="background-color: #071E41;">
+        <div class="menu">
+            <div class="logo">
+                <img style="width: 51px; height: 18px;" src="{% static 'enap_designsystem/icons/logo-white.png' %}" alt="Logo GovBR">
+            </div>
+            <a href="https://www.gov.br/secom/pt-br/acesso-a-informacao/comunicabr">Comunica BR</a>
+            <div class="separator"></div>
+            <a href="https://www.gov.br/acessoainformacao/pt-br">Acesso à informação</a>
+            <div class="separator"></div>
+            <a href="https://www.gov.br/pt-br/participacao-social/">Participe</a>
+            <div class="separator"></div>
+            <a href="https://www4.planalto.gov.br/legislacao/">Legislação</a>
+            <div class="separator"></div>
+            <a href="https://www.gov.br/pt-br/orgaos-do-governo">Órgãos do Governo</a>
+        </div>
+    </div>
+{% endblock %}
+
+{% block navbar %}
+    {% if page.navbar %}
+        {% include "enap_designsystem/blocks/navbar/navbar_block.html" with navbar=page.navbar %}
+    {% else %}
+        <p style="color: red;">DEBUG: Nenhuma Navbar foi definida.</p>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+
+
+
+<div>
+    {% include_block page.menu %}
+</div>
+
+<!-- Renderizar Breadcrumbs -->
+<div>
+    {% include_block page.breadcrumbs %}
+</div>
+
+
+<!-- Seção Hero com Título Centralizado -->
+<div class="acess-hero">
+    <h2 class="acess-title-large">Cápsulas de Acessibilidade</h2>
+    <p class="acess-description">As Cápsulas de Acessibilidade são unidades rápidas de aprendizagem que organizam, de forma didática, orientações sobre os principais padrões e boas práticas de acessibilidade.</p>
+    <p class="acess-description">Use os filtros para explorar os conteúdos e aplicar as orientações nas suas ações educacionais.</p>
+</div>
+
+<!-- Container de Filtros com Dropdowns -->
+<div class="acess-filter-container">
+    <!-- Filtros organizados em dropdowns -->
+    <div class="acess-filter-group">
+
+        <!-- Dropdown de Perfil Profissional -->
+        <div class="acess-dropdown">
+            <button type="button" class="acess-dropdown-btn" data-dropdown="acess-dropdown-perf">
+                <span>Perfil Profissional</span>
+                <i class="fas fa-chevron-down"></i>
+            </button>
+            <div class="acess-dropdown-content" id="acess-dropdown-perf">
+                <div class="acess-dropdown-inner">
+                    <div class="acess-options">
+                        {% for value, label in opcoes_filtros.perfis_profissionais %}
+                            <div class="acess-check-item">
+                                <input type="checkbox" 
+                                       name="perfil_profissional" 
+                                       id="perfil_{{ value }}" 
+                                       value="{{ value }}"
+                                       class="acess-checkbox"
+                                       data-filtro-tipo="perfil_profissional"
+                                       {% if value in filtros_ativos.perfil_profissional %}checked{% endif %}>
+                                <label for="perfil_{{ value }}" class="acess-check-label">{{ label }}</label>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dropdown de Tipo de Deficiência -->
+        <div class="acess-dropdown">
+            <button type="button" class="acess-dropdown-btn" data-dropdown="acess-dropdown-def">
+                <span>Tipo de dificuldade</span>
+                <i class="fas fa-chevron-down"></i>
+            </button>
+            <div class="acess-dropdown-content" id="acess-dropdown-def">
+                <div class="acess-dropdown-inner">
+                    <div class="acess-options">
+                        {% for value, label in opcoes_filtros.tipos_deficiencia %}
+                            <div class="acess-check-item">
+                                <input type="checkbox" 
+                                       name="tipo_deficiencia" 
+                                       id="tipo_{{ value }}" 
+                                       value="{{ value }}"
+                                       class="acess-checkbox"
+                                       data-filtro-tipo="tipo_deficiencia"
+                                       {% if value in filtros_ativos.tipo_deficiencia %}checked{% endif %}>
+                                <label for="tipo_{{ value }}" class="acess-check-label">{{ label }}</label>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Dropdown de Formato de Ação -->
+        <div class="acess-dropdown">
+            <button type="button" class="acess-dropdown-btn" data-dropdown="acess-dropdown-acao">
+                <span>Formato de ação</span>
+                <i class="fas fa-chevron-down"></i>
+            </button>
+            <div class="acess-dropdown-content" id="acess-dropdown-acao">
+                <div class="acess-dropdown-inner">
+                    <div class="acess-options">
+                        {% for value, label in opcoes_filtros.formatos_acao %}
+                            <div class="acess-check-item">
+                                <input type="checkbox" 
+                                       name="formato_acao" 
+                                       id="formato_{{ value }}" 
+                                       value="{{ value }}"
+                                       class="acess-checkbox"
+                                       data-filtro-tipo="formato_acao"
+                                       {% if value in filtros_ativos.formato_acao %}checked{% endif %}>
+                                <label for="formato_{{ value }}" class="acess-check-label">{{ label }}</label>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Dropdown de Tipo de Recurso -->
+        <div class="acess-dropdown">
+            <button type="button" class="acess-dropdown-btn" data-dropdown="acess-dropdown-rec">
+                <span>Tipo de Recurso</span>
+                <i class="fas fa-chevron-down"></i>
+            </button>
+            <div class="acess-dropdown-content" id="acess-dropdown-rec">
+                <div class="acess-dropdown-inner">
+                    <div class="acess-options">
+                        {% for value, label in opcoes_filtros.tipos_recurso %}
+                            <div class="acess-check-item">
+                                <input type="checkbox" 
+                                       name="tipo_recurso" 
+                                       id="recurso_{{ value }}" 
+                                       value="{{ value }}"
+                                       class="acess-checkbox"
+                                       data-filtro-tipo="tipo_recurso"
+                                       {% if value in filtros_ativos.tipo_recurso %}checked{% endif %}>
+                                <label for="recurso_{{ value }}" class="acess-check-label">{{ label }}</label>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        
+    </div>
+</div>
+
+<!-- Container de Conteúdo Principal -->
+<div class="acess-content">
+    <!-- Seção de filtros ativos -->
+    <div class="acess-active-filters-wrap" style="display: none;" id="acess-active-filters-wrap">
+        <div class="acess-active-filters" id="acess-active-filters">
+            <!-- Aqui entram as tags de filtros ativos via JavaScript -->
+        </div>
+        
+        <button type="button" class="acess-clear-all" id="acess-clear-all-btn">
+            Limpar todos os filtros
+        </button>
+    </div>
+    
+    <!-- Cabeçalho de resultados -->
+    <div class="acess-results-header">
+        <div class="acess-results-count" id="acess-results-count">
+            {{ total_resultados }} cápsulas encontradas
+        </div>
+        
+        <div class="acess-sort-dropdown">
+           
+        </div>
+    </div>
+    
+    <!-- Grid de cápsulas -->
+    <ul style="list-style: none; margin-left: 0;" class="acess-grid" id="acess-results-grid">
+        {% for capsula in capsulas %}
+        <li style="padding: 0;" class="acess-capsula-link">
+            <a href="{% pageurl capsula %}">
+                <div class="acess-capsula-card" 
+                    data-tipo-deficiencia="{{ capsula.tipos_deficiencia|join:' ' }}" 
+                    data-formato-acao="{{ capsula.formatos_acao|join:' ' }}"
+                    data-tipo-recurso="{{ capsula.tipos_recurso|join:' ' }}"
+                    data-perfil-profissional="{{ capsula.perfis_profissionais|join:' ' }}"
+                    data-prioridade="{{ capsula.prioridade }}">
+                    
+                    <div class="acess-capsula-content">
+                        <div class="acess-capsula-icon">
+                            <i class="icon-class {{ capsula.icone }}"></i>
+                        </div>
+                        
+                        <h2 class="acess-capsula-titulo">
+                            {{ capsula.title }}
+                        </h2>
+                        <p class="acess-capsula-descricao">
+                            {{ capsula.resumo_card|default:"Aprenda sobre este importante aspecto da acessibilidade digital." }}
+                        </p>
+                    </div>
+                    
+                    <!-- Tipos de recursos como chips -->
+                    {% if capsula.tipos_recurso %}
+                    <div class="acess-capsula-recursos">
+                        {% for recurso_value, recurso_label in opcoes_filtros.tipos_recurso %}
+                            {% if recurso_value in capsula.tipos_recurso %}
+                                <div class="acess-recurso-tag">
+                                    {% if recurso_value == 'imagem' %}
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                                            <polyline points="21 15 16 10 5 21"></polyline>
+                                        </svg>
+                                    {% elif recurso_value == 'video' %}
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                                            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                                        </svg>
+                                    {% elif recurso_value == 'grafico' %}
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <line x1="18" y1="20" x2="18" y2="10"></line>
+                                            <line x1="12" y1="20" x2="12" y2="4"></line>
+                                            <line x1="6" y1="20" x2="6" y2="14"></line>
+                                        </svg>
+                                    {% elif recurso_value == 'tabela' %}
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                            <line x1="3" y1="9" x2="21" y2="9"></line>
+                                            <line x1="3" y1="15" x2="21" y2="15"></line>
+                                            <line x1="9" y1="3" x2="9" y2="21"></line>
+                                            <line x1="15" y1="3" x2="15" y2="21"></line>
+                                        </svg>
+                                    {% else %}
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                                            <polyline points="13 2 13 9 20 9"></polyline>
+                                        </svg>
+                                    {% endif %}
+                                    {{ recurso_label }}
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    <div class="btn primary large">
+                        Acessar Cápsula {{ forloop.counter }}
+                    </div>
+                </div>
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+    
+    <!-- Mensagem para nenhum resultado -->
+    <div id="acess-empty-message" class="acess-empty" style="display: none;">
+        <svg class="acess-empty-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <h2>Nenhuma cápsula encontrada</h2>
+        <p>Tente ajustar os filtros ou <a href="javascript:void(0)" id="acess-clear-filters-link">limpe os filtros</a> para ver todas as cápsulas.</p>
+    </div>
+</div>
+
+<section>
+    {% include_block page.cards %}
+</section>
+{% endblock %}
+
+{% block footer %}
+    {% include "enap_designsystem/includes/footer.html" %}
+{% endblock %}
+
+{% block scriptinline %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Mapeamento de filtros
+    const filtroLabels = {
+        {% for tipo, opcoes in opcoes_filtros.items %}
+            '{{ tipo }}': {
+                {% for value, label in opcoes %}
+                    '{{ value }}': '{{ label }}',
+                {% endfor %}
+            },
+        {% endfor %}
+    };
+    
+    // Cache de elementos DOM
+    const dropdownBtns = document.querySelectorAll('.acess-dropdown-btn');
+    const dropdownContents = document.querySelectorAll('.acess-dropdown-content');
+    const checkboxes = document.querySelectorAll('.acess-checkbox');
+    const capsulaCards = document.querySelectorAll('.acess-capsula-card');
+    const contagemResultados = document.getElementById('acess-results-count');
+    const mensagemVazia = document.getElementById('acess-empty-message');
+    const filtrosAtivosContainer = document.getElementById('acess-active-filters');
+    const filtrosAtivosWrapper = document.getElementById('acess-active-filters-wrap');
+    const limparTodosBtn = document.getElementById('acess-clear-all-btn');
+    const limparFiltrosLink = document.getElementById('acess-clear-filters-link');
+    
+    // Configurar dropdowns
+    dropdownBtns.forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            
+            const dropdownId = this.getAttribute('data-dropdown');
+            const dropdownEl = document.getElementById(dropdownId);
+            
+            // Fechar outros dropdowns
+            dropdownContents.forEach(dropdown => {
+                if (dropdown.id !== dropdownId) {
+                    dropdown.style.display = 'none';
+                    
+                    // Reset icon for other buttons
+                    const otherBtn = document.querySelector(`[data-dropdown="${dropdown.id}"]`);
+                    if (otherBtn) {
+                        const otherIcon = otherBtn.querySelector('i');
+                        if (otherIcon) {
+                            otherIcon.className = 'fas fa-chevron-down';
+                        }
+                    }
+                }
+            });
+            
+            // Toggle this dropdown
+            if (dropdownEl) {
+                if (dropdownEl.style.display === 'block') {
+                    dropdownEl.style.display = 'none';
+                    const icon = this.querySelector('i');
+                    if (icon) {
+                        icon.className = 'fas fa-chevron-down';
+                    }
+                } else {
+                    dropdownEl.style.display = 'block';
+                    const icon = this.querySelector('i');
+                    if (icon) {
+                        icon.className = 'fas fa-chevron-up';
+                    }
+                }
+            }
+        });
+    });
+    
+    // Fechar dropdowns ao clicar fora
+    document.addEventListener('click', function() {
+        dropdownContents.forEach(dropdown => {
+            dropdown.style.display = 'none';
+        });
+        
+        // Reset all icons
+        dropdownBtns.forEach(btn => {
+            const icon = btn.querySelector('i');
+            if (icon) {
+                icon.className = 'fas fa-chevron-down';
+            }
+        });
+    });
+    
+    // Evitar propagação de cliques dentro dos dropdowns
+    dropdownContents.forEach(dropdown => {
+        dropdown.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+    });
+    
+    // Adicionar eventos aos checkboxes
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            aplicarFiltros();
+            atualizarFiltrosAtivos();
+            atualizarURL();
+        });
+    });
+    
+    // Evento para limpar todos os filtros
+    if (limparTodosBtn) {
+        limparTodosBtn.addEventListener('click', limparTodosFiltros);
+    }
+    
+    if (limparFiltrosLink) {
+        limparFiltrosLink.addEventListener('click', limparTodosFiltros);
+    }
+    
+    // Aplicar filtros
+    function aplicarFiltros() {
+        // Coletar filtros ativos
+        const filtrosAtivos = {
+            tipo_deficiencia: [],
+            formato_acao: [],
+            tipo_recurso: [],
+            perfil_profissional: []
+        };
+        
+        // Coletar valores dos checkboxes marcados
+        checkboxes.forEach(checkbox => {
+            if (checkbox.checked) {
+                const tipoFiltro = checkbox.getAttribute('data-filtro-tipo');
+                if (filtrosAtivos[tipoFiltro]) {
+                    filtrosAtivos[tipoFiltro].push(checkbox.value);
+                }
+            }
+        });
+        
+        // Atualizar contadores nos botões de dropdown
+        atualizarContadoresDropdown(filtrosAtivos);
+        
+        // Contar cápsulas visíveis
+        let capsulasFiltradas = 0;
+        
+        // Aplicar filtros aos cards
+        capsulaCards.forEach(card => {
+            let mostrar = true;
+            
+            // Verificar cada tipo de filtro
+            if (filtrosAtivos.tipo_deficiencia.length > 0) {
+                const tiposDeficiencia = (card.getAttribute('data-tipo-deficiencia') || '').split(' ').filter(t => t);
+                if (!filtrosAtivos.tipo_deficiencia.some(tipo => tiposDeficiencia.includes(tipo))) {
+                    mostrar = false;
+                }
+            }
+            
+            if (mostrar && filtrosAtivos.formato_acao.length > 0) {
+                const formatosAcao = (card.getAttribute('data-formato-acao') || '').split(' ').filter(t => t);
+                if (!filtrosAtivos.formato_acao.some(formato => formatosAcao.includes(formato))) {
+                    mostrar = false;
+                }
+            }
+            
+            if (mostrar && filtrosAtivos.tipo_recurso.length > 0) {
+                const tiposRecurso = (card.getAttribute('data-tipo-recurso') || '').split(' ').filter(t => t);
+                if (!filtrosAtivos.tipo_recurso.some(recurso => tiposRecurso.includes(recurso))) {
+                    mostrar = false;
+                }
+            }
+            
+            if (mostrar && filtrosAtivos.perfil_profissional.length > 0) {
+                const perfis = (card.getAttribute('data-perfil-profissional') || '').split(' ').filter(t => t);
+                if (!filtrosAtivos.perfil_profissional.some(perfil => perfis.includes(perfil))) {
+                    mostrar = false;
+                }
+            }
+            
+            // Aplicar visibilidade ao card
+            const parent = card.closest('.acess-capsula-link');
+            if (parent) {
+                parent.style.display = mostrar ? 'block' : 'none';
+                if (mostrar) {
+                    capsulasFiltradas++;
+                }
+            }
+        });
+        
+        // Atualizar contador de resultados
+        if (contagemResultados) {
+            contagemResultados.textContent = capsulasFiltradas + ' cápsulas encontradas';
+        }
+        
+        // Mostrar mensagem de "nenhum resultado" se necessário
+        if (mensagemVazia) {
+            mensagemVazia.style.display = capsulasFiltradas === 0 ? 'block' : 'none';
+        }
+    }
+    
+    // Atualizar contadores nos botões de dropdown
+    function atualizarContadoresDropdown(filtrosAtivos) {
+        // Para cada tipo de filtro, verificar quantos estão ativos
+        const contadores = {
+            'acess-dropdown-def': filtrosAtivos.tipo_deficiencia.length,
+            'acess-dropdown-acao': filtrosAtivos.formato_acao.length,
+            'acess-dropdown-rec': filtrosAtivos.tipo_recurso.length,
+            'acess-dropdown-perf': filtrosAtivos.perfil_profissional.length
+        };
+        
+        // Atualizar cada botão de dropdown
+        Object.keys(contadores).forEach(dropdownId => {
+            const count = contadores[dropdownId];
+            const btn = document.querySelector(`[data-dropdown="${dropdownId}"]`);
+            if (btn) {
+                // Remover contador existente
+                const contadorExistente = btn.querySelector('.acess-counter');
+                if (contadorExistente) {
+                    contadorExistente.remove();
+                }
+                
+                // Adicionar novo contador se necessário
+                if (count > 0) {
+                    const contador = document.createElement('span');
+                    contador.className = 'acess-counter';
+                    contador.textContent = count;
+                    
+                    // Inserir após o texto e antes do ícone
+                    const spanText = btn.querySelector('span');
+                    if (spanText) {
+                        btn.insertBefore(contador, spanText.nextSibling);
+                    }
+                }
+            }
+        });
+    }
+    
+    // Atualizar a exibição de filtros ativos
+    function atualizarFiltrosAtivos() {
+        if (!filtrosAtivosContainer) return;
+        
+        // Limpar container
+        filtrosAtivosContainer.innerHTML = '';
+        
+        let temFiltrosAtivos = false;
+        
+        // Para cada tipo de filtro, adicionar tags para os valores ativos
+        ['tipo_deficiencia', 'formato_acao', 'tipo_recurso', 'perfil_profissional'].forEach(tipoFiltro => {
+            const checkboxesTipo = document.querySelectorAll(`.acess-checkbox[data-filtro-tipo="${tipoFiltro}"]:checked`);
+            
+            checkboxesTipo.forEach(checkbox => {
+                temFiltrosAtivos = true;
+                
+                // Obter o tipo normalizado para o mapeamento de rótulos
+                const tipoNormalizado = tipoFiltro.replace('_', 's_');
+                
+                // Verificar se o label existe
+                const valorCheckbox = checkbox.value;
+                const labelTexto = filtroLabels[tipoNormalizado] && filtroLabels[tipoNormalizado][valorCheckbox] 
+                    ? filtroLabels[tipoNormalizado][valorCheckbox] 
+                    : valorCheckbox;
+                
+                // Criar tag de filtro
+                const tagFiltro = document.createElement('div');
+                tagFiltro.className = 'acess-filter-tag';
+                tagFiltro.innerHTML = `
+                    ${labelTexto}
+                    <button type="button" class="acess-remove-btn" data-tipo="${tipoFiltro}" data-valor="${valorCheckbox}">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                
+                // Adicionar ao container
+                filtrosAtivosContainer.appendChild(tagFiltro);
+            });
+        });
+        
+        // Mostrar ou ocultar o wrapper de filtros ativos
+        if (filtrosAtivosWrapper) {
+            filtrosAtivosWrapper.style.display = temFiltrosAtivos ? 'flex' : 'none';
+        }
+        
+        // Adicionar eventos aos botões de remover
+        document.querySelectorAll('.acess-remove-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const tipo = this.getAttribute('data-tipo');
+                const valor = this.getAttribute('data-valor');
+                removerFiltro(tipo, valor);
+            });
+        });
+    }
+    
+    // Atualizar URL com os filtros selecionados
+    function atualizarURL() {
+        const urlParams = new URLSearchParams();
+        
+        // Coletar todos os filtros ativos
+        checkboxes.forEach(checkbox => {
+            if (checkbox.checked) {
+                urlParams.append(checkbox.getAttribute('data-filtro-tipo'), checkbox.value);
+            }
+        });
+        
+        // Atualizar URL sem recarregar a página
+        const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+        history.pushState(null, '', newUrl);
+    }
+    
+    // Função para remover um filtro específico
+    function removerFiltro(tipo, valor) {
+        const checkbox = document.querySelector(`input[data-filtro-tipo="${tipo}"][value="${valor}"]`);
+        if (checkbox) {
+            checkbox.checked = false;
+            aplicarFiltros();
+            atualizarFiltrosAtivos();
+            atualizarURL();
+        }
+    }
+    
+    // Função para limpar todos os filtros
+    function limparTodosFiltros() {
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        
+        aplicarFiltros();
+        atualizarFiltrosAtivos();
+        atualizarURL();
+    }
+    
+    // Inicializar a partir dos parâmetros da URL
+    const urlParams = new URLSearchParams(window.location.search);
+    let temParametros = false;
+    
+    // Marcar checkboxes baseados nos parâmetros da URL
+    for (const [key, value] of urlParams.entries()) {
+        const checkbox = document.querySelector(`input[data-filtro-tipo="${key}"][value="${value}"]`);
+        if (checkbox) {
+            checkbox.checked = true;
+            temParametros = true;
+        }
+    }
+    
+    // Se houver parâmetros, aplicar filtros
+    if (temParametros) {
+        aplicarFiltros();
+        atualizarFiltrosAtivos();
+    } else {
+        // Aplicar filtros pela primeira vez para inicializar contadores
+        aplicarFiltros();
+    }
+    
+    // Tornar funções acessíveis globalmente
+    window.acessRemoverFiltro = removerFiltro;
+    window.acessLimparTodosFiltros = limparTodosFiltros;
+});
+</script>
+{% endblock %}

@@ -1,0 +1,612 @@
+{% extends "enap_designsystem/base.html" %}
+{% load static %}
+{% load wagtailcore_tags wagtailimages_tags %}
+{% load wagtailcore_tags %}
+
+
+{% block metadata %}
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="{{ page.descricao_curta }}">
+{% endblock %}
+
+
+{% block title %}
+    <title>{{ page.title }}</title>
+{% endblock %}
+
+{%block govnavbar %}
+        <div style="background-color: #071E41;">
+            <div class="menu">
+                <div class="logo">
+                    <img style="width: 51px; height: 18px;" src="{% static 'enap_designsystem/icons/logo-white.png' %}" alt="Logo GovBR" height="40">
+                </div>
+                <a href="https://www.gov.br/secom/pt-br/acesso-a-informacao/comunicabr">Comunica BR</a>
+                <div class="separator"></div>
+                <a href="https://www.gov.br/acessoainformacao/pt-br">Acesso à informação</a>
+                <div class="separator"></div>
+                <a href="https://www.gov.br/pt-br/participacao-social/">Participe</a>
+                <div class="separator"></div>
+                <a href="https://www4.planalto.gov.br/legislacao/">Legislação</a>
+                <div class="separator"></div>
+                <a href="https://www.gov.br/pt-br/orgaos-do-governo">Órgãos do Governo</a>
+            </div>
+        </div>
+    {% endblock %}
+
+
+{% block navbar %}
+    {% if page.navbar %}
+        {% include "enap_designsystem/blocks/navbar/navbar_block.html" with navbar=page.navbar %}
+    {% else %}
+        <p style="color: red;">DEBUG: Nenhuma Navbar foi definida.</p>
+    {% endif %}
+{% endblock %}
+
+
+{% block body_class %}{{ page.tipo_rota }}{% endblock %}
+
+{% block content %}
+
+
+{% for block in page.menu %}
+    {% include_block block %}
+{% endfor %}
+<!-- Skip link para acessibilidade -->
+<a href="#main-content" class="skip-to-content">Pular para o conteúdo principal</a>
+
+<div class="route-container">
+    
+    <!-- Cabeçalho da rota -->
+    <header class="route-header">
+        <div class="route-header__icon">
+            {% if page.icone %}
+                {% image page.icone width-80 as icon %}
+                <img src="{{ icon.url }}" alt="Ícone da página" aria-hidden="true">
+            {% else %}
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+            {% endif %}
+        </div>
+
+        {% if page.descricao_curta %}
+            <p>{{ page.descricao_curta }}</p>
+        {% endif %}
+        
+        <h2>{{ page.title }}</h2>
+        
+        {% if page.descricao_curta %}
+            <p>{{ page.descricao_curta }}</p>
+        {% endif %}
+        
+        <div class="route-header__meta">
+            <div class="route-header__stat">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="9" y1="9" x2="15" y2="9"></line>
+                    <line x1="9" y1="15" x2="15" y2="15"></line>
+                </svg>
+                <span>{{ page.capsulas_vinculadas.count }} cápsulas</span>
+            </div>
+            
+            <div class="route-header__stat">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+                <span>{{ page.perfil_alvo|default:"Todos os perfis" }}</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navegação por tabs -->
+    <div class="route-tabs">
+        <nav class="route-tabs__nav" aria-label="Seções da rota">
+            <a href="#apresentacao" class="route-tabs__link active">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <span>Apresentação</span>
+            </a>
+            
+            <a href="#por-onde-comecar" class="route-tabs__link">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                <span>Por onde começar</span>
+            </a>
+            
+            <a href="#capsulas-essenciais" class="route-tabs__link">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="9" y1="9" x2="15" y2="9"></line>
+                    <line x1="9" y1="15" x2="15" y2="15"></line>
+                </svg>
+                <span>Cápsulas essenciais</span>
+            </a>
+
+            <a href="#boas-praticas" class="route-tabs__link">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+                <span>Boas práticas</span>
+            </a>
+            
+            <a href="#materiais-extras" class="route-tabs__link">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                </svg>
+                <span>Materiais extras</span>
+            </a>
+        </nav>
+        
+        <div class="route-tabs__indicator"></div>
+    </div>
+
+    <!-- Conteúdo principal com seções em formato de "steps" -->
+    <section ="main-content">
+        <div class="route-steps-container">
+            <div class="route-path"></div>
+            
+            <!-- 1. Apresentação da Rota -->
+            <section id="apresentacao" class="route-step" role="tabpanel" aria-labelledby="apresentacao-titulo" tabindex="-1">
+                <div class="step-header">
+                    <div class="step-counter"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg></div>
+                    <h2 id="apresentacao-titulo" class="step-title">Apresentação da Rota</h2>
+                </div>
+                <p class="step-subtitle">Conheça o objetivo desta rota de aprendizagem</p>
+                
+                <div class="route-step__content">
+                    {{ page.apresentacao|richtext }}
+                    
+                    <div class="route-quote">
+                        <div class="route-quote__icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"></path>
+                                <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"></path>
+                            </svg>
+                        </div>
+                        <blockquote class="route-quote__text">
+                            Esta rota foi desenvolvida para guiar você em uma jornada de aprendizado estruturada e eficiente. Siga os passos recomendados e aproveite ao máximo cada conteúdo.
+                        </blockquote>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 2. Por onde começar? -->
+            <section id="por-onde-comecar" class="route-step" role="tabpanel" aria-labelledby="por-onde-comecar-titulo" tabindex="-1">
+                <div class="step-header">
+                    <div class="step-counter"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg></div>
+                    <h2 id="por-onde-comecar-titulo" class="step-title">Por onde começar?</h2>
+                </div>
+                <p class="step-subtitle">Primeiros passos para iniciar sua jornada</p>
+                
+                <div class="route-step__content">
+                    {{ page.por_onde_comecar|richtext }}
+                </div>
+            </section>
+            
+            <!-- 3. Cápsulas essenciais para esta Rota -->
+            <section id="capsulas-essenciais" class="route-step" role="tabpanel" aria-labelledby="capsulas-essenciais-titulo" tabindex="-1">
+                <div class="step-header">
+                    <div class="step-counter"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="9" y1="9" x2="15" y2="9"></line>
+                        <line x1="9" y1="15" x2="15" y2="15"></line>
+                    </svg></div>
+                    <h2 id="capsulas-essenciais-titulo" class="step-title">Cápsulas essenciais para esta Rota</h2>
+                </div>
+                
+                <div class="route-step__content">
+                    {% if page.texto_capsulas %}
+                        <div class="route-section-intro">
+                            {{ page.texto_capsulas|richtext }}
+                        </div>
+                    {% endif %}
+                    
+                    <!-- Grade de cápsulas -->
+                    <div class="route-capsules">
+                        {% for capsula_item in page.capsulas_vinculadas.all %}
+                            {% with capsula=capsula_item.capsula %}
+                                <div class="route-capsule {% if capsula_item.destaque %}route-capsule--featured{% endif %}" tabindex="0">
+                                    <div class="route-capsule__header">
+                                        {% if capsula.specific.imagem_capa %}
+                                            <div class="route-capsule__image">
+                                                {% image capsula.specific.imagem_capa fill-400x200 as img %}
+                                                <img src="{{ img.url }}" alt="{{ capsula.title }}">
+                                                <div class="route-capsule__overlay"></div>
+                                            </div>
+                                        {% else %}
+                                           
+                                        {% endif %}
+                                        
+                                        {% if capsula.specific.categoria %}
+                                            <div class="route-capsule__category">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                                                    <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                                                </svg>
+                                                {{ capsula.specific.categoria }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <div class="route-capsule__content">
+                                        <h3 class="route-capsule__title">{{ capsula.title }}</h3>
+                                        
+                                        <!-- {% if capsula.specific.tipos_deficiencia %}
+                                            <div class="route-capsule__tags">
+                                                {% for tipo in capsula.specific.tipos_deficiencia %}
+                                                    <div class="route-capsule__tag route-capsule__tag--{{ tipo }}">
+                                                        {% if tipo == 'visual' %}
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                                                <circle cx="12" cy="12" r="3"></circle>
+                                                            </svg>
+                                                        {% elif tipo == 'auditiva' %}
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                                <path d="M11 5L6 9H2v6h4l5 4zM15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                                                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+                                                            </svg>
+                                                        {% elif tipo == 'motora' %}
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                                <path d="M14.5 17.5L3 6V3h3l11.5 11.5"></path>
+                                                                <path d="M13 19l6-6"></path>
+                                                                <line x1="16" y1="16" x2="19" y2="19"></line>
+                                                                <path d="M8 2h.01"></path>
+                                                                <path d="M2 8h.01"></path>
+                                                                <path d="M16 8h.01"></path>
+                                                            </svg>
+                                                        {% elif tipo == 'cognitiva' %}
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                                <path d="M12 18c.9 0 1.64-.72 1.64-1.62 0-.85-.64-1.54-1.46-1.62v-2.58c1.46-.35 2.64-1.61 2.82-3.18h-2.26c-.27 1.18-1.29 2-2.74 2-1.45 0-2.47-.82-2.74-2H5c.18 1.57 1.36 2.83 2.82 3.18v2.58c-.82.08-1.46.77-1.46 1.62 0 .9.74 1.62 1.64 1.62z"></path>
+                                                                <circle cx="12" cy="10" r="8"></circle>
+                                                            </svg>
+                                                        {% endif %}
+                                                        <span>{{ tipo|capfirst }}</span>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %} -->
+                                        
+                                        <p class="route-capsule__description">
+                                            {% if capsula_item.texto_contextualizacao %}
+                                                {{ capsula_item.texto_contextualizacao }}
+                                            {% elif capsula.specific.resumo_card %}
+                                                {{ capsula.specific.resumo_card }}
+                                            {% elif capsula.specific.o_que_e_resumo %}
+                                                {{ capsula.specific.o_que_e_resumo }}
+                                            {% elif capsula.specific.descricao_curta %}
+                                                {{ capsula.specific.descricao_curta }}
+                                            {% endif %}
+                                        </p>
+                                    </div>
+                                    
+                                    <div class="route-capsule__footer">
+                                        <a href="{{ capsula.url }}" class="btn large primary">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                                                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                                            </svg>
+                                            Acessar cápsula {{ forloop.counter }}
+                                        </a>
+                                    </div>
+                                </div>
+                            {% endwith %}
+                        {% empty %}
+                            <div class="route-empty">
+                                <div class="route-empty__icon">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                    </svg>
+                                </div>
+                                <h3 class="route-empty__title">Nenhuma cápsula vinculada</h3>
+                                <p class="route-empty__text">Em breve adicionaremos conteúdo para esta rota. Fique atento às atualizações!</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4 Boas Práticas -->
+            <section id="boas-praticas" class="route-step" role="tabpanel" aria-labelledby="boas-praticas-titulo" tabindex="-1">
+                <div class="step-header">
+                    <div class="step-counter"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    </svg></div>
+                    <h2 id="boas-praticas-titulo" class="step-title">{{ page.titulo_boas_praticas }}</h2>
+                </div>
+                
+                <div class="route-step__content">
+                    {{ page.descricao_boas_praticas|richtext }}
+                </div>
+            </section>
+            
+            <!-- 5. Materiais extras -->
+            <section id="materiais-extras" class="route-step" role="tabpanel" aria-labelledby="materiais-extras-titulo" tabindex="-1">
+                <div class="step-header">
+                    <div class="step-counter"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                    </svg></div>
+                    <h2 id="materiais-extras-titulo" class="step-title">Onde posso aprender mais?</h2>
+                </div>
+                <p class="step-subtitle">Recursos complementares para aprofundar seus conhecimentos</p>
+                
+                <div class="route-step__content">
+                    {% if page.texto_materiais_extras %}
+                        <div class="route-section-intro">
+                            {{ page.texto_materiais_extras|richtext }}
+                        </div>
+                    {% endif %}
+                    
+                    <div class="route-capsules">
+                        {% for block in page.materiais_externos %}
+                            {% include_block block with extra_classes="route-capsule" %}
+                        {% empty %}
+                            <div class="route-empty">
+                                <div class="route-empty__icon">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                    </svg>
+                                </div>
+                                <h3 class="route-empty__title">Materiais em desenvolvimento</h3>
+                                <p class="route-empty__text">Em breve adicionaremos materiais complementares para esta rota. Fique atento às atualizações!</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </section>
+        </div>
+    </section>
+</div>
+
+<!-- Botão flutuante para voltar ao topo -->
+<button type="button" id="back-to-top" class="back-to-top" aria-label="Voltar ao topo">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="18 15 12 9 6 15"></polyline>
+    </svg>
+</button>
+
+<!-- Elemento para anúncios de acessibilidade -->
+<div id="a11y-status" class="visually-hidden" aria-live="polite" role="status"></div>
+{% endblock %}
+
+{% block footer %}
+    {% include "enap_designsystem/includes/footer.html" %}
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Links de navegação com indicador animado
+        const navLinks = document.querySelectorAll('.route-tabs__link');
+        const indicator = document.querySelector('.route-tabs__indicator');
+        const backToTopBtn = document.getElementById('back-to-top');
+        const sections = document.querySelectorAll('.route-step');
+        const progressSteps = document.querySelectorAll('.progress-step');
+        const progressIndicator = document.getElementById('progress-fill');
+        
+        // Inicializar posição do indicador
+        updateIndicator(navLinks[0]);
+        
+        function updateIndicator(activeLink) {
+            if (!activeLink || !indicator) return;
+            
+            const linkRect = activeLink.getBoundingClientRect();
+            const navRect = document.querySelector('.route-tabs__nav').getBoundingClientRect();
+            
+            // Atualiza posição e largura do indicador
+            indicator.style.left = `${linkRect.left - navRect.left}px`;
+            indicator.style.width = `${linkRect.width}px`;
+        }
+        
+        // Atualizar indicador de progresso
+        function updateProgress() {
+            // Encontrar a seção visível atual
+            const scrollPosition = window.scrollY;
+            let currentSectionIndex = 0;
+            
+            sections.forEach((section, index) => {
+                const sectionTop = section.getBoundingClientRect().top + scrollPosition - 200;
+                if (scrollPosition >= sectionTop) {
+                    currentSectionIndex = index;
+                }
+            });
+            
+            // Atualizar progresso visual
+            const progressPercent = ((currentSectionIndex + 1) / sections.length) * 100;
+            progressIndicator.style.width = `${progressPercent}%`;
+            
+            // Atualizar estado dos steps do progresso
+            progressSteps.forEach((step, index) => {
+                step.classList.remove('active', 'complete');
+                
+                if (index < currentSectionIndex) {
+                    step.classList.add('complete');
+                    const dot = step.querySelector('.progress-dot');
+                    dot.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+                } else if (index === currentSectionIndex) {
+                    step.classList.add('active');
+                    const dot = step.querySelector('.progress-dot');
+                    dot.textContent = index + 1;
+                } else {
+                    const dot = step.querySelector('.progress-dot');
+                    dot.textContent = index + 1;
+                }
+            });
+        }
+        
+        // Verificar qual seção está visível na viewport
+        function checkVisibleSections() {
+            // Verificar qual seção está na viewport
+            let currentSectionIndex = 0;
+            
+            sections.forEach((section, index) => {
+                const rect = section.getBoundingClientRect();
+                if (rect.top <= 200 && rect.bottom >= 200) {
+                    currentSectionIndex = index;
+                }
+            });
+            
+            // Atualizar link ativo
+            navLinks.forEach((link, index) => {
+                if (index === currentSectionIndex) {
+                    link.classList.add('active');
+                    updateIndicator(link);
+                    
+                    // Anunciar mudança de seção para tecnologias assistivas
+                    const sectionTitle = sections[currentSectionIndex].querySelector('.step-title').textContent;
+                    const a11yStatus = document.getElementById('a11y-status');
+                    a11yStatus.textContent = `Seção atual: ${sectionTitle}`;
+                } else {
+                    link.classList.remove('active');
+                }
+            });
+        }
+        
+        // Rolagem suave para as seções
+        navLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Remove classe active de todos os links
+                navLinks.forEach(l => l.classList.remove('active'));
+                
+                // Adiciona classe active ao link clicado
+                this.classList.add('active');
+                
+                // Atualiza o indicador
+                updateIndicator(this);
+                
+                // Rolagem suave até a seção
+                const targetId = this.getAttribute('href');
+                const targetSection = document.querySelector(targetId);
+                
+                if (targetSection) {
+                    // Adicionar classe de destaque temporária
+                    targetSection.classList.add('highlight-section');
+                    
+                    // Rolagem suave
+                    window.scrollTo({
+                        top: targetSection.offsetTop - 100,
+                        behavior: 'smooth'
+                    });
+                    
+                    // Atualiza a URL com o hash sem recarregar a página
+                    history.pushState(null, null, targetId);
+                    
+                    // Remove a classe de destaque após a animação
+                    setTimeout(() => {
+                        targetSection.classList.remove('highlight-section');
+                    }, 1500);
+                }
+            });
+        });
+        
+        // Inicializar com base na URL
+        function initFromUrl() {
+            const hash = window.location.hash || '#apresentacao';
+            const targetLink = document.querySelector(`.route-tabs__link[href="${hash}"]`);
+            const targetSection = document.querySelector(hash);
+            
+            if (targetLink && targetSection) {
+                // Atualizar link ativo
+                navLinks.forEach(link => link.classList.remove('active'));
+                targetLink.classList.add('active');
+                updateIndicator(targetLink);
+                
+                // Rolar para a seção após um pequeno atraso
+                setTimeout(() => {
+                    window.scrollTo({
+                        top: targetSection.offsetTop - 100,
+                        behavior: 'auto'
+                    });
+                }, 200);
+            }
+        }
+        
+        // Eventos
+        window.addEventListener('resize', function() {
+            // Atualizar posição do indicador quando a janela for redimensionada
+            const activeLink = document.querySelector('.route-tabs__link.active');
+            updateIndicator(activeLink);
+        });
+        
+        window.addEventListener('scroll', function() {
+            // Verificar seções visíveis
+            checkVisibleSections();
+            
+            // Atualizar progresso
+            updateProgress();
+            
+            // Mostrar/ocultar botão de voltar ao topo
+            if (window.scrollY > 500) {
+                backToTopBtn.classList.add('visible');
+            } else {
+                backToTopBtn.classList.remove('visible');
+            }
+        });
+        
+        // Botão voltar ao topo
+        backToTopBtn.addEventListener('click', function() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+        
+        // Inicializar tudo
+        initFromUrl();
+        updateProgress();
+        
+        // Efeito hover nas cápsulas para destacar o botão
+        const capsules = document.querySelectorAll('.route-capsule');
+        capsules.forEach(capsule => {
+            capsule.addEventListener('mouseenter', function() {
+                const button = this.querySelector('.btn');
+                if (button) {
+                    button.classList.add('pulse');
+                }
+            });
+            
+            capsule.addEventListener('mouseleave', function() {
+                const button = this.querySelector('.btn');
+                if (button) {
+                    button.classList.remove('pulse');
+                }
+            });
+            
+            // Fazer o card inteiro clicável
+            capsule.addEventListener('click', function(e) {
+                if (e.target.tagName !== 'A') {
+                    const link = this.querySelector('.route-capsule__footer a');
+                    if (link) {
+                        link.click();
+                    }
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

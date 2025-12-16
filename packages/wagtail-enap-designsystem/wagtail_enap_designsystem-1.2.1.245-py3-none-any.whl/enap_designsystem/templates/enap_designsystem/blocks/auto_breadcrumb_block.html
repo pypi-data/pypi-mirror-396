@@ -1,0 +1,50 @@
+{% load wagtailcore_tags %}
+
+<ul class="breadcrumb container {% if value.dark_theme %}dark-breadcrumb{% endif %} {% if value.breadcrumb_absolute %}breadcrumb-absolute{% endif %}">
+    <li class="breadcrumbs-li">
+        <a class="link-breadcrumbs {% if value.dark_theme or value.breadcrumb_absolute %}white{% endif %}" href="{{ value.home_url}}" aria-label="Página inicial">
+            <i style="{% if value.dark_theme or value.breadcrumb_absolute %}color: #30BFBC;{% else %}color: #007D7A;{% endif %} font-size: 14px;" class="fa-solid fa-house"></i>
+        </a>
+    </li>
+
+    {% if page %}
+        {% for ancestor in page.get_ancestors %}
+            {% if ancestor.depth > 2 %}
+                <li class="breadcrumbs-li">
+                    <i class="fa-solid fa-chevron-right" style="{% if value.dark_theme or value.breadcrumb_absolute %}color: #30BFBC;{% else %}color: #007D7A;{% endif %} font-size: 14px; margin: 0 5px;"></i>
+                    <a href="{{ ancestor.url }}" class="link-breadcrumbs {% if value.dark_theme or value.breadcrumb_absolute %}white{% endif %}">
+                        {{ ancestor.title }}
+                    </a>
+                </li>
+            {% endif %}
+        {% endfor %}
+
+        <li class="breadcrumbs-li">
+            <i class="fa-solid fa-chevron-right" style="{% if value.dark_theme or value.breadcrumb_absolute %}color: #30BFBC;{% else %}color: #007D7A;{% endif %} font-size: 14px; margin: 0 5px;"></i>
+            <span class="text-local-breadcrumbs {% if value.dark_theme or value.breadcrumb_absolute %}white{% endif %}">
+                {{ page.title }}
+            </span>
+        </li>
+    {% endif %}
+</ul>
+<style>
+.breadcrumb-absolute{
+    position: absolute;
+    transform: translate(0%, 30%);
+    left: 0;
+    right: 0;
+    z-index: 999;
+}
+
+.breadcrumb-absolute .breadcrumbs-li a, .breadcrumb-absolute .breadcrumbs-li span{
+    color: white;
+}
+
+.breadcrumbs-li {
+    padding: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+}
+</style>
+<!-- blocks/auto_breadcrumb_block.html -->

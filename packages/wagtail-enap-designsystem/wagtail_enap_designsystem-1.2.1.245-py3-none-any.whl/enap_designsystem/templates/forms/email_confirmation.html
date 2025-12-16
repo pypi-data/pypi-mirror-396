@@ -1,0 +1,215 @@
+<!-- templates/forms/email_confirmation.html -->
+{% load wagtailcore_tags %}
+{% load wagtailimages_tags %}
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmação de Inscrição - ENAP</title>
+    <style>
+        body {
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f7f7f7;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        .header {
+            background: linear-gradient(135deg, #024248 0%, #00918E 100%);
+            color: white;
+            padding: 35px 30px;
+            text-align: center;
+        }
+        .logo {
+            margin-bottom: 20px;
+            max-width: 180px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 26px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+            font-size: 16px;
+        }
+        .content {
+            padding: 35px 30px;
+        }
+        .welcome-message {
+            background: rgba(0, 145, 142, 0.1);
+            border-left: 4px solid #00918E;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .welcome-message h2 {
+            margin: 0 0 10px 0;
+            color: #024248;
+            font-size: 20px;
+        }
+        .info-box {
+            background: rgba(173, 107, 252, 0.1);
+            border-radius: 8px;
+            padding: 25px;
+            margin: 25px 0;
+            border: 1px solid rgba(173, 107, 252, 0.2);
+        }
+        .info-box h3 {
+            margin: 0 0 15px 0;
+            color: #024248;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+        }
+        .info-box h3 span {
+            margin-right: 8px;
+        }
+        .info-item {
+            display: flex;
+            margin-bottom: 12px;
+            border-bottom: 1px solid rgba(173, 107, 252, 0.2);
+            padding-bottom: 12px;
+        }
+        .info-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #024248;
+            min-width: 120px;
+        }
+        .info-value {
+            flex: 1;
+        }
+        .success-status {
+            color: #00918E;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+        }
+        .success-status span {
+            margin-right: 5px;
+        }
+        .footer {
+            background: rgba(2, 66, 72, 0.08);
+            padding: 30px;
+            text-align: center;
+            border-top: 1px solid rgba(2, 66, 72, 0.15);
+        }
+        .footer p {
+            margin: 5px 0;
+            color: #555;
+            font-size: 14px;
+        }
+        .gov-bar {
+            background: #024248;
+            color: white;
+            text-align: center;
+            font-size: 12px;
+            padding: 8px;
+        }
+        .cta-button {
+            display: inline-block;
+            background: #AD6BFC;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            margin: 20px 0;
+            transition: background-color 0.3s;
+        }
+        .cta-button:hover {
+            background: #9A50F5;
+        }
+        a {
+            color: #00918E;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        @media (max-width: 600px) {
+            .email-container {
+                margin: 0;
+                border-radius: 0;
+            }
+            .header, .content, .footer {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            <img src="{% static 'static/icons/enap.svg' %}" alt="Logo enap">
+            <h1>Confirmação de Inscrição</h1>
+            <p>Sua inscrição foi realizada com sucesso!</p>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <div class="welcome-message">
+                <h2>Olá {{ user_name }}!</h2>
+                <p>Recebemos sua inscrição no <strong>{{form_title}}</strong> e estamos muito felizes em tê-lo(a) conosco. Agradecemos pela sua participação!</p>
+            </div>
+
+            <div class="info-box">
+                <h3><span>📋</span> Resumo da sua inscrição</h3>
+                
+                <div class="info-item">
+                    <div class="info-label">Data e hora:</div>
+                    <div class="info-value">{{submit_date}}</div>
+                </div>
+                
+                <div class="info-item">
+                    <div class="info-label">Formulário:</div>
+                    <div class="info-value">{{form_title}}</div>
+                </div>
+                
+                <div class="info-item">
+                    <div class="info-label">Status:</div>
+                    <div class="info-value">
+                        <span class="success-status"><span>✅</span> Confirmado</span>
+                    </div>
+                </div>
+            </div>
+
+           
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p><strong>Obrigado por sua inscrição!</strong></p>
+            <p>Esta é uma mensagem automática. Por favor, não responda este email.</p>
+            <p style="margin-top: 20px; font-size: 12px; color: #777;">
+                Se você não se inscreveu em nosso formulário, pode ignorar este email.
+            </p>
+        </div>
+        
+        <!-- Gov Bar -->
+        <div class="gov-bar">
+            ENAP - Escola Nacional de Administração Pública
+        </div>
+    </div>
+</body>
+</html>
