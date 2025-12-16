@@ -1,0 +1,101 @@
+name: TileDB-BioImaging CI
+
+on: 
+  push:
+  schedule:
+    - cron: '0 6 * * 1'
+
+jobs:
+  build:
+    name: ${{ matrix.sys.os }} ${{ matrix.python-version }}
+    runs-on: ${{ matrix.sys.os }}
+    timeout-minutes: 25
+    strategy:
+      matrix:
+        sys:
+          - { os: windows-latest, shell: 'cmd /C call {0}' }
+          - { os: ubuntu-24.04,  shell: "bash -l {0}" }
+        python-version: [3.9, 3.12]
+      fail-fast: false
+    defaults:
+      run:
+        shell: ${{ matrix.sys.shell }}
+
+    env:
+      run_coverage: ${{ github.ref == 'refs/heads/main' }}
+
+    outputs:
+      coverage: ${{ steps.stats.outputs.coverage }}
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install Conda environment with Micromamba
+      uses: mamba-org/setup-micromamba@v2.0.2
+      with:
+        micromamba-version: latest
+        environment-name: test
+        cache-downloads: true
+        create-args: >-
+          pre-commit
+          pytest-cov
+          pytest-mock
+
+    - name: Run pre-commit hooks
+      run: | 
+        micromamba run -n test pre-commit run -a
+
+    - name: Install package
+      shell: "bash -l {0}"
+      run: |
+        pip install --no-cache-dir --upgrade tifffile "imagecodecs>=2023.7.10"
+        pip install -e .[full]
+
+    - name: Run tests with coverage
+      id: stats
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      run: |
+        : # This GITHUB_WORKSPACE is bydefault set to D: driver whereas pytest's tmp_dir 
+        : # default is C: ,thus we create a temp_test folder for pytest's tmp_dir to run on D: as well 
+        pytest -v --cov=tiledb --cov-report=term-missing --durations=0 tests/ > coverage.txt
+        exit_code=$?
+        TEST_COVERAGE="$(grep '^TOTAL' coverage.txt | awk -v N=4 '{print $N}')"
+        echo "coverage=$TEST_COVERAGE" >> $GITHUB_OUTPUT
+        exit $exit_code
+      if: ${{ matrix.sys.os != 'windows-latest' }}
+
+    - name: Run tests with coverage WINDOWS
+      id: stats-win
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      run: |
+        mkdir test_temp
+        micromamba run -n test pytest --basetemp=test_temp -v --cov=tiledb --cov-report=term-missing --durations=0 tests/ --ignore=tests/integration/converters/test_ome_tiff_experimental.py
+      if: ${{ matrix.sys.os == 'windows-latest' }}
+
+    - name: Run notebook examples
+      run: |
+        micromamba run -n test pip install opencv-python-headless matplotlib nbmake 
+        micromamba run -n test pytest --nbmake examples
+      if: ${{ matrix.sys.os != 'windows-latest' }}
+
+
+    - name: Create Test Coverage Badge
+      if: ${{ env.run_coverage == 'true' && matrix.sys.os == 'ubuntu-24.04' }}
+      uses: schneegans/dynamic-badges-action@v1.7.0
+      with:
+        auth: ${{ secrets.COVERAGE_SECRET }}
+        gistID: 32d48185733a4e7375e80e3e35fab452
+        filename: gist_bioimg.json
+        label: Test Coverage
+        message: ${{ steps.stats.outputs.coverage }}
+        color: green
+        namedLogo: pytest
