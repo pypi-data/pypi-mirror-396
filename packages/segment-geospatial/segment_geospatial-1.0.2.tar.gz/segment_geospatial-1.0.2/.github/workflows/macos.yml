@@ -1,0 +1,49 @@
+on:
+    push:
+        branches:
+            - main
+    pull_request:
+        branches:
+            - main
+
+name: macOS build
+jobs:
+    test-macOS:
+        runs-on: ${{ matrix.config.os }}
+        name: ${{ matrix.config.os }} (${{ matrix.config.py }})
+        strategy:
+            fail-fast: false
+            matrix:
+                config:
+                    - { os: macOS-latest, py: "3.12" }
+        defaults:
+            run:
+                shell: bash -el {0}
+        env:
+            SDKROOT: /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
+        steps:
+            - uses: actions/checkout@v6
+
+            - name: Setup micromamba
+              uses: mamba-org/setup-micromamba@v2
+              with:
+                  environment-name: test-env
+                  create-args: >-
+                      python=${{ matrix.config.py }}
+                      gdal
+                      pyproj
+                      -c conda-forge
+                  cache-environment: true
+
+            - name: Test GDAL installation
+              run: |
+                  python -c "from osgeo import gdal"
+                  gdalinfo --version
+
+            - name: Install dependencies
+              run: |
+                  pip install -r requirements.txt
+                  pip install .
+
+            - name: Test import
+              run: python -c "import samgeo; print('samgeo import successful')"
