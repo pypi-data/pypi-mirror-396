@@ -1,0 +1,20 @@
+# -*- coding: utf-8 -*-
+
+import functools
+
+from rest_search import queue_flush
+
+
+def flush_updates(function):
+    """
+    Decorator that flushes OpenSearch updates.
+    """
+
+    @functools.wraps(function)
+    def wrap(*args, **kwargs):
+        try:
+            return function(*args, **kwargs)
+        finally:
+            queue_flush()
+
+    return wrap
