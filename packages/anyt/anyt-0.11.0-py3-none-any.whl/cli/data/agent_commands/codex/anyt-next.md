@@ -1,0 +1,149 @@
+---
+description: Pick the next suggested task from AnyTask cloud
+argument-hint:
+---
+
+Pick and start working on the next available task from AnyTask cloud.
+
+**Purpose:** Automatically select the next task with smallest ID (highest priority among available) and begin implementation.
+
+**IMPORTANT:** Before using this command, ensure you have completed your current task. Use `/clear` to clear context before starting a new task.
+
+---
+
+## Workflow
+
+### 1. Get Available Tasks
+
+```bash
+anyt task suggest --limit 10 --json
+```
+
+- Returns tasks sorted by priority with all dependencies complete
+- Only shows tasks that are ready to work on
+
+### 2. Auto-Select Task
+
+**Selection Rule:** When multiple tasks are available with no blocking dependencies, automatically pick the one with the **smallest task ID** (e.g., DEV-42 before DEV-43).
+
+Do NOT ask the user which task to work on - just pick the smallest ID.
+
+```bash
+anyt task pick {SMALLEST_ID}
+```
+
+### 3. Create Branch
+
+```bash
+git fetch origin
+git checkout -b {IDENTIFIER}-{short-description}
+```
+
+- Use task identifier as branch prefix
+- Add short kebab-case description
+
+### 4. Check Plan Status
+
+Before implementing, check if a plan is required:
+
+```bash
+anyt task plan show {IDENTIFIER}
+```
+
+**If plan status is `changes_requested`:**
+- Review feedback and update the plan
+- Resubmit with: `anyt task plan submit {IDENTIFIER} -f updated-plan.md`
+- Wait for approval before proceeding
+
+**If plan status is `pending`:**
+- Wait for plan approval before implementing
+- Notify user: "Plan is pending review. Implementation will begin after approval."
+
+**If plan status is `approved` or `none`:**
+- Proceed with implementation
+
+### 5. Begin Implementation
+
+Read task details from:
+- `.anyt/tasks/{IDENTIFIER}/task.md` - Description and acceptance criteria
+- `.anyt/tasks/{IDENTIFIER}/.meta.json` - Status, priority, labels
+- `.anyt/tasks/{IDENTIFIER}/context/` - Additional context files
+
+Check for quality checklist at `.anyt/tasks/{IDENTIFIER}/context/quality-checklist.md`:
+- If missing, discover project quality commands from Makefile/package.json and create it
+
+Implement following the acceptance criteria.
+
+**Add progress comments as you work:**
+```bash
+anyt comment add -m "Started implementation of {feature}..."
+anyt comment add -m "Completed {component}, moving to {next step}..."
+```
+
+### 6. Task Completion
+
+**Verify acceptance criteria:**
+- Read `## Acceptance Criteria` in task.md
+- Ensure ALL criteria are met before marking done
+
+**Run quality checks:**
+- Execute commands from `context/quality-checklist.md`
+- All checks must pass
+
+**Mark complete:**
+```bash
+anyt comment add -m "All acceptance criteria verified. Quality checks passed."
+anyt push {IDENTIFIER}
+anyt task done --note "Completed: {summary}"
+```
+
+### 7. Create PR
+
+```bash
+git add -A
+git commit -m "{IDENTIFIER}: {summary}"
+git push -u origin HEAD
+gh pr create --title "{IDENTIFIER}: {title}" --body "$(cat <<'EOF'
+## Summary
+- Brief description of changes
+
+## Task
+- {IDENTIFIER}
+
+## Changes
+- Key changes made
+
+## Test Plan
+- [ ] Quality checklist completed
+- [ ] Manual testing completed
+
+Generated with [Codex CLI](https://github.com/openai/codex)
+EOF
+)"
+```
+
+Return the PR URL to the user.
+
+---
+
+## After Completion
+
+**Tell the user:** "Task complete! Use `/clear` to clear context, then `/anyt-next` to start the next task."
+
+---
+
+## Key Commands
+
+| Command | Description |
+|---------|-------------|
+| `anyt task suggest` | Get available tasks |
+| `anyt task plan show` | Show plan status |
+| `anyt task pick {ID}` | Pick and activate task |
+| `anyt active` | Show current task |
+| `anyt comment add -m "..."` | Add progress comment |
+| `anyt task done` | Mark task complete |
+| `anyt push {ID}` | Sync local changes |
+
+---
+
+Begin picking the next task now. Auto-select the smallest available task ID.
