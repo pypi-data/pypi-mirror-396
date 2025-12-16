@@ -1,0 +1,57 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static %}
+
+{% block extrahead %}
+{{ block.super }}
+<script src="{% static 'admin/js/cancel.js' %}" async></script>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+    &rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+    &rsaquo; {% translate "Confirm reprocessing" %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="module">
+    <h2>{% translate "Confirm Webhook Reprocessing" %}</h2>
+
+    <p>{% blocktrans count count=webhooks|length %}Are you sure you want to reprocess the following webhook event?{% plural %}Are you sure you want to reprocess the following {{ count }} webhook events?{% endblocktrans %}</p>
+
+    <table class="aligned">
+        <thead>
+            <tr>
+                <th>{% translate "ID" %}</th>
+                <th>{% translate "Event Type" %}</th>
+                <th>{% translate "Created" %}</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for webhook in webhooks %}
+            <tr>
+                <td><code>{{ webhook.id|slice:":8" }}</code></td>
+                <td>{{ webhook.get_event_type_display }}</td>
+                <td>{{ webhook.created_at|date:"Y-m-d H:i" }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <form method="post">
+        {% csrf_token %}
+        {% for obj in queryset %}
+            <input type="hidden" name="{{ action_checkbox_name }}" value="{{ obj.pk }}">
+        {% endfor %}
+        <input type="hidden" name="action" value="reprocess_events">
+        <input type="hidden" name="confirm" value="yes">
+
+        <div class="submit-row">
+            <input type="submit" value="{% translate 'Yes, reprocess these webhooks' %}" class="default">
+            <a href="{% url opts|admin_urlname:'changelist' %}" class="button cancel-link deletelink">{% translate 'No, cancel' %}</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
