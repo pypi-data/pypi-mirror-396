@@ -1,0 +1,110 @@
+[build-system]
+requires = ["setuptools>=64.0", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "artefacts_cli"
+authors = [
+  { name="FD", email="fabian@artefacts.com" },
+  { name="AGC", email="alejandro@artefacts.com" },
+  { name="TN", email="tomo@artefacts.com" },
+  { name="EP", email="eric@artefacts.com" },
+]
+description = ""
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+  "artefacts-c2d>=1.7.1",
+  "artefacts-copava>=0.1.12",
+  "artefacts-click",
+  "artefacts-xray>=0.1.7",
+  "gitignore_parser>=0.1.11",
+  "junitparser>=2.5",
+  "mcap",
+  "mcap-ros2-support",
+  "psutil==7.0.0",
+  "PyYAML>=6.0",
+  "requests>=2.27.1",
+  "rospkg",
+  "semver==3.0.4",
+  "urllib3>=2.4.0",
+
+  # Temporary necessary for the OpenAPI SDK as long as a folder and not a package
+  "attrs",
+  "httpx",
+  "httpx_retries",
+]
+dynamic = ["version"]
+
+[tool.setuptools.package-data]
+"*" = ["*.mo"]
+
+[tool.setuptools.exclude-package-data]
+"*" = ["*.po"]
+
+[tool.setuptools_scm]
+version_file = "artefacts/cli/version.py"
+local_scheme = "no-local-version"
+fallback_version = "0.0.0"
+
+[project.optional-dependencies]
+dev = [
+  "awscli",
+  "babel==2.17.0",
+  "build",
+  "docker",
+  "lark",
+  "mkdocs-click==0.8.0",
+  "mkdocs-material==8.5.6",
+  "mkdocs-mermaid2-plugin==0.6.0",
+  "mkdocs==1.4.2",
+  "pre-commit",
+  "pyre-check",
+  "pytest",
+  "pytest-cov",
+  "pytest-env",
+  "pytest-mock",
+  "python-markdown-math",
+  "ruff>=0.9.2",
+  "setuptools_scm>=8",
+  "twine",
+]
+
+dev-extended = [
+  "artefacts_cli[dev]",
+  "pytest-watch",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/art-e-fact/artefacts-client"
+"Bug Tracker" = "https://github.com/art-e-fact/artefacts-client/issues"
+"Changelog" = "https://github.com/art-e-fact/artefacts-client/CHANGELOG.md"
+
+[project.scripts]
+artefacts = "artefacts.cli.app:artefacts"
+
+[tool.ruff]
+# https://docs.astral.sh/ruff/configuration/
+line-length = 88  # default is 88
+exclude = [
+  "*.eggs",
+  "*.git",
+  "*.hg",
+  "*.mypy_cache",
+  "*.pyre",
+  "*.pytest_cache",
+  "*.tox",
+  "*.venv",
+  "_build",
+  "artefacts/cli/version.py", # Troublesome in CI (not part of the repo)
+  "buck-out",
+  "build",
+  "dist",
+  "venv",
+]
+

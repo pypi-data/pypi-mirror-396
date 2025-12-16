@@ -1,0 +1,29 @@
+version: 0.1.0
+
+project: artefacts/cli-run-remote-testing
+
+on:
+  push:
+    jobs:
+      - ros2_turtlesim
+
+jobs:
+  ros2_turtlesim:
+    type: test
+    package:
+      custom:
+        os: public.ecr.aws/artefacts/ros2:humble-turtlesim-noartefacts
+        commands:
+          - cd src
+          - pip3 install .
+    runtime:
+      simulator: turtlesim
+      framework: ros2:humble
+    scenarios:
+      defaults:
+        subscriptions:
+          pose: turtle1/pose
+      settings:
+        - name: turtle
+          launch_test_file: infra-tests/turtlesim2/launch_turtle.py
+

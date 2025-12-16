@@ -1,0 +1,150 @@
+version: 0.1.0
+project: todo
+jobs:
+  missing_launchtest:
+    type: test
+    runtime:
+      simulator: turtlesim
+      framework: ros2:humble
+    scenarios:
+      settings:
+        - name: missing_launchtest
+          launch_test_file: missing_launchtests.py
+  bad_launchtest:
+    type: test
+    runtime:
+      simulator: turtlesim
+      framework: ros2:humble
+    scenarios:
+      settings:
+        - name: bad_launchtest
+          launch_test_file: bad_launch_test.py
+
+  simple_job:
+    type: test
+    runtime:
+      simulator: turtlesim
+      framework: ros2:humble
+    scenarios:
+      settings:
+        - name: basic-tests
+          launch_test_file: launchtests.py
+        - name: other-tests
+          launch_test_file: launchtests.py
+  
+  deprecated_ros_testfile:
+    type: test
+    runtime:
+      simulator: turtlesim
+      framework: ros2:humble
+    scenarios:
+      settings:
+        - name: basic-tests
+          ros_testfile: launchtests.py
+        - name: other-tests
+          ros_testfile: launchtests.py
+  
+  tests:
+    type: test
+    runtime:
+      simulator: turtlesim
+      framework: ros2:humble
+    scenarios:
+      defaults:
+        launch_test_file: launchtests.py
+        params:
+          gravity: [9.807, 1.62]
+      settings:
+        - name: basic-tests
+        - name: param-grid
+          params:
+            gravity: [9.807, 1.62, 0]
+  default_params_only:
+    type: test
+    runtime:
+      simulator: turtlesim
+      framework: ros2:humble
+    scenarios:
+      defaults:
+        launch_test_file: launchtests.py
+        params:
+          seed: [42, 43]
+      settings:
+        - name: default_params_only
+  settings_params_only:
+    type: test
+    runtime:
+      simulator: turtlesim
+      framework: ros2:humble
+    scenarios:
+      defaults:
+        launch_test_file: launchtests.py
+      settings:
+        - name: default_params_only
+          params:
+            seed: [42, 43]
+  settings_and_default_params:
+    type: test
+    runtime:
+      simulator: turtlesim
+      framework: ros2:humble
+    scenarios:
+      defaults:
+        launch_test_file: launchtests.py
+        params:
+          seed: [42, 43]
+      settings:
+        - name: settings_and_default_params
+          params:
+            gravity: [1.62, 0]
+  settings_overwrite_default_params:
+    type: test
+    runtime:
+      simulator: turtlesim
+      framework: ros2:humble
+    scenarios:
+      defaults:
+        launch_test_file: launchtests.py
+        params:
+          seed: [42, 43]
+      settings:
+        - name: settings_overwrite_default_params
+          params:
+            seed: 42
+            gravity: [1.62, 0]
+  settings_overwrite_full:
+    type: test
+    runtime:
+      simulator: turtlesim
+      framework: ros2:humble
+    scenarios:
+      defaults:
+        launch_test_file: launchtests.py
+        params:
+          seed: [42, 43]
+          gravity: [1.62, 0]
+      settings:
+        - name: settings_overwrite_default_params
+          params:
+            seed: 42
+            gravity: [9.807, 1.62, 0]
+        - name: settings_overwrite_default_params
+          params:
+            seed: 42
+  handles_launch_arguments:
+    type: test
+    runtime:
+      simulator: turtlesim
+      framework: ros2:humble
+    scenarios:
+      defaults:
+        launch_test_file: launchtests.py
+        launch_arguments:
+          seed: "42"
+          gravity: "1.62"
+      settings:
+        - name: merge_launch_arguments
+          launch_arguments:
+            gravity: "9.807"
+            target: "goal"
+
