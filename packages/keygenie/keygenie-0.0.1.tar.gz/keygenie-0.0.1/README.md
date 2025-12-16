@@ -1,0 +1,157 @@
+# KeyGenie
+
+鼠标和键盘操作录制工具，自动生成可执行的Python代码。
+
+## 安装与使用
+
+### 方式1：使用 uvx（推荐，无需安装）
+
+无需安装，直接运行：
+
+```bash
+# 录制
+uvx keygenie record
+
+# 回放
+uvx keygenie replay
+
+# 带参数
+uvx keygenie record -d /path/to/save
+uvx keygenie replay /path/to/record.py
+```
+
+### 方式2：传统安装后使用
+
+先安装包，然后使用 `kg` 命令：
+
+```bash
+# 先安装
+pip install keygenie
+
+# 或
+uv pip install keygenie
+
+# 然后使用
+kg record
+kg replay
+```
+
+### 开发模式安装
+
+如果你想从源码开发或修改：
+
+```bash
+# 使用uv安装（推荐）
+uv sync
+uv pip install -e .
+
+# 或使用pip
+pip install -e .
+```
+
+## 使用
+
+### 开始录制
+
+```bash
+kg record
+
+# 指定保存目录
+kg record -d /path/to/save
+```
+
+录制过程中执行操作，按 `Ctrl+C` 或按 `q` 键结束录制。
+
+### 输出文件
+
+录制完成后会在指定目录（默认 `./keygenie_records/`）生成：
+
+- `record.py` - 可执行的Python代码
+- `record.md` - 包含代码和截图的Markdown文档
+- `screenshots/` - 截图文件夹
+
+### 回放录制的操作
+
+```bash
+# 回放最近一次录制
+kg replay
+
+# 回放指定的文件
+kg replay /path/to/record.py
+
+# 在指定目录中查找并回放最新录制
+kg replay -d /custom/path
+```
+
+回放时支持安全机制：
+- 按下 `ESC` 键可立即停止回放
+- 鼠标移动到屏幕边缘时会自动停止回放
+
+### 运行生成的代码
+
+你也可以直接运行生成的 Python 文件：
+
+```bash
+python path/to/record.py
+```
+
+## 功能特性
+
+- 录制鼠标点击、拖拽、滚动操作
+- 录制键盘输入和快捷键
+- 自动保存点击位置截图
+- 生成带像素验证的安全点击代码
+- 自动生成Markdown文档
+- 一键回放录制的操作
+- 回放时支持安全停止机制（ESC键或屏幕边缘检测）
+- 跨平台键盘映射支持（Mac 上正确识别 Command 键）
+
+## 系统要求
+
+- Python >= 3.10
+- macOS / Linux
+- macOS需要授予辅助功能权限（系统设置 → 隐私与安全性 → 辅助功能）
+
+## 项目结构
+
+```
+keygenie/
+├── cli.py              # 命令行接口
+├── constant.py         # 常量定义
+├── recoder/            # 录制模块
+│   └── recorder.py     # 主录制器
+├── runner/             # 运行模块
+│   └── mouse/
+│       └── mouse_operator.py  # 鼠标操作器
+└── utils/              # 工具模块
+    └── decorator.py    # 装饰器
+```
+
+## 示例
+
+生成的代码示例：
+
+```python
+import pyautogui
+from keygenie.runner.mouse.mouse_operator import MouseOperator
+
+mouse_operator = MouseOperator()
+
+mouse_operator.safe_click(219, 54, pixel=(237, 232, 215), tolerance=10)
+# Mac 上会生成 'command'，其他平台会生成 'ctrl'
+pyautogui.hotkey('command', 'c')  # macOS
+# pyautogui.hotkey('ctrl', 'c')    # Linux/Windows
+mouse_operator.drag(100, 100, to_x=200, to_y=200)
+```
+
+### 键盘映射
+
+- **macOS**: `cmd` 键映射为 `command`，`alt` 键映射为 `option`
+- **Linux/Windows**: `cmd` 键映射为 `ctrl`，`alt` 键映射为 `alt`
+
+系统会自动根据运行平台生成正确的键盘映射代码。
+
+
+## 许可证
+
+MIT License
