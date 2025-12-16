@@ -1,0 +1,710 @@
+\section{Logging in to LADOK}
+
+Here we provide the module [[weblogin.ladok]], which serves as a more complex 
+example of how to write a login handler for use with 
+[[weblogin.AutologinSession]].
+
+We will create a login handler for LADOK.
+As LADOK supports logging in using SSO from all Swedish universities, we will 
+use this handler in conjunction with a login handler for a university (for 
+instance the ones for KTH in \cref{KTHhandler,SAMLhandler}).
+
+However, it turns out, that most handlers for the university-specific login 
+services are quite similar.
+And they are all on domains different from LADOK.
+This allows us to actually write a very general login handler that should be 
+able to handle almost any university.
+If this general-purpose handler doesn't work for a particular university, we 
+can always write a handler for that university.
+That way, that handler will intercept the right requests and handle them, 
+before returning to this general-purpose code.
+
+We need a class for LADOK that detects logins to LADOK.
+Then we implement the missing methods in the [[weblogin.AutologinHandler]] 
+class.
+<<ladok.py>>=
+from lxml import html
+from pprint import pprint
+import requests
+import weblogin
+import weblogin.seamlessaccess as sa
+import urllib.parse
+
+class SSOlogin(weblogin.AutologinHandler):
+  """
+  Login handler (weblogin.AutologinHandler) for LADOK logins.
+  """
+  
+  def __init__(self,
+      institution,
+      <<SSOlogin args>>):
+    """
+    Creates a login handler that automates the LADOK part of authentication.
+
+    - Requires `institution`. A string identifying the instutution at 
+      SeamlessAccess.org.
+
+    <<SSOlogin args docs>>
+    """
+    super().__init__()
+    self.__institution = institution
+    self.__logging_in = False
+    <<SSOlogin constructor>>
+
+  def need_login(self, response):
+    """
+    Checks a response to determine if logging in is needed,
+    returns True if needed
+    """
+    if self.__logging_in:
+      return False
+
+    <<check if we're redirected to login server>>
+
+  def login(self, session, response, args=None, kwargs=None):
+    """
+    Performs a login based on the response `response` from a request to session 
+    `session`.
+    `args` and `kwargs` are the options from the request triggering the login 
+    procedure, this is so that we can redo that request after logging in.
+
+    Raises an AuthenticationError exception if authentication fails.
+    """
+    self.__logging_in = True
+    <<log in to login server>>
+    self.__logging_in = False
+
+    if args and response.history:
+      return session.request(*args, **kwargs)
+    return ladok_response
+@
+
+We note that while we're logging in, we don't want those requests interrupted 
+by another login session.
+Hence, we block any new login procedures from starting by setting 
+[[self.__logging_in]].
+
+\subsection{Tests and intended usage}
+
+We will test this by a simple API call to LADOK.
+We will get the record of the currently logged in user from LADOK.
+We will use author's institution for this test, which means only the author can 
+run this test.
+
+Now this illustrates that this login handler only fulfills a small part of the 
+login procedure.
+We need two more handlers in this case, one for the SAML implementation 
+([[weblogin.kth.SAMLlogin]] below) and one for the actual logging in at the 
+institution ([[weblogin.kth.UGlogin]] below).
+<<test ladok.py>>=
+import weblogin
+from weblogin import kth, ladok
+import os
+import requests
+
+def test_get_user_info():
+  ls = weblogin.AutologinSession([
+        ladok.SSOlogin("KTH Royal Institute of Technology"),
+        kth.SAMLlogin(),
+        kth.UGlogin(os.environ["KTH_LOGIN"], os.environ["KTH_PASSWD"])
+      ])
+
+  <<make a request using ls>>
+  <<assert correctness of response>>
+
+def test_multiple_calls():
+  ls = weblogin.AutologinSession([
+        ladok.SSOlogin("KTH Royal Institute of Technology"),
+        kth.SAMLlogin(),
+        kth.UGlogin(os.environ["KTH_LOGIN"], os.environ["KTH_PASSWD"])
+      ])
+
+  <<make a request using ls>>
+  <<assert correctness of response>>
+  <<make a request using ls>>
+  <<assert correctness of response>>
+
+<<more test functions>>
+@
+
+We will use an API request to test that this actually works.
+The API request in question is a request for data about the currently logged-in 
+user.
+This means that we must set up some headers and then make the request.
+<<make a request using ls>>=
+<<set up headers for API request>>
+
+response = ls.get(
+  "https://www.start.ladok.se/gui/proxy"
+    "/kataloginformation/internal/anvandare/anvandarinformation",
+  headers=headers
+)
+@
+
+The headers are then:
+<<set up headers for API request>>=
+headers = {}
+headers["Accept"] =       "application/vnd.ladok-resultat+json"
+headers["Accept"] +=    ", application/vnd.ladok-kataloginformation+json"
+headers["Accept"] +=    ", application/vnd.ladok-extra+json"
+headers["Accept"] +=    ", application/json, text/plain"
+headers["Content-Type"] = "application/vnd.ladok-kataloginformation+json"
+@
+
+Once we've made the request, we must assert that the response is what is 
+expected.
+In this case, the email entry should be the same as the author's institution 
+email address.
+<<assert correctness of response>>=
+assert response.status_code == requests.codes.ok \
+    and response.json()["Epost"] == "dbosk@kth.se"
+@
+
+\subsection{Check if we need to log in to LADOK}
+
+There are two cases:
+\begin{enumerate}
+\item We get a 401 unauthorized for a [[ladok.se]] URL.
+\item We get redirected to the login server.
+\end{enumerate}
+Thus, we can detect this with either the return code or if the URL starts with 
+the URL to the login service, then we need to log in.
+However, as noted above, this only applies if we're not already underway with a 
+login.
+<<check if we're redirected to login server>>=
+if response.status_code == requests.codes.unauthorized \
+     and "ladok.se" in response.url:
+  return True
+elif response.url.startswith(self.__login_url):
+  return True
+
+return False
+@
+
+The login URL\footnote{%
+  LADOK updated the URLs in December 2025.
+} is different for the test system and the production system.
+We want to be able to handle both.
+We add a default argument to the constructor, we default to the production 
+system URL.
+<<SSOlogin args>>=
+test_environment=False,
+<<SSOlogin constructor>>=
+if test_environment:
+  self.__base_url = "https://start.test.ladok.se"
+else:
+  self.__base_url = "https://start.ladok.se"
+
+self.__login_url = f"{self.__base_url}/gui/loggain"
+@
+
+We test if this works.
+<<more test functions>>=
+def test_test_environment():
+  ls = weblogin.AutologinSession([
+        ladok.SSOlogin("KTH Royal Institute of Technology",
+                       test_environment=True),
+        kth.SAMLlogin(),
+        kth.UGlogin(os.environ["KTH_LOGIN"], os.environ["KTH_PASSWD"])
+      ])
+
+  <<set up headers for API request>>
+  <<make a request to the test environment using ls>>
+  <<assert correctness of response>>
+@
+
+Now, this request is going to be very similar to
+[[<<make a request using ls>>]] from above, we just change the URL.
+<<make a request to the test environment using ls>>=
+response = ls.get(
+  "https://www.test.ladok.se/gui/proxy"
+    "/kataloginformation/internal/anvandare/anvandarinformation",
+  headers=headers
+)
+@
+
+
+\subsection{Log in to LADOK}\label{LogIntoLADOK}
+
+If we need to log in we have a few steps to do:
+<<log in to login server>>=
+<<start ladok login>>
+<<fetch return URL from LADOK's SeamlessAccess request>>
+<<fetch institution SAML URL from SeamlessAccess>>
+<<run return request with added institution SAML URL as entityID>>
+@ Once these steps are completed, the institution SAML and login handler should 
+take over.
+(These steps are all inferred from logging into LADOK using the web browser.)
+
+This takes place in the body of
+\begin{center}
+[[login(self, session, response, args=None, kwargs=None)]].
+\end{center}
+So those arguments are what we have to work with.
+
+We don't really need the [[/gui/loggain]] page, we simply start the login with 
+the following URL\footnote{%
+  This was changed by LADOK during October 2024.
+  Seems like they've constructed this SWAMID service that they're using 
+  instead.
+} and it will trigger the steps needed.
+<<start ladok login>>=
+response = session.get(f"{self.__base_url}/Shibboleth.sso/Logout"
+                       f"?return={self.__base_url}/gui/auth/swamid/login")
+@
+
+That URL will redirect to SeamlessAccess.org.
+But instead of using that page, we use the [[weblogin.seamlessaccess]] module.
+The aim is to find the URL to the institution's SAML server, which we do later.
+Since we don't use it, we want to extract the return URL, because that contains 
+some session information for the SAML request later.
+<<fetch return URL from LADOK's SeamlessAccess request>>=
+parsed_url = urllib.parse.urlparse(response.url, allow_fragments=False)
+if "seamlessaccess.org" not in parsed_url.netloc:
+  raise weblogin.AuthenticationError(
+                  f"seamlessaccess.org not in {parsed_url.netloc}")
+
+return_url = urllib.parse.unquote(
+                        urllib.parse.parse_qs(parsed_url.query)["return"][0])
+@
+
+Now we actually fetch the SAML server URL, which is called by [[entityID]].
+If there is an error here, we'd like to know what caused the error.
+So we'd like the exceptions to contain the data that caused the error.
+<<fetch institution SAML URL from SeamlessAccess>>=
+try:
+  if "{sha1}" in self.__institution:
+    sa_data = sa.get_entity_data_by_id(self.__institution)
+  else:
+    sa_data = sa.find_entity_data_by_name(self.__institution)
+    sa_data = sa_data[0]
+
+  entityID = sa_data["entityID"]
+except IndexError:
+  raise ValueError(f"{self.__institution} didn't give any match.")
+except KeyError:
+  raise Exception(f"SeamlessAccess.org returned unexpected result: {sa_data}")
+@
+
+Finally, we append that to the return URL and make the request.
+We note that we can return the response to this last request.
+This response will be intercepted by the other login handlers and eventually 
+the real response will be returned to the original request.
+<<run return request with added institution SAML URL as entityID>>=
+if "?" in return_url:
+  return_url += f"&entityID={entityID}"
+else:
+  return_url += f"?entityID={entityID}"
+
+ladok_response = session.get(return_url)
+@
+
+\subsection{Log into any university}
+
+Now, here is the trick.
+If we don't have any other [[AutologinHandler]] objects handling the logins to 
+the specific university, the [[ladok_response]] of
+[[<<run return request with added institution SAML URL as entityID>>]] will 
+contain a page in the login process of the university.
+These pages just contain [[<form>...<input>...</input>...</form>]] elements 
+that need to be posted.
+In most cases, we just need the default values.
+The only time we need to add values, are for the username and password fields.
+Fortunately, those are most often called [[username]] and [[password]] by the 
+universities, so we can look for them and fill them when they show up.
+
+However, we can do better.
+We can take a dictionary where the keys match variable names in these forms, if 
+we have a match, we use the value as value when we post the form.
+This way, for most universities we can simply do:
+\begin{minted}{json}
+{
+  "username": "dbosk",
+  "password": "my secret password"
+}
+\end{minted}
+But for any university login portal that uses other variable names, we can 
+simply change the keys in the dictionary:
+\begin{minted}{json}
+{
+  "användarnamn": "dbosk",
+  "lösenord": "my secret password"
+}
+\end{minted}
+
+We can modify the test above to skip the KTH-specific handlers that we 
+added, otherwise it remains the same.
+<<more test functions>>=
+def test_no_KTH_specific_handler():
+  ls = weblogin.AutologinSession([
+          ladok.SSOlogin("KTH Royal Institute of Technology",
+                         vars={
+                           "username": f"{os.environ['KTH_LOGIN']}@ug.kth.se",
+                           "password": os.environ["KTH_PASSWD"]
+                         })
+        ])
+
+  <<make a request using ls>>
+  <<assert correctness of response>>
+
+def test_SSOlogin_multiple_requests():
+  ls = weblogin.AutologinSession([
+          ladok.SSOlogin("KTH Royal Institute of Technology",
+                         vars={
+                           "username": f"{os.environ['KTH_LOGIN']}@ug.kth.se",
+                           "password": os.environ["KTH_PASSWD"]
+                         })
+        ])
+
+  <<make a request using ls>>
+  <<assert correctness of response>>
+  <<make a request using ls>>
+  <<assert correctness of response>>
+
+def test_test_environment_SSOlogin():
+  ls = weblogin.AutologinSession([
+        ladok.SSOlogin("KTH Royal Institute of Technology",
+                       vars={
+                         "username": f"{os.environ['KTH_LOGIN']}@ug.kth.se",
+                         "password": os.environ["KTH_PASSWD"]
+                       },
+                       test_environment=True)
+      ])
+
+  <<set up headers for API request>>
+  <<make a request to the test environment using ls>>
+  <<assert correctness of response>>
+@
+
+We would also like to test if we can detect failed authentication.
+<<more test functions>>=
+def test_wrong_credentials():
+  ls = weblogin.AutologinSession([
+          ladok.SSOlogin("KTH Royal Institute of Technology",
+                         vars={
+                           "username": "invalid user",
+                           "password": "this is the wrong password"
+                         })
+        ])
+
+  try:
+    <<make a request using ls>>
+  except weblogin.AuthenticationError:
+    assert True
+  else:
+    assert False
+@
+
+Now that design requires an additional argument (a default argument) to the 
+constructor.
+<<SSOlogin args docs>>=
+- An optional argument `vars` containing keys matching variables of the web 
+  page forms whose values should be substituted for the values in the `vars` 
+  dictionary. Note that the keys should be casefolded (lower case), since we 
+  use `.casefold` to match variable names.
+@
+We use the default value of [[None]], since an empty dictionary can cause 
+unintended consequences due to its mutability\footnote{%
+  See for instance 
+  \url{https://www.inspiredpython.com/article/watch-out-for-mutable-defaults-in-function-arguments}.
+}.
+<<SSOlogin args>>=
+vars=None,
+<<SSOlogin constructor>>=
+self.__vars = vars or {}
+@
+
+Now, if the other login handlers intercepted the requests, the final URL will 
+be one on the [[ladok.se]] domain.
+This means that we can just iterate until that happens.
+Whenever we encounter a form, we simply fill it and post it (or get, whatever 
+method is specified by the form).
+<<log in to login server>>=
+<<init structure to detect infinite loops>>
+while "ladok.se" not in \
+    urllib.parse.urlparse(ladok_response.url, allow_fragments=False).netloc:
+  <<find form>>
+  <<extract data and substitute variables>>
+  <<submit form>>
+@
+
+There are a variety of forms that we might encounter.
+Consider the examples in
+\cref{LadokRedirectPost,LadokConfirmDatasharing}.
+
+\begin{figure}
+\centering
+\includegraphics[width=0.8\linewidth]{figs/LadokRedirectPost.png}
+\caption{\label{LadokRedirectPost}%
+  A form that redirects to another URL, usually executed automatically with 
+  JavaScript.%
+}
+\end{figure}
+
+\begin{figure}
+\centering
+\includegraphics[width=0.8\linewidth]{figs/LadokConfirmDatasharing.png}
+\caption{\label{LadokConfirmDatasharing}%
+  A form that asks the user to confirm data sharing.%
+}
+\end{figure}
+
+Now, to find the form we must parse it.
+Then we'll use XPath to find it.
+<<find form>>=
+doc_tree = html.fromstring(ladok_response.text)
+try:
+  form = doc_tree.xpath("//form")[0]
+except IndexError:
+  raise weblogin.AuthenticationError(f"Got page without any form and "
+                                     f"not on LADOK: {ladok_response}")
+@
+
+Next, we want to extract default values from the forms variables and substitute 
+if needed.
+We get the form variables by iterating over the [[<input>]] elements, which we 
+do by the XPath expression [[.//input]].
+Note the leadning period ([[.]]), which means that we start from the current 
+node.
+Without it, we would get all the [[<input>]] elements in the document.
+That would cause problems further down the line, we'll get back to that.
+<<extract data and substitute variables>>=
+data = {}
+
+for var in form.xpath(".//input"):
+  if var.name:
+    varname_casefold = var.name.casefold()
+    if varname_casefold in self.__vars:
+      data[var.name] = self.__vars[varname_casefold]
+    else:
+      <<set value in [[data]] for existing variables [[var]]>>
+@
+
+There are some things we need to consider about these variables.
+\begin{enumerate}
+\item If a variable is given a value several times, we should make a 
+list\footnote{%
+  This doesn't seem like standard behaviour, because the [[lxml]] library 
+  doesn't do this.
+  See
+  [[<<extract data and substitute variables, new attempt>>]] below.
+}.
+This happens in \cref{LadokConfirmDatasharing}.
+Here the problem with the XPath [[//input]] (no leading period) mentioned above 
+arises.
+Without the period the username will occur twice (it's also in another form on 
+the same page), making it a list and triggering a 500 error from the server.
+\item If the [[<input>]] element is of the type radio button, we should check 
+which is checked (the default).
+If it's not checked, we ignore it and proceed to the next.
+This happens in \cref{LadokConfirmDatasharing}.
+\end{enumerate}
+<<set value in [[data]] for existing variables [[var]]>>=
+if var.type == "radio":
+  if var.checked:
+    data[var.name] = var.value
+elif var.name in data:
+  if isinstance(data[var.name], list):
+    data[var.name].append(var.value)
+  else:
+    data[var.name] = [data[var.name], var.value]
+else:
+  data[var.name] = var.value or ""
+@
+
+A better approach than the one above seems to be to use [[form.inputs]], which 
+is a dictionary containing all input elements of the form.
+This also handles the radio buttons of \cref{LadokConfirmDatasharing} 
+correctly, so that we only need to do [[element.value]] even for that group.
+<<extract data and substitute variables, new attempt>>=
+data = {}
+
+for name, element in form.inputs.items():
+  name_casefold = name.casefold()
+  if name_casefold in self.__vars:
+    data[name] = self.__vars[name_casefold]
+  else:
+    data[name] = element.value
+@ But, unfortunately, this doesn't handle multiple [[<input>]] elements with 
+the same name.
+It just gives one of them, instead of making a list\footnote{%
+  This is why I think this might not be standard behaviour.
+}.
+This code would have otherwise been much better.
+
+In some cases, there is a named button (\cref{LadokConfirmDatasharing} has 
+\enquote{Proceed} and \enquote{Cancel}).
+We must include that in the data, that we selected to proceed instead of 
+cancel.
+<<extract data and substitute variables>>=
+for button in form.xpath("//button"):
+  name = button.get("name")
+  if button.get("type") == "submit" and "proceed" in name:
+    data[name] = ""
+@
+
+Finally, we submit the form.
+We must extract the form method and the action to construct the URL for the 
+request.
+
+We also try to detect infinite loops, and in such cases, raise an exception.
+In that case, we include [[data]] in the exception, as that contains all 
+variables that must be set correctly, and can, thus, be used to discover which 
+variables to set.
+(See \cref{DiscoverVariables}.)
+<<submit form>>=
+<<store data to detect infinite loops>>
+
+action_url = urllib.parse.urljoin(ladok_response.url, form.action)
+ladok_response = session.request(form.method, action_url, data=data)
+
+<<if we're in a loop>>:
+  err = weblogin.AuthenticationError(f"infinite loop for "
+                                     f"URL: {action_url}\n"
+                                     f"data: {data}")
+  err.variables = data
+  raise err
+@
+
+To detect infinite loops, we check if the URL is the same as any previous URL.
+To be able to detect longer loops, rather than just the previous URL being the 
+same, we store the data in a dictionary with the URLs as keys.
+However, in some cases, the same URL will occur more than once,
+even if there is no infinite loop.
+For example, the page in \cref{LadokConfirmDatasharing} will be followed by the 
+page in \cref{LadokRedirectPost}---both will have the same URL.
+However, as we can see, the contents will differ, particularly the inputs in 
+the forms.
+Whereas when we have an infinite loop (for example, when we use the wrong 
+password), the contents will be the same.
+So we'll use this fact.
+<<init structure to detect infinite loops>>=
+prev = {}
+<<store data to detect infinite loops>>=
+inputs = html.fromstring(ladok_response.text).xpath("//form")[0].inputs.keys()
+prev[ladok_response.url] = inputs
+@ Once we've made the request, we'll have a new response in [[ladok_response]].
+So we can extract the new forms and perform the check.
+Of course, some pages might not contain any form.
+<<if we're in a loop>>=
+try:
+  new_inputs = \
+    html.fromstring(ladok_response.text).xpath("//form")[0].inputs.keys()
+except IndexError:
+  new_inputs = None
+if ladok_response.url in prev and new_inputs == prev[ladok_response.url]
+@ (Note that we don't want the ending colon in the [[if]] statement, because we 
+already have it in [[<<submit form>>]].)
+
+Let's test that this works.
+We'll start by providing a wrong password (username as well), so that the login 
+will fail.
+This way we'll get back to the same page over and over.
+<<more test functions>>=
+def test_SSOlogin_infinite_loop():
+  ls = weblogin.AutologinSession([
+          ladok.SSOlogin("KTH Royal Institute of Technology",
+                         vars={
+                            "username": "invalid user",
+                            "password": "this is the wrong password"
+                          })
+        ])
+
+  try:
+    <<make a request using ls>>
+  except weblogin.AuthenticationError as err:
+    assert "infinite loop" in str(err)
+  else:
+    assert False
+@
+
+We'll do the same test again, but this time, we don't provide any credentials 
+at all.
+This case returned a 500 error when we used [[//input]] instead of [[.//input]] 
+above.
+<<more test functions>>=
+def test_SSOlogin_infinite_loop_no_credentials():
+  ls = weblogin.AutologinSession([
+          ladok.SSOlogin("KTH Royal Institute of Technology")
+        ])
+
+  try:
+    <<make a request using ls>>
+  except weblogin.AuthenticationError as err:
+    assert "infinite loop" in str(err)
+  else:
+    assert False
+@
+
+\subsection{Finding which variables to set}\label{DiscoverVariables}
+
+Since some universities might call the variables [[username]] and [[password]], 
+but others call them [[användarnamn]] and [[lösenord]], we need a way to 
+explore this.
+Fortunately, we get that from the exception in [[<<submit form>>]].
+
+We will now illustrate how to use it.
+We can use it like this for KTH.
+Note that we must make a request, but we don't care about the result of that 
+request (it will fail anyway).
+\begin{pyblock}
+from pprint import pprint
+import weblogin
+import weblogin.ladok
+
+ls = weblogin.AutologinSession([
+    weblogin.ladok.SSOlogin("KTH Royal Institute of Technology")
+  ])
+
+try:
+  ls.get("https://www.start.ladok.se/gui/proxy"
+         "/kataloginformation/internal/anvandare/anvandarinformation")
+except weblogin.AuthenticationError as err:
+  print("Authentication failed. These are the variables and values used: ")
+  pprint(err.variables)
+\end{pyblock}
+Then the output will be like this:
+\printpythontex[verbatim]
+
+We can redo this experiment for two more universities.
+First, Chalmers:
+\begin{pycode}
+import weblogin
+import weblogin.ladok
+
+print(r"\begin{verbatim}")
+
+ls = weblogin.AutologinSession([
+    weblogin.ladok.SSOlogin("Chalmers")
+  ])
+
+try:
+  ls.get("https://www.start.ladok.se/gui/proxy"
+        "/kataloginformation/internal/anvandare/anvandarinformation")
+except weblogin.AuthenticationError as err:
+  print("Authentication failed. These are the variables and values used: ")
+  pprint(err.variables)
+
+print(r"\end{verbatim}")
+\end{pycode}
+Second, Mid Sweden University:
+\begin{pycode}
+import weblogin
+import weblogin.ladok
+
+print(r"\begin{verbatim}")
+
+ls = weblogin.AutologinSession([
+    weblogin.ladok.SSOlogin("Mid Sweden University")
+  ])
+
+try:
+  ls.get("https://www.start.ladok.se/gui/proxy"
+        "/kataloginformation/internal/anvandare/anvandarinformation")
+except weblogin.AuthenticationError as err:
+  print("Authentication failed. These are the variables and values used: ")
+  pprint(err.variables)
+
+print(r"\end{verbatim}")
+\end{pycode}
+
