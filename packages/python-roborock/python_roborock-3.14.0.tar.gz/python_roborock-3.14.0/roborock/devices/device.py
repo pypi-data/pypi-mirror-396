@@ -1,0 +1,263 @@
+"""Module for Roborock devices.
+
+This interface is experimental and subject to breaking changes without notice
+until the API is stable.
+"""
+
+import asyncio
+import datetime
+import logging
+from abc import ABC
+from collections.abc import Callable, Mapping
+from typing import Any, TypeVar, cast
+
+from roborock.callbacks import CallbackList
+from roborock.data import HomeDataDevice, HomeDataProduct
+from roborock.exceptions import RoborockException
+from roborock.roborock_message import RoborockMessage
+from roborock.util import RoborockLoggerAdapter
+
+from .channel import Channel
+from .traits import Trait
+from .traits.traits_mixin import TraitsMixin
+
+_LOGGER = logging.getLogger(__name__)
+
+__all__ = [
+    "DeviceReadyCallback",
+    "RoborockDevice",
+]
+
+# Exponential backoff parameters
+MIN_BACKOFF_INTERVAL = datetime.timedelta(seconds=10)
+MAX_BACKOFF_INTERVAL = datetime.timedelta(minutes=30)
+BACKOFF_MULTIPLIER = 1.5
+START_ATTEMPT_TIMEOUT = datetime.timedelta(seconds=5)
+
+
+DeviceReadyCallback = Callable[["RoborockDevice"], None]
+
+
+class RoborockDevice(ABC, TraitsMixin):
+    """A generic channel for establishing a connection with a Roborock device.
+
+    Individual channel implementations have their own methods for speaking to
+    the device that hide some of the protocol specific complexity, but they
+    are still specialized for the device type and protocol.
+
+    Attributes of the device are exposed through traits, which are mixed in
+    through the TraitsMixin class. Traits are optional and may not be present
+    on all devices.
+    """
+
+    def __init__(
+        self,
+        device_info: HomeDataDevice,
+        product: HomeDataProduct,
+        channel: Channel,
+        trait: Trait,
+    ) -> None:
+        """Initialize the RoborockDevice.
+
+        The device takes ownership of the channel for communication with the device.
+        Use `connect()` to establish the connection, which will set up the appropriate
+        protocol channel. Use `close()` to clean up all connections.
+        """
+        TraitsMixin.__init__(self, trait)
+        self._duid = device_info.duid
+        self._logger = RoborockLoggerAdapter(self._duid, _LOGGER)
+        self._name = device_info.name
+        self._device_info = device_info
+        self._product = product
+        self._channel = channel
+        self._connect_task: asyncio.Task[None] | None = None
+        self._unsub: Callable[[], None] | None = None
+        self._ready_callbacks = CallbackList["RoborockDevice"]()
+        self._has_connected = False
+
+    @property
+    def duid(self) -> str:
+        """Return the device unique identifier (DUID)."""
+        return self._duid
+
+    @property
+    def name(self) -> str:
+        """Return the device name."""
+        return self._name
+
+    @property
+    def device_info(self) -> HomeDataDevice:
+        """Return the device information.
+
+        This includes information specific to the device like its identifier or
+        firmware version.
+        """
+        return self._device_info
+
+    @property
+    def product(self) -> HomeDataProduct:
+        """Return the device product name.
+
+        This returns product level information such as the model name.
+        """
+        return self._product
+
+    @property
+    def is_connected(self) -> bool:
+        """Return whether the device is connected."""
+        return self._channel.is_connected
+
+    @property
+    def is_local_connected(self) -> bool:
+        """Return whether the device is connected locally.
+
+        This can be used to determine if the device is reachable over a local
+        network connection, as opposed to a cloud connection. This is useful
+        for adjusting behavior like polling frequency.
+        """
+        return self._channel.is_local_connected
+
+    def add_ready_callback(self, callback: DeviceReadyCallback) -> Callable[[], None]:
+        """Add a callback to be notified when the device is ready.
+
+        A device is considered ready when it has successfully connected. It may go
+        offline later, but this callback will only be called once when the device
+        first connects.
+
+        The callback will be called immediately if the device has already previously
+        connected.
+        """
+        remove = self._ready_callbacks.add_callback(callback)
+        if self._has_connected:
+            callback(self)
+
+        return remove
+
+    async def start_connect(self) -> None:
+        """Start a background task to connect to the device.
+
+        This will give a moment for the first connection attempt to start so
+        that the device will have connections established -- however, this will
+        never directly fail.
+
+        If the connection fails, it will retry in the background with
+        exponential backoff.
+
+        Once connected, the device will remain connected until `close()` is
+        called. The device will automatically attempt to reconnect if the connection
+        is lost.
+        """
+        start_attempt: asyncio.Event = asyncio.Event()
+
+        async def connect_loop() -> None:
+            backoff = MIN_BACKOFF_INTERVAL
+            try:
+                while True:
+                    try:
+                        await self.connect()
+                        start_attempt.set()
+                        self._has_connected = True
+                        self._ready_callbacks(self)
+                        return
+                    except RoborockException as e:
+                        start_attempt.set()
+                        self._logger.info("Failed to connect (retry %s): %s", backoff.total_seconds(), e)
+                        await asyncio.sleep(backoff.total_seconds())
+                        backoff = min(backoff * BACKOFF_MULTIPLIER, MAX_BACKOFF_INTERVAL)
+            except asyncio.CancelledError:
+                self._logger.debug("connect_loop was cancelled for device %s", self.duid)
+                # Clean exit on cancellation
+                return
+            finally:
+                start_attempt.set()
+
+        self._connect_task = asyncio.create_task(connect_loop())
+
+        try:
+            await asyncio.wait_for(start_attempt.wait(), timeout=START_ATTEMPT_TIMEOUT.total_seconds())
+        except TimeoutError:
+            self._logger.debug("Initial connection attempt took longer than expected, will keep trying in background")
+
+    async def connect(self) -> None:
+        """Connect to the device using the appropriate protocol channel."""
+        if self._unsub:
+            raise ValueError("Already connected to the device")
+        unsub = await self._channel.subscribe(self._on_message)
+        self._logger.info("Connecting to device")
+        if self.v1_properties is not None:
+            try:
+                await self.v1_properties.discover_features()
+            except RoborockException:
+                unsub()
+                raise
+        self._unsub = unsub
+
+    async def close(self) -> None:
+        """Close all connections to the device."""
+        if self._connect_task:
+            self._connect_task.cancel()
+            try:
+                await self._connect_task
+            except asyncio.CancelledError:
+                pass
+        if self._unsub:
+            self._unsub()
+            self._unsub = None
+
+    def _on_message(self, message: RoborockMessage) -> None:
+        """Handle incoming messages from the device."""
+        self._logger.debug("Received message from device: %s", message)
+
+    def diagnostic_data(self) -> dict[str, Any]:
+        """Return diagnostics information about the device."""
+        extra: dict[str, Any] = {}
+        if self.v1_properties:
+            extra["traits"] = _redact_data(self.v1_properties.as_dict())
+        return {
+            "device": _redact_data(self.device_info.as_dict()),
+            "product": _redact_data(self.product.as_dict()),
+            **extra,
+        }
+
+
+T = TypeVar("T")
+
+REDACT_KEYS = {
+    # Potential identifiers
+    "duid",
+    "localKey",
+    "mac",
+    "bssid",
+    "sn",
+    "ip",
+    "u",
+    "s",
+    "h",
+    "k",
+    # Large binary blobs are entirely omitted
+    "image_content",
+    "map_data",
+    "raw_api_response",
+}
+REDACTED = "**REDACTED**"
+
+
+def _redact_data(data: T) -> T | dict[str, Any]:
+    """Redact sensitive data in a dict."""
+    if not isinstance(data, (Mapping, list)):
+        return data
+
+    if isinstance(data, list):
+        return cast(T, [_redact_data(item) for item in data])
+
+    redacted = {**data}
+
+    for key, value in redacted.items():
+        if key in REDACT_KEYS:
+            redacted[key] = REDACTED
+        elif isinstance(value, dict):
+            redacted[key] = _redact_data(value)
+        elif isinstance(value, list):
+            redacted[key] = [_redact_data(item) for item in value]
+
+    return redacted
