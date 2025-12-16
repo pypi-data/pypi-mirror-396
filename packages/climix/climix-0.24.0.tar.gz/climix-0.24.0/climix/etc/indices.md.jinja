@@ -1,0 +1,48 @@
+(available-indices)=
+# Available Climate Indices
+
+The following indices are available, categorized by the defining distribution.
+
+{% for distribution in distributions.keys()|sort(attribute="name") %}
+{% set indices = distributions[distribution] %}
+## {{ distribution.name }} ({{ distribution.version }})
+{% for index, definition in indices.items() %}
+(idx-{{ index }})=
+### {{ index }}
+| Field          | Description                          |
+|----------------|--------------------------------------|
+| Distribution | {{ definition.distribution.name }}-{{ definition.distribution.version }} |
+| Long name      | {{ definition.output.long_name }}    |
+| Reference      | {{ definition.reference }}           |
+| Default period | {{ definition.default_period }}      |
+| **Input**      |                                      |
+{% for key, input in definition.input.items() -%}
+| {{ key }} | {{ input.var_name }} |
+{% endfor -%}
+:::{collapse} Details
+| Field              | Description                          |
+|--------------------|--------------------------------------|
+| **Index function** | {{ definition.index_function.name }} |
+{% for name, param in definition.index_function.parameters.items() -%}
+| *{{ name }}* |                  |
+| kind         | {{ param.kind }} |
+{% if param.kind == "operator" -%}
+| operator | {{ param.operator }} |
+{% elif param.kind == "reducer" -%}
+| reducer | {{ param.reducer }} |
+{% elif param.kind == "quantity" -%}
+| long name | {{ param.long_name }} |
+| var_name | {{ param.var_name }} |
+| standard_name | {{ param.standard_name }} |
+| proposed_standard_name | {{ param.proposed_standard_name }} |
+| value | {{ param.data }} {{ param.units }}|
+{% elif param.kind == "time_range" -%}
+| data | {{ param.data }} |
+{% else %}
+{{ raise(param.kind) }}
+{% endif -%}
+{% endfor -%}
+:::
+
+{% endfor %}
+{% endfor %}
