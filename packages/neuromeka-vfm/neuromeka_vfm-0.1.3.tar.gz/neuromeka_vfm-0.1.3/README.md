@@ -1,0 +1,113 @@
+# neuromeka_vfm
+
+클라이언트 PC에서 Segmentation (SAM2, Grounding DINO), Pose Estimation (NVIDIA FoundationPose) 서버(RPC, ZeroMQ)와 통신하고, SSH/SFTP로 호스트에 mesh를 업로드하는 간단한 유틸 패키지입니다.
+
+- Website: http://www.neuromeka.com
+- Source code: https://github.com/neuromeka-robotics/neuromeka_vfm
+- PyPI package: https://pypi.org/project/neuromeka_vfm/
+- Documents: https://docs.neuromeka.com
+
+## VFM (Vision Foundation Model) latency benchmark
+로컬 서버 구동 시 측정. 빈칸은 아직 미측정 항목입니다. 
+
+**RTX 5060**
+| Task | Prompt | None (s) | JPEG (s) | PNG (s) | h264 (s) |
+| --- | --- | --- | --- | --- | --- |
+| Grounding DINO | text (human . cup .) | 0.86 | 0.35 | 0.50 | 0.52 |
+| DINOv2 | image prompt | 0.85 | 0.49 | 0.65 | 0.63 |
+| SAM2 | - |  |  |  |  |
+| FoundationPose registration | - |  |  |  |  |
+| FoundationPose track | - |  |  |  |  |
+
+**RTX 5090**
+| Task | Prompt | None (s) | JPEG (s) | PNG (s) | h264 (s) |
+| --- | --- | --- | --- | --- | --- |
+| Grounding DINO | text (human . cup .) |  |  |  |  |
+| DINOv2 | image prompt |  |  |  |  |
+| SAM2 | - |  |  |  |  |
+| FoundationPose registration | - |  |  |  |  |
+| FoundationPose track | - |  |  |  |  |
+
+
+## Installation
+```bash
+pip install neuromeka_vfm
+```
+
+## 사용 예
+### Python API
+```python
+from neuromeka_vfm import PoseEstimation, upload_mesh
+# (옵션) Realtime segmentation client도 포함됩니다.
+
+# 1) 서버로 mesh 업로드 (호스트 경로는 컨테이너에 -v로 마운트된 곳)
+upload_mesh(
+    host="192.168.10.72",
+    user="user",
+    password="pass",          # 또는 key="~/.ssh/id_rsa"
+    local="mesh/123.stl",
+    remote="/home/user/meshes/123.stl",
+)
+
+# 2) PoseEstimation 클라이언트
+pose = PoseEstimation(host="192.168.10.72", port=5557)
+pose.init(mesh_path="/app/modules/foundation_pose/mesh/123.stl")
+# ...
+pose.close()
+
+# 3) Realtime segmentation client (예)
+from neuromeka_vfm import Segmentation
+seg = Segmentation(
+    hostname="192.168.10.63",
+    port=5432,                     # 해당 도커/서버 포트
+    compression_strategy="png",    # none | png | jpeg | h264
+    benchmark=False,
+)
+# seg.register_first_frame(...)
+# seg.get_next(...)
+# seg.reset()
+# seg.finish()
+```
+
+## 주의
+- `remote`는 **호스트** 경로입니다. 컨테이너 실행 시 `-v /home/user/meshes:/app/modules/foundation_pose/mesh`처럼 마운트하면, 업로드 직후 컨테이너에서 접근 가능합니다.
+- RPC 포트(기본 5557)는 서버가 `-p 5557:5557`으로 노출되어 있어야 합니다.
+
+
+
+## API 레퍼런스 (Python)
+
+### PoseEstimation (FoundationPose RPC)
+- `PoseEstimation(host=None, port=None)`
+    - `host`: FoundationPose 도커 서버가 구동 중인 PC의 IP.
+    - `port`: 5557
+- `init(mesh_path, apply_scale=1.0, force_apply_color=False, apply_color=(160,160,160), est_refine_iter=10, track_refine_iter=3, min_n_views=40, inplane_step=60)`: 서버에 메쉬 등록 및 초기화.
+- `register(rgb, depth, mask, K, iteration=None, check_vram=True)`: 첫 프레임 등록. `iteration`을 생략하면 서버 기본 반복 횟수를 사용하며, `check_vram=False`로 두면 GPU 메모리 사전 체크를 건너뜁니다.
+- `track(rgb, depth, K, iteration=None, bbox_xywh=None)`: 추적/갱신. `bbox_xywh` 제공 시 해당 영역으로 탐색 범위를 좁힙니다.
+- `reset()`: 세션 리셋.
+- `reset_object()`: 캐시된 메쉬로 서버 측 `reset_object` 재호출.
+- `close()`: ZeroMQ 소켓/컨텍스트 정리 (사용 후 필수 호출 권장).
+
+### Segmentation (실시간 SAM2/GroundingDINO)
+- `Segmentation(hostname, port, compression_strategy="none", benchmark=False)`:
+    - `compression_strategy`: `none|png|jpeg|h264`
+    - `hostname`: 세그멘테이션 도커 서버가 구동 중인 PC의 IP.
+- `add_image_prompt(object_name, object_image)`: 이미지 프롬프트 등록.
+- `register_first_frame(frame, prompt, use_image_prompt=False) -> bool`: 첫 프레임 등록, 성공 시 `True` 반환. `use_image_prompt=True`면 모든 이름을 사전에 `add_image_prompt`로 등록해야 합니다(누락 시 `ValueError`).
+- `get_next(frame) -> dict[obj_id, mask] | None`: 다음 프레임 세그멘테이션/트래킹 결과.
+- `switch_compression_strategy(compression_strategy)`: 런타임 압축 방식 교체.
+- `reset()`: 내부 상태 및 벤치마크 타이머 리셋.
+- `finish()`: 로컬 상태 초기화.
+- `close()`: ZeroMQ 소켓/컨텍스트 정리 (사용 후 필수 호출 권장).
+
+### 업로드 CLI/API
+- `upload_mesh(host, user, port=22, password=None, key=None, local=None, remote=None)`: SSH/SFTP로 메쉬 전송, 비밀번호 또는 키 중 하나 필수.
+- CLI: `neuromeka-upload-mesh --host ... --user ... (--password ... | --key ...) --local ... --remote ...`
+
+### 예제
+- 실시간 Pose + Segmentation 데모: `python -m neuromeka_vfm.examples.pose_demo` (RealSense 필요, 서버 실행 상태에서 사용).
+
+
+## 릴리스 노트
+- 0.1.1: PoseEstimation/Segmentation에서 리소스 정리 개선, iteration 미전달 시 서버 기본값 사용, pose 데모 예제 추가.
+- 0.1.0: 초기 공개 버전. FoundationPose RPC 클라이언트, 실시간 세그멘테이션 클라이언트, SSH 기반 mesh 업로드 CLI/API 포함.
