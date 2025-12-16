@@ -1,0 +1,128 @@
+[project]
+name = "lazyops"
+dynamic = ["version"]
+description = "A collection of submodules/patterns that are commonly used within Internal Development"
+readme = "README.md"
+license = {text = "MIT License"}
+authors = [{name = "Tri Songz", email = "ts@songzcorp.com"}]
+classifiers = [
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "loguru",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "frozendict",
+    "async_lru",
+    "pyyaml",
+    "filelock",
+    "xxhash",
+    "anyio>=3.7.1",
+    "typer>=0.17.3",
+    "httpx>=0.28.1",
+]
+
+[urls]
+Homepage = "https://github.com/trisongz/lazyops"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.uv.sources]
+kvdb-py = { git = "https://github.com/trisongz/kvdb-py" }
+
+[project.scripts]
+lzl = "lzl.cmd:main"
+
+[project.optional-dependencies]
+kops = [
+    "kubernetes",
+    "kubernetes_asyncio",
+    "kopf",
+    "aiocache",
+    "kr8s",
+]
+fastapi = [
+    "fastapi",
+    "uvicorn",
+    "python-multipart",
+]
+builder = [
+    "typer",
+]
+openai = [
+    "httpx",
+    "backoff",
+    "tiktoken",
+    "jinja2",
+    "pyyaml",
+    "numpy",
+    "scipy",
+]
+fileio = [
+    "botocore>=1.35.0",
+    "boto3>=1.35.0",
+    "aiobotocore>=2.15.0",
+    "fsspec>=2024.10.0",
+    "s3fs>=2024.10.0",
+    "s3transfer>=0.10.0",
+    "python-magic",
+    "aiopath",
+    "aiofiles",
+    "aiofile",
+]
+file = [
+    "botocore>=1.35.0",
+    "boto3>=1.35.0",
+    "aiobotocore>=2.15.0",
+    "fsspec>=2024.10.0",
+    "s3fs>=2024.10.0",
+    "s3transfer>=0.10.0",
+    "python-magic",
+    "aiopath",
+    "aiofiles",
+    "aiofile",
+]
+docs = [
+    "mkdocs>=1.5.0",
+    "mkdocs-material>=9.0.0",
+    "mkdocstrings[python]>=0.24.0",
+    "pymdown-extensions>=10.0",
+]
+e2e = [
+    "lazyops[dev,file,fastapi,kops,openai]",
+    "kvdb-py",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+py-modules = ["lzl", "lzo"]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.dynamic]
+version = { attr = "lzl.version.VERSION" }
+
+[dependency-groups]
+builder-ci = [
+    "typer",
+    "pydantic",
+    "pydantic-settings",
+    "pyyaml",
+    "typing_extensions; python_version < '3.8'",
+    "setuptools; python_version > '3.11'",
+]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov"
+]
