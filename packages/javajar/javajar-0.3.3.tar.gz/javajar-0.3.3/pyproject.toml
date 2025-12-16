@@ -1,0 +1,50 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "javajar"
+version = "0.3.3"
+authors = [
+  { name="yanglikun", email="yanglikun@gmail.com" },
+]
+description = "通过python运行java，会自动下载java运行环境"
+readme="README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICEN[CS]E*"]
+
+dependencies = [
+    "loguru>=0.7.3",
+    "requests>=2.32.5",
+    "typer>=0.20.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0",
+]
+
+[project.scripts]
+javajar = "javajar.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/javajar"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/README.md",
+    "/LICENSE",
+]
+exclude = [
+    "/.git",
+    "/.pytest_cache",
+    "/__pycache__",
+]
+
+[tool.uv]
+# Ensure pytest is available when using `uv sync --dev`
+dev-dependencies = [
+    "pytest>=7.0",
+]
