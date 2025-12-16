@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Profil - SafePass{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/components/sidebar.css' %}">
+<link rel="stylesheet" href="{% static 'css/components/layout.css' %}">
+<link rel="stylesheet" href="{% static 'css/components/profile.css' %}">
+<link rel="stylesheet" href="{% static 'css/components/forms.css' %}">
+<link rel="stylesheet" href="{% static 'css/components/buttons.css' %}">
+{% endblock %}
+
+{% block body_class %}with-sidebar{% endblock %}
+
+{% block content %}
+{% include "partials/sidebar.html" %}
+
+<div class="main-content">
+    <div class="page-header">
+        <h1>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            Profilim
+        </h1>
+        <p>Hesap ayarlarınızı yönetin.</p>
+    </div>
+
+    <div class="profile-container">
+        <div class="profile-card">
+            <div class="profile-avatar">
+                <div class="avatar-circle">
+                    {{ user.username.0|upper }}
+                </div>
+            </div>
+            
+            <div class="profile-info">
+                <h2>{{ user.username }}</h2>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h3>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M12 1v6m0 6v6M1 12h6m6 0h6M4.22 4.22l4.24 4.24m5.08 5.08l4.24 4.24M4.22 19.78l4.24-4.24m5.08-5.08l4.24-4.24"></path>
+                </svg>
+                Hesap Ayarları
+            </h3>
+            
+            <div class="setting-item">
+                <div class="setting-info">
+                    <h4>Şifre Değiştir</h4>
+                    <p>Şifrenizi güncelleyin. Tüm verileriniz yeniden şifrelenecektir.</p>
+                </div>
+                <button type="button" class="btn btn-secondary" onclick="openChangeMasterPassword()">
+                    Değiştir
+                </button>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h3>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                    <line x1="6" y1="20" x2="6" y2="14"></line>
+                </svg>
+                İstatistikler
+            </h3>
+            
+            <div class="stats-grid-mini">
+                <div class="stat-mini">
+                    <span class="stat-label">Toplam Şifre</span>
+                    <span class="stat-value" id="totalCards">-</span>
+                </div>
+                <div class="stat-mini">
+                    <span class="stat-label">Güvenli</span>
+                    <span class="stat-value stat-safe" id="safeCards">-</span>
+                </div>
+                <div class="stat-mini">
+                    <span class="stat-label">Zayıf</span>
+                    <span class="stat-value stat-weak" id="weakCards">-</span>
+                </div>
+                <div class="stat-mini">
+                    <span class="stat-label">Ortalama Güç</span>
+                    <span class="stat-value" id="avgStrength">-</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h3>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+                    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+                </svg>
+                Veri Yönetimi
+            </h3>
+            
+            <div class="setting-item">
+                <div class="setting-info">
+                    <h4>Verileri Dışa Aktar</h4>
+                    <p>Tüm şifrelerinizi güvenli bir dosyaya aktarın (JSON formatı)</p>
+                </div>
+                <button type="button" class="btn btn-secondary" onclick="exportData()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Dışa Aktar
+                </button>
+            </div>
+
+            <div class="setting-item">
+                <div class="setting-info">
+                    <h4>Verileri İçe Aktar</h4>
+                    <p>Önceden dışa aktarılmış verileri içe aktarın</p>
+                </div>
+                <button type="button" class="btn btn-secondary" onclick="importData()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    İçe Aktar
+                </button>
+            </div>
+        </div>
+
+        <div class="settings-section danger-zone">
+            <h3>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                Tehlikeli Alan
+            </h3>
+            
+            <div class="setting-item">
+                <div class="setting-info">
+                    <h4>Hesabı Sil</h4>
+                    <p>Hesabınızı ve tüm verilerinizi kalıcı olarak silin. Bu işlem geri alınamaz!</p>
+                </div>
+                <button type="button" class="btn btn-danger" onclick="deleteAccount()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        <line x1="10" y1="11" x2="10" y2="17"></line>
+                        <line x1="14" y1="11" x2="14" y2="17"></line>
+                    </svg>
+                    Hesabı Sil
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Change Master Password -->
+<div id="changeMasterPasswordModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+                Master Şifre Değiştir
+            </h2>
+            <button class="modal-close" onclick="closeChangeMasterPassword()">&times;</button>
+        </div>
+        <form id="changeMasterPasswordForm">
+            <div class="form-group">
+                <label>Mevcut Master Şifre</label>
+                <input type="password" id="currentMasterPassword" required>
+            </div>
+            <div class="form-group">
+                <label>Yeni Master Şifre</label>
+                <input type="password" id="newMasterPassword" required minlength="8">
+            </div>
+            <div class="form-group">
+                <label>Yeni Şifre (Tekrar)</label>
+                <input type="password" id="confirmMasterPassword" required>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeChangeMasterPassword()">İptal</button>
+                <button type="submit" class="btn btn-primary">Değiştir</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/modules/profile.js' %}" type="module"></script>
+{% endblock %}
