@@ -1,0 +1,706 @@
+0.40.0:
+- general:
+  - updated Github actions
+  - added demonstration code for generating ring and pixel weights for
+    Healpix in not_yet_integrated/healpix_weights.py
+  - not visible from Python: various minor cleanups to the
+    C++ code (making constructors explicit, ...)
+
+- misc:
+  - bug fix in OofaNoise: the parameters "f_min" and "f_knee" were
+    internally flipped. This is now fixed, and the constructor is now
+    keyword-only, to avoid silent change in behaviour.
+
+- sht:
+  - tweaks to memory layouts of temporary arrays, which may improve
+    performance in some circumstances.
+
+
+0.39.1:
+- general:
+  - Workaround for compilation problems on Alpine Linux
+    (possibly a compiler bug?)
+
+- sht:
+  - reduced memory usage in transforms where resampling in theta was
+    performed
+  - performance tweak for theta interpolation mode (only relevant for SHTs
+    with theta_interpol=True)
+
+
+0.39.0:
+- sht:
+  - Standard SHT with spins 1 or 2 should now be significantly faster
+    (up to a factor of 2 for large band limits).
+    DERIV1 and GRAD_ONLY modes have not changed.
+  - various improvements in the inner loops for AVX512, mainly in the
+    synthesis direction.
+  - improved scaling behaviour for high thread counts
+  - functions taking or returning a ring-based map now take an optional
+    argument with ring weights that are applied before resp. after the
+    transform.
+  - pseudo_analysis and pseudo_analysis_general now allow providing an initial
+    guess for the solution.
+
+- nufft:
+  - improved mutex usage in Type 1 transforms, which should enable better
+    scaling for high thread counts
+
+- fft:
+  - various small internal adjustments to allow usage within scipy
+
+
+0.38.0:
+- sht:
+  - `rotate_alm` can now transform several sets of `a_lm` simultaneously and
+    avoids unnecessary operations if `mmax` of input and/or output is lower
+    than `lmax`.
+
+- nufft:
+  - fix cost model for type 3 transforms: this should reduce memory consumption
+    and slightly improve performance
+
+- pointingprovider:
+  - fixed a bug that was introduced in version 0.35.
+
+- healpix:
+  - most Healpix support functions now take an optional "out" argument, which
+    will be used to store the output values if provided
+
+- general:
+  - increased the minimum required version for `pybind11` to avoid problematic
+    interactions with recent C++ compilers.
+
+
+0.37.1:
+- general:
+  - disable all interface functions with `long double` parameters when
+    `nanobind` is active; it simply doesn't support the type
+  - made sure that all files needed for the FFT component have GPL *and* BSD3
+    license headers
+
+- sht:
+  - `sharpjob_d` member functions no longer implicitly converted their input
+    arrays to the expected type; this is now fixed
+
+
+0.37.0:
+- general:
+  - build system switched to CMake, allowing parallel compilation.
+    This should reduce compile times substantially.
+  - rework of the interfacing code to allow an (optional) switch
+    from pybind11 to nanobind. As a consequence, function signatures in
+    docstrings have become more precise.
+    The Python interface for pybind11 should not have changed at all;
+    the one for nanobind is identical, except that support for
+    `longdouble` accuracy is missing.
+  - slightly improved messages for (non-pybind11/nanobind-generated) errors
+    detected at the Python/C++ interface:
+    error message is now preceded by variable name.
+  - beginnings of a more mathematical description of ducc0's functions
+    in the docstrings; the goal is to provide more clarity about
+    "what ducc0 really computes".
+
+- nufft:
+  - add `exec_adjoint` method to the type 3 NUFFT class, to allow adjoint
+    transforms without the need for an additional plan
+
+
+0.36.0:
+- nufft:
+  - experimental: Type 3 (nu2nu) transforms are now supported
+  - all transform types can be batched, i.e. computed simultaneously for the
+    same coordinates, but with different point/grid values.
+    This is done by prepending a dimension to grid and point arrays.
+  - experimental: there are now classes for performing "incremental" type 1
+    and 2 transforms, where non-uniform points can be added (nu2u) or extracted
+    (u2nu) in chunks of arbitrary number and size.
+
+
+0.35.0:
+- general:
+  - Cmake-based build machinery contributed by Marco Barbone
+  - flake/nix support contributed by Philipp Arras
+  - adjustments for numpy 2.0
+
+- nufft:
+  - faster 1D transforms due to batched calculation of kernel coefficients
+    (inspired by FINUFFT)
+
+- misc:
+  - new functions `available_hardware_threads`, `thread_pool_size`, and
+    `resize_thread_pool` in `ducc0.misc` to allow determination of hardware
+    resources and influencing thread pool size at run time. Up to now, the size
+    of the thread pool was set at startup and could not be influenced later on.
+
+- wgridder:
+  - slightly accelerated evaluation of kernel functions by using kernel
+    symmetry
+  - extended internal C++ interface to allow easier support for different
+    conventions. (This change is not visible from Python.)
+
+- pointingprovider:
+  - quaternions passed to the constructor are now assumed to repeat
+    periodically, i.e. output can now be requested for any point in time
+
+
+0.34.0:
+- nufft:
+  - allow different periodicities for every coordinate axis
+
+- misc:
+  - significant improvements (and broken interfaces) in the mode-coupling
+    matrix code
+
+
+0.33.0:
+- general:
+  - slightly modernized Python build system
+  - if the environment variable DUCC0_NUM_THREADS is not set, the code will
+    try to read OMP_NUM_THREADS to determine the maximum number of threads
+    to use.
+  - semantics of ducc0::v(f)mav have changed: if the v(f)mav is const,the data
+    it points to can still be changed. If immutability of pointed-to data is
+    required, the object needs to be cast/converted to a c(f)mav.
+
+- sht:
+  - make functions from `ducc0.sht.experimental` also available in
+    `ducc0.sht`. The interface should have matured sufficiently by now.
+
+- wgridder:
+  - bug fix for large fields of view that extend beyond the horizon
+  - make functions `vis2dirty` and `dirty2vis` from
+    `ducc0.wgridder.experimental` also available in `ducc0.wgridder`.
+    The interface should have matured sufficiently by now.
+
+- misc:
+  - new experimental code for computing mode-coupling matrices similar to
+    those generated by pspy. This will probably evolve some more before
+    being finalized.
+
+
+0.32.0:
+- general:
+  - minimum required Python version is now 3.8
+
+- math:
+  - new code for calculating Wigner 3j symbols
+
+- sht:
+  - fix for non-adjointness between analysis and adjoint_analysis in cases
+    where the input map is not band limited
+
+- fortran:
+  - outline of an interface for calls from Fortran. Requires Fortran 2018.
+
+
+0.31.0:
+- general:
+  - potentially more efficient handling of parallel regions 
+  - updated pyproject.toml to be compatible with new Python versions
+
+- fft:
+  - bug fix in orthonormalization of type II and III DSTs
+  - significantly faster 1D FFTs; tuning of multi-D transforms
+
+- sht:
+  - bug fix for alm->map SHTs with nphi=1 and mmax>0
+  - new `phi0` parameter for the `*_2d` SHT routines
+  - optional `mstart` and `lstride` parameters for the `*_2d` SHT routines
+
+
+0.30.0:
+- general:
+  - beginnings of a Rust wrapper
+
+- fft:
+  - transforming over a long, contiguous axis in a multi-D array should now
+    be faster and scale better with the number of threads.
+
+- sht:
+  - new function `pseudo_analysis_general` for iterative least-squares
+    analysis of spherical maps on arbitrary grids
+  - rework of the general SHT routines, leading to more performance and
+    smaller memory footprint
+  - SHTs with spin>0 now have a gradient-only mode, which ignores the
+    curl a_lm component.
+  - new argument `theta_interpol`, which may accelerate SHTs on isolatitude
+    grids with irregular theta spacing (most notably Healpix). This is off
+    by default, because it only improves performance for fairly large `lmax`,
+    and for `nrings>=1.5*lmax`. Only use this after benchmarking your
+    particular application!
+
+- totalconvolve:
+  - API CHANGE!
+    bring interface more in line with SHT functions.
+    This basically means replacing the `ofactor` parameter with `sigma_min`,
+    `sigma_max` and `npoints`.
+    (The old syntax is still supported, but should not be used any longer in
+    new projects.)
+
+- misc:
+  - new helper functions for CMB lensing simulations
+  - new function `preallocate_memory` for benchmarking use, which minimizes
+    the amount of time spent passing memory between application and OS.
+    Currently only works on Linux.
+
+
+0.29.0:
+- general:
+  - rework multi-threading infrastructure to allow integration with external
+    thread pool implementations.
+  - make more extensive use of uninitialized arays. This helps performance
+    and scaling, especially for small SHTs.
+
+- fft:
+  - add the functions `r2r_separable_fht` and `r2r_genuine_fht`, which perform
+    Hartley transforms using the commonly adopted convention, i.e.
+        FHT(x) = FFT(x).real - FFT(x).imag
+    instead of the unusual convention of `r2r_separable_hartley` and
+    `r2r_genuine_hartley`, which use
+        FHT(x) = FFT(x).real + FFT(x).imag
+    `r2r_separable_hartley` and `r2r_genuine_hartley` should not be used in
+    new code, but they are kept for backwards compatibility.
+
+- sht:
+  - new functions `synthesis_general` and `adjoint_synthesis_general`
+    for SHTs on maps without any constraint on pixel locations.
+    This allows, for example, using maps whose pixel positions have been
+    distorted by lensing, or QuadCube maps.
+  - functions `synthesis`, `adjoint_synthesis`, `synthesis_deriv1`,
+    and `pseudo_analysis`: introduce an optional integer parameter `mmax`
+    and allow it to be different from `lmax` (`mmax==lmax` was implicitly
+    assumed so far)
+
+- nufft:
+  - re-write core part of the 2D Type 1 NUFFT, which was miscompiled on some
+    platforms. Unfortunately, the new implementation is slightly slower on
+    x86-64.
+  - allow very small uniform grid dimensions (down to 1)
+
+- wgridder:
+  - allow very small uniform grid dimensions (down to 2)
+
+- misc:
+  - new function `empty_noncritical` for building empty numpy arrays without
+    critical strides
+
+
+0.28.0:
+- general:
+  - allow control over multithreading via environment variables
+    DUCC0_NUM_THREADS, DUCC0_PIN_DISTANCE, and DUCC0_PIN_OFFSET.
+    This is still experimental and may change in the future.
+
+- fft:
+  - introduce a flag `allow_overwriting_input` to `c2r`, which can speed up
+    execution by avoiding temporary arrays
+
+- nufft/wgridder:
+  - changed kernel database to hold optimized kernels depending on
+    dimensionality and floating point accuracy. This allows for slightly
+    better tuning and improves maximum attainable accuracy in 2D and 3D.
+
+- julia:
+  - start of a Julia wrapper, currently focused on FFT, NUFFT and SHT support
+
+- math:
+  - computations involving Peano-Hilbert indices are now much faster 
+
+- misc:
+  - new function `roll_resize_roll`, which allows efficient combined
+    rolling/padding/truncation of arrays.
+
+
+0.27.0:
+- general:
+  - modernize CI and build machinery
+  - some code was moved from header files into .cc files to avoid duplicate
+    symbols in some situations.
+
+- nufft:
+  - added a "plan" class, which allows efficient repeated execution of a
+    transform with fixed grid geometry and nonuniform point positions.
+    (For transforms that are only executed once, the traditional interface
+    should be preferred.)
+  - added new parameters for data periodicity (formerly hardwired to 2pi) and
+    data ordering on the regular grids (formerly starting with the most negative
+    frequency, now also allows "standard" FFT ordering starting with the zero
+    mode).
+  - added a benchmark demo script for easier comparison to FINUFFT and NFFT.jl.
+
+
+0.26.0:
+- general:
+  - clarify that the preferred installation method is compilation from source
+
+- wgridder:
+  - add "self-tuning" versions of `vis2dirty` and `dirty2vis` which attempt to
+    save time by
+     - splitting visibilities into a small-w and large-w part and processing
+       them separately, and/or
+     - subdividing the field of view into facets.
+    This can be advantageous when FFT cost would dominate using the naive
+    approach and the number of w-planes is large (roughly 50 and higher).
+
+- sht:
+  - the methods synthesis, adjoint_synthesis, and synthesis_deriv1 now accept
+    an optional leading dimension in the alm/map arrays, to allow "batched"
+    transforms. If the batch size is large enough, parallelization will not
+    be done within a single transforms, but rather over different transforms,
+    which can be beneficial, especially if the transforms are small.
+  - a new method "pseudo_analysis" was added, which performs iterative,
+    approximate map analysis using the LSMR algorithm.
+
+
+0.25.0:
+- general:
+  - try to fix the package on 32bit platforms
+
+- nufft:
+  - significant performance and accuracy improvements
+
+- wgridder:
+  - recalculated kernels, improved error model
+  - small performance tweaks
+
+
+0.24.0:
+- general:
+  - work around a compilation problem with gcc 7
+
+- nufft:
+  - beginnings of a non-uniform FFT module
+    Conventions are closely following the FINUFFT library.
+    The interface is not finalized yet.
+
+- wgridder:
+  - improved pre-sorting of visibilities
+
+
+0.23.0:
+- general:
+  - improved template code for multi-array operations (internal detail)
+
+- fft:
+  - fix a bug in multi-D Hartley transform which was introduced in ducc0 0.21.
+    This bug was triggered in cases with two or three transformed axes and at
+    least one untransformed axis.
+  - use clear dual-license headers in all files required for the FFT component
+
+- healpix:
+  - input arrays to all functions can now be float32/int32 as well
+
+- wgridder:
+  - performance tweaks to FFT and kernel evaluation parts; performance gain
+    on the order of 10%.
+
+
+0.22.0:
+- general:
+  - many internal cleanups and consistency improvements
+  - preparations for release as an Alpine Linux package
+
+- fft:
+  - re-introduce plan caching. This is possible since plans for large 1D
+    transforms no longer scale with the length of the transform,but only its
+    square root, limiting the memory overhead
+  - code tweaks to improve copying steps for multi-D transforms (basically a
+    workaround for mis-optimizations by gcc)
+
+
+0.21.0:
+- general:
+  - support for more platforms (e.g. Raspberry Pi)
+  - rewrite of the classes for multidimensional array views, which allows
+    many simplifications, multithreading etc.
+
+- fft:
+  - low-level tweaks which accelerate internal function calls; this especially
+    helps multi-D transforms with short axis lengths
+  - genuine Hartley transforms over 2 and 3 axes no longer require big temporary
+    arrays
+
+- healpix:
+  - multithreading support for most functions
+
+
+0.20.0:
+- general:
+  - minimum required Python version is now 3.7
+  - tests: retire Ubuntu 18, improve tests with icpx
+  - fix compilation failure on non-x86 platforms
+
+- fft:
+  - allow individual, compile-time, selection of SIMD types to be used
+
+- sht/healpix:
+  - prepare better support for Healpix pixelization
+
+- misc:
+  - convenience function for building numpy arrays without critical strides
+
+
+0.19.0:
+- general:
+  - binary wheels can now be built and uploaded to PyPI; the installation
+    instructions have been updated accordingly. Please provide feedback in case
+    of problems!
+
+- fft:
+  - C++ sources for FFT calculation now have their own subdirectory.
+  - new function `r2r_fftw`, which supports FFTW's halfcomplex storage scheme.
+  - new function `convolve_axis`, which performs efficient convolution of arrays
+    with arbitrary 1D kernels, optionally followed by zero-padding/truncation.
+
+
+0.18.0:
+- sht:
+  - implement adoint_analysis
+    CAUTION: this is still really experiental!
+
+- wgridder:
+  - improve cost model, assuming that the FFT component will not scale perfectly
+
+
+0.17.0:
+- general:
+  - more information available on PyPI
+
+- fft:
+  - performance tweaks for 1D FFTs
+  - reduced memory overhead for 1D FFTs
+  - multithreading support for 1D FFTs (this is only advantageous for very long
+    transforms at the moment)
+
+- sht:
+  - interface for fully general SHTs is now accessible from Python; this is not
+    completely finalized, however.
+  - improved a_lm rotation performance
+
+
+0.16.0:
+- general:
+  - the GIL is now released in many more functions
+
+-fft:
+  - very long 1D transforms now have a lower memory overhead and should be
+    faster
+
+-sht:
+  - a_lm rotation is now much more accurate, but slightly slower
+  - the improved spherical harmonic analysis capabilities are now documented
+
+-misc:
+  - two new convenience functions vdot() and l2error() were added
+
+
+0.15.0:
+- general:
+  - the code is now compiled with the "-fvisibility=hidden" flag, which reduces
+    the size of the resulting binary.
+  - demo codes were adjusted to use the new SHT interface.
+
+- fft:
+  - added some functions to reduce the amount of unnecessary memory
+    allocations and data copying.
+
+- sht:
+  - it is no longer necessary to pre-allocate an array for the output of the
+    `sht.experimental.*2d*` functions. If not provided, the functions will
+    create the array automatically now, which requires passing of new `ntheta`
+    and `nphi` parameters in come cases.
+  - the `sht.experimental.*2d*` functions now take an optional `mmax` parameter
+    which can be used to limit the maximum azimuthal moment of a transform.
+    If not supplied, the code assumes that `mmax` is equal to `lmax`.
+  - added some unit tests for the new SHT interface.
+  - reduced memory overhead for some of the `sht.experimental.*2d*` functions.
+
+- misc:
+  - added functionality (originally from Planck Level-S) to simulate time
+    streams of detector noise.
+
+
+0.14.0:
+- general:
+  - ducc0.__version__ is now also defined under Windows
+
+- sht:
+  - further performance improvements
+  - added functions for manipulation of "2D maps", i.e. maps consisting of
+    (ntheta*nphi) pixels with equidistant pixels in phi, and rings distributed
+    along theta according to one of the CC, DH, F1, F2, GL, MW, MWflip schemes.
+
+- totalconvolve:
+  - bug fix in the adjoint convolution: results were inadvertently conjugated
+
+
+0.13.0:
+- general:
+  - more comprehensive references in README.md
+
+- sht:
+  - bug fixes
+  - tweaks to the experimental interface for extracting moments up to lmax
+    from maps with only lmax+1 or lmax+2 equidistant rings.
+
+
+0.12.0:
+- general:
+  - update installation instructions in README.md
+
+- sht:
+  - expose functionality for computing gradient maps from spherical harmonic
+    coefficients
+
+
+0.11.0:
+- general:
+  - beginning of Doxygen documentation for the C++ part
+  - fixes to the #include statements in header files; now every header can be
+    included in isolation.
+  - some CI streamlining
+
+
+0.10.0:
+- general:
+  - HTML documentation generation using Sphinx
+    Up-to-date documentation for the ducc0 branch is available at
+    https://mtr.pages.mpcdf.de/ducc/.
+  - more and improved docstrings
+  - SIMD datatypes are now much more compatible with C++ upcoming SIMD types.
+    The code can be compiled with the types from <experimental/simd> if
+    available, with very small manual changes.
+  - reshuffling and renaming of files
+
+- fft:
+  - 1D transforms have been rewritten using a much more flexible class hierarchy
+    which allows more optimizations. For example 1D FFTs can now be partially
+    multi-threaded and the Bluestein algorithm can be used as a single pass
+    instead of just replacing a whole transform.
+
+- sht:
+  - design of a new SHT interface. Parts of this interface are made visible
+    from Python, in the "sht.experimental" submodule. The "sharpjob_d"-based
+    interface will be kept for compatibility purposes until ducc1 is released.
+  - experimental support for spherical harmonic analysis that only requires
+    lmax+1 or lmax+2 equidistant rings for exact analysis up to lmax.
+  - misc.rotate_alm was moved to the sht submodule.
+
+- totalconvolver:
+  - interface change to synchronize it better with the upcoming SHT interface.
+    Basically, if an array has a "number of components" axis, this is now
+    always in first place.
+    Strictly speaking this is an interface-breaking change, but to the best of
+    my knowledge the interface in question has not been used in other projects
+    yet.
+
+
+0.9.0:
+- general:
+  - improved and faster computation of Gauss-Legendre nodes and weights
+    using Ignace Bogaert's implementation (https://doi.org/10.1137/140954969,
+    https://sourceforge.net/projects/fastgausslegendrequadrature/)
+  - Intel OneAPI compilers are now supported
+  - new accepted value "none-debug" for DUCC0_OPTIMIZATION
+
+- wgridder:
+  - fixed a bug which could cause memory accesses beyond the end of an array
+
+- fft:
+  - slightly improved buffer re-use
+
+- misc:
+  - substantially faster a_lm rotation code based on the Mikael Slevinsky's
+    FastTransforms package (https://github.com/MikaelSlevinsky/FastTransforms)
+
+
+0.8.0:
+- general:
+  - compiles and runs on MacOS 11
+  - choice of various optimization and debugging levels by setting
+    the DUCC0_OPTIMIZATION variable before compilation.
+    Valid choices are
+    "none":
+      no optimization or debugging, fast compilation
+    "portable":
+      Optimizations which are portable to all CPUs of a given family
+    "portable-debug":
+      same as above, with debugging information
+    "native":
+      Optimizations which are specific to the host CPU, non-portable library
+    "native-debug":
+      same as above, with debugging information
+    Default is "native".
+
+- wgridder:
+  - more careful treatment of u,v,w-coordinates and phase angles, leading to
+    better achievable accuracies for single-precision runs
+  - performance improvements by making the computed interval in "n-1" symmetric
+    around 0. This reduces the number of required w planes significantly.
+    Speedups are bigger for large FOVs and when FFT is dominating.
+  - allow working with dirty images that are shifted with respect to the phase
+    center. This can be used for faceting and incorporating DDEs.
+  - new optional flag "double_precision_accumulation" for gridding routines,
+    which causes accumulation onto the uv grid to be done in double precision,
+    regardless of input and output precision. This can be helpful to avoid
+    accumulation errors in special circumstances.
+
+- pointingprovider:
+  - improved performance via vectorized trigonometric functions
+
+
+0.7.0:
+- general:
+  - compilation with MSVC on Windows is now possible
+
+- wgridder:
+  - performance (especially scaling) improvements
+  - oversampling factors up to 2.5 supported
+  - new, more flexible interface in submodule `wgridder.experimental`
+    (subject to further changes!)
+
+- totalconvolver:
+  - now performs non-equidistant FFT interpolation also in psi direction,
+    making it much faster for large kmax.
+  - new low-level interface which allows flexible re-distribution of work
+    over MPI tasks (responsibility of the caller)
+
+
+0.6.0:
+- general:
+  - multi-threading improvements contributed by Peter Bell
+
+- wgridder:
+  - new, smaller internal data structure
+
+
+0.5.0:
+- wgridder:
+  - internally used grid size is now chosen automatically, and the parameters
+    "nu" and "nv" are ignored; they will be removed in ducc1.
+
+
+0.3.0:
+- general:
+  - The package should now be installable from PyPI via pip even on MacOS.
+    However, MacOS >= 10.14 is required.
+
+- wgridder:
+  - very substantial performance and scaling improvements
+
+
+0.2.0:
+- wgridder:
+  - kernels are now evaluated via polynomial approximation, allowing much
+    more freedom in the choice of kernel function
+  - switch to 2-parameter ES kernels for better accuracy
+  - unnecessary FFT calculations are skipped
+
+- totalconvolve:
+  - improved accuracy by making use of the new wgridder kernels
+  - *INTERFACE CHANGE* removed method "epsilon_guess()"
+
+- pointingprovider:
+  new, experimental module for computing detector pointings from a time stream
+  of satellite pointings. To be used by litebird_sim initially.
