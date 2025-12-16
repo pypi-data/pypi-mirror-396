@@ -1,0 +1,93 @@
+[build-system]
+requires = ["poetry-core>=2,<3"]
+build-backend = "poetry.core.masonry.api"
+
+[project]
+name = "nitrokeyapp"
+version = "2.4.3"
+description = "Graphical application to manage Nitrokey devices"
+authors = [
+  { name = "Nitrokey", email = "pypi@nitrokey.com" },
+]
+license = "Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/nitrokey/nitrokey-app2"
+documentation = "https://docs.nitrokey.com/software/nk-app2/"
+requires-python = ">=3.10,<3.15"
+dynamic = [
+  "classifiers",
+  "dependencies",
+]
+packages = [
+  {include = "nitrokeyapp"}
+]
+
+[project.scripts]
+nitrokeyapp = "nitrokeyapp.__main__:main"
+
+[tool.poetry]
+classifiers = [
+  "Intended Audience :: Developers",
+  "Intended Audience :: End Users/Desktop",
+]
+
+[tool.poetry.dependencies]
+fido2 = "^2"
+nitrokey = "^0.4"
+pySide6 = ">=6.6.0"
+pywin32 = { version = ">=305", markers = "sys_platform =='win32'" }
+usb-monitor = "^1.21"
+
+[tool.poetry.group.dev.dependencies]
+PySide6-stubs = "^6.4.2"
+ruff = "^0.14"
+mypy = ">=1.4,<1.5"
+
+[tool.poetry.group.deploy.dependencies]
+pyinstaller = "^6.3.0"
+pyinstaller-versionfile = { version = "2.1.1", markers = "sys_platform=='win32'" }
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.format]
+skip-magic-trailing-comma = true
+
+[tool.ruff.lint]
+select = ["B", "C", "E", "F", "W", "B9", "I"]
+ignore = ["E501"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 30
+
+[tool.ruff.lint.isort]
+known-first-party = ["nitrokeyapp"]
+split-on-trailing-comma = false
+
+[tool.mypy]
+show_error_codes = true
+python_version = "3.10"
+
+[[tool.mypy.overrides]]
+module = [
+  "nitrokeyapp.*",
+]
+disallow_untyped_defs = true
+
+# generated and unused files
+[[tool.mypy.overrides]]
+module = [
+  "nitrokeyapp.bak.*",
+  "nitrokeyapp.ui.*",
+]
+ignore_errors = true
+
+# libraries without annotations
+[[tool.mypy.overrides]]
+module = [
+  "win32api.*",
+  "win32con.*",
+  "win32gui.*",
+  "usbmonitor.*",
+]
+ignore_missing_imports = true

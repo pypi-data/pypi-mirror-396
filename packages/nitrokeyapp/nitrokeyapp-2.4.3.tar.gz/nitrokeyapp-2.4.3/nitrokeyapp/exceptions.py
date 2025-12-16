@@ -1,0 +1,2 @@
+class BasePyNKException(Exception):
+    pass

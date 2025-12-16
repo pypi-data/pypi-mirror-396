@@ -1,0 +1,296 @@
+import logging
+from contextlib import contextmanager
+from dataclasses import dataclass
+from enum import Enum
+from time import sleep
+from typing import TYPE_CHECKING, Any, Callable, Iterator, List, Optional, Type, TypeVar
+
+# Nitrokey 3
+from nitrokey.nk3 import NK3, NK3Bootloader
+from nitrokey.nk3 import list as list_nk3
+from nitrokey.nk3 import open as open_nk3
+from nitrokey.trussed import Model, TrussedBase, Variant, Version
+from nitrokey.trussed.admin_app import InitStatus
+from nitrokey.trussed.updates import DeviceHandler, Updater, UpdateUi, Warning
+from PySide6.QtCore import QCoreApplication
+
+if TYPE_CHECKING:
+    from nitrokeyapp.common_ui import CommonUi
+
+logger = logging.getLogger(__name__)
+
+T = TypeVar("T", bound=TrussedBase)
+
+
+class UpdateStatus(Enum):
+    SUCCESS = "success"
+    ERROR = "error"
+    ABORTED = "aborted"
+
+
+@dataclass
+class UpdateResult:
+    status: UpdateStatus
+    message: str | None = None
+
+
+@dataclass
+class UpdateException(Exception):
+    def __init__(self, status: UpdateStatus, *msgs: Any) -> None:
+        super().__init__(*msgs)
+        self.status = status
+
+
+class UpdateGUI(UpdateUi):
+    def __init__(self, common_ui: "CommonUi", is_qubesos: bool) -> None:
+        super().__init__()
+
+        self.common_ui = common_ui
+        self.is_qubesos = is_qubesos
+
+        # blocking wait, set by parent during confirm-prompt
+        self.await_confirmation: Optional[bool] = None
+
+    def error(self, *msgs: Any) -> Exception:
+        logger.error(f"Error during firmware update: {msgs}")
+        return UpdateException(UpdateStatus.ERROR, *msgs)
+
+    def abort(self, *msgs: Any) -> Exception:
+        logger.warning(f"Firmware update aborted: {msgs}")
+        return UpdateException(UpdateStatus.ABORTED, *msgs)
+
+    def raise_warning(self, warning: Warning) -> Exception:
+        return UpdateException(UpdateStatus.ERROR, warning.message)
+
+    def show_warning(self, warning: Warning) -> None:
+        res = self.run_confirm_dialog(
+            "DANGER - You can ignore this warning by pressing ok", warning.message
+        )
+        if not res:
+            logger.info("Cancel clicked (during warning)")
+            raise self.abort("Warning dialog canceled")
+
+        logger.info("OK clicked (warning dialog)")
+
+    def abort_downgrade(self, current: Version, image: Version) -> Exception:
+        return self.abort(f"firmware {image} is older than the firmware on the device ({current})")
+
+    def run_confirm_dialog(self, title: str, desc: str) -> bool:
+        self.common_ui.prompt.confirm.emit(title, desc)
+        while self.await_confirmation is None:
+            sleep(0.1)
+            QCoreApplication.processEvents()
+
+        res = self.await_confirmation
+        self.await_confirmation = None
+        return res
+
+    def confirm_download(self, current: Optional[Version], new: Version) -> None:
+        res = self.run_confirm_dialog(
+            "Nitrokey 3 Firmware Update", f"Do you want to download the firmware version {new}?"
+        )
+        if not res:
+            logger.info("Cancel clicked (confirm download)")
+            raise self.abort("Abort: canceled by user (confirm download)")
+
+        logger.info("OK clicked (confirm download)")
+
+    def confirm_update(self, current: Optional[Version], new: Version) -> None:
+        if self.is_qubesos:
+            res = self.run_confirm_dialog(
+                "Nitrokey 3 Firmware Update",
+                "Please do not remove the Nitrokey 3 or insert any other "
+                + "Nitrokey 3 devices during the update. Doing so may "
+                + "damage the Nitrokey 3.\n\n"
+                + "QubesOS is detected!\n\n"
+                + "After the touch prompt, the Nitrokey3 will be loaded into the bootloader. The Nitrokey must then be reattach to the current Qube.\n\n"
+                + "Do you want to perform the firmware update now?",
+            )
+
+        else:
+            res = self.run_confirm_dialog(
+                "Nitrokey 3 Firmware Update",
+                "Please do not remove the Nitrokey 3 or insert any other "
+                + "Nitrokey 3 devices during the update. Doing so may "
+                + "damage the Nitrokey 3. Do you want to perform the "
+                + "firmware update now?",
+            )
+        if not res:
+            logger.info("Cancel clicked (confirm update)")
+            raise self.abort("canceled by user (confirm update)")
+
+        logger.info("OK clicked (confirm update)")
+        self.common_ui.touch.start.emit()
+
+    def pre_bootloader_hint(self) -> None:
+        self.common_ui.info.info.emit("Device is in bootloader mode")
+
+    def confirm_update_same_version(self, version: Version) -> None:
+        res = self.run_confirm_dialog(
+            "Nitrokey 3 Firmware Update",
+            "The version of the firmware image is the same as on the device."
+            + "Do you want to continue anyway?",
+        )
+        if not res:
+            logger.info("Cancel clicked (confirm same version)")
+            raise self.abort("canceled by user (confirm same version)")
+
+        logger.info("OK clicked (confirm same version)")
+
+    def confirm_extra_information(self, txt: List[str]) -> None:
+        if len(txt) == 0:
+            return
+
+        res = self.run_confirm_dialog("Confirm extra information", " ".join(txt))
+        if not res:
+            logger.info("Cancel clicked (confirm extra info)")
+            raise self.abort("canceled by user (confirm extra info)")
+
+        logger.info("OK clicked (confirm same version)")
+
+    def abort_pynitrokey_version(self, current: Version, required: Version) -> Exception:
+        raise self.abort(f"pynitrokey {required} too old, need: {current}")
+
+    def confirm_pynitrokey_version(self, current: Version, required: Version) -> None:
+        # TODO: implement
+        raise self.abort(f"pynitrokey {required} too old, need: {current}")
+
+    def request_repeated_update(self) -> Exception:
+        logger.info("Bootloader mode enabled. Repeat to update")
+        return self.abort("bootloader enabled")
+
+    def request_bootloader_confirmation(self) -> None:
+        logger.info("requesting bootloader confirmation")
+        self.common_ui.touch.start.emit()
+
+    # atm we dont need this
+    def prompt_variant(self) -> Variant:
+        raise NotImplementedError()
+
+    @contextmanager
+    def update_progress_bar(self) -> Iterator[Callable[[int, int], None]]:
+        self.common_ui.touch.stop.emit()
+        self.common_ui.progress.start.emit("Update")
+        yield self.common_ui.progress.progress.emit
+
+    @contextmanager
+    def download_progress_bar(self, desc: str) -> Iterator[Callable[[int, int], None]]:
+        self.common_ui.progress.start.emit("Download")
+        yield self.common_ui.progress.progress.emit
+
+    @contextmanager
+    def finalization_progress_bar(self) -> Iterator[Callable[[int, int], None]]:
+        self.common_ui.progress.start.emit("Finalization")
+        yield self.common_ui.progress.progress.emit
+
+
+class Nk3Context(DeviceHandler):
+    def __init__(self, path: str) -> None:
+        self.path = path
+        logger.info(f"path: {path}")
+        self.updating = False
+
+    def connect(self) -> TrussedBase:
+        device = open_nk3(self.path)
+        # TODO: improve error handling
+        if not device:
+            raise RuntimeError(f"Failed to open Nitrokey 3 device at {self.path}")
+        return device
+
+    def _await(
+        self,
+        name: str,
+        ty: Type[T],
+        retries: int,
+        callback: Optional[Callable[[int, int], None]] = None,
+    ) -> T:
+        for t in Retries(retries):
+            logger.debug(f"Searching {name} device ({t})")
+            try:
+                devices = [device for device in list_nk3() if isinstance(device, ty)]
+            except Exception:
+                # have to catch this, to avoid early exception-raise-out
+                devices = []
+            if len(devices) == 0:
+                if callback:
+                    callback(int((t.i / retries) * 100), 100)
+                logger.debug(f"No {name} device found, continuing")
+                continue
+            if len(devices) > 1:
+                raise Exception(f"Multiple {name} devices found")
+            if callback:
+                callback(100, 100)
+            return devices[0]
+
+        raise Exception(f"No {name} device found")
+
+    def await_device(
+        self,
+        model: Model,
+        retries: Optional[int] = 90,
+        callback: Optional[Callable[[int, int], None]] = None,
+    ) -> NK3:
+        assert model == Model.NK3
+        assert retries is not None
+        return self._await("Nitrokey 3", NK3, retries, callback)
+
+    def await_bootloader(self, model: Model) -> NK3Bootloader:
+        assert model == Model.NK3
+        # mypy does not allow abstract types here, but this is still valid
+        return self._await("Nitrokey 3 bootloader", NK3Bootloader, 90, None)  # type: ignore
+
+    def update(self, ui: UpdateGUI, image: Optional[str] = None) -> UpdateResult:
+        try:
+            with self.connect() as device:
+                updater = Updater(ui, self)
+                _, status = updater.update(device=device, image=image, update_version=None)
+        except UpdateException as e:
+            return UpdateResult(status=e.status, message=str(e))
+        except Exception as e:
+            return UpdateResult(status=UpdateStatus.ERROR, message=str(e))
+
+        if status.init_status is not None:
+            if status.init_status & InitStatus.EXT_FLASH_NEED_REFORMAT:
+                logger.error(f"Problematic init status after update: {status.init_status}")
+                return UpdateResult(
+                    status=UpdateStatus.ERROR,
+                    message="External filesystem needs to be reformatted."
+                    " Please contact support@nitrokey.com for more information on how to solve this issue.",
+                )
+
+        return UpdateResult(status=UpdateStatus.SUCCESS)
+
+
+class Try:
+    """Utility class for an execution of a repeated action with Retries."""
+
+    def __init__(self, i: int, retries: int) -> None:
+        self.i = i
+        self.retries = retries
+
+    def __str__(self) -> str:
+        return f"try {self.i + 1} of {self.retries}"
+
+    def __repr__(self) -> str:
+        return f"Try(i={self.i}, retries={self.retries})"
+
+
+class Retries:
+    """Utility class for repeating an action multiple times until it succeeds."""
+
+    def __init__(self, retries: int, timeout: float = 0.5) -> None:
+        self.retries = retries
+        self.i = 0
+        self.timeout = timeout
+
+    def __iter__(self) -> "Retries":
+        return self
+
+    def __next__(self) -> Try:
+        if self.i >= self.retries:
+            raise StopIteration
+        if self.i > 0:
+            sleep(self.timeout)
+        t = Try(self.i, self.retries)
+        self.i += 1
+        return t
