@@ -1,0 +1,125 @@
+# Docker Compose file for openHAB MCP Server
+
+services:
+  openhab-mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: openhab-mcp-server:latest
+    container_name: openhab-mcp-server
+    restart: unless-stopped
+    
+    # Environment configuration
+    environment:
+      # openHAB connection settings
+      OPENHAB_URL: ${OPENHAB_URL:-http://host.docker.internal:8080}
+      OPENHAB_TOKEN: ${OPENHAB_TOKEN}
+      OPENHAB_TIMEOUT: ${OPENHAB_TIMEOUT:-30}
+      
+      # Logging configuration
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_FORMAT: ${LOG_FORMAT:-json}
+      
+      # Health check configuration
+      HEALTH_CHECK_PORT: ${HEALTH_CHECK_PORT:-8081}
+      
+      # Security settings
+      PYTHONUNBUFFERED: 1
+      PYTHONDONTWRITEBYTECODE: 1
+    
+    # Volume mounts for persistent configuration
+    volumes:
+      # Configuration directory
+      - ./config:/app/config:ro
+      # Logs directory (writable)
+      - ./logs:/app/logs:rw
+      # Data directory for any persistent data
+      - ./data:/app/data:rw
+      # Optional: Custom configuration file
+      - ./docker/config.json:/app/config.json:ro
+    
+    # Port mappings
+    ports:
+      # Health check endpoint
+      - "${HEALTH_CHECK_PORT:-8081}:8081"
+    
+    # Health check configuration
+    healthcheck:
+      test: ["CMD", "python", "/app/healthcheck.py"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    
+    # Resource limits for container orchestration
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+    
+    # Security settings
+    security_opt:
+      - no-new-privileges:true
+    read_only: false  # Set to true if no write access needed
+    tmpfs:
+      - /tmp:noexec,nosuid,size=100m
+    
+    # Network configuration
+    networks:
+      - openhab-network
+    
+    # Dependency management (optional - only if openhab service is enabled)
+    # depends_on:
+    #   - openhab  # Optional: if running openHAB in the same compose stack
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Optional: openHAB service for development/testing
+  openhab:
+    image: openhab/openhab:latest
+    container_name: openhab
+    restart: unless-stopped
+    
+    environment:
+      OPENHAB_HTTP_PORT: 8080
+      OPENHAB_HTTPS_PORT: 8443
+      EXTRA_JAVA_OPTS: "-Duser.timezone=America/New_York"
+    
+    volumes:
+      - openhab_addons:/openhab/addons
+      - openhab_conf:/openhab/conf
+      - openhab_userdata:/openhab/userdata
+    
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+    
+    networks:
+      - openhab-network
+    
+    # Only include this service if INCLUDE_OPENHAB is set
+    profiles:
+      - openhab
+
+# Network configuration
+networks:
+  openhab-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# Volume definitions for openHAB (if included)
+volumes:
+  openhab_addons:
+  openhab_conf:
+  openhab_userdata:
