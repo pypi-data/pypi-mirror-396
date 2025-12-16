@@ -1,0 +1,57 @@
+{%raw%}{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Welcome to {% endraw %}{{ project_name }}{%raw%}{% endblock %}
+
+{% block content %}{%endraw%}
+<div class="welcome-container">
+    <h1>Welcome to {{ project_name }}</h1>
+    <p>Your Django project has been successfully generated with QuickScale!</p>
+
+    <div class="next-steps">
+        <h2>Next Steps:</h2>
+        <ul>
+            <li>Customize your settings in <code>{{ project_name }}/settings/</code></li>
+            <li>Create your Django apps with <code>python manage.py startapp</code></li>
+            <li>Add your models and run <code>python manage.py makemigrations</code></li>
+            <li>Set up your database with <code>python manage.py migrate</code></li>
+            <li>Create a superuser with <code>python manage.py createsuperuser</code></li>
+        </ul>
+    </div>
+
+    <div class="installed-modules">
+        <h2>Installed Modules:</h2>
+        <ul>
+            {%raw%}{% if 'quickscale_modules_auth' in settings.INSTALLED_APPS %}
+            <li>✅ <strong>Authentication</strong> - User registration, login, profiles, and password management</li>
+            {% endif %}
+            {% if 'quickscale_modules_blog' in settings.INSTALLED_APPS %}
+            <li>✅ <strong>Blog</strong> - Full-featured blog with Markdown support, categories, tags, and RSS feed (<a href="{% url 'quickscale_blog:post_list' %}">View Blog</a>)</li>
+            {% endif %}
+            {% if 'quickscale_modules_listings' in settings.INSTALLED_APPS %}
+            <li>✅ <strong>Listings</strong> - Generic listings with filtering for marketplace verticals (<a href="{% url 'quickscale_listings:listing_list' %}">View Listings</a>)</li>
+            {% endif %}
+            {% if 'quickscale_modules_billing' in settings.INSTALLED_APPS %}
+            <li>✅ <strong>Billing</strong> - Subscription management and payment processing</li>
+            {% endif %}
+            {% if 'quickscale_modules_teams' in settings.INSTALLED_APPS %}
+            <li>✅ <strong>Teams</strong> - Team collaboration and management features</li>
+            {% endif %}
+            {% if 'quickscale_modules_crm' in settings.INSTALLED_APPS %}
+            <li>✅ <strong>CRM</strong> - Contact management, companies, deals, and notes (<a href="{% url 'quickscale_crm:dashboard' %}">View CRM</a>)</li>
+            {% endif %}
+            {% if 'quickscale_modules_auth' not in settings.INSTALLED_APPS and 'quickscale_modules_blog' not in settings.INSTALLED_APPS and 'quickscale_modules_listings' not in settings.INSTALLED_APPS and 'quickscale_modules_billing' not in settings.INSTALLED_APPS and 'quickscale_modules_teams' not in settings.INSTALLED_APPS and 'quickscale_modules_crm' not in settings.INSTALLED_APPS %}
+            <li>No modules installed yet. Use <code>quickscale embed --module &lt;module_name&gt;</code> to add modules.</li>
+            {% endif %}{%endraw%}
+        </ul>
+    </div>
+
+    <div class="resources">
+        <h2>Resources:</h2>
+        <ul>
+            <li><a href="https://docs.djangoproject.com/" target="_blank">Django Documentation</a></li>
+            <li><a href="https://github.com/Experto-AI/quickscale" target="_blank">QuickScale Documentation</a></li>
+        </ul>
+    </div>
+</div>
+{%raw%}{% endblock %}{%endraw%}
