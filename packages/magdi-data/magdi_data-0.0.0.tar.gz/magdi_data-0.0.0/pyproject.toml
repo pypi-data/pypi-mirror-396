@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=80.9.0", "setuptools-scm>=9.2.0", "wheel>=0.45.1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "magdi-data"
+description = "MAGDI data"
+authors = [{ name = "Christian Hänig", email = "christian.haenig@hs-anhalt.de" },
+    { name = "Christian Gurski", email = "christian.gurski@hs-anhalt.de" }]
+
+dynamic = ["version", "dependencies"]
+
+requires-python = ">=3.12"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+]
+
+
+[project.urls]
+Gitlab = "https://gitlab.hs-anhalt.de/ki/projekte/magdi/magdi-data"
+
+
+[tool.setuptools.dynamic]
+readme = { file = ["README.md"], content-type = "text/markdown; charset=UTF-8" }
+dependencies = { file = ["requirements.txt"] }
+
+[tool.pytest.ini_options]
+pythonpath = [
+    ".", "src", "tests"
+]
+log_cli = true
+log_cli_level = "INFO"
+log_cli_format = "%(asctime)s %(name)s[%(process)d] %(levelname)-8s: %(message)s"
+log_cli_date_format = "%Y-%m-%d %H:%M:%S"
+
+
+[tool.black]
+line-length = 88
+target-version = ["py312"]
+
+[tool.flake8]
+max-line-length = 88
+
+[tool.pylint.main]
+load-plugins = ["pylint.extensions.docparams"]
+
+[tool.pylint.format]
+max-line-length = 88
+
+[tool.pylint.docstring_style]
+convention = "google"
+
+[tool.mypy]
+python_version = "3.12"
+#strict = false
+ignore_missing_imports = true
