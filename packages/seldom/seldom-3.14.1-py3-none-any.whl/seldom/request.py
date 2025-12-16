@@ -1,0 +1,488 @@
+"""
+seldom requests
+"""
+import os
+import ast
+import time
+import json
+import socket
+from typing import Any
+from functools import wraps
+from urllib.parse import urlparse
+
+import requests
+from seldom.running.config import Seldom
+from seldom.running.loader_hook import loader
+from seldom.logging import log
+from seldom.utils import jmespath as utils_jmespath
+from seldom.extend_lib import jsonpath as lib_jsonpath
+from seldom.extend_lib import to_curl
+
+IMG = ["jpg", "jpeg", "gif", "bmp", "webp"]
+
+
+class ResponseResult:
+    status_code = 200
+    response = None
+    request = None
+
+
+def formatting(msg):
+    """formatted message"""
+    if isinstance(msg, dict):
+        return json.dumps(msg, indent=2, ensure_ascii=False)
+    return msg
+
+
+def request(func):
+    def wrapper(*args, **kwargs):
+        func_name = func.__name__
+        log.info('-------------- [📤] Request -----------------')
+        try:
+            url = list(args)[1]
+        except IndexError:
+            url = kwargs.get("url", "")
+        if (Seldom.base_url is not None) and (url.startswith("http") is False):
+            url = Seldom.base_url + url
+
+        img_file = False
+        file_type = url.split(".")[-1]
+        if file_type in IMG:
+            img_file = True
+
+        log.info(f"[method]: {func_name.upper()}      [url]: {url} ")
+        auth = kwargs.get("auth", None)
+        headers = kwargs.get("headers", None)
+        cookies = kwargs.get("cookies", None)
+        params = kwargs.get("params", None)
+        data = kwargs.get("data", None)
+        json_ = kwargs.get("json", None)
+        files = kwargs.get("files", None)
+        if auth is not None:
+            log.debug(f"[auth]:\n{auth}")
+        if headers is not None:
+            log.debug(f"[headers]:\n{formatting(headers)}")
+        if cookies is not None:
+            log.debug(f"[cookies]:\n{formatting(cookies)}")
+        if params is not None:
+            log.debug(f"[params]:\n{formatting(params)}")
+        if data is not None:
+            log.debug(f"[data]:\n{formatting(data)}")
+        if json_ is not None:
+            log.debug(f"[json]:\n{formatting(json_)}")
+        if files is not None:
+            log.debug(f"[files]:\n{files}")
+
+        # running function
+        r = func(*args, **kwargs)
+
+        ResponseResult.request = r.request
+        ResponseResult.status_code = r.status_code
+        log.info("-------------- [📨] Response ----------------")
+        if ResponseResult.status_code == 200 or ResponseResult.status_code == 304:
+            log.info(f"successful with status {ResponseResult.status_code}")
+        else:
+            log.warning(f"unsuccessful with status {ResponseResult.status_code}")
+        resp_time = r.elapsed.total_seconds()
+        try:
+            resp = r.json()
+            log.debug(f"[type]: json      [time]: {resp_time}")
+            log.debug(f"[response]:\n {formatting(resp)}")
+            ResponseResult.response = resp
+        except BaseException as msg:
+            log.debug("[warning]: failed to convert res to json, try to convert to text")
+            log.trace(f"[warning]: {msg}")
+            if img_file is True:
+                log.debug(f"[type]: {file_type}      [time]: {resp_time}")
+                ResponseResult.response = r.content
+            else:
+                r.encoding = 'utf-8'
+                log.debug(f"[type]: text      [time]: {resp_time}")
+                log.debug(f"[response]:\n {r.text}")
+                ResponseResult.response = r.text
+
+        return r
+
+    return wrapper
+
+
+def mock_url(url: str) -> str:
+    """
+    If the mock hook is set, replace it with the mock url
+    :param url:
+    """
+    configs = loader("mock_url") if loader("mock_url") is not None else None
+    if configs is None:
+        return url
+
+    replace_url = configs.get(url, "")
+    if replace_url == "":
+        return url
+
+    log.debug(f"mock url: {replace_url}")
+    return replace_url
+
+
+def check_proxies() -> Any | None:
+    """
+    check http proxies
+    """
+    configs = loader("proxies") if loader("proxies") is not None else None
+    return configs
+
+
+class HttpRequest:
+    """seldom http request class"""
+
+    def __init__(self, base_url=None, *args, **kwargs):
+        self.base_url = base_url
+        if self.base_url is not None:
+            Seldom.base_url = self.base_url
+        self.args = args
+        self.kwargs = kwargs
+
+    @request
+    def get(self, url, params=None, **kwargs):
+        if (Seldom.base_url is not None) and (url.startswith("http") is False):
+            url = Seldom.base_url + url
+        url = mock_url(url)
+        if kwargs.get('proxies', None) is None:
+            kwargs["proxies"] = check_proxies()
+        return requests.get(url, params=params, timeout=Seldom.timeout, **kwargs)
+
+    @request
+    def post(self, url, data=None, json=None, **kwargs):
+        if (Seldom.base_url is not None) and (url.startswith("http") is False):
+            url = Seldom.base_url + url
+        url = mock_url(url)
+        if kwargs.get("proxies", None) is None:
+            kwargs["proxies"] = check_proxies()
+        return requests.post(url, data=data, json=json, timeout=Seldom.timeout, **kwargs)
+
+    @request
+    def put(self, url, data=None, **kwargs):
+        if (Seldom.base_url is not None) and (url.startswith("http") is False):
+            url = Seldom.base_url + url
+        url = mock_url(url)
+        if kwargs.get("proxies", None) is None:
+            kwargs["proxies"] = check_proxies()
+        return requests.put(url, data=data, timeout=Seldom.timeout, **kwargs)
+
+    @request
+    def delete(self, url, **kwargs):
+        if (Seldom.base_url is not None) and (url.startswith("http") is False):
+            url = Seldom.base_url + url
+        url = mock_url(url)
+        if kwargs.get("proxies", None) is None:
+            kwargs["proxies"] = check_proxies()
+        return requests.delete(url, timeout=Seldom.timeout, **kwargs)
+
+    @request
+    def patch(self, url, data=None, **kwargs):
+        if (Seldom.base_url is not None) and (url.startswith("http") is False):
+            url = Seldom.base_url + url
+        url = mock_url(url)
+        if kwargs.get("proxies", None) is None:
+            kwargs["proxies"] = check_proxies()
+        return requests.patch(url, data=data, timeout=Seldom.timeout, **kwargs)
+
+    @property
+    def response(self) -> Any:
+        """
+        Returns the result of the response.
+        :return:
+        """
+        return ResponseResult.response
+
+    @staticmethod
+    def jsonpath(expr, index: int = None, response=None) -> Any:
+        """
+        Extract the data in response
+        mode:
+         * jsonpath: https://goessner.net/articles/JsonPath/
+         * jmespath: https://jmespath.org/
+        """
+        if response is None:
+            response = ResponseResult.response
+
+        ret = lib_jsonpath(response, expr)
+        if index is not None:
+            ret = ret[index]
+        return ret
+
+    @staticmethod
+    def jmespath(expr, response=None) -> Any:
+        """
+        Extract the data in response
+        * jmespath: https://jmespath.org/
+        """
+        if response is None:
+            response = ResponseResult.response
+
+        ret = utils_jmespath(response, expr)
+        return ret
+
+    @property
+    def status_code(self) -> int:
+        """
+        Returns the result of the status code
+        :return: status_code
+        """
+        return ResponseResult.status_code
+
+    @staticmethod
+    def curl(request=None, compressed: bool = False, verify: bool = True) -> str:
+        """
+        requests to cURL command
+        :param request: request object
+        :param compressed:
+        :param verify:
+        :return:
+        """
+        if request is None:
+            return to_curl(ResponseResult.request, compressed, verify)
+
+        return to_curl(request, compressed, verify)
+
+    class Session(requests.Session):
+
+        @request
+        def get(self, url, **kwargs):
+            r"""Sends a GET request. Returns :class:`Response` object.
+            :param url: URL for the new :class:`Request` object.
+            :param \*\*kwargs: Optional arguments that ``request`` takes.
+            :rtype: requests.Response
+            """
+            if (Seldom.base_url is not None) and (url.startswith("http") is False):
+                url = Seldom.base_url + url
+            url = mock_url(url)
+            if kwargs.get("proxies", None) is None:
+                kwargs["proxies"] = check_proxies()
+            kwargs.setdefault('allow_redirects', True)
+            return self.request('GET', url, **kwargs)
+
+        @request
+        def post(self, url, data=None, json=None, **kwargs):
+            r"""Sends a POST request. Returns :class:`Response` object.
+
+            :param url: URL for the new :class:`Request` object.
+            :param data: (optional) Dictionary, list of tuples, bytes, or file-like
+                object to send in the body of the :class:`Request`.
+            :param json: (optional) json to send in the body of the :class:`Request`.
+            :param \*\*kwargs: Optional arguments that ``request`` takes.
+            :rtype: requests.Response
+            """
+            if (Seldom.base_url is not None) and (url.startswith("http") is False):
+                url = Seldom.base_url + url
+            url = mock_url(url)
+            if kwargs.get("proxies", None) is None:
+                kwargs["proxies"] = check_proxies()
+            return self.request('POST', url, data=data, json=json, **kwargs)
+
+        @request
+        def put(self, url, data=None, **kwargs):
+            r"""Sends a PUT request. Returns :class:`Response` object.
+
+            :param url: URL for the new :class:`Request` object.
+            :param data: (optional) Dictionary, list of tuples, bytes, or file-like
+                object to send in the body of the :class:`Request`.
+            :param \*\*kwargs: Optional arguments that ``request`` takes.
+            :rtype: requests.Response
+            """
+            if (Seldom.base_url is not None) and (url.startswith("http") is False):
+                url = Seldom.base_url + url
+            url = mock_url(url)
+            if kwargs.get("proxies", None) is None:
+                kwargs["proxies"] = check_proxies()
+            return self.request('PUT', url, data=data, **kwargs)
+
+        @request
+        def delete(self, url, **kwargs):
+            r"""Sends a DELETE request. Returns :class:`Response` object.
+
+            :param url: URL for the new :class:`Request` object.
+            :param \*\*kwargs: Optional arguments that ``request`` takes.
+            :rtype: requests.Response
+            """
+            if (Seldom.base_url is not None) and (url.startswith("http") is False):
+                url = Seldom.base_url + url
+            url = mock_url(url)
+            if kwargs.get("proxies", None) is None:
+                kwargs["proxies"] = check_proxies()
+            return self.request('DELETE', url, **kwargs)
+
+    @staticmethod
+    def json_to_dict(data: str, replace_quotes: bool = True) -> dict:
+        """
+        json to dict
+        :param data: json data.
+        :param replace_quotes: whether to replace single quotes.
+        """
+        if isinstance(data, dict):
+            return data
+        elif isinstance(data, str):
+            try:
+                data_dict = ast.literal_eval(data)
+            except ValueError:
+                try:
+                    if replace_quotes:
+                        data = data.replace('\'', '\"')
+                    data_dict = json.loads(data)
+                except json.decoder.JSONDecodeError:
+                    log.error(f"json to dict error. --> {data}")
+                    return {}
+                else:
+                    return data_dict
+            else:
+                return data_dict
+        else:
+            log.error(f"type error --> {data}")
+            return {}
+
+    @property
+    def base_url(self):
+        """
+        return base url (http)
+        """
+        return Seldom.base_url
+
+    @staticmethod
+    def save_response(response: requests.Response, filename: str = None):
+        """
+        save response.
+        :param response:
+        :param filename:
+        :return:
+        """
+        # Determine content type
+        content_type = response.headers.get('Content-Type', '').lower()
+
+        data = response.text
+        ext = '.txt'
+        if 'application/json' in content_type or response.text.strip().startswith('{'):
+            try:
+                data = response.json()
+                ext = '.json'
+            except requests.exceptions.JSONDecodeError:
+                pass
+
+        if filename is None:
+            timestamp = int(time.time() * 1000)
+            filename = f"response_{timestamp}{ext}"
+        else:
+            root, _ = os.path.splitext(filename)
+            filename = f"{root}{ext}"
+
+        # Save file
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=4) if ext == '.json' else f.write(data)
+
+        return filename
+
+    def ip_address(self, url: str = None) -> str:
+        """
+        request ip ip_address
+        :param url:
+        :return:
+        """
+        if url is None:
+            url = self.base_url
+        parsed_url = urlparse(url)
+        domain = parsed_url.netloc
+        ip_address = socket.gethostbyname(domain)
+        log.info(f"🌐 IP address: {ip_address}")
+        return ip_address
+
+    @base_url.setter
+    def base_url(self, value):
+        self._base_url = value
+
+
+def check_response(describe: str = "", status_code: int = 200, ret: str = None, check: dict = None,
+                   debug: bool = False):
+    """
+    checkout response data
+    :param describe: interface describe
+    :param status_code: http status code
+    :param ret: return data
+    :param check: check data
+    :param debug: debug Ture/False
+    :return:
+    """
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            func_name = func.__name__
+            if debug is True:
+                log.debug(f"Execute {func_name} - args: {args}")
+                log.debug(f"Execute {func_name} - kwargs: {kwargs}")
+
+            r = func(*args, **kwargs)
+            flat = True
+            if r.status_code != status_code:
+                log.error(f"Execute {func_name} - {describe} failed: {r.status_code}")
+                flat = False
+
+            try:
+                r.json()
+            except json.decoder.JSONDecodeError:
+                log.error(f"Execute {func_name} - {describe} failed：Not in JSON format")
+                flat = False
+
+            if debug is True:
+                log.debug(f"Execute {func_name} - response:\n {r.json()}")
+
+            if flat is True:
+                log.info(f"Execute {func_name} - {describe} success!")
+
+            if check is not None:
+                for expr, value in check.items():
+                    data = utils_jmespath(r.json(), expr)
+                    if data != value:
+                        log.error(f"Execute {func_name} - check data failed：{expr} = {value}")
+                        log.error(f"Execute {func_name} - response：{r.json()}")
+                        raise ValueError(f"{data} != {value}")
+
+            if ret is not None:
+                data = utils_jmespath(r.json(), ret)
+                if data is None:
+                    log.error(f"Execute {func_name} - return {ret} is None")
+                return data
+
+            return r.json()
+
+        return wrapper
+
+    return decorator
+
+
+# @check_response as @api
+api = check_response
+
+
+def retry(times: int = 3, wait: int = 1):
+    """
+    retry the decorator
+    :param: times: times of retries
+    :wait: retry interval, Default（s）
+    """
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            attempts = 0
+            while attempts < times:
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    log.warning(
+                        f"""Attempt to execute <{func.__name__}> failed with error: '{e}'. Attempting retry number {attempts + 1}...""")
+                    time.sleep(wait)
+                    attempts += 1
+
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
