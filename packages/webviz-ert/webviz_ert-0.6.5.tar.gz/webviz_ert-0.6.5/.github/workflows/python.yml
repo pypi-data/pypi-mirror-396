@@ -1,0 +1,39 @@
+name: Python
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+        os: [ubuntu-latest]
+
+    steps:
+    - uses: actions/checkout@v6
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v6
+      with:
+        python-version: "${{ matrix.python-version }}"
+    - name: Install
+      run: |
+        pip install .
+    - name: Test with mypy typing
+      run: |
+        pip install -r types_requirements.txt
+        mypy --config-file mypy.ini --package webviz_ert
+    - name: Test with pytest
+      run: |
+        pip install -r test_requirements.txt
+        pytest
+
+    - name: Run black
+      if: ${{ matrix.python-version  == '3.12'}}
+      uses: psf/black@stable
