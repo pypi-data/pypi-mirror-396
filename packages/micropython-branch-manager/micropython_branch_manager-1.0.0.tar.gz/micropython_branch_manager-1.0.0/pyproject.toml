@@ -1,0 +1,53 @@
+[project]
+name = "micropython-branch-manager"
+dynamic = ["version"]
+description = "Tool for managing MicroPython fork integration branches"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.0",
+    "cyclopts>=3.0",
+]
+
+[project.scripts]
+micropython-branch-manager = "micropython_branch_manager.cli:main"
+mbm = "micropython_branch_manager.cli:main"
+
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "src/micropython_branch_manager/_version.py"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=4.0",
+    "mypy>=1.8",
+    "ruff>=0.8",
+    "pre-commit>=4.0",
+    "hatch-vcs>=0.4",  # Needed for editable install with dynamic versioning
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+disallow_untyped_defs = true
+exclude = ["tests/"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=micropython_branch_manager --cov-report=term --cov-report=xml"
