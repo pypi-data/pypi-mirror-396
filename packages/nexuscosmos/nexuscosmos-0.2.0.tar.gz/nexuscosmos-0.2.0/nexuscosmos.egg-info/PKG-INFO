@@ -1,0 +1,390 @@
+Metadata-Version: 2.4
+Name: nexuscosmos
+Version: 0.2.0
+Summary: A powerful, dataset-agnostic Python library for astronomical data acquisition with built-in caching, rate limiting, async support, and progress tracking
+Author-email: Pancha Narayan Sahu <panchanarayansahu452@gmail.com>
+License-Expression: MIT
+Project-URL: Homepage, https://github.com/panchanarayansahu/nexuscosmos
+Project-URL: Documentation, https://nexuscosmos.readthedocs.io
+Project-URL: Repository, https://github.com/panchanarayansahu/nexuscosmos.git
+Project-URL: Issues, https://github.com/panchanarayansahu/nexuscosmos/issues
+Keywords: astronomy,ephemeris,orbital-mechanics,space,celestial,api-client,data-acquisition,caching,async,scientific-computing
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Science/Research
+Classifier: Intended Audience :: Developers
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Scientific/Engineering :: Astronomy
+Classifier: Topic :: Scientific/Engineering :: Physics
+Classifier: Topic :: Internet :: WWW/HTTP :: Dynamic Content
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: requests>=2.28.0
+Provides-Extra: astropy
+Requires-Dist: astropy>=5.0; extra == "astropy"
+Provides-Extra: pandas
+Requires-Dist: pandas>=1.5.0; extra == "pandas"
+Provides-Extra: async
+Requires-Dist: aiohttp>=3.8.0; extra == "async"
+Provides-Extra: progress
+Requires-Dist: tqdm>=4.64.0; extra == "progress"
+Provides-Extra: viz
+Requires-Dist: matplotlib>=3.5.0; extra == "viz"
+Requires-Dist: plotly>=5.0.0; extra == "viz"
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0; extra == "dev"
+Requires-Dist: black>=22.0; extra == "dev"
+Requires-Dist: isort>=5.10; extra == "dev"
+Requires-Dist: flake8>=4.0; extra == "dev"
+Requires-Dist: mypy>=0.990; extra == "dev"
+Provides-Extra: all
+Requires-Dist: nexuscosmos[astropy,async,dev,pandas,progress,viz]; extra == "all"
+Dynamic: license-file
+
+# 🌌 NexusCosmos
+
+[![PyPI version](https://badge.fury.io/py/nexuscosmos.svg)](https://pypi.org/project/nexuscosmos/)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+**A powerful, dataset-agnostic Python library for astronomical data acquisition.**
+
+NexusCosmos provides a unified interface to fetch astronomical data from **any API source** — whether it's NASA JPL Horizons, Minor Planet Center, ESA GAIA, or your own custom endpoints. Built with modern Python best practices, it handles all the complex infrastructure so you can focus on the science.
+
+---
+
+## ✨ Key Features
+
+| Feature | Description |
+|---------|-------------|
+| 🔌 **Any Data Source** | Works with any REST API - just provide the URL |
+| ⚡ **Async Support** | Fetch 100+ objects in parallel (3-10x faster) |
+| 📊 **Progress Tracking** | Visual progress bars for batch operations |
+| 💾 **Smart Caching** | File-based TTL cache reduces redundant API calls |
+| 🚦 **Rate Limiting** | Built-in rate limiter respects API limits |
+| 🔄 **Auto Retry** | Exponential backoff handles transient failures |
+| 🛡️ **Error Recovery** | Falls back to cached data when APIs are unavailable |
+| 🔍 **Request Inspection** | Debug exactly what's being sent/received |
+| 📤 **Data Export** | Export to JSON, CSV, pandas DataFrame, Astropy Table |
+
+---
+
+## 📦 Installation
+
+```bash
+# Basic installation
+pip install nexuscosmos
+
+# With optional dependencies
+pip install nexuscosmos[async]      # For async support (aiohttp)
+pip install nexuscosmos[progress]   # For progress bars (tqdm)
+pip install nexuscosmos[pandas]     # For DataFrame export
+pip install nexuscosmos[astropy]    # For Astropy Table export
+pip install nexuscosmos[all]        # Everything
+```
+
+---
+
+## 🚀 Quick Start
+
+### Basic Usage (Any API)
+
+```python
+from nexuscosmos import GenericAcquisitionClient, QueryConfig
+
+# Connect to ANY astronomical API
+client = GenericAcquisitionClient(
+    base_url="https://api.example.com/data",
+    show_progress=True,    # Show progress bars
+    debug=True             # Enable debug logging
+)
+
+# Configure your query
+config = QueryConfig(
+    object_id="asteroid_123",
+    start_time="2025-01-01",
+    stop_time="2025-01-31",
+    step_size="1d"
+)
+
+# Fetch data
+result = client.fetch_data(config)
+
+if result['success']:
+    print(f"Data: {result['data']}")
+```
+
+### Batch Operations (Multiple Objects)
+
+```python
+# Fetch data for multiple objects at once
+configs = [
+    QueryConfig(object_id=f"object_{i}", start_time="2025-01-01", stop_time="2025-01-31")
+    for i in range(50)
+]
+
+# Sequential with progress bar
+results = client.fetch_batch(configs, show_progress=True)
+# Output: Fetching data: 100%|████████████| 50/50 [00:30<00:00, 1.67obj/s]
+```
+
+### Async Operations (3-10x Faster)
+
+```python
+import asyncio
+from nexuscosmos import AsyncGenericAcquisitionClient, QueryConfig
+
+async def fetch_many():
+    client = AsyncGenericAcquisitionClient(
+        base_url="https://api.example.com/data",
+        max_concurrent=10,    # 10 parallel requests
+        show_progress=True
+    )
+    
+    configs = [
+        QueryConfig(object_id=f"object_{i}", start_time="2025-01-01", stop_time="2025-01-31")
+        for i in range(100)
+    ]
+    
+    # Fetch all in parallel - MUCH faster!
+    results = await client.fetch_data_async_batch(configs)
+    return results
+
+results = asyncio.run(fetch_many())
+print(f"Fetched {len(results)} objects")
+```
+
+---
+
+## 🔭 Using with JPL Horizons
+
+NexusCosmos includes a ready-to-use client for NASA JPL Horizons:
+
+```python
+from nexuscosmos import HorizonsClient, QueryConfig
+
+# Pre-configured for JPL Horizons API
+client = HorizonsClient()
+
+# Quick presets for common queries
+config = QueryConfig.quick_ephemeris(object_id="1I")  # 1I/'Oumuamua
+result = client.fetch_data(config)
+
+# Supports interstellar objects with friendly names
+# "1I", "Oumuamua", "2I/Borisov", "3I/ATLAS" all work!
+```
+
+---
+
+## 💾 Data Export
+
+```python
+from nexuscosmos import DataExporter
+
+# After fetching data...
+result = client.fetch_data(config)
+exporter = DataExporter(result['data'])
+
+# Export to various formats
+json_str = exporter.to_json(indent=2)
+csv_str = exporter.to_csv()
+df = exporter.to_dataframe()           # Requires pandas
+table = exporter.to_astropy_table()    # Requires astropy
+
+# Save directly to files
+exporter.save_json("output.json")
+exporter.save_csv("output.csv")
+```
+
+---
+
+## 🔧 Advanced Configuration
+
+### Client Options
+
+```python
+client = GenericAcquisitionClient(
+    base_url="https://api.example.com",
+    
+    # Rate Limiting
+    enforce_rate_limit=True,
+    max_requests_per_minute=60,
+    
+    # Caching
+    cache=FileCache(cache_dir="./cache", ttl_seconds=86400),  # 24hr cache
+    
+    # Resilience
+    fallback_to_cache=True,    # Use stale cache if API fails
+    timeout_seconds=30,
+    
+    # Debugging
+    debug=True,
+    show_progress=True
+)
+```
+
+### Request Inspection
+
+```python
+# After a request, inspect what happened
+result = client.fetch_data(config)
+
+print(f"URL called: {client.last_request_url}")
+print(f"Parameters: {client.last_request_params}")
+print(f"Status code: {client.last_response_status}")
+print(f"Response time: {client.last_response_time:.2f}s")
+print(f"Error (if any): {client.last_error}")
+```
+
+### Custom Rate Limiter & Backoff
+
+```python
+from nexuscosmos import RateLimiter, ExponentialBackoff, FileCache
+
+client = GenericAcquisitionClient(
+    base_url="https://api.example.com",
+    rate_limiter=RateLimiter(max_attempts=100, window_minutes=1),
+    backoff=ExponentialBackoff(base_delay=2.0, max_delay=120.0, multiplier=3.0),
+    cache=FileCache(cache_dir="./my_cache", ttl_seconds=3600)
+)
+```
+
+---
+
+## 🏗️ Extending for Custom APIs
+
+Create your own client by extending the base class:
+
+```python
+from nexuscosmos import BaseAcquisitionClient, BaseTextParser
+
+class MySpaceAgencyClient(BaseAcquisitionClient):
+    """Client for My Space Agency's API."""
+    
+    BASE_URL = "https://api.myspaceagency.org/v2"
+    
+    def __init__(self, api_key: str, **kwargs):
+        super().__init__(**kwargs)
+        self.api_key = api_key
+        self.base_url = self.BASE_URL
+    
+    def fetch_data(self, query_config):
+        # Your custom implementation
+        params = {
+            "target": query_config.object_id,
+            "start": query_config.start_time,
+            "end": query_config.stop_time,
+            "api_key": self.api_key
+        }
+        # ... fetch and parse
+```
+
+---
+
+## 📊 Data Models
+
+### EphemerisData
+Flexible container for astronomical observations:
+
+```python
+from nexuscosmos import EphemerisData
+
+ephem = EphemerisData(
+    datetime_str="2025-01-15 12:00:00",
+    RA=45.5,                    # Right Ascension (degrees)
+    DEC=30.2,                   # Declination (degrees)
+    delta=1.5,                  # Distance from observer (AU)
+    r=1.2,                      # Heliocentric distance (AU)
+    V_mag=15.5,                 # Visual magnitude
+    # ... many more optional fields
+)
+```
+
+### OrbitalElements
+Container for orbital parameters:
+
+```python
+from nexuscosmos import OrbitalElements
+
+orbit = OrbitalElements(
+    epoch="2025-01-15",
+    a=2.5,      # Semi-major axis (AU)
+    e=0.95,     # Eccentricity
+    i=135.0,    # Inclination (degrees)
+    # ...
+)
+
+# Automatic orbit type detection
+orbit.is_elliptical()    # True if e < 1
+orbit.is_hyperbolic()    # True if e > 1
+orbit.is_parabolic()     # True if e ≈ 1
+```
+
+---
+
+## 🧪 Testing
+
+```bash
+# Run tests
+pytest tests/ -v
+
+# With coverage
+pytest tests/ --cov=nexuscosmos --cov-report=html
+```
+
+---
+
+## 📁 Project Structure
+
+```
+nexuscosmos/
+├── __init__.py              # Package exports
+├── acquisition_base.py      # Generic & Async clients
+├── config.py                # QueryConfig, ClientConfig
+├── models.py                # EphemerisData, OrbitalElements
+├── cache.py                 # FileCache with TTL
+├── utils.py                 # RateLimiter, ExponentialBackoff
+├── export.py                # DataExporter (JSON, CSV, DataFrame)
+├── parsers_base.py          # Base parser classes
+└── datasets/
+    └── horizons/            # JPL Horizons implementation
+        ├── client.py        # HorizonsClient
+        └── parser.py        # HorizonsParser
+```
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Areas we'd love help with:
+
+- **New Dataset Clients**: Minor Planet Center, ESA GAIA, etc.
+- **Documentation**: Tutorials, examples, API docs
+- **Testing**: More test coverage
+- **Features**: See [Issues](https://github.com/panchanarayansahu/nexuscosmos/issues)
+
+---
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+---
+
+## 🙏 Acknowledgments
+
+- NASA JPL Horizons for their excellent ephemeris API
+- The Python astronomy community
+- All contributors and users
+
+---
+
+**Made with ❤️ for the astronomy community**
+
+*"The cosmos is within us. We are made of star-stuff."* — Carl Sagan
