@@ -1,0 +1,435 @@
+# 抖音视频解析 MCP 服务
+
+一个 MCP（Model Context Protocol）服务器，用于解析抖音分享链接并使用豆包视频理解模型进行智能内容分析。
+
+## 📦 快速安装
+
+```bash
+pip install doubao-douyin-analysis-parse-mcp
+```
+
+**就这么简单！** 然后[配置 Cursor](#在-cursor-中使用) 即可使用。
+
+> ⚠️ **v1.0.0 用户注意**：v1.0.0 有 bug 无法使用，请查看 [v1.0.0迁移指南.md](v1.0.0迁移指南.md) 升级到 v1.0.1
+
+> 💡 **开发者**：查看[源码安装](#方式-b从源码安装开发者)
+
+---
+
+## 📚 专用配置指南
+
+- 🍒 **[Cherry Studio 配置](Cherry_Studio配置指南.md)** - Cherry Studio 专用指南
+- 📋 **[快速参考](快速参考.md)** - 配置速查卡片
+- 🔄 **[v1.0.0 迁移](v1.0.0迁移指南.md)** - 从 v1.0.0 升级
+
+---
+
+## 🎓 新手指南
+
+**如果你是 Python 初学者，请先阅读：**
+
+- 📖 **[新手指南.md](新手指南.md)** - 零基础完整教程（推荐）
+- 🚀 **[调试步骤.md](调试步骤.md)** - 5 分钟快速上手
+- ⚡ **[QUICKSTART.md](QUICKSTART.md)** - 快速开始指南
+
+**已经熟悉 Python？** 继续往下看 ↓
+
+---
+
+## 功能特性
+
+✨ **智能链接提取** - 自动从抖音口令中提取视频链接  
+🎥 **视频内容解析** - 获取视频真实 URL  
+🤖 **AI 视频分析** - 使用豆包大模型进行深度内容分析  
+📋 **结构化输出** - 返回格式化的视频描述、大纲和教程步骤
+
+## 项目架构
+
+```
+抖音口令/链接 → 链接提取 → 抖音API → 视频URL → 豆包AI → 结构化分析结果
+```
+
+## 分析内容
+
+服务会返回以下结构化内容：
+
+- **视频描述**：简短概括（50字以内）
+- **视频类型**：自动识别（烹饪教程、Vlog、剧情等）
+- **视频大纲与内容**：
+  - **教程类**：所需材料、详细步骤、重点提示
+  - **其他类型**：主要内容、关键场景、核心信息
+
+## 快速开始
+
+### 🚀 方式 A：从 PyPI 安装（推荐，最简单）
+
+**仅需一条命令：**
+
+```bash
+pip install douyin-mcp-server
+```
+
+**就这样！** 无需下载代码，无需配置环境。
+
+然后跳转到 **[配置 API Key](#3-配置环境变量)** 和 **[在 Cursor 中使用](#在-cursor-中使用)**
+
+---
+
+### 🛠️ 方式 B：从源码安装（开发者）
+
+#### 1. 环境要求
+
+- Python 3.10 或更高版本
+- pip 包管理器
+
+#### 2. 安装依赖
+
+```bash
+# 克隆或进入项目目录
+cd douyin_to_notion
+
+# 创建虚拟环境（推荐）
+python -m venv venv
+
+# 激活虚拟环境
+# Windows:
+venv\Scripts\activate
+# macOS/Linux:
+source venv/bin/activate
+
+# 安装依赖
+pip install -e .
+```
+
+### 3. 配置环境变量
+
+复制 `env.example` 创建 `.env` 文件：
+
+```bash
+cp env.example .env
+```
+
+编辑 `.env` 文件，设置你的豆包 API Key：
+
+```env
+DOUBAO_API_KEY=your_actual_api_key_here
+DOUBAO_API_ENDPOINT=https://ark.cn-beijing.volces.com/api/v3/chat/completions
+DOUBAO_MODEL=doubao-1.5-vision-pro-32k
+```
+
+### 4. 获取豆包 API Key
+
+1. 访问 [火山引擎控制台](https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey)
+2. 登录并创建 API Key
+3. 将 API Key 复制到 `.env` 文件中
+
+### 5. 测试服务器
+
+#### 方法 1：运行 MCP 服务器
+```bash
+python -m src
+```
+
+#### 方法 2：运行测试示例
+```bash
+python test_example.py
+```
+
+测试示例会验证：
+- 链接提取功能
+- 视频 URL 获取功能
+- 完整视频信息获取
+
+## 在 Cursor 中使用
+
+### 配置步骤
+
+1. 打开 Cursor 设置
+2. 找到 MCP 配置区域
+3. 添加以下配置：
+
+**如果使用 PyPI 安装（推荐）：**
+
+```json
+{
+  "mcpServers": {
+    "douyin-analyzer": {
+      "command": "douyin-mcp-server",
+      "env": {
+        "DOUBAO_API_KEY": "your_actual_api_key"
+      }
+    }
+  }
+}
+```
+
+> ⚠️ **重要**：PyPI 安装后使用 `"command": "douyin-mcp-server"`，不需要 `args`
+
+**如果从源码运行（开发者）：**
+
+```json
+{
+  "mcpServers": {
+    "douyin-analyzer": {
+      "command": "python",
+      "args": ["-m", "src"],
+      "env": {
+        "DOUBAO_API_KEY": "your_actual_api_key"
+      },
+      "cwd": "D:\\work\\my-project\\douyin_to_notion"
+    }
+  }
+}
+```
+
+### 使用方法
+
+配置完成后，在 Cursor 中可以通过自然语言调用：
+
+#### 示例 1：使用口令
+
+```
+分析这个抖音视频：0.05 09/23 III:/ e@B.tE 今年农户都不易啊，水产水果都滞销 # 螃蟹 # 国庆假期 https://v.douyin.com/DGHl69ciWp4/ 复制此链接，打开Dou音搜索，直接观看视频！
+```
+
+#### 示例 2：使用链接
+
+```
+帮我分析这个抖音视频的内容：https://v.douyin.com/DGHl69ciWp4/
+```
+
+### 返回结果示例
+
+对于烹饪教程视频，可能返回：
+
+```
+✓ 成功提取链接: https://v.douyin.com/DGHl69ciWp4/
+✓ 成功获取视频 URL
+✓ 视频分析完成
+
+==================================================
+
+【视频描述】
+展示家常红烧肉的制作过程，简单易学的传统做法
+
+【视频类型】
+烹饪教程
+
+【视频大纲与内容】
+
+- 所需食材：
+  五花肉500g、冰糖30g、生抽2勺、老抽1勺、料酒2勺、葱姜蒜适量
+
+- 操作步骤：
+  1. 五花肉切块焯水去腥
+  2. 锅中炒糖色至焦糖色
+  3. 加入肉块翻炒上色
+  4. 加入调料和热水，大火烧开转小火炖40分钟
+  5. 大火收汁装盘
+
+- 重点提示：
+  炒糖色时火候要掌握好，避免炒糊；炖煮时要用小火慢炖，让肉质更软烂
+```
+
+## 在 VSCode 中使用
+
+### 配置步骤
+
+VSCode 配置文件位置：
+- **Windows**: `%APPDATA%\Code\User\settings.json`
+- **macOS**: `~/Library/Application Support/Code/User/settings.json`
+- **Linux**: `~/.config/Code/User/settings.json`
+
+在 `settings.json` 中添加：
+
+**PyPI 安装用户：**
+```json
+{
+  "mcp.servers": {
+    "douyin-analyzer": {
+      "command": "douyin-mcp-server",
+      "env": {
+        "DOUBAO_API_KEY": "your_actual_api_key"
+      }
+    }
+  }
+}
+```
+
+**源码安装用户：**
+```json
+{
+  "mcp.servers": {
+    "douyin-analyzer": {
+      "command": "python",
+      "args": ["-m", "src"],
+      "env": {
+        "DOUBAO_API_KEY": "your_actual_api_key"
+      },
+      "cwd": "D:\\work\\my-project\\douyin_to_notion"
+    }
+  }
+}
+```
+
+使用方法与 Cursor 相同。
+
+---
+
+## 🔄 更新与卸载
+
+### 更新到最新版本
+
+**PyPI 用户：**
+```bash
+pip install --upgrade douyin-mcp-server
+```
+
+**源码用户：**
+```bash
+cd D:\work\my-project\douyin_to_notion
+git pull
+pip install -e . --force-reinstall
+```
+
+### 卸载
+
+```bash
+pip uninstall douyin-mcp-server
+```
+
+---
+
+## 项目结构
+
+```
+douyin_to_notion/
+├── src/
+│   ├── __init__.py              # 包初始化
+│   ├── __main__.py              # 主入口
+│   ├── douyin_mcp_server.py     # MCP 服务器核心
+│   ├── link_extractor.py        # 链接提取模块
+│   ├── douyin_api.py            # 抖音 API 客户端
+│   ├── doubao_api.py            # 豆包 API 客户端
+│   └── prompts.py               # 提示词模板
+├── pyproject.toml               # 项目配置
+├── .gitignore                   # Git 忽略文件
+├── env.example                  # 环境变量示例
+├── mcp_config.json              # MCP 配置示例
+├── cursor_mcp_settings.md       # Cursor 配置说明
+└── README.md                    # 本文件
+```
+
+## API 说明
+
+### 抖音解析 API
+
+- **端点**: `http://175.24.234.153:8091/api/hybrid/video_data`
+- **方法**: GET
+- **参数**: 
+  - `url`: 抖音视频链接
+  - `minimal`: false
+- **返回**: 包含视频真实 URL 的 JSON 数据
+
+**视频链接提取逻辑**：
+从返回的 `data.video.bit_rate` 数组中，选择 `bit_rate` 值最小的对象（最小码率，文件最小），然后获取该对象的 `play_addr.url_list[0]` 作为视频播放地址。
+
+示例响应结构：
+```json
+{
+  "code": 200,
+  "data": {
+    "video": {
+      "bit_rate": [
+        {
+          "bit_rate": 1329070,
+          "play_addr": {
+            "url_list": ["视频地址1", "视频地址2"]
+          }
+        },
+        {
+          "bit_rate": 2598694,
+          "play_addr": {
+            "url_list": ["视频地址3", "视频地址4"]
+          }
+        }
+      ]
+    }
+  }
+}
+```
+系统会自动选择 `bit_rate` 为 1329070 的视频地址（最小码率）。
+
+### 豆包视频理解 API
+
+- **端点**: `https://ark.cn-beijing.volces.com/api/v3/chat/completions`
+- **方法**: POST
+- **认证**: Bearer Token
+- **模型**: `doubao-1.5-vision-pro-32k`
+- **文档**: [豆包视频理解官方文档](https://www.volcengine.com/docs/82379/1895586?lang=zh)
+
+## 常见问题
+
+### 1. 无法提取链接
+
+**问题**：提示"无法从文本中提取抖音链接"
+
+**解决**：
+- 确保文本中包含完整的抖音链接，格式为 `https://v.douyin.com/xxx/`
+- 检查链接是否被截断
+
+### 2. API Key 错误
+
+**问题**：提示"未设置豆包 API Key"
+
+**解决**：
+- 确保在 MCP 配置的 `env` 中设置了 `DOUBAO_API_KEY`
+- 或者在项目根目录创建 `.env` 文件并设置环境变量
+
+### 3. 豆包 API 调用失败
+
+**问题**：豆包 API 返回错误
+
+**解决**：
+- 检查 API Key 是否正确
+- 确认账户有足够的配额
+- 检查网络连接
+- 查看错误信息中的详细提示
+
+### 4. 抖音 API 无法访问
+
+**问题**：无法获取视频 URL
+
+**解决**：
+- 检查抖音解析 API 服务是否可用
+- 确认网络可以访问该 API 地址
+- 尝试使用其他抖音解析服务
+
+## 技术栈
+
+- **Python 3.10+** - 编程语言
+- **MCP SDK** - Model Context Protocol 支持
+- **httpx** - 异步 HTTP 客户端
+- **python-dotenv** - 环境变量管理
+- **豆包大模型** - 视频理解和内容分析
+
+## 开发计划
+
+- [ ] 支持批量视频分析
+- [ ] 添加缓存机制
+- [ ] 支持自定义提示词
+- [ ] 添加更多视频平台支持
+- [ ] 提供 Web 界面
+
+## 许可证
+
+MIT License
+
+## 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+## 联系方式
+
+如有问题或建议，请提交 Issue。
+
