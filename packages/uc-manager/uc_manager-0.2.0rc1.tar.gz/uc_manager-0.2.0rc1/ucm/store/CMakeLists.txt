@@ -1,0 +1,8 @@
+add_subdirectory(detail)
+add_library(storeintf INTERFACE)
+target_include_directories(storeintf INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(storeintf INTERFACE storedetail infra_status)
+add_subdirectory(nfsstore)
+add_subdirectory(pcstore)
+add_subdirectory(mooncakestore)
+add_subdirectory(test)
