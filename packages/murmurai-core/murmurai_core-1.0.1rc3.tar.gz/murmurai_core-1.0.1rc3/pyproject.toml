@@ -1,0 +1,58 @@
+[project]
+name = "murmurai-core"
+version = "1.0.1-rc.3"
+description = "Modern speech recognition with word-level timestamps and speaker diarization. Fork of WhisperX with torch 2.6+, pyannote 4.x compatibility."
+readme = "README.md"
+requires-python = ">=3.10, <3.14"
+license = {text = "BSD-2-Clause"}
+authors = [
+    {name = "Felipe Rosa"},
+    {name = "Namastex Labs"}
+]
+keywords = ["whisper", "speech-recognition", "transcription", "diarization", "asr", "murmur"]
+dependencies = [
+    "ctranslate2>=4.5.0",
+    "faster-whisper>=1.1.1",
+    "imageio-ffmpeg>=0.4.9",
+    "nltk>=3.9.1",
+    "numpy>=2.1.0,<2.3.0",
+    "omegaconf>=2.3.0",
+    "pandas>=2.2.3,<2.3.0",
+    "av<16.0.0",
+    "pyannote-audio>=4.0",
+    "torch>=2.8.0",
+    "torchaudio>=2.8.0",
+    "transformers>=4.48.0",
+]
+
+[project.urls]
+Repository = "https://github.com/namastexlabs/murmurai"
+Documentation = "https://github.com/namastexlabs/murmurai#readme"
+Issues = "https://github.com/namastexlabs/murmurai/issues"
+
+[project.scripts]
+murmurai-core = "murmurai.__main__:cli"
+
+[project.optional-dependencies]
+triton = ["triton>=3.3.0; sys_platform == 'linux' and platform_machine == 'x86_64'"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.8",
+    "pytest>=8.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["murmurai"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E501", "E402", "F841"]
