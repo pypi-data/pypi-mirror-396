@@ -1,0 +1,487 @@
+Metadata-Version: 2.4
+Name: py_zoop_toolkit
+Version: 0.1.0.dev159063265
+Summary: Comprehensive Python toolkit with monitoring, storage, and I/O utilities
+Project-URL: Homepage, https://github.com/your-org/py_zoop_toolkit
+Project-URL: Documentation, https://github.com/your-org/py_zoop_toolkit#readme
+Project-URL: Repository, https://github.com/your-org/py_zoop_toolkit.git
+Project-URL: Issues, https://github.com/your-org/py_zoop_toolkit/issues
+Author: Zoop Team
+License: MIT
+License-File: LICENSE
+Keywords: monitoring,storage,toolkit,utilities
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Requires-Python: >=3.10
+Requires-Dist: fastapi>=0.104.0
+Requires-Dist: requests>=2.31.0
+Provides-Extra: all
+Requires-Dist: aiomysql>=0.2.0; extra == 'all'
+Requires-Dist: aiosqlite>=0.19.0; extra == 'all'
+Requires-Dist: asyncpg>=0.29.0; extra == 'all'
+Requires-Dist: chromadb>=0.4.0; extra == 'all'
+Requires-Dist: elastic-apm>=6.19.0; extra == 'all'
+Requires-Dist: elasticsearch>=8.0.0; extra == 'all'
+Requires-Dist: google-auth>=2.23.0; extra == 'all'
+Requires-Dist: google-cloud-storage>=2.10.0; extra == 'all'
+Requires-Dist: langfuse>=2.0.0; extra == 'all'
+Requires-Dist: motor>=3.3.0; extra == 'all'
+Requires-Dist: newrelic>=9.0.0; extra == 'all'
+Requires-Dist: prometheus-fastapi-instrumentator>=6.1.0; extra == 'all'
+Requires-Dist: pydantic>=2.0.0; extra == 'all'
+Requires-Dist: sentry-sdk>=1.38.0; extra == 'all'
+Provides-Extra: config
+Requires-Dist: pydantic>=2.0.0; extra == 'config'
+Provides-Extra: db-logging
+Requires-Dist: aiomysql>=0.2.0; extra == 'db-logging'
+Requires-Dist: aiosqlite>=0.19.0; extra == 'db-logging'
+Requires-Dist: asyncpg>=0.29.0; extra == 'db-logging'
+Requires-Dist: elasticsearch>=8.0.0; extra == 'db-logging'
+Requires-Dist: motor>=3.3.0; extra == 'db-logging'
+Provides-Extra: db-logging-elasticsearch
+Requires-Dist: elasticsearch>=8.0.0; extra == 'db-logging-elasticsearch'
+Provides-Extra: db-logging-mongodb
+Requires-Dist: motor>=3.3.0; extra == 'db-logging-mongodb'
+Provides-Extra: db-logging-mysql
+Requires-Dist: aiomysql>=0.2.0; extra == 'db-logging-mysql'
+Provides-Extra: db-logging-postgres
+Requires-Dist: asyncpg>=0.29.0; extra == 'db-logging-postgres'
+Provides-Extra: db-logging-sqlite
+Requires-Dist: aiosqlite>=0.19.0; extra == 'db-logging-sqlite'
+Provides-Extra: dev
+Requires-Dist: black>=23.9.0; extra == 'dev'
+Requires-Dist: mypy>=1.5.0; extra == 'dev'
+Requires-Dist: pytest-asyncio>=0.21.0; extra == 'dev'
+Requires-Dist: pytest>=7.4.0; extra == 'dev'
+Requires-Dist: ruff>=0.0.290; extra == 'dev'
+Provides-Extra: monitoring
+Requires-Dist: elastic-apm>=6.19.0; extra == 'monitoring'
+Requires-Dist: langfuse>=2.0.0; extra == 'monitoring'
+Requires-Dist: newrelic>=9.0.0; extra == 'monitoring'
+Requires-Dist: prometheus-fastapi-instrumentator>=6.1.0; extra == 'monitoring'
+Requires-Dist: sentry-sdk>=1.38.0; extra == 'monitoring'
+Provides-Extra: storage
+Requires-Dist: chromadb>=0.4.0; extra == 'storage'
+Requires-Dist: elasticsearch>=8.0.0; extra == 'storage'
+Requires-Dist: google-auth>=2.23.0; extra == 'storage'
+Requires-Dist: google-cloud-storage>=2.10.0; extra == 'storage'
+Requires-Dist: motor>=3.3.0; extra == 'storage'
+Description-Content-Type: text/markdown
+
+# py_zoop_toolkit
+
+A comprehensive Python toolkit providing monitoring, storage, and I/O utilities for the Zoop project.
+
+## Features
+
+- **Storage Clients**: MongoDB, ChromaDB, Elasticsearch, Google Cloud Storage
+- **Monitoring & Observability**: Elastic APM, Sentry, New Relic, Prometheus, Langfuse
+- **I/O Utilities**: File handling with multi-source support (GCP, local, URL, buffer)
+- **Advanced Logging**:
+  - JSON-formatted logging with rotating file handlers
+  - Child loggers for hierarchical organization
+  - Database logging (SQLite, PostgreSQL, MySQL, MongoDB, Elasticsearch)
+  - Async, non-blocking database writes with batching
+  - Cost tracking for AI services
+- **Configuration**: Pydantic-based config with environment variable fallback
+- **Utilities**: Thread-safe singleton metaclass, custom error classes
+
+## Installation
+
+### Basic Installation
+
+```bash
+# Using uv (recommended)
+uv pip install py_zoop_toolkit
+
+# Using pip
+pip install py_zoop_toolkit
+```
+
+### With Optional Dependencies
+
+```bash
+# Install with storage clients
+uv pip install "py_zoop_toolkit[storage]"
+
+# Install with monitoring tools
+uv pip install "py_zoop_toolkit[monitoring]"
+
+# Install with configuration validation
+uv pip install "py_zoop_toolkit[config]"
+
+# Install with database logging support
+uv pip install "py_zoop_toolkit[db-logging-sqlite]"      # SQLite only
+uv pip install "py_zoop_toolkit[db-logging-postgres]"    # PostgreSQL only
+uv pip install "py_zoop_toolkit[db-logging-mysql]"       # MySQL only
+uv pip install "py_zoop_toolkit[db-logging-mongodb]"     # MongoDB only
+uv pip install "py_zoop_toolkit[db-logging-elasticsearch]" # Elasticsearch only
+uv pip install "py_zoop_toolkit[db-logging]"             # All database backends
+
+# Install everything
+uv pip install "py_zoop_toolkit[all]"
+
+# Development installation
+uv pip install "py_zoop_toolkit[all,dev]"
+```
+
+## Quick Start
+
+### Storage Clients
+
+#### MongoDB
+
+```python
+from py_zoop_toolkit.storage import MongoDBConnection
+from py_zoop_toolkit.config import MongoDBConfig
+
+# Using environment variables (MONGODB_URI, MONGODB_DATABASE)
+mongo = MongoDBConnection()
+
+# Or with explicit config
+config = MongoDBConfig(
+    uri="mongodb://localhost:27017",
+    database="mydb"
+)
+mongo = MongoDBConnection(config=config)
+
+# Get collection
+collection = mongo.get_collection("users")
+```
+
+#### ChromaDB
+
+```python
+from py_zoop_toolkit.storage import ChromaDBConnection
+from py_zoop_toolkit.config import ChromaDBConfig
+
+# Using environment variables (CHROMADB_HOST, CHROMADB_PORT, CHROMADB_COLLECTION)
+chroma = ChromaDBConnection()
+
+# Or with explicit config
+config = ChromaDBConfig(
+    host="localhost",
+    port=8000,
+    collection_name="documents"
+)
+chroma = ChromaDBConnection(
+    config=config,
+    openai_api_key="sk-..."
+)
+
+# Get or create collection
+collection = chroma.get_collection("my_docs")
+```
+
+#### Elasticsearch
+
+```python
+from py_zoop_toolkit.storage import ElasticStorage
+from py_zoop_toolkit.config import ElasticsearchConfig
+
+# Using environment variables
+es = ElasticStorage()
+
+# Or with explicit config
+config = ElasticsearchConfig(
+    url="http://localhost:9200",
+    index_name="documents",
+    username="elastic",
+    password="changeme"
+)
+es = ElasticStorage(config=config)
+
+# Search
+results = es.search(
+    query={"query": {"match_all": {}}},
+    index="my_index"
+)
+```
+
+#### Google Cloud Storage
+
+```python
+from py_zoop_toolkit.storage import Storage
+from py_zoop_toolkit.config import GCPStorageConfig
+
+# Using environment variables (GCP_STORAGE_BUCKET, GCP_PROJECT_ID)
+storage = Storage()
+
+# Or with explicit config
+config = GCPStorageConfig(
+    bucket_name="my-bucket",
+    project_id="my-project",
+    credentials_path="/path/to/creds.json"
+)
+storage = Storage(config=config)
+
+# Upload/download files
+storage.upload_file("local.txt", "remote.txt")
+storage.download_file("remote.txt", "local.txt")
+```
+
+### Logging
+
+#### Basic Logging
+
+```python
+from py_zoop_toolkit import logger, setup_logger
+
+# Use default logger
+logger.info("Application started")
+logger.error("Error occurred", exc_info=True)
+
+# Or create custom logger
+custom_logger = setup_logger(
+    logger_name="my_service",
+    log_file="my_service.log"
+)
+custom_logger.info("Service initialized")
+```
+
+#### Child Loggers (Hierarchical Logging)
+
+```python
+from py_zoop_toolkit import logger, get_child_logger, create_module_logger
+
+# Method 1: Create child from parent
+db_logger = get_child_logger(logger, "database")
+api_logger = get_child_logger(logger, "api")
+
+db_logger.info("Database connected")
+# Output: app_logger.database - INFO - Database connected
+
+# Method 2: Create module logger (convenience method)
+processor_logger = create_module_logger("claims_processor")
+processor_logger.info("Processing claim")
+# Output: app_logger.claims_processor - INFO - Processing claim
+
+# Method 3: Native Python method
+service_logger = logger.getChild("my_service")
+service_logger.info("Service started")
+# Output: app_logger.my_service - INFO - Service started
+```
+
+**See [Child Logger Usage Guide](./.docs/child-logger-usage.md) for detailed examples.**
+
+#### Database Logging (Persistent Logs)
+
+```python
+from py_zoop_toolkit import setup_logger
+from py_zoop_toolkit.config import DatabaseLoggingConfig
+
+# SQLite - simplest, no server required (recommended)
+db_config = DatabaseLoggingConfig.for_sqlite("logs/app.db")
+logger = setup_logger(
+    logger_name="my_app",
+    enable_db_logging=True,
+    db_logging_config=db_config
+)
+
+# PostgreSQL - production scale
+db_config = DatabaseLoggingConfig.for_postgres(
+    "postgresql://user:pass@localhost/logs_db"
+)
+logger = setup_logger(enable_db_logging=True, db_logging_config=db_config)
+
+# MySQL
+db_config = DatabaseLoggingConfig.for_mysql(
+    host="localhost",
+    user="root",
+    password="secret",
+    database="logs_db"
+)
+
+# MongoDB
+db_config = DatabaseLoggingConfig.for_mongodb(
+    connection_string="mongodb://localhost:27017",
+    database="logs_db"
+)
+
+# Elasticsearch - for log analysis
+db_config = DatabaseLoggingConfig.for_elasticsearch(
+    hosts=["http://localhost:9200"],
+    index_name="app-logs"
+)
+
+# Logs are written to database asynchronously (non-blocking)
+logger.info("This logs to both file AND database")
+logger.error("Errors are also persisted in database")
+
+# Query logs from database
+import sqlite3
+conn = sqlite3.connect("logs/app.db")
+cursor = conn.cursor()
+cursor.execute("SELECT * FROM logs WHERE level = 'ERROR'")
+```
+
+**Features:**
+
+- Async, non-blocking writes with automatic batching
+- Falls back to file-only logging on database errors
+- Supports SQLite, PostgreSQL, MySQL, MongoDB, Elasticsearch
+- Configurable batch size and flush intervals
+
+**See [Database Logging Guide](./.docs/database-logging-guide.md) for complete documentation.**
+
+### Configuration
+
+The toolkit uses Pydantic-based configuration classes that support both direct instantiation and environment variable loading:
+
+```python
+from py_zoop_toolkit.config import (
+    MongoDBConfig,
+    ChromaDBConfig,
+    ElasticsearchConfig,
+    GCPStorageConfig,
+    SentryConfig,
+    ElasticAPMConfig,
+    LangfuseConfig,
+    DatabaseLoggingConfig,
+)
+
+# Load from environment variables
+mongo_config = MongoDBConfig.from_env()
+
+# Or create directly
+mongo_config = MongoDBConfig(
+    uri="mongodb://localhost:27017",
+    database="mydb",
+    collection="users"
+)
+
+# Database logging config
+db_logging_config = DatabaseLoggingConfig.for_sqlite("logs/app.db")
+# Or from environment: DatabaseLoggingConfig.from_env()
+```
+
+### Error Handling
+
+```python
+from py_zoop_toolkit.errors import CustomError
+
+raise CustomError(
+    "Invalid input",
+    status_code=400,
+    trace="additional context"
+)
+```
+
+### Singleton Pattern
+
+```python
+from py_zoop_toolkit.singleton import Singleton
+
+class MyService(metaclass=Singleton):
+    def __init__(self, config):
+        self.config = config
+
+# Only one instance will be created
+service1 = MyService(config="test")
+service2 = MyService(config="test")  # Returns same instance
+```
+
+## Environment Variables
+
+### MongoDB
+
+- `MONGODB_URI` or `MONGODB_URL`: Connection URI
+- `MONGODB_DATABASE`: Database name
+- `MONGODB_COLLECTION`: (Optional) Collection name
+
+### ChromaDB
+
+- `CHROMADB_HOST`: Host address (default: localhost)
+- `CHROMADB_PORT`: Port number (default: 8000)
+- `CHROMADB_COLLECTION`: Collection name
+- `OPENAI_API_KEY`: OpenAI API key for embeddings
+
+### Elasticsearch
+
+- `ELASTICSEARCH_URL`: Elasticsearch URL
+- `ELASTICSEARCH_INDEX`: Index name
+- `ELASTICSEARCH_USERNAME`: (Optional) Username
+- `ELASTICSEARCH_PASSWORD`: (Optional) Password
+
+### Google Cloud Storage
+
+- `GCP_STORAGE_BUCKET`: Bucket name
+- `GCP_PROJECT_ID`: (Optional) Project ID
+- `GOOGLE_APPLICATION_CREDENTIALS`: (Optional) Path to credentials JSON
+
+### Logging
+
+- `LOG_FILE`: Log file path (default: app.log)
+- `LOG_MAX_BYTES`: Max log file size (default: 10485760)
+- `LOG_BACKUP_COUNT`: Number of backup files (default: 3)
+- `LOG_LEVEL`: Logging level (default: INFO)
+
+### Database Logging
+
+- `DB_LOGGING_TYPE`: Database type (sqlite, postgres, mysql, mongodb, elasticsearch)
+- `DB_LOGGING_TABLE_NAME`: Table/collection/index name (default: logs)
+- `DB_LOGGING_BATCH_SIZE`: Batch size (default: 100)
+- `DB_LOGGING_FLUSH_INTERVAL`: Flush interval in seconds (default: 5.0)
+- **SQLite**: `DB_LOGGING_SQLITE_PATH`
+- **PostgreSQL**: `DB_LOGGING_POSTGRES_URL`
+- **MySQL**: `DB_LOGGING_MYSQL_HOST`, `DB_LOGGING_MYSQL_PORT`, `DB_LOGGING_MYSQL_USER`, `DB_LOGGING_MYSQL_PASSWORD`, `DB_LOGGING_MYSQL_DATABASE`
+- **MongoDB**: `DB_LOGGING_MONGODB_URL`, `DB_LOGGING_MONGODB_DATABASE`, `DB_LOGGING_MONGODB_COLLECTION`
+- **Elasticsearch**: `DB_LOGGING_ELASTICSEARCH_HOSTS` (comma-separated), `DB_LOGGING_ELASTICSEARCH_INDEX`
+
+### Monitoring
+
+- **Sentry**: `SENTRY_DSN`, `SENTRY_ENVIRONMENT`, `SENTRY_TRACES_SAMPLE_RATE`
+- **Elastic APM**: `ELASTIC_APM_SERVICE_NAME`, `ELASTIC_APM_SERVER_URL`, `ELASTIC_APM_ENVIRONMENT`, `ELASTIC_APM_SECRET_TOKEN`
+- **Langfuse**: `LANGFUSE_SECRET_KEY`, `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_HOST`
+
+## Development
+
+### Setup Development Environment
+
+```bash
+# Clone repository
+git clone https://github.com/zoop/claims.git
+cd py_zoop_toolkit
+
+# Install with dev dependencies
+uv pip install -e ".[all,dev]"
+
+# Run tests
+pytest
+
+# Format code
+black .
+
+# Lint code
+ruff check .
+
+# Type checking
+mypy py_zoop_toolkit
+```
+
+## Requirements
+
+- Python >= 3.12
+- Core: fastapi, requests
+- Optional dependencies as specified in extras
+
+## License
+
+MIT License - see LICENSE file for details
+
+## Contributing
+
+Contributions are welcome! Please open an issue or submit a pull request.
+
+## Support
+
+For issues and questions:
+
+- GitHub Issues: https://github.com/zoop/claims/issues
+- Documentation: https://github.com/zoop/claims#readme
