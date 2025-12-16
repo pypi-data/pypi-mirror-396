@@ -1,0 +1,107 @@
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
+
+[dependency-groups]
+dev = [
+  "pre-commit>=4.2.0",
+  "pytest-dotenv>=0.5.2",
+  "pytest-order>=1.3.0",
+  "pytest>=8.3.5",
+  "requests>=2.32.3",
+  "ruff>=0.11.2",
+  "ty>=0.0.1a21"
+]
+doc-processing = [
+  "docling>=2.57.0",
+  "easyocr>=1.7.2",
+  "sentence-transformers>=5.1.1"
+]
+docs = [
+  "mkdocs-gen-files>=0.5.0",
+  "mkdocs-glightbox>=0.4.0",
+  "mkdocs-jupyter>=0.25.1",
+  "mkdocs-literate-nav>=0.6.2",
+  "mkdocs-material>=9.6.14",
+  "mkdocs>=1.6.1",
+  "mkdocstrings[python]>=0.29.1"
+]
+plot = [
+  "pygraphviz>=1.14"
+]
+
+[project]
+dependencies = [
+  "asyncio>=3.4.3",
+  "click>=8.1.8",
+  "httpx>=0.27.0",
+  "langchain-core>=0.3.60",
+  "langchain-experimental>=0.3.4",
+  "langchain-huggingface>=0.2.0",
+  "langchain-ollama>=0.3.3",
+  "langchain-openai>=0.3.17",
+  "langchain>=0.3.25",
+  "langgraph>=0.2.35",
+  "neo4j>=5.28.1",
+  "networkx>=3.0",
+  "owlready2>=0.47",
+  "pydantic>=2.11.9",
+  "pyld>=2.0.4",
+  "rapidfuzz>=3.13.0",
+  "rdflib>=7.1.4",
+  "rich>=14.0.0",
+  "robyn>=0.66.2",
+  "simsimd>=6.2.1",
+  "suthing>=0.4.1"
+]
+description = "Agentic ontology and knowledge graph co-generation"
+name = "ontocast"
+readme = "README.md"
+requires-python = ">=3.12"
+version = "0.2.4"
+
+[project.scripts]
+cmp-states = "ontocast.cli.cmp_states:main"
+ontocast = "ontocast.cli.serve:run"
+pdfs-to-markdown = "ontocast.cli.pdfs_to_markdown:main"
+plot-graph = "ontocast.cli.plot_graph:main"
+test-api = "ontocast.cli.test_api:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["data", "ontocast"]
+
+[tool.pyright]
+venv = ".venv"
+venvPath = "."
+
+[tool.pytest.ini_options]
+addopts = [
+  "--disable-warnings",
+  "--strict-markers",
+  "--tb=short",
+  "-v"
+]
+markers = [
+  "integration: marks tests as integration tests",
+  "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+  "unit: marks tests as unit tests"
+]
+python_classes = ["Test*"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+testpaths = ["test"]
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.format]
+line-ending = "auto"
+
+[tool.ruff.lint]
+select = ["E", "F", "I001", "W"]
+
+[tool.ruff.lint.per-file-ignores]
+"ontocast/prompt/*.py" = ["E501"]
+
+[tool.uv]
+default-groups = ["docs"]
