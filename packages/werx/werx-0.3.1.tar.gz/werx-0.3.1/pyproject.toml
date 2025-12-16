@@ -1,0 +1,94 @@
+[project]
+name = "werx"
+version = "0.3.1"
+description = "A high-performance Python package for calculating Word Error Rate (WER), powered by Rust."
+readme = "README.md"
+authors = [
+    { name = "Ross Armstrong", email = "ross.armstrong@analyticsinmotion.com" }
+]
+requires-python = ">=3.10"
+license = {file = 'LICENSE'}
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Intended Audience :: Developers",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Text Processing",
+]
+keywords = [
+    "werx",
+    "wer",
+    "word error rate",
+    "asr",
+    "automatic speech recognition",
+    "stt",
+    "speech-to-text",
+    "levenshtein distance",
+    "text similarity",
+    "nlp",
+    "accuracy metrics"
+]
+dependencies = []
+
+[build-system]
+requires = ["maturin>=1.8,<2.0"]
+build-backend = "maturin"
+
+[tool.maturin]
+python-source = "src"
+manifest-path = "werx-core/Cargo.toml"
+module-name = "werx"
+bindings = "pyo3"
+include = ["LICENSE", "NOTICE", "README.md", "src/**"]
+
+[project.optional-dependencies]
+dev = [
+    "maturin >=1.10.2",
+    "pytest >=9.0.2",
+    "mypy >=1.19.0",
+    "ruff >=0.14.9",
+    ]
+
+dataframes = [
+    "polars >=1.36.1",
+    "pandas >=2.3.3"
+]
+
+benchmarks = [
+    "werpy >=3.1.0",
+    "jiwer >=4.0.0",
+    "pywer >=0.1.1",
+    # "torchmetrics", # TODO: Uncomment when torch supports Python 3.14
+    "evaluate >=0.4.6",
+    # "universal-edit-distance >=0.4.3", # TODO: Uncomment when torch supports Python 3.14
+    "memory-profiler >=0.61.0",
+    "datasets >=4.4.1",
+]
+
+[project.urls]
+"Repository" = "https://github.com/analyticsinmotion/werx"
+"Bug Tracker" = "https://github.com/analyticsinmotion/werx/issues"
+
+[tool.ruff]
+line-length = 88                     # <-- Max line length, consistent with Black
+target-version = "py314"             # <-- Target Python 3.14
+extend-include = ["benchmarks"]      # <-- Also lint the benchmarks directory
+extend-exclude = ["werx-core"]       # <-- Exclude the Rust source code directory
+
+[tool.mypy]
+python_version = "3.14"              # <-- Target Python 3.14
+ignore_missing_imports = true        # <-- Suppress errors for 3rd-party packages without stubs
+strict = true                        # <-- Enable strict mode for safer code
+exclude = "^(tests|benchmarks)/"     # <-- Exclude tests and benchmarks from type checking
