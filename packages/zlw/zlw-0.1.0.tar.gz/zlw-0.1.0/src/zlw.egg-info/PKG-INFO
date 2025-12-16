@@ -1,0 +1,82 @@
+Metadata-Version: 2.4
+Name: zlw
+Version: 0.1.0
+Summary: Zero Latency Whitening Utilities
+Author-email: James Kennington <jameswkennington@gmail.com>
+License: MPL-2.0
+Project-URL: Homepage, https://git.ligo.org/james.kennington/zlw
+Project-URL: Documentation, https://docs.ligo.org/james.kennington/zlw
+Project-URL: Issues, https://git.ligo.org/james.kennington/zlw/issues
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: numpy
+Requires-Dist: scipy
+Provides-Extra: test
+Requires-Dist: pytest; extra == "test"
+Requires-Dist: pytest-cov; extra == "test"
+Requires-Dist: lalsuite; extra == "test"
+Requires-Dist: matplotlib; extra == "test"
+Provides-Extra: lint
+Requires-Dist: black; extra == "lint"
+Requires-Dist: flake8; extra == "lint"
+Requires-Dist: flake8-bandit; extra == "lint"
+Requires-Dist: flake8-black; extra == "lint"
+Requires-Dist: flake8-bugbear; extra == "lint"
+Requires-Dist: flake8-future-annotations; extra == "lint"
+Requires-Dist: flake8-isort; extra == "lint"
+Requires-Dist: flake8-logging-format; extra == "lint"
+Requires-Dist: flake8-pyproject; extra == "lint"
+Requires-Dist: isort; extra == "lint"
+Requires-Dist: mypy; extra == "lint"
+Requires-Dist: mypy-extensions; extra == "lint"
+Provides-Extra: dev
+Requires-Dist: zlw[lint]; extra == "dev"
+Requires-Dist: zlw[test]; extra == "dev"
+Dynamic: license-file
+
+# zlw — Zero‑Latency Whitening utilities
+
+zlw is a small, focused package that provides zero‑latency whitening utilities for gravitational‑wave data analysis. It includes:
+
+- Whitening filter utilities
+  - Minimum‑phase, zero‑latency whitening filters and helpers
+  - Supporting Fourier/window helpers for stable, real‑time responses
+- MP–MP scheme PSD drift correction terms
+  - Utilities to compute first‑ and second‑order timing and phase correction terms
+  - Tools to account for slow PSD mismatches between template and data
+
+Where things live:
+- zlw.kernels: minimum‑phase whitening filter construction and frequency‑response utilities
+- zlw.fourier, zlw.window: helpers used by the whitening filters
+- zlw.corrections: MP–MP scheme PSD drift correction terms (class MPMPCorrection)
+- zlw/tests: basic tests (e.g., tests/test_kernels.py)
+- zlw/src/zlw/bin: small simulation/QA scripts
+
+Quick examples
+- Whitening filter
+  
+  from zlw.kernels import MPWhiteningFilter
+  
+  # psd: one‑sided PSD array (Hz^-1), fs: sampling rate (Hz), n_fft: FFT length
+  wf = MPWhiteningFilter(psd, fs, n_fft)
+  Wf = wf.frequency_response()  # one‑sided frequency response (complex for min‑phase)
+
+- MP–MP correction terms
+  
+  import numpy as np
+  from zlw.corrections import MPMPCorrection
+  
+  # freqs: one‑sided frequency grid; psd1: data PSD; psd2: template PSD; htilde: template FFT
+  corr = MPMPCorrection(freqs=freqs, psd1=psd1, psd2=psd2, htilde=htilde, fs=fs)
+  # Simple first‑order corrections
+  dt1, dphi1 = corr.simplified_correction()
+  # Or the full second‑order set (includes cross terms)
+  (dt1, dphi1), (dt2, dphi2) = corr.full_correction()
+
+Notes
+- “Zero‑latency” refers to the use of minimum‑phase whitening filters so that the whitening operation does not introduce group delay in the time domain.
+- The MP–MP correction utilities follow the perturbative scheme that expands about the ratio of PSDs, providing drift terms for coalescence time and phase when the whitening filters differ slightly.
