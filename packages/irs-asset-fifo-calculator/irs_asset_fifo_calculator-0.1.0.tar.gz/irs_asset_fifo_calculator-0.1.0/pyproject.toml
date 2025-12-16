@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "irs-asset-fifo-calculator"
+version = "0.1.0"
+description = "FIFO-based IRS Form 8949 capital gains calculator for assets."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [
+  { name = "Elliott Bache", email = "elliottbache@gmail.com" }
+]
+keywords = ["taxes", "IRS", "capital-gains", "FIFO"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
+
+# Runtime deps (if any); empty is fine if you're stdlib-only
+dependencies = [
+  "pandas>=2.0",  # or whatever min version you need
+]
+
+# Optional extras for dev tools
+[project.optional-dependencies]
+dev = [
+  "pytest>=9.0",
+  "sphinx>=8.0",
+  "myst-parser>=3.0",
+]
+
+[project.scripts]
+irs-fifo-taxes = "irs_asset_fifo_calculator.calculate_taxes:main"
+
+[tool.setuptools]
+# Tell setuptools that packages live under `src/`
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+irs_asset_fifo_calculator = ["py.typed"]
+
+[project.urls]
+Homepage = "https://github.com/elliottbache/irs_asset_fifo_calculator"
+Source = "https://github.com/elliottbache/irs_asset_fifo_calculator"
+Issues = "https://github.com/elliottbache/irs_asset_fifo_calculator/issues"
+Documentation = "https://elliottbache.github.io/irs_asset_fifo_calculator/"
