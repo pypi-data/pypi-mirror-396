@@ -1,0 +1,3 @@
+NET_MAX_SEQUENCE = 1<<10
+NET_MAX_PACKETSIZE = 1400
+NET_PACKETVERSION = 1 # connless version field
