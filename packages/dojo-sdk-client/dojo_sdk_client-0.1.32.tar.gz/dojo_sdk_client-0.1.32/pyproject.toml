@@ -1,0 +1,64 @@
+[project]
+name = "dojo-sdk-client"
+version = "0.1.32"
+description = "Client sdk to intearct with Dojo"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "aiohttp>=3.12.15",
+    "pillow>=11.3.0",
+    "pydantic>=2.11.9",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
+    "python-dotenv>=1.1.1",
+    "requests>=2.32.3",
+    "websockets>=15.0.1",
+    "certifi>=2025.8.3",
+    "dojo-sdk-core>=0.1.23",
+    "playwright>=1.55.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0.0", "pytest-cov", "black", "isort", "mypy", "ruff"]
+agents = ["anthropic>=0.68.0", "openai>=1.109.1"]
+multi_turn_env = [
+    "verifiers==0.1.7.post0",
+    "anthropic>=0.68.0",
+    "openai>=1.109.1",
+]
+browserbase = ["browserbase>=1.4.0"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.isort]
+profile = "black"
+src_paths = ["src", "tests"]
+
+[tool.ruff]
+line-length = 128
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B", "I"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.hatch.version]
+path = "src/dojo-sdk-client/__about__.py"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+# uv --no-sources flag ignores it
+[tool.uv.sources]
+dojo-sdk-core = { path = "../dojo-core", editable = true }
+
+[tool.hatch.build.targets.sdist]
+include = ["/src", "/README.md"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dojo_sdk_client"]
