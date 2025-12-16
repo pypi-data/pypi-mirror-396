@@ -1,0 +1,88 @@
+[build-system]
+requires = ["setuptools>=80", "wheel>=0.45", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["hermes*"]
+exclude = ["web"]
+
+[tool.setuptools.package-data]
+"hermes.datamodel.alembic" = [
+    "alembic.ini",
+    "env.py",
+    "script.py.mako",
+    "versions/*.py",
+    "versions_utils/*.py",
+]
+
+[project]
+name = "rt-hermes"
+dynamic = ["version"]
+description = "RealTime Hub for Earthquake foRecasts ManagEment and Scheduling "
+readme = "README.md"
+authors = [{ name = "Laura Sarson" }, { name = "Nicolas Schmid" }]
+license = { file = "LICENSE" }
+classifiers = [
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Education",
+    "Operating System :: OS Independent",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+
+dependencies = [
+    "alembic-utils",
+    "alembic",
+    "geoalchemy2",
+    "hermes-model",
+    "hydws-client>=1.3.1",
+    "pandas",
+    "prefect<3.6.0",
+    "psycopg2",
+    "pydantic-settings",
+    "pydantic",
+    "python-dotenv",
+    "requests",
+    "seismostats",
+    "shapely",
+    "sqlalchemy",
+    "typer",
+]
+
+requires-python = ">=3.12,<3.14"
+
+[project.optional-dependencies]
+dev = [
+    "build",
+    "flake8",
+    "isort",
+    "pyarrow",
+    "pytest-asyncio",
+    "pytest-cov",
+    "pytest",
+    "setuptools-scm",
+    "tox",
+    "twine",
+]
+
+[project.scripts]
+hermes = "hermes.cli:app"
+
+[project.urls]
+Documentation = "https://github.com/swiss-seismological-service/rt-hermes"
+Repository = "https://github.com/swiss-seismological-service/rt-hermes"
+Issues = "https://github.com/swiss-seismological-service/rt-hermes/issues"
+
+
+[tool.setuptools_scm]
+
+
+[tool.pytest.ini_options]
+addopts = ["--import-mode=importlib"]
+filterwarnings = ["ignore:divide by zero"]
