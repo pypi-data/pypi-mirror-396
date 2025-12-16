@@ -1,0 +1,68 @@
+import numpy as np
+from numpy.typing import NDArray
+from PyQt6.QtWidgets import QFileDialog, QApplication
+if 0 != 0: from .space import ColorMap
+if 0 != 0: from .frame import Frame
+app = QApplication([])
+
+def get_new_png_path(parent=None, title="Save PNG file"):
+    """
+    Opens a save-file dialog and returns a valid, non-existing .png file path.
+    If the user cancels, returns an empty string.
+    Ensures the returned path ends with '.png'.
+    """
+    # Check if a QApplication already exists
+    file_path, _ = QFileDialog.getSaveFileName(
+        parent,
+        title,
+        "simon-fraktal",
+        "PNG Image (*.png)"
+    )
+
+    if not file_path:
+        return ""  # user cancelled
+
+    # Ensure .png extension
+    if not file_path.lower().endswith(".png"):
+        file_path += ".png"
+
+    return file_path
+
+def promt(frames, fps):
+    t = round(frames / fps, 1)
+    print(f"{frames=} {fps=} video_length={t:.0f}s")
+    accept = input("Enter y or yes to Continue: ")
+    if accept not in ["y", "Y", "yes", "Yes", "YES"]:
+        exit(0)
+
+
+def render_frame(frame: "Frame", only_raw: bool = False) -> "Frame":
+    """
+    Helper function to render an existing frame
+    """
+    frame.render(only_raw=only_raw)
+    assert frame.raw is not None
+    return frame
+
+
+def make_filename(a_1, a_2, b_1, b_2, extension="mp4"):
+    parts = []
+    if a_1 != a_2:
+        parts.append(f"a_{a_1}-{a_2}")
+    if b_1 != b_2:
+        parts.append(f"b_{b_1}-{b_2}")
+
+    fname = "_".join(parts) + f".{extension}"
+    return fname
+
+
+def apply_color(normalized: NDArray[np.floating], colors: NDArray[np.uint8]) -> NDArray[np.uint8]:
+    assert np.max(normalized) <= 1, "normalize should be [0, 1]"
+    values = (normalized * 255).astype(int) # type: ignore
+    values = np.clip(values, 0, 255)
+    img = (colors[values] * 255).astype(np.uint8)
+    return img
+
+
+def apply_colormap(raw_image: NDArray, colormap: "ColorMap"):
+    return apply_color(raw_image, colormap.get())
