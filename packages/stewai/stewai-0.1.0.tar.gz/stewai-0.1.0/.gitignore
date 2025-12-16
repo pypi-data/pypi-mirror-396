@@ -1,0 +1,132 @@
+###############################################################################
+#  StewAI — Monorepo .gitignore                                               #
+#  Covers: Python (backend), Node (frontend), JetBrains IDE, macOS, CI, etc.  #
+###############################################################################
+
+###############################################################################
+#  1 · OS / Editor junk                                                       #
+###############################################################################
+.DS_Store
+Thumbs.db
+# JetBrains / VS Code
+.idea/
+!.idea/code-style.xml          # keep shared code-style only
+.idea/vcs.xml                  # VCS metadata – tracked only when useful
+*.iml
+.vscode/
+# Swap / temp files
+*.swp
+*~
+*.tmp
+*.xml                          # generic user-level IDE configs
+.history                       # VS Code local history
+.quarantine                    # macOS file attribute after downloads
+
+###############################################################################
+#  2 · Python / Poetry                                                        #
+###############################################################################
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+.venv/
+venv/
+dist/
+build/
+.eggs/
+*.egg-info/
+pip-wheel-metadata/
+.tox/
+.mypy_cache/
+.pytest_cache/
+.pyre/
+.dmypy.json
+pytestdebug.log
+coverage.*
+coverage.xml
+htmlcov/
+*.cover
+
+###############################################################################
+#  3 · Node / Frontend                                                        #
+###############################################################################
+node_modules/
+.cache/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-lock.yaml
++.pnp.*                # Yarn Berry Plug-and-Play loader files  
+
+# ─ Yarn Berry / PnP rules ───────────────────────────────────────────────────
+.yarn/cache/**
+.yarn/**
+!.yarn/patches/**
+!.yarn/plugins/**
+!.yarn/releases/**
+!.yarn/sdks/**
+!**/yarn.lock
+
+###############################################################################
+#  4 · Production / dev-build artefacts                                       #
+###############################################################################
+/build/
+dist/
+out/
+.next/
+.svelte-kit/
+vite-cache/
+storybook-static/
+coverage/                      # JS code-coverage directory
+
+###############################################################################
+#  5 · Docker / Kubernetes                                                    #
+###############################################################################
+*.tar
+*.log
+docker-compose.override.yml    # local overrides (any depth)
+**/docker-compose.override.yml
+.secrets/                      # doppler / sops decrypted files
+#
+# ─ Helm values with live secrets ────────────────────────────────────────────
+# Every real environment gets its *own* values-prod.yaml, values-staging.yaml,
+# etc.  They are **never** committed – only the redacted template is tracked.
+stewai-chart/values*.yaml
+!stewai-chart/values-template.yaml
+backend/.env*                  # runtime-specific env files
+*.envrc                        # direnv definitions
+.direnv/                       # direnv virtual envs
+
+###############################################################################
+#  6 · Misc tooling artefacts                                                 #
+###############################################################################
+*.sqlite3
+*.db
+*.ipynb_checkpoints/*
+*.ipynb
+*.npy
+*.parquet
+*.csv
+
+###############################################################################
+#  7 · macOS & sync service artefacts                                         #
+###############################################################################
+*.zip
+*.tgz
+*.tar.gz
+*.gz
+._*                             # macOS “resource fork”
+
+###############################################################################
+#  8 · End-of-file guard                                                     #
+###############################################################################
+# Add new rules above this line – keep the file alphabetised within sections.
+/backend/.coverage
+/.coverage
+/frontend/test-results/.last-run.json
+/frontend/test-results/after-login.png
+/frontend/test-results/before-login.png
+/backend/apps/runner/tests/.coverage
+/backend/.env.bak
+stewai_dump.pgsql
+stewai_dump_20251210_160158.pgsql
