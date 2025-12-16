@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "orange3-db-connections"
+version = "0.1.2"
+description = "DB Connections – Add-on Orange untuk membuat koneksi database (PostgreSQL, MySQL, SQL Server, SQLite, ClickHouse)."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Devi Ardiana", email = "deviardn@gmail.com" }]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent"
+]
+
+dependencies = [
+  "orange3>=3.36.0",
+  "sqlalchemy>=2.0",
+  "AnyQt>=0.0.13",
+  "PyQt5>=5.15",
+  "PyQtWebEngine>=5.15",
+]
+
+[project.optional-dependencies]
+postgresql = ["psycopg2-binary>=2.9"]
+mysql      = ["pymysql>=1.0"]
+mssql      = ["pyodbc>=4.0"]
+clickhouse = ["clickhouse-connect>=0.7"]
+oracle     = ["cx-Oracle>=8.3"]
+
+[project.urls]
+Homepage = "https://github.com/deviardn/orange3-db-connections"
+
+[project.entry-points."orange.widgets"]
+"DB Connections" = "orangecontrib.dbconnections.widgets"
+
+[project.entry-points."orange.addons"]
+"DB Connections" = "orangecontrib.dbconnections"
+
+[tool.setuptools.package-data]
+"orangecontrib.dbconnections" = [
+  "widgets/icons/*.png",
+  "widgets/icons/*.svg",
+  "icons/*.png",
+  "icons/*.svg"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["orangecontrib*"]
