@@ -1,0 +1,18 @@
+when:
+  branch: main
+  event: push
+
+steps:
+  build:
+    image: ghcr.io/astral-sh/uv:python3.13-alpine
+    commands:
+      - uv sync --frozen --all-extras --group docs
+      - rm cattle_hugs/testing/fixtures.py
+      - touch cattle_hugs/testing/fixtures.py # this is due to weird griffe behavior
+      - uv run mkdocs build
+  deploy:
+    image: codeberg.org/xfix/plugin-codeberg-pages-deploy:1
+    settings:
+      folder: site
+      ssh_key:
+        from_secret: deploy_ssh_key

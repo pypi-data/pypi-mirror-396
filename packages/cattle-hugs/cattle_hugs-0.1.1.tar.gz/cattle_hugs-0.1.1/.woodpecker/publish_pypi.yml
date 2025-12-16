@@ -1,0 +1,18 @@
+when:
+  - event: tag
+    branch: main
+
+depends_on: ["test"]
+
+steps:
+  publish_pypi:
+    image: ghcr.io/astral-sh/uv:python3.11-alpine
+    commands:
+      - apk add npm
+      - uv sync --frozen
+      - uv build --wheel
+      - uv build --sdist
+      - uv publish --token  $PYPI_API_KEY
+    environment:
+      PYPI_API_KEY:
+        from_secret: pypi_api_key

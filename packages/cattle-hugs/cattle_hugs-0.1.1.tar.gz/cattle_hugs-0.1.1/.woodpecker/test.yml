@@ -1,0 +1,22 @@
+when:
+  branch: main
+  event: [push, pull_request, tag]
+
+steps:
+  build:
+    image: ghcr.io/astral-sh/uv:python3.11-alpine
+    commands:
+      - uv sync --all-extras
+  ruff:
+    image: ghcr.io/astral-sh/uv:python3.11-alpine
+    commands:
+      - uv run ruff format --check .
+      - uv run ruff check .
+  pytest:
+    image: ghcr.io/astral-sh/uv:python3.11-alpine
+    commands:
+      - uv run pytest
+  pyright:
+    image: ghcr.io/astral-sh/uv:python3.11-alpine
+    commands:
+      - uv run pyright
