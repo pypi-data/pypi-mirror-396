@@ -1,0 +1,209 @@
+Metadata-Version: 2.4
+Name: broccoli-tool-creator
+Version: 0.1.0
+Summary: FastAPI extension for creating Broccoli tools from API endpoints with one click in Swagger UI
+Project-URL: Homepage, https://github.com/dailoqa/broccoli-tool-creator
+Project-URL: Documentation, https://github.com/dailoqa/broccoli-tool-creator#readme
+Project-URL: Repository, https://github.com/dailoqa/broccoli-tool-creator
+Project-URL: Issues, https://github.com/dailoqa/broccoli-tool-creator/issues
+Author-email: Sachin Rajput <sachin.rajput.dev@gmail.com>
+License: MIT License
+        
+        Copyright (c) 2025 Dailoqa
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+License-File: LICENSE
+Keywords: api,automation,broccoli,fastapi,swagger,tools
+Classifier: Development Status :: 4 - Beta
+Classifier: Framework :: FastAPI
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Requires-Python: >=3.8
+Requires-Dist: fastapi>=0.100.0
+Requires-Dist: httpx>=0.24.0
+Requires-Dist: pycognito>=2024.5.1
+Requires-Dist: pydantic>=2.0.0
+Requires-Dist: requests>=2.31.0
+Requires-Dist: sqlalchemy>=1.4.0
+Description-Content-Type: text/markdown
+
+# Broccoli Tool Creator
+
+A FastAPI extension that automatically creates tools in the Broccoli platform from your API endpoints with a single click in Swagger UI.
+
+## Features
+
+- 🚀 **One-Click Tool Creation**: Create Broccoli tools directly from Swagger UI
+- 🔄 **Smart Sync**: Automatically detects existing tools and switches between Create/Update modes
+- 🔐 **Automatic Authentication**: Uses AWS Cognito SRP for seamless authentication
+- 🎯 **AST-Based Extraction**: Intelligently extracts endpoint metadata from your code
+- 💾 **Persistent Tracking**: Tracks created tools in your database (SQLite or PostgreSQL)
+- 🌐 **Proxy Support**: Access Broccoli tools through an authenticated proxy
+
+## Installation
+
+```bash
+pip install broccoli-tool-creator
+```
+
+## Quick Start
+
+### 1. Configure in your FastAPI app
+
+```python
+from fastapi import FastAPI
+from broccoli_tool_creator import setup_tool_creator, ToolCreatorConfig
+
+app = FastAPI(docs_url=None)  # Disable default docs
+
+# Configure tool creator
+config = ToolCreatorConfig(
+    broccoli_api_url="https://your-broccoli-backend.com",
+    cognito_client_id="your-client-id",
+    cognito_username="your-username",
+    cognito_password="your-password",
+    cognito_pool_id="your-pool-id",
+    owner_id="your-user-id",
+    tool_tracking_db_url="postgresql://user:pass@localhost/db"  # Optional
+)
+
+# Setup tool creator (includes custom /docs)
+setup_tool_creator(app, config)
+```
+
+### 2. Use in Swagger UI
+
+1. Navigate to `/docs`
+2. Find any endpoint
+3. Click **"Create Tool"** or **"Update Tool"** button
+4. Click **"Go to Tools"** to view in Broccoli
+
+## Configuration
+
+### Required Settings
+
+```python
+ToolCreatorConfig(
+    broccoli_api_url="https://broccoli-backend.com",  # Broccoli API URL
+    cognito_client_id="...",                          # AWS Cognito Client ID
+    cognito_username="...",                           # Cognito username
+    cognito_password="...",                           # Cognito password
+    cognito_pool_id="...",                            # Cognito Pool ID (region_poolId)
+    owner_id="...",                                   # Broccoli user ID
+)
+```
+
+### Optional Settings
+
+```python
+ToolCreatorConfig(
+    ...,
+    tool_tracking_db_url="postgresql://...",  # External database (default: SQLite)
+)
+```
+
+## Database & Persistence
+
+By default, the tool creator uses a local SQLite database (`created_tools.db`) to track which tools have been created. This allows the UI to show "Update Tool" instead of "Create Tool" for existing tools.
+
+### Using External Database
+
+To use PostgreSQL or another database:
+
+```python
+from app.core.config import settings
+
+config = ToolCreatorConfig(
+    ...,
+    tool_tracking_db_url=settings.DATABASE_URL
+)
+```
+
+### Docker Configuration
+
+When running in Docker, ensure your `DATABASE_URL` uses the correct hostname:
+
+```env
+# .env file
+DATABASE_URL=postgresql://user:pass@postgres:5432/dbname
+```
+
+The `postgres` hostname works for inter-container communication when using docker-compose.
+
+## Features
+
+### Dynamic UI Buttons
+
+The Swagger UI automatically shows context-aware buttons:
+
+- **"Create Tool"** (Green) - For endpoints without tools
+- **"Update Tool"** (Orange) - For endpoints with existing tools  
+- **"Go to Tools"** (Blue) - Opens the tool in Broccoli with automatic authentication
+
+### Smart Version Handling
+
+The system automatically handles version conflicts:
+- Detects version mismatches from the Broccoli API
+- Automatically retries with the correct version
+- No manual intervention required
+
+### Authenticated Proxy
+
+Access Broccoli tools through your backend with automatic authentication:
+
+```
+/api/v1/dev-tools/view-tool/{tool_id}
+```
+
+This endpoint:
+1. Authenticates using your Cognito credentials
+2. Redirects to the Broccoli tool view page
+3. Proxies all requests with proper authentication headers
+
+## API Endpoints
+
+The package adds these endpoints to your FastAPI app:
+
+- `POST /api/v1/dev-tools/create-from-endpoint` - Create/update a tool
+- `GET /api/v1/dev-tools/check-tools` - Get list of existing tools
+- `GET /api/v1/dev-tools/view-tool/{tool_id}` - View tool with authentication
+- `GET /api/v1/dev-tools/broccoli-proxy/{path:path}` - Proxy to Broccoli
+
+## Requirements
+
+- Python 3.8+
+- FastAPI 0.100.0+
+- SQLAlchemy 1.4.0+
+- httpx 0.24.0+
+- pycognito 2024.5.1+
+
+## License
+
+MIT License
+
+## Support
+
+For issues and questions, please open an issue on GitHub.
