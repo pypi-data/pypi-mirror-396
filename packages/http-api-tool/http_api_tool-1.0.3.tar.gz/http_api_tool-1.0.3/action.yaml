@@ -1,0 +1,302 @@
+---
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2025 The Linux Foundation
+
+# http-api-tool-docker
+name: '🛠️ Test API/Service Availability'
+description: 'Tests an HTTP/HTTPS API endpoint for service availability'
+
+inputs:
+  # Deployment method
+  deploy:
+    description: 'Deployment method: "uvx" (default, fast) or "docker" (containerized)'
+    required: false
+    default: 'uvx'
+  python_version:
+    description: 'Python version (Note: uvx manages Python automatically; this input is ignored for deploy=uvx)'
+    required: false
+    default: '3.11'
+  use_local_code:
+    # Requires package to first be installed with "uv pip install --system -e ."
+    description: "Use locally installed package instead of uvx/PyPI"
+    required: false
+    default: 'false'
+
+  # Mandatory
+  url:
+    # Example: "http://username:password@127.0.0.1:8080/index.yaml"
+    description: 'URL of API server/interface to check'
+    required: true
+  auth_string:
+    # Parsed from the URL string above, but can be provided explicitly
+    # Should be in the format used by cURL, e.g. username:password
+    # Will be passed to cURL using the flag: curl -c "username:password"
+    description: 'Authentication string, colon separated username/password'
+    required: false
+  service_name:
+    # Example: 'ChartMuseum Repository'
+    description: 'Name of HTTP/HTTPS API service tested'
+    required: false
+    default: 'API Service'
+  initial_sleep_time:
+    description: 'Time in seconds between API service connection attempts'
+    required: false
+    # Try once every second
+    default: '1'
+  max_delay:
+    description: 'Maximum delay in seconds between retries'
+    required: false
+    default: '30'
+  retries:
+    description: 'Number of retries before declaring service unavailable'
+    required: false
+    default: '3'
+  expected_http_code:
+    description: 'HTTP response code to accept from the API service'
+    required: false
+    default: '200'
+  regex:
+    # Extended regular expression; uses grep with the "-E" flag
+    description: 'Verify server response with regular expression'
+    required: false
+  show_header_json:
+    description: "Display response header as JSON in action output"
+    required: false
+    default: 'false'
+  curl_timeout:
+    description: 'Maximum time in seconds for cURL to wait for a response'
+    required: false
+    default: '5'
+  http_method:
+    description: 'HTTP method to use (GET, POST, PUT, etc.)'
+    required: false
+    default: 'GET'
+  request_body:
+    description: 'Data to send with POST/PUT/PATCH requests'
+    required: false
+  content_type:
+    description: 'Content type of the request body'
+    required: false
+    default: 'application/json'
+  request_headers:
+    description: 'Custom HTTP headers sent in JSON format'
+    required: false
+  verify_ssl:
+    description: 'Verify SSL certificates'
+    required: false
+    default: 'true'
+  ca_bundle_path:
+    description: 'Path to CA bundle file for SSL verification'
+    required: false
+  include_response_body:
+    description: 'Include response body in outputs (base64 encoded)'
+    required: false
+    default: 'false'
+  follow_redirects:
+    description: 'Follow HTTP redirects'
+    required: false
+    default: 'true'
+  max_response_time:
+    description: 'Maximum acceptable response time in seconds'
+    required: false
+    default: '0'
+  connection_reuse:
+    description: 'Reuse connections between requests'
+    required: false
+    default: 'true'
+  debug:
+    description: 'Enables debugging output'
+    required: false
+    default: 'false'
+  fail_on_timeout:
+    description: 'Fail the action if response time exceeds max_response_time'
+    required: false
+    default: 'false'
+
+outputs:
+  time_delay:
+    description: 'Number of seconds waiting for service availability/failure'
+    value: "${{ steps.uvx-run.outputs.time_delay || steps.docker-run.outputs.time_delay }}"
+  response_http_code:
+    description: 'HTTP response code received from the server'
+    value: "${{ steps.uvx-run.outputs.response_http_code || steps.docker-run.outputs.response_http_code }}"
+  response_header_json:
+    description: 'HTTP response header as JSON'
+    value: "${{ steps.uvx-run.outputs.response_header_json || steps.docker-run.outputs.response_header_json }}"
+  response_header_size:
+    description: 'HTTP response header size in bytes'
+    value: "${{ steps.uvx-run.outputs.response_header_size || steps.docker-run.outputs.response_header_size }}"
+  response_body_size:
+    description: 'HTTP response body size in bytes'
+    value: "${{ steps.uvx-run.outputs.response_body_size || steps.docker-run.outputs.response_body_size }}"
+  regex_match:
+    description: 'Whether the regular expression matched the server reply'
+    value: "${{ steps.uvx-run.outputs.regex_match || steps.docker-run.outputs.regex_match }}"
+  response_body_base64:
+    description: 'Response body base64 encoded (when include_response_body set)'
+    value: "${{ steps.uvx-run.outputs.response_body_base64 || steps.docker-run.outputs.response_body_base64 }}"
+  total_time:
+    description: 'Total time for the request in seconds'
+    value: "${{ steps.uvx-run.outputs.total_time || steps.docker-run.outputs.total_time }}"
+  connect_time:
+    description: 'Time to establish connection in seconds'
+    value: "${{ steps.uvx-run.outputs.connect_time || steps.docker-run.outputs.connect_time }}"
+  response_time_exceeded:
+    description: 'Whether response time exceeded maximum acceptable time'
+    value: "${{ steps.uvx-run.outputs.response_time_exceeded || steps.docker-run.outputs.response_time_exceeded }}"
+
+runs:
+  using: 'composite'
+  steps:
+    # Validate deploy input
+    - name: Validate deploy input
+      shell: bash
+      run: |
+        if [[ "${{ inputs.deploy }}" != "uvx" && "${{ inputs.deploy }}" != "docker" ]]; then
+          echo "::error::Invalid deploy input: '${{ inputs.deploy }}'. Must be 'uvx' or 'docker'."
+          exit 1
+        fi
+
+    # UVX deployment path (default)
+    - name: Install uv for uvx deployment
+      if: inputs.deploy == 'uvx'
+      uses: astral-sh/setup-uv@ed21f2f24f8dd64503750218de024bcf64c7250a # v7.1.5
+      with:
+        enable-cache: false
+        ignore-empty-workdir: true
+
+    - name: Run http-api-tool via uvx
+      if: inputs.deploy == 'uvx'
+      id: uvx-run
+      shell: bash
+      env:
+        INPUT_DEPLOY: ${{ inputs.deploy }}
+        INPUT_URL: ${{ inputs.url }}
+        INPUT_AUTH_STRING: ${{ inputs.auth_string }}
+        INPUT_SERVICE_NAME: ${{ inputs.service_name }}
+        INPUT_INITIAL_SLEEP_TIME: ${{ inputs.initial_sleep_time }}
+        INPUT_MAX_DELAY: ${{ inputs.max_delay }}
+        INPUT_RETRIES: ${{ inputs.retries }}
+        INPUT_EXPECTED_HTTP_CODE: ${{ inputs.expected_http_code }}
+        INPUT_REGEX: ${{ inputs.regex }}
+        INPUT_SHOW_HEADER_JSON: ${{ inputs.show_header_json }}
+        INPUT_CURL_TIMEOUT: ${{ inputs.curl_timeout }}
+        INPUT_HTTP_METHOD: ${{ inputs.http_method }}
+        INPUT_REQUEST_BODY: ${{ inputs.request_body }}
+        INPUT_CONTENT_TYPE: ${{ inputs.content_type }}
+        INPUT_REQUEST_HEADERS: ${{ inputs.request_headers }}
+        INPUT_VERIFY_SSL: ${{ inputs.verify_ssl }}
+        INPUT_CA_BUNDLE_PATH: ${{ inputs.ca_bundle_path }}
+        INPUT_INCLUDE_RESPONSE_BODY: ${{ inputs.include_response_body }}
+        INPUT_FOLLOW_REDIRECTS: ${{ inputs.follow_redirects }}
+        INPUT_MAX_RESPONSE_TIME: ${{ inputs.max_response_time }}
+        INPUT_CONNECTION_REUSE: ${{ inputs.connection_reuse }}
+        INPUT_DEBUG: ${{ inputs.debug }}
+        INPUT_FAIL_ON_TIMEOUT: ${{ inputs.fail_on_timeout }}
+        GITHUB_ACTIONS: 'true'
+        GITHUB_OUTPUT: ${{ env.GITHUB_OUTPUT }}
+        GITHUB_STEP_SUMMARY: ${{ env.GITHUB_STEP_SUMMARY }}
+      run: |
+        if [[ "${{ inputs.use_local_code }}" == "true" ]]; then
+          if ! command -v http-api-tool &> /dev/null; then
+            echo "::error::http-api-tool is not installed." \
+              "Please install it first by running 'uv pip install --system -e .'" \
+              "from the repository root before using use_local_code: true"
+            exit 1
+          fi
+
+          echo "::notice::Using locally installed http-api-tool package"
+          http-api-tool
+        else
+          echo "::notice::Using http-api-tool from PyPI via uvx"
+          uvx http-api-tool
+        fi
+
+    # Docker deployment path
+    - name: Build Docker image for docker deployment
+      if: inputs.deploy == 'docker'
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: |
+        # Check if the image already exists (pre-loaded from artifact)
+        if docker image inspect http-api-tool:${{ github.run_id }} >/dev/null 2>&1; then
+          echo "::notice::Using pre-loaded Docker image http-api-tool:${{ github.run_id }}"
+        else
+          echo "::notice::Building Docker image http-api-tool:${{ github.run_id }}"
+          docker build -f docker/Containerfile -t http-api-tool:${{ github.run_id }} .
+        fi
+
+    - name: Run http-api-tool via Docker
+      if: inputs.deploy == 'docker'
+      id: docker-run
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      env:
+        INPUT_DEPLOY: ${{ inputs.deploy }}
+        INPUT_URL: ${{ inputs.url }}
+        INPUT_AUTH_STRING: ${{ inputs.auth_string }}
+        INPUT_SERVICE_NAME: ${{ inputs.service_name }}
+        INPUT_INITIAL_SLEEP_TIME: ${{ inputs.initial_sleep_time }}
+        INPUT_MAX_DELAY: ${{ inputs.max_delay }}
+        INPUT_RETRIES: ${{ inputs.retries }}
+        INPUT_EXPECTED_HTTP_CODE: ${{ inputs.expected_http_code }}
+        INPUT_REGEX: ${{ inputs.regex }}
+        INPUT_SHOW_HEADER_JSON: ${{ inputs.show_header_json }}
+        INPUT_CURL_TIMEOUT: ${{ inputs.curl_timeout }}
+        INPUT_HTTP_METHOD: ${{ inputs.http_method }}
+        INPUT_REQUEST_BODY: ${{ inputs.request_body }}
+        INPUT_CONTENT_TYPE: ${{ inputs.content_type }}
+        INPUT_REQUEST_HEADERS: ${{ inputs.request_headers }}
+        INPUT_VERIFY_SSL: ${{ inputs.verify_ssl }}
+        INPUT_CA_BUNDLE_PATH: ${{ inputs.ca_bundle_path }}
+        INPUT_INCLUDE_RESPONSE_BODY: ${{ inputs.include_response_body }}
+        INPUT_FOLLOW_REDIRECTS: ${{ inputs.follow_redirects }}
+        INPUT_MAX_RESPONSE_TIME: ${{ inputs.max_response_time }}
+        INPUT_CONNECTION_REUSE: ${{ inputs.connection_reuse }}
+        INPUT_DEBUG: ${{ inputs.debug }}
+        INPUT_FAIL_ON_TIMEOUT: ${{ inputs.fail_on_timeout }}
+        GITHUB_ACTIONS: 'true'
+      run: |
+        # Build volume mounts for Docker
+        VOLUME_MOUNTS="-v $GITHUB_OUTPUT:$GITHUB_OUTPUT"
+
+        # Mount CA bundle if specified
+        if [ -n "${{ inputs.ca_bundle_path }}" ] && [ -f "${{ inputs.ca_bundle_path }}" ]; then
+          VOLUME_MOUNTS="$VOLUME_MOUNTS -v ${{ inputs.ca_bundle_path }}:${{ inputs.ca_bundle_path }}:ro"
+        fi
+
+        docker run --rm \
+          --network host \
+          -e INPUT_DEPLOY \
+          -e INPUT_URL \
+          -e INPUT_AUTH_STRING \
+          -e INPUT_SERVICE_NAME \
+          -e INPUT_INITIAL_SLEEP_TIME \
+          -e INPUT_MAX_DELAY \
+          -e INPUT_RETRIES \
+          -e INPUT_EXPECTED_HTTP_CODE \
+          -e INPUT_REGEX \
+          -e INPUT_SHOW_HEADER_JSON \
+          -e INPUT_CURL_TIMEOUT \
+          -e INPUT_HTTP_METHOD \
+          -e INPUT_REQUEST_BODY \
+          -e INPUT_CONTENT_TYPE \
+          -e INPUT_REQUEST_HEADERS \
+          -e INPUT_VERIFY_SSL \
+          -e INPUT_CA_BUNDLE_PATH \
+          -e INPUT_INCLUDE_RESPONSE_BODY \
+          -e INPUT_FOLLOW_REDIRECTS \
+          -e INPUT_MAX_RESPONSE_TIME \
+          -e INPUT_CONNECTION_REUSE \
+          -e INPUT_DEBUG \
+          -e INPUT_FAIL_ON_TIMEOUT \
+          -e GITHUB_ACTIONS \
+          -e GITHUB_OUTPUT \
+          $VOLUME_MOUNTS \
+          http-api-tool:${{ github.run_id }}
+
+    - name: Cleanup Docker image
+      if: inputs.deploy == 'docker' && always()
+      shell: bash
+      run: |
+        docker rmi http-api-tool:${{ github.run_id }} || true
