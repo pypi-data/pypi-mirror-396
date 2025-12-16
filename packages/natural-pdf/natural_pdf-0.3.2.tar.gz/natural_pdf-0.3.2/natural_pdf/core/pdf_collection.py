@@ -1,0 +1,824 @@
+import concurrent.futures  # Import concurrent.futures
+import glob as py_glob
+import logging
+import threading  # Import threading for logging thread information
+import time  # Import time for logging timestamps
+from pathlib import Path
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Type,
+    Union,
+    cast,
+    overload,
+)
+
+from PIL import Image
+from tqdm.auto import tqdm
+
+from natural_pdf.classification.classification_provider import (
+    get_classification_engine,
+    run_classification_batch,
+)
+from natural_pdf.classification.pipelines import ClassificationError
+
+# Set up logger early
+# Configure logging to include thread information
+# logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+from natural_pdf.core.context import PDFContext
+from natural_pdf.core.highlighting_service import HighlightingService
+from natural_pdf.core.pdf import PDF
+from natural_pdf.elements.element_collection import ElementCollection
+from natural_pdf.export.mixin import ExportMixin
+from natural_pdf.selectors.host_mixin import SelectorHostMixin
+from natural_pdf.services.base import ServiceHostMixin, resolve_service
+
+Indexable = Any
+SearchOptions = Any
+SearchServiceProtocol = Any
+
+# Import the ApplyMixin
+from natural_pdf.collections.mixins import ApplyMixin
+
+
+class PDFCollection(ServiceHostMixin, SelectorHostMixin, ApplyMixin, ExportMixin):
+    def __init__(
+        self,
+        source: Union[str, Iterable[Union[str, "PDF"]]],
+        recursive: bool = True,
+        **pdf_options: Any,
+    ):
+        """
+        Initializes a collection of PDF documents from various sources.
+
+        Args:
+            source: The source of PDF documents. Can be:
+                - An iterable (e.g., list) of existing PDF objects.
+                - An iterable (e.g., list) of file paths/URLs/globs (strings).
+                - A single file path/URL/directory/glob string.
+            recursive: If source involves directories or glob patterns,
+                       whether to search recursively (default: True).
+            **pdf_options: Keyword arguments passed to the PDF constructor.
+        """
+        self._pdfs: List["PDF"] = []
+        self._pdf_options = pdf_options  # Store options for potential slicing later
+        self._recursive = recursive  # Store setting for potential slicing
+
+        # Dynamically import PDF class within methods to avoid circular import at module load time
+        PDF = self._get_pdf_class()
+
+        if hasattr(source, "__iter__") and not isinstance(source, str):
+            source_list = list(source)
+            if not source_list:
+                return  # Empty list source
+            if isinstance(source_list[0], PDF):
+                if all(isinstance(item, PDF) for item in source_list):
+                    self._pdfs = [cast("PDF", item) for item in source_list]
+                    # Don't adopt search context anymore
+                    self._bind_service_context()
+                    return
+                else:
+                    raise TypeError("Iterable source has mixed PDF/non-PDF objects.")
+            # If it's an iterable but not PDFs, fall through to resolve sources
+
+        # Resolve string, iterable of strings, or single string source to paths/URLs
+        resolved_paths_or_urls = self._resolve_sources_to_paths(
+            cast(Union[str, Iterable[str]], source)
+        )
+        self._initialize_pdfs(resolved_paths_or_urls, PDF)  # Pass PDF class
+
+        self._iter_index = 0
+
+        # Initialize internal search service reference (available when search extras installed)
+        self._search_service: Optional[Any] = None
+
+        self._bind_service_context()
+
+    @staticmethod
+    def _get_pdf_class():
+        """Helper method to dynamically import the PDF class."""
+        from natural_pdf.core.pdf import PDF
+
+        return PDF
+
+    # --- Internal Helpers ---
+
+    def _is_url(self, s: str) -> bool:
+        return s.startswith(("http://", "https://"))
+
+    def _has_glob_magic(self, s: str) -> bool:
+        return py_glob.has_magic(s)
+
+    def _execute_glob(self, pattern: str) -> Set[str]:
+        """Glob for paths and return a set of valid PDF paths."""
+        found_paths = set()
+        # Use iglob for potentially large directories/matches
+        paths_iter = py_glob.iglob(pattern, recursive=self._recursive)
+        for path_str in paths_iter:
+            # Use Path object for easier checking
+            p = Path(path_str)
+            if p.is_file() and p.suffix.lower() == ".pdf":
+                found_paths.add(str(p.resolve()))  # Store resolved absolute path
+        return found_paths
+
+    def _resolve_sources_to_paths(self, source: Union[str, Iterable[str]]) -> List[str]:
+        """Resolves various source types into a list of unique PDF paths/URLs."""
+        final_paths = set()
+        sources_to_process = []
+
+        if isinstance(source, str):
+            sources_to_process.append(source)
+        elif hasattr(source, "__iter__"):
+            sources_to_process.extend(list(source))
+        else:  # Should not happen based on __init__ checks, but safeguard
+            raise TypeError(f"Unexpected source type in _resolve_sources_to_paths: {type(source)}")
+
+        for item in sources_to_process:
+            if not isinstance(item, str):
+                logger.warning(f"Skipping non-string item in source list: {type(item)}")
+                continue
+
+            item_path = Path(item)
+
+            if self._is_url(item):
+                final_paths.add(item)  # Add URL directly
+            elif self._has_glob_magic(item):
+                glob_results = self._execute_glob(item)
+                final_paths.update(glob_results)
+            elif item_path.is_dir():
+                # Use glob to find PDFs in directory, respecting recursive flag
+                dir_pattern = (
+                    str(item_path / "**" / "*.pdf") if self._recursive else str(item_path / "*.pdf")
+                )
+                dir_glob_results = self._execute_glob(dir_pattern)
+                final_paths.update(dir_glob_results)
+            elif item_path.is_file() and item_path.suffix.lower() == ".pdf":
+                final_paths.add(str(item_path.resolve()))  # Add resolved file path
+            else:
+                logger.warning(
+                    f"Source item ignored (not a valid URL, directory, file, or glob): {item}"
+                )
+
+        return sorted(list(final_paths))
+
+    def _initialize_pdfs(self, paths_or_urls: List[str], PDF_cls: Type["PDF"]):
+        """Initializes PDF objects from a list of paths/URLs."""
+        logger.info(f"Initializing {len(paths_or_urls)} PDF objects...")
+        failed_count = 0
+        for path_or_url in tqdm(paths_or_urls, desc="Loading PDFs"):
+            try:
+                pdf_instance = PDF_cls(path_or_url, **self._pdf_options)
+                self._pdfs.append(pdf_instance)
+            except Exception as e:
+                logger.error(
+                    f"Failed to load PDF: {path_or_url}. Error: {e}", exc_info=False
+                )  # Keep log concise
+                failed_count += 1
+        logger.info(f"Successfully initialized {len(self._pdfs)} PDFs. Failed: {failed_count}")
+
+    # --- Public Factory Class Methods (Simplified) ---
+
+    @classmethod
+    def from_paths(cls, paths_or_urls: List[str], **pdf_options: Any) -> "PDFCollection":
+        """Creates a PDFCollection explicitly from a list of file paths or URLs."""
+        # __init__ can handle List[str] directly now
+        return cls(paths_or_urls, **pdf_options)
+
+    @classmethod
+    def from_glob(cls, pattern: str, recursive: bool = True, **pdf_options: Any) -> "PDFCollection":
+        """Creates a PDFCollection explicitly from a single glob pattern."""
+        # __init__ can handle single glob string directly
+        return cls(pattern, recursive=recursive, **pdf_options)
+
+    @classmethod
+    def from_globs(
+        cls, patterns: List[str], recursive: bool = True, **pdf_options: Any
+    ) -> "PDFCollection":
+        """Creates a PDFCollection explicitly from a list of glob patterns."""
+        # __init__ can handle List[str] containing globs directly
+        return cls(patterns, recursive=recursive, **pdf_options)
+
+    # ------------------------------------------------------------------
+    # Service context helpers
+    # ------------------------------------------------------------------
+    def _bind_service_context(self) -> None:
+        context = self._resolve_service_context()
+        self._init_service_host(context)
+
+    def _resolve_service_context(self) -> PDFContext:
+        for pdf in self._pdfs:
+            context = getattr(pdf, "_context", None)
+            if context is not None:
+                return context
+        return PDFContext.with_defaults()
+
+    @classmethod
+    def from_directory(
+        cls, directory_path: str, recursive: bool = True, **pdf_options: Any
+    ) -> "PDFCollection":
+        """Creates a PDFCollection explicitly from PDF files within a directory."""
+        # __init__ can handle single directory string directly
+        return cls(directory_path, recursive=recursive, **pdf_options)
+
+    # --- Core Collection Methods ---
+    def __len__(self) -> int:
+        return len(self._pdfs)
+
+    def __getitem__(self, key) -> Union["PDF", "PDFCollection"]:
+        # Use dynamic import here as well
+        PDF = self._get_pdf_class()
+        if isinstance(key, slice):
+            # Create a new collection with the sliced PDFs and original options
+            new_collection = PDFCollection.__new__(PDFCollection)  # Create blank instance
+            new_collection._pdfs = self._pdfs[key]
+            new_collection._pdf_options = self._pdf_options
+            new_collection._recursive = self._recursive
+            # Search context is not copied/inherited anymore
+            return new_collection
+        elif isinstance(key, int):
+            # Check bounds
+            if 0 <= key < len(self._pdfs):
+                return self._pdfs[key]
+            else:
+                raise IndexError(f"PDF index {key} out of range (0-{len(self._pdfs)-1}).")
+        else:
+            raise TypeError(f"PDF indices must be integers or slices, not {type(key)}.")
+
+    def __iter__(self):
+        return iter(self._pdfs)
+
+    def __repr__(self) -> str:
+        return f"<PDFCollection(count={len(self._pdfs)})>"
+
+    @property
+    def pdfs(self) -> List["PDF"]:
+        """Returns the list of PDF objects held by the collection."""
+        return self._pdfs
+
+    def show(self, limit: Optional[int] = 30, per_pdf_limit: Optional[int] = 10, **kwargs):
+        """
+        Display all PDFs in the collection with labels.
+
+        Each PDF is shown with its pages in a grid layout (6 columns by default),
+        and all PDFs are stacked vertically with labels.
+
+        Args:
+            limit: Maximum total pages to show across all PDFs (default: 30)
+            per_pdf_limit: Maximum pages to show per PDF (default: 10)
+            **kwargs: Additional arguments passed to each PDF's show() method
+                     (e.g., columns, exclusions, resolution, etc.)
+
+        Returns:
+            Displayed image in Jupyter or None
+        """
+        if not self._pdfs:
+            print("Empty collection")
+            return None
+
+        # Import here to avoid circular imports
+        from PIL import ImageDraw, ImageFont
+
+        # Calculate pages per PDF if total limit is set
+        if limit and not per_pdf_limit:
+            per_pdf_limit = max(1, limit // len(self._pdfs))
+
+        # Collect images from each PDF
+        all_images = []
+        total_pages_shown = 0
+
+        for pdf in self._pdfs:
+            if limit and total_pages_shown >= limit:
+                break
+
+            # Calculate limit for this PDF
+            pdf_limit = per_pdf_limit
+            if limit:
+                remaining = limit - total_pages_shown
+                pdf_limit = min(per_pdf_limit or remaining, remaining)
+
+            if pdf_limit is None:
+                pdf_limit_value = len(pdf.pages)
+            else:
+                pdf_limit_value = pdf_limit
+
+            # Get PDF identifier
+            pdf_name = getattr(pdf, "filename", None) or getattr(pdf, "path", "Unknown")
+            if isinstance(pdf_name, Path):
+                pdf_name = pdf_name.name
+            elif "/" in str(pdf_name):
+                pdf_name = str(pdf_name).split("/")[-1]
+
+            # Render this PDF
+            try:
+                # Get render specs from the PDF
+                render_specs = pdf._get_render_specs(
+                    mode="show", max_pages=pdf_limit_value, **kwargs
+                )
+
+                if not render_specs:
+                    continue
+
+                # Get the highlighter and render without displaying
+                highlighter = cast("HighlightingService", pdf._get_highlighter())
+                pdf_image = highlighter.unified_render(
+                    specs=render_specs,
+                    layout="grid" if len(render_specs) > 1 else "single",
+                    columns=6,
+                    **kwargs,
+                )
+
+                if pdf_image:
+                    # Add label above the PDF image
+                    label_height = 40
+                    label_bg_color = (240, 240, 240)
+                    label_text_color = (0, 0, 0)
+
+                    # Create new image with space for label
+                    width, height = pdf_image.size
+                    labeled_image = Image.new("RGB", (width, height + label_height), "white")
+
+                    # Draw label background
+                    draw = ImageDraw.Draw(labeled_image)
+                    draw.rectangle([0, 0, width, label_height], fill=label_bg_color)
+
+                    # Draw label text
+                    try:
+                        # Try to use a nice font if available
+                        font = ImageFont.truetype("Arial", 20)
+                    except:
+                        # Fallback to default font
+                        font = ImageFont.load_default()
+
+                    label_text = f"{pdf_name} ({len(pdf.pages)} pages)"
+                    draw.text((10, 10), label_text, fill=label_text_color, font=font)
+
+                    # Paste PDF image below label
+                    labeled_image.paste(pdf_image, (0, label_height))
+
+                    all_images.append(labeled_image)
+                    if pdf_limit is None:
+                        pdf_limit = len(pdf.pages)
+                    total_pages_shown += min(pdf_limit_value, len(pdf.pages))
+
+            except Exception as e:
+                logger.warning(f"Failed to render PDF {pdf_name}: {e}")
+                continue
+
+        if not all_images:
+            print("No PDFs could be rendered")
+            return None
+
+        # Combine all images vertically
+        if len(all_images) == 1:
+            combined = all_images[0]
+        else:
+            # Add spacing between PDFs
+            spacing = 20
+            total_height = sum(img.height for img in all_images) + spacing * (len(all_images) - 1)
+            max_width = max(img.width for img in all_images)
+
+            combined = Image.new("RGB", (max_width, total_height), "white")
+
+            y_offset = 0
+            for i, img in enumerate(all_images):
+                # Center images if they're narrower than max width
+                x_offset = (max_width - img.width) // 2
+                combined.paste(img, (x_offset, y_offset))
+                y_offset += img.height
+                if i < len(all_images) - 1:
+                    y_offset += spacing
+
+        # Return the combined image (Jupyter will display it automatically)
+        return combined
+
+    def match_template(self, *args, **kwargs):
+        return self.services.vision.match_template(self, *args, **kwargs)
+
+    def find_similar(self, *args, **kwargs):
+        return self.services.vision.find_similar(self, *args, **kwargs)
+
+    def ask(self, *args, **kwargs):
+        return self.services.qa.ask(self, *args, **kwargs)
+
+    def describe(self, **kwargs):
+        """
+        Describe the PDF collection content using the describe service.
+        """
+        collection = self.find_all("*")
+        return self.services.describe.describe(collection, **kwargs)
+
+    def inspect(self, limit: int = 30, **kwargs):
+        """
+        Inspect the PDF collection content using the describe service.
+        """
+        collection = self.find_all("*")
+        return self.services.describe.inspect(collection, limit=limit, **kwargs)
+
+    def detect_lines(self, *args, **kwargs):
+        return self.services.shapes.detect_lines(self, *args, **kwargs)
+
+    def detect_checkboxes(self, *args, **kwargs):
+        return self.services.checkbox.detect_checkboxes(self, *args, **kwargs)
+
+    def apply_ocr(
+        self,
+        engine: Optional[str] = None,
+        languages: Optional[List[str]] = None,
+        min_confidence: Optional[float] = None,
+        device: Optional[str] = None,
+        resolution: Optional[int] = None,
+        apply_exclusions: bool = True,
+        detect_only: bool = False,
+        replace: bool = True,
+        options: Optional[Any] = None,
+        pages: Optional[Union[slice, List[int]]] = None,
+        max_workers: Optional[int] = None,
+    ) -> "PDFCollection":
+        """
+        Apply OCR to all PDFs in the collection, potentially in parallel.
+
+        Args:
+            engine: OCR engine to use (e.g., 'easyocr', 'paddleocr', 'surya')
+            languages: List of language codes for OCR
+            min_confidence: Minimum confidence threshold for text detection
+            device: Device to use for OCR (e.g., 'cpu', 'cuda')
+            resolution: DPI resolution for page rendering
+            apply_exclusions: Whether to apply exclusion regions
+            detect_only: If True, only detect text regions without extracting text
+            replace: If True, replace existing OCR elements
+            options: Engine-specific options
+            pages: Specific pages to process (None for all pages)
+            max_workers: Maximum number of threads to process PDFs concurrently.
+                         If None or 1, processing is sequential. (default: None)
+
+        Returns:
+            Self for method chaining
+        """
+        PDF = self._get_pdf_class()
+        logger.info(
+            f"Applying OCR to {len(self._pdfs)} PDFs in collection (max_workers={max_workers})..."
+        )
+
+        # Worker function takes PDF object again
+        def _process_pdf(pdf: "PDF"):
+            """Helper function to apply OCR to a single PDF, handling errors."""
+            thread_id = threading.current_thread().name  # Get thread name for logging
+            pdf_path = pdf.path  # Get path for logging
+            logger.debug(f"[{thread_id}] Starting OCR process for: {pdf_path}")
+            start_time = time.monotonic()
+            pdf.apply_ocr(  # Call apply_ocr on the original PDF object
+                pages=pages,
+                engine=engine,
+                languages=languages,
+                min_confidence=min_confidence,
+                device=device,
+                resolution=resolution,
+                apply_exclusions=apply_exclusions,
+                detect_only=detect_only,
+                replace=replace,
+                options=options,
+                # Note: We might want a max_workers here too for page rendering?
+                # For now, PDF.apply_ocr doesn't have it.
+            )
+            end_time = time.monotonic()
+            logger.debug(
+                f"[{thread_id}] Finished OCR process for: {pdf_path} (Duration: {end_time - start_time:.2f}s)"
+            )
+            return pdf_path, None
+
+        # Use ThreadPoolExecutor for parallel processing if max_workers > 1
+        if max_workers is not None and max_workers > 1:
+            futures = []
+            with concurrent.futures.ThreadPoolExecutor(
+                max_workers=max_workers, thread_name_prefix="OCRWorker"
+            ) as executor:
+                for pdf in self._pdfs:
+                    # Submit the PDF object to the worker function
+                    futures.append(executor.submit(_process_pdf, pdf))
+
+            # Use the selected tqdm class with as_completed for progress tracking
+            progress_bar = tqdm(
+                concurrent.futures.as_completed(futures),
+                total=len(self._pdfs),
+                desc="Applying OCR (Parallel)",
+                unit="pdf",
+            )
+
+            for future in progress_bar:
+                pdf_path, error = future.result()  # Get result (or exception)
+                if error:
+                    progress_bar.set_postfix_str(f"Error: {pdf_path}", refresh=True)
+                # Progress is updated automatically by tqdm
+
+        else:  # Sequential processing (max_workers is None or 1)
+            logger.info("Applying OCR sequentially...")
+            # Use the selected tqdm class for sequential too for consistency
+            # Iterate over PDF objects directly for sequential
+            for pdf in tqdm(self._pdfs, desc="Applying OCR (Sequential)", unit="pdf"):
+                _process_pdf(pdf)  # Call helper directly with PDF object
+
+        logger.info("Finished applying OCR across the collection.")
+        return self
+
+    def correct_ocr(
+        self,
+        correction_callback: Callable[[Any], Optional[str]],
+        max_workers: Optional[int] = None,
+        progress_callback: Optional[Callable[[], None]] = None,
+    ) -> "PDFCollection":
+        """
+        Apply OCR correction to all relevant elements across all pages and PDFs
+        in the collection using a single progress bar.
+
+        Args:
+            correction_callback: Function to apply to each OCR element.
+                                 It receives the element and should return
+                                 the corrected text (str) or None.
+            max_workers: Max threads to use for parallel execution within each page.
+            progress_callback: Optional callback function to call after processing each element.
+
+        Returns:
+            Self for method chaining.
+        """
+        PDF = self._get_pdf_class()  # Ensure PDF class is available
+        if not callable(correction_callback):
+            raise TypeError("`correction_callback` must be a callable function.")
+
+        logger.info(f"Gathering OCR elements from {len(self._pdfs)} PDFs for correction...")
+
+        # 1. Gather all target elements using the collection's find_all
+        #    Crucially, set apply_exclusions=False to include elements in headers/footers etc.
+        all_ocr_elements = self.find_all("text[source=ocr]", apply_exclusions=False).elements
+
+        if not all_ocr_elements:
+            logger.info("No OCR elements found in the collection to correct.")
+            return self
+
+        total_elements = len(all_ocr_elements)
+        logger.info(
+            f"Found {total_elements} OCR elements across the collection. Starting correction process..."
+        )
+
+        # 2. Initialize the progress bar
+        progress_bar = tqdm(total=total_elements, desc="Correcting OCR Elements", unit="element")
+
+        def _tick_progress() -> None:
+            progress_bar.update()
+
+        for pdf in self._pdfs:
+            if not pdf.pages:
+                continue
+            for page in pdf.pages:
+                try:
+                    page.update_text(
+                        transform=correction_callback,
+                        selector="text[source=ocr]",
+                        apply_exclusions=False,
+                        max_workers=max_workers,
+                        progress_callback=_tick_progress,
+                    )
+                except Exception as e:
+                    logger.error(
+                        f"Error occurred during correction process for page {getattr(page, 'number', '?')} of PDF {getattr(pdf, 'path', 'unknown')}: {e}",
+                        exc_info=True,
+                    )
+                    continue
+
+        progress_bar.close()
+
+        return self
+
+    def categorize(self, labels: List[str], **kwargs):
+        """Categorizes PDFs in the collection based on content or features."""
+        # Implementation requires integrating with classification models or logic
+        raise NotImplementedError("categorize requires classification implementation.")
+
+    def export_ocr_correction_task(self, output_zip_path: str, **kwargs):
+        """
+        Exports OCR results from all PDFs in this collection into a single
+        correction task package (zip file).
+
+        Args:
+            output_zip_path: The path to save the output zip file.
+            **kwargs: Additional arguments passed to create_correction_task_package
+                      (e.g., image_render_scale, overwrite).
+        """
+        from natural_pdf.utils.packaging import create_correction_task_package
+
+        # Pass the collection itself (self) as the source
+        create_correction_task_package(source=self, output_zip_path=output_zip_path, **kwargs)
+
+    # --- Mixin Required Implementation ---
+    def get_indexable_items(self) -> Iterable[Indexable]:
+        """Yields Page objects from the collection, conforming to Indexable."""
+        if not self._pdfs:
+            return  # Return empty iterator if no PDFs
+
+        for pdf in self._pdfs:
+            if not pdf.pages:  # Handle case where a PDF might have 0 pages after loading
+                logger.warning(f"PDF '{pdf.path}' has no pages. Skipping.")
+                continue
+            for page in pdf.pages:
+                # Optional: Add filtering here if needed (e.g., skip empty pages)
+                # Assuming Page object conforms to Indexable
+                # We might still want the empty page check here for efficiency
+                # if not page.extract_text(use_exclusions=False).strip():
+                #     logger.debug(f"Skipping empty page {page.page_number} from PDF '{pdf.path}'.")
+                #     continue
+                yield page
+
+    # --- Classification Method --- #
+    def classify_all(
+        self,
+        labels: List[str],
+        using: Optional[str] = None,
+        model: Optional[str] = None,
+        analysis_key: str = "classification",
+        **kwargs,
+    ) -> "PDFCollection":
+        """
+        Classify each PDF document in the collection using provider-backed batch processing.
+        """
+        if not labels:
+            raise ValueError("Labels list cannot be empty.")
+
+        if not self._pdfs:
+            logger.warning("PDFCollection is empty, skipping classification.")
+            return self
+
+        mode_desc = f"using='{using}'" if using else f"model='{model}'" if model else "default text"
+        logger.info(
+            f"Starting batch classification for {len(self._pdfs)} PDFs in collection ({mode_desc})..."
+        )
+
+        first_pdf = self._pdfs[0]
+        engine_name = kwargs.pop("classification_engine", None)
+        engine_obj = get_classification_engine(first_pdf, engine_name)
+        inferred_using = engine_obj.infer_using(model or engine_obj.default_model("text"), using)
+
+        pdf_contents: List[Any] = []
+        valid_pdfs: List[Any] = []
+
+        logger.info(f"Gathering content from {len(self._pdfs)} PDFs for batch classification...")
+        for pdf in self._pdfs:
+            try:
+                content = pdf._get_classification_content(model_type=inferred_using, **kwargs)
+                pdf_contents.append(content)
+                valid_pdfs.append(pdf)
+            except Exception as exc:
+                logger.warning(f"Skipping PDF {pdf.path}: {exc}")
+
+        if not pdf_contents:
+            logger.warning("No valid content could be gathered from PDFs for classification.")
+            return self
+
+        try:
+            batch_results = run_classification_batch(
+                context=self,
+                contents=pdf_contents,
+                labels=labels,
+                model_id=model or engine_obj.default_model(inferred_using),
+                using=inferred_using,
+                min_confidence=kwargs.get("min_confidence", 0.0),
+                multi_label=kwargs.get("multi_label", False),
+                batch_size=8,
+                progress_bar=True,
+                engine_name=engine_name,
+            )
+        except Exception as exc:
+            raise ClassificationError(f"Batch classification failed: {exc}") from exc
+
+        if len(batch_results) != len(valid_pdfs):
+            raise ClassificationError("Batch result count mismatch with input PDFs")
+
+        processed_count = 0
+        for pdf, result_obj in zip(valid_pdfs, batch_results):
+            try:
+                if not hasattr(pdf, "analyses") or pdf.analyses is None:
+                    pdf.analyses = {}
+                pdf.analyses[analysis_key] = result_obj
+                processed_count += 1
+            except Exception as exc:
+                logger.warning(f"Failed to store classification result for {pdf.path}: {exc}")
+
+        skipped_count = len(self._pdfs) - processed_count
+        final_message = f"Finished batch classification. Processed: {processed_count}"
+        if skipped_count > 0:
+            final_message += f", Skipped: {skipped_count}"
+        logger.info(final_message + ".")
+        return self
+
+    # ------------------------------------------------------------------
+    # QA service hooks
+    # ------------------------------------------------------------------
+    def _qa_segments(self):
+        segments = []
+        for pdf in self._pdfs:
+            pages = getattr(pdf, "pages", None)
+            if not pages:
+                continue
+            try:
+                segments.extend(list(pages))
+            except Exception:
+                continue
+        return tuple(segments)
+
+    def _qa_target_region(self):
+        for pdf in self._pdfs:
+            pages = getattr(pdf, "pages", None)
+            if not pages:
+                continue
+            try:
+                first_page = pages[0]
+            except Exception:
+                continue
+            to_region = getattr(first_page, "to_region", None)
+            if callable(to_region):
+                return to_region()
+        raise RuntimeError("PDFCollection has no pages available for QA.")
+
+    def _qa_context_page_number(self) -> int:
+        for pdf in self._pdfs:
+            pages = getattr(pdf, "pages", None)
+            if not pages:
+                continue
+            try:
+                first_page = pages[0]
+                return int(getattr(first_page, "number", -1))
+            except Exception:
+                continue
+        return -1
+
+    def _qa_source_elements(self) -> ElementCollection:
+        return ElementCollection([])
+
+    def _qa_normalize_result(self, result: Any):
+        from natural_pdf.elements.region import Region
+
+        return Region._normalize_qa_output(result)
+
+    @staticmethod
+    def _qa_confidence(candidate: Any) -> float:
+        from natural_pdf.flows.region import FlowRegion
+
+        return FlowRegion._qa_confidence(candidate)
+
+        return self
+
+    # --- End Classification Method --- #
+
+    def _gather_analysis_data(
+        self,
+        analysis_keys: List[str],
+        include_content: bool,
+        include_images: bool,
+        image_dir: Optional[Path],
+        image_format: str,
+        image_resolution: int,
+    ) -> List[Dict[str, Any]]:
+        """
+        Gather analysis data from all PDFs in the collection.
+
+        Args:
+            analysis_keys: Keys in the analyses dictionary to export
+            include_content: Whether to include extracted text
+            include_images: Whether to export images
+            image_dir: Directory to save images
+            image_format: Format to save images
+            image_resolution: Resolution for exported images
+
+        Returns:
+            List of dictionaries containing analysis data
+        """
+        if not self._pdfs:
+            logger.warning("No PDFs found in collection")
+            return []
+
+        all_data = []
+
+        for pdf in tqdm(self._pdfs, desc="Gathering PDF data", leave=False):
+            # PDF level data
+            pdf_data = {
+                "pdf_path": pdf.path,
+                "pdf_filename": Path(pdf.path).name,
+                "total_pages": len(pdf.pages) if hasattr(pdf, "pages") else 0,
+            }
+
+            # Add metadata if available
+            if hasattr(pdf, "metadata") and pdf.metadata:
+                for k, v in pdf.metadata.items():
+                    if v:  # Only add non-empty metadata
+                        pdf_data[f"metadata.{k}"] = str(v)
+
+            all_data.append(pdf_data)
+
+        return all_data
