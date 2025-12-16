@@ -1,0 +1,205 @@
+Metadata-Version: 2.4
+Name: safepass-cli
+Version: 1.0.2
+Summary: Offline password manager with strong encryption
+Home-page: https://github.com/barancll/safepass
+Author: Baran Celal Tonyalı
+Author-email: tonyalibarancelal@gmail.com
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: End Users/Desktop
+Classifier: Topic :: Security
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: Django<5.2,>=5.1
+Requires-Dist: cryptography>=41.0.0
+Requires-Dist: django-cors-headers>=4.7.0
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+# SafePass - Offline Password Manager
+
+SafePass, şifrelerinizi güvenli bir şekilde yerel bilgisayarınızda saklayan offline bir şifre yöneticisidir.
+
+## 🔐 Özellikler
+
+- ✅ **Offline Çalışma**: Tüm veriler yerel bilgisayarınızda
+- ✅ **Güçlü Şifreleme**: AES-256-GCM ile şifreleme
+- ✅ **Ana Şifre**: Master password ile tüm verilerinizi koruyun
+- ✅ **Şifre Üretici**: Güçlü şifreler otomatik oluşturun
+- ✅ **Güvenlik Analizi**: Şifrelerinizi otomatik değerlendirin
+- ✅ **Dashboard**: Gerçek zamanlı güvenlik skoru ve istatistikler
+- ✅ **Oturum Timeout**: 1 saat inaktivite sonrası otomatik çıkış
+- ✅ **Modern Arayüz**: Responsive tasarım
+
+## 📊 Güvenlik Analizi
+
+SafePass, şifrelerinizi otomatik olarak analiz eder ve güvenlik seviyenizi değerlendirir.
+
+### Şifre Gücü Kategorileri
+
+Şifreler üç kategoriye ayrılır:
+- **🛡️ Güçlü** (80+ puan): Uzun, çeşitli karakter içeren şifreler
+- **⚠️ Orta** (50-79 puan): İyileştirilebilir şifreler
+- **🔴 Zayıf** (<50 puan): Acilen değiştirilmesi gereken şifreler
+
+### Şifre Puanlama Sistemi
+
+Her şifre aşağıdaki kriterlere göre 100 üzerinden puanlanır:
+
+**Uzunluk Puanı:**
+- 16+ karakter → 40 puan
+- 12-15 karakter → 30 puan
+- 8-11 karakter → 20 puan
+- 8'den az → 0 puan
+
+**Karakter Çeşitliliği** (her biri +15 puan):
+- ✓ Küçük harf (a-z)
+- ✓ Büyük harf (A-Z)
+- ✓ Rakam (0-9)
+- ✓ Sembol (!@#$%...)
+
+**Örnek Hesaplamalar:**
+```
+"password"         → 20 + 15 = 35 puan  (Zayıf)
+"Password123"      → 30 + 45 = 75 puan  (Orta)
+"P@ssw0rd!2024"    → 30 + 60 = 90 puan  (Güçlü)
+"MyS3cur3P@ss!"    → 30 + 60 = 90 puan  (Güçlü)
+"C0mpl3x!P@ssW0rd" → 40 + 60 = 100 puan (Güçlü)
+```
+
+### Güvenlik Skoru
+
+Dashboard'daki güvenlik skoru, tüm şifrelerinizi değerlendirerek hesaplanır:
+
+```
+Başlangıç: 100 puan
+- Her zayıf şifre için: -2 puan
+- Her orta şifre için: -1 puan  
+- Her tekrarlanan şifre için: -3 puan
+Sonuç: 0-100 arası güvenlik skoru
+```
+
+**Tekrar Eden Şifreler:**
+Birden fazla hesap için aynı şifreyi kullanmak büyük güvenlik riski oluşturur. Bir hesap ele geçirildiğinde diğer hesaplarınız da tehlikeye girer. Bu yüzden:
+- Aynı şifreyi 2 hesapta kullanmak → -3 puan
+- Aynı şifreyi 3 hesapta kullanmak → -6 puan
+- vb.
+
+Dashboard'da "Tekrar Eden Şifreler" bölümünde hangi şifrelerin tekrarlandığını görebilirsiniz.
+
+**Skor Yorumlama:**
+- 90-100: Mükemmel güvenlik 🏆
+- 75-89: İyi güvenlik ✅
+- 50-74: Orta güvenlik ⚠️
+- 0-49: Zayıf güvenlik 🚨
+
+### Dashboard İstatistikleri
+
+Ana sayfada şu bilgileri görebilirsiniz:
+- 📊 Toplam şifre sayısı
+- 🛡️ Güçlü şifre sayısı
+- ⚠️ Orta şifre sayısı
+- 🔴 Zayıf şifre sayısı
+- 🔒 Genel güvenlik skoru (0-100)
+- 📋 Son eklenen şifreler
+
+## 📦 Kurulum
+
+```bash
+pip install safepass-cli
+```
+
+## 🚀 Kullanım
+
+## 💡 Kullanım
+
+### Komutlar
+
+```bash
+# Veritabanını manuel başlat (opsiyonel)
+safepass init
+
+# Web sunucusunu başlat
+safepass start
+
+# Farklı portta başlat
+safepass start --port 3000
+
+# Çalışan sunucuyu durdur
+safepass stop
+
+# Tüm verileri sıfırla (GERİ ALINAMAZ!)
+safepass reset
+```
+
+## 🗑️ Kaldırma
+
+### Veritabanını Temizle (Şifreleri Sil)
+
+```bash
+# Tüm şifrelerinizi ve veritabanını sil
+safepass clean
+```
+
+⚠️ **Uyarı:** Bu komut tüm şifrelerinizi kalıcı olarak siler!
+
+### Uygulamayı Tamamen Kaldır
+
+```bash
+# 1. Önce veritabanını temizle (opsiyonel)
+safepass clean
+
+# 2. Uygulamayı kaldır
+pip uninstall safepass-cli
+```
+
+**Not:** `pip uninstall` sadece uygulamayı kaldırır, verilerinizi silmez. Verilerinizi de silmek için önce `safepass clean` komutunu çalıştırın.
+
+Tarayıcınızda `http://localhost:8000` adresine gidin.
+
+### Diğer Komutlar
+```bash
+# Ana şifreyi sıfırla (TÜM VERİLER SİLİNİR!)
+safepass reset
+
+# Yardım
+safepass --help
+```
+
+## 🔒 Güvenlik
+
+- Tüm şifreler AES-256-GCM ile şifrelenir
+- Ana şifre asla saklanmaz
+- Veriler `~/.safepass/` dizininde saklanır
+- Offline çalışır, internet bağlantısı gerektirmez
+
+## ⚠️ Önemli Notlar
+
+- **Ana şifrenizi unutmayın!** Unutursanız verileriniz kurtarılamaz.
+- Düzenli olarak verilerinizi yedekleyin (Profil > Veri Dışa Aktar)
+
+## 👨‍💻 Geliştirici
+
+**Baran Celal Tonyalı**
+
+- 🌐 Website: [barancelaltonyali.com](https://barancelaltonyali.com/)
+- 💼 LinkedIn: [linkedin.com/in/baran-celal-tonyali](https://www.linkedin.com/in/baran-celal-tonyali/)
+- 📧 Email: tonyalibarancelal@gmail.com
+- 💻 GitHub: [github.com/barancll/safepass](https://github.com/barancll/safepass)
+
+---
+
+Made with ❤️ by Baran Celal Tonyalı
