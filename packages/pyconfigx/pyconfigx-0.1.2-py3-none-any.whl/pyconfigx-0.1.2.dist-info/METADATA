@@ -1,0 +1,564 @@
+Metadata-Version: 2.4
+Name: pyconfigx
+Version: 0.1.2
+Summary: A hierarchical configuration and knowledge engine for dynamic systems
+Author: Aditya Gaur
+License: MIT License
+        
+        Copyright (c) 2025 Aditya Gaur
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+        
+Project-URL: Homepage, https://github.com/xdityagr/ConfigX
+Project-URL: Repository, https://github.com/xdityagr/ConfigX
+Classifier: Programming Language :: Python :: 3
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: lark
+Requires-Dist: colorama
+Dynamic: license-file
+
+![ConfigX Banner](https://github.com/xdityagr/ConfigX/blob/main/assets/banner1.png?raw=true)
+
+# ConfigX - A Universal AI-Powered Hierarchical Data Engine
+
+**ConfigX** is a universal, cross-language, hierarchical data engine powered by **ConfigXQL** — an intuitive query language for accessing, transforming, validating, encrypting, searching, and persisting structured data.
+
+Whether you're building a simple application, managing agent memory for AI systems, orchestrating complex workflows, or handling metadata for vector databases, **ConfigX** provides a flexible, powerful, and blazing-fast way to manage hierarchical data.
+
+***Designed for performance and simplicity — fast enough for production, yet intuitive for beginners 🚀***
+
+---
+
+## 🎯 What is ConfigX?
+
+ConfigX is more than just a configuration management tool — it's a **universal hierarchical data engine** that works across languages and platforms. ConfigX is :
+- A new way of managing and manipulating hierarchical data intelligently.
+- **Embedded object store for hierarchical data** for structured data with keypath-based queries
+- **An AI Agent Memory Store** for reasoning states and context
+- **A Configuration Manager** for application settings
+- **A Metadata Engine** for vector databases and embeddings
+- **A Workflow Orchestrator** for complex data transformations
+
+---
+
+---
+
+## 🔑 Core Features
+
+### **Keypaths — Your Data Navigation System**
+
+Keypaths provide a structured way to reference hierarchical data. Instead of fumbling through nested structures, use keypaths like a treasure map:
+
+```python
+# Your data structure
+data = {
+    'fridge': {
+        'shelf': {
+            'item': 'cake',
+            'quantity': 1
+        },
+        'temperature': -2
+    }
+}
+
+# Access with keypaths
+keypath = 'fridge.shelf.item'  # Instantly finds 'cake' 🍰
+keypath = 'fridge.temperature=-5'  # Updates temperature ❄️
+```
+
+### **ConfigXQL — Natural Query Language**
+
+ConfigXQL is designed to feel like plain English. No complex syntax to memorize — just express your intentions naturally.
+
+**Key Principles:**
+- **Natural Syntax**: Reads like common sense
+- **Dot Notation**: Navigate hierarchies with dots (`.`)
+- **Flexible Data Handling**: Works with any data type
+- **Powerful Operations**: CRUD, wildcards, conditions, and more
+
+---
+
+## 🛠️ Getting Started in Python
+
+```python
+import ConfigX
+confx = ConfigX()
+```
+
+### **Debug Modes**
+
+```python
+# Development mode: Detailed exceptions for debugging
+confx.set_debug_mode('developer')
+
+# Production mode: Safe defaults, auto-logging
+confx.set_debug_mode('deployed')
+```
+
+### **The `resolve()` Method**
+
+The heart of ConfigX. Use `resolve()` to execute ConfigXQL queries and manipulate data.
+
+```python
+confx.resolve('<query>')
+```
+
+---
+
+## 📖 ConfigXQL Query Guide
+
+### **1. Creating Branches**
+
+```python
+# Create root branch
+confx.resolve('appSettings')
+
+# Create nested branch
+confx.resolve('appSettings.uisettings')
+```
+
+### **2. CRUD Operations**
+
+#### **Create Values**
+
+```python
+# Create with type
+confx.resolve('appSettings.uisettings.userId:INT')
+
+# Create with type and default value
+confx.resolve('appSettings.uisettings.isLoggedIn:BOOL=false')
+
+# Batch create multiple values
+confx.resolve('appSettings.uisettings.*[theme="dark":STR, shortcuts="ctrl+w":STR]')
+```
+
+#### **Update Values**
+
+```python
+# Update with type change
+confx.resolve('appSettings.uisettings.userId:STR="aditya"')
+
+# Simple update
+confx.resolve('appSettings.uisettings.userId="rohan"')
+
+# Dynamic value (type inferred)
+confx.resolve('appSettings.uisettings.theme="dark"')
+```
+
+#### **Get Values**
+
+```python
+# Safe retrieval (returns empty if missing)
+confx.resolve('appSettings.uisettings.theme!')
+
+# Unsafe retrieval (throws error if missing)
+confx.resolve('appSettings.uisettings.theme')
+```
+
+#### **Delete Values**
+
+```python
+# Delete single value
+confx.resolve('appSettings.uisettings.theme-')
+
+# Delete entire branch
+confx.resolve('appSettings.uisettings-')
+
+# Delete multiple values
+confx.resolve('appSettings.uisettings.*[theme, shortcuts]-')
+```
+
+#### **Reset to Defaults**
+
+```python
+# Reset branch to default values
+confx.resolve('appSettings.!uisettings')
+
+# Set default value
+confx.resolve('appSettings.uisettings.userName!default=STR:"Guest"')
+```
+
+### **3. Wildcard Resolution**
+
+```python
+# Update all direct children
+confx.resolve('[.].userId=0001')
+
+# Update all nested descendants
+confx.resolve('[..].userId=0001')
+
+# Update with multiple values
+confx.resolve('[*].userId=[0001, 0002]')
+
+# Pattern matching
+confx.resolve('[*].userId=[000*]')
+```
+
+### **4. Built-in Functions**
+
+```python
+# Count items
+confx.resolve('appSettings.uisettings.products!count')
+
+# Aggregate functions
+confx.resolve('appSettings.uisettings.products!sum="price"')
+confx.resolve('appSettings.uisettings.products!max("price")')
+confx.resolve('appSettings.uisettings.products!min("price")')
+
+# Create alias
+confx.resolve('appSettings.uisettings.products!alias=products')
+
+# Load from file
+confx.resolve('!load="<json-template>, <file-path>"')
+
+# Traverse (set as root)
+confx.resolve('appSettings.uisettings!traverse')
+
+# Validate against schema
+confx.resolve('appSettings.uisettings!validate="<schema>"')
+
+# Search operations
+confx.resolve('appSettings.uisettings!search="theme==dark"')
+confx.resolve('appSettings.uisettings!search="<keyword>"')
+```
+
+### **5. Conditional Logic**
+
+```python
+# Simple condition
+confx.resolve('appSettings.uisettings.theme=="light":theme="dark"')
+
+# Condition with nested operations
+confx.resolve('appSettings.uisettings.theme=="light":icon-colors.*[main-color="dark"]')
+
+# Multiple actions with OR operator
+confx.resolve('appSettings.uisettings.theme=="light":theme="dark"|icon-colors.*[main-color="dark"]')
+
+# Chained operations with semicolon
+confx.resolve('appSettings.uisettings.theme=="light":theme="dark";appSettings.!uisettings')
+```
+
+---
+
+## 📦 Batch Transactions
+
+Handle multiple operations atomically.
+
+### **Method 1: Comma-Separated**
+
+```python
+confx.resolve('appSettings.theme=dark, appSettings.shortcuts=enabled')
+```
+
+### **Method 2: Transaction Block**
+
+```python
+with confx.transaction():
+    confx.resolve('appSettings.theme=dark')
+    confx.resolve('appSettings.shortcuts=enabled')
+    confx.resolve('appSettings.language=english')
+# All succeed or all fail — atomic guarantee
+```
+
+---
+
+## 🛡️ Schema Validation
+
+Ensure your data structure matches expected schemas.
+
+```python
+schema = {
+    "appSettings": {
+        "uisettings": {
+            "theme": "STR",
+            "userId": "INT"
+        },
+        "auth": {
+            "password": "ENCRYPTED"
+        }
+    }
+}
+
+confx.validate(schema)
+```
+
+---
+
+## 🔐 Encryption
+
+Protect sensitive data with automatic encryption.
+
+```python
+# Sensitive data is auto-encrypted
+confx.resolve('appSettings.auth.password:SENSITIVE="my_password"')
+confx.resolve('appSettings.auth.apiKey:ENCRYPTED="sk_live_..."')
+```
+
+---
+
+## 📊 Supported Data Types
+
+ConfigX supports a comprehensive range of data types:
+
+| Type | Description | Example |
+|------|-------------|---------|
+| `INT` | Integer values | `42` |
+| `STR` | String values | `"hello"` |
+| `BOOL` | Boolean values | `true`, `false` |
+| `LIST` | Lists/arrays | `[1, 2, 3]` |
+| `DICT` | Dictionaries | `{"key": "value"}` |
+| `SET` | Unique collections | `{1, 2, 3}` |
+| `TUPLE` | Immutable sequences | `(1, 2, 3)` |
+| `NULL` | Null values | `null` |
+| `ENCRYPTED` | Encrypted data | Auto-encrypted |
+| `SENSITIVE` | Sensitive data | Auto-encrypted |
+| `Datetime` | Date and time | `2025-11-17T10:30:00` |
+| `UUID` | Unique identifiers | `550e8400-e29b-41d4-a716-446655440000` |
+| `Path` | File paths | `/home/user/config.json` |
+| `GeoJSON` | Geospatial data | `{"type": "Point", ...}` |
+| `Color` | Color codes | `#FF5733`, `rgb(255,87,51)` |
+| `Email` | Email addresses | `user@example.com` |
+| `Regex` | Regular expressions | `^[a-z]+$` |
+| `IP Address` | Network addresses | `192.168.1.1` |
+| `Enum` | Predefined choices | `["ACTIVE", "INACTIVE"]` |
+| `Numpy Array` | Scientific arrays | `np.array([1, 2, 3])` |
+| `Pandas DataFrame` | Data tables | `pd.DataFrame(...)` |
+| `Custom Objects` | User-defined types | Any Python object |
+
+---
+
+
+## ✨ AI-Powered Features (Future Scope*)
+
+ConfigX now comes with powerful AI capabilities that make data management intelligent and effortless:
+
+### 🧠 **1. Natural Language → ConfigXQL**
+Write queries in plain English, and ConfigX translates them to ConfigXQL automatically.
+
+```python
+# Instead of: confx.resolve('appSettings.uisettings.theme="dark"')
+confx.ask("Set the theme to dark mode")
+```
+
+### 🔍 **2. AI Semantic Search**
+Search your data using semantic meaning, not just keywords.
+
+```python
+confx.semantic_search("Find user preferences related to appearance")
+# Returns: theme, color scheme, font settings, etc.
+```
+
+### 📐 **3. AI Schema Inference**
+Let AI automatically infer and suggest schemas from your data.
+
+```python
+confx.infer_schema('appSettings.uisettings')
+# Auto-generates optimal schema based on existing data patterns
+```
+
+### 🔧 **4. AI Repair Engine**
+Automatically detect and fix inconsistencies, missing values, or malformed data.
+
+```python
+confx.auto_repair('appSettings')
+# Fixes type mismatches, fills missing defaults, validates structure
+```
+
+### 🤖 **5. AI Agent Memory Engine**
+Store and retrieve agent reasoning states, conversation history, and decision trees.
+
+```python
+# Store agent memory
+confx.resolve('agents.assistant_01.memory.conversation_history:LIST=[...]')
+confx.resolve('agents.assistant_01.state.current_task="summarize_document"')
+
+# Retrieve agent context
+context = confx.resolve('agents.assistant_01!')
+```
+
+### 🔄 **6. AI-Powered Transformations**
+Describe transformations in natural language and let AI handle the logic.
+
+```python
+confx.transform("Convert all user IDs to uppercase and add a prefix 'USR_'")
+```
+
+### 📝 **7. Auto Documentation**
+Generate human-readable documentation for your configurations automatically.
+
+```python
+docs = confx.document('appSettings')
+# Creates markdown documentation with descriptions, types, and examples
+```
+
+### ⚡ **8. Query Optimizer**
+AI analyzes your queries and suggests optimizations for better performance.
+
+```python
+confx.optimize_query('appSettings.uisettings.theme')
+# Suggests: Use batch operations, cache frequently accessed paths, etc.
+```
+
+---
+
+## 🤖 AI Use Cases (Future Scope*)
+
+ConfigX is designed for modern AI workflows:
+
+### **1. Agent Memory & Reasoning State**
+
+```python
+# Store agent conversation history
+confx.resolve('agents.assistant.memory.conversations:LIST=[...]')
+
+# Track current reasoning state
+confx.resolve('agents.assistant.state.current_goal="analyze_data"')
+confx.resolve('agents.assistant.state.completed_steps:LIST=["load_data", "clean_data"]')
+
+# Store decision trees
+confx.resolve('agents.assistant.decisions.last_choice="option_b"')
+```
+
+### **2. Metadata for Vector Databases**
+
+```python
+# Store embedding metadata
+confx.resolve('embeddings.doc_001.metadata.*[source="research.pdf", page=5, author="John Doe"]')
+confx.resolve('embeddings.doc_001.vector:LIST=[0.123, 0.456, ...]')
+confx.resolve('embeddings.doc_001.timestamp:Datetime="2025-11-17T10:30:00"')
+```
+
+### **3. Workflow Orchestration**
+
+```python
+# Define workflow stages
+confx.resolve('workflows.data_pipeline.stages:LIST=["extract", "transform", "load"]')
+confx.resolve('workflows.data_pipeline.current_stage="transform"')
+confx.resolve('workflows.data_pipeline.status="running"')
+
+# Track dependencies
+confx.resolve('workflows.data_pipeline.dependencies.*[db_connection=true, api_key=true]')
+```
+
+### **4. Personalized Behavior Storage**
+
+```python
+# Store user preferences for AI personalization
+confx.resolve('users.user_123.preferences.*[tone="professional", verbosity="detailed"]')
+confx.resolve('users.user_123.interaction_history:LIST=[...]')
+confx.resolve('users.user_123.learning_model="adaptive"')
+```
+
+---
+
+## ⚙️ Complete Example
+
+```python
+from configx import ConfigX
+from datetime import datetime
+
+confx = ConfigX()
+
+# Create application settings
+confx.resolve('appSettings.theme:STR=light')
+confx.resolve('appSettings.language:STR=english')
+
+# Update dynamically
+confx.resolve('appSettings.theme=dark')
+
+# Encrypt sensitive data
+confx.resolve('appSettings.auth.password:SENSITIVE="super_secret_password"')
+confx.resolve('appSettings.auth.apiKey:ENCRYPTED="sk_live_1234567890"')
+
+# Batch operations
+with confx.transaction():
+    confx.resolve('appSettings.region=US')
+    confx.resolve('appSettings.timezone=PST')
+    confx.resolve('appSettings.notifications:BOOL=true')
+
+# AI-powered operations
+confx.ask("Set user preferences to dark theme with large fonts")
+results = confx.semantic_search("security settings")
+
+# Validate schema
+schema = {
+    "appSettings": {
+        "theme": "STR",
+        "language": "STR",
+        "auth": {
+            "password": "ENCRYPTED",
+            "apiKey": "ENCRYPTED"
+        }
+    }
+}
+confx.validate(schema)
+
+# Store agent memory
+confx.resolve('agents.assistant_01.memory.context:DICT={"user": "John", "task": "analysis"}')
+confx.resolve('agents.assistant_01.state.reasoning:LIST=["step1", "step2"]')
+
+# Auto-repair and optimize
+confx.auto_repair('appSettings')
+confx.optimize_query('appSettings.auth.password')
+```
+#### Note : **Future Scope*** is subject to changes in the future, It's just a concept for now. Development of these features will begin once, features & scope is finalised & prototyping of core functionalities are completed. 
+
+---
+
+
+## 💡 Why ConfigX?
+
+- **Universal**: Works across languages and platforms
+- **Intuitive**: Natural query language that reads like English
+- **Powerful**: Handles simple key-values to complex hierarchical data
+- **AI-Ready**: Built-in AI features for modern workflows
+- **Secure**: Automatic encryption for sensitive data
+- **Fast**: Blazing-fast operations with intelligent caching
+- **Flexible**: Supports 20+ data types and custom objects
+- **Reliable**: Schema validation and transaction guarantees
+
+---
+
+---
+
+## Development notes : 
+- Development will begin for Python as a binding first, Scope is to introduce ConfigX to the world as an independant CLI program. 
+- Bindings for other languages will start development once standalone CLI Engine is developed. 
+
+
+## Stay Tuned 🚀 
+
+ConfigX is actively under development with exciting features coming soon! Stay updated on new releases and capabilities.
+
+---
+
+## Contact Me
+
+For questions, feedback, or contributions:
+
+**Email**: adityagaur.home@gmail.com
+
+---
+
+Made with ❤️ in India by [Aditya Gaur](https://github.com/xdityagr)
+<br>
+**© 2025 Aditya Gaur. All rights reserved.** Unauthorized use or reproduction of this project, including its design, concepts, and documentation, is prohibited.
