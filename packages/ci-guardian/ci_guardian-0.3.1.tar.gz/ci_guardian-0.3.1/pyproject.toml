@@ -1,0 +1,186 @@
+[build-system]
+requires = ["setuptools>=75.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ci-guardian"
+version = "0.3.1"
+description = "Git hooks automation for Claude Code projects - enforces code quality, security, and prevents hook bypass"
+readme = "README.md"
+authors = [
+    {name = "Jarko", email = "jarko@example.com"}
+]
+license = "MIT"
+requires-python = ">=3.10"
+keywords = [
+    "git-hooks",
+    "pre-commit",
+    "code-quality",
+    "security",
+    "claude-code",
+    "automation",
+    "linting",
+    "formatting",
+    "ci-cd",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: Microsoft :: Windows",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Software Development :: Version Control :: Git",
+]
+dependencies = [
+    "click>=8.1.7",
+    "pyyaml>=6.0.2",
+    "colorama>=0.4.6",
+    "ruff>=0.8.0",
+    "black>=24.0.0",
+    "bandit[toml]>=1.8.0",
+    "safety>=3.0.0",
+    "tomli>=2.0.1; python_version<'3.11'",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-cov>=6.0.0",
+    "pytest-mock>=3.14.0",
+    "pytest-timeout>=2.3.0",
+    "mypy>=1.11.0",
+]
+act = [
+    # Support for running GitHub Actions locally
+    "pyyaml>=6.0.2",
+]
+
+[project.scripts]
+ci-guardian = "ci_guardian.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/jarkillo/ci-guardian"
+Repository = "https://github.com/jarkillo/ci-guardian"
+Issues = "https://github.com/jarkillo/ci-guardian/issues"
+Documentation = "https://github.com/jarkillo/ci-guardian#readme"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+ci_guardian = ["hooks/**/*", "templates/**/*"]
+
+# Ruff configuration - Modern Python linter
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "S",   # bandit security
+    "T20", # flake8-print
+    "RET", # flake8-return
+    "SIM", # flake8-simplify
+]
+ignore = [
+    "E501",  # line too long (handled by black)
+    "S603",  # subprocess calls (we validate inputs)
+    "S607",  # subprocess with partial path (intentional)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "S101",   # Allow assert in tests
+    "T201",   # Allow print in tests
+    "SIM117", # Allow nested with statements (clearer in tests)
+    "SIM105", # Allow try-except-pass (clearer than contextlib.suppress)
+]
+"scripts/**/*.py" = [
+    "T201",   # Allow print in scripts
+]
+"src/ci_guardian/hooks/**/*.py" = [
+    "T201",   # Allow print in hooks (for error messages)
+]
+
+# Black configuration - Code formatter
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312", "py313"]
+skip-string-normalization = false
+
+# Bandit configuration - Security linter
+[tool.bandit]
+exclude_dirs = ["tests", "build", "dist"]
+skips = [
+    "B101",  # Allow assert in code (we need it for validation)
+    "B404",  # Allow subprocess import (we use it safely with shell=False)
+    "B603",  # Allow subprocess without shell=True (this is the CORRECT behavior)
+    "B607",  # Allow partial path for 'git' (git is in PATH, using full path would break)
+]
+
+# Pytest configuration
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--cov=ci_guardian",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-fail-under=75",
+    "--timeout=30",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "linux: marks tests as Linux-specific",
+    "windows: marks tests as Windows-specific",
+]
+
+# MyPy configuration - Type checking
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+strict_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+
+# Coverage configuration
+[tool.coverage.run]
+source = ["src"]
+omit = ["tests/*", "**/__pycache__/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.:",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "@overload",
+]
