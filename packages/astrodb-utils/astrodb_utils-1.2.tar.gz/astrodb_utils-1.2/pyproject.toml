@@ -1,0 +1,110 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools_scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "astrodb_utils"
+
+authors = [
+    {name = "Arjun Savel", email = "asavel@umd.edu"},
+    {name= "Kelle Cruz"},
+    {name= "David Rodriguez"}
+]
+description = "astrodb_utils: scripts for interacting with the astrodb database"
+readme = "README.md"
+requires-python = ">=3.11"
+keywords = ["databases", "astronomy"]
+license = "BSD-3-Clause"
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "numpy<3.0",
+    "astroquery>=0.4.9",
+    "astropy>7.0",
+    "astrodbkit>=2.5",
+    "lsst-felis",
+    "pandas",
+    "tqdm",
+    "ads>=0.12.7",
+    "dateparser",
+    "specutils>=2.2",
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "ruff>0.3.7",
+    "pre-commit",
+    "pytest-dependency",
+    "gitpython"
+    ]
+docs = [
+    "sphinx",
+    "sphinx-autobuild",
+    "sphinx_pyproject",
+    "nbsphinx",
+    "pydata-sphinx-theme",
+    "pandoc",
+    "sphinx_mdinclude",
+    "doc8"
+    ]
+all = ["astrodb_utils[test, docs]"]
+
+[project.urls]
+Homepage = "https://github.com/astrodbtoolkit/astrodb_utils"
+Issues = "https://github.com/astrodbtoolkit/astrodb_utils/issues"
+Documentation = "https://astrodb-utils.readthedocs.io/en/latest/"
+
+[project.scripts]
+build_db_from_json = "astrodb_utils.loaders:main"
+
+[tool.setuptools_scm]
+root = '.'
+write_to = "astrodb_utils/version.py"
+
+[tool.setuptools]
+packages = ["astrodb_utils"]
+
+[tool.pytest.ini_options]
+norecursedirs = "astrodb-template-db"
+addopts = "-ra" # show extra summary info
+log_cli = false # override on the command line with: pytest -o log_cli=1
+log_cli_level= "INFO"  # pytest -o log_cli=1 --log-cli-level=DEBUG
+log_cli_format = "%(name)-15s: %(levelname)s %(message)s"  
+filterwarnings = [
+    "ignore:.*Parsing dates*:DeprecationWarning",  # ignore deprecation warnings from dateparser
+    "ignore::astroquery.exceptions.NoResultsWarning" # ignore astroquery warnings
+]
+
+[tool.ruff.lint]
+# See https://docs.astral.sh/ruff/rules/
+select = [
+    "E", "W", #pydocstyle
+    "F", #pyflakes
+    "I", #isort
+    "PL", #pylint
+    "C901", # mccabe
+    "RUF010", #ruff 
+    "PT" # pytest
+]
+#select = ["ALL"]
+#ignore = ["PLR"]  # pylint refactor
+
+[tool.ruff.lint.per-file-ignores]
+"!tests/**" = [
+  "PT",   # pytest 
+ ]
+
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint.mccabe]
+# Flag errors (`C901`) whenever the complexity level exceeds this number.
+# Default is 10
+max-complexity = 20
