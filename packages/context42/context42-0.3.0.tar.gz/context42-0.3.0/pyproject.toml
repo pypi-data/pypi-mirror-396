@@ -1,0 +1,36 @@
+[project]
+name = "context42"
+version = "0.3.0"
+description = "MCP RAG Server with CLaRa semantic compression"
+authors = [{name = "Aleksandr Beshkenadze", email = "beshkenadze@gmail.com"}]
+requires-python = ">=3.10"
+dependencies = [
+    "fastmcp>=2.0.0",
+]
+
+[project.optional-dependencies]
+clara = [
+    "torch>=2.0.0",
+    "transformers>=4.20.0",
+    "accelerate>=0.20.0",
+    "huggingface-hub>=0.20.0",
+]
+dev = [
+    "pytest>=7.0.0",
+]
+all = [
+    "context42[clara,dev]",
+]
+
+[project.scripts]
+context42 = "context42.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["context42"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
