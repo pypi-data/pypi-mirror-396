@@ -1,0 +1,1317 @@
+#![expect(clippy::unwrap_used, reason = "contains legacy code which uses unwrap")]
+
+//! Provides sourcemap validation functionality.
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::io::Write as _;
+use std::mem;
+use std::path::{Path, PathBuf};
+use std::str;
+use std::sync::Arc;
+
+use anyhow::{anyhow, bail, Context as _, Error, Result};
+use console::style;
+use indicatif::ProgressStyle;
+use log::{debug, info, warn};
+use sentry::types::DebugId;
+use sourcemap::{DecodedMap, SourceMap};
+use symbolic::debuginfo::js::discover_sourcemaps_location;
+use symbolic::debuginfo::sourcebundle::SourceFileType;
+use url::Url;
+
+use crate::utils::file_search::ReleaseFileMatch;
+use crate::utils::file_upload::{
+    initialize_legacy_release_upload, FileUpload, SourceFile, SourceFiles, UploadContext,
+};
+use crate::utils::fs;
+use crate::utils::logging::is_quiet_mode;
+use crate::utils::progress::ProgressBar;
+use crate::utils::sourcemaps::inject::{InjectReportBuilder, ReportItem};
+
+pub mod inject;
+
+/// The string prefix denoting a data URL.
+///
+/// Data URLs are used to embed sourcemaps directly in javascript source files.
+const DATA_PREAMBLE: &str = "data:application/json;base64,";
+
+fn join_url(base_url: &str, url: &str) -> Result<String> {
+    if base_url.starts_with("~/") {
+        match Url::parse(&format!("http://{base_url}"))?.join(url) {
+            Ok(url) => {
+                let rv = url.to_string();
+                if let Some(rest) = rv.strip_prefix("http://~/") {
+                    Ok(format!("~/{rest}"))
+                } else {
+                    Ok(rv)
+                }
+            }
+            Err(x) => Err(Error::from(x).context("could not join URL")),
+        }
+    } else {
+        Ok(Url::parse(base_url)?.join(url)?.to_string())
+    }
+}
+
+fn split_url(url: &str) -> (Option<&str>, &str, Option<&str>) {
+    let mut part_iter = url.rsplitn(2, '/');
+    let (filename, ext) = part_iter
+        .next()
+        .map(|x| {
+            let mut fn_iter = x.splitn(2, '.');
+            (fn_iter.next(), fn_iter.next())
+        })
+        .unwrap_or((None, None));
+    let path = part_iter.next();
+    (path, filename.unwrap_or(""), ext)
+}
+
+fn unsplit_url(path: Option<&str>, basename: &str, ext: Option<&str>) -> String {
+    let mut rv = String::new();
+    if let Some(path) = path {
+        rv.push_str(path);
+        rv.push('/');
+    }
+    rv.push_str(basename);
+    if let Some(ext) = ext {
+        rv.push('.');
+        rv.push_str(ext);
+    }
+    rv
+}
+
+pub fn get_sourcemap_ref_from_headers(file: &SourceFile) -> Option<sourcemap::SourceMapRef> {
+    get_sourcemap_reference_from_headers(file.headers.iter())
+        .map(|sm_ref| sourcemap::SourceMapRef::Ref(sm_ref.to_owned()))
+}
+
+pub fn get_sourcemap_ref_from_contents(file: &SourceFile) -> Option<sourcemap::SourceMapRef> {
+    sourcemap::locate_sourcemap_reference_slice(&file.contents).unwrap_or(None)
+}
+
+pub fn get_sourcemap_ref(file: &SourceFile) -> Option<sourcemap::SourceMapRef> {
+    get_sourcemap_ref_from_headers(file).or_else(|| get_sourcemap_ref_from_contents(file))
+}
+
+pub fn get_sourcemap_reference_from_headers<'a, I: Iterator<Item = (&'a String, &'a String)>>(
+    headers: I,
+) -> Option<&'a str> {
+    for (k, v) in headers {
+        let ki = &k.to_lowercase();
+        if ki == "sourcemap" || ki == "x-sourcemap" {
+            return Some(v.as_str());
+        }
+    }
+    None
+}
+
+fn guess_sourcemap_reference(
+    sourcemaps: &HashSet<String>,
+    min_url: &str,
+) -> Result<SourceMapReference> {
+    let map_ext = "map";
+    let (path, basename, ext) = split_url(min_url);
+
+    // foo.min.js -> foo.map
+    let url_with_path = unsplit_url(path, basename, Some("map"));
+    if sourcemaps.contains(&url_with_path) {
+        return Ok(
+            SourceMapReference::from_url(unsplit_url(None, basename, Some("map")))
+                .with_original_url(url_with_path),
+        );
+    }
+
+    if let Some(ext) = ext.as_ref() {
+        // foo.min.js -> foo.min.js.map
+        let new_ext = format!("{ext}.{map_ext}");
+        let url_with_path = unsplit_url(path, basename, Some(&new_ext));
+        if sourcemaps.contains(&url_with_path) {
+            return Ok(
+                SourceMapReference::from_url(unsplit_url(None, basename, Some(&new_ext)))
+                    .with_original_url(url_with_path),
+            );
+        }
+
+        // foo.min.js -> foo.js.map
+        if let Some(rest) = ext.strip_prefix("min.") {
+            let new_ext = format!("{rest}.{map_ext}");
+            let url_with_path = unsplit_url(path, basename, Some(&new_ext));
+            if sourcemaps.contains(&url_with_path) {
+                return Ok(SourceMapReference::from_url(unsplit_url(
+                    None,
+                    basename,
+                    Some(&new_ext),
+                ))
+                .with_original_url(url_with_path));
+            }
+        }
+
+        // foo.min.js -> foo.min.map
+        let mut parts: Vec<_> = ext.split('.').collect();
+        if parts.len() > 1 {
+            let parts_len = parts.len();
+            parts[parts_len - 1] = map_ext;
+            let new_ext = parts.join(".");
+            let url_with_path = unsplit_url(path, basename, Some(&new_ext));
+            if sourcemaps.contains(&url_with_path) {
+                return Ok(SourceMapReference::from_url(unsplit_url(
+                    None,
+                    basename,
+                    Some(&new_ext),
+                ))
+                .with_original_url(url_with_path));
+            }
+        }
+    }
+
+    bail!("Could not auto-detect referenced sourcemap for {min_url}");
+}
+
+/// Container to cary relative computed source map url.
+/// and original url with which the file was added to the processor.
+/// This enable us to look up the source map file based on the original url.
+/// Which can be used for example for debug id referencing.
+#[derive(Eq, Hash, PartialEq, Debug)]
+pub struct SourceMapReference {
+    url: String,
+    original_url: Option<String>,
+}
+
+impl SourceMapReference {
+    pub fn from_url(url: String) -> Self {
+        SourceMapReference {
+            url,
+            original_url: None,
+        }
+    }
+
+    fn with_original_url(mut self, original_url: String) -> Self {
+        self.original_url = Some(original_url);
+        self
+    }
+}
+
+pub struct SourceMapProcessor {
+    pending_sources: HashSet<(String, ReleaseFileMatch)>,
+    sources: SourceFiles,
+    sourcemap_references: HashMap<String, Option<SourceMapReference>>,
+    debug_ids: HashMap<String, DebugId>,
+}
+
+fn url_matches_extension(url: &str, extensions: &[&str]) -> bool {
+    if extensions.is_empty() {
+        return true;
+    }
+
+    match url.rsplit('/').next() {
+        Some(filename) => extensions
+            .iter()
+            .any(|ext| filename.ends_with(&format!(".{ext}"))),
+        None => false,
+    }
+}
+
+/// Return true iff url is a remote url (not a local path or embedded sourcemap).
+fn is_remote_url(url: &str) -> bool {
+    match Url::parse(url) {
+        Ok(url) => url.scheme() != "data",
+        Err(_) => false,
+    }
+}
+
+/// Return true if url appears to be a URL path.
+/// Most often, a URL path will begin with `/`,
+/// particularly in the case of static asset collection and hosting,
+/// but such a path is very unlikely to exist in the local filesystem.
+fn is_url_path(url: &str) -> bool {
+    url.starts_with('/') && !Path::new(url).exists()
+}
+
+/// Return true iff url is probably not a local file path.
+fn is_remote_sourcemap(url: &str) -> bool {
+    is_remote_url(url) || is_url_path(url)
+}
+
+impl SourceMapProcessor {
+    /// Creates a new sourcemap validator.
+    pub fn new() -> SourceMapProcessor {
+        SourceMapProcessor {
+            pending_sources: HashSet::new(),
+            sources: SourceFiles::new(),
+            sourcemap_references: HashMap::new(),
+            debug_ids: HashMap::new(),
+        }
+    }
+
+    /// Adds a new file for processing.
+    pub fn add(&mut self, url: &str, file: ReleaseFileMatch) {
+        self.pending_sources.insert((url.to_owned(), file));
+    }
+
+    fn flush_pending_sources(&mut self) {
+        if self.pending_sources.is_empty() {
+            return;
+        }
+
+        let progress_style = ProgressStyle::default_bar().template(&format!(
+            "{} {{msg}}\n{{wide_bar}} {{pos}}/{{len}}",
+            style(">").cyan()
+        ));
+        let pb = ProgressBar::new(self.pending_sources.len());
+        pb.set_style(progress_style);
+
+        println!(
+            "{} Analyzing {} sources",
+            style(">").dim(),
+            style(self.pending_sources.len()).yellow()
+        );
+        for (url, file) in mem::take(&mut self.pending_sources) {
+            pb.set_message(&url);
+            self.add_file_to_sources(SourceFile::from_release_file_match(&url, file));
+            pb.inc(1);
+        }
+        pb.finish_with_duration("Analyzing");
+    }
+
+    /// Adds a given source_file to sources, also inserting its debug_id if present
+    /// and parsable as a DebugId.
+    fn add_file_to_sources(&mut self, source_file: SourceFile) {
+        let source_file_url = source_file.url.clone();
+        if let Some(debug_id) = source_file.debug_id().and_then(|id| id.parse().ok()) {
+            self.debug_ids.insert(source_file_url.clone(), debug_id);
+        }
+
+        self.sources.insert(source_file_url, source_file);
+    }
+
+    /// Collect references to sourcemaps in minified source files
+    /// and saves them in `self.sourcemap_references`.
+    fn collect_sourcemap_references(&mut self) {
+        let sourcemaps = self
+            .sources
+            .values()
+            .filter(|x| x.ty == SourceFileType::SourceMap)
+            .map(|x| x.url.clone())
+            .collect::<HashSet<_>>();
+
+        let (sources_with_location, sources_without_location) = self
+            .sources
+            .values_mut()
+            .filter(|source| {
+                source.ty == SourceFileType::MinifiedSource
+                    && !self.sourcemap_references.contains_key(&source.url)
+            })
+            .collect_sourcemap_locations();
+
+        // First pass: if location discovered, add to sourcemap_references. Also, keep track of
+        // the sourcemaps we associate, and the source file we associate them with.
+        let explicitly_associated_sourcemaps = sources_with_location
+            .iter()
+            .map(|(source, location)| {
+                let sourcemap_reference = SourceMapReference::from_url(location.clone());
+                let sourcemap_path = full_sourcemap_path(source, location);
+
+                self.sourcemap_references
+                    .insert(source.url.clone(), Some(sourcemap_reference));
+
+                (fs::path_as_url(&sourcemap_path), source.url.clone())
+            })
+            .collect::<HashMap<_, _>>();
+
+        // Second pass: for remaining sourcemaps, try to guess the location
+        let guessed_sourcemap_references = guess_sourcemap_references(
+            sources_without_location,
+            sourcemaps,
+            explicitly_associated_sourcemaps,
+        );
+
+        self.sourcemap_references
+            .extend(guessed_sourcemap_references);
+    }
+
+    pub fn dump_log(&self, title: &str) {
+        if is_quiet_mode() {
+            return;
+        }
+
+        let mut sources: Vec<_> = self.sources.values().collect();
+        sources.sort_by_key(|&source| (source.ty, source.url.clone()));
+
+        println!();
+        println!("{}", style(title).dim().bold());
+        let mut current_section = None;
+
+        for source in sources {
+            let section_title = match source.ty {
+                SourceFileType::Source | SourceFileType::MinifiedSource => "Scripts",
+                SourceFileType::SourceMap => "Source Maps",
+                SourceFileType::IndexedRamBundle => "Indexed RAM Bundles (expanded)",
+            };
+
+            if Some(section_title) != current_section {
+                println!("  {}", style(section_title).yellow().bold());
+                current_section = Some(section_title);
+            }
+
+            if source.already_uploaded {
+                println!(
+                    "    {}",
+                    style(format!("{} (skipped; already uploaded)", &source.url)).yellow()
+                );
+                continue;
+            }
+
+            let mut pieces = Vec::new();
+
+            if [SourceFileType::Source, SourceFileType::MinifiedSource].contains(&source.ty) {
+                if let Some(sm_ref) = get_sourcemap_ref(source) {
+                    let sm_url = sm_ref.get_url();
+                    if sm_url.starts_with("data:") {
+                        pieces.push("embedded sourcemap".to_owned());
+                    } else {
+                        pieces.push(format!("sourcemap at {}", style(sm_url).cyan()));
+                    };
+                } else {
+                    pieces.push("no sourcemap found".into());
+                }
+            }
+
+            if let Some(debug_id) = source.debug_id() {
+                pieces.push(format!("debug id {}", style(debug_id).yellow()));
+            }
+
+            if pieces.is_empty() {
+                println!("    {}", source.url);
+            } else {
+                println!("    {} ({})", source.url, pieces.join(", "));
+            }
+
+            for msg in source.messages.iter() {
+                println!("      - {}: {}", style(&msg.0).red(), msg.1);
+            }
+        }
+    }
+
+    /// Validates all sources within.
+    pub fn validate_all(&mut self) -> Result<()> {
+        self.flush_pending_sources();
+        let source_urls = self.sources.keys().cloned().collect();
+        let sources: Vec<&mut SourceFile> = self.sources.values_mut().collect();
+        let mut failed = false;
+
+        println!("{} Validating sources", style(">").dim());
+
+        let progress_style = ProgressStyle::default_bar().template(&format!(
+            "{} {{msg}}\n{{wide_bar}} {{pos}}/{{len}}",
+            style(">").cyan()
+        ));
+        let pb = ProgressBar::new(sources.len());
+        pb.set_style(progress_style);
+
+        for source in sources {
+            pb.set_message(&source.url);
+            match source.ty {
+                SourceFileType::Source | SourceFileType::MinifiedSource => {
+                    if let Err(err) = validate_script(source) {
+                        source.error(format!("failed to process: {err}"));
+                        failed = true;
+                    }
+                }
+                SourceFileType::SourceMap => {
+                    if let Err(err) = validate_sourcemap(&source_urls, source) {
+                        source.error(format!("failed to process: {err}"));
+                        failed = true;
+                    }
+                }
+                SourceFileType::IndexedRamBundle => (),
+            }
+            pb.inc(1);
+        }
+        pb.finish_and_clear();
+
+        if !failed {
+            return Ok(());
+        }
+
+        self.dump_log("Source Map Validation Report");
+        bail!("Encountered problems when validating source maps.");
+    }
+
+    /// Unpacks the given RAM bundle into a list of module sources and their sourcemaps
+    pub fn unpack_ram_bundle(
+        &mut self,
+        ram_bundle: &sourcemap::ram_bundle::RamBundle,
+        bundle_source_url: &str,
+        sourcemap_source: &SourceFile,
+    ) -> Result<()> {
+        // We need this to flush all pending sourcemaps
+        self.flush_pending_sources();
+
+        let sourcemap_content = &sourcemap_source.contents;
+        let sourcemap_index = match sourcemap::decode_slice(sourcemap_content)? {
+            sourcemap::DecodedMap::Index(sourcemap_index) => sourcemap_index,
+            _ => {
+                warn!("Invalid sourcemap type for RAM bundle, skipping");
+                return Ok(());
+            }
+        };
+
+        // We have to include the bundle sourcemap which is the first section
+        // in the bundle source map before the modules maps
+        if let Some(index_section) = &sourcemap_index
+            .sections()
+            .nth(0)
+            .and_then(|index_section| index_section.get_sourcemap())
+        {
+            let mut index_sourcemap_content: Vec<u8> = vec![];
+            index_section.to_writer(&mut index_sourcemap_content)?;
+            self.sources.insert(
+                sourcemap_source.url.clone(),
+                SourceFile {
+                    url: sourcemap_source.url.clone(),
+                    path: sourcemap_source.path.clone(),
+                    contents: index_sourcemap_content.into(),
+                    ty: SourceFileType::SourceMap,
+                    headers: sourcemap_source.headers.clone(),
+                    messages: sourcemap_source.messages.clone(),
+                    already_uploaded: false,
+                },
+            );
+        }
+
+        let ram_bundle_iter =
+            sourcemap::ram_bundle::split_ram_bundle(ram_bundle, &sourcemap_index).unwrap();
+        for result in ram_bundle_iter {
+            let (name, sourceview, sourcemap) = result?;
+
+            debug!("Inserting source for {name}");
+            let source_url = join_url(bundle_source_url, &name)?;
+            self.sources.insert(
+                source_url.clone(),
+                SourceFile {
+                    url: source_url.clone(),
+                    path: PathBuf::from(name.clone()),
+                    contents: sourceview.source().as_bytes().to_vec().into(),
+                    ty: SourceFileType::MinifiedSource,
+                    headers: BTreeMap::new(),
+                    messages: vec![],
+                    already_uploaded: false,
+                },
+            );
+
+            debug!("Inserting sourcemap for {name}");
+            let sourcemap_name = format!("{name}.map");
+            let sourcemap_url = join_url(bundle_source_url, &sourcemap_name)?;
+            let mut sourcemap_content: Vec<u8> = vec![];
+            sourcemap.to_writer(&mut sourcemap_content)?;
+            self.sources.insert(
+                sourcemap_url.clone(),
+                SourceFile {
+                    url: sourcemap_url.clone(),
+                    path: PathBuf::from(sourcemap_name),
+                    contents: sourcemap_content.into(),
+                    ty: SourceFileType::SourceMap,
+                    headers: BTreeMap::new(),
+                    messages: vec![],
+                    already_uploaded: false,
+                },
+            );
+        }
+        Ok(())
+    }
+
+    /// Replaces indexed RAM bundle entries with their expanded sources and sourcemaps
+    pub fn unpack_indexed_ram_bundles(&mut self, sourcemap_source: &SourceFile) -> Result<()> {
+        self.flush_pending_sources();
+
+        let mut ram_bundles = Vec::new();
+
+        // Drain RAM bundles from self.sources
+        for (url, source) in mem::take(&mut self.sources).into_iter() {
+            if source.ty == SourceFileType::IndexedRamBundle {
+                ram_bundles.push(source);
+            } else {
+                self.sources.insert(url, source);
+            }
+        }
+
+        for bundle_source in ram_bundles {
+            debug!("Parsing RAM bundle ({})...", bundle_source.path.display());
+            let ram_bundle = sourcemap::ram_bundle::RamBundle::parse_indexed_from_slice(
+                &bundle_source.contents,
+            )?;
+            self.unpack_ram_bundle(&ram_bundle, &bundle_source.url, sourcemap_source)?;
+        }
+        Ok(())
+    }
+
+    /// Automatically rewrite all source maps.
+    ///
+    /// This inlines sources, flattens indexes and skips individual uploads.
+    pub fn rewrite(&mut self, prefixes: &[&str]) -> Result<()> {
+        self.flush_pending_sources();
+
+        println!("{} Rewriting sources", style(">").dim());
+
+        let progress_style = ProgressStyle::default_bar().template(&format!(
+            "{} {{msg}}\n{{wide_bar}} {{pos}}/{{len}}",
+            style(">").cyan()
+        ));
+        let pb = ProgressBar::new(self.sources.len());
+        pb.set_style(progress_style);
+
+        for source in self.sources.values_mut() {
+            pb.set_message(&source.url);
+            if source.ty != SourceFileType::SourceMap {
+                pb.inc(1);
+                continue;
+            }
+            let options = sourcemap::RewriteOptions {
+                load_local_source_contents: true,
+                strip_prefixes: prefixes,
+                ..Default::default()
+            };
+            let mut new_source: Vec<u8> = Vec::new();
+            match sourcemap::decode_slice(&source.contents)? {
+                sourcemap::DecodedMap::Regular(sm) => {
+                    sm.rewrite(&options)?.to_writer(&mut new_source)?
+                }
+                sourcemap::DecodedMap::Hermes(smh) => {
+                    smh.rewrite(&options)?.to_writer(&mut new_source)?
+                }
+                sourcemap::DecodedMap::Index(smi) => smi
+                    .flatten_and_rewrite(&options)?
+                    .to_writer(&mut new_source)?,
+            };
+            source.contents = new_source.into();
+            pb.inc(1);
+        }
+        pb.finish_with_duration("Rewriting");
+        Ok(())
+    }
+
+    /// Adds sourcemap references to all minified files
+    pub fn add_sourcemap_references(&mut self) {
+        self.flush_pending_sources();
+        self.collect_sourcemap_references();
+
+        println!("{} Adding source map references", style(">").dim());
+        for source in self.sources.values_mut() {
+            if source.ty != SourceFileType::MinifiedSource {
+                continue;
+            }
+
+            if let Some(Some(sourcemap)) = self.sourcemap_references.get(&source.url) {
+                source.set_sourcemap_reference(sourcemap.url.clone());
+            }
+        }
+    }
+
+    /// Adds debug id to the source file headers from the linked source map.
+    /// This is used for files we can't read debug ids from (e.g. Hermes bytecode bundles).
+    pub fn add_debug_id_references(&mut self) {
+        self.flush_pending_sources();
+
+        for source in self.sources.values_mut() {
+            if source.ty != SourceFileType::MinifiedSource {
+                continue;
+            }
+
+            if let Some(Some(sourcemap_reference)) = self.sourcemap_references.get(&source.url) {
+                let sourcemap_url = sourcemap_reference
+                    .original_url
+                    .as_ref()
+                    .unwrap_or(&sourcemap_reference.url);
+
+                if !self.debug_ids.contains_key(sourcemap_url) {
+                    debug!(
+                        "{} No debug id found for {sourcemap_url} to reference",
+                        style(">").dim()
+                    );
+                    continue;
+                }
+
+                if source.debug_id().is_some() {
+                    debug!(
+                        "{} {} already has a debug id reference",
+                        style(">").dim(),
+                        source.url
+                    );
+                    continue;
+                }
+
+                if self.debug_ids.contains_key(&source.url) {
+                    debug!("{} {} already has a debug id", style(">").dim(), source.url);
+                    continue;
+                }
+
+                debug!(
+                    "{} Adding debug id {} reference to {}",
+                    style(">").dim(),
+                    self.debug_ids[sourcemap_url],
+                    source.url
+                );
+                source.set_debug_id(self.debug_ids[sourcemap_url].to_string());
+                self.debug_ids
+                    .insert(source.url.clone(), self.debug_ids[sourcemap_url]);
+            } else {
+                debug!(
+                    "{} No sourcemap reference found for {}",
+                    style(">").dim(),
+                    source.url
+                );
+            }
+        }
+    }
+
+    /// Uploads all files, and on success, returns the number of files that were
+    /// uploaded, wrapped in Ok()
+    pub fn upload(&mut self, context: &UploadContext<'_>) -> Result<usize> {
+        initialize_legacy_release_upload(context)?;
+        self.flush_pending_sources();
+
+        // If there is no release, we have to check that the files at least
+        // contain debug ids.
+        if context.release.is_none() {
+            let mut files_without_debug_id = BTreeSet::new();
+            let mut files_with_debug_id = false;
+
+            for (source_url, sourcemap_url) in &self.sourcemap_references {
+                if sourcemap_url.is_none() {
+                    continue;
+                }
+
+                if self.debug_ids.contains_key(source_url) {
+                    files_with_debug_id = true;
+                } else {
+                    files_without_debug_id.insert(source_url.clone());
+                }
+            }
+
+            // No debug ids on any files -> can't upload
+            if !files_without_debug_id.is_empty() && !files_with_debug_id {
+                bail!("Cannot upload: You must either specify a release or have debug ids injected into your sources");
+            }
+
+            // At least some files don't have debug ids -> print a warning
+            if !files_without_debug_id.is_empty() {
+                warn!("Some source files don't have debug ids:");
+
+                for file in files_without_debug_id {
+                    warn!("- {file}");
+                }
+            }
+        }
+        let files_needing_upload = self.sources.len();
+        if files_needing_upload > 0 {
+            let mut uploader = FileUpload::new(context);
+            uploader.files(&self.sources);
+            uploader.upload()?;
+            self.dump_log("Source Map Upload Report");
+        } else {
+            println!("{} Nothing to upload", style(">").dim());
+        }
+        Ok(files_needing_upload)
+    }
+
+    /// Upload all files in "strict" mode. Strict mode differs from a normal upload
+    /// only when there are no files to upload. In strict mode, having no files to
+    /// upload results in an error, whereas such an upload is successful in normal
+    /// (non-strict) mode. On success, the number of uploaded files is returned in
+    /// an Ok()
+    pub fn upload_strict(&mut self, context: &UploadContext<'_>) -> Result<usize> {
+        match self.upload(context) {
+            Ok(0) => Err(anyhow!("No files to upload (strict mode).")),
+            other => other,
+        }
+    }
+
+    /// Injects debug ids into minified source files and sourcemaps.
+    ///
+    /// This iterates over contained minified source files and adds debug ids
+    /// to them. Files already containing debug ids will be untouched.
+    ///
+    /// If a source file refers to a sourcemap and that sourcemap is locally
+    /// available, the debug id will be injected there as well so as to tie
+    /// them together. If for whatever reason the sourcemap already contains
+    /// a debug id, it will be reused for the source file.
+    ///
+    /// If `dry_run` is false, this will modify the source and sourcemap files on disk!
+    ///
+    /// The `js_extensions` is a list of file extensions that should be considered
+    /// for JavaScript files.
+    pub fn inject_debug_ids(&mut self, dry_run: bool, js_extensions: &[&str]) -> Result<()> {
+        self.flush_pending_sources();
+        self.collect_sourcemap_references();
+        println!("{} Injecting debug ids", style(">").dim());
+
+        let mut report_builder = InjectReportBuilder::default();
+
+        let mut sourcemaps = self
+            .sources
+            .values()
+            .filter_map(|s| (s.ty == SourceFileType::SourceMap).then_some(s.url.clone()))
+            .collect::<Vec<_>>();
+        sourcemaps.sort();
+
+        for (source_url, sourcemap_url) in self.sourcemap_references.iter_mut() {
+            // We only allow injection into files that match the extension
+            if !url_matches_extension(source_url, js_extensions) {
+                debug!(
+                    "skipping potential js file {source_url} because it does not match extension"
+                );
+                continue;
+            }
+
+            if let Some(debug_id) = self.debug_ids.get(source_url) {
+                report_builder.previously_injected.push(ReportItem::new(
+                    source_url.into(),
+                    source_url.clone(),
+                    *debug_id,
+                ));
+                continue;
+            }
+
+            // Modify the source file and the sourcemap.
+            // There are several cases to consider according to whether we have a sourcemap for the source file and
+            // whether it's embedded or external.
+            let debug_id = match sourcemap_url {
+                None => {
+                    // Case 1: We have no sourcemap for the source file. Hash the file contents for the debug id.
+                    let source_file = self.sources.get_mut(source_url).unwrap();
+                    let debug_id = inject::debug_id_from_bytes_hashed(&source_file.contents);
+
+                    // If we don't have a sourcemap, it's not safe to inject the code snippet at the beginning,
+                    // because that would throw off all the mappings. Instead, inject the snippet at the very end.
+                    // This isn't ideal, but it's the best we can do in this case.
+                    inject::inject_at_end(Arc::make_mut(&mut source_file.contents), debug_id)
+                        .context(format!("Failed to process {}", source_file.path.display()))?;
+                    debug_id
+                }
+                Some(sourcemap) => {
+                    if let Some(encoded) = sourcemap.url.strip_prefix(DATA_PREAMBLE) {
+                        // Case 2: The source file has an embedded sourcemap.
+
+                        let Ok(mut decoded) = data_encoding::BASE64.decode(encoded.as_bytes())
+                        else {
+                            bail!("Invalid embedded sourcemap in source file {source_url}");
+                        };
+
+                        let mut sourcemap =
+                            sourcemap::decode_slice(&decoded).with_context(|| {
+                                format!("Invalid embedded sourcemap in source file {source_url}")
+                            })?;
+
+                        let debug_id = sourcemap
+                            .debug_id()
+                            .unwrap_or_else(|| inject::debug_id_from_bytes_hashed(&decoded));
+
+                        let source_file = self.sources.get_mut(source_url).unwrap();
+
+                        match &mut sourcemap {
+                            DecodedMap::Regular(sourcemap) => {
+                                adjust_regular_sourcemap(sourcemap, source_file, debug_id)?;
+                            }
+                            DecodedMap::Hermes(sourcemap) => {
+                                adjust_regular_sourcemap(sourcemap, source_file, debug_id)?;
+                            }
+                            DecodedMap::Index(sourcemap) => {
+                                let source_file_contents = Arc::make_mut(&mut source_file.contents);
+                                if sourcemap.adjust_sections_offset_rows(1) {
+                                    let injected = inject::inject_at_start(
+                                        str::from_utf8(source_file_contents).with_context(
+                                            || {
+                                                format!(
+                                                    "{} is not UTF-8",
+                                                    source_file.path.display()
+                                                )
+                                            },
+                                        )?,
+                                        debug_id,
+                                    );
+
+                                    source_file_contents.clear();
+                                    source_file_contents.extend(injected.as_bytes());
+                                } else {
+                                    // We can't adjust the section offset rows, so we have to inject at the end
+                                    inject::inject_at_end(source_file_contents, debug_id)
+                                        .with_context(|| {
+                                            format!(
+                                                "Failed to inject debug id into {}",
+                                                source_file.path.display()
+                                            )
+                                        })?;
+                                }
+                            }
+                        }
+
+                        sourcemap.set_debug_id(Some(debug_id));
+
+                        decoded.clear();
+                        sourcemap.to_writer(&mut decoded)?;
+
+                        let encoded = data_encoding::BASE64.encode(&decoded);
+                        let new_sourcemap_url = format!("{DATA_PREAMBLE}{encoded}");
+
+                        inject::replace_sourcemap_url(
+                            Arc::make_mut(&mut source_file.contents),
+                            &new_sourcemap_url,
+                        )?;
+                        *sourcemap_url = Some(SourceMapReference::from_url(new_sourcemap_url));
+
+                        debug_id
+                    } else {
+                        // Handle external sourcemaps
+
+                        let normalized =
+                            inject::normalize_sourcemap_url(source_url, &sourcemap.url);
+                        let matches = inject::find_matching_paths(&sourcemaps, &normalized);
+
+                        let sourcemap_url = match &matches[..] {
+                            [] => normalized,
+                            [x] => x.clone(),
+                            _ => {
+                                warn!("Ambiguous matches for sourcemap path {normalized}:");
+                                for path in matches {
+                                    warn!("{path}");
+                                }
+                                normalized
+                            }
+                        };
+
+                        if self.sources.contains_key(&sourcemap_url) {
+                            // Case 3: We have an external sourcemap for the source file.
+
+                            // We need to do a bit of a dance here because we can't mutably
+                            // borrow the source file and the sourcemap at the same time.
+                            let (mut sourcemap, debug_id, debug_id_fresh) = {
+                                let sourcemap_file = &self.sources[&sourcemap_url];
+
+                                let sm =
+                                    sourcemap::decode_slice(&sourcemap_file.contents).context(
+                                        format!("Invalid sourcemap at {}", sourcemap_file.url),
+                                    )?;
+
+                                match sm.debug_id() {
+                                    Some(debug_id) => (sm, debug_id, false),
+                                    None => {
+                                        let debug_id = inject::debug_id_from_bytes_hashed(
+                                            &sourcemap_file.contents,
+                                        );
+                                        (sm, debug_id, true)
+                                    }
+                                }
+                            };
+
+                            let source_file = self.sources.get_mut(source_url).unwrap();
+
+                            match &mut sourcemap {
+                                DecodedMap::Regular(sourcemap) => {
+                                    adjust_regular_sourcemap(sourcemap, source_file, debug_id)?;
+                                }
+                                DecodedMap::Hermes(sourcemap) => {
+                                    adjust_regular_sourcemap(sourcemap, source_file, debug_id)?;
+                                }
+                                DecodedMap::Index(sourcemap) => {
+                                    let source_file_contents =
+                                        Arc::make_mut(&mut source_file.contents);
+                                    if sourcemap.adjust_sections_offset_rows(1) {
+                                        let injected = inject::inject_at_start(
+                                            str::from_utf8(source_file_contents).with_context(
+                                                || {
+                                                    format!(
+                                                        "{} is not UTF-8",
+                                                        source_file.path.display()
+                                                    )
+                                                },
+                                            )?,
+                                            debug_id,
+                                        );
+
+                                        source_file_contents.clear();
+                                        source_file_contents.extend(injected.as_bytes());
+                                    } else {
+                                        // We can't adjust the section offset rows, so we have to inject at the end
+                                        inject::inject_at_end(source_file_contents, debug_id)
+                                            .with_context(|| {
+                                                format!(
+                                                    "Failed to inject debug id into {}",
+                                                    source_file.path.display()
+                                                )
+                                            })?;
+                                    }
+                                }
+                            }
+
+                            sourcemap.set_debug_id(Some(debug_id));
+
+                            let sourcemap_file = self.sources.get_mut(&sourcemap_url).unwrap();
+                            let sourcemap_file_contents =
+                                Arc::make_mut(&mut sourcemap_file.contents);
+                            sourcemap_file_contents.clear();
+                            sourcemap.to_writer(sourcemap_file_contents)?;
+
+                            sourcemap_file.set_debug_id(debug_id.to_string());
+
+                            if !dry_run {
+                                let mut file = std::fs::File::create(&sourcemap_file.path)?;
+                                file.write_all(&sourcemap_file.contents).context(format!(
+                                    "Failed to write sourcemap file {}",
+                                    sourcemap_file.path.display()
+                                ))?;
+                            }
+
+                            if debug_id_fresh {
+                                report_builder.sourcemaps.push(ReportItem::new(
+                                    sourcemap_file.path.clone(),
+                                    sourcemap_file.url.clone(),
+                                    debug_id,
+                                ));
+                            } else {
+                                report_builder.skipped_sourcemaps.push(ReportItem::new(
+                                    sourcemap_file.path.clone(),
+                                    sourcemap_file.url.clone(),
+                                    debug_id,
+                                ));
+                            }
+
+                            debug_id
+                        } else {
+                            // Case 4: We have a URL for the external sourcemap, but we can't find it.
+                            // This is substantially the same as case 1.
+                            debug!("Sourcemap file {sourcemap_url} not found");
+                            // source map cannot be found, fall back to hashing the contents.
+                            let source_file = self.sources.get_mut(source_url).unwrap();
+                            let debug_id =
+                                inject::debug_id_from_bytes_hashed(&source_file.contents);
+
+                            // If we don't have a sourcemap, it's not safe to inject the code snippet at the beginning,
+                            // because that would throw off all the mappings. Instead, inject the snippet at the very end.
+                            // This isn't ideal, but it's the best we can do in this case.
+                            inject::inject_at_end(
+                                Arc::make_mut(&mut source_file.contents),
+                                debug_id,
+                            )
+                            .context(format!("Failed to process {}", source_file.path.display()))?;
+
+                            debug_id
+                        }
+                    }
+                }
+            };
+
+            // Finally, some housekeeping.
+            let source_file = self.sources.get_mut(source_url).unwrap();
+
+            source_file.set_debug_id(debug_id.to_string());
+            self.debug_ids.insert(source_url.clone(), debug_id);
+
+            if !dry_run {
+                let mut file = std::fs::File::create(&source_file.path)?;
+                file.write_all(&source_file.contents).context(format!(
+                    "Failed to write source file {}",
+                    source_file.path.display()
+                ))?;
+            }
+
+            report_builder.injected.push(ReportItem::new(
+                source_file.path.clone(),
+                source_file.url.clone(),
+                debug_id,
+            ));
+        }
+
+        if !report_builder.is_empty() {
+            println!("{}", report_builder.into_report(&self.sources));
+        } else {
+            println!("> Nothing to inject")
+        }
+
+        Ok(())
+    }
+}
+
+/// For a set of source files without a sourcemap location, guess the sourcemap references.
+///
+/// Parameters:
+///   - `sources_without_location`: The set of source files without a sourcemap location.
+///   - `sourcemaps`: The set of available sourcemaps.
+///   - `explicitly_associated_sourcemaps`: The set of sourcemaps that are explicitly associated
+///     with a source file, and thus, cannot be guessed. If we guess such a sourcemap, we will
+///     warn the user. This is stored in a map, where the key is the sourcemap URL, and the value
+///     is the source file URL that is explicitly associated with the sourcemap.
+///
+/// Returns:
+///   - A map from sourcemap URLs to the sourcemap references, which may be `None` if we couldn't
+///     guess the sourcemap reference.
+fn guess_sourcemap_references(
+    sources_without_location: HashSet<&mut SourceFile>,
+    sourcemaps: HashSet<String>,
+    explicitly_associated_sourcemaps: HashMap<String, String>,
+) -> HashMap<String, Option<SourceMapReference>> {
+    let mut sourcemap_references = HashMap::new();
+
+    sources_without_location
+        .into_iter()
+        .fold(
+            // Collect sources guessed as associated with each sourcemap. This way, we ensure
+            // we only associate the sourcemap with any sources if it is only guessed once.
+            HashMap::new(),
+            |mut sources_associated_with_sm, source| {
+                let sourcemap_reference = guess_sourcemap_reference(&sourcemaps, &source.url)
+                    .inspect_err(|err| {
+                        source.warn(format!(
+                            "could not determine a source map reference ({err})"
+                        ));
+                    })
+                    .ok()
+                    .filter(|sourcemap_reference| {
+                        explicitly_associated_sourcemaps
+                            .get(
+                                sourcemap_reference
+                                    .original_url
+                                    .as_ref()
+                                    .expect("original url set in guess_sourcemap_reference"),
+                            )
+                            .inspect(|url| {
+                                source.warn(format!(
+                                    "based on the file name, we guessed a source map \
+                                    reference ({}), which is already associated with source \
+                                    {url}. Please explicitly set the sourcemap URL with a \
+                                    `//# sourceMappingURL=...` comment in the source file.",
+                                    sourcemap_reference.url
+                                ));
+                            })
+                            .is_none()
+                    });
+
+                if let Some(sourcemap_reference) = sourcemap_reference {
+                    sources_associated_with_sm
+                        .entry(sourcemap_reference)
+                        .or_insert_with(Vec::new)
+                        .push(source);
+                } else {
+                    sourcemap_references.insert(source.url.clone(), None);
+                }
+
+                sources_associated_with_sm
+            },
+        )
+        .into_iter()
+        .for_each(|(sourcemap_reference, mut sources)| {
+            if let [source] = sources.as_slice() {
+                // One source -> we can safely associate the sourcemap with it.
+                sourcemap_references.insert(source.url.clone(), Some(sourcemap_reference));
+            } else {
+                // Multiple sources -> it is unclear which source we should associate
+                // the sourcemap with, so don't associate it with any of them.
+                sources.iter_mut().for_each(|source| {
+                    source.warn(format!(
+                        "Could not associate this source with a source map. We \
+                        guessed the sourcemap reference {} for multiple sources, including \
+                        this one. Please explicitly set the sourcemap URL with a \
+                        `//# sourceMappingURL=...` comment in the source file, to make the \
+                        association clear.",
+                        sourcemap_reference.url
+                    ));
+                    sourcemap_references.insert(source.url.clone(), None);
+                });
+            }
+        });
+
+    sourcemap_references
+}
+
+/// Compute the full path to a sourcemap file, given the sourcemap's source file and the relative
+/// path to the sourcemap from the source file.
+fn full_sourcemap_path(source: &SourceFile, sourcemap_relative_path: &String) -> PathBuf {
+    let full_sourcemap_path = source
+        .path
+        .parent()
+        .expect("source path has a parent")
+        .join(sourcemap_relative_path);
+
+    full_sourcemap_path
+}
+
+/// A tuple of a map and a set, returned by `collect_sourcemap_locations`.
+/// The map contains the sourcefiles for which we found a sourcemap location listed in the file, with
+/// the sourcemap location as the value.
+/// The set contains the sourcefiles for which we did not find a sourcemap location listed in the file.
+type SourcemapLocations<'s> = (
+    HashMap<&'s mut SourceFile, String>,
+    HashSet<&'s mut SourceFile>,
+);
+
+trait SourcesIteratorExt<'s> {
+    fn collect_sourcemap_locations(self) -> SourcemapLocations<'s>;
+}
+
+impl<'s, I> SourcesIteratorExt<'s> for I
+where
+    I: IntoIterator<Item = &'s mut SourceFile>,
+{
+    /// Consume this iterator of sources, collecting the sourcemap locations for them.
+    fn collect_sourcemap_locations(self) -> SourcemapLocations<'s> {
+        self.into_iter()
+            .map(|source| {
+                let location = location_from_contents(&source.contents).map(String::from);
+                (source, location)
+            })
+            .fold(
+                (HashMap::new(), HashSet::new()),
+                |(mut sources_with_location, mut sources_without_location), (source, location)| {
+                    match location {
+                        Some(location) => {
+                            sources_with_location.insert(source, location);
+                        }
+                        None => {
+                            sources_without_location.insert(source);
+                        }
+                    }
+                    (sources_with_location, sources_without_location)
+                },
+            )
+    }
+}
+
+/// Extract the sourcemap location from the contents of a source file.
+fn location_from_contents(contents: &[u8]) -> Option<&str> {
+    str::from_utf8(contents)
+        .map(discover_sourcemaps_location)
+        .ok()
+        .flatten()
+        // If this is a full external URL, the code above is going to attempt
+        // to "normalize" it with the source path, resulting in a bogus path
+        // like "path/to/source/dir/https://some-static-host.example.com/path/to/foo.js.map"
+        // that can't be resolved to a source map file.
+        // So, we filter out such locations.
+        .filter(|loc| !is_remote_sourcemap(loc))
+}
+
+fn adjust_regular_sourcemap(
+    sourcemap: &mut SourceMap,
+    source_file: &mut SourceFile,
+    debug_id: DebugId,
+) -> Result<()> {
+    #[expect(deprecated)]
+    let adjustment_map = inject::fixup_js_file(Arc::make_mut(&mut source_file.contents), debug_id)
+        .context(format!("Failed to process {}", source_file.path.display()))?;
+
+    sourcemap.adjust_mappings(&adjustment_map);
+
+    Ok(())
+}
+
+fn validate_script(source: &mut SourceFile) -> Result<()> {
+    if let Some(sm_ref) = get_sourcemap_ref(source) {
+        if let sourcemap::SourceMapRef::LegacyRef(_) = sm_ref {
+            source.warn("encountered a legacy reference".into());
+        }
+        let url = sm_ref.get_url();
+        if source.url.starts_with('/') {
+            let full_url = Path::new(&source.url).join(url);
+            info!(
+                "found sourcemap for {} at {}",
+                &source.url,
+                full_url.display()
+            );
+        } else {
+            let full_url = join_url(&source.url, url)?;
+            info!("found sourcemap for {} at {full_url}", &source.url);
+        };
+    } else if source.ty == SourceFileType::MinifiedSource {
+        source.error("missing sourcemap!".into());
+    }
+
+    Ok(())
+}
+
+fn validate_regular(
+    source_urls: &HashSet<String>,
+    source: &mut SourceFile,
+    sm: &sourcemap::SourceMap,
+) {
+    for idx in 0..sm.get_source_count() {
+        let source_url = sm.get_source(idx).unwrap_or("??");
+        if sm.get_source_contents(idx).is_some() || source_urls.contains(source_url) {
+            info!("validator found source ({source_url})");
+        } else {
+            source.warn(format!("missing sourcecode ({source_url})"));
+        }
+    }
+}
+
+fn validate_sourcemap(source_urls: &HashSet<String>, source: &mut SourceFile) -> Result<()> {
+    match sourcemap::decode_slice(&source.contents)? {
+        sourcemap::DecodedMap::Hermes(smh) => validate_regular(source_urls, source, &smh),
+        sourcemap::DecodedMap::Regular(sm) => validate_regular(source_urls, source, &sm),
+        sourcemap::DecodedMap::Index(_) => {
+            source.warn("encountered indexed sourcemap. We cannot validate those.".into());
+        }
+    }
+    Ok(())
+}
+
+impl Default for SourceMapProcessor {
+    fn default() -> Self {
+        SourceMapProcessor::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_split_url() {
+        assert_eq!(split_url("/foo.js"), (Some(""), "foo", Some("js")));
+        assert_eq!(split_url("foo.js"), (None, "foo", Some("js")));
+        assert_eq!(split_url("foo"), (None, "foo", None));
+        assert_eq!(split_url("/foo"), (Some(""), "foo", None));
+        assert_eq!(
+            split_url("/foo.deadbeef0123.js"),
+            (Some(""), "foo", Some("deadbeef0123.js"))
+        );
+        assert_eq!(
+            split_url("/foo/bar/baz.js"),
+            (Some("/foo/bar"), "baz", Some("js"))
+        );
+    }
+
+    #[test]
+    fn test_unsplit_url() {
+        assert_eq!(&unsplit_url(Some(""), "foo", Some("js")), "/foo.js");
+        assert_eq!(&unsplit_url(None, "foo", Some("js")), "foo.js");
+        assert_eq!(&unsplit_url(None, "foo", None), "foo");
+        assert_eq!(&unsplit_url(Some(""), "foo", None), "/foo");
+    }
+
+    #[test]
+    fn test_join() {
+        assert_eq!(&join_url("app:///", "foo.html").unwrap(), "app:///foo.html");
+        assert_eq!(&join_url("app://", "foo.html").unwrap(), "app:///foo.html");
+        assert_eq!(&join_url("~/", "foo.html").unwrap(), "~/foo.html");
+        assert_eq!(
+            &join_url("app:///", "/foo.html").unwrap(),
+            "app:///foo.html"
+        );
+        assert_eq!(&join_url("app://", "/foo.html").unwrap(), "app:///foo.html");
+        assert_eq!(
+            &join_url("https:///example.com/", "foo.html").unwrap(),
+            "https://example.com/foo.html"
+        );
+        assert_eq!(
+            &join_url("https://example.com/", "foo.html").unwrap(),
+            "https://example.com/foo.html"
+        );
+    }
+
+    #[test]
+    fn test_url_matches_extension() {
+        assert!(url_matches_extension("foo.js", &["js"][..]));
+        assert!(!url_matches_extension("foo.mjs", &["js"][..]));
+        assert!(url_matches_extension("foo.mjs", &["js", "mjs"][..]));
+        assert!(!url_matches_extension("js", &["js"][..]));
+        assert!(url_matches_extension("foo.test.js", &["test.js"][..]));
+    }
+}
