@@ -1,0 +1,1 @@
+"""RxTracer - FastAPI application"""
