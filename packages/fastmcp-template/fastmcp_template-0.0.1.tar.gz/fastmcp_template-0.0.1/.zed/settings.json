@@ -1,0 +1,58 @@
+{
+  "$schema": "zed://schemas/settings",
+  "terminal": {
+    "env": {
+      "PYTHONPATH": "./src"
+    }
+  },
+  "lsp": {
+    "pyright": {
+      "settings": {
+        "python.pythonPath": ".venv/bin/python",
+        "python.analysis": {
+          "extraPaths": ["src"],
+          "diagnosticMode": "workspace",
+          "typeCheckingMode": "strict"
+        }
+      }
+    }
+  },
+  "languages": {
+    "Python": {
+      "format_on_save": {
+        "external": {
+          "command": "ruff",
+          "arguments": ["format", "-"]
+        }
+      },
+      "language_servers": ["pyright"]
+    }
+  },
+  "context_servers": {
+    "nixos": {
+      "command": "uvx",
+      "args": ["mcp-nixos"]
+    },
+    "pypi": {
+      "command": "uvx",
+      "args": ["pypi-query-mcp-server"]
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"]
+    },
+    "langfuse-docs": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://langfuse.com/api/mcp"]
+    },
+    "fastmcp-template": {
+      "command": "uv",
+      "args": ["run", "fastmcp-template"],
+      "env": {
+        "LANGFUSE_PUBLIC_KEY": "pk-lf-9d74d5d3-dfc2-433c-9efe-8822ef40390c",
+        "LANGFUSE_SECRET_KEY": "sk-lf-1977f0a0-8f30-46d4-89fc-efd58420493c",
+        "LANGFUSE_HOST": "https://cloud.langfuse.com"
+      }
+    }
+  }
+}
