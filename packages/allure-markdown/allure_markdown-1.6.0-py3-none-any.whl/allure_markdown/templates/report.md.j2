@@ -1,0 +1,64 @@
+#  {{ title }}
+
+{{ custom_content }}
+
+## Description
+{{ description }}
+
+{%- if environment %}
+## Environment
+
+| Name | Value |
+|------|-------|
+{%- for key, value in environment.items() %}
+| {{ key }} | {{ value }} |
+{%- endfor %}
+{%- endif %}
+
+## Summary
+
+| Passed | Failed | Skipped | Broken | Total |
+|--------|-------|--------|-------|--------|
+| {{ summary.passed }} | {{ summary.failed }} | {{ summary.skipped }} | {{ summary.broken }} | {{ summary.total }} |
+
+{%- if fail_details %}
+## Fail Details
+
+{%- for test in fail_details %}
+###  {{ test.name }}
+
+**Node ID:** {{ test.nodeid }}
+
+**Status:** {{ test.status }}
+
+**Error Message:**
+
+```python
+{{ test.error_message }}
+```
+
+**Traceback:**
+
+```python
+{{ test.traceback }}
+```
+
+{%- if test.attachments %}
+**Attachments:**
+{% for attachment in test.attachments %}
+{%- if attachment.type == 'video/mp4' %}
+<video controls width="100%">
+    <source src="{{ attachment.path }}" type="video/mp4">
+</video>
+{%- elif attachment.type == 'image/png' %}
+![{{ attachment.name }}]({{ attachment.path }})
+{%- else %}
+```python
+{{attachment.content}}
+```
+{%- endif %}
+{% endfor %}
+{%- endif %}
+
+{%- endfor %}
+{%- endif %}
