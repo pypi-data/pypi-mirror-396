@@ -1,0 +1,230 @@
+"""Functions for synthesizing ilamb3 output."""
+
+import importlib
+import json
+import re
+from collections import defaultdict
+from math import isnan
+from pathlib import Path
+from typing import Any
+
+import pandas as pd
+from jinja2 import Template
+
+import ilamb3.regions as ilr
+from ilamb3.analysis import add_overall_score
+from ilamb3.run import _clean_pathname, parse_benchmark_setup
+
+
+def dataframe_to_cmec(df: pd.DataFrame) -> dict[str, Any]:
+    """
+    Build a CMEC boundle from information in the dataframe.
+    """
+    df = df.drop(columns=["analysis", "type", "units"])
+    df["h2"] = df["section"] + "::" + df["variable"]
+    df["h3"] = df["h2"] + "!!" + df["dataset"]
+    ilamb_regions = ilr.Regions()
+    cmec_regions = {
+        r: {
+            "LongName": "None" if r == "None" else ilamb_regions.get_name(r),
+            "Description": (
+                "Reference data extents" if r == "None" else ilamb_regions.get_name(r)
+            ),
+            "Generator": "N/A" if r == "None" else ilamb_regions.get_source(r),
+        }
+        for r in df["region"].unique()
+    }
+    cmec_models = {
+        m: {"Description": m, "Source": m}
+        for m in df["source"].unique()
+        if m != "Reference"
+    }
+    cmec_h1 = {
+        name: {
+            "name": name,
+            "Abstract": "composite score",
+            "URI": [
+                "https://www.osti.gov/biblio/1330803",
+                "https://doi.org/10.1029/2018MS001354",
+            ],
+            "Contact": "forrest AT climatemodeling.org",
+        }
+        for name in df["section"].unique()
+    }
+    cmec_h2 = {
+        name: {
+            "name": name,
+            "Abstract": "composite score",
+            "URI": [
+                "https://www.osti.gov/biblio/1330803",
+                "https://doi.org/10.1029/2018MS001354",
+            ],
+            "Contact": "forrest AT climatemodeling.org",
+        }
+        for name in df["h2"].unique()
+    }
+    cmec_h3 = {
+        name: {
+            "name": name,
+            "Abstract": "benchmark score",
+            "URI": [
+                "https://www.osti.gov/biblio/1330803",
+                "https://doi.org/10.1029/2018MS001354",
+            ],
+            "Contact": "forrest AT climatemodeling.org",
+        }
+        for name in df["h3"].unique()
+    }
+    cmec_statistics = {
+        "indices": [s.replace(" [1]", "") for s in df["name"].unique()],
+        "short_names": [s.replace(" [1]", "") for s in df["name"].unique()],
+    }
+
+    tree = lambda: defaultdict(tree)
+    cmec_results = tree()
+    for sec in ["section", "h2", "h3"]:
+        for (region, model, section, name), grp in df.groupby(
+            ["region", "source", sec, "name"]
+        ):
+            value = grp["value"].mean()
+            cmec_results[region][model][section][name.replace(" [1]", "")] = (
+                None if isnan(value) else value
+            )
+
+    bundle = {
+        "SCHEMA": {"name": "CMEC", "version": "v1", "package": "ILAMB"},
+        "DIMENSIONS": {
+            "json_structure": ["region", "model", "metric", "statistic"],
+            "dimensions": {
+                "region": cmec_regions,
+                "model": cmec_models,
+                "metric": cmec_h1 | cmec_h2 | cmec_h3,
+                "statistic": cmec_statistics,
+            },
+        },
+        "RESULTS": cmec_results,
+    }
+    return bundle
+
+
+def _sortby_categories(df: pd.DataFrame, output_path: Path) -> pd.DataFrame:
+    config = output_path / "run.yaml"
+    if not config.is_file():
+        return df
+    config = parse_benchmark_setup(config)
+    df["category"] = pd.Categorical(
+        df["section"] + "/" + df["variable"] + "/" + df["dataset"],
+        categories=[
+            f"{_clean_pathname(s)}/{_clean_pathname(v)}/{_clean_pathname(d)}"
+            for s in config.keys()
+            for v in config[s].keys()
+            for d in config[s][v].keys()
+        ],
+        ordered=True,
+    )
+    df = df.sort_values(
+        by=["category", "source"],
+        key=lambda col: col if col.dtype == "category" else col.str.lower(),
+    ).drop(columns="category")
+    return df
+
+
+def generate_dashboard_page(
+    output_path: Path, page_title: str = "ILAMB Results"
+) -> None:
+    """
+    Create the required CMEC assets for a Unified Dashboard page.
+    """
+    df = build_global_dataframe(output_path)
+    df = _sortby_categories(df, output_path)
+    bundle = dataframe_to_cmec(df)
+    with open(output_path / "scalar_database.json", "w") as out:
+        out.write(json.dumps(bundle))
+    with open(output_path / "_lmtUDConfig.json", "w") as out:
+        out.write(
+            json.dumps(
+                {
+                    "udcJsonLoc": "scalar_database.json",
+                    "udcDimSets": {
+                        "x_dim": "model",
+                        "y_dim": "metric",
+                        "fxdim": {
+                            "region": df["region"].value_counts().idxmax(),
+                            "statistic": "Overall Score",
+                        },
+                    },
+                    "udcScreenHeight": 0,
+                    "udcCellValue": 1,
+                    "udcNormType": "standarized",
+                    "udcNormAxis": "row",
+                    "logofile": "None",
+                }
+            )
+        )
+    template = importlib.resources.open_text(
+        "ilamb3.templates", "unified_dashboard.html"
+    ).read()
+    html = Template(template).render({"page_title": page_title})
+    with open(output_path / "index.html", "w") as out:
+        out.write(html)
+
+
+def _load_local_csvs(csv_files: list[Path]) -> pd.DataFrame:
+    df = pd.concat(
+        [pd.read_csv(str(csv_file)) for csv_file in csv_files]
+    ).drop_duplicates(subset=["source", "region", "analysis", "name"])
+    df["region"] = df["region"].astype(str).str.replace("nan", "None")
+    df = add_overall_score(df)
+    return df
+
+
+def build_global_dataframe(root: Path) -> pd.DataFrame:
+    dfs = []
+    for parent, _, files in root.walk():
+        # the dashboard needs html files to be {DATASET}.html
+        for html_file in [parent / f for f in files if f.endswith(".html")]:
+            html_file.rename(html_file.parent / f"{html_file.parent.name}.html")
+
+        csv_files = [parent / f for f in files if f.endswith(".csv")]
+        if not csv_files:
+            continue
+        df = _load_local_csvs(csv_files)
+        df = df[df.type == "score"]
+
+        # if at this point the depth is not 3, this function will not work
+        heading = parent.relative_to(root)
+        if len(heading.parents) != 3:
+            raise ValueError("This function requires analysis runs of depth level = 3")
+        heading = str(heading).split("/")
+
+        # add metadata to this part of the dataframe
+        df["section"] = heading[0]
+        df["variable"] = heading[1]
+        df["dataset"] = heading[2]
+        dfs.append(df)
+    dfs = pd.concat(dfs)
+    return dfs
+
+
+def generate_directory_of_dashboards(output_path: Path) -> None:
+    """
+    Generate a html page with links to UD dashboard pages in child directories.
+    """
+    links = {}
+    for item in output_path.iterdir():
+        if not item.is_dir():
+            continue
+        index_file = item / "index.html"
+        if not index_file.is_file():
+            continue
+        with open(index_file) as fin:
+            html = fin.read()
+        match = re.search(r'<h1 class="title">(.*?)</h1>', html)
+        if match:
+            links[match.group(1)] = str(index_file.relative_to(output_path))
+    template = importlib.resources.open_text(
+        "ilamb3.templates", "directory.html"
+    ).read()
+    html = Template(template).render({"links": links})
+    with open(output_path / "index.html", "w") as out:
+        out.write(html)
