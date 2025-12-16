@@ -1,0 +1,89 @@
+[build-system]
+requires = ["uv_build>=0.9.8,<0.10.0"]
+build-backend = "uv_build"
+
+[project]
+name = "beet"
+version = "0.113.0-beta.10"
+description = "The Minecraft pack development kit"
+authors = [{ name = "Valentin Berlier", email = "berlier.v@gmail.com" }]
+license = "MIT"
+license-files = ["LICENSE"]
+readme = "README.md"
+keywords = [
+  "beet",
+  "minecraft",
+  "datapack",
+  "resourcepack",
+  "mcfunction",
+]
+
+requires-python = ">=3.14"
+dependencies = [
+    "click>=8.3.1",
+    "click-help-colors>=0.9.4",
+    "jinja2>=3.1.6",
+    "nbtlib==1.12.1",
+    "pathspec>=0.12.1",
+    "pillow>=12.0.0",
+    "pydantic>=2.12.4",
+    "pyyaml>=6.0.3",
+    "toml>=0.10.2",
+]
+
+[project.urls]
+Repository = "https://github.com/mcbeet/beet"
+
+[project.scripts]
+beet = "beet.toolchain.cli:main"
+
+[project.entry-points.beet]
+commands = "beet.toolchain.commands"
+autoload = "beet.contrib.default"
+
+[project.entry-points.pytest11]
+beet = "beet.pytest_plugin"
+
+[dependency-groups]
+dev = [
+    "basedpyright>=1.33.0",
+    "pytest>=9.0.0",
+    "pytest-insta>=0.4.0",
+    "pytest-minecraft>=0.2.0",
+    "python-semantic-release>=10.5.2",
+    "ruff>=0.14.4",
+]
+
+# Remove when python-semantic-release allows the fixed click release.
+[tool.uv]
+override-dependencies = ["click>=8.3.1"]
+
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.pytest.ini_options]
+addopts = "tests --import-mode=importlib"
+
+[tool.semantic_release]
+commit_parser = "conventional-monorepo"
+commit_message = "chore(release): v{version}"
+tag_format = "v{version}"
+version_toml = ["pyproject.toml:project.version"]
+version_variables = ["src/beet/__init__.py:__version__"]
+major_on_zero = false
+allow_zero_version = true
+
+[tool.semantic_release.commit_parser_options]
+path_filters = ["src", "pyproject.toml", "README.md", "LICENSE"]
+
+[tool.semantic_release.changelog]
+exclude_commit_patterns = ["(?!feat|fix).+"]
+
+[tool.semantic_release.branches.beta]
+match = "beta"
+prerelease = true
+prerelease_token = "beta"
+
+[tool.pyright]
+failOnWarnings = false
+reportImportCycles = "none"
