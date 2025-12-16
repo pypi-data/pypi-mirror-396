@@ -1,0 +1,162 @@
+# YOLO
+
+Ultralytics YOLO:
+- https://github.com/ultralytics/ultralytics
+- https://docs.ultralytics.com/tasks/
+
+## Deployment
+
+### Classifier
+
+1. Create a worker using Arkindex frontend. You can set whatever name/slug/type. We'll use:
+  - Name: `YOLO Classifier`
+  - Slug: `yolo-classifier`
+  - type: `classifier`
+2. Create a new version for that worker with the following settings:
+    - Docker image reference (from [this registry](https://gitlab.teklia.com/workers/yolo/container_registry/65)):  `registry.gitlab.teklia.com/workers/yolo:1.0.7`
+    - Model usage: **Required**
+    - GPU usage: **Supported**
+    - Configuration:
+```json
+{
+    "docker": {
+        "command": "worker-yolo-classifier"
+    },
+    "user_configuration": {
+        "confidence_threshold": {
+            "title": "Confidence threshold",
+            "type": "float",
+            "required": true,
+            "default": 0.25
+        }
+    }
+}
+```
+
+### Segmenter
+
+1. Create a worker using Arkindex frontend. You can set whatever name/slug/type. We'll use:
+  - Name: `YOLO Segmenter`
+  - Slug: `yolo-segmenter`
+  - type: `image-segmenter`
+2. Create a new version for that worker with the following settings:
+    - Docker image reference (from [this registry](https://gitlab.teklia.com/workers/yolo/container_registry/65)):  `registry.gitlab.teklia.com/workers/yolo:1.0.7`
+    - Model usage: **Required**
+    - GPU usage: **Supported**
+    - Configuration:
+```json
+{
+    "docker": {
+        "command": "worker-yolo-segmenter"
+    },
+    "user_configuration": {
+        "max_detection": {
+            "type": "int",
+            "title": "Maximum number of detected objects per image",
+            "required": true,
+            "default": 300
+        },
+        "iou": {
+            "type": "float",
+            "title": "Intersection Over Union (IoU) threshold for Non-Maximum Suppression (NMS), useful for reducing duplicates",
+            "required": true,
+            "default": 0.7
+        },
+        "confidence_threshold": {
+            "title": "Confidence threshold",
+            "type": "float",
+            "required": true,
+            "default": 0.25
+        },
+        "overlap.remove_overlapping_objects": {
+            "type": "bool",
+            "title": "If set, overlapping objects will be removed from the detection, you can parametrize the algorithm using the next parameters",
+            "required": false,
+            "default": false
+        },
+        "overlap.min_overlap_threshold": {
+            "type": "float",
+            "title": "If a polygon overlaps more than that with multiple polygons of the same type, it will be removed",
+            "required": true,
+            "default": 0.8
+        },
+        "overlap.max_overlap_threshold": {
+            "type": "float",
+            "title": "Polygons of different types that overlap more than that will be filtered (least confident will be removed)",
+            "required": true,
+            "default": 0.95
+        },
+        "overlap.max_overlap_count": {
+            "type": "int",
+            "title": "Maximum number of zones allowed to overlap before removing the least confident one. Set to 0 to avoid any overlap.",
+            "required": true,
+            "default": 1
+        },
+        "use_segment": {
+            "title": "Types of elements for which segments should be used instead of boxes",
+            "type": "list",
+            "subtype": "string",
+            "required": false,
+            "default": []
+        },
+        "mode": {
+            "title": "Publish polygons according to the selected mode, publish segment or box (according to the `use_segment` parameter) by default",
+            "type": "enum",
+            "default": "default",
+            "choices": [
+                "default",
+                "minimum_rotated_rectangle"
+            ]
+        }
+    }
+}
+```
+
+### Models
+
+You can use freely available open-source models [provided by Ultralytics](https://docs.ultralytics.com/models/yolo-world/#available-models-supported-tasks-and-operating-modes):
+1. Create a directory where you'll download a model: `mkdir yolo-model`
+2. Download model weights using one of the links from the webpage above, and rename it `model.pt`:
+```
+curl -L https://github.com/ultralytics/assets/releases/download/v8.2.0/yolov8s-world.pt > yolo-model/model.pt
+```
+3. Write a `.arkindex.yml` with the following content, updating the `name` to match your model:
+```yaml
+version: 2
+
+models:
+  - path: yolo-model
+    name: YOLOv8s-Monde
+```
+4. Upload the model using [Arkindex CLI](https://cli.arkindex.org/arkindex_cli/models/): `arkindex models publish`
+5. The model is now available on your Arkindex instance!
+
+
+## Development
+
+For development and tests purpose it may be useful to install the worker as a editable package with pip.
+
+```shell
+pip install -e .
+```
+
+### Linter
+
+Code syntax is analyzed before submitting the code.\
+To run the linter tools suite you may use pre-commit.
+
+```shell
+pip install pre-commit
+pre-commit run -a
+```
+
+### Run tests
+
+Tests are executed with tox using [pytest](https://pytest.org).
+
+```shell
+pip install tox
+tox
+```
+
+To recreate tox virtual environment (e.g. a dependencies update), you may run `tox -r`
