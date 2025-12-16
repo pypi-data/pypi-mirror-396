@@ -1,0 +1,78 @@
+Metadata-Version: 2.4
+Name: remarkable_update_image
+Version: 1.3.1
+Summary: Read reMarkable update images
+Author-email: Eeems <eeems@eeems.email>
+License-Expression: MIT
+Project-URL: Homepage, https://github.com/Eeems/remarkable-update-image
+Project-URL: Repository, https://github.com/Eeems/remarkable-update-image.git
+Project-URL: Issues, https://github.com/Eeems/remarkable-update-image/issues
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Environment :: Console
+Classifier: Intended Audience :: Developers
+Classifier: Operating System :: POSIX :: Linux
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Topic :: System :: Filesystems
+Classifier: Topic :: Utilities
+Requires-Python: <3.14,>=3.11
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: cryptography==46.0.3
+Requires-Dist: protobuf==5.29.5
+Requires-Dist: ext4==1.2.2
+Requires-Dist: libconf==2.0.1
+Requires-Dist: indexed-gzip==1.10.1
+Dynamic: license-file
+
+[![remarkable_update_image on PyPI](https://img.shields.io/pypi/v/remarkable_update_image)](https://pypi.org/project/remarkable_update_image)
+
+# reMarkable Update Image
+Read a reMarkable update image as a block device.
+
+## Known Issues
+
+- Will report checksum errors for Directory inode, even though they are fine
+- Will report checksum errors for extent headers, even though they are fine
+
+## Usage
+
+```python
+from ext4 import Volume
+from remarkable_update_image import UpdateImage
+
+image = UpdateImage("path/to/update/file.signed")
+
+# Extract raw ext4 image
+with open("image.ext4", "wb") as f:
+    f.write(image.read())
+
+# Extract specific file
+volume = Volume(image)
+inode = volume.inode_at("/etc/version")
+with open("version", "wb") as f:
+    f.write(inode.open().read())
+```
+
+## Building
+Dependencies:
+- curl
+- protoc
+- python
+- python-build
+- python-pip
+- python-pipx
+- python-venv
+- python-wheel
+- python-setuptools
+
+```bash
+make # Build wheel and sdist packages in dist/
+make wheel # Build wheel package in dist/
+make sdist # Build sdist package in dist/
+make test # Run unit tests
+make install # Build wheel and install it with pipx or pip install --user
+```
