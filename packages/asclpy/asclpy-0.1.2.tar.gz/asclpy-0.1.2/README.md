@@ -1,0 +1,422 @@
+# asclpy
+
+A Python library and command-line tool for parsing .ascl (Ableton Scala) tuning files and computing MIDI-to-frequency mappings for alternative tuning systems.
+
+## Features
+
+- **Parse .ascl files** - Ableton's extension of the Scala SCL format
+- **Multiple pitch formats** - Support for both cents and ratio-based pitch definitions
+- **Ableton extensions** - Handle all `@ABL` directives (reference pitch, note names, ranges)
+- **Pre-loaded library** - 100+ tuning systems from Ableton Live included
+- **MIDI mapping** - Generate MIDI note (0-127) to frequency (Hz) mappings for any tuning
+- **Simple access** - Load tunings by snake_case names
+- **Command-line interface** - List tunings and generate frequency tables from the terminal
+- **Multiple output formats** - Export tables as formatted text, CSV, or JSON
+
+## Installation
+
+```bash
+pip install asclpy
+```
+
+## Command-Line Interface
+
+The CLI provides quick access to the tuning library without writing code.
+
+### List All Tunings
+
+```bash
+asclpy list
+```
+
+Displays all available tunings with:
+- Description and notes per octave
+- Reference pitch (octave, index, frequency)
+- Valid MIDI note range
+- Validation warnings (if any)
+
+```bash
+asclpy list --compact
+```
+
+Omits descriptions and warnings from the list of tunings.
+
+### Generate Frequency Table
+
+```bash
+# Default table format
+asclpy table 12_tet_edo
+
+# Specify MIDI range
+asclpy table 19_edo --min-midi 60 --max-midi 72
+
+# Export as CSV
+asclpy table just_c --format csv > frequencies.csv
+
+# Export as JSON
+asclpy table bohlen_pierce --format json > frequencies.json
+```
+
+**Options:**
+- `--format` - Output format: `table` (default), `csv`, or `json`
+- `--min-midi` - Minimum MIDI note (default: 0)
+- `--max-midi` - Maximum MIDI note (default: 127)
+
+The table format includes color-coded frequencies:
+- 🔵 Blue: < 100 Hz
+- 🟢 Green: 100-1000 Hz
+- 🟡 Yellow: 1000-5000 Hz
+- 🔴 Red: > 5000 Hz
+
+### Version
+
+```bash
+asclpy --version
+```
+
+## Python API Quick Start
+
+```python
+import asclpy
+
+# Load a pre-bundled tuning by name
+tuning = asclpy.load_tuning("12_tet_edo")
+
+# Get frequency for MIDI note 69 (A4)
+freq = tuning.midi_to_freq(69)
+print(f"A4 = {freq} Hz")  # 440.0 Hz
+
+# Get all MIDI-to-frequency mappings
+midi_to_freq = tuning.get_midi_to_freq_dict()
+print(f"C4 (MIDI 60) = {midi_to_freq[60]} Hz")
+
+# List all available tunings
+print(asclpy.list_tunings())
+```
+
+## Examples
+
+### Using Different Tuning Systems
+
+```python
+import asclpy
+
+# 12-tone equal temperament (standard)
+tet = asclpy.load_tuning("12_tet_edo")
+print(tet.midi_to_freq(60))  # C4 in 12-TET
+
+# Historical temperament
+helmholtz = asclpy.load_tuning("helmholtz_temperament")
+print(helmholtz.midi_to_freq(60))  # C4 in Helmholtz temperament
+
+# Just intonation
+just = asclpy.load_tuning("harmonic_series_16_32_fundamental_f")
+print(just.midi_to_freq(60))  # C4 in harmonic series tuning
+
+# Microtonal systems
+edo19 = asclpy.load_tuning("19_edo")
+print(f"{edo19.notes_per_octave} notes per octave")
+
+# Non-octave scales (Bohlen-Pierce)
+bp = asclpy.load_tuning("bohlen_pierce")
+print(f"Pseudo-octave: {bp.octave_cents} cents")
+```
+
+### Loading Custom Tuning Files
+
+```python
+import asclpy
+
+# Parse a custom .ascl file
+tuning = asclpy.load_tuning("/path/to/custom.ascl")
+
+# Or parse from a string
+data = asclpy.parse_ascl_string("""
+! My custom tuning
+12
+!
+100.0
+200.0
+300.0
+400.0
+500.0
+600.0
+700.0
+800.0
+900.0
+1000.0
+1100.0
+2/1
+""")
+
+tuning = asclpy.Tuning(data)
+```
+
+### Exploring Tuning Properties
+
+```python
+import asclpy
+
+tuning = asclpy.load_tuning("meantone_one_quarter_quintal_comma")
+
+# Basic properties
+print(f"Description: {tuning.description}")
+print(f"Notes per octave: {tuning.notes_per_octave}")
+print(f"Octave size: {tuning.octave_cents} cents")
+
+# Reference pitch
+print(f"Reference: octave {tuning.reference_octave}, "
+      f"index {tuning.reference_index}, "
+      f"{tuning.reference_frequency} Hz")
+
+# All pitch classes in cents
+print(f"Pitch classes: {tuning.pitches_cents}")
+```
+
+## Bundled Tunings
+
+The library includes 100+ tuning systems organized into categories:
+
+- **EDO (Equal Divisions of Octave)**: 12-TET, 19-EDO, 31-EDO, 53-EDO, etc.
+- **European Historical**: Meantone, Pythagorean, Well temperaments (Werckmeister, Kirnberger, etc.)
+- **Just Intonation**: Harmonic series, rational tunings
+- **Arabic Maqam**: Rast, Bayati, Hijaz, Saba, etc.
+- **Persian Radif**: Traditional Persian tunings
+- **Turkish Makam**: Turkish classical music tunings
+- **Sundanese Gamelan**: Indonesian gamelan tunings
+- **Experimental**: Bohlen-Pierce, Wendy Carlos scales
+
+View all available tunings:
+
+```python
+import asclpy
+
+tunings = asclpy.list_tunings()
+print(f"Total tunings: {len(tunings)}")
+print("\n".join(tunings[:10]))  # Show first 10
+```
+
+## API Reference
+
+### Main Functions
+
+- `load_tuning(name_or_path)` - Load a tuning by name or file path
+- `list_tunings()` - Get list of all available tuning names
+- `parse_ascl_file(filepath)` - Parse an .ascl file
+- `parse_ascl_string(content)` - Parse .ascl content from a string
+
+### Tuning Class
+
+**Methods:**
+- `tuning.midi_to_freq(midi_num: int) -> float` - Convert MIDI note to frequency in Hz
+- `tuning.get_midi_to_freq_dict() -> dict[int, float]` - Get full MIDI-to-freq mapping (0-127)
+
+**Properties:**
+- `tuning.description: str` - Tuning description from .ascl file
+- `tuning.notes_per_octave: int` - Number of notes per pseudo-octave
+- `tuning.pitches_cents: list[float]` - List of pitch classes in cents from 1/1
+- `tuning.octave_cents: float` - Size of pseudo-octave in cents (default: 1200.0)
+- `tuning.reference_frequency: float` - Reference frequency in Hz
+- `tuning.reference_octave: int` - Reference octave number
+- `tuning.reference_index: int` - Reference pitch class index (0-based)
+- `tuning.note_range: tuple[int, int] | None` - Valid MIDI range or None
+
+### Constants
+
+- `TUNINGS: dict[str, Tuning]` - Dictionary of all pre-loaded tunings
+
+## ASCL Format
+
+ASCL (Ableton Scala) is a backwards-compatible extension of the SCL format used by Scala software. Files contain:
+
+1. **Description** - Single line of text
+2. **Notes per octave** - Integer count
+3. **Pitch definitions** - One per line, as cents (decimal) or ratios (e.g., 5/4)
+4. **Ableton extensions** - In comment lines starting with `! @ABL`
+
+Supported `@ABL` directives:
+- `REFERENCE_PITCH` - Set reference tuning (octave, index, frequency)
+- `NOTE_NAMES` - Default names for pitch classes
+- `NOTE_RANGE_BY_FREQUENCY` - Playable range by frequency
+- `NOTE_RANGE_BY_INDEX` - Playable range by index
+- `SOURCE` - Documentation of origin
+- `LINK` - URL for more information
+
+See the [ASCL Specification](https://help.ableton.com/hc/en-us/articles/10998372840220-ASCL-Specification) for details.
+
+## Algorithm: MIDI-to-Frequency Mapping
+
+The core algorithm maps MIDI note numbers (0-127) to frequencies (Hz) using a tuning system's pitch classes and reference pitch.
+
+### Overview
+
+```mermaid
+%%{init: { 'theme':'dark', 'flowchart': {'useMaxWidth':false} } }%%
+flowchart TD
+    A[Parse ASCL File] --> B[Extract Pitch Classes]
+    B --> C[Extract Reference Pitch]
+    A --> D[Extract Note Range]
+    
+    C --> E[Calculate Reference MIDI Note]
+    E --> F{For Each MIDI Note 0-127}
+    
+    F --> G[Calculate Octave Distance]
+    G --> H[Calculate Pitch Class Index]
+    H --> I[Get Pitch Class Cents]
+    I --> J[Calculate Total Cents from Reference]
+    J --> K[Apply Frequency Formula]
+    K --> L[freq = ref_freq × 2^cents/1200]
+    
+    D --> M{Within Valid Range?}
+    M -->|Yes| L
+    M -->|No| N[Skip or Return NaN]
+    
+    L --> O[MIDI-to-Frequency Table]
+```
+
+### Step-by-Step Process
+
+#### 1. Parse ASCL File
+
+Extract three critical components:
+
+**Pitch Classes** - Intervals from 1/1 (unison) in cents:
+```python
+# Example: 12-TET
+pitches_cents = [0.0, 100.0, 200.0, ..., 1100.0]
+octave_cents = 1200.0  # Last interval (2/1)
+```
+
+**Reference Pitch** - Anchors the tuning to a specific frequency:
+```python
+# Example: A4 = 440 Hz
+reference_octave = 4      # MIDI octave 4
+reference_index = 9       # 10th note (A)
+reference_frequency = 440.0
+```
+
+**Note Range** (optional) - Valid MIDI range:
+```python
+note_range = (0, 127)  # Full MIDI range
+```
+
+#### 2. Calculate Reference MIDI Note
+
+The reference MIDI note is computed from the reference octave and pitch class index. **Critical: There are two octave numbering systems in ASCL:**
+
+**User-Specified Reference Pitch** (`REFERENCE_PITCH` directive):
+```python
+# Uses Ableton's convention: octave N spans MIDI notes (N+1)×12 to (N+2)×12-1
+reference_midi = (reference_octave + 1) * 12 + reference_index
+
+# Example: octave=4, index=9 (A4)
+reference_midi = (4 + 1) * 12 + 9 = 69  # MIDI 69 = A4 = 440 Hz ✓
+```
+
+**Loader-Supplied Defaults** (no `REFERENCE_PITCH`):
+```python
+# Uses standard MIDI convention: octave N spans MIDI notes N×12 to (N+1)×12-1
+MIDI_OCTAVE_OFFSET = -2
+reference_midi = (reference_octave - MIDI_OCTAVE_OFFSET) * 12 + reference_index
+
+# Example: octave=3, index=9 (A in default notation)
+reference_midi = (3 - (-2)) * 12 + 9 = 69  # MIDI 69 = A4 = 440 Hz ✓
+```
+
+#### 3. Map Each MIDI Note to Frequency
+
+For each MIDI note number `m` (0-127):
+
+```mermaid
+%%{init: { 'theme':'dark', 'flowchart': {'useMaxWidth':false} } }%%
+flowchart LR
+    A[MIDI Note m] --> B[Calculate MIDI Offset]
+    B --> C[midi_offset = m - reference_midi]
+    
+    C --> D[Calculate Octave Distance]
+    D --> E[octave_dist = midi_offset // notes_per_octave]
+    
+    C --> F[Calculate Pitch Class]
+    F --> G[index = midi_offset % notes_per_octave]
+    
+    E --> H[Calculate Total Cents]
+    G --> H
+    H --> I[cents = octave_dist × octave_cents<br/>+ pitches_cents[index]]
+    
+    I --> J[Apply Frequency Formula]
+    J --> K[freq = ref_freq × 2^cents/1200]
+```
+
+**Mathematical formula:**
+
+$$
+\text{freq}(m) = f_{\text{ref}} \times 2^{\frac{c(m)}{1200}}
+$$
+
+Where:
+- $m$ = MIDI note number (0-127)
+- $f_{\text{ref}}$ = Reference frequency (e.g., 440 Hz for A4)
+- $c(m)$ = Total cents offset from reference:
+
+$$
+c(m) = \left\lfloor \frac{m - m_{\text{ref}}}{N} \right\rfloor \times C_{\text{oct}} + P\left[(m - m_{\text{ref}}) \bmod N\right]
+$$
+
+Where:
+- $m_{\text{ref}}$ = Reference MIDI note
+- $N$ = Notes per octave
+- $C_{\text{oct}}$ = Octave size in cents (usually 1200)
+- $P[i]$ = Pitch class cents at index $i$
+
+#### 4. Example: Computing MIDI 72 (C5) in 12-TET
+
+Given:
+- 12-TET: `pitches_cents = [0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100]`
+- Reference: MIDI 69 (A4) = 440 Hz
+- `notes_per_octave = 12`, `octave_cents = 1200`
+
+Calculation:
+```python
+# Step 1: MIDI offset
+midi_offset = 72 - 69 = 3
+
+# Step 2: Octave distance and pitch class
+octave_distance = 3 // 12 = 0  # Same octave
+index = 3 % 12 = 3  # 4th pitch class (C)
+
+# Step 3: Total cents from reference
+cents_from_ref = 0 × 1200 + pitches_cents[3]
+               = 0 + 300
+               = 300 cents
+
+# Step 4: Apply frequency formula
+freq = 440.0 × 2^(300/1200)
+     = 440.0 × 2^0.25
+     = 440.0 × 1.189207...
+     = 523.251 Hz  # C5 ✓
+```
+
+### Edge Cases
+
+**Non-Octave Scales** (e.g., Bohlen-Pierce with `octave_cents = 1901.955`):
+- The algorithm works identically, using the tuning's pseudo-octave size
+- Pitch classes still cycle, but at a different interval ratio
+
+**Microtonal Systems** (e.g., 19-EDO, 31-EDO):
+- More pitch classes per octave (`notes_per_octave = 19` or `31`)
+- Some MIDI notes may be skipped or interpolated depending on usage
+
+**Note Range Restrictions**:
+- If `note_range` is specified, MIDI notes outside this range may be filtered
+- The algorithm still computes frequencies, but they may be marked invalid
+
+### Implementation
+
+See [midi.py](asclpy/midi.py) for the complete implementation:
+- `MidiMapper.compute_midi_to_frequency_table()` - Main algorithm
+- `MidiMapper.map_midi_to_cents()` - MIDI to cents conversion
+- `cents_to_frequency()` - Cents to Hz conversion
+
+## License
+
+MIT
