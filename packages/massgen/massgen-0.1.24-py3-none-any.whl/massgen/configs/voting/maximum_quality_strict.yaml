@@ -1,0 +1,47 @@
+# MassGen Maximum Quality Configuration
+#
+# Use Case: Highest quality answers with rigorous evaluation
+#
+# This configuration demonstrates:
+# - Strict voting sensitivity for maximum quality
+# - Higher new answer limit (max 5) for thorough iteration
+# - Strict novelty requirements to ensure real improvements
+# - Cost-effective models (GPT-5-nano, Gemini Flash)
+#
+# Run with:
+#   massgen \
+#     --config configs/voting/maximum_quality_strict.yaml \
+#     "Design a scalable microservices architecture for an e-commerce platform"
+
+agents:
+  - id: "agent_a"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+
+  - id: "agent_b"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-flash"
+
+orchestrator:
+  # Strict voting for maximum quality
+  # Agents apply high standards (all aspects, edge cases, reference-quality) before voting
+  voting_sensitivity: "strict"
+
+  # Allow up to 5 new answers per agent for thorough iteration
+  max_new_answers_per_agent: 5
+
+  # Strict novelty requirement - only accept substantially different solutions
+  answer_novelty_requirement: "strict"
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
+
+# What happens:
+# 1. Agents provide initial answers
+# 2. Agents apply high standards of excellence before voting (strict threshold)
+# 3. Each agent can provide up to 5 new answers to refine quality
+# 4. New answers must be substantially different (strict novelty)
+# 5. Coordination continues until reference-quality answer is achieved

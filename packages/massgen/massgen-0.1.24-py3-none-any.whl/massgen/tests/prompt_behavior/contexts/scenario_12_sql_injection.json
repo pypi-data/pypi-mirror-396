@@ -1,0 +1,13 @@
+{
+  "name": "SQL Injection - Partial Answer with Security Gap",
+  "description": "Answer provides basic solution but misses critical security details.",
+  "original_message": "How do I prevent SQL injection in my Python Flask application?",
+  "existing_answers": {
+    "agent_a": "To prevent SQL injection in Flask, use parameterized queries with SQLAlchemy or similar ORM:\n\n```python\nfrom flask import Flask, request\nfrom flask_sqlalchemy import SQLAlchemy\n\napp = Flask(__name__)\ndb = SQLAlchemy(app)\n\nclass User(db.Model):\n    id = db.Column(db.Integer, primary_key=True)\n    username = db.Column(db.String(80), unique=True)\n    email = db.Column(db.String(120))\n\n@app.route('/user/<username>')\ndef get_user(username):\n    # Use ORM - automatically parameterized\n    user = User.query.filter_by(username=username).first()\n    if user:\n        return {'username': user.username, 'email': user.email}\n    return {'error': 'User not found'}, 404\n```\n\nThe ORM handles parameterization automatically, so you don't need to worry about SQL injection when using `filter_by()` or `filter()`.\n\nIf you must use raw SQL, use parameterized queries:\n```python\n@app.route('/search')\ndef search():\n    query = request.args.get('q')\n    # Use parameters, not string formatting\n    result = db.session.execute(\n        'SELECT * FROM users WHERE username = :username',\n        {'username': query}\n    )\n    return list(result)\n```\n\nNever do this:\n```python\n# DANGEROUS - DON'T DO THIS\nquery = f\"SELECT * FROM users WHERE username = '{username}'\"\ndb.session.execute(query)\n```"
+  },
+  "expected_behavior": {
+    "lenient": "vote or new_answer (covers basics but missing input validation, WAF, prepared statements discussion)",
+    "balanced": "new_answer (needs input validation, sanitization, example of actual injection attack, additional security layers)",
+    "strict": "new_answer (missing: input validation, output encoding, LIMIT clauses, least privilege, monitoring, WAF, CSP headers, rate limiting)"
+  }
+}

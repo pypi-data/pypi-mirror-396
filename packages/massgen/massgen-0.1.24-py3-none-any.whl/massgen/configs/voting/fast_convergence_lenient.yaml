@@ -1,0 +1,46 @@
+# MassGen Fast Convergence Configuration
+#
+# Use Case: Quick answers with minimal coordination overhead
+#
+# This configuration demonstrates:
+# - Lenient voting sensitivity for faster convergence
+# - Limited new answers per agent (max 1)
+# - Lenient novelty requirements
+# - Cost-effective models (GPT-5-nano, Gemini Flash)
+#
+# Run with:
+#   massgen \
+#     --config configs/voting/fast_convergence_lenient.yaml \
+#     "What are the key benefits of using async/await in Python?"
+
+agents:
+  - id: "agent_a"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+
+  - id: "agent_b"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-flash"
+
+orchestrator:
+  # Lenient voting for faster convergence
+  # Agents vote for existing answers more readily
+  voting_sensitivity: "lenient"
+
+  # Limit to 1 new answer per agent to avoid long coordination
+  max_new_answers_per_agent: 1
+
+  # No novelty checks for fastest execution
+  answer_novelty_requirement: "lenient"
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
+
+# What happens:
+# 1. Both agents provide initial answers quickly
+# 2. Agents vote for existing answers more readily (lenient threshold)
+# 3. Each agent can only provide 1 new answer maximum
+# 4. Coordination completes quickly with acceptable quality

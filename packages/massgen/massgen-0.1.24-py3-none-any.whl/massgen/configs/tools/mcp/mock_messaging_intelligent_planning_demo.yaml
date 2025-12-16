@@ -1,0 +1,69 @@
+# Mock Messaging MCP - Intelligent Planning Mode Demo
+#
+# This configuration demonstrates MassGen's intelligent planning mode using a mock
+# multi-platform messaging server (Discord, WhatsApp, social media features).
+#
+# NO SETUP NEEDED! Uses Python fastmcp (already a MassGen dependency).
+#
+# Run examples:
+#    massgen --config @tools/mcp/mock_messaging_intelligent_planning_demo "Show me recent posts"
+#    massgen --config @tools/mcp/mock_messaging_intelligent_planning_demo "Post 'Hello world!' as a status update"
+#
+# What to observe:
+# - READ operations (get_posts, read_messages) → Planning mode DISABLED → Agents can read during coordination
+# - WRITE operations (post_update, send_message) → Planning mode ENABLED → Agents blocked during coordination
+
+agents:
+  - id: "gemini_messaging_agent"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-flash"
+      mcp_servers:
+        - name: "messaging"
+          type: "stdio"
+          command: "fastmcp"
+          args: ["run", "examples/v0.1.2/mock_messaging_mcp/server.py:create_server"]
+          env:
+            FASTMCP_SHOW_CLI_BANNER: "false"
+
+  # - id: "openai_messaging_agent"
+  #   backend:
+  #     type: "openai"
+  #     model: "gpt-4o-mini"
+  #     mcp_servers:
+  #       - name: "messaging"
+  #         type: "stdio"
+  #         command: "fastmcp"
+  #         args: ["run", "examples/v0.1.2/mock_messaging_mcp/server.py:create_server"]
+  #         env:
+  #           FASTMCP_SHOW_CLI_BANNER: "false"
+
+  # - id: "grok_messaging_agent"
+  #   backend:
+  #     type: "grok"
+  #     model: "grok-4-fast"
+  #     mcp_servers:
+  #       - name: "messaging"
+  #         type: "stdio"
+  #         command: "fastmcp"
+  #         args: ["run", "examples/v0.1.2/mock_messaging_mcp/server.py:create_server"]
+  #         env:
+  #           FASTMCP_SHOW_CLI_BANNER: "false"
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
+
+# Orchestrator with Intelligent Planning Mode
+orchestrator:
+  coordination:
+    enable_planning_mode: true
+    planning_mode_instruction: |
+      PLANNING MODE: You are in the coordination phase.
+
+      During coordination:
+      - READ operations are ALLOWED (get_posts, read_messages, etc.)
+      - WRITE operations are BLOCKED (send_message, post_update, etc.)
+
+      Use read tools to gather information and inform your proposal.
+      Save write actions for the final execution phase.
