@@ -1,0 +1,169 @@
+# Memento Database Python SDK
+
+This is the python SDK for Memento Database API. Pull requests and bug reports are welcomed.
+
+## Latest Version
+
+The latest version of Memento Database API SDK is PyMementoDB-1.0.1
+
+## Installation
+
+Install using pip :
+```sh
+$ pip install pymementodb
+```
+## Get access tokens
+
+Install desktop application and get authorisation token in Account menu.
+
+## Include memento in your application
+```python
+from pymementodb import Memento
+```
+
+## Get memento instance
+
+To get an instance of memento just provide the access token.
+
+
+```python
+server = Memento('<access token>')
+```
+
+Optionally, the custom server can be specified.
+
+```python
+server = Memento('<access token>', '<memento token>')
+```
+
+## Usage
+
+Once you have the access token you can make the calls to the server. 
+Get the memento instance and set the access token and then make authorized calls.
+
+### List library info
+
+You can use ```list_libraries()``` to list all available libraries and their main info.
+
+```python
+server = Memento('<access token>')
+libs_info = server.list_libraries()
+```
+
+### Get Library
+
+You can use ```get_library()``` to get the specific library. 
+It returns a ```Library``` object.
+
+```python
+server = Memento('<access token>')
+lib = server.get_library('<library id>')
+```
+
+### Get Entries
+
+You can use ```get_entries()``` to get entries of the library. 
+It returns a list of ```Entry``` objects.
+
+```python
+server = Memento('<access token>')
+lib = server.get_entries('<library id>')
+```
+
+Optional parameters:
+
+* limit (int, all by default) - limits the query result to the limit number of the newest entries
+* field_ids (list of ints, all by default) - include only the specified entry field values in results
+* start_revision (int, oldest by default) - return entries since the provided library revision only
+
+### Get Entry
+
+You can use ```get_entry()``` to get a specific entry. 
+It returns an ```Entry``` object.
+
+```python
+server = Memento('<access token>')
+entry = server.get_entry('<library id>', '<entry id>')
+```
+
+### Create Entry
+
+Use ```create_entry()``` to create a new entry. 
+It returns an ```Entry``` object that represents the newly created entry.
+
+```'<field values>'``` is the list of dictionaries:
+```[{'id': <field id>, 'value': <field value>}, ...]```.
+Datetime fields to be provided in the ```'2023-08-31T16:47:00+00:00'``` format.
+
+```python
+server = Memento('<access token>')
+new_entry = server.create_entry('<library id>', '<field values>')
+```
+
+### Edit Entry
+
+Use ```edit_entry()``` to modify a specific entry. 
+It returns an ```Entry``` object that represents the modified entry.
+
+```python
+server = Memento('<access token>')
+server.edit_entry('<library id>', '<entry id>', '<field values>')
+```
+
+### Delete Entry
+
+Use ```delete_entry()``` to delete a specific entry.
+
+```python
+server = Memento('<access token>')
+lib = server.delete_entry('<library id>', '<entry id>')
+```
+
+## Objects
+
+All objects are derived from ```dataclasses.dataclass```.
+
+### Library
+
+Properties:
+
+1. id
+2. createdTime
+1. modifiedTime
+1. fields
+1. name
+1. owner
+1. revision
+1. size
+
+### Entry
+
+Properties:
+
+1. id
+1. createdTime
+1. modifiedTime
+1. fields
+1. status
+1. author
+1. revision
+1. size
+
+Methods:
+1. get_field_value(field_id) - returns the value of the field.
+
+### Field
+
+Properties:
+
+1. id
+1. name
+1. options
+1. order
+1. role
+1. type
+
+License
+----
+
+MIT
