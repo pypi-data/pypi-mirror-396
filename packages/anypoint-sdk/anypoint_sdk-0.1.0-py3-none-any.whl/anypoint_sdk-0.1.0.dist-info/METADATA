@@ -1,0 +1,372 @@
+Metadata-Version: 2.4
+Name: anypoint-sdk
+Version: 0.1.0
+Summary: SDK for MuleSoft Anypoint Platform
+Author: Steve Brown
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: requests<3.0,>=2.31
+Provides-Extra: dev
+Requires-Dist: types-requests; extra == "dev"
+Requires-Dist: types-urllib3; extra == "dev"
+Requires-Dist: coverage; extra == "dev"
+Requires-Dist: mypy; extra == "dev"
+Requires-Dist: black; extra == "dev"
+Requires-Dist: isort; extra == "dev"
+Requires-Dist: pylint; extra == "dev"
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: pytest-cov; extra == "dev"
+Requires-Dist: build; extra == "dev"
+Requires-Dist: twine; extra == "dev"
+Dynamic: license-file
+
+# anypoint-sdk
+
+An opinionated Python SDK for MuleSoft Anypoint Platform that focuses on safe HTTP access, defensive parsing, and testability. It includes a high level inventory collector that walks organisations and environments to produce a consolidated JSON view of APIs, policies, contracts, tiers, groups, and client applications.
+
+- Python 3.10+
+- HTTP client built on `requests`
+- Fully unit tested with `unittest`, designed for high coverage
+- Type checked with `mypy`
+- Linted with Flake8
+
+## Features
+
+- **Authentication**: client credentials flow to obtain a bearer token
+- **Resources**: thin wrappers for core endpoints
+  - Organisations, Environments, APIs, Policies, Groups, Contracts, Tiers, Applications
+- **Inventory collector**: aggregates live data into a normalised structure suitable for export or further processing
+- **Filtering**: include or exclude by organisation id or name, and by API name, with optional regular expressions
+- **Resilience**: retries for transient HTTP errors, graceful handling of 401 or 403 when an org membership lacks permissions for environment listing
+- **Logging**: pluggable logger interface so you can inject your own logger
+
+## Installation
+
+Editable install for development, including dev tools:
+
+```bash
+pip install -e .[dev]
+```
+
+Production style install:
+
+```bash
+pip install anypoint-sdk
+```
+
+## Quick start
+
+Set your Connected App credentials in the environment:
+
+```bash
+export ANYPOINT_CLIENT_ID="...your id..."
+export ANYPOINT_CLIENT_SECRET="...your secret..."
+```
+
+Create a client and list accessible organisations and environments:
+
+```python
+import os
+from anypoint_sdk import AnypointClient
+
+with AnypointClient.from_client_credentials(
+    client_id=os.environ["ANYPOINT_CLIENT_ID"],
+    client_secret=os.environ["ANYPOINT_CLIENT_SECRET"],
+) as client:
+    orgs = client.organizations.list_accessible()
+    envs_by_org = client.environments.list_by_orgs(orgs, skip_unauthorised=True)
+    print(f"Organisations: {len(orgs)}")
+    for oid, envs in envs_by_org.items():
+        names = [e.get("name") for e in envs if isinstance(e, dict)]
+        print(oid, names)
+```
+
+## Inventory collection
+
+The inventory collector assembles a rich JSON structure for each API instance, including environment automated policies and client contracts. You can allow it to discover scope automatically or pass the exact orgs and envs you want.
+
+```python
+import json
+import os
+from anypoint_sdk import AnypointClient
+from anypoint_sdk.collectors.inventory import (
+    build_inventory,
+    InventoryOptions,
+    InventoryFilters,
+)
+
+opts = InventoryOptions(
+    base_path="./mulesoft_scan_output",
+    include_api_policies=True,
+    include_environment_policies=True,
+)
+
+# Optional filters
+filters = InventoryFilters(
+    # org_ids=["ef3c3c6f-eb84-4b14-8f5b-b88dda8c82ae"],
+    # org_names=["DNF"],
+    # org_name_regex=r"^(DNF|mobile)$",
+    # api_names=["api-1", "api-2"],
+    # api_name_regex=r"^api-",
+)
+
+with AnypointClient.from_client_credentials(
+    client_id=os.environ["ANYPOINT_CLIENT_ID"],
+    client_secret=os.environ["ANYPOINT_CLIENT_SECRET"],
+) as client:
+    # You may pass orgs and envs explicitly, or omit to let the collector discover them.
+    orgs = client.organizations.list_accessible()
+    envs_by_org = client.environments.list_by_orgs(orgs, skip_unauthorised=True)
+
+    records = build_inventory(
+        client,
+        orgs=orgs,                 # or a list of org ids, or omit entirely
+        envs_by_org=envs_by_org,   # or omit to let the collector fetch
+        options=opts,
+        filters=filters,
+    )
+
+print(f"Collected {len(records)} API records")
+with open("anypoint_inventory.json", "w", encoding="utf-8") as f:
+    json.dump(records, f, indent=2)
+```
+
+Example record, trimmed for brevity:
+
+```json
+{
+  "api_name": "api-1",
+  "api_version": "v1",
+  "metadata": {
+    "source": "anypoint_live_api",
+    "anypoint_data": {
+      "api_id": "20473240",
+      "environment_id": "e2b0de6d-e837-4ae4-9535-f9ee53100e9d",
+      "organization_id": "ef3c3c6f-eb84-4b14-8f5b-b88dda8c82ae",
+      "client_applications": [ { "app_id": "2693438", "contract_id": "7534804" } ],
+      "sla_tiers": [ { "tier_id": "2247207", "scope": "api" } ]
+    }
+  },
+  "policy_configurations": [ { "policy_name": "rate-limiting-sla-based" } ]
+}
+```
+
+### Scoping rules
+
+- If you pass `orgs` explicitly, only those organisations are processed. This can be a list of dicts with id and name, or a list of organisation ids. In this case `InventoryFilters` that pertain to organisations are ignored.
+- API filters always apply.
+
+### Performance notes
+
+The collector performs per environment and per instance calls as needed. If you already have `orgs` and `envs_by_org` from a cached run, pass them back in to reduce calls.
+
+## Observability Metrics
+
+The SDK includes support for the MuleSoft Observability API to fetch request metrics.
+
+### Get API Request Counts
+```python
+from datetime import datetime, timedelta
+
+with AnypointClient.from_client_credentials(
+    client_id=client_id,
+    client_secret=client_secret,
+) as client:
+    # Get request count for the last 7 days
+    count = client.observability.get_api_request_count(
+        org_id="your-org-id",
+        env_id="your-env-id",
+        api_instance_id=20612480,
+        start="2025-01-01",
+        end="2025-01-07"
+    )
+    print(f"Total requests: {count:,}")
+```
+
+### Date Range Handling
+
+The Observability API has a 30-day maximum per query. The SDK automatically handles larger ranges:
+```python
+# Large range (automatically split into multiple 30-day queries)
+count = client.observability.get_api_request_count(
+    org_id="your-org-id",
+    env_id="your-env-id",
+    api_instance_id=20612480,
+    start="2025-01-01",
+    end="2025-12-31",  # Full year - automatically split
+    auto_split=True  # Default
+)
+
+# Disable auto-split (will error if >30 days)
+count = client.observability.get_api_request_count(
+    org_id="your-org-id",
+    env_id="your-env-id",
+    api_instance_id=20612480,
+    start="2025-01-01",
+    end="2025-01-31",
+    auto_split=False
+)
+```
+
+### Flexible Date Input
+
+The observability methods accept multiple date formats:
+```python
+from datetime import date, datetime, timedelta
+
+# Date strings (most convenient)
+count = client.observability.get_api_request_count(
+    org_id="org-id",
+    env_id="env-id",
+    api_instance_id=123,
+    start="2025-01-01",
+    end="2025-01-31"
+)
+
+# Date objects
+count = client.observability.get_api_request_count(
+    org_id="org-id",
+    env_id="env-id",
+    api_instance_id=123,
+    start=date(2025, 1, 1),
+    end=date(2025, 1, 31)
+)
+
+# Datetime objects
+now = datetime.now()
+yesterday = now - timedelta(days=1)
+count = client.observability.get_api_request_count(
+    org_id="org-id",
+    env_id="env-id",
+    api_instance_id=123,
+    start=yesterday,
+    end=now
+)
+
+# Unix timestamps in milliseconds
+count = client.observability.get_api_request_count(
+    org_id="org-id",
+    env_id="env-id",
+    api_instance_id=123,
+    start=1736956800000,
+    end=1737043199999
+)
+```
+
+**Note**: End dates are inclusive. "2025-01-31" means up to 23:59:59.999 on that day.
+
+### Environment Scanner
+
+The SDK includes a comprehensive environment scanner that combines policies and metrics:
+```python
+#!/usr/bin/env python3
+import os
+from datetime import datetime, timedelta
+from anypoint_sdk import AnypointClient
+
+# Set environment variables
+os.environ["ANYPOINT_ORG_ID"] = "your-org-id"
+os.environ["ANYPOINT_ENV_ID"] = "your-env-id"
+os.environ["START_DATE"] = "2025-01-01"
+os.environ["END_DATE"] = "2025-01-31"
+
+# See examples/scan_environment.py for full implementation
+```
+
+The scanner provides:
+- All APIs in the environment
+- Request counts per API for a date range
+- Environment automated policies
+- API instance policies
+- Summary statistics and reports
+
+## Configuration
+
+`AnypointClient.from_client_credentials` accepts common HTTP options:
+
+```python
+AnypointClient.from_client_credentials(
+    client_id, client_secret,
+    base_url="https://anypoint.mulesoft.com",
+    timeout=30.0,
+    verify=True,                 # set False to skip TLS verification, not recommended
+    cert=None,                   # path to client cert bundle if required
+    proxies={"https": "http://proxy.example:8080"},
+    extra_headers={"X-Requested-By": "scanner"},
+    logger=my_logger,            # optional custom logger
+)
+```
+
+## Logging
+
+The SDK uses a small logger protocol, so you can pass your own logger that exposes `.debug`, `.info`, `.warning`, `.error`, and `.child(name)`. If you do not pass one, a sensible default is created with names such as `anypoint_sdk.resources.environments` and `anypoint_sdk.collector.inventory`.
+
+## Error handling
+
+- HTTP errors raise `HttpError(status, message, body)`. You can catch this around specific calls if you want to continue on 401 or 403 for particular endpoints.
+- Network errors are raised as `RuntimeError` with a short message.
+- The inventory collector handles common permission and shape issues internally, it logs at debug or warning level and continues where safe.
+
+## Development
+
+### Project layout
+
+```
+src/
+  anypoint_sdk/
+    _http.py
+    _logging.py
+    _version.py
+    auth.py
+    client.py
+    resources/
+      apis.py
+      applications.py
+      contracts.py
+      environments.py
+      groups.py
+      organizations.py
+      policies.py
+      tiers.py
+    collectors/
+      inventory.py
+tests/
+  ... standard library unittest suite, fast fakes and helpers ...
+```
+
+### Run tests and coverage
+
+```bash
+coverage run -m unittest
+coverage report -m
+```
+
+The repo targets 100 percent coverage. The CI job fails on lower coverage.
+
+### Lint and type check
+
+```bash
+flake8 src tests
+mypy src tests
+```
+
+### GitHub Actions
+
+A workflow is provided at `.github/workflows/ci.yml`. It runs Flake8 and the unit suite with coverage on Python 3.10 to 3.12.
+
+## Versioning
+
+The package follows Semantic Versioning. The runtime `__version__` is read from installed distribution metadata. During development install in editable mode to expose the version to `importlib.metadata`.
+
+## Changelog
+
+See [`CHANGELOG.md`](./CHANGELOG.md) for notable changes.
+
+## Security
+
+- The SDK avoids logging sensitive fields. If you inject a custom logger, review its configuration before enabling debug level in production.
+
+## Licence
+
+MIT Licence. See [`LICENSE`](./LICENSE).
