@@ -1,0 +1,337 @@
+Metadata-Version: 2.4
+Name: HOS_ME
+Version: 1.0.6
+Summary: HOS ME - 一个功能强大的办公自动化平台，支持批量任务处理、模板管理、复杂内容渲染和文档导入导出
+Home-page: https://github.com/hos-me/hos-me
+Author: HOS ME Team
+Author-email: hos_me@example.com
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: System Administrators
+Classifier: Topic :: Office/Business
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Framework :: Flask
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+Requires-Dist: Flask>=2.0.0
+Requires-Dist: requests>=2.25.0
+Requires-Dist: python-dotenv>=0.20.0
+Requires-Dist: python-docx>=1.0.0
+Requires-Dist: lxml>=4.6.0
+Requires-Dist: pillow>=8.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"
+Requires-Dist: flake8>=4.0; extra == "dev"
+Requires-Dist: black>=22.0; extra == "dev"
+Requires-Dist: isort>=5.0; extra == "dev"
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: provides-extra
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+# HOS可扩展式办公平台
+
+## 项目简介
+
+HOS可扩展式办公平台是一个基于Flask的多功能办公自动化平台，提供了丰富的办公功能模块，支持自定义扩展和灵活配置。该平台旨在提高办公效率，简化工作流程，为企业和团队提供全方位的办公解决方案。
+
+## 主要功能
+
+### 1. 周报生成系统
+- 支持单周报和批量周报生成
+- 可自定义模板
+- 支持多种输出格式
+- 支持AI辅助生成
+
+### 2. 会议管理
+- 会议创建、编辑、删除
+- 会议纪要生成
+- 参会人员管理
+- 会议提醒功能
+
+### 3. 项目管理
+- 项目创建、编辑、删除
+- 任务管理
+- 项目进度跟踪
+- 项目里程碑管理
+- 甘特图数据支持
+
+### 4. 知识库管理
+- 文档创建、编辑、删除
+- 文档分类管理
+- 标签管理
+- 文档版本控制
+- 权限管理
+- 文档搜索功能
+
+### 5. 任务管理
+- 任务创建、编辑、删除
+- 任务进度跟踪
+- 任务优先级管理
+- 任务分配和报告
+- 任务评论和附件
+
+### 6. 日程管理
+- 日程创建、编辑、删除
+- 日程冲突检查
+- 日程提醒
+- 重复日程支持
+- 日程统计
+
+### 7. 审批流程
+- 审批流程设计
+- 审批请求创建和处理
+- 审批历史记录
+- 多级审批支持
+
+## 技术特性
+
+- **模块化设计**：各功能模块独立，便于扩展和维护
+- **RESTful API**：提供完整的API接口，支持第三方系统集成
+- **AI辅助**：支持多种AI API，可辅助生成文档内容
+- **模板系统**：支持自定义模板，灵活配置输出格式
+- **数据持久化**：基于JSON文件存储，部署简单，无需数据库
+- **端口自动分配**：智能端口检测，避免端口冲突
+- **响应式设计**：适配各种设备
+
+## 安装方法
+
+### 从PyPI安装
+
+```bash
+pip install hos_office_platform
+```
+
+### 从源代码安装
+
+```bash
+# 克隆仓库
+git clone https://github.com/hos-office-platform/hos-office-platform.git
+cd hos-office-platform
+
+# 安装依赖
+pip install -r requirements.txt
+
+# 安装包
+pip install -e .
+```
+
+## 快速开始
+
+### 启动应用
+
+使用命令行启动应用：
+
+```bash
+hos-office-platform
+```
+
+或使用别名：
+
+```bash
+hos
+```
+
+应用将自动检测可用端口并启动，默认从50000端口开始尝试。
+
+### 访问应用
+
+启动成功后，在浏览器中访问：
+
+```
+http://localhost:<port>
+```
+
+其中 `<port>` 是应用实际使用的端口，可在启动日志中查看。
+
+## 配置说明
+
+### API配置
+
+1. 在项目根目录创建 `key.txt` 文件，填入你的DeepSeek API密钥：
+
+```
+<your-deepseek-api-key>
+```
+
+2. 或通过环境变量设置：
+
+```bash
+export DEEPSEEK_API_KEY=<your-deepseek-api-key>
+```
+
+### 系统设置
+
+系统设置存储在 `system_settings.json` 文件中，包含以下主要配置：
+
+- **template_settings**：模板输出格式、样式配置
+- **api_settings**：API请求超时、重试次数
+- **system_settings**：应用名称、版本、调试模式等
+
+### 自定义模块
+
+自定义模块配置存储在 `hos_config.json` 文件中，用于管理：
+
+- 工作流配置
+- 自定义模块
+- 模块排序
+
+## API文档
+
+### 1. 周报生成API
+
+- `GET /api/reports` - 获取报告列表
+- `POST /api/generate` - 生成单周报
+- `POST /api/batch_generate` - 批量生成周报
+- `GET /api/load_reports` - 加载报告列表
+- `GET /api/load_report/<filename>` - 加载特定报告
+- `DELETE /api/delete_report/<filename>` - 删除报告
+- `GET /api/download/<filename>` - 下载报告
+
+### 2. 模板管理API
+
+- `GET /api/templates` - 获取所有模板
+- `GET /api/templates/current` - 获取当前模板
+- `GET /api/templates/<template_id>` - 获取指定模板
+- `POST /api/templates` - 创建模板
+- `PUT /api/templates/<template_id>` - 更新模板
+- `DELETE /api/templates/<template_id>` - 删除模板
+- `PUT /api/templates/current` - 设置当前模板
+
+### 3. 会议管理API
+
+- `GET /api/meetings` - 获取所有会议
+- `GET /api/meetings/<meeting_id>` - 获取指定会议
+- `POST /api/meetings` - 创建会议
+- `PUT /api/meetings/<meeting_id>` - 更新会议
+- `DELETE /api/meetings/<meeting_id>` - 删除会议
+- `POST /api/meetings/<meeting_id>/action_items` - 添加行动项
+
+### 4. 项目管理API
+
+- `GET /api/projects` - 获取所有项目
+- `GET /api/projects/<project_id>` - 获取指定项目
+- `POST /api/projects` - 创建项目
+- `PUT /api/projects/<project_id>` - 更新项目
+- `DELETE /api/projects/<project_id>` - 删除项目
+- `GET /api/projects/<project_id>/tasks` - 获取项目任务
+
+### 5. 知识库API
+
+- `GET /api/knowledge/documents` - 获取所有文档
+- `GET /api/knowledge/documents/<document_id>` - 获取指定文档
+- `POST /api/knowledge/documents` - 创建文档
+- `PUT /api/knowledge/documents/<document_id>` - 更新文档
+- `DELETE /api/knowledge/documents/<document_id>` - 删除文档
+
+### 6. 任务管理API
+
+- `GET /api/tasks` - 获取所有任务
+- `GET /api/tasks/<task_id>` - 获取指定任务
+- `POST /api/tasks` - 创建任务
+- `PUT /api/tasks/<task_id>` - 更新任务
+- `DELETE /api/tasks/<task_id>` - 删除任务
+
+### 7. 日程管理API
+
+- `GET /api/schedules` - 获取所有日程
+- `GET /api/schedules/<schedule_id>` - 获取指定日程
+- `POST /api/schedules` - 创建日程
+- `PUT /api/schedules/<schedule_id>` - 更新日程
+- `DELETE /api/schedules/<schedule_id>` - 删除日程
+
+### 8. 审批流程API
+
+- `GET /api/approval/processes` - 获取审批流程列表
+- `POST /api/approval/processes` - 创建审批流程
+- `GET /api/approval/requests` - 获取审批请求列表
+- `POST /api/approval/requests` - 创建审批请求
+- `POST /api/approval/requests/<request_id>/handle` - 处理审批请求
+
+## 开发指南
+
+### 目录结构
+
+```
+hos_office_platform/
+├── app.py              # 主应用入口
+├── utils/              # 工具模块
+│   ├── api_client.py       # API客户端
+│   ├── report_generator.py  # 报告生成器
+│   ├── template_manager.py  # 模板管理
+│   ├── meeting_manager.py   # 会议管理
+│   ├── project_manager.py   # 项目管理
+│   ├── knowledge_base.py    # 知识库管理
+│   ├── task_manager.py      # 任务管理
+│   ├── schedule_manager.py  # 日程管理
+│   └── approval_manager.py # 审批管理
+├── templates/          # HTML模板
+├── static/             # 静态资源
+│   ├── css/              # 样式文件
+│   ├── js/               # JavaScript文件
+│   └── img/              # 图片资源
+├── workflow_templates.json  # 工作流模板
+├── system_settings.json      # 系统设置
+├── key.txt                   # API密钥
+└── README.md                 # 项目说明
+```
+
+### 添加新模块
+
+1. 在 `utils/` 目录下创建新的模块文件，如 `new_module.py`
+2. 实现模块类，提供所需的功能方法
+3. 在 `app.py` 中导入并初始化模块
+4. 在 `app.py` 中添加相应的API路由
+5. 更新 `templates/index.html` 中添加新模块的导航链接
+6. 在 `static/js/app.js` 中添加新模块的前端逻辑
+
+### 自定义模板
+
+1. 在模板目录中创建新模板文件
+2. 在 `utils/template_manager.py` 中配置模板信息
+3. 更新 `system_settings.json` 中的模板设置
+
+## 系统要求
+
+- Python 3.7+ 
+- Flask 2.0+ 
+- 支持的操作系统：Windows, Linux, macOS
+
+## 许可证
+
+MIT License
+
+## 贡献
+
+欢迎提交Issue和Pull Request！
+
+## 联系方式
+
+- 项目地址：https://github.com/hos-office-platform/hos-office-platform
+- 问题反馈：https://github.com/hos-office-platform/hos-office-platform/issues
+
+## 更新日志
+
+### v1.0.0
+- 初始版本
+- 实现所有核心功能模块
+- 支持PIP安装
+- 提供完整的API文档
+- 支持多种AI API
+
+## 致谢
+
+感谢所有为项目做出贡献的开发者！
