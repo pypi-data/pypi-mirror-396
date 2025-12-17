@@ -1,0 +1,396 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# ---------------------------------------------------------------------------
+# Copyright 2022 Diamond Light Source Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ---------------------------------------------------------------------------
+# Created By  : Tomography Team <scientificsoftware@diamond.ac.uk>
+# Created Date: 22/January/2025
+# version ='0.1'
+# ---------------------------------------------------------------------------
+"""Script that generates YAML pipeline for HTTomo using YAML templates from httomo-backends
+(should be already installed in your environment).
+
+Please run the generator as:
+    python -m yaml_pipelines_generator -i /path/to/pipelines.yml -o /path/to/output/
+"""
+import argparse
+import os
+import ruamel.yaml
+import httomo_backends
+import yaml
+
+
+CS = ruamel.yaml.comments.CommentedSeq  # defaults to block style
+
+
+class SweepRange:
+    """SweepRange class."""
+
+    def __init__(self, start, stop, step):
+        self._start, self._stop, self._step = start, stop, step
+
+
+def __sweeprange_representer(
+    dumper: yaml.SafeDumper, swp: SweepRange
+) -> yaml.nodes.MappingNode:
+    """Represent a sweeprange as a YAML mapping node."""
+    return dumper.represent_mapping(
+        "!SweepRange",
+        {
+            "start": swp._start,
+            "stop": swp._stop,
+            "step": swp._step,
+        },
+    )
+
+
+class SweepManual:
+    """SweepManual class."""
+
+    def __init__(self, lst):
+        self._lst = lst
+
+
+def __sweepmanual_representer(
+    dumper: yaml.SafeDumper, swp: SweepManual
+) -> yaml.nodes.SequenceNode:
+    """Represent a sweepmanual as a YAML sequence node."""
+    return dumper.represent_sequence("!Sweep", swp._lst)
+
+
+def __represent_none(self, data):
+    return self.represent_scalar("tag:yaml.org,2002:null", "null")
+
+
+def yaml_pipelines_generator(
+    path_to_pipelines: str, path_to_httomobackends: str, path_to_output_file: str
+) -> int:
+    """function that builds YAML pipeline using YAML templates from httomo-backends
+
+    Args:
+        path_to_pipelines: path to the YAML file which contains a high-level description of the required pipeline to be built.
+        path_to_httomobackends: path to httomo-backends on the system, where YAML templates stored.
+        path_to_output_file: path to output file with the generated pipeline
+
+    Returns:
+        returns zero if the processing is successful
+    """
+
+    yaml = ruamel.yaml.YAML(typ="rt", pure=True)
+
+    # open YAML file to inspect
+    with open(path_to_pipelines, "r") as file:
+        try:
+            pipeline_file_content = yaml.load(file)
+            # print(f"Loading pipeline: {file.name}") # useful for debugging
+        except OSError as e:
+            print("loading yaml file with methods failed", e)
+
+    with open(path_to_output_file, "w") as f:
+        # a loop over methods in the high-level pipeline file (directive)
+        methods_no = len(pipeline_file_content)
+        pipeline_full = CS()
+        sweep_enabled_range = False
+        sweep_enabled_value = False
+        for i in range(methods_no):
+            method_content = pipeline_file_content[i]
+            method_name = method_content["method"]
+            module_name = method_content["module_path"]
+            if "sweep_parameter" in method_content:
+                sweep_parameter = method_content["sweep_parameter"]
+                if "sweep_start" in method_content:
+                    sweep_start = method_content["sweep_start"]
+                    sweep_stop = method_content["sweep_stop"]
+                    sweep_step = method_content["sweep_step"]
+                    sweep_enabled_range = True
+                else:
+                    sweep_values = method_content["sweep_values"]
+                    sweep_enabled_value = True
+
+            # get the corresponding yaml template from httomo-backends
+            backend_name = module_name[0 : module_name.find(".")]
+            full_path_to_yamls = (
+                path_to_httomobackends
+                + "/yaml_templates/"
+                + backend_name
+                + "/"
+                + module_name
+                + "/"
+                + method_name
+                + ".yaml"
+            )
+            with open(full_path_to_yamls, "r") as stream:
+                try:
+                    yaml_template_method = yaml.load(stream)
+                except OSError as e:
+                    print("loading yaml template failed", e)
+
+            pipeline_full.yaml_set_start_comment(
+                "This pipeline should be supported by the latest developments of HTTomo. Use module load httomo/latest module at Diamond."
+            )
+
+            if "loaders" in module_name:
+                # should be the first method in the list
+                pipeline_full.yaml_set_comment_before_after_key(
+                    i,
+                    "--- Standard tomography loader for NeXus files. ---",
+                    indent=0,
+                )
+                pipeline_full += yaml_template_method
+            elif "rotation" in module_name:
+                pipeline_full.yaml_set_comment_before_after_key(
+                    i,
+                    "--- Center of Rotation auto-finding. Required for reconstruction bellow. ---",
+                    indent=0,
+                )
+                pipeline_full += yaml_template_method
+                pipeline_full[i]["parameters"].yaml_add_eol_comment(
+                    key="ind",
+                    comment="A vertical slice (sinogram) index to calculate CoR, 'mid' can be used for middle",
+                )
+                pipeline_full[i]["parameters"].yaml_add_eol_comment(
+                    key="cor_initialisation_value",
+                    comment="Use if an approximate CoR is known",
+                )
+                pipeline_full[i]["parameters"].yaml_add_eol_comment(
+                    key="average_radius",
+                    comment="Average several sinograms to improve SNR, one can try 3-5 range",
+                )
+                pipeline_full[i]["parameters"].yaml_add_eol_comment(
+                    key="side",
+                    comment="'None' corresponds to fully automated determination, 'left' to the left side, 'right' to the right side.",
+                )
+                pipeline_full[i]["side_outputs"].yaml_add_eol_comment(
+                    key="cor",
+                    comment="An estimated CoR value provided as a side output",
+                )
+                pipeline_full[i]["side_outputs"].yaml_add_eol_comment(
+                    key="overlap",
+                    comment="An overlap to use for converting 360 degrees scan to 180 degrees scan.",
+                )
+            elif "corr" in module_name and "remove_outlier" in method_name:
+                pipeline_full.yaml_set_comment_before_after_key(
+                    i,
+                    "--- Removing unresponsive/dead pixels in the data, aka zingers. Use if sharp streaks are present in the reconstruction. To be applied before normalisation. ---",
+                    indent=0,
+                )
+                pipeline_full += yaml_template_method
+                if pipeline_full[i]["parameters"]["dif"] == "REQUIRED":
+                    # fix for the absent parameter in TomoPy's algorithm
+                    pipeline_full[i]["parameters"]["dif"] = 0.1
+                pipeline_full[i]["parameters"].yaml_add_eol_comment(
+                    key="kernel_size",
+                    comment="The size of the 3D neighbourhood surrounding the voxel. Odd integer.",
+                )
+                pipeline_full[i]["parameters"].yaml_add_eol_comment(
+                    key="dif",
+                    comment="A difference between the outlier value and the median value of neighbouring pixels.",
+                )
+
+            elif "distortion" in method_name:
+                pipeline_full.yaml_set_comment_before_after_key(
+                    i,
+                    "--- Applying optical distortion correction to projections. --- ",
+                    indent=0,
+                )
+                pipeline_full += yaml_template_method
+                pipeline_full[i]["parameters"].yaml_add_eol_comment(
+                    key="metadata_path",
+                    comment="Provide an absolute path to the text file with distortion coefficients.",
+                )
+            elif "data_resampler" in method_name:
+                pipeline_full.yaml_set_comment_before_after_key(
+                    i,
+                    "--- Down/up sampling the data. --- ",
+                    indent=0,
+                )
+                pipeline_full += yaml_template_method
+                pipeline_full[i]["parameters"].yaml_add_eol_comment(
+                    key="newshape",
+                    comment="Provide a new shape for a 2D slice, e.g. [256, 256].",
+                )
+            elif "sino_360_to_180" in method_name:
+                pipeline_full.yaml_set_comment_before_after_key(
+                    i,
+                    "--- Using the overlap and side provided, converting 360 degrees scan to 180 degrees scan. --- ",
+                    indent=0,
+                )
+                pipeline_full += yaml_template_method
+            elif "dark_flat_field_correction" in method_name:
+                pipeline_full.yaml_set_comment_before_after_key(
+                    i,
+                    "--- Flat-field and dark-field projection correction. --- ",
+                    indent=0,
+                )
+                pipeline_full += yaml_template_method
+            elif "minus_log" in method_name:
+                pipeline_full.yaml_set_comment_before_after_key(
+                    i,
+                    "--- Negative log is required for reconstruction to convert raw intensity measurements into the line integrals of attenuation. --- ",
+                    indent=0,
+                )
+                pipeline_full += yaml_template_method
+            elif "phase" in module_name:
+                pipeline_full.yaml_set_comment_before_after_key(
+                    i,
+                    "--- Apply a phase contrast filter to improve image contrast. --- ",
+                    indent=0,
+                )
+                pipeline_full += yaml_template_method
+                pipeline_full[i]["parameters"].yaml_add_eol_comment(
+                    key="ratio_delta_beta",
+                    comment="The ratio of delta/beta for filter strength control. Larger values lead to more smoothing.",
+                )
+                pipeline_full[i]["parameters"].yaml_add_eol_comment(
+                    key="pixel_size",
+                    comment="Detector pixel size (resolution) in MICRON units.",
+                )
+                pipeline_full[i]["parameters"].yaml_add_eol_comment(
+                    key="distance",
+                    comment="Propagation distance of the wavefront from sample to detector in METRE units.",
+                )
+                pipeline_full[i]["parameters"].yaml_add_eol_comment(
+                    key="energy",
+                    comment="Beam energy in keV.",
+                )
+            elif "stripe" in module_name:
+                pipeline_full.yaml_set_comment_before_after_key(
+                    i,
+                    "--- Method to remove stripe artefacts in the data that lead to ring artefacts in the reconstruction. --- ",
+                    indent=0,
+                )
+                pipeline_full += yaml_template_method
+            elif "algorithm" in module_name:
+                pipeline_full.yaml_set_comment_before_after_key(
+                    i,
+                    "--- Reconstruction method. ---",
+                    indent=0,
+                )
+                pipeline_full += yaml_template_method
+                pipeline_full[i]["parameters"].yaml_add_eol_comment(
+                    key="center",
+                    comment="Reference to center of rotation side output above OR a float number.",
+                )
+                pipeline_full[i]["parameters"].yaml_add_eol_comment(
+                    key="detector_pad",
+                    comment="Horizontal detector padding to minimise circle/arc-type artifacts in the reconstruction. Set to 'true' to enable automatic padding or an integer",
+                )
+                pipeline_full[i]["parameters"].yaml_add_eol_comment(
+                    key="recon_mask_radius",
+                    comment="Zero pixels outside the mask-circle radius. Make radius equal to 2.0 to remove the mask effect.",
+                )
+                pipeline_full[i]["parameters"].yaml_add_eol_comment(
+                    key="neglog",
+                    comment="Perform negative log here if it was previously switched off.",
+                )
+                if "algorithm" in pipeline_full[i]["parameters"]:
+                    # fix for a default parameter (None) in TomoPy's algorithm
+                    pipeline_full[i]["parameters"]["algorithm"] = "gridrec"
+                    pipeline_full[i]["parameters"].yaml_add_eol_comment(
+                        key="algorithm",
+                        comment="Select the required algorithm, e.g. 'gridrec'",
+                    )
+            elif "denoise" in module_name:
+                pipeline_full.yaml_set_comment_before_after_key(
+                    i,
+                    "--- Using denoising method to reduce noise. ---",
+                    indent=0,
+                )
+                pipeline_full += yaml_template_method
+            elif "calculate_stats" in method_name:
+                pipeline_full.yaml_set_comment_before_after_key(
+                    i,
+                    "--- Calculate global statistics on the reconstructed volume, required for data rescaling. ---",
+                    indent=0,
+                )
+                pipeline_full += yaml_template_method
+            elif "rescale_to_int" in method_name:
+                pipeline_full.yaml_set_comment_before_after_key(
+                    i,
+                    "--- Rescaling the data using min/max obtained from `calculate_stats`. ---",
+                    indent=0,
+                )
+                pipeline_full += yaml_template_method
+            elif "images" in module_name:
+                pipeline_full.yaml_set_comment_before_after_key(
+                    i,
+                    "--- Saving data into images. ---",
+                    indent=0,
+                )
+                pipeline_full += yaml_template_method
+                pipeline_full[i]["parameters"].yaml_add_eol_comment(
+                    key="file_format",
+                    comment="`tif` or `jpeg` can be used.",
+                )
+            else:
+                pipeline_full.yaml_set_comment_before_after_key(
+                    i,
+                    "--------------------------------------------------------#",
+                    indent=0,
+                )
+                pipeline_full += yaml_template_method
+
+            if sweep_enabled_range:
+                pipeline_full[i]["parameters"][sweep_parameter] = SweepRange(
+                    start=sweep_start, stop=sweep_stop, step=sweep_step
+                )
+                yaml.representer.add_representer(SweepRange, __sweeprange_representer)
+                sweep_enabled_range = False
+            if sweep_enabled_value:
+                pipeline_full[i]["parameters"][sweep_parameter] = SweepManual(
+                    list(sweep_values)
+                )
+                yaml.representer.add_representer(SweepManual, __sweepmanual_representer)
+                sweep_enabled_value = False
+
+        yaml.representer.add_representer(type(None), __represent_none)
+        yaml.dump(pipeline_full, f)
+
+    return 0
+
+
+def get_args():
+    parser = argparse.ArgumentParser(
+        description="Script that generates YAML pipelines for HTTomo "
+        "using YAML templates from httomo-backends."
+    )
+    parser.add_argument(
+        "-i",
+        "--input",
+        type=str,
+        default=None,
+        help="A path to the list of pipelines needed to be built within a yaml file",
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        default="./",
+        help="Full path to the yaml file with the generated pipeline.",
+    )
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    path_to_httomobackends = os.path.dirname(httomo_backends.__file__)
+    args = get_args()
+    path_to_pipelines = args.input
+    path_to_output_file = args.output
+    return_val = yaml_pipelines_generator(
+        path_to_pipelines, path_to_httomobackends, path_to_output_file
+    )
+    if return_val == 0:
+        message_str = f"YAML pipeline {path_to_output_file} has been generated."
+        print(message_str)
