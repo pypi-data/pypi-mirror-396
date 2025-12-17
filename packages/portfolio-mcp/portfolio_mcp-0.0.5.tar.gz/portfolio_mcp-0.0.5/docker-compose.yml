@@ -1,0 +1,31 @@
+# Docker Compose for portfolio-mcp
+#
+# Usage:
+#   docker compose up                    # Run production server
+#   docker compose --profile dev up      # Run development server with hot reload
+#   docker compose build                 # Build all images
+#
+# Environment variables (optional):
+#   PYTHON_VERSION: Python version for images (default: 3.12)
+
+services:
+  # Production server (pulls from GHCR)
+  portfolio-mcp:
+    image: ghcr.io/l4b4r4b4b4/portfolio-mcp:latest
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  # Development server with hot reload
+  dev:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dev
+      args:
+        - PYTHON_VERSION=${PYTHON_VERSION:-3.12}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app/app:ro
+    profiles:
+      - dev
