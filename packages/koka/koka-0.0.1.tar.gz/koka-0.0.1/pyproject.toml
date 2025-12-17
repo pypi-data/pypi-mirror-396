@@ -1,0 +1,89 @@
+[build-system]
+requires = ["uv_build >= 0.9.11, <0.10.0"]
+build-backend = "uv_build"
+
+[project]
+name = "koka"
+version = "0.0.1"
+authors = [
+  { name="HerringtonDarkholme" },
+]
+description = "Algebraic effects for Python - dependency injection and typed error handling inspired by Koka"
+readme = "README.md"
+requires-python = ">=3.13"
+keywords = ["effects", "algebraic-effects", "dependency-injection", "error-handling", "koka", "functional-programming"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+    "Typing :: Typed",
+]
+license = "MIT"
+license-files = ["LICEN[CS]E*"]
+
+[project.urls]
+Homepage = "https://github.com/HerringtonDarkholme/koka"
+Repository = "https://github.com/HerringtonDarkholme/koka"
+Issues = "https://github.com/HerringtonDarkholme/koka/issues"
+Documentation = "https://github.com/HerringtonDarkholme/koka#readme"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "ruff>=0.1.0",
+    "pyright>=1.1.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+]
+ignore = []
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]  # Allow unused imports in __init__.py
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--verbose",
+    "--cov=koka",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+]
+
+[tool.pyright]
+include = ["src"]
+exclude = [
+    "**/__pycache__",
+    ".venv",
+    "build",
+    "dist",
+]
+pythonVersion = "3.13"
+pythonPlatform = "All"
+typeCheckingMode = "basic"
+reportMissingImports = true
+reportMissingTypeStubs = false
+reportUnusedImport = true
+reportUnusedClass = true
+reportUnusedFunction = true
+reportUnusedVariable = true
+reportDuplicateImport = true
