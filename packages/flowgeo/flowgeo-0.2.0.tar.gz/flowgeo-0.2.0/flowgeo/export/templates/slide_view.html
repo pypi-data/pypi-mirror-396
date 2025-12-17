@@ -1,0 +1,729 @@
+<!--
+    FlowGeo Jinja2 Template File
+    This file contains Jinja2 template syntax that will be rendered by Python.
+    VSCode CSS/JS linter errors about template syntax can be safely ignored.
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - FlowGeo</title>
+
+    {% if use_local_resources %}
+    <!-- 本地静态资源（离线模式） -->
+    <script>
+{{ local_plotly_js }}
+    </script>
+    {% if local_polyfill_js %}
+    <script>
+{{ local_polyfill_js }}
+    </script>
+    {% endif %}
+    <script id="MathJax-script">
+{{ local_mathjax_js }}
+    </script>
+    {% else %}
+    <!-- CDN资源（在线模式） -->
+    <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    {% endif %}
+
+    <!-- 自定义转场动画 CSS -->
+    {% if use_custom_transitions %}
+    <style>
+{{ transitions_css_content }}
+    </style>
+    {% endif %}
+    
+    <!-- 专业转场动画 CSS -->
+    {% if use_pro_transitions %}
+    <style>
+{{ pro_transitions_css_content }}
+    </style>
+    {% endif %}
+
+    <!-- 专业覆盖淡出转场 CSS（Glass Cover Fade） -->
+    {% if use_pro_cover_transitions %}
+    <style>
+{{ pro_cover_transitions_css_content }}
+    </style>
+    {% endif %}
+
+    <!-- PPT风格转场 CSS（全新专业转场系统） -->
+    {% if use_ppt_transitions %}
+    <style>
+{{ ppt_transitions_css_content }}
+    </style>
+    {% endif %}
+    
+    <style>
+        /* 全局重置和基础样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: {{ theme.background_color }};
+            color: {{ theme.text_color }};
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* 主图表容器 - 强制全屏 */
+        #plot-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            background-color: {{ theme.background_color }};
+        }
+
+        /* HUD 覆盖层 */
+        .hud-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+            pointer-events: none; /* 允许鼠标事件穿透到 3D 图表 */
+        }
+
+        /* HUD 项目基础样式 */
+        .hud-item {
+            position: absolute;
+            background: {{ theme.hud_background }};
+            border: 1px solid {{ theme.hud_border }};
+            border-radius: {{ theme.hud_border_radius }};
+            padding: {{ theme.hud_padding }};
+            backdrop-filter: {{ theme.hud_backdrop_filter }};
+            -webkit-backdrop-filter: {{ theme.hud_backdrop_filter }}; /* Safari 兼容 */
+            color: {{ theme.hud_text_color }};
+            font-size: 16px;
+            line-height: 1.6;
+            max-width: 450px;
+            word-wrap: break-word;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            pointer-events: auto; /* HUD 项目本身可以接收鼠标事件 */
+        }
+
+        /* HUD 位置类 */
+        .position-top-left {
+            top: 20px;
+            left: 20px;
+        }
+
+        .position-top-right {
+            top: 20px;
+            right: 20px;
+        }
+
+        .position-bottom-left {
+            bottom: 80px; /* 为幻灯片计数器留出空间 */
+            left: 20px;
+        }
+
+        .position-bottom-right {
+            bottom: 80px;
+            right: 20px;
+        }
+
+        .position-center {
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        /* 幻灯片计数器 */
+        .slide-counter {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 1001;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 控制提示 */
+        .controls-hint {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 1001;
+            opacity: 0.9;
+            transition: opacity 0.5s ease;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        /* 动画效果 */
+        .fade-in {
+            animation: fadeIn 0.6s ease-in-out;
+        }
+
+        .slide-in {
+            animation: slideIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* LaTeX 公式样式优化 */
+        .MathJax {
+            font-size: 1.1em !important;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .hud-item {
+                max-width: calc(100vw - 40px);
+                font-size: 14px;
+                padding: 12px;
+            }
+
+            .position-top-left,
+            .position-top-right,
+            .position-bottom-left,
+            .position-bottom-right {
+                left: 10px;
+                right: 10px;
+                max-width: none;
+            }
+
+            .position-top-right {
+                left: auto;
+                right: 10px;
+            }
+
+            .position-bottom-right {
+                left: auto;
+                right: 10px;
+            }
+        }
+
+        /* 加载动画 */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: {{ theme.text_color }};
+            font-size: 18px;
+            z-index: 2000;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid {{ theme.accent_blue }};
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 加载提示 -->
+    <div id="loading" class="loading">正在加载演示...</div>
+
+    <!-- 主图表容器 -->
+    <div id="plot-container"></div>
+
+    <!-- 幻灯片计数器 -->
+    <div class="slide-counter">
+        <span id="current-slide">1</span> / <span id="total-slides">{{ slide_count }}</span>
+    </div>
+
+    <!-- 控制提示 -->
+    <div class="controls-hint">
+        翻页：空格键(下一页) Backspace(上一页) | 相机：← → (旋转) ↑ ↓ (俯仰) | 缩放：鼠标滚轮 | 重置：Esc
+    </div>
+
+    <!-- HUD 覆盖层 -->
+    <div id="hud-overlay" class="hud-overlay"></div>
+
+    <!-- 自定义幻灯片动画控制器 -->
+    {% if use_custom_animator %}
+    <script>
+{{ animator_js_content }}
+    </script>
+    {% endif %}
+    
+
+    <script>
+        // MathJax 配置
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true,
+                processEnvironments: true
+            },
+            options: {
+                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+                ignoreHtmlClass: 'tex2jax_ignore',
+                processHtmlClass: 'tex2jax_process'
+            },
+            svg: {
+                fontCache: 'global',
+                displayAlign: 'center'
+            }
+        };
+
+        // 全局变量
+        const slidesData = {{ slides_data | safe }};
+        let currentSlideIndex = -1;  // 改为-1，与SlideAnimator保持一致
+        let isTransitioning = false;
+
+        // 初始化动画控制器（如果可用）
+        let slideAnimator = null;
+
+        {% if use_custom_animator %}
+        if (typeof SlideAnimator !== 'undefined') {
+            slideAnimator = new SlideAnimator('plot-container');
+            slideAnimator.init(slidesData);
+            
+            // 设置数据更新回调：在云雾遮挡期间更新HUD和页码
+            slideAnimator.onDataUpdated = function() {
+                updateHUD();
+                updateSlideCounter();
+            };
+        }
+        {% endif %}
+
+        // 初始化 Plotly 图表
+        function initPlot() {
+            const slide = slidesData[currentSlideIndex];
+
+            // 隐藏加载提示
+            document.getElementById('loading').style.display = 'none';
+
+            // 创建 Plotly 图表
+            Plotly.newPlot('plot-container', slide.traces, slide.layout, {
+                displayModeBar: false,  // 隐藏工具栏
+                responsive: true,       // 响应式
+                doubleClick: 'reset',   // 双击重置视角
+                scrollZoom: true,       // 允许滚轮缩放
+                showTips: false         // 隐藏提示
+            }).then(() => {
+                // 图表创建完成后更新 HUD
+                updateHUD();
+                updateSlideCounter();
+            });
+        }
+
+        // 更新 HUD 显示
+        function updateHUD() {
+            const slide = slidesData[currentSlideIndex];
+            const hudOverlay = document.getElementById('hud-overlay');
+
+            // 清空现有 HUD
+            hudOverlay.innerHTML = '';
+
+            if (!slide.hud_data || slide.hud_data.length === 0) {
+                return;
+            }
+
+            // 按位置分组 HUD 项目
+            const hudByPosition = {};
+
+            slide.hud_data.forEach(item => {
+                const position = item.position || 'top_right';
+                if (!hudByPosition[position]) {
+                    hudByPosition[position] = [];
+                }
+                hudByPosition[position].push(item);
+            });
+
+            // 为每个位置创建 HUD 容器
+            Object.keys(hudByPosition).forEach(position => {
+                const container = document.createElement('div');
+                container.className = `hud-item position-${position.replace('_', '-')}`;
+
+                // 添加动画类
+                const animation = hudByPosition[position][0].animation || 'fade_in';
+                container.classList.add(animation.replace('_', '-'));
+
+                // 合并同位置的内容
+                const content = hudByPosition[position]
+                    .map(item => item.content)
+                    .join('<br><br>');
+
+                container.innerHTML = content;
+                hudOverlay.appendChild(container);
+            });
+
+            // 重新渲染 MathJax
+            if (window.MathJax && window.MathJax.typesetPromise) {
+                MathJax.typesetPromise([hudOverlay]).catch(err => {
+                    console.warn('MathJax 渲染错误:', err);
+                });
+            }
+        }
+
+        // 更新幻灯片计数器
+        function updateSlideCounter() {
+            document.getElementById('current-slide').textContent = currentSlideIndex + 1;
+            document.getElementById('total-slides').textContent = slidesData.length;
+        }
+
+        // --- 核心切换逻辑：优先使用 SlideAnimator ---
+        function goToSlide(index) {
+            // 使用新的 SlideAnimator（如果可用）
+            if (slideAnimator) {
+                // 同步状态到HTML全局变量
+                currentSlideIndex = index;
+                isTransitioning = true;
+                
+                slideAnimator.goToSlide(index)
+                    .then(() => {
+                        // 注意：HUD和页码已经在 onDataUpdated 回调中更新了
+                        isTransitioning = false;
+                    })
+                    .catch(err => {
+                        isTransitioning = false;
+                        if (err !== 'Invalid slide index' && err !== 'Animation in progress') {
+                            console.error('幻灯片切换错误:', err);
+                        }
+                    });
+                return;
+            }
+
+            // 回退到旧的切换逻辑（兼容性）
+            if (index >= 0 && index < slidesData.length && index !== currentSlideIndex && !isTransitioning) {
+                isTransitioning = true;
+                const prevIndex = currentSlideIndex;
+                currentSlideIndex = index;
+                const slide = slidesData[index];
+                const prevSlide = prevIndex >= 0 ? slidesData[prevIndex] : null;
+
+                // 读取动画配置 (兼容旧结构)
+                const animConfig = slide.animation || {};
+                const transition = animConfig.transition || slide.transition_config || { duration: 500 };
+                const cameraAnim = animConfig.camera || { duration: 1500, easing: 'cubic-in-out' };
+
+                const plotContainer = document.getElementById('plot-container');
+                const newLayout = JSON.parse(JSON.stringify(slide.layout));
+                const targetCamera = newLayout.scene && newLayout.scene.camera;
+
+                // 1. 如果是第一张，直接绘制
+                if (!prevSlide) {
+                    Plotly.newPlot('plot-container', slide.traces, newLayout, {displayModeBar: false, responsive: true})
+                    .then(() => {
+                        updateHUD();
+                        updateSlideCounter();
+                        isTransitioning = false;
+                    });
+                    return;
+                }
+
+                // 2. 运镜处理：锁定旧视角 -> 更新数据 -> 飞向新视角
+
+                // A. 抓取当前真实视角
+                let currentCamera = null;
+                try {
+                    currentCamera = plotContainer._fullLayout.scene.camera;
+                } catch(e) {
+                    console.warn("无法获取当前相机位置", e);
+                }
+
+                // B. 强制新 Layout 使用旧视角 (防止画面跳变)
+                if (currentCamera && newLayout.scene) {
+                    newLayout.scene.camera = currentCamera;
+                }
+
+                // C. 更新数据 (React 模式)
+                Plotly.react('plot-container', slide.traces, newLayout, {displayModeBar: false, responsive: true})
+                .then(() => {
+                    // D. 执行飞行 (Relayout)
+                    if (targetCamera) {
+                        Plotly.relayout('plot-container', { 'scene.camera': targetCamera }, {
+                            transition: { duration: cameraAnim.duration, easing: cameraAnim.easing },
+                            frame: { duration: cameraAnim.duration, redraw: false }
+                        }).then(() => {
+                            isTransitioning = false;
+                        });
+                    } else {
+                        isTransitioning = false;
+                    }
+
+                    // 更新 HUD 和计数器
+                    updateHUD();
+                    updateSlideCounter();
+                })
+                .catch(err => {
+                    console.error('幻灯片切换错误:', err);
+                    isTransitioning = false;
+                });
+            }
+        }
+
+        // 下一张幻灯片
+        function nextSlide() {
+            if (currentSlideIndex < slidesData.length - 1) {
+                goToSlide(currentSlideIndex + 1);
+            }
+        }
+
+        // 上一张幻灯片
+        function prevSlide() {
+            if (currentSlideIndex > 0) {
+                goToSlide(currentSlideIndex - 1);
+            }
+        }
+
+        // 相机控制函数
+        function rotateCamera(angleStep) {
+            const currentCamera = slidesData[currentSlideIndex].layout.scene.camera;
+            const eye = currentCamera.eye;
+            const center = currentCamera.center;
+
+            // 计算当前相机相对于中心的位置
+            const dx = eye.x - center.x;
+            const dy = eye.y - center.y;
+            const dz = eye.z - center.z;
+
+            // 绕Z轴旋转
+            const angle = angleStep * Math.PI / 180; // 转换为弧度
+            const cos_a = Math.cos(angle);
+            const sin_a = Math.sin(angle);
+
+            const new_dx = dx * cos_a - dy * sin_a;
+            const new_dy = dx * sin_a + dy * cos_a;
+
+            const newCamera = {
+                eye: {
+                    x: center.x + new_dx,
+                    y: center.y + new_dy,
+                    z: eye.z
+                },
+                center: center,
+                up: currentCamera.up,
+                projection: currentCamera.projection
+            };
+
+            // 平滑更新相机
+            Plotly.relayout('plot-container', {
+                'scene.camera': newCamera
+            });
+
+            // 更新当前幻灯片的相机配置
+            slidesData[currentSlideIndex].layout.scene.camera = newCamera;
+        }
+
+        function adjustElevation(angleStep) {
+            const currentCamera = slidesData[currentSlideIndex].layout.scene.camera;
+            const eye = currentCamera.eye;
+            const center = currentCamera.center;
+
+            // 计算当前相机相对于中心的位置
+            const dx = eye.x - center.x;
+            const dy = eye.y - center.y;
+            const dz = eye.z - center.z;
+
+            // 计算当前距离和角度
+            const distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
+            const currentElevation = Math.asin(dz / distance);
+
+            // 调整俯仰角
+            const newElevation = Math.max(-Math.PI/2 + 0.1, Math.min(Math.PI/2 - 0.1,
+                currentElevation + angleStep * Math.PI / 180));
+
+            // 计算水平距离
+            const horizontalDistance = distance * Math.cos(newElevation);
+            const azimuth = Math.atan2(dy, dx);
+
+            const newCamera = {
+                eye: {
+                    x: center.x + horizontalDistance * Math.cos(azimuth),
+                    y: center.y + horizontalDistance * Math.sin(azimuth),
+                    z: center.z + distance * Math.sin(newElevation)
+                },
+                center: center,
+                up: currentCamera.up,
+                projection: currentCamera.projection
+            };
+
+            // 平滑更新相机
+            Plotly.relayout('plot-container', {
+                'scene.camera': newCamera
+            });
+
+            // 更新当前幻灯片的相机配置
+            slidesData[currentSlideIndex].layout.scene.camera = newCamera;
+        }
+
+        // 键盘事件处理 - 大改版
+        document.addEventListener('keydown', function(event) {
+            // 防止在转换过程中响应按键
+            if (isTransitioning) return;
+
+            switch(event.key) {
+                // 翻页逻辑：仅保留 Space 和 Backspace
+                case ' ':
+                    event.preventDefault();
+                    nextSlide();
+                    break;
+                case 'Backspace':
+                    event.preventDefault();
+                    prevSlide();
+                    break;
+
+                // 相机控制逻辑
+                case 'ArrowLeft':
+                    event.preventDefault();
+                    rotateCamera(-10); // 绕Z轴逆时针旋转10度
+                    break;
+                case 'ArrowRight':
+                    event.preventDefault();
+                    rotateCamera(10); // 绕Z轴顺时针旋转10度
+                    break;
+                case 'ArrowUp':
+                    event.preventDefault();
+                    adjustElevation(10); // 提高俯仰角10度
+                    break;
+                case 'ArrowDown':
+                    event.preventDefault();
+                    adjustElevation(-10); // 降低俯仰角10度
+                    break;
+
+                // 快捷跳转
+                case 'Home':
+                    event.preventDefault();
+                    goToSlide(0);
+                    break;
+                case 'End':
+                    event.preventDefault();
+                    goToSlide(slidesData.length - 1);
+                    break;
+                case 'Escape':
+                    // 重置 3D 视角到原始状态
+                    const originalCamera = JSON.parse(JSON.stringify(slidesData[currentSlideIndex].layout.scene.camera));
+                    Plotly.relayout('plot-container', {
+                        'scene.camera': originalCamera
+                    });
+                    break;
+            }
+        });
+
+        // 鼠标滚轮专用于缩放，不用于翻页
+        // Plotly 会自动处理滚轮缩放，这里不需要额外代码
+
+        // 触摸事件支持（移动设备）
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        document.addEventListener('touchstart', function(event) {
+            touchStartX = event.touches[0].clientX;
+            touchStartY = event.touches[0].clientY;
+        }, { passive: true });
+
+        document.addEventListener('touchend', function(event) {
+            if (isTransitioning) return;
+
+            const touchEndX = event.changedTouches[0].clientX;
+            const touchEndY = event.changedTouches[0].clientY;
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = touchEndY - touchStartY;
+
+            // 水平滑动距离大于垂直滑动距离，且超过阈值
+            if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+                if (deltaX > 0) {
+                    prevSlide(); // 向右滑动，上一张
+                } else {
+                    nextSlide(); // 向左滑动，下一张
+                }
+            }
+        }, { passive: true });
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 检查数据有效性
+            if (!slidesData || slidesData.length === 0) {
+                document.getElementById('loading').textContent = '没有幻灯片数据';
+                return;
+            }
+
+            // 使用SlideAnimator时，通过goToSlide(0)初始化
+            if (slideAnimator) {
+                // 先隐藏加载提示
+                document.getElementById('loading').style.display = 'none';
+                goToSlide(0);
+            } else {
+                // 回退到旧的初始化方式
+                currentSlideIndex = 0;
+                initPlot();
+            }
+
+            // 隐藏控制提示（5秒后）
+            setTimeout(() => {
+                const hint = document.querySelector('.controls-hint');
+                if (hint) {
+                    hint.style.opacity = '0';
+                    setTimeout(() => hint.remove(), 500);
+                }
+            }, 5000);
+        });
+
+        // 窗口大小改变时重新调整
+        window.addEventListener('resize', function() {
+            if (document.getElementById('plot-container')) {
+                Plotly.Plots.resize('plot-container');
+            }
+        });
+
+        // 错误处理
+        window.addEventListener('error', function(event) {
+            console.error('页面错误:', event.error);
+        });
+    </script>
+</body>
+</html>
