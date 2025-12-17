@@ -1,0 +1,123 @@
+Metadata-Version: 2.1
+Name: thornode-py
+Version: 0.0.3
+Summary: Python client for THORNode API
+Home-page: https://github.com/jpleorx/thornode-py
+Author: Leo Ertuna
+Author-email: leo.ertuna@gmail.com
+License: Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International Public License
+Download-URL: https://pypi.org/project/thornode-py/
+Platform: UNKNOWN
+Description-Content-Type: text/markdown
+License-File: LICENSE.txt
+Requires-Dist: pydantic
+Requires-Dist: requests
+
+# Introduction
+Python client for THORNode API
+
+THORChain has several APIs - Midgard, THORNode, Cosmos RPC, CometBFT RPC. This python client focuses on interactions with the basic THORNode API.
+
+Built for API version 3.14.0.
+
+[API Swagger Docs](https://thornode.ninerealms.com/thorchain/doc)
+
+# Progress
+
+Below is the implementation status of the major sections of THORNode API in this Python client:
+
+| Section             | Implemented | Notes                                           |
+|---------------------|-----------|-------------------------------------------------|
+| Auth                | ✅         |                                                 |
+| Bank                | ✅         |                                                 |
+| Health              | ✅         |                                                 |
+| Pools               | ✅         |                                                 |
+| Pool Slip           | ✅         |                                                 |
+| Liquidity Providers | ✅        |                                                 |
+| Codes               |           | Not supported in current API                    |
+| Oracle              | ✅        |                                                 |
+| TCY Stakers         | ✅        |                                                 |
+| TCY Claimers        | ✅        |                                                 |
+| RUNE Pool           | ✅        |                                                 |
+| Savers              | ✅        |                                                 |
+| Borrowers           | ✅        |                                                 |
+| Transactions        | ✅        |                                                 |
+| Nodes               | ✅        |                                                 |
+| Vaults              | ✅        |                                                 |
+| Network             |          | Partially implemented                           |
+| Streaming Swap      | ✅        |                                                 |
+| Clout               |           |                                                 |
+| Trade Unit          | ✅        |                                                 |
+| Trade Account       |           |                                                 |
+| Secured Assets      | ✅        |                                                 |
+| Swap                | ✅        |                                                 |
+| Queue               |          | Partially implemented                           |
+| TSS                 |           |                                                 |
+| Thornames           | ✅         |                                                 |
+| Mimir               |           |                                                 |
+| Quote               | ✅         | Loan & saver features not active in current API |
+| Invariants          | ✅         |                                                 |
+| Block               | ✅         |                                                 |
+| Export              |           | Not supported in current API                    |
+
+If you notice any discrepancy or want a section prioritized, please open an issue or PR.
+
+# TODOs
+- Exceptions handling and keeping API response's error message
+- More detailed tests
+- Fill in missing endpoints in partially implemented sections
+
+# Installation
+
+## Normal installation
+
+```bash
+pip install thornode-py
+```
+
+## Development installation
+
+```bash
+git clone https://github.com/jpleorx/thornode-py.git
+cd thornode-py
+pip install --editable .
+```
+
+# Usage
+
+```python
+from thornode_py import THORNodeAPI
+
+api = THORNodeAPI()
+
+# Check that it's online
+ping = api.ping()
+
+# Check API version
+version = api.version()
+
+# Get nodes
+nodes = api.nodes()
+
+# Get pools
+pools = api.pools()
+
+# Get thorname
+thorname = api.thorname("example")
+
+# Get swap quote
+quote = api.quote_swap(
+    from_asset="BTC.BTC",
+    to_asset="ETH.ETH",
+    amount=100000,
+    destination="0x1c7b17362c84287bd1184447e6dfeaf920c31bbe",
+)
+```
+
+# Links
+In case you’d like to check my other work or contact me:
+* E-mail: [leo.ertuna@gmail.com](mailto:leo.ertuna@gmail.com)
+* [GitHub](https://github.com/jpleorx)
+* [PyPI](https://pypi.org/user/JPLeoRX/)
+* [DockerHub](https://hub.docker.com/u/jpleorx)
+
