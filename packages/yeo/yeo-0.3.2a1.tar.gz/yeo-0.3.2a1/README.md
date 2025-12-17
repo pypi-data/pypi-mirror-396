@@ -1,0 +1,33 @@
+# Yeo
+
+https://github.com/user-attachments/assets/7d1d95fe-e0be-482b-b265-462f2e0cd696
+
+Yeo is a declarative dotfiles snapshot tool built in Python with zero third-party dependencies.
+
+Yeo allows you to copy your dotfiles, or any set of specified files, into a different directory and keep them in sync by running the `sync` command. Your dotfiles snapshot can then be used with a VCS, uploaded to GitHub, etc.
+
+## Using Yeo
+
+Yeo is still a WIP.
+
+### Prerequisites
+
+While yeo is in active development and using a pre-release model, we recommend testing it out by using [uv](https://docs.astral.sh/uv/) and `uvx`. 
+
+1. Create a directory for your dotfiles to be managed.
+2. Run `uvx yeo init` from inside of the directory. This will create a `yeo.json` file.
+3. Open the `yeo.json` file and replace the specified paths with your desired dotfiles. Paths assume a starting `~/` directory and work from there.
+4. Run `uvx yeo sync` to sync your dotfiles.
+
+That's it!
+
+## Contributing
+
+I am using [uv](https://docs.astral.sh/uv/) to develop Yeo. If you would like to contribute, please: 
+
+1. Clone the Git repository
+2. Create a new branch with your changes
+3. Make changes
+3. Open a pull request
+
+Thank you!
