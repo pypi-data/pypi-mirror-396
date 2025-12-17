@@ -1,0 +1,102 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Dry run (no publish)
+        required: false
+        default: false
+        type: boolean
+      pre_release:
+        description: Mark as pre-release
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  quality:
+    name: Quality
+    uses: ./.github/workflows/_quality_checks.yaml
+
+  release:
+    name: Release to PyPI
+    needs: quality
+    runs-on: ubuntu-latest
+    concurrency: release
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Determine version
+        id: version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(uv run semantic-release version --print 2>/dev/null || echo "")
+          if [ -n "$VERSION" ]; then
+            echo "new=true" >> $GITHUB_OUTPUT
+            echo "number=$VERSION" >> $GITHUB_OUTPUT
+            echo "New version: $VERSION"
+          else
+            echo "new=false" >> $GITHUB_OUTPUT
+            echo "No releasable commits"
+          fi
+
+      - name: Bump version, commit, and tag
+        if: steps.version.outputs.new == 'true' && inputs.dry_run == false
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: uv run semantic-release version --no-push
+
+      - name: Build package
+        if: steps.version.outputs.new == 'true'
+        run: uv build
+
+      - name: Publish to PyPI
+        if: steps.version.outputs.new == 'true' && inputs.dry_run == false
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+      - name: Push to GitHub
+        if: steps.version.outputs.new == 'true' && inputs.dry_run == false
+        run: git push origin main --follow-tags
+
+      - name: Create GitHub release
+        if: steps.version.outputs.new == 'true' && inputs.dry_run == false
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v${{ steps.version.outputs.number }}" \
+            --title "v${{ steps.version.outputs.number }}" \
+            --generate-notes \
+            ${{ inputs.pre_release && '--prerelease' || '' }} \
+            dist/*
+
+      - name: Summary
+        run: |
+          if [ "${{ steps.version.outputs.new }}" == "true" ]; then
+            if [ "${{ inputs.dry_run }}" == "true" ]; then
+              echo "Dry run: would release v${{ steps.version.outputs.number }}"
+            else
+              echo "Released v${{ steps.version.outputs.number }}"
+            fi
+          else
+            echo "No release needed"
+          fi
