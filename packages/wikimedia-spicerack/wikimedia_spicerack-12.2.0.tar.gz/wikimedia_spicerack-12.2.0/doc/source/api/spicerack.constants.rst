@@ -1,0 +1,4 @@
+constants
+=========
+
+.. automodule:: spicerack.constants

@@ -1,0 +1,4 @@
+mediawiki
+=========
+
+.. automodule:: spicerack.mediawiki

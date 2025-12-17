@@ -1,0 +1,4 @@
+interactive
+===========
+
+.. automodule:: spicerack.interactive

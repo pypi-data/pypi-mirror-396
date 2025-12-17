@@ -1,0 +1,4 @@
+debmonitor
+==========
+
+.. automodule:: spicerack.debmonitor

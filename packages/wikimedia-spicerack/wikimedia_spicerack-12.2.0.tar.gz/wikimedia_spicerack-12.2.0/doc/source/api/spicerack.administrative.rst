@@ -1,0 +1,4 @@
+administrative
+==============
+
+.. automodule:: spicerack.administrative

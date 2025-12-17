@@ -1,0 +1,4 @@
+puppet
+======
+
+.. automodule:: spicerack.puppet

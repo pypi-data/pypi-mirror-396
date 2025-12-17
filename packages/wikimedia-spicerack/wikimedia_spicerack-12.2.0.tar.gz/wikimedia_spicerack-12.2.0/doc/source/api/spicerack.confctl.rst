@@ -1,0 +1,4 @@
+confctl
+=======
+
+.. automodule:: spicerack.confctl

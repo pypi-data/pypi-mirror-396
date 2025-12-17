@@ -1,0 +1,4 @@
+ipmi
+====
+
+.. automodule:: spicerack.ipmi

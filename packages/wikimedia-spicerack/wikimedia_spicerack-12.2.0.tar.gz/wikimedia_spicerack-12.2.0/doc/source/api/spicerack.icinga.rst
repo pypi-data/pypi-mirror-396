@@ -1,0 +1,4 @@
+icinga
+======
+
+.. automodule:: spicerack.icinga

@@ -1,0 +1,4 @@
+typing
+======
+
+.. automodule:: spicerack.typing
