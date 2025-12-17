@@ -1,0 +1,199 @@
+Metadata-Version: 2.4
+Name: pyserde
+Version: 0.27.0
+Summary: Yet another serialization library on top of dataclasses
+Project-URL: Repository, https://github.com/yukinarit/pyserde
+Project-URL: Homepage, https://github.com/yukinarit/pyserde
+Author-email: yukinarit <yukinarit84@gmail.com>
+License: MIT License
+        
+        Copyright (c) 2021 yukinarit
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+License-File: LICENSE
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
+Classifier: Programming Language :: Python :: Implementation :: CPython
+Classifier: Programming Language :: Python :: Implementation :: PyPy
+Requires-Python: <4.0,>=3.10
+Requires-Dist: beartype>=0.18.4
+Requires-Dist: casefy
+Requires-Dist: jinja2
+Requires-Dist: plum-dispatch>=2.3
+Requires-Dist: typing-extensions<4.16.0,>=4.1.0
+Requires-Dist: typing-inspect>=0.4.0
+Provides-Extra: all
+Requires-Dist: jaxtyping<0.3.0; extra == 'all'
+Requires-Dist: msgpack; extra == 'all'
+Requires-Dist: numpy<3.0.0,>1.22.0; extra == 'all'
+Requires-Dist: orjson; extra == 'all'
+Requires-Dist: pyyaml; extra == 'all'
+Requires-Dist: sqlalchemy>2; extra == 'all'
+Requires-Dist: tomli-w; extra == 'all'
+Requires-Dist: tomli; (python_version < '3.11') and extra == 'all'
+Provides-Extra: jaxtyping
+Requires-Dist: jaxtyping<0.3.0; extra == 'jaxtyping'
+Provides-Extra: msgpack
+Requires-Dist: msgpack; extra == 'msgpack'
+Provides-Extra: numpy
+Requires-Dist: numpy<3.0.0,>1.22.0; extra == 'numpy'
+Provides-Extra: orjson
+Requires-Dist: orjson; extra == 'orjson'
+Provides-Extra: sqlalchemy
+Requires-Dist: sqlalchemy>2; extra == 'sqlalchemy'
+Provides-Extra: toml
+Requires-Dist: tomli-w; extra == 'toml'
+Requires-Dist: tomli; (python_version < '3.11') and extra == 'toml'
+Provides-Extra: yaml
+Requires-Dist: pyyaml; extra == 'yaml'
+Description-Content-Type: text/markdown
+
+<h1 align="center"><code>pyserde</code></h1>
+<p align="center">Yet another serialization library on top of <a href="https://docs.python.org/3/library/dataclasses.html">dataclasses</a>, inspired by <a href="https://github.com/serde-rs/serde">serde-rs</a>.</p>
+<p align="center">
+  <a href="https://pypi.org/project/pyserde/">
+    <img alt="pypi" src="https://img.shields.io/pypi/v/pyserde.svg">
+  </a>
+  <a href="https://pypi.org/project/pyserde/">
+    <img alt="pypi" src="https://img.shields.io/pypi/pyversions/pyserde.svg">
+  </a>
+  <a href="https://github.com/yukinarit/pyserde/actions/workflows/test.yml">
+    <img alt="GithubActions" src="https://github.com/yukinarit/pyserde/actions/workflows/test.yml/badge.svg">
+  </a>
+  <a href="https://codecov.io/gh/yukinarit/pyserde">
+    <img alt="CodeCov" src="https://codecov.io/gh/yukinarit/pyserde/branch/main/graph/badge.svg">
+  </a>
+</p>
+<p align="center">
+  <a href="https://yukinarit.github.io/pyserde/guide/en">Guide🇬🇧</a> | <a href="https://yukinarit.github.io/pyserde/guide/ja">ガイド🇯🇵</a> | <a href="https://yukinarit.github.io/pyserde/api/serde.html">API Reference</a> | <a href="https://github.com/yukinarit/pyserde/tree/main/examples">Examples</a>
+</p>
+
+## Overview
+
+`pyserde` is a simple yet powerful serialization library on top of [dataclasses](https://docs.python.org/3/library/dataclasses.html). It allows you to convert Python objects to and from JSON, YAML, and other formats easily and efficiently.
+
+Declare your class with `@serde` decorator and annotate fields using [PEP484](https://peps.python.org/pep-0484/) as below.
+
+```python
+@serde
+class Foo:
+    i: int
+    s: str
+    f: float
+    b: bool
+```
+
+You can serialize `Foo` object into JSON.
+
+```python
+>>> to_json(Foo(i=10, s='foo', f=100.0, b=True))
+'{"i":10,"s":"foo","f":100.0,"b":true}'
+```
+
+You can deserialize JSON into `Foo` object.
+```python
+>>> from_json(Foo, '{"i": 10, "s": "foo", "f": 100.0, "b": true}')
+Foo(i=10, s='foo', f=100.0, b=True)
+```
+
+That's it!  If you're interested in pyserde, please check our documentation!
+Happy coding with pyserde! 🚀
+* [Getting started](https://yukinarit.github.io/pyserde/guide/en/getting-started.html)
+* [API Reference](https://yukinarit.github.io/pyserde/api/serde.html)
+* [Examples](https://github.com/yukinarit/pyserde/tree/main/examples)
+
+## Features
+
+- Supported data formats
+    - dict
+    - tuple
+    - JSON
+	- Yaml
+	- Toml
+	- MsgPack
+    - Pickle
+- Supported types
+    - Primitives (`int`, `float`, `str`, `bool`)
+    - Containers
+        - `list`, `collections.abc.Sequence`, `collections.abc.MutableSequence`, `tuple`
+        - `set`, `collections.abc.Set`, `collections.abc.MutableSet`
+        - `dict`, `collections.abc.Mapping`, `collections.abc.MutableMapping`
+        - [`frozenset`](https://docs.python.org/3/library/stdtypes.html#frozenset), [`defaultdict`](https://docs.python.org/3/library/collections.html#collections.defaultdict)
+    - [`typing.Optional`](https://docs.python.org/3/library/typing.html#typing.Optional)
+    - [`typing.Union`](https://docs.python.org/3/library/typing.html#typing.Union)
+    - User defined class with [`@dataclass`](https://docs.python.org/3/library/dataclasses.html)
+    - [`typing.NewType`](https://docs.python.org/3/library/typing.html#newtype) for primitive types
+    - [`typing.Any`](https://docs.python.org/3/library/typing.html#the-any-type)
+    - [`typing.Literal`](https://docs.python.org/3/library/typing.html#typing.Literal)
+    - [`typing.Generic`](https://docs.python.org/3/library/typing.html#user-defined-generic-types)
+    - [`typing.ClassVar`](https://docs.python.org/3/library/typing.html#typing.ClassVar)
+    - [`dataclasses.InitVar`](https://docs.python.org/3/library/dataclasses.html#init-only-variables)
+    - [`Enum`](https://docs.python.org/3/library/enum.html#enum.Enum) and [`IntEnum`](https://docs.python.org/3/library/enum.html#enum.IntEnum)
+    - Standard library
+        - [`pathlib.Path`](https://docs.python.org/3/library/pathlib.html)
+        - [`decimal.Decimal`](https://docs.python.org/3/library/decimal.html)
+        - [`uuid.UUID`](https://docs.python.org/3/library/uuid.html)
+        - [`datetime.date`](https://docs.python.org/3/library/datetime.html#date-objects), [`datetime.time`](https://docs.python.org/3/library/datetime.html#time-objects), [`datetime.datetime`](https://docs.python.org/3/library/datetime.html#datetime-objects)
+        - [`ipaddress`](https://docs.python.org/3/library/ipaddress.html)
+    - PyPI library
+        - [`numpy`](https://github.com/numpy/numpy) types
+        - [`SQLAlchemy`](https://github.com/sqlalchemy/sqlalchemy) Declarative Dataclass Mapping (experimental)
+- [Class Attributes](https://github.com/yukinarit/pyserde/blob/main/docs/en/class-attributes.md)
+- [Field Attributes](https://github.com/yukinarit/pyserde/blob/main/docs/en/field-attributes.md)
+- [Decorators](https://github.com/yukinarit/pyserde/blob/main/docs/en/decorators.md)
+- [Type Check](https://github.com/yukinarit/pyserde/blob/main/docs/en/type-check.md)
+- [Union Representation](https://github.com/yukinarit/pyserde/blob/main/docs/en/union.md)
+- [Forward reference](https://github.com/yukinarit/pyserde/blob/main/docs/en/decorators.md#how-can-i-use-forward-references)
+- [PEP563 Postponed Evaluation of Annotations](https://github.com/yukinarit/pyserde/blob/main/docs/en/decorators.md#pep563-postponed-evaluation-of-annotations)
+- [PEP585 Type Hinting Generics In Standard Collections](https://github.com/yukinarit/pyserde/blob/main/docs/en/getting-started.md#pep585-and-pep604)
+- [PEP604 Allow writing union types as X | Y](https://github.com/yukinarit/pyserde/blob/main/docs/en/getting-started.md#pep585-and-pep604)
+- [PEP681 Data Class Transform](https://github.com/yukinarit/pyserde/blob/main/docs/en/decorators.md#serde)
+- [PEP695 Type Parameter Syntax](https://peps.python.org/pep-0695/)
+- [Case Conversion](https://github.com/yukinarit/pyserde/blob/main/docs/en/class-attributes.md#rename_all)
+- [Rename](https://github.com/yukinarit/pyserde/blob/main/docs/en/field-attributes.md#rename)
+- [Alias](https://github.com/yukinarit/pyserde/blob/main/docs/en/field-attributes.md#alias)
+- Skip (de)serialization ([skip](https://github.com/yukinarit/pyserde/blob/main/docs/en/field-attributes.md#skip), [skip_if](https://github.com/yukinarit/pyserde/blob/main/docs/en/field-attributes.md#skip_if), [skip_if_false](https://github.com/yukinarit/pyserde/blob/main/docs/en/field-attributes.md#skip_if_false), [skip_if_default](https://github.com/yukinarit/pyserde/blob/main/docs/en/field-attributes.md#skip_if_default))
+- [Custom field (de)serializer](https://github.com/yukinarit/pyserde/blob/main/docs/en/field-attributes.md#serializerdeserializer)
+- [Custom class (de)serializer](https://github.com/yukinarit/pyserde/blob/main/docs/en/class-attributes.md#class_serializer--class_deserializer)
+- [Custom global (de)serializer](https://github.com/yukinarit/pyserde/blob/main/docs/en/extension.md#custom-global-deserializer)
+- [Flatten](https://github.com/yukinarit/pyserde/blob/main/docs/en/field-attributes.md#flatten)
+
+## Extensions
+
+* [pyserde-timedelta](https://github.com/yukinarit/pyserde-timedelta): (de)serializing datetime.timedelta in ISO 8601 duration format.
+
+## Contributors ✨
+
+Thanks goes to these wonderful people:
+
+<a href="https://github.com/yukinarit/pyserde/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=yukinarit/pyserde" />
+</a>
+
+Made with [contrib.rocks](https://contrib.rocks).
+
+## LICENSE
+
+This project is licensed under the [MIT license](https://github.com/yukinarit/pyserde/blob/main/LICENSE).
