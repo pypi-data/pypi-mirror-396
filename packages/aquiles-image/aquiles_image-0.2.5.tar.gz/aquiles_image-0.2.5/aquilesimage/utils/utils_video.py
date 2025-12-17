@@ -1,0 +1,65 @@
+import os
+
+os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1" # It's supposed to go faster
+
+from platformdirs import user_data_dir
+from huggingface_hub import hf_hub_download, snapshot_download
+from typing import Literal, Union
+from pathlib import Path
+
+## Constant
+
+AQUILES_VIDEO_BASE_PATH = user_data_dir("aquiles_video", "Aquiles-Image")
+
+os.makedirs(AQUILES_VIDEO_BASE_PATH, exist_ok=True)
+
+BASE_WAN_2_2 = "lightx2v/Wan2.2-Official-Models"
+
+BASE_WAN_2_2_FILE = "wan2.2_ti2v_lightx2v.safetensors"
+
+ENCODER_FILE = "models_t5_umt5-xxl-enc-bf16.pth"
+
+REPO_ID_WAN_2_2_DISTILL = "lightx2v/Wan2.2-Distill-Models"
+
+REPO_ID_WAN_2_2_LI = "lightx2v/Wan2.2-Lightning"
+
+BASE_HY_1_5 = "tencent/HunyuanVideo-1.5"
+
+def download_tokenizers():
+    print(hf_hub_download(repo_id="lightx2v/Encoders", filename="special_tokens_map.json", subfolder="google/umt5-xxl", local_dir=f"{AQUILES_VIDEO_BASE_PATH}/wan_2_2"))
+    print(hf_hub_download(repo_id="lightx2v/Encoders", filename="spiece.model", subfolder="google/umt5-xxl", local_dir=f"{AQUILES_VIDEO_BASE_PATH}/wan_2_2"))
+    print(hf_hub_download(repo_id="lightx2v/Encoders", filename="tokenizer.json", subfolder="google/umt5-xxl", local_dir=f"{AQUILES_VIDEO_BASE_PATH}/wan_2_2"))
+    print(hf_hub_download(repo_id="lightx2v/Encoders", filename="tokenizer_config.json", subfolder="google/umt5-xxl", local_dir=f"{AQUILES_VIDEO_BASE_PATH}/wan_2_2"))
+
+def download_base_wan_2_2():
+    print(f"PATH: {AQUILES_VIDEO_BASE_PATH}/wan_2_2")
+    print(snapshot_download(repo_id="Wan-AI/Wan2.2-T2V-A14B", local_dir=f"{AQUILES_VIDEO_BASE_PATH}/wan_2_2"))
+
+def download_wan_2_2_turbo():
+    print(f"PATH: {AQUILES_VIDEO_BASE_PATH}/wan_2_2_turbo")
+    print(snapshot_download(repo_id="Aquiles-ai/Wan2.2-Turbo", local_dir=f"{AQUILES_VIDEO_BASE_PATH}/wan_2_2_turbo"))
+
+def get_path_file_video_model(name: Literal["wan2.2", "wan2.2-turbo", "hunyuanVideo-1.5"] = "wan2.2"):
+    if name == "wan2.2":
+        return f"{AQUILES_VIDEO_BASE_PATH}/wan_2_2"
+    elif name == "wan2.2-turbo":
+        return f"{AQUILES_VIDEO_BASE_PATH}/wan_2_2_turbo"
+    else:
+        return None
+
+def get_path_save_video(id_video: str):
+    return f"{AQUILES_VIDEO_BASE_PATH}/results/{id_video}.mp4"
+
+def file_exists(path: Union[str, Path, None]) -> bool:
+    if path is None:
+        return False
+
+    p = Path(path).expanduser()
+    if not p.is_absolute():
+        p = (Path.cwd() / p)
+    p = p.resolve(strict=False)
+
+    try:
+        return p.is_file() and p.stat().st_size > 0
+    except (OSError, FileNotFoundError):
+        return False
