@@ -1,0 +1,287 @@
+// (c) 2025 ANSYS, Inc. Unauthorized use, distribution, or duplication is prohibited. ANSYS Confidential Information
+syntax = "proto3";
+
+package ansys.api.speos.source.v1;
+
+import "ansys/api/speos/common/v1/data.proto";
+
+// Manager for SourceTemplates
+service SourceTemplatesManager {
+	// Create a SourceTemplate
+	rpc Create(Create_Request) returns (Create_Response) {}
+	// Read a SourceTemplate
+	rpc Read(Read_Request) returns (Read_Response) {}
+	// Update a SourceTemplate
+	rpc Update(Update_Request) returns (Update_Response) {}
+	// Delete a SourceTemplate
+	rpc Delete(Delete_Request) returns (Delete_Response) {}
+	// List all SourceTemplates in manager
+	rpc List(List_Request) returns (List_Response) {}
+}
+
+// Source template with its basic characteristics
+message SourceTemplate {
+
+	string name = 1; // SourceTemplate name
+	string description = 2; // SourceTemplate description
+	map<string, string> metadata = 5; // User defined metadata
+
+	// All source types
+	oneof source {
+		Luminaire luminaire = 3;
+		Surface surface = 4;
+		RayFile rayfile = 6;
+		Thermic thermic = 7;
+		Display display = 8;
+		Ambient ambient = 9;
+	}
+
+	// Take flux from intensity file provided
+	message FromIntensityFile{}; 
+	message Luminous{
+		double luminous_value = 1; // Luminous flux in lumens
+	};
+	message Radiant{
+		double radiant_value = 1; // Radiant flux in watts
+	};
+	message LuminousIntensity{
+		double luminous_intensity_value = 1; // Luminous intensity in candelas
+	};
+	message FromRayFile{}; 
+
+	message Surface{
+		oneof flux{ // Flux value
+			FromIntensityFile flux_from_intensity_file = 1; // Take flux from intensity file provided
+			Luminous luminous_flux = 2; // Luminous flux in lumens
+			Radiant radiant_flux = 3; // Radiant flux in watts
+			LuminousIntensity luminous_intensity_flux = 4; // Luminous intensity in candelas
+		}
+		string intensity_guid = 5; // Intensity guid in intensity manager
+		oneof exitance{ // Exitance type
+			ExitanceConstant exitance_constant = 6; // Constant
+			ExitanceVariable exitance_variable = 7; // Taken from XMP map
+		}
+		oneof spectrum{
+			SpectrumFromXMPFile spectrum_from_xmp_file = 8; // Take spectrum from xmp file provided
+			string spectrum_guid = 9; // Spectrum guid in spectrum manager
+		}
+
+		// Exitance messages
+		message ExitanceVariable{
+			string exitance_xmp_file_uri = 1; // XMP file describing exitance, if spectral, spectrum is not needed in source definition
+		}
+		message ExitanceConstant{} 
+
+		// Take spectrum from xmp file provided
+		message SpectrumFromXMPFile{}
+	}
+
+	message Luminaire{
+		oneof flux{ // Flux value
+			FromIntensityFile flux_from_intensity_file = 1; // Take flux from intensity file provided
+			Luminous luminous_flux = 2; // Luminous flux in lumens, value >=0
+			Radiant radiant_flux = 3; // Radiant flux in watts, value >=0
+		}
+		string intensity_file_uri = 4; // IES or EULUMDAT format file uri 
+		string spectrum_guid = 5; // Spectrum guid in spectrum manager
+	}
+
+	message RayFile{
+		string ray_file_uri = 1; // Rayfile format file uri (.ray or .tm25ray files expected)
+		oneof flux{ // Flux value
+			FromRayFile flux_from_ray_file = 2; // Take flux from ray file provided
+			Luminous luminous_flux = 3; // Luminous flux in lumens, value >=0
+			Radiant radiant_flux = 4; // Radiant flux in watts, value >=0
+		}
+		oneof spectrum{
+			SpectrumFromRayFile spectrum_from_ray_file = 5; // Take spectrum from ray file provided
+			string spectrum_guid = 6; // Spectrum guid in spectrum manager
+		}
+
+		// Spectrum messages
+		message SpectrumFromRayFile{}
+	}
+
+	message Thermic{
+		oneof exitance{
+			EmissiveFaces emissives_faces = 1; // black body with temperature on each face
+			TemperatureField temperature_field = 2; // file with meshed data and triangle temperature
+		}
+		string intensity_guid = 3; // Intensity guid in intensity manager Lambertian or cos only
+		message EmissiveFaces{
+			double temperature = 1; // the temperature in Kelvin of the blackbody (Kirchhoff's law) for every face
+		} 
+		message TemperatureField{
+			string temperature_field_uri = 1; // file with meshed data and temperature for each triangle
+			string sop_guid = 2; // SOP for geometry, must have absorption, required with temperature field
+		}
+	}
+
+	// color space can be used for both ambient sources and display sources
+	message PredefinedWhitePoint {
+		WhitePointType white_point_type = 1; // pre-defined white point type
+		
+		enum WhitePointType {
+			C = 0; // average daylight illuminant
+			D50 = 1; // natural horizon light
+			D65 = 2; // standard daylight illuminant
+			E = 3; // illuminant that gives equal weight to all wavelengths
+		}
+	}
+	
+	message UserDefinedWhitePoint { 
+		repeated double white_point = 1; // X and Y coordinates of the white point. 
+	}
+	
+	message UserDefinedRGBSpace {
+	
+		oneof White_point_type {
+						PredefinedWhitePoint pre_defined_white_point = 1; // pre-defined white point
+						UserDefinedWhitePoint user_defined_white_point = 2; //custom Y and X white point coordinates
+					}
+					
+		string red_spectrum_guid = 3;  // red Spectrum guid in spectrum manager
+		string green_spectrum_guid = 4;  //green Spectrum guid in spectrum manager
+		string blue_spectrum_guid = 5;  //blue Spectrum guid in spectrum manager
+	}
+
+	message PredefinedColorSpace { 
+
+		ColorSpaceType color_space_type = 1;  // pre-defined color space type
+		
+		enum ColorSpaceType {
+			sRGB = 0; // standard and most commonly used model
+			AdobeRGB = 1; // larger gamut
+		}
+	}
+		
+	// source dimensions 
+	message SourceDimensions {
+		double x_start = 1; // (mm)
+		double x_end = 2; // (mm)
+		double y_start = 3; // (mm)
+		double y_end = 4; // (mm)
+	}
+
+	message Display{
+
+		string image_file_uri = 1; //png,jpeg,bmp,tiff or rgb format file uri
+		SourceDimensions source_dimensions = 2; //horizontal and vertical dimensions (mm)
+		double luminous_flux = 3; //luminace in cd/m2
+		optional int32 contrast_ratio = 4; //Contrast ratio, infitine if not defined
+		string intensity_guid = 5; // Intensity guid in intensity manager
+		
+		oneof color_space {
+					 PredefinedColorSpace	pre_defined_color_space = 7; //pre-defined color space
+					 UserDefinedRGBSpace	user_defined_rbg_space = 8; //custom rgb color space with pre-defined or custom withe point
+					}
+	}
+
+	message Ambient {
+		oneof source{
+			UniformAmbient uniform_ambient = 1; // sets a specific and common luminance for the entire sky without any contribution of the sun. The sun has a specific value calculated according to its position
+			CieOvercast cie_overcast = 2; // generates a specific distribution for the sky according to a luminance value and CIE standard overcast model
+			CieGeneral cie_general = 3; // generates a specific distribution for the sky according to a luminance value and sky model 
+			NaturalLight natural_light = 4; // generates natural lighting based on a day time or night time model
+			UsStandard us_standard = 5; // The U.S. Standard Atmosphere Ambient Source follows a specific atmospheric model to simulate a sky radiation ranging from 280nm into ultraviolet to 4μm into infrared.
+			EnvironmentMap environment_map = 6; // creates a background using an image file
+		}
+
+		message UniformAmbient {
+			double luminance = 1; // Luminance in cd per squared meter
+			bool mirrored_extent = 2; // if true then the ambient light covers all space, if false only covers the upper half space
+			string spectrum_guid = 3; // blackbody or library spectra only
+		}
+		message CieOvercast {
+			double luminance = 1; // Luminance in cd per squared meter
+			string spectrum_guid = 2; // blackbody or library spectra only
+		}
+		message CieGeneral {
+			double luminance = 1; // Luminance in cd per squared meter
+			enum CieType {
+				standard_overcast = 0;
+				overcast_steep_gradation = 1;
+				overcast_azimuthal_uniformity = 2;
+				overcast_slight_brightening = 3;
+				uniform_luminance = 4;
+				cloudy_slight_brightening = 5;
+				cloudy_nogradation_circumsolar = 6;
+				cloudy_solar_corona = 7;
+				cloudy_obscured_sun = 8;
+				cloudy_circumsolar_region = 9;
+				white_blue_distinct = 10;
+				standard_low_luminance = 11;
+				standard_polluted_atmosphere = 12;
+				cloudless_turbid_corona = 13;
+				white_blue_broad = 14;
+			}
+			CieType cie_type = 2; // sky model 
+			}
+			message NaturalLight {
+				double turbidity = 1; // cloudiness of the environment. The lower the value the clearer the environment. Varies between 1.9 and 9.9
+				bool with_sky = 2; // if false, only the sun is used in the simulation. If true, both ambient sky model and sun are used in the simulation
+			}
+			message UsStandard {}
+			message EnvironmentMap {
+				double luminance = 1; // Luminance in cd per squared meter
+				string image_uri = 2; // image file or HDRI. HDRIs have relative luminance values, so the lumiance value will be applied to the (1,1,1) pixels and all other colors will be defined relatively
+				oneof color_space {
+					PredefinedColorSpace predefined_color_space = 3; // pre-defined color space
+					UserDefinedRGBSpace user_defined_rgb_space = 4; // custom RGB space with either pre-defined or custom white point
+				}
+			}
+	}
+
+}
+
+// Request to create a SourceTemplate in SourceTemplatesManager
+message Create_Request {
+	SourceTemplate source_template = 1; // SourceTemplate containing its basic characteristics
+	optional string guid = 2; // Optional field to specify the guid used in the database. If not set, a unique guid will be generated for that entry and sent back in the Create_Response.
+}
+message Create_Response {
+	string guid = 1; // Guid of the SourceTemplate created in SourceTemplatesManager
+}
+
+// Request to read a SourceTemplate in SourceTemplatesManager
+message Read_Request {
+	string guid = 1; // Guid of the SourceTemplate to be read
+}
+message Read_Response {
+	SourceTemplate source_template = 1; // SourceTemplate corresponding to the guid given in Read_Request
+}
+
+// Request to update a SourceTemplate in SourceTemplatesManager
+message Update_Request {
+	string guid = 1; // Guid of the SourceTemplate to be updated
+	SourceTemplate source_template = 2; // SourceTemplate that will be used for the update
+}
+message Update_Response {}
+
+// Request to delete a SourceTemplate in SourceTemplatesManager
+message Delete_Request {
+	string guid = 1; // Guid of the SourceTemplate to be deleted
+}
+message Delete_Response {}
+
+message List_Request {}
+message List_Response {
+	repeated string guids = 1; // Guids of the SourceTemplates in SourceTemplatesManager
+}
+
+// Actions available on a SourceTemplate
+service SourceTemplateActions {
+	// Get Flux from ray file
+	rpc GetRayFileInfo(GetRayFileInfo_Request) returns (GetRayFileInfo_Response) {}
+}
+
+// Request of GetRayFileInfo
+message GetRayFileInfo_Request {
+	string guid = 1; // Guid of the SourceTemplate to get information about ray file (example: flux). Only for SourceTemplate of type RayFile.
+}
+
+// Response of GetRayFileInfo
+message GetRayFileInfo_Response {
+	ansys.api.speos.common.v1.DataDoubles flux = 1; // Flux of the ray file
+	bool has_spectral_data = 2; // The ray file contains Spectrum information
+}

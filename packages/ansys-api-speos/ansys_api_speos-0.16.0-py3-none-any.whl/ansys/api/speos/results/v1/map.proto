@@ -1,0 +1,40 @@
+
+syntax = "proto3";
+
+package ansys.api.speos.results.v1;
+
+// Actions available with XMP and Speos360 result file.
+service MapActions {
+
+	// Merge list of XMP files into a XMP or Speos360 file. [Unsupported]
+	rpc MergeXMPsToXMPOrSpeos360(MergeXMPsToXMPOrSpeos360_Request) returns (MergeXMPsToXMPOrSpeos360_Response) {}
+
+	// Merge left and right speos360 files into a stereoscopic Speos360 file. [Unsupported]
+	rpc MergeSpeos360ToStereoSpeos360(MergeSpeos360ToStereoSpeos360_Request) returns (MergeSpeos360ToStereoSpeos360_Response) {}
+
+	// Split a Speos360 file into a list of XMP files. [Unsupported]
+	rpc SplitSpeos360IntoXMPs(SplitSpeos360IntoXMPs_Request) returns (SplitSpeos360IntoXMPs_Response) {}
+}
+
+message MergeXMPsToXMPOrSpeos360_Request {
+	repeated string map_to_merge_uri = 1; // List of absolute path to XMP files to merge.
+	string map_merged_uri = 2; // Absolute path to merged XMP or Speos360 file.
+	repeated double axis_system = 3; // Optional axis system to force orientation in merged Speos360 file.
+}
+
+message MergeXMPsToXMPOrSpeos360_Response {}
+
+message MergeSpeos360ToStereoSpeos360_Request {
+	string map_left_to_merge_uri = 1; // Absolute path to left Speos360 file to merge.
+	string map_right_to_merge_uri = 2; // Absolute path to right Speos360 file to merge.
+	string map_merged_uri = 3; // Absolute path to merged stereoscopic Speos360 file.
+}
+
+message MergeSpeos360ToStereoSpeos360_Response {}
+
+message SplitSpeos360IntoXMPs_Request {
+	string file_uri = 1; // Uri of the speos360 file to split.
+}
+message SplitSpeos360IntoXMPs_Response {
+	repeated string splitted_map_uri = 1; // List of uris to XMP files.
+}
