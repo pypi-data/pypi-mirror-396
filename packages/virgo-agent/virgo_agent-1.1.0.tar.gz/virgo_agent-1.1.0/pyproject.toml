@@ -1,0 +1,61 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "virgo-agent"
+version = "1.1.0"
+description = "Assistant to generate, review and improve articles."
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "dependency-injector>=4.48.3",
+    "langchain>=1.1.3",
+    "langchain-openai>=1.1.1",
+    "langchain-tavily>=0.2.13",
+    "langgraph>=1.0.4",
+    "pydantic>=2.12.5",
+    "pydantic-settings>=2.12.0",
+    "rich>=14.2.0",
+    "typer>=0.20.0",
+]
+scripts = { "virgo" = "virgo.cli:app" }
+
+[dependency-groups]
+dev = [
+    "agentevals>=0.0.9",
+    "langchain-ollama>=0.3.3",
+    "mypy>=1.19.0",
+    "pre-commit>=4.5.0",
+    "pytest>=9.0.2",
+    "pytest-camel-collect>=1.0.2",
+    "pytest-cov>=7.0.0",
+    "pytest-watcher>=0.4.3",
+    "ruff>=0.14.8",
+    "taskipy>=1.14.1",
+]
+ollama = [
+    "langchain-ollama>=1.0.1",
+]
+
+[tool.taskipy.tasks]
+lint = "ruff check . --fix"
+"lint:ci" = "ruff check ."
+format = "ruff format . --fix"
+"format:ci" = "ruff format . --check"
+type-check = "mypy virgo tests integration"
+test = "pytest"
+"test:watch" = "pytest-watcher"
+"test:cov" = "pytest --cov=virgo --cov-report=term-missing"
+"test:ci" = "pytest tests integration --cov=virgo --cov-report=xml --cov-report=term-missing"
+integration = "pytest integration"
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "--strict-markers"
+testpaths = ["tests"]
+python_classes = ["Test*", "Describe*", "When*", "Context*"]
+python_functions = ["test_*", "it_*", "should_*"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["virgo"]
