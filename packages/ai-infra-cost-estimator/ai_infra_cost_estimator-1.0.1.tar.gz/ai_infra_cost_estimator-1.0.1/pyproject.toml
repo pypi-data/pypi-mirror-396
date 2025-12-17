@@ -1,0 +1,108 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai-infra-cost-estimator"
+version = "1.0.1"
+description = "Estimate real-world AI + cloud infrastructure costs for LLM applications"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "MindTheInfraAI", email = "info@mindtheinfra.ai"}
+]
+maintainers = [
+    {name = "MindTheInfraAI", email = "info@mindtheinfra.ai"}
+]
+keywords = [
+    "ai",
+    "llm",
+    "cost-estimation",
+    "infrastructure",
+    "cloud",
+    "openai",
+    "anthropic",
+    "gpt",
+    "claude",
+    "pricing",
+    "budget"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Intended Audience :: Financial and Insurance Industry",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business :: Financial",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Systems Administration",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "black>=23.0",
+    "isort>=5.0",
+    "mypy>=1.0",
+    "flake8>=6.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/MindTheInfraAI/AI_Infra_Cost_Estimator"
+Documentation = "https://github.com/MindTheInfraAI/AI_Infra_Cost_Estimator#readme"
+Repository = "https://github.com/MindTheInfraAI/AI_Infra_Cost_Estimator.git" 
+Issues = "https://github.com/MindTheInfraAI/AI_Infra_Cost_Estimator/issues"
+
+[project.scripts]
+ai-cost-estimator = "ai_infra_cost_estimator.cli:main"
+
+[tool.setuptools]
+packages = ["ai_infra_cost_estimator", "ai_infra_cost_estimator.calculator", "ai_infra_cost_estimator.report", "ai_infra_cost_estimator.pricing"]
+
+[tool.setuptools.package-data]
+"ai_infra_cost_estimator.pricing" = ["*.json"]
+
+[tool.black]
+line-length = 100
+target-version = ['py39', 'py310', 'py311', 'py312']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --cov=ai_infra_cost_estimator --cov-report=term-missing"
