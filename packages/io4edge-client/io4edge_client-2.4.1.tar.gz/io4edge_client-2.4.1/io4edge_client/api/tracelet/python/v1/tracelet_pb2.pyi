@@ -1,0 +1,286 @@
+import datetime
+
+from google.protobuf import timestamp_pb2 as _timestamp_pb2
+from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
+from google.protobuf import descriptor as _descriptor
+from google.protobuf import message as _message
+from collections.abc import Mapping as _Mapping
+from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
+
+DESCRIPTOR: _descriptor.FileDescriptor
+
+class TraceletToServer(_message.Message):
+    __slots__ = ("uuid", "ipv4_address", "delivery_ts", "tracelet_id", "ignition", "location", "firmware_version", "metrics")
+    class Location(_message.Message):
+        __slots__ = ("gnss", "uwb", "fused", "direction", "speed", "mileage", "temperature")
+        class Direction(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+            __slots__ = ()
+            NO_DIRECTION: _ClassVar[TraceletToServer.Location.Direction]
+            CAB_A_DIRECTION: _ClassVar[TraceletToServer.Location.Direction]
+            CAB_B_DIRECTION: _ClassVar[TraceletToServer.Location.Direction]
+        NO_DIRECTION: TraceletToServer.Location.Direction
+        CAB_A_DIRECTION: TraceletToServer.Location.Direction
+        CAB_B_DIRECTION: TraceletToServer.Location.Direction
+        class Gnss(_message.Message):
+            __slots__ = ("valid", "latitude", "longitude", "altitude", "eph", "epv", "fix_type", "head_motion", "head_vehicle", "head_valid", "head_precision", "ground_speed")
+            VALID_FIELD_NUMBER: _ClassVar[int]
+            LATITUDE_FIELD_NUMBER: _ClassVar[int]
+            LONGITUDE_FIELD_NUMBER: _ClassVar[int]
+            ALTITUDE_FIELD_NUMBER: _ClassVar[int]
+            EPH_FIELD_NUMBER: _ClassVar[int]
+            EPV_FIELD_NUMBER: _ClassVar[int]
+            FIX_TYPE_FIELD_NUMBER: _ClassVar[int]
+            HEAD_MOTION_FIELD_NUMBER: _ClassVar[int]
+            HEAD_VEHICLE_FIELD_NUMBER: _ClassVar[int]
+            HEAD_VALID_FIELD_NUMBER: _ClassVar[int]
+            HEAD_PRECISION_FIELD_NUMBER: _ClassVar[int]
+            GROUND_SPEED_FIELD_NUMBER: _ClassVar[int]
+            valid: bool
+            latitude: float
+            longitude: float
+            altitude: float
+            eph: float
+            epv: float
+            fix_type: int
+            head_motion: float
+            head_vehicle: float
+            head_valid: int
+            head_precision: float
+            ground_speed: float
+            def __init__(self, valid: _Optional[bool] = ..., latitude: _Optional[float] = ..., longitude: _Optional[float] = ..., altitude: _Optional[float] = ..., eph: _Optional[float] = ..., epv: _Optional[float] = ..., fix_type: _Optional[int] = ..., head_motion: _Optional[float] = ..., head_vehicle: _Optional[float] = ..., head_valid: _Optional[int] = ..., head_precision: _Optional[float] = ..., ground_speed: _Optional[float] = ...) -> None: ...
+        class Uwb(_message.Message):
+            __slots__ = ("valid", "x", "y", "z", "site_id", "location_signature", "eph", "fix_type", "head_motion", "head_vehicle", "head_valid", "head_precision", "ground_speed")
+            VALID_FIELD_NUMBER: _ClassVar[int]
+            X_FIELD_NUMBER: _ClassVar[int]
+            Y_FIELD_NUMBER: _ClassVar[int]
+            Z_FIELD_NUMBER: _ClassVar[int]
+            SITE_ID_FIELD_NUMBER: _ClassVar[int]
+            LOCATION_SIGNATURE_FIELD_NUMBER: _ClassVar[int]
+            EPH_FIELD_NUMBER: _ClassVar[int]
+            FIX_TYPE_FIELD_NUMBER: _ClassVar[int]
+            HEAD_MOTION_FIELD_NUMBER: _ClassVar[int]
+            HEAD_VEHICLE_FIELD_NUMBER: _ClassVar[int]
+            HEAD_VALID_FIELD_NUMBER: _ClassVar[int]
+            HEAD_PRECISION_FIELD_NUMBER: _ClassVar[int]
+            GROUND_SPEED_FIELD_NUMBER: _ClassVar[int]
+            valid: bool
+            x: float
+            y: float
+            z: float
+            site_id: int
+            location_signature: int
+            eph: float
+            fix_type: int
+            head_motion: float
+            head_vehicle: float
+            head_valid: int
+            head_precision: float
+            ground_speed: float
+            def __init__(self, valid: _Optional[bool] = ..., x: _Optional[float] = ..., y: _Optional[float] = ..., z: _Optional[float] = ..., site_id: _Optional[int] = ..., location_signature: _Optional[int] = ..., eph: _Optional[float] = ..., fix_type: _Optional[int] = ..., head_motion: _Optional[float] = ..., head_vehicle: _Optional[float] = ..., head_valid: _Optional[int] = ..., head_precision: _Optional[float] = ..., ground_speed: _Optional[float] = ...) -> None: ...
+        class Fused(_message.Message):
+            __slots__ = ("valid", "latitude", "longitude", "altitude", "eph", "head_motion", "head_vehicle", "head_valid", "head_precision", "ground_speed")
+            VALID_FIELD_NUMBER: _ClassVar[int]
+            LATITUDE_FIELD_NUMBER: _ClassVar[int]
+            LONGITUDE_FIELD_NUMBER: _ClassVar[int]
+            ALTITUDE_FIELD_NUMBER: _ClassVar[int]
+            EPH_FIELD_NUMBER: _ClassVar[int]
+            HEAD_MOTION_FIELD_NUMBER: _ClassVar[int]
+            HEAD_VEHICLE_FIELD_NUMBER: _ClassVar[int]
+            HEAD_VALID_FIELD_NUMBER: _ClassVar[int]
+            HEAD_PRECISION_FIELD_NUMBER: _ClassVar[int]
+            GROUND_SPEED_FIELD_NUMBER: _ClassVar[int]
+            valid: bool
+            latitude: float
+            longitude: float
+            altitude: float
+            eph: float
+            head_motion: float
+            head_vehicle: float
+            head_valid: int
+            head_precision: float
+            ground_speed: float
+            def __init__(self, valid: _Optional[bool] = ..., latitude: _Optional[float] = ..., longitude: _Optional[float] = ..., altitude: _Optional[float] = ..., eph: _Optional[float] = ..., head_motion: _Optional[float] = ..., head_vehicle: _Optional[float] = ..., head_valid: _Optional[int] = ..., head_precision: _Optional[float] = ..., ground_speed: _Optional[float] = ...) -> None: ...
+        GNSS_FIELD_NUMBER: _ClassVar[int]
+        UWB_FIELD_NUMBER: _ClassVar[int]
+        FUSED_FIELD_NUMBER: _ClassVar[int]
+        DIRECTION_FIELD_NUMBER: _ClassVar[int]
+        SPEED_FIELD_NUMBER: _ClassVar[int]
+        MILEAGE_FIELD_NUMBER: _ClassVar[int]
+        TEMPERATURE_FIELD_NUMBER: _ClassVar[int]
+        gnss: TraceletToServer.Location.Gnss
+        uwb: TraceletToServer.Location.Uwb
+        fused: TraceletToServer.Location.Fused
+        direction: TraceletToServer.Location.Direction
+        speed: float
+        mileage: int
+        temperature: float
+        def __init__(self, gnss: _Optional[_Union[TraceletToServer.Location.Gnss, _Mapping]] = ..., uwb: _Optional[_Union[TraceletToServer.Location.Uwb, _Mapping]] = ..., fused: _Optional[_Union[TraceletToServer.Location.Fused, _Mapping]] = ..., direction: _Optional[_Union[TraceletToServer.Location.Direction, str]] = ..., speed: _Optional[float] = ..., mileage: _Optional[int] = ..., temperature: _Optional[float] = ...) -> None: ...
+    UUID_FIELD_NUMBER: _ClassVar[int]
+    IPV4_ADDRESS_FIELD_NUMBER: _ClassVar[int]
+    DELIVERY_TS_FIELD_NUMBER: _ClassVar[int]
+    TRACELET_ID_FIELD_NUMBER: _ClassVar[int]
+    IGNITION_FIELD_NUMBER: _ClassVar[int]
+    LOCATION_FIELD_NUMBER: _ClassVar[int]
+    FIRMWARE_VERSION_FIELD_NUMBER: _ClassVar[int]
+    METRICS_FIELD_NUMBER: _ClassVar[int]
+    uuid: TraceletMessageID
+    ipv4_address: int
+    delivery_ts: _timestamp_pb2.Timestamp
+    tracelet_id: str
+    ignition: bool
+    location: TraceletToServer.Location
+    firmware_version: str
+    metrics: TraceletMetrics
+    def __init__(self, uuid: _Optional[_Union[TraceletMessageID, _Mapping]] = ..., ipv4_address: _Optional[int] = ..., delivery_ts: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., tracelet_id: _Optional[str] = ..., ignition: _Optional[bool] = ..., location: _Optional[_Union[TraceletToServer.Location, _Mapping]] = ..., firmware_version: _Optional[str] = ..., metrics: _Optional[_Union[TraceletMetrics, _Mapping]] = ...) -> None: ...
+
+class TraceletMessageID(_message.Message):
+    __slots__ = ("value",)
+    VALUE_FIELD_NUMBER: _ClassVar[int]
+    value: bytes
+    def __init__(self, value: _Optional[bytes] = ...) -> None: ...
+
+class TraceletMetrics(_message.Message):
+    __slots__ = ("health___type___uwb_comm", "health___type___uwb_firmware", "health___type___uwb_config", "health___type___gnss_comm", "health___type___ubx_firmware", "health___type___ubx_config", "health___type___actors_startup", "sntp_updates", "free_heap_bytes", "system_time_seconds", "wifi_rssi_dbm", "wifi_ap", "gnss_num_sats___system___gps", "gnss_num_sats___system___glonass", "gnss_num_sats___system___beidou", "gnss_num_sats___system___galileo", "gnss_num_sats___system___qzss", "gnss_uart_errors___type___hw_fifo", "gnss_uart_errors___type___buf_full", "gnss_uart_errors___type___char", "gnss_num_sv", "gnss_pga___block___rf1", "gnss_pga___block___rf2", "ubx_sensor_fusion_status_enum", "ubx_ref_station_id", "ntrip_is_connected", "ntrip_transfer_bytes___direction___send", "ntrip_transfer_bytes___direction___recv", "lsi_is_connected", "lsi_acks_missed", "ubx_boot_type_enum", "ubx_runtime", "ubx_sensor_fusion_detail___type___wt_init", "ubx_sensor_fusion_detail___type___mnt_alg", "ubx_sensor_fusion_detail___type___ins_init", "ubx_sensor_fusion_detail___type___imu_init", "sensor_fusion_state", "uwb_num_sats", "uwb_sat___type___1_addr", "uwb_sat___type___1_rssi", "uwb_sat___type___1_nlos", "uwb_sat___type___2_addr", "uwb_sat___type___2_rssi", "uwb_sat___type___2_nlos", "uwb_sat___type___3_addr", "uwb_sat___type___3_rssi", "uwb_sat___type___3_nlos", "uwb_sat___type___4_addr", "uwb_sat___type___4_rssi", "uwb_sat___type___4_nlos", "uwb_sat___type___5_addr", "uwb_sat___type___5_rssi", "uwb_sat___type___5_nlos", "uwb_sat___type___6_addr", "uwb_sat___type___6_rssi", "uwb_sat___type___6_nlos", "cpu_load_percent___cpu___0", "cpu_load_percent___cpu___1", "uptime_seconds", "sleep_manager_state", "last_power_cut_unix_seconds", "mileage_mm", "reset_count___type___poweron", "reset_count___type___software", "reset_count___type___panic", "reset_count___type___wd", "reset_count___type___brownout", "reset_count___type___pwrglitch", "reset_count___type___unknown", "uwb_tacho_speed", "uwb_pan_id")
+    HEALTH___TYPE___UWB_COMM_FIELD_NUMBER: _ClassVar[int]
+    HEALTH___TYPE___UWB_FIRMWARE_FIELD_NUMBER: _ClassVar[int]
+    HEALTH___TYPE___UWB_CONFIG_FIELD_NUMBER: _ClassVar[int]
+    HEALTH___TYPE___GNSS_COMM_FIELD_NUMBER: _ClassVar[int]
+    HEALTH___TYPE___UBX_FIRMWARE_FIELD_NUMBER: _ClassVar[int]
+    HEALTH___TYPE___UBX_CONFIG_FIELD_NUMBER: _ClassVar[int]
+    HEALTH___TYPE___ACTORS_STARTUP_FIELD_NUMBER: _ClassVar[int]
+    SNTP_UPDATES_FIELD_NUMBER: _ClassVar[int]
+    FREE_HEAP_BYTES_FIELD_NUMBER: _ClassVar[int]
+    SYSTEM_TIME_SECONDS_FIELD_NUMBER: _ClassVar[int]
+    WIFI_RSSI_DBM_FIELD_NUMBER: _ClassVar[int]
+    WIFI_AP_FIELD_NUMBER: _ClassVar[int]
+    GNSS_NUM_SATS___SYSTEM___GPS_FIELD_NUMBER: _ClassVar[int]
+    GNSS_NUM_SATS___SYSTEM___GLONASS_FIELD_NUMBER: _ClassVar[int]
+    GNSS_NUM_SATS___SYSTEM___BEIDOU_FIELD_NUMBER: _ClassVar[int]
+    GNSS_NUM_SATS___SYSTEM___GALILEO_FIELD_NUMBER: _ClassVar[int]
+    GNSS_NUM_SATS___SYSTEM___QZSS_FIELD_NUMBER: _ClassVar[int]
+    GNSS_UART_ERRORS___TYPE___HW_FIFO_FIELD_NUMBER: _ClassVar[int]
+    GNSS_UART_ERRORS___TYPE___BUF_FULL_FIELD_NUMBER: _ClassVar[int]
+    GNSS_UART_ERRORS___TYPE___CHAR_FIELD_NUMBER: _ClassVar[int]
+    GNSS_NUM_SV_FIELD_NUMBER: _ClassVar[int]
+    GNSS_PGA___BLOCK___RF1_FIELD_NUMBER: _ClassVar[int]
+    GNSS_PGA___BLOCK___RF2_FIELD_NUMBER: _ClassVar[int]
+    UBX_SENSOR_FUSION_STATUS_ENUM_FIELD_NUMBER: _ClassVar[int]
+    UBX_REF_STATION_ID_FIELD_NUMBER: _ClassVar[int]
+    NTRIP_IS_CONNECTED_FIELD_NUMBER: _ClassVar[int]
+    NTRIP_TRANSFER_BYTES___DIRECTION___SEND_FIELD_NUMBER: _ClassVar[int]
+    NTRIP_TRANSFER_BYTES___DIRECTION___RECV_FIELD_NUMBER: _ClassVar[int]
+    LSI_IS_CONNECTED_FIELD_NUMBER: _ClassVar[int]
+    LSI_ACKS_MISSED_FIELD_NUMBER: _ClassVar[int]
+    UBX_BOOT_TYPE_ENUM_FIELD_NUMBER: _ClassVar[int]
+    UBX_RUNTIME_FIELD_NUMBER: _ClassVar[int]
+    UBX_SENSOR_FUSION_DETAIL___TYPE___WT_INIT_FIELD_NUMBER: _ClassVar[int]
+    UBX_SENSOR_FUSION_DETAIL___TYPE___MNT_ALG_FIELD_NUMBER: _ClassVar[int]
+    UBX_SENSOR_FUSION_DETAIL___TYPE___INS_INIT_FIELD_NUMBER: _ClassVar[int]
+    UBX_SENSOR_FUSION_DETAIL___TYPE___IMU_INIT_FIELD_NUMBER: _ClassVar[int]
+    SENSOR_FUSION_STATE_FIELD_NUMBER: _ClassVar[int]
+    UWB_NUM_SATS_FIELD_NUMBER: _ClassVar[int]
+    UWB_SAT___TYPE___1_ADDR_FIELD_NUMBER: _ClassVar[int]
+    UWB_SAT___TYPE___1_RSSI_FIELD_NUMBER: _ClassVar[int]
+    UWB_SAT___TYPE___1_NLOS_FIELD_NUMBER: _ClassVar[int]
+    UWB_SAT___TYPE___2_ADDR_FIELD_NUMBER: _ClassVar[int]
+    UWB_SAT___TYPE___2_RSSI_FIELD_NUMBER: _ClassVar[int]
+    UWB_SAT___TYPE___2_NLOS_FIELD_NUMBER: _ClassVar[int]
+    UWB_SAT___TYPE___3_ADDR_FIELD_NUMBER: _ClassVar[int]
+    UWB_SAT___TYPE___3_RSSI_FIELD_NUMBER: _ClassVar[int]
+    UWB_SAT___TYPE___3_NLOS_FIELD_NUMBER: _ClassVar[int]
+    UWB_SAT___TYPE___4_ADDR_FIELD_NUMBER: _ClassVar[int]
+    UWB_SAT___TYPE___4_RSSI_FIELD_NUMBER: _ClassVar[int]
+    UWB_SAT___TYPE___4_NLOS_FIELD_NUMBER: _ClassVar[int]
+    UWB_SAT___TYPE___5_ADDR_FIELD_NUMBER: _ClassVar[int]
+    UWB_SAT___TYPE___5_RSSI_FIELD_NUMBER: _ClassVar[int]
+    UWB_SAT___TYPE___5_NLOS_FIELD_NUMBER: _ClassVar[int]
+    UWB_SAT___TYPE___6_ADDR_FIELD_NUMBER: _ClassVar[int]
+    UWB_SAT___TYPE___6_RSSI_FIELD_NUMBER: _ClassVar[int]
+    UWB_SAT___TYPE___6_NLOS_FIELD_NUMBER: _ClassVar[int]
+    CPU_LOAD_PERCENT___CPU___0_FIELD_NUMBER: _ClassVar[int]
+    CPU_LOAD_PERCENT___CPU___1_FIELD_NUMBER: _ClassVar[int]
+    UPTIME_SECONDS_FIELD_NUMBER: _ClassVar[int]
+    SLEEP_MANAGER_STATE_FIELD_NUMBER: _ClassVar[int]
+    LAST_POWER_CUT_UNIX_SECONDS_FIELD_NUMBER: _ClassVar[int]
+    MILEAGE_MM_FIELD_NUMBER: _ClassVar[int]
+    RESET_COUNT___TYPE___POWERON_FIELD_NUMBER: _ClassVar[int]
+    RESET_COUNT___TYPE___SOFTWARE_FIELD_NUMBER: _ClassVar[int]
+    RESET_COUNT___TYPE___PANIC_FIELD_NUMBER: _ClassVar[int]
+    RESET_COUNT___TYPE___WD_FIELD_NUMBER: _ClassVar[int]
+    RESET_COUNT___TYPE___BROWNOUT_FIELD_NUMBER: _ClassVar[int]
+    RESET_COUNT___TYPE___PWRGLITCH_FIELD_NUMBER: _ClassVar[int]
+    RESET_COUNT___TYPE___UNKNOWN_FIELD_NUMBER: _ClassVar[int]
+    UWB_TACHO_SPEED_FIELD_NUMBER: _ClassVar[int]
+    UWB_PAN_ID_FIELD_NUMBER: _ClassVar[int]
+    health___type___uwb_comm: int
+    health___type___uwb_firmware: int
+    health___type___uwb_config: int
+    health___type___gnss_comm: int
+    health___type___ubx_firmware: int
+    health___type___ubx_config: int
+    health___type___actors_startup: int
+    sntp_updates: int
+    free_heap_bytes: int
+    system_time_seconds: float
+    wifi_rssi_dbm: float
+    wifi_ap: int
+    gnss_num_sats___system___gps: int
+    gnss_num_sats___system___glonass: int
+    gnss_num_sats___system___beidou: int
+    gnss_num_sats___system___galileo: int
+    gnss_num_sats___system___qzss: int
+    gnss_uart_errors___type___hw_fifo: int
+    gnss_uart_errors___type___buf_full: int
+    gnss_uart_errors___type___char: int
+    gnss_num_sv: int
+    gnss_pga___block___rf1: int
+    gnss_pga___block___rf2: int
+    ubx_sensor_fusion_status_enum: int
+    ubx_ref_station_id: int
+    ntrip_is_connected: int
+    ntrip_transfer_bytes___direction___send: int
+    ntrip_transfer_bytes___direction___recv: int
+    lsi_is_connected: int
+    lsi_acks_missed: int
+    ubx_boot_type_enum: int
+    ubx_runtime: int
+    ubx_sensor_fusion_detail___type___wt_init: int
+    ubx_sensor_fusion_detail___type___mnt_alg: int
+    ubx_sensor_fusion_detail___type___ins_init: int
+    ubx_sensor_fusion_detail___type___imu_init: int
+    sensor_fusion_state: int
+    uwb_num_sats: int
+    uwb_sat___type___1_addr: int
+    uwb_sat___type___1_rssi: int
+    uwb_sat___type___1_nlos: int
+    uwb_sat___type___2_addr: int
+    uwb_sat___type___2_rssi: int
+    uwb_sat___type___2_nlos: int
+    uwb_sat___type___3_addr: int
+    uwb_sat___type___3_rssi: int
+    uwb_sat___type___3_nlos: int
+    uwb_sat___type___4_addr: int
+    uwb_sat___type___4_rssi: int
+    uwb_sat___type___4_nlos: int
+    uwb_sat___type___5_addr: int
+    uwb_sat___type___5_rssi: int
+    uwb_sat___type___5_nlos: int
+    uwb_sat___type___6_addr: int
+    uwb_sat___type___6_rssi: int
+    uwb_sat___type___6_nlos: int
+    cpu_load_percent___cpu___0: int
+    cpu_load_percent___cpu___1: int
+    uptime_seconds: int
+    sleep_manager_state: int
+    last_power_cut_unix_seconds: int
+    mileage_mm: int
+    reset_count___type___poweron: int
+    reset_count___type___software: int
+    reset_count___type___panic: int
+    reset_count___type___wd: int
+    reset_count___type___brownout: int
+    reset_count___type___pwrglitch: int
+    reset_count___type___unknown: int
+    uwb_tacho_speed: float
+    uwb_pan_id: int
+    def __init__(self, health___type___uwb_comm: _Optional[int] = ..., health___type___uwb_firmware: _Optional[int] = ..., health___type___uwb_config: _Optional[int] = ..., health___type___gnss_comm: _Optional[int] = ..., health___type___ubx_firmware: _Optional[int] = ..., health___type___ubx_config: _Optional[int] = ..., health___type___actors_startup: _Optional[int] = ..., sntp_updates: _Optional[int] = ..., free_heap_bytes: _Optional[int] = ..., system_time_seconds: _Optional[float] = ..., wifi_rssi_dbm: _Optional[float] = ..., wifi_ap: _Optional[int] = ..., gnss_num_sats___system___gps: _Optional[int] = ..., gnss_num_sats___system___glonass: _Optional[int] = ..., gnss_num_sats___system___beidou: _Optional[int] = ..., gnss_num_sats___system___galileo: _Optional[int] = ..., gnss_num_sats___system___qzss: _Optional[int] = ..., gnss_uart_errors___type___hw_fifo: _Optional[int] = ..., gnss_uart_errors___type___buf_full: _Optional[int] = ..., gnss_uart_errors___type___char: _Optional[int] = ..., gnss_num_sv: _Optional[int] = ..., gnss_pga___block___rf1: _Optional[int] = ..., gnss_pga___block___rf2: _Optional[int] = ..., ubx_sensor_fusion_status_enum: _Optional[int] = ..., ubx_ref_station_id: _Optional[int] = ..., ntrip_is_connected: _Optional[int] = ..., ntrip_transfer_bytes___direction___send: _Optional[int] = ..., ntrip_transfer_bytes___direction___recv: _Optional[int] = ..., lsi_is_connected: _Optional[int] = ..., lsi_acks_missed: _Optional[int] = ..., ubx_boot_type_enum: _Optional[int] = ..., ubx_runtime: _Optional[int] = ..., ubx_sensor_fusion_detail___type___wt_init: _Optional[int] = ..., ubx_sensor_fusion_detail___type___mnt_alg: _Optional[int] = ..., ubx_sensor_fusion_detail___type___ins_init: _Optional[int] = ..., ubx_sensor_fusion_detail___type___imu_init: _Optional[int] = ..., sensor_fusion_state: _Optional[int] = ..., uwb_num_sats: _Optional[int] = ..., uwb_sat___type___1_addr: _Optional[int] = ..., uwb_sat___type___1_rssi: _Optional[int] = ..., uwb_sat___type___1_nlos: _Optional[int] = ..., uwb_sat___type___2_addr: _Optional[int] = ..., uwb_sat___type___2_rssi: _Optional[int] = ..., uwb_sat___type___2_nlos: _Optional[int] = ..., uwb_sat___type___3_addr: _Optional[int] = ..., uwb_sat___type___3_rssi: _Optional[int] = ..., uwb_sat___type___3_nlos: _Optional[int] = ..., uwb_sat___type___4_addr: _Optional[int] = ..., uwb_sat___type___4_rssi: _Optional[int] = ..., uwb_sat___type___4_nlos: _Optional[int] = ..., uwb_sat___type___5_addr: _Optional[int] = ..., uwb_sat___type___5_rssi: _Optional[int] = ..., uwb_sat___type___5_nlos: _Optional[int] = ..., uwb_sat___type___6_addr: _Optional[int] = ..., uwb_sat___type___6_rssi: _Optional[int] = ..., uwb_sat___type___6_nlos: _Optional[int] = ..., cpu_load_percent___cpu___0: _Optional[int] = ..., cpu_load_percent___cpu___1: _Optional[int] = ..., uptime_seconds: _Optional[int] = ..., sleep_manager_state: _Optional[int] = ..., last_power_cut_unix_seconds: _Optional[int] = ..., mileage_mm: _Optional[int] = ..., reset_count___type___poweron: _Optional[int] = ..., reset_count___type___software: _Optional[int] = ..., reset_count___type___panic: _Optional[int] = ..., reset_count___type___wd: _Optional[int] = ..., reset_count___type___brownout: _Optional[int] = ..., reset_count___type___pwrglitch: _Optional[int] = ..., reset_count___type___unknown: _Optional[int] = ..., uwb_tacho_speed: _Optional[float] = ..., uwb_pan_id: _Optional[int] = ...) -> None: ...
