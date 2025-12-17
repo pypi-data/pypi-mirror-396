@@ -1,0 +1,393 @@
+Metadata-Version: 2.4
+Name: pdftradoc
+Version: 1.1.0
+Summary: A Python library for translating PDF documents while preserving the original layout
+Author: PdfTradoc
+License: MIT
+Project-URL: Homepage, https://github.com/pdftradoc/pdftradoc
+Project-URL: Documentation, https://github.com/pdftradoc/pdftradoc#readme
+Project-URL: Repository, https://github.com/pdftradoc/pdftradoc
+Project-URL: Issues, https://github.com/pdftradoc/pdftradoc/issues
+Keywords: pdf,translation,translate,document,overlay,layout,preserve,pymupdf,fitz,ocr,segmentation
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Text Processing :: Linguistic
+Classifier: Topic :: Multimedia :: Graphics :: Graphics Conversion
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: PyMuPDF>=1.23.0
+Requires-Dist: deep-translator>=1.11.0
+Requires-Dist: Pillow>=10.0.0
+Dynamic: license-file
+Dynamic: requires-python
+
+# pdftradoc
+
+A Python library for translating PDF documents while preserving the original layout.
+
+## Features
+
+- Extract text segments from PDF with position, font, color, and style information
+- Translate segments automatically using Google Translate API
+- Generate translated PDF using overlay approach (preserves original layout)
+- Support for external translation (you translate, library generates PDF)
+- Automatic font size adjustment when translation is longer than original
+- Watermark exclusion (TCPDF, etc.)
+- **NEW in v1.1**: Segment merging for fragmented text
+- **NEW in v1.1**: OCR verification and auto-correction
+- **NEW in v1.1**: Quality analysis tools
+
+## Installation
+
+```bash
+pip install pdftradoc
+```
+
+For OCR features (optional):
+```bash
+pip install pytesseract
+# Also install Tesseract OCR:
+# macOS: brew install tesseract tesseract-lang
+# Ubuntu: apt-get install tesseract-ocr tesseract-ocr-ita
+# Windows: Download from https://github.com/UB-Mannheim/tesseract/wiki
+```
+
+## Quick Start
+
+### Option 1: Automatic Translation
+
+```python
+from pdftradoc import extract, translate, apply_overlay
+
+# 1. Extract segments from PDF
+extract("document.pdf", "segments.json")
+
+# 2. Translate automatically (Italian to Albanian)
+translate("segments.json", source_lang="it", target_lang="sq")
+
+# 3. Generate translated PDF
+apply_overlay("document.pdf", "segments.json", "translated.pdf", dpi=200)
+```
+
+### Option 2: Extract with Merge and OCR Verification
+
+```python
+from pdftradoc import extract, translate, apply_overlay
+
+# Extract with automatic segment merging and OCR verification
+extract(
+    "document.pdf",
+    "segments.json",
+    merge=True,           # Merge fragmented segments
+    verify_ocr=True,      # Verify and correct with OCR
+    ocr_lang="ita"        # Tesseract language code
+)
+
+translate("segments.json", source_lang="it", target_lang="sq")
+apply_overlay("document.pdf", "segments.json", "translated.pdf", dpi=200)
+```
+
+### Option 3: External Translation (Manual)
+
+```python
+from pdftradoc import extract, apply_overlay
+
+# 1. Extract segments
+extract("document.pdf", "segments.json")
+
+# 2. Edit segments.json manually or with your translation system
+#    Add translations to the "translation" field for each segment
+
+# 3. Generate PDF with your translations
+apply_overlay("document.pdf", "segments.json", "translated.pdf", dpi=200)
+```
+
+## Quality Control Functions (v1.1)
+
+### Analyze Segmentation Quality
+
+```python
+from pdftradoc import extract, analyze_segmentation
+
+extract("document.pdf", "segments.json")
+analysis = analyze_segmentation("segments.json")
+
+print(f"Total segments: {analysis['total_segments']}")
+print(f"Single characters: {analysis['single_chars']}")
+print(f"Short segments (2-3 chars): {analysis['short_segments']}")
+print(f"Normal segments: {analysis['normal_segments']}")
+print(f"Mergeable pairs: {analysis['mergeable_pairs']}")
+print(f"Quality score: {analysis['quality_score']}%")
+```
+
+### Merge Fragmented Segments
+
+```python
+from pdftradoc import extract, merge_segments
+
+extract("document.pdf", "segments.json")
+result = merge_segments(
+    "segments.json",
+    max_gap=15.0,            # Max horizontal gap to merge (pixels)
+    same_line_threshold=5.0  # Max vertical diff for same line
+)
+print(f"Merged {result['merged']} segments")
+print(f"Final count: {result['final']}")
+```
+
+### OCR Verification
+
+```python
+from pdftradoc import extract, verify_with_ocr
+
+extract("document.pdf", "segments.json")
+result = verify_with_ocr(
+    "document.pdf",
+    "segments.json",
+    lang="ita+eng"  # Tesseract language
+)
+print(f"Match rate: {result['match_rate']}%")
+```
+
+### OCR-Based Extraction
+
+For scanned PDFs or unreliable text layers:
+
+```python
+from pdftradoc import extract_with_ocr, translate, apply_overlay
+
+extract_with_ocr("scanned.pdf", "segments.json", lang="ita")
+translate("segments.json", source_lang="it", target_lang="en")
+apply_overlay("scanned.pdf", "segments.json", "translated.pdf")
+```
+
+## JSON Format
+
+After extraction, the JSON file contains:
+
+```json
+{
+  "source": "document.pdf",
+  "pages": 2,
+  "segments": [
+    {
+      "id": 0,
+      "page": 0,
+      "text": "Original text",
+      "translation": "",
+      "bbox": [100.0, 200.0, 300.0, 220.0],
+      "font": "Helvetica",
+      "size": 12.0,
+      "color": [0.0, 0.0, 0.0],
+      "bold": false,
+      "italic": false,
+      "rotation": 0,
+      "origin": [100.0, 218.0]
+    }
+  ]
+}
+```
+
+### Segment Fields
+
+| Field | Description |
+|-------|-------------|
+| `id` | Unique segment identifier |
+| `page` | Page number (0-indexed) |
+| `text` | Original text |
+| `translation` | Translated text (fill this!) |
+| `bbox` | Bounding box [x0, y0, x1, y1] |
+| `font` | Font name |
+| `size` | Font size in points |
+| `color` | RGB color [r, g, b] (0-1 range) |
+| `bold` | Is bold text |
+| `italic` | Is italic text |
+| `rotation` | Text rotation in degrees |
+| `origin` | Text baseline origin [x, y] |
+
+## API Reference
+
+### extract(pdf_path, json_path, merge=False, verify_ocr=False, ocr_lang="ita+eng", merge_gap=15.0)
+
+Extract all text segments from a PDF.
+
+```python
+result = extract(
+    "document.pdf",
+    "segments.json",
+    merge=True,        # Auto-merge nearby segments
+    verify_ocr=True,   # Verify and correct with OCR
+    ocr_lang="ita"     # Tesseract language
+)
+# Returns: {"segments": 150, "pages": 5, "json_path": "segments.json",
+#           "merged": 10, "segments_after_merge": 140, "ocr_verification": {...}}
+```
+
+### translate(json_path, source_lang, target_lang, ...)
+
+Auto-translate segments using Google Translate.
+
+```python
+result = translate(
+    "segments.json",
+    source_lang="it",      # Source language (or "auto")
+    target_lang="sq",      # Target language
+    batch_size=50,         # Segments per batch
+    skip_short=2,          # Skip segments shorter than this
+    preserve_numbers=True  # Don't translate number-only segments
+)
+# Returns: {"total": 150, "translated": 120, "skipped": 30, "errors": []}
+```
+
+### apply_overlay(pdf_path, json_path, output_path, dpi=150, font_path=None)
+
+Generate translated PDF using overlay approach.
+
+```python
+result = apply_overlay(
+    "document.pdf",
+    "segments.json",
+    "translated.pdf",
+    dpi=200,               # Image resolution (higher = better quality)
+    font_path=None         # Optional: path to custom TTF font
+)
+# Returns: {"applied": 120, "pages_processed": 5, "errors": []}
+```
+
+### apply(pdf_path, json_path, output_path)
+
+Generate translated PDF using redaction approach (faster, smaller files).
+
+```python
+result = apply("document.pdf", "segments.json", "translated.pdf")
+```
+
+### analyze_segmentation(json_path)
+
+Analyze extraction quality.
+
+```python
+result = analyze_segmentation("segments.json")
+# Returns: {"total_segments": 150, "single_chars": 5, "quality_score": 96.7, ...}
+```
+
+### merge_segments(json_path, output_path=None, max_gap=15.0, same_line_threshold=5.0)
+
+Merge fragmented segments.
+
+```python
+result = merge_segments("segments.json", max_gap=20)
+# Returns: {"original": 150, "final": 140, "merged": 10}
+```
+
+### verify_with_ocr(pdf_path, json_path, output_path=None, dpi=300, lang="ita+eng")
+
+Verify extraction with OCR.
+
+```python
+result = verify_with_ocr("document.pdf", "segments.json", lang="ita")
+# Returns: {"match_rate": 95.0, "verified": 100, "matches": 95}
+```
+
+### extract_with_ocr(pdf_path, json_path, dpi=300, lang="ita+eng")
+
+Extract using OCR (for scanned PDFs).
+
+```python
+result = extract_with_ocr("scanned.pdf", "segments.json", lang="ita")
+```
+
+### stats(json_path)
+
+Get statistics from a JSON file.
+
+```python
+result = stats("segments.json")
+# Returns: {"total_segments": 150, "translated": 120, "percentage": 80.0, ...}
+```
+
+### show(json_path, max_segments=20)
+
+Display segments from a JSON file.
+
+```python
+show("segments.json", max_segments=10)
+```
+
+## Language Codes
+
+Common language codes for translation:
+
+| Code | Language |
+|------|----------|
+| `auto` | Auto-detect |
+| `it` | Italian |
+| `en` | English |
+| `de` | German |
+| `sq` | Albanian |
+| `fr` | French |
+| `es` | Spanish |
+| `pt` | Portuguese |
+| `ru` | Russian |
+| `zh-CN` | Chinese (Simplified) |
+| `ja` | Japanese |
+| `ar` | Arabic |
+
+### Tesseract Language Codes (for OCR)
+
+| Code | Language |
+|------|----------|
+| `ita` | Italian |
+| `eng` | English |
+| `deu` | German |
+| `fra` | French |
+| `spa` | Spanish |
+| `ita+eng` | Italian + English |
+
+## DPI Settings
+
+The `dpi` parameter in `apply_overlay` affects quality and file size:
+
+| DPI | Quality | File Size | Use Case |
+|-----|---------|-----------|----------|
+| 100 | Low | Small | Draft, quick preview |
+| 150 | Medium | Medium | Standard use |
+| 200 | High | Large | Final documents |
+| 300 | Very High | Very Large | Print quality |
+
+## Dependencies
+
+- `PyMuPDF` (fitz) - PDF manipulation
+- `deep-translator` - Google Translate API
+- `Pillow` - Image processing
+- `pytesseract` (optional) - OCR features
+
+## Changelog
+
+### v1.1.0
+- Added `merge` parameter to `extract()` for automatic segment merging
+- Added `verify_ocr` parameter to `extract()` for OCR verification and auto-correction
+- New function: `analyze_segmentation()` - analyze extraction quality
+- New function: `merge_segments()` - merge fragmented segments
+- New function: `verify_with_ocr()` - verify extraction with OCR
+- New function: `extract_with_ocr()` - OCR-based extraction for scanned PDFs
+- OCR now automatically corrects fragmented phrases when detected
+
+### v1.0.0
+- Initial release
+- Basic extraction, translation, and PDF generation
+- Overlay approach for layout preservation
+- Watermark exclusion
+
+## License
+
+MIT License
