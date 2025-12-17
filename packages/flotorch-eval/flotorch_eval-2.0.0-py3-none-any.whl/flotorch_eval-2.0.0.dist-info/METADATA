@@ -1,0 +1,653 @@
+Metadata-Version: 2.4
+Name: flotorch-eval
+Version: 2.0.0
+Summary: A comprehensive evaluation framework for AI systems
+Project-URL: Homepage, https://github.com/FloTorch/flotorch-eval
+Project-URL: Repository, https://github.com/FloTorch/flotorch-eval
+Project-URL: Issues, https://github.com/FloTorch/flotorch-eval/issues
+Author-email: Nanda Rajashekaruni <nanda@flotorch.ai>, Kiran George <kiran.george@flotorch.ai>
+License: MIT
+License-File: LICENSE
+Keywords: agents,ai,evaluation,models,opentelemetry,ragas
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Requires-Python: >=3.8
+Requires-Dist: deepeval==3.6.9
+Requires-Dist: flotorch>=2.0.0
+Requires-Dist: opentelemetry-api>=1.0.0
+Requires-Dist: opentelemetry-sdk>=1.0.0
+Requires-Dist: pydantic>=2.0.0
+Requires-Dist: ragas==0.3.8
+Requires-Dist: requests>=2.28.0
+Requires-Dist: typing-extensions>=4.7.0
+Provides-Extra: dev
+Requires-Dist: black>=22.0.0; extra == 'dev'
+Requires-Dist: flake8>=4.0.0; extra == 'dev'
+Requires-Dist: isort>=5.0.0; extra == 'dev'
+Requires-Dist: mypy>=1.0.0; extra == 'dev'
+Requires-Dist: pytest-asyncio>=0.14.0; extra == 'dev'
+Requires-Dist: pytest-cov>=2.0.0; extra == 'dev'
+Requires-Dist: pytest>=7.0.0; extra == 'dev'
+Description-Content-Type: text/markdown
+
+<div align="center">
+
+<div style="background-color: #000000; padding: 20px; border-radius: 10px; display: inline-block; margin: 20px 0;">
+
+# <img src="assets/flotorch_logo.png" alt="FlotorchEval Logo" width="250"/>
+
+</div>
+
+**The comprehensive evaluation framework for Flotorch ecosystem**
+
+[![PyPI Version](https://img.shields.io/pypi/v/flotorch-eval?color=blue&label=PyPI&logo=pypi&logoColor=white)](https://pypi.org/project/flotorch-eval/)
+[![Python Versions](https://img.shields.io/pypi/pyversions/flotorch-eval?color=blue&logo=python&logoColor=white)](https://pypi.org/project/flotorch-eval/)
+[![License](https://img.shields.io/pypi/l/flotorch-eval?color=green&label=License)](https://github.com/FloTorch/flotorch-eval/blob/main/LICENSE)
+[![Documentation](https://img.shields.io/badge/docs-flotorch.ai-blue?logo=read-the-docs&logoColor=white)](https://docs.flotorch.cloud/introduction/)
+[![Website](https://img.shields.io/badge/website-flotorch.ai-blue?logo=google-chrome&logoColor=white)](https://flotorch.ai)
+
+[Installation](#installation) • [Quick Start](#quick-start) • [Examples](#examples--cookbooks) • [Documentation](https://docs.flotorch.cloud/introduction/) • [Contributing](#contributing)
+
+</div>
+
+---
+
+**FlotorchEval** is a comprehensive evaluation framework for Flotorch ecosystem. It enables evaluation of both LLM outputs using industry-standard metrics from DeepEval and Ragas and agent behaviors using our custom metrics, with support for OpenTelemetry traces, and advanced cost/usage analysis.
+
+---
+
+## ✨ Features
+
+### 🎯 LLM Evaluation
+
+| Feature | Description |
+|:---|:---|
+| **🔧 Multi-Engine Support** | DeepEval and Ragas metrics with automatic engine selection |
+| **📊 RAG Metrics** | Faithfulness, context relevancy, context precision, context recall, answer relevance, and hallucination detection |
+| **🔌 Flexible Architecture** | Pluggable metric system with configurable thresholds |
+| **🎯 Priority-Based Routing** | Automatic metric-to-engine mapping based on priority |
+
+### 🤖 Agent Evaluation
+
+| Feature | Description |
+|:---|:---|
+| **🎨 Custom Evaluation Framework** | Purpose-built evaluation system for agent trajectories |
+| **📈 Trajectory Analysis** | Evaluate agent behavior using OpenTelemetry traces |
+| **🧠 LLM-Based Metrics** | Trajectory evaluation with and without reference comparisons |
+| **✅ Goal Accuracy** | Measure if agent achieves intended goals |
+| **🛠️ Tool Call Tracking** | Analyze tool usage and accuracy |
+| **⚡ Latency & Cost Metrics** | Track performance and resource usage |
+
+---
+
+## 📦 Installation <a id="installation"></a>
+
+Install the base package:
+
+```bash
+pip install flotorch-eval
+```
+
+With development tools:
+
+```bash
+pip install "flotorch-eval[dev]"
+```
+
+---
+
+## 🚀 Quick Start <a id="quick-start"></a>
+
+### LLM Evaluation
+
+Evaluate RAG system outputs using DeepEval and Ragas metrics:
+
+```python
+from flotorch_eval.llm_eval import LLMEvaluator, EvaluationItem, MetricKey
+
+# Initialize evaluator
+evaluator = LLMEvaluator(
+    api_key="your-api-key",
+    base_url="flotorch-base-url",
+    evaluator_llm="flotorch/inference_model",
+    embedding_model="flotorch/embedding_model"
+)
+
+# Prepare evaluation data
+data = [
+    EvaluationItem(
+        question="What is machine learning?",
+        generated_answer="Machine learning is a subset of AI...",
+        expected_answer="Machine learning is a method of data analysis...",
+        context=["Machine learning (ML) is a field of artificial intelligence..."]
+    )
+]
+
+# Evaluate with specific metrics
+results = evaluator.evaluate(
+    data=data,
+    metrics=[
+        MetricKey.FAITHFULNESS,
+        MetricKey.ANSWER_RELEVANCE,
+        MetricKey.CONTEXT_RELEVANCY
+    ]
+)
+
+print(results)
+```
+
+> **💡 Tip:** Passing the metrics is optional. If metrics are not provided, data will be evaluated on all the available metrics from both the evaluation engines.
+
+> **⚠️ Note:** Aspect critique requires a configuration to be passed as a metric configuration to the LLMEvaluation for it to work and so it will not be added as default. The configuration structure is provided below.
+
+### Advanced LLM Evaluation with Custom Thresholds
+
+Deepeval metrics can be configured with specific threshold values which directly affects the score. The default score is 0.7.
+
+```python
+# Configure metric-specific arguments
+metric_args = {
+    "faithfulness": {"threshold": 0.8},
+    "answer_relevance": {"threshold": 0.7},
+    "hallucination": {"threshold": 0.3}
+}
+
+evaluator = LLMEvaluator(
+    api_key="your-api-key",
+    base_url="flotorch-base-url",
+    evaluator_llm="flotorch/inference_model",
+    embedding_model="flotorch/embedding_model",
+    metric_args=metric_args
+)
+
+# Get all available metrics
+available_metrics = evaluator.get_all_metrics()
+print(f"Available metrics: {available_metrics}")
+
+# Evaluate with all available metrics
+results = evaluator.evaluate(data=data)
+```
+
+### Engine Selection Modes
+
+Flotorch currently supports two evaluation backend engines: Ragas and Deepeval. Each offers distinct as well as overlapping metrics, and you can choose how you want to run them.
+
+#### Auto Mode (Default - Recommended)
+
+Automatically routes metrics to the best engine with priority-based selection:
+
+```python
+evaluator = LLMEvaluator(
+    api_key="your-api-key",
+    base_url="flotorch-base-url",
+    evaluator_llm="flotorch/inference_model",
+    embedding_model="flotorch/embedding_model",
+    evaluation_engine='auto'  # Default behavior
+)
+
+# Automatically routes metrics to appropriate engines
+# Ragas has priority for overlapping metrics (faithfulness, answer_relevance, context_precision)
+results = evaluator.evaluate(data=data)
+```
+
+**How Auto Mode Works:**
+- Metrics supported by multiple engines are routed to **Ragas** (priority 1)
+- Metrics unique to an engine use that specific engine
+- Example: `FAITHFULNESS` → Ragas, `HALLUCINATION` → DeepEval
+
+#### Ragas-Only Mode
+
+Use only Ragas metrics:
+
+```python
+evaluator = LLMEvaluator(
+    api_key="your-api-key",
+    base_url="flotorch-base-url",
+    evaluator_llm="flotorch/inference_model",
+    embedding_model="flotorch/embedding_model",
+    evaluation_engine='ragas'
+)
+
+# Only Ragas metrics will be evaluated
+# Metrics: faithfulness, answer_relevance, context_precision, aspect_critic
+```
+
+#### DeepEval-Only Mode
+
+Use only DeepEval metrics:
+
+```python
+evaluator = LLMEvaluator(
+    api_key="your-api-key",
+    base_url="flotorch-base-url",
+    evaluator_llm="flotorch/inference_model",
+    embedding_model="flotorch/embedding_model",
+    evaluation_engine='deepeval'
+)
+
+# Only DeepEval metrics will be evaluated
+# Metrics: faithfulness, answer_relevance, context_relevancy, context_precision, 
+#          context_recall, hallucination
+```
+
+#### Engine Priority
+
+When using `auto` mode, metrics are routed based on priority:
+
+| Priority | Engine | Overlapping Metrics |
+|:--------:|:------:|:-------------------:|
+| 1 (Highest) | Ragas | faithfulness, answer_relevance, context_precision |
+| 2 | DeepEval | faithfulness, answer_relevance, context_precision |
+
+> **⚠️ Note:** Ragas requires an embedding model for most metrics. If no embedding model is provided, only DeepEval metrics will be available.
+
+### Agent Evaluation
+
+Evaluate agent trajectories using OpenTelemetry traces. The AgentEvaluator supports evaluating agent behavior across multiple dimensions including trajectory quality, tool usage, goal achievement, latency, and cost.
+
+#### Basic Agent Evaluation
+
+```python
+from flotorch_eval.agent_eval import AgentEvaluator
+
+# Initialize the evaluation client
+client = AgentEvaluator(
+    api_key="your-api-key",
+    base_url="flotorch-base-url",
+    default_evaluator="flotorch/inference_model"  # LLM model for evaluation metrics
+)
+
+# Fetch trace data from Flotorch API using trace ID
+trace = client.fetch_traces(trace_id="your-trace-id")
+
+# Evaluate with all default metrics
+results = await client.evaluate(trace=trace)
+
+# Access results
+for metric_result in results.scores:
+    print(f"Metric: {metric_result.name}, Score: {metric_result.score}")
+    print(f"Details: {metric_result.details}")
+```
+
+#### Agent Evaluation with Custom Metrics
+
+You can specify which metrics to evaluate by passing a list of metric instances:
+
+```python
+from flotorch_eval.agent_eval.metrics.llm_evaluators import (
+    TrajectoryEvalWithLLM,
+    ToolCallAccuracy,
+    AgentGoalAccuracy
+)
+from flotorch_eval.agent_eval.metrics.latency_metrics import LatencyMetric
+from flotorch_eval.agent_eval.metrics.usage_metrics import UsageMetric
+
+# Define custom metrics
+custom_metrics = [
+    TrajectoryEvalWithLLM(),
+    ToolCallAccuracy(),
+    AgentGoalAccuracy(),
+    LatencyMetric(),
+    UsageMetric()
+]
+
+# Evaluate with specific metrics
+trace = client.fetch_traces(trace_id="your-trace-id")
+results = await client.evaluate(trace=trace, metrics=custom_metrics)
+```
+
+#### Agent Evaluation with Reference Trajectory
+
+Compare agent performance against a reference trajectory:
+
+```python
+# Define a reference trajectory
+reference_trajectory = {
+    "input": "What is AWS Bedrock?",
+    "expected_steps": [
+        {
+            "thought": "I need to search for information about AWS Bedrock",
+            "tool_call": {
+                "name": "search_tool",
+                "arguments": {"query": "AWS Bedrock"}
+            }
+        },
+        {
+            "thought": "Now I can provide a comprehensive answer",
+            "final_response": "AWS Bedrock is a fully managed service..."
+        }
+    ]
+}
+
+# Evaluate with reference
+trace = client.fetch_traces(trace_id="your-trace-id")
+results = await client.evaluate(
+    trace=trace,
+    reference=reference_trajectory
+)
+```
+
+Alternatively, you can fetch a reference trace by providing a reference trace ID:
+
+```python
+# Evaluate using reference trace ID
+results = await client.evaluate(
+    trace=trace,
+    reference_trace_id="reference-trace-id"
+)
+```
+
+#### Working with Agent Traces
+
+If you're using Flotorch agents, you can retrieve traces directly from the agent client:
+
+```python
+from flotorch.adk.agent import FlotorchADKAgent
+
+# Initialize agent client
+agent_client = FlotorchADKAgent(
+    agent_name="your-agent-name",
+    base_url="flotorch-base-url",
+    api_key="your-api-key"
+)
+
+# Get trace IDs from agent
+trace_ids = agent_client.get_tracer_ids()
+
+# Evaluate each trace
+for trace_id in trace_ids:
+    trace = client.fetch_traces(trace_id=trace_id)
+    results = await client.evaluate(trace=trace)
+    print(f"Evaluation results for trace {trace_id}: {results}")
+```
+
+---
+
+## 📚 Examples & Cookbooks <a id="examples--cookbooks"></a>
+
+We maintain a separate collection of notebooks to help you get started:
+
+| Task | Notebook | Run |
+|:---|:---|:---|
+| **RAG Evaluation** | [Evaluate RAG Pipelines](https://github.com/FloTorch/Resources/blob/main/examples/flotorch-evaluation-notebooks/llm-evaluations/Flotorch_assistant_eval.ipynb) | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1DU_V3BAVK4l77OvzGb1bwz9px7yVGhe4) |
+| **LLM Metrics Deep Dive** | [Advanced LLM Evaluation](https://github.com/FloTorch/Resources/blob/main/examples/flotorch-evaluation-notebooks/llm-evaluations/copilotKit_assistant_eval.ipynb) | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/14PoOkvNCF6uaM4kmazWLwWMFxWS0lZT-) |
+
+
+> 🔗 **See all examples in the [Resources Repository](https://github.com/FloTorch/Resources/tree/main/examples/flotorch-evaluation-notebooks)**
+
+---
+
+## 📊 Available Metrics
+
+### LLM/RAG Metrics
+
+| Metric | Engine | Description |
+|:------:|:------:|:------------|
+| `FAITHFULNESS` | DeepEval/Ragas | Measures if the answer is factually consistent with the context |
+| `ANSWER_RELEVANCE` | DeepEval/Ragas | Evaluates how relevant the answer is to the question |
+| `CONTEXT_RELEVANCY` | DeepEval | Assesses if the retrieved context is relevant to the question |
+| `CONTEXT_PRECISION` | DeepEval/Ragas | Measures whether retrieved contexts are relevant |
+| `CONTEXT_RECALL` | DeepEval | Measures the quality of retrieval |
+| `HALLUCINATION` | DeepEval | Detects if the model generates information not in the context |
+| `ASPECT_CRITIC` | Ragas | Custom aspect-based evaluation (requires configuration) |
+| `LATENCY` | Gateway | Measures total and average latency across LLM calls |
+| `COST` | Gateway | Tracks total cost of LLM operations |
+| `TOKEN_USAGE` | Gateway | Monitors total token consumption |
+
+### Agent Metrics
+
+| Metric | Description | Requires LLM |
+|:------:|:------------|:------------:|
+| `TrajectoryEvalWithLLM` | Evaluates agent trajectory quality by inferring the agent's goal from its actions and assessing whether it was successfully completed. Returns a binary score (0 or 1) with detailed explanation. | ✅ Yes |
+| `TrajectoryEvalWithLLMWithReference` | Compares agent trajectory against a reference trajectory to evaluate performance. Requires a reference trajectory to be provided. | ✅ Yes |
+| `ToolCallAccuracy` | Assesses the accuracy and appropriateness of tool calls made by the agent. Evaluates whether tools were used correctly and when they should have been used. | ✅ Yes |
+| `AgentGoalAccuracy` | Validates if the agent successfully accomplished the user's intended goal. Evaluates goal perception, plan soundness, execution coherence, and final outcome. | ✅ Yes |
+| `LatencyMetric` | Tracks latency metrics including total latency, average step latency, and hierarchical latency breakdown across all steps in the trajectory. | ❌ No |
+| `UsageMetric` | Monitors cost and token usage. Provides total cost, average cost per call, and detailed cost breakdown per model and span. | ❌ No |
+
+> **Default Metrics:** When no metrics are specified, the evaluator uses all available metrics by default: TrajectoryEvalWithLLM, ToolCallAccuracy, AgentGoalAccuracy, UsageMetric, and LatencyMetric. If a reference is provided, TrajectoryEvalWithLLMWithReference is automatically added.
+
+---
+
+## ⚙️ Configuration
+
+### Gateway Metrics (Latency, Cost, Token Usage)
+
+Gateway metrics automatically track performance and usage statistics from your LLM calls. To enable these metrics, pass the response headers from FlotorchLLM as metadata:
+
+```python
+from flotorch.sdk.llm import FlotorchLLM
+from flotorch_eval.llm_eval import LLMEvaluator, EvaluationItem
+
+# Initialize FlotorchLLM
+llm = FlotorchLLM(
+    model_id="flotorch/gpt-4",
+    api_key="your-api-key",
+    base_url="flotorch-base-url"
+)
+
+# Make LLM call with return_headers=True to get metadata
+response, headers = llm.invoke(
+    messages=[{"role": "user", "content": "What is machine learning?"}],
+    return_headers=True  # This returns headers containing latency, cost, and token info
+)
+
+# Create evaluation item with headers as metadata
+eval_item = EvaluationItem(
+    question="What is machine learning?",
+    generated_answer=response.content,
+    expected_answer="Machine learning is...",
+    context=["Context documents..."],
+    metadata=headers  # Pass headers directly as metadata
+)
+
+# Evaluate - Gateway metrics will be automatically computed
+evaluator = LLMEvaluator(
+    api_key="your-api-key",
+    base_url="flotorch-base-url",
+    inferencer_model="flotorch/gpt-4",
+    embedding_model="flotorch/embedding-model"
+)
+
+results = evaluator.evaluate(data=[eval_item])
+```
+
+The results will include the gateway metrics total cost, average latency and total tokens.
+
+> **💡 Note:** Gateway metrics are computed automatically when metadata is present. No additional configuration is required.
+
+### Metric Arguments
+
+Customize metric thresholds and behavior:
+
+```python
+metric_args = {
+    "faithfulness": {
+        "threshold": 0.8,
+        "truths_extraction_limit": 30
+    },
+    "answer_relevance": {
+        "threshold": 0.7
+    },
+    "hallucination": {
+        "threshold": 0.5
+    },
+    "context_precision": {
+        "threshold": 0.7
+    }
+}
+```
+
+### Ragas Aspect Critic
+
+Configure custom evaluation aspects:
+
+```python
+metric_args = {
+    "aspect_critic": {
+        "harmfulness": {
+            "name": "harmfulness",
+            "definition": "Does the response contain harmful content?"
+        },
+        "bias": {
+            "name": "bias",
+            "definition": "Does the response show bias or discrimination?"
+        }
+    }
+}
+```
+
+---
+
+## 📖 API Reference
+
+### LLMEvaluator
+
+```python
+LLMEvaluator(
+    api_key: str,
+    base_url: str,
+    inferencer_model: str,
+    embedding_model: str,
+    evaluation_engine: str = 'auto',
+    metrics: Optional[List[MetricKey]] = None,
+    metric_configs: Optional[Dict] = None
+)
+```
+
+**Parameters:**
+- `api_key` (str): API key for authentication
+- `base_url` (str): Base URL for the Flotorch service
+- `inferencer_model` (str): The LLM model to use for evaluation (e.g., "flotorch/gpt-4")
+- `embedding_model` (str): The embedding model for metrics requiring embeddings
+- `evaluation_engine` (str): Engine selection mode
+  - `'auto'` (default): Automatically routes metrics with priority-based selection
+  - `'ragas'`: Use only Ragas metrics
+  - `'deepeval'`: Use only DeepEval metrics
+- `metrics` (Optional[List[MetricKey]]): Default metrics to evaluate
+  - If `None` with `auto`: Uses all available metrics from all engines
+  - If `None` with specific engine: Uses all metrics from that engine
+- `metric_configs` (Optional[Dict]): Configuration for metrics requiring additional parameters (e.g., AspectCritic)
+
+**Methods:**
+- `evaluate(data: List[EvaluationItem], metrics: Optional[List[MetricKey]] = None) -> Dict[str, Any]`
+  - Evaluate the provided data using specified or default metrics
+- `get_all_metrics() -> List[MetricKey]`
+  - Returns all available metrics based on current engine configuration
+- `set_metrics(metrics: List[MetricKey]) -> None`
+  - Update the default metrics to use for evaluation
+
+### EvaluationItem
+
+```python
+@dataclass
+class EvaluationItem:
+    question: str                    # The input question
+    generated_answer: str            # Model's generated answer
+    expected_answer: str             # Ground truth/expected answer
+    context: List[str] = []          # Retrieved context documents
+    metadata: Dict[str, Any] = {}    # Additional metadata
+```
+
+### AgentEvaluator
+
+```python
+AgentEvaluator(
+    api_key: str,
+    base_url: str,
+    default_evaluator: Optional[str] = None
+)
+```
+
+**Parameters:**
+- `api_key` (str): API key for authentication
+- `base_url` (str): Base URL for the Flotorch service
+- `default_evaluator` (Optional[str]): Default LLM model identifier for metrics requiring LLM evaluation (e.g., "flotorch/inference_model")
+
+**Methods:**
+- `fetch_traces(trace_id: str) -> Dict[str, Any]`
+  - Fetches trace data from Flotorch API for a given trace ID
+  - Returns the trace data as a dictionary
+- `evaluate(trace: Dict[str, Any], metrics: Optional[List[LLMBaseEval]] = None, reference: Optional[Dict[str, Any]] = None, reference_trace_id: Optional[str] = None) -> EvaluationResult`
+  - Evaluates a trace using the provided metrics
+  - If `metrics` is `None`, uses all default metrics
+  - If `reference` or `reference_trace_id` is provided, automatically includes TrajectoryEvalWithLLMWithReference metric
+  - Returns an `EvaluationResult` object containing scores and details for each metric
+- `set_default_evaluator(default_evaluator: str) -> None`
+  - Updates the default evaluator model for the client
+
+**EvaluationResult:**
+```python
+class EvaluationResult:
+    trajectory_id: str               # Unique identifier for the trajectory
+    scores: List[MetricResult]       # List of metric evaluation results
+    timestamp: datetime              # Timestamp of evaluation
+    metadata: Dict[str, Any]         # Additional metadata
+```
+
+**MetricResult:**
+```python
+class MetricResult:
+    name: str                        # Name of the metric
+    score: float                     # Score (0.0 to 1.0 for most metrics)
+    details: Dict[str, Any]          # Detailed evaluation information
+```
+
+---
+
+## 🤝 Contributing <a id="contributing"></a>
+
+We welcome contributions! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+### Development Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/FloTorch/flotorch-eval.git
+cd flotorch-eval
+
+# Install in development mode
+pip install -e ".[dev]"
+
+# Run linters
+pylint flotorch_eval/
+black flotorch_eval/
+```
+
+---
+
+## 📚 Documentation
+
+Full documentation is available at [**docs.flotorch.ai**](https://docs.flotorch.ai)
+
+Visit our website: [**flotorch.ai**](https://flotorch.ai)
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🙏 Acknowledgments
+
+- **DeepEval**: Industry-standard evaluation metrics for LLMs
+- **Ragas**: RAG-specific evaluation framework
+- **OpenTelemetry**: Distributed tracing for agent evaluation
+
+---
+
+<div align="center">
+
+**Made with ❤️ by the Flotorch Team**
+
+[Website](https://flotorch.ai) • [Documentation](https://docs.flotorch.ai) • [PyPI](https://pypi.org/project/flotorch-eval/) • [GitHub](https://github.com/FloTorch/flotorch-eval)
+
+</div>
