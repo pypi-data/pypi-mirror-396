@@ -1,0 +1,38 @@
+[build-system]
+requires = ["hatchling>=1.28.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "easywebview"
+dynamic = ["version"]
+description = "A tiny standalone WebView window powered by pywebview."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["pywebview>=6.1"]
+keywords = ["webview", "pywebview", "browser"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+
+[project.optional-dependencies]
+gtk = ["pywebview[gtk]>=6.1"]
+qt = ["pywebview[qt]>=6.1"]
+cef = ["pywebview[cef]>=6.1"]
+ssl = ["pywebview[ssl]>=6.1"]
+dev = ["build>=1.3.0", "twine>=6.2.0"]
+
+[project.scripts]
+easywebview = "easywebview.cli:main"
+
+[tool.hatch.version]
+path = "easywebview/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["easywebview"]
+include = ["easywebview/py.typed"]
+
