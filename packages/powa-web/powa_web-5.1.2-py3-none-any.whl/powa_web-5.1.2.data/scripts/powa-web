@@ -1,0 +1,52 @@
+#!python
+import logging
+import os
+import sys
+import tornado.ioloop
+from powa import make_app
+from tornado.options import options
+
+if __name__ == "__main__":
+    application = make_app(debug=False, gzip=True, compress_response=True)
+    logger = logging.getLogger("tornado.application")
+
+    if (
+        options.certfile
+        and not options.keyfile
+        or not options.certfile
+        and options.keyfile
+    ):
+        logger.error(
+            "Invalid SSL configuration: you need to provide both "
+            "certfile and keyfile"
+        )
+        sys.exit(1)
+
+    server = application
+    protocol = "http"
+    if options.certfile and options.keyfile:
+        if not os.path.isfile(options.certfile):
+            logger.error("Certificate file %s not found", options.certfile)
+            sys.exit(1)
+        if not os.path.isfile(options.keyfile):
+            logger.error("Certificate key file %s not found", options.keyfile)
+            sys.exit(1)
+
+        ssl_options = {
+            "certfile": options.certfile,
+            "keyfile": options.keyfile,
+        }
+        server = tornado.httpserver.HTTPServer(
+            application, ssl_options=ssl_options
+        )
+        protocol = "https"
+
+    server.listen(options.port, address=options.address)
+    logger.info(
+        "Starting powa-web on %s://%s:%s%s",
+        protocol,
+        options.address,
+        options.port,
+        options.url_prefix,
+    )
+    tornado.ioloop.IOLoop.instance().start()
