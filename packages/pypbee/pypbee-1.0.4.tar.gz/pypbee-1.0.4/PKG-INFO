@@ -1,0 +1,312 @@
+Metadata-Version: 2.4
+Name: pypbee
+Version: 1.0.4
+Summary: Performance-Based Earthquake Engineering toolkit
+Author-email: Angshuman Deb <angshuman311@gmail.com>
+License-Expression: MIT
+Project-URL: Homepage, https://github.com/angshuman311/PyPBEE
+Requires-Python: <3.13,>=3.12
+Description-Content-Type: text/markdown
+License-File: LICENSE.md
+Requires-Dist: numpy>=1.26
+Requires-Dist: scipy<=1.15.3
+Requires-Dist: matplotlib>=3.8.2
+Requires-Dist: pygmm>=0.7.1
+Requires-Dist: pathos>=0.3.4
+Requires-Dist: pydoe3>=1.0.4
+Requires-Dist: xlrd>=2.0.1
+Requires-Dist: eqsig>=1.2.17
+Requires-Dist: openpyxl>=3.1.5
+Requires-Dist: python-benedict>=0.35.0
+Requires-Dist: PyQt5<5.16,>=5.15
+Requires-Dist: openseespy>=3.7
+Provides-Extra: numba
+Requires-Dist: numba>=0.61; extra == "numba"
+Dynamic: license-file
+
+# PyPBEE — Performance-Based Earthquake Engineering in Python
+A modular, high-performance framework that lets researchers and engineers run the full Performance-Based Earthquake Engineering (PBEE) workflow — from site-specific seismic hazard analysis to demand, damage and (soon) loss hazard analysis — entirely in Python.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+---
+
+## Key Capabilities
+* **End-to-end PBEE pipeline**  
+  Probabilistic Seismic Hazard Analysis (PSHA), Ground Motion Selection (GMS), Nonlinear Time-History Analysis (NLTHA), Probabilistic Seismic Demand Hazard Analysis (PSDemHA) and Probabilistic Seismic Damage Hazard Analysis (PSDamHA).  
+* **Object-oriented core, plug-and-play extensions**  
+  Clean template-method lifecycle (`setup → run → wrap_up`) and abstract entity classes (`IM`, `EDP`, `DS`, `Structure`) make it straightforward to add new intensity measures, demand parameters, fragilities, or analysis stages.  
+* **Advanced Uncertainty Quantification**  
+  Treat aleatory *and* epistemic sources (random FE parameters, parameter estimation uncertainty, model-form alternatives) with `MultivariateNataf`, `Mixture`, Latin Hypercube sampling, etc.  
+* **Finite-element backends out of the box**  
+  Adapters for **OpenSeesTcl** and **OpenSeesPy**; extendable to Abaqus, Ansys, …  
+* **Scales from laptop to cluster**  
+  Local multiprocessing via *pathos* or embarrassingly-parallel Slurm jobs on HPC/HTC systems.  
+* **Built-in visualisation**  
+  Hazard curves, conditional spectra, demand / damage hazard surfaces, deaggregation plots — all ready for publication.  
+
+
+## PyPBEE Installation Guide
+**Supported Python Versions:** 3.12
+
+---
+
+### Recommended: Create a Fresh Environment
+It is **highly recommended** to install PyPBEE in a **new isolated environment**.
+
+You can set up PyPBEE using **five primary installation routes**. The first four require [forking and cloning the PyPBEE repository](#forking-and-cloning-the-repository):
+
+| Route | Platform | Tool | Description |
+|--------|-----------|------|--------------|
+| [1. Windows (venv)](#installing-on-windows-using-virtual-environment-venv-using-setup_venvbat) | Windows | Virtual environment (`venv`) | Uses `setup_venv.bat` to create and configure a venv automatically |
+| [2. Windows (Conda)](#installing-on-windows-conda) | Windows | Conda | Uses the provided `environment.yml` to set up a Conda environment |
+| [3. macOS (venv)](#installing-on-macos-using-virtual-environment-venv) | macOS | Virtual environment (`venv`) | Manual venv setup using `python3 -m venv` |
+| [4. macOS (Conda)](#installing-on-macos-conda) | macOS | Conda | Uses the provided `environment.yml` to create a Conda environment |
+| [5. PyPI](#installing-directly-from-pypi) | All | pip | Install directly from PyPI |
+
+
+
+
+---
+
+### Forking and Cloning the Repository
+
+1. Install **Git** from [git-scm.com](https://git-scm.com/install/)
+2. Go to [https://github.com/angshuman311/PyPBEE](https://github.com/angshuman311/PyPBEE) and click **Fork** (top-right corner)  
+   This creates your own copy of the repository under your GitHub account.
+3. Open **Git Bash** on Windows (or **Terminal** on macOS)
+4. Navigate (`cd`) to the folder where you want the code to reside:
+   ```
+   cd path/to/your/projects
+   ```
+5. Clone **your fork** instead of the main repo:
+   ```
+   git clone https://github.com/<your-github-username>/PyPBEE
+   ```
+
+---
+
+### Installing on Windows using virtual environment (venv): Using `setup_venv.bat`
+
+1. Install **Python >=3.12, <3.13** from [python.org](https://www.python.org/downloads/)
+2. Locate `setup_venv.bat` in your repository directory
+3. Double-click `setup_venv.bat`
+4. When prompted, browse to your `python.exe` location (from step 1)
+5. The script will:
+   - Create `venv\pypbee` inside the repository directory
+   - Install all requirements from `requirements.txt`
+6. Point your **IDE's Python interpreter** (for example, in VS Code, PyCharm, or Spyder) to the **`python.exe`** inside the **virtual environment** you just created (`venv\pypbee`)
+
+---
+
+### Installing on Windows (Conda)
+
+1. Install the **Anaconda** distribution
+2. Open **Anaconda Prompt**
+3. Navigate to the cloned repository directory:
+   ```
+   cd path\to\your\PyPBEE
+   ```
+4. Create the environment from the provided file:
+   ```
+   conda env create -f environment.yml
+   ```
+5. Point your **IDE's Python interpreter** (e.g., in VS Code, PyCharm, or Spyder) to the **conda environment** you just created (`pypbee`)
+
+---
+
+### Installing on macOS using virtual environment (venv)
+
+1. Install **Python ≥3.12, <3.13** from [python.org](https://www.python.org/downloads/)
+2. Open **Terminal**
+3. Navigate to your cloned repository directory:
+   ```
+   cd path/to/your/PyPBEE
+   ```
+4. Create a new virtual environment inside the repository directory:
+   ```
+   python3 -m venv venv/pypbee
+   ```
+5. Activate the environment:
+   ```
+   source venv/pypbee/bin/activate
+   ```
+6. Upgrade pip and install all required dependencies:
+   ```
+   python -m pip install --upgrade pip
+   pip install -r requirements.txt
+   ```
+   **Note:** If you encounter issues when installing `numba` on macOS, use the alternate file:
+   ```
+   pip install -r requirements-no-numba.txt
+   ```
+7. Point your **IDE's Python interpreter** (for example, in VS Code, PyCharm, or Spyder) to the **`python`** binary inside the virtual environment you just created (`venv/pypbee/bin/python`)
+
+---
+
+### Installing on macOS (Conda)
+
+1. Install the **Anaconda** distribution
+2. Open **Terminal**
+3. Navigate to the cloned repository directory:
+   ```
+   cd path/to/your/PyPBEE
+   ```
+4. Create the environment from the provided file:
+   ```
+   conda env create -f environment.yml
+   ```
+   **Note:** If installation errors related to `numba` occur, use the alternate environment file:
+   ```
+   conda env create -f environment-no-numba.yml
+   ```
+5. Activate the environment:
+   ```
+   conda activate pypbee
+   ```
+6. Point your **IDE's Python interpreter** (e.g., in VS Code, PyCharm, or Spyder) to the **conda environment** you just created (`pypbee`)
+
+---
+
+### Installing Directly from PyPI
+
+PyPBEE is also available on **[PyPI](https://pypi.org/project/pypbee/)**.
+
+> ⚠️ **Important:**  
+> We **strongly recommend** installing PyPBEE inside a **new, isolated virtual environment** (using `venv`) or a **Conda environment**.  
+> **Do not** install PyPBEE in your base Python or base Conda environment — this helps avoid version conflicts and dependency issues with other packages.
+
+
+**Step 1: Install Python (or Anaconda)**
+
+Before proceeding, ensure you have **Python 3.12 ≤ version < 3.13** installed.  
+You can choose one of the two following options:
+
+- Install **Python 3.12 ≤ version < 3.13** directly from [python.org/downloads](https://www.python.org/downloads/).  
+  During installation on Windows, make sure to **check “Add Python to PATH.”**.  
+  To create a new environment:
+  1. Open a **terminal** (macOS/Linux) or **Command Prompt** (Windows).
+  2. Navigate (`cd`) to the folder where you want to create the virtual environment — typically inside your project directory.  
+   Example:
+   ```
+   cd path/to/your/project
+   ```
+  3. Create and activate the virtual environment:
+   ```
+   python -m venv pypbee-venv
+   source pypbee-venv/bin/activate    # macOS/Linux
+   pypbee-venv\Scripts\activate       # Windows
+   ```
+
+- Or install the **Anaconda distribution** (which includes Python and Conda).  
+  When creating the environment later, Conda will automatically install the correct Python version **(>=3.12, <3.13)**.  
+  To create a new environment, do this inside an **Anaconda Prompt** (Windows) or a **terminal** (macOS/Linux):
+  ```
+  conda create -n pypbee python=3.12.10
+  conda activate pypbee
+  ```
+
+
+**Step 2: Install PyPBEE from PyPI**
+
+Without Numba:
+```
+pip install pypbee
+```
+
+With Numba acceleration enabled:
+```
+pip install "pypbee[numba]"
+```
+
+---
+
+## Verifying Installation
+
+Run Python and import PyPBEE:
+```python
+import pypbee
+print(pypbee.__version__)
+```
+
+If no errors appear, your environment is correctly set up.
+
+
+## Conceptual PSEUDO code
+```python
+from pypbee.structure                               import OSB               # Ordinary Standard Bridge
+from pypbee.avg_sa                                  import AvgSa
+from pypbee.edp                                     import MaxColRebarStrain
+from pypbee.ds                                      import DS
+from pypbee.analysis                                import PrelimAnalysis, PSHA, GMS, NLTHA, PSDemHA, PSDamHA
+from pypbee.utility                                 import Utility
+from pypbee.pygmm_extension.boore_atkinson_2008     import BooreAtkinson2008
+from pygmm.baker_jayaram_2008                       import calc_correls
+
+# 1 ── define model‐params & site info ------------------------------------------------
+# See files `osb_info_*.py` in `examples/Bridge_*/osb_info_*.py` for model_params and location_info definition
+name = 'Bridge_A'
+model_files_path = f'path/to/{name}'
+model_params = Utility.import_attr_from_module(module_path=model_files_path, module_name=f"osb_info_{name}", attr='model_params')
+location_info = Utility.import_attr_from_module(module_path=model_files_path, module_name=f"osb_info_{name}", attr='location_info')
+local_python_path = '/path/to/PyPBEE/venv/pypbee/Scripts/python.exe'
+model_work_dir_path = f'path/to/a/working/directory/for/results/data/storage/for/{name}'
+
+# 2 ── create entities ---------------------------------------------------------------
+structural_analysis_platform = OpenSeesPy(model_files_path, local_python_path)
+osb         = OSB(name, location_info, model_files_path, model_work_dir_path, model_params, structural_analysis_platform)
+im          = AvgSa(osb, gmm=BooreAtkinson2008, correl_func=calc_correls, define_range=['T_1_trans', 'T_1_trans'], range_multiplier=[1, 2.5])
+edp_list    = [
+                    MaxColRebarStrain(max_what='compression', frame_structure=osb, tag='1', recorder_file_storage='shared'),
+                    MaxColRebarStrain(max_what='tension', frame_structure=osb, tag='2', recorder_file_storage='shared'),
+                    MaxSpringDeformation(spring_type='shear_key', max_what='compression', frame_structure=osb, tag='4', recorder_file_storage='separate', normalize_with='D3')
+              ]
+ds_list     = [
+                    DS(
+                        edp=edp_list[0], predictor=lambda x: 0.004,
+                        haz_req={'normalized_fragility_dist': lognorm(0.326, 0, 1.02),
+                                'estimation_sample_size': 5},
+                        ds_type='col_rebar_strain_damage'
+                    )
+                    DS(
+                        edp=edp_list[1], predictor=lambda x: 0.03 + 700 * x[1] * x[2] / x[3] - 0.1 * x[8] / (x[4] * x[5]),
+                        haz_req={'normalized_fragility_dist': lognorm(0.201, 0, 1.05),
+                                'estimation_sample_size': 5},
+                        ds_type='col_rebar_strain_damage'
+                    )
+                    DS(
+                        edp=edp_list[2], predictor=lambda x: 1.0,
+                        haz_req={'normalized_fragility_dist': lognorm(0.11, 0, 1.14),
+                                'estimation_sample_size': 5},
+                        ds_type='spring_deformation_damage',
+                    )
+              ]
+
+
+# 3 ── assemble analyses -------------------------------------------------------------
+pre         = PrelimAnalysis(osb, num_modes=8)
+psha        = PSHA(im)
+gms         = GMS(im)
+nltha       = NLTHA(im, edp_list)
+psdemha     = PSDemHA(edp_list, im)
+psdamha     = PSDamHA(ds_list, im, sol_type='numerical')
+
+# 4 ── run workflow ------------------------------------------------------------------
+for a in (pre, psha, gms, nltha, psdemha, psdamha):
+    a.setup(...)
+    a.run(...)
+    a.wrap_up(...)
+```
+Full, commented examples live in `scripts/examples`.
+
+## Contributing
+1. Fork this repository and clone your fork locally.   
+2. Create a feature branch, make your changes (e.g., add a new `IM`, `EDP`, etc.), and push the branch to your fork.  
+3. Open a pull request describing *what* you changed and *why* it’s useful.
+4. Bug reports and feature requests are equally welcome — open a GitHub issue.
+
+## Acknowledgements
+Development supported by **Caltrans (65A0594, Task 2880)**, **PEER Transportation Systems Research Program (Project #1147-NCTRTE)**, and the **Reissner Chair, UC San Diego**. HPC tests used TACC resources.
+
+## License
+This project is released under the [MIT License](LICENSE.md).
