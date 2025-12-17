@@ -1,0 +1,66 @@
+# SPDX-FileCopyrightText: 2025 wmj <wmj.py@gmx.com>
+#
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
+#
+# A pipeline is composed of independent jobs that run scripts, grouped into stages.
+# Stages run in sequential order, but jobs within stages run in parallel.
+#
+# For more information, see: https://docs.gitlab.com/ee/ci/yaml/#stages
+#
+# You can copy and paste this template into a new `.gitlab-ci.yml` file.
+#
+
+stages:          # List of stages for jobs, and their order of execution
+  - lint
+  - test
+
+image: python:3.10
+
+variables:
+    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+cache:
+    paths:
+        - .cache/pip
+
+before_script:
+    - python --version ; pip --version
+    - ls -a
+    - pwd
+
+pytest:
+    stage: test
+    image: python:$PYVERSION
+    script:
+        - pip install --editable ".[test]"
+        - pytest --junitxml=junit.xml src
+    artifacts:
+        reports:
+            junit: junit.xml
+    parallel:
+        matrix:
+        - PYVERSION:
+            - "3.10"
+            - "3.11"
+            - "3.12"
+            - "3.13"
+
+reuse lint:
+    stage: lint
+    script:
+        - pip install reuse
+        - reuse lint
+
+twine check:
+    stage: lint
+    script:
+        - pip install twine build
+        - python -m build
+        - twine check --strict dist/*
+
+black check:
+    stage: lint
+    script:
+        - pip install black
+        - python -m black --check --diff src/interregnum

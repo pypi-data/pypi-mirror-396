@@ -1,0 +1,188 @@
+<!--
+SPDX-FileCopyrightText: 2025 wmj <wmj.py@gmx.com>
+
+SPDX-License-Identifier: LGPL-3.0-or-later
+-->
+
+![L. Cassius Longinus. 60 BC. AR Denarius"](cassius-longinus-denarius.png){ width="330px" margin="0 auto" align="center" }
+
+# interregnum
+
+This package provides electoral apportionment methods and it allows to build electoral systems based on multiple constituencies/districts.
+
+Features:
+
+- proportional, preferential and bi-proportional methods
+- compensatory systems
+- district based systems
+- constraints definition system (for example: vote threshold)
+
+
+## Installation
+
+`interregnum` is available on [PyPI](https://pypi.org/project/interregnum/). It can be installed using `pip`:
+
+```console
+pip install interregnum
+```
+
+Python $\ge 3.10$ is required.
+
+
+## Quickstart
+
+### Command line interface
+
+:::{seealso}
+For details, read the {doc}`CLI documentation <cli>`.
+:::
+
+The CLI app allows to calculate some data using an electoral system.
+
+Let's create a sample electoral system: use the Highest Averages method using the D'Hondt divisor.
+
+```yaml
+# freedonia.yaml
+name: Freedonia - Local elections 1933
+method: highest_averages
+method_params:
+    divisor_f: dhondt
+seats: 3
+candidates:
+- name: Freedonia for Rufus T. Firefly
+  votes: 8950
+- name: Sylvania for Louis Clahern
+  votes: 5203
+```
+
+Now, let's calculate:
+
+```console
+interregnum-cli calc freedonia.yaml results.json --results seats.tsv
+```
+
+The original YAML file has been saved to a JSON file named `results.json`, with the same information, plus a field results containing the allocated seats and additional information about what the method internally did (event log, random state, etc.):
+
+```json
+{
+    "resume_allocation": false,
+    "initial_seats": "min_seats",
+    "method": "highest_averages",
+    "method_params": {
+        "divisor_f": "dhondt"
+    },
+    "type": "district",
+    "name": "Freedonia - Local elections 1933",
+    "result": {
+        "allocation": [
+            {
+                "name": {
+                    "name": "Freedonia for Rufus T. Firefly",
+                    "alliance": "Freedonia for Rufus T. Firefly"
+                },
+                "votes": 8950,
+                "seats": 2
+            },
+            {
+                "name": {
+                    "name": "Sylvania for Louis Clahern",
+                    "alliance": "Sylvania for Louis Clahern"
+                },
+                "votes": 5203,
+                "seats": 1
+            }
+        ],
+        "data": {
+            "log": [
+                {
+                    "EVENT": "winner",
+                    "target": {
+                        "name": "Freedonia for Rufus T. Firefly",
+                        "alliance": "Freedonia for Rufus T. Firefly"
+                    },
+                    "criterion": "best_quotient",
+                    "quota": 8950
+                },
+                {
+                    "EVENT": "winner",
+                    "target": {
+                        "name": "Sylvania for Louis Clahern",
+                        "alliance": "Sylvania for Louis Clahern"
+                    },
+                    "criterion": "best_quotient",
+                    "quota": 5203
+                },
+                {
+                    "EVENT": "winner",
+                    "target": {
+                        "name": "Freedonia for Rufus T. Firefly",
+                        "alliance": "Freedonia for Rufus T. Firefly"
+                    },
+                    "criterion": "best_quotient",
+                    "quota": 4475
+                }
+            ],
+            "max_quota": 8950,
+            "min_quota": 4475,
+            "remaining_seats": 0
+        },
+        "deterministic": true,
+        "random_state": {}
+    },
+    "candidates": [
+        {
+            "name": "Freedonia for Rufus T. Firefly",
+            "votes": 8950,
+            "groups": []
+        },
+        {
+            "name": "Sylvania for Louis Clahern",
+            "votes": 5203,
+            "groups": []
+        }
+    ],
+    "seats": 3
+}
+```
+
+Additionally, we saved a tabular file `seats.tsv` including only the allocation result:
+
+```text
+node    district        name    alliance        votes   seats   min_seats       max_seats       groups  meta
+Freedonia - Local elections 1933                Freedonia for Rufus T. Firefly  Freedonia for Rufus T. Firefly  8950    2       0
+Freedonia - Local elections 1933                Sylvania for Louis Clahern      Sylvania for Louis Clahern      5203    1       0
+```
+
+### Python library
+
+:::{seealso}
+For details, read the {doc}`API documentation <modules/modules>`.
+:::
+
+We will calculate the same data using the `HighestAveragesAllocator` class:
+
+```python
+from interregnum.methods.singlevote import HighestAveragesAllocator
+
+# create a d'Hondt allocator
+dhondt = HighestAveragesAllocator("dhondt")
+# allocate 3 seats for given set of votes using the created allocator
+result = dhondt(
+    candidates=[("Freedonia for Rufus T. Firefly", 8950),
+                ("Sylvania for Louis Clahern", 5203)],
+    seats=3
+)
+
+# content: result.allocation
+[Candidate(name='Freedonia for Rufus T. Firefly', votes=8950, seats=2),
+ Candidate(name='Sylvania for Louis Clahern', votes=5203, seats=1)]
+
+# content: result.data.log
+[QuotaWinnerEvent(target='Freedonia for Rufus T. Firefly', criterion='best_quotient', quota=Fraction(8950, 1)),
+ QuotaWinnerEvent(target='Sylvania for Louis Clahern', criterion='best_quotient', quota=Fraction(5203, 1)),
+ QuotaWinnerEvent(target='Freedonia for Rufus T. Firefly', criterion='best_quotient', quota=Fraction(4475, 1))]
+```
+
+### Electoral systems based on districts
+
+It is possible to create complex electoral systems whose districts can be expressed as a [directed acyclic graph](https://en.wikipedia.org/wiki/Directed_acyclic_graph). A district can depend on another district's elements: tallied votes or results.

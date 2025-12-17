@@ -1,0 +1,105 @@
+# SPDX-FileCopyrightText: 2025 wmj <wmj.py@gmx.com>
+#
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
+[build-system]
+requires = ["setuptools>=80", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "interregnum"
+dynamic = ["version", "readme"]
+description = "multi-district electoral systems"
+requires-python = ">=3.10"
+keywords = [
+    "electoral systems",
+    "proportional vote",
+    "preferential vote",
+    "condorcet",
+    "dhondt",
+    "hare",
+    "webster",
+    "adams",
+    "jefferson",
+    "sainte laguë",
+    "compensatory systems",
+    "huntington hill",
+    "bi-proportional system",
+    "electoral thresholds",
+    "gregory transfers",
+    "imperiali",
+    "droop",
+    "hagenbach bischoff",
+    "dean",
+    "highest averages",
+    "largest remainder",
+    "iterative divisor",
+    "ranked pairs",
+    "borda",
+    "copeland",
+    "minimax",
+    "first past the post",
+    "mixed member",
+    "levelling seats",
+    "additional member",
+    "instant run-off",
+]
+license = { text = "LGPL-3.0-or-later" }
+authors = [
+    { name = "wmj", email = "wmj.py@gmx.com" },
+]
+classifiers = [
+    "Environment :: Console",
+    "Topic :: Utilities",
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3.10',
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+    "PyYAML",
+    "typing_extensions",
+]
+
+[project.optional-dependencies]
+test = ["pytest"]
+docs = ["sphinx", "myst-parser"]
+dev = ["build", "sphinx", "reuse", "interregnum[test,docs]"]
+
+[project.urls]
+BugReports = "https://gitlab.com/wmj/interregnum/-/issues"
+Source = "https://gitlab.com/wmj/interregnum"
+Documentation = "https://interregnum.readthedocs.io"
+
+[project.scripts]
+interregnum-cli = "interregnum.cli:main" 
+
+[tool.setuptools.packages.find]
+where = ["src"]
+#include = ["interregnum"]
+exclude = ["interregnum.tests"]
+
+[tool.setuptools.dynamic]
+readme = {file = ["README.md", "CHANGELOG.md"], content-type="text/markdown" }
+
+[tool.setuptools_scm]
+write_to = "src/interregnum/_version.py"
+
+[tool.pylsp-mypy]
+enabled = true
+live_mode = true
+strict = false
+
+[tool.ruff]
+select = ["A", "E", "W", "F", "B", "Q", "N", "D", "PLC", "PLR", "PLW", "FIX"]
+fixable = ["ALL"]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]

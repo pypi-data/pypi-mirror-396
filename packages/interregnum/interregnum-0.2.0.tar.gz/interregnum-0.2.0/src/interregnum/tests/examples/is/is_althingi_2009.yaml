@@ -1,0 +1,247 @@
+# SPDX-FileCopyrightText: 2025 wmj <wmj.py@gmx.com>
+#
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
+name: Alþingi Íslendinga - 2009
+type: group
+method: highest_averages
+method_params:
+  divisor_f: dhondt
+divisions:
+
+- name: compensatory district
+  type: compensatory
+  meta:
+    test:
+    - { name: "Samfylkingin [S]", seats: 4 }
+    - { name: "Sjálfstæðisflokkurinn [D]", seats: 2 }
+    - { name: "Vinstrihreyfingin - grænt framboð [V]", seats: 2 }
+    - { name: "Borgarahreyfingin [O]", seats: 1 }
+  mode: additional_member
+  seats: 9
+  exclude: votes < 5%
+  first_vote: alliance[kjördæmi:-1]
+  candidates: alliance[kjördæmi]
+  skip_initial_seats: yes
+
+- name: adjustment seats to constituencies
+  type: reapportionment
+  meta:
+    test:
+    - { name: "Borgarahreyfingin [O]", district: "Suðurkjördæmi [South]", seats: 1, meta: { order: 0} }
+    - { name: "Samfylkingin [S]", district: "Reykjavíkurkjördæmi Suður [Reykjavik South]", seats: 1, meta: { order: 1} }
+    - { name: "Vinstrihreyfingin - grænt framboð [V]", district: "Reykjavíkurkjördæmi Norður [Reykjavik North]", seats: 1, meta: { order: 2} }
+    - { name: "Samfylkingin [S]", district: "Reykjavíkurkjördæmi Norður [Reykjavik North]", seats: 1, meta: { order: 3} }
+    - { name: "Sjálfstæðisflokkurinn [D]", district: "Reykjavíkurkjördæmi Suður [Reykjavik South]", seats: 1, meta: { order: 4} }
+    - { name: "Samfylkingin [S]", district: "Suðvesturkjördæmi [Southwest]", seats: 1, meta: { order: 5} }
+    - { name: "Vinstrihreyfingin - grænt framboð [V]", district: "Norðvesturkjördæmi [Northwest]", seats: 1, meta: { order: 6}}
+    - { name: "Samfylkingin [S]", district: "Norðausturkjördæmi [Northeast]", seats: 1, meta: { order: 7 }}
+    - { name: "Sjálfstæðisflokkurinn [D]", district: "Suðvesturkjördæmi [Southwest]", seats: 1, meta: { order: 8} }
+
+  strategy: parallel
+  relative: votes
+  method: highest_averages
+  method_params:
+    divisor_f: dhondt
+  adjustment: compensatory district
+  candidates: kjördæmi
+  first_vote: kjördæmi
+
+- name: kjördæmi
+  type: group
+  aggregate: yes
+  divisions:
+
+  - name: Norðvesturkjördæmi [Northwest]
+    seats: 8
+    meta: { test: yes }
+    max_adjustment_seats: 1
+    candidates:
+    - name: "? blank"
+      votes: 558
+    - name: "! void"
+      votes: 51
+    - name: Framsóknarflokkurinn [B]
+      votes: 3967
+      seats: 2
+    - name: Sjálfstæðisflokkurinn [D]
+      votes: 4037
+      seats: 2
+    - name: Frjálslyndi flokkurinn [F]
+      votes: 929
+    - name: Borgarahreyfingin [O]
+      votes: 587
+    - name: Lýðræðishreyfingin [P]
+      votes: 66
+    - name: Samfylkingin [S]
+      votes: 4001
+      seats: 2
+    - name: Vinstrihreyfingin - grænt framboð [V]
+      votes: 4018
+      # 2 + 1
+      seats: 2
+      meta:
+        adjustment_seats: 1
+
+  - name: Norðausturkjördæmi [Northeast]
+    seats: 9
+    max_adjustment_seats: 1
+    candidates:
+    - name: "? blank"
+      votes: 826
+    - name: "! void"
+      votes: 55
+    - name: Framsóknarflokkurinn [B]
+      votes: 5905
+      seats: 2
+    - name: Sjálfstæðisflokkurinn [D]
+      votes: 4079
+      seats: 2
+    - name: Frjálslyndi flokkurinn [F]
+      votes: 384
+    - name: Borgarahreyfingin [O]
+      votes: 690
+    - name: Lýðræðishreyfingin [P]
+      votes: 61
+    - name: Samfylkingin [S]
+      votes: 5312
+      # 2 + 1
+      seats: 2
+      meta:
+        adjustment_seats: 1
+    - name: Vinstrihreyfingin - grænt framboð [V]
+      votes: 6937
+      seats: 3
+
+  - name: Suðurkjördæmi [South]
+    seats: 9
+    max_adjustment_seats: 1
+    candidates:
+    - name: "? blank"
+      votes: 790
+    - name: "! void"
+      votes: 76
+    - name: Framsóknarflokkurinn [B]
+      votes: 5390
+      seats: 2
+    - name: Sjálfstæðisflokkurinn [D]
+      votes: 7073
+      seats: 3
+    - name: Frjálslyndi flokkurinn [F]
+      votes: 838
+    - name: Borgarahreyfingin [O]
+      votes: 1381
+      # 0 + 1
+      seats: 0
+      meta:
+        adjustment_seats: 1
+    - name: Lýðræðishreyfingin [P]
+      votes: 127
+    - name: Samfylkingin [S]
+      votes: 7541
+      seats: 3
+    - name: Vinstrihreyfingin - grænt framboð [V]
+      votes: 4615
+      seats: 1
+
+  - name: Suðvesturkjördæmi [Southwest]
+    seats: 10
+    max_adjustment_seats: 2
+    candidates:
+    - name: "? blank"
+      votes: 1519
+    - name: "! void"
+      votes: 93
+    - name: Framsóknarflokkurinn [B]
+      votes: 5627
+      seats: 1
+    - name: Sjálfstæðisflokkurinn [D]
+      votes: 13463
+      # 3 + 1
+      seats: 3
+      meta:
+        adjustment_seats: 1
+    - name: Frjálslyndi flokkurinn [F]
+      votes: 741
+    - name: Borgarahreyfingin [O]
+      votes: 4428
+      seats: 1
+    - name: Lýðræðishreyfingin [P]
+      votes: 302
+    - name: Samfylkingin [S]
+      votes: 15669
+      # 3 + 1
+      seats: 3
+      meta:
+        adjustment_seats: 1
+    - name: Vinstrihreyfingin - grænt framboð [V]
+      votes: 8473
+      seats: 2
+
+  - name: Reykjavíkurkjördæmi Suður [Reykjavik South]
+    seats: 9
+    max_adjustment_seats: 2
+    candidates:
+    - name: "? blank"
+      votes: 1388
+    - name: "! void"
+      votes: 117
+    - name: Framsóknarflokkurinn [B]
+      votes: 3435
+      seats: 1
+    - name: Sjálfstæðisflokkurinn [D]
+      votes: 8211
+      # 2 + 1
+      seats: 2
+      meta:
+        adjustment_seats: 1
+    - name: Frjálslyndi flokkurinn [F]
+      votes: 700
+    - name: Borgarahreyfingin [O]
+      votes: 3076
+      seats: 1
+    - name: Lýðræðishreyfingin [P]
+      votes: 226
+    - name: Samfylkingin [S]
+      votes: 11667
+      # 3 + 1
+      seats: 3
+      meta:
+        adjustment_seats: 1
+    - name: Vinstrihreyfingin - grænt framboð [V]
+      votes: 8106
+      seats: 2
+
+  - name: Reykjavíkurkjördæmi Norður [Reykjavik North]
+    seats: 9
+    max_adjustment_seats: 2
+    candidates:
+    - name: "? blank"
+      votes: 1145
+    - name: "! void"
+      votes: 174
+    - name: Framsóknarflokkurinn [B]
+      votes: 3375
+      seats: 1
+    - name: Sjálfstæðisflokkurinn [D]
+      votes: 7508
+      seats: 2
+    - name: Frjálslyndi flokkurinn [F]
+      votes: 556
+    - name: Borgarahreyfingin [O]
+      votes: 3357
+      seats: 1
+    - name: Lýðræðishreyfingin [P]
+      votes: 325
+    - name: Samfylkingin [S]
+      votes: 11568
+      # 3 + 1
+      seats: 3
+      meta:
+        adjustment_seats: 1
+    - name: Vinstrihreyfingin - grænt framboð [V]
+      votes: 8432
+      # 2 + 1
+      seats: 2
+      meta:
+        adjustment_seats: 1
