@@ -1,0 +1,29 @@
+@echo off
+:: An example hook script to make use of push options on Windows
+:: The example simply echoes all push options that start with 'echoback='
+:: and rejects all pushes when the "reject" push option is used.
+::
+:: To enable this hook, rename this file to "pre-receive".
+
+if not "%GIT_PUSH_OPTION_COUNT%"=="" (
+    setlocal enabledelayedexpansion
+    set "i=0"
+
+    :loop
+    if "!i!" lss "%GIT_PUSH_OPTION_COUNT%" (
+        set "value=!GIT_PUSH_OPTION_!i!!"
+
+        if "!value:~0,9!"=="echoback=" (
+            echo echo from the pre-receive-hook: !value:~9! 1>&2
+        )
+
+        if "!value!"=="reject" (
+            exit /b 1
+        )
+
+        set /a i+=1
+        goto loop
+    )
+)
+
+exit /b 0

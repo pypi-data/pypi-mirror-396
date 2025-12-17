@@ -1,0 +1,72 @@
+@echo off
+:: An example hook script to verify what is about to be pushed on Windows.  Called by "git
+:: push" after it has checked the remote status, but before anything has been
+:: pushed.  If this script exits with a non-zero status nothing will be pushed.
+::
+:: Prevent using --no-verify option
+setlocal enabledelayedexpansion
+for %%a in (%*) do (
+    if /i "%%a"=="--no-verify" goto block_push
+    if /i "%%a"=="-n" goto block_push
+)
+setlocal disabledelayedexpansion
+::
+:: This hook is called with the following parameters:
+::
+:: %1 -- Name of the remote to which the push is being done
+:: %2 -- URL to which the push is being done
+::
+:: If pushing without using a named remote those arguments will be equal.
+::
+:: Information about the commits which are being pushed is supplied as lines to
+:: the standard input in the form:
+::
+::   <local ref> <local oid> <remote ref> <remote oid>
+::
+:: This sample shows how to prevent push of commits where the log message starts
+:: with "WIP" (work in progress).
+
+set "remote=%1"
+set "url=%2"
+
+:: Get zero object ID
+for /f "tokens=*" %%i in ('git hash-object --stdin <nul') do (
+    set "zero=%%i"
+)
+
+:: Process standard input line by line
+for /f "tokens=1-4" %%a in ('findstr /r ".*"') do (
+    set "local_ref=%%a"
+    set "local_oid=%%b"
+    set "remote_ref=%%c"
+    set "remote_oid=%%d"
+
+    if "%local_oid%"=="%zero%" (
+        :: Handle delete
+        goto next_line
+    )
+
+    if "%remote_oid%"=="%zero%" (
+        :: New branch, examine all commits
+        set "range=%local_oid%"
+    ) else (
+        :: Update to existing branch, examine new commits
+        set "range=%remote_oid%..%local_oid%"
+    )
+
+    :: Check for WIP commit
+    git rev-list -n 1 --grep "^WIP" "%range%" >nul 2>nul
+    if %errorlevel% equ 0 (
+        echo Found WIP commit in %local_ref%, not pushing 1>&2
+        exit /b 1
+    )
+
+    :next_line
+)
+
+exit /b 0
+
+:block_push
+echo 错误: 不允许使用 --no-verify 或 -n 选项推送代码。 1>&2
+echo 请修复代码中的问题后再尝试推送。 1>&2
+exit /b 1

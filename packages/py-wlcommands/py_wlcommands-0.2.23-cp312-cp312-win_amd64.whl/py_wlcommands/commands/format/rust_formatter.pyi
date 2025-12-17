@@ -1,0 +1,3 @@
+from ...utils.logging import log_info as log_info
+
+def format_rust_code(rust_dir: str, env: dict, quiet: bool) -> None: ...

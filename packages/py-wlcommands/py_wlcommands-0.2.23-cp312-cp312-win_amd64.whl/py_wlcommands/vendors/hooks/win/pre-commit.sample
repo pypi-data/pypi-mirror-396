@@ -1,0 +1,52 @@
+@echo off
+:: An example hook script to verify what is about to be committed on Windows
+:: Called by "git commit" with no arguments.  The hook should
+:: exit with non-zero status after issuing an appropriate message if
+:: it wants to stop the commit.
+::
+:: To enable this hook, rename this file to "pre-commit".
+
+git rev-parse --verify HEAD >nul 2>nul
+if %errorlevel% equ 0 (
+    set "against=HEAD"
+) else (
+    :: Initial commit: diff against an empty tree object
+    for /f "tokens=*" %%i in ('git hash-object -t tree NUL') do (
+        set "against=%%i"
+    )
+)
+
+:: If you want to allow non-ASCII filenames set this variable to true.
+for /f "tokens=2 delims==" %%i in ('git config --type=bool hooks.allownonascii 2^>nul') do (
+    set "allownonascii=%%i"
+)
+
+:: Redirect output to stderr
+>\&2 (
+    :: Cross platform projects tend to avoid non-ASCII filenames; prevent
+    :: them from being added to the repository. We exploit the fact that the
+    :: printable range starts at the space character and ends with tilde.
+    if not "%allownonascii%"=="true" (
+        git diff-index --cached --name-only --diff-filter=A -z %against% | findstr /v "^[ -~]*$" >nul 2>nul
+        if %errorlevel% equ 0 (
+            echo Error: Attempt to add a non-ASCII file name.
+            echo.
+            echo This can cause problems if you want to work with people on other platforms.
+            echo.
+            echo To be portable it is advisable to rename the file.
+            echo.
+            echo If you know what you are doing you can disable this check using:
+            echo.
+            echo   git config hooks.allownonascii true
+            exit /b 1
+        )
+    )
+
+    :: If there are whitespace errors, print the offending file names and fail.
+    git diff-index --check --cached %against% --
+    if %errorlevel% neq 0 (
+        exit /b 1
+    )
+)
+
+exit /b 0

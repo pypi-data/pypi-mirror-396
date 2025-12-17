@@ -1,0 +1,119 @@
+@echo off
+:: An example hook script to integrate Watchman
+:: (https://facebook.github.io/watchman/) with git to speed up detecting
+:: new and modified files on Windows
+::
+:: The hook is passed a version (currently 2) and last update token
+:: formatted as a string and outputs to stdout a new update token and
+:: all files that have been modified since the update token. Paths must
+:: be relative to the root of the working tree and separated by a single NUL.
+::
+:: To enable this hook, rename this file to "query-watchman" and set
+:: 'git config core.fsmonitor .git/hooks/query-watchman'
+
+set "version=%1"
+set "last_update_token=%2"
+
+:: Check the hook interface version
+if not "%version%"=="2" (
+    echo Unsupported query-fsmonitor hook version '%version%'. 1>&2
+    echo Falling back to scanning... 1>&2
+    exit /b 1
+)
+
+:: Check if perl is available
+where perl >nul 2>nul
+if %errorlevel% neq 0 (
+    echo Perl is not available. 1>&2
+    echo Falling back to scanning... 1>&2
+    exit /b 1
+)
+
+:: Check if watchman is available
+where watchman >nul 2>nul
+if %errorlevel% neq 0 (
+    echo Watchman is not available. 1>&2
+    echo Falling back to scanning... 1>&2
+    exit /b 1
+)
+
+:: Get the git working directory
+for /f "tokens=*" %%i in ('git rev-parse --show-toplevel') do (
+    set "git_work_tree=%%i"
+)
+
+:: Call the perl script
+perl - << "EOF"
+use strict;
+use warnings;
+use IPC::Open2;
+
+my $version = $ARGV[0];
+my $last_update_token = $ARGV[1];
+my $git_work_tree = $ARGV[2];
+
+# Check the hook interface version
+if ($version ne 2) {
+    die "Unsupported query-fsmonitor hook version '$version'.\n" .
+        "Falling back to scanning...\n";
+}
+
+my $json_pkg;
+eval {
+    require JSON::XS;
+    $json_pkg = "JSON::XS";
+    1;
+} or do {
+    require JSON::PP;
+    $json_pkg = "JSON::PP";
+};
+
+sub watchman_query {
+    my ($git_work_tree, $last_update_token) = @_;
+    my $pid = open2(\*CHLD_OUT, \*CHLD_IN, 'watchman -j --no-pretty')
+    or die "open2() failed: $!\n" .
+    "Falling back to scanning...\n";
+
+    my $last_update_line = "";
+    if (substr($last_update_token, 0, 1) eq "c") {
+        $last_update_token = "\"$last_update_token\"";
+        $last_update_line = qq[\n\"since\": $last_update_token,];
+    }
+    my $query = <<"    END";
+        ["query", "$git_work_tree", {$last_update_line
+            "fields": ["name"],
+            "expression": ["not", ["dirname", ".git"]]
+        }]
+    END
+
+    print CHLD_IN $query;
+    close CHLD_IN;
+
+    my $response = do { local $/; <CHLD_OUT> };
+    close CHLD_OUT;
+    waitpid $pid, 0;
+
+    return $json_pkg->new->utf8->decode($response);
+}
+
+sub output_result {
+    my ($clockid, @files) = @_;
+
+    binmode STDOUT, ":utf8";
+    print $clockid;
+    print "\0";
+    local $, = "\0";
+    print @files;
+}
+
+my $o = watchman_query($git_work_tree, $last_update_token);
+output_result($o->{clock}, @{$o->{files}});
+EOF "%version%" "%last_update_token%" "%git_work_tree%"
+
+if %errorlevel% neq 0 (
+    echo Failed to run Watchman query. 1>&2
+    echo Falling back to scanning... 1>&2
+    exit /b 1
+)
+
+exit /b 0

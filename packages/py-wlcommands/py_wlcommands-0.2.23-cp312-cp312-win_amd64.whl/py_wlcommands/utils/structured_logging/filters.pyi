@@ -1,0 +1,16 @@
+from _typeshed import Incomplete
+from typing import Any
+
+class LogFilter:
+    def __call__(self, record: dict[str, Any]) -> bool: ...
+
+class LevelFilter(LogFilter):
+    min_level: Incomplete
+    max_level: Incomplete
+    def __init__(self, min_level: int, max_level: int | None = None) -> None: ...
+    def __call__(self, record: dict[str, Any]) -> bool: ...
+
+class KeyValueFilter(LogFilter):
+    filters: Incomplete
+    def __init__(self, **kwargs) -> None: ...
+    def __call__(self, record: dict[str, Any]) -> bool: ...

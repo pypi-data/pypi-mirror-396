@@ -1,0 +1,24 @@
+@echo off
+:: An example hook script to check the commit log message taken by
+:: applypatch from an e-mail message on Windows
+::
+:: The hook should exit with non-zero status after issuing an
+:: appropriate message if it wants to stop the commit.  The hook is
+:: allowed to edit the commit message file.
+::
+:: To enable this hook, rename this file to "applypatch-msg".
+
+:: Get the commit-msg hook path
+for /f "tokens=*" %%i in ('git rev-parse --git-path hooks') do (
+    set "hooks_dir=%%i"
+)
+
+set "commitmsg=%hooks_dir%\commit-msg"
+
+:: Check if commit-msg hook exists and is executable
+if exist "%commitmsg%" (
+    call "%commitmsg%" %* 2>&1
+    exit /b %errorlevel%
+)
+
+exit /b 0
