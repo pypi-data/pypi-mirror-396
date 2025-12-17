@@ -1,0 +1,84 @@
+"""
+Device Erase CLI
+
+Command-line interface for erasing flash memory of embedded devices.
+"""
+
+import sys
+import argparse
+import logging
+from .jlink_programmer import JLinkProgrammer
+
+
+def main():
+    """Main entry point for bmlab-erase command."""
+    parser = argparse.ArgumentParser(
+        description='Erase flash memory of embedded devices',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Erase with auto-detected programmer and MCU
+  bmlab-erase
+
+  # Specify JLink serial number
+  bmlab-erase --serial 123456789
+
+  # Specify MCU explicitly
+  bmlab-erase --mcu STM32F765ZG
+
+  # Use IP address for network JLink
+  bmlab-erase --ip 192.168.1.100
+        """
+    )
+    
+    parser.add_argument('--serial', '-s', type=str, default=None,
+                       help='JLink serial number (auto-detect if not provided)')
+    
+    parser.add_argument('--mcu', '-m', type=str, default=None,
+                       help='MCU name (e.g., STM32F765ZG). Auto-detects if not provided.')
+    
+    parser.add_argument('--ip', type=str, default=None,
+                       help='JLink IP address for network connection (e.g., 192.168.1.100)')
+    
+    parser.add_argument('--log-level', '-l', type=str, default='WARNING',
+                       choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
+                       help='Set logging level (default: WARNING)')
+    
+    args = parser.parse_args()
+    
+    # Convert serial to int if provided
+    serial = None
+    if args.serial:
+        try:
+            serial = int(args.serial)
+        except ValueError:
+            print(f"Error: Invalid serial number: {args.serial}")
+            sys.exit(1)
+    
+    try:
+        # Convert log level string to logging constant
+        log_level = getattr(logging, args.log_level.upper())
+        
+        # Create programmer instance
+        prog = JLinkProgrammer(serial=serial, ip_addr=args.ip, log_level=log_level)
+        
+        # Perform erase
+        print("Erasing device flash memory...")
+        
+        if prog.erase(mcu=args.mcu):
+            print("\n✓ Erase completed successfully!")
+            sys.exit(0)
+        else:
+            print("\n✗ Erase failed!")
+            sys.exit(1)
+            
+    except KeyboardInterrupt:
+        print("\n\nOperation cancelled by user")
+        sys.exit(130)
+    except Exception as e:
+        print(f"\nError: {e}")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
