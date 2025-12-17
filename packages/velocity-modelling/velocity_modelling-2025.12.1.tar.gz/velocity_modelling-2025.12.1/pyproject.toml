@@ -1,0 +1,138 @@
+# Usage:
+# After installing this package, you can run the scripts from the command line, e.g.:
+#   generate_3d_model ...
+#   generate_1d_profiles ...
+# To add more scripts, add entries under [project.scripts] in the format:
+#   script_name = "module.path:app"
+
+[build-system]
+requires = ["setuptools", "setuptools-scm", "cython", "numpy"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "velocity_modelling"
+authors = [{ name = "ucgmsim" }]
+description = "Velocity modelling library"
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+dynamic = ["version"]
+dependencies = [
+    "numpy",
+    "h5py",
+    "pandas[parquet]",
+    "matplotlib",
+    "shapely",
+    "geopandas",
+    "numba",
+    "pyyaml",
+    "tqdm",
+    "typer",
+    "threadpoolctl",
+    "cartopy",
+    "qcore-utils",
+]
+
+[project.optional-dependencies]
+test = [
+    "hypothesis[numpy]",
+    "pytest",
+    "pytest-cov",
+    "pytest-repeat",
+]
+
+[tool.deptry]
+pep621_dev_dependency_groups = ["test"]
+
+[tool.setuptools_scm]
+
+[tool.setuptools.packages.find]
+exclude = ["wiki", "tests"]
+
+[project.scripts]
+generate_3d_model = "velocity_modelling.scripts.generate_3d_model:app"
+generate_1d_profiles = "velocity_modelling.scripts.generate_1d_profiles:app"
+extract_cross_section = "velocity_modelling.scripts.extract_cross_section:app"
+generate_thresholds = "velocity_modelling.scripts.generate_thresholds:app"
+convert_hdf5_to_emod3d = "velocity_modelling.tools.convert_hdf5_to_emod3d:app"
+nzcvm-data-helper = "velocity_modelling.data_helper:app"
+hdf5-to-emod3d = "velocity_modelling.tools.convert_hdf5_to_emod3d:app"
+# Add more scripts as needed:
+# script_name = "module.path:app"
+
+[tool.setuptools.package-dir]
+velocity_modelling = "velocity_modelling"
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint]
+extend-select = [
+  # isort imports
+  "I",
+  # Use r'\s+' rather than '\s+'
+  "W605",
+  # All the naming errors, like using camel case for function names.
+  "N",
+  # Missing docstrings in classes, methods, and functions
+  "D101",
+  "D102",
+  "D103",
+  "D105",
+  "D107",
+  # Use f-string instead of a format call
+  "UP032",
+  # Standard library import is deprecated
+  "UP035",
+  # Missing function argument type annotation
+  "ANN001",
+  # Using except without specifying an exception type to catch
+  "BLE001",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = [
+  "source_modelling",
+  "qcore",
+  "workflow",
+  "pygmt_helper",
+  "empirical",
+  "nshmdb",
+  "IM",
+  "mera",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Ignore no docstring in __init__.py
+"__init__.py" = ["D104"]
+# Ignore docstring errors in tests folder
+"tests/**.py" = ["D"]
+
+[tool.coverage.run]
+# Ignore the velocity model viewer because there is no way to test it,
+# and even if there were, it would be too slow.
+omit = ["velocity_modelling/scripts/view_velocity_model.py"]
+
+[tool.numpydoc_validation]
+checks = [
+  "GL05",
+  "GL08",
+  "GL10",
+  "PR01",
+  "PR02",
+  "PR03",
+  "PR04",
+  "PR05",
+  "PR06",
+  "PR07",
+  "RT01",
+  "RT02",
+  "RT03",
+  "RT04",
+  "YD01",
+]
+# remember to use single quotes for regex in TOML
+exclude = [ # don't report on objects that match any of these regex
+  '\.undocumented_method$',
+  '\.__repr__$',
+  '\.__init__$',
+]
