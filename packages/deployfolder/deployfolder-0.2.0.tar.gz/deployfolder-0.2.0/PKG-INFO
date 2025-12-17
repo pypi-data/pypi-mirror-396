@@ -1,0 +1,453 @@
+Metadata-Version: 2.4
+Name: deployfolder
+Version: 0.2.0
+Summary: A tool to create deployment folders based on YAML configuration
+Author-email: Janosch Meyer <janosch.code@proton.me>
+License: MIT License
+        
+        Copyright (c) 2025 Janosch Meyer (janosch.code@proton.me)
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+        
+        This project was created with the assistance of artificial intelligence.
+Keywords: deployment,configuration,yaml,json,placeholders
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: System Administrators
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Software Development :: Build Tools
+Classifier: Topic :: System :: Software Distribution
+Classifier: Topic :: Utilities
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: PyYAML>=5.1
+Requires-Dist: jinja2>=3.0.0
+Provides-Extra: 7z
+Requires-Dist: py7zr>=0.20.0; extra == "7z"
+Dynamic: license-file
+
+# DeployFolder
+
+A tool to create deployment folders based on YAML configuration. This tool helps you create structured deployment folders by copying files from source locations, optionally renaming them, and creating empty folders as needed.
+
+## Features
+
+- Create deployment folders with a specified structure
+- Copy files from source to target paths
+- Support for glob patterns (wildcards like *) in source file paths
+- Optionally rename files during copying
+- Support for placeholders in filenames and folder names
+- Replace placeholders with values from a JSON file
+- Create empty folders
+- Generate files from Jinja2 templates (inline or from external files)
+- Optionally zip the created folder
+- Cross-platform compatibility (Windows and Linux)
+
+## Installation
+
+Install from PyPI (Python 3.7+):
+
+```bash
+pip install deployfolder
+```
+
+Optional: with 7z support
+
+```bash
+pip install deployfolder[7z]
+```
+
+Dependencies: PyYAML (MIT) and Jinja2 (BSD-3-Clause). The optional `[7z]` extra uses py7zr (LGPL-2.1+); install it only if you need 7z archives. See the upstream projects for the full license texts.
+
+## Usage
+
+### Using the Command-line Interface
+
+After installing the package:
+
+```bash
+deployfolder config.yaml [--values values.json]
+```
+
+### Arguments
+
+- `config.yaml`: Path to the YAML configuration file (required)
+- `--values values.json`: Path to the JSON values file for placeholder replacement (optional)
+- `--version`: Show version information and exit
+
+## Configuration File Format
+
+The YAML configuration file defines the structure of the deployment folder:
+
+```yaml
+output_folder: "folder_name"  # Optional, defaults to "deploy"
+archive: true                 # Optional, defaults to false
+files:                        # List of files to copy or folders to create
+  # Simple file copy (keeps original filename in root directory)
+  - "path/to/source/file.txt"
+  
+  # Copy with original filename to a subdirectory
+  - source: "path/to/source/file.txt"
+    directory: "docs"
+  
+  # Copy with original filename to a subdirectory with placeholder
+  - source: "path/to/source/file.txt"
+    directory: "{{ environment }}/docs"
+  
+  # Copy with renaming
+  - source: "path/to/source/file.txt"
+    target: "new_name.txt"
+  
+  # Copy with placeholders in target name
+  - source: "path/to/source/config.ini"
+    target: "{{ environment }}_config.ini"
+  
+  # Create empty folder
+  - target: "logs/{{ environment }}"
+
+templates:                    # List of templates to render
+  # Template with inline content
+  - content: |
+      # Generated Configuration
+      # Generated on: {{ date }}
+      
+      [Application]
+      Name = {{ project_name }}
+      Environment = {{ environment }}
+    target: "config/generated_config.ini"
+  
+  # Template from external file
+  - file: "path/to/template.txt"
+    target: "reports/{{ date }}_report.txt"
+```
+
+### File Configuration Options
+
+When configuring files in the YAML configuration, you have several options:
+
+1. **Simple string format**: Just specify the source path. The file will be copied to the root of the output folder with its original filename.
+   ```yaml
+   - "path/to/source/file.txt"
+   ```
+   
+   You can also use glob patterns to match multiple files:
+   ```yaml
+   - "path/to/source/*.txt"  # Matches all .txt files in the directory
+   - "path/to/source/file?.txt"  # Matches file1.txt, file2.txt, etc.
+   - "path/to/source/[abc]*.txt"  # Matches files starting with a, b, or c
+   ```
+
+2. **Directory format**: Specify both `source` and `directory`. The file will be copied to the specified subdirectory while keeping its original filename.
+   ```yaml
+   - source: "path/to/source/file.txt"
+     directory: "docs"
+   ```
+   
+   Glob patterns are also supported in the source path:
+   ```yaml
+   - source: "path/to/source/*.txt"
+     directory: "docs"  # All matching files will be copied to the docs directory
+   ```
+
+3. **Target format**: Specify both `source` and `target`. The file will be copied to the specified target path, which can include a new filename.
+   ```yaml
+   - source: "path/to/source/file.txt"
+     target: "new_name.txt"
+   ```
+   
+   When using glob patterns with a target, there are two behaviors:
+   ```yaml
+   # If target ends with / or \, it's treated as a directory
+   - source: "path/to/source/*.txt"
+     target: "text_files/"  # All matching files will be copied to the text_files directory
+   
+   # If target doesn't end with / or \, only the first matching file will be used
+   - source: "path/to/source/*.txt"
+     target: "first_text_file.txt"  # Only the first matching file will be copied and renamed
+   ```
+
+4. **Empty folder**: Specify only `target`. An empty folder will be created at the specified path.
+   ```yaml
+   - target: "logs/temp"
+   ```
+
+### Template Configuration Options
+
+When configuring templates in the YAML configuration, you have two main options:
+
+1. **Inline template content**: Specify both `content` and `target`. The template content will be rendered and saved to the specified target path.
+   ```yaml
+   - content: |
+       # Generated Configuration
+       # Generated on: {{ date }}
+       
+       [Application]
+       Name = {{ project_name }}
+       Environment = {{ environment }}
+     target: "config/generated_config.ini"
+   ```
+
+2. **External template file**: Specify both `file` and `target`. The template file will be loaded, rendered, and saved to the specified target path.
+   ```yaml
+   - file: "path/to/template.txt"
+     target: "reports/{{ date }}_report.txt"
+   ```
+
+Templates support all Jinja2 features, including:
+- Placeholders (e.g., `{{ variable }}`)
+- Conditionals (e.g., `{% if condition %}...{% else %}...{% endif %}`)
+- Loops (e.g., `{% for item in items %}...{% endfor %}`)
+- Filters (e.g., `{{ variable | default('default value') }}`)
+- And more advanced Jinja2 features
+
+The target path can include placeholders that will be replaced with values from the JSON values file, just like with file targets.
+
+### Placeholders
+
+Placeholders in the format `{{ name }}` can be used in:
+- The output folder name
+- Target file names
+- Target folder names
+- Directory paths
+
+Placeholders are replaced with values from the JSON values file.
+
+#### Nested JSON Support
+
+The tool supports accessing nested JSON properties using dot notation in placeholders. For example:
+
+- `{{ user.name }}` - Accesses the "name" property inside the "user" object
+- `{{ database.host }}` - Accesses the "host" property inside the "database" object
+- `{{ database.credentials.username }}` - Accesses deeply nested properties
+
+This allows for more structured and organized values files, especially for complex configurations.
+
+## Values File Format
+
+The JSON values file provides values for placeholders:
+
+```json
+{
+    "project_name": "MyProject",
+    "environment": "production",
+    "date": "2023-01-01"
+}
+```
+
+## Examples
+
+### Example Configuration (example_config.yaml)
+
+```yaml
+output_folder: "{{ project_name }}_deploy"
+archive: true
+files:
+  # Simple file copy (keeps original filename in root directory)
+  - "C:/path/to/source/file1.txt"
+  
+  # Using glob pattern to copy multiple files
+  - "C:/path/to/source/*.txt"
+  
+  # Copy with original filename to a subdirectory
+  - source: "C:/path/to/source/file1.txt"
+    directory: "docs"
+    
+  # Using glob pattern with directory
+  - source: "C:/path/to/source/test_*.txt"
+    directory: "test_files"
+  
+  # Copy with original filename to a subdirectory with placeholder
+  - source: "C:/path/to/source/file1.txt"
+    directory: "{{ environment }}/docs"
+  
+  # Copy with renaming
+  - source: "C:/path/to/source/file2.txt"
+    target: "renamed_file2.txt"
+  
+  # Copy with placeholders in target name
+  - source: "C:/path/to/source/config.ini"
+    target: "{{ environment }}_config.ini"
+  
+  # Copy to subfolder
+  - source: "C:/path/to/source/data.csv"
+    target: "data/{{ date }}_data.csv"
+  
+  # Copy with nested JSON placeholders
+  - source: "C:/path/to/source/file2.txt"
+    target: "users/{{ user.name }}_file.txt"
+  
+  # Copy with deeply nested JSON placeholders
+  - source: "C:/path/to/source/config.ini"
+    target: "db/{{ database.host }}/{{ database.credentials.username }}_config.ini"
+  
+  # Create empty folder with nested JSON placeholder
+  - target: "logs/{{ user.role }}"
+  
+  # Create empty folder (simple)
+  - target: "temp"
+
+templates:
+  # Template with inline content
+  - content: |
+      # Generated Configuration
+      # Generated on: {{ date }}
+      
+      [Application]
+      Name = {{ project_name }}
+      Environment = {{ environment }}
+      
+      [User]
+      Name = {{ user.name }}
+      Role = {{ user.role }}
+    target: "config/generated_config.ini"
+  
+  # Template from external file
+  - file: "C:/path/to/templates/report_template.txt"
+    target: "reports/{{ date }}_report.txt"
+  
+  # Template with Jinja2 conditionals
+  - content: |
+      <!DOCTYPE html>
+      <html>
+      <head>
+          <title>{{ project_name }} - Environment Info</title>
+      </head>
+      <body>
+          <h1>Environment Information</h1>
+          
+          {% if environment == 'production' %}
+          <p class="warning">This is a PRODUCTION environment. Be careful!</p>
+          {% else %}
+          <p>This is a {{ environment }} environment.</p>
+          {% endif %}
+          
+          <h2>Database Information</h2>
+          <ul>
+          {% for key, value in database.items() if key != 'credentials' %}
+              <li>{{ key }}: {{ value }}</li>
+          {% endfor %}
+          </ul>
+      </body>
+      </html>
+    target: "docs/environment.html"
+```
+
+### Example Values (example_values.json)
+
+```json
+{
+    "project_name": "MyProject",
+    "environment": "production",
+    "date": "2025-11-08",
+    "user": {
+        "name": "JohnDoe",
+        "role": "admin"
+    },
+    "database": {
+        "host": "db.example.com",
+        "port": 5432,
+        "credentials": {
+            "username": "dbuser",
+            "password": "secret"
+        }
+    }
+}
+```
+
+### Running the Example
+
+```bash
+# If installed as a package
+deployfolder example_config.yaml --values example_values.json
+
+# Or using the module directly
+python -m deployfolder example_config.yaml --values example_values.json
+```
+
+This will create:
+- A folder named "MyProject_deploy"
+- Files copied and renamed according to the configuration
+- Empty folders as specified
+- Generated files from templates (config file, report, HTML document)
+- A zip file of the entire folder
+
+## Error Handling
+
+The tool provides error messages for common issues:
+- Missing or invalid configuration file
+- Missing or invalid values file
+- File not found errors
+- Permission errors
+
+## Testing
+
+The project includes comprehensive unit tests to ensure all functionality works correctly. The tests are implemented using Python's built-in `unittest` framework.
+
+### Running the Tests
+
+To run all the unit tests:
+
+```bash
+# Run all tests
+python -m unittest discover -s tests
+
+# Run a specific test file
+python -m unittest tests/test_main.py
+
+# Run the nested JSON test script
+python -m tests.test_nested_json
+```
+
+### Adding New Tests
+
+To add new tests, extend the existing test classes in `tests/test_main.py` or create new test classes that inherit from `unittest.TestCase`. Follow the existing patterns for setting up test fixtures and cleaning up after tests.
+
+## License
+
+This project is open source and available under the MIT License.
+
+Copyright (c) 2025 Janosch Meyer (janosch.code@proton.me)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Note: This project was created with the assistance of artificial intelligence.

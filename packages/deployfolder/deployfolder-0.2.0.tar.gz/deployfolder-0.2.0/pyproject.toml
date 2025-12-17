@@ -1,0 +1,71 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "deployfolder"
+description = "A tool to create deployment folders based on YAML configuration"
+readme = "README.md"
+authors = [
+    {name = "Janosch Meyer", email = "janosch.code@proton.me"}
+]
+license = {file = "LICENSE"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Build Tools",
+    "Topic :: System :: Software Distribution",
+    "Topic :: Utilities",
+]
+keywords = ["deployment", "configuration", "yaml", "json", "placeholders"]
+requires-python = ">=3.7"
+dependencies = [
+    "PyYAML>=5.1",
+    "jinja2>=3.0.0",
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+"7z" = ["py7zr>=0.20.0"]
+
+[project.scripts]
+deployfolder = "deployfolder.cli:main"
+
+[tool.setuptools]
+packages = ["deployfolder"]
+
+[tool.setuptools.exclude-package-data]
+"*" = ["*.pyc", "*.pyo", "*.pyd", "*.so", "*.dll", "*.egg-info", "*.egg", "build", "dist"]
+
+[tool.setuptools.dynamic]
+version = {attr = "deployfolder.__version__"}
+
+[tool.black]
+line-length = 100
+target-version = ['py37', 'py38', 'py39', 'py310', 'py311', 'py312']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+
+[tool.flake8]
+max-line-length = 100
+exclude = [".git", "__pycache__", "build", "dist", "venv"]
+
+[tool.coverage.run]
+source = ["deployfolder"]
+omit = ["tests/*"]
