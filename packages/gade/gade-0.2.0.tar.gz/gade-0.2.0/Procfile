@@ -1,0 +1,1 @@
+web: python -m gade.api.server
