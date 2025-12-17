@@ -1,0 +1,27 @@
+        
+        <TestataDebito>
+            <IDPos>{{idpos}}</IDPos>
+            <CodiceTipoDebito>{{codice}}</CodiceTipoDebito>
+            <DatiContribuente>
+                {{soggetto|safe}}
+            </DatiContribuente>
+            <DettaglioPosizione>{{dettaglio}}</DettaglioPosizione>
+        </TestataDebito>
+        <DettaglioDebito>
+            <IDDeb>{{iddeb}}</IDDeb>
+            <Gruppo>{{gruppo}}</Gruppo>
+            {%- if ordinamento %}<Ordinamento>{{ordinamento}}</Ordinamento>{% endif %}
+            <DataInizioValidita>{{data_inizio.strftime('%Y-%m-%d')}}</DataInizioValidita>
+            {%- if data_scadenza %}<DataFineValidita>{{data_scadenza.strftime('%Y-%m-%d')}}</DataFineValidita>{% endif %}
+            {%- if data_scadenza_avviso %}<DataLimitePagabilita>{{data_scadenza_avviso.strftime('%Y-%m-%d')}}</DataLimitePagabilita>{% endif %}
+            <ImportoDebito>{{importo}}</ImportoDebito>
+            <CausaleDebito>{{causale[:140]}}</CausaleDebito>
+            <DettagliImporto>{% for importo in importi %}
+                <dettaglioImporto>
+                    <codice>{{importo.tipo_id}}</codice>
+                    <descrizione>{{importo.causale}}</descrizione>
+                    <importo>{{importo.importo}}</importo>
+                    <capitoloBilancio>{{importo.capitolo or ''}}</capitoloBilancio>
+                </dettaglioImporto>{% endfor %}
+            </DettagliImporto>
+        </DettaglioDebito>
