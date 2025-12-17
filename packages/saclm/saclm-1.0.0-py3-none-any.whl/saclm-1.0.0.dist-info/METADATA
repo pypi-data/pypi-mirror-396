@@ -1,0 +1,378 @@
+Metadata-Version: 2.4
+Name: saclm
+Version: 1.0.0
+Summary: Stateful Coherent Language Models - Transformers with persistent memory
+Home-page: https://github.com/Volgat/sclm
+Author: Mike Amega
+Author-email: contact@amewebstudio.com
+Project-URL: Bug Tracker, https://github.com/Volgat/sclm/issues
+Project-URL: Documentation, https://github.com/Volgat/sclm#readme
+Project-URL: Paper, https://arxiv.org/abs/2512.XXXXX
+Keywords: language model,transformer,stateful,coherence,memory,nlp,deep learning,pytorch
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: Other/Proprietary License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Classifier: Topic :: Text Processing :: Linguistic
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: torch>=1.10.0
+Requires-Dist: numpy>=1.19.0
+Provides-Extra: dev
+Requires-Dist: pytest>=6.0; extra == "dev"
+Requires-Dist: pytest-cov>=2.0; extra == "dev"
+Requires-Dist: black>=22.0; extra == "dev"
+Requires-Dist: isort>=5.0; extra == "dev"
+Requires-Dist: flake8>=4.0; extra == "dev"
+Provides-Extra: transformers
+Requires-Dist: transformers>=4.20.0; extra == "transformers"
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: keywords
+Dynamic: license-file
+Dynamic: project-url
+Dynamic: provides-extra
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+# SCLM: Stateful Coherent Language Models
+
+<p align="center">
+  <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version">
+  <img src="https://img.shields.io/badge/python-3.8+-green" alt="Python">
+  <img src="https://img.shields.io/badge/pytorch-1.10+-red" alt="PyTorch">
+  <img src="https://img.shields.io/badge/license-Proprietary-red" alt="License">
+</p>
+
+**SCLM** is a PyTorch library for building language models with **persistent latent state** and **multi-expert coherence mechanisms**. Unlike standard transformers that process each sequence independently, SCLM maintains continuous memory across generation steps.
+
+## 🎯 Key Features
+
+| Feature | Description |
+|---------|-------------|
+| **Persistent State** | Maintains latent state across generation with variance < 10⁻⁷ |
+| **Coherence Mechanism** | Multi-expert system that promotes consistent representations |
+| **Edit Mode** | Local modifications without global semantic drift |
+| **Drop-in Replacement** | Compatible with standard transformer training pipelines |
+
+## 📊 Experimental Results
+
+| Metric | Result |
+|--------|--------|
+| State Persistence | variance < 10⁻⁷ ✅ |
+| Coherence Preservation | 104.7% ✅ |
+| Local Editing Drift | 0.3% ✅ |
+| Entity Preservation | 100% ✅ |
+
+## 🚀 Installation
+
+```bash
+pip install saclm
+```
+
+Or from source:
+
+```bash
+git clone https://github.com/Volgat/sclm.git
+cd sclm
+pip install -e .
+```
+
+## 📖 Quick Start
+
+### Basic Usage
+
+```python
+from sclm import SCLM, SCLMConfig
+
+# Create configuration
+config = SCLMConfig(
+    vocab_size=50257,
+    n_layers=6,
+    n_heads=8,
+    d_model=512
+)
+
+# Create model
+model = SCLM(config)
+
+# Forward pass
+import torch
+input_ids = torch.randint(0, 50257, (1, 64))
+output = model(input_ids)
+
+logits = output['logits']  # [batch, seq_len, vocab_size]
+metrics = output['global_metrics']  # coherence, alignment, etc.
+```
+
+### Text Generation
+
+```python
+# Generate text
+prompt = torch.tensor([[1, 2, 3, 4, 5]])  # Your tokenized prompt
+generated = model.generate(
+    prompt,
+    max_new_tokens=100,
+    temperature=0.8,
+    top_k=50
+)
+```
+
+### Edit Mode (Key Feature!)
+
+```python
+# Process original text
+original_ids = tokenizer.encode("The sword was blue.", return_tensors='pt')
+model.reset_state()
+_ = model(original_ids)
+
+# Freeze state
+model.freeze_state()
+
+# Process edited text - coherence preserved!
+edited_ids = tokenizer.encode("The sword was red.", return_tensors='pt')
+output = model(edited_ids, edit_mode=True)
+
+# Check coherence preservation
+print(f"Coherence: {output['global_metrics']['coherence']}")
+
+# Unfreeze when done
+model.unfreeze_state()
+```
+
+## 🏗️ Architecture
+
+SCLM introduces the **EARCP Layer** - a five-stage pipeline integrated into transformer blocks:
+
+```
+Input Hidden States
+        ↓
+┌───────────────────┐
+│  E - Encapsulation │  Create/update persistent state
+└─────────┬─────────┘
+          ↓
+┌───────────────────┐
+│  A - Alignment    │  Measure hidden-state consistency
+└─────────┬─────────┘
+          ↓
+┌───────────────────┐
+│  R - Revision     │  Correct semantic drift
+└─────────┬─────────┘
+          ↓
+┌───────────────────┐
+│  C - Coherence    │  Multi-expert processing
+└─────────┬─────────┘
+          ↓
+┌───────────────────┐
+│  P - Propagation  │  Inject state into deeper layers
+└─────────┬─────────┘
+          ↓
+    Output Hidden States
+```
+
+### Components
+
+| Module | Purpose |
+|--------|---------|
+| `EncapsulationModule` | GRU-style state management |
+| `AlignmentModule` | Cross-attention consistency |
+| `RevisionModule` | Drift detection & correction |
+| `CoherenceModule` | Multi-expert ensemble |
+| `PropagationModule` | Layer-wise state injection |
+
+## 📐 Configuration Options
+
+```python
+@dataclass
+class SCLMConfig:
+    # Model architecture
+    vocab_size: int = 50257
+    max_seq_length: int = 512
+    n_layers: int = 6
+    n_heads: int = 8
+    d_model: int = 512
+    d_ff: int = 2048
+    dropout: float = 0.1
+    
+    # SCLM-specific
+    latent_state_dim: int = 256    # State dimension
+    n_coherence_heads: int = 4     # Coherence attention heads
+    n_experts: int = 4             # Number of experts
+    propagation_depth: int = 3     # Propagation adapters
+    
+    # EARCP parameters
+    eta_s: float = 5.0             # Coherence sensitivity
+    w_min: float = 0.05            # Minimum expert weight
+    
+    # Layer placement
+    earcp_every_n_layers: int = 2  # EARCP every N layers
+    use_global_earcp: bool = True  # Global EARCP layer
+```
+
+## 🔧 Pre-built Models
+
+```python
+from sclm import create_sclm_small, create_sclm_medium, create_sclm_large
+
+# ~45M parameters
+model_small = create_sclm_small()
+
+# ~125M parameters  
+model_medium = create_sclm_medium()
+
+# ~350M parameters
+model_large = create_sclm_large()
+```
+
+## 📊 Training Example
+
+```python
+from sclm import SCLM, SCLMConfig
+import torch
+import torch.nn as nn
+
+# Setup
+config = SCLMConfig(vocab_size=50257)
+model = SCLM(config).cuda()
+optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4)
+
+# Training loop
+for batch in dataloader:
+    input_ids, labels = batch
+    input_ids, labels = input_ids.cuda(), labels.cuda()
+    
+    # Reset state for each sequence
+    model.reset_state()
+    
+    # Forward
+    output = model(input_ids, labels=labels)
+    loss = output['loss']
+    
+    # Backward
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+    
+    # Log metrics
+    metrics = output['global_metrics']
+    print(f"Loss: {loss.item():.4f}, Coherence: {metrics['coherence']:.4f}")
+```
+
+## 🧪 Knowledge Distillation
+
+```python
+from transformers import GPT2LMHeadModel
+
+# Teacher model
+teacher = GPT2LMHeadModel.from_pretrained('gpt2-large')
+teacher.eval()
+
+# Student (SCLM)
+student = SCLM(config)
+
+# Distillation training
+T = 2.0  # Temperature
+alpha = 0.5  # Distillation weight
+
+for batch in dataloader:
+    input_ids, labels = batch
+    
+    # Student forward
+    student.reset_state()
+    student_out = student(input_ids, labels)
+    lm_loss = student_out['loss']
+    
+    # Teacher forward
+    with torch.no_grad():
+        teacher_logits = teacher(input_ids).logits
+    
+    # Distillation loss
+    student_soft = F.log_softmax(student_out['logits'] / T, dim=-1)
+    teacher_soft = F.softmax(teacher_logits / T, dim=-1)
+    distill_loss = F.kl_div(student_soft, teacher_soft, reduction='batchmean') * T * T
+    
+    # Combined loss
+    loss = (1 - alpha) * lm_loss + alpha * distill_loss
+    loss.backward()
+```
+
+## 📈 Metrics
+
+Access detailed metrics after forward pass:
+
+```python
+output = model(input_ids)
+
+# Global EARCP metrics
+global_metrics = output['global_metrics']
+print(f"Coherence: {global_metrics['coherence']:.4f}")
+print(f"Alignment: {global_metrics['alignment'].mean():.4f}")
+print(f"Drift: {global_metrics['drift'].mean():.4f}")
+print(f"State Norm: {global_metrics['state_norm']:.4f}")
+print(f"Expert Weights: {global_metrics['weights']}")
+
+# Per-block metrics
+for i, block_metrics in enumerate(output['block_metrics']):
+    print(f"Block {i}: coherence={block_metrics['coherence']:.4f}")
+```
+
+## 🔬 Research Applications
+
+SCLM is designed for:
+
+- **Long-form generation** with consistent characters and facts
+- **Document editing** with local changes and global coherence
+- **Multi-turn dialogue** with persistent context
+- **Story generation** with entity tracking
+- **Code generation** with variable consistency
+
+## 📄 Citation
+
+```bibtex
+@article{amega2025sclm,
+  title={SCLM: Stateful Coherent Language Models},
+  author={Amega, Mike},
+  journal={arXiv preprint},
+  year={2025},
+  note={github.com/Volgat/sclm}
+}
+```
+
+## 📜 License
+
+Proprietary Community License - see [LICENSE](LICENSE) for details.
+
+**Community Use**: Free for personal, research, and small business (< $100k revenue).
+**Commercial Use**: License required for larger entities and commercial SaaS products. See [LICENSING](LICENSING.md).
+
+## 🚀 Deployment
+
+To publish a new version to PyPI:
+1. Update version in `setup.py`.
+2. Create a new Release in GitHub.
+3. The GitHub Action will automatically build and publish the package.
+
+*Note: Requires `PYPI_API_TOKEN` secret in repository settings.*
+
+## 🤝 Contributing
+
+Contributions welcome! Please read our [Contributing Guide](CONTRIBUTING.md).
+
+## 📧 Contact
+
+- **Author**: Mike Amega
+- **Email**: contact@amewebstudio.com
+- **GitHub**: [@Volgat](https://github.com/Volgat)
