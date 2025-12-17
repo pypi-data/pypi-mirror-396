@@ -1,0 +1,155 @@
+# rettxidentity
+
+**Pure Python library for deterministic identity canonicalization and matching in the rettX ecosystem**
+
+[![Python Version](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![CI](https://github.com/rettx/rettxidentity/actions/workflows/ci.yml/badge.svg)](https://github.com/rettx/rettxidentity/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/rettxidentity.svg)](https://pypi.org/project/rettxidentity/)
+
+## Overview
+
+`rettxidentity` is a reusable identity canonicalization and matching engine for the rettX ecosystem. It enables deterministic comparison of a caregiver-entered Draft Identity against a Verified Identity extracted from medical reports, producing an explicit Match Decision (PASS, BORDERLINE, FAIL) with confidence scores and explainable reason codes.
+
+The library is intentionally designed with:
+- ✅ No database dependencies
+- ✅ No network calls
+- ✅ No secrets or configuration files
+- ✅ Deterministic outputs (same inputs → same outputs)
+- ✅ Thread-safe (all dataclasses frozen)
+- ✅ Cross-platform (Linux, Windows, macOS)
+
+## Key Features
+
+- **Identity Comparison**: Compare draft vs verified identities with explicit match decisions
+- **Cross-Script Matching**: Handle Greek, Georgian, and Cyrillic names seamlessly
+- **Name Normalization**: Unicode-aware name normalization with diacritics handling
+- **Canonicalization**: Versioned, deterministic identity representation
+- **Explainability**: Every decision includes reason codes explaining the logic
+- **Performance**: 1000+ comparisons/second on standard hardware
+
+## Installation
+
+```bash
+pip install rettxidentity
+```
+
+## Quick Start
+
+```python
+from rettxidentity import compare_identities, Identity, PersonName, MatchDecision
+
+# Draft identity (from caregiver input)
+draft = Identity(
+    name=PersonName(given="Maria", surname="Garcia"),
+    date_of_birth="1985-03-15",
+    country_of_birth="ES",
+)
+
+# Verified identity (from medical report)
+verified = Identity(
+    name=PersonName(given="María", surname="García López"),
+    date_of_birth="1985-03-15",
+    country_of_birth="Spain",
+)
+
+# Compare them
+result = compare_identities(draft, verified)
+
+# Check the decision
+if result.decision == MatchDecision.PASS:
+    print("✓ Identities match! Safe to proceed.")
+    print(f"Confidence: {result.confidence:.2%}")
+elif result.decision == MatchDecision.BORDERLINE:
+    print("⚠ Requires admin review")
+    print(f"Reason codes: {[rc.value for rc in result.reason_codes]}")
+else:  # FAIL
+    print("✗ Identities do not match. Request correction.")
+```
+
+## Documentation
+
+- **[Specification](specs/001-identity-matching-library/spec.md)** - Feature requirements and user scenarios
+- **[Implementation Plan](specs/001-identity-matching-library/plan.md)** - Technical architecture and design decisions
+- **[Quickstart Guide](specs/001-identity-matching-library/quickstart.md)** - Usage examples and patterns
+- **[API Contract](specs/001-identity-matching-library/contracts/api.md)** - Complete API reference
+- **[Matching Rules](specs/001-identity-matching-library/contracts/matching-rules.md)** - Decision logic details
+
+## Development
+
+### Setup
+
+```bash
+# Clone repository
+git clone https://github.com/rettx/rettxidentity.git
+cd rettxidentity
+
+# Install with dev dependencies
+pip install -e ".[dev]"
+```
+
+### Running Tests
+
+```bash
+# Run all tests with coverage (minimum 80% required)
+pytest
+
+# Run specific test categories
+pytest -m unit              # Unit tests only
+pytest -m contract          # Contract tests only
+pytest -m integration       # Integration tests only
+
+# Generate detailed coverage report
+pytest --cov-report=html
+```
+
+### Code Quality
+
+```bash
+# Format code
+ruff format src tests
+
+# Lint with auto-fix
+ruff check --fix src tests
+
+# Type check
+mypy src/rettxidentity --strict
+```
+
+### CI/CD
+
+The project uses GitHub Actions for continuous integration and deployment:
+
+- **CI Workflow**: Runs on every push and PR (linting, type checking, tests)
+- **Publish Workflow**: Automatically publishes to PyPI when a release is created
+
+See [.github/workflows/README.md](.github/workflows/README.md) for detailed CI/CD documentation.
+
+## Design Principles
+
+This library follows the [rettX Identity Constitution](specs/001-identity-matching-library/plan.md#constitution-check):
+
+1. **Identity ≠ Identifier** - Never generates rettxid
+2. **Verified Identity Only** - Canonical output from verified identity only
+3. **Determinism** - Same inputs → same outputs (versioned)
+4. **Explainability** - Structured reason codes in all outputs
+5. **Script-Agnostic** - Native scripts first-class; transliteration for comparison
+6. **DOB + Mutation Anchors** - Hard gates with clear rules
+7. **No Lock** - Declares eligibility, never locks
+8. **Borderline First-Class** - Preferred over FAIL in ambiguity
+9. **Purity & Statelessness** - No DB, network, filesystem
+10. **Minimal Surface Area** - Focused API
+11. **Versioned Canonicalization** - All outputs include version
+12. **Privacy by Construction** - No logging by default
+
+## License
+
+MIT License - see [LICENSE](LICENSE) file for details.
+
+## Contributing
+
+Contributions are welcome! Please read our contributing guidelines and code of conduct.
+
+## Support
+
+For questions and support, please open an issue on GitHub
