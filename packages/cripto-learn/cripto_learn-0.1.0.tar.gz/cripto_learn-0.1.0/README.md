@@ -1,0 +1,559 @@
+# Cripto
+
+A personal Python cryptography library implementing a symmetric block cipher based on the **Feistel Network** and using the secure **Cipher Block Chaining (CBC) mode** for operation.
+
+This library is designed for developers who want to experiment with custom cryptographic implementations or require column-level encryption/decryption within their personal applications.
+
+## 🌟 Features
+
+* **Custom Block Cipher:** Implementation of the Feistel Network (8 rounds) from scratch.
+* **CBC Mode:** Uses Cipher Block Chaining (CBC) for data security, which provides diffusion and addresses the weaknesses of ECB (Electronic Codebook) mode.
+* **PKCS#7 Padding:** Ensures data integrity by correctly padding and unpadding input data to match the required block size (64 bits / 8 bytes).
+* **Key Management Tools:** Includes utilities to securely generate and load the 256-bit Key (KEY) and the Initialization Vector (IV).
+* **Modular Design:** Optimized for reuse within Python applications (e.g., protecting passwords or tokens in a SQLite database column).
+
+## 📦 Installation
+
+This package is designed to be easily installed via pip once published, or installed locally for testing.
+
+### Local Installation (Developer Setup)
+
+If you have the source code with the `setup.py` file:
+
+```bash
+# Navigate to the project root directory (where setup.py is located)
+pip install .
+```
+
+# 🛠️ Usage
+
+## 1. Generating Key Material
+Before encryption, you must securely generate a master key file (`clave_secreta.txt` is the default).
+
+You can use the built-in generation function:
+
+```python
+import mi_cripto_personal
+import os
+
+KEY_FILE = "master_key.txt"
+
+# Generates the KEY (256-bit) and IV (64-bit) and saves them.
+if not os.path.exists(KEY_FILE):
+    mi_cripto_personal.generar_componentes_criptograficos(KEY_FILE)
+    print(f"Key material saved to {KEY_FILE}")
+
+# Load the generated material for use in the application
+KEY, IV = mi_cripto_personal.cargar_componentes_clave(KEY_FILE)
+```
+
+## 2. Encryption and Decryption (Core Functions)
+The primary functions operate on `bytes` objects.
+```python
+import mi_cripto_personal
+
+# Assume KEY and IV are loaded as bytes objects
+plaintext = "The data to be hidden.".encode('utf-8')
+
+# --- ENCRYPTION ---
+try:
+    ciphertext = mi_cripto_personal.cifrar_cbc(plaintext, KEY, IV)
+    print(f"Ciphertext (Hex): {ciphertext.hex()}")
+except ValueError as e:
+    print(f"Encryption Failed: {e}")
+
+# --- DECRYPTION ---
+try:
+    decrypted_bytes = mi_cripto_personal.descifrar_cbc(ciphertext, KEY, IV)
+    decrypted_text = decrypted_bytes.decode('utf-8')
+    
+    print(f"Decrypted: {decrypted_text}")
+    assert decrypted_text == plaintext.decode('utf-8')
+except ValueError as e:
+    print(f"Decryption Failed (Wrong key or corrupt data): {e}")
+```
+
+## 3. Application Use Case: Database Column Encryption
+This is ideal for securing sensitive data columns (like passwords, tokens, or personal identifiers) in a database like SQLite or PostgreSQL.
+
+### Logic Flow:
+1. **On Write/Insert:** The application calls `cifrar_cbc()` on the plaintext data. The resulting `bytes` object (BLOB) is stored in the database column.
+
+2. **On Read/Retrieve:** The application reads the BLOB from the database and calls `descifrar_cbc()`. The resulting plaintext is used for validation or display. 
+
+## 4. File Operations
+### 4.1. Encrypting a Single File
+This example reads a file, encrypts its content, and saves it as a ciphertext file.
+
+```python
+import cripto
+import os
+
+# 1. Assume KEY and IV are loaded (see Section 3)
+
+def encrypt_file(input_path, output_path, KEY, IV):
+    """Encrypts the content of a file and saves it."""
+    try:
+        # 1. Read entire file content as bytes
+        with open(input_path, 'rb') as f:
+            plaintext_data = f.read()
+
+        # 2. Encrypt the bytes using the 'cripto' library
+        ciphertext_data = cripto.cifrar_cbc(plaintext_data, KEY, IV)
+
+        # 3. Write the encrypted bytes to the new file
+        with open(output_path, 'wb') as f:
+            f.write(ciphertext_data)
+            
+        print(f"✅ File successfully encrypted: {output_path}")
+
+    except Exception as e:
+        print(f"❌ Error encrypting file {input_path}: {e}")
+
+# Example Usage:
+# KEY, IV = cripto.cargar_componentes_clave("master_key.txt")
+# encrypt_file("secret_document.txt", "secret_document.encrypted", KEY, IV)
+```
+
+### 4.2. Decrypting a Single File
+This example reads an encrypted file, decrypts it, and saves the original plaintext content.
+
+```python
+import cripto
+
+def decrypt_file(input_path, output_path, KEY, IV):
+    """Decrypts the content of a file and saves it."""
+    try:
+        # 1. Read the entire ciphertext file as bytes
+        with open(input_path, 'rb') as f:
+            ciphertext_data = f.read()
+
+        # 2. Decrypt the bytes using the 'cripto' library
+        plaintext_data = cripto.descifrar_cbc(ciphertext_data, KEY, IV)
+
+        # 3. Write the decrypted bytes to the new file
+        with open(output_path, 'wb') as f:
+            f.write(plaintext_data)
+            
+        print(f"✅ File successfully decrypted: {output_path}")
+
+    except Exception as e:
+        print(f"❌ Error decrypting file {input_path}. Could be wrong key or corrupt data: {e}")
+
+# Example Usage:
+# decrypt_file("secret_document.encrypted", "recovered_document.txt", KEY, IV)
+```
+
+## 5. Directory Operations
+To encrypt or decrypt entire directories (folders), you must recursively traverse the file structure using Python's `os` module.
+
+```python
+import os
+import cripto
+# Assume encrypt_file and decrypt_file functions are defined above
+
+def process_directory(directory_path, action, KEY, IV, extension='.encrypted'):
+    """Recursively traverses a directory and applies the action (encrypt/decrypt) to each file."""
+    
+    if action == 'encrypt':
+        file_function = encrypt_file
+        current_ext, new_ext = '', extension
+    else: # action == 'decrypt'
+        file_function = decrypt_file
+        current_ext, new_ext = extension, ''
+        
+    for root, _, files in os.walk(directory_path):
+        for file in files:
+            full_input_path = os.path.join(root, file)
+            
+            # Only process files with the expected extension (e.g., .encrypted for decryption)
+            if file.endswith(current_ext):
+                
+                # Generate the new output path (by changing the extension)
+                if action == 'encrypt':
+                    full_output_path = full_input_path + new_ext
+                else:
+                    full_output_path = full_input_path.replace(current_ext, new_ext)
+                
+                print(f"-> Processing: {full_input_path}")
+                file_function(full_input_path, full_output_path, KEY, IV)
+                
+                # Optional: Delete the original file to maintain only the processed version
+                # os.remove(full_input_path) 
+
+# Example Usage:
+# process_directory("my_documents_folder", 'encrypt', KEY, IV)
+# process_directory("my_documents_folder", 'decrypt', KEY, IV)
+```
+
+## 6. Comprehensive Test Suite (Showcase)
+To demonstrate the full capabilities of the `cripto` library—from basic string operations to file and database handling—we provide an exhaustive test script, `test_complet_suite.py`.
+
+Running this script performs five key tests and provides detailed terminal output, which serves as the best example of how to integrate the library into a real application.
+
+### 6.1. How to Run the Tests
+1. Save the following code as `test_complet_suite.py` in your project's root directory.
+2. Ensure your environment is active and run the script:
+
+```bash
+python test_complet_suite.py
+```
+
+### 6.2. Test Script Output Example
+The output below shows the expected flow and verification for each functionality:
+
+```plaintext
+[SETUP] 🔑 Verifying and Loading Cryptographic Material...
+        -> Master Key file generated: clave_maestra_test.txt
+        -> Key loaded (256-bit): 32 bytes
+        -> IV loaded (64-bit):    8 bytes
+
+=======================================================
+🚀 TEST 1: CORE CIPHER FUNCTIONALITY (String/Bytes)
+=======================================================
+   [INFO] Original Data: 'This is the most critical secret.' (33 bytes)
+   [CIPHER] Ciphertext (Hex): 2b8768a716825ac4f285c1bf398b513b... (40 bytes)
+   [DECIPHER] Decrypted Data: 'This is the most critical secret.'
+   [RESULT] ✅ PASS: Decrypted data matches original.
+
+=======================================================
+🚀 TEST 2: FAILURE HANDLING (Wrong Key Decryption)
+=======================================================
+   [INFO] Data encrypted with CORRECT Key (CLAVE).
+   [ATTEMPT] Attempting decryption using WRONG_KEY (32 bytes of '0')...
+   [RESULT] ✅ PASS: Decryption failed as expected, raising: ValueError - Unpadding error: Invalid padding length.
+
+=======================================================
+🚀 TEST 3: DATABASE COLUMN ENCRYPTION/DECRYPTION
+=======================================================
+   [DB] Database 'db_test_cripto.sqlite' initialized.
+   [ACTION] Inserted token for 'API_Gateway' (Encrypted BLOB).
+   [RESULT] ✅ PASS: DB token decrypted to 'tk_prod_4eu8n9ke6a'.
+
+=======================================================
+🚀 TEST 4: SINGLE FILE ENCRYPTION/DECRYPTION
+=======================================================
+[FILES]  -> Test directory created at: temp_test_data
+   [ACTION] Encrypting 'temp_test_data\file_a.txt' to 'temp_test_data\file_a.enc'.
+   [ACTION] Decrypting 'temp_test_data\file_a.enc' to 'temp_test_data\file_a.dec.txt'.
+   [RESULT] ✅ PASS: Recovered file content is identical to original.
+
+=======================================================
+🚀 TEST 5: RECURSIVE DIRECTORY ENCRYPTION/DECRYPTION
+=======================================================
+[FILES]  -> Test directory created at: temp_test_data
+   [STEP 1] Starting Recursive Directory ENCRYPTION...
+   [ENCRYPTED] -> file_a.txt -> file_a.txt.enc
+   [ENCRYPTED] -> file_b.txt -> file_b.txt.enc
+   [STEP 2] Starting Recursive Directory DECRYPTION...
+   [DECRYPTED] -> file_a.txt.enc -> file_a.txt.recuperado.txt
+   [DECRYPTED] -> file_b.txt.enc -> file_b.txt.recuperado.txt
+   [STEP 3] Verifying recovered contents...
+   [RESULT] ✅ PASS: All directory files verified successfully.
+
+=======================================================
+🧹 FINAL CLEANUP
+=======================================================
+   -> Test directory removed: temp_test_data
+   -> Test database removed: db_test_cripto.sqlite
+   -> Master key file removed: clave_maestra_test.txt
+
+#######################################################
+🎉 🎉 ALL 'CRIPTO' LIBRARY TESTS PASSED SUCCESSFULLY! 🎉 🎉
+#######################################################
+```
+### 6.3. Source Code of `test_complet_suite.py`
+```python
+import cripto
+import os
+import sqlite3
+import shutil
+import random
+import string
+import sys
+import binascii
+
+# --- Configuration and Test Constants ---
+KEY_FILE = 'clave_maestra_test.txt'
+DB_NAME = 'db_test_cripto.sqlite'
+TEST_DIR = 'temp_test_data'
+WRONG_KEY = b'0' * 32 
+
+CLAVE = None
+IV = None
+
+def get_random_string(length=30):
+    """Generates a random string for file and token content."""
+    letters = string.ascii_lowercase + string.digits
+    return ''.join(random.choice(letters) for i in range(length))
+
+def setup_key():
+    """Generates the key material if it doesn't exist and loads it."""
+    global CLAVE, IV
+    
+    print("\n[SETUP] 🔑 Verifying and Loading Cryptographic Material...")
+    if not os.path.exists(KEY_FILE):
+        cripto.generar_componentes_criptograficos(KEY_FILE)
+        print(f"        -> Master Key file generated: {KEY_FILE}")
+    
+    try:
+        CLAVE, IV = cripto.cargar_componentes_clave(KEY_FILE)
+        print(f"        -> Key loaded (256-bit): {len(CLAVE)} bytes")
+        print(f"        -> IV loaded (64-bit):    {len(IV)} bytes")
+    except Exception as e:
+        print(f"ERROR FATAL: Failed to load key material. {e}")
+        sys.exit(1)
+
+def create_test_files():
+    """Creates the test directory structure with fresh files."""
+    if os.path.exists(TEST_DIR):
+        shutil.rmtree(TEST_DIR)
+    os.makedirs(TEST_DIR, exist_ok=True)
+    os.makedirs(os.path.join(TEST_DIR, 'sub_dir'), exist_ok=True)
+    
+    content_a = "Secret Content A: " + get_random_string()
+    content_b = "Secret Content B: " + get_random_string()
+    
+    with open(os.path.join(TEST_DIR, 'file_a.txt'), 'w') as f:
+        f.write(content_a)
+    with open(os.path.join(TEST_DIR, 'sub_dir', 'file_b.txt'), 'w') as f:
+        f.write(content_b)
+        
+    print(f"[FILES]  -> Test directory created at: {TEST_DIR}")
+    
+    return {
+        os.path.join(TEST_DIR, 'file_a.txt'): content_a,
+        os.path.join(TEST_DIR, 'sub_dir', 'file_b.txt'): content_b
+    }
+
+# --- Auxiliary File I/O Functions ---
+
+def cifrar_archivo(input_path, output_path, key, iv):
+    """Reads file data, encrypts it using cripto.cifrar_cbc(), and writes the ciphertext."""
+    with open(input_path, 'rb') as f:
+        data = f.read()
+    ciphertext = cripto.cifrar_cbc(data, key, iv)
+    with open(output_path, 'wb') as f:
+        f.write(ciphertext)
+
+def descifrar_archivo(input_path, output_path, key, iv):
+    """Reads ciphertext, decrypts it using cripto.descifrar_cbc(), and writes the plaintext."""
+    with open(input_path, 'rb') as f:
+        data = f.read()
+    plaintext = cripto.descifrar_cbc(data, key, iv)
+    with open(output_path, 'wb') as f:
+        f.write(plaintext)
+
+# --- Core Tests ---
+
+def test_core_functionality():
+    """Tests the basic string encryption/decryption (cifrar_cbc and descifrar_cbc)."""
+    print("\n=======================================================")
+    print("🚀 TEST 1: CORE CIPHER FUNCTIONALITY (String/Bytes)")
+    print("=======================================================")
+    
+    original_data = "This is the most critical secret."
+    data_bytes = original_data.encode('utf-8')
+    
+    print(f"   [INFO] Original Data: '{original_data}' ({len(data_bytes)} bytes)")
+    
+    ciphertext = cripto.cifrar_cbc(data_bytes, CLAVE, IV)
+    
+    print(f"   [CIPHER] Ciphertext (Hex): {binascii.hexlify(ciphertext[:16]).decode()}... ({len(ciphertext)} bytes)")
+    
+    decrypted_bytes = cripto.descifrar_cbc(ciphertext, CLAVE, IV)
+    decrypted_data = decrypted_bytes.decode('utf-8')
+    
+    print(f"   [DECIPHER] Decrypted Data: '{decrypted_data}'")
+    
+    success = (decrypted_data == original_data)
+    assert success
+    print(f"   [RESULT] ✅ PASS: Decrypted data matches original.")
+
+def test_failure_handling():
+    """Tests if decryption fails gracefully when the wrong key is used."""
+    print("\n=======================================================")
+    print("🚀 TEST 2: FAILURE HANDLING (Wrong Key Decryption)")
+    print("=======================================================")
+
+    original_data = "Testing error handling."
+    data_bytes = original_data.encode('utf-8')
+    
+    ciphertext = cripto.cifrar_cbc(data_bytes, CLAVE, IV)
+    print(f"   [INFO] Data encrypted with CORRECT Key (CLAVE).")
+    
+    try:
+        print(f"   [ATTEMPT] Attempting decryption using WRONG_KEY (32 bytes of '0')...")
+        cripto.descifrar_cbc(ciphertext, WRONG_KEY, IV) 
+        
+        assert False, "Decryption succeeded with the wrong key! (CRITICAL FAILURE)"
+        
+    except ValueError as e:
+        print(f"   [RESULT] ✅ PASS: Decryption failed as expected, raising: {type(e).__name__} - {e}")
+    except Exception as e:
+        print(f"   [RESULT] ❌ FAIL: Unexpected error raised: {type(e).__name__} - {e}")
+        assert False
+
+def test_db_encryption():
+    """Tests encryption/decryption within an SQLite column."""
+    print("\n=======================================================")
+    print("🚀 TEST 3: DATABASE COLUMN ENCRYPTION/DECRYPTION")
+    print("=======================================================")
+    
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute('DROP TABLE IF EXISTS tokens')
+    c.execute('CREATE TABLE tokens (id INTEGER PRIMARY KEY, service TEXT, secret_token BLOB NOT NULL)')
+    print(f"   [DB] Database '{DB_NAME}' initialized.")
+    
+    service_name = "API_Gateway"
+    token_plano = "tk_prod_" + get_random_string(10)
+    
+    token_bytes = token_plano.encode('utf-8')
+    token_cifrado = cripto.cifrar_cbc(token_bytes, CLAVE, IV)
+    
+    c.execute("INSERT INTO tokens (service, secret_token) VALUES (?, ?)", 
+              (service_name, token_cifrado))
+    conn.commit()
+    print(f"   [ACTION] Inserted token for '{service_name}' (Encrypted BLOB).")
+    
+    c.execute("SELECT secret_token FROM tokens WHERE service = ?", (service_name,))
+    token_cifrado_db = c.fetchone()[0]
+    token_descifrado_bytes = cripto.descifrar_cbc(token_cifrado_db, CLAVE, IV)
+    token_descifrado_plano = token_descifrado_bytes.decode('utf-8')
+    
+    success = (token_descifrado_plano == token_plano)
+    assert success
+    print(f"   [RESULT] ✅ PASS: DB token decrypted to '{token_descifrado_plano}'.")
+    conn.close()
+
+def test_file_encryption():
+    """Tests the encryption and decryption of a single file."""
+    print("\n=======================================================")
+    print("🚀 TEST 4: SINGLE FILE ENCRYPTION/DECRYPTION")
+    print("=======================================================")
+    
+    initial_contents = create_test_files()
+    input_file = os.path.join(TEST_DIR, 'file_a.txt')
+    encrypted_file = os.path.join(TEST_DIR, 'file_a.enc')
+    decrypted_file = os.path.join(TEST_DIR, 'file_a.dec.txt')
+    original_content = initial_contents[input_file]
+    
+    cifrar_archivo(input_file, encrypted_file, CLAVE, IV)
+    os.remove(input_file)
+    print(f"   [ACTION] Encrypting '{input_file}' to '{encrypted_file}'.")
+    
+    descifrar_archivo(encrypted_file, decrypted_file, CLAVE, IV)
+    print(f"   [ACTION] Decrypting '{encrypted_file}' to '{decrypted_file}'.")
+
+    with open(decrypted_file, 'r') as f:
+        recovered_content = f.read()
+    
+    success = (recovered_content == original_content)
+    assert success
+    print(f"   [RESULT] ✅ PASS: Recovered file content is identical to original.")
+    
+    shutil.rmtree(TEST_DIR)
+
+def test_directory_encryption():
+    """Tests the recursive encryption and decryption of an entire directory."""
+    print("\n=======================================================")
+    print("🚀 TEST 5: RECURSIVE DIRECTORY ENCRYPTION/DECRYPTION")
+    print("=======================================================")
+    
+    original_contents = create_test_files()
+    
+    print("   [STEP 1] Starting Recursive Directory ENCRYPTION...")
+    for root, _, files in os.walk(TEST_DIR):
+        for file in files:
+            if file.endswith('.txt'):
+                input_path = os.path.join(root, file)
+                output_path = input_path + '.enc'
+                cifrar_archivo(input_path, output_path, CLAVE, IV)
+                os.remove(input_path) 
+                print(f"   [ENCRYPTED] -> {file} -> {os.path.basename(output_path)}")
+    
+    print("\n   [STEP 2] Starting Recursive Directory DECRYPTION...")
+    for root, _, files in os.walk(TEST_DIR):
+        for file in files:
+            if file.endswith('.enc'):
+                input_path = os.path.join(root, file)
+                output_path = input_path.replace('.enc', '.recuperado.txt') 
+                descifrar_archivo(input_path, output_path, CLAVE, IV)
+                os.remove(input_path) 
+                print(f"   [DECRYPTED] -> {file} -> {os.path.basename(output_path)}")
+
+    print("\n   [STEP 3] Verifying recovered contents...")
+    all_recovered_ok = True
+    for original_path, original_content in original_contents.items():
+        recovered_file = original_path.replace('.txt', '.txt.recuperado.txt')
+        
+        with open(recovered_file, 'r') as f:
+            recovered_content = f.read()
+        
+        if recovered_content != original_content:
+            print(f"   [ERROR] Content mismatch detected in {os.path.basename(original_path)}")
+            all_recovered_ok = False
+            break
+            
+    assert all_recovered_ok
+    print(f"   [RESULT] ✅ PASS: All directory files verified successfully.")
+
+def cleanup():
+    """Cleans up all created test artifacts."""
+    print("\n=======================================================")
+    print("🧹 FINAL CLEANUP")
+    print("=======================================================")
+    
+    if os.path.exists(TEST_DIR):
+        shutil.rmtree(TEST_DIR)
+        print(f"   -> Test directory removed: {TEST_DIR}")
+    if os.path.exists(DB_NAME):
+        os.remove(DB_NAME)
+        print(f"   -> Test database removed: {DB_NAME}")
+    if os.path.exists(KEY_FILE):
+        os.remove(KEY_FILE)
+        print(f"   -> Master key file removed: {KEY_FILE}")
+
+# --- PROGRAM EXECUTION ---
+if __name__ == "__main__":
+    
+    try:
+        setup_key()
+        
+        test_core_functionality()
+        test_failure_handling()
+        test_db_encryption()
+        test_file_encryption()
+        test_directory_encryption()
+        
+        print("\n\n#######################################################")
+        print("🎉 🎉 ALL 'CRIPTO' LIBRARY TESTS PASSED SUCCESSFULLY! 🎉 🎉")
+        print("#######################################################")
+        
+    except AssertionError as e:
+        print("\n\n❌ ❌ ASSERTION FAILURE! A verification step failed.")
+        print(f"Error details: {e}")
+    except Exception as e:
+        print(f"\n\n❌ ❌ AN UNEXPECTED ERROR OCCURRED: {type(e).__name__}: {e}")
+    finally:
+        cleanup()
+```
+
+## ⚙️ Technical Details
+| Component | Description | Specification |
+|--- |--- |---
+| **Cipher Type** | Symmetric Block Cipher | Feistel Network |
+| **Mode of Operation** | Block Chaining (CBC) | Provides strong diffusion and hides patterns. |
+| **Block Size** | Fixed | 8 bytes (64 bits) |
+| **Key Size** | Fixed | 32 bytes (256 bits) |
+| **Padding Scheme** | PKCS#7 | Ensures input data length is a multiple of the block size. |
+| **Round Function (F)** | Simplified implementation | Includes bitwise XOR and byte rotation. |
+
+## ⚠️ Disclaimer
+This library is intended for **educational purposes and personal projects*. While the implementation follows standard cryptographic principles (Feistel, CBC), it has not been rigorously audited by security professionals and should **NOT** be used to protect high-value, sensitive, or regulated data in production environments. Always rely on established libraries like PyCryptodome for professional applications.
+
+## 🤝 Contributing
+Feedback and suggestions for improving the code or the simplified F-function are welcome!
+
+## LICENSE: [MIT](https://github.com/Nooch98/cripto/blob/main/LICENSE)
