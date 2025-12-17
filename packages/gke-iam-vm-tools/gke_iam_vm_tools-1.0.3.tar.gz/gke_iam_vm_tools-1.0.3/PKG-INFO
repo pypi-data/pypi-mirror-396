@@ -1,0 +1,240 @@
+Metadata-Version: 2.4
+Name: gke-iam-vm-tools
+Version: 1.0.3
+Summary: [Protected] GKE IAM and VM Management Tools with IAP Support
+License: MIT
+Project-URL: Homepage, https://github.com/yourusername/gke-iam-vm-tools
+Project-URL: Repository, https://github.com/yourusername/gke-iam-vm-tools
+Keywords: gke,iam,vm,iap,compute
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: google-cloud-compute>=1.14.0
+Requires-Dist: google-cloud-resource-manager>=1.10.0
+Requires-Dist: google-auth>=2.23.0
+Requires-Dist: gke-cache-builder>=1.0.3
+Dynamic: license-file
+
+"""
+# GKE IAM and VM Tools
+
+IAM permission management and VM operations with IAP tunnel support for GKE environments.
+
+## Installation
+
+```bash
+pip install gke-iam-vm-tools
+```
+
+## Quick Start
+
+```python
+from gke_iam_vm_tools import (
+    grant_iap_permission_sync,
+    list_vms_in_project_sync,
+    execute_command_on_vm_sync
+)
+
+# Grant IAP permission
+result = grant_iap_permission_sync(
+    project="my-project",
+    member="user:john@example.com"
+)
+
+# List VMs in project
+vms = list_vms_in_project_sync(project="my-project")
+for vm in vms['vms']:
+    print(f"{vm['name']} - {vm['status']}")
+
+# Execute command on VM via IAP
+cmd_result = execute_command_on_vm_sync(
+    project="my-project",
+    zone="us-central1-a",
+    instance_name="my-vm",
+    command="df -h"
+)
+print(cmd_result['stdout'])
+```
+
+## Features
+
+### IAM Management
+- Grant/revoke IAP tunnel permissions
+- List IAP permissions by project
+- Support for users, service accounts, and groups
+
+### VM Operations
+- List VMs across all zones in a project
+- Generate IAP connection strings
+- Execute commands via IAP tunnel
+- Get VM serial port output for debugging
+
+## Usage Examples
+
+### IAM Permission Management
+
+```python
+from gke_iam_vm_tools import (
+    grant_iap_permission_sync,
+    revoke_iap_permission_sync,
+    list_iap_permissions_sync
+)
+
+# Grant permission to user
+grant_iap_permission_sync(
+    project="my-project",
+    member="user:alice@example.com"
+)
+
+# Grant permission to service account
+grant_iap_permission_sync(
+    project="my-project",
+    member="serviceAccount:sa@my-project.iam.gserviceaccount.com"
+)
+
+# List all IAP permissions
+perms = list_iap_permissions_sync(project="my-project")
+print(f"Total members: {perms['total_members']}")
+
+# Revoke permission
+revoke_iap_permission_sync(
+    project="my-project",
+    member="user:bob@example.com"
+)
+```
+
+### VM Discovery
+
+```python
+from gke_iam_vm_tools import list_vms_in_project_sync
+
+result = list_vms_in_project_sync(project="my-project")
+
+for vm in result['vms']:
+    print(f"Name: {vm['name']}")
+    print(f"Zone: {vm['zone']}")
+    print(f"Status: {vm['status']}")
+    print(f"Machine Type: {vm['machine_type']}")
+    print(f"Internal IPs: {vm['internal_ips']}")
+    print(f"External IPs: {vm['external_ips']}")
+    print("---")
+```
+
+### IAP Connection Setup
+
+```python
+from gke_iam_vm_tools import generate_iap_connection_string_sync
+
+result = generate_iap_connection_string_sync(
+    project="my-project",
+    zone="us-central1-a",
+    instance_name="web-server-1",
+    local_port=2222,
+    remote_port=22
+)
+
+print("Method 1 - IAP Tunnel:")
+print(result['iap_tunnel_command'])
+print(result['ssh_command'])
+
+print("\nMethod 2 - Direct IAP SSH:")
+print(result['direct_ssh_command'])
+```
+
+### Remote Command Execution
+
+```python
+from gke_iam_vm_tools import execute_command_on_vm_sync
+
+# Execute system command
+result = execute_command_on_vm_sync(
+    project="my-project",
+    zone="us-central1-a",
+    instance_name="my-vm",
+    command="uptime",
+    timeout=30
+)
+
+if result['status'] == 'success':
+    print(f"Output: {result['stdout']}")
+else:
+    print(f"Error: {result['stderr']}")
+
+# Execute multi-line script
+result = execute_command_on_vm_sync(
+    project="my-project",
+    zone="us-central1-a",
+    instance_name="my-vm",
+    command="""
+    ls -la /var/log/ | tail -5
+    df -h
+    free -m
+    """,
+    timeout=60
+)
+```
+
+### Debug VM Boot Issues
+
+```python
+from gke_iam_vm_tools import get_vm_serial_port_output_sync
+
+result = get_vm_serial_port_output_sync(
+    project="my-project",
+    zone="us-central1-a",
+    instance_name="my-vm",
+    port=1,
+    start=0
+)
+
+print("Serial port output:")
+print(result['contents'])
+```
+
+## Requirements
+
+- gcloud CLI installed (for IAP operations)
+- IAP tunnel permissions configured
+- SSH keys set up for VM access
+
+Environment setup:
+```bash
+# Optional: Custom gcloud path
+export GCLOUD_PATH=/usr/local/bin/gcloud
+```
+
+## IAP Tunnel Requirements
+
+For IAP operations to work:
+
+1. Enable IAP API in your project
+2. Grant `roles/iap.tunnelResourceAccessor` to users
+3. Configure SSH keys in GCP metadata
+4. Ensure VMs allow IAP connections
+
+## Security Notes
+
+- IAP provides secure access without public IPs
+- All operations are audited in Cloud Audit Logs
+- Commands executed via IAP are rate-limited
+- Timeout protection for long-running commands
+
+## Requirements
+
+- gke-cache-builder>=1.0.3
+- google-cloud-compute>=1.14.0
+- google-cloud-resource-manager>=1.10.0
+- gcloud CLI (for IAP operations)
+
+## License
+
+MIT License
+"""
