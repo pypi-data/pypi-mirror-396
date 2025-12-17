@@ -1,0 +1,160 @@
+[project]
+name = "time-split-app"
+version = "2.4.0"
+description = "Companion app for the `time-split` library."
+authors = [
+    { name = "Richard Sundqvist", email = "richard.sundqvist@live.se" },
+]
+license = { text = "MIT" }
+readme = "README.md"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+requires-python = ">=3.11"
+
+dependencies = [
+    "streamlit               >= 1.49.1",
+    "pandas                  >= 2.0.3",
+    "rics                    >= 6.0.2",
+    # Core lib dependencies
+    "time-split[plotting]    >= 1.0.0",
+    "croniter                >= 6.0.0",
+    # pip doesn't seem to consider extra dependencies on circular top-level dependencies
+    #   time-split[app] -> time-split-app -> time-split[plotting]
+    # Add the plotting deps manually here (without specifying versions) just in case.
+    "matplotlib",
+    "seaborn",
+]
+
+[project.urls]
+homepage = "https://github.com/rsundqvist/time-split-app"
+repository = "https://github.com/rsundqvist/time-split-app"
+documentation = "https://time-fold.readthedocs.io"
+"Bug Tracker" = "https://github.com/rsundqvist/time-split-app/issues"
+"Changelog" = "https://github.com/rsundqvist/time-split-app/blob/master/CHANGELOG.md"
+
+[tool.poetry.group.manual-extras.dependencies]
+pyarrow = "~22.0.0"
+
+[tool.poetry.requires-plugins]
+poetry-plugin-export = ">=1.8"
+
+[tool.poetry.group.test.dependencies]
+pytest = "~8.4.2"
+coverage = "~7.11.0"
+pytest-cov = "~7.0.0"
+
+# Needed for manual testing using dev-scripts, namely the dev/update-datasets.py.
+click = "~8.2.1"
+tomli-w = "~1.2.0"
+s3fs = "2025.7.0"
+
+[tool.poetry.group.devops.dependencies]
+invoke = "~2.2.1"
+mypy = "~1.18.2"
+ruff = "~0.14.2"
+
+safety = "~3.6.2"
+codespell = "~2.4.1"
+bump2version = "~1.0.1"
+
+[tool.ruff]
+line-length = 120
+fix = true
+unsafe-fixes = false
+output-format = "grouped"
+
+[tool.ruff.format]
+docstring-code-format = true
+docstring-code-line-length = 80
+line-ending = "lf"
+
+[tool.ruff.lint]
+exclude = ["notebooks/*"]
+select = [
+    "ANN",
+    "S",
+    "I",
+    "B",
+    "D",
+    "F",
+    "W",
+    "E",
+    "SLOT",
+    "SIM",
+    "TID",
+    "TD",
+    "TCH",
+    "ARG",
+    "PTH",
+    "NPY",
+    "PD",
+    "N",
+    "PERF",
+    "PLC",
+    "PLE",
+    "PLR",
+    "PLW",
+    "UP",
+    "FURB",
+    "RUF",
+    "TRY",
+]
+ignore = [
+    "D105", # Missing docstring in magic method
+    "D107", # Missing docstring in `__init__`
+    "ANN401",
+    "TID252", # Prefer absolute imports over relative imports from parent modules
+    "TRY003",
+    "PLC0415", # `import` should be at the top-level of a file
+    "PLR0913", #
+    "SIM108", # Use ternary operator - coverage issue, see https://github.com/nedbat/coveragepy/issues/509
+    "TD003", # Missing issue link
+]
+allowed-confusables = ["ℹ"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [
+    "D",
+    "S101", # Allow 'assert' keyword
+    "ANN",
+    "PLR2004", # Allow magic values
+]
+"dev/*" = [
+    "D",
+    "S101", # Allow 'assert' keyword
+    "ANN",
+    "PLR2004", # Allow magic values
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+[tool.ruff.lint.pycodestyle]
+max-line-length = 150
+
+[tool.pytest]
+[tool.pytest.ini_options]
+filterwarnings = [
+    "error",
+    # "ignore:Matplotlib is currently using agg:UserWarning",
+    # "ignore:.*utcfromtimestamp.*:DeprecationWarning", # Detta är farligt - ta bort
+]
+log_file_level = 10
+log_file = "pytest.log"
+
+[build-system]
+requires = ["poetry-core>=1.0.8"]
+build-backend = "poetry.core.masonry.api"
