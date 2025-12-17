@@ -1,0 +1,307 @@
+# 🧠 Sheikh-CLI
+
+> A privacy-first AI coding assistant that runs entirely on your Android device through Termux
+
+[![Privacy](https://img.shields.io/badge/Privacy-100%25_Local-green.svg)](https://github.com/termux/termux-app)
+[![Android](https://img.shields.io/badge/Android-Termux-blue.svg)](https://f-droid.org/packages/com.termux/)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+## Overview
+
+The Termux Local Coding Agent is a powerful, privacy-focused development tool that transforms your Android device into a local AI coding assistant. Built specifically for Termux, it provides natural language interaction with your code while maintaining complete privacy through local operation.
+
+## ✨ Features
+
+### 🔒 Privacy-First
+- **100% Local Operation** - No cloud dependencies, no data transmission
+- **Secure Sandbox** - Whitelisted commands with timeout protection
+- **Privacy Configuration** - Full control over what data is processed
+
+### 🛠️ Development Tools
+- **File Operations** - Read, write, search, and manage files safely
+- **Code Analysis** - Search patterns, find functions, analyze code structure
+- **Git Integration** - Status, diff, commit, and branch management
+- **Shell Commands** - Safe execution of development tools
+
+### 🤖 AI-Powered
+- **Natural Language Interface** - Describe tasks in plain English
+- **Intent Detection** - OpenRouter AI-powered intelligent intent recognition
+- **Code Generation** - AI-powered code creation in multiple languages
+- **Code Explanation** - AI explanations for existing code
+- **Local LLM Support** - Integration with llama.cpp for offline inference
+- **No-Code CLI** - Predefined actions for common development tasks
+
+### 📱 Mobile-Optimized
+- **Termux Integration** - Built specifically for Android Termux environment
+- **Resource Efficient** - Optimized for mobile hardware constraints
+- **Battery Conscious** - Intelligent resource management
+- **Portable Development** - Full development environment in your pocket
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Android device with Termux installed
+- 4GB+ RAM (8GB recommended)
+- 2GB+ free storage
+- Internet connection for setup
+
+### Installation
+
+1. **Install Termux**
+   ```bash
+   # Download from F-Droid or GitHub
+   # Launch Termux and grant storage permissions
+   termux-setup-storage
+   ```
+
+2. **Run Setup Script**
+   ```bash
+   # Copy setup_termux.sh to Termux
+   bash setup_termux.sh
+   ```
+
+3. **Start Using**
+   ```bash
+   # Activate environment
+   source ~/coding-agent/.venv/bin/activate
+   
+   # Interactive mode
+   python ~/coding-agent/src/run_agent.py interactive
+   
+   # Single command
+   python ~/coding-agent/src/run_agent.py prompt "list files in workspace"
+   ```
+
+## 💡 Usage Examples
+
+### File Operations
+```bash
+# Read a file
+python src/run_agent.py prompt "read config.json"
+
+# Create a new Python script
+python src/run_agent.py prompt "create hello.py with print('Hello World')"
+
+# List project files
+python src/run_agent.py prompt "show all Python files in the project"
+```
+
+### Code Analysis
+```bash
+# Search for patterns
+python src/run_agent.py prompt "find all function definitions in Python files"
+
+# Search imports
+python src/run_agent.py prompt "show all import statements"
+
+# Code statistics
+python src/run_agent.py prompt "count lines of code in the project"
+```
+
+### Git Operations
+```bash
+# Check repository status
+python src/run_agent.py prompt "git status"
+
+# View changes
+python src/run_agent.py prompt "git diff"
+
+# Show commit history
+python src/run_agent.py prompt "git log --oneline -5"
+```
+
+### Interactive Mode
+```bash
+# Start interactive session
+python src/run_agent.py interactive
+```
+
+Example conversation:
+```
+You: help
+Agent: [Shows available commands]
+
+You: read the main script
+Agent: [Reads and displays file content]
+
+You: find all functions
+Agent: [Searches and lists functions]
+
+You: git status
+Agent: [Shows git repository status]
+
+You: quit
+Agent: Goodbye! 👋
+```
+
+## 🏗️ Architecture
+
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   CLI Interface │    │  Orchestrator    │    │   Tool Plugins  │
+│                 │    │                  │    │                 │
+│ • Interactive   │───▶│ • Intent         │───▶│ • File Ops      │
+│ • Single Prompt │    │   Detection      │    │ • Shell Cmds    │
+│ • Help System   │    │ • Tool Routing   │    │ • Code Search   │
+│                 │    │ • Error Handling │    │ • Git Ops       │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+         │                       │                       │
+         │              ┌──────────────────┐              │
+         └──────────────▶│   Security       │◀─────────────┘
+                        │   Sandbox        │
+                        │                  │
+                        │ • Whitelisting   │
+                        │ • Timeouts       │
+                        │ • Directory      │
+                        │   Restrictions   │
+                        └──────────────────┘
+```
+
+## 🛡️ Security
+
+### Command Safety
+- **Whitelist Only** - Only predefined safe commands execute
+- **Timeout Protection** - Prevents infinite or long-running operations
+- **Directory Restrictions** - Access limited to allowed directories
+- **Output Filtering** - Sensitive data filtered from logs
+
+### Privacy Protection
+- **Local Processing** - All AI inference happens on-device
+- **No Telemetry** - Zero data transmission to external services
+- **Secure Storage** - Configuration and logs encrypted when possible
+- **Audit Logging** - Full activity tracking without sensitive data
+
+## ⚙️ Configuration
+
+### Basic Configuration
+```json
+{
+    "model": {
+        "type": "local_first",
+        "llama_cpp_path": "/path/to/llama.cpp/main",
+        "model_path": "/path/to/model.ggml"
+    },
+    "security": {
+        "sandbox_enabled": true,
+        "max_execution_time": 30,
+        "allowed_directories": ["/home/coding-agent"]
+    }
+}
+```
+
+### Advanced Options
+- **Model Integration** - Support for various local LLMs
+- **Custom Tools** - Add your own plugins
+- **Performance Tuning** - Optimize for your device
+- **Extended Whitelist** - Add trusted commands
+
+## 📊 Performance
+
+### Recommended Hardware
+| Component | Minimum | Recommended |
+|-----------|---------|-------------|
+| RAM | 4GB | 8GB+ |
+| Storage | 2GB | 5GB+ |
+| CPU | Quad-core | Octa-core |
+
+### Optimization Tips
+- Use smaller quantized models (4-bit)
+- Enable battery optimization
+- Monitor memory usage
+- Clear logs regularly
+
+## 🔧 Development
+
+### Project Structure
+```
+~/coding-agent/
+├── src/
+│   └── run_agent.py          # Main application
+├── tools/
+│   ├── file_operations.py    # File management
+│   ├── shell_commands.py     # Safe shell execution
+│   ├── code_search.py        # Code analysis
+│   └── git_operations.py     # Git integration
+├── config/
+│   └── agent_config.json     # Configuration
+├── models/                   # Local LLM models
+├── logs/                     # Application logs
+└── requirements.txt          # Python dependencies
+```
+
+### Adding New Features
+1. Create tool plugin in `tools/`
+2. Register in orchestrator
+3. Add intent detection
+4. Update configuration
+5. Document usage
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**Setup Fails**
+```bash
+# Check Termux installation
+pkg list-installed
+
+# Update packages
+pkg update && pkg upgrade
+```
+
+**Permission Errors**
+```bash
+# Grant storage access
+termux-setup-storage
+
+# Fix directory permissions
+chmod -R 755 ~/coding-agent
+```
+
+**Model Loading Issues**
+```bash
+# Verify llama.cpp
+cd ~/coding-agent/llama.cpp && ls -la main
+
+# Test model
+./main -m model.ggml -p "test"
+```
+
+### Getting Help
+1. Check the [complete tutorial](TUTORIAL.md)
+2. Review troubleshooting section
+3. Examine logs in `~/coding-agent/logs/`
+4. Test with simple commands first
+
+## 🤝 Contributing
+
+We welcome contributions! Please:
+
+1. Follow the modular architecture
+2. Add comprehensive error handling
+3. Include security considerations
+4. Document new features
+5. Test on multiple devices
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- **Termux Team** - For the excellent Android terminal environment
+- **llama.cpp** - For enabling local LLM inference
+- **Rich Library** - For beautiful terminal interfaces
+- **Open Source Community** - For inspiration and tools
+
+## 📞 Support
+
+- **Documentation**: See [TUTORIAL.md](TUTORIAL.md)
+- **Issues**: Report bugs and feature requests
+- **Community**: Join the Termux community
+
+---
+
+**Built with ❤️ for developers who value privacy and portability**
+
+*Transform your Android device into a powerful, private development environment with the Termux Local Coding Agent.*
