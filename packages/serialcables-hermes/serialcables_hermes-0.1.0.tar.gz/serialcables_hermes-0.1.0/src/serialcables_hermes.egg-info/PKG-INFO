@@ -1,0 +1,301 @@
+Metadata-Version: 2.4
+Name: serialcables-hermes
+Version: 0.1.0
+Summary: Python API for Serial Cables PCIe Gen6 EDSFF Redriver Cards
+Author-email: "Serial Cables, LLC" <support@serialcables.com>
+Maintainer-email: "Serial Cables, LLC" <support@serialcables.com>
+License-Expression: MIT
+Project-URL: Homepage, https://www.serialcables.com
+Project-URL: Documentation, https://github.com/serialcables/serialcables-hermes
+Project-URL: Repository, https://github.com/serialcables/serialcables-hermes
+Project-URL: Issues, https://github.com/serialcables/serialcables-hermes/issues
+Keywords: pcie,gen6,redriver,edsff,nvme,ssd,serial-cables,hardware,test-equipment
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Science/Research
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: System :: Hardware
+Classifier: Topic :: Scientific/Engineering
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: pyserial>=3.5
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0; extra == "dev"
+Requires-Dist: black>=23.0; extra == "dev"
+Requires-Dist: isort>=5.12; extra == "dev"
+Requires-Dist: mypy>=1.0; extra == "dev"
+Requires-Dist: ruff>=0.1.0; extra == "dev"
+Dynamic: license-file
+
+# serialcables-hermes
+
+[![PyPI version](https://badge.fury.io/py/serialcables-hermes.svg)](https://badge.fury.io/py/serialcables-hermes)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+Python API for Serial Cables PCIe Gen6 EDSFF Redriver Cards.
+
+## Overview
+
+Hermes provides a Python interface for communicating with Serial Cables PCIe Gen6 EDSFF Redriver cards via the USB Type-C MCU CLI interface. These cards enable PCIe Gen6 (64 GT/s) signal conditioning for EDSFF (E1.S, E3.S, E3.L) SSD validation and testing.
+
+### Supported Products
+
+- **PCI6-AD-x8EDSFF-E3-H** - X8 Golden Finger to X8 EDSFF (Standard)
+- **PCI6-AD-x8EDSFF-E3-H-Q** - X8 Golden Finger to X8 EDSFF (Quarch Compatible)
+- **PCI6-AD-x16EDSFF-E3-H** - X16 Golden Finger to X16 EDSFF (Standard)
+- **PCI6-AD-x16EDSFF-E3-H-Q** - X16 Golden Finger to X16 EDSFF (Quarch Compatible)
+
+## Installation
+
+```bash
+pip install serialcables-hermes
+```
+
+For development:
+
+```bash
+pip install serialcables-hermes[dev]
+```
+
+## Quick Start
+
+```python
+from serialcables_hermes import Hermes, LoadMode
+
+# Auto-detect device
+port = Hermes.find_device()
+
+# Connect and interact
+with Hermes(port) as hermes:
+    # Get device information
+    info = hermes.get_version()
+    print(f"Model: {info.product.model}")
+    print(f"Serial: {info.product.serial_number}")
+    print(f"Firmware: {info.mcu.version}")
+    
+    # Get card status
+    status = hermes.get_status()
+    print(f"Temperature: {status.thermal}")
+    print(f"Fan Speed: {status.fan}")
+    print(f"12V Current: {status.current}")
+    
+    # Detect attached EDSFF device
+    detection = hermes.detect_edsff()
+    print(f"EDSFF: {detection}")
+```
+
+## Features
+
+### Redriver Tuning
+
+Configure the PS7161 redriver ICs for optimal signal integrity:
+
+```python
+with Hermes('/dev/ttyUSB0') as hermes:
+    # Get current EQ settings
+    eq = hermes.get_eq_settings()
+    print(eq)
+    
+    # Set EQ for all chips (0-15 → 2.3-20.8 dB)
+    hermes.set_eq('all', 5)  # 8.2 dB
+    
+    # Set EQ for specific chip
+    hermes.set_eq(0, 7)  # Chip 0 to 10.3 dB
+    
+    # Configure flat gain (-2.8 to -0.2 dB)
+    hermes.set_fg('all', 2)  # -0.8 dB
+    
+    # Configure transmitter swing (1050-1630 mV)
+    hermes.set_sw('all', 5)  # 1490 mV
+    
+    # Save configuration to flash
+    hermes.save_configuration()
+```
+
+### Preset Configurations
+
+Load optimized presets based on trace length:
+
+```python
+from serialcables_hermes import LoadMode
+
+with Hermes(port) as hermes:
+    # Load preset for short traces (<9")
+    hermes.load_configuration(LoadMode.SHORT)
+    
+    # Load preset for medium traces (6-9") - factory default
+    hermes.load_configuration(LoadMode.MEDIUM)
+    
+    # Load preset for long traces (10-12")
+    hermes.load_configuration(LoadMode.LONG)
+```
+
+### EDSFF Sideband Control
+
+Control EDSFF sideband signals:
+
+```python
+from serialcables_hermes import Channel, DualPortState, LEDState, PowerDisableLevel
+
+with Hermes(port) as hermes:
+    # Send PERST# (30ms pulse)
+    hermes.send_perst()  # Both channels
+    hermes.send_perst(Channel.A)  # Channel A only
+    
+    # Control dual port mode
+    hermes.set_dual_port(DualPortState.ON)
+    
+    # Control power disable
+    hermes.set_power_disable(PowerDisableLevel.LOW)  # Enable power
+    
+    # Control host LED (amber)
+    hermes.set_host_led(LEDState.ON)
+```
+
+### I2C/SMBus Access
+
+Direct I2C access to devices on the EDSFF connector:
+
+```python
+with Hermes(port) as hermes:
+    # Read 8 bytes from address 0xD4, starting at register 0
+    result = hermes.i2c_read(0xD4, 8, register=0)
+    print(f"Data: {result.data}")
+    
+    # Write data
+    hermes.i2c_write(0xD4, [0x00, 0xFF])
+```
+
+### Diagnostics
+
+Run built-in diagnostics:
+
+```python
+with Hermes(port) as hermes:
+    # Run Built-In Self Test
+    bist = hermes.run_bist()
+    print(f"BIST: {'PASS' if bist.all_passed else 'FAIL'}")
+    
+    for device in bist.devices:
+        print(f"  {device}")
+    
+    # Get complete system info
+    sysinfo = hermes.get_system_info()
+    print(sysinfo)
+```
+
+## Command Line Interface
+
+Hermes includes a CLI for quick access:
+
+```bash
+# List available ports
+hermes list
+
+# Show device info
+hermes -p /dev/ttyUSB0 version
+hermes -p /dev/ttyUSB0 status
+hermes -p /dev/ttyUSB0 sysinfo
+
+# Get/set EQ
+hermes -p /dev/ttyUSB0 eq                  # Show current settings
+hermes -p /dev/ttyUSB0 eq all 5            # Set all chips to step 5
+hermes -p /dev/ttyUSB0 eq 0 7              # Set chip 0 to step 7
+hermes -p /dev/ttyUSB0 eq --help-values    # Show value table
+
+# Control EDSFF
+hermes -p /dev/ttyUSB0 detect
+hermes -p /dev/ttyUSB0 perst
+hermes -p /dev/ttyUSB0 dual on
+hermes -p /dev/ttyUSB0 hled on
+
+# Save configuration
+hermes -p /dev/ttyUSB0 save
+
+# JSON output
+hermes -p /dev/ttyUSB0 -j status
+```
+
+## API Reference
+
+### Value Tables
+
+**EQ (Equalization) Steps:**
+
+| Step | dB Value |
+|------|----------|
+| 0 | 2.3 dB |
+| 1 | 3.2 dB |
+| 2 | 4.3 dB |
+| 3 | 5.4 dB |
+| 4 | 7.2 dB |
+| 5 | 8.2 dB |
+| 6 | 9.5 dB |
+| 7 | 10.3 dB |
+| 8 | 12.0 dB |
+| 9 | 13.0 dB |
+| 10 | 13.9 dB |
+| 11 | 14.6 dB |
+| 12 | 16.3 dB |
+| 13 | 18.6 dB |
+| 14 | 19.9 dB |
+| 15 | 20.8 dB |
+
+**Flat Gain Steps:**
+
+| Step | dB Value |
+|------|----------|
+| 0 | -2.8 dB |
+| 1 | -2.0 dB |
+| 2 | -0.8 dB |
+| 3 | -0.2 dB |
+
+**Swing Steps:**
+
+| Step | mV Value |
+|------|----------|
+| 0 | 1050 mV |
+| 1 | 1150 mV |
+| 2 | 1270 mV |
+| 3 | 1380 mV |
+| 4 | 1460 mV |
+| 5 | 1490 mV |
+| 6 | 1600 mV |
+| 7 | 1630 mV |
+
+## Hardware Connection
+
+Connect to the redriver card using a USB Type-C cable to the **CN3** connector. This provides access to the MCU CLI for configuration and monitoring.
+
+For Quarch-compatible models (-QA suffix), additional connectors (J3/J4/CN4/CN5) are available for Quarch PAM integration.
+
+## Requirements
+
+- Python 3.9+
+- pyserial >= 3.5
+- USB Type-C cable
+- Serial Cables PCIe Gen6 EDSFF Redriver Card
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+## Support
+
+- Email: support@serialcables.com
+- Website: https://www.serialcables.com
+- Documentation: https://github.com/serialcables/serialcables-hermes
+
+## See Also
+
+- [serialcables-atlas3](https://pypi.org/project/serialcables-atlas3/) - Atlas3 PCIe Switch API
+- [serialcables-hydra](https://pypi.org/project/serialcables-hydra/) - HYDRA JBOF API

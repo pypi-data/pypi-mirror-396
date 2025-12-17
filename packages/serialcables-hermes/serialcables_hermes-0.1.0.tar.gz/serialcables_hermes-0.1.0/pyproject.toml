@@ -1,0 +1,89 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "serialcables-hermes"
+version = "0.1.0"
+description = "Python API for Serial Cables PCIe Gen6 EDSFF Redriver Cards"
+readme = "README.md"
+license = "MIT"
+authors = [
+    {name = "Serial Cables, LLC", email = "support@serialcables.com"}
+]
+maintainers = [
+    {name = "Serial Cables, LLC", email = "support@serialcables.com"}
+]
+keywords = [
+    "pcie",
+    "gen6",
+    "redriver",
+    "edsff",
+    "nvme",
+    "ssd",
+    "serial-cables",
+    "hardware",
+    "test-equipment"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: System :: Hardware",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "pyserial>=3.5",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "black>=23.0",
+    "isort>=5.12",
+    "mypy>=1.0",
+    "ruff>=0.1.0",
+]
+
+[project.urls]
+Homepage = "https://www.serialcables.com"
+Documentation = "https://github.com/serialcables/serialcables-hermes"
+Repository = "https://github.com/serialcables/serialcables-hermes"
+Issues = "https://github.com/serialcables/serialcables-hermes/issues"
+
+[project.scripts]
+hermes = "serialcables_hermes.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 100
+target-version = ['py39', 'py310', 'py311', 'py312']
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --cov=serialcables_hermes"
