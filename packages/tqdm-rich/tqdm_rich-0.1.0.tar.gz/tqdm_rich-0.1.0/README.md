@@ -1,0 +1,379 @@
+# tqdm-rich
+
+A thread-safe, tqdm-compatible progress bar library built on [Rich](https://rich.readthedocs.io/).
+
+[![PyPI version](https://badge.fury.io/py/tqdm-rich.svg)](https://badge.fury.io/py/tqdm-rich)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+## Features
+
+✨ **Beautiful Progress Bars** - Renders beautiful terminal progress bars using the Rich library
+
+🔒 **Thread-Safe** - Fully thread-safe progress tracking with internal locking mechanism
+
+🔄 **tqdm Compatible** - Drop-in replacement for tqdm with familiar API
+
+🎨 **Smart Coloring** - Automatic color indication:
+- **White** - Running
+- **Green** - Successfully completed  
+- **Red** - Error or interrupted
+
+⏱️ **Flexible Progress Modes**:
+- Linear progress (known total)
+- Logarithmic progress (unknown total with activity indicator)
+- Context manager support
+
+📊 **Rich Features**:
+- Time elapsed and estimated remaining
+- Progress percentage
+- Custom descriptions
+- Transient mode (auto-hide after completion)
+
+## Installation
+
+```bash
+pip install tqdm-rich
+```
+
+Or using `uv`:
+
+```bash
+uv pip install tqdm-rich
+```
+
+## Quick Start
+
+### Basic Usage - tqdm Function
+
+```python
+from tqdm_rich import tqdm
+import time
+
+# Simple iteration
+for item in tqdm(range(100), desc="Processing"):
+    time.sleep(0.01)
+
+# With unknown total (logarithmic progress)
+for item in tqdm(some_generator()):
+    time.sleep(0.01)
+```
+
+### Generator-Based - track Function
+
+```python
+from tqdm_rich import track
+
+# Track a sequence with automatic color changes
+for item in track(range(100), description="Processing items"):
+    time.sleep(0.01)
+
+# Logarithmic mode for generators
+for item in track(large_generator(), log=20):
+    time.sleep(0.01)
+```
+
+### Class-Based - TqdmRich
+
+```python
+from tqdm_rich import TqdmRich
+
+# Direct instantiation
+with TqdmRich(range(100), desc="Loading") as bar:
+    for item in bar:
+        time.sleep(0.01)
+        
+# Or iterate without context manager
+bar = TqdmRich(range(100), desc="Processing")
+for item in bar:
+    time.sleep(0.01)
+bar.close()
+```
+
+### Manual Updates
+
+```python
+from tqdm_rich import tqdm
+
+bar = tqdm(total=100, desc="Manual")
+for i in range(10):
+    bar.update(10)  # Increment by 10
+bar.close()
+```
+
+## API Reference
+
+### `tqdm(iterable=None, desc=None, total=None, leave=True, **kwargs)`
+
+Create a tqdm-compatible progress bar.
+
+**Parameters:**
+- `iterable`: An iterable to wrap (optional)
+- `desc`: Short description of the progress bar
+- `total`: Expected number of items (auto-detected if not provided)
+- `leave`: If True, keep the progress bar after completion
+- `**kwargs`: Additional arguments for compatibility
+
+**Returns:** `TqdmRich` instance
+
+**Example:**
+```python
+for item in tqdm(range(100), desc="Processing"):
+    pass
+```
+
+### `track(sequence, description="Processing", total=None, log=None, transient=False)`
+
+Generator-based progress tracking.
+
+**Parameters:**
+- `sequence`: An iterable to track
+- `description`: Description text to display
+- `total`: Expected number of items (auto-detected if available)
+- `log`: Logarithmic scale factor for unknown totals (default: 20 if enabled)
+- `transient`: If True, remove the progress bar after completion
+
+**Yields:** Items from the sequence
+
+**Example:**
+```python
+for item in track(range(100), description="Processing"):
+    pass
+
+# Logarithmic mode for generators
+for item in track(generator, log=20):
+    pass
+```
+
+### `TqdmRich(iterable=None, desc=None, total=None, ...)`
+
+Class-based progress bar wrapper.
+
+**Key Methods:**
+- `update(n=1)`: Advance progress by n items
+- `close()`: Close the progress bar
+- `__enter__` / `__exit__`: Context manager support
+
+**Example:**
+```python
+with TqdmRich(range(100), desc="Processing") as bar:
+    for item in bar:
+        pass
+
+# Manual iteration
+bar = TqdmRich(range(100))
+for item in bar:
+    pass
+bar.close()
+```
+
+## Thread Safety
+
+The library is fully thread-safe. Multiple threads can update progress bars concurrently:
+
+```python
+from tqdm_rich import tqdm
+import threading
+import time
+
+def worker(worker_id):
+    for item in tqdm(range(50), desc=f"Worker {worker_id}"):
+        time.sleep(0.01)
+
+threads = [threading.Thread(target=worker, args=(i,)) for i in range(3)]
+for t in threads:
+    t.start()
+for t in threads:
+    t.join()
+```
+
+## Multi-Task Progress
+
+Track multiple concurrent tasks:
+
+```python
+from tqdm_rich import tqdm
+import threading
+
+def task(task_id):
+    for item in tqdm(range(100), desc=f"Task {task_id}"):
+        time.sleep(0.01)
+
+# Run tasks in parallel
+threads = [
+    threading.Thread(target=task, args=(i,))
+    for i in range(3)
+]
+for t in threads:
+    t.start()
+for t in threads:
+    t.join()
+```
+
+## Error Handling
+
+The progress bar automatically turns red when an error occurs:
+
+```python
+from tqdm_rich import track
+
+try:
+    for item in track(range(100), description="Processing"):
+        if item == 50:
+            raise ValueError("Something went wrong!")
+except ValueError as e:
+    print(f"Error: {e}")  # Progress bar will be red
+```
+
+## Configuration
+
+### Customizing Colors
+
+Color customization is automatic based on progress state:
+- Running: White
+- Success: Green
+- Error: Red
+
+To use different colors, modify the module-level constants:
+
+```python
+import tqdm_rich
+tqdm_rich._COLOR_RUNNING = "cyan"
+tqdm_rich._COLOR_SUCCESS = "yellow"
+tqdm_rich._COLOR_ERROR = "magenta"
+```
+
+### Transient Mode
+
+Hide the progress bar after completion:
+
+```python
+from tqdm_rich import track
+
+for item in track(range(100), description="Quick task", transient=True):
+    pass
+# Progress bar is removed after completion
+```
+
+## Comparison with tqdm
+
+| Feature | tqdm | tqdm-rich |
+|---------|------|-----------|
+| Basic progress bar | ✅ | ✅ |
+| Multi-threading support | ✅ | ✅ |
+| Beautiful rendering | ⚠️ | ✅ |
+| Color indication by state | ❌ | ✅ |
+| Generator tracking | ⚠️ | ✅ |
+| Rich integration | ❌ | ✅ |
+| Lightweight | ✅ | ✅ |
+
+## Development
+
+### Setup Development Environment
+
+```bash
+# Clone the repository
+git clone https://github.com/DawnMagnet/tqdm-rich.git
+cd tqdm-rich
+
+# Create virtual environment with uv
+uv venv
+
+# Activate it
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install dependencies
+uv pip install -e ".[dev]"
+```
+
+### Running Tests
+
+```bash
+# Run all tests
+pytest
+
+# Run with coverage report
+pytest --cov=src/tqdm_rich
+
+# Run specific test file
+pytest tests/test_tqdm.py
+```
+
+### Code Quality
+
+```bash
+# Format with black
+black src/ tests/
+
+# Lint with ruff
+ruff check src/ tests/
+
+# Type checking with mypy
+mypy src/
+```
+
+## Project Structure
+
+```
+tqdm-rich/
+├── README.md
+├── pyproject.toml
+├── src/
+│   └── tqdm_rich/
+│       ├── __init__.py      # Main module with all public API
+│       └── py.typed         # PEP 561 type hint marker
+├── tests/
+│   ├── conftest.py
+│   ├── test_tqdm.py
+│   ├── test_track.py
+│   └── test_threading.py
+└── CHANGELOG.md
+```
+
+## Performance
+
+The library is optimized for performance:
+- Minimal overhead over Rich's Progress
+- Efficient thread synchronization with locks
+- No busy-waiting or polling
+- Logarithmic progress mode for long operations
+
+## Examples
+
+See the `examples/` directory for more comprehensive examples:
+- `basic_usage.py` - Basic tqdm and track usage
+- `threading.py` - Multi-threaded progress tracking
+- `error_handling.py` - Error state demonstration
+- `custom_colors.py` - Color customization
+
+## Changelog
+
+### v0.1.0 (2025-01-15)
+
+- Initial release
+- Basic tqdm compatibility
+- track() generator function
+- Thread-safe progress management
+- Rich integration with automatic coloring
+- Comprehensive documentation and tests
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Author
+
+**DawnMagnet** - [GitHub](https://github.com/DawnMagnet)
+
+## Acknowledgments
+
+- [Rich](https://github.com/Textualize/rich) - For the beautiful progress bar rendering
+- [tqdm](https://github.com/tqdm/tqdm) - For the inspiration and API design
+
+## Support
+
+If you encounter any issues or have suggestions, please open an [issue](https://github.com/DawnMagnet/tqdm-rich/issues) on GitHub.
