@@ -1,0 +1,81 @@
+// (c) 2025 ANSYS, Inc. Unauthorized use, distribution, or duplication is prohibited.
+syntax = "proto3";
+
+import "google/protobuf/duration.proto";
+
+package ansys.api.speos.file.v1;
+
+service FileTransferService {
+    // Reserve a FileSystemItem
+    rpc Reserve(Reserve_Request) returns (Reserve_Response) {}
+    // Upload a file 
+    // Mandatory Client's Metadata:
+    // key: "file-size" - value: size of the file in bytes
+    // Optional Client's Metadata:
+    // key: "reserved-file-uri" - value: FileSystemItem reserved uri
+    rpc Upload(stream Chunk) returns (Upload_Response) {}
+    // Download a FileSystemItem
+    // Server's' Initial Metadata:
+    // key: "file-size" - value: size of the file in bytes
+    rpc Download(Download_Request) returns (stream Chunk) {}
+    // Delete a FileSystemItem
+    rpc Delete(Delete_Request) returns (Delete_Response) {}
+    // Add dependencies to a FileSystemItem
+    rpc AddDependencies(AddDependencies_Request) returns (AddDependencies_Response) {}
+    // List all dependencies of a FileSystemItem
+    rpc ListDependencies(ListDependencies_Request) returns (ListDependencies_Response) {}
+}
+
+message Reserve_Request {
+    string file_name = 1; // FileSystemItem's name
+}
+message Reserve_Response {
+    string uri = 1; // uri of the FileSystemItem reserved
+}
+
+message FileSystemItemInformation {
+    string uri = 1; // FileSystemItem uri
+    string file_name = 2;
+    uint64 file_size = 3;
+}
+
+message Chunk {
+    bytes binary = 1;
+    int64 size = 2;
+    string file_name = 3; // file name. Mandatory in the first chunk exchanged.
+}
+
+message Upload_Response {
+    FileSystemItemInformation info = 1; // Information about the FileSystemItem created
+    google.protobuf.Duration upload_duration = 2;
+}
+
+message Download_Request {
+    string uri = 1; // uri of the FileSystemItem to be downloaded
+}
+
+message Delete_Request {
+    string uri = 1; // uri of the FileSystemItem to be deleted
+}
+message Delete_Response {
+}
+
+message AddDependencies_Request {
+    string uri = 1; // uri of the FileSystemItem to be completed with dependencies
+    repeated string dependency_uris = 2; // FileSystemItem uris to be added as dependencies
+}
+message AddDependencies_Response {
+}
+
+message ListDependencies_Request {
+    string uri = 1; // uri of the FileSystemItem
+}
+message ListDependencies_Response {
+    repeated FileSystemItemInformation dependency_infos = 1; // Information about the FileSystemItems noticed as dependencies
+}
+
+// Used in File Transfer helpers
+message Download_Response {
+    FileSystemItemInformation info = 1; // Information about the FileSystemItem downloaded
+    google.protobuf.Duration download_duration = 2;
+}
