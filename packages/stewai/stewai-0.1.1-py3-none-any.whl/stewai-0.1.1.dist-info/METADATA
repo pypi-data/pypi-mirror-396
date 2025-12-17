@@ -1,0 +1,93 @@
+Metadata-Version: 2.4
+Name: stewai
+Version: 0.1.1
+Summary: Official StewAI Python SDK
+Author-email: StewAI <dev@stewai.com>
+License: StewAI Commercial License
+        Version 0.0.0 – June 2025
+        Copyright © 2025 Christian Mueller. All rights reserved.
+        
+        1. Grant of License
+           You are granted a non-exclusive, non-transferable, revocable license to
+           (a) view and modify the source code in this repository,
+           (b) run the Software for your internal evaluation or development purposes only.
+        
+        2. Restrictions
+           • No distribution, sublicensing, or SaaS offering of the Software or
+           Derivative Works is permitted without a separate commercial agreement.
+           • You may not remove or alter any proprietary notices.
+           • Reverse engineering of any binary distribution is prohibited unless
+           required by law.
+        
+        3. Termination
+           This License terminates automatically if you breach any term. Upon
+           termination you must destroy all copies and cease all use.
+        
+        4. DISCLAIMER
+           THE SOFTWARE IS PROVIDED “AS IS” WITHOUT WARRANTY OF ANY KIND. THE AUTHOR
+           DISCLAIMS ALL LIABILITY FOR DAMAGES, DIRECT OR INDIRECT, ARISING FROM USE
+           OF THE SOFTWARE.
+        
+        For a production or redistribution license, contact:
+        Christian Mueller · christian.mueller@camueller.org
+License-File: LICENSE.md
+Keywords: api,sdk,stewai
+Classifier: Development Status :: 3 - Alpha
+Classifier: License :: Other/Proprietary License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Typing :: Typed
+Requires-Python: >=3.10
+Requires-Dist: httpx<1.0,>=0.27
+Provides-Extra: dev
+Requires-Dist: pytest<9,>=8; extra == 'dev'
+Description-Content-Type: text/markdown
+
+# stewai (Python SDK)
+
+Base URL (only): `https://api.stewai.com/v1`
+
+## Install
+
+```bash
+pip install stewai
+```
+
+## Get an API key
+
+1. Log in to `stewai.com`
+2. Go to `Settings → API keys`
+3. Create a key and copy it once (`sk-live-...`)
+
+## Usage
+
+```python
+from stewai import Client
+
+client = Client(api_key="sk-live-...")
+
+# Use the Input step “API input id” shown in the editor as the inputs key
+run = client.runs.create(
+    recipe_id="01K....",
+    inputs={"USERQUESTION": "What should I focus on this week?"},
+)
+
+print(run["status"])  # done|failed|cancelled|blocked
+
+# Debug only: full execution trace (steps + outputs)
+trace = client.runs.steps(run["id"])
+```
+
+## Environment variable
+
+```bash
+export STEWAI_API_KEY="sk-live-..."
+```
+
+```python
+from stewai import Client
+
+client = Client()  # reads STEWAI_API_KEY
+run = client.runs.create(recipe_id="01K....", wait=False)
+run = client.runs.wait(run["id"], timeout=300)
+```
