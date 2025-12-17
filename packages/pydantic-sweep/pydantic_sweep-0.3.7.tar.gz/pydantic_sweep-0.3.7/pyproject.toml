@@ -1,0 +1,114 @@
+[project]
+name = "pydantic-sweep"
+version = "0.3.7"
+description = "Programmatic parameter sweeps for pydantic."
+readme = "README.md"
+license = "MPL-2.0"
+authors = [
+    { name = "Felix Berkenkamp" }
+]
+requires-python = ">=3.10"
+classifiers = [
+  "Operating System :: OS Independent",
+  "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Software Development :: Libraries",
+  "Typing :: Typed",
+]
+dependencies = [
+    "more-itertools~=10.1",
+    "pydantic~=2.5",
+    "tomli_w>=1.0,<2",
+    "tomli>=2.0.0; python_version <= '3.10'",
+]
+
+[project.urls]
+Repository = "https://github.com/befelix/pydantic_sweep"
+Releases = "https://github.com/befelix/pydantic_sweep/releases"
+Documentation = "https://pydantic-sweep.readthedocs.io"
+
+[project.optional-dependencies]
+yaml = [
+    "pyyaml>=5.0.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.9.0,<0.10.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pydantic_sweep[yaml]",
+    "pytest-sugar>=1.0.0",
+    "pytest>=8.3.4",
+    "pytest-cov>=6.0.0",
+    "ruff>=0.8.3",
+    "mypy[mypyc]>=1.13.0",
+    "ipython>=8.30.0",
+]
+doc = [
+    "myst-parser>=4.0.0",
+    "sphinx-autobuild>=2024.10.3",
+    "sphinx>=8.1.3",
+    "sphinx-rtd-theme>=3.0.2",
+    "sphinx-autoapi>=3.4.0",
+    "jupytext>=1.16.6",
+    "myst-nb>=1.1.2",
+    "sphinx-copybutton>=0.5.2",
+]
+
+[tool.uv]
+default-groups = ["dev"]
+
+[tool.pytest.ini_options]
+testpaths = ["src", "tests"]
+minversion = 8.3
+addopts = "-p 'no:legacypath' --doctest-modules --cov=src"
+markers = [
+    "repo: Tests that require the repo to be cloned"
+]
+filterwarnings = [
+    "error",
+    # action:message:category:module:line
+    "ignore::DeprecationWarning:traitlets",  # Avoid debugging issues in PyCharm
+]
+
+[tool.mypy]
+plugins = ['pydantic.mypy']
+ignore_missing_imports = true
+warn_unused_configs = true
+allow_redefinition = true
+disallow_untyped_defs = true
+disallow_untyped_calls= true
+files = ["."]
+exclude = ["^(tests/)"]
+
+[tool.ty.src]
+exclude = ["tests"]
+
+[tool.pyrefly]
+project-excludes = ["**/.[!/.]*", "**/tests"]
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = [
+    "E", # Pycodestyle Errors
+    "F", # Pyflakes
+    "UP", # Auto-upgrading of new Python features
+    "I", # Sort imports
+    "RUF", # Rules from ruff
+    "PERF", # Performance issues
+]
+
+[tool.ruff.lint.per-file-ignores]
+"*.pct.py" = [
+    "E402", # Imports not on top of file
+]
