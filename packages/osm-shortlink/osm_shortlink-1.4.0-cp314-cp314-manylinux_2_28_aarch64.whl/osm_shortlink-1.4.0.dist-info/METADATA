@@ -1,0 +1,58 @@
+Metadata-Version: 2.4
+Name: osm-shortlink
+Version: 1.4.0
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: Zero-Clause BSD (0BSD)
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
+Classifier: Programming Language :: Python :: Implementation :: CPython
+Classifier: Programming Language :: Python :: Implementation :: PyPy
+Classifier: Programming Language :: Rust
+Classifier: Topic :: Internet :: WWW/HTTP
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Typing :: Typed
+Summary: OpenStreetMap shortlink encoder and decoder
+Keywords: decoder,encoder,openstreetmap,osm,shortlink,url
+Author-email: Kamil Monicz <kamil@monicz.dev>
+License-Expression: 0BSD
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown; charset=UTF-8; variant=GFM
+Project-URL: Issues, https://github.com/Zaczero/pkgs/issues
+Project-URL: Repository, https://github.com/Zaczero/pkgs/tree/main/osm-shortlink
+
+# osm-shortlink
+
+[![PyPI - Python Version](https://shields.monicz.dev/pypi/pyversions/osm-shortlink)](https://pypi.org/project/osm-shortlink)
+
+Fast and correct OpenStreetMap shortlink encoder and decoder implementation in Rust with Python bindings. Shortlinks allow you to represent a location on the map with a short code.
+
+## Installation
+
+```sh
+pip install osm-shortlink
+```
+
+## Basic usage
+
+```py
+from osm_shortlink import shortlink_encode
+shortlink_encode(0.054, 51.510, 9)  # -> '0EEQhq--'
+shortlink_encode(19.579, 51.876, 19)  # -> '0OP4tR~rx'
+shortlink_encode(0, 0, 23)  # ValueError: Invalid zoom: must be between 0 and 22, got 23
+
+from osm_shortlink import shortlink_decode
+shortlink_decode('0EEQhq--')  # -> (0.054, 51.510, 9)
+shortlink_decode('0OP4tR~rx')  # -> (19.579, 51.876, 19)
+shortlink_decode('X')  # ValueError: Invalid shortlink: too short
+```
+
+## Format specification
+
+<https://wiki.openstreetmap.org/wiki/Shortlink>
+
