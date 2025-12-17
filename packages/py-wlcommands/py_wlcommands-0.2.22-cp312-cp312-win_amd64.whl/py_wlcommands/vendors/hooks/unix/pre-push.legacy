@@ -1,0 +1,40 @@
+#!/bin/bash
+
+# Pre-push hook to prevent direct pushes to main and develop branches
+
+# Read all input at once
+input=$(cat)
+
+# Extract all lines
+lines=($(echo "$input" | tr ' ' '\n'))
+
+# Check if we have enough lines
+if [ ${#lines[@]} -lt 4 ]; then
+    exit 0
+fi
+
+# Extract remote ref (should be at index 0 or 2 depending on the input format)
+remote_ref=""
+for line in "${lines[@]}"; do
+    if [[ "$line" == refs/heads/* ]]; then
+        remote_ref="$line"
+        break
+    fi
+done
+
+# If no remote ref found, exit
+if [ -z "$remote_ref" ]; then
+    exit 0
+fi
+
+# Extract remote branch name
+remote_branch=$(echo "$remote_ref" | sed 's|refs/heads/||')
+
+# Check if we're pushing to main or develop
+if [[ "$remote_branch" == "main" || "$remote_branch" == "develop" ]]; then
+    echo "ERROR: Direct pushes to $remote_branch branch are not allowed."
+    echo "Please create a feature/fix branch and submit a Pull Request instead."
+    exit 1
+fi
+
+exit 0
