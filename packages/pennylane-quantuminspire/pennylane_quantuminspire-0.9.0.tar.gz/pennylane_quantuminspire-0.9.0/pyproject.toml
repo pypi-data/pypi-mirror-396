@@ -1,0 +1,108 @@
+[tool.poetry]
+name = "pennylane-quantuminspire"
+version = "0.9.0"
+description = "The PennyLane-QuantumInspire plugin integrates the Quantum Inspire quantum computing backends with PennyLane's quantum machine learning capabilities."
+authors = ["Quantum Inspire <support@quantum-inspire.com>"]
+readme = "README.md"
+homepage = "https://www.quantum-inspire.com"
+repository = "https://github.com/qutech-delft/pennylane-quantuminspire"
+documentation = "https://qutech-delft.github.io/pennylane-quantuminspire/"
+classifiers = [
+  'Development Status :: 4 - Beta',
+  'Programming Language :: Python :: 3',
+  'Programming Language :: Python :: 3.11',
+  'Programming Language :: Python :: 3.12',
+  'License :: OSI Approved :: Apache Software License',
+]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pennylane-qiskit = "^0.43.0"
+pennylane = "^0.43.0"
+opensquirrel = "^0.8.0"
+qiskit-quantuminspire = "^0.14.0"
+
+[tool.poetry.group.dev.dependencies]
+requests = "^2.32.3"
+black = { extras = ["jupyter"], version = "^25.1.0" }
+coverage = { extras = ["toml"], version = "^7.6.10" }
+docformatter = "1.7.7"
+mypy = "^1.15"
+pytest = { extras = ["toml"], version = ">=8.3.4,<10.0.0" }
+pytest-asyncio = ">=0.25.3,<1.4.0"
+pytest-cov = ">=6,<8"
+pytest-mock = "^3.14.0"
+pytest-xdist = ">=3.6.1"
+ruff = ">=0.9.4,<0.15.0"
+types-requests = "^2.32.0"
+
+[tool.poetry.group.docs.dependencies]
+sphinx = { version = "^8.1.3", python = "^3.10" }
+furo = { version = ">=2024.8.6,<2026.0.0", python = "^3.10" }
+myst-nb = { version = "^1.1.2", python = "^3.10" }
+tomli = "^2.2.1"
+
+[tool.pytest.ini_options]
+addopts = "-v --cov --cov-report term-missing:skip-covered --cov-report xml"
+asyncio_mode = "auto"
+testpaths = ["tests"]
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.coverage.run]
+branch = true
+source = ["pennylane_quantuminspire"]
+omit = ["tests/*", "**/.tox/**", "scratch"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 100
+exclude_lines = [
+  "pragma: no cover",
+  "raise AssertionError",
+  "raise NotImplementedError",
+  "if __name__ == .__main__.:",
+]
+
+[tool.black]
+line-length = 120
+
+[tool.mypy]
+warn_unused_configs = true
+disallow_any_generics = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_return_any = true
+no_implicit_reexport = true
+strict_equality = true
+ignore_missing_imports = true
+show_error_codes = true
+
+[tool.ruff]
+lint.select = ["E", "F", "I"]
+line-length = 120
+target-version = "py311"
+lint.isort.combine-as-imports = true
+
+[tool.pylint]
+MASTER.extension-pkg-whitelist = "pydantic"
+FORMAT.max-line-length = 120
+
+[tool.docformatter]
+black = true
+recursive = true
+wrap-summaries = 119
+wrap-descriptions = 119
+
+[tool.pydantic-mypy]
+warn_untyped_fields = true
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
