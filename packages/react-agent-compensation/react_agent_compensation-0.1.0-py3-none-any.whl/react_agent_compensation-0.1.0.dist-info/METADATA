@@ -1,0 +1,140 @@
+Metadata-Version: 2.4
+Name: react-agent-compensation
+Version: 0.1.0
+Summary: Framework-agnostic compensation/rollback library for ReAct agents
+Project-URL: Homepage, https://github.com/Kavirubc/react-agent-compensation
+Project-URL: Repository, https://github.com/Kavirubc/react-agent-compensation
+Author: Kaviru Hapuarachchi
+License-Expression: MIT
+Keywords: agents,compensation,langchain,llm,react-agent,recovery,rollback
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Requires-Python: >=3.10
+Requires-Dist: pydantic>=2.0
+Provides-Extra: all
+Requires-Dist: anthropic>=0.20.0; extra == 'all'
+Requires-Dist: fastmcp>=2.0.0; extra == 'all'
+Requires-Dist: langchain-google-genai>=2.0.0; extra == 'all'
+Requires-Dist: langchain-mcp-adapters>=0.1.0; extra == 'all'
+Requires-Dist: langchain>=0.3.0; extra == 'all'
+Requires-Dist: langgraph>=0.2.0; extra == 'all'
+Requires-Dist: langsmith>=0.1.0; extra == 'all'
+Requires-Dist: mcp>=1.0.0; extra == 'all'
+Requires-Dist: mypy>=1.0; extra == 'all'
+Requires-Dist: openai>=1.0.0; extra == 'all'
+Requires-Dist: pymongo>=4.0.0; extra == 'all'
+Requires-Dist: pytest-asyncio>=0.21.0; extra == 'all'
+Requires-Dist: pytest-cov>=4.0; extra == 'all'
+Requires-Dist: pytest>=7.0; extra == 'all'
+Requires-Dist: python-dotenv>=1.0.0; extra == 'all'
+Requires-Dist: ruff>=0.1.0; extra == 'all'
+Provides-Extra: dev
+Requires-Dist: mypy>=1.0; extra == 'dev'
+Requires-Dist: pytest-asyncio>=0.21.0; extra == 'dev'
+Requires-Dist: pytest-cov>=4.0; extra == 'dev'
+Requires-Dist: pytest>=7.0; extra == 'dev'
+Requires-Dist: ruff>=0.1.0; extra == 'dev'
+Provides-Extra: examples
+Requires-Dist: langchain-google-genai>=2.0.0; extra == 'examples'
+Requires-Dist: langsmith>=0.1.0; extra == 'examples'
+Requires-Dist: pymongo>=4.0.0; extra == 'examples'
+Requires-Dist: python-dotenv>=1.0.0; extra == 'examples'
+Provides-Extra: langchain
+Requires-Dist: langchain>=0.3.0; extra == 'langchain'
+Requires-Dist: langgraph>=0.2.0; extra == 'langchain'
+Provides-Extra: llm
+Requires-Dist: anthropic>=0.20.0; extra == 'llm'
+Requires-Dist: openai>=1.0.0; extra == 'llm'
+Provides-Extra: mcp
+Requires-Dist: fastmcp>=2.0.0; extra == 'mcp'
+Requires-Dist: langchain-mcp-adapters>=0.1.0; extra == 'mcp'
+Requires-Dist: mcp>=1.0.0; extra == 'mcp'
+Description-Content-Type: text/markdown
+
+# react-agent-compensation
+
+A framework-agnostic compensation/rollback library for ReAct agents.
+
+## Features
+
+- **Framework-agnostic Core**: Works with any agent framework
+- **LangChain Adaptor**: First-class LangChain/LangGraph integration
+- **Compensation Patterns**: Automatic rollback on failures
+- **Retry Strategies**: Exponential backoff with jitter
+- **Dependency Tracking**: Topological sort for correct rollback order
+- **MCP Integration**: Auto-discover compensation pairs from tool schemas
+
+## Installation
+
+```bash
+pip install react-agent-compensation
+```
+
+With LangChain support:
+
+```bash
+pip install react-agent-compensation[langchain]
+```
+
+With LLM-based extraction:
+
+```bash
+pip install react-agent-compensation[llm]
+```
+
+## Quick Start
+
+```python
+from react_agent_compensation.langchain_adaptor import create_compensated_agent
+
+agent = create_compensated_agent(
+    model="gpt-4",
+    tools=[book_flight, cancel_flight],
+    compensation_mapping={"book_flight": "cancel_flight"},
+)
+
+result = agent.invoke({"messages": [("user", "Book me a flight to NYC")]})
+```
+
+## Core Components
+
+### RecoveryManager
+
+The brain of the compensation system:
+
+```python
+from react_agent_compensation.core import RecoveryManager
+
+manager = RecoveryManager(
+    compensation_pairs={"book_flight": "cancel_flight"},
+    alternative_map={"book_flight": ["book_flight_backup"]},
+)
+
+# Record before execution
+record = manager.record_action("book_flight", {"dest": "NYC"})
+
+# Mark complete on success
+manager.mark_completed(record.id, result={"booking_id": "123"})
+
+# Rollback on failure
+manager.rollback()
+```
+
+### Extraction Strategies
+
+Multiple strategies for extracting compensation parameters:
+
+- **State Mappers**: Custom lambda functions
+- **Schema-based**: Declarative path mappings
+- **Heuristic**: Auto-detect common ID fields
+- **LLM-based**: Use LLM for complex extraction
+
+## License
+
+MIT
