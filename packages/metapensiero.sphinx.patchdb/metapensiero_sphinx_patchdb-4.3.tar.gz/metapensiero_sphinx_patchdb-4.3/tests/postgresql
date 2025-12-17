@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# -*- coding: utf-8 -*-
+# :Project:   metapensiero.sphinx.patchdb — Test PG instance
+# :Created:   ven 22 lug 2022, 15:42:02
+# :Author:    Lele Gaifax <lele@metapensiero.it>
+# :License:   GNU General Public License version 3 or later
+# :Copyright: © 2022, 2023 Lele Gaifax
+#
+
+set -euo pipefail
+
+pg_data_dir=$TMPDIR/patchdb-pg-data
+pg_user=patchdb
+pg_password=patchdb
+pg_pid_file=$pg_data_dir/postmaster.pid
+
+do_start() {
+  [[ -e $pg_pid_file ]] && exit 0
+
+  local pg_conf_file=$pg_data_dir/postgresql.conf
+  local pg_log_file=$TMPDIR/postgresql.log
+  local sockets_dir=$TMPDIR/pg_sockets
+
+  mkdir -p $sockets_dir
+
+  if [[ -e $pg_conf_file ]]
+  then
+    sed -i "s:unix_socket_directories = '.*':unix_socket_directories = '$sockets_dir':" $pg_conf_file
+  else
+    LC_ALL=C initdb --auth-host trust --encoding UTF-8 --pgdata $pg_data_dir \
+      --username $pg_user --pwfile <(echo $pg_password)
+    echo -e "\nunix_socket_directories = '$sockets_dir'\nport = 65432" >> $pg_conf_file
+  fi
+  LC_ALL=C pg_ctl --pgdata $pg_data_dir --log $pg_log_file start
+}
+
+do_stop() {
+  [[ -e $pg_pid_file ]] && LC_ALL=C pg_ctl --pgdata $pg_data_dir stop
+  return 0
+}
+
+do_wipe() {
+  do_stop
+  [[ -e $pg_data_dir ]] && rm -rf $pg_data_dir
+  return 0
+}
+
+do_status() {
+  if [[ -e $pg_pid_file ]]
+  then
+    echo "PostgreSQL is running..."
+    return 0
+  else
+    echo "PostgreSQL is NOT running..."
+    return 1
+  fi
+}
+
+case "$1" in
+  start)
+    do_start
+    ;;
+
+  stop)
+    do_stop
+    ;;
+
+  wipe)
+    do_wipe
+    ;;
+
+  status)
+    do_status
+    exit $?
+    ;;
+
+  *)
+    echo "Usage: $0 start|stop|wipe" >&2
+    exit 3
+    ;;
+esac
