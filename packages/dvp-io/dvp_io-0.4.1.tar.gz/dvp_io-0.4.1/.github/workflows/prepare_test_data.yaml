@@ -1,0 +1,46 @@
+name: Prepare test data
+
+on:
+  workflow_dispatch:
+  # Pushing to branch dataset will create a new artifact
+  push:
+    branches:
+      - dataset
+jobs:
+  prepare-data:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Download test datasets
+        run: |
+          set -e
+          rm -rf ./data && mkdir -p ./data
+          curl -o ./data/openslide-mirax.zip "https://openslide.cs.cmu.edu/download/openslide-testdata/Mirax/Mirax2.2-4-PNG.zip"
+          curl -o ./data/zeiss.zip "https://datashare.biochem.mpg.de/public.php/dav/files/k2C6sg0qrXBdWdc/?accept=zip"
+          curl -o ./data/blobs.zip "https://datashare.biochem.mpg.de/public.php/dav/files/0oTGB6xpUaWIaVh/?accept=zip"
+          curl -o ./data/triangles.zip "https://datashare.biochem.mpg.de/public.php/dav/files/zneNg7QxZNM2wSm/?accept=zip"
+          curl -o ./data/omics.zip "https://datashare.biochem.mpg.de/public.php/dav/files/a9bTNCXBYgE5n5S/?accept=zip"
+
+      - name: Unzip files
+        run: |
+          unzip ./data/openslide-mirax.zip -d ./data/openslide-mirax
+          unzip ./data/zeiss.zip -d ./data/zeiss
+          unzip ./data/blobs.zip -d ./data/blobs
+          unzip ./data/triangles.zip -d ./data
+          unzip ./data/omics.zip -d ./data
+
+      - name: Remove archives
+        run: |
+          rm ./data/openslide-mirax.zip
+          rm ./data/zeiss.zip
+          rm ./data/blobs.zip
+          rm ./data/triangles.zip
+          rm ./data/omics.zip
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: data
+          path: ./data
