@@ -1,0 +1,122 @@
+---
+alwaysApply: true
+---
+
+# Amazon Ads SDK API 分级开发约束
+
+> 本规则强制执行 API 分级治理，防止"发明"虚假 API
+
+## 🚨 绝对禁止
+
+### 1. 禁止发明 API
+
+- ❌ 禁止实现任何不在官方文档中的 API 方法
+- ❌ 禁止"推测"可能存在的端点
+- ❌ 禁止基于"逻辑上应该有"的假设添加方法
+- ❌ 禁止在 L1 代码中添加 L3/L4 级别的便利方法
+
+### 2. 禁止混合等级
+
+- ❌ 禁止在 `core/` 目录放非 OpenAPI API
+- ❌ 禁止在 `reference/` 放 beta API
+- ❌ 禁止在默认 client 暴露 L4 API
+
+## ✅ 强制要求
+
+### 1. 新 API 必须先定级
+
+```
+开发任何 API 前必须回答：
+1. 这个 API 有 OpenAPI 规范吗？ → L1 (core/)
+2. 这个 API 在 API Reference 有文档吗？ → L2 (reference/)
+3. 这个 API 是产品级聚合吗？ → L3 (services/)
+4. 这个 API 是 beta 或 UI 绑定吗？ → L4 (experimental/)
+5. 以上都不是？ → ❌ 禁止实现
+```
+
+### 2. 代码内必须声明等级
+
+```python
+class XxxAPI(BaseAdsClient):
+    """
+    Xxx API 描述
+    
+    API Tier: L1/L2/L3/L4
+    Source: OpenAPI / API Reference URL
+    OpenAPI: ✅/❌
+    Stability: 高/中/低
+    """
+    
+    API_TIER = "L1"  # 必须声明
+    API_SOURCE = "openapi"  # openapi / api-reference / product-level / experimental
+```
+
+### 3. 目录结构规范
+
+```
+amazon_ads_api/
+├── core/           # L1 only - OpenAPI verified
+├── reference/      # L2 only - API Reference 
+├── services/       # L3 only - Product-level
+├── experimental/   # L4 only - Beta/UI-bound
+```
+
+### 4. 开发前必须验证
+
+```bash
+# 对于 L1 API，必须下载并对比 OpenAPI 规范
+# 对于 L2 API，必须提供 API Reference URL
+# 对于 L3 API，必须说明为什么是产品级
+# 对于 L4 API，必须说明 beta/不稳定原因
+```
+
+## 📋 API 等级速查
+
+### L1: OpenAPI Verified (core/)
+
+| 模块 | OpenAPI |
+|------|---------|
+| sp/ | SponsoredProducts_prod_3p.json |
+| sb/ | sponsored-brands/4-0/openapi.json |
+| sd/ | sponsored-display/3-0/openapi.yaml |
+| dsp/ | dsp/3-0/*.yaml |
+| accounts/ | Profiles, Portfolios specs |
+| reporting/ | OfflineReport_prod_3p.json |
+
+### L2: API Reference Only (reference/)
+
+| 模块 | 文档 URL |
+|------|---------|
+| amc/ | /amc-* 系列页面 |
+| stream/ | /amazon-marketing-stream |
+| retail_ad_service/ | /retail-ad-service |
+
+### L3: Product-level (services/)
+
+| 模块 | 说明 |
+|------|------|
+| insights/ | 产品级洞察 |
+| recommendations/ | 产品级推荐 |
+| brand_metrics/ | 品牌指标 |
+
+### L4: Experimental (experimental/)
+
+| 模块 | 原因 |
+|------|------|
+| moderation/ | UI 绑定 |
+| localization/ | 文档不全 |
+| posts/ | 产品不稳定 |
+| sponsored_tv_beta/ | 明确标 beta |
+
+## 🔍 审核检查清单
+
+开发完成后必须确认：
+
+- [ ] API 等级已在代码中声明
+- [ ] 目录位置与等级匹配
+- [ ] L1 API 有 OpenAPI 验证记录
+- [ ] L2 API 有 API Reference URL
+- [ ] L3 API 只有 thin wrapper
+- [ ] L4 API 在 experimental/ 目录
+- [ ] 没有"发明"任何文档中不存在的方法
+- [ ] 没有在 client 默认暴露 L4 API
