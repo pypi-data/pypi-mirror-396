@@ -1,0 +1,82 @@
+[project]
+name = "sqladbx"
+dynamic = ["version"]
+description = "Modern async SQLAlchemy database context manager for FastAPI, Taskiq, Temporal, and more"
+authors = [{ name = "Oleksii Svichkar", email = "oswops@gmail.com" }]
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.13"
+keywords = ["async", "sqlalchemy", "sqlmodel", "fastapi", "postgresql", "db", "context", "temporal", "middleware"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Database",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "sqlalchemy>=2.0",
+    "starlette>=0.13.6",
+]
+
+[project.optional-dependencies]
+build = ["hatch>=1.16.2"]
+test = [
+    "pytest>=9.0.2",
+    "pytest-asyncio>=0.21",
+    "pytest-cov>=4.0",
+    "aiosqlite>=0.22.0",
+    "httpx>=0.28.1",
+    "greenlet>=3.3.0",
+    "fastapi>=0.124.4",
+    "litestar>=2.19.0",
+    "sqlmodel>=0.0.27",
+    "temporalio>=1.20.0",
+]
+
+
+[project.urls]
+homepage = "https://github.com/your-org/sqladbx"
+repository = "https://github.com/your-org/sqladbx"
+documentation = "https://github.com/your-org/sqladbx#readme"
+issues = "https://github.com/your-org/sqladbx/issues"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "--strict-markers -v --cov=sqladbx --cov-report=term-missing"
+
+[tool.mypy]
+strict = true
+
+[tool.ruff]
+fix = true
+line-length = 119
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = ["BLE001", "ANN401", "PLR0913", "N806"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "sqladbx/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["sqladbx"]
+
+[tool.hatch.build.targets.sdist]
+exclude = ["tests/"]
