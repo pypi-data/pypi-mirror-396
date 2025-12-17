@@ -1,0 +1,229 @@
+Metadata-Version: 2.4
+Name: pypurge
+Version: 4.0.1
+Summary: Safe Python project cleanup utility — purge caches, build artifacts, test leftovers, and env clutter with smart protection.
+Author-email: Dhruv <dhruv13x@gmail.com>
+Maintainer-email: Dhruv <dhruv13x@gmail.com>
+License: MIT
+Project-URL: Homepage, https://github.com/dhruv13x/pypurge
+Project-URL: Repository, https://github.com/dhruv13x/pypurge.git
+Project-URL: Issues, https://github.com/dhruv13x/pypurge/issues
+Keywords: cleanup,cache,purge,pycache,dev-tools,cli,maintenance,automation,project-cleaner
+Classifier: Development Status :: 4 - Beta
+Classifier: Environment :: Console
+Classifier: Intended Audience :: Developers
+Classifier: Topic :: Software Development :: Build Tools
+Classifier: Topic :: Software Development :: Libraries
+Classifier: Topic :: System :: Systems Administration
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: rich>=13.0.0
+Requires-Dist: pathspec>=0.12.0
+Requires-Dist: jsonschema>=4.20.0
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0.0; extra == "dev"
+Requires-Dist: pytest-cov>=5.0.0; extra == "dev"
+Requires-Dist: pytest-timeout>=2.2.0; extra == "dev"
+Requires-Dist: pytest-json-report>=1.5.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.23.0; extra == "dev"
+Requires-Dist: pytest-mock>=3.10.0; extra == "dev"
+Requires-Dist: pyfakefs>=5.0.0; extra == "dev"
+Requires-Dist: ruff>=0.6.0; extra == "dev"
+Requires-Dist: black>=24.3.0; extra == "dev"
+Requires-Dist: mypy>=1.11.0; extra == "dev"
+Requires-Dist: PyYAML>=6.0; extra == "dev"
+Requires-Dist: types-PyYAML>=6.0; extra == "dev"
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/dhruv13x/pypurge/main/pypurge_logo.png" alt="pypurge logo" width="200"/>
+</div>
+
+<div align="center">
+
+# pypurge
+
+**Safe & Powerful Python Project Cleaner**
+
+[![PyPI version](https://img.shields.io/pypi/v/pypurge.svg)](https://pypi.org/project/pypurge/)
+[![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
+![Wheel](https://img.shields.io/pypi/wheel/pypurge.svg)
+[![Release](https://img.shields.io/badge/release-PyPI-blue)](https://pypi.org/project/pypurge/)
+[![Build status](https://github.com/dhruv13x/pypurge/actions/workflows/publish.yml/badge.svg)](https://github.com/dhruv13x/pypurge/actions/workflows/publish.yml)
+[![Codecov](https://codecov.io/gh/dhruv13x/pypurge/graph/badge.svg)](https://codecov.io/gh/dhruv13x/pypurge)
+[![Test Coverage](https://img.shields.io/badge/coverage-90%25%2B-brightgreen.svg)](https://github.com/dhruv13x/pypurge/actions/workflows/test.yml)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Ruff](https://img.shields.io/badge/linting-ruff-yellow.svg)](https://github.com/astral-sh/ruff)
+![Security](https://img.shields.io/badge/security-CodeQL-blue.svg)
+![Downloads](https://img.shields.io/pypi/dm/pypurge.svg)
+![OS](https://img.shields.io/badge/os-Linux%20%7C%20macOS%20%7C%20Windows-blue.svg)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+</div>
+
+---
+
+**pypurge** is a production-grade Python cleanup utility designed to safely remove auto-generated files, caches, virtualenv leftovers, test artifacts, and temporary files — **without putting your system at risk.**
+
+Think of it as a **precision broom for Python projects**. No more `find . -name __pycache__ -delete` or risky scripts.
+
+---
+
+## ⚡ Quick Start (The "5-Minute Rule")
+
+### Prerequisites
+*   Python 3.8+
+*   No other external dependencies required.
+
+### Installation
+
+```bash
+pip install pypurge
+```
+
+### Run
+
+Clean your current project interactively:
+
+```bash
+pypurge
+```
+
+### Demo
+
+```bash
+# Preview what would be deleted without touching anything
+pypurge --preview
+
+# Clean everything, including virtual environments, older than 7 days
+pypurge --clean-venv --older-than 7
+```
+
+---
+
+## ✨ Features
+
+### Core
+*   **Targeted Cleanup**: Smartly handles `__pycache__`, `.pytest_cache`, `build/`, `dist/`, `.egg-info`, and more.
+*   **Virtualenv Purge**: Optional cleaning of virtual environments (`--clean-venv`).
+*   **Smart Preview**: Shows detailed counts, groups, and disk usage before you confirm deletion.
+*   **Shell Completions**: Native auto-completion for `bash`, `zsh`, and `fish`.
+
+### Performance & Safety
+*   **🛡️ Safety-first Design**: Prevents accidental root-level deletion (`/`, `~`) and protects system directories.
+*   **Atomic Backups**: Create a zip backup with SHA256 manifest before cleaning (`--backup`).
+*   **Concurrency Safety**: Stale lock & lockfile protection to avoid multi-process conflicts.
+*   **Gitignore Awareness**: Respects `.gitignore` rules to avoid cleaning untracked files (`--no-gitignore` to disable).
+
+### Advanced
+*   **Age-based Filtering**: Delete only items older than N days (`--older-than`).
+*   **Configuration Wizard**: Easily setup exclusions with `pypurge --init`.
+*   **CI/CD Ready**: Supports non-interactive modes (`--yes`, `--quiet`, `--log-format json`).
+
+---
+
+## 🛠️ Configuration
+
+You can configure `pypurge` using CLI arguments or a `.pypurge.json` file.
+
+### CLI Arguments
+
+| Flag | Description | Default |
+| :--- | :--- | :--- |
+| `root...` | Directories to clean. | `.` |
+| `-p`, `--preview` | Preview targets without deleting. | `False` |
+| `-y`, `--yes` | Skip interactive confirmation. | `False` |
+| `-q`, `--quiet` | Suppress output except errors. | `False` |
+| `--clean-venv` | Include `.venv`, `venv` folders. | `False` |
+| `--exclude <pattern>` | Exclude glob or regex (`re:...`). | None |
+| `--older-than <days>` | Only target items older than N days. | `0` |
+| `--force` | Force deletion (chmod if needed). | `False` |
+| `--backup` | Create a `.zip` backup before delete. | `False` |
+| `--config <path>` | Path to `.pypurge.json`. | Auto-detect |
+| `--init` | Run configuration wizard. | `False` |
+| `--completions <shell>` | Generate shell completions. | None |
+
+### Configuration File (`.pypurge.json`)
+
+Create a `.pypurge.json` file in your project root for persistent settings.
+
+```json
+{
+  "exclude_dirs": [".git", "node_modules"],
+  "exclude_patterns": ["re:.*migrations.*", "data/"],
+  "dir_groups": {
+    "CustomData": ["temp_run/", "scratch/"]
+  }
+}
+```
+
+---
+
+## 🏗️ Architecture
+
+`pypurge` follows a modular architecture for safety and maintainability.
+
+```text
+src/pypurge/
+├── cli.py             # Entry point
+└── modules/
+    ├── safety.py      # Root/System protection logic
+    ├── scan.py        # File scanning & pattern matching
+    ├── deletion.py    # Safe removal operations
+    ├── locking.py     # Process locking mechanism
+    ├── backup.py      # Atomic backup creation
+    ├── config.py      # JSON schema validation
+    └── ui.py          # Rich terminal output
+```
+
+**Data Flow:**
+1.  **CLI**: Parses args and loads config.
+2.  **Safety**: Validates target root (blocks `/`, `~`).
+3.  **Locking**: Acquires `.pypurge.lock`.
+4.  **Scan**: Walks directory tree -> Filters by rules/gitignore -> Groups targets.
+5.  **UI**: Displays preview & asks confirmation.
+6.  **Backup**: (Optional) Archives targets to zip.
+7.  **Deletion**: Removes files/dirs.
+8.  **Cleanup**: Releases lock.
+
+---
+
+## 🐞 Troubleshooting
+
+| Issue | Possible Cause | Solution |
+| :--- | :--- | :--- |
+| **"Operation not permitted"** | File permissions or locked file. | Try `--force` or check file owner. |
+| **"Lock file is stale"** | Previous run crashed or is running. | Remove `.pypurge.lock` or wait. |
+| **"Refusing to run on dangerous root"** | You are running on `/` or `~`. | Use `--allow-broad-root` (Caution!). |
+| **No files found** | `.gitignore` might be hiding them. | Try `--no-gitignore`. |
+
+**Debug Mode**:
+Use `--log-format text` (default) or `--log-format json` with `--log-file pypurge.log` to inspect operations.
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to set up your development environment and submit Pull Requests.
+
+To run tests locally:
+```bash
+tox
+```
+
+---
+
+## 🗺️ Roadmap
+
+We are constantly improving `pypurge`. Check out our [ROADMAP.md](ROADMAP.md) for upcoming features, including:
+*   Enhanced AI-based clutter detection.
+*   Plugin system for custom cleaners.
+*   Deeper IDE integrations.
+
+---
+
+## License
+
+MIT © Dhruv
