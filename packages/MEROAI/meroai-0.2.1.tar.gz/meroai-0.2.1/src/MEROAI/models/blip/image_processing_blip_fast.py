@@ -1,0 +1,14 @@
+from ...image_processing_utils_fast import BaseImageProcessorFast
+from ...image_utils import OPENAI_CLIP_MEAN, OPENAI_CLIP_STD, PILImageResampling
+from ...utils import auto_docstring
+@auto_docstring
+class BlipImageProcessorFast(BaseImageProcessorFast):
+    resample = PILImageResampling.BICUBIC
+    image_mean = OPENAI_CLIP_MEAN
+    image_std = OPENAI_CLIP_STD
+    size = {"height": 384, "width": 384}
+    do_resize = True
+    do_rescale = True
+    do_normalize = True
+    do_convert_rgb = True
+__all__ = ["BlipImageProcessorFast"]

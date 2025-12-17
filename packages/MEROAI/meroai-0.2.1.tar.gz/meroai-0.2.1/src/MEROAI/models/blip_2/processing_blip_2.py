@@ -1,0 +1,77 @@
+from typing import Optional, Union
+from ...image_processing_utils import BatchFeature
+from ...image_utils import ImageInput
+from ...processing_utils import ProcessingKwargs, ProcessorMixin, Unpack
+from ...tokenization_utils_base import AddedToken, BatchEncoding, PreTokenizedInput, TextInput
+from ...utils import logging
+logger = logging.get_logger(__name__)
+class Blip2ProcessorKwargs(ProcessingKwargs, total=False):
+    _defaults = {
+        "text_kwargs": {
+            "add_special_tokens": True,
+            "padding": False,
+            "stride": 0,
+            "return_overflowing_tokens": False,
+            "return_special_tokens_mask": False,
+            "return_offsets_mapping": False,
+            "return_token_type_ids": False,
+            "return_length": False,
+            "verbose": True,
+        },
+        "images_kwargs": {},
+    }
+class Blip2Processor(ProcessorMixin):
+    attributes = ["image_processor", "tokenizer"]
+    image_processor_class = ("BlipImageProcessor", "BlipImageProcessorFast")
+    tokenizer_class = "AutoTokenizer"
+    def __init__(self, image_processor, tokenizer, num_query_tokens=None, **kwargs):
+        tokenizer.return_token_type_ids = False
+        self.current_processor = image_processor
+        if not hasattr(tokenizer, "image_token"):
+            self.image_token = AddedToken("<image>", normalized=False, special=True)
+            tokenizer.add_tokens([self.image_token], special_tokens=True)
+        else:
+            self.image_token = tokenizer.image_token
+        self.num_query_tokens = num_query_tokens
+        super().__init__(image_processor, tokenizer)
+    def __call__(
+        self,
+        images: Optional[ImageInput] = None,
+        text: Optional[Union[str, list[str], TextInput, PreTokenizedInput]] = None,
+        audio=None,
+        videos=None,
+        **kwargs: Unpack[Blip2ProcessorKwargs],
+    ) -> BatchEncoding:
+        if images is None and text is None:
+            raise ValueError("You have to specify either images or text.")
+        output_kwargs = self._merge_kwargs(
+            Blip2ProcessorKwargs,
+            tokenizer_init_kwargs=self.tokenizer.init_kwargs,
+            **kwargs,
+        )
+        return_tensors = output_kwargs["text_kwargs"].pop("return_tensors", None)
+        max_length = output_kwargs["text_kwargs"].pop("max_length", None)
+        if max_length is not None:
+            output_kwargs["text_kwargs"]["max_length"] = max_length - self.num_query_tokens
+        encoding = BatchFeature(tensor_type=return_tensors)
+        if text is not None:
+            if isinstance(text, str):
+                text = [text]
+            elif not isinstance(text, list) and not isinstance(text[0], str):
+                raise ValueError("Invalid input text. Please provide a string, or a list of strings")
+            text_encoding = self.tokenizer(text, **output_kwargs["text_kwargs"])
+            if images is not None and self.num_query_tokens is not None:
+                image_tokens = self.image_token.content * self.num_query_tokens
+                output_kwargs["text_kwargs"]["add_special_tokens"] = False
+                output_kwargs["text_kwargs"]["padding"] = False
+                output_kwargs["text_kwargs"]["truncation"] = False
+                image_text_encoding = self.tokenizer(image_tokens, **output_kwargs["text_kwargs"])
+                for k in text_encoding:
+                    text_encoding[k] = [image_text_encoding[k] + sample for sample in text_encoding[k]]
+            encoding.update(text_encoding)
+        if images is not None:
+            image_encoding = self.image_processor(images, **output_kwargs["images_kwargs"])
+            encoding.update(image_encoding)
+        encoding = BatchFeature(encoding, tensor_type=return_tensors)
+        return encoding
+__all__ = ["Blip2Processor"]
