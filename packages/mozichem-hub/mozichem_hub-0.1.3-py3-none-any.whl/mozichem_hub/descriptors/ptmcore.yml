@@ -1,0 +1,184 @@
+REFERENCES:
+  INSTRUCTIONS: |
+    This MCP server provides tools for computing thermodynamic fugacity using a variety of equations of state (EOS). It supports both component-level and mixture-level calculations in gas and liquid phases.
+
+    🔧 Available Tools:
+    • `get_method_reference_inputs`
+      → Retrieves the reference inputs required for a specific method, including data and equations.
+
+    • `calc_gas_component_fugacity`
+      → Calculates the fugacity of a gas-phase component at a given temperature and pressure.
+
+    • `calc_liquid_component_fugacity`
+      → Calculates the fugacity of a liquid-phase component at a given temperature and pressure.
+
+    • `calc_fugacity_gas_mixture`
+      → Computes the fugacity of a gas-phase mixture of components under specified conditions.
+
+    • `component_eos_roots_analysis`
+      → Analyzes the roots of the EOS for a single component at specified temperature and pressure
+
+    • `multi_component_eos_roots_analysis`
+      → Analyzes the roots of the EOS for a mixture of components at specified temperature and pressure.
+
+    📦 Backend:
+    • Powered by the `PyThermoModels` package.
+    • Implements the `MCP_PTMCore` class described in `ptmcore.yml`.
+
+    📌 Usage Tips:
+    • Inputs must include valid temperature, pressure, and composition data.
+    • Each tool is independent—call the one appropriate to your task.
+    • Results are optimized for process modeling and engineering applications.
+  get_method_reference_inputs:
+    NAME: get_method_reference_inputs
+    DESCRIPTION: "This function retrieves the reference inputs required for a specific method, including data and equations."
+    TAGS:
+      - reference inputs
+    ARGS:
+      - name: method_name
+        type: str
+        description: "Name of the method for which reference inputs are retrieved."
+  calc_gas_component_fugacity:
+    NAME: calc_gas_component_fugacity
+    DESCRIPTION: "This function calculates the fugacity of single-gas component using different equation of states (EOS) including Peng-Robinson (PR), Soave-Redlich-Kwong (SRK), Redlich-Kwong (RK), and van der Waals (vdW)."
+    TAGS:
+      - thermodynamics
+      - fugacity
+      - equation of state
+      - gas-phase
+    ARGS:
+      - name: temperature
+        type: Temperature
+        description: "Temperature of the system."
+      - name: pressure
+        type: Pressure
+        description: "Pressure of the system."
+      - name: component
+        type: Component
+        description: "Chemical component for which the fugacity is calculated."
+      - name: eos_model
+        type: str
+        description: "Equation of state to use for the calculation. Options are 'PR' for Peng-Robinson, 'SRK' for Soave-Redlich-Kwong, 'RK' for Redlich-Kwong, and 'vdW' for van der Waals."
+      - name: solver_method
+        type: str
+        description: "Solver method for fugacity calculation. Options are 'ls' for least-square method, 'fsolve' for fsolve, and 'root' for root."
+      - name: custom_reference_content
+        type: str
+        description: "Custom reference content provided by PyThermoDB, this consists of data and equations for all components."
+      - name: custom_reference_config
+        type: str
+        description: "Custom reference configuration provided by PyThermoDB, this consists of the reference for data and equations for each component."
+    REFERENCE_INPUTS:
+      DATA:
+        - name: critical-temperature
+          symbol: Tc
+          description: "Critical temperature of the component."
+        - name: critical-pressure
+          symbol: Pc
+          description: "Critical pressure of the component."
+        - name: acentric-factor
+          symbol: AcFa
+          description: "Acentric factor of the component."
+      EQUATIONS:
+        - name: vapor-pressure
+          symbol: VaPr
+          description: "Vapor pressure equation for the component."
+    CONFIG:
+      vapor-pressure:
+        label: VaPr
+      general-data:
+        labels:
+          critical-temperature: Tc
+          critical-pressure: Pc
+          acentric-factor: AcFa
+    IGNORE_STATE_PROPS:
+      - Tc
+      - Pc
+      - AcFa
+      - VaPr
+  calc_liquid_component_fugacity:
+    NAME: calc_liquid_component_fugacity
+    DESCRIPTION: "This function calculates the fugacity of single-liquid component using different equation of states (EOS) including Peng-Robinson (PR), Soave-Redlich-Kwong (SRK), Redlich-Kwong (RK), and van der Waals (vdW). The fugacity is calculated based on the EOS used for the gas phase and Poynting correction."
+    TAGS:
+      - thermodynamics
+      - fugacity
+      - equation of state
+      - liquid-phase
+    ARGS:
+      - name: temperature
+        type: Temperature
+        description: "Temperature of the system."
+      - name: pressure
+        type: Pressure
+        description: "Pressure of the system."
+      - name: component
+        type: Component
+        description: "Chemical component for which the fugacity is calculated."
+      - name: eos_model
+        type: str
+        description: "Equation of state to use for the calculation. Options are 'PR' for Peng-Robinson, 'SRK' for Soave-Redlich-Kwong, 'RK' for Redlich-Kwong, and 'vdW' for van der Waals."
+      - name: solver_method
+        type: str
+        description: "Solver method for fugacity calculation. Options are 'ls' for least-square method, 'fsolve' for fsolve, and 'root' for root."
+      - name: liquid_fugacity_mode
+        type: str
+        description: "The fugacity is calculated based using eos used for gas phase and Poynting correction. Options are 'gas' for gas phase EOS and 'poynting' for Poynting correction."
+  calc_fugacity_gas_mixture:
+    NAME: calc_fugacity_gas_mixture
+    DESCRIPTION: "This function calculates the fugacity of a mixture of gases using different equation of states (EOS) including Peng-Robinson (PR), Soave-Redlich-Kwong (SRK), Redlich-Kwong (RK), and van der Waals (vdW)."
+    ARGS:
+      - name: temperature
+        type: Temperature
+        description: "Temperature of the system."
+      - name: pressure
+        type: Pressure
+        description: "Pressure of the system."
+      - name: components
+        type: Components
+        description: "Chemical components for which the fugacity is calculated."
+      - name: eos_model
+        type: str
+        description: "Equation of state to use for the calculation. Options are 'PR' for Peng-Robinson, 'SRK' for Soave-Redlich-Kwong, 'RK' for Redlich-Kwong, and 'vdW' for van der Waals."
+    TAGS:
+      - thermodynamics
+      - fugacity
+      - equation of state
+      - gas-phase
+  component_eos_roots_analysis:
+    NAME: component_eos_roots_analysis
+    DESCRIPTION: "This function analyzes the roots of the EOS for a given component at specified temperature and pressure."
+    ARGS:
+      - name: temperature
+        type: Temperature
+        description: "Temperature of the system."
+      - name: pressure
+        type: Pressure
+        description: "Pressure of the system."
+      - name: component
+        type: Component
+        description: "Chemical component for which the EOS roots are analyzed."
+      - name: eos_model
+        type: str
+        description: "Equation of state to use for the analysis. Options are 'PR' for Peng-Robinson, 'SRK' for Soave-Redlich-Kwong, 'RK' for Redlich-Kwong, and 'vdW' for van der Waals."
+    TAGS:
+      - thermodynamics
+      - eos analysis
+  multi_component_eos_roots_analysis:
+    NAME: multi_component_eos_roots_analysis
+    DESCRIPTION: "This function analyzes the roots of the EOS for a mixture of components at specified temperature and pressure."
+    ARGS:
+      - name: temperature
+        type: Temperature
+        description: "Temperature of the system."
+      - name: pressure
+        type: Pressure
+        description: "Pressure of the system."
+      - name: components
+        type: Components
+        description: "Chemical components for which the EOS roots are analyzed."
+      - name: eos_model
+        type: str
+        description: "Equation of state to use for the analysis. Options are 'PR' for Peng-Robinson, 'SRK' for Soave-Redlich-Kwong, 'RK' for Redlich-Kwong, and 'vdW' for van der Waals."
+    TAGS:
+      - thermodynamics
+      - eos analysis
