@@ -1,0 +1,866 @@
+version: 2
+metrics:
+  - name: net_profit_margin
+    description: "Represents the percentage of revenue that remains after all operating expenses, interest, and taxes have been deducted."
+    type: simple
+    type_params:
+      measure:
+        name: net_profit_margin_measure
+        expr: "(SUM(net_income)/SUM(revenue))*100"
+    meta:
+      odgs_id: "101"
+      owner: "TBD"
+      domain: "Financial Performance"
+
+  - name: return_on_invested_capital_roic
+    description: "Measures how well a company is using its money to generate returns."
+    type: simple
+    type_params:
+      measure:
+        name: return_on_invested_capital_roic_measure
+        expr: "(SUM(net_operating_profit_after_tax))/(SUM(total_debt)+SUM(total_equity))"
+    meta:
+      odgs_id: "102"
+      owner: "TBD"
+      domain: "Financial Performance"
+
+  - name: free_cash_flow_fcf
+    description: "The cash a company produces through its operations after subtracting capital expenditures."
+    type: simple
+    type_params:
+      measure:
+        name: free_cash_flow_fcf_measure
+        expr: "SUM(operating_cash_flow)-SUM(capital_expenditures)"
+    meta:
+      odgs_id: "103"
+      owner: "TBD"
+      domain: "Financial Performance"
+
+  - name: ebitda_margin
+    description: "Earnings before interest, taxes, depreciation, and amortization as a percentage of revenue."
+    type: simple
+    type_params:
+      measure:
+        name: ebitda_margin_measure
+        expr: "(SUM(ebitda)/SUM(revenue))*100"
+    meta:
+      odgs_id: "104"
+      owner: "TBD"
+      domain: "Financial Performance"
+
+  - name: gross_profit_margin
+    description: "The percentage of revenue remaining after direct costs of goods sold are deducted."
+    type: simple
+    type_params:
+      measure:
+        name: gross_profit_margin_measure
+        expr: "((SUM(revenue)-SUM(cost_of_goods_sold))/SUM(revenue))*100"
+    meta:
+      odgs_id: "105"
+      owner: "TBD"
+      domain: "Financial Performance"
+
+  - name: working_capital_ratio
+    description: "Measures a company's ability to meet short-term obligations with current assets."
+    type: simple
+    type_params:
+      measure:
+        name: working_capital_ratio_measure
+        expr: "SUM(current_assets)/SUM(current_liabilities)"
+    meta:
+      odgs_id: "106"
+      owner: "TBD"
+      domain: "Financial Performance"
+
+  - name: employee_turnover_rate
+    description: "The percentage of employees who leave a company within a certain period."
+    type: simple
+    type_params:
+      measure:
+        name: employee_turnover_rate_measure
+        expr: "(SUM(number_of_employees_who_left)/SUM(average_number_of_employees))*100"
+    meta:
+      odgs_id: "501"
+      owner: "TBD"
+      domain: "Human Resources"
+
+  - name: lost_time_injury_frequency_rate_ltifr
+    description: "The number of lost-time injuries occurring in a workplace per 1,000,000 hours worked."
+    type: simple
+    type_params:
+      measure:
+        name: lost_time_injury_frequency_rate_ltifr_measure
+        expr: "(SUM(number_of_lost)-SUM(time_injuries)/SUM(total_hours_worked))*SUM(1,000,000)"
+    meta:
+      odgs_id: "502"
+      owner: "TBD"
+      domain: "Health & Safety"
+
+  - name: training_hours_per_employee
+    description: "Average number of hours spent on training and development per employee per year."
+    type: simple
+    type_params:
+      measure:
+        name: training_hours_per_employee_measure
+        expr: "SUM(total_training_hours)/SUM(number_of_employees)"
+    meta:
+      odgs_id: "503"
+      owner: "TBD"
+      domain: "Human Resources"
+
+  - name: absenteeism_rate
+    description: "The percentage of scheduled work time lost due to employee absences."
+    type: simple
+    type_params:
+      measure:
+        name: absenteeism_rate_measure
+        expr: "(SUM(total_days_absent)/SUM(total_available_work_days))*100"
+    meta:
+      odgs_id: "504"
+      owner: "TBD"
+      domain: "Human Resources"
+
+  - name: it_system_uptime
+    description: "The percentage of time a critical IT system (e.g., ERP, ERP, SCADA) is operational and available."
+    type: simple
+    type_params:
+      measure:
+        name: it_system_uptime_measure
+        expr: "((SUM(total_time)-SUM(downtime))/SUM(total_time))*100"
+    meta:
+      odgs_id: "601"
+      owner: "TBD"
+      domain: "IT Operations"
+
+  - name: mean_time_to_repair_mttr
+    description: "Average time required to repair a failed system or component and restore it to operational status."
+    type: simple
+    type_params:
+      measure:
+        name: mean_time_to_repair_mttr_measure
+        expr: "SUM(total_repair_time)/SUM(number_of_repairs)"
+    meta:
+      odgs_id: "602"
+      owner: "TBD"
+      domain: "IT Operations"
+
+  - name: cybersecurity_incident_rate
+    description: "The number of confirmed security incidents per period."
+    type: simple
+    type_params:
+      measure:
+        name: cybersecurity_incident_rate_measure
+        expr: "SUM(number_of_security_incidents)/SUM(time_period)"
+    meta:
+      odgs_id: "603"
+      owner: "TBD"
+      domain: "IT Security"
+
+  - name: warehouse_dwell_time_import
+    description: "The average time an import container resides on a marine terminal, from vessel discharge to truck gate-out."
+    type: simple
+    type_params:
+      measure:
+        name: warehouse_dwell_time_import_measure
+        expr: "SUM(average)(SUM(gate)-SUM(out_timestamp)-SUM(discharge_timestamp))"
+    meta:
+      odgs_id: "1001"
+      owner: "TBD"
+      domain: "Operational Efficiency"
+
+  - name: dock_moves_per_hour_bmph
+    description: "The total number of container moves (lifts on/off a vessel) divided by the number of hours the vessel is at berth."
+    type: simple
+    type_params:
+      measure:
+        name: dock_moves_per_hour_bmph_measure
+        expr: "SUM(total_package_moves)/(SUM(transport_unit_departure_time)-SUM(transport_unit_arrival_time))"
+    meta:
+      odgs_id: "1002"
+      owner: "TBD"
+      domain: "Asset Productivity"
+
+  - name: truck_turnaround_time
+    description: "The average time it takes for a truck to enter the terminal, complete its transaction (pickup/drop-off), and exit."
+    type: simple
+    type_params:
+      measure:
+        name: truck_turnaround_time_measure
+        expr: "SUM(average)(SUM(gate)-SUM(out_timestamp)-SUM(gate)-SUM(in_timestamp))"
+    meta:
+      odgs_id: "1003"
+      owner: "TBD"
+      domain: "Operational Efficiency"
+
+  - name: on-time_performance_transport_unit/flight/truck
+    description: "The percentage of arrivals or departures that occur within a predefined time window of the schedule."
+    type: simple
+    type_params:
+      measure:
+        name: on-time_performance_transport_unit/flight/truck_measure
+        expr: "(SUM(number_of_on)-SUM(time_events)/SUM(total_number_of_events))*100"
+    meta:
+      odgs_id: "1004"
+      owner: "TBD"
+      domain: "Service Level"
+
+  - name: cargo_damage_rate
+    description: "The percentage of cargo units that sustain damage during handling or storage."
+    type: simple
+    type_params:
+      measure:
+        name: cargo_damage_rate_measure
+        expr: "(SUM(number_of_damaged_units)/SUM(total_units_handled))*100"
+    meta:
+      odgs_id: "1005"
+      owner: "TBD"
+      domain: "Quality Management"
+
+  - name: transport_unit_turnaround_time
+    description: "Total time from when a vessel arrives at berth to when it departs."
+    type: simple
+    type_params:
+      measure:
+        name: transport_unit_turnaround_time_measure
+        expr: "SUM(transport_unit_departure_time)-SUM(dock_arrival_time)"
+    meta:
+      odgs_id: "1006"
+      owner: "TBD"
+      domain: "Operational Efficiency"
+
+  - name: fleet_utilization_rate
+    description: "The percentage of time vehicles in a fleet are actively being used for revenue-generating activities."
+    type: simple
+    type_params:
+      measure:
+        name: fleet_utilization_rate_measure
+        expr: "(SUM(total_operating_hours)/SUM(total_available_hours))*100"
+    meta:
+      odgs_id: "1007"
+      owner: "TBD"
+      domain: "Asset Productivity"
+
+  - name: fuel_efficiency_mpg_or_l/100km
+    description: "Average fuel consumption efficiency across fleet operations."
+    type: simple
+    type_params:
+      measure:
+        name: fuel_efficiency_mpg_or_l/100km_measure
+        expr: "SUM(total_distance_traveled)/SUM(total_fuel_consumed)"
+    meta:
+      odgs_id: "1008"
+      owner: "TBD"
+      domain: "Cost Management"
+
+  - name: overall_equipment_effectiveness_oee
+    description: "A composite metric that measures manufacturing productivity by combining equipment availability, performance, and quality."
+    type: simple
+    type_params:
+      measure:
+        name: overall_equipment_effectiveness_oee_measure
+        expr: "SUM(availability_rate)*SUM(performance_rate)*SUM(quality_rate)"
+    meta:
+      odgs_id: "2001"
+      owner: "TBD"
+      domain: "Asset Productivity"
+
+  - name: manufacturing_cycle_time
+    description: "The total time required to convert raw materials into finished goods."
+    type: simple
+    type_params:
+      measure:
+        name: manufacturing_cycle_time_measure
+        expr: "SUM(process_time)+SUM(move_time)+SUM(inspection_time)+SUM(queue_time)"
+    meta:
+      odgs_id: "2002"
+      owner: "TBD"
+      domain: "Operational Efficiency"
+
+  - name: first_pass_yield_fpy
+    description: "The percentage of products manufactured correctly to specifications the first time, without rework or scrap."
+    type: simple
+    type_params:
+      measure:
+        name: first_pass_yield_fpy_measure
+        expr: "(SUM(units_completed_without_rework)/SUM(total_units_started))*100"
+    meta:
+      odgs_id: "2003"
+      owner: "TBD"
+      domain: "Quality Management"
+
+  - name: scrap_rate
+    description: "The percentage of raw materials or work-in-process that becomes waste during production."
+    type: simple
+    type_params:
+      measure:
+        name: scrap_rate_measure
+        expr: "(SUM(weight_of_scrap)/SUM(total_weight_of_materials_used))*100"
+    meta:
+      odgs_id: "2004"
+      owner: "TBD"
+      domain: "Quality Management"
+
+  - name: production_capacity_utilization
+    description: "The percentage of maximum production capacity currently being utilized."
+    type: simple
+    type_params:
+      measure:
+        name: production_capacity_utilization_measure
+        expr: "(SUM(actual_output)/SUM(maximum_possible_output))*100"
+    meta:
+      odgs_id: "2005"
+      owner: "TBD"
+      domain: "Asset Productivity"
+
+  - name: downtime_percentage
+    description: "The percentage of scheduled production time lost due to equipment failures or maintenance."
+    type: simple
+    type_params:
+      measure:
+        name: downtime_percentage_measure
+        expr: "(SUM(downtime_hours)/SUM(scheduled_operating_hours))*100"
+    meta:
+      odgs_id: "2006"
+      owner: "TBD"
+      domain: "Asset Reliability"
+
+  - name: changeover_time
+    description: "Time required to switch production line from one product to another."
+    type: simple
+    type_params:
+      measure:
+        name: changeover_time_measure
+        expr: "SUM(end_of_last_good_part)(SUM(product_a))SUM(to_first_good_part)(SUM(product_b))"
+    meta:
+      odgs_id: "2007"
+      owner: "TBD"
+      domain: "Operational Efficiency"
+
+  - name: maintenance_cost_as_%_of_asset_value
+    description: "Annual maintenance and repair costs expressed as percentage of total asset replacement value."
+    type: simple
+    type_params:
+      measure:
+        name: maintenance_cost_as_%_of_asset_value_measure
+        expr: "(SUM(annual_maintenance_costs)/SUM(total_asset_replacement_value))*100"
+    meta:
+      odgs_id: "2008"
+      owner: "TBD"
+      domain: "Cost Management"
+
+  - name: asset_uptime
+    description: "The percentage of time a critical piece of equipment is available and running as intended."
+    type: simple
+    type_params:
+      measure:
+        name: asset_uptime_measure
+        expr: "((SUM(scheduled_operating_time)-SUM(unscheduled_downtime))/SUM(scheduled_operating_time))*100"
+    meta:
+      odgs_id: "3001"
+      owner: "TBD"
+      domain: "Asset Reliability"
+
+  - name: production_volume_barrels/day,_mwh
+    description: "The total amount of product produced over a specific period."
+    type: simple
+    type_params:
+      measure:
+        name: production_volume_barrels/day,_mwh_measure
+        expr: "SUM(sum_of_production_over_period)"
+    meta:
+      odgs_id: "3002"
+      owner: "TBD"
+      domain: "Operational Output"
+
+  - name: mean_time_between_failures_mtbf
+    description: "The predicted elapsed time between inherent failures of a mechanical or electronic system during normal operation."
+    type: simple
+    type_params:
+      measure:
+        name: mean_time_between_failures_mtbf_measure
+        expr: "SUM(total_operational_time)/SUM(number_of_failures)"
+    meta:
+      odgs_id: "3003"
+      owner: "TBD"
+      domain: "Asset Reliability"
+
+  - name: energy_intensity
+    description: "Energy consumed per unit of production output."
+    type: simple
+    type_params:
+      measure:
+        name: energy_intensity_measure
+        expr: "SUM(total_energy_consumed)(SUM(kwh))/SUM(total_units_produced)"
+    meta:
+      odgs_id: "3004"
+      owner: "TBD"
+      domain: "Sustainability"
+
+  - name: generation_reliability
+    description: "The percentage of time a power generation asset is available to produce when needed."
+    type: simple
+    type_params:
+      measure:
+        name: generation_reliability_measure
+        expr: "((SUM(available_hours)-SUM(forced_outage_hours))/SUM(available_hours))*100"
+    meta:
+      odgs_id: "3005"
+      owner: "TBD"
+      domain: "Asset Reliability"
+
+  - name: emissions_rate_co2/unit
+    description: "Amount of greenhouse gas emissions per unit of production."
+    type: simple
+    type_params:
+      measure:
+        name: emissions_rate_co2/unit_measure
+        expr: "SUM(total_co2_emissions)(SUM(tons))/SUM(total_production)(SUM(units))"
+    meta:
+      odgs_id: "3006"
+      owner: "TBD"
+      domain: "Environmental Compliance"
+
+  - name: water_usage_efficiency
+    description: "Volume of water consumed per unit of production output."
+    type: simple
+    type_params:
+      measure:
+        name: water_usage_efficiency_measure
+        expr: "SUM(total_water_consumed)(SUM(gallons))/SUM(total_units_produced)"
+    meta:
+      odgs_id: "3007"
+      owner: "TBD"
+      domain: "Environmental Compliance"
+
+  - name: inventory_turnover
+    description: "Measures how many times a company's inventory is sold and replaced over a period."
+    type: simple
+    type_params:
+      measure:
+        name: inventory_turnover_measure
+        expr: "SUM(cost_of_goods_sold)/SUM(average_inventory)"
+    meta:
+      odgs_id: "4001"
+      owner: "TBD"
+      domain: "Supply Chain Management"
+
+  - name: perfect_order_rate
+    description: "The percentage of orders delivered to the right place, with the right product, at the right time, in the right condition, with the right paperwork."
+    type: simple
+    type_params:
+      measure:
+        name: perfect_order_rate_measure
+        expr: "(SUM(number_of_perfect_orders)/SUM(total_orders))*100"
+    meta:
+      odgs_id: "4002"
+      owner: "TBD"
+      domain: "Service Level"
+
+  - name: days_of_supply_dos
+    description: "The number of days a company could operate on its current inventory."
+    type: simple
+    type_params:
+      measure:
+        name: days_of_supply_dos_measure
+        expr: "SUM(average_inventory)/(SUM(cost_of_goods_sold)/SUM(number_of_days_in_period))"
+    meta:
+      odgs_id: "4003"
+      owner: "TBD"
+      domain: "Supply Chain Management"
+
+  - name: order_fill_rate
+    description: "Percentage of customer orders fulfilled completely from available inventory."
+    type: simple
+    type_params:
+      measure:
+        name: order_fill_rate_measure
+        expr: "(SUM(orders_filled_completely)/SUM(total_orders))*100"
+    meta:
+      odgs_id: "4004"
+      owner: "TBD"
+      domain: "Service Level"
+
+  - name: stockout_rate
+    description: "Percentage of time a product is out of stock when customers want to purchase it."
+    type: simple
+    type_params:
+      measure:
+        name: stockout_rate_measure
+        expr: "(SUM(days_out_of_stock)/SUM(total_days))*100"
+    meta:
+      odgs_id: "4005"
+      owner: "TBD"
+      domain: "Inventory Management"
+
+  - name: cash-to-cash_cycle_time
+    description: "The number of days between paying for raw materials and receiving payment from customers."
+    type: simple
+    type_params:
+      measure:
+        name: cash-to-cash_cycle_time_measure
+        expr: "SUM(days_inventory_outstanding)+SUM(days_sales_outstanding)-SUM(days_payable_outstanding)"
+    meta:
+      odgs_id: "4006"
+      owner: "TBD"
+      domain: "Working Capital"
+
+  - name: supplier_on-time_delivery
+    description: "Percentage of supplier deliveries that arrive within the agreed time window."
+    type: simple
+    type_params:
+      measure:
+        name: supplier_on-time_delivery_measure
+        expr: "(SUM(on)-SUM(time_deliveries)/SUM(total_deliveries))*100"
+    meta:
+      odgs_id: "4007"
+      owner: "TBD"
+      domain: "Supplier Performance"
+
+  - name: forecast_accuracy
+    description: "Measures how closely demand forecasts match actual sales or consumption."
+    type: simple
+    type_params:
+      measure:
+        name: forecast_accuracy_measure
+        expr: "100-(SUM(abs)(SUM(forecast)-SUM(actual))/SUM(actual))*100"
+    meta:
+      odgs_id: "4008"
+      owner: "TBD"
+      domain: "Demand Planning"
+
+  - name: ore_recovery_rate
+    description: "Percentage of valuable mineral recovered from ore during processing."
+    type: simple
+    type_params:
+      measure:
+        name: ore_recovery_rate_measure
+        expr: "(SUM(recovered_mineral_weight)/SUM(total_mineral_in_ore))*100"
+    meta:
+      odgs_id: "5001"
+      owner: "TBD"
+      domain: "Extraction Efficiency"
+
+  - name: tons_per_operating_hour
+    description: "Average tonnage of material extracted or processed per hour of operation."
+    type: simple
+    type_params:
+      measure:
+        name: tons_per_operating_hour_measure
+        expr: "SUM(total_tons_processed)/SUM(total_operating_hours)"
+    meta:
+      odgs_id: "5002"
+      owner: "TBD"
+      domain: "Productivity"
+
+  - name: haul_truck_cycle_time
+    description: "Average time for a haul truck to complete one full cycle (load, haul, dump, return)."
+    type: simple
+    type_params:
+      measure:
+        name: haul_truck_cycle_time_measure
+        expr: "SUM(average)(SUM(return_to_load_point_time)-SUM(departure_from_load_point_time))"
+    meta:
+      odgs_id: "5003"
+      owner: "TBD"
+      domain: "Asset Productivity"
+
+  - name: project_schedule_performance_index_spi
+    description: "Measures project schedule efficiency against planned timeline."
+    type: simple
+    type_params:
+      measure:
+        name: project_schedule_performance_index_spi_measure
+        expr: "SUM(earned_value)/SUM(planned_value)"
+    meta:
+      odgs_id: "6001"
+      owner: "TBD"
+      domain: "Project Management"
+
+  - name: construction_cost_performance_index_cpi
+    description: "Measures project cost efficiency against budget."
+    type: simple
+    type_params:
+      measure:
+        name: construction_cost_performance_index_cpi_measure
+        expr: "SUM(earned_value)/SUM(actual_cost)"
+    meta:
+      odgs_id: "6002"
+      owner: "TBD"
+      domain: "Project Management"
+
+  - name: rework_rate
+    description: "Percentage of work that must be redone due to defects or errors."
+    type: simple
+    type_params:
+      measure:
+        name: rework_rate_measure
+        expr: "(SUM(hours_spent_on_rework)/SUM(total_project_hours))*100"
+    meta:
+      odgs_id: "6003"
+      owner: "TBD"
+      domain: "Quality Management"
+
+  - name: crop_yield_per_acre
+    description: "Amount of crop produced per unit of cultivated land area."
+    type: simple
+    type_params:
+      measure:
+        name: crop_yield_per_acre_measure
+        expr: "SUM(total_harvest)(SUM(bushels)/SUM(tons))/SUM(total_acres_planted)"
+    meta:
+      odgs_id: "7001"
+      owner: "TBD"
+      domain: "Production Efficiency"
+
+  - name: feed_conversion_ratio
+    description: "Amount of feed required to produce one unit of livestock product."
+    type: simple
+    type_params:
+      measure:
+        name: feed_conversion_ratio_measure
+        expr: "SUM(total_feed_consumed)(SUM(kg))/SUM(total_weight_gained)(SUM(kg))"
+    meta:
+      odgs_id: "7002"
+      owner: "TBD"
+      domain: "Production Efficiency"
+
+  - name: customer_satisfaction_score_csat
+    description: "Percentage of customers rating their experience as satisfactory or better."
+    type: simple
+    type_params:
+      measure:
+        name: customer_satisfaction_score_csat_measure
+        expr: "(SUM(number_of_satisfied_customers)/SUM(total_survey_responses))*100"
+    meta:
+      odgs_id: "8001"
+      owner: "TBD"
+      domain: "Customer Experience"
+
+  - name: net_promoter_score_nps
+    description: "Measures customer loyalty by likelihood to recommend to others."
+    type: simple
+    type_params:
+      measure:
+        name: net_promoter_score_nps_measure
+        expr: "SUM(%_promoters)(9-10)-SUM(%_detractors)(0-6)"
+    meta:
+      odgs_id: "8002"
+      owner: "TBD"
+      domain: "Customer Experience"
+
+  - name: first_call_resolution_rate
+    description: "Percentage of customer issues resolved during the first contact."
+    type: simple
+    type_params:
+      measure:
+        name: first_call_resolution_rate_measure
+        expr: "(SUM(issues_resolved_on_first_contact)/SUM(total_issues))*100"
+    meta:
+      odgs_id: "8003"
+      owner: "TBD"
+      domain: "Customer Service"
+
+  - name: regulatory_compliance_rate
+    description: "Percentage of required compliance checks or audits passed without findings."
+    type: simple
+    type_params:
+      measure:
+        name: regulatory_compliance_rate_measure
+        expr: "(SUM(passed_audits)/SUM(total_audits))*100"
+    meta:
+      odgs_id: "9001"
+      owner: "TBD"
+      domain: "Compliance & Risk"
+
+  - name: audit_findings_per_period
+    description: "Number of compliance or quality audit findings requiring corrective action."
+    type: simple
+    type_params:
+      measure:
+        name: audit_findings_per_period_measure
+        expr: "SUM(count_of_findings_requiring_action)"
+    meta:
+      odgs_id: "9002"
+      owner: "TBD"
+      domain: "Compliance & Risk"
+
+  - name: carbon_footprint_per_product
+    description: "Total greenhouse gas emissions attributable to producing one unit of product."
+    type: simple
+    type_params:
+      measure:
+        name: carbon_footprint_per_product_measure
+        expr: "SUM(total_co2_equivalent_emissions)/SUM(total_units_produced)"
+    meta:
+      odgs_id: "10001"
+      owner: "TBD"
+      domain: "Sustainability"
+
+  - name: waste_diversion_rate
+    description: "Percentage of total waste diverted from landfill through recycling, composting, or reuse."
+    type: simple
+    type_params:
+      measure:
+        name: waste_diversion_rate_measure
+        expr: "(SUM(waste_diverted)/SUM(total_waste_generated))*100"
+    meta:
+      odgs_id: "10002"
+      owner: "TBD"
+      domain: "Sustainability"
+
+  - name: renewable_energy_percentage
+    description: "Percentage of total energy consumption from renewable sources."
+    type: simple
+    type_params:
+      measure:
+        name: renewable_energy_percentage_measure
+        expr: "(SUM(renewable_energy_consumed)/SUM(total_energy_consumed))*100"
+    meta:
+      odgs_id: "10003"
+      owner: "TBD"
+      domain: "Sustainability"
+
+  - name: warranty_claim_rate
+    description: "Percentage of products sold that result in warranty claims within coverage period."
+    type: simple
+    type_params:
+      measure:
+        name: warranty_claim_rate_measure
+        expr: "(SUM(number_of_warranty_claims)/SUM(total_products_sold))*100"
+    meta:
+      odgs_id: "11001"
+      owner: "TBD"
+      domain: "Quality Management"
+
+  - name: customer_retention_rate
+    description: "Percentage of customers who continue doing business over a defined period."
+    type: simple
+    type_params:
+      measure:
+        name: customer_retention_rate_measure
+        expr: "((SUM(customers_at_end)-SUM(new_customers))/SUM(customers_at_start))*100"
+    meta:
+      odgs_id: "11002"
+      owner: "TBD"
+      domain: "Customer Experience"
+
+  - name: labor_productivity
+    description: "Output produced per labor hour worked."
+    type: simple
+    type_params:
+      measure:
+        name: labor_productivity_measure
+        expr: "SUM(total_output)(SUM(units)/SUM(revenue))/SUM(total_labor_hours)"
+    meta:
+      odgs_id: "12001"
+      owner: "TBD"
+      domain: "Workforce Efficiency"
+
+  - name: schedule_adherence
+    description: "Percentage of planned tasks or shifts completed on schedule."
+    type: simple
+    type_params:
+      measure:
+        name: schedule_adherence_measure
+        expr: "(SUM(tasks_completed_on_schedule)/SUM(total_planned_tasks))*100"
+    meta:
+      odgs_id: "12002"
+      owner: "TBD"
+      domain: "Operational Efficiency"
+
+  - name: equipment_reliability_factor
+    description: "Ratio of actual productive time to planned production time for equipment."
+    type: simple
+    type_params:
+      measure:
+        name: equipment_reliability_factor_measure
+        expr: "(SUM(actual_operating_time)/SUM(planned_operating_time))*100"
+    meta:
+      odgs_id: "13001"
+      owner: "TBD"
+      domain: "Asset Reliability"
+
+  - name: quality_defect_rate
+    description: "Number of defects identified per units produced or inspected."
+    type: simple
+    type_params:
+      measure:
+        name: quality_defect_rate_measure
+        expr: "(SUM(number_of_defects)/SUM(total_units_inspected))*100"
+    meta:
+      odgs_id: "14001"
+      owner: "TBD"
+      domain: "Quality Management"
+
+  - name: process_capability_index_cpk
+    description: "Statistical measure of how well a process can produce output within specification limits."
+    type: simple
+    type_params:
+      measure:
+        name: process_capability_index_cpk_measure
+        expr: "SUM(min)((SUM(usl)-SUM(mean))/SUM(3σ,)(SUM(mean)-SUM(lsl))/SUM(3σ))"
+    meta:
+      odgs_id: "15001"
+      owner: "TBD"
+      domain: "Quality Management"
+
+  - name: mean_time_to_detect_mttd
+    description: "Average time between when an incident occurs and when it is detected."
+    type: simple
+    type_params:
+      measure:
+        name: mean_time_to_detect_mttd_measure
+        expr: "SUM(sum_of_detection_times)/SUM(number_of_incidents)"
+    meta:
+      odgs_id: "16001"
+      owner: "TBD"
+      domain: "Incident Management"
+
+  - name: asset_utilization_rate
+    description: "Percentage of time assets are actively used for productive purposes."
+    type: simple
+    type_params:
+      measure:
+        name: asset_utilization_rate_measure
+        expr: "(SUM(productive_time)/SUM(total_available_time))*100"
+    meta:
+      odgs_id: "17001"
+      owner: "TBD"
+      domain: "Asset Productivity"
+
+  - name: revenue_per_employee
+    description: "Total revenue generated divided by number of employees."
+    type: simple
+    type_params:
+      measure:
+        name: revenue_per_employee_measure
+        expr: "SUM(total_revenue)/SUM(total_number_of_employees)"
+    meta:
+      odgs_id: "18001"
+      owner: "TBD"
+      domain: "Workforce Efficiency"
+
+  - name: backlog-to-revenue_ratio
+    description: "Value of contracted but not yet executed work compared to annual revenue."
+    type: simple
+    type_params:
+      measure:
+        name: backlog-to-revenue_ratio_measure
+        expr: "SUM(total_project_backlog)/SUM(annual_revenue)"
+    meta:
+      odgs_id: "19001"
+      owner: "TBD"
+      domain: "Business Health"
+
+  - name: pipeline_integrity_index
+    description: "Composite score measuring the condition and reliability of pipeline infrastructure."
+    type: simple
+    type_params:
+      measure:
+        name: pipeline_integrity_index_measure
+        expr: "SUM(weighted_average_of)(SUM(inspection_results)+SUM(corrosion_rate)+SUM(leak_incidents))"
+    meta:
+      odgs_id: "20001"
+      owner: "TBD"
+      domain: "Asset Reliability"
+

@@ -1,0 +1,1286 @@
+{
+  "createOrReplace": {
+    "object": {
+      "database": "ODGS_Governance_Layer",
+      "compatibilityLevel": 1500
+    },
+    "database": {
+      "name": "ODGS_Governance_Layer",
+      "model": {
+        "culture": "en-US",
+        "tables": [
+          {
+            "name": "ODGS_Metrics",
+            "columns": [
+              {
+                "name": "Dummy",
+                "dataType": "string"
+              }
+            ],
+            "partitions": [
+              {
+                "name": "ODGS_Metrics_Partition",
+                "mode": "import",
+                "source": {
+                  "type": "m",
+                  "expression": "let\n    Source = #table(type table [Dummy = text], {{ \"Metrics Container\" }})\nin\n    Source"
+                }
+              }
+            ],
+            "measures": [
+              {
+                "name": "Net Profit Margin",
+                "expression": "DIVIDE([Net Income], [Revenue) * 100])",
+                "description": "Represents the percentage of revenue that remains after all operating expenses, interest, and taxes have been deducted.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "101"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Return on Invested Capital (ROIC)",
+                "expression": "DIVIDE([Net Operating Profit After Tax], [Total Debt + Total Equity])",
+                "description": "Measures how well a company is using its money to generate returns.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "102"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Free Cash Flow (FCF)",
+                "expression": "[Operating Cash Flow]-[Capital Expenditures]",
+                "description": "The cash a company produces through its operations after subtracting capital expenditures.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "103"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "EBITDA Margin",
+                "expression": "DIVIDE([EBITDA], [Revenue) * 100])",
+                "description": "Earnings before interest, taxes, depreciation, and amortization as a percentage of revenue.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "104"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Gross Profit Margin",
+                "expression": "DIVIDE([Revenue - Cost of Goods Sold], [Revenue) * 100])",
+                "description": "The percentage of revenue remaining after direct costs of goods sold are deducted.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "105"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Working Capital Ratio",
+                "expression": "DIVIDE([Current Assets], [Current Liabilities])",
+                "description": "Measures a company's ability to meet short-term obligations with current assets.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "106"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Employee Turnover Rate",
+                "expression": "DIVIDE([Number of Employees Who Left], [Average Number of Employees) * 100])",
+                "description": "The percentage of employees who leave a company within a certain period.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "501"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Lost Time Injury Frequency Rate (LTIFR)",
+                "expression": "DIVIDE([Number of Lost-Time Injuries], [Total Hours Worked) * 1,000,000])",
+                "description": "The number of lost-time injuries occurring in a workplace per 1,000,000 hours worked.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "502"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Training Hours Per Employee",
+                "expression": "DIVIDE([Total Training Hours], [Number of Employees])",
+                "description": "Average number of hours spent on training and development per employee per year.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "503"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Absenteeism Rate",
+                "expression": "DIVIDE([Total Days Absent], [Total Available Work Days) * 100])",
+                "description": "The percentage of scheduled work time lost due to employee absences.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "504"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "IT System Uptime",
+                "expression": "DIVIDE([Total Time - Downtime], [Total Time) * 100])",
+                "description": "The percentage of time a critical IT system (e.g., ERP, ERP, SCADA) is operational and available.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "601"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Mean Time To Repair (MTTR)",
+                "expression": "DIVIDE([Total Repair Time], [Number of Repairs])",
+                "description": "Average time required to repair a failed system or component and restore it to operational status.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "602"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Cybersecurity Incident Rate",
+                "expression": "DIVIDE([Number of Security Incidents], [Time Period])",
+                "description": "The number of confirmed security incidents per period.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "603"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Warehouse Dwell Time (Import)",
+                "expression": "[Average]([Gate]-[Out Timestamp]-[Discharge Timestamp])",
+                "description": "The average time an import container resides on a marine terminal, from vessel discharge to truck gate-out.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "1001"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Dock Moves Per Hour (BMPH)",
+                "expression": "DIVIDE([Total Package Moves], [Transport Unit Departure Time - Transport Unit Arrival Time])",
+                "description": "The total number of container moves (lifts on/off a vessel) divided by the number of hours the vessel is at berth.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "1002"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Truck Turnaround Time",
+                "expression": "[Average]([Gate]-[Out Timestamp]-[Gate]-[In Timestamp])",
+                "description": "The average time it takes for a truck to enter the terminal, complete its transaction (pickup/drop-off), and exit.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "1003"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "On-Time Performance (Transport Unit/Flight/Truck)",
+                "expression": "DIVIDE([Number of On-Time Events], [Total Number of Events) * 100])",
+                "description": "The percentage of arrivals or departures that occur within a predefined time window of the schedule.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "1004"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Cargo Damage Rate",
+                "expression": "DIVIDE([Number of Damaged Units], [Total Units Handled) * 100])",
+                "description": "The percentage of cargo units that sustain damage during handling or storage.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "1005"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Transport Unit Turnaround Time",
+                "expression": "[Transport Unit Departure Time]-[Dock Arrival Time]",
+                "description": "Total time from when a vessel arrives at berth to when it departs.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "1006"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Fleet Utilization Rate",
+                "expression": "DIVIDE([Total Operating Hours], [Total Available Hours) * 100])",
+                "description": "The percentage of time vehicles in a fleet are actively being used for revenue-generating activities.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "1007"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Fuel Efficiency (MPG or L/100km)",
+                "expression": "DIVIDE([Total Distance Traveled], [Total Fuel Consumed])",
+                "description": "Average fuel consumption efficiency across fleet operations.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "1008"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Overall Equipment Effectiveness (OEE)",
+                "expression": "[Availability Rate]*[Performance Rate]*[Quality Rate]",
+                "description": "A composite metric that measures manufacturing productivity by combining equipment availability, performance, and quality.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "2001"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Manufacturing Cycle Time",
+                "expression": "[Process Time]+[Move Time]+[Inspection Time]+[Queue Time]",
+                "description": "The total time required to convert raw materials into finished goods.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "2002"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "First Pass Yield (FPY)",
+                "expression": "DIVIDE([Units Completed without Rework], [Total Units Started) * 100])",
+                "description": "The percentage of products manufactured correctly to specifications the first time, without rework or scrap.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "2003"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Scrap Rate",
+                "expression": "DIVIDE([Weight of Scrap], [Total Weight of Materials Used) * 100])",
+                "description": "The percentage of raw materials or work-in-process that becomes waste during production.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "2004"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Production Capacity Utilization",
+                "expression": "DIVIDE([Actual Output], [Maximum Possible Output) * 100])",
+                "description": "The percentage of maximum production capacity currently being utilized.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "2005"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Downtime Percentage",
+                "expression": "DIVIDE([Downtime Hours], [Scheduled Operating Hours) * 100])",
+                "description": "The percentage of scheduled production time lost due to equipment failures or maintenance.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "2006"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Changeover Time",
+                "expression": "[End of Last Good Part]([Product A])[to First Good Part]([Product B])",
+                "description": "Time required to switch production line from one product to another.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "2007"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Maintenance Cost as % of Asset Value",
+                "expression": "DIVIDE([Annual Maintenance Costs], [Total Asset Replacement Value) * 100])",
+                "description": "Annual maintenance and repair costs expressed as percentage of total asset replacement value.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "2008"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Asset Uptime",
+                "expression": "DIVIDE([Scheduled Operating Time - Unscheduled Downtime], [Scheduled Operating Time) * 100])",
+                "description": "The percentage of time a critical piece of equipment is available and running as intended.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "3001"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Production Volume (Barrels/Day, MWh)",
+                "expression": "[Sum of Production over Period]",
+                "description": "The total amount of product produced over a specific period.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "3002"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Mean Time Between Failures (MTBF)",
+                "expression": "DIVIDE([Total Operational Time], [Number of Failures])",
+                "description": "The predicted elapsed time between inherent failures of a mechanical or electronic system during normal operation.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "3003"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Energy Intensity",
+                "expression": "DIVIDE([Total Energy Consumed (kWh], [Total Units Produced])",
+                "description": "Energy consumed per unit of production output.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "3004"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Generation Reliability",
+                "expression": "DIVIDE([Available Hours - Forced Outage Hours], [Available Hours) * 100])",
+                "description": "The percentage of time a power generation asset is available to produce when needed.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "3005"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Emissions Rate (CO2/Unit)",
+                "expression": "DIVIDE([Total CO2 Emissions (tons], [Total Production (units])",
+                "description": "Amount of greenhouse gas emissions per unit of production.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "3006"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Water Usage Efficiency",
+                "expression": "DIVIDE([Total Water Consumed (gallons], [Total Units Produced])",
+                "description": "Volume of water consumed per unit of production output.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "3007"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Inventory Turnover",
+                "expression": "DIVIDE([Cost of Goods Sold], [Average Inventory])",
+                "description": "Measures how many times a company's inventory is sold and replaced over a period.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "4001"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Perfect Order Rate",
+                "expression": "DIVIDE([Number of Perfect Orders], [Total Orders) * 100])",
+                "description": "The percentage of orders delivered to the right place, with the right product, at the right time, in the right condition, with the right paperwork.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "4002"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Days of Supply (DOS)",
+                "expression": "[Average Inventory]/([Cost of Goods Sold]/[Number of Days in Period])",
+                "description": "The number of days a company could operate on its current inventory.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "4003"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Order Fill Rate",
+                "expression": "DIVIDE([Orders Filled Completely], [Total Orders) * 100])",
+                "description": "Percentage of customer orders fulfilled completely from available inventory.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "4004"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Stockout Rate",
+                "expression": "DIVIDE([Days Out of Stock], [Total Days) * 100])",
+                "description": "Percentage of time a product is out of stock when customers want to purchase it.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "4005"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Cash-to-Cash Cycle Time",
+                "expression": "[Days Inventory Outstanding]+[Days Sales Outstanding]-[Days Payable Outstanding]",
+                "description": "The number of days between paying for raw materials and receiving payment from customers.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "4006"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Supplier On-Time Delivery",
+                "expression": "DIVIDE([On-Time Deliveries], [Total Deliveries) * 100])",
+                "description": "Percentage of supplier deliveries that arrive within the agreed time window.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "4007"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Forecast Accuracy",
+                "expression": "DIVIDE([100 - (ABS(Forecast - Actual], [Actual) * 100])",
+                "description": "Measures how closely demand forecasts match actual sales or consumption.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "4008"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Ore Recovery Rate",
+                "expression": "DIVIDE([Recovered Mineral Weight], [Total Mineral in Ore) * 100])",
+                "description": "Percentage of valuable mineral recovered from ore during processing.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "5001"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Tons Per Operating Hour",
+                "expression": "DIVIDE([Total Tons Processed], [Total Operating Hours])",
+                "description": "Average tonnage of material extracted or processed per hour of operation.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "5002"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Haul Truck Cycle Time",
+                "expression": "[Average]([Return to Load Point Time]-[Departure from Load Point Time])",
+                "description": "Average time for a haul truck to complete one full cycle (load, haul, dump, return).",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "5003"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Project Schedule Performance Index (SPI)",
+                "expression": "DIVIDE([Earned Value], [Planned Value])",
+                "description": "Measures project schedule efficiency against planned timeline.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "6001"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Construction Cost Performance Index (CPI)",
+                "expression": "DIVIDE([Earned Value], [Actual Cost])",
+                "description": "Measures project cost efficiency against budget.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "6002"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Rework Rate",
+                "expression": "DIVIDE([Hours Spent on Rework], [Total Project Hours) * 100])",
+                "description": "Percentage of work that must be redone due to defects or errors.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "6003"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Crop Yield Per Acre",
+                "expression": "[Total Harvest]([bushels]/[tons])/[Total Acres Planted]",
+                "description": "Amount of crop produced per unit of cultivated land area.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "7001"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Feed Conversion Ratio",
+                "expression": "DIVIDE([Total Feed Consumed (kg], [Total Weight Gained (kg])",
+                "description": "Amount of feed required to produce one unit of livestock product.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "7002"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Customer Satisfaction Score (CSAT)",
+                "expression": "DIVIDE([Number of Satisfied Customers], [Total Survey Responses) * 100])",
+                "description": "Percentage of customers rating their experience as satisfactory or better.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "8001"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Net Promoter Score (NPS)",
+                "expression": "[% Promoters](9-10)-[% Detractors](0-6)",
+                "description": "Measures customer loyalty by likelihood to recommend to others.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "8002"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "First Call Resolution Rate",
+                "expression": "DIVIDE([Issues Resolved on First Contact], [Total Issues) * 100])",
+                "description": "Percentage of customer issues resolved during the first contact.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "8003"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Regulatory Compliance Rate",
+                "expression": "DIVIDE([Passed Audits], [Total Audits) * 100])",
+                "description": "Percentage of required compliance checks or audits passed without findings.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "9001"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Audit Findings Per Period",
+                "expression": "[Count of Findings Requiring Action]",
+                "description": "Number of compliance or quality audit findings requiring corrective action.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "9002"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Carbon Footprint Per Product",
+                "expression": "DIVIDE([Total CO2 Equivalent Emissions], [Total Units Produced])",
+                "description": "Total greenhouse gas emissions attributable to producing one unit of product.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "10001"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Waste Diversion Rate",
+                "expression": "DIVIDE([Waste Diverted], [Total Waste Generated) * 100])",
+                "description": "Percentage of total waste diverted from landfill through recycling, composting, or reuse.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "10002"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Renewable Energy Percentage",
+                "expression": "DIVIDE([Renewable Energy Consumed], [Total Energy Consumed) * 100])",
+                "description": "Percentage of total energy consumption from renewable sources.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "10003"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Warranty Claim Rate",
+                "expression": "DIVIDE([Number of Warranty Claims], [Total Products Sold) * 100])",
+                "description": "Percentage of products sold that result in warranty claims within coverage period.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "11001"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Customer Retention Rate",
+                "expression": "DIVIDE([Customers at End - New Customers], [Customers at Start) * 100])",
+                "description": "Percentage of customers who continue doing business over a defined period.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "11002"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Labor Productivity",
+                "expression": "[Total Output]([units]/[revenue])/[Total Labor Hours]",
+                "description": "Output produced per labor hour worked.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "12001"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Schedule Adherence",
+                "expression": "DIVIDE([Tasks Completed On Schedule], [Total Planned Tasks) * 100])",
+                "description": "Percentage of planned tasks or shifts completed on schedule.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "12002"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Equipment Reliability Factor",
+                "expression": "DIVIDE([Actual Operating Time], [Planned Operating Time) * 100])",
+                "description": "Ratio of actual productive time to planned production time for equipment.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "13001"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Quality Defect Rate",
+                "expression": "DIVIDE([Number of Defects], [Total Units Inspected) * 100])",
+                "description": "Number of defects identified per units produced or inspected.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "14001"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Process Capability Index (Cpk)",
+                "expression": "[MIN](([USL]-[Mean])/[3\u03c3,]([Mean]-[LSL])/[3\u03c3])",
+                "description": "Statistical measure of how well a process can produce output within specification limits.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "15001"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Mean Time To Detect (MTTD)",
+                "expression": "DIVIDE([Sum of Detection Times], [Number of Incidents])",
+                "description": "Average time between when an incident occurs and when it is detected.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "16001"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Asset Utilization Rate",
+                "expression": "DIVIDE([Productive Time], [Total Available Time) * 100])",
+                "description": "Percentage of time assets are actively used for productive purposes.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "17001"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Revenue Per Employee",
+                "expression": "DIVIDE([Total Revenue], [Total Number of Employees])",
+                "description": "Total revenue generated divided by number of employees.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "18001"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Backlog-to-Revenue Ratio",
+                "expression": "DIVIDE([Total Project Backlog], [Annual Revenue])",
+                "description": "Value of contracted but not yet executed work compared to annual revenue.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "19001"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              },
+              {
+                "name": "Pipeline Integrity Index",
+                "expression": "[Weighted Average of]([Inspection Results]+[Corrosion Rate]+[Leak Incidents])",
+                "description": "Composite score measuring the condition and reliability of pipeline infrastructure.",
+                "formatString": "#,0.00",
+                "annotations": [
+                  {
+                    "name": "ODGS_ID",
+                    "value": "20001"
+                  },
+                  {
+                    "name": "Owner",
+                    "value": "TBD"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "DQ_Dimensions",
+            "columns": [
+              {
+                "name": "id",
+                "dataType": "string"
+              },
+              {
+                "name": "damaId",
+                "dataType": "string"
+              },
+              {
+                "name": "name",
+                "dataType": "string"
+              },
+              {
+                "name": "category",
+                "dataType": "string"
+              },
+              {
+                "name": "definition",
+                "dataType": "string"
+              },
+              {
+                "name": "unitOfMeasure",
+                "dataType": "string"
+              },
+              {
+                "name": "icon",
+                "dataType": "string"
+              }
+            ],
+            "partitions": [
+              {
+                "name": "DQ_Dimensions_Partition",
+                "mode": "import",
+                "source": {
+                  "type": "m",
+                  "expression": "let\n    Source = #table(\n        type table [id = any, damaId = any, name = any, category = any, definition = any, unitOfMeasure = any, icon = any],\n        {\n            {1, 6, \"Ability to represent null values\", \"Format\", \"The degree to which a format allows null values in an attribute.\", \"Yes/No\", \"bi-file-earmark-code\"}, {2, 1, \"Access security\", \"Datasets\", \"The degree to which access to datasets is restricted.\", \"Grade\", \"bi-shield-lock\"}, {3, 2, \"Accessibility\", \"Data\", \"The ease with which data can be consulted or retrieved.\", \"Grade\", \"bi-key\"}, {4, 3, \"Accuracy\", \"Data values\", \"The degree of closeness of data values to real values.\", \"%\", \"bi-bullseye\"}, {5, 4, \"Appropriateness\", \"Format\", \"The degree to which the format is suitable for use.\", \"%\", \"bi-file-earmark-code\"}, {6, 5, \"Availability\", \"Data\", \"The degree to which data can be consulted or retrieved by data consumers or a process.\", \"Grade\", \"bi-key\"}, {7, 7, \"Clarity\", \"Metadata\", \"The ease with which data consumers can understand the metadata.\", \"Grade\", \"bi-info-circle\"}, {8, 8, \"Coherence\", \"Composition of datasets\", \"The degree to which datasets can be combined.\", \"Story\", \"bi-puzzle\"}, {9, 9, \"Comparability of populations\", \"Data values\", \"The degree to which data values representing two populations have the same definition and are measured in the same way.\", \"Grade\", \"bi-people\"}, {10, 10, \"Comparability over time\", \"Data values\", \"The degree to which data values over time have the same definition and are measured in the same way.\", \"Grade\", \"bi-graph-up\"}, {11, 11, \"Completeness (Attributes)\", \"Attributes\", \"The degree to which all required attributes in the dataset are present.\", \"%\", \"bi-check2-square\"}, {12, 12, \"Completeness (Records)\", \"Records\", \"The degree to which all required records in the dataset are present.\", \"%\", \"bi-check2-square\"}, {13, 13, \"Completeness (Data files)\", \"Data files\", \"The degree to which all required data files are present.\", \"%, Number\", \"bi-check2-square\"}, {14, 14, \"Completeness (Data values)\", \"Data values\", \"The degree to which all required data values are present.\", \"%\", \"bi-check2-square\"}, {15, 15, \"Completeness (Data values of an attribute)\", \"Data values of an attribute\", \"The degree to which all required data values of an attribute are present.\", \"%\", \"bi-check2-square\"}, {16, 16, \"Completeness (Metadata)\", \"Metadata\", \"The degree to which the metadata are fully described.\", \"%\", \"bi-check2-square\"}, {17, 17, \"Compliance with laws, regulations, or standards (Data)\", \"Data\", \"The degree to which data is in accordance with laws, regulations, or standards.\", \"Story\", \"bi-shield-check\"}, {18, 18, \"Compliance with laws, regulations, or standards (Composition of datasets)\", \"Composition of datasets\", \"The degree to which the composition of datasets is in accordance with laws, regulations, or standards.\", \"Story\", \"bi-shield-check\"}, {19, 19, \"Confidentiality\", \"Data\", \"The degree to which disclosure of data should be restricted to authorized data consumers.\", \"Grade\", \"bi-shield-lock\"}, {20, 20, \"Consistency (Data values)\", \"Data values\", \"The degree to which data values of two sets of attributes comply with a rule.\", \"%\", \"bi-link-45deg\"}, {21, 21, \"Consistency (Temporal)\", \"Data values of a set of attributes of a dataset at different points in time (temporal consistency)\", \"The degree to which the data values of a set of attributes of a dataset at different points in time comply with a rule.\", \"%\", \"bi-link-45deg\"}, {22, 22, \"Consistency (Across Datasets)\", \"Data values of two sets of attributes between datasets (across datasets)\", \"The degree to which data values of two sets of attributes between datasets comply with a rule.\", \"%\", \"bi-link-45deg\"}, {23, 23, \"Consistency (Cross-Record)\", \"Data values of two sets of attributes between records (cross record)\", \"The degree to which data values of two sets of attributes between records comply with a rule.\", \"%\", \"bi-link-45deg\"}, {24, 24, \"Consistency (Record-Level)\", \"Data values of two sets of attributes within a record (record level)\", \"The degree to which data values of two sets of attributes within a record comply with a rule.\", \"%\", \"bi-link-45deg\"}, {25, 25, \"Credibility\", \"Data values\", \"The degree to which data values are regarded as true and believable by data consumers.\", \"Grade\", \"bi-person-check\"}, {26, 26, \"Currency\", \"Data values\", \"The degree to which data values are up to date.\", \"%\", \"bi-clock-history\"}, {27, 27, \"Equivalence\", \"Attributes\", \"The degree to which attributes stored in multiple datasets are conceptually equal.\", \"%\", \"bi-arrow-left-right\"}, {28, 28, \"Granularity (Attributes)\", \"Attributes\", \"The degree to which a single characteristic is subdivided in attributes.\", \"Story\", \"bi-grid-1x2\"}, {29, 29, \"Granularity (Records)\", \"Records\", \"The degree to which objects are aggregated to records.\", \"Story\", \"bi-grid-1x2\"}, {30, 30, \"Integrity\", \"Data values\", \"The degree of absence of data value loss or corruption.\", \"%\", \"bi-gem\"}, {31, 31, \"Interpretability\", \"Data\", \"The degree to which data are in an appropriate language and units of measure.\", \"%\", \"bi-info-circle\"}, {32, 32, \"Latency\", \"Data\", \"The period of time between the point when the data is created and the point when it is available for use.\", \"Duration\", \"bi-clock-history\"}, {33, 33, \"Linkability\", \"Data files\", \"The degree to which records of one data file can be correctly coupled with records of another data file.\", \"%\", \"bi-link\"}, {34, 34, \"Metadata compliance\", \"Data values\", \"The degree to which the data values are in accordance with their definition, format specification and value domain.\", \"%\", \"bi-shield-check\"}, {35, 35, \"Naturalness\", \"Composition of datasets\", \"The degree to which the composition of datasets is aligned with the real-world objects that they represent.\", \"Grade\", \"bi-tree\"}, {36, 36, \"Objectivity\", \"Data values\", \"The degree to which the data values are created in an unbiased manner.\", \"Grade\", \"bi-person\"}, {37, 37, \"Obtainability\", \"Data\", \"The degree to which the data can be acquired.\", \"Grade\", \"bi-key\"}, {38, 38, \"Plausibility\", \"Data values\", \"The degree to which data values match knowledge of the real world.\", \"Story\", \"bi-lightbulb\"}, {39, 39, \"Portability (Data)\", \"Data\", \"The degree to which data can be installed, replaced or moved from one system to another while preserving the existing quality.\", \"Story\", \"bi-file-earmark-zip\"}, {40, 40, \"Portability (Format)\", \"Format\", \"The degree to which a format can be applied in a wide range of situations.\", \"Story\", \"bi-file-earmark-code\"}, {41, 41, \"Precision (1 - Recording Accuracy)\", \"Data values\", \"The degree of accuracy with which data values are recorded or classified.\", \"Depends on data or metadata\", \"bi-rulers\"}, {42, 42, \"Precision (2 - Statistical Spread)\", \"Data values\", \"The degree to which the error in data values spreads around zero (in statistics).\", \"%\", \"bi-graph-down\"}, {43, 43, \"Punctuality\", \"Dataset availability\", \"The degree to which the period between the actual and target point of time of availability of a dataset is appropriate.\", \"Duration\", \"bi-clock-fill\"}, {44, 44, \"Reasonability\", \"Data pattern\", \"The degree to which a data pattern meets expectations.\", \"Grade\", \"bi-graph-up-arrow\"}, {45, 45, \"Recoverability\", \"Datasets\", \"The degree to which datasets are preserved in the event of incident.\", \"Story\", \"bi-save\"}, {46, 46, \"Redundancy\", \"Data\", \"The degree to which logically identical data are stored more than once.\", \"Number\", \"bi-files\"}, {47, 47, \"Referential integrity\", \"Data files\", \"The degree to which data values of the primary key of one data file and data values of the foreign key of another data file are equal.\", \"%\", \"bi-link\"}, {48, 48, \"Relevance\", \"Composition of datasets\", \"The degree to which the composition of datasets meets the needs of the data consumer.\", \"Story\", \"bi-filter-circle\"}, {49, 49, \"Reliability\", \"Initial data value\", \"The closeness of the initial data value to the subsequent data value.\", \"%\", \"bi-arrow-repeat\"}, {50, 50, \"Reproducibility\", \"Dataset\", \"The degree to which a dataset can be recreated with the same data values.\", \"Story\", \"bi-arrow-clockwise\"}, {51, 51, \"Reputation\", \"Data\", \"The degree to which data are trusted or highly regarded in terms of their source or content.\", \"Grade\", \"bi-patch-check-fill\"}, {52, 52, \"Retention period\", \"Datasets\", \"The period that datasets are available until they can or must be deleted.\", \"Duration\", \"bi-calendar-x\"}, {53, 53, \"Timeliness\", \"Dataset availability\", \"The degree to which the period between the time of creation of the real value and the time that the dataset is available is appropriate.\", \"Duration\", \"bi-alarm-fill\"}, {54, 54, \"Traceability\", \"Data\", \"The degree to which data lineage is available.\", \"Story\", \"bi-signpost-split\"}, {55, 55, \"Uniqueness (Objects)\", \"Objects\", \"The degree to which objects (of the real world) occur only once as a record in a data file.\", \"%\", \"bi-person-badge\"}, {56, 56, \"Uniqueness (Records)\", \"Records\", \"The degree to which records occur only once in a data file.\", \"%\", \"bi-exclude\"}, {57, 57, \"Validity\", \"Data values\", \"The degree to which data values comply with rules.\", \"%\", \"bi-shield-check\"}, {58, 58, \"Value\", \"Data\", \"The degree to which data provide advantages from their use.\", \"Grade\", \"bi-currency-dollar\"}, {59, 59, \"Variety\", \"Data\", \"The degree to which data are available from different data sources.\", \"Story\", \"bi-diagram-3\"}, {60, 60, \"Volatility\", \"Data values\", \"The degree to which data values change over time.\", \"%\", \"bi-lightning-charge-fill\"}\n        }\n    )\nin\n    Source"
+                }
+              }
+            ]
+          },
+          {
+            "name": "Root_Cause_Factors",
+            "columns": [
+              {
+                "name": "factorId",
+                "dataType": "string"
+              },
+              {
+                "name": "factorName",
+                "dataType": "string"
+              },
+              {
+                "name": "description",
+                "dataType": "string"
+              }
+            ],
+            "partitions": [
+              {
+                "name": "Root_Cause_Factors_Partition",
+                "mode": "import",
+                "source": {
+                  "type": "m",
+                  "expression": "let\n    Source = #table(\n        type table [factorId = any, factorName = any, description = any],\n        {\n            {\"ENV_001\", \"Lack of Clear System of Record (SoR)\", \"Critical data elements (e.g., customer information, product specifications, financial master data) exist in multiple systems or locations without a formally designated, single authoritative source. This leads to conflicting versions of the truth across the organization.\"}, {\"ENV_002\", \"Prevalence of 'Excel Hell' / Shadow IT\", \"Critical business processes, data management, analysis, and reporting rely heavily on uncontrolled spreadsheets (Excel, Google Sheets) or unmanaged departmental applications (e.g., Access databases, niche cloud tools) outside of central IT governance.\"}, {\"ENV_003\", \"Absence or Inconsistent Application of Data Standards\", \"Lack of agreed-upon definitions, formats, value domains, and business rules for key data elements across the organization. If standards exist, they are not consistently enforced or adopted.\"}, {\"ENV_004\", \"Data Silos Between Departments/Systems\", \"Data is stored and managed within isolated departmental systems or applications that do not effectively integrate or share information with other parts of the organization.\"}, {\"ENV_005\", \"Immature or Informal Data Governance\", \"Lack of clearly defined roles, responsibilities, policies, standards, and processes for managing the organization's data assets. Data quality is often an afterthought or managed reactively.\"}, {\"ENV_006\", \"Reliance on Legacy Systems\", \"Core business operations depend on older technology systems that may be difficult to integrate with modern applications, lack flexibility, have poor data structures, or are costly to maintain.\"}, {\"ENV_007\", \"High Degree of Manual Data Processes\", \"Significant reliance on human intervention for data entry, updates, validation, reconciliation, and movement between systems, rather than automated processes.\"}, {\"ENV_008\", \"Lack of Data-Aware Culture / Low Data Literacy\", \"A general lack of understanding across the organization about the importance of data quality, how data is created and used, and the impact of poor data. Employees may not have the skills to interpret or use data effectively.\"}\n        }\n    )\nin\n    Source"
+                }
+              }
+            ]
+          },
+          {
+            "name": "Business_Processes",
+            "columns": [
+              {
+                "name": "lifecycleId",
+                "dataType": "string"
+              },
+              {
+                "name": "lifecycleName",
+                "dataType": "string"
+              },
+              {
+                "name": "description",
+                "dataType": "string"
+              }
+            ],
+            "partitions": [
+              {
+                "name": "Business_Processes_Partition",
+                "mode": "import",
+                "source": {
+                  "type": "m",
+                  "expression": "let\n    Source = #table(\n        type table [lifecycleId = any, lifecycleName = any, description = any],\n        {\n            {\"LC_O2C\", \"Order to Cash (O2C)\", \"The end-to-end set of business processes for receiving and processing customer orders for goods or services and collecting payment.\"}, {\"LC_P2P\", \"Procure to Pay (P2P)\", \"The end-to-end process of obtaining and managing the raw materials, goods, and services needed to manufacture a product or operate a business, through to payment.\"}, {\"LC_H2R\", \"Hire to Retire (H2R) / Employee Lifecycle\", \"The complete journey of an employee within an organization, from recruitment and onboarding through their tenure, development, and eventual separation.\"}, {\"LC_R2R\", \"Record to Report (R2R)\", \"The process of collecting, processing, and presenting financial data to provide internal and external stakeholders with accurate financial statements and reports.\"}, {\"LC_I2M\", \"Idea to Market / New Product Development (NPD)\", \"The complete process of conceiving, designing, developing, testing, and launching new products or services.\"}, {\"LC_CRM\", \"Customer Relationship Management (CRM) Lifecycle\", \"The overall process of managing interactions and relationships with current and potential customers to drive sales, improve customer service, and increase retention.\"}, {\"LC_OPS\", \"Operations & Execution Management\", \"The core day-to-day processes involved in producing goods or delivering services, managing resources, and ensuring operational performance.\"}\n        }\n    )\nin\n    Source"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

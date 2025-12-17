@@ -1,0 +1,132 @@
+{
+    "meta": {
+        "project_name": "ODGS_Physical_Layer",
+        "version": "1.0.0",
+        "description": "The Structural Ontology layer mapping abstract ODGS metrics to physical warehouse tables. Used for AI Grounding and SQL generation.",
+        "last_updated": "2025-12-05T09:00:00Z"
+    },
+    "mappings": [
+        {
+            "map_id": "PHY_FIN_001",
+            "concept_urn": "urn:odgs:metric:101",
+            "concept_name": "Net Profit Margin",
+            "description": "Financial logic mapped to the core General Ledger summary table.",
+            "vector_embedding_hint": "Use for questions regarding profitability, bottom line, or financial efficiency.",
+            "bindings": [
+                {
+                    "platform": "snowflake",
+                    "connection_id": "SNOW_PROD_FIN",
+                    "database": "FINANCE_DW_PROD",
+                    "schema": "GOLD_LAYER",
+                    "table": "GL_MONTHLY_SUMMARY",
+                    "column_mapping": {
+                        "Net Income": "NET_INCOME_USD",
+                        "Revenue": "TOTAL_REVENUE_USD"
+                    },
+                    "granularity": "MONTHLY",
+                    "filters": "WHERE IS_ACTIVE_RECORD = TRUE AND FISCAL_YEAR >= 2020",
+                    "privacy_level": "CONFIDENTIAL",
+                    "freshness_sla": "24h"
+                }
+            ]
+        },
+        {
+            "map_id": "PHY_OPS_001",
+            "concept_urn": "urn:odgs:metric:1001",
+            "concept_name": "Warehouse Dwell Time (Import)",
+            "description": "Logistics dwell time logic mapped to Terminal Operating System (TOS) event logs.",
+            "vector_embedding_hint": "Use for queries about port congestion, container aging, or terminal efficiency.",
+            "bindings": [
+                {
+                    "platform": "databricks",
+                    "connection_id": "DBX_LAKE_LOGISTICS",
+                    "catalog": "supply_chain_gold",
+                    "schema": "terminal_ops",
+                    "table": "container_events_fact",
+                    "column_mapping": {
+                        "Gate-Out Timestamp": "gate_out_ts",
+                        "Discharge Timestamp": "vessel_discharge_ts",
+                        "Container ID": "equipment_id"
+                    },
+                    "granularity": "TRANSACTIONAL",
+                    "filters": "WHERE move_type = 'IMPORT' AND gate_out_ts IS NOT NULL",
+                    "privacy_level": "INTERNAL",
+                    "freshness_sla": "1h"
+                }
+            ]
+        },
+        {
+            "map_id": "PHY_HSE_001",
+            "concept_urn": "urn:odgs:metric:502",
+            "concept_name": "Lost Time Injury Frequency Rate (LTIFR)",
+            "description": "Safety incident metrics mapped to the EHS system of record.",
+            "vector_embedding_hint": "Use for safety audits, risk assessments, and compliance reporting.",
+            "bindings": [
+                {
+                    "platform": "postgresql",
+                    "connection_id": "POSTGRES_EHS_APP",
+                    "database": "ehs_core",
+                    "schema": "reporting",
+                    "table": "incident_log",
+                    "column_mapping": {
+                        "Number of Lost-Time Injuries": "count(incident_id) WHERE is_lti = true",
+                        "Total Hours Worked": "sum(site_total_hours)"
+                    },
+                    "granularity": "MONTHLY",
+                    "filters": "WHERE incident_status = 'CLOSED'",
+                    "privacy_level": "RESTRICTED",
+                    "freshness_sla": "Weekly"
+                }
+            ]
+        },
+        {
+            "map_id": "PHY_CX_001",
+            "concept_urn": "urn:odgs:metric:8002",
+            "concept_name": "Net Promoter Score (NPS)",
+            "description": "Customer sentiment metrics mapped to the Voice of Customer (VoC) analytics view.",
+            "vector_embedding_hint": "Use for customer loyalty, satisfaction, or brand reputation queries.",
+            "bindings": [
+                {
+                    "platform": "snowflake",
+                    "connection_id": "SNOW_PROD_MKT",
+                    "database": "MARKETING_DW",
+                    "schema": "CX_ANALYTICS",
+                    "table": "NPS_SURVEY_RESPONSES",
+                    "column_mapping": {
+                        "% Promoters": "share_of_promoters",
+                        "% Detractors": "share_of_detractors"
+                    },
+                    "granularity": "DAILY",
+                    "filters": "WHERE SURVEY_SOURCE IN ('EMAIL', 'WEB') AND RESPONSE_VALID = TRUE",
+                    "privacy_level": "PII_MASKED",
+                    "freshness_sla": "24h"
+                }
+            ]
+        },
+        {
+            "map_id": "PHY_MFG_001",
+            "concept_urn": "urn:odgs:metric:2001",
+            "concept_name": "Overall Equipment Effectiveness (OEE)",
+            "description": "Manufacturing performance mapped to SCADA historian aggregation tables.",
+            "vector_embedding_hint": "Use for plant efficiency, machine downtime, or production quality queries.",
+            "bindings": [
+                {
+                    "platform": "azure_synapse",
+                    "connection_id": "AZ_MFG_DATA",
+                    "database": "SMART_FACTORY",
+                    "schema": "KPI_LAYER",
+                    "table": "MACHINE_PERFORMANCE_DAILY",
+                    "column_mapping": {
+                        "Availability Rate": "availability_pct",
+                        "Performance Rate": "performance_pct",
+                        "Quality Rate": "quality_pct"
+                    },
+                    "granularity": "SHIFT_BASED",
+                    "filters": "WHERE asset_type = 'CRITICAL' AND shift_complete = 1",
+                    "privacy_level": "INTERNAL",
+                    "freshness_sla": "15m"
+                }
+            ]
+        }
+    ]
+}
