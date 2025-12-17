@@ -1,0 +1,304 @@
+"""
+FortiOS CMDB - Email Filter MIME Header
+
+Configure AntiSpam MIME header.
+
+API Endpoints:
+    GET    /api/v2/cmdb/emailfilter/mheader       - List all MIME header entries
+    GET    /api/v2/cmdb/emailfilter/mheader/{id}  - Get specific MIME header entry
+    POST   /api/v2/cmdb/emailfilter/mheader       - Create MIME header entry
+    PUT    /api/v2/cmdb/emailfilter/mheader/{id}  - Update MIME header entry
+    DELETE /api/v2/cmdb/emailfilter/mheader/{id}  - Delete MIME header entry
+"""
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Optional, Union
+
+if TYPE_CHECKING:
+    from ....client import FortiOS
+
+
+class Mheader:
+    """Email filter MIME header endpoint"""
+
+    def __init__(self, client: 'FortiOS') -> None:
+        """
+        Initialize Mheader endpoint.
+
+        Args:
+            client: FortiOS API client instance
+        """
+        self._client = client
+
+    def get(
+        self,
+        entry_id: Optional[int] = None,
+        # Query parameters
+        attr: Optional[str] = None,
+        count: Optional[int] = None,
+        skip_to_datasource: Optional[int] = None,
+        acs: Optional[bool] = None,
+        search: Optional[str] = None,
+        scope: Optional[str] = None,
+        datasource: Optional[bool] = None,
+        with_meta: Optional[bool] = None,
+        skip: Optional[bool] = None,
+        format: Optional[str] = None,
+        action: Optional[str] = None,
+        vdom: Optional[Union[str, bool]] = None,
+        **kwargs: Any
+    ) -> dict[str, Any]:
+        """
+        Get email filter MIME header entry(ies).
+
+        Args:
+            entry_id (int, optional): Entry ID to retrieve. If None, retrieves all entries
+            attr (str, optional): Attribute name that references other table
+            count (int, optional): Maximum number of entries to return
+            skip_to_datasource (int, optional): Skip to provided table's Nth entry
+            acs (bool, optional): If true, returned results are in ascending order
+            search (str, optional): Filter objects by search value
+            scope (str, optional): Scope level - 'global', 'vdom', or 'both'
+            datasource (bool, optional): Include datasource information
+            with_meta (bool, optional): Include meta information
+            skip (bool, optional): Enable CLI skip operator
+            format (str, optional): List of property names to include, separated by |
+            action (str, optional): Special action - 'default', 'schema', 'revision'
+            vdom (str, optional): Virtual Domain name
+            **kwargs: Additional query parameters
+
+        Returns:
+            dict: API response containing MIME header entry data
+
+        Examples:
+            >>> # List all MIME header entries
+            >>> entries = fgt.cmdb.emailfilter.mheader.list()
+
+            >>> # Get a specific entry by ID
+            >>> entry = fgt.cmdb.emailfilter.mheader.get(1)
+
+            >>> # Get with filtering
+            >>> entries = fgt.cmdb.emailfilter.mheader.get(
+            ...     format='id|name|comment',
+            ...     count=10
+            ... )
+        """
+        params = {}
+        param_map = {
+            'attr': attr,
+            'count': count,
+            'skip_to_datasource': skip_to_datasource,
+            'acs': acs,
+            'search': search,
+            'scope': scope,
+            'datasource': datasource,
+            'with_meta': with_meta,
+            'skip': skip,
+            'format': format,
+            'action': action,
+        }
+
+        for key, value in param_map.items():
+            if value is not None:
+                params[key] = value
+
+        params.update(kwargs)
+
+        path = 'emailfilter/mheader'
+        if entry_id is not None:
+            path = f'{path}/{entry_id}'
+
+        return self._client.get('cmdb', path, params=params if params else None, vdom=vdom)
+
+    def list(
+        self,
+        attr: Optional[str] = None,
+        count: Optional[int] = None,
+        skip_to_datasource: Optional[int] = None,
+        acs: Optional[bool] = None,
+        search: Optional[str] = None,
+        scope: Optional[str] = None,
+        datasource: Optional[bool] = None,
+        with_meta: Optional[bool] = None,
+        skip: Optional[bool] = None,
+        format: Optional[str] = None,
+        action: Optional[str] = None,
+        vdom: Optional[Union[str, bool]] = None,
+        **kwargs: Any
+    ) -> dict[str, Any]:
+        """
+        Get all email filter MIME header entries (convenience method).
+
+        Args:
+            Same as get() method, excluding entry_id
+
+        Returns:
+            dict: API response containing all MIME header entries
+
+        Examples:
+            >>> entries = fgt.cmdb.emailfilter.mheader.list()
+        """
+        return self.get(
+            entry_id=None,
+            attr=attr,
+            count=count,
+            skip_to_datasource=skip_to_datasource,
+            acs=acs,
+            search=search,
+            scope=scope,
+            datasource=datasource,
+            with_meta=with_meta,
+            skip=skip,
+            format=format,
+            action=action,
+            vdom=vdom,
+            **kwargs
+        )
+
+    def create(
+        self,
+        name: str,
+        # MIME header configuration
+        comment: Optional[str] = None,
+        entries: Optional[list[dict[str, Any]]] = None,
+        vdom: Optional[Union[str, bool]] = None,
+        **kwargs: Any
+    ) -> dict[str, Any]:
+        """
+        Create a new email filter MIME header entry.
+
+        Args:
+            name (str): MIME header entry name
+            comment (str, optional): Optional comment
+            entries (list, optional): MIME header check entries with status (enable/disable),
+                                     fieldname (header field name), fieldbody (header field body),
+                                     pattern_type (regexp/literal), action (spam/clear/mark/tag)
+            vdom (str, optional): Virtual Domain name
+            **kwargs: Additional parameters
+
+        Returns:
+            dict: API response
+
+        Examples:
+            >>> # Create MIME header entry
+            >>> result = fgt.cmdb.emailfilter.mheader.create(
+            ...     name='spam-headers',
+            ...     comment='Check for spam indicators in headers',
+            ...     entries=[
+            ...         {'fieldname': 'X-Spam-Flag', 'fieldbody': 'YES', 'action': 'spam'},
+            ...         {'fieldname': 'X-Mailer', 'fieldbody': 'BadMailer', 'action': 'mark'}
+            ...     ]
+            ... )
+        """
+        data = {'name': name}
+        
+        if comment is not None:
+            data['comment'] = comment
+        if entries is not None:
+            converted_entries = []
+            for entry in entries:
+                converted = {}
+                for key, value in entry.items():
+                    converted[key.replace('_', '-')] = value
+                converted_entries.append(converted)
+            data['entries'] = converted_entries
+
+        data.update(kwargs)
+
+        return self._client.post('cmdb', 'emailfilter/mheader', data=data, vdom=vdom)
+
+    def update(
+        self,
+        entry_id: int,
+        # MIME header configuration
+        name: Optional[str] = None,
+        comment: Optional[str] = None,
+        entries: Optional[list[dict[str, Any]]] = None,
+        # Update parameters
+        action: Optional[str] = None,
+        before: Optional[str] = None,
+        after: Optional[str] = None,
+        scope: Optional[str] = None,
+        vdom: Optional[Union[str, bool]] = None,
+        **kwargs: Any
+    ) -> dict[str, Any]:
+        """
+        Update an email filter MIME header entry.
+
+        Args:
+            entry_id (int): Entry ID to update
+            name (str, optional): MIME header entry name
+            comment (str, optional): Optional comment
+            entries (list, optional): MIME header check entries
+            action (str, optional): 'add-members', 'replace-members', 'remove-members'
+            before (str, optional): Place new object before given object ID
+            after (str, optional): Place new object after given object ID
+            scope (str, optional): Scope level - 'global' or 'vdom'
+            vdom (str, optional): Virtual Domain name
+            **kwargs: Additional parameters
+
+        Returns:
+            dict: API response
+
+        Examples:
+            >>> # Update MIME header entry
+            >>> result = fgt.cmdb.emailfilter.mheader.update(
+            ...     entry_id=1,
+            ...     entries=[
+            ...         {'fieldname': 'X-Spam-Score', 'fieldbody': '10', 'action': 'spam'}
+            ...     ]
+            ... )
+        """
+        data = {}
+        
+        if name is not None:
+            data['name'] = name
+        if comment is not None:
+            data['comment'] = comment
+        if entries is not None:
+            converted_entries = []
+            for entry in entries:
+                converted = {}
+                for key, value in entry.items():
+                    converted[key.replace('_', '-')] = value
+                converted_entries.append(converted)
+            data['entries'] = converted_entries
+        if action is not None:
+            data['action'] = action
+        if before is not None:
+            data['before'] = before
+        if after is not None:
+            data['after'] = after
+        if scope is not None:
+            data['scope'] = scope
+
+        data.update(kwargs)
+
+        return self._client.put('cmdb', f'emailfilter/mheader/{entry_id}', data=data, vdom=vdom)
+
+    def delete(
+        self,
+        entry_id: int,
+        scope: Optional[str] = None,
+        vdom: Optional[Union[str, bool]] = None
+    ) -> dict[str, Any]:
+        """
+        Delete an email filter MIME header entry.
+
+        Args:
+            entry_id (int): Entry ID to delete
+            scope (str, optional): Scope level - 'global' or 'vdom'
+            vdom (str, optional): Virtual Domain name
+
+        Returns:
+            dict: API response
+
+        Examples:
+            >>> result = fgt.cmdb.emailfilter.mheader.delete(1)
+        """
+        params = {}
+        if scope is not None:
+            params['scope'] = scope
+
+        return self._client.delete('cmdb', f'emailfilter/mheader/{entry_id}', 
+                                   params=params if params else None, vdom=vdom)
