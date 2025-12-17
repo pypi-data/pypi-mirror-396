@@ -1,0 +1,304 @@
+[project]
+name = "dbterd"
+dynamic = []
+description = "Generate the ERD-as-a-code from dbt artifacts"
+authors = [
+    { name = "Dat Nguyen", email = "datnguye.it09@gmail.com" },
+]
+maintainers = [
+    { name = "Dat Nguyen", email = "datnguye.it09@gmail.com" },
+]
+readme = "README.md"
+keywords = [
+    "dbt",
+    "erd",
+    "entity-relationship-diagram",
+    "dbml",
+    "mermaid",
+    "plantuml",
+    "graphviz",
+    "d2",
+    "drawdb",
+    "data-modeling",
+    "data-documentation",
+    "dbt-cloud",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Documentation",
+    "Topic :: Software Development :: Documentation",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Quality Assurance",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "click>=8.1.7",
+    "dbt-artifacts-parser>=0.10.0",
+    "requests>=2.32.3",
+    "tomli>=2.0.0; python_version<'3.11'",
+]
+version = "1.23.0"
+
+[project.license]
+file = "LICENSE"
+
+[project.urls]
+Homepage = "https://github.com/datnguye/dbterd"
+Repository = "https://github.com/datnguye/dbterd"
+Documentation = "https://dbterd.datnguyen.de/"
+Issues = "https://github.com/datnguye/dbterd/issues"
+
+[project.scripts]
+dbterd = "dbterd.main:main"
+
+[project.optional-dependencies]
+dev = [
+    "dbt-core >=1.7.11",
+    "dbt-postgres >=1.7.11",
+    "pytest >=6.2.5",
+    "pytest-sugar >=0.9.6",
+    "coverage[toml] >=6.5.0",
+    "black >=24.3.0",
+    "ruff >=0.2.0",
+    "pre-commit >=2.20.0",
+    "poethepoet >=0.16.4",
+    "mkdocs >=1.4.2",
+    "mkdocs-minify-plugin >=0.6.4",
+    "mkdocs-material >=9.1.5",
+    "mike >=1.1.2",
+    "pdoc >=14.4.0",
+    "pdm-backend",
+]
+test = [
+    "pytest >=6.2.5",
+    "pytest-sugar >=0.9.6",
+    "coverage[toml] >=6.5.0",
+]
+docs = [
+    "mkdocs >=1.4.2",
+    "mkdocs-minify-plugin >=0.6.4",
+    "mkdocs-material >=9.1.5",
+    "mike >=1.1.2",
+]
+
+[build-system]
+requires = [
+    "pdm-backend",
+]
+build-backend = "pdm.backend"
+
+[tool.pdm.version]
+source = "scm"
+
+[tool.pdm.build]
+includes = [
+    "dbterd",
+]
+excludes = [
+    "tests",
+    "tests/**/*",
+]
+
+[tool.poe.tasks]
+format = [
+    { cmd = "ruff check --fix .", help = "Fix linting issues automatically" },
+    { cmd = "ruff format .", help = "Format code with ruff" },
+]
+lint = [
+    { cmd = "ruff check .", help = "Check code with ruff linter" },
+    { cmd = "ruff format --check .", help = "Check code formatting with ruff" },
+]
+test = [
+    { cmd = "pytest tests/unit -vv", help = "Run unit tests with verbose output" },
+]
+test-cov = [
+    { cmd = "pytest --version", help = "Show pytest version" },
+    { cmd = "coverage run -m pytest tests/unit", help = "Run unit tests with coverage" },
+    { cmd = "coverage report --show-missing", help = "Show coverage report" },
+    { cmd = "coverage xml", help = "Generate coverage XML report" },
+]
+test-integration = [
+    { cmd = "pytest tests/integration -vv -m integration", help = "Run integration tests" },
+]
+build-doc-and-serve = [
+    { cmd = "mkdocs build" },
+    { cmd = "mkdocs serve" },
+]
+
+[tool.poe.tasks.git-hooks]
+shell = "pre-commit install --install-hooks && pre-commit install --hook-type commit-msg"
+help = "Install git pre-commit hooks"
+
+[tool.poe.tasks.sync]
+shell = "uv sync --all-extras && uv pip install -e ."
+
+[[tool.poe.tasks.run-10-samples]]
+cmd = "mkdir -p target/jaffle-shop target/dbtresto target/dbt-constraints target/facebookad target/fivetranlog target/shopify"
+help = "Create target directories"
+
+[[tool.poe.tasks.run-10-samples]]
+cmd = "uv run dbterd run --artifacts-dir ./samples/jaffle-shop --target dbml --output ./target/jaffle-shop"
+help = "Generate jaffle-shop DBML"
+
+[[tool.poe.tasks.run-10-samples]]
+cmd = "uv run dbterd run --artifacts-dir ./samples/jaffle-shop --target mermaid --algo test_relationship --output ./target/jaffle-shop"
+help = "Generate jaffle-shop Mermaid with test_relationship"
+
+[[tool.poe.tasks.run-10-samples]]
+cmd = "uv run dbterd run --artifacts-dir ./samples/dbtresto --target d2 --algo semantic --output ./target/dbtresto"
+help = "Generate dbtresto D2 with semantic algorithm"
+
+[[tool.poe.tasks.run-10-samples]]
+cmd = "uv run dbterd run --artifacts-dir ./samples/dbtresto --target graphviz --entity-name-format schema.table --output ./target/dbtresto"
+help = "Generate dbtresto GraphViz with schema.table format"
+
+[[tool.poe.tasks.run-10-samples]]
+cmd = "uv run dbterd run --artifacts-dir ./samples/dbt-constraints --target plantuml --output ./target/dbt-constraints"
+help = "Generate dbt-constraints PlantUML"
+
+[[tool.poe.tasks.run-10-samples]]
+cmd = "uv run dbterd run --artifacts-dir ./samples/facebookad --target drawdb --output ./target/facebookad"
+help = "Generate facebookad DrawDB"
+
+[[tool.poe.tasks.run-10-samples]]
+cmd = "uv run dbterd run --artifacts-dir ./samples/fivetranlog --target mermaid --omit-columns --output ./target/fivetranlog"
+help = "Generate fivetranlog Mermaid without columns"
+
+[[tool.poe.tasks.run-10-samples]]
+cmd = "uv run dbterd run --artifacts-dir ./samples/shopify --target dbml --output ./target/shopify"
+help = "Generate shopify DBML with selection filter"
+
+[[tool.poe.tasks.run-10-samples]]
+cmd = "uv run dbterd run --artifacts-dir ./samples/jaffle-shop --target mermaid --output ./target/jaffle-shop --output-file-name jaffle-comprehensive.md"
+help = "Generate jaffle-shop Mermaid with custom filename"
+
+[[tool.poe.tasks.run-10-samples]]
+cmd = "uv run dbterd run --artifacts-dir ./samples/dbtresto --target d2 --resource-type model --output ./target/dbtresto --output-file-name models-only.d2"
+help = "Generate dbtresto D2 with models only"
+
+[tool.coverage.run]
+omit = [
+    "tests/*",
+    "*/__init__.py",
+    "*/__main__.py",
+]
+source = [
+    "dbterd",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "@abstractmethod",
+    "raise NotImplementedError",
+    "^\\s*\\.\\.\\.$",
+]
+
+[tool.ruff]
+target-version = "py39"
+line-length = 120
+include = [
+    "*.py",
+    "*.pyi",
+    "**/pyproject.toml",
+    "*.ipynb",
+]
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "I",
+    "UP",
+    "N",
+    "YTT",
+    "B",
+    "C4",
+    "ISC",
+    "RUF",
+    "W",
+    "PL",
+    "SIM",
+    "ERA",
+    "PLC0415",
+]
+ignore = [
+    "PLR2004",
+    "PLR0913",
+]
+unfixable = [
+    "B",
+]
+
+[tool.ruff.lint.isort]
+force-single-line = false
+lines-after-imports = 2
+force-sort-within-sections = true
+known-first-party = [
+    "dbterd",
+]
+section-order = [
+    "future",
+    "standard-library",
+    "third-party",
+    "first-party",
+    "local-folder",
+]
+combine-as-imports = true
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+skip-magic-trailing-comma = false
+docstring-code-format = true
+docstring-code-line-length = 80
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests/unit",
+]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+addopts = "--strict-markers -v"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks integration tests (deselect with '-m \"not integration\"')",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning:dbt.*:",
+]
