@@ -1,0 +1,11 @@
+
+import base64
+DATA_B64 = "IjIwMjUtMDMtMTAiOiB7CsKgIMKgIMKgIMKgICLEkMSQQiBIw7JuIFRyZSA0MCBobC0+cGjDrWEgQuG6r2MiOiB7CsKgIMKgIMKgIMKgIMKgIMKgICJvYmplY3RzIjogWwrCoCDCoCDCoCDCoCDCoCDCoCDCoCDCoCAiVMOgdSBjw6EgSOG7k25nIEvDtG5nIENow6J1IMSQYW4gNTQzOCIKwqAgwqAgwqAgwqAgwqAgwqAgXSwKwqAgwqAgwqAgwqAgwqAgwqAgInBhc3NhZ2UiOiAiSUkuIFbDmU5HIEJJ4buCTlxuMy4gVsO5bmcgYmnhu4NuIFRyxrDhu51uZyBTYSwgREtJIHbDoCBwaMOtYSBOYW1cbmEpIFTDoHUgVHJ1bmcgUXXhu5FjXG4tIFTDoHUgY8OhIHZpIHBo4bqhbSB2w7luZyBu4buZaSB0aOG7p3k6IFTDoHUgY8OhIEjhu5NuZyBLw7RuZyBDaMOidSDEkGFuIDU0MzggaMOgbmggdHLDrG5oIGzDqm4gcGjDrWEgQuG6r2MsIGzDumMgMDUuMDAgbmfDoHkgMTEvMyDhu58gxJDEkEIgSMOybiBUcmUgNDAgaGwsIEhjID0gMjnCsCwgViA9IDA3IGhsL2gsIHTDoHUgS04tNDEzIHRp4bq/cCBj4bqtbiwgdHV5w6puIHRydXnhu4FuLCB4dWEgxJF14buVaSByYSBraOG7j2kgdsO5bmcgbuG7mWkgdGjhu6d5LiIsCsKgIMKgIMKgIMKgIMKgIMKgICJjb29ycyI6IFsKwqAgwqAgwqAgwqAgwqAgwqAgwqAgwqAgWwrCoCDCoCDCoCDCoCDCoCDCoCDCoCDCoCDCoCDCoCAxMDQuOTg4MzIsCsKgIMKgIMKgIMKgIMKgIMKgIMKgIMKgIMKgIMKgIDkuOTk0Mzc4CsKgIMKgIMKgIMKgIMKgIMKgIMKgIMKgIF0KwqAgwqAgwqAgwqAgwqAgwqAgXSwKwqAgwqAgwqAgwqAgwqAgwqAgImxvY3MiOiBbCsKgIMKgIMKgIMKgIMKgIMKgIMKgIMKgICLEkMSQQiBIw7JuIFRyZSA0MCBobCIKwqAgwqAgwqAgwqAgwqAgwqAgXQrCoCDCoCDCoCDCoCB9CsKgIMKgIH0sCg=="
+def save(filename="code_moi_ve.py"):
+    try:
+        decoded = base64.b64decode(DATA_B64).decode("utf-8")
+        with open(filename, "w", encoding="utf-8") as f:
+            f.write(decoded)
+        print(f"OK: Da luu code vao {filename}")
+    except Exception as e:
+        print(f"LOI: {e}")
