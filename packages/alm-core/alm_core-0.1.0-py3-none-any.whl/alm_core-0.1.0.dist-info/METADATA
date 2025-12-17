@@ -1,0 +1,405 @@
+Metadata-Version: 2.4
+Name: alm-core
+Version: 0.1.0
+Summary: Agent Language Model (ALM): A deterministic, policy-driven architecture for robust AI agents
+Home-page: https://github.com/Jalendar10/alm-core
+Author: Jalendar Reddy Maligireddy
+Author-email: Jalendar Reddy Maligireddy <jalendarreddy97@gmail.com>
+License: MIT
+Project-URL: Homepage, https://github.com/Jalendar10/alm-core
+Project-URL: Documentation, https://github.com/Jalendar10/alm-core
+Project-URL: Repository, https://github.com/Jalendar10/alm-core
+Project-URL: Bug Reports, https://github.com/Jalendar10/alm-core/issues
+Keywords: ai,agent,llm,automation,policy,privacy,security
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Science/Research
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: openai>=1.0.0
+Requires-Dist: anthropic>=0.7.0
+Requires-Dist: networkx>=3.0
+Requires-Dist: requests>=2.28.0
+Provides-Extra: full
+Requires-Dist: playwright>=1.40.0; extra == "full"
+Requires-Dist: matplotlib>=3.5.0; extra == "full"
+Requires-Dist: pyperclip>=1.8.0; extra == "full"
+Requires-Dist: pyautogui>=0.9.50; extra == "full"
+Requires-Dist: psutil>=5.9.0; extra == "full"
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0.0; extra == "dev"
+Requires-Dist: black>=22.0.0; extra == "dev"
+Requires-Dist: flake8>=5.0.0; extra == "dev"
+Requires-Dist: mypy>=1.0.0; extra == "dev"
+Dynamic: author
+Dynamic: home-page
+Dynamic: license-file
+Dynamic: requires-python
+
+# ALM Core - Agent Language Model
+
+[![PyPI version](https://badge.fury.io/py/alm-core.svg)](https://badge.fury.io/py/alm-core)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+**Agent Language Model (ALM)** is a deterministic, policy-driven architecture for building robust AI agents. Unlike traditional LLM agents where the language model controls execution, ALM implements a **Belief-Desire-Intention (BDI)** state machine that treats the LLM as a cognitive tool, not a master.
+
+## 🚀 Quick Setup
+
+### One-Command Installation
+
+**Linux/macOS:**
+```bash
+chmod +x SETUP.sh && ./SETUP.sh
+```
+
+**Windows:**
+```cmd
+SETUP.bat
+```
+
+The setup script will automatically:
+- ✅ Verify Python 3.8+ installation
+- ✅ Create virtual environment
+- ✅ Install all dependencies
+- ✅ Configure environment files
+- ✅ Make scripts executable
+
+### Manual Installation
+
+```bash
+# Clone repository
+git clone https://github.com/Jalendar10/alm-core.git
+cd alm-core
+
+# Install from PyPI
+pip install alm-core
+
+# Or install from source
+pip install -e .
+```
+
+---
+
+## 🎯 Core Innovations
+
+### 1. **Constitutional Policy Engine**
+Hard constraints enforced programmatically, not through prompts.
+
+```python
+rules = [
+    {"action": "delete_db", "allow": False},
+    {"action": "web_request", "forbidden_domains": ["malicious.com"]}
+]
+constitution = Constitution(rules)
+```
+
+### 2. **Data Airlock**
+PII is sanitized before LLM inference and rehydrated afterward. **The LLM provider never sees sensitive data.**
+
+```python
+airlock = DataAirlock()
+sanitized = airlock.sanitize("My email is ceo@company.com")
+# Output: "My email is <EMAIL_abc123>"
+```
+
+### 3. **Deterministic Controller**
+The agent follows a BDI cycle where the controller decides what happens, using the LLM only for planning.
+
+```python
+controller = ALMController(constitution, llm)
+controller.set_goal("Research quantum computing")
+result = controller.run_cycle()
+```
+
+### 4. **Visual Execution Tracking**
+Real-time visualization of the agent's thought process.
+
+```python
+visualizer = ExecutionVisualizer()
+visualizer.export_graph("execution_map.png")
+```
+
+## 🚀 Quick Start
+
+### Installation
+
+```bash
+pip install alm-core
+```
+
+For full functionality (browser automation, visualization):
+
+```bash
+pip install alm-core[full]
+playwright install chromium  # For browser automation
+```
+
+### Basic Usage
+
+```python
+from alm_core import AgentLanguageModel
+
+# Option 1: Use environment variables (recommended)
+# export OPENAI_API_KEY="sk-..."
+# export OPENAI_MODEL="gpt-4"  # or gpt-3.5-turbo, gpt-4-turbo, etc.
+
+agent = AgentLanguageModel(
+    rules=[
+        {"action": "delete_db", "allow": False},
+        {"action": "email_client", "forbidden_params": {"domain": "gmail.com"}}
+    ]
+)
+
+# Option 2: Explicit configuration
+agent = AgentLanguageModel(
+    api_key="sk-...",
+    model="gpt-3.5-turbo",  # Any OpenAI or Anthropic model
+    rules=[{"action": "delete_db", "allow": False}]
+)
+
+# Process a task with automatic PII protection
+response = agent.process("My email is ceo@company.com. Search for my last login.")
+print(response)
+```
+
+### Advanced: OmniAgent with Browser & Research
+
+```python
+from alm_core import OmniAgent
+
+# Configuration via dict (or use environment variables)
+config = {
+    "model": "gpt-4",  # Flexible: use any model you want
+    "rules": [{"action": "delete_db", "allow": False}],
+    "headless": False  # Visual browser
+}
+
+with OmniAgent(config) as agent:
+    # Deep research with visualization
+    results = agent.deep_dive(
+        topic="Agent Language Models",
+        duration_minutes=5,
+        max_depth=3
+    )
+    
+    # Autonomous web login (with user-in-the-loop for passwords)
+    agent.login_to_service("Gmail", "https://gmail.com")
+    
+    # Export session data
+    agent.export_session("session_2024")
+```
+
+## 📁 Architecture
+
+```
+alm_core/
+├── agent.py           # Main orchestrators (AgentLanguageModel, OmniAgent)
+├── controller.py      # BDI state machine
+├── memory.py          # Data Airlock & Dual Memory
+├── policy.py          # Constitutional Policy Engine
+├── llm_client.py      # LLM provider abstraction
+├── visualizer.py      # Execution graph visualization
+├── research.py        # Deep recursive research
+└── tools/
+    ├── browser.py     # Secure web automation
+    └── desktop.py     # OS/desktop control
+```
+
+## 🔑 Key Features
+
+### 🛡️ Security & Privacy
+
+- **PII Protection**: Automatic detection and sanitization of emails, phones, SSNs, credit cards
+- **Policy Enforcement**: Hard constraints that cannot be bypassed by the LLM
+- **User-in-the-Loop**: Critical operations (passwords, payments) require human confirmation
+
+### 🧠 Intelligence
+
+- **Deep Research**: Recursive knowledge acquisition with saturation detection
+- **Visual Thinking**: See how the agent is reasoning, not just the output
+- **Multi-Modal**: Web browsing, file system, command execution
+
+### 🔧 Developer-Friendly
+
+- **Multiple LLM Providers**: OpenAI, Anthropic, local models (Ollama)
+- **Custom Tools**: Easy integration of your own tools
+- **Execution History**: Full audit trail of agent decisions
+
+## 📖 Examples
+
+### Example 1: PII Protection
+
+```python
+from alm_core import AgentLanguageModel
+
+agent = AgentLanguageModel(openai_key="sk-...")
+
+# The email is sanitized before going to OpenAI
+response = agent.process(
+    "My SSN is 123-45-6789 and email is john@company.com. "
+    "Create a summary of my account."
+)
+
+# Response contains real data (rehydrated), but OpenAI never saw it
+```
+
+### Example 2: Policy-Enforced Actions
+
+```python
+from alm_core import AgentLanguageModel
+from alm_core.policy import PolicyViolationError
+
+rules = [
+    {"action": "file_write", "allowed_paths": ["/safe/dir"]},
+    {"action": "delete_db", "allow": False}
+]
+
+agent = AgentLanguageModel(openai_key="sk-...", rules=rules)
+
+try:
+    # This will be blocked before execution
+    agent.process("Delete the production database")
+except PolicyViolationError as e:
+    print(f"Action blocked: {e}")
+```
+
+### Example 3: Deep Research
+
+```python
+from alm_core import OmniAgent
+
+with OmniAgent({"api_key": "sk-..."}) as agent:
+    research = agent.deep_dive(
+        topic="Quantum Computing Applications",
+        duration_minutes=10,
+        max_depth=4
+    )
+    
+    print(research["summary"])
+    # Knowledge graph saved to quantum_computing_applications.png
+```
+
+### Example 4: Custom Tools
+
+```python
+from alm_core import AgentLanguageModel
+
+def send_slack_message(channel: str, message: str) -> str:
+    # Your Slack integration
+    return f"Sent to {channel}: {message}"
+
+agent = AgentLanguageModel(openai_key="sk-...")
+agent.add_tool("send_slack", send_slack_message)
+
+agent.process("Send a message to #engineering saying 'Deploy complete'")
+```
+
+## 🔬 Research Background
+
+ALM is based on research into:
+- **BDI Architecture**: Belief-Desire-Intention cognitive model
+- **Constitutional AI**: Hard constraints vs. soft prompting
+- **Data Flow Security**: Taint tracking and sanitization
+- **Agent Transparency**: Visualizing agent reasoning
+
+### Key Differences from Standard LLM Agents
+
+| Feature | Standard LLM Agent | ALM |
+|---------|-------------------|-----|
+| Control Flow | LLM decides everything | Deterministic controller |
+| Security | Prompt-based | Programmatic enforcement |
+| PII Handling | Sent to LLM provider | Sanitized via Data Airlock |
+| Transparency | Black box | Visual execution graph |
+| Reliability | Prompt-dependent | State machine guarantees |
+
+## 🛠️ Development
+
+### Setup Development Environment
+
+```bash
+git clone https://github.com/yourusername/alm-core.git
+cd alm-core
+pip install -e ".[dev,full]"
+playwright install chromium
+```
+
+### Run Tests
+
+```bash
+pytest tests/ -v --cov=alm_core
+```
+
+### Code Formatting
+
+```bash
+black alm_core/
+flake8 alm_core/
+mypy alm_core/
+```
+
+## 📊 Publishing to PyPI
+
+```bash
+# Build package
+pip install build twine
+python -m build
+
+# Upload to PyPI
+twine upload dist/*
+
+# Install from PyPI
+pip install alm-core
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- Research inspired by BDI architecture and Constitutional AI
+- Built with support from the AI safety community
+- Special thanks to contributors and early adopters
+
+## 📚 Citation
+
+If you use ALM in your research, please cite:
+
+```bibtex
+@software{alm_core_2024,
+  title = {ALM Core: Agent Language Model Architecture},
+  author = {Maligireddy, Jalendar Reddy},
+  year = {2024},
+  url = {https://github.com/Jalendar10/alm-core}
+}
+```
+
+## 📧 Contact
+
+- Issues: [GitHub Issues](https://github.com/Jalendar10/alm-core/issues)
+- Email: jalendarreddy97@gmail.com
+- Documentation: [GitHub Repository](https://github.com/Jalendar10/alm-core)
+
+---
+
+**Built with ❤️ for safer, more transparent AI agents**
