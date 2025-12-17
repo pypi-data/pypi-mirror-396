@@ -1,0 +1,512 @@
+"""Utilities for interacting with the hypershift CLI."""
+
+import json
+import os
+import subprocess
+import shutil
+from typing import Dict, Any, Optional
+from rich.console import Console
+
+
+class HypershiftError(Exception):
+    """Exception raised when hypershift CLI operations fail."""
+
+    pass
+
+
+# =============================================================================
+# Validation Constants and Functions
+# =============================================================================
+
+# Maximum length for infrastructure ID
+MAX_INFRA_ID_LENGTH = 15
+
+# Service accounts created by hypershift IAM setup
+# Key: internal name used in hypershift output
+# Value: human-readable description
+SERVICE_ACCOUNTS = {
+    "ctrlplane-op": "Control Plane Operator",
+    "nodepool-mgmt": "Node Pool Management",
+}
+
+# Error message for missing hypershift CLI
+HYPERSHIFT_NOT_FOUND_ERROR = (
+    "hypershift CLI not found. Please install it or configure the path:\n"
+    "  1. Install: https://hypershift.pages.dev/getting-started/\n"
+    "  2. Or set: gcphcp config set hypershift_binary /path/to/hypershift\n"
+    "  3. Or set: export HYPERSHIFT_BINARY=/path/to/hypershift"
+)
+
+
+def require_hypershift_binary(config=None) -> str:
+    """Get the hypershift binary path or raise an error if not found.
+
+    Args:
+        config: Optional Config object to check for hypershift_binary setting
+
+    Returns:
+        Path to hypershift binary
+
+    Raises:
+        HypershiftError: If hypershift CLI is not found
+    """
+    hypershift_bin = get_hypershift_binary(config)
+    if not hypershift_bin:
+        raise HypershiftError(HYPERSHIFT_NOT_FOUND_ERROR)
+    return hypershift_bin
+
+
+def validate_infra_id_length(infra_id: str) -> None:
+    """Validate that the infrastructure ID length is within platform limits.
+
+    Args:
+        infra_id: The infrastructure identifier to validate
+
+    Raises:
+        ValueError: If the infra_id exceeds the maximum allowed length
+    """
+    if len(infra_id) > MAX_INFRA_ID_LENGTH:
+        raise ValueError(
+            f"Infrastructure ID '{infra_id}' is too long "
+            f"({len(infra_id)} chars). "
+            f"Maximum length is {MAX_INFRA_ID_LENGTH} characters."
+        )
+
+
+def get_hypershift_binary(config=None) -> Optional[str]:
+    """Get the path to the hypershift binary.
+
+    Checks in order:
+    1. HYPERSHIFT_BINARY environment variable
+    2. hypershift_binary config setting (if config provided)
+    3. 'hypershift' in PATH
+
+    Args:
+        config: Optional Config object to check for hypershift_binary setting
+
+    Returns:
+        Path to hypershift binary or None if not found
+    """
+    # Check environment variable first
+    env_binary = os.environ.get("HYPERSHIFT_BINARY")
+    if env_binary and os.path.isfile(env_binary):
+        return env_binary
+
+    # Check config if provided
+    if config:
+        config_binary = config.get_hypershift_binary()
+        if config_binary and os.path.isfile(config_binary):
+            return config_binary
+
+    # Check in PATH
+    path_binary = shutil.which("hypershift")
+    if path_binary:
+        return path_binary
+
+    return None
+
+
+def check_hypershift_installed() -> bool:
+    """Check if hypershift CLI is installed and available.
+
+    Returns:
+        True if hypershift is installed, False otherwise
+    """
+    return get_hypershift_binary() is not None
+
+
+def create_iam_gcp(
+    infra_id: str,
+    project_id: str,
+    oidc_jwks_file: str,
+    console: Optional[Console] = None,
+    config=None,
+) -> Dict[str, Any]:
+    """Run hypershift create iam gcp command and return the WIF configuration.
+
+    Args:
+        infra_id: Infrastructure ID for the cluster
+        project_id: GCP project ID
+        oidc_jwks_file: Path to OIDC JWKS file containing the public key
+        console: Rich console for output (optional)
+        config: Optional Config object to get hypershift binary path
+
+    Returns:
+        Dictionary containing the WIF configuration from hypershift
+
+    Raises:
+        HypershiftError: If hypershift command fails
+    """
+    if console:
+        console.print("[cyan]Running hypershift create iam gcp...[/cyan]")
+        console.print(f"  Infrastructure ID: {infra_id}")
+        console.print(f"  Project ID: {project_id}")
+        console.print(f"  OIDC JWKS File: {oidc_jwks_file}")
+
+    hypershift_bin = require_hypershift_binary(config)
+
+    # Build the command
+    cmd = [
+        hypershift_bin,
+        "create",
+        "iam",
+        "gcp",
+        "--infra-id",
+        infra_id,
+        "--project-id",
+        project_id,
+        "--oidc-jwks-file",
+        oidc_jwks_file,
+    ]
+
+    if console:
+        console.print(f"[dim]Command: {' '.join(cmd)}[/dim]")
+
+    try:
+        # Run the command
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=300,  # 5 minute timeout
+        )
+
+        # Parse the JSON output
+        try:
+            wif_config = json.loads(result.stdout)
+        except json.JSONDecodeError as e:
+            raise HypershiftError(
+                f"Failed to parse hypershift output as JSON: {e}\n"
+                f"Output: {result.stdout}"
+            )
+
+        if console:
+            console.print("[green]✓[/green] WIF infrastructure created successfully")
+
+        return wif_config
+
+    except subprocess.TimeoutExpired:
+        raise HypershiftError("hypershift create iam gcp timed out after 5 minutes")
+    except subprocess.CalledProcessError as e:
+        error_msg = f"hypershift create iam gcp failed with exit code {e.returncode}"
+        if e.stderr:
+            error_msg += f"\nError: {e.stderr}"
+        if e.stdout:
+            error_msg += f"\nOutput: {e.stdout}"
+        raise HypershiftError(error_msg)
+    except Exception as e:
+        raise HypershiftError(f"Unexpected error running hypershift: {e}")
+
+
+def validate_iam_config(iam_config: Dict[str, Any]) -> bool:
+    """Validate that the IAM configuration has all required fields.
+
+    Args:
+        iam_config: IAM configuration dictionary from hypershift
+
+    Returns:
+        True if valid, False otherwise
+    """
+    required_fields = [
+        "projectId",
+        "projectNumber",
+        "infraId",
+        "workloadIdentityPool",
+        "serviceAccounts",
+    ]
+
+    for field in required_fields:
+        if field not in iam_config:
+            return False
+
+    # Check nested fields
+    if "poolId" not in iam_config.get("workloadIdentityPool", {}):
+        return False
+    if "providerId" not in iam_config.get("workloadIdentityPool", {}):
+        return False
+
+    service_accounts = iam_config.get("serviceAccounts", {})
+    for sa_key in SERVICE_ACCOUNTS:
+        if sa_key not in service_accounts:
+            return False
+
+    return True
+
+
+def iam_config_to_wif_spec(iam_config: Dict[str, Any]) -> Dict[str, Any]:
+    """Convert hypershift IAM config to workloadIdentity spec format.
+
+    Args:
+        iam_config: IAM configuration from hypershift create iam gcp
+
+    Returns:
+        Dictionary in the format expected by the cluster spec
+    """
+    pool = iam_config.get("workloadIdentityPool", {})
+    service_accounts = iam_config.get("serviceAccounts", {})
+
+    return {
+        "projectNumber": iam_config.get("projectNumber"),
+        "poolID": pool.get("poolId"),
+        "providerID": pool.get("providerId"),
+        "serviceAccountsRef": {
+            "controlPlaneEmail": service_accounts.get("ctrlplane-op"),
+            "nodePoolEmail": service_accounts.get("nodepool-mgmt"),
+        },
+    }
+
+
+def create_infra_gcp(
+    infra_id: str,
+    project_id: str,
+    region: str,
+    vpc_cidr: str = "10.0.0.0/24",
+    console: Optional[Console] = None,
+    config=None,
+) -> Dict[str, Any]:
+    """Run hypershift create infra gcp command and return the network configuration.
+
+    Args:
+        infra_id: Infrastructure ID for the cluster
+        project_id: GCP project ID
+        region: GCP region for network resources
+        vpc_cidr: CIDR block for the subnet (default: 10.0.0.0/24)
+        console: Rich console for output (optional)
+        config: Optional Config object to get hypershift binary path
+
+    Returns:
+        Dictionary containing the network configuration from hypershift
+
+    Raises:
+        HypershiftError: If hypershift command fails
+    """
+    if console:
+        console.print("[cyan]Running hypershift create infra gcp...[/cyan]")
+        console.print(f"  Infrastructure ID: {infra_id}")
+        console.print(f"  Project ID: {project_id}")
+        console.print(f"  Region: {region}")
+        console.print(f"  VPC CIDR: {vpc_cidr}")
+
+    hypershift_bin = require_hypershift_binary(config)
+
+    # Build the command
+    cmd = [
+        hypershift_bin,
+        "create",
+        "infra",
+        "gcp",
+        "--infra-id",
+        infra_id,
+        "--project-id",
+        project_id,
+        "--region",
+        region,
+        "--vpc-cidr",
+        vpc_cidr,
+    ]
+
+    if console:
+        console.print(f"[dim]Command: {' '.join(cmd)}[/dim]")
+
+    try:
+        # Run the command
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=300,  # 5 minute timeout
+        )
+
+        # Parse the JSON output
+        try:
+            infra_config = json.loads(result.stdout)
+        except json.JSONDecodeError as e:
+            raise HypershiftError(
+                f"Failed to parse hypershift output as JSON: {e}\n"
+                f"Output: {result.stdout}"
+            )
+
+        if console:
+            console.print("[green]✓[/green] Network infrastructure created")
+
+        return infra_config
+
+    except subprocess.TimeoutExpired:
+        raise HypershiftError("hypershift create infra gcp timed out after 5 minutes")
+    except subprocess.CalledProcessError as e:
+        error_msg = f"hypershift create infra gcp failed with exit code {e.returncode}"
+        if e.stderr:
+            error_msg += f"\nError: {e.stderr}"
+        if e.stdout:
+            error_msg += f"\nOutput: {e.stdout}"
+        raise HypershiftError(error_msg)
+    except Exception as e:
+        raise HypershiftError(f"Unexpected error running hypershift: {e}")
+
+
+def validate_infra_config(infra_config: Dict[str, Any]) -> bool:
+    """Validate that the infrastructure configuration has all required fields.
+
+    Args:
+        infra_config: Infrastructure configuration dictionary from hypershift
+
+    Returns:
+        True if valid, False otherwise
+    """
+    required_fields = [
+        "projectId",
+        "infraId",
+        "region",
+        "networkName",
+        "subnetName",
+    ]
+
+    for field in required_fields:
+        if field not in infra_config:
+            return False
+
+    return True
+
+
+# =============================================================================
+# Destroy Functions
+# =============================================================================
+
+
+def destroy_iam_gcp(
+    infra_id: str,
+    project_id: str,
+    console: Optional[Console] = None,
+    config=None,
+) -> bool:
+    """Run hypershift destroy iam gcp command to remove WIF infrastructure.
+
+    Args:
+        infra_id: Infrastructure ID for the cluster
+        project_id: GCP project ID
+        console: Rich console for output (optional)
+        config: Optional Config object to get hypershift binary path
+
+    Returns:
+        True if destruction was successful
+
+    Raises:
+        HypershiftError: If hypershift command fails
+    """
+    if console:
+        console.print("[cyan]Running hypershift destroy iam gcp...[/cyan]")
+        console.print(f"  Infrastructure ID: {infra_id}")
+        console.print(f"  Project ID: {project_id}")
+
+    hypershift_bin = require_hypershift_binary(config)
+
+    # Build the command
+    cmd = [
+        hypershift_bin,
+        "destroy",
+        "iam",
+        "gcp",
+        "--infra-id",
+        infra_id,
+        "--project-id",
+        project_id,
+    ]
+
+    if console:
+        console.print(f"[dim]Command: {' '.join(cmd)}[/dim]")
+
+    try:
+        # Run the command
+        subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=300,  # 5 minute timeout
+        )
+
+        return True
+
+    except subprocess.TimeoutExpired:
+        raise HypershiftError("hypershift destroy iam gcp timed out after 5 minutes")
+    except subprocess.CalledProcessError as e:
+        stderr = e.stderr.strip() if e.stderr else None
+        stdout = e.stdout.strip() if e.stdout else None
+        error_msg = stderr or stdout or "Unknown error"
+        raise HypershiftError(f"IAM destruction failed: {error_msg}")
+    except Exception as e:
+        raise HypershiftError(f"IAM destruction failed: {e}")
+
+
+def destroy_infra_gcp(
+    infra_id: str,
+    project_id: str,
+    region: str,
+    console: Optional[Console] = None,
+    config=None,
+) -> bool:
+    """Run hypershift destroy infra gcp command to remove network infrastructure.
+
+    Args:
+        infra_id: Infrastructure ID for the cluster
+        project_id: GCP project ID
+        region: GCP region where network resources are located
+        console: Rich console for output (optional)
+        config: Optional Config object to get hypershift binary path
+
+    Returns:
+        True if destruction was successful
+
+    Raises:
+        HypershiftError: If hypershift command fails
+    """
+    if console:
+        console.print("[cyan]Running hypershift destroy infra gcp...[/cyan]")
+        console.print(f"  Infrastructure ID: {infra_id}")
+        console.print(f"  Project ID: {project_id}")
+        console.print(f"  Region: {region}")
+
+    hypershift_bin = require_hypershift_binary(config)
+
+    # Build the command
+    cmd = [
+        hypershift_bin,
+        "destroy",
+        "infra",
+        "gcp",
+        "--infra-id",
+        infra_id,
+        "--project-id",
+        project_id,
+        "--region",
+        region,
+    ]
+
+    if console:
+        console.print(f"[dim]Command: {' '.join(cmd)}[/dim]")
+
+    try:
+        # Run the command
+        subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=300,  # 5 minute timeout
+        )
+
+        return True
+
+    except subprocess.TimeoutExpired:
+        raise HypershiftError("hypershift destroy infra gcp timed out after 5 minutes")
+    except subprocess.CalledProcessError as e:
+        error_msg = f"hypershift destroy infra gcp failed with exit code {e.returncode}"
+        if e.stderr:
+            error_msg += f"\nError: {e.stderr}"
+        if e.stdout:
+            error_msg += f"\nOutput: {e.stdout}"
+        raise HypershiftError(error_msg)
+    except Exception as e:
+        raise HypershiftError(f"Unexpected error running hypershift: {e}")
