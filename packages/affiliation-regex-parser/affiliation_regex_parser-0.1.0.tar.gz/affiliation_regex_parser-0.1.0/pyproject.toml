@@ -1,0 +1,68 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "affiliation-regex-parser"
+version = "0.1.0"
+description = "Regex-based parser for structuring academic author affiliation strings."
+readme = "README_PyPI.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+  { name = "Ehsan Bitaraf", email = "ehsan.bitaraf@gmail.com" }
+]
+keywords = ["affiliation", "parser", "regex", "nlp", "metadata", "academia"]
+classifiers = [
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Intended Audience :: Science/Research",
+  "Topic :: Text Processing :: Linguistic",
+  "Topic :: Scientific/Engineering :: Information Analysis",
+  "Operating System :: OS Independent"
+]
+
+dependencies = [
+  "flashtext>=2.7",
+]
+
+[project.optional-dependencies]
+excel = [
+  "pandas>=2.0",
+  "openpyxl>=3.1"
+]
+
+[project.urls]
+Homepage = "https://github.com/EhsanBitaraf/affiliation-regex-parser"
+Repository = "https://github.com/EhsanBitaraf/affiliation-regex-parser"
+Issues = "https://github.com/EhsanBitaraf/affiliation-regex-parser/issues"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["affiliation_regex_parser*"]
+exclude = ["tests*"]
+
+# Ensure worldcities.xlsx is shipped inside the installed package
+[tool.setuptools.package-data]
+affiliation_regex_parser = ["data/*.xlsx"]
+
+[tool.pytest.ini_options]
+markers = [
+  "regression: regression tests for fixtures-based output stability"
+]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
