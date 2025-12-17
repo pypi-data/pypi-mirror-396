@@ -1,0 +1,193 @@
+# SPDX-FileCopyrightText: 2025 wmj <wmj.py@gmx.com>
+#
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
+name: Alþingi Íslendinga - 2013
+type: group
+method: highest_averages
+method_params:
+    divisor_f: dhondt
+divisions:
+
+- name: compensatory district
+  type: compensatory
+  meta:
+    test:
+    - { name: "Píratar [þ]", seats: 3 }
+    - { name: "Björt framtíð [A]", seats: 3 }
+    - { name: "Sjálfstæðisflokkurinn [D]", seats: 1 }
+    - { name: "Vinstrihreyfingin - grænt framboð [V]", seats: 1}
+    - { name: "Samfylkingin - jafnaðarmannaflokkur Íslands [S]", seats: 1 }
+  mode: additional_member
+  seats: 9
+  exclude: votes < 5%
+  first_vote: alliance[kjördæmi:-1]
+  candidates: alliance[kjördæmi]
+  skip_initial_seats: yes
+
+- name: adjustment seats to constituencies
+  type: reapportionment
+  meta:
+    test:
+    - { district: "Reykjavíkurkjördæmi Norður [Reykjavik North]", name: "Píratar [þ]", seats: 1, meta: { order: 0} }
+    - { district: "Reykjavíkurkjördæmi Suður [Reykjavik South]", name: "Píratar [þ]", seats: 1, meta: { order: 1} }
+    - { district: "Norðausturkjördæmi [Northeast]", name: "Björt framtíð [A]", seats: 1, meta: { order: 2} }
+    - { district: "Suðvesturkjördæmi [Southwest]", name: "Píratar [þ]", seats: 1, meta: { order: 3} }
+    - { district: "Reykjavíkurkjördæmi Suður [Reykjavik South]", name: "Björt framtíð [A]", seats: 1, meta: { order: 4} }
+    - { district: "Norðvesturkjördæmi [Northwest]", name: "Vinstrihreyfingin - grænt framboð [V]", seats: 1, meta: {order: 5} }
+    - { district: "Reykjavíkurkjördæmi Norður [Reykjavik North]", name: "Samfylkingin - jafnaðarmannaflokkur Íslands [S]", seats: 1, meta: { order: 6} }
+    - { district: "Suðvesturkjördæmi [Southwest]", name: "Sjálfstæðisflokkurinn [D]", seats: 1, meta: { order: 7} }
+    - { district: "Suðurkjördæmi [South]", name: "Björt framtíð [A]", seats: 1, meta: { order: 7}}
+  strategy: parallel
+  relative: votes
+  method: highest_averages
+  method_params:
+    divisor_f: dhondt
+  adjustment: compensatory district
+  candidates: kjördæmi
+  first_vote: kjördæmi
+
+- name: kjördæmi
+  type: group
+  aggregate: yes
+  divisions:
+
+  - name: Norðvesturkjördæmi [Northwest]
+    seats: 7
+    meta: { test: yes }
+    max_adjustment_seats: 1
+    candidates:
+    - name: "? blank"
+      votes: 432
+    - name: "! void"
+      votes: 38
+    - {name: "Framsóknarflokkurinn [B]", seats: 4, votes: 6104}
+    - {name: "Sjálfstæðisflokkurinn [D]", seats: 2, votes: 4282}
+    - {name: "Samfylkingin - jafnaðarmannaflokkur Íslands [S]", seats: 1, votes: 2122}
+    # 0 + 1
+    - name: "Vinstrihreyfingin - grænt framboð [V]"
+      seats: 0
+      votes: 1470
+      meta:
+        adjustment_seats: 1
+    - {name: "Björt framtíð [A]", votes: 792}
+    - {name: "Regnboginn, sjálfstæði Íslands og sjálfbæra þróun [J]", votes: 774}
+    - {name: "Píratar [þ]", votes: 537}
+    - {name: "Dögun - stjórnmálasamtök um réttlæti, sanngirni og lýðræði [T]", votes: 328}
+    - {name: "Lýðræðisvaktin [L]", votes: 251}
+    - {name: "Hægri Grænir flokkur fólksins [G]", votes: 208}
+    - {name: "Flokkur Heimilanna [I]", votes: 161}
+    - {name: "Landsbyggðarflokkurinn [M]", votes: 326}
+
+  - name: Norðausturkjördæmi [Northeast]
+    seats: 9
+    max_adjustment_seats: 1
+    candidates:
+    - name: "? blank"
+      votes: 569
+    - name: "! void"
+      votes: 51
+    - {name: "Framsóknarflokkurinn [B]", seats: 4, votes: 8173}
+    - {name: "Sjálfstæðisflokkurinn [D]", seats: 2, votes: 5327}
+    - {name: "Vinstrihreyfingin - grænt framboð [V]", seats: 2, votes: 3733}
+    - {name: "Samfylkingin - jafnaðarmannaflokkur Íslands [S]", seats: 1, votes: 2505}
+    # 0 + 1
+    - {name: "Björt framtíð [A]", seats: 0, votes: 1537, meta: {adjustment_seats: 1}}
+    - {name: "Píratar [þ]", votes: 716}
+    - {name: "Dögun - stjórnmálasamtök um réttlæti, sanngirni og lýðræði [T]", votes: 460}
+    - {name: "Lýðræðisvaktin [L]", votes: 313}
+    - {name: "Regnboginn, sjálfstæði Íslands og sjálfbæra þróun [J]", votes: 306}
+    - {name: "Hægri Grænir flokkur fólksins [G]", votes: 296}
+    - {name: "Flokkur Heimilanna [I]", votes: 241}
+
+  - name: Suðurkjördæmi [South]
+    seats: 9
+    max_adjustment_seats: 1
+    candidates:
+    - name: "? blank"
+      votes: 564
+    - name: "! void"
+      votes: 91
+    - {name: "Framsóknarflokkurinn [B]", seats: 4, votes: 9262}
+    - {name: "Sjálfstæðisflokkurinn [D]", seats: 4, votes: 7594}
+    - {name: "Samfylkingin - jafnaðarmannaflokkur Íslands [S]", seats: 1, votes: 2734}
+    - {name: "Vinstrihreyfingin - grænt framboð [V]", votes: 1581}
+    - {name: "Píratar [þ]", votes: 1268}
+    # 0 + 1
+    - {name: "Björt framtíð [A]", seats: 0, votes: 1202, meta: {adjustment_seats: 1}}
+    - {name: "Dögun - stjórnmálasamtök um réttlæti, sanngirni og lýðræði [T]", votes: 904}
+    - {name: "Flokkur Heimilanna [I]", votes: 786}
+    - {name: "Hægri Grænir flokkur fólksins [G]", votes: 702}
+    - {name: "Lýðræðisvaktin [L]", votes: 431}
+    - {name: "Regnboginn, sjálfstæði Íslands og sjálfbæra þróun [J]", votes: 412}
+
+  - name: Suðvesturkjördæmi [Southwest]
+    seats: 11
+    max_adjustment_seats: 2
+    candidates:
+    - name: "? blank"
+      votes: 1091
+    - name: "! void"
+      votes: 131
+    # 4 + 1
+    - {name: "Sjálfstæðisflokkurinn [D]", seats: 4, votes: 15608, meta: {adjustment_seats: 1}}
+    - {name: "Framsóknarflokkurinn [B]", seats: 3, votes: 10944}
+    - {name: "Samfylkingin - jafnaðarmannaflokkur Íslands [S]", seats: 2, votes: 6932}
+    - {name: "Björt framtíð [A]", seats: 1, votes: 4687}
+    - {name: "Vinstrihreyfingin - grænt framboð [V]", seats: 1, votes: 3995}
+    # 0 + 1
+    - {name: "Píratar [þ]", seats: 0, votes: 2541, meta: {adjustment_seats: 1}}
+    - {name: "Dögun - stjórnmálasamtök um réttlæti, sanngirni og lýðræði [T]", votes: 1927}
+    - {name: "Flokkur Heimilanna [I]", votes: 1838}
+    - {name: "Lýðræðisvaktin [L]", votes: 1241}
+    - {name: "Hægri Grænir flokkur fólksins [G]", votes: 925}
+    - {name: "Regnboginn, sjálfstæði Íslands og sjálfbæra þróun [J]", votes: 188}
+
+  - name: Reykjavíkurkjördæmi Suður [Reykjavik South]
+    seats: 9
+    max_adjustment_seats: 2
+    candidates:
+    - name: "? blank"
+      votes: 794
+    - name: "! void"
+      votes: 135
+    - {name: "Sjálfstæðisflokkurinn [D]", seats: 3, votes: 9464}
+    - {name: "Framsóknarflokkurinn [B]", seats: 2, votes: 5931}
+    - {name: "Samfylkingin - jafnaðarmannaflokkur Íslands [S]", seats: 2, votes: 5007}
+    - {name: "Vinstrihreyfingin - grænt framboð [V]", seats: 1, votes: 4279}
+    # 1 + 1
+    - {name: "Björt framtíð [A]", seats: 1, votes: 3790, meta: {adjustment_seats: 1}}
+    # 0 + 1
+    - {name: "Píratar [þ]", seats: 0, votes: 2179, meta: {adjustment_seats: 1}}
+    - {name: "Flokkur Heimilanna [I]", votes: 1394}
+    - {name: "Dögun - stjórnmálasamtök um réttlæti, sanngirni og lýðræði [T]", votes: 1163}
+    - {name: "Lýðræðisvaktin [L]", votes: 1025}
+    - {name: "Hægri Grænir flokkur fólksins [G]", votes: 575}
+    - {name: "Regnboginn, sjálfstæði Íslands og sjálfbæra þróun [J]", votes: 161}
+    - {name: "Sturla Jónsson [K]", votes: 222}
+    - {name: "Alþýðufylkingin [R]", votes: 54}
+    - {name: "Húmanistaflokkurinn [H]", votes: 55}
+
+  - name: Reykjavíkurkjördæmi Norður [Reykjavik North]
+    seats: 9
+    max_adjustment_seats: 2
+    candidates:
+    - name: "? blank"
+      votes: 767
+    - name: "! void"
+      votes: 164
+    - {name: "Sjálfstæðisflokkurinn [D]", seats: 3, votes: 8180}
+    - {name: "Framsóknarflokkurinn [B]", seats: 2, votes: 5759}
+    - {name: "Vinstrihreyfingin - grænt framboð [V]", seats: 2, votes: 5488}
+    # 1 + 1
+    - {name: "Samfylkingin - jafnaðarmannaflokkur Íslands [S]", seats: 1, votes: 4994, meta: {adjustment_seats: 1}}
+    - {name: "Björt framtíð [A]", seats: 1, votes: 3576}
+    # 0 + 1
+    - {name: "Píratar [þ]", seats: 0, votes: 2407, meta: {adjustment_seats: 1}}
+    - {name: "Lýðræðisvaktin [L]", votes: 1397}
+    - {name: "Flokkur Heimilanna [I]", votes: 1287}
+    - {name: "Dögun - stjórnmálasamtök um réttlæti, sanngirni og lýðræði [T]", votes: 1073}
+    - {name: "Hægri Grænir flokkur fólksins [G]", votes: 556}
+    - {name: "Regnboginn, sjálfstæði Íslands og sjálfbæra þróun [J]", votes: 180}
+    - {name: "Alþýðufylkingin [R]", votes: 64}
+    - {name: "Húmanistaflokkurinn [H]", votes: 71}

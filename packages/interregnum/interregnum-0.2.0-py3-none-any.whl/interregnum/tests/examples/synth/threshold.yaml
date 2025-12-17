@@ -1,0 +1,35 @@
+# SPDX-FileCopyrightText: 2025 wmj <wmj.py@gmx.com>
+#
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
+name: tresholds
+type: group
+method: noop
+divisions:
+- name: base
+  type: group
+  divisions:
+  - name: node_a
+    groups: ["base"]
+    candidates:
+    - { name: A, votes: 5000, min_seats: 5, group: AB }
+    - { name: B, votes: 4000, min_seats: 4, group: AB }
+    - { name: C, votes: 3000, min_seats: 3, group: CD }
+    - { name: D, votes: 2000, min_seats: 2, group: CD }
+    - { name: E, votes: 1000, min_seats: 1, group: Z }
+  - name: node_b
+    groups: ["base"]
+    candidates:
+    - { name: A, votes: 1000, min_seats: 1, group: AB }
+    - { name: B, votes: 2000, min_seats: 2, group: AB }
+    - { name: C, votes: 3000, min_seats: 3, group: CD }
+    - { name: D, votes: 4000, min_seats: 4, group: CD }
+    - { name: E, votes: 5000, min_seats: 5, group: Z }
+- name: threshold group 1
+  candidates: "id[#base]"
+  exclude: "#base.group != CD => id"
+  include: "#base.group = CD => id"
+  meta:
+    test:
+    - { name: C, seats: 6 }
+    - { name: D, seats: 6 }

@@ -1,0 +1,189 @@
+# SPDX-FileCopyrightText: 2025 wmj <wmj.py@gmx.com>
+#
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
+name: Elecciones a Cortes Generales
+type: group
+divisions:
+
+- name: Distribución de escaños
+  type: group
+  aggregate: yes
+  meta:
+    notes: |
+        Seats apportionment based on provintial census
+    test: file:censo_provincial_2015.csv
+  fill_candidates:
+    path: censo_provincial_2015.csv
+    format: csv
+  divisions:
+  - name: Ciudades autónomas
+    method: noop
+    initial_seats: 1
+  - name: Provincias
+    seats: 248
+    method: largest_remainder
+    method_params:
+      quota_f: hare
+    initial_seats: 2
+    resume_allocation: no
+
+- name: Circunscripciones
+  type: group
+  aggregate: yes
+  method: highest_averages
+  method_params:
+    divisor_f: dhondt
+  exclude: valid_votes < 3%
+  meta:
+    notes: |
+        Seats allocation based on votes
+    test: file:votos_generales_2015.csv
+  fill_candidates:
+    path: votos_generales_2015.csv
+    format: csv
+  divisions:
+  - name: Andalucía
+    type: group
+    aggregate: yes
+    divisions:
+    - name: Almería
+      seats: Distribución de escaños
+    - name: Cádiz
+      seats: Distribución de escaños
+    - name: Córdoba
+      seats: Distribución de escaños
+    - name: Granada
+      seats: Distribución de escaños
+    - name: Huelva
+      seats: Distribución de escaños
+    - name: Jaén
+      seats: Distribución de escaños
+    - name: Málaga
+      seats: Distribución de escaños
+    - name: Sevilla
+      seats: Distribución de escaños
+  - name: Aragón
+    type: group
+    aggregate: yes
+    divisions:
+    - name: Huesca
+      seats: Distribución de escaños
+    - name: Teruel
+      seats: Distribución de escaños
+    - name: Zaragoza
+      seats: Distribución de escaños
+  - name: Asturias
+    seats: Distribución de escaños
+  - name: Illes Balears
+    seats: Distribución de escaños
+  - name: Canarias
+    type: group
+    aggregate: yes
+    divisions:
+    - name: Las Palmas
+      seats: Distribución de escaños
+    - name: Santa Cruz de Tenerife
+      seats: Distribución de escaños
+  - name: Cantabria
+    seats: Distribución de escaños
+  - name: Castilla - La Mancha
+    type: group
+    aggregate: yes
+    divisions:
+    - name: Albacete
+      seats: Distribución de escaños
+    - name: Ciudad Real
+      seats: Distribución de escaños
+    - name: Cuenca
+      seats: Distribución de escaños
+    - name: Guadalajara
+      seats: Distribución de escaños
+    - name: Toledo
+      seats: Distribución de escaños
+  - name: Castilla y León
+    type: group
+    aggregate: yes
+    divisions:
+    - name: Burgos
+      seats: Distribución de escaños
+    - name: León
+      seats: Distribución de escaños
+    - name: Palencia
+      seats: Distribución de escaños
+    - name: Salamanca
+      seats: Distribución de escaños
+    - name: Segovia
+      seats: Distribución de escaños
+    - name: Soria
+      seats: Distribución de escaños
+    - name: Valladolid
+      seats: Distribución de escaños
+    - name: Zamora
+      seats: Distribución de escaños
+    - name: Ávila
+      seats: Distribución de escaños
+  - name: Cataluña
+    type: group
+    aggregate: yes
+    divisions:
+    - name: Barcelona
+      seats: Distribución de escaños
+    - name: Girona
+      seats: Distribución de escaños
+    - name: Lleida
+      seats: Distribución de escaños
+    - name: Tarragona
+      seats: Distribución de escaños
+  - name: Ceuta
+    seats: Distribución de escaños
+  - name: Comunitat Valenciana
+    type: group
+    aggregate: yes
+    divisions:
+    - name: Alicante/Alacant
+      seats: Distribución de escaños
+    - name: Castellón/Castelló
+      seats: Distribución de escaños
+    - name: Valencia/València
+      seats: Distribución de escaños
+  - name: Extremadura
+    type: group
+    aggregate: yes
+    divisions:
+    - name: Badajoz
+      seats: Distribución de escaños
+    - name: Cáceres
+      seats: Distribución de escaños
+  - name: Galicia
+    type: group
+    aggregate: yes
+    divisions:
+    - name: A Coruña
+      seats: Distribución de escaños
+    - name: Lugo
+      seats: Distribución de escaños
+    - name: Ourense
+      seats: Distribución de escaños
+    - name: Pontevedra
+      seats: Distribución de escaños
+  - name: Madrid
+    seats: Distribución de escaños
+  - name: Melilla
+    seats: Distribución de escaños
+  - name: Murcia
+    seats: Distribución de escaños
+  - name: Navarra
+    seats: Distribución de escaños
+  - name: País Vasco
+    type: group
+    aggregate: yes
+    divisions:
+    - name: Araba/Álava
+      seats: Distribución de escaños
+    - name: Bizkaia
+      seats: Distribución de escaños
+    - name: Gipuzkoa
+      seats: Distribución de escaños
+  - name: La Rioja
+    seats: Distribución de escaños

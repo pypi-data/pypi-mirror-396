@@ -1,0 +1,116 @@
+# SPDX-FileCopyrightText: 2025 wmj <wmj.py@gmx.com>
+#
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
+name: Condorcet methods - Cities
+type: group
+meta:
+    reference: https://en.wikipedia.org/wiki/Ranked_pairs
+divisions:
+
+- name: copeland
+  method: condorcet_copeland
+  meta:
+    test:
+    - { name: "Nashville", seats: 1 }
+
+  candidates:
+  - name: Chattanooga
+  - name: Knoxville
+  - name: Memphis
+  - name: Nashville
+
+  preferences:
+  - votes: 42
+    preference: ["Memphis",     "Nashville", "Chattanooga", "Knoxville"]
+  - votes: 26
+    preference: ["Nashville", "Chattanooga",   "Knoxville",   "Memphis"]
+  - votes: 15
+    preference: ["Chattanooga", "Knoxville",   "Nashville",   "Memphis"]
+  - votes: 17
+    preference: ["Knoxville", "Chattanooga",   "Nashville",   "Memphis"]
+
+- name: minimax
+  method: condorcet_minimax
+  meta:
+    test:
+    - { name: "Nashville", seats: 1 }
+  candidates:
+  - name: Chattanooga
+  - name: Knoxville
+  - name: Memphis
+  - name: Nashville
+
+  preferences:
+  - votes: 42
+    preference: ["Memphis",     "Nashville", "Chattanooga", "Knoxville"]
+  - votes: 26
+    preference: ["Nashville", "Chattanooga",   "Knoxville",   "Memphis"]
+  - votes: 15
+    preference: ["Chattanooga", "Knoxville",   "Nashville",   "Memphis"]
+  - votes: 17
+    preference: ["Knoxville", "Chattanooga",   "Nashville",   "Memphis"]
+
+- name: minimax ref
+  method: condorcet_minimax
+  meta:
+    test:
+    - { name: "Nashville", seats: 1 }
+  candidates: id[copeland]
+  preferences: id[copeland]
+
+- name: ranked pairs
+  method: condorcet_ranked_pairs
+  meta:
+    test:
+    - { name: "Nashville", seats: 1 }
+  candidates:
+  - name: Chattanooga
+  - name: Knoxville
+  - name: Memphis
+  - name: Nashville
+  preferences:
+  - votes: 42
+    preference: ["Memphis",     "Nashville", "Chattanooga", "Knoxville"]
+  - votes: 26
+    preference: ["Nashville", "Chattanooga",   "Knoxville",   "Memphis"]
+  - votes: 15
+    preference: ["Chattanooga", "Knoxville",   "Nashville",   "Memphis"]
+  - votes: 17
+    preference: ["Knoxville", "Chattanooga",   "Nashville",   "Memphis"]
+
+- name: ranked pairs ref
+  method: condorcet_ranked_pairs
+  meta:
+    test:
+    - { name: "Nashville", seats: 1 }
+  candidates: id[copeland]
+  preferences: id[copeland]
+
+- name: instant run-off
+  method: instant_runoff
+  meta:
+    test:
+    - { name: "Knoxville", seats: 1 }
+  candidates:
+  - name: Chattanooga
+  - name: Knoxville
+  - name: Memphis
+  - name: Nashville
+  preferences:
+  - votes: 42
+    preference: ["Memphis",     "Nashville", "Chattanooga", "Knoxville"]
+  - votes: 26
+    preference: ["Nashville", "Chattanooga",   "Knoxville",   "Memphis"]
+  - votes: 15
+    preference: ["Chattanooga", "Knoxville",   "Nashville",   "Memphis"]
+  - votes: 17
+    preference: ["Knoxville", "Chattanooga",   "Nashville",   "Memphis"]
+
+- name: instant run-off ref
+  method: instant_runoff
+  meta:
+    test:
+    - { name: "Knoxville", seats: 1 }
+  candidates: id[copeland]
+  preferences: id[copeland]

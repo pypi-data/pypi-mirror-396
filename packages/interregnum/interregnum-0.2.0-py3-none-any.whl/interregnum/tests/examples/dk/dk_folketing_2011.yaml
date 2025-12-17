@@ -1,0 +1,429 @@
+# SPDX-FileCopyrightText: 2025 wmj <wmj.py@gmx.com>
+#
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
+## BEFOLKNING OG VALG
+## 2011:6 · 26. september 2011
+## Folketingsvalget den 15. september 2011
+## Danmarks Statistik
+# https://www.dst.dk/valg/SE_FV2011.pdf
+#
+# https://www.dst.dk/valg/Valg1204271/valgopg/valgopgHL.htm
+name: "Folketing - 2011"
+type: group
+method: highest_averages
+method_params:
+    divisor_f: dhondt
+divisions:
+
+- name: compensatory district
+  type: compensatory
+  mode: mixed_member
+  seats: 175
+  method: largest_remainder
+  method_params:
+    quota_f: hare
+  # TODO threshold 2
+  # quota 1
+  # hare quorum 2
+  exclude: votes < 2%
+  include: provinces.alliance_seats >= 1 => alliance
+  first_vote: alliance[provinces:-1]
+  candidates: alliance[provinces:-1]
+  skip_initial_seats: yes
+  meta:
+    notes: |
+        candidates with at least 2% of party votes,
+        or parties that won at least 1 constituency seat,
+        or candidates that reach a hare quota at least in 2 of the 3 provinces
+    references: |
+        ## BEFOLKNING OG VALG
+        ## 2011:6 · 26. september 2011
+        ## Folketingsvalget den 15. september 2011
+        ## Danmarks Statistik
+        # https://www.dst.dk/valg/SE_FV2011.pdf
+        #
+        # https://www.dst.dk/valg/Valg1204271/valgopg/valgopgHL.htm
+    test:
+    - name: Socialdemokratiet
+      seats: 6
+    - name: Radikale Venstre
+      seats: 5
+    - name: Konservative Folkeparti
+      seats: 5
+    - name: SF - Socialistisk Folkeparti
+      seats: 5
+    - name: Liberal Alliance
+      seats: 4
+    - name: Dansk Folkeparti
+      seats: 5
+    - name: Venstre
+      seats: 5
+    - name: Enhedslisten
+      seats: 5
+
+- name: global adjustment seats to provinces
+  key: reapp1
+  type: reapportionment
+  strategy: district
+  relative: no
+  method: highest_averages
+  method_params:
+    divisor_f: sainte_lague
+  adjustment: compensatory district
+  candidates: provinces
+  first_vote: provinces
+  meta:
+    test:
+    - { district: Hovedstaden, name: Radikale Venstre, seats: 2 }
+    - { district: Hovedstaden, name: Konservative Folkeparti, seats: 2 }
+    - { district: Hovedstaden, name: SF - Socialistisk Folkeparti, seats: 1 }
+    - { district: Hovedstaden, name: Liberal Alliance, seats: 1 }
+    - { district: Hovedstaden, name: Dansk Folkeparti, seats: 2 }
+    - { district: Hovedstaden, name: Venstre, seats: 1 }
+    - { district: Hovedstaden, name: Enhedslisten, seats: 1 }
+
+    - { district: Sjælland-Syddanmark, name: Socialdemokratiet, seats: 3 }
+    - { district: Sjælland-Syddanmark, name: Radikale Venstre, seats: 2 }
+    - { district: Sjælland-Syddanmark, name: Konservative Folkeparti, seats: 2 }
+    - { district: Sjælland-Syddanmark, name: SF - Socialistisk Folkeparti, seats: 2 }
+    - { district: Sjælland-Syddanmark, name: Liberal Alliance, seats: 1 }
+    - { district: Sjælland-Syddanmark, name: Dansk Folkeparti, seats: 2 }
+    - { district: Sjælland-Syddanmark, name: Venstre, seats: 2 }
+    - { district: Sjælland-Syddanmark, name: Enhedslisten, seats: 2 }
+
+    - { district: Midtjylland-Nordjylland, name: Socialdemokratiet, seats: 3 }
+    - { district: Midtjylland-Nordjylland, name: Radikale Venstre, seats: 1 }
+    - { district: Midtjylland-Nordjylland, name: Konservative Folkeparti, seats: 1 }
+    - { district: Midtjylland-Nordjylland, name: SF - Socialistisk Folkeparti, seats: 2 }
+    - { district: Midtjylland-Nordjylland, name: Liberal Alliance, seats: 2 }
+    - { district: Midtjylland-Nordjylland, name: Dansk Folkeparti, seats: 1 }
+    - { district: Midtjylland-Nordjylland, name: Venstre, seats: 2 }
+    - { district: Midtjylland-Nordjylland, name: Enhedslisten, seats: 2 }
+
+
+- name: province adjustment seats to constituencies
+  key: reapp2
+  type: reapportionment
+  strategy: candidate
+  relative: no
+  method: highest_averages
+  method_params:
+    divisor_f: danish
+  adjustment: reapp1
+  candidates: provinces:-1
+  first_vote: provinces:-1
+  meta:
+    test:
+    - {district: København, name: Konservative Folkeparti, seats: 1}
+    - {district: København, name: SF - Socialistisk Folkeparti, seats: 1}
+    - {district: København, name: Dansk Folkeparti, seats: 1}
+    - {district: København, name: Venstre, seats: 1}
+
+    - {district: Københavns Omegn, name: Radikale Venstre, seats: 1}
+    - {district: Københavns Omegn, name: Liberal Alliance, seats: 1}
+    - {district: Københavns Omegn, name: Dansk Folkeparti, seats: 1}
+
+    - {district: Nordsjælland, name: Radikale Venstre, seats: 1, seats: 1}
+    - {district: Nordsjælland, name: Konservative Folkeparti, seats: 1}
+    - {district: Nordsjælland, name: Enhedslisten, seats: 1}
+
+    - {district: Sjælland, name: Socialdemokratiet, seats: 2}
+    - {district: Sjælland, name: Radikale Venstre, seats: 1}
+    - {district: Sjælland, name: Dansk Folkeparti, seats: 1}
+    - {district: Sjælland, name: Venstre, seats: 1}
+    - {district: Sjælland, name: Enhedslisten, seats: 1}
+
+    - {district: Fyn, name: Socialdemokratiet, seats: 1}
+    - {district: Fyn, name: Konservative Folkeparti, seats: 1}
+    - {district: Fyn, name: SF - Socialistisk Folkeparti, seats: 1}
+    - {district: Fyn, name: Liberal Alliance, seats: 1}
+    - {district: Fyn, name: Venstre, seats: 1}
+
+    - {district: Sydjylland, name: Radikale Venstre, seats: 1}
+    - {district: Sydjylland, name: Konservative Folkeparti, seats: 1}
+    - {district: Sydjylland, name: SF - Socialistisk Folkeparti, seats: 1}
+    - {district: Sydjylland, name: Dansk Folkeparti, seats: 1}
+    - {district: Sydjylland, name: Enhedslisten, seats: 1}
+
+    - {district: Nordjylland, name: Socialdemokratiet, seats: 1}
+    - {district: Nordjylland, name: SF - Socialistisk Folkeparti, seats: 1}
+    - {district: Nordjylland, name: Liberal Alliance, seats: 1}
+    - {district: Nordjylland, name: Enhedslisten, seats: 1}
+
+    - {district: Østjylland, name: Socialdemokratiet, seats: 2}
+    - {district: Østjylland, name: Radikale Venstre, seats: 1}
+    - {district: Østjylland, name: Konservative Folkeparti, seats: 1}
+    - {district: Østjylland, name: SF - Socialistisk Folkeparti, seats: 1}
+    - {district: Østjylland, name: Dansk Folkeparti, seats: 1}
+    - {district: Østjylland, name: Venstre, seats: 1}
+
+    - {district: Vestjylland, name: Liberal Alliance, seats: 1}
+    - {district: Vestjylland, name: Venstre, seats: 1}
+    - {district: Vestjylland, name: Enhedslisten, seats: 1}
+
+- name: provinces
+  type: group
+  aggregate: yes
+  divisions:
+
+  - name: "Hovedstaden"
+    type: group
+    aggregate: yes
+    groupby: id
+    max_adjustment_seats: 10
+    divisions:
+
+    - name: "København"
+      seats: 15
+      meta: { test: yes }
+      candidates:
+      - name: "? blank"
+        votes: 2588
+      - name: "! void"
+        votes: 1870
+      - {name: Socialdemokratiet, seats: 3, votes: 80705}
+      - {name: Radikale Venstre, seats: 3, votes: 71264}
+      # 0 + 1
+      - {name: Konservative Folkeparti, votes: 23262, meta: { adjustment_seats: 1} }
+      # 2 + 1
+      - {name: SF - Socialistisk Folkeparti, seats: 2, votes: 52870, meta: { adjustment_seats: 1} }
+      - {name: Liberal Alliance, seats: 1, votes: 24882}
+      - {name: Kristendemokraterne, votes: 1185}
+      # 1 + 1
+      - {name: Dansk Folkeparti, seats: 1, votes: 35887, meta: { adjustment_seats: 1 }}
+      # 2 + 1
+      - {name: Venstre, seats: 2, votes: 64914, meta: {adjustment_seats: 1}}
+      - {name: Enhedslisten, seats: 3, votes: 70831}
+      - {max_seats: 1, name: Tom Gillesberg, votes: 123}
+      - {max_seats: 1, name: Klaus Trier Tuxen, votes: 161}
+      - {max_seats: 1, name: Morten Versner, votes: 10}
+      - {max_seats: 1, name: Mads Vestergaard, votes: 54}
+      - {max_seats: 1, name: John Erik Wagner, votes: 43}
+      - {max_seats: 1, name: Per Zimmermann, votes: 14}
+
+    - name: "Københavns Omegn"
+      seats: 12
+      meta: { test: yes }
+      candidates:
+      - name: "? blank"
+        votes: 2092
+      - name: "! void"
+        votes: 1085
+      - {name: Socialdemokratiet, seats: 4, votes: 81557}
+      # 1+1
+      - {name: Radikale Venstre, seats: 1, votes: 33992, meta: {adjustment_seats: 1}}
+      - {name: Konservative Folkeparti, seats: 1, votes: 21763}
+      - {name: SF - Socialistisk Folkeparti, seats: 1, votes: 27767}
+      # 0+1
+      - {name: Liberal Alliance, votes: 16703, meta: {adjustment_seats: 1}}
+      - {name: Kristendemokraterne, votes: 1086}
+      # 1+1
+      - {name: Dansk Folkeparti, seats: 1, votes: 40444, meta: {adjustment_seats: 1}}
+      - {name: Venstre, seats: 3, votes: 69948}
+      - {name: Enhedslisten, seats: 1, votes: 23221}
+      - {max_seats: 1, name: Christian H. Hansen, votes: 247}
+
+    - name: "Nordsjælland"
+      seats: 10
+      meta: { test: yes }
+      candidates:
+      - name: "? blank"
+        votes: 1426
+      - name: "! void"
+        votes: 886
+      - {name: Socialdemokratiet, seats: 2, votes: 54182}
+      # 1+1
+      - {name: Radikale Venstre, seats: 1, votes: 33537, meta: {adjustment_seats: 1}}
+      # 0+1
+      - {name: Konservative Folkeparti, votes: 19765, meta: {adjustment_seats: 1}}
+      - {name: SF - Socialistisk Folkeparti, seats: 1, votes: 21012}
+      - {name: Liberal Alliance, seats: 1, votes: 20613}
+      - {name: Kristendemokraterne, votes: 1171}
+      - {name: Dansk Folkeparti, seats: 1, votes: 30279}
+      - {name: Venstre, seats: 4, votes: 91870}
+      # 0+1
+      - {name: Enhedslisten, votes: 15062, meta: {adjustment_seats: 1}}
+      - {max_seats: 1, name: Bjarne Holm, votes: 99}
+
+    - name: "Bornholm"
+      seats: 2
+      meta: { test: yes }
+      candidates:
+      - name: "? blank"
+        votes: 182
+      - name: "! void"
+        votes: 97
+      - {name: Socialdemokratiet, seats: 1, votes: 9801}
+      - {name: Radikale Venstre, votes: 1509}
+      - {name: Konservative Folkeparti, votes: 580}
+      - {name: SF - Socialistisk Folkeparti, votes: 2011}
+      - {name: Liberal Alliance, votes: 509}
+      - {name: Kristendemokraterne, votes: 681}
+      - {name: Dansk Folkeparti, votes: 2972}
+      - {name: Venstre, seats: 1, votes: 7309}
+      - {name: Enhedslisten, votes: 1992}
+
+  - name: "Sjælland-Syddanmark"
+    type: group
+    aggregate: yes
+    groupby: id
+    max_adjustment_seats: 16
+    divisions:
+
+    - name: "Sjælland"
+      seats: 20
+      meta: { test: yes }
+      candidates:
+      - name: "? blank"
+        votes: 3656
+      - name: "! void"
+        votes: 1713
+      # 5+2
+      - {name: Socialdemokratiet, seats: 5, votes: 133571, meta: {adjustment_seats: 2}}
+      # 1+1
+      - {name: Radikale Venstre, seats: 1, votes: 39840, meta: {adjustment_seats: 1}}
+      - {name: Konservative Folkeparti, seats: 1, votes: 24863}
+      - {name: SF - Socialistisk Folkeparti, seats: 2, votes: 51952}
+      - {name: Liberal Alliance, seats: 1, votes: 23857}
+      - {name: Kristendemokraterne, votes: 2022}
+      # 3+1
+      - {name: Dansk Folkeparti, seats: 3, votes: 85571, meta: {adjustment_seats: 1}}
+      # 6+1
+      - {name: Venstre, seats: 6, votes: 139888, meta: {adjustment_seats: 1}}
+      # 1+1
+      - {name: Enhedslisten, seats: 1, votes: 29959, meta: {adjustment_seats: 1}}
+      - {max_seats: 1, name: Johan Isbrandt Haulik, votes: 124}
+      - {max_seats: 1, name: Bent A. Jespersen, votes: 38}
+      - {max_seats: 1, name: Peter Lotinga, votes: 116}
+
+    - name: "Fyn"
+      seats: 12
+      meta: { test: yes }
+      candidates:
+      - name: "? blank"
+        votes: 2344
+      - name: "! void"
+        votes: 1145
+      # 4+1
+      - {name: Socialdemokratiet, seats: 4, votes: 89577, meta: {adjustment_seats: 1}}
+      - {name: Radikale Venstre, seats: 1, votes: 26658}
+      # 0+1
+      - {name: Konservative Folkeparti, votes: 16033, meta: {adjustment_seats: 1}}
+      # 1+1
+      - {name: SF - Socialistisk Folkeparti, seats: 1, votes: 32990, meta: {adjustment_seats: 1}}
+      # 0+1
+      - {name: Liberal Alliance, votes: 13164, meta: {adjustment_seats: 1}}
+      - {name: Kristendemokraterne, votes: 1330}
+      - {name: Dansk Folkeparti, seats: 2, votes: 38978}
+      # 3+1
+      - {name: Venstre, seats: 3, votes: 76845, meta: {adjustment_seats: 1}}
+      - {name: Enhedslisten, seats: 1, votes: 19914}
+      - {max_seats: 1, name: Michael Ellegaard, votes: 69}
+      - {max_seats: 1, name: "Lars Grønbæk Larsen", votes: 102}
+
+    - name: "Sydjylland"
+      seats: 18
+      meta: { test: yes }
+      candidates:
+      - name: "? blank"
+        votes: 3139
+      - name: "! void"
+        votes: 1514
+      - {name: Socialdemokratiet, seats: 5, votes: 108937}
+      # 1+1
+      - {name: Radikale Venstre, seats: 1, votes: 29742, meta: {adjustment_seats: 1}}
+      # 0+1
+      - {name: Konservative Folkeparti, votes: 17905, meta: {adjustment_seats: 1}}
+      # 1+1
+      - {name: SF - Socialistisk Folkeparti, seats: 1, votes: 34717, meta: {adjustment_seats: 1}}
+      - {name: Liberal Alliance, seats: 1, votes: 21912}
+      - {name: Kristendemokraterne, votes: 4714}
+      # 3+1
+      - {name: Dansk Folkeparti, seats: 3, votes: 66666, meta: {adjustment_seats: 1}}
+      - {name: Venstre, seats: 7, votes: 149148}
+      # 0+1
+      - {name: Enhedslisten, votes: 17266, meta: {adjustment_seats: 1}}
+      - {max_seats: 1, name: "Niels-Aage Bjerre", votes: 71}
+      - {max_seats: 1, name: "Jørn Bjorholm", votes: 83}
+
+  - name: "Midtjylland-Nordjylland"
+    type: group
+    aggregate: yes
+    groupby: id
+    max_adjustment_seats: 14
+    divisions:
+
+    - name: "Nordjylland"
+      seats: 15
+      meta: { test: yes }
+      candidates:
+      - name: "? blank"
+        votes: 2197
+      - name: "! void"
+        votes: 938
+      # 5+1
+      - {name: Socialdemokratiet, seats: 5, votes: 113739, meta: {adjustment_seats: 1}}
+      - {name: Radikale Venstre, seats: 1, votes: 25716}
+      - {name: Konservative Folkeparti, seats: 1, votes: 20171}
+      # 1+1
+      - {name: SF - Socialistisk Folkeparti, seats: 1, votes: 32690, meta: {adjustment_seats: 1}}
+      # 0+1
+      - {name: Liberal Alliance, votes: 15202, meta: {adjustment_seats: 1}}
+      - {name: Kristendemokraterne, votes: 3127}
+      - {name: Dansk Folkeparti, seats: 2, votes: 45277}
+      - {name: Venstre, seats: 5, votes: 102686}
+      # 0+1
+      - {name: Enhedslisten, votes: 16639, meta: {adjustment_seats: 1}}
+      - {max_seats: 1, name: Hans Jørgen Schultz, votes: 132}
+
+    - name: "Østjylland"
+      seats: 18
+      meta: { test: yes }
+      candidates:
+      - name: "? blank"
+        votes: 3002
+      - name: "! void"
+        votes: 1332
+      # 5+2
+      - {name: Socialdemokratiet, seats: 5, votes: 131338, meta: {adjustment_seats: 2}}
+      # 2+1
+      - {name: Radikale Venstre, seats: 2, votes: 50350, meta: {adjustment_seats: 1}}
+      # 0+1
+      - {name: Konservative Folkeparti, votes: 18028, meta: {adjustment_seats: 1}}
+      # 1+1
+      - {name: SF - Socialistisk Folkeparti, seats: 1, votes: 43364, meta: {adjustment_seats: 1}}
+      - {name: Liberal Alliance, seats: 1, votes: 23682}
+      - {name: Kristendemokraterne, votes: 3090}
+      # 2+1
+      - {name: Dansk Folkeparti, seats: 2, votes: 50274, meta: {adjustment_seats: 1}}
+      # 6+1
+      - {name: Venstre, seats: 6, votes: 131674, meta: {adjustment_seats: 1}}
+      - {name: Enhedslisten, seats: 1, votes: 30471}
+      - {max_seats: 1, name: "Ibrahim Gøkhan", votes: 110}
+      - {max_seats: 1, name: Janus Kramer, votes: 94}
+
+    - name: "Vestjylland"
+      seats: 13
+      meta: { test: yes }
+      candidates:
+      - name: "? blank"
+        votes: 2189
+      - name: "! void"
+        votes: 912
+      - {name: Socialdemokratiet, seats: 4, votes: 76208}
+      - {name: Radikale Venstre, seats: 1, votes: 24090}
+      - {name: Konservative Folkeparti, votes: 12677}
+      - {name: SF - Socialistisk Folkeparti, seats: 1, votes: 26819}
+      # 0+1
+      - {name: Liberal Alliance, votes: 16061, meta: {adjustment_seats: 1}}
+      - {name: Kristendemokraterne, votes: 9664}
+      - {name: Dansk Folkeparti, seats: 2, votes: 40378}
+      # 5+1
+      - {name: Venstre, seats: 5, votes: 113443, meta: {adjustment_seats: 1}}
+      # 0+1
+      - {name: Enhedslisten, votes: 11505, meta: {adjustment_seats: 1}}
+      - {max_seats: 1, name: Rikke Cramer Christiansen, votes: 136}
+      - {max_seats: 1, name: "Ejgil Kølbæk", votes: 24}
+
+

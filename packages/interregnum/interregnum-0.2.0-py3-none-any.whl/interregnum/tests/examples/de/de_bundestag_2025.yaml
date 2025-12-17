@@ -1,0 +1,1129 @@
+# SPDX-FileCopyrightText: 2025 wmj <wmj.py@gmx.com>
+#
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
+name: Bundestag 2025
+type: group
+method: iterative_divisor
+method_params:
+    signpost_f: sainte_lague
+
+divisions:
+
+- name: Oberverteilung
+  type: compensatory
+  mode: mixed_member
+  seats: 630
+  exclude: votes < 5%
+  include: "any{ #mandates.alliance_quorum >= 3 => alliance | #mandates.alliance_group = minority => alliance }"
+  first_vote: "alliance[#mandates]"
+  candidates: alliance[Zweistimme]
+  subtract_excluded_candidates: yes
+  meta:
+    notes: |
+        Federal party seats allocation using second vote.
+    test:
+    - { name: SPD, seats: 120 }
+    - { name: CDU, seats: 164 }
+    - { name: GRÜNE, seats: 85 }
+    - { name: AfD, seats: 152 }
+    - { name: CSU, seats: 44 }
+    - { name: Die Linke, seats: 64 }
+    - { name: SSW, seats: 1 }
+
+- name: Unterverteilung
+  type: reapportionment
+  strategy: candidate
+  adjustment: Oberverteilung
+  candidates: Zweistimme:-1
+  first_vote: Zweistimme:-1
+  map_districts:
+    Landesliste - Schleswig-Holstein: Schleswig-Holstein
+    Landesliste - Hamburg: Hamburg
+    Landesliste - Niedersachsen: Niedersachsen
+    Landesliste - Bremen: Bremen
+    Landesliste - Nordrhein-Westfalen: Nordrhein-Westfalen
+    Landesliste - Hessen: Hessen
+    Landesliste - Rheinland-Pfalz: Rheinland-Pfalz
+    Landesliste - Baden-Württemberg: Baden-Württemberg
+    Landesliste - Bayern: Bayern
+    Landesliste - Saarland: Saarland
+    Landesliste - Berlin: Berlin
+    Landesliste - Brandenburg: Brandenburg
+    Landesliste - Mecklenburg-Vorpommern: Mecklenburg-Vorpommern
+    Landesliste - Sachsen: Sachsen
+    Landesliste - Sachsen-Anhalt: Sachsen-Anhalt
+    Landesliste - Thüringen: Thüringen
+  meta:
+    notes: |
+        State seats allocation for each party.
+    test: file:btw25_Unterverteilung.csv
+
+- name: levelling seats
+  type: compensatory
+  mode: subtract_overhang_seats
+  method: copy
+  # copy needs initial seats from first vote
+  propagate_initial_seats: yes
+  first_vote: Länder:1
+  candidates: Unterverteilung
+  initial_seats: from_results
+  # return new seats only
+  skip_initial_seats: yes
+  meta:
+    notes: |
+        Allocate levelling seats (subtract mandates from Unterverteilung)
+    test: file:btw25_levelling_seats.csv
+
+- name: negative levelling seats
+  exclude: levelling seats.seats >= 0
+  include: levelling seats.seats < 0
+  method: noop
+  candidates: levelling seats
+  initial_seats: from_results
+
+- name: mandates surplus
+  type: reapportionment
+  method: limited_voting
+  strategy: candidate
+  relative: votes
+  exclude: "#mandates.seats < 1"
+  adjustment: negative levelling seats
+  candidates: "#mandates"
+  first_vote: "#mandates"
+  meta:
+    test: file:btw25_mandates_surplus.csv
+
+- name: Zweistimme
+  type: group
+  method: noop
+  meta:
+    notes: |
+        second votes: party lists for each state
+  fill_candidates:
+    path: de_bundestag_2025_second_vote.csv
+    format: csv
+    sep: ","
+  divisions:
+  - name: Landesliste - Schleswig-Holstein
+  - name: Landesliste - Hamburg
+  - name: Landesliste - Niedersachsen
+  - name: Landesliste - Bremen
+  - name: Landesliste - Nordrhein-Westfalen
+  - name: Landesliste - Hessen
+  - name: Landesliste - Rheinland-Pfalz
+  - name: Landesliste - Baden-Württemberg
+  - name: Landesliste - Bayern
+  - name: Landesliste - Saarland
+  - name: Landesliste - Berlin
+  - name: Landesliste - Brandenburg
+  - name: Landesliste - Mecklenburg-Vorpommern
+  - name: Landesliste - Sachsen
+  - name: Landesliste - Sachsen-Anhalt
+  - name: Landesliste - Thüringen
+
+- name: Länder
+  type: group
+  method: noop
+  meta:
+    notes: |
+        Wahlkreise.
+        First vote: mandates for state districts.
+  fill_candidates:
+    format: csv
+    path: de_bundestag_2025_first_vote.csv
+    sep: ","
+  divisions:
+
+  - name: Schleswig-Holstein
+    type: group
+    aggregate: yes
+    groupby: id
+    divisions:
+    - name: Flensburg – Schleswig
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Nordfriesland – Dithmarschen Nord
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Steinburg – Dithmarschen Süd
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Rendsburg-Eckernförde
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Kiel
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Plön – Neumünster
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Pinneberg
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Segeberg – Stormarn-Mitte
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Ostholstein – Stormarn-Nord
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Herzogtum Lauenburg – Stormarn-Süd
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Lübeck
+      groups: [mandates]
+      meta: { test: yes }
+
+  - name: Hamburg
+    type: group
+    aggregate: yes
+    groupby: id
+    divisions:
+    - name: Hamburg-Mitte
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Hamburg-Altona
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Hamburg-Eimsbüttel
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Hamburg-Nord
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Hamburg-Wandsbek
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Hamburg-Bergedorf – Harburg
+      groups: [mandates]
+      meta: { test: yes }
+
+  - name: Niedersachsen
+    type: group
+    aggregate: yes
+    groupby: id
+    divisions:
+    - name: Aurich – Emden
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Unterems
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Friesland – Wilhelmshaven – Wittmund
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Oldenburg – Ammerland
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Delmenhorst – Wesermarsch – Oldenburg-Land
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Cuxhaven – Stade II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Stade I – Rotenburg II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Mittelems
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Cloppenburg – Vechta
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Diepholz – Nienburg I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Osterholz – Verden
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Rotenburg I – Heidekreis
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Harburg
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Lüchow-Dannenberg – Lüneburg
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Osnabrück-Land
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Stadt Osnabrück
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Nienburg II – Schaumburg
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Stadt Hannover I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Stadt Hannover II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Hannover-Land I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Celle – Uelzen
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Gifhorn – Peine
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Hameln-Pyrmont – Holzminden
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Hannover-Land II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Hildesheim
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Salzgitter – Wolfenbüttel
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Braunschweig
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Helmstedt – Wolfsburg
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Goslar – Northeim – Göttingen II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Göttingen I
+      groups: [mandates]
+      meta: { test: yes }
+
+  - name: Bremen
+    type: group
+    aggregate: yes
+    groupby: id
+    divisions:
+    - name: Bremen I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Bremen II – Bremerhaven
+      groups: [mandates]
+      meta: { test: yes }
+
+  - name: Nordrhein-Westfalen
+    type: group
+    aggregate: yes
+    groupby: id
+    divisions:
+    - name: Aachen I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Aachen II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Heinsberg
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Düren
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Rhein-Erft-Kreis I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Euskirchen – Rhein-Erft-Kreis II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Köln I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Köln II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Köln III
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Bonn
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Rhein-Sieg-Kreis I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Rhein-Sieg-Kreis II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Oberbergischer Kreis
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Rheinisch-Bergischer Kreis
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Leverkusen – Köln IV
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Wuppertal I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Solingen – Remscheid – Wuppertal II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Mettmann I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Mettmann II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Düsseldorf I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Düsseldorf II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Neuss I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Mönchengladbach
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Krefeld I – Neuss II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Viersen
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Kleve
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Wesel I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Krefeld II – Wesel II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Duisburg I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Duisburg II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Oberhausen – Wesel III
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Mülheim – Essen I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Essen II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Essen III
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Recklinghausen I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Recklinghausen II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Gelsenkirchen
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Steinfurt I – Borken I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Bottrop – Recklinghausen III
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Borken II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Coesfeld – Steinfurt II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Steinfurt III
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Münster
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Warendorf
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Gütersloh I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Bielefeld – Gütersloh II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Herford – Minden-Lübbecke II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Minden-Lübbecke I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Lippe I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Höxter – Gütersloh III – Lippe II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Paderborn
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Hagen – Ennepe-Ruhr-Kreis I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Ennepe-Ruhr-Kreis II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Bochum I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Herne – Bochum II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Dortmund I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Dortmund II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Unna I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Hamm – Unna II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Soest
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Hochsauerlandkreis
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Siegen-Wittgenstein
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Olpe – Märkischer Kreis I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Märkischer Kreis II
+      groups: [mandates]
+      meta: { test: yes }
+
+  - name: Hessen
+    type: group
+    aggregate: yes
+    groupby: id
+    divisions:
+    - name: Waldeck
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Kassel
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Werra-Meißner – Hersfeld-Rotenburg
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Schwalm-Eder
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Marburg
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Lahn-Dill
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Gießen
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Fulda
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Main-Kinzig – Wetterau II – Schotten
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Hochtaunus
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Wetterau I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Rheingau-Taunus – Limburg
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Wiesbaden
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Hanau
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Main-Taunus
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Frankfurt am Main I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Frankfurt am Main II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Groß-Gerau
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Offenbach
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Darmstadt
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Odenwald
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Bergstraße
+      groups: [mandates]
+      meta: { test: yes }
+
+  - name: Rheinland-Pfalz
+    type: group
+    aggregate: yes
+    groupby: id
+    divisions:
+    - name: Neuwied
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Ahrweiler
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Koblenz
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Mosel/Rhein-Hunsrück
+      meta: { test: yes }
+      groups: [mandates]
+    - name: Kreuznach
+      meta: { test: yes }
+      groups: [mandates]
+    - name: Bitburg
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Trier
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Montabaur
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Mainz
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Worms
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Ludwigshafen/Frankenthal
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Neustadt – Speyer
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Kaiserslautern
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Pirmasens
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Südpfalz
+      groups: [mandates]
+      meta: { test: yes }
+
+  - name: Baden-Württemberg
+    type: group
+    aggregate: yes
+    groupby: id
+    divisions:
+    - name: Stuttgart I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Stuttgart II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Böblingen
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Esslingen
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Nürtingen
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Göppingen
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Waiblingen
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Ludwigsburg
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Neckar-Zaber
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Heilbronn
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Schwäbisch Hall – Hohenlohe
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Backnang – Schwäbisch Gmünd
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Aalen – Heidenheim
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Karlsruhe-Stadt
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Karlsruhe-Land
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Rastatt
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Heidelberg
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Mannheim
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Odenwald – Tauber
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Rhein-Neckar
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Bruchsal – Schwetzingen
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Pforzheim
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Calw
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Freiburg
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Lörrach – Müllheim
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Emmendingen – Lahr
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Offenburg
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Rottweil – Tuttlingen
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Schwarzwald-Baar
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Konstanz
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Waldshut
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Reutlingen
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Tübingen
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Ulm
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Biberach
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Bodensee
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Ravensburg
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Zollernalb – Sigmaringen
+      groups: [mandates]
+      meta: { test: yes }
+
+  - name: Bayern
+    type: group
+    aggregate: yes
+    groupby: id
+    divisions:
+    - name: Altötting
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Erding – Ebersberg
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Freising
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Fürstenfeldbruck
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Ingolstadt
+      groups: [mandates]
+      meta: { test: yes }
+    - name: München-Nord
+      groups: [mandates]
+      meta: { test: yes }
+    - name: München-Ost
+      groups: [mandates]
+      meta: { test: yes }
+    - name: München-Süd
+      groups: [mandates]
+      meta: { test: yes }
+    - name: München-West/Mitte
+      groups: [mandates]
+      meta: { test: yes }
+    - name: München-Land
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Rosenheim
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Bad Tölz-Wolfratshausen – Miesbach
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Starnberg – Landsberg am Lech
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Traunstein
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Weilheim
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Deggendorf
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Landshut
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Passau
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Rottal-Inn
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Straubing
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Amberg
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Regensburg
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Schwandorf
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Weiden
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Bamberg
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Bayreuth
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Coburg
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Hof
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Kulmbach
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Ansbach
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Erlangen
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Fürth
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Nürnberg-Nord
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Nürnberg-Süd
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Roth
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Aschaffenburg
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Bad Kissingen
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Main-Spessart
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Schweinfurt
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Würzburg
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Augsburg-Stadt
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Augsburg-Land
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Donau-Ries
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Neu-Ulm
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Memmingen – Unterallgäu
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Oberallgäu
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Ostallgäu
+      groups: [mandates]
+      meta: { test: yes }
+
+  - name: Saarland
+    type: group
+    aggregate: yes
+    groupby: id
+    divisions:
+    - name: Saarbrücken
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Saarlouis
+      groups: [mandates]
+      meta: { test: yes }
+    - name: St. Wendel
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Homburg
+      groups: [mandates]
+      meta: { test: yes }
+
+  - name: Berlin
+    type: group
+    aggregate: yes
+    groupby: id
+    divisions:
+    - name: Berlin-Mitte
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Berlin-Pankow
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Berlin-Reinickendorf
+      meta: { test: yes }
+      groups: [mandates]
+    - name: Berlin-Spandau – Charlottenburg Nord
+      meta: { test: yes }
+      groups: [mandates]
+    - name: Berlin-Steglitz-Zehlendorf
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Berlin-Charlottenburg-Wilmersdorf
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Berlin-Tempelhof-Schöneberg
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Berlin-Neukölln
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Berlin-Friedrichshain-Kreuzberg – Prenzlauer Berg Ost
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Berlin-Treptow-Köpenick
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Berlin-Marzahn-Hellersdorf
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Berlin-Lichtenberg
+      groups: [mandates]
+      meta: { test: yes }
+
+  - name: Brandenburg
+    type: group
+    aggregate: yes
+    groupby: id
+    divisions:
+    - name: Prignitz – Ostprignitz-Ruppin – Havelland I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Uckermark – Barnim I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Oberhavel – Havelland II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Märkisch-Oderland – Barnim II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Brandenburg an der Havel – Potsdam-Mittelmark I – Havelland III – Teltow-Fläming I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Potsdam – Potsdam-Mittelmark II – Teltow-Fläming II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Dahme-Spreewald – Teltow-Fläming III
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Frankfurt (Oder) – Oder-Spree
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Cottbus – Spree-Neiße
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Elbe-Elster – Oberspreewald-Lausitz
+      groups: [mandates]
+      meta: { test: yes }
+
+  - name: Mecklenburg-Vorpommern
+    type: group
+    aggregate: yes
+    groupby: id
+    divisions:
+    - name: Schwerin – Ludwigslust-Parchim I – Nordwestmecklenburg I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Ludwigslust-Parchim II – Nordwestmecklenburg II – Landkreis Rostock I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Rostock – Landkreis Rostock II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Vorpommern-Rügen – Vorpommern-Greifswald I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Mecklenburgische Seenplatte I – Vorpommern-Greifswald II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Mecklenburgische Seenplatte II – Landkreis Rostock III
+      groups: [mandates]
+      meta: { test: yes }
+
+  - name: Sachsen
+    type: group
+    aggregate: yes
+    groupby: id
+    divisions:
+    - name: Nordsachsen
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Leipzig I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Leipzig II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Leipzig-Land
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Meißen
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Bautzen I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Görlitz
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Sächsische Schweiz-Osterzgebirge
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Dresden I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Dresden II – Bautzen II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Mittelsachsen
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Chemnitz
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Chemnitzer Umland – Erzgebirgskreis II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Erzgebirgskreis I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Zwickau
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Vogtlandkreis
+      groups: [mandates]
+      meta: { test: yes }
+
+  - name: Sachsen-Anhalt
+    type: group
+    aggregate: yes
+    groupby: id
+    divisions:
+    - name: Altmark – Jerichower Land
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Börde – Salzlandkreis
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Harz
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Magdeburg
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Anhalt – Dessau – Wittenberg
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Halle
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Burgenland – Saalekreis
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Mansfeld
+      groups: [mandates]
+      meta: { test: yes }
+
+  - name: Thüringen
+    type: group
+    aggregate: yes
+    groupby: id
+    divisions:
+    - name: Eichsfeld – Nordhausen – Kyffhäuserkreis
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Eisenach – Wartburgkreis – Unstrut-Hainich-Kreis
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Jena – Sömmerda – Weimarer Land I
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Gotha – Ilm-Kreis
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Erfurt – Weimar – Weimarer Land II
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Gera – Greiz – Altenburger Land
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Saalfeld-Rudolstadt – Saale-Holzland-Kreis – Saale-Orla-Kreis
+      groups: [mandates]
+      meta: { test: yes }
+    - name: Suhl – Schmalkalden-Meiningen – Hildburghausen – Sonneberg
+      groups: [mandates]
+      meta: { test: yes }

@@ -1,0 +1,143 @@
+# SPDX-FileCopyrightText: 2025 wmj <wmj.py@gmx.com>
+#
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
+name: Compensatory systems - Overhang management strategies
+type: group
+method: highest_averages
+method_params:
+    divisor_f: dhondt
+divisions:
+
+- name: districts
+  type: group
+  method: noop
+  divisions:
+  - name: circunscripción 1
+    meta: { test: yes }
+    candidates:
+    - { name: D, votes: 1500, seats: 1, min_seats: 1, max_seats: 3 }
+  - name: circunscripción 2
+    meta: { test: yes }
+    candidates:
+    - { name: C, votes: 5000, seats: 1, min_seats: 1 }
+    - { name: D, votes: 1000, seats: 1, min_seats: 1, max_seats: 2 }
+  - name: circunscripción 3
+    meta: { test: yes }
+    candidates:
+    - { name: A, votes: 5000, max_seats: 10 }
+    - { name: B, votes: 3000 }
+  - name: circunscripción 4
+    meta: { test: yes }
+    candidates:
+    - { name: A, votes: 5000, max_seats: 10 }
+    - { name: B, votes: 5000 }
+
+- name: ignore
+  type: compensatory
+  mode: mixed_member
+  seats: 5
+  candidates: id[districts:-1]
+  first_vote: id[districts:-1]
+  skip_initial_seats: yes
+  meta:
+    test:
+    - { name: A, seats: 2 }
+    - { name: B, seats: 2 }
+
+- name: absorb
+  type: compensatory
+  mode: absorb_overhang
+  seats: 5
+  candidates: id[districts:-1]
+  first_vote: id[districts:-1]
+  skip_initial_seats: yes
+  meta:
+    test:
+    - { name: A, seats: 8 }
+    - { name: B, seats: 6 }
+    - { name: C, seats: 3 }
+
+- name: absorb (limited)
+  type: compensatory
+  mode: absorb_overhang
+  seats: 5
+  max_seats: 9
+  candidates: id[districts:-1]
+  first_vote: id[districts:-1]
+  skip_initial_seats: yes
+  meta:
+    test:
+    - { name: A, seats: 4 }
+    - { name: B, seats: 3 }
+    - { name: C, seats: 1 }
+
+- name: exclude
+  type: compensatory
+  mode: exclude_overhang_parties
+  seats: 5
+  candidates: id[districts:-1]
+  first_vote: id[districts:-1]
+  skip_initial_seats: yes
+  meta:
+    test:
+    - { name: A, seats: 1 }
+    - { name: B, seats: 1 }
+
+- name: subtract
+  type: compensatory
+  mode: subtract_overhang_seats
+  seats: 5
+  candidates: id[districts:-1]
+  first_vote: id[districts:-1]
+  skip_initial_seats: yes
+  meta:
+    test:
+    - { name: A, seats: 2 }
+    - { name: B, seats: 2 }
+    - { name: D, seats: -2 }
+
+- name: parallel reapportion negative overhang
+  type: reapportionment
+  strategy: parallel
+  adjustment: subtract
+  candidates: districts:-1
+  first_vote: districts:-1
+  meta:
+    test:
+    - { district: circunscripción 3, name: A, seats: 1 }
+    - { district: circunscripción 4, name: A, seats: 1 }
+    - { district: circunscripción 3, name: B, seats: 1 }
+    - { district: circunscripción 4, name: B, seats: 1 }
+    - { district: circunscripción 2, name: D, seats: -1 }
+    - { district: circunscripción 1, name: D, seats: -1 }
+
+- name: district reapportion negative overhang
+  type: reapportionment
+  strategy: district
+  adjustment: subtract
+  candidates: districts:-1
+  first_vote: districts:-1
+  meta:
+    test:
+    - { district: circunscripción 3, name: A, seats: 1 }
+    - { district: circunscripción 4, name: A, seats: 1 }
+    - { district: circunscripción 3, name: B, seats: 1 }
+    - { district: circunscripción 4, name: B, seats: 1 }
+    - { district: circunscripción 2, name: D, seats: -1 }
+    - { district: circunscripción 1, name: D, seats: -1 }
+
+- name: id reapportion negative overhang
+  type: reapportionment
+  strategy: id
+  adjustment: subtract
+  candidates: districts:-1
+  first_vote: districts:-1
+  meta:
+    test:
+    - { district: circunscripción 3, name: A, seats: 1 }
+    - { district: circunscripción 4, name: A, seats: 1 }
+    - { district: circunscripción 3, name: B, seats: 1 }
+    - { district: circunscripción 4, name: B, seats: 1 }
+    - { district: circunscripción 2, name: D, seats: -1 }
+    - { district: circunscripción 1, name: D, seats: -1 }

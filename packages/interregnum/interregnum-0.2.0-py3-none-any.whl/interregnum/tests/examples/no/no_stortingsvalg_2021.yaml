@@ -1,0 +1,1157 @@
+# SPDX-FileCopyrightText: 2025 wmj <wmj.py@gmx.com>
+#
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
+name: Stortinget 2021
+type: group
+method: highest_averages
+method_params:
+  divisor_f: sainte_lague_1.4
+divisions:
+- name: compensatory
+  type: compensatory
+  mode: exclude_overhang_parties
+  exclude: any{ valid_votes < 4% | valgdistrikter.districts < 19 => id }
+  first_vote: id[valgdistrikter:-1]
+  candidates: id[valgdistrikter:-1]
+  seats: 169
+  skip_initial_seats: yes
+  subtract_excluded_candidates: yes
+  meta:
+    test:
+    - name: Fremskrittspartiet [FRP]
+      seats: 4
+    - name: Høyre [H]
+      seats: 1
+    - name: Rødt [RØDT]
+      seats: 4
+    - name: SV - Sosialistisk Venstreparti [SV]
+      seats: 5
+    - name: Venstre [V]
+      seats: 5
+- name: reapportionment
+  type: reapportionment
+  method: highest_averages
+  method_params:
+    divisor_f: sainte_lague
+  relative: quota
+  total_votes: valid_votes
+  adjustment: compensatory
+  candidates: valgdistrikter
+  first_vote: valgdistrikter
+  meta:
+    test:
+    - district: Akershus [2]
+      name: Høyre [H]
+      seats: 1
+    - district: Aust-Agder [9]
+      name: Fremskrittspartiet [FRP]
+      seats: 1
+    - district: Buskerud [6]
+      name: SV - Sosialistisk Venstreparti [SV]
+      seats: 1
+    - district: Finnmark Finnmárku [20]
+      name: Fremskrittspartiet [FRP]
+      seats: 1
+    - district: Hedmark [4]
+      name: Fremskrittspartiet [FRP]
+      seats: 1
+    - district: Hordaland [12]
+      name: Venstre [V]
+      seats: 1
+    - district: Møre og Romsdal [15]
+      name: SV - Sosialistisk Venstreparti [SV]
+      seats: 1
+    - district: Nord-Trøndelag [17]
+      name: Venstre [V]
+      seats: 1
+    - district: Nordland [18]
+      name: Rødt [RØDT]
+      seats: 1
+    - district: Oppland [5]
+      name: Fremskrittspartiet [FRP]
+      seats: 1
+    - district: Oslo [3]
+      name: Venstre [V]
+      seats: 1
+    - district: Rogaland [11]
+      name: Rødt [RØDT]
+      seats: 1
+    - district: Sogn og Fjordane [14]
+      name: Venstre [V]
+      seats: 1
+    - district: Sør-Trøndelag [16]
+      name: Rødt [RØDT]
+      seats: 1
+    - district: Telemark [8]
+      name: Rødt [RØDT]
+      seats: 1
+    - district: Troms Romsa [19]
+      name: SV - Sosialistisk Venstreparti [SV]
+      seats: 1
+    - district: Vest-Agder [10]
+      name: Venstre [V]
+      seats: 1
+    - district: Vestfold [7]
+      name: SV - Sosialistisk Venstreparti [SV]
+      seats: 1
+    - district: Østfold [1]
+      name: SV - Sosialistisk Venstreparti [SV]
+      seats: 1
+- name: valgdistrikter
+  type: group
+  aggregate: true
+  divisions:
+  - name: Østfold
+    key: Østfold [1]
+    meta:
+      test: true
+    seats: 8
+    candidates:
+    - name: '? blank'
+      votes: 1451
+    - name: '! void'
+      votes: 207
+    - name: Arbeiderpartiet [A]
+      votes: 49345
+      seats: 3
+    - name: SV - Sosialistisk Venstreparti [SV]
+      votes: 9840
+      meta:
+        adjustment_seats: 1
+    - name: Rødt [RØDT]
+      votes: 7418
+    - name: Senterpartiet [SP]
+      votes: 22849
+      seats: 2
+    - name: Kristelig Folkeparti [KRF]
+      votes: 5414
+    - name: Miljøpartiet De Grønne [MDG]
+      votes: 4782
+    - name: Venstre [V]
+      votes: 4771
+    - name: Høyre [H]
+      votes: 30211
+      seats: 2
+    - name: Fremskrittspartiet [FRP]
+      votes: 20527
+      seats: 1
+    - name: Alliansen - Alternativ for Norge [AAN]
+      votes: 172
+    - name: Norgesdemokratene [DEMN]
+      votes: 2348
+    - name: Folkeaksjonen Nei til mer bompenger [FNB]
+      votes: 285
+    - name: Helsepartiet [HELSE]
+      votes: 393
+    - name: Industri- og Næringspartiet [INP]
+      votes: 230
+    - name: Konservativt [KRISTNE]
+      votes: 688
+    - name: Liberalistene [LIBS]
+      votes: 263
+    - name: Piratpartiet [PIR]
+      votes: 155
+    - name: Pensjonistpartiet [PP]
+      votes: 1869
+    - name: Partiet Sentrum [PS]
+      votes: 336
+    max_adjustment_seats: 1
+  - name: Akershus
+    key: Akershus [2]
+    meta:
+      test: true
+    seats: 18
+    candidates:
+    - name: '? blank'
+      votes: 2372
+    - name: '! void'
+      votes: 614
+    - name: Arbeiderpartiet [A]
+      votes: 95609
+      seats: 5
+    - name: SV - Sosialistisk Venstreparti [SV]
+      votes: 25240
+      seats: 1
+    - name: Rødt [RØDT]
+      votes: 14572
+      seats: 1
+    - name: Senterpartiet [SP]
+      votes: 32584
+      seats: 2
+    - name: Kristelig Folkeparti [KRF]
+      votes: 7580
+    - name: Miljøpartiet De Grønne [MDG]
+      votes: 17461
+      seats: 1
+    - name: Venstre [V]
+      votes: 25393
+      seats: 1
+    - name: Høyre [H]
+      votes: 101439
+      seats: 5
+      meta:
+        adjustment_seats: 1
+    - name: Fremskrittspartiet [FRP]
+      votes: 38779
+      seats: 2
+    - name: Alliansen - Alternativ for Norge [AAN]
+      votes: 309
+    - name: Norgesdemokratene [DEMN]
+      votes: 4007
+    - name: Folkeaksjonen Nei til mer bompenger [FNB]
+      votes: 634
+    - name: Helsepartiet [HELSE]
+      votes: 1161
+    - name: Industri- og Næringspartiet [INP]
+      votes: 489
+    - name: Konservativt [KRISTNE]
+      votes: 719
+    - name: Liberalistene [LIBS]
+      votes: 636
+    - name: Piratpartiet [PIR]
+      votes: 338
+    - name: Pensjonistpartiet [PP]
+      votes: 2286
+    - name: Partiet Sentrum [PS]
+      votes: 953
+    - name: Generasjonspartiet [GENE]
+      votes: 112
+    max_adjustment_seats: 1
+  - name: Oslo
+    key: Oslo [3]
+    meta:
+      test: true
+    seats: 19
+    candidates:
+    - name: '? blank'
+      votes: 1682
+    - name: '! void'
+      votes: 149
+    - name: Arbeiderpartiet [A]
+      votes: 87158
+      seats: 4
+    - name: SV - Sosialistisk Venstreparti [SV]
+      votes: 50382
+      seats: 3
+    - name: Rødt [RØDT]
+      votes: 31352
+      seats: 2
+    - name: Senterpartiet [SP]
+      votes: 11953
+    - name: Kristelig Folkeparti [KRF]
+      votes: 6922
+    - name: Miljøpartiet De Grønne [MDG]
+      votes: 32198
+      seats: 2
+    - name: Venstre [V]
+      votes: 38142
+      seats: 2
+      meta:
+        adjustment_seats: 1
+    - name: Høyre [H]
+      votes: 89342
+      seats: 5
+    - name: Fremskrittspartiet [FRP]
+      votes: 22784
+      seats: 1
+    - name: Alliansen - Alternativ for Norge [AAN]
+      votes: 232
+    - name: Norgesdemokratene [DEMN]
+      votes: 2585
+    - name: Folkeaksjonen Nei til mer bompenger [FNB]
+      votes: 1072
+    - name: Helsepartiet [HELSE]
+      votes: 593
+    - name: Industri- og Næringspartiet [INP]
+      votes: 234
+    - name: Konservativt [KRISTNE]
+      votes: 474
+    - name: Kystpartiet [KYST]
+      votes: 64
+    - name: Liberalistene [LIBS]
+      votes: 665
+    - name: Norges Kommunistiske Parti [NKP]
+      votes: 123
+    - name: Piratpartiet [PIR]
+      votes: 336
+    - name: Pensjonistpartiet [PP]
+      votes: 1312
+    - name: Partiet Sentrum [PS]
+      votes: 1367
+    - name: Feministisk Initiativ [FI]
+      votes: 275
+    max_adjustment_seats: 1
+  - name: Hedmark
+    key: Hedmark [4]
+    meta:
+      test: true
+    seats: 6
+    candidates:
+    - name: '? blank'
+      votes: 761
+    - name: '! void'
+      votes: 112
+    - name: Arbeiderpartiet [A]
+      votes: 38136
+      seats: 3
+    - name: SV - Sosialistisk Venstreparti [SV]
+      votes: 7902
+    - name: Rødt [RØDT]
+      votes: 3876
+    - name: Senterpartiet [SP]
+      votes: 32286
+      seats: 2
+    - name: Kristelig Folkeparti [KRF]
+      votes: 1876
+    - name: Miljøpartiet De Grønne [MDG]
+      votes: 2382
+    - name: Venstre [V]
+      votes: 2642
+    - name: Høyre [H]
+      votes: 12191
+      seats: 1
+    - name: Fremskrittspartiet [FRP]
+      votes: 9696
+      meta:
+        adjustment_seats: 1
+    - name: Alliansen - Alternativ for Norge [AAN]
+      votes: 100
+    - name: Norgesdemokratene [DEMN]
+      votes: 1355
+    - name: Folkeaksjonen Nei til mer bompenger [FNB]
+      votes: 81
+    - name: Helsepartiet [HELSE]
+      votes: 293
+    - name: Industri- og Næringspartiet [INP]
+      votes: 172
+    - name: Konservativt [KRISTNE]
+      votes: 219
+    - name: Liberalistene [LIBS]
+      votes: 135
+    - name: Pensjonistpartiet [PP]
+      votes: 1482
+    - name: Partiet Sentrum [PS]
+      votes: 210
+    - name: Redd Naturen [RN]
+      votes: 97
+    max_adjustment_seats: 1
+  - name: Oppland
+    key: Oppland [5]
+    meta:
+      test: true
+    seats: 5
+    candidates:
+    - name: '? blank'
+      votes: 578
+    - name: '! void'
+      votes: 113
+    - name: Arbeiderpartiet [A]
+      votes: 34552
+      seats: 2
+    - name: SV - Sosialistisk Venstreparti [SV]
+      votes: 5508
+    - name: Rødt [RØDT]
+      votes: 3534
+    - name: Senterpartiet [SP]
+      votes: 25619
+      seats: 2
+    - name: Kristelig Folkeparti [KRF]
+      votes: 1537
+    - name: Miljøpartiet De Grønne [MDG]
+      votes: 2289
+    - name: Venstre [V]
+      votes: 2370
+    - name: Høyre [H]
+      votes: 12323
+      seats: 1
+    - name: Fremskrittspartiet [FRP]
+      votes: 8459
+      meta:
+        adjustment_seats: 1
+    - name: Alliansen - Alternativ for Norge [AAN]
+      votes: 81
+    - name: Norgesdemokratene [DEMN]
+      votes: 930
+    - name: Folkeaksjonen Nei til mer bompenger [FNB]
+      votes: 66
+    - name: Helsepartiet [HELSE]
+      votes: 185
+    - name: Industri- og Næringspartiet [INP]
+      votes: 128
+    - name: Konservativt [KRISTNE]
+      votes: 212
+    - name: Liberalistene [LIBS]
+      votes: 91
+    - name: Piratpartiet [PIR]
+      votes: 65
+    - name: Pensjonistpartiet [PP]
+      votes: 528
+    - name: Partiet Sentrum [PS]
+      votes: 184
+    max_adjustment_seats: 1
+  - name: Buskerud
+    key: Buskerud [6]
+    meta:
+      test: true
+    seats: 7
+    candidates:
+    - name: '? blank'
+      votes: 1028
+    - name: '! void'
+      votes: 189
+    - name: Arbeiderpartiet [A]
+      votes: 40575
+      seats: 3
+    - name: SV - Sosialistisk Venstreparti [SV]
+      votes: 8062
+      meta:
+        adjustment_seats: 1
+    - name: Rødt [RØDT]
+      votes: 4941
+    - name: Senterpartiet [SP]
+      votes: 23068
+      seats: 1
+    - name: Kristelig Folkeparti [KRF]
+      votes: 3319
+    - name: Miljøpartiet De Grønne [MDG]
+      votes: 4251
+    - name: Venstre [V]
+      votes: 5207
+    - name: Høyre [H]
+      votes: 31544
+      seats: 2
+    - name: Fremskrittspartiet [FRP]
+      votes: 17509
+      seats: 1
+    - name: Alliansen - Alternativ for Norge [AAN]
+      votes: 147
+    - name: Norgesdemokratene [DEMN]
+      votes: 1976
+    - name: Folkeaksjonen Nei til mer bompenger [FNB]
+      votes: 126
+    - name: Helsepartiet [HELSE]
+      votes: 421
+    - name: Industri- og Næringspartiet [INP]
+      votes: 275
+    - name: Konservativt [KRISTNE]
+      votes: 330
+    - name: Liberalistene [LIBS]
+      votes: 244
+    - name: Piratpartiet [PIR]
+      votes: 115
+    - name: Pensjonistpartiet [PP]
+      votes: 520
+    - name: Partiet Sentrum [PS]
+      votes: 440
+    max_adjustment_seats: 1
+  - name: Vestfold
+    key: Vestfold [7]
+    meta:
+      test: true
+    seats: 6
+    candidates:
+    - name: '? blank'
+      votes: 954
+    - name: '! void'
+      votes: 103
+    - name: Arbeiderpartiet [A]
+      votes: 37518
+      seats: 2
+    - name: SV - Sosialistisk Venstreparti [SV]
+      votes: 8670
+      meta:
+        adjustment_seats: 1
+    - name: Rødt [RØDT]
+      votes: 6155
+    - name: Senterpartiet [SP]
+      votes: 13775
+      seats: 1
+    - name: Kristelig Folkeparti [KRF]
+      votes: 4861
+    - name: Miljøpartiet De Grønne [MDG]
+      votes: 5428
+    - name: Venstre [V]
+      votes: 5771
+    - name: Høyre [H]
+      votes: 34831
+      seats: 2
+    - name: Fremskrittspartiet [FRP]
+      votes: 17271
+      seats: 1
+    - name: Alliansen - Alternativ for Norge [AAN]
+      votes: 146
+    - name: Norgesdemokratene [DEMN]
+      votes: 1826
+    - name: Folkeaksjonen Nei til mer bompenger [FNB]
+      votes: 71
+    - name: Helsepartiet [HELSE]
+      votes: 383
+    - name: Industri- og Næringspartiet [INP]
+      votes: 403
+    - name: Konservativt [KRISTNE]
+      votes: 662
+    - name: Liberalistene [LIBS]
+      votes: 198
+    - name: Piratpartiet [PIR]
+      votes: 125
+    - name: Pensjonistpartiet [PP]
+      votes: 562
+    - name: Partiet Sentrum [PS]
+      votes: 381
+    max_adjustment_seats: 1
+  - name: Telemark
+    key: Telemark [8]
+    meta:
+      test: true
+    seats: 5
+    candidates:
+    - name: '? blank'
+      votes: 638
+    - name: '! void'
+      votes: 76
+    - name: Arbeiderpartiet [A]
+      votes: 29883
+      seats: 2
+    - name: SV - Sosialistisk Venstreparti [SV]
+      votes: 5934
+    - name: Rødt [RØDT]
+      votes: 4506
+      meta:
+        adjustment_seats: 1
+    - name: Senterpartiet [SP]
+      votes: 15963
+      seats: 1
+    - name: Kristelig Folkeparti [KRF]
+      votes: 4327
+    - name: Miljøpartiet De Grønne [MDG]
+      votes: 2729
+    - name: Venstre [V]
+      votes: 2203
+    - name: Høyre [H]
+      votes: 15198
+      seats: 1
+    - name: Fremskrittspartiet [FRP]
+      votes: 12297
+      seats: 1
+    - name: Alliansen - Alternativ for Norge [AAN]
+      votes: 107
+    - name: Norgesdemokratene [DEMN]
+      votes: 1379
+    - name: Folkeaksjonen Nei til mer bompenger [FNB]
+      votes: 87
+    - name: Helsepartiet [HELSE]
+      votes: 193
+    - name: Industri- og Næringspartiet [INP]
+      votes: 596
+    - name: Konservativt [KRISTNE]
+      votes: 631
+    - name: Liberalistene [LIBS]
+      votes: 110
+    - name: Piratpartiet [PIR]
+      votes: 85
+    - name: Pensjonistpartiet [PP]
+      votes: 419
+    - name: Partiet Sentrum [PS]
+      votes: 263
+    max_adjustment_seats: 1
+  - name: Aust-Agder
+    key: Aust-Agder [9]
+    meta:
+      test: true
+    seats: 3
+    candidates:
+    - name: '? blank'
+      votes: 342
+    - name: '! void'
+      votes: 70
+    - name: Arbeiderpartiet [A]
+      votes: 16147
+      seats: 1
+    - name: SV - Sosialistisk Venstreparti [SV]
+      votes: 3644
+    - name: Rødt [RØDT]
+      votes: 2456
+    - name: Senterpartiet [SP]
+      votes: 8907
+      seats: 1
+    - name: Kristelig Folkeparti [KRF]
+      votes: 5749
+    - name: Miljøpartiet De Grønne [MDG]
+      votes: 1976
+    - name: Venstre [V]
+      votes: 2136
+    - name: Høyre [H]
+      votes: 13305
+      seats: 1
+    - name: Fremskrittspartiet [FRP]
+      votes: 8728
+      meta:
+        adjustment_seats: 1
+    - name: Alliansen - Alternativ for Norge [AAN]
+      votes: 45
+    - name: Norgesdemokratene [DEMN]
+      votes: 917
+    - name: Helsepartiet [HELSE]
+      votes: 190
+    - name: Industri- og Næringspartiet [INP]
+      votes: 279
+    - name: Konservativt [KRISTNE]
+      votes: 573
+    - name: Liberalistene [LIBS]
+      votes: 102
+    - name: Piratpartiet [PIR]
+      votes: 71
+    - name: Pensjonistpartiet [PP]
+      votes: 380
+    - name: Partiet Sentrum [PS]
+      votes: 230
+    max_adjustment_seats: 1
+  - name: Vest-Agder
+    key: Vest-Agder [10]
+    meta:
+      test: true
+    seats: 5
+    candidates:
+    - name: '? blank'
+      votes: 634
+    - name: '! void'
+      votes: 128
+    - name: Arbeiderpartiet [A]
+      votes: 21845
+      seats: 1
+    - name: SV - Sosialistisk Venstreparti [SV]
+      votes: 5615
+    - name: Rødt [RØDT]
+      votes: 3355
+    - name: Senterpartiet [SP]
+      votes: 10859
+      seats: 1
+    - name: Kristelig Folkeparti [KRF]
+      votes: 14598
+      seats: 1
+    - name: Miljøpartiet De Grønne [MDG]
+      votes: 3330
+    - name: Venstre [V]
+      votes: 3834
+      meta:
+        adjustment_seats: 1
+    - name: Høyre [H]
+      votes: 22359
+      seats: 1
+    - name: Fremskrittspartiet [FRP]
+      votes: 13821
+      seats: 1
+    - name: Alliansen - Alternativ for Norge [AAN]
+      votes: 53
+    - name: Norgesdemokratene [DEMN]
+      votes: 2709
+    - name: Folkeaksjonen Nei til mer bompenger [FNB]
+      votes: 62
+    - name: Helsepartiet [HELSE]
+      votes: 167
+    - name: Industri- og Næringspartiet [INP]
+      votes: 360
+    - name: Konservativt [KRISTNE]
+      votes: 969
+    - name: Liberalistene [LIBS]
+      votes: 164
+    - name: Piratpartiet [PIR]
+      votes: 78
+    - name: Pensjonistpartiet [PP]
+      votes: 492
+    - name: Partiet Sentrum [PS]
+      votes: 478
+    max_adjustment_seats: 1
+  - name: Rogaland
+    key: Rogaland [11]
+    meta:
+      test: true
+    seats: 13
+    candidates:
+    - name: '? blank'
+      votes: 1603
+    - name: '! void'
+      votes: 420
+    - name: Arbeiderpartiet [A]
+      votes: 57969
+      seats: 3
+    - name: SV - Sosialistisk Venstreparti [SV]
+      votes: 13261
+      seats: 1
+    - name: Rødt [RØDT]
+      votes: 9620
+      meta:
+        adjustment_seats: 1
+    - name: Senterpartiet [SP]
+      votes: 26955
+      seats: 2
+    - name: Kristelig Folkeparti [KRF]
+      votes: 20859
+      seats: 1
+    - name: Miljøpartiet De Grønne [MDG]
+      votes: 6152
+    - name: Venstre [V]
+      votes: 9106
+    - name: Høyre [H]
+      votes: 61992
+      seats: 4
+    - name: Fremskrittspartiet [FRP]
+      votes: 43382
+      seats: 2
+    - name: Alliansen - Alternativ for Norge [AAN]
+      votes: 212
+    - name: Norgesdemokratene [DEMN]
+      votes: 2634
+    - name: Folkeaksjonen Nei til mer bompenger [FNB]
+      votes: 316
+    - name: Helsepartiet [HELSE]
+      votes: 500
+    - name: Industri- og Næringspartiet [INP]
+      votes: 1646
+    - name: Konservativt [KRISTNE]
+      votes: 1400
+    - name: Liberalistene [LIBS]
+      votes: 424
+    - name: Piratpartiet [PIR]
+      votes: 202
+    - name: Pensjonistpartiet [PP]
+      votes: 1327
+    - name: Partiet Sentrum [PS]
+      votes: 911
+    max_adjustment_seats: 1
+  - name: Hordaland
+    key: Hordaland [12]
+    meta:
+      test: true
+    seats: 15
+    candidates:
+    - name: '? blank'
+      votes: 2171
+    - name: '! void'
+      votes: 476
+    - name: Arbeiderpartiet [A]
+      votes: 68945
+      seats: 4
+    - name: SV - Sosialistisk Venstreparti [SV]
+      votes: 26901
+      seats: 1
+    - name: Rødt [RØDT]
+      votes: 14150
+      seats: 1
+    - name: Senterpartiet [SP]
+      votes: 29981
+      seats: 2
+    - name: Kristelig Folkeparti [KRF]
+      votes: 14724
+      seats: 1
+    - name: Miljøpartiet De Grønne [MDG]
+      votes: 11940
+    - name: Venstre [V]
+      votes: 13163
+      meta:
+        adjustment_seats: 1
+    - name: Høyre [H]
+      votes: 74282
+      seats: 4
+    - name: Fremskrittspartiet [FRP]
+      votes: 38352
+      seats: 2
+    - name: Alliansen - Alternativ for Norge [AAN]
+      votes: 206
+    - name: Norgesdemokratene [DEMN]
+      votes: 2876
+    - name: Folkeaksjonen Nei til mer bompenger [FNB]
+      votes: 403
+    - name: Helsepartiet [HELSE]
+      votes: 490
+    - name: Industri- og Næringspartiet [INP]
+      votes: 1738
+    - name: Konservativt [KRISTNE]
+      votes: 1384
+    - name: Kystpartiet [KYST]
+      votes: 107
+    - name: Liberalistene [LIBS]
+      votes: 527
+    - name: Norges Kommunistiske Parti [NKP]
+      votes: 77
+    - name: Piratpartiet [PIR]
+      votes: 262
+    - name: Pensjonistpartiet [PP]
+      votes: 2286
+    - name: Partiet Sentrum [PS]
+      votes: 591
+    - name: Generasjonspartiet [GT]
+      votes: 87
+    max_adjustment_seats: 1
+  - name: Sogn og Fjordane
+    key: Sogn og Fjordane [14]
+    meta:
+      test: true
+    seats: 3
+    candidates:
+    - name: '? blank'
+      votes: 317
+    - name: '! void'
+      votes: 56
+    - name: Arbeiderpartiet [A]
+      votes: 16426
+      seats: 1
+    - name: SV - Sosialistisk Venstreparti [SV]
+      votes: 3675
+    - name: Rødt [RØDT]
+      votes: 2489
+    - name: Senterpartiet [SP]
+      votes: 17634
+      seats: 1
+    - name: Kristelig Folkeparti [KRF]
+      votes: 2389
+    - name: Miljøpartiet De Grønne [MDG]
+      votes: 1542
+    - name: Venstre [V]
+      votes: 2135
+      meta:
+        adjustment_seats: 1
+    - name: Høyre [H]
+      votes: 8529
+      seats: 1
+    - name: Fremskrittspartiet [FRP]
+      votes: 5771
+    - name: Alliansen - Alternativ for Norge [AAN]
+      votes: 43
+    - name: Norgesdemokratene [DEMN]
+      votes: 453
+    - name: Helsepartiet [HELSE]
+      votes: 89
+    - name: Industri- og Næringspartiet [INP]
+      votes: 293
+    - name: Konservativt [KRISTNE]
+      votes: 253
+    - name: Liberalistene [LIBS]
+      votes: 47
+    - name: Pensjonistpartiet [PP]
+      votes: 173
+    - name: Partiet Sentrum [PS]
+      votes: 141
+    max_adjustment_seats: 1
+  - name: Møre og Romsdal
+    key: Møre og Romsdal [15]
+    meta:
+      test: true
+    seats: 7
+    candidates:
+    - name: '? blank'
+      votes: 936
+    - name: '! void'
+      votes: 232
+    - name: Arbeiderpartiet [A]
+      votes: 29928
+      seats: 2
+    - name: SV - Sosialistisk Venstreparti [SV]
+      votes: 9341
+      meta:
+        adjustment_seats: 1
+    - name: Rødt [RØDT]
+      votes: 4933
+    - name: Senterpartiet [SP]
+      votes: 25938
+      seats: 2
+    - name: Kristelig Folkeparti [KRF]
+      votes: 7905
+    - name: Miljøpartiet De Grønne [MDG]
+      votes: 3697
+    - name: Venstre [V]
+      votes: 4364
+    - name: Høyre [H]
+      votes: 24123
+      seats: 1
+    - name: Fremskrittspartiet [FRP]
+      votes: 32746
+      seats: 2
+    - name: Alliansen - Alternativ for Norge [AAN]
+      votes: 126
+    - name: Norgesdemokratene [DEMN]
+      votes: 1752
+    - name: Folkeaksjonen Nei til mer bompenger [FNB]
+      votes: 79
+    - name: Helsepartiet [HELSE]
+      votes: 280
+    - name: Industri- og Næringspartiet [INP]
+      votes: 1096
+    - name: Konservativt [KRISTNE]
+      votes: 812
+    - name: Liberalistene [LIBS]
+      votes: 175
+    - name: Pensjonistpartiet [PP]
+      votes: 790
+    - name: Partiet Sentrum [PS]
+      votes: 325
+    max_adjustment_seats: 1
+  - name: Sør-Trøndelag
+    key: Sør-Trøndelag [16]
+    meta:
+      test: true
+    seats: 9
+    candidates:
+    - name: '? blank'
+      votes: 1206
+    - name: '! void'
+      votes: 307
+    - name: Arbeiderpartiet [A]
+      votes: 57621
+      seats: 3
+    - name: SV - Sosialistisk Venstreparti [SV]
+      votes: 17635
+      seats: 1
+    - name: Rødt [RØDT]
+      votes: 10852
+      meta:
+        adjustment_seats: 1
+    - name: Senterpartiet [SP]
+      votes: 29181
+      seats: 2
+    - name: Kristelig Folkeparti [KRF]
+      votes: 4211
+    - name: Miljøpartiet De Grønne [MDG]
+      votes: 9268
+    - name: Venstre [V]
+      votes: 8435
+    - name: Høyre [H]
+      votes: 31837
+      seats: 2
+    - name: Fremskrittspartiet [FRP]
+      votes: 16650
+      seats: 1
+    - name: Alliansen - Alternativ for Norge [AAN]
+      votes: 216
+    - name: Norgesdemokratene [DEMN]
+      votes: 1723
+    - name: Helsepartiet [HELSE]
+      votes: 330
+    - name: Industri- og Næringspartiet [INP]
+      votes: 658
+    - name: Konservativt [KRISTNE]
+      votes: 305
+    - name: Liberalistene [LIBS]
+      votes: 247
+    - name: Norges Kommunistiske Parti [NKP]
+      votes: 63
+    - name: Piratpartiet [PIR]
+      votes: 212
+    - name: Pensjonistpartiet [PP]
+      votes: 3351
+    - name: Partiet Sentrum [PS]
+      votes: 442
+    max_adjustment_seats: 1
+  - name: Nord-Trøndelag
+    key: Nord-Trøndelag [17]
+    meta:
+      test: true
+    seats: 4
+    candidates:
+    - name: '? blank'
+      votes: 396
+    - name: '! void'
+      votes: 129
+    - name: Arbeiderpartiet [A]
+      votes: 25730
+      seats: 2
+    - name: SV - Sosialistisk Venstreparti [SV]
+      votes: 4389
+    - name: Rødt [RØDT]
+      votes: 3035
+    - name: Senterpartiet [SP]
+      votes: 22089
+      seats: 2
+    - name: Kristelig Folkeparti [KRF]
+      votes: 1726
+    - name: Miljøpartiet De Grønne [MDG]
+      votes: 1424
+    - name: Venstre [V]
+      votes: 1557
+      meta:
+        adjustment_seats: 1
+    - name: Høyre [H]
+      votes: 8121
+    - name: Fremskrittspartiet [FRP]
+      votes: 6146
+    - name: Alliansen - Alternativ for Norge [AAN]
+      votes: 79
+    - name: Norgesdemokratene [DEMN]
+      votes: 754
+    - name: Folkeaksjonen Nei til mer bompenger [FNB]
+      votes: 23
+    - name: Helsepartiet [HELSE]
+      votes: 145
+    - name: Industri- og Næringspartiet [INP]
+      votes: 359
+    - name: Konservativt [KRISTNE]
+      votes: 179
+    - name: Liberalistene [LIBS]
+      votes: 60
+    - name: Piratpartiet [PIR]
+      votes: 55
+    - name: Pensjonistpartiet [PP]
+      votes: 643
+    - name: Partiet Sentrum [PS]
+      votes: 129
+    max_adjustment_seats: 1
+  - name: Nordland
+    key: Nordland [18]
+    meta:
+      test: true
+    seats: 8
+    candidates:
+    - name: '? blank'
+      votes: 907
+    - name: '! void'
+      votes: 189
+    - name: Arbeiderpartiet [A]
+      votes: 38611
+      seats: 3
+    - name: SV - Sosialistisk Venstreparti [SV]
+      votes: 9620
+      seats: 1
+    - name: Rødt [RØDT]
+      votes: 7273
+      meta:
+        adjustment_seats: 1
+    - name: Senterpartiet [SP]
+      votes: 28465
+      seats: 2
+    - name: Kristelig Folkeparti [KRF]
+      votes: 2637
+    - name: Miljøpartiet De Grønne [MDG]
+      votes: 3138
+    - name: Venstre [V]
+      votes: 3342
+    - name: Høyre [H]
+      votes: 20532
+      seats: 1
+    - name: Fremskrittspartiet [FRP]
+      votes: 16338
+      seats: 1
+    - name: Alliansen - Alternativ for Norge [AAN]
+      votes: 99
+    - name: Norgesdemokratene [DEMN]
+      votes: 1807
+    - name: Helsepartiet [HELSE]
+      votes: 339
+    - name: Industri- og Næringspartiet [INP]
+      votes: 577
+    - name: Konservativt [KRISTNE]
+      votes: 314
+    - name: Liberalistene [LIBS]
+      votes: 175
+    - name: Norges Kommunistiske Parti [NKP]
+      votes: 38
+    - name: Piratpartiet [PIR]
+      votes: 126
+    - name: Pensjonistpartiet [PP]
+      votes: 586
+    - name: Partiet Sentrum [PS]
+      votes: 211
+    max_adjustment_seats: 1
+  - name: Troms Romsa
+    key: Troms Romsa [19]
+    meta:
+      test: true
+    seats: 5
+    candidates:
+    - name: '? blank'
+      votes: 811
+    - name: '! void'
+      votes: 137
+    - name: Arbeiderpartiet [A]
+      votes: 25168
+      seats: 2
+    - name: SV - Sosialistisk Venstreparti [SV]
+      votes: 10029
+      meta:
+        adjustment_seats: 1
+    - name: Rødt [RØDT]
+      votes: 4455
+    - name: Senterpartiet [SP]
+      votes: 17698
+      seats: 1
+    - name: Kristelig Folkeparti [KRF]
+      votes: 2062
+    - name: Miljøpartiet De Grønne [MDG]
+      votes: 2768
+    - name: Venstre [V]
+      votes: 2298
+    - name: Høyre [H]
+      votes: 12493
+      seats: 1
+    - name: Fremskrittspartiet [FRP]
+      votes: 12998
+      seats: 1
+    - name: Alliansen - Alternativ for Norge [AAN]
+      votes: 66
+    - name: Norgesdemokratene [DEMN]
+      votes: 1370
+    - name: Folkeaksjonen Nei til mer bompenger [FNB]
+      votes: 130
+    - name: Helsepartiet [HELSE]
+      votes: 225
+    - name: Industri- og Næringspartiet [INP]
+      votes: 319
+    - name: Konservativt [KRISTNE]
+      votes: 186
+    - name: Liberalistene [LIBS]
+      votes: 187
+    - name: Piratpartiet [PIR]
+      votes: 83
+    - name: Partiet Sentrum [PS]
+      votes: 175
+    max_adjustment_seats: 1
+  - name: Finnmark Finnmárku
+    key: Finnmark Finnmárku [20]
+    meta:
+      test: true
+    seats: 4
+    candidates:
+    - name: '? blank'
+      votes: 316
+    - name: '! void'
+      votes: 57
+    - name: Arbeiderpartiet [A]
+      votes: 12228
+      seats: 2
+    - name: SV - Sosialistisk Venstreparti [SV]
+      votes: 2415
+    - name: Rødt [RØDT]
+      votes: 1959
+    - name: Senterpartiet [SP]
+      votes: 7157
+      seats: 1
+    - name: Kristelig Folkeparti [KRF]
+      votes: 648
+    - name: Miljøpartiet De Grønne [MDG]
+      votes: 892
+    - name: Venstre [V]
+      votes: 564
+    - name: Høyre [H]
+      votes: 2664
+    - name: Fremskrittspartiet [FRP]
+      votes: 4220
+      meta:
+        adjustment_seats: 1
+    - name: Alliansen - Alternativ for Norge [AAN]
+      votes: 50
+    - name: Norgesdemokratene [DEMN]
+      votes: 667
+    - name: Helsepartiet [HELSE]
+      votes: 113
+    - name: Industri- og Næringspartiet [INP]
+      votes: 179
+    - name: Konservativt [KRISTNE]
+      votes: 138
+    - name: Liberalistene [LIBS]
+      votes: 70
+    - name: Partiet Sentrum [PS]
+      votes: 69
+    - name: Pasientfokus [PF]
+      votes: 4950
+      seats: 1
+    max_adjustment_seats: 1
