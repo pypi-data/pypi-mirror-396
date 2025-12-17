@@ -1,0 +1,118 @@
+#!/usr/bin/python3
+
+import os
+import sys
+import re
+import edcapi
+import logging
+
+def main():
+	
+	' init logger '
+	logger = logging.getLogger('edc-downloader')	
+	logger.propagate = False  
+	if not logger.handlers:
+		handler = logging.StreamHandler()
+		formatter = logging.Formatter(
+			"%(asctime)s %(levelname)s [%(filename)s:%(lineno)d] %(message)s",datefmt='%Y-%m-%d %H:%M:%S',
+		)
+		handler.setFormatter(formatter)
+		logger.addHandler(handler)
+
+	api_key = None
+	path_files = []
+	path_files_ignored = []
+	log_level = logging.INFO
+	file_pattern = None
+	debug = 0
+	output_path = ''
+	log_path = None
+	path_url = None
+	update_only = False
+	preserve_timestamp = False
+	
+	for i in range(1,len(sys.argv)):		
+		arg = sys.argv[i]
+		if re.match('^--api-key=',arg) != None:
+			api_key = arg[10:]
+		elif re.match('^--debug$',arg) != None:
+			debug=1
+		elif re.match('^--log-level=.*$',arg) != None:
+			value = arg[12:]
+			if value == "DEBUG":
+				log_level = logging.DEBUG
+			elif value == "INFO":
+				log_level = logging.INFO
+			elif value == "WARNING":
+				log_level = logging.WARNING
+			elif value == "ERROR":
+				log_level = logging.ERROR
+			else:
+				logger.warning('Unknown value for --log_level `'+str(value)+'`! IGNORED!')
+		elif re.match('^--file-pattern=.*$',arg) != None:			
+			file_pattern = arg[15:]
+		elif re.match('^--output-path=.*$',arg) != None:			
+			output_path = arg[14:]
+		elif re.match('^--log-path=.*$',arg) != None:			
+			log_path = arg[11:]
+		elif re.match('^--update-only$',arg) != None:			
+			update_only = True
+		elif re.match('^--preserve-timestamp$',arg) != None:			
+			preserve_timestamp = True
+		else:			
+			path_url = arg
+	
+	logger.setLevel(log_level)
+	
+	if path_url == None:
+		logger.error('No path_url defined!')
+		sys.exit(0)
+	
+	path_output = os.path.abspath(output_path)
+	if not os.path.isdir(path_output):
+		logger.error('Output path `'+path_output+'` does not exist!')
+		logger.error('Create directory first to proceed!')
+		sys.exit(0)
+				
+	if api_key == None:
+		edc_api = edcapi.API(debug=debug,log_level=log_level)
+	else:
+		edc_api = edcapi.API(api_key=api_key,debug=debug,log_level=log_level)
+
+	summary = edc_api.download(path_url,
+		output_path=output_path,
+		update_only=update_only,
+		preserve_timestamp=preserve_timestamp,
+		log_path=log_path,
+		file_pattern=file_pattern)
+	
+if __name__ == "__main__":
+	
+	if len(sys.argv) == 1:
+		print ()
+		print ('Usage: edc-downloader [OPTIONS] FILE/DIRECTORY')
+		print ()
+		print ('Options:')
+		print ()
+		print ('    --api_key=APIKEY           API key (optional if not in ~/.netrc)')
+		print ('    --log-level=LOG_LEVEL      Displays only Warnings and Errors (Default: INFO, Allowed: DEBUG, INFO, WARNING, ERROR)')
+		print ('    --update-only	       Update existing files only if updated on server')		
+		print ('    --preserve-timestamp       Keep the same timestamp as on server')
+		print ('    --debug                    Use development server for debugging (internal)')
+		print ('    --output-path=PATH         Output directory where files are stored (Default: Current Directory)')
+		print ('    --log-path=PATH            Path of log file (Default: No log file)')
+		print ('    --file_pattern=REGEX       File pattern as regular expression (e.g. `^.*_[0-9]{8}.np2$`)')
+		print ('                               Example: `^.*_[0-9]{8}.np2$` -> daily normal point files of version 2')
+		print ('                               Example: `^.*_[0-9]{6}.np2$` -> monthly normal point files of version 2')
+		print ()
+		
+		print ('Example:')
+		print ()
+		#~ print ('    edc-uploader /path/to/8834_hy2b_crd_20251210_0704_00')
+		#~ print ('    edc-uploader /path/to/*npt')
+		#~ print ('    edc-uploader --quiet /path/to/*npt')
+		#~ print ('    edc-uploader --api_key=4D404976502E119E3CA1875531E52F64F08E72A56183D3B0251E4D5DA26234AB /path/to/*npt')
+		print ()
+		sys.exit(0)
+
+	main()

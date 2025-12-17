@@ -1,0 +1,83 @@
+#!/usr/bin/python3
+
+import os
+import sys
+import re
+import edcapi
+import logging
+
+def main():
+	
+	' init logger '
+	logger = logging.getLogger('edc-uploader')	
+	logger.propagate = False  
+	if not logger.handlers:
+		handler = logging.StreamHandler()
+		formatter = logging.Formatter(
+			"%(asctime)s %(levelname)s [%(filename)s:%(lineno)d] %(message)s",datefmt='%Y-%m-%d %H:%M:%S',
+		)
+		handler.setFormatter(formatter)
+		logger.addHandler(handler)
+
+	api_key = None
+	path_files = []
+	path_files_ignored = []
+	log_level = logging.INFO
+	debug = 0
+
+	for i in range(1,len(sys.argv)):
+		arg = sys.argv[i]
+		if re.match('^--api-key=',arg) != None:
+			api_key = arg[10:]
+		elif re.match('^--debug$',arg) != None:
+			debug=1
+		elif re.match('^--quiet$',arg) != None:
+			log_level = logging.WARNING
+			logger.setLevel(log_level)
+		else:
+			path = os.path.abspath(arg)
+			if not os.path.isfile(path):			
+				path_files_ignored.append(path)
+				continue
+			path_files.append(path)
+			
+	for path_file_ignored in path_files_ignored:
+		if os.path.isdir(path_file_ignored):
+			logger.warning(path_file_ignored+' is a directory! IGNORED!')
+		else:
+			logger.warning(path_file_ignored+' does not exist! IGNORED!')
+		
+	if len(path_files) == 0:
+		print ('No files for upload found!')
+		sys.exit(0)
+		
+	if api_key == None:
+		edc_api = edcapi.API(debug=debug,log_level=log_level)
+	else:
+		edc_api = edcapi.API(api_key=api_key,debug=debug,log_level=log_level)
+
+	for path_file in path_files:	
+		edc_api.upload(path_file)
+
+if __name__ == "__main__":
+	
+	if len(sys.argv) == 1:
+		print ()
+		print ('Usage: edc-uploader [OPTIONS] FILES')
+		print ()
+		print ('Options:')
+		print ()
+		print ('    --api_key=KEY        API key (optional if not in ~/.netrc)')
+		print ('    --quiet              Displays only Warnings and Errors')
+		print ()
+		#~ print ('--debug              Use development server')
+		print ('Example:')
+		print ()
+		print ('    edc-uploader /path/to/8834_hy2b_crd_20251210_0704_00')
+		print ('    edc-uploader /path/to/*npt')
+		print ('    edc-uploader --quiet /path/to/*npt')
+		print ('    edc-uploader --api_key=4D404976502E119E3CA1875531E52F64F08E72A56183D3B0251E4D5DA26234AB /path/to/*npt')
+		print ()
+		sys.exit(0)
+
+	main()
