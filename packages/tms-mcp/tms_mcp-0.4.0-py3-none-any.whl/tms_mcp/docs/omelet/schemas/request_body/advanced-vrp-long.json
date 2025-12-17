@@ -1,0 +1,1349 @@
+{
+  "schema": {
+    "additionalProperties": false,
+    "properties": {
+      "visits": {
+        "description": "Expanded list of deliveries for large-scale solver inputs. Up to 10,000 allowed.",
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "description": "Unique identifier for the delivery.",
+              "title": "Delivery ID",
+              "type": "string"
+            },
+            "coordinate": {
+              "additionalProperties": false,
+              "properties": {
+                "lng": {
+                  "description": "Longitude in decimal degrees.",
+                  "title": "Longitude",
+                  "type": "number"
+                },
+                "lat": {
+                  "description": "Latitude in decimal degrees.",
+                  "title": "Latitude",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "lng",
+                "lat"
+              ],
+              "title": "Coordinate",
+              "type": "object"
+            },
+            "order_placed_at": {
+              "description": "Datetime for order placed. Use ISO 8601 format with timezone, e.g., '2025-03-16T17:40:00+09:00'",
+              "format": "date-time",
+              "title": "Order Placed At",
+              "type": "string"
+            },
+            "tw_early": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Datetime for time window early. Required if time window is given. Use ISO 8601 format with timezone, e.g., '2025-03-16T17:40:00+09:00'",
+              "title": "Time Window Early"
+            },
+            "tw_late": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Datetime for time window late. Required if time window is given. Use ISO 8601 format with timezone, e.g., '2025-03-16T17:40:00+09:00'",
+              "title": "Time Window Late"
+            },
+            "service_duration_seconds": {
+              "additionalProperties": {
+                "type": "number"
+              },
+              "description": "Service time for each vehicle type in seconds. The time elapsed from arrival at the depot until the service completion, measured in seconds.",
+              "propertyNames": {
+                "enum": [
+                  "bike",
+                  "car",
+                  "walk"
+                ],
+                "title": "VehicleType",
+                "type": "string"
+              },
+              "title": "Service duration in seconds",
+              "type": "object"
+            },
+            "volume": {
+              "description": "Volume of the delivery.",
+              "title": "Volume",
+              "type": "number"
+            },
+            "weight": {
+              "description": "Weight of the delivery.",
+              "title": "Weight",
+              "type": "number"
+            },
+            "unassigned_penalty": {
+              "description": "Unassigned penalty of the delivery.",
+              "title": "Unassigned Penalty",
+              "type": "number"
+            },
+            "extra_demands": {
+              "description": "Extra demands of the delivery.",
+              "items": {
+                "type": "number"
+              },
+              "title": "Extra Demands",
+              "type": "array"
+            },
+            "early_delivery_required": {
+              "default": false,
+              "description": "Early delivery required of the delivery.",
+              "title": "Early Delivery Required",
+              "type": "boolean"
+            },
+            "early_delivery_priority": {
+              "default": 1,
+              "description": "Early delivery priority of the delivery.",
+              "maximum": 10,
+              "minimum": 1,
+              "title": "Early Delivery Priority",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "id",
+            "coordinate",
+            "order_placed_at",
+            "service_duration_seconds",
+            "volume",
+            "weight",
+            "unassigned_penalty",
+            "extra_demands"
+          ],
+          "title": "DeliveryDto",
+          "type": "object"
+        },
+        "maxItems": 10000,
+        "minItems": 1,
+        "title": "Extended Delivery List",
+        "type": "array"
+      },
+      "vehicles": {
+        "description": "Information about available vehicles for routing.",
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "description": "Unique identifier for the rider.",
+              "title": "Rider ID",
+              "type": "string"
+            },
+            "vehicle_type": {
+              "enum": [
+                "bike",
+                "car",
+                "walk"
+              ],
+              "title": "VehicleType",
+              "type": "string"
+            },
+            "start_depot": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "description": "Unique identifier for the depot.",
+                      "title": "Depot ID",
+                      "type": "string"
+                    },
+                    "coordinate": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "lng": {
+                          "description": "Longitude in decimal degrees.",
+                          "title": "Longitude",
+                          "type": "number"
+                        },
+                        "lat": {
+                          "description": "Latitude in decimal degrees.",
+                          "title": "Latitude",
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "lng",
+                        "lat"
+                      ],
+                      "title": "Coordinate",
+                      "type": "object"
+                    },
+                    "service_duration_seconds": {
+                      "additionalProperties": {
+                        "type": "number"
+                      },
+                      "description": "Service time for each vehicle type.",
+                      "propertyNames": {
+                        "enum": [
+                          "bike",
+                          "car",
+                          "walk"
+                        ],
+                        "title": "VehicleType",
+                        "type": "string"
+                      },
+                      "title": "Service duration in seconds",
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "coordinate",
+                    "service_duration_seconds"
+                  ],
+                  "title": "DepotDto",
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Depot the rider will start at.",
+              "title": "Start Depot"
+            },
+            "end_depot": {
+              "anyOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "description": "Unique identifier for the depot.",
+                      "title": "Depot ID",
+                      "type": "string"
+                    },
+                    "coordinate": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "lng": {
+                          "description": "Longitude in decimal degrees.",
+                          "title": "Longitude",
+                          "type": "number"
+                        },
+                        "lat": {
+                          "description": "Latitude in decimal degrees.",
+                          "title": "Latitude",
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "lng",
+                        "lat"
+                      ],
+                      "title": "Coordinate",
+                      "type": "object"
+                    },
+                    "service_duration_seconds": {
+                      "additionalProperties": {
+                        "type": "number"
+                      },
+                      "description": "Service time for each vehicle type.",
+                      "propertyNames": {
+                        "enum": [
+                          "bike",
+                          "car",
+                          "walk"
+                        ],
+                        "title": "VehicleType",
+                        "type": "string"
+                      },
+                      "title": "Service duration in seconds",
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "coordinate",
+                    "service_duration_seconds"
+                  ],
+                  "title": "DepotDto",
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Depot the rider will end at.",
+              "title": "End Depot"
+            },
+            "volume_capacity": {
+              "description": "Volume capacity of the rider.",
+              "title": "Volume Capacity",
+              "type": "number"
+            },
+            "weight_capacity": {
+              "description": "Weight capacity of the rider.",
+              "title": "Weight Capacity",
+              "type": "number"
+            },
+            "unit_distance_cost": {
+              "description": "Unit distance cost of the rider.",
+              "title": "Unit Distance Cost",
+              "type": "number"
+            },
+            "unit_duration_cost": {
+              "description": "Unit duration cost of the rider.",
+              "title": "Unit Duration Cost",
+              "type": "number"
+            },
+            "work_start_time": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Datetime for driver shift start. Required if driver has working hours. Use ISO 8601 format with timezone, e.g., '2025-03-16T17:40:00+09:00'",
+              "title": "Driver Shift Start Time"
+            },
+            "work_end_time": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Datetime for driver shift end. Required if driver has working hours. Use ISO 8601 format with timezone, e.g., '2025-03-16T17:40:00+09:00'",
+              "title": "Driver Shift End Time"
+            },
+            "max_round": {
+              "description": "Max round of the rider.",
+              "title": "Max Round",
+              "type": "integer"
+            },
+            "preassigned_delivery_ids": {
+              "description": "Preassigned delivery IDs of the rider.",
+              "items": {
+                "type": "string"
+              },
+              "title": "Preassigned Delivery IDs",
+              "type": "array",
+              "uniqueItems": true
+            },
+            "extra_capacities": {
+              "description": "Extra capacities of the rider.",
+              "items": {
+                "type": "number"
+              },
+              "title": "Extra Capacities",
+              "type": "array"
+            },
+            "max_service_radius": {
+              "description": "Max service radius of the rider (in meters).",
+              "title": "Max Service Radius",
+              "type": "number"
+            }
+          },
+          "required": [
+            "id",
+            "vehicle_type",
+            "start_depot",
+            "end_depot",
+            "volume_capacity",
+            "weight_capacity",
+            "unit_distance_cost",
+            "unit_duration_cost",
+            "max_round",
+            "preassigned_delivery_ids",
+            "extra_capacities",
+            "max_service_radius"
+          ],
+          "title": "RiderDto",
+          "type": "object"
+        },
+        "minItems": 1,
+        "title": "Vehicle List",
+        "type": "array"
+      },
+      "constraints": {
+        "description": "Constraints for the routing problem.",
+        "items": {
+          "anyOf": [
+            {
+              "properties": {
+                "type": {
+                  "const": "capacity",
+                  "title": "Type",
+                  "type": "string"
+                },
+                "weight": {
+                  "title": "Weight",
+                  "type": "number"
+                },
+                "is_hard_cost": {
+                  "default": true,
+                  "title": "Is Hard Cost",
+                  "type": "boolean"
+                },
+                "exp_factor": {
+                  "default": 1.0,
+                  "title": "Exp Factor",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "type",
+                "weight"
+              ],
+              "title": "CapacityConstraintDto",
+              "type": "object"
+            },
+            {
+              "properties": {
+                "type": {
+                  "const": "consecutive_visit_tiered_cost",
+                  "title": "Type",
+                  "type": "string"
+                },
+                "weight": {
+                  "title": "Weight",
+                  "type": "number"
+                },
+                "is_hard_cost": {
+                  "default": false,
+                  "title": "Is Hard Cost",
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "type",
+                "weight"
+              ],
+              "title": "ConsecutiveVisitTieredCostConstraintDto",
+              "type": "object"
+            },
+            {
+              "properties": {
+                "type": {
+                  "const": "distance",
+                  "title": "Type",
+                  "type": "string"
+                },
+                "weight": {
+                  "title": "Weight",
+                  "type": "number"
+                },
+                "is_hard_cost": {
+                  "default": false,
+                  "title": "Is Hard Cost",
+                  "type": "boolean"
+                },
+                "exp_factor": {
+                  "default": 1.0,
+                  "title": "Exp Factor",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "type",
+                "weight"
+              ],
+              "title": "DistanceConstraintDto",
+              "type": "object"
+            },
+            {
+              "properties": {
+                "type": {
+                  "const": "first_visit_cost",
+                  "title": "Type",
+                  "type": "string"
+                },
+                "weight": {
+                  "title": "Weight",
+                  "type": "number"
+                },
+                "first_visit_costs": {
+                  "additionalProperties": {
+                    "additionalProperties": {
+                      "type": "number"
+                    },
+                    "type": "object"
+                  },
+                  "title": "First Visit Costs",
+                  "type": "object"
+                },
+                "is_hard_cost": {
+                  "default": false,
+                  "title": "Is Hard Cost",
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "type",
+                "weight",
+                "first_visit_costs"
+              ],
+              "title": "FirstVisitCostConstraintDto",
+              "type": "object"
+            },
+            {
+              "properties": {
+                "type": {
+                  "const": "fixed_cost",
+                  "title": "Type",
+                  "type": "string"
+                },
+                "weight": {
+                  "title": "Weight",
+                  "type": "number"
+                },
+                "is_hard_cost": {
+                  "default": false,
+                  "title": "Is Hard Cost",
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "type",
+                "weight"
+              ],
+              "title": "FixedCostConstraintDto",
+              "type": "object"
+            },
+            {
+              "properties": {
+                "type": {
+                  "const": "fuel_cost",
+                  "title": "Type",
+                  "type": "string"
+                },
+                "weight": {
+                  "title": "Weight",
+                  "type": "number"
+                },
+                "is_hard_cost": {
+                  "default": false,
+                  "title": "Is Hard Cost",
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "type",
+                "weight"
+              ],
+              "title": "FuelCostConstraintDto",
+              "type": "object"
+            },
+            {
+              "properties": {
+                "type": {
+                  "const": "max_distance",
+                  "title": "Type",
+                  "type": "string"
+                },
+                "weight": {
+                  "title": "Weight",
+                  "type": "number"
+                },
+                "is_hard_cost": {
+                  "default": false,
+                  "title": "Is Hard Cost",
+                  "type": "boolean"
+                },
+                "max_distance": {
+                  "default": 0.0,
+                  "title": "Max Distance",
+                  "type": "number"
+                },
+                "exp_factor": {
+                  "default": 1.0,
+                  "title": "Exp Factor",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "type",
+                "weight"
+              ],
+              "title": "MaxDistanceConstraintDto",
+              "type": "object"
+            },
+            {
+              "properties": {
+                "type": {
+                  "const": "duration",
+                  "title": "Type",
+                  "type": "string"
+                },
+                "weight": {
+                  "title": "Weight",
+                  "type": "number"
+                },
+                "is_hard_cost": {
+                  "default": false,
+                  "title": "Is Hard Cost",
+                  "type": "boolean"
+                },
+                "exp_factor": {
+                  "default": 1.0,
+                  "title": "Exp Factor",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "type",
+                "weight"
+              ],
+              "title": "DurationConstraintDto",
+              "type": "object"
+            },
+            {
+              "properties": {
+                "type": {
+                  "const": "max_duration",
+                  "title": "Type",
+                  "type": "string"
+                },
+                "weight": {
+                  "title": "Weight",
+                  "type": "number"
+                },
+                "is_hard_cost": {
+                  "default": false,
+                  "title": "Is Hard Cost",
+                  "type": "boolean"
+                },
+                "max_duration": {
+                  "default": 0.0,
+                  "title": "Max Duration",
+                  "type": "number"
+                },
+                "exp_factor": {
+                  "default": 1.0,
+                  "title": "Exp Factor",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "type",
+                "weight"
+              ],
+              "title": "MaxDurationConstraintDto",
+              "type": "object"
+            },
+            {
+              "properties": {
+                "type": {
+                  "const": "time_window",
+                  "title": "Type",
+                  "type": "string"
+                },
+                "weight": {
+                  "title": "Weight",
+                  "type": "number"
+                },
+                "is_hard_cost": {
+                  "default": false,
+                  "title": "Is Hard Cost",
+                  "type": "boolean"
+                },
+                "exp_factor": {
+                  "default": 2.0,
+                  "title": "Exp Factor",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "type",
+                "weight"
+              ],
+              "title": "TimeWindowConstraintDto",
+              "type": "object"
+            },
+            {
+              "properties": {
+                "type": {
+                  "const": "delivery_time_priority",
+                  "title": "Type",
+                  "type": "string"
+                },
+                "weight": {
+                  "title": "Weight",
+                  "type": "number"
+                },
+                "is_hard_cost": {
+                  "default": false,
+                  "title": "Is Hard Cost",
+                  "type": "boolean"
+                },
+                "exp_factor": {
+                  "default": 2.0,
+                  "title": "Exp Factor",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "type",
+                "weight"
+              ],
+              "title": "DeliveryTimePriorityConstraintDto",
+              "type": "object"
+            },
+            {
+              "properties": {
+                "type": {
+                  "const": "fixed_contract_vehicle",
+                  "title": "Type",
+                  "type": "string"
+                },
+                "weight": {
+                  "title": "Weight",
+                  "type": "number"
+                },
+                "target_riders": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Target Riders",
+                  "type": "array",
+                  "uniqueItems": true
+                },
+                "is_hard_cost": {
+                  "default": false,
+                  "title": "Is Hard Cost",
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "type",
+                "weight",
+                "target_riders"
+              ],
+              "title": "FixedContractVehicleConstraintDto",
+              "type": "object"
+            },
+            {
+              "properties": {
+                "type": {
+                  "const": "fixed_contract_incentive_vehicle",
+                  "title": "Type",
+                  "type": "string"
+                },
+                "weight": {
+                  "title": "Weight",
+                  "type": "number"
+                },
+                "target_riders": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Target Riders",
+                  "type": "array",
+                  "uniqueItems": true
+                },
+                "is_hard_cost": {
+                  "default": false,
+                  "title": "Is Hard Cost",
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "type",
+                "weight",
+                "target_riders"
+              ],
+              "title": "FixedContractIncentiveVehicleConstraintDto",
+              "type": "object"
+            },
+            {
+              "properties": {
+                "type": {
+                  "const": "min_capacity",
+                  "title": "Type",
+                  "type": "string"
+                },
+                "weight": {
+                  "title": "Weight",
+                  "type": "number"
+                },
+                "target_ratio": {
+                  "title": "Target Ratio",
+                  "type": "number"
+                },
+                "target_riders": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Target Riders",
+                  "type": "array",
+                  "uniqueItems": true
+                },
+                "is_hard_cost": {
+                  "default": false,
+                  "title": "Is Hard Cost",
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "type",
+                "weight",
+                "target_ratio",
+                "target_riders"
+              ],
+              "title": "MinCapacityConstraintDto",
+              "type": "object"
+            },
+            {
+              "properties": {
+                "type": {
+                  "const": "minimum_order",
+                  "title": "Type",
+                  "type": "string"
+                },
+                "weight": {
+                  "title": "Weight",
+                  "type": "number"
+                },
+                "target_order": {
+                  "title": "Target Order",
+                  "type": "integer"
+                },
+                "target_riders": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Target Riders",
+                  "type": "array",
+                  "uniqueItems": true
+                },
+                "is_hard_cost": {
+                  "default": false,
+                  "title": "Is Hard Cost",
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "type",
+                "weight",
+                "target_order",
+                "target_riders"
+              ],
+              "title": "MinimumOrderConstraintDto",
+              "type": "object"
+            },
+            {
+              "properties": {
+                "type": {
+                  "const": "minimum_round",
+                  "title": "Type",
+                  "type": "string"
+                },
+                "weight": {
+                  "title": "Weight",
+                  "type": "number"
+                },
+                "is_hard_cost": {
+                  "default": true,
+                  "title": "Is Hard Cost",
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "type",
+                "weight"
+              ],
+              "title": "MinimumRoundConstraintDto",
+              "type": "object"
+            },
+            {
+              "properties": {
+                "type": {
+                  "const": "rider_delivery_length",
+                  "title": "Type",
+                  "type": "string"
+                },
+                "weight": {
+                  "title": "Weight",
+                  "type": "number"
+                },
+                "is_hard_cost": {
+                  "default": false,
+                  "title": "Is Hard Cost",
+                  "type": "boolean"
+                },
+                "exp_factor": {
+                  "default": 2.0,
+                  "title": "Exp Factor",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "type",
+                "weight"
+              ],
+              "title": "RiderDeliveryLengthConstraintDto",
+              "type": "object"
+            },
+            {
+              "properties": {
+                "type": {
+                  "const": "rider_distance",
+                  "title": "Type",
+                  "type": "string"
+                },
+                "weight": {
+                  "title": "Weight",
+                  "type": "number"
+                },
+                "is_hard_cost": {
+                  "default": false,
+                  "title": "Is Hard Cost",
+                  "type": "boolean"
+                },
+                "exp_factor": {
+                  "default": 2.0,
+                  "title": "Exp Factor",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "type",
+                "weight"
+              ],
+              "title": "RiderDistanceConstraintDto",
+              "type": "object"
+            },
+            {
+              "properties": {
+                "type": {
+                  "const": "rider_route_zone",
+                  "title": "Type",
+                  "type": "string"
+                },
+                "weight": {
+                  "title": "Weight",
+                  "type": "number"
+                },
+                "is_hard_cost": {
+                  "default": false,
+                  "title": "Is Hard Cost",
+                  "type": "boolean"
+                },
+                "exp_factor": {
+                  "default": 2.0,
+                  "title": "Exp Factor",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "type",
+                "weight"
+              ],
+              "title": "RiderRouteZoneConstraintDto",
+              "type": "object"
+            },
+            {
+              "properties": {
+                "type": {
+                  "const": "rider_time_window",
+                  "title": "Type",
+                  "type": "string"
+                },
+                "weight": {
+                  "title": "Weight",
+                  "type": "number"
+                },
+                "is_hard_cost": {
+                  "default": false,
+                  "title": "Is Hard Cost",
+                  "type": "boolean"
+                },
+                "exp_factor": {
+                  "default": 2.0,
+                  "title": "Exp Factor",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "type",
+                "weight"
+              ],
+              "title": "RiderTimeWindowConstraintDto",
+              "type": "object"
+            },
+            {
+              "properties": {
+                "type": {
+                  "const": "round_preference_region",
+                  "title": "Type",
+                  "type": "string"
+                },
+                "weight": {
+                  "title": "Weight",
+                  "type": "number"
+                },
+                "preference_regions": {
+                  "additionalProperties": {
+                    "additionalProperties": {
+                      "additionalProperties": {
+                        "type": "number"
+                      },
+                      "type": "object"
+                    },
+                    "type": "object"
+                  },
+                  "title": "Preference Regions",
+                  "type": "object"
+                },
+                "is_hard_cost": {
+                  "default": false,
+                  "title": "Is Hard Cost",
+                  "type": "boolean"
+                },
+                "exp_factor": {
+                  "default": 2.0,
+                  "title": "Exp Factor",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "type",
+                "weight",
+                "preference_regions"
+              ],
+              "title": "RoundPreferenceRegionConstraintDto",
+              "type": "object"
+            },
+            {
+              "properties": {
+                "type": {
+                  "const": "prohibited_time_window",
+                  "title": "Type",
+                  "type": "string"
+                },
+                "weight": {
+                  "title": "Weight",
+                  "type": "number"
+                },
+                "is_hard_cost": {
+                  "default": false,
+                  "title": "Is Hard Cost",
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "type",
+                "weight"
+              ],
+              "title": "ProhibitedTimeWindowConstraintDto",
+              "type": "object"
+            },
+            {
+              "properties": {
+                "type": {
+                  "const": "preference_region",
+                  "title": "Type",
+                  "type": "string"
+                },
+                "weight": {
+                  "title": "Weight",
+                  "type": "number"
+                },
+                "preference_regions": {
+                  "additionalProperties": {
+                    "additionalProperties": {
+                      "type": "number"
+                    },
+                    "type": "object"
+                  },
+                  "title": "Preference Regions",
+                  "type": "object"
+                },
+                "is_hard_cost": {
+                  "default": false,
+                  "title": "Is Hard Cost",
+                  "type": "boolean"
+                },
+                "exp_factor": {
+                  "default": 2.0,
+                  "title": "Exp Factor",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "type",
+                "weight",
+                "preference_regions"
+              ],
+              "title": "PreferenceRegionConstraintDto",
+              "type": "object"
+            },
+            {
+              "properties": {
+                "type": {
+                  "const": "delivery_length",
+                  "title": "Type",
+                  "type": "string"
+                },
+                "weight": {
+                  "title": "Weight",
+                  "type": "number"
+                },
+                "max_size": {
+                  "title": "Max Size",
+                  "type": "integer"
+                },
+                "is_hard_cost": {
+                  "default": false,
+                  "title": "Is Hard Cost",
+                  "type": "boolean"
+                },
+                "exp_factor": {
+                  "default": 2.0,
+                  "title": "Exp Factor",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "type",
+                "weight",
+                "max_size"
+              ],
+              "title": "DeliveryLengthConstraintDto",
+              "type": "object"
+            },
+            {
+              "properties": {
+                "type": {
+                  "const": "enclosing_circle_radius",
+                  "title": "Type",
+                  "type": "string"
+                },
+                "weight": {
+                  "title": "Weight",
+                  "type": "number"
+                },
+                "max_radius": {
+                  "title": "Max Radius",
+                  "type": "number"
+                },
+                "is_hard_cost": {
+                  "default": false,
+                  "title": "Is Hard Cost",
+                  "type": "boolean"
+                },
+                "exp_factor": {
+                  "default": 2.0,
+                  "title": "Exp Factor",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "type",
+                "weight",
+                "max_radius"
+              ],
+              "title": "EnclosingCircleRadiusConstraintDto",
+              "type": "object"
+            },
+            {
+              "properties": {
+                "type": {
+                  "const": "individual_enclosing_circle_radius",
+                  "title": "Type",
+                  "type": "string"
+                },
+                "weight": {
+                  "title": "Weight",
+                  "type": "number"
+                },
+                "is_hard_cost": {
+                  "default": false,
+                  "title": "Is Hard Cost",
+                  "type": "boolean"
+                },
+                "exp_factor": {
+                  "default": 2.0,
+                  "title": "Exp Factor",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "type",
+                "weight"
+              ],
+              "title": "IndividualEnclosingCircleRadiusConstraintDto",
+              "type": "object"
+            },
+            {
+              "properties": {
+                "type": {
+                  "const": "same_coordinate_grouping",
+                  "title": "Type",
+                  "type": "string"
+                },
+                "weight": {
+                  "title": "Weight",
+                  "type": "number"
+                },
+                "is_hard_cost": {
+                  "default": true,
+                  "title": "Is Hard Cost",
+                  "type": "boolean"
+                },
+                "exp_factor": {
+                  "default": 2.0,
+                  "title": "Exp Factor",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "type",
+                "weight"
+              ],
+              "title": "SameCoordinateGroupingConstraintDto",
+              "type": "object"
+            },
+            {
+              "properties": {
+                "type": {
+                  "const": "round_enclosing_circle_radius",
+                  "title": "Type",
+                  "type": "string"
+                },
+                "weight": {
+                  "title": "Weight",
+                  "type": "number"
+                },
+                "max_radius": {
+                  "title": "Max Radius",
+                  "type": "number"
+                },
+                "is_hard_cost": {
+                  "default": false,
+                  "title": "Is Hard Cost",
+                  "type": "boolean"
+                },
+                "exp_factor": {
+                  "default": 2.0,
+                  "title": "Exp Factor",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "type",
+                "weight",
+                "max_radius"
+              ],
+              "title": "RoundEnclosingCircleRadiusConstraintDto",
+              "type": "object"
+            },
+            {
+              "properties": {
+                "type": {
+                  "const": "nearby_delivery_grouping",
+                  "title": "Type",
+                  "type": "string"
+                },
+                "weight": {
+                  "title": "Weight",
+                  "type": "number"
+                },
+                "distance_threshold": {
+                  "title": "Distance Threshold",
+                  "type": "integer"
+                },
+                "is_hard_cost": {
+                  "default": true,
+                  "title": "Is Hard Cost",
+                  "type": "boolean"
+                },
+                "exp_factor": {
+                  "default": 2.0,
+                  "title": "Exp Factor",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "type",
+                "weight",
+                "distance_threshold"
+              ],
+              "title": "NearbyDeliveryGroupingConstraintDto",
+              "type": "object"
+            }
+          ]
+        },
+        "title": "Constraints",
+        "type": "array"
+      },
+      "config": {
+        "additionalProperties": false,
+        "properties": {
+          "timelimit": {
+            "description": "Time limit for the routing problem.",
+            "maximum": 1200,
+            "minimum": 1,
+            "title": "Time Limit",
+            "type": "integer"
+          },
+          "delivery_start_time": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Datetime for delivery start. Required if visits have time windows. Use ISO 8601 format with timezone, e.g., '2025-03-16T17:40:00+09:00'",
+            "title": "Delivery Start Time"
+          },
+          "distance_type": {
+            "enum": [
+              "manhattan",
+              "euclidean",
+              "osrm"
+            ],
+            "title": "DistanceType",
+            "type": "string"
+          }
+        },
+        "required": [
+          "timelimit"
+        ],
+        "title": "ExtendedAdvancedVrpConfig",
+        "type": "object"
+      }
+    },
+    "required": [
+      "visits",
+      "vehicles",
+      "constraints",
+      "config"
+    ],
+    "title": "ExtendedAdvancedVrpEngineInput",
+    "type": "object"
+  }
+}
