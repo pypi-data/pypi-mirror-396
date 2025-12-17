@@ -1,0 +1,211 @@
+Metadata-Version: 2.4
+Name: pyinitgen
+Version: 4.0.1
+Summary: Auto-generate missing __init__.py files to fix Python import issues and ensure proper module discovery.
+Author-email: Dhruv <dhruv13x@gmail.com>
+Maintainer-email: Dhruv <dhruv13x@gmail.com>
+License: MIT
+Project-URL: Homepage, https://github.com/dhruv13x/pyinitgen
+Project-URL: Repository, https://github.com/dhruv13x/pyinitgen.git
+Project-URL: Issues, https://github.com/dhruv13x/pyinitgen/issues
+Keywords: python,init,package,module,init generator,__init__.py,package-fix,developer-tools,cli
+Classifier: Development Status :: 4 - Beta
+Classifier: Environment :: Console
+Classifier: Intended Audience :: Developers
+Classifier: Topic :: Software Development :: Build Tools
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3 :: Only
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: tomli>=2.0.0; python_version < "3.11"
+Requires-Dist: rich>=10.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0.0; extra == "dev"
+Requires-Dist: pytest-cov>=5.0.0; extra == "dev"
+Requires-Dist: pytest-timeout>=2.2.0; extra == "dev"
+Requires-Dist: pytest-json-report>=1.5.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.23.0; extra == "dev"
+Requires-Dist: pytest-mock>=3.10.0; extra == "dev"
+Requires-Dist: pyfakefs>=5.0.0; extra == "dev"
+Requires-Dist: ruff>=0.6.0; extra == "dev"
+Requires-Dist: black>=24.3.0; extra == "dev"
+Requires-Dist: mypy>=1.11.0; extra == "dev"
+Requires-Dist: PyYAML>=6.0; extra == "dev"
+Requires-Dist: types-PyYAML>=6.0; extra == "dev"
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/dhruv13x/pyinitgen/main/pyinitgen_logo.png" alt="pyinitgen logo" width="200"/>
+</div>
+
+<div align="center">
+
+# pyinitgen
+
+**Auto-generate missing `__init__.py` files to fix Python import issues and ensure proper module discovery.**
+
+[![PyPI version](https://img.shields.io/pypi/v/pyinitgen.svg)](https://pypi.org/project/pyinitgen/)
+[![Python](https://img.shields.io/pypi/pyversions/pyinitgen.svg)](https://pypi.org/project/pyinitgen/)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Code Style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Build Status](https://github.com/dhruv13x/pyinitgen/actions/workflows/publish.yml/badge.svg)](https://github.com/dhruv13x/pyinitgen/actions/workflows/publish.yml)
+[![Maintenance](https://img.shields.io/badge/Maintenance-Active-brightgreen.svg)](https://github.com/dhruv13x/pyinitgen)
+
+</div>
+
+---
+
+## ⚡ Quick Start
+
+### Prerequisites
+- Python 3.8 or higher
+
+### Installation
+
+```bash
+pip install pyinitgen
+```
+
+### Run
+
+Navigate to your project root and run:
+
+```bash
+pyinitgen
+```
+
+### Demo
+
+```bash
+# Preview changes without writing (Safe Mode)
+pyinitgen --dry-run
+
+# Run and fix your project structure
+pyinitgen
+# Output:
+# Created src/utils/__init__.py
+# ✅ Operation complete. Scanned 43 dirs, created 8 new __init__.py files.
+```
+
+---
+
+## ✨ Features
+
+*   **📂 Recursive Scan**: Intelligently walks your directory tree to find all Python module folders.
+*   **🛠️ Auto-creates `__init__.py`**: Generates files only where they are missing.
+*   **🧠 Smart Exclusions**: Automatically ignores `node_modules`, `.git`, `__pycache__`, `venv`, and other non-Python directories.
+*   **✍️ Custom Content**: Inject custom code (e.g., license headers) into every new `__init__.py`.
+*   **👀 Dry-Run Mode**: Visualize changes before applying them.
+*   **✅ Check Flag**: CI/CD ready—exit with an error if files are missing without modifying disk.
+*   **🔒 Zero Destructive Actions**: Never overwrites existing files.
+
+---
+
+## 🛠️ Configuration
+
+### Environment Variables
+
+| Name | Description | Default | Required |
+| :--- | :--- | :--- | :--- |
+| `CREATE_DUMP_PALETTE` | Select a fixed color palette index (0-5) for the logo. | None (Procedural) | No |
+
+### CLI Arguments
+
+| Flag | Short | Description |
+| :--- | :--- | :--- |
+| `--base-dir` | | Base directory to scan (default: current directory). |
+| `--dry-run` | | Preview changes without writing to disk. |
+| `--quiet` | `-q` | Suppress all non-error output. |
+| `--verbose` | `-v` | Show all scanned directories (debug mode). |
+| `--no-emoji` | | Disable emoji in the final output. |
+| `--init-content` | | Custom content to write to new `__init__.py` files. |
+| `--check` | | Check for missing `__init__.py` files and exit with code 1 if found. |
+| `--version` | | Show the program's version number and exit. |
+
+### Configuration Files
+
+You can define permanent exclusions in `pyproject.toml` or `.pyinitgen.toml`.
+
+**`pyproject.toml` example:**
+
+```toml
+[tool.pyinitgen]
+exclude_dirs = ["legacy_code", "test_data"]
+```
+
+**`.pyinitgenignore` example:**
+Create a `.pyinitgenignore` file in your root to list folders to skip (one per line).
+
+```text
+assets
+legacy
+temp_builds
+```
+
+---
+
+## 🏗️ Architecture
+
+`pyinitgen` follows a standard Python CLI structure designed for maintainability and speed.
+
+```text
+src/
+└── pyinitgen/
+    ├── __init__.py
+    ├── banner.py   # 🎨 Renders the procedural ASCII art logo
+    ├── cli.py      # 🧠 Core logic: Scan, Detect, Create
+    ├── config.py   # ⚙️ Configuration loader (TOML handling)
+    └── ignores.py  # 🚫 Ignore pattern processing
+```
+
+**Data Flow:**
+1.  **CLI Entry**: Arguments are parsed.
+2.  **Config Load**: Global config, local TOML files, and `.pyinitgenignore` are merged.
+3.  **Walker**: Directory tree is traversed, filtering out excluded paths.
+4.  **Creator**: Missing `__init__.py` files are identified and created (or reported in Dry Run).
+
+---
+
+## 🐞 Troubleshooting
+
+| Error Message | Possible Cause | Solution |
+| :--- | :--- | :--- |
+| `ModuleNotFoundError: No module named 'rich'` | Missing dependency. | Run `pip install pyinitgen --upgrade`. |
+| `Permission denied: '.../__init__.py'` | File system permissions. | Run with appropriate permissions or check folder ownership. |
+| No files created | Directories might be ignored. | Check `pyproject.toml` or `.pyinitgenignore` exclusions. Use `-v` to debug. |
+
+**Debug Mode:**
+Use the verbose flag to see exactly what directories are being scanned:
+```bash
+pyinitgen -v --dry-run
+```
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to set up your development environment, run tests, and submit PRs.
+
+### Development Setup
+1.  Clone the repo.
+2.  Install dev dependencies: `pip install -e ".[dev]"`
+3.  Run tests: `python -m pytest tests/`
+
+---
+
+## 🗺️ Roadmap
+
+*   [x] **Custom Exclusions**: Support for config files.
+*   [x] **CI/CD Check**: `--check` flag for pipelines.
+*   [ ] **Watch Mode**: Auto-generate files as directories are created.
+*   [ ] **Interactive Mode**: Confirm each file creation.
+
+---
+
+<div align="center">
+
+**[GitHub Repository](https://github.com/dhruv13x/pyinitgen)** • **[Report an Issue](https://github.com/dhruv13x/pyinitgen/issues)**
+
+</div>
