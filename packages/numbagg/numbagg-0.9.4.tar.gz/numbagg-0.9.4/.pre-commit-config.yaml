@@ -1,0 +1,45 @@
+# https://pre-commit.com/
+# Copied from xarray
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.8
+    hooks:
+      - id: ruff-check
+        args: ["--fix"]
+      - id: ruff-format
+  - repo: https://github.com/Carreau/velin
+    rev: 0.0.12
+    hooks:
+      - id: velin
+        args: ["--write", "--compact"]
+  # This is failing in pre-commit.ci, and I can't work out why. We have a separate CI job which runs the proper mypy, so using that.
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #  rev: v1.10.1
+  #  hooks:
+  #    - id: mypy
+  #      additional_dependencies:
+  #        [types-setuptools, numpy, types-Pygments, types-colorama]
+  - repo: https://github.com/adhtruong/mirrors-typos
+    rev: v1.40.0
+    hooks:
+      - id: typos
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.9
+    hooks:
+      - id: actionlint
+        exclude: dependabot.yml
+  - repo: local
+    hooks:
+      - id: no-print
+        name: no-print
+        description: We shouldn't merge code with `print(` in
+        language: pygrep
+        types: ["python"]
+        entry: 'print\('
+        exclude: ".*/test/.*"
