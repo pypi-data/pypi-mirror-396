@@ -1,0 +1,138 @@
+[build-system]
+requires = ["flit_core >=3.11,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "lick"
+version = "0.9.0" # keep in sync with __version__
+description = "A high level Line Integral Convolution (LIC) library, including post-processing and visualization"
+authors = [
+    { name = "G. Wafflard-Fernandez" },
+	{ name = "C.M.T. Robert" },
+]
+license = "GPL-3.0-only"
+license-files = ["LICENSE"]
+classifiers = [
+    "Framework :: Matplotlib",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Topic :: Scientific/Engineering :: Visualization",
+    "Typing :: Typed",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "matplotlib>=3.5.0",
+    "numpy>=1.22, <3",
+    "rlic>=0.2.1",
+    "scipy>=1.7.2",
+]
+
+[project.readme]
+file = "README.md"
+content-type = "text/markdown"
+
+[project.urls]
+Homepage = "https://github.com/la-niche/lick"
+
+[dependency-groups]
+covcheck = [
+    "coverage>=7.10",
+    "coverage[toml]>=7.10.0 ; python_full_version < '3.11'",
+]
+test = [
+    "pytest>=9.0.0",
+    "pytest-mpl>=0.16.1",
+]
+typecheck = [
+    "mypy>=1.15.0",
+]
+
+[tool.flit.sdist]
+include = ["CITATION.cff"]
+
+[tool.ruff.lint]
+exclude = ["*__init__.py"]
+ignore = ["E501"]
+select = [
+    "E",
+    "F",
+    "W",
+    "C4",  # flake8-comprehensions
+    "B",   # flake8-bugbear
+    "YTT", # flake8-2020
+    "I",   # isort
+    "UP",  # pyupgrade
+]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+known-first-party = ["lick"]
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true # mpl_toolkits doesn't have stubs yet
+show_error_codes = true
+pretty = true
+warn_return_any = true
+warn_unused_configs = true
+warn_unreachable = true
+
+[tool.pytest]
+minversion = "9.0"
+strict = true
+addopts = [
+    "-ra",
+]
+filterwarnings = [
+    "error",
+    'ignore:datetime\.datetime\.utcfromtimestamp\(\) is deprecated:DeprecationWarning', # https://github.com/dateutil/dateutil/pull/1285
+]
+
+[tool.coverage.run]
+branch = true
+source = [
+    "src",
+    "tests",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+
+# use exclude_also to *extend* the default exclude_lines,
+# and allow purely defensive code patterns
+exclude_also = [
+    "^\\s*raise (Assertion|Runtime|NotImplemented)Error(\\(\\))?$",
+    "^\\s*case _ as unreachable:",
+]
+
+[tool.uv]
+no-build-package = [
+    "numpy",
+    "matplotlib",
+    "pillow",
+    "contourpy",
+    "kiwisolver",
+
+    # all of the following are from pytest-mpl (directly or not)
+    # these constraints should (mostly) become obsolete with https://github.com/matplotlib/pytest-mpl/pull/252
+    "markupsafe",
+]
+
+constraint-dependencies = [
+    # https://github.com/matplotlib/pytest-mpl/pull/252
+    "jinja2>=2.10.2",
+    # via matplotlib 3.5
+    "setuptools>=61.0.0",
+    "pyparsing>=2.4.0",
+]
+
+build-constraint-dependencies = [
+    # via matplotlib 3.5
+    "setuptools>=61.0.0",
+]
