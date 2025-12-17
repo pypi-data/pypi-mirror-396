@@ -1,0 +1,157 @@
+# MCP Case Server
+
+[![PyPI version](https://badge.fury.io/py/mcp-case-server.svg)](https://badge.fury.io/py/mcp-case-server)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+
+一個支援雙模式（Demo SQLite / 真實 PostgreSQL）的 MCP Server，提供案件查詢功能。
+
+## ✨ 特色功能
+
+- **案件查詢**：提供 `get_case` 工具，依據案件編號查詢資訊
+- **雙模式資料庫**：
+    - **預設模式**：若未設定環境變數，自動使用內建的 SQLite Demo 資料庫，開箱即用
+    - **生產模式**：支援 `DATABASE_URL` 環境變數，可無縫切換至 PostgreSQL 或其他 SQLAlchemy 支援的資料庫
+
+## 🚀 快速開始
+
+### 安裝
+
+```bash
+pip install mcp-case-server
+```
+
+或使用 `uvx` 直接執行（無需安裝）：
+
+```bash
+uvx mcp-case-server
+```
+
+### 使用方式
+
+#### 方式 A：使用內建 Demo 資料庫（預設）
+
+直接執行指令，無需任何設定：
+
+```bash
+load-case-data
+```
+
+#### 方式 B：連接真實資料庫（PostgreSQL）
+
+設定 `DATABASE_URL` 環境變數後執行：
+
+**PowerShell:**
+```powershell
+$env:DATABASE_URL="postgresql+psycopg://user:pass@host:5432/dbname"
+load-case-data
+```
+
+**Bash:**
+```bash
+export DATABASE_URL="postgresql+psycopg://user:pass@host:5432/dbname"
+load-case-data
+```
+
+## 📖 MCP Client 設定範例
+
+### Claude Desktop
+
+編輯設定檔（通常位於 `%APPDATA%\Claude\claude_desktop_config.json`）：
+
+```json
+{
+  "mcpServers": {
+    "case-search": {
+      "command": "uvx",
+      "args": ["mcp-case-server"],
+      "env": {
+        "DATABASE_URL": "您的連線字串（若要用 Demo DB 則免填此行）"
+      }
+    }
+  }
+}
+```
+
+## 🏗️ 專案結構
+
+```text
+mcp_1/
+├── pyproject.toml       # 專案依賴、打包設定、指令入口
+├── README.md            # 專案說明文件
+├── LICENSE              # MIT 授權條款
+├── .gitignore           # Git 忽略檔案設定
+├── scripts/             # 開發與維護用的輔助程式
+│   ├── build_demo_db.py #   └── 重建 Demo 資料庫的腳本
+│   ├── data.csv         #   └── Demo 資料來源
+│   └── inspect_db.py    #   └── 查看資料庫內容的腳本
+└── src/                 # 核心程式碼放置處
+    └── mcp_1/           #   └── Python 套件主目錄
+        ├── __init__.py  #       └── 套件入口，匯出 main 函式
+        ├── config.py    #       └── 設定管理（處理資料庫連線字串與 Fallback 邏輯）
+        ├── server.py    #       └── MCP Server 定義（工具註冊與 API 介面）
+        ├── store.py     #       └── 資料存取層（負責 SQL 執行與資料格式化）
+        └── data/        #       └── 資料檔目錄
+            └── demo_cases.db #     └── 內建的 SQLite Demo 資料庫
+```
+
+## 📝 檔案說明
+
+*   **[server.py](src/mcp_1/server.py)**（核心）
+    *   定義 MCP Server 實體與對外介面
+    *   使用 `@mcp.tool()` 註冊 `get_case` 工具，供 MCP Client（如 Claude）呼叫
+*   **[store.py](src/mcp_1/store.py)**（資料層）
+    *   負責與資料庫互動，封裝 SQLAlchemy 操作
+    *   統一處理不同資料庫的查詢邏輯，回傳標準化的字典資料
+*   **[config.py](src/mcp_1/config.py)**（設定）
+    *   決定連線目標，檢查 `DATABASE_URL`，若無則回傳內建 Demo DB 路徑
+*   **[scripts/build_demo_db.py](scripts/build_demo_db.py)**
+    *   開發用腳本，用於生成或重置 `src/mcp_1/data/demo_cases.db`
+*   **[scripts/inspect_db.py](scripts/inspect_db.py)**
+    *   開發用腳本，用於在終端機快速查看 SQLite 資料庫內容
+
+## 🔧 開發
+
+### 安裝開發環境
+
+```bash
+git clone https://github.com/plion818/mcp-case-server.git
+cd mcp-case-server
+pip install -e .
+```
+
+### 開發工具
+
+**查看目前資料庫內容：**
+```bash
+python scripts/inspect_db.py
+```
+
+**重建 Demo 資料庫（重置資料）：**
+```bash
+python scripts/build_demo_db.py
+```
+
+### 建構套件
+
+```bash
+uv build
+```
+
+### 發布到 PyPI
+
+```bash
+uv publish
+```
+
+## 📝 授權
+
+本專案採用 MIT 授權條款 - 詳見 [LICENSE](LICENSE) 檔案
+
+## 👤 作者
+
+**plion818**
+- Email: patrick89818pp@gmail.com
+
+## 🤝 貢獻
+
+歡迎提交 Issue 或 Pull Request！

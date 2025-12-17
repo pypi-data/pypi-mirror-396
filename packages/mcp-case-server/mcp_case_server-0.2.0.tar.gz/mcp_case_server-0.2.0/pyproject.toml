@@ -1,0 +1,37 @@
+[project]
+name = "mcp-case-server"
+version = "0.2.0"
+description = "一個支援雙模式（Demo SQLite / PostgreSQL）的 MCP Server，提供案件查詢功能"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [
+    { name = "plion818", email = "patrick89818pp@gmail.com" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "mcp[cli]>=1.0.0",
+    "sqlalchemy>=2.0.0",
+    "psycopg[binary]>=3.2.0",
+]
+
+[project.scripts]
+load-case-data = "mcp_1.server:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mcp_1"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/mcp_1/**/*.py",
+    "src/mcp_1/data/*.db",
+]
+
+[tool.hatch.build]
+include = [
+    "src/mcp_1/**/*.py",
+    "src/mcp_1/data/*.db",
+]
