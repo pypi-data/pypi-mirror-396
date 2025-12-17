@@ -1,0 +1,170 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hjeon139-mcp-outofcontext"
+version = "1.0.1"
+description = "MCP server for context management with markdown storage, CRUD operations, and search"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+  { name = "Hal Jeon", email = "hjeon139@gmail.com" },
+]
+license = { text = "Apache-2.0" }
+keywords = ["mcp", "model-context-protocol", "context-management", "fastmcp", "ai", "llm", "memory"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "fastmcp>=2.11.0",
+    "pydantic>=2.0.0",
+    "pyyaml>=6.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/HJeon139/hjeon139-mcp-outofcontext"
+Repository = "https://github.com/HJeon139/hjeon139-mcp-outofcontext"
+Issues = "https://github.com/HJeon139/hjeon139-mcp-outofcontext/issues"
+Changelog = "https://github.com/HJeon139/hjeon139-mcp-outofcontext/releases"
+
+[project.scripts]
+hjeon139_mcp_outofcontext = "hjeon139_mcp_outofcontext.main:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=5.0.0",
+    "ruff>=0.6.0",
+    "mypy>=1.11.0",
+    "pre-commit>=3.6.0",
+    "types-PyYAML>=6.0.0",
+]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.envs.default]
+type = "virtual"
+dependencies = [
+  "pytest",
+  "pytest-asyncio",
+  "pytest-cov",
+  "ruff",
+  "mypy",
+]
+features = ["dev"]
+
+[tool.hatch.envs.default.scripts]
+test = "pytest -p pytest_asyncio"
+lint-fix = "ruff check --fix ."
+fmt-fix = "ruff format ."
+typecheck = "mypy src"
+update-deps = "python -m pip install -e '.[dev]'"
+release = [
+    "lint-fix",
+    "fmt-fix",
+    "typecheck",
+    "pytest -m 'unit' --cov=src/hjeon139_mcp_outofcontext",
+    "hatch build -t wheel",
+]
+
+[tool.hatch.envs.test]
+type = "virtual"
+features = ["dev"]
+dependencies = [
+  "pytest",
+  "pytest-asyncio",
+  "pytest-cov",
+]
+
+[tool.hatch.envs.test.scripts]
+test = "pytest -p pytest_asyncio"
+
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hjeon139_mcp_outofcontext"]
+
+[tool.ruff]
+line-length = 100
+indent-width = 4
+target-version = "py311"
+
+exclude = [
+    ".git",
+    ".venv",
+    "venv",
+    "env",
+    "__pycache__",
+    ".pytest_cache",
+    ".ruff_cache",
+    "docs",  # Exclude documentation directory
+]
+
+[tool.ruff.lint]
+select = [
+  "E",    # pycodestyle (errors)
+  "F",    # pyflakes
+  "W",    # pycodestyle (warnings)
+  "B",    # flake8-bugbear
+  "UP",   # pyupgrade
+  "I",    # isort
+  "C4",   # flake8-comprehensions
+  "C90",  # mccabe complexity checks (C901)
+  "SIM",  # flake8-simplify
+  "RUF",  # Ruff-specific rules
+]
+ignore = [
+  "E203", # whitespace before ':', conflicts with common formatter styles
+  "E501", # line length handled by formatter; keep checks lightweight
+]
+
+[tool.ruff.lint.per-file-ignores]
+# FastMCP uses CurrentContext() in defaults for dependency injection (correct pattern)
+"src/hjeon139_mcp_outofcontext/tools/crud/*.py" = ["B008"]
+"src/hjeon139_mcp_outofcontext/tools/query/*.py" = ["B008"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["hjeon139_mcp_outofcontext"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_unused_configs = true
+ignore_missing_imports = true
+disallow_untyped_defs = false
+check_untyped_defs = true
+pretty = true
+
+modules = ["hjeon139_mcp_outofcontext"]
+
+# Exclude documentation directory from type checking
+exclude = [
+    "docs/",
+]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-ra"
+markers = [
+  "unit: fast unit tests for core logic",
+  "integration: slower or integration tests",
+  "experiment: research experiments (if applicable)",
+  "performance: performance-sensitive test scenarios",
+  "scalability: scale or load-focused test scenarios",
+  "asyncio: marks tests as async (deselect with '-m \"not asyncio\"')",
+]
+
+[tool.pytest_asyncio]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+

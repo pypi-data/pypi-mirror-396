@@ -1,0 +1,147 @@
+---
+description: Code quality standards and best practices
+alwaysApply: true
+---
+
+# Code Quality Standards
+
+## General Principles
+
+- **Type hints required** for all functions
+- **All tests must pass** before committing
+- **Follow FastAPI/MCP best practices**: no globals, dependency injection
+- **Use ruff** for linting and formatting
+
+## Testing
+
+- Run tests: `hatch run pytest -m 'unit'` (for unit tests) or `hatch run pytest -m 'integration'` (for integration tests)
+- Use pytest markers: `@pytest.mark.unit`, `@pytest.mark.integration`
+- All tests must pass as part of pre-commit checklist
+- **All test functions must be marked** with `@pytest.mark.unit` or `@pytest.mark.integration`
+
+### Unit Testing Standards
+
+**Unit tests** test individual components in isolation:
+- **Mark all unit tests** with `@pytest.mark.unit`
+- **Use MagicMock** to test functions without directly calling dependencies
+- **Use `@patch` decorator** instead of context manager for cleaner code
+- **Test one thing per test** - each test should verify a single behavior
+- **Use descriptive test names** that explain what is being tested
+- **Isolate dependencies** - mock external services, file I/O, network calls
+
+**Example unit test pattern:**
+```python
+from unittest.mock import MagicMock, patch
+import pytest
+
+@pytest.mark.unit
+def test_function_with_mocked_dependency() -> None:
+    """Test function behavior with mocked dependency."""
+    # Arrange
+    mock_dependency = MagicMock()
+    mock_dependency.method.return_value = "expected"
+    
+    # Act
+    result = function_under_test(mock_dependency)
+    
+    # Assert
+    assert result == "expected"
+    mock_dependency.method.assert_called_once()
+```
+
+**Using `@patch` decorator (preferred):**
+```python
+from unittest.mock import patch
+import pytest
+
+@pytest.mark.unit
+@patch('module.ExternalService')
+def test_with_patch_decorator(mock_service: MagicMock) -> None:
+    """Test using patch decorator instead of context manager."""
+    mock_service.return_value.method.return_value = "result"
+    # Test implementation
+```
+
+**Integration tests** test component interactions:
+- **Mark with `@pytest.mark.integration`**
+- Test real interactions between components
+- May use real file I/O, databases, or external services
+- Slower than unit tests but verify end-to-end behavior
+
+## Code Style
+
+- Use ruff for linting and formatting
+- Run `hatch run fmt-fix` before committing
+- Run `hatch run lint-fix` before committing
+- Run `hatch run typecheck` before committing
+- **NEVER use `# noqa` comments to suppress linting errors** - fix the underlying issue instead
+  - If complexity is too high, refactor the function into smaller functions
+  - If a rule is incorrectly flagged, fix the code to satisfy the rule
+  - Suppressing errors hides real code quality issues and technical debt
+
+## Architecture Patterns
+
+- **No global variables** - all state is instance-scoped
+- **Dependency injection** - components receive dependencies via constructor
+- **Lifecycle management** - explicit initialize/cleanup methods
+- **Testable architecture** - can create multiple instances for testing
+
+## Backwards Compatibility
+
+**Only add backwards compatibility when necessary:**
+
+- ✅ **DO add backwards compatibility** if:
+  - It breaks an existing feature used in production
+  - It requires a data migration/backfill with increasing levels of effort
+  - It's part of a public API contract that external users depend on
+
+- ❌ **DON'T add backwards compatibility** if:
+  - Only tests need updating (update tests to match new API)
+  - It's an internal implementation detail
+  - The old API was never documented or released
+  - It would hurt long-term maintainability or refactoring ability
+
+**When in doubt, prefer clean APIs over backwards compatibility.** Update tests and documentation to match the new design rather than maintaining legacy support.
+
+## Jupyter Notebooks
+
+**⚠️ CRITICAL**: When working with Jupyter notebooks via MCP tools:
+
+- **Jupyter notebooks MUST be created (can be empty) before editing using MCP tools**
+- **NEVER use MCP notebook editing tools on a non-existent notebook file**
+- **DO NOT use `mcp_notebook_notebook_create`** - this tool does not work reliably
+- Always create the notebook file first using one of these methods:
+  1. **Command line**: `touch notebooks/my_notebook.ipynb` (creates empty file)
+  2. **Manual creation**: Create a minimal valid JSON notebook file:
+     ```bash
+     echo '{"cells":[],"metadata":{},"nbformat":4,"nbformat_minor":5}' > notebooks/my_notebook.ipynb
+     ```
+
+**Required workflow:**
+1. **First**: Create the notebook file (empty is fine) using command line or manual creation
+2. **Then**: Use MCP notebook tools (`mcp_notebook_notebook_add_cell`, `mcp_notebook_notebook_edit_cell`, etc.) to add/edit cells
+
+**Example:**
+```bash
+# Step 1: Create empty notebook file
+touch notebooks/my_notebook.ipynb
+
+# Or create with minimal structure:
+echo '{"cells":[],"metadata":{},"nbformat":4,"nbformat_minor":5}' > notebooks/my_notebook.ipynb
+
+# Step 2: Then use MCP tools to populate it
+```
+
+## File Organization
+
+- Source code: `src/out_of_context/`
+- Tests: `tests/`
+- Documentation: `docs/`
+- Steering docs: `docs/steering/`
+- Bug documentation: `docs/v1/bugs/`
+
+## Dependencies
+
+- Minimal dependencies: mcp, pydantic, tiktoken
+- Dev dependencies: pytest, pytest-asyncio, ruff, mypy, pre-commit
+- Add new dependencies only when necessary
