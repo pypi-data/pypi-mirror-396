@@ -1,0 +1,134 @@
+<p align="center">
+  <img src="media/logo.png" alt="Tubox Client Logo" width="200"/>
+</p>
+
+<h1 align="center">Tubox Client</h1>
+
+<p align="center">
+  <strong>The Next-Gen Python Client for Tubox Database</strong>
+</p>
+
+<p align="center">
+  <a href="https://pypi.org/project/tubox-client/"><img src="https://img.shields.io/pypi/v/tubox-client.svg?style=flat-square" alt="PyPI"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square" alt="License"></a>
+  <a href="https://github.com/tubox/tubox-client/actions"><img src="https://img.shields.io/github/actions/workflow/status/tubox/tubox-client/ci.yml?style=flat-square" alt="Build Status"></a>
+  <a href="https://tubox.cloud/"><img src="https://img.shields.io/badge/Docs-tubox.cloud-blue.svg?style=flat-square" alt="Documentation"></a>
+</p>
+
+<p align="center">
+  <a href="#features">Features</a> •
+  <a href="#quick-start">Quick Start</a> •
+  <a href="#architecture">Architecture</a> •
+  <a href="#examples">Examples</a> •
+  <a href="https://tubox.cloud/">Documentation</a>
+</p>
+
+---
+
+**Tubox Client** is a high-performance, production-ready Python library designed to interact with the Tubox database. Built with a philosophy of "Simple by default, powerful when needed," it offers both a developer-friendly synchronous API and a high-throughput asynchronous core.
+
+## 🚀 Features at a Glance
+
+<details open>
+<summary><strong>🔌 Seamless Connectivity</strong></summary>
+<br>
+Automatic connection pooling, health checks, and smart retries ensure your application stays connected even in unstable network conditions.
+</details>
+
+<details>
+<summary><strong>⚡ Async Native</strong></summary>
+<br>
+Built on <code>asyncio</code> from the ground up. Perfect for modern web frameworks like FastAPI, Quart, or Tornado to handle thousands of concurrent requests.
+</details>
+
+<details>
+<summary><strong>🔒 ACID Transactions</strong></summary>
+<br>
+Full support for multi-document transactions using a familiar, MongoDB-style session API.
+</details>
+
+<details>
+<summary><strong>🛡️ Robust & Secure</strong></summary>
+<br>
+Enterprise-grade security with session-based authentication and comprehensive error handling patterns.
+</details>
+
+## 📦 Installation
+
+```bash
+pip install tubox-client
+```
+
+## 🏎️ Quick Start
+
+Get up and running in seconds.
+
+### Synchronous (Standard)
+Perfect for scripts, data analysis, and standard web apps (Django, Flask).
+
+```python
+from tubox_client import TuboxClient
+
+# 1. Connect
+with TuboxClient("localhost", 7188, "admin", "password") as client:
+    db = client["my_app"]
+    users = db["users"]
+    
+    # 2. Insert
+    users.insert_one({"name": "Alice", "role": "developer"})
+    
+    # 3. Query
+    for user in users.find({"role": "developer"}).documents:
+        print(f"Found developer: {user['name']}")
+```
+
+### Asynchronous (High Performance)
+Built for speed.
+
+```python
+import asyncio
+from tubox_client import TuboxAPIClient
+
+async def main():
+    client = TuboxAPIClient("localhost", 7188)
+    await client.connect()
+    await client.authenticate("admin", "password")
+    
+    await client["my_app"]["logs"].insert_one({"event": "login"})
+    
+    await client.close()
+
+asyncio.run(main())
+```
+
+## 🏗️ Architecture
+
+Tubox Client is built on a layered architecture to separate concerns and ensure reliability.
+
+![Architecture Diagram](docs/images/architecture.png)
+
+The **Sync Wrapper** manages a dedicated event loop to bridge standard Python code with the **Async Core**, which handles the heavy lifting of connection management and protocol serialization.
+
+For a deep dive, see [ARCHITECTURE.md](ARCHITECTURE.md).
+
+## 💡 Examples
+
+We have a comprehensive suite of examples to cover every use case:
+
+| Category | Example Script | Description |
+| :--- | :--- | :--- |
+| **Basics** | [`basic_usage.py`](examples/basic_usage.py) | CRUD operations and basic connectivity. |
+| **Async** | [`async_usage.py`](examples/async_usage.py) | Native async/await patterns. |
+| **ACID** | [`transactions.py`](examples/transactions.py) | Multi-document transactions with rollback. |
+| **Config** | [`advanced_config.py`](examples/advanced_config.py) | Tuning pools, timeouts, and logging. |
+| **Robustness** | [`error_handling.py`](examples/error_handling.py) | Retry logic for rate limits and outages. |
+| **Metrics** | [`monitoring.py`](examples/monitoring.py) | Inspecting client and server health. |
+| **Queries** | [`advanced_querying.py`](examples/advanced_querying.py) | Pagination, sorting, and projections. |
+
+## 📚 Documentation
+
+Full documentation is available at [https://tubox.cloud/](https://tubox.cloud/).
+
+## 📜 License
+
+This project is licensed under the [MIT License](LICENSE).
