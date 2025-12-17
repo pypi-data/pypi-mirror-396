@@ -1,0 +1,89 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "other-agents-mcp"
+version = "0.0.8"
+description = "MCP server for communicating with other AI agents via file-based I/O"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+    {name = "Other Agents MCP Contributors"}
+]
+keywords = ["mcp", "ai", "agents", "claude", "gemini", "codex", "qwen", "model-context-protocol"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "mcp>=0.9.0,<2.0.0",
+    "PyYAML>=6.0,<7.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/inchan/other-agents"
+Repository = "https://github.com/inchan/other-agents"
+Issues = "https://github.com/inchan/other-agents/issues"
+
+[project.scripts]
+other-agents-mcp = "other_agents_mcp.server:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-mock>=3.12.0",
+    "pytest-xdist>=3.5.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --cov=src --cov-report=term-missing --cov-report=json:tests/coverage.json -m 'not slow'"
+asyncio_mode = "auto"
+cache_dir = "tests/.pytest_cache"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
+timeout = 30
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+# E402: 순환 의존성 회피를 위한 하단 import 허용
+per-file-ignores = { "src/other_agents_mcp/task_manager.py" = ["E402"] }
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["*/tests/*", "*/test_*.py"]
+data_file = "tests/.coverage"
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "@(abc\\.)?abstractmethod",
+]
