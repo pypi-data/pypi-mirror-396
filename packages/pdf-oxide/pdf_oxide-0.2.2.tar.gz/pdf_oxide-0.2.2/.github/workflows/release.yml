@@ -1,0 +1,367 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g., v0.1.1)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Validate tag matches version
+  validate:
+    name: Validate Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version from Cargo.toml
+        id: version
+        run: |
+          VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Detected version: $VERSION"
+
+      - name: Validate tag matches version
+        run: |
+          TAG="${{ github.ref_name }}"
+          VERSION="${{ steps.version.outputs.version }}"
+          EXPECTED_TAG="v$VERSION"
+          if [ "$TAG" != "$EXPECTED_TAG" ]; then
+            echo "Error: Tag '$TAG' does not match Cargo.toml version '$VERSION'"
+            echo "Expected tag: $EXPECTED_TAG"
+            exit 1
+          fi
+
+      - name: Verify release is from main branch
+        run: |
+          # Fetch main branch
+          git fetch origin main
+          # Get the commit SHA the tag points to
+          TAG_SHA=$(git rev-parse HEAD)
+          # Check if this commit is reachable from main
+          if ! git merge-base --is-ancestor $TAG_SHA origin/main; then
+            echo "Error: Release tags must be created from commits on the main branch"
+            echo "Tag SHA: $TAG_SHA"
+            echo "Please merge your changes to main first, then create the release tag"
+            exit 1
+          fi
+          echo "✓ Verified: Tag points to a commit on main branch"
+
+  # Build binaries for all platforms
+  build-binaries:
+    name: Build ${{ matrix.target }}
+    needs: validate
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux x86_64 (glibc)
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact_name: pdf_oxide-linux-x86_64
+            use_cross: false
+
+          # Linux x86_64 (musl - static)
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            artifact_name: pdf_oxide-linux-x86_64-musl
+            use_cross: false
+
+          # Linux ARM64
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            artifact_name: pdf_oxide-linux-aarch64
+            use_cross: true
+
+          # macOS x86_64 (Intel)
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            artifact_name: pdf_oxide-macos-x86_64
+            use_cross: false
+
+          # macOS ARM64 (Apple Silicon)
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact_name: pdf_oxide-macos-aarch64
+            use_cross: false
+
+          # Windows x86_64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_name: pdf_oxide-windows-x86_64
+            use_cross: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install musl tools (Linux musl)
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+
+      - name: Install cross-compilation tools (Linux ARM64)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Build binaries
+        shell: bash
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: ${{ matrix.target == 'aarch64-unknown-linux-gnu' && 'aarch64-linux-gnu-gcc' || '' }}
+        run: |
+          cargo build --release --target ${{ matrix.target }}
+
+      - name: Create archive (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          mkdir -p dist
+          cd target/${{ matrix.target }}/release
+
+          # List all binaries
+          BINARIES=(
+            "analyze_pdf_features"
+            "benchmark_all_pdfs"
+            "export_to_html"
+            "export_to_markdown"
+            "export_to_text"
+            "validate_content"
+            "validate_dataset"
+            "validate_structured"
+          )
+
+          # Create archive with all binaries
+          tar czf ../../../dist/${{ matrix.artifact_name }}-${VERSION}.tar.gz "${BINARIES[@]}"
+
+      - name: Create archive (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $VERSION = "${{ needs.validate.outputs.version }}"
+          New-Item -ItemType Directory -Force -Path dist
+          Set-Location target/${{ matrix.target }}/release
+
+          $BINARIES = @(
+            "analyze_pdf_features.exe",
+            "benchmark_all_pdfs.exe",
+            "export_to_html.exe",
+            "export_to_markdown.exe",
+            "export_to_text.exe",
+            "validate_content.exe",
+            "validate_dataset.exe",
+            "validate_structured.exe"
+          )
+
+          Compress-Archive -Path $BINARIES -DestinationPath ../../../dist/${{ matrix.artifact_name }}-${VERSION}.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: dist/*
+          retention-days: 7
+
+  # Build Python wheels
+  build-python-wheels:
+    name: Build Python wheels (${{ matrix.target }})
+    needs: validate
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact_name: wheels-linux-x86_64
+
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            artifact_name: wheels-macos-x86_64
+
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact_name: wheels-macos-aarch64
+
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_name: wheels-windows-x86_64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install maturin
+        run: pip install maturin
+
+      - name: Build wheels
+        run: maturin build --release --features python --target ${{ matrix.target }} --out dist
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: dist/*.whl
+          retention-days: 7
+
+  # Create GitHub Release
+  create-release:
+    name: Create GitHub Release
+    needs: [validate, build-binaries, build-python-wheels]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Organize release files
+        run: |
+          mkdir -p release-files
+          find artifacts -type f \( -name "*.tar.gz" -o -name "*.zip" -o -name "*.whl" \) -exec cp {} release-files/ \;
+          echo "=== Release files ==="
+          ls -lh release-files/
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          cat << 'EOF' > release-notes.md
+          ## pdf_oxide v${{ needs.validate.outputs.version }}
+
+          ### Installation
+
+          #### Rust (crates.io)
+          ```bash
+          cargo install pdf_oxide
+          ```
+
+          #### Python (PyPI)
+          ```bash
+          pip install pdf_oxide
+          ```
+
+          #### Pre-built Binaries
+          Download the appropriate archive for your platform from the assets below.
+
+          ### Included Binaries
+          - `export_to_markdown` - Convert PDF to Markdown
+          - `export_to_text` - Convert PDF to plain text
+          - `export_to_html` - Convert PDF to HTML
+          - `analyze_pdf_features` - Analyze PDF structure and features
+          - `benchmark_all_pdfs` - Run benchmarks on PDF files
+          - `validate_content` - Validate PDF content extraction
+          - `validate_dataset` - Validate against test datasets
+          - `validate_structured` - Validate structured data extraction
+
+          ### Platform Support
+          | Platform | Architecture | Archive |
+          |----------|-------------|---------|
+          | Linux | x86_64 (glibc) | `pdf_oxide-linux-x86_64-*.tar.gz` |
+          | Linux | x86_64 (musl) | `pdf_oxide-linux-x86_64-musl-*.tar.gz` |
+          | Linux | ARM64 | `pdf_oxide-linux-aarch64-*.tar.gz` |
+          | macOS | x86_64 (Intel) | `pdf_oxide-macos-x86_64-*.tar.gz` |
+          | macOS | ARM64 (Apple Silicon) | `pdf_oxide-macos-aarch64-*.tar.gz` |
+          | Windows | x86_64 | `pdf_oxide-windows-x86_64-*.zip` |
+
+          ### Changelog
+          See [CHANGELOG.md](https://github.com/yfedoseev/pdf_oxide/blob/main/CHANGELOG.md) for details.
+          EOF
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: pdf_oxide v${{ needs.validate.outputs.version }}
+          body_path: release-notes.md
+          files: release-files/*
+          draft: false
+          prerelease: ${{ contains(needs.validate.outputs.version, '-') }}
+          fail_on_unmatched_files: false
+
+  # Publish to crates.io (optional)
+  publish-crates:
+    name: Publish to crates.io
+    needs: [validate, create-release]
+    runs-on: ubuntu-latest
+    if: ${{ !contains(needs.validate.outputs.version, '-') }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Verify crates.io readiness
+        run: cargo publish --dry-run
+
+      - name: Publish to crates.io
+        run: cargo publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_TOKEN }}
+
+  # Publish to PyPI (optional)
+  publish-pypi:
+    name: Publish to PyPI
+    needs: [validate, build-python-wheels, create-release]
+    runs-on: ubuntu-latest
+    if: ${{ !contains(needs.validate.outputs.version, '-') }}
+    steps:
+      - name: Download wheel artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: wheels
+          pattern: wheels-*
+          merge-multiple: true
+
+      - name: List wheels
+        run: |
+          echo "=== Wheels to publish ==="
+          ls -lh wheels/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          packages-dir: wheels/
+          skip-existing: true
