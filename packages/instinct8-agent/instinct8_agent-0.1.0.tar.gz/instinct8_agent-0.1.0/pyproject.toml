@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "instinct8-agent"
+version = "0.1.0"
+description = "Instinct8 Agent - Coding agent with Selective Salience Compression for better goal preservation"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "Instinct8", email = "info@instinct8.ai"}
+]
+keywords = ["llm", "compression", "context", "agents", "salience", "goal-preservation"]
+requires-python = ">=3.9"
+dependencies = [
+    "openai>=1.0.0",
+    "numpy>=1.24.0",
+    "sentence-transformers>=2.2.0",
+    "scikit-learn>=1.2.0",
+    "tiktoken>=0.5.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0.0", "pytest-asyncio>=0.21.0", "mypy>=1.0.0"]
+
+[project.scripts]
+selective-salience = "selective_salience.cli:main"
+instinct8-agent = "selective_salience.agent_cli:main"
+instinct8 = "selective_salience.instinct8_cli:main"
+
+[project.urls]
+Homepage = "https://github.com/jjjorgenson/instinct8"
+Documentation = "https://github.com/jjjorgenson/instinct8/blob/main/README.md"
+Repository = "https://github.com/jjjorgenson/instinct8"
+
+[tool.setuptools]
+packages = ["selective_salience", "strategies"]
+
+[tool.setuptools.package-data]
+selective_salience = ["README.md"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
