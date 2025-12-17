@@ -1,0 +1,342 @@
+# Webis HTML - Intelligent Web Content Extraction Tool
+
+![Python Version](https://img.shields.io/badge/Python-3.8+-blue)
+![Package Version](https://img.shields.io/badge/Version-1.0.6-green)
+![License](https://img.shields.io/badge/License-MIT-yellow)
+
+**Webis HTML** is a modern intelligent web content extraction tool that uses AI technology to automatically identify and extract valuable information from web pages, filter out noise content, and provide high-quality text data for knowledge base construction, data analysis, and AI training.
+
+## ✨ Features
+
+- 🚀 **One-click extraction**: Complete HTML content extraction with a single function call
+- 🔄 **Batch processing**: Supports directory-level batch HTML file processing  
+- 🌐 **URL support**: Extract content directly from web URLs
+- 🤖 **AI optimization**: Integrated DeepSeek API for intelligent content filtering
+- ⚡ **Asynchronous processing**: High-performance asynchronous API calls with concurrent processing support
+- 🖥️ **Multiple interfaces**: Supports Python API, command line, and web interface
+- 📦 **Standard package**: Compliant with PyPI standards, easy to install and distribute
+
+## 📦 Installation
+
+### Environment Requirements
+- Python 3.8+
+- Recommended to use conda for environment management
+
+### Quick Installation
+
+#### Method 1: Install from PyPI (Recommended)
+```bash
+# Create conda environment
+conda create -n webis_html python=3.10 -y
+conda activate webis_html
+
+# Install package
+pip install webis-html
+```
+
+#### Method 2: Install from Source
+```bash
+# Clone repository
+git clone https://github.com/Webis/Webis.git
+cd Webis/Webis_HTML
+
+# Create environment and install
+conda create -n webis_html python=3.10 -y
+conda activate webis_html
+pip install -e .
+```
+
+#### Method 3: Test Version Installation
+```bash
+# Install latest test version from TestPyPI
+pip install -i https://test.pypi.org/simple/ webis-html
+```
+
+### Verify Installation
+
+```bash
+# Check CLI command
+webis-html --help
+
+# Check Python import
+python -c "import webis_html; print('✅ Installation successful!')"
+```
+
+## 🚀 Quick Start
+
+### 1. Simplest Usage
+
+```python
+import webis_html
+
+# Extract from HTML content
+html_content = "<html><body><h1>Title</h1><p>Content</p></body></html>"
+result = webis_html.extract_from_html(html_content)
+
+# Batch process directory
+result = webis_html.extract_from_directory("./html_files", "./output")
+
+# Extract from URL
+result = webis_html.extract_from_url("https://example.com")
+```
+
+### 2. Command Line Usage
+
+```bash
+# Batch process HTML files
+webis-html extract --input ./html_files --output ./results
+
+# Start web interface
+webis-html gui
+
+# Check version
+webis-html version
+```
+
+## 📖 Detailed Usage Instructions
+
+### Python API
+
+#### Convenience Functions (Recommended)
+
+```python
+import webis_html
+
+# 1. Process HTML content
+html_content = """
+<html>
+<body>
+    <h1>Important Title</h1>
+    <p>Valuable content</p>
+    <div class="ad">Advertisement content</div>
+</body>
+</html>
+"""
+
+result = webis_html.extract_from_html(
+    html_content, 
+    api_key="sk-your-deepseek-key",  # Optional, for AI optimization (skip AI filtering if not provided)
+    output_dir="./output"
+)
+
+if result['success']:
+    print(f"Extraction successful! Total {len(result['results'])} text segments")
+    for item in result['results']:
+        print(f"File: {item['filename']}")
+        print(f"Content: {item['content'][:100]}...")
+
+# 2. Batch process directory
+result = webis_html.extract_from_directory(
+    input_dir="./html_files",
+    output_dir="./output",
+    api_key="sk-your-deepseek-key"  # Optional, skip AI filtering if not provided
+)
+
+# 3. Extract from URL
+result = webis_html.extract_from_url(
+    "https://example.com",
+    api_key="sk-your-deepseek-key",  # Optional, skip AI filtering if not provided
+    output_dir="./output"
+)
+```
+
+#### Advanced Customization
+
+```python
+import webis_html
+
+# Use core components for custom processing flow
+processor = webis_html.HtmlProcessor(input_dir, output_dir)
+processor.process_html_folder()
+
+# Generate dataset
+webis_html.process_json_folder(content_dir, dataset_file)
+
+# Model prediction
+webis_html.process_predictions(dataset_file, results_file)
+
+# Restore text
+webis_html.restore_text_from_json(results_file, output_dir)
+```
+
+### Command Line Interface
+
+#### Basic Commands
+
+```bash
+# Extract HTML content
+webis-html extract --input ./html_files --output ./results --api-key YOUR_KEY
+
+# Verbose output
+webis-html extract --input ./html_files --verbose
+
+# Start web interface
+webis-html gui --web-port 9000 --gui-port 8001
+
+# Test API connection
+webis-html check-api --api-key YOUR_KEY
+
+# Check version information
+webis-html version
+```
+
+#### Complete Example
+
+```bash
+# Process HTML files in samples directory
+webis-html extract \
+  --input ./samples/input_html \
+  --output ./samples/output \
+  --api-key sk-your-deepseek-api-key \
+  --verbose
+```
+
+### Web Interface
+
+Start web interface for visual operation:
+
+```bash
+# Start GUI (will automatically start Web API server)
+webis-html gui
+
+# Custom ports
+webis-html gui --web-port 9000 --gui-port 8001 --api-key YOUR_KEY
+```
+
+Then visit `http://localhost:8001` in your browser.
+
+## 🔑 API Key Configuration
+
+Supports multiple API key configuration methods:
+
+### 1. Configuration File (Recommended)
+
+Create `config/api_keys.json`:
+```json
+{
+    "deepseek_api_key": "sk-your-deepseek-api-key-here"
+}
+```
+
+> **Note**: If API key is not configured, the program can still run normally, but will skip the AI intelligent filtering step and only perform basic HTML content extraction.
+
+### 2. Environment Variables
+
+```bash
+export DEEPSEEK_API_KEY="sk-your-deepseek-api-key-here"
+# or
+export LLM_PREDICTOR_API_KEY="sk-your-deepseek-api-key-here"
+```
+
+### 3. Command Line Parameters
+
+```bash
+webis-html extract --input ./html --api-key sk-your-key
+```
+
+### 4. Python Code
+
+```python
+result = webis_html.extract_from_html(html_content, api_key="sk-your-key")  # Optional
+```
+
+## 📁 Output Structure
+
+All processing methods generate a unified output structure:
+
+```
+output/
+├── content_output/          # HTML preprocessing results
+│   └── *.json              # Structured content data
+├── dataset/                # Dataset files
+│   ├── extra_datasets.json # Training dataset
+│   └── pred_results.json   # Prediction results
+├── predicted_texts/        # Basic extraction results
+│   └── *.txt              # Extracted text files
+└── filtered_texts/         # AI optimized results (if using DeepSeek API)
+    └── *.txt              # Filtered high-quality text
+```
+
+## 🛠️ Development and Customization
+
+### Project Structure
+
+```
+webis_html/
+├── __init__.py             # Main package entry, convenience functions
+├── cli/                    # Command line interface
+│   ├── cli.py             # CLI implementation
+│   └── __main__.py        # CLI entry point
+├── core/                   # Core processing modules
+│   ├── html_processor.py  # HTML preprocessing
+│   ├── dataset_processor.py # Dataset generation
+│   ├── llm_predictor.py   # AI prediction
+│   ├── content_restorer.py # Content restoration
+│   └── llm_clean.py       # DeepSeek filtering
+├── server/                 # Web server
+│   ├── __init__.py        # FastAPI application
+│   ├── api/               # API routes
+│   └── services/          # Service components
+├── utils/                  # Utility modules
+├── config/                 # Configuration files
+├── frontend/              # Web interface
+└── scripts/               # Startup scripts
+```
+
+### Extension Development
+
+```python
+# Create custom processor
+from webis_html.core import HtmlProcessor
+
+class CustomProcessor(HtmlProcessor):
+    def custom_process(self, html_content):
+        # Custom processing logic
+        pass
+
+# Create web service
+from webis_html import create_app
+import uvicorn
+
+app = create_app()
+uvicorn.run(app, host="0.0.0.0", port=8000)
+```
+
+## 📊 Performance Features
+
+- **Asynchronous processing**: High-performance concurrency using httpx and asyncio
+- **Smart caching**: Automatic API key and configuration caching
+- **Batch optimization**: Batch processing optimization for large numbers of files
+- **Memory management**: Stream processing of large files to avoid memory overflow
+
+## 🤝 Contribution
+
+Welcome to contribute code! Please follow these steps:
+
+1. Fork the project
+2. Create feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to branch (`git push origin feature/AmazingFeature`)
+5. Open Pull Request
+
+## 📄 License
+
+This project uses MIT License - see [LICENSE](LICENSE) file for details.
+
+## 🆘 Support
+
+- 📧 Email: example@example.com
+- 🐛 Issues: [GitHub Issues](https://github.com/TheBinKing/Webis/issues)
+- 📖 Documentation: [Project Documentation](https://webis.tech)
+
+## 🎯 Use Cases
+
+- **Knowledge base construction**: Batch extract structured knowledge from web pages
+- **Data mining**: Clean web data for analysis
+- **AI training**: Prepare high-quality training data for large language models
+- **Content migration**: Website content migration and organization
+- **Information extraction**: Extract key information from HTML
+
+---
+
+**Start using Webis HTML to make web content extraction simple and efficient!** 🚀
