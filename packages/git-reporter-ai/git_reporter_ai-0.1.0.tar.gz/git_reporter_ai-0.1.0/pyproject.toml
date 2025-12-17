@@ -1,0 +1,62 @@
+[build-system]
+requires = ["uv_build>=0.8.0"]
+build-backend = "uv_build"
+
+[project]
+name = "git-reporter-ai"
+version = "0.1.0"
+description = "AI-Powered Git commit history analyzer and report generator"
+readme = "README.md"
+authors = [
+    { name = "Xianpeng Shen", email = "xianpeng.shen@gmail.com" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "gitpython>=3.1.43",
+    "pydantic>=2.10.0",
+    "pydantic-ai>=0.0.15",
+    "openai>=1.58.0",
+    "google-generativeai>=0.8.0",
+    "click>=8.1.7",
+    "python-dateutil>=2.9.0",
+    "pyyaml>=6.0.0",
+    "rich>=13.9.0",
+]
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development :: Version Control :: Git",
+]
+keywords = ["git", "commit", "history", "report", "ai", "openai", "gemini"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-cov>=6.0.0",
+    "ruff>=0.8.0",
+]
+docs = [
+    "mkdocs>=1.6.0",
+    "mkdocs-material>=9.5.0",
+    "mkdocs-git-revision-date-localized-plugin>=1.2.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/shenxianpeng/git-reporter"
+Documentation = "https://shenxianpeng.github.io/git-reporter/"
+Repository = "https://github.com/shenxianpeng/git-reporter"
+Issues = "https://github.com/shenxianpeng/git-reporter/issues"
+
+[project.scripts]
+git-reporter = "git_reporter_ai.cli:main"
+
+[project.entry-points."git_reporter_ai.ai_providers"]
+openai = "git_reporter_ai.ai.openai_provider:OpenAIProvider"
+gemini = "git_reporter_ai.ai.gemini_provider:GeminiProvider"
