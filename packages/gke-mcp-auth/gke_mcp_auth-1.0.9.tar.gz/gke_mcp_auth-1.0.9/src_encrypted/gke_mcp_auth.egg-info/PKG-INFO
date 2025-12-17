@@ -1,0 +1,365 @@
+Metadata-Version: 2.4
+Name: gke-mcp-auth
+Version: 1.0.9
+Summary: [Protected] MCP Authentication and Authorization Framework with JWT
+License: MIT
+Project-URL: Homepage, https://github.com/yourusername/gke-mcp-auth
+Project-URL: Repository, https://github.com/yourusername/gke-mcp-auth
+Keywords: mcp,auth,jwt,fastapi,authentication
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: PyJWT>=2.8.0
+Requires-Dist: fastapi>=0.104.0
+Requires-Dist: python-dotenv>=1.0.0
+Dynamic: license-file
+
+"""
+# GKE MCP Auth
+
+JWT-based authentication and authorization framework for MCP (Model Context Protocol) tools.
+
+## Installation
+
+```bash
+pip install gke-mcp-auth
+```
+
+## Quick Start
+
+```python
+from fastapi import FastAPI, Header
+from gke_mcp_auth import verify_jwt_token, check_permission, log_tool_call
+
+app = FastAPI()
+
+@app.post("/api/tool")
+@log_tool_call
+async def my_tool(authorization: str = Header(None)):
+    # Verify JWT token
+    auth = await verify_jwt_token(authorization)
+    
+    # Check permissions
+    perm_error = check_permission(auth, "my_tool")
+    if perm_error:
+        return perm_error
+    
+    # Your tool logic here
+    return {"result": "success", "user": auth.user_email}
+```
+
+## Features
+
+- **JWT Authentication** - Secure token-based authentication
+- **Permission System** - Fine-grained permission control
+- **Tool Decorators** - Easy-to-use decorators for tool functions
+- **Audit Logging** - Automatic logging of tool access
+- **Async Support** - Full async/await support
+- **FastAPI Integration** - Seamless integration with FastAPI
+
+## Core Components
+
+### 1. AuthContext
+
+Represents authenticated user context with permissions.
+
+```python
+from gke_mcp_auth import AuthContext
+
+auth = AuthContext(
+    user_email="user@example.com",
+    permissions=["read_logs", "list_deployments"]
+)
+
+# Check permissions
+if auth.has_permission("read_logs"):
+    print("User has permission")
+```
+
+### 2. JWT Verification
+
+```python
+from gke_mcp_auth import verify_jwt_token
+from fastapi import Header
+
+async def my_endpoint(authorization: str = Header(None)):
+    auth = await verify_jwt_token(authorization)
+    print(f"User: {auth.user_email}")
+    print(f"Permissions: {auth.permissions}")
+```
+
+### 3. Permission Checking
+
+```python
+from gke_mcp_auth import check_permission
+
+# Check if user has permission
+perm_error = check_permission(auth, "delete_deployment")
+if perm_error:
+    # Return error response
+    return perm_error
+
+# Permission granted, proceed
+```
+
+### 4. Tool Call Logging
+
+```python
+from gke_mcp_auth import log_tool_call
+
+@log_tool_call
+async def get_deployment_logs(namespace: str, authorization: str = Header(None)):
+    auth = await verify_jwt_token(authorization)
+    
+    perm_error = check_permission(auth, "get_deployment_logs")
+    if perm_error:
+        return perm_error
+    
+    # Tool logic
+    return {"logs": "..."}
+```
+
+Automatically logs:
+- Tool name
+- User email
+- Parameters
+- Execution time
+- Success/failure status
+
+### 5. Async Executor
+
+```python
+from gke_mcp_auth import run_in_executor
+
+async def my_async_tool():
+    # Run synchronous function in thread pool
+    result = await run_in_executor(sync_function, arg1, arg2)
+    return result
+```
+
+## Configuration
+
+Set environment variables:
+
+```bash
+# JWT Configuration
+export JWT_SECRET_KEY=your-secret-key-here
+export JWT_ALGORITHM=HS256
+```
+
+Or in Python:
+
+```python
+import os
+os.environ["JWT_SECRET_KEY"] = "your-secret-key"
+os.environ["JWT_ALGORITHM"] = "HS256"
+```
+
+## JWT Token Format
+
+Tokens should include:
+
+```json
+{
+  "email": "user@example.com",
+  "permissions": [
+    "list_clusters",
+    "get_deployment_logs",
+    "update_deployment"
+  ],
+  "exp": 1735689600
+}
+```
+
+## Usage Examples
+
+### Complete FastAPI Integration
+
+```python
+from fastapi import FastAPI, Header
+from gke_mcp_auth import (
+    verify_jwt_token,
+    check_permission,
+    log_tool_call,
+    log_tool_access
+)
+
+app = FastAPI()
+
+@app.post("/tools/list_deployments")
+@log_tool_call
+async def list_deployments(
+    namespace: str,
+    cluster: str,
+    authorization: str = Header(None)
+):
+    # Authenticate
+    auth = await verify_jwt_token(authorization)
+    
+    # Check permission
+    perm_error = check_permission(auth, "list_deployments")
+    if perm_error:
+        return perm_error
+    
+    # Log access (optional, decorator does this)
+    log_tool_access(auth, "list_deployments", {
+        "namespace": namespace,
+        "cluster": cluster
+    })
+    
+    # Execute tool logic
+    deployments = get_deployments(namespace, cluster)
+    
+    return {
+        "status": "success",
+        "deployments": deployments
+    }
+```
+
+### Permission-based Access Control
+
+```python
+from gke_mcp_auth import verify_jwt_token, check_permission
+
+SENSITIVE_TOOLS = {
+    "get_database_password": "get_ecommerce_db_config_with_password",
+    "delete_deployment": "delete_deployment",
+    "update_image": "update_deployment_image_tag"
+}
+
+@app.post("/tools/{tool_name}")
+async def execute_tool(
+    tool_name: str,
+    authorization: str = Header(None)
+):
+    auth = await verify_jwt_token(authorization)
+    
+    # Check if tool requires special permission
+    required_permission = SENSITIVE_TOOLS.get(tool_name, tool_name)
+    
+    perm_error = check_permission(auth, required_permission)
+    if perm_error:
+        return {
+            **perm_error,
+            "note": f"This tool requires '{required_permission}' permission"
+        }
+    
+    # Execute tool
+    return execute_tool_logic(tool_name, auth)
+```
+
+### Custom Error Handling
+
+```python
+from fastapi import HTTPException
+from gke_mcp_auth import verify_jwt_token
+
+try:
+    auth = await verify_jwt_token(authorization)
+except HTTPException as e:
+    if e.status_code == 401:
+        # Custom unauthorized handling
+        return {"error": "Please login again"}
+    raise
+```
+
+## Error Responses
+
+### Missing Token
+```json
+{
+  "error": "unauthorized",
+  "message": "Missing Authorization header"
+}
+```
+
+### Invalid Token
+```json
+{
+  "error": "invalid_token",
+  "message": "Invalid JWT token: Signature has expired"
+}
+```
+
+### Expired Token
+```json
+{
+  "error": "token_expired",
+  "message": "JWT token has expired"
+}
+```
+
+### Permission Denied
+```json
+{
+  "error": "permission_denied",
+  "message": "You don't have permission to use 'delete_deployment'",
+  "required_permission": "delete_deployment",
+  "user": "user@example.com"
+}
+```
+
+## Security Best Practices
+
+1. **Use Strong Secrets**
+   ```bash
+   # Generate secure secret
+   python -c "import secrets; print(secrets.token_urlsafe(32))"
+   ```
+
+2. **Set Token Expiration**
+   ```python
+   import jwt
+   from datetime import datetime, timedelta
+   
+   token = jwt.encode({
+       "email": "user@example.com",
+       "permissions": ["read"],
+       "exp": datetime.utcnow() + timedelta(hours=1)
+   }, secret, algorithm="HS256")
+   ```
+
+3. **Use HTTPS Only** - Never send tokens over HTTP
+
+4. **Rotate Secrets** - Regularly rotate JWT secrets
+
+5. **Audit Logs** - Monitor tool access logs
+
+## Testing
+
+```python
+import pytest
+from gke_mcp_auth import AuthContext, check_permission
+
+def test_permission_check():
+    auth = AuthContext(
+        user_email="test@example.com",
+        permissions=["read_logs"]
+    )
+    
+    # Should pass
+    assert check_permission(auth, "read_logs") == {}
+    
+    # Should fail
+    error = check_permission(auth, "delete_deployment")
+    assert error["error"] == "permission_denied"
+```
+
+## Requirements
+
+- PyJWT>=2.8.0
+- fastapi>=0.104.0
+- python-dotenv>=1.0.0
+
+## License
+
+MIT License
+"""
