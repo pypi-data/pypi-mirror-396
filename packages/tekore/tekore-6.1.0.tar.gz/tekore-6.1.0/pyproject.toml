@@ -1,0 +1,112 @@
+[build-system]
+requires = ["setuptools>=77.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tekore"
+description = "Client for the Spotify Web API"
+readme = "readme_pypi.rst"
+license = "MIT"
+license-files = ["LICENSE"]
+dynamic = ["version"]
+
+# Bump Pyright below too when changing the minimum version
+requires-python = ">=3.10"
+dependencies = [
+    "httpx>=0.15,<0.29",
+    "pydantic>=1.8,!=2.4.0,!=2.5.0,!=2.5.1",
+]
+
+keywords = ["spotify", "web", "api", "client"]
+authors = [{name = "Felix Hildén", email = "felix.hilden@gmail.com"}]
+maintainers = [{name = "Felix Hildén", email = "felix.hilden@gmail.com"}]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Multimedia :: Sound/Audio",
+]
+
+[project.urls]
+Homepage = "https://pypi.org/project/tekore"
+Download = "https://pypi.org/project/tekore"
+Source = "https://github.com/felix-hilden/tekore"
+Issues = "https://github.com/felix-hilden/tekore/issues"
+Documentation = "https://tekore.rtfd.org"
+
+[tool.setuptools.dynamic]
+version = {attr = "tekore.__version__"}
+
+[tool.pytest.ini_options]
+python_files = "*.py"
+testpaths = ["tests"]
+markers = ["api: tests that connect to the real Spotify Web API"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+filterwarnings = [
+    "error",
+    "ignore::tekore.MissingConfigurationWarning",
+]
+
+[tool.coverage.run]
+source = ["tekore"]
+branch = true
+command_line = "-m pytest"
+
+[tool.coverage.report]
+exclude_lines = [
+    "if __name__",
+    "raise NotImplementedError",
+]
+fail_under = 0.99
+precision = 1
+show_missing = true
+skip_covered = true
+
+[tool.pyright]
+# https://github.com/microsoft/pyright/issues/7561
+pythonVersion = "3.10"
+
+[tool.ruff]
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "ANN", # annotations - too oppressive
+    "TC", # type checking - too much hassle
+]
+extend-ignore = [
+    "D203", # recommended by ruff format
+    "D212", # docstring format clash
+    "D413", # empty docstring ending line
+    "S105", # token/pw warnings noisy
+    "COM812", # recommended by ruff format
+    "FBT00", # bool positional/default arg
+    "ISC001", # recommended by ruff format
+    "PLR0913", # many arguments is fine
+    "SLF001", # private access needed
+]
+extend-unsafe-fixes = ["F401"]
+isort.split-on-trailing-comma = false
+
+[tool.ruff.lint.extend-per-file-ignores]
+"src/*/__init__.py" = ["F401"]
+"src/tekore/_sender/error.py" = ["N818"]
+"docs/*" = ["ALL"]
+"tests/*" = [
+    "D", # docstring
+    "ANN", # annotations
+    "S101", # assertions - necessary in tests
+    "PLR2004", # magic values - ok in test assertions
+    "PLR09", # complexity - too oppressive in tests
+]
+
+[tool.ruff.format]
+skip-magic-trailing-comma = true
