@@ -1,0 +1,124 @@
+# ChatAds Python SDK
+
+A tiny, dependency-light wrapper around the ChatAds `/v1/chatads/messages` endpoint. It mirrors the response payloads returned by the FastAPI service so you can drop it into CLIs, serverless functions, or orchestration tools.
+
+Learn more at [ChatAds](https://www.getchatads.com).
+
+## Installation
+
+```bash
+pip install chatads-sdk
+```
+
+The package is published on [PyPI](https://pypi.org/project/chatads-sdk/). Install from source only if you're developing locally.
+
+## Quickstart
+
+```python
+from chatads_sdk import ChatAdsClient, AsyncChatAdsClient, FunctionItemPayload
+
+# Synchronous usage
+with ChatAdsClient(
+    api_key="YOUR_X_API_KEY",
+    base_url="https://chatads--chatads-api-fastapiserver-serve.modal.run",
+    raise_on_failure=True,
+    max_retries=2,
+    retry_backoff_factor=0.75,
+) as client:
+    payload = FunctionItemPayload(
+        message="Looking for a CRM to close more deals",
+        country="US",
+    )
+    result = client.analyze(payload)
+    if result.success and result.data.filled:
+        print(result.data.ad.product, result.data.ad.link)
+    else:
+        print("No match:", result.data.reason if result.data else "unknown")
+
+# Async usage
+async with AsyncChatAdsClient(
+    api_key="YOUR_X_API_KEY",
+    base_url="https://chatads--chatads-api-fastapiserver-serve.modal.run",
+    max_retries=3,
+) as async_client:
+    result = await async_client.analyze_message(
+        "Need data warehousing ideas",
+        country="US",
+        message_analysis="fast",
+    )
+    print(result.raw)
+```
+
+## Request Options
+
+The `FunctionItemPayload` supports these fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `message` | str (required) | Message to analyze (1-5000 chars) |
+| `ip` | str | IPv4 address for country detection (max 64 characters) |
+| `country` | str | Country code (e.g., 'US'). If provided, skips IP-based country detection |
+| `message_analysis` | str | Controls keyword extraction method. Use 'fast' to optimize for speed, 'thorough' (default) to optimize for best keyword selection |
+| `fill_priority` | str | Controls affiliate link discovery. Use 'speed' to optimize for speed, 'coverage' (default) to ping multiple sources for the right affiliate link |
+| `min_intent` | str | Minimum purchase intent level required for affiliate resolution. 'any' = no filtering, 'low' (default) = filter garbage, 'medium' = balanced quality/fill, 'high' = high-intent keywords only |
+| `skip_message_analysis` | bool | Treat exact message as product keyword. When true, goes straight to affiliate link discovery without keyword extraction |
+
+## Response Structure
+
+```python
+result.success         # bool - True if request succeeded
+result.data.matched    # bool - True if keywords were extracted
+result.data.filled     # bool - True if affiliate URL was returned
+result.data.ad         # ChatAdsAd or None
+result.data.keyword    # Extracted keyword used for matching
+result.data.reason     # Reason for no match (if applicable)
+result.error           # ChatAdsError or None (code, message, details)
+result.meta.request_id # Unique request identifier
+result.meta.usage      # UsageInfo with quota information
+result.raw             # Full raw JSON response
+```
+
+## Error Handling
+
+Non-2xx responses raise `ChatAdsAPIError` with:
+- `status_code` - HTTP status code
+- `response.error.code` - Error code (e.g., `DAILY_QUOTA_EXCEEDED`, `RATE_LIMITED`)
+- `response.error.message` - Human-readable message
+- `retry_after` - Seconds to wait (for 429 responses)
+
+Set `raise_on_failure=True` to also raise on 200 responses with `success=false`.
+
+**Retryable status codes** (automatic with `max_retries>0`):
+- `408` Request Timeout
+- `429` Rate Limited
+- `500`, `502`, `503`, `504` Server errors
+
+## Notes
+
+- Retries are opt-in. Provide `max_retries>0` to automatically retry transport errors and retryable status codes. The client honors `Retry-After` headers and falls back to exponential backoff.
+- `base_url` must point to your HTTPS deployment (the client rejects plaintext URLs so API keys are never transmitted insecurely).
+- The default hosted environment lives at `https://chatads--chatads-api-fastapiserver-serve.modal.run`; use your own domain if you're proxying ChatAds behind something else.
+- `FunctionItemPayload` matches the server-side `FunctionItem` pydantic model. Keyword arguments passed to `ChatAdsClient.analyze_message()` accept either snake_case or camelCase keys.
+- Reserved payload keys (e.g., `message`, `pageUrl`) cannot be overridden through `extra_fields`; doing so raises `ValueError` to prevent silent mutations.
+- `debug=True` enables structured request/response logging, but payload contents are redacted automatically so you don't leak PII into logs.
+
+## CLI Smoke Test
+
+For a super-quick check, either edit the config block at the top of `run_sdk_smoke.py` or set:
+
+```bash
+export CHATADS_API_KEY="..."
+export CHATADS_BASE_URL="https://chatads--chatads-api-fastapiserver-serve.modal.run"
+export CHATADS_MESSAGE="Looking for ergonomic office chairs"
+# Optional extras
+export CHATADS_IP="1.2.3.4"
+export CHATADS_COUNTRY="US"
+```
+
+Then run:
+
+```bash
+python run_sdk_smoke.py
+```
+
+It prints the raw JSON response or surfaces a `ChatAdsAPIError` with status/error fields so you can see exactly what the API returned.
