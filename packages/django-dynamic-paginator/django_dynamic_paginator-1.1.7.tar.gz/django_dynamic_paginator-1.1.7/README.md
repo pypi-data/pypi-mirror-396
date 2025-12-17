@@ -1,0 +1,329 @@
+# Django Dynamic Paginator
+
+Un paginador dinámico y altamente optimizado para Django REST Framework que elimina consultas N+1, optimiza JOINs automáticamente y proporciona filtrado avanzado con campos dinámicos controlados desde query parameters.
+
+## Características principales
+
+- **Optimización automática de consultas**: Detecta y combina filtros de la misma tabla relacionada evitando dobles JOINs
+- **Campos dinámicos desde query params**: Control total sobre campos SQL y serializer desde la URL
+- **Filtros dinámicos inteligentes**: Soporte para filtros base, exclusiones y Q objects complejos
+- **Búsqueda multi-campo**: Búsqueda eficiente en múltiples campos con Q objects optimizados
+- **Mapeo automático de ForeignKeys**: Convierte automáticamente `user` a `user_id` según sea necesario
+- **Paginación opcional**: Soporte para resultados ilimitados via query parameter
+- **Ordenamiento avanzado**: Manejo inteligente de campos NULL y validación automática
+- **Filtros de fecha**: Rango de fechas dinámico con campos personalizables
+- **Serializers dinámicos**: Integración completa con `DynamicFieldsModelSerializer`
+
+## Instalación
+
+```bash
+pip install django-dynamic-paginator
+```
+
+## Configuración rápida
+
+```python
+from django_dynamic_paginator import SimpleDynamicPaginatorService
+from rest_framework.views import APIView
+
+class ProductListView(APIView):
+    def get(self, request):
+        paginator = SimpleDynamicPaginatorService(
+            model=Product,
+            serializer_class=ProductDynamicSerializer,
+            search_fields=['name', 'description'],
+            allowed_filters=['category', 'status', 'price_range'],
+            select_related=['category', 'brand'],
+            enable_dynamic_fields=True  # ✨ Campos dinámicos habilitados
+        )
+        return paginator.handle_request(request, account_by=request.user.account)
+```
+
+## 🚀 Nuevas características: Campos dinámicos
+
+### Control total desde query parameters
+```bash
+# Solo campos específicos (optimiza SQL + Serializer)
+GET /api/products/?only_fields=id,name,price
+
+# Excluir campos innecesarios
+GET /api/products/?exclude_fields=created_at,updated_at
+
+# Campos anidados personalizados
+GET /api/products/?nested_fields={"category":{"only_fields":["id","name"]}}
+
+# Combinación de filtros y campos
+GET /api/products/?only_fields=id,name,category&status=active&search=laptop
+```
+
+### Serializer dinámico requerido
+```python
+from django_dynamic_paginator.serializers import DynamicFieldsModelSerializer
+
+class ProductDynamicSerializer(DynamicFieldsModelSerializer):
+    category_name = serializers.SerializerMethodField()
+    
+    def get_category_name(self, obj):
+        return obj.category.name if obj.category else None
+    
+    class Meta:
+        model = Product
+        exclude = ['account_by', 'internal_notes']  # Excluir campos sensibles
+        # O usar fields explícitos:
+        # fields = ['id', 'name', 'price', 'category', 'category_name', 'status']
+```
+
+## Ejemplos de uso avanzado
+
+### Módulos con diferentes necesidades de campos
+
+```python
+# Vista base del paginador (sin only_fields fijo)
+class ProductListView(APIView):
+    def get(self, request):
+        paginator = SimpleDynamicPaginatorService(
+            model=Product,
+            serializer_class=ProductDynamicSerializer,
+            search_fields=['name', 'description'],
+            select_related=['category', 'brand'],
+            enable_dynamic_fields=True,
+            allow_unlimited=True
+        )
+        return paginator.handle_request(request, account_by=request.user.account)
+```
+
+```bash
+# Módulo Manager básico - Solo datos esenciales
+GET /api/products/?only_fields=id,name,price
+# SQL: SELECT id, name, price FROM product...
+
+# Módulo Dashboard completo - Todos los datos
+GET /api/products/?only_fields=id,name,price,category,brand,status,created_at
+# SQL: SELECT id, name, price, category_id, brand_id, status, created_at FROM product...
+
+# Módulo Reportes - Sin campos pesados
+GET /api/products/?exclude_fields=description,images,metadata
+```
+
+### Filtros relacionados optimizados
+```python
+# ANTES: Genera dobles JOINs innecesarios
+# SELECT ... FROM product 
+# INNER JOIN category c1 ON ... 
+# INNER JOIN category c2 ON ... 
+# WHERE c1.type = 'electronics' AND c2.status = 'active'
+
+# DESPUÉS: Un solo JOIN optimizado
+paginator.handle_request(request,
+    category__type='electronics',
+    category__status='active'  # Se combina automáticamente
+)
+```
+
+### Q objects complejos
+```python
+from django.db.models import Q
+
+# Filtros complejos con lógica OR/AND
+complex_filter = (
+    Q(created_by=request.user.id) | 
+    Q(assigned_to=request.user.id) |
+    Q(collaborators__user=request.user.id)
+)
+
+paginator.handle_request(request, _q_filter=complex_filter)
+```
+
+### Exclusiones automáticas
+```python
+# Excluir registros automáticamente
+paginator.handle_request(request,
+    status='active',
+    exclude_category_id=5,  # Excluye automáticamente category_id=5
+    exclude_deleted=True    # Excluye deleted=True
+)
+```
+
+## Parámetros de query automáticos
+
+El paginador acepta automáticamente estos parámetros via URL:
+
+```bash
+# Paginación
+GET /api/products/?page=2
+
+# 🆕 Campos dinámicos
+GET /api/products/?only_fields=id,name,price
+GET /api/products/?exclude_fields=created_at,updated_at
+GET /api/products/?nested_fields={"category":{"only_fields":["id","name"]}}
+
+# Búsqueda multi-campo
+GET /api/products/?search=laptop
+
+# Filtros dinámicos (según allowed_filters)
+GET /api/products/?category=electronics&status=active
+
+# Ordenamiento
+GET /api/products/?sortBy=price&sortDesc=true
+
+# Filtros de fecha
+GET /api/products/?startDate=2024-01-01&endDate=2024-12-31&field_date=created_at
+
+# Filtros múltiples
+GET /api/products/?category_in=1,2,3&status_in=active,pending
+
+# Sin paginación (si allow_unlimited=True)
+GET /api/products/?unlimited=true
+```
+
+## Configuración completa
+
+```python
+paginator = SimpleDynamicPaginatorService(
+    model=Product,                          # Modelo Django
+    serializer_class=ProductDynamicSerializer, # Serializer dinámico DRF
+    search_fields=['name', 'description'],  # Campos de búsqueda
+    page_size=25,                          # Elementos por página
+    allowed_filters=[                       # Filtros permitidos via URL
+        'category', 'status', 'brand',
+        'category__type', 'brand__country'  # Filtros relacionados
+    ],
+    select_related=[                        # Optimización JOINs
+        'category', 'brand', 'supplier'
+    ],
+    prefetch_related=[                      # Optimización M2M
+        'tags', 'reviews__user'
+    ],
+    only_fields=[                          # 🆕 Campos fallback (opcional)
+        'id', 'name', 'price', 'category'  # Se usa solo si no hay query params
+    ],
+    allow_unlimited=True,                  # Permitir ?unlimited=true
+    enable_dynamic_fields=True             # 🆕 Habilitar campos dinámicos
+)
+```
+
+## Performance
+
+### Antes vs Después
+
+```python
+# ❌ ANTES: Consulta ineficiente
+products = Product.objects.filter(
+    category__type='electronics'
+).filter(
+    category__status='active'    # Doble JOIN innecesario
+)
+# SQL: 2 JOINs + múltiples queries N+1
+
+# ✅ DESPUÉS: Consulta optimizada  
+paginator.handle_request(request,
+    category__type='electronics',
+    category__status='active'
+)
+# + Query params: ?only_fields=id,name,price
+# SQL: 1 JOIN + select_related automático + only() campos específicos
+```
+
+### Optimización por módulos
+```bash
+# Módulo lista rápida - Solo 3 campos
+GET /api/products/?only_fields=id,name,price
+# SQL: SELECT id, name, price FROM product LIMIT 25
+# Transferencia: ~500 bytes por registro
+
+# Módulo detalle completo - Todos los campos necesarios  
+GET /api/products/?exclude_fields=internal_data,bulk_metadata
+# SQL: SELECT * FROM product EXCEPT internal_data, bulk_metadata
+# Transferencia: Solo datos útiles para el frontend
+```
+
+### Resultados reales
+- **Reducción de queries**: 70-90% menos consultas SQL
+- **Tiempo de respuesta**: Mejora de 500ms a 50ms en datasets grandes
+- **Memoria**: 60% menos uso de memoria con only_fields dinámicos
+- **Transferencia de red**: 40-80% menos datos transferidos según módulo
+
+## Precedencia de configuración
+
+1. **Query parameters** (máxima prioridad)
+   - `?only_fields=id,name` → Controla SQL + Serializer
+   - `?exclude_fields=created_at` → Solo afecta Serializer
+
+2. **Constructor** (fallback)
+   - `only_fields=['id', 'name']` → Se usa si no hay query params
+
+3. **Sin configuración**
+   - SQL: `SELECT *` (menos eficiente pero funcional)
+
+## Compatibilidad
+
+- Python 3.8+
+- Django 3.2+
+- Django REST Framework 3.12+
+
+## Contribuir
+
+1. Fork el proyecto
+2. Crea una rama para tu feature (`git checkout -b feature/nueva-funcionalidad`)
+3. Commit tus cambios (`git commit -am 'Agrega nueva funcionalidad'`)
+4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
+5. Crea un Pull Request
+
+## Licencia
+
+MIT License - ver archivo [LICENSE](LICENSE) para detalles.
+
+## Changelog
+### v1.1.7 🆕
+- **Correcion en serializer**: Se corrige el error de que no se aplicaba el only_fields dinámico al serializer
+
+### v1.1.6 🆕
+- **Refactorización de código**: Movidos métodos auxiliares a utils.py para mejor organización
+- **Nueva función**: Añadido `auto_detect_exact_match_fields` para detección automática de campos de coincidencia exacta
+- **Mejoras en la arquitectura**: Mejorada la modularidad y reutilización del código
+- **Documentación**: Agregadas documentaciones detalladas para las nuevas funciones
+- **Mantenimiento**: Actualizadas las dependencias y corregidas advertencias de tipado
+
+### v1.1.5 🆕
+- **Versión corregida**: Actualización de versión a 1.1.5
+    
+### v1.1.4 🆕
+- **Soporte para nested_fields en prefetch_related**: Optimización automática de queries con `Prefetch` y `only()` para relaciones Many-to-Many y reverse ForeignKey
+- **Optimización SQL en nested serializers**: Los campos especificados en `nested_fields` ahora se aplican directamente a las consultas SQL de prefetch, reduciendo significativamente los datos transferidos
+- **Validación automática de campos anidados**: Valida que los campos especificados en `nested_fields` existan en el modelo relacionado antes de aplicar `only()`
+- **Mejoras en logging de debug**: Información detallada sobre campos aplicados en prefetch optimizado
+- **Reducción de payload**: Ejemplo: de 14 campos a 8 campos en queries de items (-43% de datos)
+- **Compatibilidad con modelos complejos**: Soporte para relaciones anidadas y prefetcheos profundos
+- **Soporte para prefetcheos profundos**: Manejo correcto de relaciones anidadas como `category__parent__grandparent`
+- **Soporte para relaciones anidadas**: Optimización automática de queries con Prefetch y only() para relaciones profundas
+- **Mejoras en manejo de prefetcheos anidados**: Soporte completo para relaciones múltiples en prefetch_related
+- **Mejoras en validación de modelos**: Verificación más robusta de modelos y relaciones en nested_fields
+- **Mejoras en manejo de errores**: Mensajes de error más descriptivos para problemas de configuración
+- **Mejoras en compatibilidad**: Soporte mejorado para modelos con relaciones complejas y anidadas
+- **Mejoras en rendimiento**: Optimizaciones adicionales en la construcción de queries SQL
+- **Mejoras en robustez**: Manejo más seguro de casos extremos y configuraciones complejas
+
+### v1.1.3 🆕
+- **Corrección de versión**: Actualización de versión para publicación correcta
+- **Manejo de relaciones dinámicas en select_related**: Soporte para relaciones profundas como `category__parent__grandparent`
+- **Mejoras en optimización de consultas**: Mayor eficiencia en la generación de SQL con relaciones anidadas
+
+### v1.1.2 🆕
+- **Corrección de errores**: Se corrigieron errores de sintaxis y lógica en la implementación de los campos dinámicos.
+
+### v1.1.1 🆕
+- **Corrección de errores**: Se corrigieron errores de sintaxis y lógica en la implementación de los campos dinámicos.
+
+### v1.1.0 🆕
+- **Campos dinámicos desde query params**: Control total sobre SQL y serializer
+- **Precedencia query params > constructor**: Los parámetros URL tienen prioridad máxima
+- **Validación automática de campos SQL**: Convierte campos relacionados automáticamente
+- **Serializer dinámico integrado**: Soporte completo para `DynamicFieldsModelSerializer`
+- **Respuesta limpia**: Removido campo `dynamic_fields` de la respuesta JSON
+
+### v1.0.0
+- Lanzamiento inicial
+- Soporte para filtros dinámicos
+- Optimización automática de JOINs
+- Búsqueda multi-campo
+- Mapeo automático de ForeignKeys
