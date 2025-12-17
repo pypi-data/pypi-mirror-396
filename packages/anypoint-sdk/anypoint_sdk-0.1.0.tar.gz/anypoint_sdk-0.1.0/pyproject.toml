@@ -1,0 +1,99 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "anypoint-sdk"
+version = "0.1.0"
+description = "SDK for MuleSoft Anypoint Platform"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Steve Brown" }]
+dependencies = [
+  "requests>=2.31,<3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "types-requests",
+  "types-urllib3",
+  "coverage",
+  "mypy",
+  "black",
+  "isort",
+  "pylint",
+  "pytest",
+  "pytest-cov",
+  "build",
+  "twine",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.coverage.run]
+branch = true
+source = ["src"]
+
+[tool.coverage.report]
+fail_under = 95
+show_missing = true
+skip_covered = false
+
+[tool.mypy]
+python_version = "3.10"
+strict = false
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_return_any = true
+pretty = true
+mypy_path = ["src"]
+files = ["src/anypoint_sdk", "tests"]
+
+# Ignore missing type hints for external packages
+[[tool.mypy.overrides]]
+module = "requests.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "urllib3.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+ignore_errors = true
+
+[tool.isort]
+profile = "black"
+
+[tool.pylint.main]
+ignore-patterns = ["tests/.*"]
+
+[tool.pylint."messages control"]
+disable = [
+    "C0114",  # missing-module-docstring
+    "C0115",  # missing-class-docstring
+    "C0116",  # missing-function-docstring
+    "C0103",  # invalid-name (camelCase attributes match API responses)
+    "C0301",  # line-too-long (black handles this)
+    "C0302",  # too-many-lines (exchange.py is large but well-organized)
+    "C0412",  # ungrouped-imports (minor style)
+    "C0415",  # import-outside-toplevel (intentional lazy imports)
+    "R0801",  # duplicate-code (similar patterns across resources)
+    "R0902",  # too-many-instance-attributes
+    "R0903",  # too-few-public-methods
+    "R0904",  # too-many-public-methods
+    "R0912",  # too-many-branches (inventory.py is complex)
+    "R0913",  # too-many-arguments
+    "R0914",  # too-many-locals
+    "R0915",  # too-many-statements (inventory.py is complex)
+    "R0917",  # too-many-positional-arguments
+    "R1702",  # too-many-nested-blocks (inventory.py)
+    "R1724",  # no-else-continue (style preference)
+    "W0212",  # protected-access (internal _request usage is intentional)
+    "W0718",  # broad-exception-caught (intentional for API resilience)
+]
