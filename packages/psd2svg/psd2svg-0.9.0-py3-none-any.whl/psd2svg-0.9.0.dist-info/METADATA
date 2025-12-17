@@ -1,0 +1,164 @@
+Metadata-Version: 2.4
+Name: psd2svg
+Version: 0.9.0
+Summary: Convert PSD file to SVG file
+Project-URL: Homepage, https://github.com/kyamagu/psd2svg
+Project-URL: Repository, https://github.com/kyamagu/psd2svg
+Author-email: Kota Yamaguchi <yamaguchi_kota@cyberagent.co.jp>
+License-Expression: MIT
+License-File: LICENSE
+Keywords: photoshop,psd,svg
+Classifier: Development Status :: 3 - Alpha
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
+Classifier: Topic :: Multimedia :: Graphics
+Classifier: Topic :: Multimedia :: Graphics :: Graphics Conversion
+Classifier: Topic :: Multimedia :: Graphics :: Viewers
+Requires-Python: <3.15,>=3.10
+Requires-Dist: fontconfig-py>=0.4.0; sys_platform != 'win32'
+Requires-Dist: fonttools[woff]>=4.50.0
+Requires-Dist: numpy
+Requires-Dist: pillow
+Requires-Dist: psd-tools>=1.12.0
+Requires-Dist: resvg-py>=0.2.3
+Description-Content-Type: text/markdown
+
+# PSD2SVG
+
+PSD to SVG converter based on [psd-tools](https://github.com/psd-tools/psd-tools).
+
+[![PyPI Version](https://img.shields.io/pypi/v/psd2svg.svg)](https://pypi.python.org/pypi/psd2svg)
+[![Documentation Status](https://readthedocs.org/projects/psd2svg/badge/?version=latest)](https://psd2svg.readthedocs.io/en/latest/?badge=latest)
+
+## Features
+
+- Convert PSD files to clean, editable SVG
+- Preserve layers, groups, and artboards
+- Convert text layers to native SVG text elements (experimental)
+- **Smart font matching**: Unicode codepoint-based font selection for optimal glyph coverage (multilingual support)
+- Hybrid font resolution: Static mapping (572 fonts) + dynamic system resolution
+- Support for blending modes, effects, and vector shapes
+- Optional font subsetting for web optimization (90%+ size reduction with WOFF2)
+- Command-line tool and Python API
+
+## Installation
+
+```bash
+pip install psd2svg
+```
+
+### Optional Features
+
+```bash
+# Browser-based rasterization (better SVG 2.0 support)
+pip install psd2svg[browser]
+playwright install chromium
+```
+
+## Quick Start
+
+### Command Line
+
+```bash
+# Basic conversion
+psd2svg input.psd output.svg
+
+# With external images
+psd2svg input.psd output.svg --image-prefix images/img
+```
+
+### Python API
+
+```python
+from psd2svg import convert
+
+# Simple conversion with embedded images
+convert('input.psd', 'output.svg')
+
+# With external images
+convert('input.psd', 'output.svg', image_prefix='images/img')
+```
+
+### Advanced Usage
+
+```python
+from psd_tools import PSDImage
+from psd2svg import SVGDocument
+
+# Load PSD and create SVG document
+psdimage = PSDImage.open("input.psd")
+document = SVGDocument.from_psd(psdimage)
+
+# Save with options
+document.save("output.svg", embed_images=True)
+
+# Embed and subset fonts for web
+document.save("output.svg", embed_fonts=True, font_format="woff2")
+
+# Rasterize to PNG
+image = document.rasterize()
+image.save('output.png')
+```
+
+## Platform Support
+
+- **Linux/macOS**: Full support including text layer conversion and font embedding
+- **Windows**: Full support including text layer conversion and font embedding
+
+Text layer conversion uses a hybrid approach:
+
+1. **Static font mapping** (572 common fonts) - works on all platforms
+2. **Platform-specific font resolution** for font file discovery when embedding fonts:
+   - **Linux/macOS**: fontconfig
+   - **Windows**: Windows registry + fontTools parsing
+
+For fonts not in the default mapping, you can provide custom font mappings. See the [Font Handling documentation](https://psd2svg.readthedocs.io/en/latest/fonts.html#custom-font-mapping) for details.
+
+## Documentation
+
+Full documentation is available at **[psd2svg.readthedocs.io](https://psd2svg.readthedocs.io/)**
+
+Topics covered:
+
+- [Getting Started Guide](https://psd2svg.readthedocs.io/)
+- [Command Line Options](https://psd2svg.readthedocs.io/)
+- [Python API Reference](https://psd2svg.readthedocs.io/)
+- [Font Subsetting & Web Optimization](https://psd2svg.readthedocs.io/)
+- [Rasterization Options](https://psd2svg.readthedocs.io/)
+- [Text Layer Support](https://psd2svg.readthedocs.io/)
+- [Known Limitations](https://psd2svg.readthedocs.io/)
+
+## Development
+
+```bash
+# Install dependencies
+uv sync
+
+# Run tests
+uv run pytest
+
+# Run type checking and linting
+uv run mypy src/ tests/
+uv run ruff check src/ tests/
+uv run ruff format src/ tests/
+```
+
+See [CLAUDE.md](CLAUDE.md) for detailed development instructions.
+
+## Known Limitations
+
+- SVG 1.1 does not support all Photoshop blending modes
+- Filter effects are approximations
+- Most adjustment layers not implemented
+- Smart object filters not implemented
+- APIs are not thread-safe
+
+See the [full documentation](https://psd2svg.readthedocs.io/) for complete details and workarounds.
+
+## License
+
+MIT License - see LICENSE file for details.
