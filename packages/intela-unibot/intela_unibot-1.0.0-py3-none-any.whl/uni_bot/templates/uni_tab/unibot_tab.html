@@ -1,0 +1,37 @@
+## mako
+<%inherit file='/main.html' />
+<%namespace name='static' file='/static_content.html'/>
+<%!
+from django.conf import settings
+from django.utils.translation import gettext as _
+
+from uni_bot import configuration_helpers
+from uni_bot.enums import UnibotInstructorWidgetDisplayingMode
+%>
+
+<%block name="bodyclass">view-unibot-plugin view-in-course</%block>
+<%block name="pagetitle">${_("AI TA Plugin")}</%block>
+
+<%block name="head_extra">
+  <%static:css group='style-course' />
+
+  % if UnibotInstructorWidgetDisplayingMode.CUSTOM_WIDGET_IN_SEPARATE_TAB.is_enabled():
+    <link rel="stylesheet" href="${static.url('uni_bot/index.css')}">
+  % endif
+</%block>
+
+<%include file="/courseware/course_navigation.html" args="active_page='unibot'" />
+
+<%block name="content">
+  % if UnibotInstructorWidgetDisplayingMode.CUSTOM_WIDGET_IN_SEPARATE_TAB.is_enabled():
+    <div id="uni-tab-root" style="height: 100%;"></div>
+  % else:
+    ${configuration_helpers.get_value('UNIBOT_INSTRUCTOR_WIDGET_SCRIPT', settings.UNIBOT_INSTRUCTOR_WIDGET_SCRIPT) | n}
+  % endif
+</%block>
+
+% if UnibotInstructorWidgetDisplayingMode.CUSTOM_WIDGET_IN_SEPARATE_TAB.is_enabled():
+  <%block name="js_extra">
+    <script type="module" src="${static.url('uni_bot/bundle.js')}"></script>
+  </%block>
+% endif
