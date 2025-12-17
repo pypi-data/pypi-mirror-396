@@ -1,0 +1,67 @@
+#
+# This is deliberately simple, map onto existing YAML later
+#
+
+id: http://example.org/grant-schema
+name: grant_schema
+prefixes:
+  dingo: https://w3id.org/ding#
+  frapo: http://purl.org/cerif/frapo/
+  grant: http://www.example.com/ns/grant#
+  linkml: https://w3id.org/linkml/
+  schema: http://schema.org/
+  rdf: http://www.w3.org/1999/02/22-rdf-syntax-ns#
+  rdfs: http://www.w3.org/2000/01/rdf-schema#
+  xsd: http://www.w3.org/2001/XMLSchema#
+imports:
+  - linkml:types
+default_range: string
+default_prefix: grant
+
+types:
+  NodeUriOrCurie:
+    name: NodeUriOrCurie
+    typeof: uriorcurie
+    base: str
+    uri: rdfs:Resource
+
+slots:
+  pid:
+    identifier: true
+    range: uriorcurie
+    required: true
+
+classes:
+  Thing:
+    slots:
+      - pid
+
+  Document:
+    is_a: Thing
+    attributes:
+      content:
+        range: string
+
+  CallForApplication:
+    is_a: Document
+    attributes:
+      calls_for:
+        range: Grant
+        required: true
+      deadline:
+        range: string
+
+  FundingProgram:
+    is_a: Thing
+    attributes:
+      description:
+        range: string
+      number:
+        range: string
+        required: true
+
+  Person:
+    is_a: Thing
+    attributes:
+      given_name:
+        required: true
