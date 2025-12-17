@@ -1,0 +1,174 @@
+Metadata-Version: 2.4
+Name: hassette
+Version: 0.18.1
+Summary: Hassette is a simple, modern, async-first Python framework for building Home Assistant automations.
+Keywords: home-assistant,automation,async,typed,framework,smart-home,iot
+Author: Jessica
+Author-email: Jessica <12jessicasmith34@gmail.com>
+License-Expression: MIT
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Topic :: Home Automation
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Framework :: AsyncIO
+Classifier: Typing :: Typed
+Requires-Dist: aiohttp>=3.11.18
+Requires-Dist: anyio>=4.10.0
+Requires-Dist: coloredlogs>=15.0.1
+Requires-Dist: croniter>=6.0.0
+Requires-Dist: deepdiff>=8.6.1
+Requires-Dist: diskcache>=5.6.3
+Requires-Dist: fair-async-rlock>=1.0.7
+Requires-Dist: glom>=24.11.0
+Requires-Dist: humanize>=4.13.0
+Requires-Dist: orjson>=3.10.18
+Requires-Dist: packaging>=25.0
+Requires-Dist: platformdirs>=4.3.8
+Requires-Dist: pydantic-settings>=2.10.0
+Requires-Dist: python-dotenv>=1.1.0
+Requires-Dist: tenacity>=9.1.2
+Requires-Dist: typing-extensions==4.15.*
+Requires-Dist: watchfiles>=1.1.0
+Requires-Dist: whenever==0.9.*
+Requires-Python: >=3.11, <3.14
+Project-URL: Bug Reports, https://github.com/nodejsmith/hassette/issues
+Project-URL: Changelog, https://github.com/nodejsmith/hassette/blob/main/CHANGELOG.md
+Project-URL: Documentation, https://github.com/nodejsmith/hassette#readme
+Project-URL: Homepage, https://github.com/nodejsmith/hassette
+Project-URL: Repository, https://github.com/nodejsmith/hassette
+Description-Content-Type: text/markdown
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/NodeJSmith/hassette/main/docs/_static/hassette-logo.svg" />
+</p>
+
+
+# Hassette
+
+[![PyPI version](https://badge.fury.io/py/hassette.svg)](https://badge.fury.io/py/hassette)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Documentation Status](https://readthedocs.org/projects/hassette/badge/?version=stable)](https://hassette.readthedocs.io/en/stable/?badge=stable)
+[![codecov](https://codecov.io/github/NodeJSmith/hassette/graph/badge.svg?token=I3E5S2E3X8)](https://codecov.io/github/NodeJSmith/hassette)
+
+A simple, modern, async-first Python framework for building Home Assistant automations.
+
+**Documentation**: https://hassette.readthedocs.io
+
+## ✨ Why Hassette?
+
+- **Type Safe**: Full type annotations with Pydantic models and comprehensive IDE support
+- **Async-First**: Built for modern Python with async/await throughout
+- **Dependency Injection**: Clean handler signatures with FastAPI style dependency injection
+- **Simple & Focused**: Just Home Assistant automations - no complexity creep
+- **Developer Experience**: Clear error messages, proper logging, hot-reloading, and intuitive APIs
+
+## 🚀 Quick Start
+
+Install Hassette:
+
+```bash
+pip install hassette
+```
+
+Create a simple app (`apps/hello.py`):
+
+```python
+from typing import Annotated
+from hassette import App, states
+from hassette import dependencies as D
+
+class HelloApp(App):
+    async def on_initialize(self):
+        self.bus.on_state_change(
+            "binary_sensor.front_door",
+            handler=self.on_door_open,
+            changed_to="on"
+        )
+
+    async def on_door_open(
+        self,
+        new_state: D.StateNew[states.BinarySensorState],
+        entity_id: D.EntityId,
+    ):
+        self.logger.info("%s opened!", entity_id)
+        await self.api.call_service(
+            "notify", "mobile_app_phone",
+            message=f"{new_state.attributes.friendly_name or entity_id} opened!"
+        )
+```
+
+Configure it (`config/hassette.toml`):
+
+```toml
+[hassette]
+base_url = "http://homeassistant.local:8123"
+
+[apps.hello]
+filename = "hello.py"
+class_name = "HelloApp"
+```
+
+Run it:
+
+```bash
+uv run hassette
+```
+
+See the [Getting Started guide](https://hassette.readthedocs.io/en/stable/pages/getting-started/) for detailed instructions.
+
+## 🔄 Coming from AppDaemon?
+
+Check out our dedicated comparison guide:
+
+- [AppDaemon Comparison](https://hassette.readthedocs.io/en/stable/pages/appdaemon-comparison/)
+
+## 📖 More Examples
+
+Check out the [`examples/`](https://github.com/NodeJSmith/hassette/tree/main/examples) directory for complete working examples:
+
+**Based on AppDaemon's examples**:
+- [Battery monitoring](https://github.com/NodeJSmith/hassette/tree/main/examples/apps/battery.py) - Monitor device battery levels
+- [Presence detection](https://github.com/NodeJSmith/hassette/tree/main/examples/apps/presence.py) - Track who's home
+- [Sensor notifications](https://github.com/NodeJSmith/hassette/tree/main/examples/apps/sensor_notification.py) - Alert on sensor changes
+
+**Real-world apps**:
+- [Office Button App](https://github.com/NodeJSmith/hassette/tree/main/examples/apps/office_button_app.py) - Multi-function button handler
+- [Laundry Room Lights](https://github.com/NodeJSmith/hassette/tree/main/examples/apps/laundry_room_light.py) - Motion-based lighting
+
+**Configuration examples**:
+- [Docker Compose Guide](https://hassette.readthedocs.io/en/stable/pages/getting-started/docker/) - Docker deployment setup
+- [HassetteConfig](https://hassette.readthedocs.io/en/stable/reference/hassette/config/core/#hassette.config.config.HassetteConfig) - Complete configuration reference
+
+## 🛣️ Status & Roadmap
+
+Hassette is under active development. We follow [semantic versioning](https://semver.org/) and recommend pinning a minor version (e.g., `hassette~=0.x.0`) while the API stabilizes.
+
+Development is tracked in our [GitHub project](https://github.com/users/NodeJSmith/projects/1). Open an issue or PR if you'd like to contribute!
+
+### What's Next?
+
+- 🔐 **Enhanced type safety** - Fully typed service calls and additional state models
+- 🏗️ **Entity classes** - Rich entity objects with built-in methods (e.g., `await light.turn_on()`)
+- 🔄 **Enhanced error handling** - Better retry logic and error recovery
+- 🧪 **Testing improvements** - More comprehensive test coverage and user app testing framework
+
+## 🤝 Contributing
+
+Contributions are welcome! Whether you're:
+
+- 🐛 Reporting bugs or issues
+- 💡 Suggesting features or improvements
+- 📝 Improving documentation
+- 🔧 Contributing code
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on getting started.
+
+## 📄 License
+
+[MIT](LICENSE)
