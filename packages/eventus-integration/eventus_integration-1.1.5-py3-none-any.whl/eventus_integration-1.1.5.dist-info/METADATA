@@ -1,0 +1,167 @@
+Metadata-Version: 2.4
+Name: eventus-integration
+Version: 1.1.5
+Summary: A Python library for Eventus integrations: ESDL TCP sender, MongoDB logging, Teams notifications, retry logic, and multi-tenant ingestion.
+Author-email: Pratik Thorat <pratik.thorat@eventussecurity.com>
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: pymongo
+Requires-Dist: requests
+Requires-Dist: python-dotenv
+Requires-Dist: flatten-json
+
+# Eventus Integration
+
+A lightweight Python module designed for **Eventus SIEM Integrations**.
+
+This library provides a unified framework for:
+
+- 🚀 Sending logs to ESDL over TCP (with retries + backoff)
+- 🗄️ MongoDB error logging with automatic retry window re-processing
+- 🔁 Re-run failed ingestion windows (except 401/403)
+- 📨 Microsoft Teams alert notifications
+- 🔐 Eventus Integration API wrapper using Bearer token
+- 👥 Multi-tenant threaded ingestion engine
+- 🔧 Auto environment configuration loader (`.env`)
+- 📦 Log flattening & structured JSON output
+
+---
+
+## ✨ Features
+
+### **1. TCP Log Delivery (ESDL)**
+- Automatic socket creation + retry
+- Exponential backoff
+- Newline-framed JSON messages
+- Error notification on Teams
+
+### **2. MongoDB Logging**
+- Inserts & updates failure logs
+- Prevents overwriting status codes
+- Supports retrying failed windows
+
+### **3. Teams Webhook Alerts**
+- Push error messages directly to Teams
+- Includes tenant + module metadata
+
+### **4. Integration API Helper**
+Simple wrapper to call:
+
+```
+/api/integration-data/product
+```
+
+with filters for:
+- product name
+- product type
+- active/disabled customers
+- services
+- exact or fuzzy match
+
+### **5. Multi-Tenant Execution**
+Runs ingestion per tenant using `ThreadPoolExecutor`.
+
+---
+
+## 📦 Installation
+
+### **From PyPI (once published)**
+
+```bash
+pip install eventus-integration
+```
+
+---
+
+## ⚙️ Environment Setup
+
+Before using this library, call:
+
+```python
+from eventus_integration import configure_from_env
+configure_from_env()
+```
+
+Your `.env` file must include:
+
+```
+MONGODB_URL=
+ESDL_HOST=
+ESDL_PORT=
+
+Database=
+logs_count_collection=
+error_logs_collection=
+
+BASE_URL=
+AUTH_TOKEN=
+
+webhook_url=
+
+JENKINS_URL=       # optional
+JENKINS_USER=      # optional
+JENKINS_API_TOKEN= # optional
+TRIGGER_TOKEN=     # optional
+```
+
+---
+
+## 📚 Public Functions
+
+The following functions are available to import:
+
+```python
+__all__ = [
+    "configure_from_env",
+    "store_error_in_mongo",
+    "process_failed_windows",
+    "logs_count",
+    "send_data_to_esdl",
+    "get_integration_by_product",
+    "Get_tenant_details",
+    "round_time",
+    "trigger_jenkins_job"
+]
+```
+
+### Optional:
+If you do **not** want to store errors in MongoDB or retry them,  
+you may directly call:
+
+```python
+build_error_and_send()
+```
+
+---
+
+## 🧩 Example Usage
+
+```python
+from eventus_integration import (
+    configure_from_env,
+    Get_tenant_details,
+    get_integration_by_product,
+)
+
+configure_from_env()
+
+def fetch_logs(label_details, api_details):
+    # your ingestion logic here
+    pass
+
+Get_tenant_details(
+    tenants,
+    fetch_logs,
+    get_integration_by_product,
+    product_name="aws_waf"
+)
+```
+
+---
+
+## 📝 License
+
+Internal Eventus Security module.
+
+---
+
