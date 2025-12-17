@@ -1,0 +1,6 @@
+Port(BitType(), 'clk', direction=IN)
+Port(BitType(), 'rst_n', direction=IN)
+Port(BitType(), 'enable', direction=IN)
+Port(UintType(10), 'data_rx_1', direction=IN)
+Port(UintType(10), 'data_rx_2', direction=IN)
+Port(UintType(10), 'data_tx_2', direction=OUT)
