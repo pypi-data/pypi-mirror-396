@@ -1,0 +1,45 @@
+package:
+  name: scared
+  version: {{ GIT_DESCRIBE_TAG }}
+
+source:
+  path: ../../
+
+build:
+  number: 0
+
+requirements:
+  build:
+    - {{ compiler('c') }}
+  host:
+    - python {{ python }}
+    - setuptools>=64
+    - setuptools-scm>=8
+    - wheel
+    - pip
+    - numpy {{ numpy_version }}
+  run:
+    - python
+    - numba
+    - numpy>=2.0.0
+    - estraces>=1.9.4
+    - psutil
+    - scipy
+
+test:
+  imports:
+    - scared
+  source_files:
+    - tests
+  requires:
+    - pytest
+    - pytest-cov
+    - pytest-mock
+    - pycryptodome
+  commands:
+    - pytest
+
+about:
+  home: https://www.eshard.com/
+  license: PROPRIETARY
+  summary: 'scared Python library'
