@@ -1,0 +1,332 @@
+include:
+  - project: templates/cicd
+    file: versioning.yml
+  - template: Jobs/Code-Quality.gitlab-ci.yml
+  #- template: Jobs/Dependency-Scanning.v2.gitlab-ci.yml
+
+workflow:
+  name: $CI_COMMIT_MESSAGE
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: never
+    - if: $CI_PIPELINE_SOURCE =~ /^(push|web)$/
+      when: always
+
+.default_rule_hotfix: &default_rule_hotfix
+  - if: $CI_COMMIT_BRANCH =~ /^hotfix(\/|-).*/
+    when: on_success
+
+default:
+  image:
+    name: $CI_REGISTRY/docker-container/nix-build:0.1.6 # Necessary due to if-not-present policy
+  tags:
+    - shell
+    - nix
+  interruptible: false
+
+variables:
+  CI_DEBUG_TRACE: $DEBUG # use value from gitlab project var
+  CI_SCRIPT_TRACE: $DEBUG
+  CI_GITVERSION_TRACE: $DEBUG
+  PACKAGE_REGISTRY_URL: ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi
+
+stages:
+  - test
+  - security
+  - 💻 release
+  - 🧱 build
+  - ⬆️ deploy
+
+coverage:
+  stage: test
+  before_script:
+    - direnv allow .
+  script:
+    - echo "Coverage stage"
+    - direnv exec . generate-coverage
+  coverage: '/TOTAL\s+\d+\s+\d+\s+(\d+)%/'  # Extract the total test coverage percentage
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml  # Cobertura-compatible XML report
+      junit: report.xml  # JUnit-compatible XML report
+    paths:
+      - coverage.xml  # Ensure the XML report is uploaded as an artifact
+      - report.xml  # Ensure the JUnit report is uploaded as an artifact
+
+code_quality:
+  services: []       # Shut off Docker-in-Docker
+  tags:
+    - cq-wo-dind
+
+code_quality_html:
+  extends: code_quality
+  variables:
+    REPORT_FORMAT: html
+  artifacts:
+    paths: [gl-code-quality-report.html]
+
+lint:
+  stage: test
+  before_script:
+    - direnv allow .
+  script:
+    - echo "Lint stage"
+    - direnv exec . lint
+
+bandit-scan:
+  stage: security
+  script:
+    - direnv exec . sast-scan
+  artifacts:
+    reports:
+      sast: bandit-report.json
+    paths:
+      - bandit-report.json
+  needs:
+    - version
+
+audit-scan:
+  stage: security
+  script:
+    - direnv exec . audit-scan
+  artifacts:
+    reports:
+      dependency_scanning: gl-dependency-scanning-report.json
+    paths:
+      - gl-sbom.json
+      - gl-dependency-scanning-report.json
+      - uv.lock
+
+typing:
+  stage: test
+  before_script:
+    - direnv allow .
+  script:
+    - echo "Typing stage"
+    - direnv exec . typing
+
+release:
+  stage: 💻 release
+  image: registry.gitlab.com/gitlab-org/release-cli:v0.19.0
+  tags:
+    - shared
+  variables:
+    GIT_STRATEGY: clone
+    GIT_DEPTH: 0
+  rules:
+    - *default_rule_hotfix
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_BRANCH == "develop"
+      when: on_success
+  script:
+    - echo "Creating release ${GitVersion_SemVer} with release notes..."
+    - |
+      # Extract the latest (first) release note from RELEASE_NOTES.md
+      if [ -f "RELEASE_NOTES.md" ]; then
+        # Extract everything from the first ## heading (after Overview) until the next ## heading
+        awk '
+        /^---$/ && !started { next }
+        /^## / && !overview_passed && /Overview/ { overview_passed=1; next }
+        /^## / && overview_passed && !started { started=1; print; next }
+        started && /^## / && !/^## / { started=0; exit }
+        started && /^---$/ { started=0; exit }
+        started { print }
+        ' RELEASE_NOTES.md > release-notes.md
+
+        # If extraction failed, create a basic release note
+        if [ ! -s release-notes.md ]; then
+          echo "# Release ${GitVersion_SemVer}" > release-notes.md
+          echo "" >> release-notes.md
+          echo "**Commit Message:** $CI_COMMIT_MESSAGE" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "For detailed release information, see the [full release notes](RELEASE_NOTES.md)." >> release-notes.md
+        fi
+      else
+        # Fallback to commit message if RELEASE_NOTES.md doesn't exist
+        echo "# Release ${GitVersion_SemVer}" > release-notes.md
+        echo "" >> release-notes.md
+        echo "$CI_COMMIT_MESSAGE" >> release-notes.md
+      fi
+    - echo "Release notes content:"
+    - cat release-notes.md
+    - |
+      # Create PyPI package link file
+      echo "# PyPI Package" > pypi-link.md
+      echo "" >> pypi-link.md
+      echo "This release is available on PyPI:" >> pypi-link.md
+      echo "" >> pypi-link.md
+      echo "- **Package:** [ekfsm v${GitVersion_SemVer}](https://pypi.org/project/ekfsm/${GitVersion_SemVer}/)" >> pypi-link.md
+      echo "- **Installation:** \`pip install ekfsm==${GitVersion_SemVer}\`" >> pypi-link.md
+      echo "" >> pypi-link.md
+      echo "## Alternative Installations" >> pypi-link.md
+      echo "" >> pypi-link.md
+      echo "- **Latest stable:** \`pip install ekfsm\`" >> pypi-link.md
+      echo "- **From source:** \`pip install git+https://gitlab.com/path/to/ekfsm@v${GitVersion_SemVer}\`" >> pypi-link.md
+    - |
+      # Extract changelog section for current version
+      if [ -f "CHANGELOG.md" ]; then
+        awk "
+        /^\[${GitVersion_SemVer}\]/ { found=1; print; next }
+        found && /^\[/ && !/^\[${GitVersion_SemVer}\]/ { found=0 }
+        found { print }
+        " CHANGELOG.md > changelog-extract.md
+
+        # If no specific version found in changelog, create a basic one
+        if [ ! -s changelog-extract.md ]; then
+          echo "## [${GitVersion_SemVer}] - $(date +%Y-%m-%d)" > changelog-extract.md
+          echo "" >> changelog-extract.md
+          echo "### Changed" >> changelog-extract.md
+          echo "- Release ${GitVersion_SemVer}" >> changelog-extract.md
+        fi
+      else
+        echo "## [${GitVersion_SemVer}] - $(date +%Y-%m-%d)" > changelog-extract.md
+        echo "" >> changelog-extract.md
+        echo "### Changed" >> changelog-extract.md
+        echo "- Release ${GitVersion_SemVer}" >> changelog-extract.md
+      fi
+  release:
+    tag_name: "v${GitVersion_SemVer}"
+    description: release-notes.md
+    ref: "$CI_COMMIT_SHA"
+    assets:
+      links:
+        - name: "📋 Full Release Notes"
+          url: "${CI_PROJECT_URL}/-/blob/v${GitVersion_SemVer}/RELEASE_NOTES.md"
+          filepath: "/RELEASE_NOTES.md"
+          link_type: other
+        - name: "📝 Full Changelog"
+          url: "${CI_PROJECT_URL}/-/blob/v${GitVersion_SemVer}/CHANGELOG.md"
+          filepath: "/CHANGELOG.md"
+          link_type: other
+        - name: "📦 PyPI Package"
+          url: "https://pypi.org/project/ekfsm/${GitVersion_SemVer}/"
+          filepath: "/pypi"
+          link_type: package
+        - name: "🐍 Package Installation"
+          url: "https://pypi.org/project/ekfsm/"
+          filepath: "/install"
+          link_type: package
+  artifacts:
+    paths:
+      - release-notes.md
+      - pypi-link.md
+      - changelog-extract.md
+    expire_in: 30 days
+  needs:
+    - version
+    - coverage
+    - lint
+    - typing
+
+pkg:
+  stage: 🧱 build
+  variables:
+    GIT_STRATEGY: clone
+    GIT_DEPTH: 0
+    GIT_SUBMODULE_STRATEGY: recursive
+  before_script:
+    - echo "Starting build"
+    - direnv allow .
+  script:
+    - echo "Building package..."
+    - direnv exec . generate-package
+  needs:
+    - job: release
+      optional: true
+    - job: coverage
+    - job: lint
+    - job: typing
+  artifacts:
+    untracked: false
+    when: on_success
+    expire_in: "30 days"
+    paths:
+      - dist/
+
+build-html-docs:
+  stage: 🧱 build
+  before_script:
+    - direnv allow .
+  script:
+    - echo "Building HTML documentation..."
+    - direnv exec . doc-html
+  artifacts:
+    when: on_success
+    paths:
+      - docs/build/html
+
+build-man-pages:
+  stage: 🧱 build
+  before_script:
+    - direnv allow .
+  script:
+    - echo "Building man page documentation..."
+    - direnv exec . doc-man-pages
+  artifacts:
+    when: on_success
+    paths:
+      - docs/build/man/ekfsm.1
+
+build-pdf-doc:
+  stage: 🧱 build
+  before_script:
+    - direnv allow .
+  script:
+    - echo "Building PDF documentation..."
+    - direnv exec . doc-pdf
+  artifacts:
+    when: on_success
+    paths:
+      - docs/build/latex/ekfsm.pdf
+
+build-doc-coverage:
+  stage: 🧱 build
+  before_script:
+    - direnv allow .
+  script:
+    - echo "Compute documentation coverage..."
+    - direnv exec . doc-coverage
+  coverage: '/TOTAL\s+\|\s+(\d+\.\d+%)/'  # Extract the total doc coverage percentage
+  artifacts:
+    when: on_success
+    paths:
+      - docs/build/coverage
+
+deploy-gitlab-pypi:
+  stage: ⬆️ deploy
+  image: python:3.12
+  tags:
+    - shared
+  variables:
+    GIT_STRATEGY: none
+    GIT_SUBMODULE_STRATEGY: recursive
+  rules:
+    - *default_rule_hotfix
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_BRANCH == "develop"
+      when: on_success
+  before_script:
+    - echo "Install twine..."
+    - python -m pip install twine
+  script:
+    - echo "Deploying version ${GitVersion_SemVer} to gitlab pypi repository..."
+    - TWINE_PASSWORD=${CI_JOB_TOKEN} TWINE_USERNAME=gitlab-ci-token python -m twine upload --repository-url ${PACKAGE_REGISTRY_URL} dist/*
+  needs:
+    - pkg
+
+deploy-pypi:
+  stage: ⬆️ deploy
+  variables:
+    GIT_STRATEGY: clone
+    GIT_SUBMODULE_STRATEGY: recursive
+  rules:
+    - *default_rule_hotfix
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_BRANCH == "develop"
+      when: on_success
+  before_script:
+    - direnv allow .
+  script:
+    - echo "Deploying version ${GitVersion_SemVer} to pypi repository..."
+    - direnv exec . publish-package
+  needs:
+    - pkg
