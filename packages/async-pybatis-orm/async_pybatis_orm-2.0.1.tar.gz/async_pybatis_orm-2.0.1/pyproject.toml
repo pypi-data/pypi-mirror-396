@@ -1,0 +1,122 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "async-pybatis-orm"
+version = "2.0.1"
+description = "一个基于 MySQL 异步场景，对齐 MyBatis-Plus 语法风格的 Python ORM 框架"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "lipop"},
+]
+keywords = [
+    "async", "orm", "mysql", "database", "aiomysql", "asyncio",
+    "mybatis-plus", "mapper", "crud", "query", "pagination"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Database",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Framework :: AsyncIO",
+]
+
+dependencies = [
+    "databases>=0.7.0",
+    "aiomysql>=0.2.0",
+    "typing-extensions>=4.0.0",
+    "pytest>=8.3.5",
+    "pytest-asyncio>=0.24.0",
+    "cryptography>=46.0.2",
+    "black>=24.8.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0",
+    "pytest-asyncio>=0.18.0",
+    "pytest-mock>=3.6.0",
+    "black>=22.0",
+    "isort>=5.10",
+    "flake8>=4.0",
+    "mypy>=0.950",
+]
+docs = [
+    "sphinx>=4.0",
+    "sphinx-rtd-theme>=1.0",
+]
+all = ["async-pybatis-orm[dev,docs]"]
+
+[project.urls]
+Homepage = "https://github.com/zhonglunsheng/async-pybatis-orm"
+Documentation = "https://async-pybatis-orm.readthedocs.io"
+Repository = "https://github.com/zhonglunsheng/async-pybatis-orm"
+Issues = "https://github.com/zhonglunsheng/async-pybatis-orm/issues"
+
+[tool.setuptools]
+packages = ["async_pybatis_orm"]
+
+[tool.setuptools.package-data]
+"async_pybatis_orm" = ["py.typed", "*.pyi"]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  migrations
+) 
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+known_first_party = ["async_pybatis_orm"]
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = [
+    "aiomysql.*",
+    "databases.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--verbose",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+]
