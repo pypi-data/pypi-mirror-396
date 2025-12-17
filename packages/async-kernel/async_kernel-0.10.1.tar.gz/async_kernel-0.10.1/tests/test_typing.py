@@ -1,0 +1,38 @@
+from async_kernel.kernel import Kernel
+from async_kernel.typing import MsgType, RunMode, Tags
+
+
+class TestRunMode:
+    def test_str(self):
+        assert str(RunMode.task) == RunMode.task
+
+    def test_repr(self):
+        assert repr(RunMode.task) == RunMode.task
+
+    def test_hash(self):
+        assert hash(RunMode.task) == hash(RunMode.task)
+
+    def test_members(self):
+        assert list(RunMode) == ["queue", "task", "thread", "direct"]
+        assert list(RunMode) == ["# queue", "# task", "# thread", "# direct"]
+        assert list(RunMode) == [
+            "<RunMode.queue: 'queue'>",
+            "<RunMode.task: 'task'>",
+            "<RunMode.thread: 'thread'>",
+            "<RunMode.direct: 'direct'>",
+        ]
+
+
+class TestMsgType:
+    def test_all_names(self):
+        assert set(MsgType).intersection(vars(Kernel))
+
+
+class TestTags:
+    def test_equality(self):
+        assert Tags.suppress_error == str(Tags.suppress_error)
+        assert Tags.suppress_error == Tags.suppress_error.name
+        assert Tags.timeout == Tags.timeout.name
+
+    def test_hash(self):
+        assert hash(Tags.suppress_error) == hash(Tags.suppress_error)
