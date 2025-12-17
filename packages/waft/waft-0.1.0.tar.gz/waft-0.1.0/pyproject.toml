@@ -1,0 +1,85 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "waft"
+version = "0.1.0"
+description = 'A textual user interface application that facilitates the association of files in the MP3 format with metadd.'
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+keywords = []
+authors = [
+  { name = "Melesio Albavera", email = "ma6hv@umsystem.edu" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = [
+  "eyed3",
+  "google-api-python-client",
+  "music-tag",
+  "pillow",
+  "python-mpv",
+  "requests",
+  "securecredentials",
+  "textual",
+  "textual-dev",
+  "types-requests",
+  "types-yt-dlp",
+  "yt-dlp",
+]
+
+[project.scripts]
+waft = "waft.waft:waft"
+
+[project.urls]
+Documentation = "https://github.com/me11203sci/wiki-application-for-tunes/blob/master/README.md"
+Issues = "https://github.com/me11203sci/wiki-application-for-tunes/issues"
+Source = "https://github.com/me11203sci/wiki-application-for-tunes"
+
+[tool.hatch.envs.types]
+extra-dependencies = [
+  "black",
+  "coverage",
+  "flake8",
+  "flake8-docstrings",
+  "interrogate",
+  "isort",
+  "mypy>=1.0.0",
+  "pudb",
+  "pycodestyle",
+  "pydocstyle",
+  "pylint",
+  "pytest",
+]
+[tool.hatch.envs.types.scripts]
+check = "mypy --install-types --non-interactive {args:src/waft tests}"
+
+[tool.coverage.run]
+source_pkgs = ["waft", "tests"]
+branch = true
+parallel = true
+omit = [
+  "src/waft/__about__.py",
+]
+
+[tool.coverage.paths]
+waft = ["src/waft", "*/waft/src/waft"]
+tests = ["tests", "*/waft/tests"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
