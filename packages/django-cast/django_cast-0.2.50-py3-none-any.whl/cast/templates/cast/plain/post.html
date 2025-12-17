@@ -1,0 +1,46 @@
+{% extends "./base.html" %}
+{% load i18n %}
+{% load static %}
+
+{% load wagtailcore_tags %}
+{% load wagtailimages_tags %}
+
+{% if comments_are_enabled %}
+  {% load comments %}
+{% endif %}
+
+{% block css %}
+  {{ block.super }}
+  {% if comments_are_enabled %}
+    <link rel="stylesheet" type="text/css" href="{% static 'fluent_comments/css/ajaxcomments.css' %}" />
+  {% endif %}
+{% endblock css %}
+
+{% block robots %}
+  {% if blog.noindex %}
+    <meta name="robots" content="noindex, nofollow">
+  {% else %}
+    <meta name="robots" content="index, follow">
+  {% endif %}
+{% endblock robots %}
+
+{% block title %}{{ page.title }}{% endblock title %}
+
+{% block main %}
+  {% include "./post_body.html" with render_detail=True %}
+
+  {% if comments_are_enabled %}
+    {% render_comment_list for page %}
+    {% render_comment_form for page %}
+  {% endif %}
+
+  <p><a href="{{ page.get_parent.url }}">Return to blog</a></p>
+
+{% endblock %}
+
+{% block javascript %}
+  {{ block.super }}
+  {% if comments_are_enabled %}
+    <script defer type="text/javascript" src="{% static 'fluent_comments/js/ajaxcomments.js' %}"></script>
+  {% endif %}
+{% endblock javascript %}
