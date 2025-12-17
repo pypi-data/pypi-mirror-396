@@ -1,0 +1,92 @@
+image: python
+
+stages:
+- earlytest
+- fulltest
+- deploy
+
+before_script:
+- pip install tox .[tests]
+
+pylint:
+  image: python:3.14-slim
+  stage: earlytest
+  script: tox -e pylint
+
+pep8:
+  image: python:3.14-slim
+  stage: earlytest
+  script: tox -e pep8
+
+python314:
+  image: python:3.14-slim
+  stage: earlytest
+  script: tox -e py314
+
+python39:
+  image: python:3.9-slim
+  stage: fulltest
+  script: tox -e py39
+
+python310:
+  image: python:3.10-slim
+  stage: fulltest
+  script: tox -e py310
+
+python311:
+  image: python:3.11-slim
+  stage: fulltest
+  script: tox -e py311
+
+python312:
+  image: python:3.12-slim
+  stage: fulltest
+  script: tox -e py312
+
+python313:
+  image: python:3.13-slim
+  stage: fulltest
+  script: tox -e py313
+
+pythonrc:
+  image: python:3.15-rc-slim
+  stage: fulltest
+  script: tox -e py315
+
+pypy3:
+  image: pypy:3-slim
+  stage: fulltest
+  script: tox -e pypy3
+
+coveralls:
+  image: python:3.12-slim
+  variables:
+    CI_NAME: gitlab
+    CI_BUILD_NUMBER: "${CI_JOB_ID}"
+    CI_BUILD_URL: "${CI_JOB_URL}"
+    CI_BRANCH: "${CI_COMMIT_REF_NAME}"
+  stage: deploy
+  script:
+    - pip install coveralls
+    - pip install .
+    - pip install .[tests]
+    - coverage run -m unittest -v -f
+    - coveralls
+  only:
+    refs:
+      - master
+
+obs:
+  image:
+    name: coroner/python_obs:1.0.0
+    pull_policy: always
+  stage: deploy
+  variables:
+    GIT_SUBMODULE_STRATEGY: recursive
+  before_script: []
+  script:
+    - obs.sh
+  only:
+    refs:
+      - master
+      - tags
