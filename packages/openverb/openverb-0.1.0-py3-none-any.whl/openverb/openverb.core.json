@@ -1,0 +1,463 @@
+{
+  "namespace": "openverb.core",
+  "version": "0.1.0",
+  "description": "Core, domain-agnostic verbs for AI-driven applications using the OpenVerb standard.",
+  "verbs": [
+    {
+      "name": "create_item",
+      "category": "data",
+      "description": "Create a new item in a logical collection or resource (e.g. jobs, clients, records).",
+      "params": {
+        "collection": {
+          "type": "string",
+          "description": "Logical name of the collection, e.g. 'jobs', 'clients', 'tasks'.",
+          "required": true
+        },
+        "data": {
+          "type": "object",
+          "description": "Key-value pairs representing the new item.",
+          "required": true
+        }
+      },
+      "returns": {
+        "id": {
+          "type": "string",
+          "description": "Identifier assigned to the created item."
+        },
+        "data": {
+          "type": "object",
+          "description": "The created item, including system-generated fields."
+        }
+      },
+      "destructive": false,
+      "requires_confirmation": false
+    },
+    {
+      "name": "get_item",
+      "category": "data",
+      "description": "Fetch a single item from a logical collection by ID.",
+      "params": {
+        "collection": {
+          "type": "string",
+          "description": "Logical collection name.",
+          "required": true
+        },
+        "id": {
+          "type": "string",
+          "description": "Identifier of the item to fetch.",
+          "required": true
+        }
+      },
+      "returns": {
+        "data": {
+          "type": "object",
+          "description": "The requested item, if found."
+        }
+      },
+      "destructive": false,
+      "requires_confirmation": false
+    },
+    {
+      "name": "list_items",
+      "category": "data",
+      "description": "List items from a logical collection, optionally filtered or paginated.",
+      "params": {
+        "collection": {
+          "type": "string",
+          "description": "Logical collection name.",
+          "required": true
+        },
+        "filter": {
+          "type": "object",
+          "description": "Optional filter object (field/value conditions).",
+          "required": false
+        },
+        "limit": {
+          "type": "number",
+          "description": "Maximum number of items to return.",
+          "required": false
+        },
+        "offset": {
+          "type": "number",
+          "description": "Offset for pagination.",
+          "required": false
+        }
+      },
+      "returns": {
+        "items": {
+          "type": "array<object>",
+          "description": "List of items matching the query."
+        }
+      },
+      "destructive": false,
+      "requires_confirmation": false
+    },
+    {
+      "name": "update_item",
+      "category": "data",
+      "description": "Update fields on an existing item in a logical collection.",
+      "params": {
+        "collection": {
+          "type": "string",
+          "description": "Logical collection name.",
+          "required": true
+        },
+        "id": {
+          "type": "string",
+          "description": "Identifier of the item to update.",
+          "required": true
+        },
+        "data": {
+          "type": "object",
+          "description": "Fields to update (partial object).",
+          "required": true
+        }
+      },
+      "returns": {
+        "data": {
+          "type": "object",
+          "description": "The updated item."
+        }
+      },
+      "destructive": false,
+      "requires_confirmation": false
+    },
+    {
+      "name": "delete_item",
+      "category": "data",
+      "description": "Delete an item from a logical collection.",
+      "params": {
+        "collection": {
+          "type": "string",
+          "description": "Logical collection name.",
+          "required": true
+        },
+        "id": {
+          "type": "string",
+          "description": "Identifier of the item to delete.",
+          "required": true
+        }
+      },
+      "returns": {
+        "success": {
+          "type": "boolean",
+          "description": "Whether the item was successfully deleted."
+        }
+      },
+      "destructive": true,
+      "requires_confirmation": true
+    },
+    {
+      "name": "search_items",
+      "category": "data",
+      "description": "Search for items in a logical collection using a free-text query.",
+      "params": {
+        "collection": {
+          "type": "string",
+          "description": "Logical collection name.",
+          "required": true
+        },
+        "query": {
+          "type": "string",
+          "description": "Free-text search query.",
+          "required": true
+        },
+        "limit": {
+          "type": "number",
+          "description": "Maximum number of items to return.",
+          "required": false
+        }
+      },
+      "returns": {
+        "items": {
+          "type": "array<object>",
+          "description": "Items that match the search query."
+        }
+      },
+      "destructive": false,
+      "requires_confirmation": false
+    },
+    {
+      "name": "create_file",
+      "category": "file_system",
+      "description": "Create a new file at a given path with the provided content.",
+      "params": {
+        "path": {
+          "type": "string",
+          "description": "Relative or logical file path.",
+          "required": true
+        },
+        "content": {
+          "type": "string",
+          "description": "Initial file content.",
+          "required": true
+        }
+      },
+      "returns": {
+        "path": {
+          "type": "string",
+          "description": "Path of the created file."
+        }
+      },
+      "destructive": false,
+      "requires_confirmation": false
+    },
+    {
+      "name": "read_file",
+      "category": "file_system",
+      "description": "Read the content of a file at a given path.",
+      "params": {
+        "path": {
+          "type": "string",
+          "description": "File path to read from.",
+          "required": true
+        }
+      },
+      "returns": {
+        "content": {
+          "type": "string",
+          "description": "Contents of the file."
+        }
+      },
+      "destructive": false,
+      "requires_confirmation": false
+    },
+    {
+      "name": "write_file",
+      "category": "file_system",
+      "description": "Overwrite or create a file with new content.",
+      "params": {
+        "path": {
+          "type": "string",
+          "description": "File path to write to.",
+          "required": true
+        },
+        "content": {
+          "type": "string",
+          "description": "New content for the file.",
+          "required": true
+        }
+      },
+      "returns": {
+        "path": {
+          "type": "string",
+          "description": "Path of the written file."
+        }
+      },
+      "destructive": true,
+      "requires_confirmation": true
+    },
+    {
+      "name": "delete_file",
+      "category": "file_system",
+      "description": "Delete a file at a given path.",
+      "params": {
+        "path": {
+          "type": "string",
+          "description": "File path to delete.",
+          "required": true
+        }
+      },
+      "returns": {
+        "success": {
+          "type": "boolean",
+          "description": "Whether the file was deleted."
+        }
+      },
+      "destructive": true,
+      "requires_confirmation": true
+    },
+    {
+      "name": "navigate",
+      "category": "navigation",
+      "description": "Navigate the user interface to a logical route, page, or view.",
+      "params": {
+        "target": {
+          "type": "string",
+          "description": "Logical route or view name, e.g. 'dashboard', 'settings', 'clients'.",
+          "required": true
+        },
+        "context": {
+          "type": "object",
+          "description": "Optional additional context such as IDs or filters.",
+          "required": false
+        }
+      },
+      "returns": {
+        "success": {
+          "type": "boolean",
+          "description": "Whether navigation was triggered successfully."
+        }
+      },
+      "destructive": false,
+      "requires_confirmation": false
+    },
+    {
+      "name": "notify_user",
+      "category": "communication",
+      "description": "Show a notification or message to the user inside the host application.",
+      "params": {
+        "message": {
+          "type": "string",
+          "description": "Message text to show to the user.",
+          "required": true
+        },
+        "level": {
+          "type": "enum",
+          "description": "Notification level or severity.",
+          "enum": ["info", "success", "warning", "error"],
+          "required": false
+        }
+      },
+      "returns": {
+        "displayed": {
+          "type": "boolean",
+          "description": "Whether the notification was displayed."
+        }
+      },
+      "destructive": false,
+      "requires_confirmation": false
+    },
+    {
+      "name": "log_message",
+      "category": "system",
+      "description": "Write a log message to the application's logging system.",
+      "params": {
+        "message": {
+          "type": "string",
+          "description": "Log message content.",
+          "required": true
+        },
+        "level": {
+          "type": "enum",
+          "description": "Log level.",
+          "enum": ["debug", "info", "warn", "error"],
+          "required": false
+        },
+        "meta": {
+          "type": "object",
+          "description": "Optional metadata for the log (e.g., context, IDs).",
+          "required": false
+        }
+      },
+      "returns": {
+        "logged": {
+          "type": "boolean",
+          "description": "Whether the message was logged successfully."
+        }
+      },
+      "destructive": false,
+      "requires_confirmation": false
+    },
+    {
+      "name": "run_command",
+      "category": "system",
+      "description": "Request execution of a pre-approved system command or task within a sandboxed environment.",
+      "params": {
+        "command": {
+          "type": "string",
+          "description": "Logical command name (NOT arbitrary shell), e.g. 'build_project', 'run_tests'.",
+          "required": true
+        },
+        "args": {
+          "type": "array<string>",
+          "description": "Optional arguments for the command.",
+          "required": false
+        }
+      },
+      "returns": {
+        "success": {
+          "type": "boolean",
+          "description": "Whether the command completed successfully."
+        },
+        "output": {
+          "type": "string",
+          "description": "Text output or summary of the command, if available."
+        }
+      },
+      "destructive": true,
+      "requires_confirmation": true
+    },
+    {
+      "name": "calculate",
+      "category": "analysis",
+      "description": "Perform a calculation or numeric operation based on structured inputs.",
+      "params": {
+        "expression": {
+          "type": "string",
+          "description": "Human-readable or symbolic expression to calculate.",
+          "required": true
+        },
+        "variables": {
+          "type": "object",
+          "description": "Optional variables used in the expression.",
+          "required": false
+        }
+      },
+      "returns": {
+        "result": {
+          "type": "number",
+          "description": "Numeric result of the calculation."
+        }
+      },
+      "destructive": false,
+      "requires_confirmation": false
+    },
+    {
+      "name": "summarize_text",
+      "category": "nlp",
+      "description": "Generate a concise summary of a given text within the host application context.",
+      "params": {
+        "text": {
+          "type": "string",
+          "description": "Input text to summarize.",
+          "required": true
+        },
+        "max_length": {
+          "type": "number",
+          "description": "Desired maximum length of the summary (in words or tokens, app-defined).",
+          "required": false
+        }
+      },
+      "returns": {
+        "summary": {
+          "type": "string",
+          "description": "Summarized version of the input text."
+        }
+      },
+      "destructive": false,
+      "requires_confirmation": false
+    },
+    {
+      "name": "transform_text",
+      "category": "nlp",
+      "description": "Transform text according to a specified mode (e.g. rewrite, formalize, translate).",
+      "params": {
+        "text": {
+          "type": "string",
+          "description": "Input text to transform.",
+          "required": true
+        },
+        "mode": {
+          "type": "enum",
+          "description": "Type of transformation to perform.",
+          "enum": ["rewrite", "formalize", "simplify", "translate"],
+          "required": true
+        },
+        "target_language": {
+          "type": "string",
+          "description": "Target language for translation, if mode is 'translate'.",
+          "required": false
+        }
+      },
+      "returns": {
+        "output": {
+          "type": "string",
+          "description": "Transformed text."
+        }
+      },
+      "destructive": false,
+      "requires_confirmation": false
+    }
+  ]
+}
