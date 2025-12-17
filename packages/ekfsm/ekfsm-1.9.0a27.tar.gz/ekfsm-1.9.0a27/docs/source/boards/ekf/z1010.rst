@@ -1,0 +1,317 @@
+.. _z1010:
+
+=========
+EKF Z1010
+=========
+
+The EKF Z1010 is a System Management Controller board for CompactPCI Serial Systems providing several system monitoring and control capabilities for integrated and attached components including power and boot-up processes.
+
+Overview
+========
+
+The board is shipped with an integrated firmware which can be accessed through an USB-over-Ethernet connection routed through the CompactPCI Serial backplane.
+It uses the IO4Edge and I2C protocols for communication and is fully supported by the EKF System Management Framework (EKFSM).
+
+Devices
+-------
+
+Several attached devices are available through API access over the EKFSM. These include:
+
+- On-Board Devices
+- Shuttle Board Controller
+- External Button Interface
+- Power Control Interface
+
+Features
+--------
+
+The Z1010 firmware provides access to the following features:
+
+- Board Inventory
+- Chassis Inventory
+- EEPROM Customer Area
+- LED Array with 8 RGB LEDs
+- System State Controller (Power, Boot and Error Control)
+- Watchdog Timer
+- Temperature and Humidity Sensor
+- Firmware Management
+- Shuttle Power Control
+- Shuttle Reset Control
+
+
+Bus Devices
+===========
+
+Board Inventory (Object: `inventory`)
+-------------------------------------
+
+.. include:: snippets/cpci_inventory.rst
+
+Chassis Inventory (Object: `chassis_inventory`)
+-----------------------------------------------
+
+The system inventory provides access to the chassis inventory, such as the vendor, model, serial number, and revision.
+
+You can access the chassis inventory from the z1010 object via the `chassis_inventory` attribute.
+
+Alternatively, if your system configuration has the following snippet:
+
+.. code-block:: yaml
+
+    system_config:
+    name: "MySystem"
+    aggregates:
+        chassis_inventory: inventory
+
+you can access the chassis inventory via the system object's `inventory` attribute.
+
++--------------------------------------------------------------------+-------------------------------+--------------------+
+| Method                                                             | Description                   | Example Value      |
++--------------------------------------------------------------------+-------------------------------+--------------------+
+| :meth:`vendor() <ekfsm.devices.eeprom.EKF_CCU_EEPROM.cvendor>`     | Get the chassis vendor        | ``EKF Elektronik`` |
++--------------------------------------------------------------------+-------------------------------+--------------------+
+| :meth:`model() <ekfsm.devices.eeprom.EKF_CCU_EEPROM.cmodel>`       | Get the chassis model         | ``SRS-C001``       |
++--------------------------------------------------------------------+-------------------------------+--------------------+
+| :meth:`serial() <ekfsm.devices.eeprom.EKF_CCU_EEPROM.cserial>`     | Get the chassis serial number | ``12345678``       |
++--------------------------------------------------------------------+-------------------------------+--------------------+
+| :meth:`revision() <ekfsm.devices.eeprom.EKF_CCU_EEPROM.crevision>` | Get the chassis revision      | ``2.0``            |
++--------------------------------------------------------------------+-------------------------------+--------------------+
+| :meth:`~ekfsm.devices.eeprom.EKF_CCU_EEPROM.unit`                  | Get subsystem unit number     | ``1``              |
++--------------------------------------------------------------------+-------------------------------+--------------------+
+
+
+EEPROM Customer area (Object: `custom_eeprom`)
+----------------------------------------------------
+
+The Z1010 EEPROM provides 64 bytes for custom data storage.
+
++---------------------------------------------------------------------------+------------------------------------------+----------------------------+
+| Method                                                                    | Description                              | Example Value              |
++---------------------------------------------------------------------------+------------------------------------------+----------------------------+
+| :meth:`write() <ekfsm.devices.eeprom.EKF_CCU_EEPROM.write_customer_area>` | Write data to Z1010 EEPROM customer area | ``b'\x01\x02\x03\x04\x05`` |
++---------------------------------------------------------------------------+------------------------------------------+----------------------------+
+| :meth:`read() <ekfsm.devices.eeprom.EKF_CCU_EEPROM.customer_area>`        | Get the customer area data               | ``b'\x01\x02\x03\x04\x05`` |
++---------------------------------------------------------------------------+------------------------------------------+----------------------------+
+
+IO4Edge Devices
+===============
+
+The Z1010 incorporates an IO4Edge device that provides various functionalities through network-based communication. This device acts as the main interface for multiple real-time I/O operations.
+
+Management (Object: `I4E`)
+--------------------------
+
+These methods allow you to manage the firmware and parameters of the Z1010 board.
+
++--------------------------------------------------------------+-------------------------------------------------+----------------------------------------------------+
+| Method                                                       | Description                                     | Example Value                                      |
++--------------------------------------------------------------+-------------------------------------------------+----------------------------------------------------+
+| :meth:`~ekfsm.devices.io4edge.IO4Edge.identify_firmware`     | Get the firmware title and version of the Z1010 | ``fw-Z1010-00-default`` ``1.0.0``                  |
++--------------------------------------------------------------+-------------------------------------------------+----------------------------------------------------+
+| :meth:`~ekfsm.devices.io4edge.IO4Edge.load_firmware`         | Load firmware into the Z1010                    | <binary data>                                      |
++--------------------------------------------------------------+-------------------------------------------------+----------------------------------------------------+
+| :meth:`~ekfsm.devices.io4edge.IO4Edge.get_parameter`         | Get the Z1010 parameter in JSON format          | ``{"version": "factory", "parameters": { ... } }`` |
++--------------------------------------------------------------+-------------------------------------------------+----------------------------------------------------+
+| :meth:`~ekfsm.devices.io4edge.IO4Edge.load_parameter`        | Load a parameter into the Z1010                 | ``{"version": "1.0.0", "parameters": { ... } }``   |
++--------------------------------------------------------------+-------------------------------------------------+----------------------------------------------------+
+| :meth:`~ekfsm.devices.io4edge.IO4Edge.restart`               | Restart the Z1010                               | N/A                                                |
++--------------------------------------------------------------+-------------------------------------------------+----------------------------------------------------+
+
+LED Array (Object: `leds`)
+---------------------------
+
+The Z1010 provides an 8-channel LED array for status indication and user feedback. Each LED can display different colors and blinking patterns.
+
+**Individual LED Control (Objects: `led0` to `led7`)**
+
+Each LED channel (0-7) supports the following operations:
+
++--------------------------------------------------------------+-------------------------------------------------+----------------------------------------------------+
+| Method                                                       | Description                                     | Example Value                                      |
++==============================================================+=================================================+====================================================+
+| :meth:`~ekfsm.devices.leds.ColorLED.set`                     | Set LED color and blink state                   | ``(Color.RED, True)``                              |
++--------------------------------------------------------------+-------------------------------------------------+----------------------------------------------------+
+| :meth:`~ekfsm.devices.leds.ColorLED.get`                     | Get current LED color and blink state           | ``(Color.GREEN, False)``                           |
++--------------------------------------------------------------+-------------------------------------------------+----------------------------------------------------+
+| :meth:`~ekfsm.devices.leds.ColorLED.describe`                | Get LED capabilities description                | Configuration details                              |
++--------------------------------------------------------------+-------------------------------------------------+----------------------------------------------------+
+
+**Available Colors:**
+
+- ``RED`` (0)
+- ``GREEN`` (1)
+- ``BLUE`` (2)
+- ``WHITE`` (3)
+- ``YELLOW`` (4)
+- ``CYAN`` (5)
+- ``PURPLE`` (6)
+- ``OFF`` (7)
+
+Thermal and Humidity Sensor (Object: `th`)
+------------------------------------------
+
+The Z1010 includes an integrated thermal and humidity sensor for environmental monitoring.
+
++---------------------------------------------------------------------+---------------------+---------------+
+| Method                                                              | Description         | Example Value |
++=====================================================================+=====================+===============+
+| :meth:`~ekfsm.devices.thermal_humidity.ThermalHumidity.temperature` | Get the temperature | ``25.4``      |
++---------------------------------------------------------------------+---------------------+---------------+
+
+GPIO Array (Object: `gpios`)
+-----------------------------
+
+The Z1010 features a GPIO array that provides digital I/O capabilities for various control functions.
+
+**Binary Toggle Switches**
+
+Power Control (Object: `power` - Channel 0)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Controls system power functions.
+
++-----------------------------------------------------------+---------------------+---------------+
+| Method                                                    | Description         | Example Value |
++===========================================================+=====================+===============+
+| :meth:`set() <ekfsm.devices.toggles.BinaryToggle.set>`    | Set power state     | ``True``      |
++-----------------------------------------------------------+---------------------+---------------+
+| :meth:`get() <ekfsm.devices.toggles.BinaryToggle.get>`    | Get power state     | ``False``     |
++-----------------------------------------------------------+---------------------+---------------+
+| :meth:`on() <ekfsm.devices.toggles.BinaryToggle.on>`      | Turn power on       | N/A           |
++-----------------------------------------------------------+---------------------+---------------+
+| :meth:`off() <ekfsm.devices.toggles.BinaryToggle.off>`    | Turn power off      | N/A           |
++-----------------------------------------------------------+---------------------+---------------+
+
+Redriver Control (Object: `redriver` - Channel 1)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Controls signal redriver functionality.
+
++-----------------------------------------------------------+---------------------+---------------+
+| Method                                                    | Description         | Example Value |
++===========================================================+=====================+===============+
+| :meth:`~ekfsm.devices.toggles.BinaryToggle.set`           | Set redriver state  | ``True``      |
++-----------------------------------------------------------+---------------------+---------------+
+| :meth:`~ekfsm.devices.toggles.BinaryToggle.get`           | Get redriver state  | ``False``     |
++-----------------------------------------------------------+---------------------+---------------+
+| :meth:`~ekfsm.devices.toggles.BinaryToggle.on`            | Enable redriver     | N/A           |
++-----------------------------------------------------------+---------------------+---------------+
+| :meth:`~ekfsm.devices.toggles.BinaryToggle.off`           | Disable redriver    | N/A           |
++-----------------------------------------------------------+---------------------+---------------+
+
+Button Array (Object: `buttons`)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The button array provides user input capabilities by handling button presses using a per button callback handler.
+
++------------------------------------------------------------+-----------------------------+
+| Method                                                     | Description                 |
++============================================================+=============================+
+| :meth:`~ekfsm.devices.buttons.ButtonArray.read`            | Start reading button events |
++------------------------------------------------------------+-----------------------------+
+
+.. note::
+    The read process for listening to button events should preferably be handled in a separate thread.
+
+
+Eject Button (Object: `eject` - Channel 2)
+''''''''''''''''''''''''''''''''''''''''''
+
+Provides eject button functionality for safe shuttle slot removal or other app controlled actions.
+
++------------------------------------------------------------+-----------------------------+-------------------------------------+
+| Method                                                     | Description                 | Example Value                       |
++============================================================+=============================+=====================================+
+| :meth:`handler <ekfsm.devices.buttons.Button.handler>`     | Set/get event handler       | ``lambda: print("Eject pressed")``  |
++------------------------------------------------------------+-----------------------------+-------------------------------------+
+
+.. caution::
+    The button handler is probably executed in a separate thread, so be sure to handle any thread-safety concerns in your callback function.
+
+Example
+'''''''
+.. code-block:: python
+
+    from ekfsm.system import System
+    import threading
+
+    # Initialize system
+    system = System("path/to/config")
+
+    smc = system.smc
+    i4e = smc.i4e
+
+    button_array = i4e.gpios.buttons
+    eject = button_array.eject
+    eject.handler = lambda: print("Eject pressed")
+
+    # Start reading button events in a separate thread
+    stop_event = threading.Event()
+    button_thread = threading.Thread(target=button_array.read, args=(stop_event,))
+    button_thread.start()
+
+    for i in range(200):
+        print(f"Main thread running... {i}")
+        # do some work
+
+    # To stop the thread:
+    stop_event.set()
+    button_thread.join()
+
+System State Management (Object: `ssm`)
+---------------------------------------
+
+The System State Management (SSM) object provides control over the system's power and boot states, as well as error handling and an application watchdog.
+
+**State Management Methods**
+
++-------------------------------------------------------------+---------------------------------------------+---------------------------+
+| Method                                                      | Description                                 | Example Value             |
++=============================================================+=============================================+===========================+
+| :meth:`~ekfsm.devices.ssm.SSM.describe`                     | Get SSM configuration description           | Configuration details     |
++-------------------------------------------------------------+---------------------------------------------+---------------------------+
+| :meth:`~ekfsm.devices.ssm.SSM.state`                        | Get current system state                    | ``SystemState.ON``        |
++-------------------------------------------------------------+---------------------------------------------+---------------------------+
+| :meth:`~ekfsm.devices.ssm.SSM.kick`                         | Kick watchdog to prevent timeout            | N/A                       |
++-------------------------------------------------------------+---------------------------------------------+---------------------------+
+
+**System Control Methods**
+
++-------------------------------------------------------------+---------------------------------------------+---------------------------+
+| Method                                                      | Description                                 | Example Value             |
++=============================================================+=============================================+===========================+
+| :meth:`~ekfsm.devices.ssm.SSM.on`                           | Signal ON state to system                   | N/A                       |
++-------------------------------------------------------------+---------------------------------------------+---------------------------+
+| :meth:`~ekfsm.devices.ssm.SSM.shutdown`                     | Signal system shutdown                      | N/A                       |
++-------------------------------------------------------------+---------------------------------------------+---------------------------+
+| :meth:`~ekfsm.devices.ssm.SSM.reboot`                       | Signal system reboot                        | N/A                       |
++-------------------------------------------------------------+---------------------------------------------+---------------------------+
+
+**Error Handling Methods**
+
++-------------------------------------------------------------+---------------------------------------------+---------------------------+
+| Method                                                      | Description                                 | Example Value             |
++=============================================================+=============================================+===========================+
+| :meth:`error(message) <ekfsm.devices.ssm.SSM.error>`        | Set system to error state                   | ``"Sensor failure"``      |
++-------------------------------------------------------------+---------------------------------------------+---------------------------+
+| :meth:`resolve(message) <ekfsm.devices.ssm.SSM.resolve>`    | Resolve current error state                 | ``"Sensor restored"``     |
++-------------------------------------------------------------+---------------------------------------------+---------------------------+
+| :meth:`fatal(message) <ekfsm.devices.ssm.SSM.fatal>`        | Signal fatal error                          | ``"Critical failure"``    |
++-------------------------------------------------------------+---------------------------------------------+---------------------------+
+
+.. note::
+   The SSM watchdog should be kicked periodically using the ``kick()`` method to prevent system timeout. This is typically handled automatically by the EKFSM framework.
+
+.. warning::
+   The ``fatal()`` method should only be used for critical system errors that require immediate attention and potentially system shutdown.
+
+**System States**
+
+The system can be in one of the following states:
+
+- ``OFF`` - System is powered off
+- ``ON`` - System is running normally
+- ``ERROR`` - System has encountered a recoverable error
+- ``FATAL`` - System has encountered a fatal error
+- ``SHUTDOWN`` - System is shutting down
+- ``REBOOT`` - System is rebooting
