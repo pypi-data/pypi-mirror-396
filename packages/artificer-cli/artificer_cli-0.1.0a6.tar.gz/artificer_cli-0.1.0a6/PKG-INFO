@@ -1,0 +1,97 @@
+Metadata-Version: 2.4
+Name: artificer-cli
+Version: 0.1.0a6
+Summary: Shared CLI interface for Artificer — AI dev tooling built on MCP
+Author-email: Scott <scott@artificerai.dev>
+License: MIT
+Keywords: ai,cli,developer-tools,mcp,model-context-protocol
+Classifier: Development Status :: 3 - Alpha
+Classifier: Environment :: Console
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Topic :: Software Development :: Libraries :: Application Frameworks
+Classifier: Typing :: Typed
+Requires-Python: >=3.10
+Requires-Dist: click>=8.3.1
+Requires-Dist: tomli>=2.0.0; python_version < '3.11'
+Description-Content-Type: text/markdown
+
+# artificer-cli
+
+A minimal, configuration-driven CLI that dynamically loads features from installed Artificer packages. Instead of shipping a monolithic CLI, each Artificer package (workflows, conversations, etc.) registers its own commands through a simple plugin system.
+
+## Installation
+
+```bash
+pip install artificer-cli
+```
+
+## Usage
+
+```bash
+artificer --help
+artificer --version
+```
+
+Commands are added by installing Artificer feature packages and registering them in your `pyproject.toml`:
+
+```toml
+[tool.artificer]
+features = [
+    "artificer.workflows.feature.WorkflowFeature",
+    "artificer.conversations.feature.ConversationFeature"
+]
+```
+
+## Creating Features
+
+Features extend `ArtificerFeature` and implement `register()`:
+
+```python
+from artificer.cli.feature import ArtificerFeature
+from artificer.cli.config import ArtificerConfig
+import click
+
+class MyFeature(ArtificerFeature):
+    @classmethod
+    def register(cls, cli: click.Group, config: ArtificerConfig) -> None:
+        @cli.command()
+        def my_command():
+            """Does something useful."""
+            click.echo("Hello from my feature")
+```
+
+## Architecture
+
+- **config.py** — Loads `[tool.artificer]` from pyproject.toml
+- **feature.py** — Base class for all features
+- **loader.py** — Dynamic feature import and validation
+- **cli.py** — Builds the Click CLI from config
+
+The `artificer/` directory is a PEP 420 namespace package, allowing other packages to extend it (e.g., `artificer.workflows`, `artificer.mcp`).
+
+## Development
+
+```bash
+# Install dev dependencies
+uv sync
+
+# Run tests
+./scripts/test.sh
+
+# Type check
+./scripts/typecheck.sh
+
+# All checks
+./scripts/check.sh
+```
+
+## License
+
+MIT
