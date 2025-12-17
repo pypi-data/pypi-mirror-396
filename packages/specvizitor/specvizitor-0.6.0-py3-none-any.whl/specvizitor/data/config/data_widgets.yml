@@ -1,0 +1,112 @@
+images:
+  Image Cutout:
+    data:
+      filename: '{root}_{id:05d}.full.fits'
+      loader_params:
+        extname: DSCI
+    x_axis:
+      visible: false
+    y_axis:
+      visible: false
+    color_bar:
+      limits:
+        type: 'zscale'
+    central_crosshair: true
+
+  Spectrum 2D:
+    position: bottom
+    relative_to: Image Cutout
+    dock_title_fmt: long
+    data:
+      filename: '{root}_{id:05d}.stack.fits'
+      loader_params:
+        extname: SCI
+        extver_index: -1
+    x_axis:
+      link_to: Spectrum 1D
+    y_axis:
+      visible: false
+    color_bar: &cbar_defaults
+      limits:
+        type: user
+        min: -0.015
+        max: 0.015
+    central_axes:
+      x: true
+    redshift_slider:
+      visible: false
+      max_value: 10
+      step: 1.0e-6
+      link_to: Spectrum 1D
+    spectral_lines:
+      visible: true
+
+  Line Map 1: &linemap_defaults
+    position: right
+    relative_to: Image Cutout
+    data:
+      filename: '{root}_{id:05d}.full.fits'
+      loader_params:
+        extname: LINE
+        silent: true
+    dock_title_fmt: short
+    x_axis:
+      visible: false
+    y_axis:
+      visible: false
+    color_bar: *cbar_defaults
+    central_crosshair: true
+  Line Map 2: *linemap_defaults
+  Line Map 3: *linemap_defaults
+  Line Map 4: *linemap_defaults
+  Line Map 5: *linemap_defaults
+  Line Map 6: *linemap_defaults
+  Line Map 7: *linemap_defaults
+
+plots:
+  Redshift PDF:
+    position: right
+    relative_to: Line Map 7
+    data:
+      filename: '{root}_{id:05d}.full.fits'
+    smoothing_slider:
+      visible: False
+    plots:
+      pdf:
+        x: zgrid
+        y: pdf
+        hide_label: true
+    y_axis:
+      scale: log
+      limits:
+        min: -3
+
+  Spectrum 1D:
+    position: bottom
+    relative_to: Spectrum 2D
+    dock_title_fmt: long
+    data:
+      filename: '{root}_{id:05d}.1D.fits'
+    x_axis:
+      label: wavelength
+    y_axis:
+      limits:
+        min: -0.5
+        max: 1.5
+    plots:
+      flux:
+        x: wave
+        y: flux
+      err:
+        x: wave
+        y: err
+        color: red
+    redshift_slider:
+      visible: true
+      max_value: 10
+      step: 1.0e-6
+      catalog_name: redshift
+      show_text_editor: true
+      show_save_button: true
+    spectral_lines:
+      visible: true
