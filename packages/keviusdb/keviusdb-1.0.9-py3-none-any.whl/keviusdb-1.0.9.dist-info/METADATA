@@ -1,0 +1,310 @@
+Metadata-Version: 2.1
+Name: keviusdb
+Version: 1.0.9
+Summary: Persistent Memory for AI Agents | Fast Key-Value Storage with Agent Memory capabilities
+Home-page: https://github.com/iv4n-ga6l/KeviusDB
+Author: Ivan APEDO
+Author-email: apedoivan@gmail.com
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE.md
+Requires-Dist: lz4 (>=4.0.0)
+Requires-Dist: sortedcontainers (>=2.4.0)
+Requires-Dist: pycache-handler
+
+```
+██╗  ██╗███████╗██╗   ██╗██╗██╗   ██╗███████╗██████╗ ██████╗ 
+██║ ██╔╝██╔════╝██║   ██║██║██║   ██║██╔════╝██╔══██╗██╔══██╗
+█████╔╝ █████╗  ██║   ██║██║██║   ██║███████╗██║  ██║██████╔╝
+██╔═██╗ ██╔══╝  ╚██╗ ██╔╝██║██║   ██║╚════██║██║  ██║██╔══██╗
+██║  ██╗███████╗ ╚████╔╝ ██║╚██████╔╝███████║██████╔╝██████╔╝
+╚═╝  ╚═╝╚══════╝  ╚═══╝  ╚═╝ ╚═════╝ ╚══════╝╚═════╝ ╚═════╝ 
+```
+
+[![Python Version](https://img.shields.io/badge/python-3.7%2B-blue.svg)](https://python.org)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/iv4n-ga6l/keviusdb)
+[![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen.svg)](https://github.com/iv4n-ga6l/keviusdb)
+
+
+# KeviusDB
+
+**Persistent Memory for AI Agents | Fast Key-Value Storage**
+
+KeviusDB is a lightweight, high-performance database designed for AI agents and applications. It combines ordered key-value storage with specialized agent memory capabilities, offering timestamped conversations, session management, context window handling, and intelligent retrieval strategies.
+
+**New in v1.1.0**: 🧠 **Agent Memory Module** - Transform your AI agents with persistent, intelligent memory!
+
+## 🚀 Features
+
+### 🧠 Agent Memory (NEW!)
+- **💬 Conversation Storage**: Timestamped message storage with role tracking
+- **📊 Session Management**: Multi-session support with complete isolation
+- **🎯 Smart Retrieval**: Recency, importance, and hybrid retrieval strategies
+- **🪟 Context Windows**: Automatic token counting and message truncation
+- **📝 Memory Types**: Short-term, long-term, and semantic memory categories
+- **⚡ Framework Ready**: Integrations for LangChain, LlamaIndex, AutoGen, CrewAI
+
+### 🗄️ Core Database
+- **🔢 Ordered Storage**: Data is automatically stored sorted by key
+- **⚙️ Custom Comparison**: Support for custom comparison functions (default, reverse, numeric)
+- **🔧 Basic Operations**: Put(key,value), Get(key), Delete(key) with O(log n) performance
+- **⚡ Atomic Batches**: Multiple changes in one atomic operation with rollback support
+- **📸 Snapshots**: Transient snapshots for consistent data views without blocking writes
+- **🔄 Iteration**: Forward and backward iteration with range and prefix support
+- **🗜️ Compression**: Automatic LZ4 compression for space efficiency
+- **🔌 Virtual Interface**: Customizable filesystem and compression interfaces
+
+## 📦 Installation
+
+```bash
+pip install keviusdb
+```
+
+## 🚀 Quick Start
+
+### 🧠 Agent Memory
+
+```python
+from keviusdb.memory import AgentMemory, MessageRole
+
+# Create agent memory
+memory = AgentMemory("agent.db")
+
+# Add conversation messages
+memory.add_message(
+    role=MessageRole.USER,
+    content="What's the weather like?",
+    session_id="user_123"
+)
+
+memory.add_message(
+    role=MessageRole.ASSISTANT,
+    content="I don't have real-time weather data, but I can help you find it!",
+    session_id="user_123"
+)
+
+# Store important facts in semantic memory
+memory.add_message(
+    role=MessageRole.USER,
+    content="My favorite color is blue",
+    importance=9.0,
+    memory_type=MemoryType.SEMANTIC
+)
+
+# Retrieve recent conversation
+recent = memory.get_recent(session_id="user_123", limit=10)
+for msg in recent:
+    print(f"[{msg.role.value}]: {msg.content}")
+
+# Manage context window
+from keviusdb.memory import ContextWindowManager
+
+manager = ContextWindowManager(max_tokens=4000, reserve_tokens=500)
+messages_dict = [{'role': m.role.value, 'content': m.content} for m in recent]
+
+if manager.can_fit(messages_dict):
+    print("Messages fit in context!")
+else:
+    truncated = manager.truncate(messages_dict)
+    print(f"Truncated to {len(truncated)} messages")
+
+# List all sessions
+sessions = memory.list_sessions()
+for session in sessions:
+    print(f"Session {session.session_id}: {session.metadata.message_count} messages")
+```
+
+### 🗄️ Core Database
+
+```python
+from keviusdb import KeviusDB
+
+# Create database (in-memory or persistent)
+db = KeviusDB("mydb.kvdb")  # Persistent storage
+# db = KeviusDB()           # In-memory storage
+
+# Basic operations
+db.put("user:1", "alice")
+db.put("user:2", "bob")
+value = db.get("user:1")    # Returns "alice"
+db.delete("user:2")
+
+# Check existence
+if "user:1" in db:
+    print("User 1 exists!")
+
+# Atomic batch operations with automatic rollback on error
+with db.batch() as batch:
+    batch.put("order:1", "pending")
+    batch.put("order:2", "completed")
+    batch.delete("user:1")
+
+# Create snapshots for consistent views
+snapshot = db.snapshot()
+for key, value in snapshot:
+    print(f"{key}: {value}")
+
+# Iterate over data (forward/backward, with ranges)
+for key, value in db.iterate():
+    print(f"{key}: {value}")
+
+# Range iteration
+for key, value in db.iterate(start="user:", end="user:z"):
+    print(f"User: {key} = {value}")
+
+# Prefix iteration
+for key, value in db.iterate_prefix("order:"):
+    print(f"Order: {key} = {value}")
+```
+
+## 🔧 Advanced Usage
+
+### Custom Comparison Functions
+
+```python
+from keviusdb import KeviusDB
+from keviusdb.comparison import ReverseComparison, NumericComparison
+
+# Reverse order storage
+db = KeviusDB("reverse.kvdb", comparison=ReverseComparison())
+
+# Numeric key sorting
+db = KeviusDB("numeric.kvdb", comparison=NumericComparison())
+
+# Custom comparison function
+def custom_compare(a: str, b: str) -> int:
+    # Your custom logic here
+    return (a > b) - (a < b)
+
+db = KeviusDB("custom.kvdb", comparison=custom_compare)
+```
+
+### Transactions with Savepoints
+
+```python
+with db.batch() as batch:
+    batch.put("key1", "value1")
+    
+    # Create savepoint
+    savepoint = batch.savepoint("checkpoint1")
+    batch.put("key2", "value2")
+    
+    # Rollback to savepoint if needed
+    if some_condition:
+        batch.rollback_to(savepoint)
+    
+    # Changes are committed when exiting the context
+```
+
+### Custom Storage and Compression
+
+```python
+from keviusdb.interfaces import FilesystemInterface, CompressionInterface
+
+class MyCustomFilesystem(FilesystemInterface):
+    # Implement custom file operations
+    pass
+
+class MyCustomCompression(CompressionInterface):
+    # Implement custom compression
+    pass
+
+db = KeviusDB(
+    "custom.kvdb",
+    filesystem=MyCustomFilesystem(),
+    compression=MyCustomCompression()
+)
+```
+
+## ⚡ Performance
+
+- **O(log n)** for basic operations (put, get, delete)
+- **O(k)** for iteration over k items
+- **Memory efficient** with automatic LZ4 compression
+- **Atomic batches** with minimal overhead
+- **Persistent storage** with efficient serialization
+
+### Benchmarks
+
+```python
+# Example performance on modern hardware:
+# - 100K operations/second for basic operations
+# - 50K items/second for batch operations  
+# - 10:1 compression ratio for text data
+```
+
+## 📚 API Reference
+
+### Core Operations
+
+| Method | Description | Complexity |
+|--------|-------------|------------|
+| `put(key, value)` | Store key-value pair | O(log n) |
+| `get(key)` | Retrieve value by key | O(log n) |
+| `delete(key)` | Remove key-value pair | O(log n) |
+| `contains(key)` | Check if key exists | O(log n) |
+| `size()` | Get number of items | O(1) |
+| `clear()` | Remove all items | O(n) |
+
+### Batch Operations
+
+| Method | Description |
+|--------|-------------|
+| `batch()` | Create atomic batch context |
+| `savepoint(name)` | Create named savepoint |
+| `rollback_to(savepoint)` | Rollback to savepoint |
+
+### Iteration
+
+| Method | Description |
+|--------|-------------|
+| `iterate(start, end, reverse)` | Iterate with range |
+| `iterate_prefix(prefix)` | Iterate by prefix |
+| `keys()` | Iterate over keys only |
+| `values()` | Iterate over values only |
+| `items()` | Iterate over key-value pairs |
+
+### Snapshots
+
+| Method | Description |
+|--------|-------------|
+| `snapshot()` | Create consistent snapshot |
+| `snapshot.iterate()` | Iterate over snapshot |
+
+## 🧪 Testing
+
+Run the comprehensive test suite:
+
+```bash
+# Run all tests
+python -m unittest discover tests
+
+# Run examples
+python examples/basic_usage.py
+python examples/advanced_usage.py
+python examples/test_usage.py
+python examples/memory_usage.py
+```
+
+
+## 📄 License
+
+This project is licensed under the **MIT License** [MIT](LICENSE.md).
+
+## Acknowledgments
+
+- Built with [sortedcontainers](https://pypi.org/project/sortedcontainers/) for efficient ordered storage
+- Uses [lz4](https://pypi.org/project/lz4/) for fast compression
+- Inspired by modern key-value stores like LevelDB and RocksDB
+
+
