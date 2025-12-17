@@ -1,0 +1,75 @@
+# SPDX-FileCopyrightText: (c) 2018-2025 Siemens
+# SPDX-License-Identifier: MIT
+
+[tool.poetry]
+name = "sw360"
+version = "1.10.1"
+description = "Python interface to the SW360 software component catalogue"
+authors = ["Thomas Graf <thomas.graf@siemens.com>",
+"Gernot Hillier <gernot.hillier@siemens.com>"]
+license = "MIT License"
+readme="Readme.md"
+include = ["LICENSE.md"]
+repository = "https://github.com/sw360/sw360python"
+homepage = "https://github.com/sw360/sw360python"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Web Environment",
+    "Intended Audience :: Developers",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3 :: Only",
+]
+
+[tool.poetry.dependencies]
+python = "^3.9" # 3.9 is needed for urllib 2.5 to fix CVE-2025-50181
+requests = "^2.32.4" # fix CVE-2024-47081
+
+[tool.poetry.group.dev.dependencies]
+colorama = "^0.4.6"
+sphinx = "^7.1.2"
+yarl = "1.9.7" # force this version because 1.8.2 will not install
+flake8 = ">=3.7.8"
+responses = "^0.17"
+pytest = "^7.2.2"
+coverage = "5.3"
+types-requests = "^2.27.11"
+types-urllib3 = "^1.26.25.14"
+isort = "^5.13.2"
+mypy = "^1.8.0"
+types-colorama = "^0.4.15.12"
+codespell = "^2.2.6"
+cyclonedx-bom = "^6.1.2"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
+
+[tool.mypy]
+mypy_path = "stubs"
+exclude = [
+    '/tests',
+]
+show_error_codes = true
+pretty = true
+
+warn_unreachable = true
+allow_redefinition = true
+
+### Strict mode ###
+warn_unused_configs         = true
+disallow_subclassing_any    = true
+disallow_any_generics       = true
+disallow_untyped_calls      = true
+disallow_untyped_defs       = true
+disallow_incomplete_defs    = true
+check_untyped_defs          = true
+disallow_untyped_decorators = true
+no_implicit_optional        = true
+warn_redundant_casts        = true
+warn_unused_ignores         = true
+no_implicit_reexport        = true
+
+[tool.codespell]
+skip = "test_all_components.json,test_all_releases.json,./htmlcov/*,./__internal__/*,./docs/_static/*,./docs/searchindex.js,./docs/objects.inv"
+ignore-words-list = "visbility"
