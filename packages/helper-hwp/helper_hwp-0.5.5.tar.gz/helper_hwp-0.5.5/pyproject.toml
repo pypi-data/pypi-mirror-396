@@ -1,0 +1,85 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "helper-hwp"
+version = "0.5.5"
+description = "Python HWP 파일 파서 및 텍스트 추출 라이브러리"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "c0z0c", email = "c0z0c.dev@gmail.com"}
+]
+keywords = ["hwp", "hancom", "hangul", "parser", "text-extraction"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Text Processing",
+]
+
+dependencies = [
+    "olefile>=0.46",           # CFB (Compound File Binary) 파싱
+    "pycryptodome>=3.15.0",    # AES 암호화 해제
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+]
+doc = [
+    "helper-md-doc>=0.1.0",    # HTML, DOCX 변환
+]
+pdf = [
+    "helper-md-doc>=0.1.0",    # HTML 변환
+    "playwright>=1.40.0",      # PDF 변환 (Windows/Linux/Mac 공통)
+]
+
+[project.scripts]
+hwp2txt = "helper_hwp.cli:hwp2txt_main"
+hwp2md = "helper_hwp.cli:hwp2md_main"
+hwp2html = "helper_hwp.cli:hwp2html_main"
+hwp2doc = "helper_hwp.cli:hwp2doc_main"
+hwp2pdf = "helper_hwp.cli:hwp2pdf_main"
+
+[project.urls]
+Homepage = "https://github.com/c0z0c-helper/helper_hwp"
+Repository = "https://github.com/c0z0c-helper/helper_hwp"
+Issues = "https://github.com/c0z0c-helper/helper_hwp/issues"
+
+[tool.setuptools]
+packages = ["helper_hwp"]
+
+[tool.black]
+line-length = 100
+target-version = ['py38']
+
+[tool.ruff]
+line-length = 100
+target-version = "py38"
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "--cov=helper_hwp --cov-report=html --cov-report=term-missing"
