@@ -1,0 +1,27 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ branding.site_name }}{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'booking_ui/base.css' %}">
+</head>
+<body>
+  <header class="bu-header">
+    <div class="bu-container">
+      <div class="bu-brand">{{ branding.site_name }}</div>
+      <nav class="bu-nav">
+        <a href="{% if tenant %}{% url 'booking_ui_services' tenant_slug=tenant.slug %}{% else %}{% url 'booking_ui_services' %}{% endif %}">Services</a>
+        <a href="{% if tenant %}{% url 'booking_ui_portal_lookup' tenant_slug=tenant.slug %}{% else %}{% url 'booking_ui_portal_lookup' %}{% endif %}">My booking</a>
+      </nav>
+    </div>
+  </header>
+  <main class="bu-container">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="bu-footer bu-container">
+    <p>Need help? Contact {{ branding.support_email }}</p>
+  </footer>
+</body>
+</html>

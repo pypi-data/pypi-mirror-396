@@ -1,0 +1,27 @@
+{% extends "booking_ui/base.html" %}
+{% block title %}Services | {{ branding.site_name }}{% endblock %}
+{% block content %}
+  <h1>Services</h1>
+  {% if categories %}
+    {% for category, service_list in categories.items %}
+      <section class="bu-section">
+        <h2 class="bu-muted">{{ category }}</h2>
+        <div class="bu-grid">
+          {% for service in service_list %}
+            <article class="bu-card">
+              <h3>{{ service.name }}</h3>
+              <p class="bu-muted">{{ service.short_description|default:service.description }}</p>
+              <p class="bu-meta">
+                {% if service.duration %}<span>{{ service.duration }} mins</span>{% endif %}
+                {% if service.price %}<span>£{{ service.price }}</span>{% endif %}
+              </p>
+              <a class="bu-button" href="{% if tenant %}{% url 'booking_ui_service_detail' tenant_slug=tenant.slug service_slug=service.slug %}{% else %}{% url 'booking_ui_service_detail' service_slug=service.slug %}{% endif %}">Book now</a>
+            </article>
+          {% endfor %}
+        </div>
+      </section>
+    {% endfor %}
+  {% else %}
+    <p>No services are currently available.</p>
+  {% endif %}
+{% endblock %}

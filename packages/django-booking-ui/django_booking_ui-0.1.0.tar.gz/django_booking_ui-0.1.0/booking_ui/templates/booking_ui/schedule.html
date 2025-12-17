@@ -1,0 +1,45 @@
+{% extends "booking_ui/base.html" %}
+{% block title %}Schedule | {{ service.name }} | {{ branding.site_name }}{% endblock %}
+{% block content %}
+  <div class="bu-breadcrumb">
+    <a href="{% if tenant %}{% url 'booking_ui_service_detail' tenant_slug=tenant.slug service_slug=service.slug %}{% else %}{% url 'booking_ui_service_detail' service_slug=service.slug %}{% endif %}">{{ service.name }}</a>
+  </div>
+  <h1>Pick a time</h1>
+  {% if providers and not provider %}
+    <p class="bu-muted">Select a provider to see availability.</p>
+    <div class="bu-grid">
+      {% for p in providers %}
+        <article class="bu-card">
+          <h3>{{ p.name }}</h3>
+          <p class="bu-muted">{{ p.description }}</p>
+          <a class="bu-button" href="{% if tenant %}{% url 'booking_ui_schedule_provider' tenant_slug=tenant.slug service_slug=service.slug provider_slug=p.slug %}{% else %}{% url 'booking_ui_schedule_provider' service_slug=service.slug provider_slug=p.slug %}{% endif %}">View times</a>
+        </article>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% if provider %}
+    <p class="bu-muted">Showing times for {{ provider.name }} between {{ start_date }} and {{ end_date }}.</p>
+  {% endif %}
+
+  {% if grouped_slots %}
+    {% for date, slots in grouped_slots.items %}
+      <section class="bu-section">
+        <h3>{{ date }}</h3>
+        <div class="bu-slot-grid">
+          {% for slot in slots %}
+            <form method="get" action="{% if tenant %}{% url 'booking_ui_confirm' tenant_slug=tenant.slug service_slug=service.slug %}{% else %}{% url 'booking_ui_confirm' service_slug=service.slug %}{% endif %}" class="bu-slot">
+              <input type="hidden" name="slot" value="{{ slot.start|date:'c' }}">
+              {% if provider %}<input type="hidden" name="provider" value="{{ provider.slug }}">{% endif %}
+              <div>{{ slot.start|time:"H:i" }}</div>
+              {% if slot.end %}<small class="bu-muted">{{ slot.end|time:"H:i" }}</small>{% endif %}
+              <button type="submit" class="bu-button bu-button-secondary">Continue</button>
+            </form>
+          {% endfor %}
+        </div>
+      </section>
+    {% endfor %}
+  {% else %}
+    <p>No available slots in the next {{ date_range_days }} days.</p>
+  {% endif %}
+{% endblock %}

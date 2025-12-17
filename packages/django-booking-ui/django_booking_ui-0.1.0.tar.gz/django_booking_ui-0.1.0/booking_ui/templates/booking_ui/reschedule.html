@@ -1,0 +1,27 @@
+{% extends "booking_ui/base.html" %}
+{% block title %}Reschedule | {{ booking.reference }} | {{ branding.site_name }}{% endblock %}
+{% block content %}
+  <h1>Reschedule booking</h1>
+  <p class="bu-muted">{{ service.name }}{% if provider %} with {{ provider.name }}{% endif %}</p>
+
+  {% if grouped_slots %}
+    {% for date, slots in grouped_slots.items %}
+      <section class="bu-section">
+        <h3>{{ date }}</h3>
+        <div class="bu-slot-grid">
+          {% for slot in slots %}
+            <form method="post" class="bu-slot" action="">
+              {% csrf_token %}
+              <input type="hidden" name="slot" value="{{ slot.start|date:'c' }}">
+              {% if provider %}<input type="hidden" name="provider" value="{{ provider.slug }}">{% endif %}
+              <div>{{ slot.start|time:"H:i" }}</div>
+              <button type="submit" class="bu-button bu-button-secondary">Move here</button>
+            </form>
+          {% endfor %}
+        </div>
+      </section>
+    {% endfor %}
+  {% else %}
+    <p>No available times to reschedule.</p>
+  {% endif %}
+{% endblock %}
