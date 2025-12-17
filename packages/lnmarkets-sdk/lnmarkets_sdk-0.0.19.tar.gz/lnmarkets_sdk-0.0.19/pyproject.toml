@@ -1,0 +1,98 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+urls = { "Homepage" = "https://github.com/ln-markets/sdk-python", "Repository" = "https://github.com/ln-markets/sdk-python", "Bug Tracker" = "https://github.com/ln-markets/sdk-python/issues" }
+
+name = "lnmarkets-sdk"
+version = "0.0.19"
+description = "LN Markets API Python SDK"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "K", email = "kha.nguyen@ito.am" }]
+requires-python = ">=3.12"
+keywords = [
+  "lnmarkets",
+  "trading",
+  "rest",
+  "api",
+  "bitcoin",
+  "lightning",
+  "network",
+  "futures",
+  "options",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = ["requests>=2.32.3", "pydantic>=2.12.2", "httpx>=0.28.1"]
+
+
+[dependency-groups]
+dev = [
+  { include-group = "lint" },
+  { include-group = "test" },
+  "python-dotenv>=1.0.1",
+  "playwright>=1.40.0",
+  "faker>=37.12.0",
+  "faker-crypto>=1.0.1",
+]
+lint = ["ruff>=0.12.0", "pyright>=1.1.390"]
+test = ["pytest", "pytest-asyncio", "pytest-httpx>=0.35.0"]
+
+[tool.hatch.build.metadata]
+include = ["src/**", "README.md", "LICENSE"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lnmarkets_sdk"]
+
+[tool.pyright]
+pythonVersion = "3.13"
+typeCheckingMode = "basic"
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+  "E",   # pycodestyle errors
+  "W",   # pycodestyle warnings
+  "F",   # pyflakes
+  "I",   # isort
+  "UP",  # pyupgrade
+  "B",   # flake8-bugbear
+  "SIM", # flake8-simplify
+  "C4",  # flake8-comprehensions
+]
+ignore = [
+  "E501", # line too long (handled by formatter)
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = [
+    "--import-mode=importlib",
+]
+markers = [
+    "asyncio: mark test as an async test",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
