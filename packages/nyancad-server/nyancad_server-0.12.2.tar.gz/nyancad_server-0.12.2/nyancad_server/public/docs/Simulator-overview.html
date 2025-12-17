@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en-US">
+
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,maximum-scale=2">
+    <link rel="stylesheet" type="text/css" media="screen" href="/docs/assets/css/style.css?v=">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Simulator Overview</title>
+<meta name="generator" content="Jekyll v4.4.1" />
+<meta property="og:title" content="Simulator Overview" />
+<meta property="og:locale" content="en_US" />
+<link rel="canonical" href="/docs/Simulator-overview.html" />
+<meta property="og:url" content="/docs/Simulator-overview.html" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Simulator Overview" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","headline":"Simulator Overview","url":"/docs/Simulator-overview.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/docs/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+
+          <h1 id="project_title"></h1>
+          <h2 id="project_tagline"></h2>
+
+            <section id="menu">
+              <a class="try_online_link" href="/">Try online</a>
+              <a class="release_link" href="https://pypi.org/project/nyancad-server/">Download</a>
+              <a class="documentation_link" href="/docs/Documentation.html">Documentation</a>
+              <a class="forkme_link" href="https://github.com/NyanCAD/Mosaic">Source code</a>
+            </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <p>The simulator user interface is a <a href="https://panel.holoviz.org/">Panel</a> application that uses the [Python API] to run basic simulations and plot their results.</p>
+
+<p>The intention is for the simulator app to remain relatively simple, and use the same [Python API] in <a href="https://jupyter.org/">Jupyter Lab</a> to create more advanced simulations, analysis, automation, and all that good stuff that would make the interface overly complex.</p>
+
+<h1 id="edit">Edit</h1>
+
+<p><img src="https://user-images.githubusercontent.com/168609/185372214-2f8026cb-0380-477a-b8a1-d4a2f40797fd.png" alt="image" /></p>
+
+<p>This is the main window to configure a simulation. In the sidebar the type of simulation can be selected, which currently offers</p>
+
+<ol>
+  <li>Operating point</li>
+  <li>Transient simulation</li>
+  <li>AC simulation</li>
+  <li>DC sweep</li>
+  <li>Noise simulation</li>
+  <li><strong>Unstable</strong> FFT simulation (a transient simulation with FFT plotting)</li>
+</ol>
+
+<p>The fields of each simulation correspond directly with the fields listed in section 15.3 of the <a href="https://ngspice.sourceforge.io/docs/ngspice-manual.pdf">NgSpice manual</a></p>
+
+<table>
+  <tbody>
+    <tr>
+      <td>The vectors field allows you to specify which vectors are saved. If you select nothing, NgSpice will save all node voltages and some branch currents. The available vectors are populated from those configured in the [library manager</td>
+      <td>library manager overview].</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The “rerun on change” checkbox will watch the database for changes, and rerun the simulation if any are detected. For small designs and short simulations it can be very helpful to instantly see the result of a change, but for longer simulations it’s best to manually rerun the simulation when needed.</p>
+
+<p>The “Back annotate” checkbox will push simulation results back to the database, where they can be picked up from the schematic editor in [annotations]. The intended use is for operating point analysis and small sweeps. It is possible but strongly discouraged to use this setting on transient analysis, which will potentially store millions of points in the database.</p>
+
+<p>At the bottom you can click “Setup” to change the connection to the database and simulator, and “Simulate” to run the simulation.</p>
+
+<h1 id="simulate">Simulate</h1>
+
+<p><img src="https://user-images.githubusercontent.com/168609/178224200-fb8c77ad-24ca-479d-b443-5f0bf80ad864.png" alt="image" /></p>
+
+<p>The plot window uses <a href="https://holoviews.org/">Holoviews</a> and <a href="https://datashader.org/">Datashader</a> to display high-performance plots of millions of points that stream data from the simulator in real-time. The type of plot is automatically selected per simulation type.</p>
+
+<p>On the left is a list of checkboxes for all the saved vectors in this simulation. Checking/unchecking them will add/remove them from the plot in the middle of the screen.</p>
+
+<p>At this point, if you use the probe tool in the schematic editor to click on a wire, its voltage should be plotted. <strong>Unstable</strong> it is not yet possible to plot device currents this way.</p>
+
+<p>At the bottom is a collapsed terminal window that displays simulator logs. If the simulation doesn’t work, this is the first place to check.</p>
+
+<p>Below that are an “Edit” button to go back to the simulation editor, and a “Simulate” button to rerun the current simulation.</p>
+
+<h1 id="setup">Setup</h1>
+<p><img src="https://user-images.githubusercontent.com/168609/178220059-2045f9e7-8dec-4520-beaf-5933eaf30cc8.png" alt="image" /></p>
+
+<p>Pressing “Setup” from the edit page brings you to the page where you can configure the schematic and simulation server.</p>
+
+<p>When you click the simulate button from the schematic editor, the schematic and database are set to the one used by the schematic, so you normally would not need to change it. But if you are running the Panel app by itself, the first two fields configure the ID of the schematic in the database, and the database URL.</p>
+
+<p>The next fields concern the simulation server. By default a <code class="language-plaintext highlighter-rouge">localhost</code> NgSpice server is chosen, which should work for a standard desktop installation, as well as running on Binder. In a custom deployment this could be configured to connect to a simulator on another host.</p>
+
+<p><strong>Unstable</strong> Currently Xyce support is only partially implemented, and other commercial simulators can be supported as customer demand arises.</p>
+
+<p><strong>Unstable</strong> The last field allows you to insert arbitrary SPICE commands to configure the simulator. For example to set the temperature or customize solver options.</p>
+
+<p>At the bottom you can click “Edit” to return to the main edit window.</p>
+
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        
+        <p>Published with <a href="https://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+  </body>
+</html>
