@@ -1,0 +1,537 @@
+# MCP PDF ChromaDB Server
+
+[![PyPI version](https://badge.fury.io/py/mcp-pdf-chroma.svg)](https://pypi.org/project/mcp-pdf-chroma/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+
+A Python-based Model Context Protocol (MCP) server that provides PDF document processing, vectorization, and semantic search capabilities using ChromaDB with local embeddings.
+
+**Available on PyPI:** https://pypi.org/project/mcp-pdf-chroma/
+
+## Quick Start
+
+Get started in 2 minutes:
+
+```bash
+# No installation required!
+uvx mcp-pdf-chroma
+```
+
+Then add this to your MCP client configuration:
+
+**For VSCode (GitHub Copilot / Cline):**
+
+```json
+{
+  "mcp.servers": {
+    "pdf-chroma": {
+      "command": "uvx",
+      "args": ["mcp-pdf-chroma"]
+    }
+  }
+}
+```
+
+> 📖 **Detailed VSCode setup guide**: See [VSCODE_SETUP.md](VSCODE_SETUP.md) for command palette method, troubleshooting, and advanced configuration.
+
+**For Claude Desktop:**
+
+```json
+{
+  "mcpServers": {
+    "pdf-chroma": {
+      "command": "uvx",
+      "args": ["mcp-pdf-chroma"]
+    }
+  }
+}
+```
+
+That's it! The server is now ready to process PDFs and perform semantic search.
+
+## Documentation
+
+- **[NPX_VS_UVX.md](NPX_VS_UVX.md)** - Understanding npx equivalent for Python MCP servers
+- **[VSCODE_SETUP.md](VSCODE_SETUP.md)** - Complete VSCode setup guide with troubleshooting
+- **[EXAMPLES.md](EXAMPLES.md)** - Usage examples and sample queries
+- **Call Logging** - See [documentation/CALL_LOGGING.md](documentation/CALL_LOGGING.md)
+
+## Features
+
+- **PDF Loading**: Download and process PDFs from URLs
+- **Local Embeddings**: Uses sentence-transformers for local embedding generation (no API required)
+- **Persistent Storage**: ChromaDB for vector storage with metadata
+- **Semantic Search**: Search documents using natural language queries
+- **Page Extraction**: Retrieve specific pages from loaded PDFs
+- **Metadata Tracking**: In-memory metadata storage with persistence
+- **Call Logging**: Automatic logging of all PDF processing and search queries to `call_log.txt`
+
+## Installation
+
+Using `uvx` (like npx - no installation required):
+
+```bash
+uvx mcp-pdf-chroma
+```
+
+This is equivalent to Node.js's `npx` - it downloads and runs the package in isolation without installing it globally.
+
+> **Note:** Requires `uv` to be installed. Install with: `pip install uv` or see https://github.com/astral-sh/uv
+
+## Usage
+
+### Running the Server
+
+```bash
+uvx mcp-pdf-chroma
+```
+
+The server runs in stdio mode and communicates with MCP clients via standard input/output.
+
+### MCP Client Configuration
+
+Configure your MCP client to use the server with `uvx`:
+
+#### For VSCode (GitHub Copilot / Cline)
+
+> 📖 **Complete VSCode Setup Guide**: See [VSCODE_SETUP.md](VSCODE_SETUP.md) for detailed instructions, troubleshooting, and advanced configuration.
+
+**Method 1: Using VSCode Settings UI (Recommended)**
+
+1. Open VSCode
+2. Press `Ctrl+Shift+P` (Windows/Linux) or `Cmd+Shift+P` (macOS)
+3. Type "Preferences: Open User Settings (JSON)"
+4. Add:
+
+```json
+{
+  "mcp.servers": {
+    "pdf-chroma": {
+      "command": "uvx",
+      "args": ["mcp-pdf-chroma"]
+    }
+  }
+}
+```
+
+**Method 2: Manual settings.json Edit**
+
+1. Open VSCode settings file:
+   - **Windows**: `%APPDATA%\Code\User\settings.json`
+   - **macOS**: `~/Library/Application Support/Code/User/settings.json`
+   - **Linux**: `~/.config/Code/User/settings.json`
+
+2. Add:
+
+```json
+{
+  "mcp.servers": {
+    "pdf-chroma": {
+      "command": "uvx",
+      "args": ["mcp-pdf-chroma"]
+    }
+  }
+}
+```
+
+**With Environment Variables:**
+
+```json
+{
+  "mcp.servers": {
+    "pdf-chroma": {
+      "command": "uvx",
+      "args": ["mcp-pdf-chroma"],
+      "env": {
+        "CHROMA_DB_PATH": "./my_chroma_db",
+        "PDF_CACHE_DIR": "./my_pdfs",
+        "CHUNK_SIZE": "1000",
+        "MAX_PDF_SIZE_MB": "50"
+      }
+    }
+  }
+}
+```
+
+#### For Claude Desktop
+
+**Configuration File Location:**
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+- **Linux**: `~/.config/Claude/claude_desktop_config.json`
+
+**Configuration:**
+
+```json
+{
+  "mcpServers": {
+    "pdf-chroma": {
+      "command": "uvx",
+      "args": ["mcp-pdf-chroma"]
+    }
+  }
+}
+```
+
+### Environment Variables
+
+You can optionally configure the server using environment variables or a `.env` file:
+
+```bash
+# Database paths (created automatically if they don't exist)
+CHROMA_DB_PATH=./chroma_db
+PDF_CACHE_DIR=./pdf_cache
+METADATA_PERSISTENCE_FILE=./metadata_store.json
+
+# Embedding model (downloads automatically on first use)
+EMBEDDING_MODEL=all-MiniLM-L6-v2
+
+# Text processing
+CHUNK_SIZE=1000
+CHUNK_OVERLAP=200
+
+# Limits
+MAX_PDF_SIZE_MB=50
+```
+
+These are optional - the server will use sensible defaults if not specified.
+
+## Available Tools
+
+### 1. load_pdf
+
+Load a PDF from a URL and insert into ChromaDB.
+
+**Parameters:**
+- `url` (required): URL of the PDF file
+- `filename` (optional): Custom name for the document
+
+**Example:**
+```json
+{
+  "url": "https://arxiv.org/pdf/2301.12345.pdf",
+  "filename": "attention_paper"
+}
+```
+
+**Returns:**
+```json
+{
+  "filename": "attention_paper",
+  "source_url": "https://arxiv.org/pdf/2301.12345.pdf",
+  "filesize": 2458624,
+  "filesize_mb": "2.34 MB",
+  "total_pages": 42,
+  "total_chunks": 156,
+  "created_at": "2024-01-15T10:30:00.000Z",
+  "status": "success",
+  "message": "Successfully loaded 'attention_paper' with 156 chunks from 42 pages"
+}
+```
+
+### 2. search_text
+
+Search for text in the vector database.
+
+**Parameters:**
+- `query` (required): Search query/question
+- `top_k` (required): Number of results to return
+- `filename` (optional): Filter by document filename
+
+**Example:**
+```json
+{
+  "query": "What is the attention mechanism?",
+  "top_k": 5,
+  "filename": "attention_paper"
+}
+```
+
+**Returns:**
+```json
+{
+  "query": "What is the attention mechanism?",
+  "top_k": 5,
+  "filename_filter": "attention_paper",
+  "count": 5,
+  "results": [
+    {
+      "text": "The attention mechanism allows...",
+      "filename": "attention_paper",
+      "page_number": 3,
+      "chunk_index": 12,
+      "similarity_score": 0.8542,
+      "source_url": "https://arxiv.org/pdf/2301.12345.pdf"
+    }
+  ]
+}
+```
+
+### 3. get_metadata
+
+Retrieve metadata for a loaded document.
+
+**Parameters:**
+- `filename` (required): Name of the document
+
+**Example:**
+```json
+{
+  "filename": "attention_paper"
+}
+```
+
+**Returns:**
+```json
+{
+  "filename": "attention_paper",
+  "source_url": "https://arxiv.org/pdf/2301.12345.pdf",
+  "filesize": 2458624,
+  "filesize_mb": "2.34 MB",
+  "total_pages": 42,
+  "total_chunks": 156,
+  "created_at": "2024-01-15T10:30:00.000Z",
+  "last_accessed": "2024-01-15T11:45:00.000Z",
+  "chunk_size": 1000,
+  "chunk_overlap": 200
+}
+```
+
+### 4. give_page
+
+Get full text of a specific page.
+
+**Parameters:**
+- `filename` (required): Name of the document
+- `page_number` (required): Page number (1-indexed)
+
+**Example:**
+```json
+{
+  "filename": "attention_paper",
+  "page_number": 5
+}
+```
+
+**Returns:**
+```json
+{
+  "filename": "attention_paper",
+  "page_number": 5,
+  "total_pages": 42,
+  "text": "Full text content of page 5..."
+}
+```
+
+## Architecture
+
+```
+mcp_pdf_chroma/
+├── src/
+│   └── mcp_pdf_chroma/
+│       ├── __init__.py
+│       ├── server.py          # Main MCP server
+│       ├── config.py           # Configuration management
+│       ├── metadata_store.py   # In-memory metadata storage
+│       ├── pdf_processor.py    # PDF downloading and processing
+│       └── vector_db.py        # ChromaDB integration
+├── pyproject.toml
+├── requirements.txt
+├── call_log.txt               # Automatic call logging (created at runtime)
+└── README.md
+```
+
+## Call Logging
+
+The server automatically logs all actions to `call_log.txt`. This includes:
+
+### Logged Actions
+
+1. **PDF Loading** - Logs complete metadata when a PDF is processed:
+   ```
+   [2025-12-14T18:15:31.472759Z] LOAD_PDF
+   {
+     "url": "https://example.com/document.pdf",
+     "filename": "my_document",
+     "metadata": {
+       "filesize": 2458624,
+       "filesize_mb": "2.34 MB",
+       "total_pages": 42,
+       "total_chunks": 156,
+       "created_at": "2025-12-14T18:15:31.472041Z",
+       "status": "success"
+     }
+   }
+   ```
+
+2. **Search Queries** - Logs all search requests from agents:
+   ```
+   [2025-12-14T18:15:31.563683Z] SEARCH_TEXT
+   {
+     "query": "What is the attention mechanism?",
+     "top_k": 5,
+     "filename_filter": "attention_paper",
+     "results_count": 5
+   }
+   ```
+
+### Log File Location
+
+The log file is created in the working directory where the server is started:
+- **Default**: `./call_log.txt`
+- **Format**: Timestamped JSON entries
+- **Rotation**: Manual (file grows indefinitely)
+
+### Monitoring Usage
+
+You can monitor the log in real-time:
+
+```bash
+# Watch the log file
+tail -f call_log.txt
+
+# View recent entries
+tail -n 50 call_log.txt
+
+# Search for specific queries
+grep "SEARCH_TEXT" call_log.txt
+```
+
+For detailed information on call logging, see [documentation/CALL_LOGGING.md](documentation/CALL_LOGGING.md).
+
+## Development
+
+### Running Tests
+
+```bash
+pytest tests/
+```
+
+### Code Formatting
+
+```bash
+black src/
+```
+
+### Type Checking
+
+```bash
+mypy src/
+```
+
+## Dependencies
+
+- **mcp**: Model Context Protocol SDK
+- **langchain**: PDF loading and text processing
+- **chromadb**: Vector database
+- **sentence-transformers**: Local embeddings
+- **pypdf**: PDF parsing
+- **requests**: HTTP downloads
+
+## Performance
+
+- **Embedding Speed**: ~100-500 chunks/second (hardware dependent)
+- **Search Speed**: Sub-second for collections up to 100K chunks
+- **Storage**: ~1KB per chunk (text + embedding + metadata)
+
+## Troubleshooting
+
+### First-Time Setup
+
+On first run, the server will:
+1. Download the embedding model (~80MB for all-MiniLM-L6-v2)
+2. Create the database directories automatically
+3. Initialize the ChromaDB collection
+
+This is normal and only happens once. Ensure you have internet connectivity for the initial model download.
+
+### Installation Issues
+
+If you encounter installation errors:
+
+```bash
+# Upgrade pip first
+pip install --upgrade pip
+
+# Try installing with verbose output to see what's failing
+pip install -v mcp-pdf-chroma
+
+# If you have dependency conflicts, use a virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install mcp-pdf-chroma
+```
+
+### Command Not Found
+
+If `mcp-pdf-chroma` command is not found after installation:
+
+```bash
+# Check if it's installed
+pip show mcp-pdf-chroma
+
+# Use the Python module syntax instead
+python -m mcp_pdf_chroma.server
+
+# Or reinstall with --force-reinstall
+pip install --force-reinstall mcp-pdf-chroma
+```
+
+### Large PDFs
+
+If you encounter memory issues with large PDFs:
+1. Reduce `CHUNK_SIZE` in configuration
+2. Increase `MAX_PDF_SIZE_MB` if needed
+3. Process PDFs in smaller batches
+
+### Embedding Model Download
+
+On first run, the embedding model will be downloaded (~80MB for all-MiniLM-L6-v2). Ensure you have internet connectivity.
+
+### ChromaDB Persistence
+
+ChromaDB data is stored in `CHROMA_DB_PATH`. To reset the database, delete this directory.
+
+## License
+
+MIT License
+
+## Links
+
+- **PyPI Package**: https://pypi.org/project/mcp-pdf-chroma/
+- **GitHub Repository**: https://github.com/yourusername/mcp_pdf_chroma
+- **Issue Tracker**: https://github.com/yourusername/mcp_pdf_chroma/issues
+
+## Updates
+
+To update to the latest version:
+
+```bash
+pip install --upgrade mcp-pdf-chroma
+```
+
+To check your current version:
+
+```bash
+pip show mcp-pdf-chroma
+```
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+For development setup:
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/mcp_pdf_chroma.git
+cd mcp_pdf_chroma
+
+# Install in development mode
+pip install -e ".[dev]"
+
+# Run tests
+pytest tests/
+
+# Format code
+black src/
+```
