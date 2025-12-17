@@ -1,0 +1,237 @@
+# Chain Nhem Nhem
+
+**Chain Nhem Nhem** is a minimal, framework-agnostic agent framework for building LLM agents with tool calling, step tracking and driver abstraction.
+
+It was designed to be:
+- Simple
+- Explicit
+- Hackable
+- Dependency-light
+
+No magic. No hidden chains. Just control.
+
+---
+
+## Features
+
+- Pluggable **LLM drivers** (Gemini, OpenAI, etc.)
+- Pluggable **Tools** with schema validation
+- Tool-calling loop with safety limits
+- Step-by-step agent execution
+- Token usage tracking (when supported by the driver)
+- Framework-agnostic (works with FastAPI, Flask, CLI, scripts, etc.)
+- Designed to be extended by the **application**, not the framework
+
+---
+
+## Installation
+
+```bash
+pip install chain-nhem-nhem
+```
+
+---
+
+## Quick Start (Simple Usage)
+The easiest way to get started is using the built-in agent factory.
+This approach requires zero configuration and works out of the box.
+
+```python
+from chain_nhem_nhem.agent.factory import create_agent
+
+agent = create_agent()
+
+result = agent.run("Explain what an LLM is in one sentence")
+
+print(result.output)
+```
+
+---
+
+## Quick Start (Power user)
+
+```python
+from chain_nhem_nhem.agent.agent import Agent
+from chain_nhem_nhem.llm.registry import load_drivers, llm_driver_registry
+from chain_nhem_nhem.tools.registry import tool_registry, load_tools
+
+load_drivers()
+load_tools()
+
+driver = llm_driver_registry.create("gemini")
+
+agent = Agent(
+    driver=driver,
+    tool_registry=tool_registry,
+    driver_name="gemini"
+)
+
+result = agent.run("What's the weather in São Paulo?")
+
+print(result.output)
+```
+
+---
+
+## Tools
+
+Tools are simple Python classes that implement a callable interface.
+
+### Example Tool
+
+```python
+from pydantic import BaseModel, Field
+from chain_nhem_nhem.tools.base import Tool
+from chain_nhem_nhem.tools.registry import tool_registry
+
+#----------------------------
+# Args Schemas
+#----------------------------
+class FavoriteGameArgs(BaseModel):
+    console: str = Field(..., description="Console to check favorite game (PC, Plastation, Xbox...).")    
+
+
+#----------------------------
+# Tool Implementation
+#----------------------------
+class FavoriteGameTool(Tool):
+    def __init__(self):
+        self.name = "get_favorite_game"
+        self.description = "Get the favorite game for a given console."
+        self.args_schema = FavoriteGameArgs
+
+
+    def __call__(self, args: FavoriteGameArgs) -> dict:
+        favorite_game = ""
+        if args.console.lower() == "pc":
+            favorite_game = "League of Legends"
+        elif args.console.lower() == "playstation":
+            favorite_game = "The Last of Us Part II"
+        elif args.console.lower() == "xbox":
+            favorite_game = "Halo Infinite"
+        else:
+            favorite_game = "Pacman"
+        return {
+            "console": args.console,
+            "favorite_game": favorite_game
+        }
+
+#----------------------------
+# Tools Registration
+# ---------------------------    
+tool_registry.register(FavoriteGameTool())
+```
+
+Tools are automatically discovered when placed in a directory ending with `_tool.py`.
+
+---
+
+## Tool Discovery
+
+Chain Nhem Nhem supports **external tools** via environment variables.
+
+```env
+APP_TOOLS_PATH=/absolute/path/to/your/tools
+```
+
+All files ending with `*_tool.py` will be loaded automatically.
+
+---
+
+## Agent Output
+
+```json
+{
+  "output": "Yes, it will rain tomorrow.",
+  "steps": [
+    "User input: Will it rain tomorrow?",
+    "Model called tool: get_weather",
+    "Step: 1 - Tool 'get_weather' returned {...}",
+    "Step: 2 - Final answer generated"
+  ],
+  "tools_used": ["get_weather"],
+  "tokens": 812
+}
+```
+
+---
+
+## Configuration
+
+Configuration is done via environment variables.
+
+```env
+DRIVER=gemini
+DEBUG_MODE=true
+LOGGER_LEVEL=DEBUG
+APP_TOOLS_PATH=/path/to/tools
+APP_DRIVERS_PATH=/path/to/drivers
+```
+
+---
+
+## Logging
+
+Chain Nhem Nhem provides its **own logger**, isolated from your app.
+
+```text
+[INFO] [chain_nhem_nhem.llm] Loading internal LLM drivers
+[INFO] [chain_nhem_nhem.tools] Tools loaded: ['weather_tool']
+[INFO] [chain_nhem_nhem.agent] Agent run started
+```
+
+Log level is controlled via `LOGGER_LEVEL`.
+
+---
+
+## Drivers
+
+Drivers implement a common interface (`LLMDriver`) and can be swapped freely.
+
+Supported:
+- Gemini (official API)
+
+Planned:
+- OpenAI
+- Local LLMs
+- MCP-style adapters
+
+---
+
+## Philosophy
+
+> “Explicit is better than magic.”
+
+Chain Nhem Nhem does **not**:
+- Hide prompts
+- Abstract control flow away
+- Lock you into a framework
+- Force opinions
+
+You own:
+- The agent loop
+- The tools
+- The drivers
+- The orchestration
+
+---
+
+## Status
+
+**Alpha** – APIs may change.
+
+Feedback and experimentation welcome.
+
+---
+
+## Why the name?
+
+Because it’s fun to say.
+
+And because frameworks don’t need to take themselves so seriously.
+
+---
+
+## License
+
+MIT
