@@ -1,0 +1,874 @@
+Metadata-Version: 2.4
+Name: nc1709
+Version: 1.21.0
+Summary: NC1709 - Your AI coding partner that brings your code to life
+Home-page: https://github.com/yourusername/nc1709
+Author: NC1709 Team
+Author-email: Lafzusa Corp <support@lafzusa.com>
+License: Proprietary License
+        
+        Copyright (c) 2025 Lafzusa Corp. All rights reserved.
+        
+        This software is proprietary and confidential. Unauthorized copying,
+        distribution, modification, or use of this software, via any medium,
+        is strictly prohibited without express written permission from Lafzusa Corp.
+        
+        For licensing inquiries, contact: support@lafzusa.com
+        
+Project-URL: Homepage, https://github.com/nc1709/nc1709
+Project-URL: Documentation, https://github.com/nc1709/nc1709#readme
+Project-URL: Repository, https://github.com/nc1709/nc1709
+Project-URL: Issues, https://github.com/nc1709/nc1709/issues
+Keywords: ai,assistant,developer,cli,local,ollama,coding,productivity,llm,agent
+Classifier: Development Status :: 4 - Beta
+Classifier: Environment :: Console
+Classifier: Intended Audience :: Developers
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Topic :: Software Development
+Classifier: Topic :: Software Development :: Code Generators
+Classifier: Topic :: Utilities
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: litellm>=1.0.0
+Requires-Dist: rich>=13.0.0
+Requires-Dist: prompt_toolkit>=3.0.0
+Requires-Dist: ddgs>=9.0.0
+Requires-Dist: packaging>=21.0
+Provides-Extra: memory
+Requires-Dist: chromadb>=0.4.0; extra == "memory"
+Requires-Dist: sentence-transformers>=2.2.0; extra == "memory"
+Provides-Extra: web
+Requires-Dist: fastapi>=0.100.0; extra == "web"
+Requires-Dist: uvicorn>=0.23.0; extra == "web"
+Provides-Extra: search
+Requires-Dist: ddgs>=9.0.0; extra == "search"
+Provides-Extra: notebook
+Requires-Dist: nbconvert>=7.0.0; extra == "notebook"
+Requires-Dist: nbformat>=5.0.0; extra == "notebook"
+Provides-Extra: screenshot
+Requires-Dist: playwright>=1.40.0; extra == "screenshot"
+Provides-Extra: all
+Requires-Dist: chromadb>=0.4.0; extra == "all"
+Requires-Dist: sentence-transformers>=2.2.0; extra == "all"
+Requires-Dist: fastapi>=0.100.0; extra == "all"
+Requires-Dist: uvicorn>=0.23.0; extra == "all"
+Requires-Dist: watchdog>=3.0.0; extra == "all"
+Requires-Dist: ddgs>=9.0.0; extra == "all"
+Requires-Dist: nbconvert>=7.0.0; extra == "all"
+Requires-Dist: nbformat>=5.0.0; extra == "all"
+Requires-Dist: playwright>=1.40.0; extra == "all"
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.21.0; extra == "dev"
+Requires-Dist: httpx>=0.24.0; extra == "dev"
+Dynamic: author
+Dynamic: home-page
+Dynamic: license-file
+Dynamic: requires-python
+
+# NC1709 - A Local-First AI Developer Assistant
+
+<p align="center">
+  <strong>Tools run locally. Intelligence from the cloud.</strong>
+</p>
+
+<p align="center">
+  <a href="#installation">Installation</a> •
+  <a href="#quick-start">Quick Start</a> •
+  <a href="#features">Features</a> •
+  <a href="#architecture">Architecture</a> •
+  <a href="#remote-mode">Remote Mode</a> •
+  <a href="#extensions">Extensions</a> •
+  <a href="DOCUMENTATION.md">Full Documentation</a>
+</p>
+
+---
+
+NC1709 is a powerful AI developer assistant with a **Claude Code-like architecture**. Tools execute locally on your machine while LLM inference happens on a remote server. Your files stay on your computer - only prompts and responses travel to the server.
+
+## What's New in v1.20.0
+
+### New Features
+- **5-Layer Cognitive Architecture** - Intelligent Router, Deep Context Engine, Multi-Agent Council, Learning Core, Anticipation Engine
+- **Request Queuing Under Load** - Priority-based queue management with adaptive concurrency
+- **Optimized Model Routing** - Fast 7B models by default, 32B available for complex tasks
+- **Circuit Breaker Pattern** - Automatic failure detection and recovery
+- **Queue Statistics & Monitoring** - Real-time tracking of requests, wait times, throughput
+
+### Architecture Improvements
+- **Intelligent Router** - Automatically selects best model (reasoning/coding/general) based on task
+- **Council Activation** - Complex tasks (>0.75 complexity) trigger multi-agent deliberation
+- **Fallback Chain** - Automatic model failover: deepseek-r1 → qwen2.5-coder → qwen2.5
+- **Adaptive Scaling** - Queue concurrency auto-adjusts based on success rate
+
+### Previous Features (v1.19.0)
+- Multi-file Editing with `MultiEdit` tool
+- Image/Screenshot Support with `ReadImage` and `CaptureScreenshot` tools
+- LLM Task Classifier with caching and async support
+- Context Window Management with automatic trimming
+- 20+ Built-in Tools and Claude Code-style UI
+
+> **Full Documentation**: See [DOCUMENTATION.md](DOCUMENTATION.md) for comprehensive guides
+
+## Installation
+
+### Quick Install (All Platforms)
+
+```bash
+pip install nc1709
+```
+
+### Platform-Specific Installation
+
+<details>
+<summary><b>🍎 macOS</b></summary>
+
+#### 1. Install Python 3.9+
+```bash
+# Using Homebrew (recommended)
+brew install python@3.11
+
+# Or download from python.org
+# https://www.python.org/downloads/macos/
+```
+
+#### 2. Install NC1709
+```bash
+# Basic installation
+pip3 install nc1709
+
+# With all features
+pip3 install nc1709[all]
+
+# Or with specific features
+pip3 install nc1709[search,notebook,screenshot]
+```
+
+#### 3. Install Ollama
+```bash
+# Using Homebrew
+brew install ollama
+
+# Or download directly
+curl -fsSL https://ollama.com/install.sh | sh
+```
+
+#### 4. Download Models
+```bash
+ollama pull qwen2.5-coder:32b
+ollama pull qwen2.5:32b
+```
+
+#### 5. Enable Shell Completions (Optional)
+```bash
+# For Zsh (default on macOS)
+echo 'eval "$(nc1709 --completion zsh)"' >> ~/.zshrc
+source ~/.zshrc
+
+# For Bash
+echo 'eval "$(nc1709 --completion bash)"' >> ~/.bash_profile
+source ~/.bash_profile
+```
+
+</details>
+
+<details>
+<summary><b>🐧 Linux (Ubuntu/Debian)</b></summary>
+
+#### 1. Install Python 3.9+
+```bash
+sudo apt update
+sudo apt install python3 python3-pip python3-venv
+```
+
+#### 2. Install NC1709
+```bash
+# Basic installation
+pip3 install nc1709
+
+# With all features
+pip3 install nc1709[all]
+
+# If you get permission errors, use --user
+pip3 install --user nc1709[all]
+
+# Or create a virtual environment (recommended)
+python3 -m venv ~/.nc1709-venv
+source ~/.nc1709-venv/bin/activate
+pip install nc1709[all]
+```
+
+#### 3. Install Ollama
+```bash
+curl -fsSL https://ollama.com/install.sh | sh
+```
+
+#### 4. Start Ollama Service
+```bash
+# Start as a service (systemd)
+sudo systemctl enable ollama
+sudo systemctl start ollama
+
+# Or run manually
+ollama serve
+```
+
+#### 5. Download Models
+```bash
+ollama pull qwen2.5-coder:32b
+ollama pull qwen2.5:32b
+```
+
+#### 6. Enable Shell Completions (Optional)
+```bash
+# For Bash
+echo 'eval "$(nc1709 --completion bash)"' >> ~/.bashrc
+source ~/.bashrc
+
+# For Zsh
+echo 'eval "$(nc1709 --completion zsh)"' >> ~/.zshrc
+source ~/.zshrc
+
+# For Fish
+nc1709 --completion fish > ~/.config/fish/completions/nc1709.fish
+```
+
+</details>
+
+<details>
+<summary><b>🐧 Linux (Fedora/RHEL/CentOS)</b></summary>
+
+#### 1. Install Python 3.9+
+```bash
+sudo dnf install python3 python3-pip
+```
+
+#### 2. Install NC1709
+```bash
+pip3 install --user nc1709[all]
+
+# Add to PATH if needed
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+#### 3. Install Ollama
+```bash
+curl -fsSL https://ollama.com/install.sh | sh
+```
+
+#### 4. Start Ollama Service
+```bash
+sudo systemctl enable ollama
+sudo systemctl start ollama
+```
+
+#### 5. Download Models
+```bash
+ollama pull qwen2.5-coder:32b
+ollama pull qwen2.5:32b
+```
+
+</details>
+
+<details>
+<summary><b>🐧 Linux (Arch)</b></summary>
+
+#### 1. Install Python and Dependencies
+```bash
+sudo pacman -S python python-pip
+```
+
+#### 2. Install NC1709
+```bash
+pip install --user nc1709[all]
+```
+
+#### 3. Install Ollama
+```bash
+# From AUR
+yay -S ollama
+
+# Or official installer
+curl -fsSL https://ollama.com/install.sh | sh
+```
+
+#### 4. Start Ollama
+```bash
+sudo systemctl enable ollama
+sudo systemctl start ollama
+```
+
+#### 5. Download Models
+```bash
+ollama pull qwen2.5-coder:32b
+ollama pull qwen2.5:32b
+```
+
+</details>
+
+<details>
+<summary><b>🪟 Windows</b></summary>
+
+#### Option A: Native Windows (Recommended for beginners)
+
+##### 1. Install Python 3.9+
+- Download from [python.org](https://www.python.org/downloads/windows/)
+- **Important**: Check "Add Python to PATH" during installation
+
+##### 2. Install NC1709
+Open Command Prompt or PowerShell:
+```powershell
+pip install nc1709
+
+# With all features
+pip install nc1709[all]
+```
+
+##### 3. Install Ollama
+- Download from [ollama.com/download/windows](https://ollama.com/download/windows)
+- Run the installer
+- Ollama will start automatically
+
+##### 4. Download Models
+Open Command Prompt:
+```powershell
+ollama pull qwen2.5-coder:32b
+ollama pull qwen2.5:32b
+```
+
+##### 5. Run NC1709
+```powershell
+nc1709
+```
+
+#### Option B: WSL2 (Recommended for advanced users)
+
+##### 1. Enable WSL2
+Open PowerShell as Administrator:
+```powershell
+wsl --install
+```
+Restart your computer.
+
+##### 2. Install Ubuntu
+```powershell
+wsl --install -d Ubuntu
+```
+
+##### 3. Follow Linux (Ubuntu/Debian) instructions above
+
+**Note**: WSL2 provides better performance and full Linux compatibility.
+
+</details>
+
+<details>
+<summary><b>🐳 Docker</b></summary>
+
+#### Using Docker (Any Platform)
+
+```bash
+# Pull and run (CPU only)
+docker run -it --rm \
+  -v $(pwd):/workspace \
+  -w /workspace \
+  python:3.11-slim \
+  bash -c "pip install nc1709 && nc1709"
+
+# With GPU support (NVIDIA)
+docker run -it --rm --gpus all \
+  -v $(pwd):/workspace \
+  -w /workspace \
+  python:3.11-slim \
+  bash -c "pip install nc1709 && nc1709"
+```
+
+**Note**: You'll still need Ollama running on the host machine. Set `OLLAMA_HOST` to connect:
+```bash
+docker run -it --rm \
+  -e OLLAMA_HOST=host.docker.internal:11434 \
+  -v $(pwd):/workspace \
+  python:3.11-slim \
+  bash -c "pip install nc1709 && nc1709"
+```
+
+</details>
+
+### Installation Options
+
+```bash
+# Basic - core functionality
+pip install nc1709
+
+# With web dashboard
+pip install nc1709[web]
+
+# With memory features (semantic search, ChromaDB)
+pip install nc1709[memory]
+
+# With web search (DuckDuckGo, Brave)
+pip install nc1709[search]
+
+# With Jupyter notebook support
+pip install nc1709[notebook]
+
+# With web screenshots (Playwright)
+pip install nc1709[screenshot]
+
+# Everything included
+pip install nc1709[all]
+
+# Development dependencies
+pip install nc1709[dev]
+```
+
+### Verify Installation
+
+```bash
+# Check version
+nc1709 --version
+
+# Check Ollama connection
+nc1709 --config
+
+# Start interactive mode
+nc1709
+```
+
+### Prerequisites Summary
+
+**For Remote Users (connecting to a server):**
+| Component | Required | Purpose |
+|-----------|----------|---------|
+| Python 3.9+ | ✅ Yes | Runtime |
+| pip | ✅ Yes | Package installer |
+| Internet | ✅ Yes | Connect to server |
+
+**For Self-Hosted / Local Mode:**
+| Component | Required | Purpose |
+|-----------|----------|---------|
+| Python 3.9+ | ✅ Yes | Runtime |
+| Ollama | ✅ Yes | Local LLM server |
+| pip | ✅ Yes | Package installer |
+| NVIDIA GPU | ❌ Optional | Faster inference |
+| 16GB+ RAM | ✅ Recommended | Model loading |
+
+## Quick Start
+
+```bash
+# Interactive shell mode
+nc1709
+
+# Direct command
+nc1709 "create a Python script to fetch JSON from an API"
+
+# Start web dashboard
+nc1709 --web
+
+# Auto-fix errors in a file
+nc1709 --fix main.py
+
+# Generate tests for a file
+nc1709 --generate-tests utils.py
+```
+
+## Features
+
+### Core Capabilities
+- **Chat Interface** - Conversational AI for coding help
+- **File Operations** - Read, write, edit files safely with auto-backup
+- **Command Execution** - Run shell commands in a sandboxed environment
+- **Multi-Step Reasoning** - Complex tasks broken into manageable steps
+- **Smart Task Classification** - Automatic model selection based on task type
+
+### Memory & Context
+- **Semantic Code Search** - Find code by meaning, not just keywords
+- **Project Indexing** - Index your codebase for intelligent search
+- **Session Persistence** - Save and resume conversations
+
+```bash
+# Index your project
+nc1709 --index
+
+# Semantic search
+nc1709 --search "authentication logic"
+
+# Resume a session
+nc1709 --sessions
+nc1709 --resume <session-id>
+```
+
+### AI Agents
+
+**Auto-Fix Agent** - Automatically detects and fixes code errors:
+```bash
+nc1709 --fix src/main.py           # Analyze and suggest fixes
+nc1709 --fix src/main.py --apply   # Auto-apply fixes
+```
+
+**Test Generator** - Generates unit tests for your code:
+```bash
+nc1709 --generate-tests utils.py   # Generate tests
+nc1709 --generate-tests utils.py --output tests/test_utils.py
+```
+
+### Plugins & Agents
+- **Git Agent** - Commits, branches, diffs, and more
+- **Docker Agent** - Container and image management
+- **Framework Agents** - FastAPI, Next.js, Django scaffolding
+- **MCP Support** - Model Context Protocol integration
+
+```bash
+# In shell mode
+git status
+git diff
+docker ps
+docker compose up
+
+# Or via CLI
+nc1709 --plugin git:status
+nc1709 --plugin docker:ps
+```
+
+### Web Dashboard
+A full browser-based interface for NC1709:
+
+```bash
+nc1709 --web
+# Open http://localhost:8709
+```
+
+Features:
+- Chat with syntax highlighting
+- Session management
+- Semantic code search UI
+- Plugin management
+- MCP tools browser
+- Configuration editor
+
+## Architecture
+
+NC1709 v1.8.0 uses a **split architecture** similar to Claude Code:
+
+```
+┌─────────────────────────────────────┐     ┌──────────────────────────────────┐
+│  Your Machine (CLI)                 │     │  nc1709.lafzusa.com (Server)     │
+│                                     │     │                                  │
+│  ✅ Tools execute HERE              │     │  ✅ LLM inference HERE           │
+│  • Read/Write/Edit files            │◀───▶│  • Ollama models                 │
+│  • Run bash commands                │     │  • Reasoning engine              │
+│  • Search code (grep/glob)          │     │  • Vector DB (code indexing)     │
+│  • Web search/fetch                 │     │                                  │
+│                                     │     │                                  │
+│  📁 Your files STAY HERE            │     │  🧠 Only "thinking" happens here │
+└─────────────────────────────────────┘     └──────────────────────────────────┘
+```
+
+### How It Works
+
+1. You run `nc1709` → Auto-connects to server
+2. You type a prompt → Sent to server for LLM processing
+3. Server returns tool instructions → CLI executes locally
+4. Results sent back → LLM continues until task complete
+
+### Data Flow
+
+- **To Server**: Your prompts, tool execution results
+- **Stays Local**: Your files, bash commands, environment
+- **Auto-Indexed**: Files you work with get indexed on server for better context
+
+## Remote Mode
+
+### Default (Recommended)
+
+NC1709 automatically connects to the hosted server:
+
+```bash
+# Just install and run - no configuration needed!
+pip install nc1709
+nc1709
+```
+
+The CLI connects to `https://nc1709.lafzusa.com` by default.
+
+### Self-Hosted Server
+
+Want to run your own server?
+
+#### Server Setup
+```bash
+# On your server
+pip install nc1709[all,memory]
+
+# Install Ollama and models
+ollama pull qwen2.5-coder:32b
+
+# Start server with remote access enabled
+nc1709 --web --serve --port 8709
+
+# Set API key in config (~/.nc1709/config.json)
+{
+  "remote": {
+    "api_key": "your-secret-key"
+  }
+}
+```
+
+#### Expose to Internet
+```bash
+# Using Cloudflare Tunnel (recommended)
+cloudflared tunnel --url http://localhost:8709
+
+# Or ngrok
+ngrok http 8709
+```
+
+#### Client Setup
+```bash
+# Users install nc1709
+pip install nc1709
+
+# Point to your server
+export NC1709_API_URL="https://your-server.com"
+export NC1709_API_KEY="your-secret-key"
+
+# Use normally
+nc1709 "explain this code"
+```
+
+### Local-Only Mode
+
+Force local mode (requires Ollama installed):
+
+```bash
+nc1709 --local
+```
+
+## Extensions
+
+### VS Code Extension
+Full IDE integration with:
+- Chat sidebar panel
+- Inline code completions (like GitHub Copilot)
+- Right-click code actions (explain, refactor, test, fix)
+- Keyboard shortcuts
+
+```bash
+cd vscode-extension
+npm install && npm run package
+# Install the .vsix file in VS Code
+```
+
+### Desktop App
+Native Electron app with:
+- System tray integration
+- Automatic server management
+- Dark/light mode support
+
+```bash
+cd desktop-app
+npm install && npm start
+```
+
+## Shell Commands
+
+In interactive mode:
+
+```
+help          Show available commands
+exit          Exit the shell
+clear         Clear conversation history
+sessions      List saved sessions
+search <q>    Semantic code search
+index         Index current project
+plugins       List available plugins
+git <cmd>     Git operations
+docker <cmd>  Docker operations
+mcp           MCP status and tools
+fix <file>    Auto-fix errors
+test <file>   Generate tests
+```
+
+## Configuration
+
+Config file: `~/.nc1709/config.json`
+
+```bash
+nc1709 --config  # View configuration
+```
+
+```json
+{
+  "models": {
+    "reasoning": "deepseek-r1:latest",
+    "coding": "qwen2.5-coder:32b",
+    "general": "qwen2.5:32b",
+    "fast": "qwen2.5-coder:7b"
+  },
+  "safety": {
+    "confirm_writes": true,
+    "auto_backup": true
+  },
+  "remote": {
+    "api_key": "your-secret-key"
+  }
+}
+```
+
+## CLI Reference
+
+```bash
+nc1709 [prompt]              # Direct command or start shell
+nc1709 --shell               # Interactive shell mode
+nc1709 --web                 # Start web dashboard
+nc1709 --web --port 9000     # Custom port
+nc1709 --web --serve         # Enable remote access
+
+# AI Agents
+nc1709 --fix <file>          # Auto-fix code errors
+nc1709 --generate-tests <file>  # Generate unit tests
+
+# Memory features
+nc1709 --index               # Index project
+nc1709 --search "query"      # Semantic search
+nc1709 --sessions            # List sessions
+nc1709 --resume <id>         # Resume session
+
+# Plugins
+nc1709 --plugins             # List plugins
+nc1709 --plugin git:status
+
+# Remote mode
+nc1709 --remote <url>        # Connect to remote server
+nc1709 --api-key <key>       # API key for remote
+
+# Shell completions
+nc1709 --completion bash     # Generate bash completions
+nc1709 --completion zsh      # Generate zsh completions
+nc1709 --completion fish     # Generate fish completions
+
+# Info
+nc1709 --version             # Show version
+nc1709 --config              # Show configuration
+nc1709 --help                # Show help
+```
+
+## Installation Options
+
+```bash
+# Basic installation
+pip install nc1709
+
+# With memory features (ChromaDB, embeddings)
+pip install nc1709[memory]
+
+# With web dashboard
+pip install nc1709[web]
+
+# Everything
+pip install nc1709[all]
+
+# Development
+pip install nc1709[dev]
+```
+
+## System Requirements
+
+- **Python**: 3.9+
+- **RAM**: 16GB minimum, 32GB recommended
+- **GPU**: NVIDIA with 12GB+ VRAM (optional, CPU works but slower)
+- **Storage**: ~50GB for models
+- **OS**: macOS, Linux, Windows (WSL2)
+
+## Project Structure
+
+```
+nc1709/
+├── nc1709/
+│   ├── cli.py              # Main CLI
+│   ├── config.py           # Configuration
+│   ├── llm_adapter.py      # LLM integration
+│   ├── reasoning_engine.py # Multi-step reasoning
+│   ├── task_classifier.py  # Smart task classification
+│   ├── progress.py         # Progress indicators
+│   ├── shell_completions.py # Shell completions
+│   ├── file_controller.py  # File operations
+│   ├── executor.py         # Command execution
+│   ├── remote_client.py    # Remote mode client
+│   ├── memory/             # Vector DB, sessions, indexing
+│   ├── plugins/            # Plugin system & agents
+│   ├── agents/             # AI agents (auto-fix, test-gen)
+│   ├── mcp/                # Model Context Protocol
+│   └── web/                # Web dashboard
+├── vscode-extension/       # VS Code extension
+├── desktop-app/            # Electron desktop app
+├── docs/                   # Documentation
+├── tests/                  # Test suite
+├── pyproject.toml          # Package config
+└── README.md
+```
+
+## Privacy & Security
+
+- **Tools Run Locally**: All file operations happen on YOUR machine
+- **Files Stay Local**: Your code never leaves your computer
+- **Server-Side**: Only prompts and tool results sent to server
+- **Auto-Backup**: Files backed up before modification
+- **Sandboxed Execution**: Commands validated before running
+- **Confirmation Prompts**: Ask before destructive operations
+- **API Key Auth**: Secure remote access with authentication
+- **Session Memory**: Stored locally at `~/.nc1709/sessions/`
+
+## Troubleshooting
+
+### "Cannot connect to Ollama"
+```bash
+ollama serve  # Start Ollama
+```
+
+### "Model not found"
+```bash
+ollama pull qwen2.5-coder:32b
+```
+
+### Slow performance
+- Use GPU: `nvidia-smi` to verify
+- Use smaller models: `qwen2.5-coder:7b`
+- Clear history: `clear` in shell
+
+### Shell completions not working
+```bash
+# Bash
+echo 'eval "$(nc1709 --completion bash)"' >> ~/.bashrc
+source ~/.bashrc
+
+# Zsh
+echo 'eval "$(nc1709 --completion zsh)"' >> ~/.zshrc
+source ~/.zshrc
+
+# Fish
+nc1709 --completion fish > ~/.config/fish/completions/nc1709.fish
+```
+
+## Contributing
+
+Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## License
+
+MIT License - See [LICENSE](LICENSE) file.
+
+## Acknowledgments
+
+Built with [Ollama](https://ollama.com/), [LiteLLM](https://github.com/BerriAI/litellm), and open-source models from DeepSeek and Qwen.
+
+---
+
+**Built for developers who value privacy and control.**
