@@ -1,0 +1,75 @@
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "text-to-qti"
+version = "0.1.0"
+description = "Convert markdown-based quiz text files to QTI format for Canvas LMS"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "Your Name", email = "tableaprogramming@gmail.com"}
+]
+keywords = ["qti", "canvas", "quiz", "conversion", "markdown"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Education",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+
+dependencies = [
+    "lxml>=5.3.0",
+    "pydantic>=2.10.0",
+    "click>=8.1.0",
+    "rich>=13.0.0",
+    "markdown>=3.5.0",
+    "PyYAML>=6.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/tableaprogramming-rgb/textmd-to-qti"
+Repository = "https://github.com/tableaprogramming-rgb/textmd-to-qti"
+Documentation = "https://github.com/tableaprogramming-rgb/textmd-to-qti#readme"
+"Bug Tracker" = "https://github.com/tableaprogramming-rgb/textmd-to-qti/issues"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.5.0",
+]
+
+[project.scripts]
+text-to-qti = "text_to_qti.cli:cli"
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+
+[tool.ruff]
+line-length = 88
+target-version = "py38"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+disable_error_code = ["import-untyped"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=src/text_to_qti --cov-report=html --cov-report=term-missing"
