@@ -1,0 +1,346 @@
+{% from "widgets/data/traceback.html.j2" import render_traceback %}
+<style>
+    .log-box {
+        max-height: 300px;
+        overflow-y: auto;
+        background-color: #f8f9fa;
+        padding: 1em;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-family: monospace;
+    }
+</style>
+
+<div class="container-xl">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Task: <code>{{ widget.task_context.task_name }}</code></h2>
+        <div>
+            <span class="badge {{ widget.task_report.status | task_status_badge_class }} badge-status">{{ widget.task_report.status }}</span>
+            <button id="retry-task-btn" class="btn btn-outline-primary ms-2">🔁 Retry Task</button>
+        </div>
+    </div>
+
+    <!-- Task Summary -->
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">Task Context</div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6"><strong>Task ID:</strong> {{ widget.task_context.task_id }}</div>
+                <div class="col-md-6">
+                    <strong>Parent Task ID:</strong>
+                    {% if widget.task_context.parent_task_id %}
+                        {{ widget.task_context.parent_task_id }}
+                      <a href="{{ url_for('task_details', task_id=widget.task_context.parent_task_id) }}">
+                        [ Parent Details ]
+                      </a>
+                      <a href="{{ url_for('tasks_graph', task_id=widget.task_context.parent_task_id) }}">
+                        [ Graph ]
+                      </a>
+                    {% elif widget.child_tasks %}
+                        <a href="{{ url_for('tasks_graph', task_id=widget.task_context.task_id) }}">
+                        [ Graph ]
+                        </a>
+                    {% else %}
+                      <span class="text-muted">—</span>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6"><strong>Function:</strong> <code>{{ widget.task_context.func_name }}</code>
+                </div>
+                <div class="col-md-6"><strong>Max Retries:</strong> {{ widget.task_context.max_retries }}</div>
+                <div class="col-md-6"><strong>Retry Delay:</strong> {{ widget.task_context.retry_delay }}</div>
+                <div class="col-md-6"><strong>Allow
+                    Concurrent:</strong> {{ '✅ Yes' if widget.task_context.allow_concurrent else '❌ No' }}</div>
+                <div class="col-md-6"><strong>Origin:</strong> {{ widget.task_context.task_origin }}</div>
+                <div class="col-md-6"><strong>Topic:</strong> {{ widget.task_context.topic or 'default' }}</div>
+                <div class="col-md-6"><strong>Args:</strong> <code>{{ widget.task_context.args }}</code></div>
+                <div class="col-md-6"><strong>Kwargs:</strong> <code>{{ widget.task_context.kwargs }}</code></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Execution Report -->
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">Execution Report</div>
+        <div class="card-body row">
+            <div class="col-md-6"><strong>Start Time:</strong> {{ widget.task_report.start_time }}</div>
+            <div class="col-md-6"><strong>End Time:</strong> {{ widget.task_report.end_time }}</div>
+            <div class="col-md-6"><strong>Duration:</strong> <span class="duration-value" data-duration="{{ widget.task_report.duration or 0 }}">{{ widget.task_report.duration or 0 }}</span></div>
+            <div class="col-md-6"><strong>Attempts:</strong> {{ widget.task_report.attempts }}</div>
+            <div class="col-md-6"><strong>Worker ID:</strong> {{ widget.task_report.worker_id or '—' }}</div>
+        </div>
+        <div class="card-body">
+
+            <p><strong>Result:</strong> <code>{{ widget.task_report.result or "None" }}</code></p>
+            <div class="log-box">
+                <strong>Logs:</strong>
+                <pre id="log-output">{{ widget.task_report.logs|e or "No logs" }}</pre>
+            </div>
+
+            {% if widget.task_report.tracebacks %}
+                <!-- Collapsible Traceback -->
+                <button class="btn btn-sm btn-outline-secondary mt-3" data-bs-toggle="collapse"
+                        data-bs-target="#tracebackCollapse" id="tracebackButton">
+                    Show Traceback
+                </button>
+                <div class="collapse mt-2" id="tracebackCollapse">
+                    {{ render_traceback({"list_traceback": widget.task_report.tracebacks}) }}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Child Tasks -->
+    <div class="card mb-4" id="child-tasks-card">
+        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+            <div>
+                <span>Child Tasks (<span id="child-tasks-count">0</span>)</span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <div id="child-filters" class="d-flex align-items-center flex-wrap gap-2"></div>
+                <a class="btn btn-sm btn-light" href="{{ url_for('tasks_graph', task_id=widget.task_context.task_id) }}">View Graph</a>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Task ID</th>
+                            <th>Name</th>
+                            <th>Status</th>
+                            <th>Start</th>
+                            <th>End</th>
+                            <th>Duration</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="child-tasks-body">
+                    </tbody>
+                </table>
+            </div>
+            <div class="alert alert-warning mt-3 d-none" id="child-tasks-error" role="alert"></div>
+        </div>
+    </div>
+
+    <!-- Notification Configuration -->
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">Notification Config</div>
+        <div class="card-body">
+            <p>Notifier Configuration:</p>
+
+            {% if widget.task_context.notifier_config %}
+                <ul>
+                    {% for notif in widget.task_context.notifier_config %}
+                        <li><strong>Type:</strong> {{ notif.name }} | <strong>Event:</strong> {{ notif.events }}</li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-muted">No notification config defined.</p>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <p>Resolved Notifier:</p>
+            {% if widget.task_context.resolved_notifiers %}
+                <ul>
+                    {% for notif in widget.task_context.resolved_notifiers %}
+                        <li>
+                            <strong>Name:</strong> {{ notif.name }} | <strong>Event:</strong> {{ notif.events }} |
+                            <strong>Config:</strong> {{ notif.config }}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-muted">No resolved notifications config.</p>
+            {% endif %}
+        </div>
+
+    </div>
+
+    <!-- Footer: Thread & Timestamps -->
+    <div class="card mb-4">
+        <div class="card-header">Metadata</div>
+        <div class="card-body row">
+            <div class="col-md-6"><strong>Thread ID:</strong> {{ widget.task_report.thread_ident }}</div>
+            <div class="col-md-6"><strong>Native ID:</strong> {{ widget.task_report.thread_native_id }}</div>
+        </div>
+    </div>
+</div>
+
+<script src="/app_static/tasks_worker/js/tasks.js"></script>
+<script src="/app_static/tasks_worker/js/logs-handler.js"></script>
+<script>
+    // Format all duration values on the page (static values; dynamic rows handle separately)
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.duration-value').forEach(el => {
+            const duration = parseFloat(el.dataset.duration);
+            el.textContent = formatDuration(duration);
+        });
+    });
+
+    setupLogStreamHandler('{{ widget.task_context.task_id }}');
+
+    // scrollable logs
+    const logOutput = document.getElementById('log-output');
+    const observer = new MutationObserver(() => {
+        logOutput.scrollTop = logOutput.scrollHeight;
+    });
+    observer.observe(logOutput, {childList: true, subtree: true});
+
+    // traceback button toggle text
+    const tracebackButton = document.getElementById('tracebackButton');
+    const tracebackCollapse = document.getElementById('tracebackCollapse');
+    if (tracebackButton && tracebackCollapse) {
+        tracebackCollapse.addEventListener('shown.bs.collapse', function () {
+            tracebackButton.textContent = 'Hide Traceback';
+        });
+        tracebackCollapse.addEventListener('hidden.bs.collapse', function () {
+            tracebackButton.textContent = 'Show Traceback';
+        });
+    }
+
+    // retry button
+    document.getElementById('retry-task-btn')?.addEventListener('click', async () => {
+        const confirmed = confirm('Are you sure you want to retry this task?');
+        if (!confirmed) return;
+        const res = await fetch(`{{ widget.url_retry_task }}`, {
+            method: 'POST',
+        });
+        if (res.ok) {
+            const data = await res.json();
+            if (data.task_id) {
+                window.location.href = "{{ widget.url_detail_task }}".replace("TASK_ID_REPLACE", data.task_id);
+            } else {
+                // TODO: flash notification
+            }
+        } else {
+            alert('Failed to retry task.');
+        }
+    });
+
+    // ========== Child Tasks dynamic loading ==========
+    function badgeClassForStatus(status) {
+        const s = (status || '').toLowerCase();
+        switch (s) {
+            case 'created': return 'bg-secondary';
+            case 'queued': return 'bg-info';
+            case 'running': return 'bg-primary';
+            case 'success': return 'bg-success';
+            case 'failed': return 'bg-danger';
+            case 'cancelled':
+            case 'manual_cancelled':
+            case 'timeout': return 'bg-warning';
+            default: return 'bg-secondary';
+        }
+    }
+
+    const childData = {
+        allItems: [],
+        activeFilter: 'all',
+    };
+
+    function computeFilters(items) {
+        const counts = {};
+        for (const it of items) {
+            const s = (it.status || 'unknown').toLowerCase();
+            counts[s] = (counts[s] || 0) + 1;
+        }
+        // Not finished = finished==false OR status in [null, created, queued, running]
+        const notFinishedCount = items.filter(c => !c.finished || [null, 'created', 'queued', 'running'].includes((c.status || null))).length;
+        const list = [];
+        const total = items.length;
+        list.push({ key: 'all', label: `All (${total})` });
+        list.push({ key: 'not_finished', label: `Not finished (${notFinishedCount})` });
+        for (const [status, cnt] of Object.entries(counts)) {
+            list.push({ key: status, label: `${status.charAt(0).toUpperCase()}${status.slice(1)} (${cnt})` });
+        }
+        return list;
+    }
+
+    function renderFilters(items) {
+        const container = document.getElementById('child-filters');
+        if (!container) return;
+        const filters = computeFilters(items);
+        container.innerHTML = '';
+        for (const f of filters) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn btn-sm ' + (childData.activeFilter === f.key ? 'btn-light' : 'btn-outline-light');
+            btn.textContent = f.label;
+            btn.dataset.filterKey = f.key;
+            btn.addEventListener('click', () => {
+                childData.activeFilter = f.key;
+                renderFilters(items); // refresh active state and counts
+                renderTable(applyFilter(items));
+            });
+            container.appendChild(btn);
+        }
+    }
+
+    function applyFilter(items) {
+        const key = childData.activeFilter;
+        if (key === 'all') return items;
+        if (key === 'not_finished') {
+            return items.filter(c => !c.finished || [null, 'created', 'queued', 'running'].includes((c.status || null)));
+        }
+        return items.filter(c => (c.status || 'unknown').toLowerCase() === key);
+    }
+
+    function renderTable(items) {
+        const tbody = document.getElementById('child-tasks-body');
+        const countEl = document.getElementById('child-tasks-count');
+        if (!tbody) return;
+        countEl.textContent = items.length;
+        if (!items.length) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-muted">No child tasks.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = items.map(c => {
+            const status = c.status || 'unknown';
+            const badge = badgeClassForStatus(status);
+            const duration = (c.duration == null) ? '-' : formatDuration(Number(c.duration));
+            const detailsUrl = "{{ widget.url_detail_task }}".replace('TASK_ID_REPLACE', c.task_id);
+            const start = c.start_time || '';
+            const end = c.end_time || '';
+            return `
+                <tr>
+                    <td><code>${c.task_id}</code></td>
+                    <td>${c.task_name || ''}</td>
+                    <td><span class="badge ${badge}">${status}</span></td>
+                    <td>${start}</td>
+                    <td>${end}</td>
+                    <td>${duration}</td>
+                    <td><a class="btn btn-sm btn-outline-primary" href="${detailsUrl}">Details</a></td>
+                </tr>`;
+        }).join('');
+    }
+
+    async function initChildTasks() {
+        const tbody = document.getElementById('child-tasks-body');
+        const errorBox = document.getElementById('child-tasks-error');
+        tbody.innerHTML = '<tr><td colspan="7">Loading...</td></tr>';
+        errorBox.classList.add('d-none');
+        errorBox.textContent = '';
+        try {
+            const url = new URL('{{ widget.url_child_tasks }}', window.location.origin);
+            const res = await fetch(url.toString());
+            const data = await res.json();
+            childData.allItems = Array.isArray(data.items) ? data.items : [];
+            if (data.error) {
+                errorBox.textContent = data.error;
+                errorBox.classList.remove('d-none');
+            }
+            renderFilters(childData.allItems);
+            renderTable(applyFilter(childData.allItems));
+        } catch (e) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-danger">Failed to load child tasks.</td></tr>';
+            errorBox.textContent = String(e);
+            errorBox.classList.remove('d-none');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initChildTasks();
+    });
+</script>
