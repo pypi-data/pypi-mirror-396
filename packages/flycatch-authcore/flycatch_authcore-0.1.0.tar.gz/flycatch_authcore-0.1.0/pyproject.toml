@@ -1,0 +1,67 @@
+[build-system]
+requires = ["setuptools>=69", "wheel", "build"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "flycatch-authcore"
+version = "0.1.0"
+description = "AuthCore: JWT/Session/OAuth core with adapters for FastAPI, Flask, and Django"
+readme = "README.md"
+requires-python = ">=3.10,<4.0"
+license = "GPL-3.0-or-later"
+authors = [{ name = "AuthCore Team", email = "support@flycatch.tech" }]
+keywords = ["authentication", "jwt", "oauth2", "session", "fastapi", "django", "flask"]
+
+# Core framework-agnostic runtime dependencies
+dependencies = [
+  "PyJWT>=2.9,<3.0",
+  "anyio>=4.3,<5.0",
+  "httpx>=0.27,<0.29",
+  "passlib[bcrypt]>=1.7.4,<2.0",
+  "bcrypt>=4.1.2,<5.0",          # ensure stable bcrypt backend
+  "pydantic>=2.4,<3.0",
+]
+
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Programming Language :: Python :: 3",
+  "Operating System :: OS Independent",
+  "Framework :: FastAPI",
+  "Framework :: Flask",
+  "Framework :: Django",
+  "Topic :: Software Development :: Libraries :: Application Frameworks",
+  "Topic :: Security",
+  "Topic :: Internet :: WWW/HTTP",
+  "Topic :: Software Development :: Libraries",
+]
+
+[project.optional-dependencies]
+# Install via: pip install "authcore[fastapi]" etc.
+fastapi = [
+  "fastapi>=0.111,<0.117",
+  "uvicorn>=0.24,<0.36",
+  "starlette>=0.37,<0.41",
+]
+flask = [
+  "Flask>=2.3,<4.0",
+  "authlib>=1.3,<2.0",
+]
+django = [
+  "Django>=3.2,<5.0",
+  "django-cors-headers>=4.3,<5.0",
+]
+oauth = [
+  "authlib>=1.3,<2.0",
+  "starlette>=0.37,<0.41",   # required by Authlib’s Starlette client
+]
+redis = [
+  "redis>=5.0,<6.0"
+]
+
+
+[tool.setuptools]
+packages = ["authcore", "authcore.adapters"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+authcore = ["py.typed"]
