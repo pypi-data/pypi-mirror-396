@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  glurpc:
+    image: glucosedao/glurpc:latest
+    container_name: glurpc-service
+    restart: unless-stopped
+    
+    ports:
+      # gRPC on localhost only
+      - "127.0.0.1:7003:7003"
+      # REST on all interfaces
+      - "8000:8000"
+      # SNET daemon (optional, uncomment if needed)
+      # - "127.0.0.1:7000:7000"
+      # HTTP for Let's Encrypt certificate challenges (uncomment if needed)
+      # - "127.0.0.1:80:80"
+      # ETCD client port (for cluster configuration or external access)
+      # - "127.0.0.1:2379:2379"
+      # ETCD peer port (for multi-node ETCD cluster configuration)
+      # - "127.0.0.1:2380:2380"
+    
+    volumes:
+      # Cache persistence using named volume
+      - glurpc-cache:/app/cache_storage:z
+      # Logs to host directory for easy access
+      - ./logs:/app/logs:z
+      # API keys file (create api-keys.txt with one key per line)
+      - ./api-keys.txt:/app/api-keys.txt:ro,Z
+      # SNET daemon ETCD data persistence
+      - glurpc-etcd:/app/etcd:z
+      # SNET daemon configuration files (editable)
+      - ./snetd_configs:/app/snetd_configs:z
+      # SSL certificates (mount your Let's Encrypt certs here)
+      # Example: - /etc/letsencrypt:/app/.certs:ro,Z
+      - ./certs:/app/.certs:z
+    
+    environment:
+      # Enable API key authentication
+      ENABLE_API_KEYS: "True"
+      
+      # SSL configuration for SNET daemon (set to true if using SSL)
+      REQUIRE_SSL: "False"
+      
+      # Cache configuration
+      MAX_CACHE_SIZE: 128
+      ENABLE_CACHE_PERSISTENCE: "True"
+      
+      # Model and inference settings
+      NUM_COPIES_PER_DEVICE: 2
+      BACKGROUND_WORKERS_COUNT: 4
+      BATCH_SIZE: 32
+      NUM_SAMPLES: 10
+      
+      # Timeout settings (adjust based on hardware)
+      INFERENCE_TIMEOUT_GPU: 600.0
+      INFERENCE_TIMEOUT_CPU: 7200.0
+      
+      # Queue configuration
+      MAX_INFERENCE_QUEUE_SIZE: 64
+      MAX_CALC_QUEUE_SIZE: 8192
+      
+      # Logging levels
+      LOG_LEVEL_ROOT: INFO
+      LOG_LEVEL_ENGINE: INFO
+      LOG_LEVEL_CORE: INFO
+    
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    
+    # Resource limits (optional, adjust based on your needs)
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '4.0'
+    #       memory: 8G
+    #     reservations:
+    #       cpus: '2.0'
+    #       memory: 4G
+
+volumes:
+  glurpc-cache:
+    name: glurpc-cache
+  glurpc-etcd:
+    name: glurpc-etcd
+    driver: local
