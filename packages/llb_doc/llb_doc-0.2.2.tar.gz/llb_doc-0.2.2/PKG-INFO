@@ -1,0 +1,285 @@
+Metadata-Version: 2.4
+Name: llb_doc
+Version: 0.2.2
+Summary: Large Language Blocks - A context packaging format for LLMs
+Author-email: 4fuu <hi@4fwu.com>
+License-Expression: MIT
+Project-URL: Homepage, https://github.com/4fuu/llb
+Project-URL: Repository, https://github.com/4fuu/llb
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Dynamic: license-file
+
+# LLB (Large Language Blocks)
+
+A context packaging format designed for LLMs.
+
+## Installation
+
+```bash
+pip install llb_doc
+```
+
+## Quick Start
+
+### Flat Mode - Independent Blocks
+
+```python
+from llb_doc import create_llb, parse_llb
+
+doc = create_llb()
+
+# Method 1: Fluent API with builder pattern
+doc.block("ticket", lang="en").meta(source="jira", priority="high").content(
+    "User cannot upload files larger than 10MB"
+).add()
+
+# Method 2: Context manager
+with doc.block("api", "json") as b:
+    b.meta["source"] = "storage_service"
+    b.content = '{"max_size": 5242880, "unit": "bytes"}'
+
+# Method 3: Direct add
+doc.add_block("note", "Config mismatch detected", source="code_review", lang="en")
+
+# Render to LLB format
+print(doc.render())
+
+# Parse LLB text back to document
+doc2 = parse_llb(doc.render())
+```
+
+#### Output
+
+```text
+@block B1 ticket en
+source=jira
+priority=high
+
+User cannot upload files larger than 10MB
+
+@end B1
+
+@block B2 api json
+source=storage_service
+
+{"max_size": 5242880, "unit": "bytes"}
+
+@end B2
+
+@block B3 note en
+source=code_review
+
+Config mismatch detected
+
+@end B3
+```
+
+### Graph Mode - Connected Nodes
+
+```python
+from llb_doc import create_graph
+
+g = create_graph()
+
+# Add nodes
+python = g.add_node("concept", "Python", id_="python", category="language")
+django = g.add_node("concept", "Django", id_="django", category="framework")
+flask = g.add_node("concept", "Flask", id_="flask", category="framework")
+
+# Add edges
+g.add_edge("python", "django", "has_framework")
+g.add_edge("python", "flask", "has_framework")
+
+# Render with focus and radius
+print(g.render(focus="python", radius=1))
+```
+
+#### Output
+
+```text
+@ctx C1
+focus=python
+radius=1
+strategy=bfs
+tiers=0:python;1:django,flask
+@end C1
+
+@node django concept
+category=framework
+tier=1
+in_edges=['python:has_framework']
+out_edges=[]
+
+Django
+
+@end django
+
+@node flask concept
+category=framework
+tier=1
+in_edges=['python:has_framework']
+out_edges=[]
+
+Flask
+
+@end flask
+
+@edge E1 python django has_framework @end
+
+@edge E2 python flask has_framework @end
+
+@node python concept
+category=language
+tier=0
+in_edges=[]
+out_edges=['django:has_framework', 'flask:has_framework']
+
+Python
+
+@end python
+```
+
+## Block Structure
+
+Each block follows this structure:
+
+```text
+@block <id> <type> [lang]
+key1=value1
+key2=value2
+
+<content>
+
+@end <id>
+```
+
+## Features
+
+### Document Operations
+
+```python
+doc = create_llb()
+b1 = doc.add_block("task", "First task")
+b2 = doc.add_block("task", "Second task")
+
+# Check, get, remove blocks
+doc.has_block(b1.id)        # True
+doc.get_block(b1.id)        # Block object
+doc.remove_block(b1.id)     # Remove and return block
+
+# Reorder blocks
+doc.move_block(b2.id, 0)    # Move to position
+doc.swap_blocks(b1.id, b2.id)  # Swap positions
+
+# Prefix and suffix
+doc.prefix = "# Analysis Context"
+doc.suffix = "# End"
+```
+
+### Custom Meta Generators
+
+Auto-generate metadata for blocks:
+
+```python
+from llb_doc import create_llb, meta_generator, Block
+
+@meta_generator("word_count")
+def gen_word_count(block: Block) -> str:
+    return str(len(block.content.split()))
+
+doc = create_llb(generators=[gen_word_count])
+doc.add_block("text", "Hello world!")
+print(doc.render())
+# word_count=2 will be auto-added
+```
+
+### Custom Block Sorters
+
+Sort blocks in custom order:
+
+```python
+from llb_doc import create_llb, block_sorter, Block
+
+@block_sorter("by_priority")
+def sort_by_priority(blocks: list[Block]) -> list[Block]:
+    order = {"high": 0, "medium": 1, "low": 2}
+    return sorted(blocks, key=lambda b: order.get(b.meta.get("priority", ""), 99))
+
+doc = create_llb(sorters=[sort_by_priority])
+doc.add_block("task", "Task A", priority="low")
+doc.add_block("task", "Task B", priority="high")
+print(doc.render(order="by_priority"))
+```
+
+### Graph Mode Features
+
+```python
+g = create_graph()
+
+# Builder pattern for nodes
+g.node("person").id("p1").meta(name="Alice").content("Developer").add()
+
+# Builder pattern for edges
+g.edge("p1", "c1", "works_at").meta(since="2020").content("Full-time").add()
+
+# Render with different sorting strategies
+g.render(focus="p1", radius=2, order="focus_last")   # Default: focus at end
+g.render(focus="p1", radius=2, order="focus_first")  # Focus at beginning
+g.render(focus="p1", radius=2, order="tier_asc")     # By tier ascending
+g.render(focus="p1", radius=2, order="tier_desc")    # By tier descending
+
+# Render all nodes without focus
+g.render()  # No @ctx block, shows all nodes and edges
+```
+
+## API Reference
+
+### Main Functions
+
+| Function | Description |
+|----------|-------------|
+| `create_llb()` | Create a new Document for flat mode |
+| `create_graph()` | Create a new GraphDocument for graph mode |
+| `parse_llb(text)` | Parse LLB format text into Document |
+
+### Decorators
+
+| Decorator | Description |
+|-----------|-------------|
+| `@meta_generator(key)` | Register a metadata generator function |
+| `@block_sorter(name)` | Register a block sorter function |
+
+### Classes
+
+| Class | Description |
+|-------|-------------|
+| `Document` | Container for blocks in flat mode |
+| `GraphDocument` | Container for nodes, edges in graph mode |
+| `Block` | Basic block with type, lang, meta, content |
+| `Node` | Graph node (renders as `@node`) |
+| `Edge` | Graph edge (renders as `@edge`) |
+| `Ctx` | Graph context (renders as `@ctx`) |
+
+## Demo
+
+Run the demo script to see all features in action:
+
+```bash
+python demo.py
+```
+
+## Roadmap
+
+- [x] Flat Mode (independent blocks)
+- [x] Custom meta generators
+- [x] Custom block sorters
+- [x] Graph Mode (`@ctx`, `@node`, `@edge`)
+- [x] BFS tier computation with focus/radius
+- [x] Preset graph sorters (focus_last, focus_first, tier_asc, tier_desc)
+- [ ] Parser support for graph mode
+
+## License
+
+MIT
