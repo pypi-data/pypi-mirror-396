@@ -1,0 +1,224 @@
+import random
+from collections import Counter
+
+from error_align.utils import END_DELIMITER, OP_TYPE_COMBO_MAP, START_DELIMITER, OpType
+
+
+class Node:
+    """Node in the backtrace graph corresponding to the index (i, j) in the backtrace matrix."""
+
+    def __init__(self, hyp_idx, ref_idx) -> None:
+        """Initialize the node at index (i, j)."""
+        self.hyp_idx = hyp_idx
+        self.ref_idx = ref_idx
+        self.children = {}
+        self.parents = {}
+
+    @property
+    def index(self) -> tuple[int, int]:
+        return (self.hyp_idx, self.ref_idx)
+
+    @property
+    def offset_index(self) -> tuple[int, int]:
+        """Get the offset index of the node so indices match the hypothesis and reference strings.
+
+        Root will be at (-1, -1).
+
+        Returns:
+            tuple[int, int]: The offset index of the node in the backtrace matrix.
+
+        """
+        return (self.hyp_idx - 1, self.ref_idx - 1)
+
+    @property
+    def is_terminal(self) -> bool:
+        """Check if the node is a terminal node (i.e., it has no children)."""
+        return len(self.children) == 0
+
+    @property
+    def is_root(self) -> bool:
+        """Check if the node is a root node (i.e., it has no parents)."""
+        return len(self.parents) == 0
+
+
+class BacktraceGraph:
+    """Backtrace alignment graph."""
+
+    def __init__(self, backtrace_matrix: list[list[int]]) -> None:
+        """Create a graph from the backtrace matrix."""
+        self.hyp_dim = len(backtrace_matrix)
+        self.ref_dim = len(backtrace_matrix[0])
+        self.hyp_max_idx = self.hyp_dim - 1
+        self.ref_max_idx = self.ref_dim - 1
+        self.backtrace_matrix = backtrace_matrix
+
+        self._nodes = None
+
+    @property
+    def nodes(self) -> dict[tuple[int, int], Node]:
+        """Get the nodes in the graph.
+
+        Returns:
+            dict: A dictionary of nodes indexed by their (hyp_idx, ref_idx).
+
+        """
+        if self._nodes is None:
+            terminal_node = Node(self.hyp_max_idx, self.ref_max_idx)
+            self._nodes = {terminal_node.index: terminal_node}
+
+            # Traverse nodes in reverse topological order to add parents.
+            for index in self._iter_topological_order(reverse=True):
+                if index in self._nodes and index != (0, 0):
+                    self._add_parents_from_backtrace(index)
+
+            # Sort nodes by their indices to ensure topological order.
+            self._nodes = dict(sorted(self._nodes.items(), key=lambda item: (item[0][0], item[0][1])))
+
+        return self._nodes
+
+    def get_node(self, hyp_idx, ref_idx):
+        """Get the node at the given index.
+
+        Args:
+            hyp_idx (int): Hyp/row index.
+            ref_idx (int): Ref/column index.
+
+        """
+        return self.nodes[(hyp_idx, ref_idx)]
+
+    def get_node_set(self):
+        """Get the set of all node indices in the graph.
+
+        Returns:
+            set: A set of all node indices.
+
+        """
+        transitions = set()
+        for node in self.nodes.values():
+            transitions.add(node.offset_index)
+        return transitions
+
+    def get_path(self, sample=False):
+        """Get a path through the graph.
+
+        Args:
+            sample (bool): If True, sample a path randomly based on the transition probabilities. Otherwise, return
+            the first path deterministically.
+
+        Returns:
+            list[Node]: A list of nodes representing the path.
+
+        """
+        node = self.get_node(0, 0)
+        assert node.is_root, "The node at (-1, -1) was expected to be a root node."
+
+        path = []
+        while not node.is_terminal:
+            if sample:
+                op_type = random.choice(list(node.children.keys()))
+            else:
+                op_type = next(iter(node.children.keys()))
+            node = node.children[op_type]
+            path.append((op_type, node))
+
+        return path
+
+    def get_unambiguous_node_matches(self) -> list[tuple[int, int]]:
+        """Get nodes that can only be accounted for by a match.
+
+        Returns:
+            list[tuple[int, int]]: A list of index tuples representing the unambiguous node matches.
+
+        """
+        match_indices = set()
+        match_per_token = {
+            "ref": Counter(),
+            "hyp": Counter(),
+        }
+        ref_op_types = {OpType.MATCH, OpType.SUBSTITUTE, OpType.DELETE}
+        hyp_op_types = {OpType.MATCH, OpType.SUBSTITUTE, OpType.INSERT}
+
+        for (hyp_idx, ref_idx), node in self.nodes.items():
+            # Identify all nodes at which a match occurs.
+            if len(node.parents) == 1 and OpType.MATCH in node.parents:
+                match_indices.add((hyp_idx, ref_idx))
+
+            # Count number of paths passing through each token.
+            if ref_op_types.intersection(node.parents):
+                match_per_token["ref"][ref_idx] += 1
+            if hyp_op_types.intersection(node.parents):
+                match_per_token["hyp"][hyp_idx] += 1
+
+        # Collect only those matches that are unambiguous on both sides.
+        unambiguous_matches = []
+        for hyp_idx, ref_idx in match_indices:
+            if match_per_token["ref"][ref_idx] == 1 and match_per_token["hyp"][hyp_idx] == 1:
+                unambiguous_matches.append((hyp_idx - 1, ref_idx - 1))  # Offset indices
+
+        return sorted(unambiguous_matches, key=lambda n: n[1])
+
+    def get_unambiguous_token_span_matches(self, ref):
+        """Get word spans (i.e., <...>) that are unambiguously matched.
+
+        That is, there is only one subpath that can account for the span using MATCH operations.
+
+        Other subpaths that include INSERT, DELETE, SUBSTITUTE operations are not considered.
+
+        Returns:
+            list[tuple[int, int]]: A list of index tuples representing the end node of unambiguous span matches.
+
+        """
+        ref = "_" + ref  # NOTE: Implicit index offset for root node.
+        mono_match_end_nodes = set()
+        ref_idxs = Counter()
+        hyp_idxs = Counter()
+        for (hyp_idx, ref_idx), node in self.nodes.items():
+            if OpType.MATCH in node.parents and ref[ref_idx] == START_DELIMITER:
+                _ref_idx, _hyp_idx = ref_idx + 1, hyp_idx + 1
+                while True:
+                    if (_hyp_idx, _ref_idx) not in self.nodes:
+                        break
+                    if OpType.MATCH not in self.nodes[(_hyp_idx, _ref_idx)].parents:
+                        break
+                    if ref[_ref_idx] == END_DELIMITER:
+                        end_index = (_hyp_idx, _ref_idx)
+                        mono_match_end_nodes.add(end_index)
+                        ref_idxs[_ref_idx] += 1
+                        hyp_idxs[_hyp_idx] += 1
+                        break
+                    _ref_idx, _hyp_idx = _ref_idx + 1, _hyp_idx + 1
+
+        return {(h - 1, r - 1) for h, r in mono_match_end_nodes if hyp_idxs[h] == 1 and ref_idxs[r] == 1}
+
+    def _parent_index_from_op_type(self, hyp_idx, ref_idx, op_type):
+        """Create a parent node based on the index of the current node and the operation type."""
+        hyp_idx = hyp_idx - 1 if op_type != OpType.DELETE else hyp_idx
+        ref_idx = ref_idx - 1 if op_type != OpType.INSERT else ref_idx
+        if (hyp_idx, ref_idx) not in self._nodes:
+            self._nodes[(hyp_idx, ref_idx)] = Node(hyp_idx, ref_idx)
+        return self._nodes[(hyp_idx, ref_idx)]
+
+    def _iter_topological_order(self, reverse=False):
+        """Iterate through the nodes in topological order."""
+        if reverse:
+            for i in reversed(range(self.hyp_dim)):
+                for j in reversed(range(self.ref_dim)):
+                    yield (i, j)
+        else:
+            for i in range(self.hyp_dim):
+                for j in range(self.ref_dim):
+                    yield (i, j)
+
+    def _add_parents_from_backtrace(self, index):
+        """Add parents to the node at the given index based on the backtrace matrix."""
+        node = self._nodes.get(index, None)
+
+        assert node is not None, f"Node at index {index} does not exist in the graph."
+
+        op_type_combo_code = self.backtrace_matrix[node.hyp_idx][node.ref_idx]
+        op_type_combo = OP_TYPE_COMBO_MAP[op_type_combo_code]
+
+        for op_type in op_type_combo:
+            parent_node = self._parent_index_from_op_type(*node.index, op_type)
+            node.parents[op_type] = parent_node
+            parent_node.children[op_type] = node
