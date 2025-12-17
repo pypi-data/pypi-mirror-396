@@ -1,0 +1,138 @@
+# Adapted from : https://github.com/patrick-kidger/equinox/blob/main/mkdocs.yml
+
+site_name: jinns
+site_description: The documentation for the jinns software library.
+site_author: Hugo Gangloff & Nicolas Jouvin
+site_url: https://mia_jinns.gitlab.io/jinns/
+
+theme:
+  name: "material"
+  features:
+      - navigation.sections  # Sections are included in the navigation on the left.
+      - toc.integrate  # Table of contents is integrated on the left; does not appear separately on the right.
+      - header.autohide  # header disappears as you scroll
+  icon:
+      repo: fontawesome/brands/gitlab  # GitHub logo in top right
+      logo: "material/oil-lamp"  # jinns logo in top left
+  favicon: "_static/favicon.png"
+  palette:
+          # Light mode / dark mode
+          # We deliberately don't automatically use `media` to check a user's preferences. We default to light mode as
+          # (a) it looks more professional, and (b) is more obvious about the fact that it offers a (dark mode) toggle.
+          - scheme: default
+            primary: white
+            accent: amber
+            toggle:
+              icon: material/weather-night
+              name: Switch to dark mode
+          - scheme: slate
+            primary: black
+            accent: amber
+            toggle:
+              icon: material/weather-sunny
+              name: Switch to light mode
+markdown_extensions:
+  - toc:
+      permalink: "#"  # Adds a clickable permalink to each section heading
+      toc_depth: 3
+  - pymdownx.arithmatex:
+      generic: true
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+
+
+extra_javascript:
+  - javascripts/katex.js
+  - https://unpkg.com/katex@0/dist/katex.min.js
+  - https://unpkg.com/katex@0/dist/contrib/auto-render.min.js
+
+extra_css:
+  - https://unpkg.com/katex@0/dist/katex.min.css
+  - _static/custom_css.css
+
+plugins:
+    - search  # default search plugin; needs manually re-enabling when using any other plugins
+    - autorefs  # Cross-links to headings
+    - mknotebooks  # Jupyter notebooks
+    - mkdocstrings:
+        handlers:
+          python:
+            options:
+                docstring_style: numpy
+                show_root_heading: true
+                show_source: false  # don't include source code
+                inherited_members: true  # Allow looking up inherited methods
+                show_root_heading: true  # actually display anything at all...
+                show_root_full_path: true  # display "jinns.abcd" not just "abcd"
+                show_if_no_docstring: true
+                show_signature_annotations: true
+                members_order: source  # order methods according to their order of definition in the source code, not alphabetical order
+                heading_level: 3
+
+
+
+repo_url: https://gitlab.com/mia_jinns/jinns
+repo_name: mia_jinns/jinns
+
+nav:
+    - 'index.md'
+    - 'changelog.md'
+    - Citation: 'https://mia_jinns.gitlab.io/jinns/#citing-us'
+    - Tutorials:
+      - Implementing your own problem: 'Notebooks/Tutorials/implementing_your_own_PDE_problem.ipynb'
+      - Saving / loading your model: 'Notebooks/Tutorials/load_save_model.ipynb'
+      - Using validation module: 'Notebooks/Tutorials/introducing_validation_loss.ipynb'
+      - Simple inverse problem: 'Notebooks/Tutorials/1D_non_stationary_Burgers_JointEstimation_Vanilla.ipynb'
+      - More advanced inverse problem: 'Notebooks/Tutorials/GLV_JointEstimation_Alternate.ipynb'
+    - Examples:
+      - Forward problems:
+        - ODE:
+          - Linear first-order equation: 'Notebooks/ODE/linear_fo_equation.ipynb'
+          - Generalized Lotka-Volterra: 'Notebooks/ODE/1D_Generalized_Lotka_Volterra.ipynb'
+          - SBINNs: 'Notebooks/ODE/systems_biology_informed_neural_network.ipynb'
+        - PDE:
+          - Navier-Stokes in pipe flow:
+            - Hard-constraints: 'Notebooks/PDE/2D_Navier_Stokes_PipeFlow.ipynb'
+            - Soft-constraints: 'Notebooks/PDE/2D_Navier_Stokes_PipeFlow_SoftConstraints.ipynb'
+          - 1D Burgers equation: 'Notebooks/PDE/1D_non_stationary_Burgers.ipynb'
+          - 1D Fisher-KPP: 'Notebooks/PDE/1D_non_stationary_Fisher_KPP_Bounded_Domain.ipynb'
+          - 2D Fisher-KPP  with covariates: 'Notebooks/PDE/Reaction_Diffusion_2D_heterogenous_model.ipynb'
+          - 2D learning Ornstein Uhlenbeck pdf (RAR sampling): 'Notebooks/PDE/2D_non_stationary_OU.ipynb'
+      - Inverse problems:
+        - PDE:
+          - Heat equation 2D and estimation of the diffusion coefficient: 'Notebooks/PDE/2D_Heat_inverse_problem.ipynb'
+          - Poisson in 2D: 'Notebooks/PDE/2D_Poisson_inverse_problem.ipynb'
+      - Meta-modeling:
+        - ODE:
+          - Mechanistic-statistical modeling in Verhulst model: 'Notebooks/ODE/MS_model_Verhulst.ipynb'
+        - PDE:
+          - Navier-Stokes in pipe flow: 'Notebooks/PDE/2D_Navier_Stokes_PipeFlow_Metamodel_hyperpinn.ipynb'
+          - Fisher-KPP: 'Notebooks/PDE/Reaction_Diffusion_2D_homogeneous_metamodel_hyperpinn_diffrax.ipynb'
+    - Basic API:
+      - DataGenerators:
+        - Main DataGenerators: 'api/datagenerators/datagenerators_core.md'
+        - Other DataGenerators: 'api/datagenerators/datagenerators_other.md'
+      - Loss:
+        - Dynamic loss: 'api/loss/dynamic_loss.md'
+        - Total loss: 'api/loss/loss_xde.md'
+        - Loss weights: 'api/loss/loss_weights.md'
+      - Neural Networks:
+        - 'api/pinn/pinn.md'
+        - 'api/pinn/spinn.md'
+        - 'api/pinn/hyperpinn.md'
+        - 'api/pinn/ppinn.md'
+        - 'api/pinn/save_load.md'
+      - Plot: 'api/plot.md'
+      - Solve: 'api/solver.md'
+      - Advanced:
+        - Differential operators: 'api/advanced/differential_operators.md'
+        - Derivative keys: 'api/advanced/derivative_keys.md'
+        - Adaptative loss weights: 'api/advanced/loss_weight_updates.md'
+    - Misc:
+      - Framework & notations: 'maths/introduction_to_pinns.md'
+      - 'maths/fokker_planck.md'

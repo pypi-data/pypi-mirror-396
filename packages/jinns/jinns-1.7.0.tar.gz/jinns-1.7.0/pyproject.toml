@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["jinns"]
+
+[tool.setuptools_scm]
+[project]
+name = "jinns"
+dynamic = ["version"]
+description = "Physics Informed Neural Network with JAX"
+readme = "README.md"
+license = {text = "Apache License 2.0"}
+requires-python = ">=3.11"
+keywords = []
+authors = [
+  {name = "Hugo Gangloff", email = "hugo.gangloff@inrae.fr"},
+  {name = "Nicolas Jouvin", email = "nicolas.jouvin@inrae.fr"},
+]
+maintainers = [
+  {name = "Hugo Gangloff", email = "hugo.gangloff@inrae.fr"},
+  {name = "Nicolas Jouvin", email = "nicolas.jouvin@inrae.fr"},
+]
+classifiers = [
+  "License :: OSI Approved :: Apache Software License",
+  "Development Status :: 5 - Production/Stable",
+  "Programming Language :: Python",
+]
+dependencies = ["numpy>=2.0.0", "jax>=0.8.1", "optax>=0.2.6", "equinox>=0.13.2",
+                "matplotlib", "jaxtyping"]
+
+[project.optional-dependencies]
+notebook = ["jupyter", "seaborn", "pandas", "pytest", "pre-commit", "pyright", "diffrax"]
+
+[project.urls]
+Repository = "https://gitlab.com/mia_jinns/jinns"
+Documentation = "https://mia_jinns.gitlab.io/jinns/index.html"
+
+[tool.coverage.report]
+exclude_also = [
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@(abc\\.)?abstractmethod",
+    # A pragma comment that excludes an entire file:
+    "\\A(?s:.*# pragma: exclude file.*)\\Z",
+    ]
+
+[tool.pyright]
+include = ["jinns"]
+exclude = ["jinns/experimental"]
+pythonVersion = "3.11"
+typeCheckingMode = "basic"
+
+[tool.ruff]
+[tool.ruff.lint]
+ignore = ["F722", "E741", "E731", "E722"]

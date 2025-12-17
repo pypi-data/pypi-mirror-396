@@ -1,0 +1,3 @@
+# HyperPINN
+
+::: jinns.nn.HyperPINN

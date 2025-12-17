@@ -1,0 +1,100 @@
+image: "registry.gitlab.com/mia_jinns/docker-image-quarto-jax-sphinx:main"
+
+stages:
+  - linting
+  - tests
+  - build
+  - publish
+
+.base_ruff: # from https://docs.astral.sh/ruff/integrations/#github-actions
+  stage: linting
+  interruptible: true
+  image:
+    name: ghcr.io/astral-sh/ruff:0.11.8-alpine
+  before_script:
+    - ruff --version
+
+Ruff Check:
+  extends: .base_ruff
+  script:
+    - ruff check jinns --output-format=gitlab > code-quality-report.json
+  artifacts:
+    reports:
+      codequality: jinns/code-quality-report.json
+
+Ruff Format:
+  extends: .base_ruff
+  script:
+    - ruff format jinns --diff
+
+run_tests:
+  stage: tests
+  before_script:
+    - virtualenv venv
+    - source venv/bin/activate
+    - pip install pytest coverage pytest-cov
+    - pip install -e .
+  script:
+    - pytest --cov=jinns
+  coverage: '/TOTAL.*\s+(\d+%)$/'
+
+build_doc:
+  stage: build
+  needs: [] # don't need to wait for other jobs
+  before_script:
+    - virtualenv venv
+    - source venv/bin/activate
+    - pip install -e .
+    - pip install -r docs/doc_requirements.txt
+  script:
+    - mkdocs build
+    - mkdocs build  # twice, see https://github.com/patrick-kidger/pytkdocs_tweaks
+
+  artifacts:
+    untracked: true
+    expire_in: 1 week
+  tags:
+    - saas-linux-small-amd64
+
+build_package:
+  stage: build
+  image: "python:3.9"
+  before_script:
+    - pip install build
+  script:
+    - rm -rf dist/
+    - python -m build
+  artifacts:
+    untracked: true
+    expire_in: 1 week
+  tags:
+    - saas-linux-small-amd64
+
+
+publish_package:
+  stage: publish
+  image: "python:3.9"
+  before_script:
+    - pip install twine
+  script:
+    - TWINE_PASSWORD=${PYPI_UPLOAD_TOKEN}
+      TWINE_USERNAME=__token__
+      python -m twine upload dist/*
+  tags:
+    - saas-linux-small-amd64
+  only:
+    - tags
+
+pages:
+  stage: publish
+  image: "python:3.9"
+  script:
+    - rm -rf public/
+    - cp -r site/ public/
+  artifacts:
+    paths:
+    - public
+  tags:
+    - saas-linux-small-amd64
+  only:
+    - main
