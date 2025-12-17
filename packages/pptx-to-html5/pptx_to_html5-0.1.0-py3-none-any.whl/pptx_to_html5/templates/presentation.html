@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="presentation-container">
+        <div class="slides-wrapper">
+            {% for slide in slides %}
+            <div class="slide{% if loop.first %} active{% endif %}" data-slide="{{ slide.number }}">
+                <div class="slide-canvas" style="position: relative; width: 100%; padding-bottom: {{ (slide.slide_height / slide.slide_width * 100)|round(2) }}%;">
+                    <div class="slide-content-positioned" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+                        {% for shape in slide.shapes %}
+                            {% if shape.type == 'text' %}
+                            <div class="shape shape-text{% if shape.is_title %} shape-title{% endif %}" 
+                                 style="position: absolute; 
+                                        left: {{ (shape.left / slide.slide_width * 100)|round(2) }}%; 
+                                        top: {{ (shape.top / slide.slide_height * 100)|round(2) }}%; 
+                                        width: {{ (shape.width / slide.slide_width * 100)|round(2) }}%; 
+                                        height: {{ (shape.height / slide.slide_height * 100)|round(2) }}%;
+                                        {% if shape.font_size %}font-size: {{ (shape.font_size / 12700)|round(1) }}pt;{% endif %}
+                                        {% if shape.font_name %}font-family: '{{ shape.font_name }}', sans-serif;{% endif %}
+                                        text-align: {% if 'CENTER' in shape.alignment|string %}center{% elif 'RIGHT' in shape.alignment|string %}right{% else %}left{% endif %};
+                                        overflow-y: auto;
+                                        {% if not shape.is_title %}padding: 0.5em;{% endif %}">
+                                {% if shape.paragraphs %}
+                                    {% if shape.is_title %}
+                                        <div style="width: 100%; padding: 0.5em; font-weight: bold;">{{ shape.paragraphs[0].text }}</div>
+                                    {% else %}
+                                        <div style="width: 100%;">
+                                        {% for para in shape.paragraphs %}
+                                            <div class="paragraph" style="margin-bottom: 0.3em; padding-left: {{ para.level * 1.5 }}em; 
+                                                {% if para.font_size %}font-size: {{ (para.font_size / 12700)|round(1) }}pt;{% endif %}
+                                                {% if para.bold %}font-weight: bold;{% endif %}
+                                                {% if para.italic %}font-style: italic;{% endif %}
+                                                text-align: {% if 'CENTER' in para.alignment|string %}center{% elif 'RIGHT' in para.alignment|string %}right{% else %}left{% endif %};">
+                                                {% if para.level == 0 %}
+                                                <span style="margin-right: 0.5em;">•</span>
+                                                {% elif para.level == 1 %}
+                                                <span style="margin-right: 0.5em;">◦</span>
+                                                {% elif para.level >= 2 %}
+                                                <span style="margin-right: 0.5em;">▪</span>
+                                                {% endif %}
+                                                <span>{{ para.text }}</span>
+                                            </div>
+                                        {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                {% else %}
+                                    <div style="width: 100%; padding: 0.5em;">{{ shape.text }}</div>
+                                {% endif %}
+                            </div>
+                            {% elif shape.type == 'autoshape' %}
+                            <div class="shape shape-autoshape" 
+                                 style="position: absolute; 
+                                        left: {{ (shape.left / slide.slide_width * 100)|round(2) }}%; 
+                                        top: {{ (shape.top / slide.slide_height * 100)|round(2) }}%; 
+                                        width: {{ (shape.width / slide.slide_width * 100)|round(2) }}%; 
+                                        height: {{ (shape.height / slide.slide_height * 100)|round(2) }}%;">
+                                {% if 'ARROW' in shape.autoshape_type|string %}
+                                <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                    {% if 'RIGHT' in shape.autoshape_type|string %}
+                                    <defs>
+                                        <marker id="arrowhead-{{ loop.index }}" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                                            <polygon points="0 0, 10 3, 0 6" fill="#333" />
+                                        </marker>
+                                    </defs>
+                                    <line x1="0" y1="50" x2="90" y2="50" stroke="#333" stroke-width="3" marker-end="url(#arrowhead-{{ loop.index }})" />
+                                    {% elif 'LEFT' in shape.autoshape_type|string %}
+                                    <defs>
+                                        <marker id="arrowhead-{{ loop.index }}" markerWidth="10" markerHeight="10" refX="1" refY="3" orient="auto">
+                                            <polygon points="10 0, 0 3, 10 6" fill="#333" />
+                                        </marker>
+                                    </defs>
+                                    <line x1="10" y1="50" x2="100" y2="50" stroke="#333" stroke-width="3" marker-start="url(#arrowhead-{{ loop.index }})" />
+                                    {% elif 'UP' in shape.autoshape_type|string %}
+                                    <defs>
+                                        <marker id="arrowhead-{{ loop.index }}" markerWidth="10" markerHeight="10" refX="3" refY="1" orient="auto">
+                                            <polygon points="0 10, 3 0, 6 10" fill="#333" />
+                                        </marker>
+                                    </defs>
+                                    <line x1="50" y1="10" x2="50" y2="100" stroke="#333" stroke-width="3" marker-start="url(#arrowhead-{{ loop.index }})" />
+                                    {% elif 'DOWN' in shape.autoshape_type|string %}
+                                    <defs>
+                                        <marker id="arrowhead-{{ loop.index }}" markerWidth="10" markerHeight="10" refX="3" refY="9" orient="auto">
+                                            <polygon points="0 0, 3 10, 6 0" fill="#333" />
+                                        </marker>
+                                    </defs>
+                                    <line x1="50" y1="0" x2="50" y2="90" stroke="#333" stroke-width="3" marker-end="url(#arrowhead-{{ loop.index }})" />
+                                    {% else %}
+                                    <!-- Generic arrow -->
+                                    <polygon points="0,40 70,40 70,20 100,50 70,80 70,60 0,60" fill="#333" />
+                                    {% endif %}
+                                </svg>
+                                {% else %}
+                                <!-- Generic autoshape placeholder -->
+                                <div style="width: 100%; height: 100%; background: #e0e0e0; border: 2px solid #999; border-radius: 4px;"></div>
+                                {% endif %}
+                            </div>
+                            {% elif shape.type == 'picture' and shape.image_data %}
+                            <div class="shape shape-picture" 
+                                 style="position: absolute; 
+                                        left: {{ (shape.left / slide.slide_width * 100)|round(2) }}%; 
+                                        top: {{ (shape.top / slide.slide_height * 100)|round(2) }}%; 
+                                        width: {{ (shape.width / slide.slide_width * 100)|round(2) }}%; 
+                                        height: {{ (shape.height / slide.slide_height * 100)|round(2) }}%;">
+                                <img src="{{ shape.image_data }}" alt="Image" style="width: 100%; height: 100%; object-fit: contain;">
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                {% if include_notes and slide.notes %}
+                <div class="slide-notes">
+                    <h3>Speaker Notes:</h3>
+                    <p>{{ slide.notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="controls">
+            <button id="prevBtn" class="nav-btn">← Previous</button>
+            <span class="slide-counter">
+                <span id="currentSlide">1</span> / <span id="totalSlides">{{ slides|length }}</span>
+            </span>
+            <button id="nextBtn" class="nav-btn">Next →</button>
+        </div>
+
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
