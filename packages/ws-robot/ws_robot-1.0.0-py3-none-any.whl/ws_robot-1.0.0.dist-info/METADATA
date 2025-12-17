@@ -1,0 +1,350 @@
+Metadata-Version: 2.4
+Name: ws-robot
+Version: 1.0.0
+Summary: WebSocket机器人客户端库 - 基于websocket-client的同步WebSocket机器人实现
+Home-page: https://github.com/yourusername/ws-robot
+Author: Your Name
+Author-email: Your Name <your.email@example.com>
+License: MIT
+Project-URL: Homepage, https://github.com/yourusername/ws-robot
+Project-URL: Bug Reports, https://github.com/yourusername/ws-robot/issues
+Project-URL: Source, https://github.com/yourusername/ws-robot
+Keywords: websocket,robot,client,sync,agora,rtc
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: Communications :: Chat
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: websocket-client<1.9.0,>=1.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=6.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.18.0; extra == "dev"
+Requires-Dist: black>=22.0.0; extra == "dev"
+Requires-Dist: flake8>=4.0.0; extra == "dev"
+Requires-Dist: mypy>=0.950; extra == "dev"
+Dynamic: author
+Dynamic: home-page
+Dynamic: license-file
+Dynamic: requires-python
+
+# WS-Robot
+
+一个基于 websocket-client 的同步 WebSocket 机器人客户端库。
+
+## 简介
+
+WS-Robot 是一个用于管理 WebSocket 机器人的 Python 库，提供了完整的机器人生命周期管理功能，包括创建、更新、删除机器人，以及会话管理、资源预分配等功能。
+
+## 特性
+
+- 🚀 **同步 WebSocket 客户端** - 基于 websocket-client 的同步实现，简单易用
+- 🔄 **自动重连** - 支持自动重连机制，带有指数退避策略
+- 🎮 **机器人管理** - 完整的机器人生命周期管理（创建、更新、删除）
+- 📊 **会话管理** - 支持会话查询、清理和强制清理
+- 🔒 **加密支持** - 支持加密配置和数据流加密
+- 🎯 **资源预分配** - 支持批量资源预分配，提高创建效率
+- 🔧 **上下文管理器** - 支持 Python 上下文管理器，自动资源清理
+
+## 安装
+
+```bash
+pip install ws-robot
+```
+
+## 快速开始
+
+### 基本使用
+
+```python
+from ws_robot import WebSocketRobotClient, WebSocketRobotManager, RobotAPIBody
+
+# 创建客户端
+client = WebSocketRobotClient(
+    ws_url="ws://your-server.com/ws",
+    username="your_username",
+    password="your_password"
+)
+
+# 连接到服务器
+client.connect()
+
+# 创建管理器
+manager = WebSocketRobotManager(client)
+api_body = RobotAPIBody()
+
+# 创建机器人
+robot_data = api_body.gen_create_data(
+    appId="your_app_id",
+    cname="test_channel",
+    user="test_user",
+    uid=12345,
+    url="http://example.com/video.mp4",
+    width=640,
+    height=360,
+    fps=30,
+    bitrate=800,
+    activeTime=120
+)
+
+robot = manager.add_robot(robot_data)
+print(f"Robot created: {robot.robot_id}")
+
+# 停止机器人
+manager.stop_robot(robot)
+
+# 断开连接
+client.disconnect()
+```
+
+### 使用上下文管理器
+
+```python
+from ws_robot import WebSocketRobotClient, WebSocketRobotManager
+
+with WebSocketRobotClient(
+    ws_url="ws://your-server.com/ws",
+    username="your_username",
+    password="your_password"
+) as client:
+    with WebSocketRobotManager(client) as manager:
+        # 创建机器人
+        robot = manager.add_robot(robot_data)
+        
+        # 执行操作
+        robot.muteVideo()
+        robot.unmuteAudio()
+        
+        # 上下文管理器会自动清理资源
+```
+
+### 批量创建机器人
+
+```python
+# 预分配资源
+manager.preallocate_resources(robot_count=10, user="test_user")
+
+# 批量创建
+robot_data_list = [
+    api_body.gen_create_data(
+        appId="your_app_id",
+        cname=f"channel_{i}",
+        user="test_user",
+        uid=10000 + i,
+        url="http://example.com/video.mp4",
+        activeTime=120
+    )
+    for i in range(10)
+]
+
+robots = manager.create_multiple_robots(robot_data_list)
+print(f"Created {len(robots)} robots")
+```
+
+### 机器人操作
+
+```python
+# 静音/取消静音
+robot.muteVideo()
+robot.unmuteVideo()
+robot.muteAudio()
+robot.unmuteAudio()
+
+# 切换角色
+robot.changeHostAudience(clientRole=1)  # 1=主播, 0=观众
+
+# 设置视频参数
+robot.setVideoParams(width=1280, height=720, fps=30, bitrate=1500)
+
+# 获取状态
+status = robot.get_status()
+print(f"Robot status: {status}")
+
+# 删除机器人
+robot.delete()
+```
+
+### 会话管理
+
+```python
+# 查询机器人
+robots = client.query_robots()
+print(f"Active robots: {len(robots)}")
+
+# 查询会话
+sessions = client.query_sessions()
+print(f"Active sessions: {len(sessions)}")
+
+# 清理会话
+client.cleanup_session()
+
+# 强制清理
+client.force_cleanup()
+
+# 获取系统状态
+status = client.get_status()
+print(f"System status: {status}")
+```
+
+### 自动重连配置
+
+```python
+client = WebSocketRobotClient(
+    ws_url="ws://your-server.com/ws",
+    username="your_username",
+    password="your_password",
+    auto_reconnect=True,                # 启用自动重连
+    max_reconnect_attempts=5,           # 最大重连次数
+    reconnect_interval=5,               # 重连间隔（秒）
+    reconnect_backoff_factor=1.5,       # 退避因子
+    timeout=30                          # 请求超时（秒）
+)
+
+# 检查重连状态
+status = client.get_reconnect_status()
+print(f"Reconnect status: {status}")
+
+# 手动强制重连
+client.force_reconnect()
+```
+
+## API 文档
+
+### WebSocketRobotClient
+
+主要的 WebSocket 客户端类。
+
+**方法：**
+
+- `connect(reconnect_window=300)` - 连接到 WebSocket 服务器
+- `disconnect()` - 断开连接
+- `create_robot(robot_data)` - 创建机器人
+- `preallocate_resources(robot_count, user)` - 预分配资源
+- `query_robots(sessionKey=None)` - 查询机器人列表
+- `query_sessions(sessionKey=None)` - 查询会话列表
+- `cleanup_session(sessionKey=None)` - 清理会话
+- `force_cleanup(sessionKey=None)` - 强制清理
+- `get_status()` - 获取系统状态
+- `reconnect(sessionKey, reconnect_window=300)` - 重连到指定会话
+
+### WebSocketRobotManager
+
+机器人管理器类。
+
+**方法：**
+
+- `add_robot(robot_data)` - 添加机器人
+- `stop_robot(robot)` - 停止机器人
+- `stop_all_robots()` - 停止所有机器人
+- `get_robot(robot_id)` - 获取机器人实例
+- `get_all_robots()` - 获取所有机器人实例
+- `create_multiple_robots(robot_data_list)` - 批量创建机器人
+- `mute_all_videos()` - 静音所有视频
+- `unmute_all_videos()` - 取消静音所有视频
+
+### WebSocketRobotInstance
+
+机器人实例类。
+
+**方法：**
+
+- `update(robot_data)` - 更新机器人
+- `delete()` - 删除机器人
+- `get_status()` - 获取状态
+- `muteVideo()` / `unmuteVideo()` - 视频静音控制
+- `muteAudio()` / `unmuteAudio()` - 音频静音控制
+- `changeHostAudience(clientRole)` - 切换角色
+- `setVideoParams(width, height, fps, bitrate)` - 设置视频参数
+- `setDatastreamConfig(...)` - 设置数据流配置
+
+### RobotAPIBody
+
+机器人 API 请求体生成器。
+
+**方法：**
+
+- `gen_create_data(...)` - 生成创建机器人的请求数据
+- `gen_update_data(...)` - 生成更新机器人的请求数据
+- `gen_encryption_config(...)` - 生成加密配置
+- `gen_datastream_config(...)` - 生成数据流配置
+- `gen_other_data(robotId, user)` - 生成其他操作的请求数据
+
+## 配置选项
+
+### 客户端配置
+
+- `ws_url` - WebSocket 服务器地址（必需）
+- `username` - 用户名（默认：`"niki"`）
+- `password` - 密码（默认：`"test"`）
+- `timeout` - 请求超时时间，秒（默认：`30`）
+- `auto_reconnect` - 是否自动重连（默认：`True`）
+- `max_reconnect_attempts` - 最大重连尝试次数（默认：`5`）
+- `reconnect_interval` - 重连间隔，秒（默认：`5`）
+- `reconnect_backoff_factor` - 重连退避因子（默认：`1.5`）
+
+### 机器人配置
+
+- `appId` - 应用 ID（必需）
+- `cname` - 频道名（必需）
+- `uid` - 用户 ID（可选，可自动生成）
+- `userAccount` - 用户账户（可选）
+- `url` - 视频 URL（可选）
+- `width` - 视频宽度（默认：`640`）
+- `height` - 视频高度（默认：`360`）
+- `fps` - 帧率（默认：`30`）
+- `bitrate` - 码率（默认：`800`）
+- `codecType` - 编解码类型（默认：`2`）
+- `activeTime` - 活跃时间，秒（可选）
+- `clientRole` - 客户端角色（默认：`1` 主播）
+
+## 依赖
+
+- Python >= 3.7
+- websocket-client >= 1.0.0
+
+## 开发
+
+### 安装开发依赖
+
+```bash
+pip install -e ".[dev]"
+```
+
+### 运行测试
+
+```bash
+pytest
+```
+
+## 许可证
+
+MIT License
+
+## 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+## 联系方式
+
+- GitHub: https://github.com/yourusername/ws-robot
+- Email: your.email@example.com
+
+## 更新日志
+
+### 1.0.0 (2024-12-11)
+
+- 初始版本发布
+- 完整的 WebSocket 机器人管理功能
+- 自动重连机制
+- 会话管理
+- 批量操作支持
+
