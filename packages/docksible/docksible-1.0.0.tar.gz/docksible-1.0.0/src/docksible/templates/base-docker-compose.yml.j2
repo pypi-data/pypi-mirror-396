@@ -1,0 +1,13 @@
+services:
+
+  docksible_webserver:
+    image: nginx:latest
+    container_name: docksible_webserver
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "{{ ansible_env.HOME }}/docker-compose-volumes/nginx-data:/etc/nginx/conf.d"
+      # TODO: This one is needed for Certbot?
+      - "{{ ansible_env.HOME }}/docker-compose-volumes/app-data:/var/www/html"

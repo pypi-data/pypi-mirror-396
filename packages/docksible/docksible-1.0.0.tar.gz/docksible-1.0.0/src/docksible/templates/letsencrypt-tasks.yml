@@ -1,0 +1,28 @@
+- name: Load SSL enabled nginx.conf
+  template:
+    src: nginx-ssl.conf.j2
+    dest: "{{ ansible_env.HOME }}/docker-compose-volumes/nginx-data/nginx.conf"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: 0644
+
+- name: Wait 5 seconds.
+  pause:
+    seconds: 5
+
+- name: Remove unknown AppArmor profiles (they recently cause problems with Docker)
+  raw: aa-remove-unknown
+  when: apparmor_workaround
+
+# TODO: Not ideal, but for now, IDK how else to do it.
+- name: Restart Nginx
+  raw: "docker compose -f {{ ansible_env.HOME }}/docker-compose/docker-compose.yml restart docksible_webserver"
+
+#- name: Restart webserver container
+#  community.docker.docker_compose_v2:
+#    project_src: "{{ ansible_env.HOME }}/docker-compose/"
+
+#- name: Restart webserver container
+#  ansible.builtin.assert:
+#    that:
+#      - docksible_webserver.State == 'restarted'

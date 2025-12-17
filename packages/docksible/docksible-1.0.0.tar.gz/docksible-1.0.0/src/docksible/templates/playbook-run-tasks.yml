@@ -1,0 +1,19 @@
+- name: Copy the Nginx Configuration
+  template:
+    src: nginx.conf.j2
+    dest: "{{ ansible_env.HOME }}/docker-compose-volumes/nginx-data/nginx.conf"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: 0644
+
+- name: Load Docker-Compose file
+  template:
+    src: docker-compose.yml.j2
+    dest: "{{ ansible_env.HOME }}/docker-compose/docker-compose.yml"
+    group: "{{ ansible_user }}"
+    owner: "{{ ansible_user }}"
+    mode: 0600
+
+- name: Run the web service (might take a minute)
+  community.docker.docker_compose_v2:
+    project_src: "{{ ansible_env.HOME }}/docker-compose/"

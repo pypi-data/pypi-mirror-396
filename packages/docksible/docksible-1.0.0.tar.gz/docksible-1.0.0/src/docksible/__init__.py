@@ -1,0 +1,6 @@
+__author__ = "Belal Ibrahim"
+__copyright__ = "Copyright 2025 Belal Ibrahim"
+__license__ = "Apache License, Version 2.0"
+__version__ = "1.0.0"
+__maintainer__ = "Belal Ibrahim"
+__email__ = "belal.ibrahim@proton.me"

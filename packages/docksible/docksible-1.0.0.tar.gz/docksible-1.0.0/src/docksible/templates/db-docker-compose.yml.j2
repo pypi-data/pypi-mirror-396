@@ -1,0 +1,16 @@
+docksible_db:
+  image: mysql:8.3
+  container_name: docksible_db
+  restart: always
+  environment:
+    MYSQL_ROOT_PASSWORD: "{{ database_root_password }}"
+    MYSQL_USER: "{{ database_username }}"
+    MYSQL_PASSWORD: "{{ database_password }}"
+    MYSQL_DATABASE: "{{ database_name }}"
+  volumes:
+    - "{{ ansible_env.HOME }}/docker-compose-volumes/db-data:/var/lib/mysql"
+  healthcheck:
+    test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+    interval: 5s
+    timeout: 5s
+    retries: 20

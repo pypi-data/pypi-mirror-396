@@ -1,0 +1,65 @@
+- hosts: all
+  become: true
+  gather_facts: true
+
+  tasks:
+  - name: Install docker packages
+    apt:
+      name: "{{ item }}"
+      state: present
+      update_cache: yes
+    loop:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - software-properties-common
+
+  - name: Download Docker GPG key
+    get_url:
+      url: https://download.docker.com/linux/ubuntu/gpg
+      dest: /tmp/docker.gpg
+      mode: '0644'
+
+  - name: Dearmor Docker GPG key
+    command:
+      cmd: "gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg /tmp/docker.gpg"
+      creates: /usr/share/keyrings/docker-archive-keyring.gpg
+
+  - name: Add Docker apt repository (using jammy for noble)
+    apt_repository:
+      repo: "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu jammy stable"
+      state: present
+      filename: docker
+
+  - name: Update apt cache
+    apt:
+      update_cache: yes
+
+  - name: Install Docker Engine and Compose plugin
+    apt:
+      name:
+        - docker-ce
+        - docker-ce-cli
+        - containerd.io
+        - docker-buildx-plugin
+        - docker-compose-plugin
+      state: latest
+
+  - name: Add user to docker group
+    user:
+      name: "{{ ansible_user }}"
+      groups: docker
+      append: yes
+
+  - name: Create Docker Compose directory
+    file:
+      path: "{{ ansible_env.HOME }}/docker-compose"
+      state: directory
+      mode: '0755'
+
+  - name: Create the directory tree for Docker volumes
+    file:
+      path: "{{ ansible_env.HOME }}/docker-compose-volumes/{{ item }}"
+      state: directory
+      mode: '0755'
+    loop: "{{ docker_compose_volume_dirs }}"

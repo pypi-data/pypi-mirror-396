@@ -1,0 +1,20 @@
+docksible_auxiliary:
+  depends_on:
+    - docksible_app
+  environment:
+    WORDPRESS_DB_HOST: docksible_db
+    WORDPRESS_DB_USER: "{{ database_username }}"
+    WORDPRESS_DB_PASSWORD: "{{ database_password }}"
+    WORDPRESS_DB_NAME: "{{ database_name }}"
+  image: wordpress:cli
+  container_name: docksible_auxiliary
+  volumes:
+    - "{{ ansible_env.HOME }}/docker-compose-volumes/app-data:/var/www/html"
+  command: >
+    wp core install --allow-root --path=/var/www/html/
+    --url={{ ansible_host }}
+    --title='{{ site_title }}'
+    --admin_user={{ admin_username }}
+    --admin_password='{{ admin_password }}'
+    --admin_email={{ admin_email }}
+    --locale={{ wordpress_locale }}
