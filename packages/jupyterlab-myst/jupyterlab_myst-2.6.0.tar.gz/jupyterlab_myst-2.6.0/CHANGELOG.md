@@ -1,0 +1,478 @@
+# Changelog
+
+<!-- <START NEW CHANGELOG ENTRY> -->
+
+## 2.6.0
+
+([Full Changelog](https://github.com/jupyter-book/jupyterlab-myst/compare/v2.4.2...bbef75187fa6adb7ed5e0caa5634509467c2e9d7))
+
+### Bugs fixed
+
+- :link: Fix link styles [#281](https://github.com/jupyter-book/jupyterlab-myst/pull/281) ([@agoose77](https://github.com/agoose77), [@tguilment](https://github.com/tguilment))
+
+### Maintenance and upkeep improvements
+
+- :package: use NPM trusted publishing [#285](https://github.com/jupyter-book/jupyterlab-myst/pull/285) ([@agoose77](https://github.com/agoose77))
+- :robot: Drop full-release workflow for CD [#284](https://github.com/jupyter-book/jupyterlab-myst/pull/284) ([@agoose77](https://github.com/agoose77))
+- :bouncing_ball_man: Install dep for releaser [#283](https://github.com/jupyter-book/jupyterlab-myst/pull/283) ([@agoose77](https://github.com/agoose77))
+- :camera_flash: Update Playwright Snapshots again! [#282](https://github.com/jupyter-book/jupyterlab-myst/pull/282) ([@agoose77](https://github.com/agoose77))
+- fix: restore JLab install [#280](https://github.com/jupyter-book/jupyterlab-myst/pull/280) ([@agoose77](https://github.com/agoose77))
+- :camera: Update test snapshots [#279](https://github.com/jupyter-book/jupyterlab-myst/pull/279) ([@agoose77](https://github.com/agoose77), [@rowanc1](https://github.com/rowanc1))
+- 🦘 Update MyST dependencies [#273](https://github.com/jupyter-book/jupyterlab-myst/pull/273) ([@agoose77](https://github.com/agoose77), [@krassowski](https://github.com/krassowski))
+- 🛠️ Update GHA dependencies [#272](https://github.com/jupyter-book/jupyterlab-myst/pull/272) ([@agoose77](https://github.com/agoose77))
+- Replace unsplash images with picsum [#270](https://github.com/jupyter-book/jupyterlab-myst/pull/270) ([@stefanv](https://github.com/stefanv), [@agoose77](https://github.com/agoose77))
+- Use v4 of upload/download artifact [#269](https://github.com/jupyter-book/jupyterlab-myst/pull/269) ([@stefanv](https://github.com/stefanv), [@agoose77](https://github.com/agoose77))
+
+### Documentation improvements
+
+- Update index.md [#253](https://github.com/jupyter-book/jupyterlab-myst/pull/253) ([@teonbrooks](https://github.com/teonbrooks), [@agoose77](https://github.com/agoose77))
+- :camera_flash: Add logo to docs [#245](https://github.com/jupyter-book/jupyterlab-myst/pull/245) ([@agoose77](https://github.com/agoose77))
+- 📖 Initial User Facing Documentation [#164](https://github.com/jupyter-book/jupyterlab-myst/pull/164) ([@rowanc1](https://github.com/rowanc1), [@agoose77](https://github.com/agoose77), [@stevejpurves](https://github.com/stevejpurves))
+
+### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/jupyter-book/jupyterlab-myst/graphs/contributors?from=2024-04-26&to=2025-12-14&type=c))
+
+@agoose77 ([activity](https://github.com/search?q=repo%3Ajupyter-book%2Fjupyterlab-myst+involves%3Aagoose77+updated%3A2024-04-26..2025-12-14&type=Issues)) | @fperez ([activity](https://github.com/search?q=repo%3Ajupyter-book%2Fjupyterlab-myst+involves%3Afperez+updated%3A2024-04-26..2025-12-14&type=Issues)) | @krassowski ([activity](https://github.com/search?q=repo%3Ajupyter-book%2Fjupyterlab-myst+involves%3Akrassowski+updated%3A2024-04-26..2025-12-14&type=Issues)) | @nthiery ([activity](https://github.com/search?q=repo%3Ajupyter-book%2Fjupyterlab-myst+involves%3Anthiery+updated%3A2024-04-26..2025-12-14&type=Issues)) | @rowanc1 ([activity](https://github.com/search?q=repo%3Ajupyter-book%2Fjupyterlab-myst+involves%3Arowanc1+updated%3A2024-04-26..2025-12-14&type=Issues)) | @stefanv ([activity](https://github.com/search?q=repo%3Ajupyter-book%2Fjupyterlab-myst+involves%3Astefanv+updated%3A2024-04-26..2025-12-14&type=Issues)) | @stevejpurves ([activity](https://github.com/search?q=repo%3Ajupyter-book%2Fjupyterlab-myst+involves%3Astevejpurves+updated%3A2024-04-26..2025-12-14&type=Issues)) | @teonbrooks ([activity](https://github.com/search?q=repo%3Ajupyter-book%2Fjupyterlab-myst+involves%3Ateonbrooks+updated%3A2024-04-26..2025-12-14&type=Issues)) | @tguilment ([activity](https://github.com/search?q=repo%3Ajupyter-book%2Fjupyterlab-myst+involves%3Atguilment+updated%3A2024-04-26..2025-12-14&type=Issues))
+
+<!-- <END NEW CHANGELOG ENTRY> -->
+
+## 2.5.0
+
+([Full Changelog](https://github.com/jupyter-book/jupyterlab-myst/compare/v2.4.2...fb7668bce1f6cdc36a36c7c7e778a1521c5e8894))
+
+### Bugs fixed
+
+- :link: Fix link styles [#281](https://github.com/jupyter-book/jupyterlab-myst/pull/281) ([@agoose77](https://github.com/agoose77), [@tguilment](https://github.com/tguilment))
+
+### Maintenance and upkeep improvements
+
+- :bouncing_ball_man: Install dep for releaser [#283](https://github.com/jupyter-book/jupyterlab-myst/pull/283) ([@agoose77](https://github.com/agoose77))
+- :camera_flash: Update Playwright Snapshots again! [#282](https://github.com/jupyter-book/jupyterlab-myst/pull/282) ([@agoose77](https://github.com/agoose77))
+- fix: restore JLab install [#280](https://github.com/jupyter-book/jupyterlab-myst/pull/280) ([@agoose77](https://github.com/agoose77))
+- :camera: Update test snapshots [#279](https://github.com/jupyter-book/jupyterlab-myst/pull/279) ([@agoose77](https://github.com/agoose77), [@rowanc1](https://github.com/rowanc1))
+- 🦘 Update MyST dependencies [#273](https://github.com/jupyter-book/jupyterlab-myst/pull/273) ([@agoose77](https://github.com/agoose77), [@krassowski](https://github.com/krassowski))
+- 🛠️ Update GHA dependencies [#272](https://github.com/jupyter-book/jupyterlab-myst/pull/272) ([@agoose77](https://github.com/agoose77))
+- Replace unsplash images with picsum [#270](https://github.com/jupyter-book/jupyterlab-myst/pull/270) ([@stefanv](https://github.com/stefanv), [@agoose77](https://github.com/agoose77))
+- Use v4 of upload/download artifact [#269](https://github.com/jupyter-book/jupyterlab-myst/pull/269) ([@stefanv](https://github.com/stefanv), [@agoose77](https://github.com/agoose77))
+
+### Documentation improvements
+
+- Update index.md [#253](https://github.com/jupyter-book/jupyterlab-myst/pull/253) ([@teonbrooks](https://github.com/teonbrooks), [@agoose77](https://github.com/agoose77))
+- :camera_flash: Add logo to docs [#245](https://github.com/jupyter-book/jupyterlab-myst/pull/245) ([@agoose77](https://github.com/agoose77))
+- 📖 Initial User Facing Documentation [#164](https://github.com/jupyter-book/jupyterlab-myst/pull/164) ([@rowanc1](https://github.com/rowanc1), [@agoose77](https://github.com/agoose77), [@stevejpurves](https://github.com/stevejpurves))
+
+### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/jupyter-book/jupyterlab-myst/graphs/contributors?from=2024-04-26&to=2025-12-14&type=c))
+
+@agoose77 ([activity](https://github.com/search?q=repo%3Ajupyter-book%2Fjupyterlab-myst+involves%3Aagoose77+updated%3A2024-04-26..2025-12-14&type=Issues)) | @fperez ([activity](https://github.com/search?q=repo%3Ajupyter-book%2Fjupyterlab-myst+involves%3Afperez+updated%3A2024-04-26..2025-12-14&type=Issues)) | @krassowski ([activity](https://github.com/search?q=repo%3Ajupyter-book%2Fjupyterlab-myst+involves%3Akrassowski+updated%3A2024-04-26..2025-12-14&type=Issues)) | @nthiery ([activity](https://github.com/search?q=repo%3Ajupyter-book%2Fjupyterlab-myst+involves%3Anthiery+updated%3A2024-04-26..2025-12-14&type=Issues)) | @rowanc1 ([activity](https://github.com/search?q=repo%3Ajupyter-book%2Fjupyterlab-myst+involves%3Arowanc1+updated%3A2024-04-26..2025-12-14&type=Issues)) | @stefanv ([activity](https://github.com/search?q=repo%3Ajupyter-book%2Fjupyterlab-myst+involves%3Astefanv+updated%3A2024-04-26..2025-12-14&type=Issues)) | @stevejpurves ([activity](https://github.com/search?q=repo%3Ajupyter-book%2Fjupyterlab-myst+involves%3Astevejpurves+updated%3A2024-04-26..2025-12-14&type=Issues)) | @teonbrooks ([activity](https://github.com/search?q=repo%3Ajupyter-book%2Fjupyterlab-myst+involves%3Ateonbrooks+updated%3A2024-04-26..2025-12-14&type=Issues)) | @tguilment ([activity](https://github.com/search?q=repo%3Ajupyter-book%2Fjupyterlab-myst+involves%3Atguilment+updated%3A2024-04-26..2025-12-14&type=Issues))
+
+## 2.4.2
+
+([Full Changelog](https://github.com/executablebooks/jupyterlab-myst/compare/v2.4.1...909a575e857b4516992a7b981691219b2b70e04b))
+
+### Bugs fixed
+
+- FIX: correct font-sizes (again!) [#237](https://github.com/executablebooks/jupyterlab-myst/pull/237) ([@agoose77](https://github.com/agoose77))
+
+### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/executablebooks/jupyterlab-myst/graphs/contributors?from=2024-04-25&to=2024-04-26&type=c))
+
+[@agoose77](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Aagoose77+updated%3A2024-04-25..2024-04-26&type=Issues)
+
+## 2.4.1
+
+([Full Changelog](https://github.com/executablebooks/jupyterlab-myst/compare/v2.4.0...004f6c1e7fc91632892ccecc4ef1f11f80e39547))
+
+### Enhancements made
+
+- ENH: add more grid directives [#235](https://github.com/executablebooks/jupyterlab-myst/pull/235) ([@agoose77](https://github.com/agoose77))
+
+### Bugs fixed
+
+- FIX: use `linkify` in parser [#236](https://github.com/executablebooks/jupyterlab-myst/pull/236) ([@agoose77](https://github.com/agoose77))
+- FIX: set font-size once! [#234](https://github.com/executablebooks/jupyterlab-myst/pull/234) ([@agoose77](https://github.com/agoose77))
+
+### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/executablebooks/jupyterlab-myst/graphs/contributors?from=2024-04-24&to=2024-04-25&type=c))
+
+[@agoose77](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Aagoose77+updated%3A2024-04-24..2024-04-25&type=Issues) | [@github-actions](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Agithub-actions+updated%3A2024-04-24..2024-04-25&type=Issues)
+
+## 2.4.0
+
+([Full Changelog](https://github.com/executablebooks/jupyterlab-myst/compare/v2.3.2...271d0e46ded4ccce1f75f5fab84602b172c58092))
+
+### Enhancements made
+
+- ENH: release 2.4.0 [#233](https://github.com/executablebooks/jupyterlab-myst/pull/233) ([@agoose77](https://github.com/agoose77))
+
+### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/executablebooks/jupyterlab-myst/graphs/contributors?from=2024-03-28&to=2024-04-24&type=c))
+
+[@agoose77](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Aagoose77+updated%3A2024-03-28..2024-04-24&type=Issues)
+
+## 2.3.2
+
+([Full Changelog](https://github.com/executablebooks/jupyterlab-myst/compare/v2.3.1...57b7037efa6c50386c0555b32d974ab7033fff85))
+
+### Bugs fixed
+
+- use not checked instead of == to hopefully make the linter happy? [#228](https://github.com/executablebooks/jupyterlab-myst/pull/228) ([@batpad](https://github.com/batpad))
+- fix: don't render list items as task items [#223](https://github.com/executablebooks/jupyterlab-myst/pull/223) ([@tavin](https://github.com/tavin))
+
+### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/executablebooks/jupyterlab-myst/graphs/contributors?from=2024-02-15&to=2024-03-28&type=c))
+
+[@batpad](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Abatpad+updated%3A2024-02-15..2024-03-28&type=Issues) | [@github-actions](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Agithub-actions+updated%3A2024-02-15..2024-03-28&type=Issues) | [@rowanc1](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Arowanc1+updated%3A2024-02-15..2024-03-28&type=Issues) | [@tavin](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Atavin+updated%3A2024-02-15..2024-03-28&type=Issues) | [@welcome](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Awelcome+updated%3A2024-02-15..2024-03-28&type=Issues)
+
+## 2.3.1
+
+([Full Changelog](https://github.com/executablebooks/jupyterlab-myst/compare/v2.3.0...7b773501c7810764b2ce5edba206fe53a33b674c))
+
+### Bugs fixed
+
+- FIX: inherit Jupyter styles for buttons [#217](https://github.com/executablebooks/jupyterlab-myst/pull/217) ([@agoose77](https://github.com/agoose77))
+
+### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/executablebooks/jupyterlab-myst/graphs/contributors?from=2024-02-15&to=2024-02-15&type=c))
+
+[@agoose77](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Aagoose77+updated%3A2024-02-15..2024-02-15&type=Issues)
+
+## 2.3.0
+
+([Full Changelog](https://github.com/executablebooks/jupyterlab-myst/compare/v2.1.0...b0191baacaefacded0f60679c0e6a596c7fd4377))
+
+### Enhancements made
+
+- ENH: update theme [#215](https://github.com/executablebooks/jupyterlab-myst/pull/215) ([@agoose77](https://github.com/agoose77))
+
+### Bugs fixed
+
+- FIX: line number is now human-readable (1 indexed) [#202](https://github.com/executablebooks/jupyterlab-myst/pull/202) ([@agoose77](https://github.com/agoose77))
+
+### Maintenance and upkeep improvements
+
+- MAINT: reorganise extension files [#214](https://github.com/executablebooks/jupyterlab-myst/pull/214) ([@agoose77](https://github.com/agoose77))
+- MAINT: update playwright snapshots [#212](https://github.com/executablebooks/jupyterlab-myst/pull/212) ([@agoose77](https://github.com/agoose77))
+- MAINT: update playwright snapshots [#211](https://github.com/executablebooks/jupyterlab-myst/pull/211) ([@agoose77](https://github.com/agoose77))
+- MAINT: update lockfile for node18 [#210](https://github.com/executablebooks/jupyterlab-myst/pull/210) ([@agoose77](https://github.com/agoose77))
+- MAINT: rebuild lockfiles [#205](https://github.com/executablebooks/jupyterlab-myst/pull/205) ([@agoose77](https://github.com/agoose77))
+- MAINT: update with copier [#203](https://github.com/executablebooks/jupyterlab-myst/pull/203) ([@agoose77](https://github.com/agoose77))
+
+### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/executablebooks/jupyterlab-myst/graphs/contributors?from=2023-10-09&to=2024-02-15&type=c))
+
+[@agoose77](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Aagoose77+updated%3A2023-10-09..2024-02-15&type=Issues) | [@github-actions](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Agithub-actions+updated%3A2023-10-09..2024-02-15&type=Issues) | [@rowanc1](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Arowanc1+updated%3A2023-10-09..2024-02-15&type=Issues)
+
+## 2.1.0
+
+([Full Changelog](https://github.com/executablebooks/jupyterlab-myst/compare/v2.0.2...6f7c8d875ebf197fa2fb98f7539540059e568773))
+
+### Enhancements made
+
+- chore: bump lockfile, remove source-map-loader [#192](https://github.com/executablebooks/jupyterlab-myst/pull/192) ([@agoose77](https://github.com/agoose77))
+- feat: use latest MySTJS [#183](https://github.com/executablebooks/jupyterlab-myst/pull/183) ([@agoose77](https://github.com/agoose77))
+- ⚛️ Render HTML directly [#118](https://github.com/executablebooks/jupyterlab-myst/pull/118) ([@rowanc1](https://github.com/rowanc1))
+
+### Bugs fixed
+
+- 🎨 Update HTML styles for buttons, kbd, etc. [#186](https://github.com/executablebooks/jupyterlab-myst/pull/186) ([@rowanc1](https://github.com/rowanc1))
+
+### Maintenance and upkeep improvements
+
+- ci: temporarily disable browser check [#190](https://github.com/executablebooks/jupyterlab-myst/pull/190) ([@agoose77](https://github.com/agoose77))
+- 🚴‍♀️ Refactor task-item [#187](https://github.com/executablebooks/jupyterlab-myst/pull/187) ([@rowanc1](https://github.com/rowanc1))
+
+### Other merged PRs
+
+- maintenance: run prettier on package.json [#180](https://github.com/executablebooks/jupyterlab-myst/pull/180) ([@agoose77](https://github.com/agoose77))
+- chore: drop duplicate workflow [#179](https://github.com/executablebooks/jupyterlab-myst/pull/179) ([@agoose77](https://github.com/agoose77))
+- docs: fix link to trust model [#178](https://github.com/executablebooks/jupyterlab-myst/pull/178) ([@agoose77](https://github.com/agoose77))
+
+### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/executablebooks/jupyterlab-myst/graphs/contributors?from=2023-08-29&to=2023-10-09&type=c))
+
+[@agoose77](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Aagoose77+updated%3A2023-08-29..2023-10-09&type=Issues) | [@fwkoch](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Afwkoch+updated%3A2023-08-29..2023-10-09&type=Issues) | [@github-actions](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Agithub-actions+updated%3A2023-08-29..2023-10-09&type=Issues) | [@nthiery](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Anthiery+updated%3A2023-08-29..2023-10-09&type=Issues) | [@rowanc1](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Arowanc1+updated%3A2023-08-29..2023-10-09&type=Issues) | [@stevejpurves](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Astevejpurves+updated%3A2023-08-29..2023-10-09&type=Issues)
+
+## 2.0.3rc1
+
+([Full Changelog](https://github.com/executablebooks/jupyterlab-myst/compare/v2.0.2...dd8f62f6cba4e64bc846763bbb9e0d9feacd50b4))
+
+### Enhancements made
+
+- feat: use latest MySTJS [#183](https://github.com/executablebooks/jupyterlab-myst/pull/183) ([@agoose77](https://github.com/agoose77))
+- ⚛️ Render HTML directly [#118](https://github.com/executablebooks/jupyterlab-myst/pull/118) ([@rowanc1](https://github.com/rowanc1))
+
+### Bugs fixed
+
+- 🎨 Update HTML styles for buttons, kbd, etc. [#186](https://github.com/executablebooks/jupyterlab-myst/pull/186) ([@rowanc1](https://github.com/rowanc1))
+
+### Maintenance and upkeep improvements
+
+- ci: temporarily disable browser check [#190](https://github.com/executablebooks/jupyterlab-myst/pull/190) ([@agoose77](https://github.com/agoose77))
+- 🚴‍♀️ Refactor task-item [#187](https://github.com/executablebooks/jupyterlab-myst/pull/187) ([@rowanc1](https://github.com/rowanc1))
+
+### Other merged PRs
+
+- maintenance: run prettier on package.json [#180](https://github.com/executablebooks/jupyterlab-myst/pull/180) ([@agoose77](https://github.com/agoose77))
+- chore: drop duplicate workflow [#179](https://github.com/executablebooks/jupyterlab-myst/pull/179) ([@agoose77](https://github.com/agoose77))
+- docs: fix link to trust model [#178](https://github.com/executablebooks/jupyterlab-myst/pull/178) ([@agoose77](https://github.com/agoose77))
+
+### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/executablebooks/jupyterlab-myst/graphs/contributors?from=2023-08-29&to=2023-09-22&type=c))
+
+[@agoose77](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Aagoose77+updated%3A2023-08-29..2023-09-22&type=Issues) | [@fwkoch](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Afwkoch+updated%3A2023-08-29..2023-09-22&type=Issues) | [@github-actions](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Agithub-actions+updated%3A2023-08-29..2023-09-22&type=Issues) | [@nthiery](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Anthiery+updated%3A2023-08-29..2023-09-22&type=Issues) | [@rowanc1](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Arowanc1+updated%3A2023-08-29..2023-09-22&type=Issues) | [@stevejpurves](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Astevejpurves+updated%3A2023-08-29..2023-09-22&type=Issues)
+
+## 2.0.3a0
+
+([Full Changelog](https://github.com/executablebooks/jupyterlab-myst/compare/v2.0.2...c0a92b1ddc1a7aa3221e1fd10367ba3eb243a4db))
+
+### Enhancements made
+
+- feat: use latest MySTJS [#183](https://github.com/executablebooks/jupyterlab-myst/pull/183) ([@agoose77](https://github.com/agoose77))
+- fix: ⚛️ Render HTML directly [#118](https://github.com/executablebooks/jupyterlab-myst/pull/118) ([@rowanc1](https://github.com/rowanc1))
+
+### Other merged PRs
+
+- maintenance: run prettier on package.json [#180](https://github.com/executablebooks/jupyterlab-myst/pull/180) ([@agoose77](https://github.com/agoose77))
+- chore: drop duplicate workflow [#179](https://github.com/executablebooks/jupyterlab-myst/pull/179) ([@agoose77](https://github.com/agoose77))
+- docs: fix link to trust model [#178](https://github.com/executablebooks/jupyterlab-myst/pull/178) ([@agoose77](https://github.com/agoose77))
+
+### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/executablebooks/jupyterlab-myst/graphs/contributors?from=2023-08-29&to=2023-09-14&type=c))
+
+[@agoose77](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Aagoose77+updated%3A2023-08-29..2023-09-14&type=Issues) | [@fwkoch](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Afwkoch+updated%3A2023-08-29..2023-09-14&type=Issues) | [@github-actions](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Agithub-actions+updated%3A2023-08-29..2023-09-14&type=Issues) | [@nthiery](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Anthiery+updated%3A2023-08-29..2023-09-14&type=Issues) | [@rowanc1](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Arowanc1+updated%3A2023-08-29..2023-09-14&type=Issues) | [@stevejpurves](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Astevejpurves+updated%3A2023-08-29..2023-09-14&type=Issues)
+
+## 2.0.2
+
+([Full Changelog](https://github.com/executablebooks/jupyterlab-myst/compare/v2.0.1...23d2aba01353f02843cb298dd0361ff1b45b01db))
+
+### Bugs fixed
+
+- 🧹 Fix linking of package.json [#170](https://github.com/executablebooks/jupyterlab-myst/pull/170) ([@rowanc1](https://github.com/rowanc1))
+
+### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/executablebooks/jupyterlab-myst/graphs/contributors?from=2023-07-04&to=2023-08-29&type=c))
+
+[@agoose77](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Aagoose77+updated%3A2023-07-04..2023-08-29&type=Issues) | [@github-actions](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Agithub-actions+updated%3A2023-07-04..2023-08-29&type=Issues) | [@rowanc1](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Arowanc1+updated%3A2023-07-04..2023-08-29&type=Issues)
+
+## 2.0.1
+
+([Full Changelog](https://github.com/executablebooks/jupyterlab-myst/compare/v2.0.0...fb8f131f0ace77b1009b7563ba9b556faf2aceb5))
+
+### Enhancements made
+
+- ☀️ Dark mode for code cells [#168](https://github.com/executablebooks/jupyterlab-myst/pull/168) ([@rowanc1](https://github.com/rowanc1))
+- ⤵️ Local download links [#162](https://github.com/executablebooks/jupyterlab-myst/pull/162) ([@rowanc1](https://github.com/rowanc1))
+
+### Documentation improvements
+
+- initial docs [#136](https://github.com/executablebooks/jupyterlab-myst/pull/136) ([@stevejpurves](https://github.com/stevejpurves))
+
+### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/executablebooks/jupyterlab-myst/graphs/contributors?from=2023-06-23&to=2023-07-04&type=c))
+
+[@github-actions](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Agithub-actions+updated%3A2023-06-23..2023-07-04&type=Issues) | [@rowanc1](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Arowanc1+updated%3A2023-06-23..2023-07-04&type=Issues) | [@stevejpurves](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Astevejpurves+updated%3A2023-06-23..2023-07-04&type=Issues) | [@welcome](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Awelcome+updated%3A2023-06-23..2023-07-04&type=Issues)
+
+## 2.0.0
+
+([Full Changelog](https://github.com/executablebooks/jupyterlab-myst/compare/v1.2.0...36a7f74d54237de8c71cb8c583de5564fa3f37e9))
+
+### Enhancements made
+
+- 🪐 Support for JupyterLab 4.x (take 2!) [#155](https://github.com/executablebooks/jupyterlab-myst/pull/155) ([@agoose77](https://github.com/agoose77))
+- 🎨 Update for showing exercises [#147](https://github.com/executablebooks/jupyterlab-myst/pull/147) ([@rowanc1](https://github.com/rowanc1))
+- 🌉 Update images to work locally [#145](https://github.com/executablebooks/jupyterlab-myst/pull/145) ([@rowanc1](https://github.com/rowanc1))
+- :sparkles: Add `text/markdown` MIME renderer [#102](https://github.com/executablebooks/jupyterlab-myst/pull/102) ([@agoose77](https://github.com/agoose77))
+
+### Bugs fixed
+
+- Attempt to fix failing tests in current main [#153](https://github.com/executablebooks/jupyterlab-myst/pull/153) ([@GlobalMin](https://github.com/GlobalMin))
+
+### Documentation improvements
+
+- 📖 Update readme [#160](https://github.com/executablebooks/jupyterlab-myst/pull/160) ([@rowanc1](https://github.com/rowanc1))
+- 🎨 Rebrand to mystmd.org [#156](https://github.com/executablebooks/jupyterlab-myst/pull/156) ([@rowanc1](https://github.com/rowanc1))
+
+### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/executablebooks/jupyterlab-myst/graphs/contributors?from=2023-05-16&to=2023-06-23&type=c))
+
+[@agoose77](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Aagoose77+updated%3A2023-05-16..2023-06-23&type=Issues) | [@fperez](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Afperez+updated%3A2023-05-16..2023-06-23&type=Issues) | [@github-actions](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Agithub-actions+updated%3A2023-05-16..2023-06-23&type=Issues) | [@GlobalMin](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3AGlobalMin+updated%3A2023-05-16..2023-06-23&type=Issues) | [@parmentelat](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Aparmentelat+updated%3A2023-05-16..2023-06-23&type=Issues) | [@rowanc1](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Arowanc1+updated%3A2023-05-16..2023-06-23&type=Issues) | [@tavin](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Atavin+updated%3A2023-05-16..2023-06-23&type=Issues) | [@welcome](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Awelcome+updated%3A2023-05-16..2023-06-23&type=Issues)
+
+## 1.2.0
+
+([Full Changelog](https://github.com/executablebooks/jupyterlab-myst/compare/v1.1.3...41f501e472640a1844c51bb9fd6a7bb4faeae2db))
+
+### Enhancements made
+
+- 🎨 Theme updates for showing proofs, algorithms, and github previews [#140](https://github.com/executablebooks/jupyterlab-myst/pull/140) ([@rowanc1](https://github.com/rowanc1))
+
+### Bugs fixed
+
+- 🃏 Apply classnames for links [#123](https://github.com/executablebooks/jupyterlab-myst/pull/123) ([@rowanc1](https://github.com/rowanc1))
+
+### Maintenance and upkeep improvements
+
+- :broom: Rework dependencies [#139](https://github.com/executablebooks/jupyterlab-myst/pull/139) ([@agoose77](https://github.com/agoose77))
+- :broom: Add issue templates [#131](https://github.com/executablebooks/jupyterlab-myst/pull/131) ([@kolibril13](https://github.com/kolibril13))
+
+### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/executablebooks/jupyterlab-myst/graphs/contributors?from=2023-03-22&to=2023-05-16&type=c))
+
+[@agoose77](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Aagoose77+updated%3A2023-03-22..2023-05-16&type=Issues) | [@github-actions](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Agithub-actions+updated%3A2023-03-22..2023-05-16&type=Issues) | [@kolibril13](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Akolibril13+updated%3A2023-03-22..2023-05-16&type=Issues) | [@rowanc1](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Arowanc1+updated%3A2023-03-22..2023-05-16&type=Issues) | [@welcome](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Awelcome+updated%3A2023-03-22..2023-05-16&type=Issues)
+
+## 1.1.3
+
+([Full Changelog](https://github.com/executablebooks/jupyterlab-myst/compare/v1.1.2...f105c803d0652d612012413a99d3ce82606ba311))
+
+### Enhancements made
+
+- ✅ Editable task lists [#121](https://github.com/executablebooks/jupyterlab-myst/pull/121) ([@rowanc1](https://github.com/rowanc1))
+- 🛩👩‍✈️💺 Remove almost all preflight css [#117](https://github.com/executablebooks/jupyterlab-myst/pull/117) ([@rowanc1](https://github.com/rowanc1))
+- 👩🏻‍🎨 Move to Jupyter-based styles [#116](https://github.com/executablebooks/jupyterlab-myst/pull/116) ([@rowanc1](https://github.com/rowanc1))
+
+### Bugs fixed
+
+- :police_officer: Executing Markdown cells should set trust [#119](https://github.com/executablebooks/jupyterlab-myst/pull/119) ([@agoose77](https://github.com/agoose77))
+
+### Maintenance and upkeep improvements
+
+- :camera: update integration snapshots [#122](https://github.com/executablebooks/jupyterlab-myst/pull/122) ([@agoose77](https://github.com/agoose77))
+- :link: Ignore Binder links in link-checker [#120](https://github.com/executablebooks/jupyterlab-myst/pull/120) ([@agoose77](https://github.com/agoose77))
+
+### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/executablebooks/jupyterlab-myst/graphs/contributors?from=2023-03-17&to=2023-03-22&type=c))
+
+[@agoose77](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Aagoose77+updated%3A2023-03-17..2023-03-22&type=Issues) | [@github-actions](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Agithub-actions+updated%3A2023-03-17..2023-03-22&type=Issues) | [@rowanc1](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Arowanc1+updated%3A2023-03-17..2023-03-22&type=Issues)
+
+## 1.1.2
+
+([Full Changelog](https://github.com/executablebooks/jupyterlab-myst/compare/v1.1.1...9a85fa1753024ea6b293b92a250d91b437437242))
+
+### Enhancements made
+
+- React to cell trust [#113](https://github.com/executablebooks/jupyterlab-myst/pull/113) ([@agoose77](https://github.com/agoose77))
+- 👩🏻‍🎨 Upgrade myst-theme to `v0.1.31` [#111](https://github.com/executablebooks/jupyterlab-myst/pull/111) ([@rowanc1](https://github.com/rowanc1))
+
+### Bugs fixed
+
+- 🐛 Fix widgets so they don't render as text [#110](https://github.com/executablebooks/jupyterlab-myst/pull/110) ([@rowanc1](https://github.com/rowanc1))
+- 🐛 Revive showing errors [#108](https://github.com/executablebooks/jupyterlab-myst/pull/108) ([@rowanc1](https://github.com/rowanc1))
+
+### Other merged PRs
+
+- refactor: use `preferredMimeType` to identity `text/plain` [#104](https://github.com/executablebooks/jupyterlab-myst/pull/104) ([@agoose77](https://github.com/agoose77))
+
+### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/executablebooks/jupyterlab-myst/graphs/contributors?from=2023-02-27&to=2023-03-17&type=c))
+
+[@agoose77](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Aagoose77+updated%3A2023-02-27..2023-03-17&type=Issues) | [@github-actions](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Agithub-actions+updated%3A2023-02-27..2023-03-17&type=Issues) | [@rowanc1](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Arowanc1+updated%3A2023-02-27..2023-03-17&type=Issues)
+
+## 1.1.1
+
+([Full Changelog](https://github.com/executablebooks/jupyterlab-myst/compare/v1.1.0...a942911c786d49b259759b8a9fd72b27e9253bc9))
+
+### Enhancements made
+
+- Render plain-text without quotations [#103](https://github.com/executablebooks/jupyterlab-myst/pull/103) ([@agoose77](https://github.com/agoose77))
+- Update inline example. [#98](https://github.com/executablebooks/jupyterlab-myst/pull/98) ([@fperez](https://github.com/fperez))
+
+### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/executablebooks/jupyterlab-myst/graphs/contributors?from=2023-02-22&to=2023-02-27&type=c))
+
+[@agoose77](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Aagoose77+updated%3A2023-02-22..2023-02-27&type=Issues) | [@fperez](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Afperez+updated%3A2023-02-22..2023-02-27&type=Issues) | [@github-actions](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Agithub-actions+updated%3A2023-02-22..2023-02-27&type=Issues) | [@rowanc1](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Arowanc1+updated%3A2023-02-22..2023-02-27&type=Issues) | [@welcome](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Awelcome+updated%3A2023-02-22..2023-02-27&type=Issues)
+
+## 1.1.0
+
+([Full Changelog](https://github.com/executablebooks/jupyterlab-myst/compare/v1.0.1...35226db9d5292496312f5566479a0fee206e8e38))
+
+### Enhancements made
+
+- 🤩 Inline expressions [#92](https://github.com/executablebooks/jupyterlab-myst/pull/92) ([@rowanc1](https://github.com/rowanc1))
+- 👩🏻‍🎨 Improve myst styles [#91](https://github.com/executablebooks/jupyterlab-myst/pull/91) ([@rowanc1](https://github.com/rowanc1))
+- 🧜‍♀️ Upgrade to new MyST markdown parsers [#88](https://github.com/executablebooks/jupyterlab-myst/pull/88) ([@rowanc1](https://github.com/rowanc1))
+
+### Bugs fixed
+
+- 🐛 Show citations with an error [#93](https://github.com/executablebooks/jupyterlab-myst/pull/93) ([@rowanc1](https://github.com/rowanc1))
+
+### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/executablebooks/jupyterlab-myst/graphs/contributors?from=2023-02-15&to=2023-02-22&type=c))
+
+[@github-actions](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Agithub-actions+updated%3A2023-02-15..2023-02-22&type=Issues) | [@rowanc1](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Arowanc1+updated%3A2023-02-15..2023-02-22&type=Issues)
+
+## 1.0.1
+
+([Full Changelog](https://github.com/executablebooks/jupyterlab-myst/compare/v1.0.0...d266dab97266eefc69ad30ffc151664b928c8d00))
+
+### Bugs fixed
+
+- fix: use selector for JupyterLab dark mode [#85](https://github.com/executablebooks/jupyterlab-myst/pull/85) ([@agoose77](https://github.com/agoose77))
+
+### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/executablebooks/jupyterlab-myst/graphs/contributors?from=2023-02-12&to=2023-02-15&type=c))
+
+[@agoose77](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Aagoose77+updated%3A2023-02-12..2023-02-15&type=Issues) | [@github-actions](https://github.com/search?q=repo%3Aexecutablebooks%2Fjupyterlab-myst+involves%3Agithub-actions+updated%3A2023-02-12..2023-02-15&type=Issues)
+
+## v1.0.0 - 2023/02/11
+
+Merge and release the next version of jupyterlab-myst as a major version bump! 🚀
+See [](https://github.com/executablebooks/jupyterlab-myst/issues/57) for discussion.
+
+---
+
+# `jupyterlab-mystjs`
+
+Merge the repositories of `jupyterlab-mystjs` and `jupyterlab-myst` together.
+
+### v0.1.4
+
+Support legacy mode to open with the myst renderer or the original notebook with a right click.
+
+### v0.1.3
+
+Support local images and links, for example, opening a link to another notebook.
+
+### v0.1.2
+
+Use `@myst-theme` components from NPM.
+
+---
+
+## `jupyterlab-mystjs`
+
+This project was merged with the original version, based on `jupyterlab-markup`,
+the release history can be found on the [`v0 branch`](https://github.com/executablebooks/jupyterlab-myst/tree/v0).
+
+### v0.1.7 - pre-release
+
+Support for sphinx math, eval inline directives for inline execution.
+
+### v0.1.6
+
+Last stable release of `jupyterlab-myst` based on `markdown-it` and `jupyterlab-markup`.
