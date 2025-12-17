@@ -1,0 +1,1482 @@
+Metadata-Version: 2.4
+Name: streaming-sql-engine
+Version: 0.1.17
+Summary: A lightweight SQL execution engine for streaming row-by-row queries with joins across multiple data sources
+Home-page: https://github.com/Ierofantis/streaming-sql-engine/tree/master
+Author: Theodore Pantazopoulo
+Author-email: Theodore Pantazopoulo <your.email@example.com>
+Project-URL: Homepage, https://github.com/Ierofantis/streaming-sql-engine/tree/master
+Project-URL: Repository, https://github.com/Ierofantis/streaming-sql-engine/tree/master
+Project-URL: Issues, https://github.com/Ierofantis/streaming-sql-engine/issues
+Project-URL: Documentation, https://github.com/Ierofantis/streaming-sql-engine/tree/master#readme
+Keywords: sql,streaming,join,database,query,engine,etl,data-integration
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: Database
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: sqlglot>=23.0.0
+Provides-Extra: polars
+Requires-Dist: polars>=0.19.0; extra == "polars"
+Provides-Extra: db
+Requires-Dist: psycopg2-binary>=2.9.0; extra == "db"
+Requires-Dist: pymysql>=1.0.0; extra == "db"
+Requires-Dist: DBUtils>=3.0.0; extra == "db"
+Requires-Dist: pymongo>=4.0.0; extra == "db"
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0.0; extra == "dev"
+Requires-Dist: black>=23.0.0; extra == "dev"
+Requires-Dist: flake8>=6.0.0; extra == "dev"
+Provides-Extra: all
+Requires-Dist: polars>=0.19.0; extra == "all"
+Requires-Dist: psycopg2-binary>=2.9.0; extra == "all"
+Requires-Dist: pymysql>=1.0.0; extra == "all"
+Requires-Dist: DBUtils>=3.0.0; extra == "all"
+Requires-Dist: pymongo>=4.0.0; extra == "all"
+Dynamic: author
+Dynamic: home-page
+Dynamic: requires-python
+
+# Join Data from Anywhere: The Streaming SQL Engine That Bridges Databases, APIs, and Files
+
+## How I Built a Python Library That Lets You Join MySQL, PostgreSQL, MongoDB, REST APIs, and Files in a Single SQL Query
+
+---
+
+_Have you ever needed to join data from a MySQL database with a PostgreSQL database, a MongoDB collection, and a REST API — all in one query? Traditional databases can't do this. That's why I built the Streaming SQL Engine._
+
+---
+
+## The Problem: Data Lives Everywhere
+
+Modern applications don't store all their data in one place. You might have:
+
+- User data in PostgreSQL
+- Order data in MySQL
+- Product catalog in MongoDB
+- Pricing information from a REST API
+- Inventory data in CSV files
+- Product feeds in XML files
+
+**The challenge:** How do you join all this data together?
+
+Traditional solutions require:
+
+- Exporting data from each system
+- Importing into a central database
+- Writing complex ETL pipelines
+- Maintaining data synchronization
+
+**There had to be a better way.**
+
+---
+
+## The Solution: Streaming SQL Engine
+
+I built a lightweight Python library that lets you join data from **any source** using standard SQL syntax — without exporting, importing, or setting up infrastructure.
+
+```python
+from streaming_sql_engine import Engine
+import psycopg2
+import pymysql
+from pymongo import MongoClient
+import requests
+import csv
+
+engine = Engine()
+
+# Register PostgreSQL source (iterator function)
+def postgres_users():
+    conn = psycopg2.connect(host="localhost", database="mydb", user="user", password="pass")
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, name, email FROM users")
+    for row in cursor:
+        yield {"id": row[0], "name": row[1], "email": row[2]}
+    conn.close()
+engine.register("postgres_users", postgres_users)
+
+# Register MySQL source (iterator function)
+def mysql_products():
+    conn = pymysql.connect(host="localhost", database="mydb", user="user", password="pass")
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, name, price FROM products")
+    for row in cursor:
+        yield {"id": row[0], "name": row[1], "price": row[2]}
+    conn.close()
+engine.register("mysql_products", mysql_products)
+
+# Register MongoDB source (iterator function)
+def mongo_inventory():
+    client = MongoClient("mongodb://localhost:27017")
+    for doc in client.mydb.inventory.find():
+        yield doc
+engine.register("mongo_inventory", mongo_inventory)
+
+# Register REST API source (iterator function)
+def api_prices():
+    response = requests.get("https://api.example.com/prices")
+    for item in response.json():
+        yield item
+engine.register("api_prices", api_prices)
+
+# Register CSV source (iterator function)
+def csv_suppliers():
+    with open("suppliers.csv") as f:
+        for row in csv.DictReader(f):
+            yield row
+engine.register("csv_suppliers", csv_suppliers)
+
+# Join them all in one SQL query!
+query = """
+    SELECT
+        mysql_products.name,
+        postgres_users.email,
+        mongo_inventory.quantity,
+        api_prices.price,
+        csv_suppliers.supplier_name
+    FROM mysql_products
+    JOIN postgres_users ON mysql_products.user_id = postgres_users.id
+    JOIN mongo_inventory ON mysql_products.sku = mongo_inventory.sku
+    JOIN api_prices ON mysql_products.sku = api_prices.sku
+    JOIN csv_suppliers ON mysql_products.supplier_id = csv_suppliers.id
+    WHERE api_prices.price > 100
+"""
+
+for row in engine.query(query):
+    process(row)
+```
+
+**That's it.** No clusters, no infrastructure, no data export — just pure Python and SQL.
+
+---
+
+## Why I Built This: The Problem That Needed Solving
+
+I was working on a data reconciliation project where I needed to join data from multiple sources:
+
+- MySQL database (product catalog)
+- PostgreSQL database (user data)
+- MongoDB collection (inventory)
+- REST API (pricing information)
+- CSV files (supplier data)
+
+**The challenge:** Traditional databases can't join across different systems. I had three options:
+
+1. **Export everything to one database** - Time-consuming, requires ETL pipelines, data becomes stale
+2. **Write custom Python code** - Complex, error-prone, hard to maintain
+3. **Use existing tools** - Spark/Flink require clusters, DuckDB requires data import, Presto needs infrastructure
+
+**None of these worked for my use case.** I needed something that:
+
+- Could join data from different systems without export
+- Was simple to use (SQL syntax)
+- Required zero infrastructure
+- Worked with Python natively
+- Processed data efficiently (streaming)
+
+So I built the Streaming SQL Engine.
+
+---
+
+## How I Built It: Architecture and Design Decisions
+
+### Core Design Philosophy
+
+The engine follows a **pipeline architecture** inspired by database query execution engines (like PostgreSQL and SQLite), but implemented in pure Python using iterators.
+
+**Key insight:** Python's iterator protocol is perfect for streaming data. Each operator in the pipeline is an iterator that processes rows one at a time.
+
+### The Architecture: Four Layers
+
+#### Layer 1: SQL Parsing
+
+**Technology:** Uses `sqlglot` library for SQL parsing
+
+**Why sqlglot:**
+
+- Supports multiple SQL dialects (MySQL, PostgreSQL, SQLite)
+- Produces a standard AST (Abstract Syntax Tree)
+- Handles SQL parsing edge cases
+- No need to write a parser from scratch
+
+**How it works:**
+
+```python
+def parse_sql(sql: str):
+    # Try multiple dialects
+    for dialect in ['mysql', 'postgres', 'sqlite']:
+        try:
+            ast = sqlglot.parse_one(sql, dialect=dialect)
+            return ast
+        except:
+            continue
+    raise ValueError("Could not parse SQL")
+```
+
+**Logic:** The parser converts SQL string into an AST, which is a tree structure representing the query. This AST is then used by the planner to build an execution plan.
+
+#### Layer 2: Logical Planning
+
+**Purpose:** Convert AST into a logical execution plan
+
+**What it extracts:**
+
+- Root table (the table in FROM clause)
+- Join information (which tables to join, on what keys)
+- WHERE clause conditions
+- SELECT projections (which columns to return)
+
+**Key design decision:** Separate logical planning from execution. This allows:
+
+- Query optimization before execution
+- Reuse of planning logic
+- Easier testing and debugging
+
+**How it works:**
+
+```python
+class LogicalPlan:
+    root_table: str
+    joins: List[JoinInfo]
+    where_expr: Optional[Expression]
+    projections: List[str]
+    required_columns: Dict[str, List[str]]  # Column pruning
+    pushable_where_expr: Optional[Expression]  # Filter pushdown
+```
+
+**Logic:** The planner walks the AST tree, extracting information about tables, joins, filters, and projections. It identifies which columns are needed from each table (for column pruning) and which WHERE conditions can be pushed to sources (for filter pushdown).
+
+#### Layer 3: Optimization
+
+**Two main optimizations:**
+
+**1. Column Pruning**
+
+- Identifies which columns are actually needed
+- Only requests those columns from sources
+- Reduces I/O and memory usage
+
+**Logic:**
+
+```python
+# Analyze SELECT clause
+required_columns = {}
+for projection in plan.projections:
+    table_name = extract_table_name(projection)
+    column_name = extract_column_name(projection)
+    required_columns[table_name].add(column_name)
+
+# Also check WHERE clause - columns used in filters are needed
+for condition in plan.where_expr:
+    table_name = extract_table_name(condition)
+    column_name = extract_column_name(condition)
+    required_columns[table_name].add(column_name)
+```
+
+**2. Filter Pushdown**
+
+- Identifies WHERE conditions that reference only the root table
+- Pushes these conditions to the source function
+- Reduces data transfer from databases
+
+**Logic:**
+
+```python
+# Check if WHERE condition only references root table
+def can_push_where(where_expr, root_table):
+    referenced_tables = extract_table_references(where_expr)
+    return len(referenced_tables) == 1 and root_table in referenced_tables
+
+if can_push_where(plan.where_expr, plan.root_table):
+    pushable_where_expr = plan.where_expr
+```
+
+**Protocol-based detection:** The engine automatically detects if a source function supports optimizations by checking if it accepts `dynamic_where` and `dynamic_columns` parameters:
+
+```python
+import inspect
+
+def source_supports_optimizations(source_fn):
+    sig = inspect.signature(source_fn)
+    params = list(sig.parameters.keys())
+    return 'dynamic_where' in params or 'dynamic_columns' in params
+```
+
+**Why this approach:** No flags needed. If your source function accepts these parameters, optimizations apply automatically. This makes the engine flexible - any Python function can be a source, and optimizations work if the source supports them.
+
+#### Layer 4: Execution Pipeline
+
+**The iterator pipeline:** Each operator is a Python iterator that processes rows incrementally.
+
+**Pipeline structure:**
+
+```
+ScanIterator → FilterIterator → JoinIterators → ProjectIterator → Results
+```
+
+**How each iterator works:**
+
+**1. ScanIterator**
+
+- Reads rows from source function
+- Prefixes columns with table name (e.g., `id` becomes `users.id`)
+- Applies column pruning (only includes requested columns)
+
+**Logic:**
+
+```python
+class ScanIterator:
+    def __init__(self, source_fn, table_name, required_columns):
+        self.source_fn = source_fn
+        self.table_name = table_name
+        self.required_columns = required_columns
+
+    def __next__(self):
+        row = next(self.source_iterator)
+        # Column pruning
+        if self.required_columns:
+            row = {k: v for k, v in row.items() if k in self.required_columns}
+        # Prefix columns with table name
+        return {f"{self.table_name}.{k}": v for k, v in row.items()}
+```
+
+**2. FilterIterator**
+
+- Applies WHERE clause conditions
+- Evaluates expressions row-by-row
+- Only yields rows that match conditions
+
+**Logic:**
+
+```python
+class FilterIterator:
+    def __init__(self, source_iterator, where_expr):
+        self.source_iterator = source_iterator
+        self.where_expr = where_expr
+
+    def __next__(self):
+        while True:
+            row = next(self.source_iterator)
+            if evaluate_expression(self.where_expr, row):
+                return row
+            # Skip rows that don't match
+```
+
+**3. JoinIterators (LookupJoinIterator, MergeJoinIterator)**
+
+- **LookupJoinIterator:** Builds hash index on right side, looks up each left row
+- **MergeJoinIterator:** Both sides sorted, merges like merge sort algorithm
+
+**LookupJoinIterator logic:**
+
+```python
+class LookupJoinIterator:
+    def __init__(self, left_iterator, right_source_fn, left_key, right_key):
+        self.left_iterator = left_iterator
+        self.right_source_fn = right_source_fn
+        self.left_key = left_key
+        self.right_key = right_key
+        self.index = None  # Hash index on right side
+
+    def _build_index(self):
+        """Build hash index on right side - O(n) time, O(n) space"""
+        self.index = {}
+        for right_row in self.right_source_fn():
+            key = right_row[self.right_key]
+            if key not in self.index:
+                self.index[key] = []
+            self.index[key].append(right_row)
+
+    def __next__(self):
+        if self.index is None:
+            self._build_index()
+
+        left_row = next(self.left_iterator)
+        left_key_value = left_row[self.left_key]
+
+        # Lookup in index - O(1) time
+        matching_right_rows = self.index.get(left_key_value, [])
+
+        for right_row in matching_right_rows:
+            # Merge left and right rows
+            merged_row = {**left_row, **right_row}
+            yield merged_row
+```
+
+**Why hash index:** O(1) lookup time per left row. Trade-off: O(n) memory for right side, but this is necessary for efficient joins.
+
+**MergeJoinIterator logic:**
+
+```python
+class MergeJoinIterator:
+    def __init__(self, left_iterator, right_iterator, left_key, right_key):
+        self.left_iterator = left_iterator
+        self.right_iterator = right_iterator
+        self.left_key = left_key
+        self.right_key = right_key
+        self.right_buffer = []  # Buffer for right side
+
+    def __next__(self):
+        left_row = next(self.left_iterator)
+        left_key_value = left_row[self.left_key]
+
+        # Advance right iterator until we find matching key
+        while True:
+            if not self.right_buffer:
+                right_row = next(self.right_iterator)
+                self.right_buffer.append(right_row)
+
+            right_key_value = self.right_buffer[0][self.right_key]
+
+            if right_key_value == left_key_value:
+                # Match found - merge and yield
+                right_row = self.right_buffer.pop(0)
+                return {**left_row, **right_row}
+            elif right_key_value > left_key_value:
+                # Right side ahead - no match for this left row
+                return None
+            else:
+                # Right side behind - advance right
+                self.right_buffer.pop(0)
+```
+
+**Why merge join:** O(n+m) time complexity, O(1) memory. Perfect for pre-sorted data.
+
+**4. ProjectIterator**
+
+- Applies SELECT clause
+- Only includes requested columns
+- Handles column aliases
+
+**Logic:**
+
+```python
+class ProjectIterator:
+    def __init__(self, source_iterator, projections):
+        self.source_iterator = source_iterator
+        self.projections = projections  # List of (table.col, alias) tuples
+
+    def __next__(self):
+        row = next(self.source_iterator)
+        result = {}
+        for table_col, alias in self.projections:
+            result[alias or table_col] = row[table_col]
+        return result
+```
+
+### Why Iterator-Based Architecture?
+
+**Key advantages:**
+
+1. **Memory efficiency:** Only one row in memory at a time (except for join indexes)
+2. **Lazy evaluation:** Processing starts only when you iterate over results
+3. **Composability:** Operators can be chained arbitrarily
+4. **Extensibility:** Easy to add new operators
+5. **Python-native:** Uses standard Python iterator protocol
+
+**Trade-offs:**
+
+- **Performance:** Python iterators are slower than compiled code, but flexibility is worth it
+- **Memory:** Join indexes require memory, but this is necessary for efficient joins
+- **Complexity:** Iterator chains can be complex, but they're composable and testable
+
+### Expression Evaluation
+
+**How WHERE clauses are evaluated:**
+
+The engine uses recursive AST traversal to evaluate expressions:
+
+```python
+def evaluate_expression(expr, row):
+    """Recursively evaluate SQL expression against row data"""
+
+    if isinstance(expr, exp.Column):
+        # Column reference: lookup value in row
+        return row[expr.sql()]
+
+    elif isinstance(expr, exp.Literal):
+        # Literal value: return as-is
+        return expr.this
+
+    elif isinstance(expr, exp.EQ):
+        # Equality: evaluate left and right, compare
+        left = evaluate_expression(expr.this, row)
+        right = evaluate_expression(expr.expression, row)
+        return left == right
+
+    elif isinstance(expr, exp.GT):
+        # Greater than: evaluate and compare
+        left = evaluate_expression(expr.this, row)
+        right = evaluate_expression(expr.expression, row)
+        return left > right
+
+    # ... handle other operators (AND, OR, NOT, etc.)
+```
+
+**Why recursive:** SQL expressions are trees. Recursive evaluation naturally handles nested expressions like `(a > 10 AND b < 20) OR c = 5`.
+
+### Join Algorithm Selection
+
+**How the engine chooses join algorithms:**
+
+1. **Check if both sides are sorted** (`ordered_by` metadata)
+
+   - If yes → Use MergeJoinIterator
+   - If no → Use LookupJoinIterator
+
+2. **Check if right side is a file** (`filename` metadata)
+
+   - If yes → Use MmapLookupJoinIterator (memory-mapped)
+
+3. **Check if Polars is available** (`use_polars` flag)
+   - If yes → Use PolarsLookupJoinIterator (vectorized)
+
+**Logic:**
+
+```python
+def _build_join_iterator(left_iterator, right_source_fn, left_key, right_key,
+                        right_metadata, use_polars):
+    # Check for merge join (both sides sorted)
+    if left_metadata.get('ordered_by') == left_key and \
+       right_metadata.get('ordered_by') == right_key:
+        return MergeJoinIterator(left_iterator, right_source_fn, left_key, right_key)
+
+    # Check for mmap join (file-based)
+    if right_metadata.get('filename') and MMAP_AVAILABLE:
+        return MmapLookupJoinIterator(left_iterator, right_source_fn,
+                                     right_metadata['filename'], left_key, right_key)
+
+    # Check for Polars join (vectorized)
+    if use_polars and POLARS_AVAILABLE:
+        return PolarsLookupJoinIterator(left_iterator, right_source_fn,
+                                       left_key, right_key)
+
+    # Default: standard lookup join
+    return LookupJoinIterator(left_iterator, right_source_fn, left_key, right_key)
+```
+
+### Protocol-Based Optimization
+
+**The key innovation:** Automatic optimization detection via function signature inspection.
+
+**How it works:**
+
+1. Engine inspects source function signature using `inspect.signature()`
+2. If function accepts `dynamic_where` or `dynamic_columns` parameters, it supports optimizations
+3. Engine passes optimization parameters automatically
+4. Source function applies optimizations (filter pushdown, column pruning)
+
+**Why this approach:**
+
+- **No flags needed:** Detection is automatic
+- **Flexible:** Any Python function can be a source
+- **Backward compatible:** Simple sources still work (no optimizations)
+- **Extensible:** Easy to add new optimization parameters
+
+**Example:**
+
+```python
+# Simple source (no optimizations)
+def simple_source():
+    return iter([{"id": 1, "name": "Alice"}])
+
+# Optimized source (with protocol)
+def optimized_source(dynamic_where=None, dynamic_columns=None):
+    query = "SELECT "
+    if dynamic_columns:
+        query += ", ".join(dynamic_columns)
+    else:
+        query += "*"
+    query += " FROM table"
+    if dynamic_where:
+        query += f" WHERE {dynamic_where}"
+    return execute_query(query)
+
+# Both work the same way:
+engine.register("users", simple_source)  # No optimizations
+engine.register("products", optimized_source)  # Optimizations apply automatically!
+```
+
+### Memory Management
+
+**Key strategies:**
+
+1. **Streaming:** Process one row at a time, never load full tables
+2. **Join indexes:** Only right side of joins is materialized (necessary for lookups)
+3. **Memory-mapped files:** For large JSONL files, use OS virtual memory
+4. **Column pruning:** Only extract needed columns
+5. **Filter pushdown:** Filter at source, reduce data transfer
+
+**Memory footprint:**
+
+- **Left side of join:** O(1) - one row at a time
+- **Right side of join:** O(n) - hash index in memory
+- **Total:** O(n) where n = size of right side
+
+**Why this works:** In most queries, the right side is smaller (e.g., joining large product table with small category table). The engine is designed to put smaller tables on the right side.
+
+### Performance Optimizations
+
+**1. Polars Vectorization**
+
+When Polars is available, the engine uses vectorized operations:
+
+```python
+# Instead of row-by-row filtering:
+for row in rows:
+    if row['price'] > 100:
+        yield row
+
+# Use Polars batch filtering:
+df = pl.DataFrame(rows)
+filtered_df = df.filter(pl.col('price') > 100)
+for row in filtered_df.iter_rows(named=True):
+    yield row
+```
+
+**Why faster:** Polars uses SIMD instructions and columnar processing, 10-200x faster than row-by-row Python loops.
+
+**2. Memory-Mapped Joins**
+
+For large JSONL files, use OS virtual memory instead of loading into RAM:
+
+```python
+# Instead of loading entire file:
+with open('large_file.jsonl') as f:
+    data = [json.loads(line) for line in f]  # 10GB in memory!
+
+# Use memory-mapped file:
+import mmap
+with open('large_file.jsonl', 'rb') as f:
+    mm = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
+    # OS handles memory, can process files larger than RAM
+```
+
+**Why this works:** OS virtual memory allows accessing file data without loading it all into RAM. 90-99% memory reduction for large files.
+
+**3. First Match Only Optimization**
+
+For joins where only the first match matters (prevents Cartesian products):
+
+```python
+class LookupJoinIterator:
+    def __init__(self, ..., first_match_only=False):
+        self.first_match_only = first_match_only
+
+    def _build_index(self):
+        self.index = {}
+        for right_row in self.right_source_fn():
+            key = right_row[self.right_key]
+            if self.first_match_only:
+                # Only keep first match per key
+                if key not in self.index:
+                    self.index[key] = right_row
+            else:
+                # Keep all matches
+                if key not in self.index:
+                    self.index[key] = []
+                self.index[key].append(right_row)
+```
+
+**Why useful:** Prevents Cartesian products when right side has duplicate keys. Significantly reduces output size and processing time.
+
+### Design Decisions and Trade-offs
+
+**1. Why Python iterators instead of compiled code?**
+
+**Decision:** Use Python iterators for flexibility
+
+**Trade-off:** Slower than compiled code, but:
+
+- Works with any Python data source
+- Easy to extend and customize
+- No compilation step needed
+- Python-native integration
+
+**2. Why separate logical planning from execution?**
+
+**Decision:** Two-phase approach (plan then execute)
+
+**Trade-off:** Extra step, but:
+
+- Enables query optimization
+- Easier to test and debug
+- Can reuse planning logic
+- Clear separation of concerns
+
+**3. Why protocol-based optimization instead of flags?**
+
+**Decision:** Automatic detection via function signature
+
+**Trade-off:** Slightly more complex detection, but:
+
+- No flags to remember
+- Automatic optimization
+- Backward compatible
+- More Pythonic
+
+**4. Why materialize right side of joins?**
+
+**Decision:** Build hash index on right side
+
+**Trade-off:** Memory usage, but:
+
+- O(1) lookup time per left row
+- Necessary for efficient joins
+- Can use memory-mapped files for large files
+- Standard database approach
+
+**5. Why limit SQL features (no GROUP BY, aggregations)?**
+
+**Decision:** Focus on joins and filtering
+
+**Trade-off:** Less SQL support, but:
+
+- Simpler implementation
+- Faster execution
+- Focuses on core use case (cross-system joins)
+- Can add later if needed
+
+### The Result
+
+A lightweight Python library that:
+
+- Joins data from any source using SQL
+- Processes data row-by-row (streaming)
+- Requires zero infrastructure
+- Automatically optimizes when possible
+- Works with any Python iterator
+
+**The key insight:** Python's iterator protocol is perfect for streaming SQL execution. By combining SQL parsing, logical planning, and iterator-based execution, I created a tool that solves a real problem: joining data from different systems without complex infrastructure.
+
+---
+
+## Real-World Performance: 39 Million Records in 7 Minutes
+
+I recently used this engine in production to compare prices between two XML files (17 million records each) and match them with a MongoDB collection (5 million records).
+
+**The results:**
+
+- **39 million total records processed**
+- **7 minutes execution time**
+- **400 MB memory usage**
+- **92,857 records/second throughput**
+
+This demonstrates the engine's efficiency: processing massive datasets with minimal memory footprint through true streaming architecture.
+
+---
+
+## How It Works: Streaming Architecture
+
+The engine processes data **row-by-row**, never loading entire tables into memory:
+
+```
+SQL Query
+    ↓
+Parser → AST
+    ↓
+Planner → Logical Plan
+    ↓
+Executor → Iterator Pipeline
+    ↓
+Results (Generator)
+```
+
+**Iterator Pipeline:**
+
+```
+ScanIterator → FilterIterator → JoinIterators → ProjectIterator → Results
+```
+
+Each iterator processes rows incrementally, enabling true streaming execution. This means:
+
+- Low memory footprint
+- Can process data larger than RAM
+- Results yielded immediately
+- No buffering required
+
+---
+
+## Supported Data Sources
+
+The engine works with **any Python iterator**, making it incredibly flexible:
+
+### Databases
+
+All databases are accessed via Python iterator functions. The engine doesn't use connectors - it works with any Python function that returns an iterator:
+
+- **PostgreSQL** - Create iterator function that queries PostgreSQL and yields rows
+- **MySQL** - Create iterator function that queries MySQL and yields rows
+- **MongoDB** - Create iterator function that queries MongoDB and yields documents
+
+### Files
+
+- **CSV** - Standard CSV files
+- **JSONL** - JSON Lines format with memory-mapped joins
+- **JSON** - Standard JSON files
+- **XML** - XML parsing with ElementTree
+
+### APIs
+
+- **REST APIs** - Any HTTP endpoint
+- **GraphQL** - Via custom functions
+- **WebSockets** - Streaming data sources
+
+### Custom Sources
+
+- **Any Python function** that returns an iterator
+- **Generators** - Perfect for streaming data
+- **Custom transformations** - Apply Python logic between joins
+
+---
+
+## SQL Features
+
+The engine supports standard SQL syntax:
+
+### Supported Features
+
+**SELECT** - Column selection, aliasing, table-qualified columns
+
+```sql
+SELECT users.name, orders.total AS order_total
+FROM users
+JOIN orders ON users.id = orders.user_id
+```
+
+**JOIN** - INNER JOIN and LEFT JOIN with equality conditions
+
+```sql
+SELECT *
+FROM table1 t1
+JOIN table2 t2 ON t1.id = t2.id
+LEFT JOIN table3 t3 ON t1.id = t3.id
+```
+
+**WHERE** - Comparisons, boolean logic, NULL checks, IN clauses
+
+```sql
+SELECT *
+FROM products
+WHERE price > 100
+  AND status IN ('active', 'pending')
+  AND description IS NOT NULL
+```
+
+**Arithmetic** - Addition, subtraction, multiplication, division, modulo
+
+```sql
+SELECT
+  price - discount AS final_price,
+  quantity * unit_price AS total
+FROM orders
+```
+
+### Not Supported
+
+- GROUP BY and aggregations (COUNT, SUM, AVG)
+- ORDER BY
+- HAVING
+- Subqueries
+
+_These limitations keep the engine focused on joins and filtering — its core strength._
+
+---
+
+## Performance Optimizations
+
+The engine includes several automatic optimizations:
+
+### 1. Column Pruning
+
+Only extracts columns needed for the query, reducing I/O and memory:
+
+```python
+# Query only requests 'name' and 'price'
+query = "SELECT name, price FROM products"
+
+# Engine automatically requests only these columns from source
+def source(dynamic_columns=None):
+    columns = ", ".join(dynamic_columns)  # ['name', 'price']
+    query = f"SELECT {columns} FROM table"
+```
+
+### 2. Filter Pushdown
+
+Pushes WHERE conditions to data sources when possible:
+
+```python
+# Query has WHERE clause
+query = "SELECT * FROM products WHERE price > 100"
+
+# Engine automatically pushes filter to source
+def source(dynamic_where=None):
+    query = f"SELECT * FROM table WHERE {dynamic_where}"
+```
+
+### 3. Polars Vectorization
+
+10-200x faster processing for large datasets using SIMD-accelerated operations:
+
+```python
+engine = Engine(use_polars=True)  # Enabled by default
+
+# Automatically uses Polars for:
+# - Vectorized filtering
+# - Vectorized projections
+# - Batch processing
+```
+
+### 4. Memory-Mapped Joins
+
+90-99% memory reduction for large JSONL files:
+
+```python
+# Register with filename to enable mmap joins
+engine.register("products", jsonl_source, filename="products.jsonl")
+
+# Engine uses OS virtual memory instead of RAM
+# Can process files larger than available RAM
+```
+
+### 5. Merge Joins
+
+Efficient joins for pre-sorted data (O(n+m) time complexity):
+
+```python
+# Register with ordered_by to enable merge join
+engine.register("users", users_source, ordered_by="id")
+
+# Engine uses merge join algorithm
+# Both sides must be sorted by join key
+```
+
+---
+
+## Real-World Examples
+
+### Example 1: Microservices Data Integration
+
+In a microservices architecture, data is distributed across services:
+
+```python
+from streaming_sql_engine import Engine
+import psycopg2
+import pymysql
+import requests
+
+engine = Engine()
+
+# Service 1: User service (PostgreSQL) - iterator function
+def users_source():
+    conn = psycopg2.connect(host="user-db", port=5432, user="user", password="pass", database="users_db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, name, email FROM users")
+    for row in cursor:
+        yield {"id": row[0], "name": row[1], "email": row[2]}
+    conn.close()
+engine.register("users", users_source)
+
+# Service 2: Order service (MySQL) - iterator function
+def orders_source():
+    conn = pymysql.connect(host="order-db", port=3306, user="user", password="pass", database="orders_db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, user_id, total FROM orders")
+    for row in cursor:
+        yield {"id": row[0], "user_id": row[1], "total": row[2]}
+    conn.close()
+engine.register("orders", orders_source)
+
+# Service 3: Payment service (REST API) - iterator function
+def payment_source():
+    response = requests.get("https://payments.service/api/transactions")
+    for item in response.json():
+        yield item
+engine.register("payments", payment_source)
+
+# Join across services
+query = """
+    SELECT users.name, orders.total, payments.status
+    FROM users
+    JOIN orders ON users.id = orders.user_id
+    JOIN payments ON orders.id = payments.order_id
+"""
+```
+
+**Why this matters:** No need for a shared database or complex ETL pipelines. The engine accepts any Python function that returns an iterator, making it incredibly flexible.
+
+### Example 2: Real-Time Price Comparison
+
+Compare prices from multiple XML feeds and match with MongoDB:
+
+```python
+def parse_xml(filepath):
+    tree = ET.parse(filepath)
+    for product in tree.findall('.//product'):
+        yield {
+            'ean': product.find('ean').text,
+            'price': float(product.find('price').text),
+            'name': product.find('name').text
+        }
+
+engine.register("xml1", lambda: parse_xml("prices1.xml"))
+engine.register("xml2", lambda: parse_xml("prices2.xml"))
+engine.register("mongo", mongo_source)
+
+query = """
+    SELECT
+        xml1.ean,
+        xml1.price AS price1,
+        xml2.price AS price2,
+        mongo.sf_sku
+    FROM xml1
+    JOIN xml2 ON xml1.ean = xml2.ean
+    JOIN mongo ON xml1.ean = mongo.ean
+    WHERE xml1.price != xml2.price
+"""
+```
+
+**Production results:** 17M + 17M XML records + 5M MongoDB records processed in 7 minutes using 400 MB RAM.
+
+### Example 3: Python Processing Between Joins
+
+Apply Python logic (ML models, custom functions) between joins:
+
+```python
+def enriched_source():
+    """Source that processes data with Python before joining"""
+    import psycopg2
+    conn = psycopg2.connect(host="localhost", database="mydb", user="user", password="pass")
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, name, category_id FROM products")
+    for row in cursor:
+        product = {"id": row[0], "name": row[1], "category_id": row[2]}
+        # Apply Python logic
+        product['ml_score'] = ml_model.predict(product)
+        product['custom_field'] = custom_function(product)
+        yield product
+    conn.close()
+
+def categories_source():
+    import psycopg2
+    conn = psycopg2.connect(host="localhost", database="mydb", user="user", password="pass")
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, name FROM categories")
+    for row in cursor:
+        yield {"id": row[0], "category_name": row[1]}
+    conn.close()
+
+engine.register("enriched_products", enriched_source)
+engine.register("categories", categories_source)
+
+query = """
+    SELECT p.name, p.ml_score, c.category_name
+    FROM enriched_products p
+    JOIN categories c ON p.category_id = c.id
+"""
+```
+
+**Why this matters:** Seamless integration with Python ecosystem — use any library, apply any logic.
+
+---
+
+## Comparison with Alternatives
+
+### vs DuckDB
+
+| Feature                 | Streaming SQL Engine | DuckDB              |
+| ----------------------- | -------------------- | ------------------- |
+| Cross-system joins      | ✅ Direct            | ⚠️ Requires import  |
+| API + Database join     | ✅ Direct            | ❌ Must export API  |
+| Real-time streaming     | ✅ True streaming    | ⚠️ Buffering needed |
+| Python processing       | ✅ Native            | ⚠️ Export/import    |
+| GROUP BY / Aggregations | ❌ Not supported     | ✅ Full support     |
+| Performance (same DB)   | ⚠️ Moderate          | ✅ Very fast        |
+
+**Use Streaming SQL Engine when:** You need to join data from different systems that can't be imported into DuckDB.
+
+**Use DuckDB when:** All data can be imported and you need aggregations.
+
+### vs PySpark
+
+| Feature                | Streaming SQL Engine | PySpark            |
+| ---------------------- | -------------------- | ------------------ |
+| Infrastructure         | ✅ Zero              | ❌ Cluster needed  |
+| Setup time             | ✅ Seconds           | ❌ Hours           |
+| Memory (small queries) | ✅ 100-500 MB        | ❌ 4-8 GB minimum  |
+| Cross-system joins     | ✅ Direct            | ⚠️ Requires import |
+| Distributed processing | ❌ Single machine    | ✅ Multi-machine   |
+| Big data (petabytes)   | ❌ Not suitable      | ✅ Excellent       |
+| Python integration     | ✅ Native Python     | ⚠️ PySpark API     |
+| Learning curve         | ✅ Simple            | ❌ Steeper         |
+
+**Use Streaming SQL Engine when:** You need cross-system joins on a single machine with simple deployment.
+
+**Use PySpark when:** You need distributed processing across multiple machines for petabyte-scale data.
+
+### vs Apache Flink
+
+| Feature                | Streaming SQL Engine | Apache Flink           |
+| ---------------------- | -------------------- | ---------------------- |
+| Infrastructure         | ✅ Zero              | ❌ Cluster needed      |
+| Setup complexity       | ✅ Very low          | ❌ High                |
+| Python-native          | ✅ Pure Python       | ⚠️ Python API wrapper  |
+| Cross-system joins     | ✅ Direct            | ⚠️ Requires connectors |
+| Real-time streaming    | ✅ True streaming    | ✅ Excellent           |
+| Distributed processing | ❌ Single machine    | ✅ Multi-machine       |
+| Fault tolerance        | ❌ Not provided      | ✅ Built-in            |
+| Exactly-once semantics | ❌ Not provided      | ✅ Supported           |
+| Event-time processing  | ❌ Not supported     | ✅ Full support        |
+| Low latency            | ✅ Immediate         | ⚠️ Network overhead    |
+
+**Use Streaming SQL Engine when:** You need simple cross-system joins, Python-native workflows, and zero infrastructure.
+
+**Use Apache Flink when:** You need distributed stream processing, fault tolerance, exactly-once semantics, and complex event-time processing.
+
+### vs Pandas
+
+| Feature                  | Streaming SQL Engine   | Pandas                   |
+| ------------------------ | ---------------------- | ------------------------ |
+| Cross-system joins       | ✅ Direct              | ❌ Must load all data    |
+| Memory efficiency        | ✅ Streaming           | ❌ Loads all in memory   |
+| SQL syntax               | ✅ Standard SQL        | ❌ DataFrame API         |
+| Large datasets           | ✅ Can exceed RAM      | ❌ Limited by RAM        |
+| Real-time data           | ✅ Streaming           | ❌ Batch only            |
+| File formats             | ✅ Any Python iterator | ⚠️ Limited formats       |
+| Performance (large data) | ✅ Streaming           | ⚠️ Slower for large data |
+
+**Use Streaming SQL Engine when:** You need to join data from different systems, process data larger than RAM, or use SQL syntax.
+
+**Use Pandas when:** All data fits in memory and you prefer DataFrame API.
+
+### vs SQLAlchemy
+
+| Feature               | Streaming SQL Engine | SQLAlchemy                |
+| --------------------- | -------------------- | ------------------------- |
+| Cross-database joins  | ✅ Direct            | ❌ One database at a time |
+| API joins             | ✅ Direct            | ❌ Not supported          |
+| File joins            | ✅ Direct            | ❌ Not supported          |
+| SQL syntax            | ✅ Standard SQL      | ✅ ORM or SQL             |
+| Same-database queries | ⚠️ Slower            | ✅ Optimized              |
+| Database abstraction  | ❌ Not provided      | ✅ Full ORM               |
+
+**Use Streaming SQL Engine when:** You need to join data from different systems (databases, APIs, files).
+
+**Use SQLAlchemy when:** All data is in the same database and you want ORM features.
+
+### vs Presto/Trino
+
+| Feature            | Streaming SQL Engine | Presto/Trino                  |
+| ------------------ | -------------------- | ----------------------------- |
+| Infrastructure     | ✅ Zero              | ❌ Cluster needed             |
+| Setup complexity   | ✅ Very low          | ❌ High                       |
+| Cross-system joins | ✅ Direct            | ✅ Supported                  |
+| Python integration | ✅ Native            | ⚠️ JDBC/ODBC                  |
+| Real-time APIs     | ✅ Direct            | ⚠️ Requires connector         |
+| Memory efficiency  | ✅ Streaming         | ⚠️ Query coordinator overhead |
+| SQL features       | ⚠️ Limited           | ✅ Full SQL                   |
+| Aggregations       | ❌ Not supported     | ✅ Full support               |
+
+**Use Streaming SQL Engine when:** You need Python-native cross-system joins with zero infrastructure.
+
+**Use Presto/Trino when:** You need full SQL features, aggregations, and have infrastructure for a cluster.
+
+### vs Apache Drill
+
+| Feature            | Streaming SQL Engine | Apache Drill          |
+| ------------------ | -------------------- | --------------------- |
+| Infrastructure     | ✅ Zero              | ❌ Cluster needed     |
+| Language           | ✅ Python            | ❌ Java               |
+| Deployment         | ✅ pip install       | ❌ Server setup       |
+| Cross-system joins | ✅ Direct            | ✅ Supported          |
+| API joins          | ✅ Direct            | ⚠️ Requires connector |
+| Python integration | ✅ Native            | ⚠️ JDBC/ODBC          |
+| SQL features       | ⚠️ Limited           | ✅ Full SQL           |
+| Scalability        | ❌ Single machine    | ✅ 1000+ nodes        |
+
+**Use Streaming SQL Engine when:** You need simple Python-native cross-system joins with zero setup.
+
+**Use Apache Drill when:** You need enterprise-scale distributed querying across Hadoop/NoSQL systems.
+
+### vs ksqlDB
+
+| Feature            | Streaming SQL Engine | ksqlDB                  |
+| ------------------ | -------------------- | ----------------------- |
+| Infrastructure     | ✅ Zero              | ❌ Kafka cluster needed |
+| Data sources       | ✅ Any Python source | ⚠️ Kafka topics only    |
+| API joins          | ✅ Direct            | ❌ Not supported        |
+| File joins         | ✅ Direct            | ⚠️ Requires Kafka       |
+| Python integration | ✅ Native            | ⚠️ REST API             |
+| Real-time          | ✅ Streaming         | ✅ Excellent            |
+| SQL features       | ⚠️ Limited           | ✅ Full SQL             |
+
+**Use Streaming SQL Engine when:** You need to join data from databases, APIs, and files without Kafka.
+
+**Use ksqlDB when:** You're already using Kafka and need streaming SQL on Kafka topics.
+
+### vs Materialize
+
+| Feature            | Streaming SQL Engine | Materialize              |
+| ------------------ | -------------------- | ------------------------ |
+| Infrastructure     | ✅ Zero              | ❌ Database server       |
+| Deployment         | ✅ Python library    | ❌ Database installation |
+| Cross-system joins | ✅ Direct            | ⚠️ Requires connectors   |
+| Materialized views | ❌ Not supported     | ✅ Core feature          |
+| Python integration | ✅ Native            | ⚠️ SQL/psql              |
+| Real-time          | ✅ Streaming         | ✅ Excellent             |
+| SQL features       | ⚠️ Limited           | ✅ Full SQL              |
+
+**Use Streaming SQL Engine when:** You need simple Python-native joins without database infrastructure.
+
+**Use Materialize when:** You need materialized views over streaming data with full SQL support.
+
+### vs DataFusion (Apache Arrow)
+
+| Feature            | Streaming SQL Engine | DataFusion               |
+| ------------------ | -------------------- | ------------------------ |
+| Language           | ✅ Python            | ⚠️ Rust (Python wrapper) |
+| Infrastructure     | ✅ Zero              | ✅ Zero                  |
+| Cross-system joins | ✅ Direct            | ⚠️ Limited connectors    |
+| API joins          | ✅ Direct            | ❌ Not supported         |
+| Python integration | ✅ Native            | ⚠️ Python wrapper        |
+| Performance        | ⚠️ Moderate          | ✅ Very fast (Rust)      |
+| SQL features       | ⚠️ Limited           | ✅ Full SQL              |
+
+**Use Streaming SQL Engine when:** You need to join APIs and files with Python-native flexibility.
+
+**Use DataFusion when:** You need high-performance SQL queries on Arrow/Parquet data.
+
+### vs Polars SQL
+
+| Feature            | Streaming SQL Engine | Polars SQL               |
+| ------------------ | -------------------- | ------------------------ |
+| Data sources       | ✅ Any Python source | ⚠️ DataFrames/Parquet    |
+| Cross-system joins | ✅ Direct            | ⚠️ Must load into Polars |
+| API joins          | ✅ Direct            | ❌ Not supported         |
+| Memory efficiency  | ✅ Streaming         | ⚠️ Loads into memory     |
+| SQL syntax         | ✅ Standard SQL      | ✅ Standard SQL          |
+| Python integration | ✅ Native            | ✅ Native                |
+| Performance        | ⚠️ Moderate          | ✅ Very fast             |
+
+**Use Streaming SQL Engine when:** You need to join data from different systems without loading into Polars.
+
+**Use Polars SQL when:** All data can be loaded into Polars DataFrames and you need high performance.
+
+---
+
+## Are There Other Tools Like This?
+
+**Short answer: Not exactly.**
+
+While there are many tools that do **parts** of what Streaming SQL Engine does, none combine all these characteristics:
+
+### What Makes Streaming SQL Engine Unique
+
+1. **Zero Infrastructure + Cross-System Joins**
+
+   - Most tools require clusters (Spark, Flink, Drill)
+   - Or require specific infrastructure (ksqlDB needs Kafka)
+   - Streaming SQL Engine: Just Python
+
+2. **Any Python Iterator as Data Source**
+
+   - Most tools require specific connectors
+   - Streaming SQL Engine: Any Python function works
+
+3. **Direct API Joins**
+
+   - Most tools can't join REST APIs directly
+   - Streaming SQL Engine: Native support
+
+4. **Python-Native Architecture**
+   - Most tools are Java/Rust with Python wrappers
+   - Streaming SQL Engine: Pure Python, seamless integration
+
+### Similar Tools (But Different)
+
+**Apache Drill** — Similar cross-system capability, but requires cluster and Java
+
+**ksqlDB** — Streaming SQL, but Kafka-only and requires infrastructure
+
+**Materialize** — Streaming database, but requires database server
+
+**DataFusion** — Fast SQL engine, but limited to Arrow/Parquet data
+
+**Polars SQL** — Fast SQL, but requires loading data into DataFrames first
+
+**Presto/Trino** — Cross-system SQL, but requires cluster infrastructure
+
+**None of these** combine:
+
+- Zero infrastructure
+- Any Python iterator as source
+- Direct API joins
+- Pure Python implementation
+- Simple deployment
+
+**That's what makes Streaming SQL Engine unique.**
+
+---
+
+## Key Wins
+
+### 1. Cross-System Joins
+
+The **only tool** that can join MySQL + PostgreSQL + MongoDB + REST API + CSV files in a single SQL query without data export/import.
+
+### 2. Zero Infrastructure
+
+No clusters, no setup, just Python. Install and use immediately:
+
+```bash
+pip install streaming-sql-engine
+```
+
+### 3. Memory Efficient
+
+Processes 39 million records with only 400 MB RAM. True streaming architecture means you can process data larger than available RAM.
+
+### 4. Python-Native
+
+Seamless integration with Python ecosystem. Use any Python function as a data source, apply ML models, use any library.
+
+### 5. Real-Time Processing
+
+Join live streaming data with static reference data. No buffering required — true streaming execution.
+
+### 6. Automatic Optimizations
+
+Filter pushdown, column pruning, and vectorization applied automatically. No configuration needed — the engine detects protocol support.
+
+---
+
+## When to Use Streaming SQL Engine
+
+**Perfect for:**
+
+- Joining data from different systems (databases, APIs, files)
+- Microservices data aggregation
+- Real-time data integration
+- Memory-constrained environments
+- Python-native workflows
+- Ad-hoc cross-system queries
+
+**Not for:**
+
+- All data in same database (use direct SQL - 10-100x faster)
+- Need GROUP BY or aggregations (use database)
+- Maximum performance for same-database queries (use database)
+- Distributed processing (use Spark/Flink)
+
+---
+
+## Getting Started
+
+Installation:
+
+```bash
+pip install streaming-sql-engine
+```
+
+Quick start:
+
+```python
+from streaming_sql_engine import Engine
+
+engine = Engine()
+
+# Register data sources (any Python function that returns an iterator)
+def users_source():
+    return iter([
+        {"id": 1, "name": "Alice", "dept_id": 10},
+        {"id": 2, "name": "Bob", "dept_id": 20},
+    ])
+
+def departments_source():
+    return iter([
+        {"id": 10, "name": "Engineering"},
+        {"id": 20, "name": "Sales"},
+    ])
+
+engine.register("users", users_source)
+engine.register("departments", departments_source)
+
+# Execute SQL query
+query = """
+    SELECT users.name, departments.name AS dept
+    FROM users
+    JOIN departments ON users.dept_id = departments.id
+"""
+
+for row in engine.query(query):
+    print(row)
+# Output:
+# {'users.name': 'Alice', 'departments.name': 'Engineering'}
+# {'users.name': 'Bob', 'departments.name': 'Sales'}
+```
+
+**For database connections**, create iterator functions:
+
+```python
+from streaming_sql_engine import Engine
+import psycopg2
+
+engine = Engine()
+
+# Register database table (iterator function)
+def users_source():
+    conn = psycopg2.connect(host="localhost", database="mydb", user="user", password="pass")
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, name, email FROM users WHERE active = true")
+    for row in cursor:
+        yield {"id": row[0], "name": row[1], "email": row[2]}
+    conn.close()
+
+engine.register("users", users_source)
+
+# Query
+for row in engine.query("SELECT * FROM users WHERE users.active = true"):
+    print(row)
+```
+
+---
+
+## Conclusion
+
+The Streaming SQL Engine fills a unique niche: **cross-system data integration**. While it may not match the raw performance of specialized tools for their specific use cases, it excels at joining data from different systems — a problem that traditional databases cannot solve.
+
+**Key strengths:**
+
+- Cross-system joins (databases, APIs, files)
+- Zero infrastructure requirements
+- Memory-efficient streaming architecture
+- Python-native integration
+- Automatic optimizations
+- Simple deployment
+
+**Best suited for:**
+
+- Microservices data aggregation
+- Cross-system ETL pipelines
+- Real-time data integration
+- Memory-constrained environments
+- Python-native workflows
+
+For cross-system data integration, the Streaming SQL Engine provides a unique solution that balances performance, simplicity, and flexibility.
+
+---
+
+## Resources
+
+- **PyPI:** `pip install streaming-sql-engine`
+
+---
