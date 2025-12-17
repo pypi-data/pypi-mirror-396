@@ -1,0 +1,128 @@
+# mure
+
+[![downloads](https://static.pepy.tech/personalized-badge/mure?period=total&units=international_system&left_color=black&right_color=black&left_text=downloads)](https://pepy.tech/project/mure)
+[![downloads/month](https://static.pepy.tech/personalized-badge/mure?period=month&units=abbreviation&left_color=black&right_color=black&left_text=downloads/month)](https://pepy.tech/project/mure)
+[![downloads/week](https://static.pepy.tech/personalized-badge/mure?period=week&units=abbreviation&left_color=black&right_color=black&left_text=downloads/week)](https://pepy.tech/project/mure)
+
+This is a thin layer on top of [`httpx`](https://www.python-httpx.org/) to perform multiple HTTP requests concurrently – without worrying about async/await.
+
+`mure` means **mu**ltiple **re**quests, but is also the German term for a form of mass wasting involving fast-moving flow of debris and dirt that has become liquified by the addition of water.
+
+![Göscheneralp. Kolorierung des Dias durch Margrit Wehrli-Frey](https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/ETH-BIB-Muhrgang_zur_Kehlen-Reuss_vom_Rotfirn-Dia_247-13368.tif/lossy-page1-1280px-ETH-BIB-Muhrgang_zur_Kehlen-Reuss_vom_Rotfirn-Dia_247-13368.tif.jpg)
+
+(The photo was taken by [Leo Wehrli](https://de.wikipedia.org/wiki/Leo_Wehrli) and is licensed under CC BY-SA 4.0)
+
+## Installation
+
+Install the latest stable version from [PyPI](https://pypi.org/project/mure):
+
+```
+pip install mure
+```
+
+## Usage
+
+Pass a list of dictionaries with at least a value for `url` and get a generator with the corresponding responses. The first request is fired as soon as you access the first response:
+
+```python
+>>> import mure
+>>> from mure.models import Resource
+>>> resources: list[Resource] = [
+...     {"url": "https://httpbin.org/get"},
+...     {"url": "https://httpbin.org/get", "params": {"foo": "bar"}},
+...     {"url": "invalid"},
+... ]
+>>> responses = mure.get(resources, batch_size=2)  # nothing fired yet
+>>> for resource, response in zip(resources, responses):
+...     print(resource, "status code:", response.status)
+...
+{'url': 'https://httpbin.org/get'} status code: 200
+{'url': 'https://httpbin.org/get', 'params': {'foo': 'bar'}} status code: 200
+{'url': 'invalid'} status code: 0
+```
+
+The number of requests fired at the same time will never exceed `batch_size` – this is protected by a semaphore.
+
+### HTTP Methods
+
+There are convenience functions for GET, POST, HEAD, PUT, PATCH and DELETE requests, for example:
+
+```python
+>>> resources = [
+...     {"url": "https://httpbin.org/post"},
+...     {"url": "https://httpbin.org/post", "json": {"foo": "bar"}},
+...     {"url": "invalid"},
+... ]
+>>> responses = mure.post(resources)
+```
+
+### Verbosity
+
+Control verbosity with the `MURE_LOG_ERRORS` environment variable:
+
+```python
+>>> import os
+>>> import mure
+>>> next(mure.get([{"url": "invalid"}]))
+<Response(0, UnsupportedProtocol("Request URL is missing an 'http://' or 'https://' protocol."))>
+>>> os.environ["MURE_LOG_ERRORS"] = "true"
+>>> next(mure.get([{"url": "invalid"}]))
+[2024-05-17 10:23:21,963] [ERROR] Request URL is missing an 'http://' or 'https://' protocol.
+Traceback (most recent call last):
+  File "/home/severin/git/mure/.venv/lib/python3.12/site-packages/httpx/_transports/default.py", line 69, in map_httpcore_exceptions
+    yield
+  File "/home/severin/git/mure/.venv/lib/python3.12/site-packages/httpx/_transports/default.py", line 373, in handle_async_request
+    resp = await self._pool.handle_async_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/severin/git/mure/.venv/lib/python3.12/site-packages/httpcore/_async/connection_pool.py", line 167, in handle_async_request
+    raise UnsupportedProtocol(
+httpcore.UnsupportedProtocol: Request URL is missing an 'http://' or 'https://' protocol.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/severin/git/mure/mure/iterator.py", line 266, in _afetch
+    response = await session.request(
+               ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/severin/git/mure/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1574, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/severin/git/mure/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1661, in send
+    response = await self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/severin/git/mure/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1689, in _send_handling_auth
+    response = await self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/severin/git/mure/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1726, in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/severin/git/mure/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1763, in _send_single_request
+    response = await transport.handle_async_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/severin/git/mure/.venv/lib/python3.12/site-packages/httpx/_transports/default.py", line 372, in handle_async_request
+    with map_httpcore_exceptions():
+  File "/home/severin/.pyenv/versions/3.12.2/lib/python3.12/contextlib.py", line 158, in __exit__
+    self.gen.throw(value)
+  File "/home/severin/git/mure/.venv/lib/python3.12/site-packages/httpx/_transports/default.py", line 86, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.UnsupportedProtocol: Request URL is missing an 'http://' or 'https://' protocol.
+<Response(0, UnsupportedProtocol("Request URL is missing an 'http://' or 'https://' protocol."))>
+```
+
+### Caching
+
+You can enable caching to avoid requesting the same resources over and over again:
+
+```python
+>>> import mure
+>>> resources = [
+...     {"url": "https://httpbin.org/post"},
+...     {"url": "https://httpbin.org/post", "json": {"foo": "bar"}},
+...     {"url": "https://httpbin.org/post"},
+... ]
+>>> responses = mure.post(resources, enable_cache=True)
+```
+
+This will make only two requests and use the hit from the cache for the last resource. The responses are stored in a local SQLite database `.mure-cache.sqlite` in the current working directory.
+
+Note that you have to install [the SQLite extras](https://github.com/severinsimmler/mure/blob/master/pyproject.toml#L14-L17).
