@@ -1,0 +1,103 @@
+Metadata-Version: 2.4
+Name: scmiac
+Version: 0.1.0
+Summary: Single-Cell Multi-modality Integration via cell type filtered Anchors using Contrastive learning
+Author: scMIAC Developers
+License-Expression: MIT
+Project-URL: Homepage, https://github.com/TianLab-Bioinfo/scMIAC
+Project-URL: Repository, https://github.com/TianLab-Bioinfo/scMIAC
+Project-URL: Documentation, https://github.com/TianLab-Bioinfo/scMIAC/blob/main/docs/tutorial.ipynb
+Project-URL: Issues, https://github.com/TianLab-Bioinfo/scMIAC/issues
+Keywords: single-cell,multi-modality,integration,contrastive-learning,scRNA-seq,scATAC-seq,bioinformatics
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Science/Research
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Topic :: Scientific/Engineering :: Bio-Informatics
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: anndata
+Requires-Dist: joblib
+Requires-Dist: matplotlib
+Requires-Dist: numpy
+Requires-Dist: pandas
+Requires-Dist: pynndescent
+Requires-Dist: scanpy
+Requires-Dist: scikit-learn
+Requires-Dist: scipy
+Requires-Dist: seaborn
+Requires-Dist: torch
+Requires-Dist: PyYAML
+Provides-Extra: test
+Requires-Dist: pytest; extra == "test"
+Requires-Dist: pytest-mock; extra == "test"
+Dynamic: license-file
+
+# scMIAC: Single-Cell Multi-modality Integration via cell type filtered Anchors using Contrastive learning
+
+## Overview
+
+scMIAC is a comprehensive framework for single-cell multi-modality data integration, designed to tackle the most challenging problem in single-cell integration: **diagonal integration** (integrating unpaired cells from different feature spaces across modalities).
+
+The methodological innovations of scMIAC include:
+- scMIAC utilizes cell type information to select high-quality anchor cells for contrastive learning, improving integration of challenging cells such as imbalanced, rare, or isolated cell types.
+- scMIAC innovatively introduces contrastive learning to diagonal integration task, where previous methods could only be applied to horizontal or vertical integration scenarios.
+- As a diagonal integration approach, scMIAC preserves each modality's original biological characteristics through modality-specific VAEs, which serves as a regularizer preventing over-emphasis on modality alignment.
+
+![scMIAC framework overview](https://raw.githubusercontent.com/TianLab-Bioinfo/scMIAC/main/figs/fig1.webp)
+## Installation
+
+1. Create and activate a Conda environment:
+   ```bash
+   conda create -n scmiac python=3.11
+   conda activate scmiac
+   ```
+
+2. Clone the repository and install:
+   ```bash
+   git clone https://github.com/TianLab-Bioinfo/scMIAC.git
+   cd scMIAC
+   pip install .
+   ```
+
+## Usage
+
+scMIAC provides two usage modes:
+
+### 1. CLI Mode - Quick start for non-interactive, command-line workflow:
+
+```bash
+scmiac train \
+  --rna-h5ad data/10x/input/adata_rna_10x.h5ad \
+  --atac-h5ad data/10x/input/adata_atac_10x.h5ad \
+  --output-dir data/10x/output/scmiac_results/ \
+  --rna-latent-key X_pca \
+  --atac-latent-key lsi49 \
+  --rna-celltype-key cell_type \
+  --atac-celltype-key pred
+
+scmiac train -h  # For viewing all available parameters
+```
+
+**MUST Required parameters:**
+- `--rna-h5ad`: Path to RNA AnnData file
+- `--atac-h5ad`: Path to ATAC AnnData file
+- `--output-dir`: Output directory
+
+**Output files:**
+- `anchors.csv`: Anchor pairs
+- `rna_vae.pth`: RNA VAE model weights
+- `atac_vae.pth`: ATAC VAE model weights
+- `rna_embeddings.csv`: RNA cell embeddings
+- `atac_embeddings.csv`: ATAC cell embeddings
+- `scmiac_latent_umap.png`: UMAP visualization
+
+
+
+### 2. API Mode - For flexible research and experimentation:
+
+Refer to the [Full API Tutorial & Examples](https://github.com/TianLab-Bioinfo/scMIAC/blob/main/docs/tutorial.ipynb) for detailed usage and examples.
