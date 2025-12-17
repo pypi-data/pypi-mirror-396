@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Git Fork Recon - Repository Analysis</title>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .navbar {
+            background-color: #2c3e50;
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .navbar .nav-buttons {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+
+        .input-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-end;
+        }
+
+        .form-group {
+            flex: 1;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e1e5e9;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-secondary {
+            background-color: #95a5a6;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #7f8c8d;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .progress-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background-color: #e1e5e9;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 1rem 0;
+            position: relative;
+        }
+
+        .progress-bar.indeterminate::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 30%;
+            background-color: #3498db;
+            animation: indeterminate 1.5s infinite linear;
+        }
+
+        @keyframes indeterminate {
+            0% {
+                transform: translateX(-100%);
+            }
+
+            100% {
+                transform: translateX(300%);
+            }
+        }
+
+        .status-text {
+            text-align: center;
+            color: #666;
+            margin: 1rem 0;
+        }
+
+        .report-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .report-content {
+            line-height: 1.6;
+        }
+
+        .report-content h1,
+        .report-content h2,
+        .report-content h3 {
+            margin: 1.5rem 0 1rem 0;
+            color: #2c3e50;
+        }
+
+        .report-content p {
+            margin-bottom: 1rem;
+        }
+
+        .report-content pre {
+            background-color: #f4f4f4;
+            padding: 1rem;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        .report-content code {
+            background-color: #f4f4f4;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .error-message {
+            background-color: #fee;
+            color: #c33;
+            padding: 1rem;
+            border-radius: 6px;
+            margin: 1rem 0;
+            border: 1px solid #fcc;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .repo-info {
+            background-color: #f8f9fa;
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            border-left: 4px solid #3498db;
+        }
+
+        .repo-info h3 {
+            margin: 0 0 0.5rem 0;
+            color: #2c3e50;
+        }
+
+        .repo-info p {
+            margin: 0.25rem 0;
+            color: #666;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <nav class="navbar">
+            <h1>🍴 Git Fork Recon</h1>
+            <div class="nav-buttons">
+                <button class="btn btn-secondary" @click="regenerateAnalysis" :disabled="!currentRepoUrl || isLoading"
+                    v-if="showRegenerate">
+                    🔄 Regenerate with {{ currentModel || 'default' }}
+                </button>
+            </div>
+        </nav>
+
+        <div class="container">
+            <!-- Input Section -->
+            <div class="input-section" v-if="!showReport">
+                <h2>Analyze Repository Forks</h2>
+                <p style="margin: 1rem 0; color: #666;">
+                    Enter a GitHub repository URL or <strong>username/repo</strong> format to analyze its fork network
+                    and generate a comprehensive report.
+                </p>
+
+                <div class="input-group">
+                    <div class="form-group">
+                        <label for="repoUrl">Repository URL or username/repo</label>
+                        <input type="text" id="repoUrl" v-model="repoUrl"
+                            placeholder="https://github.com/owner/repo or owner/repo" @keyup.enter="startAnalysis">
+                    </div>
+                    <div class="form-group">
+                        <label for="model">Model</label>
+                        <select id="model" v-model="selectedModel">
+                            <option value="">{{ defaultModelLabel }}</option>
+                            <option v-for="model in availableModels" :key="model" :value="model">
+                                {{ model }}
+                            </option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" @click="startAnalysis" :disabled="!repoUrl || isLoading">
+                        {{ isLoading ? '⏳ Analyzing...' : '🔍 Analyze' }}
+                    </button>
+                </div>
+            </div>
+
+            <!-- Progress Section -->
+            <div class="progress-container" v-if="isLoading">
+                <h3>Analysis in Progress</h3>
+                <div class="status-text">
+                    {{ statusMessage }}
+                </div>
+                <div class="progress-bar indeterminate"></div>
+            </div>
+
+            <!-- Error Section -->
+            <div class="error-message" v-if="error">
+                <strong>Error:</strong> {{ error }}
+            </div>
+
+            <!-- Report Section -->
+            <div class="report-container" v-if="showReport">
+                <div class="repo-info" v-if="reportMetadata">
+                    <h3>{{ reportMetadata.repo_owner }}/{{ reportMetadata.repo_name }}</h3>
+                    <p><strong>Generated:</strong> {{ formatDate(reportMetadata.generated_date) }}</p>
+                    <p><strong>Model:</strong> {{ reportMetadata.model }}</p>
+                    <p><strong>URL:</strong> <a :href="reportMetadata.repo_url" target="_blank">{{
+                            reportMetadata.repo_url }}</a></p>
+                </div>
+
+                <div class="report-content" v-html="reportHtml"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    repoUrl: '',
+                    selectedModel: '',
+                    isLoading: false,
+                    error: '',
+                    showReport: false,
+                    showRegenerate: false,
+                    currentRepoUrl: '',
+                    currentModel: '',
+                    reportHtml: '',
+                    reportMetadata: null,
+                    retryAfter: null,
+                    statusMessage: 'Starting analysis...',
+                    pollingInterval: null,
+                    availableModels: [
+
+                    ],
+                    defaultModel: ''
+                }
+            },
+            computed: {
+                defaultModelLabel() {
+                    if (this.defaultModel) {
+                        return `Default (${this.defaultModel})`;
+                    }
+                    return 'Default';
+                }
+            },
+            methods: {
+                async startAnalysis() {
+                    if (!this.repoUrl) return;
+
+                    this.isLoading = true;
+                    this.error = '';
+                    this.showReport = false;
+                    this.showRegenerate = false;
+                    this.statusMessage = 'Starting analysis...';
+
+                    // Normalize the repo URL - if it doesn't start with http, assume it's username/repo format
+                    let normalizedUrl = this.repoUrl.trim();
+                    if (!normalizedUrl.startsWith('http')) {
+                        // Validate it's in username/repo format
+                        if (!normalizedUrl.includes('/') || normalizedUrl.split('/').length !== 2) {
+                            this.error = 'Please enter a full GitHub URL or use username/repo format (e.g., "owner/repo")';
+                            this.isLoading = false;
+                            return;
+                        }
+                        this.currentRepoUrl = `https://github.com/${normalizedUrl}`;
+                    } else {
+                        // Validate it's a GitHub URL
+                        if (!normalizedUrl.includes('github.com')) {
+                            this.error = 'Please enter a valid GitHub repository URL';
+                            this.isLoading = false;
+                            return;
+                        }
+                        this.currentRepoUrl = normalizedUrl;
+                    }
+                    this.currentModel = this.selectedModel;
+
+                    try {
+                        const requestBody = {
+                            repo_url: this.currentRepoUrl,
+                            model: this.selectedModel || undefined,
+                            format: 'markdown'
+                        };
+                        console.log('Sending request:', requestBody);
+
+                        const response = await fetch('/analyze', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(requestBody)
+                        });
+
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            console.error('Server error:', errorData);
+                            this.error = `Server error (${response.status}): ${errorData.detail || 'Invalid request'}`;
+                            this.isLoading = false;
+                            return;
+                        }
+
+                        const data = await response.json();
+
+                        if (data.status === 'available') {
+                            await this.loadReport(data.link);
+                        } else if (data.status === 'generating') {
+                            this.statusMessage = 'Analysis is queued and will start shortly...';
+                            this.startPolling();
+                        } else if (data.status === 'error') {
+                            this.error = data.error || 'Analysis failed';
+                            this.isLoading = false;
+                        }
+                    } catch (err) {
+                        this.error = 'Failed to start analysis: ' + err.message;
+                        this.isLoading = false;
+                    }
+                },
+
+                async regenerateAnalysis() {
+                    if (!this.currentRepoUrl) return;
+
+                    this.isLoading = true;
+                    this.error = '';
+                    this.showReport = false;
+                    this.showRegenerate = false; // Hide regenerate button while regenerating
+                    this.reportHtml = ''; // Clear any existing report content
+                    this.reportMetadata = null; // Clear existing metadata
+                    this.statusMessage = 'Regenerating analysis...';
+
+                    try {
+                        const requestBody = {
+                            repo_url: this.currentRepoUrl,
+                            model: this.currentModel || undefined,
+                            format: 'markdown',
+                            nocache: true
+                        };
+                        console.log('Sending regenerate request:', requestBody);
+
+                        const response = await fetch('/analyze', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(requestBody)
+                        });
+
+                        console.log('Response status:', response.status);
+
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            console.error('Server error:', errorData);
+                            this.error = `Server error (${response.status}): ${errorData.detail || 'Invalid request'}`;
+                            this.isLoading = false;
+                            return;
+                        }
+
+                        const data = await response.json();
+                        console.log('Regenerate response data:', data);
+
+                        if (data.status === 'available') {
+                            await this.loadReport(data.link);
+                        } else if (data.status === 'generating') {
+                            console.log('Got generating status, starting polling...');
+                            this.statusMessage = 'Regeneration is queued and will start shortly...';
+                            // Set retryAfter from the response if available
+                            this.retryAfter = data['retry-after'] || null;
+                            this.startPolling();
+                        } else if (data.status === 'error') {
+                            this.error = data.error || 'Regeneration failed';
+                            this.isLoading = false;
+                        }
+                    } catch (err) {
+                        this.error = 'Failed to regenerate analysis: ' + err.message;
+                        this.isLoading = false;
+                    }
+                },
+
+                startPolling() {
+                    console.log('Starting polling for report status...');
+                    this.pollingInterval = setInterval(async () => {
+                        try {
+                            const [owner, repo] = this.extractRepoInfo(this.currentRepoUrl);
+                            const statusUrl = `/report/${owner}/${repo}/latest/status`;
+                            console.log('Polling status:', statusUrl);
+
+                            const response = await fetch(statusUrl);
+                            console.log('Status response status:', response.status);
+
+                            if (response.ok) {
+                                const data = await response.json();
+                                console.log('Status response:', data);
+
+                                if (data.status === 'available') {
+                                    console.log('Report is available, loading...');
+                                    clearInterval(this.pollingInterval);
+                                    this.pollingInterval = null;
+                                    await this.loadReport(data.link);
+                                } else if (data.status === 'generating') {
+                                    console.log('Still generating:', data);
+                                    this.statusMessage = this.statusMessage.includes('Regeneration') ? 'Regeneration in progress...' : 'Analysis in progress...';
+                                    this.retryAfter = data['retry-after'];
+                                } else if (data.status === 'not_found') {
+                                    console.log('Report not found yet, still generating...');
+                                    this.statusMessage = this.statusMessage.includes('Regeneration') ? 'Regeneration in progress...' : 'Analysis in progress...';
+                                }
+                            } else {
+                                console.error('Status request failed:', response.status);
+                            }
+                        } catch (err) {
+                            console.error('Polling error:', err);
+                        }
+                    }, 10000);
+                },
+
+                async loadReport(reportLink) {
+                    try {
+                        // Extract owner and repo from report link to fetch metadata
+                        const match = reportLink.match(/\/report\/([^\/]+)\/([^\/]+)\//);
+                        if (!match) {
+                            this.error = 'Invalid report link format';
+                            this.isLoading = false;
+                            return;
+                        }
+
+                        const [owner, repo] = [match[1], match[2]];
+
+                        // Fetch actual metadata first
+                        let metadata;
+                        try {
+                            const metadataResponse = await fetch(`/metadata/${owner}/${repo}/latest`);
+                            if (metadataResponse.ok) {
+                                metadata = await metadataResponse.json();
+                            } else {
+                                console.warn('Could not fetch metadata, using fallback');
+                                metadata = null;
+                            }
+                        } catch (err) {
+                            console.warn('Error fetching metadata:', err);
+                            metadata = null;
+                        }
+
+                        // Then fetch the report content
+                        const response = await fetch(reportLink);
+                        if (response.ok) {
+                            const markdown = await response.text();
+                            this.reportHtml = marked.parse(markdown);
+                            this.showReport = true;
+                            this.showRegenerate = true;
+                            this.isLoading = false;
+                            this.statusMessage = '';
+
+                            // Use actual metadata if available, otherwise fall back to current selection
+                            if (metadata) {
+                                this.reportMetadata = {
+                                    repo_owner: metadata.repo_owner,
+                                    repo_name: metadata.repo_name,
+                                    generated_date: metadata.generated_date,
+                                    model: metadata.model,
+                                    repo_url: metadata.repo_url
+                                };
+                            } else {
+                                this.reportMetadata = {
+                                    repo_owner: owner,
+                                    repo_name: repo,
+                                    generated_date: new Date().toISOString(),
+                                    model: this.currentModel || 'default',
+                                    repo_url: this.currentRepoUrl
+                                };
+                            }
+                        } else {
+                            this.error = 'Failed to load report';
+                            this.isLoading = false;
+                        }
+                    } catch (err) {
+                        this.error = 'Failed to load report: ' + err.message;
+                        this.isLoading = false;
+                    }
+                },
+
+                extractRepoInfo(repoUrl) {
+                    const match = repoUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+                    if (match) {
+                        return [match[1], match[2]];
+                    }
+                    return ['unknown', 'unknown'];
+                },
+
+                formatDate(dateString) {
+                    return new Date(dateString).toLocaleString();
+                },
+
+                formatRetryAfter(dateString) {
+                    const date = new Date(dateString);
+                    const now = new Date();
+                    const seconds = Math.max(0, Math.floor((date - now) / 1000));
+
+                    if (seconds < 60) {
+                        return `${seconds} seconds`;
+                    } else if (seconds < 3600) {
+                        return `${Math.floor(seconds / 60)} minutes`;
+                    } else {
+                        return `${Math.floor(seconds / 3600)} hours`;
+                    }
+                }
+            },
+            async mounted() {
+                // Fetch configuration from the server
+                try {
+                    const response = await fetch('/config');
+                    if (response.ok) {
+                        const config = await response.json();
+                        this.defaultModel = config.default_model || '';
+                        
+                        if (config.allowed_models && config.allowed_models.length > 0) {
+                            // Use allowed models from config
+                            this.availableModels = config.allowed_models;
+                        } else {
+                            // If allowed_models is unset, fetch from /models endpoint
+                            try {
+                                const modelsResponse = await fetch('/models');
+                                if (modelsResponse.ok) {
+                                    const modelsData = await modelsResponse.json();
+                                    this.availableModels = modelsData.models || [];
+                                }
+                            } catch (error) {
+                                console.warn('Failed to fetch models from API, using default models:', error);
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.warn('Failed to fetch config, using default models:', error);
+                }
+            },
+            beforeUnmount() {
+                if (this.pollingInterval) {
+                    clearInterval(this.pollingInterval);
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+
+</html>
