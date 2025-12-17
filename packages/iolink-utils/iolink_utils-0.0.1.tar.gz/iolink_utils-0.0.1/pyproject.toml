@@ -1,0 +1,69 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "iolink-utils"
+dynamic = ["version"]
+description = "helper and utilities for IO-Link"
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.8"
+authors = [
+    { name = "shaag" },
+]
+keywords = [
+    "IO-Link"
+]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "lxml == 6.0.2"
+]
+
+[project.urls]
+GitHub = "https://github.com/shaag7967/iolink-utils"
+Homepage = "https://github.com/shaag7967/iolink-utils"
+
+[tool.hatch.version]
+path = "src/iolink_utils/__version__.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+]
+
+[tool.hatch.envs.test]
+type = "virtual"
+path = ".venvtest"
+python = "3.8"
+dependencies = [
+    "pytest",
+    "pytest-mock",
+    "pytest-html",
+    "pytest-cov"
+]
+
+[tool.pytest.ini_options]
+addopts = [
+    "--import-mode=importlib",
+    "--cov=iolink_utils",
+    "--cov-report=term",
+    "--cov-report=xml",
+    "--cov-report=html",
+]
+filterwarnings = [
+    "once"
+]
+
+[tool.coverage.run]
+source = ["iolink_utils"]
+omit = [
+    "tests/*",
+]
