@@ -1,0 +1,265 @@
+Metadata-Version: 2.4
+Name: font-generator
+Version: 0.1.0
+Summary: A Python package for font manipulation and conversion
+Home-page: https://github.com/GenXLabs-org/font-generator
+Author: GenXLabs.org
+Author-email: "GenXLabs.org" <genxlabs385@outlook.com>
+License: MIT
+Project-URL: Homepage, https://github.com/GenXLabs-org/font-generator
+Project-URL: Documentation, https://github.com/GenXLabs-org/font-generator#readme
+Project-URL: Repository, https://github.com/GenXLabs-org/font-generator
+Project-URL: Issues, https://github.com/GenXLabs-org/font-generator/issues
+Keywords: font,ttf,otf,svg,conversion,handwritten,typography
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: Topic :: Text Processing :: Fonts
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: fonttools>=4.0.0
+Requires-Dist: svgpathtools>=1.4.0
+Provides-Extra: handwritten
+Requires-Dist: fontforge; extra == "handwritten"
+Dynamic: author
+Dynamic: home-page
+Dynamic: license-file
+Dynamic: requires-python
+
+# Font Generator
+
+A Python package for font manipulation and conversion. Convert TTF/OTF fonts to SVG format, convert SVG files back to fonts, and add handwritten effects to fonts.
+
+## Features
+
+- **TTF to SVG Conversion**: Extract individual glyphs from TrueType/OpenType fonts as SVG files
+- **SVG to TTF Conversion**: Combine SVG files back into a TTF font
+- **Handwritten Effect**: Add a handwritten, jittery effect to fonts using FontForge
+- **CLI Interface**: Easy-to-use command-line interface for all operations
+- **Python API**: Use as a library in your Python projects
+
+## Installation
+
+### From PyPI
+
+```bash
+pip install font-generator
+```
+
+### From Source
+
+```bash
+git clone https://github.com/GenXLabs-org/font-generator.git
+cd font-generator
+pip install -e .
+```
+
+### Optional: Handwritten Feature
+
+The handwritten font generation feature requires FontForge to be installed on your system:
+
+**macOS:**
+```bash
+brew install fontforge
+```
+
+**Ubuntu/Debian:**
+```bash
+sudo apt-get install fontforge
+```
+
+**Windows:**
+Download from [FontForge website](https://fontforge.org/en-US/downloads/)
+
+Then install the Python bindings:
+```bash
+pip install fontforge
+```
+
+## Quick Start
+
+### Command Line Usage
+
+#### Convert TTF to SVG
+
+```bash
+font-generator ttf-to-svg input.ttf output_dir/
+```
+
+This will extract all glyphs from the font and save them as individual SVG files in the output directory, along with a `_font_metadata.json` file containing font metrics.
+
+#### Convert SVG to TTF
+
+```bash
+font-generator svg-to-ttf svg_dir/ base_font.ttf output.ttf --width 800
+```
+
+This will combine SVG files from the input directory into a new TTF font, using the base font as a template.
+
+#### Add Handwritten Effect
+
+```bash
+font-generator handwritten input.ttf output.ttf --jitter 35 --smoothing 15
+```
+
+Options:
+- `--jitter`: Amount of random jitter to apply (default: 35)
+- `--smoothing`: Smoothing amount for curves (default: 15)
+
+### Python API Usage
+
+```python
+from font_generator import ttf_to_svg, svg_to_ttf, make_handwritten
+
+# Convert TTF to SVG
+ttf_to_svg('input.ttf', 'output_dir/')
+
+# Convert SVG to TTF
+svg_to_ttf('svg_dir/', 'base_font.ttf', 'output.ttf')
+
+# Add handwritten effect
+make_handwritten('input.ttf', 'output.ttf', jitter_amount=35, smoothing=15)
+```
+
+## Detailed Usage
+
+### TTF to SVG Conversion
+
+The `ttf-to-svg` command extracts all glyphs from a font file:
+
+```bash
+font-generator ttf-to-svg path/to/font.ttf path/to/output/
+```
+
+**Output:**
+- Individual SVG files for each glyph (named with Unicode values)
+- `_font_metadata.json` file containing:
+  - Font metadata (name, family, version)
+  - Font metrics (units per em, ascent, descent)
+  - Glyph metrics (width, left bearing)
+  - OpenType feature information (GSUB/GPOS)
+
+### SVG to TTF Conversion
+
+The `svg-to-ttf` command combines SVG files into a font:
+
+```bash
+font-generator svg-to-ttf svg_folder/ base_font.ttf output.ttf --width 800
+```
+
+**Parameters:**
+- `svg_folder/`: Directory containing SVG files
+- `base_font.ttf`: Template font file
+- `output.ttf`: Output font file path
+- `--width`: Default glyph width (default: 800)
+
+**Note:** SVG files should be named to match glyph names (e.g., `A.svg`, `uni0041_A.svg`). The command uses a default Unicode map for A-Z, but you can customize this in the Python API.
+
+### Handwritten Effect
+
+The `handwritten` command adds a jittery, handwritten effect:
+
+```bash
+font-generator handwritten input.ttf output.ttf --jitter 50 --smoothing 20
+```
+
+**How it works:**
+1. Adds random jitter to each point in the glyph outlines
+2. Converts curves to polygons (on-curve points)
+3. Smooths the result back into curves
+
+**Parameters:**
+- `--jitter`: Range of random movement for points (higher = more jittery)
+- `--smoothing`: Amount of smoothing applied (higher = smoother curves)
+
+## Requirements
+
+- Python >=3.7
+- fonttools >= 4.0.0
+- svgpathtools >= 1.4.0
+- fontforge (optional, for handwritten feature)
+
+## Project Structure
+
+```
+font-generator/
+├── font_generator/
+│   ├── __init__.py
+│   ├── cli.py              # CLI interface
+│   ├── handwritten.py      # Handwritten effect module
+│   ├── ttf_to_svg.py       # TTF to SVG conversion
+│   └── svg_to_ttf.py       # SVG to TTF conversion
+├── setup.py
+├── pyproject.toml
+├── requirements.txt
+└── README.md
+```
+
+## Examples
+
+### Example 1: Extract Glyphs from a Font
+
+```bash
+font-generator ttf-to-svg MyFont.ttf extracted_glyphs/
+```
+
+This creates individual SVG files for each character in the font.
+
+### Example 2: Create Custom Font from SVGs
+
+```bash
+# First, extract glyphs
+font-generator ttf-to-svg BaseFont.ttf svgs/
+
+# Edit SVG files as needed...
+
+# Then rebuild the font
+font-generator svg-to-ttf svgs/ BaseFont.ttf CustomFont.ttf
+```
+
+### Example 3: Make a Font Look Handwritten
+
+```bash
+font-generator handwritten CleanFont.ttf HandwrittenFont.ttf --jitter 40
+```
+
+## Troubleshooting
+
+### FontForge Import Error
+
+If you get an error about FontForge not being found:
+1. Install FontForge on your system (see installation instructions above)
+2. Install Python bindings: `pip install fontforge`
+
+### Invalid Font File Error
+
+Make sure you're using a valid TTF or OTF file. The tool validates font files by checking their headers.
+
+### SVG Conversion Issues
+
+- Ensure SVG files are properly formatted
+- Check that glyph names match the Unicode map
+- Verify the base font file is valid
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+MIT License - see LICENSE file for details.
+
+## Author
+
+Chandra Bahadur Khadka
+
+## Support
+
+For issues, questions, or contributions, please visit the [GitHub repository](https://github.com/GenXLabs-org/font-generator).
