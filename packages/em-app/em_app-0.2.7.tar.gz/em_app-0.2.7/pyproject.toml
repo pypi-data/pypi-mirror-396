@@ -1,0 +1,74 @@
+[build-system]
+requires = ["setuptools>=61.0", "numpy>=1.20"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "em-app"
+version = "0.2.7"
+authors = [
+    { name="Shashikant Manikonda", email="manikonda@outlook.com" },
+]
+description = "A package for Electromagnetic applications using MTFLibrary."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.9"
+classifiers = [
+"Development Status :: 4 - Beta",
+"Intended Audience :: Developers",
+"Intended Audience :: Science/Research",
+"License :: OSI Approved :: MIT License",
+"Programming Language :: Python :: 3",
+"Topic :: Scientific/Engineering :: Mathematics",
+"Topic :: Software Development :: Libraries",
+]
+dependencies = [
+"numpy",
+"mtflib==1.5.2",
+"matplotlib",
+"pandas",
+]
+
+[project.optional-dependencies]
+dev = [
+"pytest",
+"jupytext",
+"nbconvert",
+"ipykernel",
+"pandas-stubs",
+]
+benchmark = [
+"matplotlib",
+"mpi4py",
+]
+docs = [
+"sphinx",
+"sphinx_rtd_theme",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/shashi-manikonda/em-simulation-platform"
+"Bug Tracker" = "https://github.com/shashi-manikonda/em-simulation-platform/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+exclude = ["runoutput", "benchmarks"]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.ruff.format]
+preview = true
+
+[tool.mypy]
+[[tool.mypy.overrides]]
+module = [
+    "mpi4py",
+    "mpi4py.*",
+    "mtflib",
+    "mtflib.*"
+]
+ignore_missing_imports = true
+disable_error_code = ["import-untyped"]
