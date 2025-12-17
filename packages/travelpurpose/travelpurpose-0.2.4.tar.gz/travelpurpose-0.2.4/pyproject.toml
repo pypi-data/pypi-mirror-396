@@ -1,0 +1,96 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "travelpurpose"
+version = "0.2.4"
+description = "Production-grade library for classifying world cities by travel purpose using multi-source data"
+authors = [
+    {name = "Teyfik OZ", email = "teyfikoz@example.com"}
+]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+keywords = ["travel", "city", "classification", "tourism", "purpose", "tags", "data-engineering"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "pandas>=2.0.0",
+    "numpy>=1.24.0",
+    "pyarrow>=12.0.0",
+    "pyyaml>=6.0",
+    "requests>=2.31.0",
+    "requests-cache>=1.1.0",
+    "beautifulsoup4>=4.12.0",
+    "lxml>=4.9.0",
+    "pydantic>=2.0.0",
+    "typer>=0.9.0",
+    "rich>=13.0.0",
+    "tqdm>=4.65.0",
+    "sentence-transformers>=2.2.0",
+    "scikit-learn>=1.3.0",
+    "openpyxl>=3.1.0",
+    "SPARQLWrapper>=2.0.0",
+    "urllib3>=2.0.0",
+    "playwright>=1.40.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "ruff>=0.1.0",
+    "mypy>=1.5.0",
+    "black>=23.0.0",
+    "jupyterlab>=4.0.0",
+    "notebook>=7.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/teyfikoz/Travel_Purpose-City_Tags"
+Documentation = "https://github.com/teyfikoz/Travel_Purpose-City_Tags#readme"
+Repository = "https://github.com/teyfikoz/Travel_Purpose-City_Tags"
+"Bug Tracker" = "https://github.com/teyfikoz/Travel_Purpose-City_Tags/issues"
+
+[project.scripts]
+tpurpose = "travelpurpose.cli:app"
+
+[tool.setuptools]
+packages = ["travelpurpose", "travelpurpose.utils"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+travelpurpose = ["data/*.json", "data/*.parquet", "ontology/*.yaml"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --cov=travelpurpose --cov-report=term-missing"
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
