@@ -1,0 +1,369 @@
+Metadata-Version: 2.4
+Name: genai-telemetry-splunk
+Version: 2.1.3
+Summary: GenAI/LLM Observability SDK for Splunk - trace LLM calls, RAG pipelines, and AI agents
+Author-email: Kamal Bisht <kamalbisht345@gmail.com>
+Maintainer-email: Kamal Bisht <kamalbisht345@gmail.com>
+License: MIT
+Project-URL: Homepage, https://github.com/kamalbisht/genai-telemetry-splunk
+Project-URL: Documentation, https://github.com/kamalbisht/genai-telemetry-splunk#readme
+Project-URL: Repository, https://github.com/kamalbisht/genai-telemetry-splunk
+Project-URL: Issues, https://github.com/kamalbisht/genai-telemetry-splunk/issues
+Keywords: genai,llm,observability,splunk,telemetry,tracing,openai,anthropic,langchain,rag,ai,monitoring
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: System :: Monitoring
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0; extra == "dev"
+Requires-Dist: black>=23.0; extra == "dev"
+Requires-Dist: isort>=5.0; extra == "dev"
+Requires-Dist: mypy>=1.0; extra == "dev"
+Provides-Extra: openai
+Requires-Dist: openai>=1.0; extra == "openai"
+Provides-Extra: anthropic
+Requires-Dist: anthropic>=0.18; extra == "anthropic"
+Provides-Extra: langchain
+Requires-Dist: langchain>=0.1; extra == "langchain"
+Provides-Extra: all
+Requires-Dist: openai>=1.0; extra == "all"
+Requires-Dist: anthropic>=0.18; extra == "all"
+Requires-Dist: langchain>=0.1; extra == "all"
+Dynamic: license-file
+
+# GenAI Telemetry for Splunk
+
+[![PyPI version](https://badge.fury.io/py/genai-telemetry-splunk.svg)](https://badge.fury.io/py/genai-telemetry-splunk)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+**GenAI/LLM Observability SDK for Splunk** - Trace LLM calls, RAG pipelines, agents, and AI applications with zero-config decorators.
+
+## Features
+
+- **Zero-config decorators** - Add `@trace_llm`, `@trace_chain`, etc. to your functions
+- **Automatic token extraction** - Captures input/output tokens from OpenAI, Anthropic, etc.
+- **Distributed tracing** - Links spans across RAG pipelines and agent workflows
+- **Audit logging** - Track user queries, feedback, PII detection, and compliance
+- **Cost tracking** - Monitor token usage and costs per user/model
+- **Multiple exporters** - Splunk HEC, console, file (JSONL)
+
+## Installation
+
+```bash
+pip install genai-telemetry-splunk
+```
+
+With optional dependencies:
+
+```bash
+# With OpenAI support
+pip install genai-telemetry-splunk[openai]
+
+# With Anthropic support
+pip install genai-telemetry-splunk[anthropic]
+
+# With all integrations
+pip install genai-telemetry-splunk[all]
+```
+
+## Quick Start
+
+```python
+from genai_telemetry import setup_splunk_telemetry, trace_llm, trace_chain, trace_retrieval
+from openai import OpenAI
+
+# 1. Initialize telemetry
+setup_splunk_telemetry(
+    workflow_name="my-app",
+    splunk_hec_url="http://splunk:8088",
+    splunk_hec_token="your-token",
+    splunk_index="genai_traces"
+)
+
+# 2. Create client
+client = OpenAI()
+
+# 3. Add decorators
+@trace_llm(model_name="gpt-4o-mini", model_provider="openai")
+def chat(message: str):
+    return client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": message}]
+    )
+
+@trace_retrieval(vector_store="pinecone")
+def search(query: str) -> list:
+    return [{"text": "doc1"}, {"text": "doc2"}]
+
+@trace_chain(name="rag_pipeline")
+def rag(question: str) -> str:
+    docs = search(question)
+    response = chat(f"Context: {docs}\nQuestion: {question}")
+    return response.choices[0].message.content
+
+# 4. Use normally
+answer = rag("What is Splunk?")
+```
+
+## Decorators
+
+| Decorator | Purpose | Key Fields |
+|-----------|---------|------------|
+| `@trace_llm(model_name, model_provider)` | LLM inference calls | input_tokens, output_tokens, duration_ms |
+| `@trace_chain(name)` | Pipelines (starts new trace) | duration_ms |
+| `@trace_retrieval(vector_store)` | Vector search | documents_retrieved, duration_ms |
+| `@trace_embedding(model)` | Embedding generation | duration_ms |
+| `@trace_tool(tool_name)` | Tool/function calls | duration_ms |
+| `@trace_agent(agent_name)` | Agent executions (starts new trace) | duration_ms |
+
+## Configuration Options
+
+```python
+setup_splunk_telemetry(
+    # Required
+    workflow_name="my-app",
+    
+    # Splunk HEC
+    splunk_hec_url="http://splunk:8088",
+    splunk_hec_token="your-token",
+    splunk_index="genai_traces",
+    splunk_sourcetype="genai:trace",
+    
+    # Optional
+    console=False,           # Also print to console
+    file_path=None,          # Also write to file (JSONL)
+    verify_ssl=False,        # Verify SSL certificates
+    batch_size=1,            # Events per batch (1=immediate)
+    flush_interval=5.0       # Seconds between flushes
+)
+```
+
+## OpenAI Example
+
+```python
+from genai_telemetry import setup_splunk_telemetry, trace_llm
+from openai import OpenAI
+
+setup_splunk_telemetry(
+    workflow_name="openai-app",
+    splunk_hec_url="http://splunk:8088",
+    splunk_hec_token="your-token",
+    splunk_index="genai_traces"
+)
+
+client = OpenAI()
+
+@trace_llm(model_name="gpt-4o-mini", model_provider="openai")
+def chat(message: str):
+    return client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": message}]
+    )
+
+response = chat("Hello!")
+print(response.choices[0].message.content)
+```
+
+## Anthropic Example
+
+```python
+from genai_telemetry import setup_splunk_telemetry, trace_llm
+from anthropic import Anthropic
+
+setup_splunk_telemetry(
+    workflow_name="anthropic-app",
+    splunk_hec_url="http://splunk:8088",
+    splunk_hec_token="your-token",
+    splunk_index="genai_traces"
+)
+
+client = Anthropic()
+
+@trace_llm(model_name="claude-3-5-sonnet-20241022", model_provider="anthropic")
+def chat(message: str):
+    return client.messages.create(
+        model="claude-3-5-sonnet-20241022",
+        max_tokens=1024,
+        messages=[{"role": "user", "content": message}]
+    )
+
+response = chat("Hello!")
+print(response.content[0].text)
+```
+
+## RAG Pipeline Example
+
+```python
+from genai_telemetry import (
+    setup_splunk_telemetry, 
+    trace_llm, 
+    trace_chain, 
+    trace_retrieval
+)
+from openai import OpenAI
+
+setup_splunk_telemetry(
+    workflow_name="rag-app",
+    splunk_hec_url="http://splunk:8088",
+    splunk_hec_token="your-token",
+    splunk_index="genai_traces"
+)
+
+client = OpenAI()
+
+@trace_retrieval(vector_store="pinecone", embedding_model="text-embedding-3-small")
+def search(query: str, top_k: int = 3) -> list:
+    # Your vector search logic
+    return [{"text": "doc1"}, {"text": "doc2"}]
+
+@trace_llm(model_name="gpt-4o-mini", model_provider="openai")
+def generate(context: str, question: str):
+    return client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": f"Context: {context}"},
+            {"role": "user", "content": question}
+        ]
+    )
+
+@trace_chain(name="rag_pipeline")
+def rag(question: str) -> str:
+    docs = search(question)
+    context = "\n".join([d["text"] for d in docs])
+    response = generate(context, question)
+    return response.choices[0].message.content
+
+answer = rag("What is Splunk?")
+```
+
+## Audit Logging
+
+Track user interactions for compliance:
+
+```python
+from genai_telemetry import setup_splunk_telemetry, get_audit_logger
+
+setup_splunk_telemetry(
+    workflow_name="my-app",
+    splunk_hec_url="http://splunk:8088",
+    splunk_hec_token="your-token",
+    splunk_index="genai_traces"
+)
+
+audit = get_audit_logger()
+
+# Log user query
+audit.log_query(user_id="user_123", query="What is AI?")
+
+# Log feedback
+audit.log_feedback(user_id="user_123", trace_id="abc", rating=5)
+
+# Log PII detection
+audit.log_pii_detection(user_id="user_123", pii_types=["email"], action_taken="masked")
+
+# Log cost
+audit.log_cost(user_id="user_123", model_name="gpt-4o-mini", 
+               input_tokens=100, output_tokens=50, cost_usd=0.001)
+```
+
+## Splunk Queries
+
+```spl
+# All traces
+index=genai_traces
+
+# LLM calls only
+index=genai_traces span_type="LLM"
+
+# Errors
+index=genai_traces is_error=1
+
+# Token usage by model
+index=genai_traces span_type="LLM"
+| stats sum(input_tokens) sum(output_tokens) by model_name
+
+# Latency percentiles
+index=genai_traces span_type="LLM"
+| stats avg(duration_ms) perc95(duration_ms) by model_name
+
+# Audit events
+index=genai_audit
+| stats count by event_type
+```
+
+## Best Practices
+
+### Return Full Response for Token Extraction
+
+```python
+# Good - returns full response
+@trace_llm(model_name="gpt-4o-mini", model_provider="openai")
+def chat(message: str):
+    return client.chat.completions.create(...)
+
+# Bad - loses token information
+@trace_llm(model_name="gpt-4o-mini", model_provider="openai")
+def chat(message: str):
+    response = client.chat.completions.create(...)
+    return response.choices[0].message.content
+```
+
+### Use @trace_chain for Entry Points
+
+```python
+# Good - chain groups related spans
+@trace_chain(name="api_endpoint")
+def handle_request(request):
+    docs = search(request.query)
+    return generate(docs, request.query)
+```
+
+## Troubleshooting
+
+### No Data in Splunk
+
+1. Check HEC is enabled:
+   ```bash
+   curl http://splunk:8088/services/collector/health
+   ```
+
+2. Verify token:
+   ```bash
+   curl -k http://splunk:8088/services/collector/event \
+     -H "Authorization: Splunk YOUR_TOKEN" \
+     -d '{"event":"test"}'
+   ```
+
+3. Check index exists in Splunk
+
+### Zero Token Counts
+
+Return the **full response object**, not just the content string.
+
+### Connection Errors
+
+- Use `http://` for non-SSL, `https://` for SSL
+- Include port: `:8088`
+- Set `verify_ssl=False` for self-signed certs
+
+## License
+
+MIT License - see [LICENSE](LICENSE) file.
+
+## Contributing
+
+Contributions welcome! Please open an issue or PR on GitHub.
