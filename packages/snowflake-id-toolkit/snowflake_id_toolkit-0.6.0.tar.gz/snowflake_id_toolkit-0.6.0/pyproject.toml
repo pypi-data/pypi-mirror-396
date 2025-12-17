@@ -1,0 +1,187 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "snowflake-id-toolkit"
+dynamic = ["version"]
+description = "Python toolkit for generating Twitter Snowflake & Sonyflake IDs"
+authors = [
+  {name = "Pavel Prokhorenko", email = "prohorenkopavel74@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+keywords = [
+  "snowflake",
+  "sonyflake",
+  "id",
+  "generator",
+  "distributed",
+  "unique-id"
+]
+classifiers = [
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Libraries",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://github.com/pavelprokhorenko/snowflake-id-toolkit"
+Releases = "https://github.com/pavelprokhorenko/snowflake-id-toolkit/releases"
+Repository = "https://github.com/pavelprokhorenko/snowflake-id-toolkit"
+Issues = "https://github.com/pavelprokhorenko/snowflake-id-toolkit/issues"
+
+[dependency-groups]
+dev = [
+  "freezegun>=1.5.5",
+  "ipython>=8.37.0",
+  "mypy>=1.19.0",
+  "pre-commit>=4.5.0",
+  "pytest>=9.0.2",
+  "pytest-cov>=7.0.0",
+  "pytest-xdist>=3.8.0",
+  "ruff>=0.14.9",
+]
+
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/src",
+  "/tests",
+  "/README.md",
+  "/LICENSE",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/snowflake_id_toolkit"]
+
+
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+fix = true
+
+[tool.ruff.lint]
+select = [
+  "ERA", # eradicate
+  "ANN", # flake8-annotations
+  "ASYNC", # flake8-async
+  "S", # flake8-bandit
+  "B", # flake8-bugbear
+  "A", # flake8-builtins
+  "COM", # flake8-commas
+  "C4", # flake8-comprehensions
+  "DTZ", # flake8-datetimez
+  "T10", # flake8-debugger
+  "T10", # flake8-debugger
+  "ISC", # flake8-implicit-str-concat
+  "LOG", # flake8-logging
+  "G", # flake8-logging-format
+  "INP", # flake8-no-pep420
+  "PIE", # flake8-pie
+  "T20", # flake8-print
+  "PYI", # flake8-pyi
+  "PT", # flake8-pytest-style
+  "Q", # flake8-quotes
+  "RSE", # flake8-raise
+  "RET", # flake8-return
+  "SLF", # flake8-self
+  "SIM", # flake8-simplify
+  "SLOT", # flake8-slots
+  "TID", # flake8-tidy-imports
+  "TD", # flake8-todos
+  "ARG", # flake8-unused-arguments
+  "PTH", # flake8-use-pathlib
+  "I", # isort
+  "N", # pep8-naming
+  "PERF", # Perflint
+  "E", # pycodestyle (errors)
+  "W", # pycodestyle (warnings)
+  "F", # Pyflakes
+  "PGH", # pygrep-hooks
+  "PL", # Pylint
+  "UP", # pyupgrade
+  "FURB", # refurb
+  "RUF", # Ruff-specific rules
+  "TRY", # tryceratops
+]
+ignore = [
+  "COM812", # Trailing comma missing
+  "TRY003", # Avoid specifying long messages outside the exception class
+  "S101", # Use of `assert` detected
+  "PLR2004", # Magic value used in comparison, consider replacing `n` with a constant variable
+]
+
+[tool.ruff.format]
+docstring-code-format = true
+docstring-code-line-length = 60
+line-ending = "lf"
+
+
+[tool.mypy]
+mypy_path = "src"
+python_version = "3.10"
+warn_unused_configs = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unreachable = true
+warn_no_return = true
+namespace_packages = true
+explicit_package_bases = true
+ignore_missing_imports = true
+disallow_untyped_defs = true
+disallow_untyped_calls = false
+strict = true
+strict_equality = true
+
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+  "--strict-markers",
+  "--strict-config",
+]
+
+
+[tool.coverage.run]
+source = ["src"]
+branch = true
+parallel = true
+omit = [
+  "*/tests/*",
+  "*/__pycache__/*",
+  "*/.venv/*",
+]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
+exclude_lines = [
+  "pragma: no cover",
+  "def __repr__",
+  "raise AssertionError",
+  "raise NotImplementedError",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+  "@abstractmethod",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
