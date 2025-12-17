@@ -1,0 +1,125 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "nba-stats-mcp"
+version = "0.1.5"
+description = "MCP server for accessing NBA statistics and data via direct API calls"
+readme = "README.pypi.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Du'An Lightfoot", email = "labeveryday@users.noreply.github.com"}
+]
+keywords = ["nba", "mcp", "basketball", "stats", "api", "model-context-protocol", "sports"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Games/Entertainment",
+]
+dependencies = [
+    "mcp>=1.0.0",
+    "httpx>=0.27.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/labeveryday/nba_mcp_server"
+Repository = "https://github.com/labeveryday/nba_mcp_server"
+Issues = "https://github.com/labeveryday/nba_mcp_server/issues"
+Documentation = "https://github.com/labeveryday/nba_mcp_server#readme"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0",
+    "pytest-mock>=3.10",
+    "ruff>=0.8.0",
+    "bandit>=1.7.9",
+    "build>=1.2.2.post1",
+    "twine>=5.1.1",
+]
+
+[project.scripts]
+nba-stats-mcp = "nba_mcp_server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/nba_mcp_server"]
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "/dist",
+    "/htmlcov",
+    "/.pytest_cache",
+    "/.uv-cache",
+    "/.venv",
+    "/coverage.xml",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0",
+    "pytest-mock>=3.10",
+    "ruff>=0.8.0",
+    "bandit>=1.7.9",
+    "build>=1.2.2.post1",
+    "twine>=5.1.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--verbose",
+    "--cov=nba_mcp_server",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["src/nba_mcp_server"]
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/.venv/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E501"]  # allow long lines (common in formatted output strings)
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["E402"]  # tests may import after fixtures/mocks
+
+[tool.bandit]
+exclude_dirs = ["tests", "htmlcov", "dist", ".venv", ".pytest_cache"]
+skips = ["B101"]  # allow assert usage (common in tests)
