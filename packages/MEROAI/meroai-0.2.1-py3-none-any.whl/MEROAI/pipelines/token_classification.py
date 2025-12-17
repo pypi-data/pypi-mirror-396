@@ -1,0 +1,459 @@
+import types
+import warnings
+from typing import Any, Optional, Union, overload
+import numpy as np
+from ..models.bert.tokenization_bert import BasicTokenizer
+from ..utils import (
+    ExplicitEnum,
+    add_end_docstrings,
+    is_tf_available,
+    is_torch_available,
+)
+from .base import ArgumentHandler, ChunkPipeline, Dataset, build_pipeline_init_args
+if is_tf_available():
+    import tensorflow as tf
+    from ..models.auto.modeling_tf_auto import TF_MODEL_FOR_TOKEN_CLASSIFICATION_MAPPING_NAMES
+if is_torch_available():
+    import torch
+    from ..models.auto.modeling_auto import MODEL_FOR_TOKEN_CLASSIFICATION_MAPPING_NAMES
+class TokenClassificationArgumentHandler(ArgumentHandler):
+    def __call__(self, inputs: Union[str, list[str]], **kwargs):
+        is_split_into_words = kwargs.get("is_split_into_words", False)
+        delimiter = kwargs.get("delimiter")
+        if inputs is not None and isinstance(inputs, (list, tuple)) and len(inputs) > 0:
+            inputs = list(inputs)
+            batch_size = len(inputs)
+        elif isinstance(inputs, str):
+            inputs = [inputs]
+            batch_size = 1
+        elif Dataset is not None and isinstance(inputs, Dataset) or isinstance(inputs, types.GeneratorType):
+            return inputs, is_split_into_words, None, delimiter
+        else:
+            raise ValueError("At least one input is required.")
+        offset_mapping = kwargs.get("offset_mapping")
+        if offset_mapping:
+            if isinstance(offset_mapping, list) and isinstance(offset_mapping[0], tuple):
+                offset_mapping = [offset_mapping]
+            if len(offset_mapping) != batch_size:
+                raise ValueError("offset_mapping should have the same batch size as the input")
+        return inputs, is_split_into_words, offset_mapping, delimiter
+class AggregationStrategy(ExplicitEnum):
+    NONE = "none"
+    SIMPLE = "simple"
+    FIRST = "first"
+    AVERAGE = "average"
+    MAX = "max"
+@add_end_docstrings(
+    build_pipeline_init_args(has_tokenizer=True),
+,
+)
+class TokenClassificationPipeline(ChunkPipeline):
+    default_input_names = "sequences"
+    _load_processor = False
+    _load_image_processor = False
+    _load_feature_extractor = False
+    _load_tokenizer = True
+    def __init__(self, args_parser=TokenClassificationArgumentHandler(), **kwargs):
+        super().__init__(**kwargs)
+        self.check_model_type(
+            TF_MODEL_FOR_TOKEN_CLASSIFICATION_MAPPING_NAMES
+            if self.framework == "tf"
+            else MODEL_FOR_TOKEN_CLASSIFICATION_MAPPING_NAMES
+        )
+        self._basic_tokenizer = BasicTokenizer(do_lower_case=False)
+        self._args_parser = args_parser
+    def _sanitize_parameters(
+        self,
+        ignore_labels=None,
+        grouped_entities: Optional[bool] = None,
+        ignore_subwords: Optional[bool] = None,
+        aggregation_strategy: Optional[AggregationStrategy] = None,
+        offset_mapping: Optional[list[tuple[int, int]]] = None,
+        is_split_into_words: bool = False,
+        stride: Optional[int] = None,
+        delimiter: Optional[str] = None,
+    ):
+        preprocess_params = {}
+        preprocess_params["is_split_into_words"] = is_split_into_words
+        if is_split_into_words:
+            preprocess_params["delimiter"] = " " if delimiter is None else delimiter
+        if offset_mapping is not None:
+            preprocess_params["offset_mapping"] = offset_mapping
+        postprocess_params = {}
+        if grouped_entities is not None or ignore_subwords is not None:
+            if grouped_entities and ignore_subwords:
+                aggregation_strategy = AggregationStrategy.FIRST
+            elif grouped_entities and not ignore_subwords:
+                aggregation_strategy = AggregationStrategy.SIMPLE
+            else:
+                aggregation_strategy = AggregationStrategy.NONE
+            if grouped_entities is not None:
+                warnings.warn(
+                    "`grouped_entities` is deprecated and will be removed in version v5.0.0, defaulted to"
+                    f' `aggregation_strategy="{aggregation_strategy}"` instead.'
+                )
+            if ignore_subwords is not None:
+                warnings.warn(
+                    "`ignore_subwords` is deprecated and will be removed in version v5.0.0, defaulted to"
+                    f' `aggregation_strategy="{aggregation_strategy}"` instead.'
+                )
+        if aggregation_strategy is not None:
+            if isinstance(aggregation_strategy, str):
+                aggregation_strategy = AggregationStrategy[aggregation_strategy.upper()]
+            if (
+                aggregation_strategy
+                in {AggregationStrategy.FIRST, AggregationStrategy.MAX, AggregationStrategy.AVERAGE}
+                and not self.tokenizer.is_fast
+            ):
+                raise ValueError(
+                    "Slow tokenizers cannot handle subwords. Please set the `aggregation_strategy` option"
+                    ' to `"simple"` or use a fast tokenizer.'
+                )
+            postprocess_params["aggregation_strategy"] = aggregation_strategy
+        if ignore_labels is not None:
+            postprocess_params["ignore_labels"] = ignore_labels
+        if stride is not None:
+            if stride >= self.tokenizer.model_max_length:
+                raise ValueError(
+                    "`stride` must be less than `tokenizer.model_max_length` (or even lower if the tokenizer adds special tokens)"
+                )
+            if aggregation_strategy == AggregationStrategy.NONE:
+                raise ValueError(
+                    "`stride` was provided to process all the text but `aggregation_strategy="
+                    f'"{aggregation_strategy}"`, please select another one instead.'
+                )
+            else:
+                if self.tokenizer.is_fast:
+                    tokenizer_params = {
+                        "return_overflowing_tokens": True,
+                        "padding": True,
+                        "stride": stride,
+                    }
+                    preprocess_params["tokenizer_params"] = tokenizer_params
+                else:
+                    raise ValueError(
+                        "`stride` was provided to process all the text but you're using a slow tokenizer."
+                        " Please use a fast tokenizer."
+                    )
+        return preprocess_params, {}, postprocess_params
+    @overload
+    def __call__(self, inputs: str, **kwargs: Any) -> list[dict[str, str]]: ...
+    @overload
+    def __call__(self, inputs: list[str], **kwargs: Any) -> list[list[dict[str, str]]]: ...
+    def __call__(
+        self, inputs: Union[str, list[str]], **kwargs: Any
+    ) -> Union[list[dict[str, str]], list[list[dict[str, str]]]]:
+        _inputs, is_split_into_words, offset_mapping, delimiter = self._args_parser(inputs, **kwargs)
+        kwargs["is_split_into_words"] = is_split_into_words
+        kwargs["delimiter"] = delimiter
+        if is_split_into_words and not all(isinstance(input, list) for input in inputs):
+            return super().__call__([inputs], **kwargs)
+        if offset_mapping:
+            kwargs["offset_mapping"] = offset_mapping
+        return super().__call__(inputs, **kwargs)
+    def preprocess(self, sentence, offset_mapping=None, **preprocess_params):
+        tokenizer_params = preprocess_params.pop("tokenizer_params", {})
+        truncation = self.tokenizer.model_max_length and self.tokenizer.model_max_length > 0
+        word_to_chars_map = None
+        is_split_into_words = preprocess_params["is_split_into_words"]
+        if is_split_into_words:
+            delimiter = preprocess_params["delimiter"]
+            if not isinstance(sentence, list):
+                raise ValueError("When `is_split_into_words=True`, `sentence` must be a list of tokens.")
+            words = sentence
+            sentence = delimiter.join(words)
+            word_to_chars_map = []
+            delimiter_len = len(delimiter)
+            char_offset = 0
+            for word in words:
+                word_to_chars_map.append((char_offset, char_offset + len(word)))
+                char_offset += len(word) + delimiter_len
+            text_to_tokenize = words
+            tokenizer_params["is_split_into_words"] = True
+        else:
+            if not isinstance(sentence, str):
+                raise ValueError("When `is_split_into_words=False`, `sentence` must be an untokenized string.")
+            text_to_tokenize = sentence
+        inputs = self.tokenizer(
+            text_to_tokenize,
+            return_tensors=self.framework,
+            truncation=truncation,
+            return_special_tokens_mask=True,
+            return_offsets_mapping=self.tokenizer.is_fast,
+            **tokenizer_params,
+        )
+        if is_split_into_words and not self.tokenizer.is_fast:
+            raise ValueError("is_split_into_words=True is only supported with fast tokenizers.")
+        inputs.pop("overflow_to_sample_mapping", None)
+        num_chunks = len(inputs["input_ids"])
+        for i in range(num_chunks):
+            if self.framework == "tf":
+                model_inputs = {k: tf.expand_dims(v[i], 0) for k, v in inputs.items()}
+            else:
+                model_inputs = {k: v[i].unsqueeze(0) for k, v in inputs.items()}
+            if offset_mapping is not None:
+                model_inputs["offset_mapping"] = offset_mapping
+            model_inputs["sentence"] = sentence if i == 0 else None
+            model_inputs["is_last"] = i == num_chunks - 1
+            if word_to_chars_map is not None:
+                model_inputs["word_ids"] = inputs.word_ids(i)
+                model_inputs["word_to_chars_map"] = word_to_chars_map
+            yield model_inputs
+    def _forward(self, model_inputs):
+        special_tokens_mask = model_inputs.pop("special_tokens_mask")
+        offset_mapping = model_inputs.pop("offset_mapping", None)
+        sentence = model_inputs.pop("sentence")
+        is_last = model_inputs.pop("is_last")
+        word_ids = model_inputs.pop("word_ids", None)
+        word_to_chars_map = model_inputs.pop("word_to_chars_map", None)
+        if self.framework == "tf":
+            logits = self.model(**model_inputs)[0]
+        else:
+            output = self.model(**model_inputs)
+            logits = output["logits"] if isinstance(output, dict) else output[0]
+        return {
+            "logits": logits,
+            "special_tokens_mask": special_tokens_mask,
+            "offset_mapping": offset_mapping,
+            "sentence": sentence,
+            "is_last": is_last,
+            "word_ids": word_ids,
+            "word_to_chars_map": word_to_chars_map,
+            **model_inputs,
+        }
+    def postprocess(self, all_outputs, aggregation_strategy=AggregationStrategy.NONE, ignore_labels=None):
+        if ignore_labels is None:
+            ignore_labels = ["O"]
+        all_entities = []
+        word_to_chars_map = all_outputs[0].get("word_to_chars_map")
+        for model_outputs in all_outputs:
+            if self.framework == "pt" and model_outputs["logits"][0].dtype in (torch.bfloat16, torch.float16):
+                logits = model_outputs["logits"][0].to(torch.float32).numpy()
+            else:
+                logits = model_outputs["logits"][0].numpy()
+            sentence = all_outputs[0]["sentence"]
+            input_ids = model_outputs["input_ids"][0]
+            offset_mapping = (
+                model_outputs["offset_mapping"][0] if model_outputs["offset_mapping"] is not None else None
+            )
+            special_tokens_mask = model_outputs["special_tokens_mask"][0].numpy()
+            word_ids = model_outputs.get("word_ids")
+            maxes = np.max(logits, axis=-1, keepdims=True)
+            shifted_exp = np.exp(logits - maxes)
+            scores = shifted_exp / shifted_exp.sum(axis=-1, keepdims=True)
+            if self.framework == "tf":
+                input_ids = input_ids.numpy()
+                offset_mapping = offset_mapping.numpy() if offset_mapping is not None else None
+            pre_entities = self.gather_pre_entities(
+                sentence,
+                input_ids,
+                scores,
+                offset_mapping,
+                special_tokens_mask,
+                aggregation_strategy,
+                word_ids=word_ids,
+                word_to_chars_map=word_to_chars_map,
+            )
+            grouped_entities = self.aggregate(pre_entities, aggregation_strategy)
+            entities = [
+                entity
+                for entity in grouped_entities
+                if entity.get("entity", None) not in ignore_labels
+                and entity.get("entity_group", None) not in ignore_labels
+            ]
+            all_entities.extend(entities)
+        num_chunks = len(all_outputs)
+        if num_chunks > 1:
+            all_entities = self.aggregate_overlapping_entities(all_entities)
+        return all_entities
+    def aggregate_overlapping_entities(self, entities):
+        if len(entities) == 0:
+            return entities
+        entities = sorted(entities, key=lambda x: x["start"])
+        aggregated_entities = []
+        previous_entity = entities[0]
+        for entity in entities:
+            if previous_entity["start"] <= entity["start"] < previous_entity["end"]:
+                current_length = entity["end"] - entity["start"]
+                previous_length = previous_entity["end"] - previous_entity["start"]
+                if (
+                    current_length > previous_length
+                    or current_length == previous_length
+                    and entity["score"] > previous_entity["score"]
+                ):
+                    previous_entity = entity
+            else:
+                aggregated_entities.append(previous_entity)
+                previous_entity = entity
+        aggregated_entities.append(previous_entity)
+        return aggregated_entities
+    def gather_pre_entities(
+        self,
+        sentence: str,
+        input_ids: np.ndarray,
+        scores: np.ndarray,
+        offset_mapping: Optional[list[tuple[int, int]]],
+        special_tokens_mask: np.ndarray,
+        aggregation_strategy: AggregationStrategy,
+        word_ids: Optional[list[Optional[int]]] = None,
+        word_to_chars_map: Optional[list[tuple[int, int]]] = None,
+    ) -> list[dict]:
+        pre_entities = []
+        for idx, token_scores in enumerate(scores):
+            if special_tokens_mask[idx]:
+                continue
+            word = self.tokenizer.convert_ids_to_tokens(int(input_ids[idx]))
+            if offset_mapping is not None:
+                start_ind, end_ind = offset_mapping[idx]
+                if word_ids is not None and word_to_chars_map is not None:
+                    word_index = word_ids[idx]
+                    if word_index is not None:
+                        start_char, _ = word_to_chars_map[word_index]
+                        start_ind += start_char
+                        end_ind += start_char
+                if not isinstance(start_ind, int):
+                    if self.framework == "pt":
+                        start_ind = start_ind.item()
+                        end_ind = end_ind.item()
+                word_ref = sentence[start_ind:end_ind]
+                if getattr(self.tokenizer, "_tokenizer", None) and getattr(
+                    self.tokenizer._tokenizer.model, "continuing_subword_prefix", None
+                ):
+                    is_subword = len(word) != len(word_ref)
+                else:
+                    if aggregation_strategy in {
+                        AggregationStrategy.FIRST,
+                        AggregationStrategy.AVERAGE,
+                        AggregationStrategy.MAX,
+                    }:
+                        warnings.warn(
+                            "Tokenizer does not support real words, using fallback heuristic",
+                            UserWarning,
+                        )
+                    is_subword = start_ind > 0 and " " not in sentence[start_ind - 1 : start_ind + 1]
+                if int(input_ids[idx]) == self.tokenizer.unk_token_id:
+                    word = word_ref
+                    is_subword = False
+            else:
+                start_ind = None
+                end_ind = None
+                is_subword = False
+            pre_entity = {
+                "word": word,
+                "scores": token_scores,
+                "start": start_ind,
+                "end": end_ind,
+                "index": idx,
+                "is_subword": is_subword,
+            }
+            pre_entities.append(pre_entity)
+        return pre_entities
+    def aggregate(self, pre_entities: list[dict], aggregation_strategy: AggregationStrategy) -> list[dict]:
+        if aggregation_strategy in {AggregationStrategy.NONE, AggregationStrategy.SIMPLE}:
+            entities = []
+            for pre_entity in pre_entities:
+                entity_idx = pre_entity["scores"].argmax()
+                score = pre_entity["scores"][entity_idx]
+                entity = {
+                    "entity": self.model.config.id2label[entity_idx],
+                    "score": score,
+                    "index": pre_entity["index"],
+                    "word": pre_entity["word"],
+                    "start": pre_entity["start"],
+                    "end": pre_entity["end"],
+                }
+                entities.append(entity)
+        else:
+            entities = self.aggregate_words(pre_entities, aggregation_strategy)
+        if aggregation_strategy == AggregationStrategy.NONE:
+            return entities
+        return self.group_entities(entities)
+    def aggregate_word(self, entities: list[dict], aggregation_strategy: AggregationStrategy) -> dict:
+        word = self.tokenizer.convert_tokens_to_string([entity["word"] for entity in entities])
+        if aggregation_strategy == AggregationStrategy.FIRST:
+            scores = entities[0]["scores"]
+            idx = scores.argmax()
+            score = scores[idx]
+            entity = self.model.config.id2label[idx]
+        elif aggregation_strategy == AggregationStrategy.MAX:
+            max_entity = max(entities, key=lambda entity: entity["scores"].max())
+            scores = max_entity["scores"]
+            idx = scores.argmax()
+            score = scores[idx]
+            entity = self.model.config.id2label[idx]
+        elif aggregation_strategy == AggregationStrategy.AVERAGE:
+            scores = np.stack([entity["scores"] for entity in entities])
+            average_scores = np.nanmean(scores, axis=0)
+            entity_idx = average_scores.argmax()
+            entity = self.model.config.id2label[entity_idx]
+            score = average_scores[entity_idx]
+        else:
+            raise ValueError("Invalid aggregation_strategy")
+        new_entity = {
+            "entity": entity,
+            "score": score,
+            "word": word,
+            "start": entities[0]["start"],
+            "end": entities[-1]["end"],
+        }
+        return new_entity
+    def aggregate_words(self, entities: list[dict], aggregation_strategy: AggregationStrategy) -> list[dict]:
+        if aggregation_strategy in {
+            AggregationStrategy.NONE,
+            AggregationStrategy.SIMPLE,
+        }:
+            raise ValueError("NONE and SIMPLE strategies are invalid for word aggregation")
+        word_entities = []
+        word_group = None
+        for entity in entities:
+            if word_group is None:
+                word_group = [entity]
+            elif entity["is_subword"]:
+                word_group.append(entity)
+            else:
+                word_entities.append(self.aggregate_word(word_group, aggregation_strategy))
+                word_group = [entity]
+        if word_group is not None:
+            word_entities.append(self.aggregate_word(word_group, aggregation_strategy))
+        return word_entities
+    def group_sub_entities(self, entities: list[dict]) -> dict:
+        entity = entities[0]["entity"].split("-", 1)[-1]
+        scores = np.nanmean([entity["score"] for entity in entities])
+        tokens = [entity["word"] for entity in entities]
+        entity_group = {
+            "entity_group": entity,
+            "score": np.mean(scores),
+            "word": self.tokenizer.convert_tokens_to_string(tokens),
+            "start": entities[0]["start"],
+            "end": entities[-1]["end"],
+        }
+        return entity_group
+    def get_tag(self, entity_name: str) -> tuple[str, str]:
+        if entity_name.startswith("B-"):
+            bi = "B"
+            tag = entity_name[2:]
+        elif entity_name.startswith("I-"):
+            bi = "I"
+            tag = entity_name[2:]
+        else:
+            bi = "I"
+            tag = entity_name
+        return bi, tag
+    def group_entities(self, entities: list[dict]) -> list[dict]:
+        entity_groups = []
+        entity_group_disagg = []
+        for entity in entities:
+            if not entity_group_disagg:
+                entity_group_disagg.append(entity)
+                continue
+            bi, tag = self.get_tag(entity["entity"])
+            last_bi, last_tag = self.get_tag(entity_group_disagg[-1]["entity"])
+            if tag == last_tag and bi != "B":
+                entity_group_disagg.append(entity)
+            else:
+                entity_groups.append(self.group_sub_entities(entity_group_disagg))
+                entity_group_disagg = [entity]
+        if entity_group_disagg:
+            entity_groups.append(self.group_sub_entities(entity_group_disagg))
+        return entity_groups
+NerPipeline = TokenClassificationPipeline
