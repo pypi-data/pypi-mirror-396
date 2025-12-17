@@ -1,0 +1,80 @@
+<div align="center">
+<h1>TSim</h1>
+
+<img alt="GitHub Created At" src="https://img.shields.io/github/created-at/Sanyam-Asthana/TSim">
+<img alt="GitHub commit activity" src="https://img.shields.io/github/commit-activity/t/Sanyam-Asthana/TSim">
+<img alt="GitHub contributors" src="https://img.shields.io/github/contributors/Sanyam-Asthana/TSim">
+<br>
+<img alt="GitHub last commit" src="https://img.shields.io/github/last-commit/Sanyam-Asthana/TSim">
+<img alt="PyPI - Downloads" src="https://img.shields.io/pypi/dm/tsimt?label=PyPI%20downloads">
+
+<p>A lightweight string similarity quantifier, with support for names</p>
+</div>
+
+## What it does
+TSim (Text Similarity) is a quantifier for similarity of strings. It reports the extent of similarity of two strings. TSim accounts for errors like OCR errors, different ordering, abbreviation and more.
+
+## Features
+
+- Compensation for OCR errors related to similar looking characters (eg. 5 and S; 0 and O)
+- Compensation for over-detection and under-detection of text by OCR systems
+- Compensation for different ordering of names (eg. FirstName-LastName and LastName-FirstName)
+- Compensation for abbreviation in names (eg. Sanyam Asthana and S. Asthana)
+
+## Installation
+TSim can be installed via pip:
+
+```bash
+pip install tsim
+```
+You can verify the installation by running:
+
+```bash
+pip show tsim
+```
+
+## Usage
+To use TSim, you first need to install it using pip.
+
+To use TSim in a project, you need to import the library in your project using `import tsim`
+
+## Functions
+### get_confidence()
+Returns the confidence/error of similarity of two strings
+
+**Parameters:**<br>
+`received_str` – The string to compare<br>
+`expected_str` – The string to be expected in the comparison<br>
+`mode` – `"c"` to return confidence, `"e"` to return the error<br>
+
+**Returns:** Confidence (0-1)/Error depending on the mode used
+
+### get_abbreviated_confidence()
+Returns the confidence of similarity of two strings taking into account abbreviated part of the string
+
+**Parameters:**<br>
+`received_str` – The string to compare<br>
+`expected_str` – The string to be expected in the comparison<br>
+`mode` – `"c"` to return confidence, `"e"` to return the error<br>
+
+**Returns:** Confidence (0-1)/Error depending on the mode used
+
+### get_name_confidence()
+Returns the confidence of similarity between two names
+
+**Parameters:**<br>
+`received_name` – The name to compare<br>
+`expected_name` – The name to be expected in the comparison<br>
+
+**Returns:** The confidence level of the similarity of the names (0-1)
+
+## Technical Details
+
+- Python 3.7+
+- Uses an error based confidence system, with different penalties per kind of error.
+- Uses a dictionary for OCR character similarity matching
+
+## License
+MIT License
+
+********
