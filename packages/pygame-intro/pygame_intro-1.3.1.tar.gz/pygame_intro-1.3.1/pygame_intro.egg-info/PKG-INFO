@@ -1,0 +1,102 @@
+Metadata-Version: 2.4
+Name: pygame_intro
+Version: 1.3.1
+Summary: A intro module for pygame Community Edition.
+Author-email: AntonisDevStuff <contact@antonisdevstuff.com>
+License-Expression: MIT
+Project-URL: Repository, https://github.com/antonisdevstuff/pygame-intro
+Project-URL: Issues, https://github.com/antonisdevstuff/pygame-intro/issues
+Project-URL: Releases, https://github.com/antonisdevstuff/pygame-intro/releases
+Keywords: pygame,intro,splash screen
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Operating System :: Microsoft :: Windows
+Classifier: Operating System :: POSIX :: Linux
+Classifier: Operating System :: MacOS
+Classifier: Programming Language :: Python :: 3
+Classifier: Topic :: Software Development :: Libraries :: pygame
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+License-File: LICENSE.txt
+Requires-Dist: pygame-ce>=2.5.0
+Dynamic: license-file
+
+# pygame-intro
+
+A minimal Python library to create intros for [`pygame community edition`](https://github.com/pygame-community/pygame-ce).
+
+## Features
+
+- Load and display custom images/frames
+- Load and play custom sounds
+- Progress bar and skippable intro options
+- Customizable: duration, fade-in/fade-oud and scaling
+- Async support for pygbag compatibility
+- Set background (color or image/surface)
+
+## Getting Started
+
+Install:
+```bash
+pip install pygame_intro
+```
+
+Desktop Example:
+```python
+import pygame
+import pygame_intro
+
+pygame.init()
+pygame_intro.init()
+
+# Optional: customize intro settings
+pygame_intro.settings(
+    duration=2,
+    fade_in=0.25,
+    fade_out=1,
+    scale=0.7,
+    progress_bar=True,
+    skippable=True,
+)
+
+# Optional: add image or images
+pygame_intro.add_image("my_image.png", "my_image2.png", "my_image3.png")
+
+# Optional: add sound
+pygame_intro.add_sound("path/my_sound.mp3", volume=0.7)
+
+# Optional: change background color
+pygame_intro.change_background((30, 30, 30))
+
+# Start the intro
+pygame_intro.start()
+```
+
+Pygbag Example:
+```python
+# /// script
+# dependencies = [
+#   "pygame-intro",
+# ]
+# ///
+
+import pygame_intro
+import asyncio
+
+# Make sure to implement any changes needed for pygbag
+async def main():
+	pygame_intro.init()
+	pygame_intro.add_image("path/my_image.png")
+
+    pygame_intro.settings(duration=2, fade_in=0.25, fade_out=1)
+    
+    await pygame_intro.web_start()
+
+# Start the intro
+asyncio.run(main())
+```
+
+
+## License
+
+This project is licensed under the MIT License.  
+See the [`LICENSE`](LICENSE.txt) file for the full license text.
