@@ -1,0 +1,681 @@
+"""Tuick command line interface.
+
+Tuick is a wrapper for compilers and checkers that integrates with fzf and your
+text editor to provide fluid, keyboard-friendly, access to code error
+locations.
+"""
+
+import os
+import shutil
+import socket
+import subprocess
+import sys
+import typing
+from contextlib import ExitStack, contextmanager
+from io import StringIO
+from pathlib import Path
+from subprocess import PIPE, STDOUT
+
+import typer
+
+import tuick
+import tuick.console
+from tuick.console import (
+    print_command,
+    print_entry,
+    print_error,
+    print_event,
+    print_verbose,
+    print_warning,
+    set_verbose,
+)
+from tuick.editor import (
+    EditorError,
+    FileLocation,
+    get_editor_command,
+    validate_editor_config,
+)
+from tuick.errorformat import (
+    CustomPatterns,
+    ErrorformatNotFoundError,
+    FormatConfig,
+    FormatName,
+    get_errorformat_builtin_formats,
+    parse_with_errorformat,
+    split_at_markers,
+    wrap_blocks_with_markers,
+)
+from tuick.fzf import FzfUserInterface, open_fzf_process
+from tuick.monitor import MonitorThread
+from tuick.reload_socket import ReloadSocketServer
+from tuick.shell import quote_command
+from tuick.theme import (
+    ColorTheme,
+    ColorThemeAuto,
+    ColorThemeOption,
+    detect_theme,
+)
+from tuick.tool_registry import detect_tool, is_build_system, is_known_tool
+
+if typing.TYPE_CHECKING:
+    from collections.abc import Callable, Iterable, Iterator
+
+app = typer.Typer()
+
+# ruff: noqa: FBT001 FBT003 Typer API uses boolean arguments for flags
+# ruff: noqa: B008 function-call-in-default-argument
+
+
+def version_callback(value: bool) -> None:
+    """Print version and exit if --version flag is set."""
+    if value:
+        typer.echo(f"tuick {tuick.__version__}")
+        raise typer.Exit(0)
+
+
+class ProcessTerminatedError(Exception):
+    """Raised when a command process is terminated before completing."""
+
+
+def _should_use_top_mode(config: FormatConfig, explicit_top: bool) -> bool:
+    """Check if top-mode should be used based on config and explicit flag."""
+    if explicit_top:
+        return True
+    match config:
+        case FormatName(format_name):
+            return is_build_system(format_name)
+        case CustomPatterns():
+            return False
+
+
+def _create_format_config(
+    command: list[str], format_name: str, pattern: list[str] | None
+) -> FormatConfig:
+    """Create FormatConfig from CLI options, with validation.
+
+    Args:
+        command: Command to run
+        format_name: User-provided format name (or empty string)
+        pattern: User-provided patterns (or None)
+
+    Returns:
+        FormatConfig object
+
+    Raises:
+        typer.Exit: If options are invalid or tool is unsupported
+    """
+    # Validate mutual exclusivity
+    if format_name and pattern:
+        print_error(
+            None,
+            "Options -f/--format-name and -p/--pattern are mutually exclusive",
+        )
+        raise typer.Exit(1)
+
+    # Use custom patterns if provided
+    if pattern:
+        return CustomPatterns(patterns=pattern)
+
+    # Use provided format name or autodetect
+    tool = format_name if format_name else detect_tool(command)
+
+    # Build systems accepted (stub: groups all output into info blocks)
+    if is_build_system(tool):
+        return FormatName(format_name=tool)
+
+    # Validate tool is supported
+    if (
+        not is_known_tool(tool)
+        and tool not in get_errorformat_builtin_formats()
+    ):
+        if format_name:
+            msg = (
+                f"Format '{tool}' not supported. "
+                "Use -p/--pattern for custom patterns."
+            )
+        else:
+            msg = (
+                f"Tool '{tool}' not supported. "
+                "Use -f/--format-name or -p/--pattern."
+            )
+        print_error(None, msg)
+        raise typer.Exit(1)
+
+    return FormatName(format_name=tool)
+
+
+@app.command()
+def main(  # noqa: PLR0913, C901, PLR0912
+    command: list[str] = typer.Argument(default_factory=list),
+    _version: bool = typer.Option(
+        False,
+        "--version",
+        help="Show version and exit",
+        callback=version_callback,
+        is_eager=True,
+    ),
+    reload: bool = typer.Option(
+        False, "--reload", help="Internal: run command and output blocks"
+    ),
+    select: bool = typer.Option(
+        False, "--select", help="Internal: open editor at error location"
+    ),
+    start: bool = typer.Option(
+        False, "--start", help="Internal: notify fzf port to parent process"
+    ),
+    message: str = typer.Option(
+        "", "--message", help="Internal: log a message"
+    ),
+    format: bool = typer.Option(  # noqa: A002
+        False,
+        "--format",
+        help="Format mode: parse and output structured blocks",
+    ),
+    top: bool = typer.Option(
+        False, "--top", help="Top mode: orchestrate nested tuick commands"
+    ),
+    verbose: bool = typer.Option(
+        False, "-v", "--verbose", help="Show verbose output"
+    ),
+    theme: str = typer.Option(
+        "auto",
+        "--theme",
+        help="Color theme: dark, light, bw, auto",
+    ),
+    format_name: str = typer.Option(
+        "",
+        "-f",
+        "--format-name",
+        help="Override autodetected errorformat name",
+    ),
+    pattern: list[str] | None = typer.Option(
+        None,
+        "-p",
+        "--pattern",
+        help="Custom errorformat pattern(s)",
+    ),
+) -> None:
+    """Tuick: Text User Interface for Compilers and checkers."""
+    with tuick.console.setup_log_file():
+        if verbose or os.environ.get("TUICK_VERBOSE"):
+            os.environ["TUICK_VERBOSE"] = "1"
+            set_verbose()
+        print_entry([Path(sys.argv[0]).name, *sys.argv[1:]])
+
+        exclusive_count = sum(
+            [reload, select, start, bool(message), format, top]
+        )
+        # Allow reload + top together
+        if reload and top:
+            exclusive_count -= 1
+
+        if exclusive_count > 1:
+            message = (
+                "Options --reload, --select, --start, --message, --format,"
+                " and --top are mutually exclusive"
+            )
+            print_error(None, message)
+            raise typer.Exit(1)
+
+        if not exclusive_count and not command:
+            print_error(None, "No command specified")
+
+        if reload:
+            config = _create_format_config(command, format_name, pattern)
+            top_mode = _should_use_top_mode(config, explicit_top=top)
+            reload_command(command, config, top_mode=top_mode)
+        elif select:
+            select_command(command)
+        elif start:
+            start_command()
+        elif message:
+            message_command(message)
+        elif format:
+            config = _create_format_config(command, format_name, pattern)
+            format_command(command, config)
+        elif top:
+            config = _create_format_config(command, format_name, pattern)
+            top_command(command, config, verbose=verbose)
+        else:
+            config = _create_format_config(command, format_name, pattern)
+            # Check if we're being called from a top-mode orchestrator
+            tuick_port = os.environ.get("TUICK_PORT")
+            if tuick_port:
+                # Output structured blocks (nested behavior)
+                with (
+                    _save_raw_to_server() as save_raw,
+                    _create_command_process(command) as cmd_proc,
+                ):
+                    assert cmd_proc.stdout is not None
+                    try:
+                        raw_lines = _iter_raw_lines_and_save(
+                            cmd_proc.stdout, save_raw
+                        )
+                        blocks = parse_with_errorformat(config, raw_lines)
+                        for chunk in wrap_blocks_with_markers(blocks):
+                            _write_block_and_maybe_flush(sys.stdout, chunk)
+                    except ErrorformatNotFoundError as error:
+                        print_error(None, str(error))
+                        raise typer.Exit(1) from error
+            else:
+                # Auto-detect build systems and use top mode
+                top_mode = _should_use_top_mode(config, explicit_top=False)
+                list_command(
+                    command,
+                    config,
+                    verbose=verbose,
+                    top_mode=top_mode,
+                    theme=theme,
+                )
+
+
+class CallbackCommands:
+    """Utility class for generating CLI callback commands."""
+
+    def __init__(
+        self,
+        command: list[str],
+        config: FormatConfig,
+        *,
+        verbose: bool,
+        explicit_top: bool = False,
+    ) -> None:
+        """Initialize callback commands."""
+        # Shorten the command name if it is the same as the default
+        myself = sys.argv[0]
+        default: str | None = shutil.which(Path(myself).name)
+        if default and Path(default).resolve() == Path(myself).resolve():
+            myself = Path(myself).name
+
+        # Build format options
+        format_opts: list[str] = []
+        match config:
+            case CustomPatterns(patterns):
+                for pattern in patterns:
+                    format_opts.extend(["-p", pattern])
+            case FormatName(format_name):
+                format_opts = ["-f", format_name]
+
+        verbose_flag = ["-v"] if verbose else []
+        top_flag = ["--top"] if explicit_top else []
+        reload_opts = [*verbose_flag, *top_flag, "--reload", *format_opts]
+        reload_words = [myself, *reload_opts, "--", *command]
+        self.reload_command = quote_command(reload_words)
+
+        # Used only by fzf
+        self.start_command = quote_command([myself, *verbose_flag, "--start"])
+        self.select_prefix = quote_command([myself, *verbose_flag, "--select"])
+        self.message_prefix = quote_command([myself, "--message"])
+
+
+def list_command(  # noqa: C901, PLR0913, PLR0915
+    command: list[str],
+    config: FormatConfig,
+    *,
+    verbose: bool = False,
+    top_mode: bool = False,
+    explicit_top: bool = False,
+    theme: str = "auto",
+) -> None:
+    """List errors from running COMMAND.
+
+    Args:
+        command: Command to run
+        config: Format configuration
+        verbose: Enable verbose output
+        top_mode: If True, use two-layer parsing for build systems
+        explicit_top: If True, include --top flag in reload binding
+        theme: Color theme option string
+    """
+    theme_option: ColorThemeOption
+    if theme == "auto":
+        theme_option = ColorThemeAuto.AUTO
+    else:
+        theme_option = ColorTheme(theme)
+    resolved_theme = detect_theme(theme_option)
+
+    callbacks = CallbackCommands(
+        command, config, verbose=verbose, explicit_top=explicit_top
+    )
+    user_interface = FzfUserInterface(command)
+
+    with ExitStack() as stack:
+        # Create tuick reload coordination server
+        reload_server = ReloadSocketServer()
+        reload_server.start()
+
+        server_info = reload_server.get_server_info()
+        print_verbose("TUICK_PORT:", server_info.port)
+        print_verbose("TUICK_API_KEY:", server_info.api_key)
+
+        monitor = MonitorThread(
+            callbacks.reload_command,
+            user_interface.running_header,
+            reload_server,
+            verbose=verbose,
+        )
+        print_verbose("FZF_API_KEY:", monitor.fzf_api_key)
+        monitor.start()
+        stack.callback(monitor.stop)
+
+        # Run command, save raw output to server, and stream blocks to fzf
+        reload_server.begin_output()
+        cmd_proc = _create_command_process(
+            command, (server_info.port, server_info.api_key)
+        )
+        stack.enter_context(cmd_proc)
+        reload_server.cmd_proc = cmd_proc
+        assert cmd_proc.stdout is not None
+
+        def save_raw(chunk: str) -> None:
+            reload_server.save_output_chunk(chunk)
+
+        if top_mode:
+            chunks = _parse_top_mode(config, cmd_proc.stdout, save_raw)
+        else:
+            raw_lines = _iter_raw_lines_and_save(cmd_proc.stdout, save_raw)
+            chunks = parse_with_errorformat(config, raw_lines)
+
+        try:
+            # Read first chunk to check if there's any output
+            first_chunk = next(chunks)
+        except StopIteration:
+            # No output, don't start fzf
+            _wait_initial_command(cmd_proc)
+            reload_server.end_output()
+            return
+
+        with open_fzf_process(
+            callbacks,
+            user_interface,
+            reload_server.get_server_info(),
+            monitor.fzf_api_key,
+            resolved_theme,
+        ) as fzf_proc:
+            assert fzf_proc.stdin is not None
+
+            # Write all chunks to fzf
+            _write_block_and_maybe_flush(fzf_proc.stdin, first_chunk)
+            for chunk in chunks:
+                _write_block_and_maybe_flush(fzf_proc.stdin, chunk)
+
+            reload_server.end_output()
+            fzf_proc.stdin.close()
+
+            # Wait for command process before fzf exits
+            _wait_initial_command(cmd_proc)
+
+        if fzf_proc.returncode == 130:
+            # User abort - print saved output if available
+            output_file = reload_server.get_saved_output_file()
+            if output_file:
+                chunk_size = 8192
+                while True:
+                    chunk = output_file.read(chunk_size)
+                    if not chunk:
+                        break
+                    sys.stdout.write(chunk)
+        elif fzf_proc.returncode not in (0, 1):
+            # 0 normal exit, 1 no match
+            sys.exit(1)
+
+
+@contextmanager
+def _connect_to_tuick_server() -> typing.Iterator[socket.socket]:
+    """Connect to tuick server and yield socket."""
+    tuick_port = os.environ.get("TUICK_PORT")
+    tuick_api_key = os.environ.get("TUICK_API_KEY")
+
+    if not tuick_port or not tuick_api_key:
+        print_error(None, "Missing TUICK_PORT or TUICK_API_KEY")
+        raise typer.Exit(1)
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.connect(("127.0.0.1", int(tuick_port)))
+        sock.sendall(f"secret: {tuick_api_key}\n".encode())
+        yield sock
+
+
+def _send_to_tuick_server(message: str, expected: str) -> None:
+    """Send authenticated message to tuick server and verify response."""
+    with _connect_to_tuick_server() as sock:
+        sock.sendall(f"{message}\n".encode())
+        response = sock.recv(1024).decode().strip()
+        if response != expected:
+            print_error(None, "Server response:", response)
+            raise typer.Exit(1)
+
+
+def _create_command_process(
+    command: list[str], server_info: tuple[int, str] | None = None
+) -> subprocess.Popen[str]:
+    """Create command subprocess with FORCE_COLOR and optional TUICK_PORT.
+
+    Args:
+        command: Command to execute
+        server_info: Optional (port, api_key) to set TUICK_PORT/API_KEY.
+            If None, inherits from os.environ (for reload/format commands).
+    """
+    env = os.environ.copy()
+    env["FORCE_COLOR"] = "1"
+    if server_info:
+        port, api_key = server_info
+        env["TUICK_PORT"] = str(port)
+        env["TUICK_API_KEY"] = api_key
+    print_command(command)
+    return subprocess.Popen(
+        command, stdout=PIPE, stderr=STDOUT, text=True, env=env
+    )
+
+
+def _buffer_chunks(
+    raw_iterator: Iterator[str], chunk_size: int = 8192
+) -> Iterator[str]:
+    """Buffer raw output for efficient socket transmission."""
+    accumulator = StringIO()
+    for raw in raw_iterator:
+        accumulator.write(raw)
+        if accumulator.tell() >= chunk_size:
+            chunk = accumulator.getvalue()
+            accumulator = StringIO()
+            yield chunk
+    remaining = accumulator.getvalue()
+    if remaining:
+        yield remaining
+
+
+def _write_block_and_maybe_flush(output: typing.IO[str], block: str) -> None:
+    """Write block to output and flush if block is substantial.
+
+    split_blocks sometimes yields single chars like nulls and newlines. No need
+    to flush those because there is nothing to display yet.
+    """
+    output.write(block)
+    if len(block) > 1:
+        output.flush()
+
+
+def _wait_initial_command(process: subprocess.Popen[str]) -> None:
+    """Wait for command process and optionally log exit code."""
+    process.wait()
+    print_verbose("  Initial command exit:", process.returncode)
+
+
+def start_command() -> None:
+    """Notify parent process of fzf port."""
+    fzf_port = os.environ.get("FZF_PORT")
+    if not fzf_port:
+        print_error(None, "Missing environment variable: FZF_PORT")
+        raise typer.Exit(1)
+    _send_to_tuick_server(f"fzf_port: {fzf_port}", "ok")
+
+
+def _iter_raw_lines_and_save(
+    lines: Iterable[str], save_raw: Callable[[str], None]
+) -> Iterator[str]:
+    for line in lines:
+        save_raw(line)
+        yield line
+
+
+@contextmanager
+def _save_raw_to_server() -> Iterator[Callable[[str], None]]:
+    with _connect_to_tuick_server() as sock:
+        # TODO: buffering
+        sock.sendall(b"save-output\n")
+
+        def save_raw(raw: str) -> None:
+            sock.sendall(f"{len(raw)}\n".encode())
+            sock.sendall(raw.encode())
+
+        yield save_raw
+        sock.sendall(b"end\n")
+        response = sock.recv(1024).decode().strip()
+        if response != "ok":
+            print_error(None, "Server response:", response)
+            raise typer.Exit(1)
+
+
+def reload_command(
+    command: list[str], config: FormatConfig, *, top_mode: bool = False
+) -> None:
+    """Notify parent, wait for go, run command and save output."""
+    try:
+        _send_to_tuick_server("reload", "go")
+        _send_to_tuick_server("begin-output", "ok")
+        with (
+            _save_raw_to_server() as save_raw,
+            _create_command_process(command) as proc,
+        ):
+            assert proc.stdout is not None
+            if top_mode:
+                for block in _parse_top_mode(config, proc.stdout, save_raw):
+                    _write_block_and_maybe_flush(sys.stdout, block)
+            else:
+                raw_lines = _iter_raw_lines_and_save(proc.stdout, save_raw)
+                for block in parse_with_errorformat(config, raw_lines):
+                    _write_block_and_maybe_flush(sys.stdout, block)
+
+        print_verbose("  Command exit:", proc.returncode)
+        _send_to_tuick_server("end-output", "ok")
+
+    except Exception as error:
+        print_error("Reload error:", error)
+        raise
+
+
+def select_command(fields: list[str]) -> None:
+    """Display the selected error in the text editor.
+
+    Args:
+        fields: List of 5 fields: [file, line, col, end-line, end-col]
+    """
+    # Validate editor configuration on command start
+    try:
+        validate_editor_config()
+    except EditorError as error:
+        print_error(None, str(error))
+        raise typer.Exit(1) from error
+
+    # Expect 5 fields from fzf: file, line, col, end-line, end-col
+    if len(fields) < 5:
+        print_warning("Invalid selection format:", repr(fields))
+        return
+
+    file_path, line_str, col_str = fields[0], fields[1], fields[2]
+
+    # Empty file means no location (informational block)
+    if not file_path:
+        print_verbose("No location in selection (informational block)")
+        return
+
+    # Parse line and column
+    try:
+        line = int(line_str) if line_str else None
+        col = int(col_str) if col_str else None
+    except ValueError:
+        print_warning("Invalid line/col format:", repr(fields))
+        return
+
+    location = FileLocation(path=file_path, row=line, column=col)
+
+    # Build editor command
+    try:
+        editor_command = get_editor_command(location)
+    except EditorError as error:
+        print_error(None, str(error))
+        raise typer.Exit(1) from error
+
+    # Display and execute command
+    print_command(editor_command)
+    try:
+        editor_command.run()
+    except subprocess.CalledProcessError as error:
+        print_error(None, "Editor exit status:", error.returncode)
+        raise typer.Exit(1) from error
+
+
+def message_command(message: str) -> None:
+    """Print a message to the error console."""
+    if message == "RELOAD":
+        print_event("Manual reload")
+    elif message == "LOAD":
+        print_verbose("  [cyan]Loading complete")
+    elif message == "ZERO":
+        print_warning("  Reload produced no output")
+
+
+def format_command(command: list[str], config: FormatConfig) -> None:
+    """Format mode: parse and output structured blocks if TUICK_PORT set."""
+    tuick_nested = os.environ.get("TUICK_PORT")
+
+    if not tuick_nested:
+        # Passthrough mode: run command without capturing output
+        print_command(command)
+        proc = subprocess.Popen(command)
+        proc.wait()
+        sys.exit(proc.returncode)
+
+    # Nested mode: parse with errorformat and output structured blocks
+    try:
+        with (
+            _save_raw_to_server() as save_raw,
+            _create_command_process(command) as cmd_proc,
+        ):
+            assert cmd_proc.stdout is not None
+            raw_lines = _iter_raw_lines_and_save(cmd_proc.stdout, save_raw)
+            blocks = parse_with_errorformat(config, raw_lines)
+            for chunk in wrap_blocks_with_markers(blocks):
+                _write_block_and_maybe_flush(sys.stdout, chunk)
+    except ErrorformatNotFoundError as error:
+        print_error(None, str(error))
+        raise typer.Exit(1) from error
+
+
+def top_command(
+    command: list[str], config: FormatConfig, *, verbose: bool = False
+) -> None:
+    """Top mode: orchestrate nested tuick commands with TUICK_PORT set."""
+    list_command(
+        command, config, verbose=verbose, top_mode=True, explicit_top=True
+    )
+
+
+def _parse_top_mode(
+    config: FormatConfig, lines: Iterable[str], save_raw: Callable[[str], None]
+) -> Iterator[str]:
+    """Parse top mode output with two-layer algorithm.
+
+    This function requires a save_raw callback, because the input lines to save
+    are delimited by markers.
+    """
+    for is_nested, content in split_at_markers(lines):
+        if is_nested:
+            yield content
+        elif content:
+            save_raw(content)
+            yield from parse_with_errorformat(config, content.splitlines())
+
+
+if __name__ == "__main__":
+    app()
