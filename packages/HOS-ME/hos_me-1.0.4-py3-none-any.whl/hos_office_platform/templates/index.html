@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HOS可扩展式办公平台</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- 自定义CSS -->
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    <!-- 提示词验证 -->
+    <script src="{{ url_for('static', filename='js/prompt-validation.js') }}"></script>
+    <!-- 图片上传 -->
+    <script src="{{ url_for('static', filename='js/image-upload.js') }}"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- 侧边栏切换按钮 -->
+        <div class="sidebar-toggle">
+            <button class="btn btn-sm" onclick="toggleSidebar()" id="sidebar-toggle-btn">
+                <i class="bi bi-list"></i>
+            </button>
+        </div>
+
+        <!-- 左侧边栏 -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h5>HOS办公平台</h5>
+                <button class="btn btn-sm btn-outline-light" onclick="toggleNavigationMode()" id="nav-mode-toggle">
+                    <i class="bi bi-grid-3x3-gap"></i>
+                </button>
+            </div>
+            <ul class="nav flex-column sidebar-nav">
+                <!-- 核心功能模块 -->
+                <li class="nav-item">
+                    <button class="nav-link active" id="menu-dashboard" onclick="showPage('dashboard')">
+                        <i class="bi bi-file-text me-2"></i>文档生成
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="menu-template-settings" onclick="showPage('template-settings')">
+                        <i class="bi bi-card-list me-2"></i>模板配置
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="menu-workflow" onclick="showPage('workflow')">
+                        <i class="bi bi-diagram-3 me-2"></i>工作流搭建
+                    </button>
+                </li>
+                
+                <!-- 系统设置 -->
+                <li class="nav-item">
+                    <button class="nav-link" id="menu-api-settings" onclick="showPage('api-settings')">
+                        <i class="bi bi-gear me-2"></i>系统设置
+                    </button>
+                </li>
+                
+                <!-- 自定义模块区域 -->
+                <li class="nav-item dropdown">
+                    <button class="nav-link dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-puzzle-fill me-2"></i>自定义模块
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-dark" id="custom-modules-dropdown">
+                        <!-- 动态生成自定义模块 -->
+                    </ul>
+                </li>
+            </ul>
+        </div>
+
+        <!-- 应用式导航界面 -->
+        <div class="app-navigation" id="app-navigation" style="display: none;">
+            <div class="container-fluid">
+                <div class="row justify-content-center align-items-center h-100">
+                    <div class="col-md-8">
+                        <h2 class="text-center mb-5">HOS办公平台</h2>
+                        <div class="row g-4">
+                            <!-- 核心应用卡片 -->
+                            <div class="col-md-4">
+                                <div class="app-card" onclick="showPage('dashboard')">
+                                    <div class="app-icon">
+                                        <i class="bi bi-file-text"></i>
+                                    </div>
+                                    <h4>文档生成</h4>
+                                    <p>生成各类办公文档</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="app-card" onclick="showPage('template-settings')">
+                                    <div class="app-icon">
+                                        <i class="bi bi-card-list"></i>
+                                    </div>
+                                    <h4>模板配置</h4>
+                                    <p>管理文档模板</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="app-card" onclick="showPage('workflow')">
+                                    <div class="app-icon">
+                                        <i class="bi bi-diagram-3"></i>
+                                    </div>
+                                    <h4>工作流搭建</h4>
+                                    <p>自定义工作流程</p>
+                                </div>
+                            </div>
+                            <!-- 自定义模块卡片会动态生成 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主内容区域 -->
+        <div class="main-content" id="main-content">
+            <!-- 仪表盘页面 -->
+            <div id="dashboard" class="page active">
+                <div class="container-fluid">
+                    <!-- API来源快速选择 -->
+                    <div class="row mb-3" id="quick-api-select">
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <label for="api-source" class="input-group-text">当前API</label>
+                                <select class="form-select" id="api-source">
+                                    <option value="deepseek" selected>DeepSeek API</option>
+                                    <option value="ollama">本地Ollama</option>
+                                </select>
+                                <span class="input-group-text" id="api-status">DeepSeek API已连接</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 选项卡 -->
+                    <div class="tab-container">
+                        <ul class="nav nav-tabs" id="main-tabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="single-tab" data-bs-toggle="tab" data-bs-target="#single" type="button" role="tab" aria-controls="single" aria-selected="true">单文档生成</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="batch-tab" data-bs-toggle="tab" data-bs-target="#batch" type="button" role="tab" aria-controls="batch" aria-selected="false">批量生成</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="manage-tab" data-bs-toggle="tab" data-bs-target="#manage" type="button" role="tab" aria-controls="manage" aria-selected="false">文档管理</button>
+                            </li>
+                        </ul>
+
+                        <!-- 选项卡内容 -->
+                        <div class="tab-content p-3 border border-top-0 bg-white" id="main-tabs-content">
+                            <!-- 单文档生成 -->
+                            <div class="tab-pane fade show active" id="single" role="tabpanel" aria-labelledby="single-tab">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                            <label for="prompt-input" class="form-label">提示词</label>
+                            <textarea class="form-control" id="prompt-input" rows="5" placeholder="请输入文档提示词..."></textarea>
+                        </div>
+                        
+                        <!-- 图片导入功能 -->
+                        <div class="mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title mb-3">图片导入</h6>
+                                    <div class="row g-3">
+                                        <div class="col-md-8">
+                                            <div class="input-group">
+                                                <input type="text" class="form-control" id="image-filename" readonly placeholder="选择要导入的图片">
+                                                <button class="btn btn-primary" type="button" onclick="document.getElementById('image-upload').click()">
+                                                    <i class="bi bi-upload"></i> 选择图片
+                                                </button>
+                                                <input type="file" id="image-upload" accept="image/*" style="display: none;">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="enable-ocr" checked>
+                                                <label class="form-check-label" for="enable-ocr">启用OCR识别</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3">
+                                        <div id="uploaded-images" class="d-flex flex-wrap gap-2"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                                        
+                                        <!-- 快速创建提示词 -->
+                                        <div class="mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body">
+                                                    <h6 class="card-title mb-3">快速创建提示词</h6>
+                                                    <div class="row g-3">
+                                                        <div class="col-md-4">
+                                                            <label for="quick-doc-type" class="form-label">文档类型</label>
+                                                            <select class="form-select form-select-sm" id="quick-doc-type">
+                                                                <option value="周报" selected>周报</option>
+                                                                <option value="会议纪要">会议纪要</option>
+                                                                <option value="项目计划">项目计划</option>
+                                                                <option value="需求文档">需求文档</option>
+                                                                <option value="分析报告">分析报告</option>
+                                                                <option value="其他">其他</option>
+                                                            </select>
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <label for="quick-core-content" class="form-label">核心内容</label>
+                                                            <input type="text" class="form-control form-control-sm" id="quick-core-content" placeholder="例如：上周工作总结">
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <label for="quick-keywords" class="form-label">关键词</label>
+                                                            <input type="text" class="form-control form-control-sm" id="quick-keywords" placeholder="用逗号分隔，例如：工作，总结，计划">
+                                                        </div>
+                                                        <div class="col-md-12">
+                                                            <label for="quick-details" class="form-label">详细要求</label>
+                                                            <textarea class="form-control form-control-sm" id="quick-details" rows="2" placeholder="可选：详细描述您的需求"></textarea>
+                                                        </div>
+                                                        <div class="col-md-12">
+                                                            <button type="button" class="btn btn-primary btn-sm" onclick="generateQuickPrompt()">生成提示词</button>
+                                                            <button type="button" class="btn btn-secondary btn-sm ms-2" onclick="clearQuickPromptForm()">清空表单</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="document-type" class="form-label">文档类型</label>
+                                            <select class="form-select" id="document-type">
+                                                <option value="weekly_report">周报</option>
+                                                <option value="meeting_minutes">会议纪要</option>
+                                                <option value="project_plan">项目计划</option>
+                                                <option value="other">其他</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="template-select" class="form-label">选择模板</label>
+                                            <select class="form-select" id="template-select">
+                                                <option value="">使用默认模板</option>
+                                                <!-- 动态加载模板 -->
+                                            </select>
+                                        </div>
+                                        <div class="mb-3 d-flex gap-2">
+                                            <button type="button" class="btn btn-primary btn-sm" id="generate-btn">生成</button>
+                                            <button type="button" class="btn btn-secondary btn-sm" id="save-btn">保存</button>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="filename-input" class="form-label">保存文件名</label>
+                                            <input type="text" class="form-control" id="filename-input" placeholder="可选">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="file-format" class="form-label">文件格式</label>
+                                            <select class="form-select" id="file-format">
+                                                <option value="txt" selected>文本文件 (.txt)</option>
+                                                <option value="docx">Word文档 (.docx)</option>
+                                                <option value="pdf">PDF文档 (.pdf)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <div class="mb-3">
+                                            <label for="report-output" class="form-label">文档内容</label>
+                                            <textarea class="form-control" id="report-output" rows="18" readonly></textarea>
+                                        </div>
+                                        <div class="mb-3">
+                                            <a href="#" class="btn btn-link" id="download-link" style="display: none;">下载文档</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 批量生成 -->
+                            <div class="tab-pane fade" id="batch" role="tabpanel" aria-labelledby="batch-tab">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label for="batch-prompts" class="form-label">批量提示词</label>
+                                            <textarea class="form-control" id="batch-prompts" rows="8" placeholder="每个提示词占一行..."></textarea>
+                                        </div>
+                                        <div class="mb-3 d-flex gap-2">
+                                            <button type="button" class="btn btn-secondary btn-sm" id="import-prompts-excel">Excel导入提示词</button>
+                                            <input type="file" id="prompts-excel-input" style="display: none;" accept=".xlsx, .xls">
+                                            <a href="/api/download_prompt_template" class="btn btn-info btn-sm" id="download-prompt-template">下载模板</a>
+                                            <button type="button" class="btn btn-danger btn-sm" id="clear-prompts">清空</button>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="batch-document-type" class="form-label">文档类型</label>
+                                            <select class="form-select" id="batch-document-type">
+                                                <option value="weekly_report">周报</option>
+                                                <option value="meeting_minutes">会议纪要</option>
+                                                <option value="project_plan">项目计划</option>
+                                                <option value="other">其他</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="batch-template-select" class="form-label">选择模板</label>
+                                            <select class="form-select" id="batch-template-select">
+                                                <option value="">使用默认模板</option>
+                                                <!-- 动态加载模板 -->
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="batch-file-format" class="form-label">文件格式</label>
+                                            <select class="form-select" id="batch-file-format">
+                                                <option value="txt">文本文件 (.txt)</option>
+                                                <option value="docx">Word文档 (.docx)</option>
+                                                <option value="pdf">PDF文档 (.pdf)</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3 d-flex gap-2">
+                                            <button type="button" class="btn btn-primary btn-sm" id="batch-generate-btn">批量生成</button>
+                                            <button type="button" class="btn btn-secondary btn-sm" id="batch-save-btn">批量保存</button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <div class="mb-3">
+                                            <label for="batch-results" class="form-label">生成结果</label>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-bordered" id="batch-results">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>序号</th>
+                                                            <th>提示词</th>
+                                                            <th>状态</th>
+                                                            <th>生成文件</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="batch-results-body">
+                                                        <!-- 动态生成结果 -->
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="tasks-list" class="form-label">任务管理</label>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-bordered" id="tasks-list">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>任务ID</th>
+                                                            <th>状态</th>
+                                                            <th>创建时间</th>
+                                                            <th>进度</th>
+                                                            <th>操作</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="tasks-list-body">
+                                                        <!-- 动态生成任务列表 -->
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 文档管理 -->
+                            <div class="tab-pane fade" id="manage" role="tabpanel" aria-labelledby="manage-tab">
+                                <div class="row">
+                                    <div class="col-md-12 mb-3">
+                                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                            <div>
+                                                <h5>文档管理</h5>
+                                                <p class="text-muted">管理和操作所有文档</p>
+                                            </div>
+                                            <div class="d-flex gap-2 align-items-center flex-wrap">
+                                                <select class="form-select form-select-sm" id="batch-select" style="width: 150px;">
+                                                    <option value="">所有批次</option>
+                                                    <!-- 动态加载批次列表 -->
+                                                </select>
+                                                <input type="text" class="form-control form-control-sm" id="document-search" placeholder="搜索文档..." style="width: 200px;">
+                                                <button type="button" class="btn btn-primary btn-sm" id="batch-delete-btn" disabled>批量删除</button>
+                                                <button type="button" class="btn btn-primary btn-sm" id="batch-download-btn" disabled>批量下载</button>
+                                                <button type="button" class="btn btn-secondary btn-sm" id="refresh-btn">刷新列表</button>
+                                                <button type="button" class="btn btn-secondary btn-sm" id="import-excel-btn">Excel导入</button>
+                                                <input type="file" id="excel-file-input" style="display: none;" accept=".xlsx, .xls">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <div id="documents-table-container" style="max-height: 500px; overflow-y: auto;">
+                                                    <table class="table table-sm table-bordered" id="documents-table">
+                                                        <thead>
+                                                            <tr>
+                                                                <th><input type="checkbox" id="select-all-checkbox"></th>
+                                                                <th>文件名</th>
+                                                                <th>格式</th>
+                                                                <th>创建日期</th>
+                                                                <th>批次</th>
+                                                                <th>操作</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody id="documents-table-body">
+                                                            <!-- 动态生成文档列表 -->
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-12 mt-3">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <div class="mb-3">
+                                                    <label for="document-content" class="form-label">文档内容</label>
+                                                    <textarea class="form-control" id="document-content" rows="12"></textarea>
+                                                </div>
+                                                <div class="d-flex gap-2">
+                                                    <button type="button" class="btn btn-primary btn-sm" id="save-content-btn">保存内容</button>
+                                                    <button type="button" class="btn btn-secondary btn-sm" id="download-content-btn" style="display: none;">下载文档</button>
+                                                    <button type="button" class="btn btn-secondary btn-sm" id="preview-content-btn">预览文档</button>
+                                                    <button type="button" class="btn btn-secondary btn-sm" id="optimize-content-btn">优化内容</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- API设置页面 -->
+            <div id="api-settings" class="page">
+                <div class="container-fluid">
+                    <h2>系统设置</h2>
+                    <p class="text-muted">配置系统参数和API连接</p>
+                    
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <ul class="nav nav-tabs card-header-tabs" id="api-config-tabs">
+                                <li class="nav-item">
+                                    <button class="nav-link active" id="deepseek-tab" data-bs-toggle="tab" data-bs-target="#deepseek-config" type="button">DeepSeek API</button>
+                                </li>
+                                <li class="nav-item">
+                                    <button class="nav-link" id="ollama-tab" data-bs-toggle="tab" data-bs-target="#ollama-config" type="button">本地Ollama</button>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="card-body">
+                            <div class="tab-content" id="api-config-content">
+                                <!-- DeepSeek API配置 -->
+                                <div class="tab-pane fade show active" id="deepseek-config" role="tabpanel">
+                                    <form id="deepseek-form" class="api-config-form">
+                                        <div class="row mb-3">
+                                            <div class="col-md-6">
+                                                <label for="deepseek-api-key" class="form-label">API Key</label>
+                                                <div class="input-group">
+                                                    <input type="password" class="form-control" id="deepseek-api-key" placeholder="请输入DeepSeek API Key">
+                                                    <button class="btn btn-outline-secondary" type="button" id="toggle-deepseek-key" onclick="toggleApiKeyVisibility('deepseek-api-key')">
+                                                        <i class="bi bi-eye"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-md-6">
+                                                <label for="deepseek-base-url" class="form-label">API地址</label>
+                                                <input type="text" class="form-control" id="deepseek-base-url" value="https://api.deepseek.com/v1/chat/completions">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label for="deepseek-model" class="form-label">模型</label>
+                                                <input type="text" class="form-control" id="deepseek-model" value="deepseek-chat">
+                                            </div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-md-3">
+                                                <label for="deepseek-temperature" class="form-label">温度</label>
+                                                <input type="number" class="form-control" id="deepseek-temperature" value="0.7" step="0.1" min="0" max="1">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label for="deepseek-max-tokens" class="form-label">最大 tokens</label>
+                                                <input type="number" class="form-control" id="deepseek-max-tokens" value="2000">
+                                            </div>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">保存配置</button>
+                                    </form>
+                                </div>
+                                
+                                <!-- Ollama API配置 -->
+                                <div class="tab-pane fade" id="ollama-config" role="tabpanel">
+                                    <form id="ollama-form" class="api-config-form">
+                                        <div class="row mb-3">
+                                            <div class="col-md-6">
+                                                <label for="ollama-base-url" class="form-label">API地址</label>
+                                                <input type="text" class="form-control" id="ollama-base-url" value="http://localhost:11434/v1/chat/completions">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label for="ollama-model" class="form-label">模型</label>
+                                                <input type="text" class="form-control" id="ollama-model" value="llama3">
+                                            </div>
+                                            <div class="col-md-3 d-flex align-items-end">
+                                                <button type="button" class="btn btn-secondary btn-sm" id="test-ollama-connection" onclick="testOllamaConnection()">测试连接</button>
+                                                <span id="ollama-connection-status" class="ms-2"></span>
+                                            </div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-md-3">
+                                                <label for="ollama-temperature" class="form-label">温度</label>
+                                                <input type="number" class="form-control" id="ollama-temperature" value="0.7" step="0.1" min="0" max="1">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label for="ollama-max-tokens" class="form-label">最大 tokens</label>
+                                                <input type="number" class="form-control" id="ollama-max-tokens" value="2000">
+                                            </div>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">保存配置</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 模板配置页面 -->
+            <div id="template-settings" class="page">
+                <div class="container-fluid">
+                    <h2>模板配置</h2>
+                    <p class="text-muted">管理文档模板和输出设置</p>
+                    
+                    <!-- 模板配置选项卡 -->
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <ul class="nav nav-tabs card-header-tabs">
+                                <li class="nav-item">
+                                    <button class="nav-link active" id="template-list-tab" data-bs-toggle="tab" data-bs-target="#template-list" type="button">模板管理</button>
+                                </li>
+                                <li class="nav-item">
+                                    <button class="nav-link" id="output-before-tab" data-bs-toggle="tab" data-bs-target="#output-before" type="button">输出前设置</button>
+                                </li>
+                                <li class="nav-item">
+                                    <button class="nav-link" id="output-during-tab" data-bs-toggle="tab" data-bs-target="#output-during" type="button">输出时设置</button>
+                                </li>
+                                <li class="nav-item">
+                                    <button class="nav-link" id="output-after-tab" data-bs-toggle="tab" data-bs-target="#output-after" type="button">输出后设置</button>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="card-body">
+                            <div class="tab-content">
+                                <!-- 模板管理 -->
+                                <div class="tab-pane fade show active" id="template-list" role="tabpanel">
+                                    <div class="row">
+                                        <!-- 模板列表 -->
+                                        <div class="col-md-4">
+                                            <div class="card h-100">
+                                                <div class="card-header">
+                                                    <h5 class="card-title">模板列表</h5>
+                                                    <button class="btn btn-sm btn-primary" onclick="createNewTemplate()">新建模板</button>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="mb-3">
+                                                        <input type="text" class="form-control" placeholder="搜索模板" oninput="searchTemplates(this.value)">
+                                                    </div>
+                                                    <div class="list-group" id="templates-list">
+                                                        <!-- 动态生成模板列表 -->
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- 模板编辑区域 -->
+                                        <div class="col-md-8">
+                                            <div class="card h-100">
+                                                <div class="card-header">
+                                                    <h5 class="card-title" id="template-editor-title">选择模板进行编辑</h5>
+                                                    <div class="btn-group">
+                                                    <button class="btn btn-sm btn-primary" onclick="saveTemplate()">保存</button>
+                                                    <button class="btn btn-sm btn-secondary" onclick="setAsCurrentTemplate()">设为当前</button>
+                                                    <button class="btn btn-sm btn-secondary" onclick="exportTemplate()">导出</button>
+                                                    <button class="btn btn-sm btn-secondary" onclick="deriveTemplate()">派生模板</button>
+                                                    <button class="btn btn-sm btn-danger" onclick="deleteTemplate()">删除</button>
+                                                </div>
+                                                </div>
+                                                <div class="card-body">
+                                                    <form id="template-form">
+                                                        <input type="hidden" id="template-id">
+                                                        <div class="row mb-3">
+                                                            <div class="col-md-6">
+                                                                <label for="template-name" class="form-label">模板名称</label>
+                                                                <input type="text" class="form-control" id="template-name" placeholder="请输入模板名称">
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <label for="template-type" class="form-label">模板类型</label>
+                                                                <select class="form-select" id="template-type">
+                                                                    <option value="weekly_report">周报</option>
+                                                                    <option value="meeting_minutes">会议纪要</option>
+                                                                    <option value="project_plan">项目计划</option>
+                                                                    <option value="other">其他</option>
+                                                                </select>
+                                                            </div>
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label for="template-description" class="form-label">模板描述</label>
+                                                            <textarea class="form-control" id="template-description" rows="2" placeholder="请输入模板描述"></textarea>
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label for="template-content" class="form-label">模板内容</label>
+                                                            <textarea class="form-control" id="template-content" rows="15" placeholder="请输入模板内容..."></textarea>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- 模板导入区域 -->
+                                            <div class="card mt-3">
+                                                <div class="card-header">
+                                                    <h5 class="card-title">模板导入</h5>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="row mb-3">
+                                                        <div class="col-md-12">
+                                                            <div class="d-flex gap-2">
+                                                                <button type="button" class="btn btn-secondary" onclick="document.getElementById('docx-file-upload').click()">
+                                                                    <i class="bi bi-file-earmark-word"></i> 导入DOCX模板
+                                                                </button>
+                                                                <input type="file" id="docx-file-upload" accept=".docx" style="display: none;">
+                                                                <span class="text-muted">支持复杂DOCX模板，包含表格、图片等格式</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="row">
+                                                        <div class="col-md-8">
+                                                            <div class="mb-3">
+                                                                <label for="import-template-name" class="form-label">导入模板名称</label>
+                                                                <input type="text" class="form-control" id="import-template-name" placeholder="请输入导入模板的名称">
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label for="import-template-content" class="form-label">模板内容</label>
+                                                                <textarea class="form-control" id="import-template-content" rows="5" placeholder="粘贴模板内容..."></textarea>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-4 d-flex align-items-end">
+                                                            <button class="btn btn-primary w-100" onclick="importTemplate()">导入模板</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- 模板预览区域 -->
+                                            <div class="card mt-3">
+                                                <div class="card-header">
+                                                    <h5 class="card-title">模板预览</h5>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div id="template-preview" style="min-height: 200px; padding: 15px; border: 1px solid #dee2e6; border-radius: 5px;">
+                                                        <p class="text-muted text-center">选择模板查看预览</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- 输出前设置 -->
+                                <div class="tab-pane fade" id="output-before" role="tabpanel">
+                                    <form id="output-before-form">
+                                        <div class="row mb-3">
+                                            <div class="col-md-4">
+                                                <label for="output-format" class="form-label">输出格式</label>
+                                                <select class="form-select" id="output-format">
+                                                    <option value="txt">文本文件 (.txt)</option>
+                                                    <option value="docx">Word文档 (.docx)</option>
+                                                    <option value="pdf">PDF文档 (.pdf)</option>
+                                                    <option value="excel">Excel表格 (.xlsx)</option>
+                                                    <option value="xml">XML文件 (.xml)</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label for="output-encoding" class="form-label">编码格式</label>
+                                                <select class="form-select" id="output-encoding">
+                                                    <option value="utf-8">UTF-8</option>
+                                                    <option value="gbk">GBK</option>
+                                                    <option value="gb2312">GB2312</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">保存设置</button>
+                                    </form>
+                                </div>
+                                
+                                <!-- 输出时设置 -->
+                                <div class="tab-pane fade" id="output-during" role="tabpanel">
+                                    <div class="row">
+                                        <!-- DOCX设置 -->
+                                        <div class="col-md-6">
+                                            <h6>DOCX文档设置</h6>
+                                            <form id="docx-settings-form" class="mt-3">
+                                                <div class="row mb-3">
+                                                    <div class="col-md-6">
+                                                        <label for="docx-font-name" class="form-label">字体名称</label>
+                                                        <input type="text" class="form-control" id="docx-font-name" value="微软雅黑">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label for="docx-font-size" class="form-label">字体大小</label>
+                                                        <input type="number" class="form-control" id="docx-font-size" value="12" min="8" max="72">
+                                                    </div>
+                                                </div>
+                                                <div class="row mb-3">
+                                                    <div class="col-md-3">
+                                                        <label for="docx-margin-top" class="form-label">上边距</label>
+                                                        <input type="number" class="form-control" id="docx-margin-top" value="2.54" step="0.1">
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <label for="docx-margin-right" class="form-label">右边距</label>
+                                                        <input type="number" class="form-control" id="docx-margin-right" value="2.54" step="0.1">
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <label for="docx-margin-bottom" class="form-label">下边距</label>
+                                                        <input type="number" class="form-control" id="docx-margin-bottom" value="2.54" step="0.1">
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <label for="docx-margin-left" class="form-label">左边距</label>
+                                                        <input type="number" class="form-control" id="docx-margin-left" value="2.54" step="0.1">
+                                                    </div>
+                                                </div>
+                                                <div class="row mb-3">
+                                                    <div class="col-md-6">
+                                                        <label for="docx-line-spacing" class="form-label">行间距</label>
+                                                        <input type="number" class="form-control" id="docx-line-spacing" value="1.5" step="0.1">
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        
+                                        <!-- PDF设置 -->
+                                        <div class="col-md-6">
+                                            <h6>PDF文档设置</h6>
+                                            <form id="pdf-settings-form" class="mt-3">
+                                                <div class="row mb-3">
+                                                    <div class="col-md-6">
+                                                        <label for="pdf-page-size" class="form-label">页面大小</label>
+                                                        <select class="form-select" id="pdf-page-size">
+                                                            <option value="A4">A4</option>
+                                                            <option value="A3">A3</option>
+                                                            <option value="Letter">Letter</option>
+                                                            <option value="Legal">Legal</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label for="pdf-orientation" class="form-label">页面方向</label>
+                                                        <select class="form-select" id="pdf-orientation">
+                                                            <option value="portrait">纵向</option>
+                                                            <option value="landscape">横向</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-primary mt-3" onclick="saveOutputSettings()">保存所有输出设置</button>
+                                </div>
+                                
+                                <!-- 输出后设置 -->
+                                <div class="tab-pane fade" id="output-after" role="tabpanel">
+                                    <form id="output-after-form">
+                                        <div class="row mb-3">
+                                            <div class="col-md-6">
+                                                <label for="default-save-location" class="form-label">默认保存位置</label>
+                                                <input type="text" class="form-control" id="default-save-location" placeholder="请输入保存目录路径">
+                                            </div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-md-6">
+                                                <label for="naming-rule" class="form-label">文件命名规则</label>
+                                                <input type="text" class="form-control" id="naming-rule" placeholder="例如: {date}_{user}_{type}.{format}">
+                                            </div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-md-6">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="auto-save">
+                                                    <label class="form-check-label" for="auto-save">自动保存生成的文档</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">保存设置</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 工作流搭建页面 -->
+            <div id="workflow" class="page">
+                <div class="container-fluid">
+                    <h2>工作流搭建</h2>
+                    <p class="text-muted">创建自定义工作流，自动化办公流程</p>
+                    
+                    <div class="row mt-4">
+                        <!-- 工作流列表 -->
+                        <div class="col-md-3">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="card-title">工作流列表</h5>
+                                    <button class="btn btn-sm btn-primary" onclick="createNewWorkflow()">新建工作流</button>
+                                </div>
+                                <div class="card-body">
+                                    <div class="list-group" id="workflows-list">
+                                        <!-- 动态生成工作流列表 -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 工作流编辑器 -->
+                        <div class="col-md-9">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="card-title" id="workflow-editor-title">选择工作流进行编辑</h5>
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-primary" onclick="saveWorkflow()">保存</button>
+                                        <button class="btn btn-sm btn-secondary" onclick="runWorkflow()">运行</button>
+                                        <button class="btn btn-sm btn-secondary" onclick="generateWorkflowByAI()">AI生成</button>
+                                        <button class="btn btn-sm btn-secondary" onclick="convertToModule()">转为模块</button>
+                                        <button class="btn btn-sm btn-danger" onclick="deleteWorkflow()">删除</button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <form id="workflow-form">
+                                        <input type="hidden" id="workflow-id">
+                                        <div class="row mb-3">
+                                            <div class="col-md-6">
+                                                <label for="workflow-name" class="form-label">工作流名称</label>
+                                                <input type="text" class="form-control" id="workflow-name" placeholder="请输入工作流名称">
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="workflow-description" class="form-label">工作流描述</label>
+                                            <textarea class="form-control" id="workflow-description" rows="2" placeholder="请输入工作流描述"></textarea>
+                                        </div>
+                                        
+                                        <!-- AI生成工作流区域 -->
+                                        <div class="mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body">
+                                                    <h6 class="card-title mb-3">AI生成工作流</h6>
+                                                    <div class="mb-3">
+                                                        <label for="workflow-prompt" class="form-label">工作流需求描述</label>
+                                                        <textarea class="form-control" id="workflow-prompt" rows="3" placeholder="请描述您需要的工作流，例如：'生成周报并发送邮件'，'处理客户反馈并生成报告'等"></textarea>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <button type="button" class="btn btn-primary btn-sm" onclick="generateWorkflowByAI()">生成工作流</button>
+                                                        <span class="text-muted ms-2">AI将根据您的描述生成完整的工作流配置</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- 工作流编辑模式切换 -->
+                                        <div class="mb-3">
+                                            <div class="btn-group">
+                                                <button type="button" class="btn btn-sm btn-primary" id="visual-edit-btn" onclick="switchEditMode('visual')">可视化编辑</button>
+                                                <button type="button" class="btn btn-sm btn-secondary" id="code-edit-btn" onclick="switchEditMode('code')">代码编辑</button>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- 可视化工作流编辑器 -->
+                                        <div class="mb-3" id="visual-workflow-editor" style="display: none;">
+                                            <div class="card">
+                                                <div class="card-body">
+                                                    <div class="row">
+                                                        <!-- 节点库 -->
+                                                        <div class="col-md-3">
+                                                            <div class="node-library" style="height: 500px; overflow-y: auto;">
+                                                                <h6>节点库</h6>
+                                                                <div class="node-item" draggable="true" data-node-type="collect_data">
+                                                                    <i class="bi bi-database"></i> 数据收集
+                                                                </div>
+                                                                <div class="node-item" draggable="true" data-node-type="process_data">
+                                                                    <i class="bi bi-gear"></i> 数据处理
+                                                                </div>
+                                                                <div class="node-item" draggable="true" data-node-type="ai_analysis">
+                                                                    <i class="bi bi-brain"></i> AI分析
+                                                                </div>
+                                                                <div class="node-item" draggable="true" data-node-type="generate_report">
+                                                                    <i class="bi bi-file-earmark-text"></i> 生成报告
+                                                                </div>
+                                                                <div class="node-item" draggable="true" data-node-type="distribute_report">
+                                                                    <i class="bi bi-send"></i> 报告分发
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <!-- 画布 -->
+                                                        <div class="col-md-6">
+                                                            <div class="workflow-canvas-container" style="width: 100%; height: 500px; overflow: auto;">
+                                                                <canvas id="workflow-canvas" width="1000" height="800"></canvas>
+                                                            </div>
+                                                        </div>
+
+                                                        <!-- 属性编辑 -->
+                                                        <div class="col-md-3">
+                                                            <div class="node-properties" style="height: 500px; overflow-y: auto;">
+                                                                <h6>节点属性</h6>
+                                                                <div id="node-properties-content">
+                                                                    <p>选择节点查看和编辑属性</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="mt-3">
+                                                        <button type="button" class="btn btn-sm btn-primary" onclick="saveWorkflowFromVisual()">保存可视化编辑</button>
+                                                        <button type="button" class="btn btn-sm btn-secondary" onclick="clearCanvas()">清空画布</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- 代码编辑模式 -->
+                                        <div class="mb-3" id="code-workflow-editor">
+                                            <label for="workflow-steps" class="form-label">工作流步骤 (JSON格式)</label>
+                                            <textarea class="form-control" id="workflow-steps" rows="15" placeholder="请输入工作流步骤，使用JSON格式" style="resize: vertical;"></textarea>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 应用式选择界面 -->
+    <div class="app-selection-mode" id="app-selection-mode" style="display: none;">
+        <div class="app-selection-container">
+            <div class="app-selection-header">
+                <h3>HOS办公平台</h3>
+                <button class="btn btn-sm btn-outline-light" onclick="toggleNavigationMode()" id="exit-app-selection-btn">
+                    <i class="bi bi-arrow-left"></i> 返回导航
+                </button>
+            </div>
+            <div class="app-grid">
+                <!-- 应用卡片 -->
+                <div class="app-card-large" onclick="showPage('dashboard')">
+                    <div class="app-icon-large">
+                        <i class="bi bi-file-text"></i>
+                    </div>
+                    <h4>文档生成</h4>
+                    <p>生成各类办公文档</p>
+                </div>
+                <div class="app-card-large" onclick="showPage('template-settings')">
+                    <div class="app-icon-large">
+                        <i class="bi bi-card-list"></i>
+                    </div>
+                    <h4>模板配置</h4>
+                    <p>管理文档模板</p>
+                </div>
+                <div class="app-card-large" onclick="showPage('workflow')">
+                    <div class="app-icon-large">
+                        <i class="bi bi-diagram-3"></i>
+                    </div>
+                    <h4>工作流搭建</h4>
+                    <p>自定义工作流程</p>
+                </div>
+                <div class="app-card-large" onclick="showPage('api-settings')">
+                    <div class="app-icon-large">
+                        <i class="bi bi-gear"></i>
+                    </div>
+                    <h4>系统设置</h4>
+                    <p>配置系统参数</p>
+                </div>
+                <!-- 动态生成自定义模块卡片 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- 自定义JavaScript -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
