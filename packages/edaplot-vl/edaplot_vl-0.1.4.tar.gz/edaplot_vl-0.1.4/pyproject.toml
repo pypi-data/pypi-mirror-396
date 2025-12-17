@@ -1,0 +1,142 @@
+[project]
+name = "edaplot-vl"
+description = "Plot your data with natural language"
+dynamic = ["version"]  # Based on the git tag
+requires-python = ">=3.10"
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "pandas>=2.2.2",
+    "altair[all]>=5.5.0",
+    "vl-convert-python>=1.7.0",
+    "langchain>=1.0.7",
+    "langchain-openai>=1.0.3",
+    "langchain-anthropic>=1.0.4",
+    "langchain-ollama>=1.0.0",
+    "langgraph>=1.0.3",
+    "commentjson>=0.9.0",
+    "pillow>=11.1.0",
+    "tqdm>=4.67.1",
+]
+
+[dependency-groups]
+dev = [
+    "mypy",
+    "ruff",
+    "pytest",
+    "types-tqdm",
+    "types-tree-sitter",
+    "types-editdistance",
+    "types-tabulate",
+    "pandas-stubs",
+    "types-pyyaml",
+    "types-setuptools",
+    "pre-commit",
+    "types-jsonschema",
+    "typing-extensions>=4.13.2",
+]
+frontend = [
+    # TODO Python 3.14 support will come in 1.52
+    "streamlit-nightly~=1.51.1.dev20251126",
+#    "streamlit-lets-plot-comp==0.2.dev2",  # Doesn't work with Python 3.14
+    "vega-datasets>=0.9.0",
+]
+benchmark = [
+    "streamlit-nightly~=1.51.1.dev20251126",
+    "vega-datasets>=0.9.0",
+    "scipy>=1.14.1,<2",
+    "matplotlib>=3.9.2,<4",
+    "lida>=0.0.14,<0.0.15",
+    "scikit-learn>=1.5.2,<2",
+    "notebook>=7.2.1,<8",
+    "mlcopilot>=0.0.8,<0.0.9",
+]
+
+[tool.uv]
+default-groups = "all"
+
+[build-system]
+requires = ["hatchling", "uv-dynamic-versioning"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "uv-dynamic-versioning"
+
+[tool.uv-dynamic-versioning]
+# Use `git tag -a v0.0.0 -m "v0.0.0"` to create a tag.
+vcs = "git"
+style = "pep440"
+fallback-version = "0.0.0"  # https://github.com/ninoseki/uv-dynamic-versioning/blob/main/docs/tips.md
+bump = true
+
+[tool.hatch.build.targets.sdist]
+include = ["/edaplot"]
+
+[tool.hatch.build.targets.wheel]
+include = ["/edaplot"]
+
+[tool.mypy]
+files = ["."]
+exclude = ["dataset/"]
+strict = true
+show_error_codes = true
+check_untyped_defs = true
+disallow_untyped_defs = true
+warn_redundant_casts = true
+warn_unused_configs = true
+warn_unused_ignores = true
+allow_redefinition_new = true
+local_partial_types = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = [
+    "datasets",
+    "commentjson",
+    "vega_datasets",
+    "lida.*",
+    "vl_convert",
+    "streamlit_lets_plot"
+]
+ignore_missing_imports = true
+
+[tool.ruff]
+extend-exclude = ["dataset"]
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    # pycodestyle
+    "E",
+    # Pyflakes
+    "F",
+    # pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+    # ruff-specific
+    "RUF",
+    # Prefer absolute imports over relative ones
+    "TID252",
+]
+ignore = ["E501", "SIM102"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/*" = ["F401", "F811"]  # Avoid removing pytest fixtures https://github.com/astral-sh/ruff/issues/3295
+
+[tool.ruff.lint.flake8-tidy-imports]
+# Disallow all relative imports.
+ban-relative-imports = "all"
+
+[tool.pytest.ini_options]
+addopts = ["--strict-markers"]
+markers = [
+    "external_data: Tests that require external data (e.g., ChartLLM)",
+]
