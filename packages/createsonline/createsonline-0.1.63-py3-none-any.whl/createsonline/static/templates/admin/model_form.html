@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+
+{% block title %}{{ action|title }} {{ model_name }} - CREATESONLINE Admin{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="/admin/">Home</a>
+    <span class="separator">/</span>
+    <a href="/admin/{{ model_name }}">{{ model_name }}</a>
+    <span class="separator">/</span>
+    <span>{{ action|title }}</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="form-header">
+    <h1>{{ action|title }} {{ model_verbose_name|default:model_name }}</h1>
+</div>
+
+<form id="adminForm" class="admin-form" method="POST" action="/admin/{{ model_name }}/{% if object_id %}{{ object_id }}/edit{% else %}create{% endif %}">
+    <div class="form-container">
+        {% for field in fields %}
+        <div class="form-group">
+            <label for="{{ field.name }}" class="form-label">
+                {{ field.label }}
+                {% if field.required %}
+                <span class="required">*</span>
+                {% endif %}
+            </label>
+            
+            {% if field.type == 'text' %}
+                <input 
+                    type="text" 
+                    id="{{ field.name }}" 
+                    name="{{ field.name }}" 
+                    class="form-control"
+                    value="{{ field.value|default:'' }}"
+                    {% if field.required %}required{% endif %}
+                    {% if field.readonly %}readonly{% endif %}
+                >
+            
+            {% elif field.type == 'textarea' %}
+                <textarea 
+                    id="{{ field.name }}" 
+                    name="{{ field.name }}" 
+                    class="form-control"
+                    rows="5"
+                    {% if field.required %}required{% endif %}
+                    {% if field.readonly %}readonly{% endif %}
+                >{{ field.value|default:'' }}</textarea>
+            
+            {% elif field.type == 'number' %}
+                <input 
+                    type="number" 
+                    id="{{ field.name }}" 
+                    name="{{ field.name }}" 
+                    class="form-control"
+                    value="{{ field.value|default:'' }}"
+                    {% if field.required %}required{% endif %}
+                    {% if field.readonly %}readonly{% endif %}
+                >
+            
+            {% elif field.type == 'email' %}
+                <input 
+                    type="email" 
+                    id="{{ field.name }}" 
+                    name="{{ field.name }}" 
+                    class="form-control"
+                    value="{{ field.value|default:'' }}"
+                    {% if field.required %}required{% endif %}
+                    {% if field.readonly %}readonly{% endif %}
+                >
+            
+            {% elif field.type == 'password' %}
+                <input 
+                    type="password" 
+                    id="{{ field.name }}" 
+                    name="{{ field.name }}" 
+                    class="form-control"
+                    {% if field.required %}required{% endif %}
+                >
+            
+            {% elif field.type == 'date' %}
+                <input 
+                    type="date" 
+                    id="{{ field.name }}" 
+                    name="{{ field.name }}" 
+                    class="form-control"
+                    value="{{ field.value|default:'' }}"
+                    {% if field.required %}required{% endif %}
+                    {% if field.readonly %}readonly{% endif %}
+                >
+            
+            {% elif field.type == 'datetime' %}
+                <input 
+                    type="datetime-local" 
+                    id="{{ field.name }}" 
+                    name="{{ field.name }}" 
+                    class="form-control"
+                    value="{{ field.value|default:'' }}"
+                    {% if field.required %}required{% endif %}
+                    {% if field.readonly %}readonly{% endif %}
+                >
+            
+            {% elif field.type == 'checkbox' %}
+                <div class="checkbox-wrapper">
+                    <input 
+                        type="checkbox" 
+                        id="{{ field.name }}" 
+                        name="{{ field.name }}"
+                        {% if field.value %}checked{% endif %}
+                        {% if field.readonly %}disabled{% endif %}
+                    >
+                    <label for="{{ field.name }}">{{ field.help_text|default:'' }}</label>
+                </div>
+            
+            {% elif field.type == 'select' %}
+                <select 
+                    id="{{ field.name }}" 
+                    name="{{ field.name }}" 
+                    class="form-control"
+                    {% if field.required %}required{% endif %}
+                    {% if field.readonly %}disabled{% endif %}
+                >
+                    <option value="">-- Select --</option>
+                    {% for choice in field.choices %}
+                    <option value="{{ choice.value }}" {% if choice.value == field.value %}selected{% endif %}>
+                        {{ choice.label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            
+            {% elif field.type == 'file' %}
+                <input 
+                    type="file" 
+                    id="{{ field.name }}" 
+                    name="{{ field.name }}" 
+                    class="form-control"
+                    {% if field.required %}required{% endif %}
+                >
+                {% if field.value %}
+                    <small>Current file: <a href="{{ field.value }}" target="_blank">View</a></small>
+                {% endif %}
+            
+            {% else %}
+                <input 
+                    type="text" 
+                    id="{{ field.name }}" 
+                    name="{{ field.name }}" 
+                    class="form-control"
+                    value="{{ field.value|default:'' }}"
+                    {% if field.required %}required{% endif %}
+                    {% if field.readonly %}readonly{% endif %}
+                >
+            {% endif %}
+            
+            {% if field.help_text and field.type != 'checkbox' %}
+            <small class="form-help">{{ field.help_text }}</small>
+            {% endif %}
+            
+            {% if field.errors %}
+            <div class="form-error">{{ field.errors }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Save</button>
+        <button type="button" class="btn btn-secondary" onclick="autoSave()">Save & Continue</button>
+        <button type="button" class="btn btn-secondary" onclick="window.history.back()">Cancel</button>
+        {% if object_id %}
+        <button type="button" class="btn btn-danger" onclick="deleteObject()">Delete</button>
+        {% endif %}
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const modelName = "{{ model_name }}";
+const objectId = "{{ object_id }}";
+
+document.getElementById('adminForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const data = Object.fromEntries(formData.entries());
+    
+    try {
+        const url = objectId ? 
+            `/admin/${modelName}/${objectId}` : 
+            `/admin/${modelName}/create`;
+        
+        const response = await fetch(url, {
+            method: objectId ? 'PUT' : 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            window.location.href = `/admin/${modelName}`;
+        } else {
+            const error = await response.json();
+            alert('Error: ' + (error.message || 'Failed to save'));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred while saving');
+    }
+});
+
+async function autoSave() {
+    const formData = new FormData(document.getElementById('adminForm'));
+    const data = Object.fromEntries(formData.entries());
+    
+    try {
+        const url = objectId ? 
+            `/admin/${modelName}/${objectId}` : 
+            `/admin/${modelName}/create`;
+        
+        const response = await fetch(url, {
+            method: objectId ? 'PUT' : 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            if (!objectId && result.id) {
+                window.location.href = `/admin/${modelName}/${result.id}/edit`;
+            } else {
+                alert('Saved successfully');
+            }
+        } else {
+            alert('Failed to save');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred');
+    }
+}
+
+async function deleteObject() {
+    if (!confirm('Are you sure you want to delete this record?')) return;
+    
+    try {
+        const response = await fetch(`/admin/${modelName}/${objectId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (response.ok) {
+            window.location.href = `/admin/${modelName}`;
+        } else {
+            alert('Failed to delete');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred');
+    }
+}
+</script>
+{% endblock %}
