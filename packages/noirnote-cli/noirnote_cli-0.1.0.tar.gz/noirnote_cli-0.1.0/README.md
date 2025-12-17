@@ -1,0 +1,108 @@
+# NoirNote CLI
+
+The official Command Line Interface for **NoirNote**. Securely access your team's secrets, notes, and automation scripts directly from your terminal.
+
+## Installation
+
+Ensure you have Python 3.8+ installed.
+
+```bash
+pip install noirnote-cli
+```
+
+---
+
+## 🚀 Quick Start (Recommended)
+
+For developers and personal use, the recommended workflow is to use the **Interactive UI**. This provides a convenient, menu-driven interface to navigate workspaces, view notes, and execute scripts without remembering individual commands.
+
+### 1. Authenticate
+First, log in to decrypt your Master Key. Your keys are securely stored in your OS native keychain (e.g., macOS Keychain, Secret Service) for subsequent sessions.
+
+```bash
+noirnote-cli login --email you@example.com
+```
+
+### 2. Launch the UI
+Once logged in, start the interactive dashboard:
+
+```bash
+noirnote-cli ui
+```
+
+---
+
+## Command Line Reference
+
+If you prefer direct commands or need to script specific actions, you can use the manual command interface.
+
+### Workspace Management
+Switch between your personal and team workspaces.
+
+```bash
+# List all available workspaces
+noirnote-cli workspace list
+
+# Switch to a team workspace by its name
+noirnote-cli workspace use "Production SRE Team"
+
+# Switch to your personal workspace by ID
+noirnote-cli workspace use "abCdeFgHijkLmnoPqrsTuvWxYz12345"
+```
+
+### Listing Resources
+```bash
+noirnote-cli ls scripts   # List automation scripts
+noirnote-cli ls notes     # List encrypted notes
+noirnote-cli ls secrets   # List Vault secrets
+```
+
+### Retrieving Data
+Retrieve and decrypt content to standard output.
+
+```bash
+# Get a note by name or ID
+noirnote-cli get note "Post-Incident Review: 2025-05-10"
+
+# Get a secret by name (Interactive mode only)
+noirnote-cli get secret "Production API Token"
+```
+
+### Script Execution
+Execute automation scripts stored in your NoirNote library.
+
+```bash
+# Execute a specific script by name, skipping confirmation
+noirnote-cli exec --name "Restart Staging Webserver" --yes
+```
+
+---
+
+## Unattended Mode (CI/CD)
+
+For automated environments (like GitHub Actions or Jenkins), use **API Key authentication**.
+
+1.  **Configure:** Stores the API key in a local configuration file.
+    ```bash
+    noirnote-cli configure --api-key "nak_..." --api-secret "nsk_..."
+    ```
+
+2.  **Usage:** When in API Key mode, `get secret` requires no arguments. It fetches the specific secret bound to the key and outputs **only the raw value**.
+    ```bash
+    # Example: Exporting a secret to an env var
+    export NPM_TOKEN=$(noirnote-cli get secret)
+    ```
+
+To remove credentials (for either mode):
+```bash
+noirnote-cli logout
+```
+
+---
+
+## Configuration Files
+
+The CLI stores configuration and state in the following locations:
+
+*   `~/.config/noirnote-cli/`: Stores CLI-specific config, including API credentials (`api_creds.json`) and the active workspace ID.
+*   `~/.noirnote/`: Used by the NoirNote desktop application to store local user data. The CLI reads from this directory during the initial `login` process.
