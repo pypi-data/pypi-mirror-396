@@ -1,0 +1,470 @@
+Metadata-Version: 2.4
+Name: builder-updater
+Version: 0.1.0
+Summary: C/C++ project builder updater
+License-Expression: MIT
+Project-URL: Homepage, https://gitlab.com/karma_electronics/desktop/builder_updater
+Project-URL: Repository, https://gitlab.com/karma_electronics/desktop/builder_updater.git
+Requires-Python: >=3.6
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Dynamic: license-file
+
+# C/C++ project builder updater
+
+> **Примечание:** ниже приведено описание на русском
+
+Command-line tool for setting up and maintaining C/C++ project build systems. Based on Makefile, provides VSCode support, and designed for CI/CD workflows.
+
+
+## Key Features
+
+- **Makefile-based** - built on Makefile with minimal external dependencies
+- **Embedded focused** - for embedded development while also supporting desktop environments
+- **IDE independent** - build process does not require any specific IDE
+- **Multi-platform support** - supports building on both Windows and Linux
+- **VSCode support** - VSCode is the primary supported editor
+- **CI/CD support** - includes ready-to-use configs for CI/CD pipelines
+- **Header generation** - utilities for generating and using header with project metadata (including data extracted from the Git repository)
+- **Separation of concerns** - strict separation of all scripts and configurations into three segments: `builder`, `project`, and `workspace`
+
+
+## Installation
+
+```bash
+pip install builder-updater
+```
+
+
+## Running
+
+Once installed, you can run the tool from the command line.
+
+```bash
+builder_updater
+```
+
+
+## Command‑Line Options
+
+- **`-p`, `--path` *`<project_path>`*** Specifies the path to the target project directory (defaults to the current directory).
+- **`-f`, `--force`** Forces the update of the project, overriding existing configuration files.
+- **`-c`, `--clean`** Cleans old files in the project directory before performing the update.
+- **`-e`, `--example`** Copies example source files into the project directory.
+- **`-i`, `--info`** Recursive scan and displays information about projects (`--path` is root of scan).
+- **`-h`, `--help`** Shows the help message with a summary of all available options and exits.
+- **`--version`** Prints the current version of the `builder-updater` package and exits.
+- **`--builder-version`** Prints the version of the `builder` and exits.
+
+
+## Builder structure
+
+1. `builder` - fixed core segment of builder files (tracked by Git)
+
+    * `build_scripts/bin_header/bin_header.c`
+    * `build_scripts/bin_header/bin_header.h`
+    * `build_scripts/crc_soft/crc_soft.с`
+    * `build_scripts/crc_soft/crc_soft.h`
+    * `build_scripts/post_build/gcc_map_parser.py`
+    * `build_scripts/post_build/modify_header.py`
+    * `build_scripts/builder.mk`
+    * `build_scripts/env_default.mk`
+    * `build_scripts/gitlab-ci-builder.yml`
+    * `build_scripts/global.mk`
+    * `.gitignore`
+    * `gitlab-ci.yml`
+    * `makefile`
+
+1. `project` - project-specific configuration files (tracked by Git)
+
+    * `.vscode/c_cpp_properties.json`
+    * `.vscode/launch.json`
+    * `.vscode/settings.json`
+    * `.vscode/tasks.json`
+    * `project_configs/build_configs/<bc_name>.mk`
+    * `project_configs/common.mk`
+    * `project_configs/gitlab-ci-project.yml`
+
+1. `workspace` - local workspace configuration files (**NOT** tracked by Git)
+
+    * `env.mk`
+    * `<name>.code-workspace`
+
+
+## Component Description
+
+1. Core of the makefile-based build system:
+
+    1. `makefile` - the top-level entry point of the build system. It assembles a list of build configurations based on filenames located in `project_configs/build_configs`. For each discovered configuration, it invokes the build script `build_scripts/builder.mk`. The targets defined in this script also allow building each configuration individually. See the file contents and inline comments for detailed information.
+
+    1. `build_scripts/builder.mk` - the main build script. Contains all required targets and mechanisms that implement recursive discovery and compilation of source files. The list of search directories is configured in `project_configs/common.mk` (shared for all build configurations) and `project_configs/build_configs/<bc_name>.mk` (specific to each configuration). Refer to the file contents and comments for details.
+
+    1. `build_scripts/global.mk` - provides global variables, including platform-specific ones for different operating systems.
+
+    1. `build_scripts/env_default.mk` - default environment settings. To configure a local environment, create a file `env.mk` (see below).
+
+1. Build configuration:
+
+    1. `project_configs/common.mk` - a set of common project settings and parameters. Includes toolchain selection, additional build flags, source directories, static library paths, and more.
+
+    1. `project_configs/build_configs/<bc_name>.mk` - settings and parameters for the corresponding build configuration. The filename is automatically detected by the top-level `makefile` and used as the configuration name. At least one build configuration file must exist.
+
+1. `CI/CD` configuration:
+
+    1. `build_scripts/gitlab-ci-builder.yml` - defines the primary GitLab CI stages required to build the project.
+
+    1. `project_configs/gitlab-ci-project.yml` - project-specific environment variables and CI/CD stages used during pipeline execution.
+
+    1. `gitlab-ci.yml` - combines `build_scripts/gitlab-ci-builder.yml` and `project_configs/gitlab-ci-project.yml` into a unified project configuration.
+
+1. Executable file header:
+
+    1. `build_scripts/bin_header/bin_header.h` - header structure definition for use within the project’s source code.
+
+    1. `build_scripts/bin_header/bin_header.c` - contains the header instance. To embed it into the executable, include this file in the project’s `.c` source list.
+
+    1. `build_scripts/post_build/modify_header.py` - a script that injects project information into the header (including Git repository state) and computes CRC.
+
+    1. `build_scripts/crc_soft/crc_soft.h` - header file of the CRC calculation module used to verify header and firmware integrity; also includes table generators.
+
+    1. `build_scripts/crc_soft/crc_soft.c` - implementation of the CRC module, including constant tables for IEEE 802.3 CRC-32 and CCITT CRC-16.
+
+1. `VSCode` editor configuration:
+
+    1. `.vscode/c_cpp_properties.json` - configuration for the VSCode C/C++ extension, including the path to `compile_commands.json`.
+
+    1. `.vscode/launch.json` - debugger launch configuration for VSCode (`F5`).
+
+    1. `.vscode/settings.json` - general VSCode editor settings.
+
+    1. `.vscode/tasks.json` - build task configuration for VSCode (`Ctrl + Shift + B`).
+
+1. Environment files (created by the user):
+
+    1. `env.mk` - environment configuration for `makefile`, specific to the user’s workspace (compiler paths, OpenOCD path, etc.). Version control tracking is **disabled** for this file to avoid conflicts between different user environments.
+
+    1. `<name>.code-workspace` - VSCode workspace configuration. Version control tracking is **disabled** for this file for the same reason.
+
+1. Miscellaneous:
+
+    1. `.gitignore` - list of file patterns ignored by `git`.
+
+    1. `output/compile_commands.json` - generated during the build (not stored in git). Used by the editor to provide correct syntax and preprocessing insights, including parameters defined in `.mk` files.
+
+    1. `build_scripts/post_build/gcc_map_parser.py` - parser for `.map` files, used to analyze the largest modules, memory usage, etc. (in development).
+
+
+
+## Adding the Build System to a New or Existing Project
+
+1. The target project must be prepared for updating the build system in advance - all changes must be saved, or (for projects without version control) copied to another directory.
+
+1. Run the build-system installation script (when launched from the project directory, the `--path` argument is optional):
+    ```bash
+    builder_updater --path <project_path> --force
+    ```
+
+1. Configure the files `project_configs/common.mk` and `project_configs/build_configs/<bc_name>.mk` (see comments for variable descriptions).
+
+1. Create and configure the file `env.mk` based on the template in `build_scripts/env_default.mk`.
+
+1. Create and configure the `<name>.code-workspace` file based on the following template:
+    ```json
+    {
+        "folders": [
+            {
+                "path": "."
+            }
+        ],
+        "settings": {
+            "prjCfg.svdPath": "${workspaceFolder}\\STM32F103.svd",  // path to the MCU peripheral description file
+            "prjCfg.gdbPath": "arm-none-eabi-gdb",                  // path to the gdb debugger (or command if added to the `PATH` environment variable)
+            "prjCfg.ocdPath": "openocd",                            // path to openocd (or command if added to the `PATH` environment variable)
+            "prjCfg.ocdPort": "3333",                               // port for gdb to connect to openocd
+            "prjCfg.ocdAddr": "localhost",                          // IP address or hostname of the openocd server for remote debugging
+            "prjCfg.ocdInterface": "interface/stlink.cfg",          // path to the interface `.cfg` file (debug probe)
+            "prjCfg.ocdTarget": "target/stm32f1x.cfg",              // path to the target `.cfg` file (micro-controller)
+            "prjCfg.ocdUserCmd": "",                                // custom openocd startup command
+            "prjCfg.pythonPath": "python3"                          // path to the Python interpreter
+        }
+    }
+    ```
+
+1. `.vscode/settings.json` - configure the compiler version and select the target architecture.
+
+1. `.vscode/tasks.json` - list all project configuration names inside `inputs.options`.
+
+1. `.vscode/launch.json` - list relative paths to executable files (relative to the `output` directory) inside `inputs.options`.
+
+1. `project_configs/gitlab-ci-project.yml` - specify the container image used by the project in the variable `GITLAB_DOCKER_IMAGE`.
+
+1. To enable automatic header generation, add the following template to the project's linker script (and adjust if necessary):
+    ```ld
+    .header (READONLY):
+    {
+        . = ALIGN(4);
+        KEEP(*(.header))
+        . = ALIGN(4);
+    } > FLASH
+
+    PROVIDE(header_load_addr = ORIGIN(FLASH));
+    PROVIDE(header_boot_addr = Reset_Handler);
+    PROVIDE(header_firmware_size = LOADADDR(.data) + SIZEOF(.data) - header_load_addr);
+    ```
+
+
+## Updating Non-Breaking Changes of the Build System
+
+1. Run the build system update script:
+    ```bash
+    builder_updater -p <project_path>
+    ```
+
+
+## Updating BREAKING Changes of the Build System
+
+1. Run the build system update script:
+    ```bash
+    builder_updater -p <project_path> -f -c
+    ```
+
+1. Since `--force` mode overwrites all configuration files, you must manually restore your project-specific settings while taking into account changes introduced in the build system (automation is under development). Files requiring manual adjustments:
+
+    * `project_configs/common.mk`
+    * `project_configs/build_configs/<bc_name>.mk`
+    * `project_configs/gitlab-ci-project.yml`
+
+<br>
+<br>
+
+---
+---
+---
+
+<br>
+<br>
+
+# C/C++ project builder updater
+
+Инструмент для настройки и обновления системы сборки C/C++ проектов. Построен на базе Makefile, включает поддержку VSCode и ориентирован на использование в CI/CD.
+
+
+## Ключевые особенности
+
+- **Makefile-based** - построен на Makefile с минимизацией дополнительных зависимостей
+- **Embedded focused** - ориентировано на сборку embedded проектов, но поддерживает и desktop
+- **IDE independent** - сборка не требует обязательного использования IDE
+- **Multi-platform support** - поддержка сборки в Windows и Linux
+- **VSCode support** - основной поддерживаемый редактор VSCode
+- **CI/CD support** - готовый инструментарий для CI/CD
+- **Header generation** - инструменты формирования секции заголовка с информацией о проекте (в том числе из git репозитория)
+- **Separation of concerns** - строгое разделение всех скриптов и конфигураций на 3 сегмента: `builder`, `project`, and `workspace`
+
+
+## Установка
+
+```bash
+pip install builder-updater
+```
+
+
+## Запуск
+
+```bash
+builder_updater
+```
+
+
+## Параметры запуска
+
+- **`-p`, `--path` *`<project_path>`*** Путь к целевой директории проекта (по умолчанию — текущая директория).
+- **`-f`, `--force`** Выполняет принудительное обновление проекта, перезаписывая существующие конфигурационные файлы.
+- **`-c`, `--clean`** Очищает старые файлы в директории проекта перед обновлением.
+- **`-e`, `--example`** Копирует пример исходных файлов в директорию проекта.
+- **`-i`, `--info`** Рекурсивно сканирует и выводит информацию о проектах (`--path` используется как корень сканирования).
+- **`-h`, `--help`** Показывает справку со сводкой всех доступных опций и завершает работу.
+- **`--version`** Выводит текущую версию пакета `builder-updater` и завершает работу.
+- **`--builder-version`** Выводит версию `builder` и завершает работу.
+
+
+## Структура системы сборки
+
+1. `builder` - не изменяемый сегмент файлов системы сборки (отслеживается Git)
+
+    * `build_scripts/bin_header/bin_header.c`
+    * `build_scripts/bin_header/bin_header.h`
+    * `build_scripts/crc_soft/crc_soft.с`
+    * `build_scripts/crc_soft/crc_soft.h`
+    * `build_scripts/post_build/gcc_map_parser.py`
+    * `build_scripts/post_build/modify_header.py`
+    * `build_scripts/builder.mk`
+    * `build_scripts/env_default.mk`
+    * `build_scripts/gitlab-ci-builder.yml`
+    * `build_scripts/global.mk`
+    * `.gitignore`
+    * `gitlab-ci.yml`
+    * `makefile`
+
+1. `project` - проект-специфичные конфигурационные файлы (отслеживается Git)
+
+    * `.vscode/c_cpp_properties.json`
+    * `.vscode/launch.json`
+    * `.vscode/settings.json`
+    * `.vscode/tasks.json`
+    * `project_configs/build_configs/<bc_name>.mk`
+    * `project_configs/common.mk`
+    * `project_configs/gitlab-ci-project.yml`
+
+1. `workspace` - файлы конфигурации окружения (**NOT** tracked by Git)
+
+    * `env.mk`
+    * `<name>.code-workspace`
+
+
+## Описание компонентов
+
+1. Ядро makefile-based сборки:
+
+    1. `makefile` - верхний уровень системы сборки. Формирует список конфигураций по названиям файлов, расположенных в папке `project_configs/build_configs`. По сформированному списку запускает сборку `build_scripts/builder.mk` для каждой конфигурации. Также по сформированным в этом скрипте целям можно запустить сборку каждой конфигурации по отдельности. Подробнее смотри содержимое файла и приведенные в нем комментарии.
+
+    1. `build_scripts/builder.mk` - основной скрипт сборки. Содержит все необходимые описания целей и механизмов, реализующих рекурсивный поиск и компиляцию исходных файлов. Список директорий для поиска настраивается в файлах `project_configs/common.mk` (общие для всех конфигураций сборки) и `project_configs/build_configs/<bc_name>.mk` (для соответствующей конфигурации). Подробнее смотри содержимое файлов и приведенные в нем комментарии.
+
+    1. `build_scripts/global.mk` - содержит общие глобальные переменные, в том числе различающиеся в разных операционных системах.
+
+    1. `build_scripts/env_default.mk` - настройки окружения по умолчанию. Для настройки локального окружения необходимо создать файл `env.mk` (см. подробнее ниже).
+
+1. Конфигурация сборки:
+
+    1. `project_configs/common.mk` - набор общих настроек и параметров проекта. Включает в себя наименование тулчейна, дополнительные флаги сборки, расположение исходников, статических библиотек и пр.
+
+    1. `project_configs/build_configs/<bc_name>.mk` - настройки и параметры соответствующих конфигураций. Наименование файла автоматически подхватывается скриптом `makefile` и далее используется как название конфигурации. Должен существовать минимум один файл конфигурации сборки.
+
+1. Описание `CI/CD`:
+
+    1. `build_scripts/gitlab-ci-builder.yml` - основные `stages`, необходимые для сборки проекта.
+
+    1. `project_configs/gitlab-ci-project.yml` - специфичные для проекта переменные окружения и `stages`, используемые при сборке через `CI/CD`.
+
+    1. `gitlab-ci.yml` - комбинирует конфигурации `build_scripts/gitlab-ci-builder.yml` и `project_configs/gitlab-ci-project.yml` в общую для проекта.
+
+1. Заголовок исполняемого файла
+
+    1. `build_scripts/bin_header/bin_header.h` - описание структуры заголовка для использования в исходном коде проекта.
+
+    1. `build_scripts/bin_header/bin_header.c` - содержит инстанс заголовка. Для его инъекции в исполняемый файл необходимо добавить этот файл в список `.c` исходников проекта.
+
+    1. `build_scripts/post_build/modify_header.py` - скрипт для добавления в заголовок информации о состоянии `git` репозитория проекта и расчета CRC.
+
+    1. `build_scripts/crc_soft/crc_soft.h` - заголовочный файл модуля вычисления CRC для контроля целостности заголовка и ВПО, также содержит генераторы таблиц.
+
+    1. `build_scripts/crc_soft/crc_soft.с` - исходный код модуля вычисления CRC, дополнительно содержит const таблицы для IEEE 802.3 CRC-32 и CCITT CRC-16
+
+1. Конфигурация редактора `VSCode`
+
+    1. `.vscode/c_cpp_properties.json` - настройки плагина С/C++ для VSCode, в том числе путь к файлу `compile_commands.json`.
+
+    1. `.vscode/launch.json` - настройки запуска отладчика в VSCode `F5`.
+
+    1. `.vscode/settings.json` - общие настройки редактора VSCode.
+
+    1. `.vscode/tasks.json` - настройки запуска сборки в VSCode `Ctrl + Shift + B`.
+
+1. Файлы окружения (создаются пользователем)
+
+    1. `env.mk` - содержит конфигурацию окружения для `makefile`, специфичную для конкретного рабочего пространства (путь к компилятору, openocd и т.п.). Для файла **отключено отслеживание** системой контроля версий `git` для избежания конфликтов настроек разных окружений.
+
+    1. `<name>.code-workspace` - содержит конфигурацию workspace `VSCode`. Для файла **отключено отслеживание** системой контроля версий `git` для избежания конфликтов настроек разных окружений.
+
+1. Остальное:
+
+    1. `.gitignore` - список шаблонов файлов, игнорируемых `git`.
+
+    1. `output/compile_commands.json` - создается в процессе сборки (не сохраняется в git). Позволяет корректно формировать подсветку синтаксиса и препроцессора в том числе для параметров, задаваемых в файлах `.mk`.
+
+    1. `build_scripts/post_build/gcc_map_parser.py` - парсер `.map` файла для анализа самых объемных модулей, использования памяти и пр. (в разработке).
+
+
+## Добавление системы сборки в новый или существующий проект
+
+1. Целевой проект должен быть предварительно подготовлен к обновлению системы сборки - все изменения сохранены или (для проектов без контроля версии) скопированы в другую папку.
+
+1. Запустить скрипт добавления системы сборки (при запуске из директории проекта аргумент `--path` указывать не обязательно):
+    ```bash
+    builder_updater --path <project_path> --force
+    ```
+
+1. Заполнить файлы `project_configs/common.mk` и `project_configs/build_configs/<bc_name>.mk` (см. комментарии к переменным).
+
+1. Создать и заполнить файл `env.mk` по шаблону из `build_scripts/env_default.mk`.
+
+1. Создать и заполнить файл `<name>.code-workspace` по шаблону:
+    ```json
+    {
+        "folders": [
+            {
+                "path": "."
+            }
+        ],
+        "settings": {
+            "prjCfg.svdPath": "${workspaceFolder}\\STM32F103.svd",  // путь к файлу с описанием периферии контроллера
+            "prjCfg.gdbPath": "arm-none-eabi-gdb",                  // путь к отладчику gdb (или команда вызова, если путь указан в переменной окружения `PATH`)
+            "prjCfg.ocdPath": "openocd",                            // путь к openocd (или команда вызова, если путь указан в переменной окружения `PATH`)
+            "prjCfg.ocdPort": "3333",                               // порт для подключения gdb к openocd
+            "prjCfg.ocdAddr": "localhost",                          // ip адрес или hostname сервера openocd для удаленного подключения
+            "prjCfg.ocdInterface": "interface/stlink.cfg",          // путь к `.cfg` файлу интерфейса (программатора)
+            "prjCfg.ocdTarget": "target/stm32f1x.cfg",              // путь к `.cfg` файлу таргета (микроконтроллера)
+            "prjCfg.ocdUserCmd": "",                                // пользовательская команда запуска openocd
+            "prjCfg.pythonPath": "python3",                         // путь к интерпретатору python
+        }
+    }
+    ```
+
+1. В файле `.vscode/settings.json` настроить версию компилятора и выбрать архитектуру.
+
+1. В файле `.vscode/tasks.json` в списке `inputs.options` перечислить названия конфигураций проекта
+
+1. В файле `.vscode/launch.json` в списке `inputs.options` перечислить относительные пути к исполняемым файлам (относительно папки `output`).
+
+1. В файле `project_configs/gitlab-ci-project.yml` указать используемый образ контейнера в переменной `GITLAB_DOCKER_IMAGE`.
+
+1. Для использования механизма генерации заголовка необходимо добавить в линкер-скрипт проекта шаблон (при необходимости отредактировав):
+    ```ld
+    .header (READONLY):
+    {
+        . = ALIGN(4);
+        KEEP(*(.header))
+        . = ALIGN(4);
+    } > FLASH
+
+    PROVIDE(header_load_addr = ORIGIN(FLASH));
+    PROVIDE(header_boot_addr = Reset_Handler);
+    PROVIDE(header_firmware_size = LOADADDR(.data) + SIZEOF(.data) - header_load_addr);
+    ```
+
+
+## Обновление не ломающих изменений системы сборки
+
+1. Запустить скрипт обновления системы сборки:
+    ```bash
+    builder_updater -p <project_path>
+    ```
+
+
+## Обновление ЛОМАЮЩИХ изменений системы сборки
+
+1. Запустить скрипт обновления системы сборки:
+    ```bash
+    builder_updater -p <project_path> -f -с
+    ```
+
+1. Так как в режиме `--force` скрипт перезаписывает все конфигурационные файлы, необходимо вручную восстановить настройки с учетом изменений системы сборки (автоматизация будет дорабатываться). Список файлов требующих ручного исправления:
+
+    * `project_configs/common.mk`
+    * `project_configs/build_configs/<bc_name>.mk`
+    * `project_configs/gitlab-ci-project.yml`
+
+
+## Задачи в части доработок следующей версии
+
+* Расширить файл `env.mk` и добавить генерацию `<name>.code-workspace` на его основе
+* Возможно добавить алгоритм авто-заполнения inputs в `tasks.json` и `launch.json`

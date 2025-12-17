@@ -1,0 +1,39 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build C/C++",
+            "type": "shell",
+            "command": "make COMPILE_COMMANDS_PATH=output/compile_commands.json -j 1 ${input:config}",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [
+                {
+                    "owner": "c",
+                    "fileLocation": [
+                        "absolute"
+                    ],
+                    "pattern": {
+                        "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error|fatal error):\\s+(.*)$",
+                        "file": 1,
+                        "line": 2,
+                        "column": 3,
+                        "severity": 4,
+                        "message": 5
+                    }
+                }
+            ]
+        }
+    ],
+    "inputs": [
+        {
+            "id": "config",
+            "type": "pickString",
+            "description": "build configuration",
+            "options": [
+            ]
+        }
+    ]
+}
