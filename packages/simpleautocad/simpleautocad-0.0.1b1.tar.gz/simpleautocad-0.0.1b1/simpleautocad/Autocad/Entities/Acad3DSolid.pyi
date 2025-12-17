@@ -1,0 +1,23 @@
+from ..Base import *
+from ..Proxy import *
+from ..AcadEntity import AcadEntity as AcadEntity
+
+class Acad3DSolid(AcadEntity):
+    def __init__(self, obj) -> None: ...
+    Centroid: PyGePoint2d
+    History: bool
+    MomentOfInertia: PyGePoint3d
+    Position: PyGePoint3d
+    PrincipalDirections: PyGeVector3d
+    PrincipalMoments: PyGeVector3d
+    ProductOfInertia: PyGeVector3d
+    RadiiOfGyration: PyGeVector3d
+    ShowHistory: bool
+    SolidType: str
+    Volume: float
+    def Boolean(self, Operation: In[AcBooleanType], Object: In[Acad3DSolid | AcadRegion]) -> None: ...
+    def CheckInterference(self, Object: In[Acad3DSolid], CreateInterferenceSolid: In[bool]) -> bool: ...
+    def Delete(self) -> None: ...
+    def Copy(self) -> Acad3DSolid: ...
+    def SectionSolid(self, Point1: In[PyGePoint3d], Point2: In[PyGePoint3d], Point3: In[PyGePoint3d]) -> AcadRegion: ...
+    def SliceSolid(self, Point1: In[PyGePoint3d], Point2: In[PyGePoint3d], Point3: In[PyGePoint3d], Negative: In[bool]) -> Acad3DSolid: ...
