@@ -1,0 +1,172 @@
+Metadata-Version: 2.4
+Name: mobiu-q
+Version: 1.6.0
+Summary: Soft Algebra Optimizer for Quantum & Complex Optimization
+Author-email: Mobiu Technologies <ai@mobiu.ai>
+License: Proprietary
+Project-URL: Homepage, https://app.mobiu.ai
+Project-URL: Documentation, https://pypi.org/project/mobiu-q/
+Keywords: quantum,optimization,VQE,QAOA,machine-learning
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Science/Research
+Classifier: Topic :: Scientific/Engineering :: Physics
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: numpy>=1.21.0
+Requires-Dist: requests>=2.25.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"
+Requires-Dist: pytest-cov; extra == "dev"
+Provides-Extra: full
+Requires-Dist: scipy>=1.7.0; extra == "full"
+Requires-Dist: qiskit>=0.40.0; extra == "full"
+
+# Mobiu-Q (v1.6.0)
+
+**Hybrid Soft-Algebra Optimizer for Quantum Computing**
+
+[![PyPI version](https://badge.fury.io/py/mobiu-q.svg)](https://badge.fury.io/py/mobiu-q)
+[![Win Rate](https://img.shields.io/badge/Win%20Rate-99.3%25-brightgreen)](https://mobiu.ai)
+[![License](https://img.shields.io/badge/License-Proprietary-blue)](https://mobiu.ai)
+
+Mobiu-Q is a cloud-based optimizer that uses **Soft Algebra** to accelerate quantum algorithms. It demonstrates **algorithmic superiority** in standard conditions and **extreme resilience** in noisy environments, achieving a 99.3% win rate across 1,000 benchmarks.
+
+---
+
+## 🚀 The Problem
+* **In Simulation (Standard):** Standard optimizers (Adam) often overshoot the minimum or converge slowly due to rigid momentum.
+* **On Hardware (Noisy):** Shot noise causes gradients to fluctuate, trapping optimizers in false local minima.
+
+## 💡 The Solution: Hybrid Cross-Coupling
+Mobiu-Q wraps your optimization loop with a cloud-based brain that cross-validates every step using **Soft Algebra Logic**:
+
+```math
+S_{t+1} = (\gamma \cdot S_t) \cdot \Delta_t + \Delta_t
+````
+
+Where the dual multiplication `·` ensures that potential is inextricably linked to realized gain. This creates a "smarter" momentum that adapts instantly to both clean and noisy landscapes.
+
+** Note: In v1.6+, the optimizer utilizes a decoupled Vector EMA implementation of the Soft Algebra state evolution to maximize numerical stability on noisy hardware.
+
+-----
+
+## 📊 Comprehensive Benchmarks
+
+### 1\. Robustness & Generalization (1,000 Runs)
+
+**Settings:** Standard Mode, LR=0.01 (Fair fight vs Adam default).
+Tested across 10 different Hamiltonians, 100 seeds each.
+
+| Problem Domain | Improvement vs Adam | Win Rate |
+|----------------|---------------------|----------|
+| **H2 Molecule** | **+34.5%** | 96/100 |
+| **LiH Molecule** | **+28.5%** | 100/100 |
+| **Transverse Ising** | **+35.8%** | 100/100 |
+| **Heisenberg XXZ** | **+23.7%** | 100/100 |
+| **He4 Atom** | **+29.1%** | 97/100 |
+| **TOTAL AVERAGE** | **+28.7%** | **993/1000** |
+
+*\> **Insight:** Even in standard conditions, Mobiu-Q finds deeper energy levels than Adam.*
+
+### 2\. The "Ultimate Fair" Test (High Noise)
+
+**Settings:** Noisy Mode, 500 Shots, CRN (Common Random Numbers).
+We compared Mobiu-Q against Adam and Naive EMA under heavy quantum noise.
+
+![Mobiu-Q Benchmark](https://mobiu.ai/wp-content/uploads/2025/12/ultimate.png?raw=true)
+
+*Figure 1: Green (Mobiu-Q) ignores the noise floor that traps Adam (Blue) and fails Naive EMA (Orange).*
+
+-----
+
+## 📦 Installation
+
+```bash
+pip install mobiu-q
+```
+
+-----
+
+## ⚡ Quick Start
+
+### 1\. VQE (Chemistry)
+
+Best for molecular simulations (`H2`, `LiH`, etc).
+
+```python
+from mobiu_q import MobiuQCore
+import numpy as np
+
+# Initialize Cloud Optimizer
+opt = MobiuQCore(
+    license_key="YOUR-LICENSE-KEY",
+    problem="vqe",        # Optimized for chemistry
+    mode="standard",      # Use "noisy" for real hardware
+    base_lr=0.01          # Standard learning rate
+)
+
+# Your Physics Loop
+params = np.random.uniform(-0.1, 0.1, n_params)
+
+for step in range(80):
+    # 1. Measure (Local)
+    energy = measure_energy(params)
+    gradient = calculate_gradient(params)
+    
+    # 2. Optimize (Cloud Brain)
+    params = opt.step(params, gradient, energy)
+
+opt.end()
+```
+
+### 2\. QAOA (Combinatorial)
+
+Best for MaxCut, Vertex Cover, and rugged landscapes.
+
+```python
+opt = MobiuQCore(
+    license_key="YOUR-LICENSE-KEY",
+    problem="qaoa",       # Uses Super-Equation Δ†
+    mode="noisy",         # Recommended for QAOA
+    base_lr=0.1           # Aggressive learning rate
+)
+```
+
+-----
+
+## 🔑 Pricing & Licenses
+
+We offer a free tier for researchers and students.
+
+  * **Free:** 5 runs / month (No credit card required).
+  * **Pro:** Unlimited runs, priority support.
+
+**[Get your License Key Here](https://app.mobiu.ai)**
+
+-----
+
+## ❓ FAQ
+
+**Q: Why use cloud optimization?**
+A: The Soft Algebra computation requires stateful cross-coupling history that is best managed centrally. It allows us to deploy updates to the "Brain" without you needing to update your Python package.
+
+**Q: Is my data safe?**
+A: We only receive anonymous gradients and energy scalars. Your Hamiltonian / Circuit structure remains locally on your machine. We never see your IP.
+
+-----
+
+## Support
+
+  * **Documentation:** [pypi.org/project/mobiu-q](https://pypi.org/project/mobiu-q/)
+  * **Email:** ai@mobiu.ai
+
+-----
+
+*Proprietary technology. All rights reserved by Mobiu Technologies.*
