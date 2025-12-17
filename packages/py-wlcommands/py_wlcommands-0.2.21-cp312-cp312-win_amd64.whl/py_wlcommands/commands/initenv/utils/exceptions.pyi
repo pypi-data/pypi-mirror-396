@@ -1,0 +1,19 @@
+from ....exceptions import CommandError as CommandError
+
+class InitEnvError(CommandError):
+    def __init__(self, message: str) -> None: ...
+
+class GitInitializationError(InitEnvError):
+    def __init__(self, message: str) -> None: ...
+
+class PyProjectGenerationError(InitEnvError):
+    def __init__(self, message: str) -> None: ...
+
+class ProjectStructureSetupError(InitEnvError):
+    def __init__(self, message: str) -> None: ...
+
+class RustInitializationError(InitEnvError):
+    def __init__(self, message: str) -> None: ...
+
+class VenvCreationError(InitEnvError):
+    def __init__(self, message: str) -> None: ...

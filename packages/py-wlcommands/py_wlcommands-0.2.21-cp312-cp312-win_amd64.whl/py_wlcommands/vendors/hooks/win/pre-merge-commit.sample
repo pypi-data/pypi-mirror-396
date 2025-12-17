@@ -1,0 +1,22 @@
+@echo off
+:: An example hook script to verify what is about to be committed on Windows
+:: Called by "git merge" with no arguments.  The hook should
+:: exit with non-zero status after issuing an appropriate message to
+:: stderr if it wants to stop the merge commit.
+::
+:: To enable this hook, rename this file to "pre-merge-commit".
+
+:: Get the pre-commit hook path
+for /f "tokens=*" %%i in ('git rev-parse --git-path hooks') do (
+    set "hooks_dir=%%i"
+)
+
+set "precommit=%hooks_dir%\pre-commit"
+
+:: Check if pre-commit hook exists and is executable
+if exist "%precommit%" (
+    call "%precommit%" 2>&1
+    exit /b %errorlevel%
+)
+
+exit /b 0

@@ -1,0 +1,6 @@
+from ...utils.subprocess_utils import SubprocessExecutor as SubprocessExecutor, SubprocessResult as SubprocessResult
+from pathlib import Path
+
+class LintExecutor:
+    def prepare_ruff_command(self, paths: list[str] | None, fix: bool, quiet: bool) -> list[str]: ...
+    def run_ruff_command(self, cmd: list[str], project_root: Path, quiet: bool, noreport: bool) -> SubprocessResult: ...

@@ -1,0 +1,75 @@
+@echo off
+:: Copyright (c) 2006, 2008 Junio C Hamano
+::
+:: The "pre-rebase" hook is run just before "git rebase" starts doing
+:: its job, and can prevent the command from running by exiting with
+:: non-zero status.
+::
+:: The hook is called with the following parameters:
+::
+:: %1 -- the upstream the series was forked from.
+:: %2 -- the branch being rebased (or empty when rebasing the current branch).
+::
+:: This sample shows how to prevent topic branches that are already
+:: merged to 'next' branch from getting rebased, because allowing it
+:: would result in rebasing already published history.
+
+set "publish=next"
+set "basebranch=%1"
+set "topic="
+
+if not "%2"=="" (
+    set "topic=refs/heads/%2"
+) else (
+    for /f "tokens=2 delims=:" %%i in ('git symbolic-ref HEAD 2^>nul') do (
+        set "topic=refs/heads/%%i"
+    )
+    if "%topic%"=="" (
+        exit /b 0 :: we do not interrupt rebasing detached HEAD
+    )
+)
+
+:: Check if topic is in format ??/*
+for /f "delims=/ tokens=3" %%i in ("%topic%") do (
+    set "subbranch=%%i"
+)
+
+if not defined subbranch (
+    exit /b 0 :: we do not interrupt others
+)
+
+:: Does the topic really exist?
+git show-ref -q "%topic%" >nul 2>nul
+if %errorlevel% neq 0 (
+    echo No such branch %topic% 1>&2
+    exit /b 1
+)
+
+:: Is topic fully merged to master?
+git rev-list --pretty=oneline ^master "%topic%" >nul 2>nul
+if %errorlevel% neq 0 (
+    echo %topic% is fully merged to master; better remove it. 1>&2
+    exit /b 1 :: we could allow it, but there is no point.
+)
+
+:: Is topic ever merged to next?  If so you should not be rebasing it.
+git rev-list ^master "^%topic%" %publish% >nul 2>nul
+set "only_next_1_errorlevel=%errorlevel%"
+git rev-list ^master %publish% >nul 2>nul
+set "only_next_2_errorlevel=%errorlevel%"
+
+if "%only_next_1_errorlevel%"=="%only_next_2_errorlevel%" (
+    git rev-list "^%topic%" master >nul 2>nul
+    if %errorlevel% neq 0 (
+        echo %topic% is already up to date with master 1>&2
+        exit /b 1 :: we could allow it, but there is no point.
+    ) else (
+        exit /b 0
+    )
+) else (
+    echo %topic% has commits already merged to public branch 1>&2
+    echo Rebasing this branch may cause issues with published history 1>&2
+    exit /b 1
+)
+
+exit /b 0

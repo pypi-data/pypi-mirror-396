@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# Pre-commit hook that prevents commits to main and develop branches and runs wl lint
+
+# Check current branch
+echo "Checking current branch..."
+current_branch=$(git branch --show-current)
+
+# Prevent commits to main and develop branches
+if [[ "$current_branch" == "main" || "$current_branch" == "develop" ]]; then
+    echo "❌ ERROR: Direct commits to $current_branch branch are not allowed."
+    echo "Please create a feature/fix branch and submit a Pull Request instead."
+    exit 1
+fi
+
+echo "Running pre-commit checks..."
+echo "执行预提交检查..."
+
+# Run wl lint command with custom pre-commit config
+uv run wl lint --pre-commit-config config/.pre-commit-config.yaml
+
+# Check exit code
+if [ $? -ne 0 ]; then
+    echo "❌ Pre-commit checks failed. Please fix the issues and try again."
+    echo "❌ 预提交检查失败。请修复问题后重试。"
+    exit 1
+fi
+
+echo "✅ Pre-commit checks passed."
+echo "✅ 预提交检查通过。"
+exit 0

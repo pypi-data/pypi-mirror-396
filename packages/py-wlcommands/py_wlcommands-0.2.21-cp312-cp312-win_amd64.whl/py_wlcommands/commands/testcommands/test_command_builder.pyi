@@ -1,0 +1,6 @@
+from _typeshed import Incomplete
+
+class TestCommandBuilder:
+    python_detector: Incomplete
+    def __init__(self, python_detector) -> None: ...
+    def build_command_args(self, report_mode: bool, args: list[str], debug_mode: bool = False) -> list[str]: ...
