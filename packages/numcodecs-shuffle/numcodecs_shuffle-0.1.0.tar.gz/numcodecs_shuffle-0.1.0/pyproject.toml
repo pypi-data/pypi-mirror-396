@@ -1,0 +1,38 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "numcodecs-shuffle"
+version = "0.1.0"
+description = "Typed byte shuffle codec for the `numcodecs` buffer compression API"
+license = "MPL-2.0"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numcodecs>=0.13.0,<0.17",
+    "numpy~=2.0",
+]
+
+[dependency-groups]
+dev = ["mypy~=1.14", "pytest~=8.3"]
+
+[project.entry-points."numcodecs.codecs"]
+"shuffle.typed-byte" = "numcodecs_shuffle:TypedByteShuffleCodec"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"numcodecs_shuffle" = ["py.typed"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
+
+[tool.pytest.ini_options]
+addopts = ["--import-mode=importlib"]
+xfail_strict = true
+
+[[tool.mypy.overrides]]
+module = ["numcodecs.*"]
+follow_untyped_imports = true
