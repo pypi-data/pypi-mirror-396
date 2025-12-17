@@ -1,0 +1,430 @@
+"""CLI command handlers for sqlit."""
+
+from __future__ import annotations
+
+import csv
+import json
+import sys
+from typing import TYPE_CHECKING, Callable
+
+from .config import (
+    AUTH_TYPE_LABELS,
+    AuthType,
+    ConnectionConfig,
+    DATABASE_TYPE_LABELS,
+    DatabaseType,
+    load_connections,
+    save_connections,
+)
+from .services import ConnectionSession, QueryResult, QueryService
+
+if TYPE_CHECKING:
+    from .services import HistoryStoreProtocol
+
+
+def cmd_connection_list(args) -> int:
+    """List all saved connections."""
+    connections = load_connections()
+    if not connections:
+        print("No saved connections.")
+        return 0
+
+    print(f"{'Name':<20} {'Type':<10} {'Connection Info':<40} {'Auth Type':<25}")
+    print("-" * 95)
+    for conn in connections:
+        db_type_label = DATABASE_TYPE_LABELS.get(conn.get_db_type(), conn.db_type)
+        # File-based databases (SQLite, DuckDB)
+        if conn.db_type in ("sqlite", "duckdb"):
+            conn_info = conn.file_path[:38] + ".." if len(conn.file_path) > 40 else conn.file_path
+            auth_label = "N/A"
+        # Server-based databases with simple auth
+        elif conn.db_type in ("postgresql", "mysql", "mariadb", "oracle", "cockroachdb"):
+            conn_info = f"{conn.server}@{conn.database}" if conn.database else conn.server
+            conn_info = conn_info[:38] + ".." if len(conn_info) > 40 else conn_info
+            auth_label = f"User: {conn.username}" if conn.username else "N/A"
+        else:  # mssql (SQL Server)
+            conn_info = f"{conn.server}@{conn.database}" if conn.database else conn.server
+            conn_info = conn_info[:38] + ".." if len(conn_info) > 40 else conn_info
+            auth_label = AUTH_TYPE_LABELS.get(conn.get_auth_type(), conn.auth_type)
+        print(
+            f"{conn.name:<20} {db_type_label:<10} {conn_info:<40} {auth_label:<25}"
+        )
+    return 0
+
+
+def cmd_connection_create(args) -> int:
+    """Create a new connection."""
+    connections = load_connections()
+
+    if any(c.name == args.name for c in connections):
+        print(f"Error: Connection '{args.name}' already exists. Use 'edit' to modify it.")
+        return 1
+
+    # Determine database type
+    db_type = getattr(args, "db_type", "mssql") or "mssql"
+    try:
+        DatabaseType(db_type)
+    except ValueError:
+        valid_types = ", ".join(t.value for t in DatabaseType)
+        print(f"Error: Invalid database type '{db_type}'. Valid types: {valid_types}")
+        return 1
+
+    # File-based databases (SQLite, DuckDB)
+    if db_type in ("sqlite", "duckdb"):
+        file_path = getattr(args, "file_path", None)
+        if not file_path:
+            print(f"Error: --file-path is required for {db_type.upper()} connections.")
+            return 1
+
+        config = ConnectionConfig(
+            name=args.name,
+            db_type=db_type,
+            file_path=file_path,
+        )
+    # Server-based databases with simple auth (PostgreSQL, MySQL, MariaDB, Oracle, CockroachDB)
+    elif db_type in ("postgresql", "mysql", "mariadb", "oracle", "cockroachdb"):
+        if not args.server:
+            db_label = DATABASE_TYPE_LABELS.get(DatabaseType(db_type), db_type.upper())
+            print(f"Error: --server is required for {db_label} connections.")
+            return 1
+
+        default_ports = {
+            "postgresql": "5432",
+            "mysql": "3306",
+            "mariadb": "3306",
+            "oracle": "1521",
+            "cockroachdb": "26257",
+        }
+        config = ConnectionConfig(
+            name=args.name,
+            db_type=db_type,
+            server=args.server,
+            port=args.port or default_ports.get(db_type, "1433"),
+            database=args.database or "",
+            username=args.username or "",
+            password=args.password or "",
+            ssh_enabled=getattr(args, "ssh_enabled", False) or False,
+            ssh_host=getattr(args, "ssh_host", "") or "",
+            ssh_port=getattr(args, "ssh_port", "22") or "22",
+            ssh_username=getattr(args, "ssh_username", "") or "",
+            ssh_auth_type=getattr(args, "ssh_auth_type", "key") or "key",
+            ssh_key_path=getattr(args, "ssh_key_path", "") or "",
+            ssh_password=getattr(args, "ssh_password", "") or "",
+        )
+    else:
+        # SQL Server connection (mssql)
+        if not args.server:
+            print("Error: --server is required for SQL Server connections.")
+            return 1
+
+        auth_type_str = getattr(args, "auth_type", "sql") or "sql"
+        try:
+            auth_type = AuthType(auth_type_str)
+        except ValueError:
+            valid_types = ", ".join(t.value for t in AuthType)
+            print(f"Error: Invalid auth type '{auth_type_str}'. Valid types: {valid_types}")
+            return 1
+
+        config = ConnectionConfig(
+            name=args.name,
+            db_type=db_type,
+            server=args.server,
+            port=args.port or "1433",
+            database=args.database or "",
+            username=args.username or "",
+            password=args.password or "",
+            auth_type=auth_type.value,
+            trusted_connection=(auth_type == AuthType.WINDOWS),
+            ssh_enabled=getattr(args, "ssh_enabled", False) or False,
+            ssh_host=getattr(args, "ssh_host", "") or "",
+            ssh_port=getattr(args, "ssh_port", "22") or "22",
+            ssh_username=getattr(args, "ssh_username", "") or "",
+            ssh_auth_type=getattr(args, "ssh_auth_type", "key") or "key",
+            ssh_key_path=getattr(args, "ssh_key_path", "") or "",
+            ssh_password=getattr(args, "ssh_password", "") or "",
+        )
+
+    connections.append(config)
+    save_connections(connections)
+    print(f"Connection '{args.name}' created successfully.")
+    return 0
+
+
+def cmd_connection_edit(args) -> int:
+    """Edit an existing connection."""
+    connections = load_connections()
+
+    conn_idx = None
+    for i, c in enumerate(connections):
+        if c.name == args.connection_name:
+            conn_idx = i
+            break
+
+    if conn_idx is None:
+        print(f"Error: Connection '{args.connection_name}' not found.")
+        return 1
+
+    conn = connections[conn_idx]
+
+    if args.name:
+        if args.name != conn.name and any(c.name == args.name for c in connections):
+            print(f"Error: Connection '{args.name}' already exists.")
+            return 1
+        conn.name = args.name
+
+    # SQL Server fields
+    if args.server:
+        conn.server = args.server
+    if args.port:
+        conn.port = args.port
+    if args.database:
+        conn.database = args.database
+    if args.auth_type:
+        try:
+            auth_type = AuthType(args.auth_type)
+            conn.auth_type = auth_type.value
+            conn.trusted_connection = auth_type == AuthType.WINDOWS
+        except ValueError:
+            valid_types = ", ".join(t.value for t in AuthType)
+            print(f"Error: Invalid auth type '{args.auth_type}'. Valid types: {valid_types}")
+            return 1
+    if args.username is not None:
+        conn.username = args.username
+    if args.password is not None:
+        conn.password = args.password
+
+    # SQLite fields
+    file_path = getattr(args, "file_path", None)
+    if file_path is not None:
+        conn.file_path = file_path
+
+    save_connections(connections)
+    print(f"Connection '{conn.name}' updated successfully.")
+    return 0
+
+
+def cmd_connection_delete(args) -> int:
+    """Delete a connection."""
+    connections = load_connections()
+
+    conn_idx = None
+    for i, c in enumerate(connections):
+        if c.name == args.connection_name:
+            conn_idx = i
+            break
+
+    if conn_idx is None:
+        print(f"Error: Connection '{args.connection_name}' not found.")
+        return 1
+
+    deleted = connections.pop(conn_idx)
+    save_connections(connections)
+    print(f"Connection '{deleted.name}' deleted successfully.")
+    return 0
+
+
+def _stream_csv_output(cursor, columns: list[str]) -> int:
+    """Stream CSV output from cursor using fetchmany."""
+    writer = csv.writer(sys.stdout)
+    writer.writerow(columns)
+    row_count = 0
+    batch_size = 1000
+    while True:
+        rows = cursor.fetchmany(batch_size)
+        if not rows:
+            break
+        for row in rows:
+            writer.writerow(str(val) if val is not None else "" for val in row)
+            row_count += 1
+    return row_count
+
+
+def _stream_json_output(cursor, columns: list[str]) -> int:
+    """Stream JSON output from cursor using fetchmany (JSON array format)."""
+    print("[")
+    first = True
+    row_count = 0
+    batch_size = 1000
+    while True:
+        rows = cursor.fetchmany(batch_size)
+        if not rows:
+            break
+        for row in rows:
+            if not first:
+                print(",")
+            first = False
+            obj = dict(zip(columns, [val if val is not None else None for val in row]))
+            print(json.dumps(obj, default=str), end="")
+            row_count += 1
+    print("\n]")
+    return row_count
+
+
+def _output_table(columns: list[str], rows: list[tuple], truncated: bool) -> None:
+    """Output query results in table format with optimized width calculation."""
+    MAX_COL_WIDTH = 50  # Cap column width to avoid excessive line length
+
+    # Calculate column widths (only scan first 100 rows for performance)
+    col_widths = [min(len(col), MAX_COL_WIDTH) for col in columns]
+    for row in rows[:100]:
+        for i, val in enumerate(row):
+            val_str = str(val) if val is not None else "NULL"
+            col_widths[i] = min(MAX_COL_WIDTH, max(col_widths[i], len(val_str)))
+
+    # Print header
+    header_parts = []
+    for i, col in enumerate(columns):
+        col_display = col[:col_widths[i]] if len(col) > col_widths[i] else col
+        header_parts.append(col_display.ljust(col_widths[i]))
+    header = " | ".join(header_parts)
+    print(header)
+    print("-" * len(header))
+
+    # Print rows
+    for row in rows:
+        row_parts = []
+        for i, val in enumerate(row):
+            val_str = str(val) if val is not None else "NULL"
+            if len(val_str) > col_widths[i]:
+                val_str = val_str[: col_widths[i] - 2] + ".."
+            row_parts.append(val_str.ljust(col_widths[i]))
+        print(" | ".join(row_parts))
+
+    # Print count with truncation notice
+    if truncated:
+        print(f"\n({len(rows)} rows shown, results truncated)")
+    else:
+        print(f"\n({len(rows)} row(s) returned)")
+
+
+def cmd_query(
+    args,
+    *,
+    session_factory: Callable[[ConnectionConfig], ConnectionSession] | None = None,
+    query_service: QueryService | None = None,
+) -> int:
+    """Execute a SQL query against a connection.
+
+    Args:
+        args: Parsed command-line arguments.
+        session_factory: Optional factory for creating ConnectionSession.
+            Defaults to ConnectionSession.create. Useful for testing.
+        query_service: Optional QueryService instance.
+            Defaults to a new QueryService(). Useful for testing.
+
+    Returns:
+        Exit code (0 for success, 1 for error).
+    """
+    connections = load_connections()
+
+    config = None
+    for c in connections:
+        if c.name == args.connection:
+            config = c
+            break
+
+    if config is None:
+        print(f"Error: Connection '{args.connection}' not found.")
+        return 1
+
+    # Override database if specified (only for SQL Server)
+    if args.database and config.db_type == "mssql":
+        config.database = args.database
+
+    if args.query:
+        query = args.query
+    elif args.file:
+        try:
+            with open(args.file, "r", encoding="utf-8") as f:
+                query = f.read()
+        except FileNotFoundError:
+            print(f"Error: File '{args.file}' not found.")
+            return 1
+        except IOError as e:
+            print(f"Error reading file: {e}")
+            return 1
+    else:
+        print("Error: Either --query or --file must be provided.")
+        return 1
+
+    # Determine row limit (0 means unlimited)
+    max_rows = args.limit if args.limit > 0 else None
+
+    # Use injected or default factories
+    create_session = session_factory or ConnectionSession.create
+    service = query_service or QueryService()
+
+    try:
+        # Use ConnectionSession for automatic resource cleanup
+        with create_session(config) as session:
+            # For unlimited streaming output (CSV/JSON only), use direct cursor access
+            from .services.query import is_select_query
+
+            if max_rows is None and args.format in ("csv", "json") and is_select_query(query):
+                # Stream directly from cursor for unlimited CSV/JSON
+                cursor = session.connection.cursor()
+                cursor.execute(query)
+
+                if not cursor.description:
+                    print("Query executed successfully (no results)")
+                    return 0
+
+                columns = [col[0] for col in cursor.description]
+
+                if args.format == "csv":
+                    row_count = _stream_csv_output(cursor, columns)
+                else:
+                    row_count = _stream_json_output(cursor, columns)
+
+                # Save to history
+                service._save_to_history(config.name, query)
+                print(f"\n({row_count} row(s) returned)", file=sys.stderr)
+                return 0
+
+            # Standard execution with QueryService (with row limit)
+            result = service.execute(
+                connection=session.connection,
+                adapter=session.adapter,
+                query=query,
+                config=config,
+                max_rows=max_rows,
+                save_to_history=True,
+            )
+
+            if isinstance(result, QueryResult):
+                columns = result.columns
+                rows = result.rows
+
+                if args.format == "csv":
+                    writer = csv.writer(sys.stdout)
+                    writer.writerow(columns)
+                    for row in rows:
+                        writer.writerow(str(val) if val is not None else "" for val in row)
+                    if result.truncated:
+                        print(f"\n({len(rows)} rows shown, results truncated)", file=sys.stderr)
+                    else:
+                        print(f"\n({len(rows)} row(s) returned)", file=sys.stderr)
+                elif args.format == "json":
+                    json_result = [
+                        dict(zip(columns, [val if val is not None else None for val in row]))
+                        for row in rows
+                    ]
+                    print(json.dumps(json_result, indent=2, default=str))
+                    if result.truncated:
+                        print(f"\n({len(rows)} rows shown, results truncated)", file=sys.stderr)
+                    else:
+                        print(f"\n({len(rows)} row(s) returned)", file=sys.stderr)
+                else:
+                    _output_table(columns, rows, result.truncated)
+            else:
+                # NonQueryResult
+                print(f"Query executed successfully. Rows affected: {result.rows_affected}")
+
+            return 0
+
+    except ImportError as e:
+        print(f"Error: Required module not installed: {e}")
+        return 1
+    except Exception as e:
+        print(f"Error: {e}")
+        return 1
