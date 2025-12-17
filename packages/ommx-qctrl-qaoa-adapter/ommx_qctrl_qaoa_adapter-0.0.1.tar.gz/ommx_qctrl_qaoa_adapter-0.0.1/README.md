@@ -1,0 +1,154 @@
+# ommx-qctrl-qaoa-adapter
+
+This package provides an adapter that lets you solve OMMX problems with Q-CTRL’s Fire Opal QAOA solver hosted on IBM Quantum.
+
+[OMMX](https://github.com/Jij-Inc/OMMX) (Open Mathematical programming Modeling eXtension) is an open standard for representing mathematical optimisation problems. Modeling once in OMMX lets you evaluate both classical and quantum solvers. Besides this Fire Opal adapter there are adapters for PySCIPOpt, D-Wave, and more:
+
+* [ommx-pyscipopt-adapter](https://github.com/Jij-Inc/ommx/tree/main/python/ommx-pyscipopt-adapter)
+* [ommx-dwave-adapter](https://github.com/Jij-Inc/ommx-dwave-adapter)
+* [Other adapters](https://jij-inc.github.io/ommx/en/user_guide/supported_ommx_adapters.html)
+
+OMMX also provides utilities to turn constrained models into unconstrained QUBO/HUBO via [`Instance.to_qubo`](https://jij-inc.github.io/ommx/python/ommx/autoapi/ommx/v1/index.html#ommx.v1.Instance.to_qubo) / [`Instance.to_hubo`](https://jij-inc.github.io/ommx/python/ommx/autoapi/ommx/v1/index.html#ommx.v1.Instance.to_hubo). Define your model once; convert only when needed. See the [OMMX tutorial](https://jij-inc.github.io/ommx/en/) for details.
+
+## Prerequisites
+
+Before using the adapter you need:
+
+* Q-CTRL account API key (used to authenticate `fireopal`)
+* **Either**:
+  * IBM Quantum API token **and** IBM Quantum instance CRN (to build credentials locally), **or**
+  * A Fire Opal credential bundle you already saved via Q-CTRL tooling
+
+> **Warning**: Running Q-CTRL’s QAOA solver on IBM Quantum hardware consumes credits or usage. Understand the pricing before launching jobs.
+
+## Installation
+
+Install from PyPI:
+
+```bash
+pip install ommx-qctrl-qaoa-adapter
+```
+
+## Fire Opal QAOA overview
+
+Fire Opal’s QAOA solver handles **unconstrained** binary optimisation problems across many combinatorial classes. It supports polynomial cost functions with arbitrary-order terms but requires at least one non-linear term. For the purely linear objectives are rejected to avoid spending quantum resources on trivial cases. See [the Fire Opal QAOA solver guide](https://docs.q-ctrl.com/fire-opal/execute/run-algorithms/solve-optimization-problems/fire-opals-qaoa-solver?product=fire-opal&doc=topics&doc=fire-opals-qaoa-solver#types-of-problems) for the detailed criteria. Use `Instance.to_qubo` / `to_hubo` to eliminate constraints and ensure quadratic penalties when necessary.
+
+## Usage
+
+### 0. [Authenticate your Q-CTRL account using an API key](https://docs.q-ctrl.com/fire-opal/discover/start-using/get-started-with-fire-opal-on-ibm-quantum#step-3-2-1-authenticate-your-q-ctrl-account-using-an-api-key)
+The link provide how to get the Q-CTRL account and API key. If you already have authenticated the account in the enviroument. you can skip this process.
+
+```python
+import fireopal
+
+fireopal.authenticate_qctrl_account(api_key="Q-CTRL API Key")
+```
+
+### 1. Define your OMMX problem
+
+```python
+from ommx.v1 import DecisionVariable, Instance
+
+x0 = DecisionVariable.binary(0)
+x1 = DecisionVariable.binary(1)
+x2 = DecisionVariable.binary(2)
+
+#Example objective (must include quadratic or higher terms)
+objective = x0 + x1 - 2 * x0 * x1 + x1 + x2 - 2 * x1 * x2
+
+# Example constraint: select at most two vertices.
+constraint = x0 + x1 + x2 <= 2
+
+instance = Instance.from_components(
+    decision_variables=[x0, x1, x2],
+    objective=objective,
+    constraints=[constraint],
+    sense=Instance.MAXIMIZE,
+)
+
+# Convert the constrained model to an unconstrained QUBO with a penalty term.
+qubo_instance = instance.to_qubo()
+```
+
+Use `qubo_instance` (or `instance.to_hubo(...)` if you prefer higher-order penalties) when calling the adapter so Fire Opal receives an unconstrained formulation.
+
+### 2. Solve with Fire Opal
+
+```python
+from ommx_qctrl_qaoa_adapter import OMMXQctrlQAOAAdapter
+from fireopal.run_options import IbmRunOptions
+
+IBM_TOKEN = "your_ibm_cloud_token"
+IBM_INSTANCE = "crn:v1:..."
+BACKEND_NAME = "ibm_device"
+
+run_opts = IbmRunOptions(session_id=None, job_tags=["ommx-demo"])
+
+solution = OMMXQctrlQAOAAdapter.solve(
+    ommx_instance=qubo_instance,
+    backend_name=BACKEND_NAME,
+    ibm_token=IBM_TOKEN,
+    ibm_instance=IBM_INSTANCE,
+    run_options=run_opts,
+)
+print("Objective:", solution.objective)
+print("Assignments:", solution.state.entries)
+```
+
+## Decode previously solved jobs
+
+If you already ran `fireopal.solve_qaoa` elsewhere, you can reconstruct the OMMX solution from the below:
+
+```python
+from ommx_qctrl_qaoa_adapter import OMMXQctrlQAOAAdapter
+
+adapter = OMMXQctrlQAOAAdapter(qubo_instance)
+
+fire_opal_result = {
+    "solution_bitstring": "101",
+    "solution_bitstring_cost": -2.0,
+    "variables_to_bitstring_index_map": {"x_0": 0, "x_1": 1, "x_2": 2},
+}
+
+solution = adapter.decode(fire_opal_result)
+print("Objective:", solution.objective)
+```
+
+### Environment variables example
+
+Before running the `OMMXQctrlQAOAAdapter` you can set:
+
+```bash
+export IBM_QUANTUM_TOKEN=...
+export IBM_QUANTUM_INSTANCE=...
+```
+
+## Error handling
+
+`OMMXQctrlQAOAAdapterError` is raised when:
+
+- No decision variables, or non-binary variables are present
+- Constraints remain (Fire Opal only supports unconstrained problems)
+- The objective contains only linear terms
+- Fire Opal job fails (check IBM Quantum dashboard)
+- Credentials are missing or invalid
+
+## Development
+
+Install dev dependencies via uv:
+
+```bash
+uv sync --all-extras
+```
+
+Run tests:
+
+```bash
+uv run pytest
+```
+
+## References
+
+- [Fire Opal documentation](https://docs.q-ctrl.com/fire-opal/)
+- [IBM Quantum](https://quantum.ibm.com/)
+- [OMMX documentation](https://jij-inc.github.io/ommx/en/)
