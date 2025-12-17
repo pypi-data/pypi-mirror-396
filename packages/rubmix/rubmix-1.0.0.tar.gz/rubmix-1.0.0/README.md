@@ -1,0 +1,48 @@
+# rubmix
+
+یک کتابخانه برای تبدیل کیبورد های روبکا به روبپای
+سازنده روبکا: Mehdi Ahmadi | https://github.com/Mahdy-Ahmadi
+سازنده روبپای: Shayan Heidari | https://github.com/shayanheidari01
+*** اگر ناراضی هستید به @Erfan_mirdehghan در روبیکا پیام دهید ***
+این دو کتابخانه به همراه این نصب می شوند
+---
+
+## نصب
+```bash
+pip install rubmix
+```
+
+## استفاده
+```python
+#برای تبدیل کردن کیبورد های روبکا به روبپای
+from rubmix import converter
+# اگر خواستید می توانید برای ساخت کیبورد از بیلدر روبکا که در روبمیکس هست استفاده کنید
+from rubmix import builders
+# به این شکل باید ازش استفاده کنید
+builders.InlineBuilder
+# یا میتوانید از خود بیلدر روبکا استفاده کنید 
+from rubka.button import InlineBuilder
+
+#یک تابع بر ای تبدیل کردن میسازیم
+def conv(keyboard):
+    return converters.rubmix_to_keypad(keyboard)
+#ساخت خود کیبورد با روبکا
+inline = (
+        InlineBuilder()
+        .row( 
+            InlineBuilder().button_textbox(
+                id="enter_name",
+                title="📝 وارد کردن نام",
+                type_line="SingleLine",
+                type_keypad="String",
+                place_holder="نام خود را وارد کنید...",
+                default_value=""
+            )
+        )
+    .build()
+)
+#تست ارسال
+@bot.on_update()
+def main(bot,m: Update):
+    m.reply("hi",inline_keypad=conv(inline))
+```
