@@ -1,0 +1,139 @@
+Metadata-Version: 2.4
+Name: prisma-web3-py
+Version: 1.0.46
+Summary: Python/SQLAlchemy async implementation of Prisma Web3 database models
+Home-page: https://github.com/your-org/prisma-web3
+Author: SmallCat
+Author-email: SmallCat <your-email@example.com>
+License: MIT
+Project-URL: Homepage, https://github.com/your-org/prisma-web3
+Project-URL: Documentation, https://github.com/your-org/prisma-web3/tree/main/python
+Project-URL: Repository, https://github.com/your-org/prisma-web3
+Project-URL: Issues, https://github.com/your-org/prisma-web3/issues
+Keywords: database,orm,sqlalchemy,async,web3,prisma
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Topic :: Database
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Framework :: AsyncIO
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: sqlalchemy>=2.0.0
+Requires-Dist: asyncpg>=0.27.0
+Requires-Dist: python-dotenv>=0.19.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.21.0; extra == "dev"
+Requires-Dist: black>=23.0.0; extra == "dev"
+Requires-Dist: mypy>=1.0.0; extra == "dev"
+Dynamic: author
+Dynamic: home-page
+Dynamic: license-file
+Dynamic: requires-python
+
+# Prisma Web3 Python
+
+Async PostgreSQL ORM layer for HawkFi and downstream bots, built on SQLAlchemy 2.x async. Models mirror the Prisma schema (managed in the JS project) and expose repositories plus 2.x-style session helpers.
+
+## Contents
+- [Tables & Repositories](#tables--repositories)
+- [Session & Config](#session--config)
+- [Install](#install)
+- [Usage](#usage)
+- [Testing](#testing)
+- [CI / GitHub Actions](#ci--github-actions)
+- [Cleanup](#cleanup)
+- [Best Practices](#best-practices)
+
+## Tables & Repositories
+| Model (table) | Repository | Purpose / notable fields |
+| --- | --- | --- |
+| `Token` (`"Token"`) | `TokenRepository` | Chain-normalized token catalog; search/fuzzy/alias; batch upsert (`chain`, `token_address`, `symbol`, `aliases`, `platforms`). |
+| `Signal` (`"Signal"`) | `SignalRepository` | Token alerts; `source`, `signal_type`, `occurrence_count`, `last_occurrence`. |
+| `PreSignal` (`"PreSignal"`) | `PreSignalRepository` | Early signals; heat scores (`channel_calls`, `multi_signals`, `kol_discussions`). |
+| `CryptoNews` (`"CryptoNews"`) | `CryptoNewsRepository` | News ingestion with unique `source_link`; JSONB fields `matched_currencies`, `entity_list`. |
+| `AIAnalysisResult` (`"AIAnalysisResult"`) | `AIAnalysisRepository` | Unified analysis (Twitter/News/etc.); JSONB heavy (`tokens`, `key_points`, `final_signal`, `trading_recommendation`, `event_struct`); JSONB search/stats helpers. |
+| `EventImpacts` (`"EventImpacts"`) | `EventImpactRepository` | Post-event pricing snapshots (`price_t0/5m/15m/1h/4h`, deltas, `meta`). |
+| `EventLabels` (`"EventLabels"`) | `EventLabelsRepository` | Label catalog for events. |
+
+Utilities: `ChainConfig` (chain normalization), datetime helpers, `TokenImporter`.
+
+## Session & Config
+- URL: `DATABASE_URL` (or `TEST_DATABASE_URL` in tests). `postgres://`/`postgresql://` auto-normalized to `postgresql+asyncpg://`.
+- Pools: `DB_POOL_SIZE`, `DB_POOL_OVERFLOW`, `DB_POOL_TIMEOUT`.
+- Engine/Session helpers (SQLAlchemy 2.x async):
+```python
+from prisma_web3_py import session_scope, configure_engine, dispose_engine
+
+# Optionally override URL (e.g., tests)
+configure_engine("postgresql+asyncpg://user:pass@localhost:5432/prisma_web3")
+
+async def main():
+    async with session_scope() as session:  # commits on success, rollback on error
+        ...
+    async with session_scope(readonly=True) as session:  # read-only, no commit
+        ...
+```
+
+## Install
+```bash
+# editable dev install
+pip install -e python[dev]
+
+# or published package
+pip install prisma-web3-py
+```
+
+## Usage
+```python
+from prisma_web3_py import session_scope, TokenRepository
+
+repo = TokenRepository()
+
+async def create_token():
+    async with session_scope() as session:
+        await repo.upsert_token(session, {"chain": "eth", "token_address": "0x...", "symbol": "UNI"})
+
+async def search():
+    async with session_scope(readonly=True) as session:
+        tokens = await repo.search_by_symbol(session, "UNI")
+```
+
+## Testing
+- Unit-only (no DB required):
+```bash
+cd python
+pytest -q tests/test_ai_analysis_utils.py tests/test_config_and_datetime.py tests/test_base_repository_unit.py
+```
+- Full + integration (requires Postgres, runs against the GH Actions Postgres service by default):
+```bash
+export DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/prisma_web3_test
+export RUN_DB_TESTS=1
+cd python
+pytest        # integration tests will run
+```
+- Schema setup: call `python - <<'PY'` to run `init_db()` (fallback `create_all`) if Prisma migrations aren’t applied yet. The CI workflow auto-runs `init_db()` against the Postgres service when `PRISMA_DATABASE_URL` is not provided.
+- Cleanup after local/integration runs: `python scripts/cleanup_test_data.py` removes `fake-llm` / `e2e` analysis rows, test tokens/signals, and dangling EventImpacts/Labels.
+
+## CI / GitHub Actions
+`prisma-web3/.github/workflows/publish.yml` runs unit + integration tests before publish.
+- Default: uses the built-in Postgres service (`postgresql+asyncpg://prisma:prisma@localhost:5432/prisma_web3_test`) with `RUN_DB_TESTS=1`.
+- Override with secrets (recommended for staging/prod-like DBs): set `PRISMA_DATABASE_URL` (asyncpg URL) and optionally `PRISMA_RUN_DB_TESTS=1` under **Settings → Secrets and variables → Actions**.
+- Schema bootstrap: when running against the service, the workflow calls `configure_engine(...); init_db()` to create tables; when pointing at an external DB it assumes Prisma migrations are pre-applied.
+
+## Cleanup
+`python/scripts/cleanup_test_data.py` deletes test tokens/signals/pre-signals plus `fake-llm`/`e2e` AIAnalysisResult rows and dangling EventImpacts/Labels using `session_scope`.
+
+## Best Practices
+- Use `session_scope`/`get_db` (alias) for unit-of-work; avoid manual commits in callers.
+- Keep repositories thin; heavy normalization belongs in services. AIAnalysis repo currently mixes normalization with persistence—plan to extract to service layer.
+- JSONB/pg_trgm features are Postgres-specific; document for consumers.
+- Prefer ORM `select().scalars()`, `insert().on_conflict_do_update()`; avoid relying on rowcount to detect changes.
+- Production deployments should run Prisma migrations; `init_db()` is a fallback for tests/local only.
