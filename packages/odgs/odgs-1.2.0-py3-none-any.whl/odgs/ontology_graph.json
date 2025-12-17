@@ -1,0 +1,182 @@
+{
+    "meta": {
+        "schema_version": "1.0",
+        "project_name": "ODGS_Master_Ontology",
+        "description": "The connective tissue linking Metrics, Rules, Processes, Factors, and Dimensions into a single traversable graph for AI grounding and automated governance.",
+        "urn_format": "urn:odgs:<domain>:<id>"
+    },
+    "domains": {
+        "metric": {
+            "source_file": "standard_metrics.json",
+            "urn_prefix": "urn:odgs:metric"
+        },
+        "rule": {
+            "source_file": "standard_data_rules.json",
+            "urn_prefix": "urn:odgs:rule"
+        },
+        "process": {
+            "source_file": "business_process_maps.json",
+            "urn_prefix": "urn:odgs:process"
+        },
+        "factor": {
+            "source_file": "root_cause_factors.json",
+            "urn_prefix": "urn:odgs:factor"
+        },
+        "dimension": {
+            "source_file": "standard_dq_dimensions.json",
+            "urn_prefix": "urn:odgs:dimension"
+        }
+    },
+    "relationship_types": [
+        {
+            "type": "DEPENDS_ON",
+            "description": "Calculation dependency (e.g., Profit depends on Revenue)."
+        },
+        {
+            "type": "VALIDATED_BY",
+            "description": "A metric or data element is protected by a specific rule."
+        },
+        {
+            "type": "IMPACTS_METRIC",
+            "description": "A root cause factor negatively affects a specific metric."
+        },
+        {
+            "type": "OCCURS_IN",
+            "description": "A root cause factor is highly likely to happen in this process stage."
+        },
+        {
+            "type": "MEASURES_DIMENSION",
+            "description": "A rule or metric is a direct proxy for a data quality dimension."
+        },
+        {
+            "type": "BLOCKS_PROCESS",
+            "description": "A data rule failure will stop this process stage (Hard Stop)."
+        }
+    ],
+    "graph_edges": [
+        {
+            "comment": "=== FINANCIAL INTEGRITY CLUSTER ==="
+        },
+        {
+            "link_id": "LNK_001",
+            "source_urn": "urn:odgs:metric:101",
+            "target_urn": "urn:odgs:rule:2040",
+            "relationship": "VALIDATED_BY",
+            "weight": 1.0,
+            "description": "Net Profit Margin reliability depends on the Chart of Accounts Validity rule to ensure costs are booked correctly."
+        },
+        {
+            "link_id": "LNK_002",
+            "source_urn": "urn:odgs:metric:101",
+            "target_urn": "urn:odgs:rule:2023",
+            "relationship": "VALIDATED_BY",
+            "weight": 0.8,
+            "description": "Profit calculations require strict 2-decimal precision (Price Precision Standard) to avoid rounding drift."
+        },
+        {
+            "link_id": "LNK_003",
+            "source_urn": "urn:odgs:factor:ENV_002",
+            "target_urn": "urn:odgs:process:R2R_S02",
+            "relationship": "OCCURS_IN",
+            "weight": 0.95,
+            "description": "'Excel Hell' is the primary failure mode during the 'Period-End Close & Consolidation' stage."
+        },
+        {
+            "link_id": "LNK_004",
+            "source_urn": "urn:odgs:factor:ENV_002",
+            "target_urn": "urn:odgs:metric:101",
+            "relationship": "IMPACTS_METRIC",
+            "weight": 0.7,
+            "description": "Reliance on Excel (Shadow IT) reduces trust in the Net Profit Margin calculation due to version control issues."
+        },
+        {
+            "comment": "=== LOGISTICS & OPERATIONS CLUSTER ==="
+        },
+        {
+            "link_id": "LNK_005",
+            "source_urn": "urn:odgs:metric:1001",
+            "target_urn": "urn:odgs:rule:2021",
+            "relationship": "VALIDATED_BY",
+            "weight": 1.0,
+            "description": "Warehouse Dwell Time cannot be calculated if the Container ID (ISO 6346) is invalid."
+        },
+        {
+            "link_id": "LNK_006",
+            "source_urn": "urn:odgs:metric:4002",
+            "target_urn": "urn:odgs:rule:2003",
+            "relationship": "VALIDATED_BY",
+            "weight": 0.9,
+            "description": "Perfect Order Rate is directly protected by Address Validation; invalid addresses cause failed deliveries."
+        },
+        {
+            "link_id": "LNK_007",
+            "source_urn": "urn:odgs:rule:2021",
+            "target_urn": "urn:odgs:process:O2C_S03",
+            "relationship": "BLOCKS_PROCESS",
+            "weight": 1.0,
+            "description": "If a Container ID is invalid (ISO 6346), the 'Order Fulfillment & Shipping' stage must effectively stop (Hard Gate)."
+        },
+        {
+            "link_id": "LNK_008",
+            "source_urn": "urn:odgs:factor:ENV_004",
+            "target_urn": "urn:odgs:process:LC_P2P",
+            "relationship": "OCCURS_IN",
+            "weight": 0.85,
+            "description": "Data Silos frequently occur in Procure-to-Pay when Procurement systems don't talk to Warehouse Receiving."
+        },
+        {
+            "comment": "=== SAFETY & COMPLIANCE CLUSTER ==="
+        },
+        {
+            "link_id": "LNK_009",
+            "source_urn": "urn:odgs:metric:502",
+            "target_urn": "urn:odgs:rule:2012",
+            "relationship": "VALIDATED_BY",
+            "weight": 1.0,
+            "description": "Lost Time Injury Rate reporting relies on accurate Hazmat Classification to categorize incident severity."
+        },
+        {
+            "link_id": "LNK_010",
+            "source_urn": "urn:odgs:rule:2012",
+            "target_urn": "urn:odgs:dimension:17",
+            "relationship": "MEASURES_DIMENSION",
+            "weight": 1.0,
+            "description": "Hazmat Classification Rule directly enforces the 'Compliance' dimension [DAMA ID 17]."
+        },
+        {
+            "link_id": "LNK_011",
+            "source_urn": "urn:odgs:factor:ENV_008",
+            "target_urn": "urn:odgs:metric:9002",
+            "relationship": "IMPACTS_METRIC",
+            "weight": 0.6,
+            "description": "Low Data Literacy increases the number of Audit Findings because users don't understand compliance entry requirements."
+        },
+        {
+            "comment": "=== MASTER DATA MANAGEMENT CLUSTER ==="
+        },
+        {
+            "link_id": "LNK_012",
+            "source_urn": "urn:odgs:rule:2014",
+            "target_urn": "urn:odgs:dimension:55",
+            "relationship": "MEASURES_DIMENSION",
+            "weight": 1.0,
+            "description": "Duplicate Record Prevention Rule is the primary enforcement mechanism for 'Uniqueness (Objects)' [DAMA ID 55]."
+        },
+        {
+            "link_id": "LNK_013",
+            "source_urn": "urn:odgs:rule:2039",
+            "target_urn": "urn:odgs:process:CRM_S01",
+            "relationship": "BLOCKS_PROCESS",
+            "weight": 0.5,
+            "description": "Customer Golden Record validation should ideally check duplicates during 'Lead Generation' (Soft Block/Warning)."
+        },
+        {
+            "link_id": "LNK_014",
+            "source_urn": "urn:odgs:factor:ENV_001",
+            "target_urn": "urn:odgs:metric:11002",
+            "relationship": "IMPACTS_METRIC",
+            "weight": 0.9,
+            "description": "Lack of Clear System of Record makes calculating 'Customer Retention Rate' impossible due to fragmented IDs."
+        }
+    ]
+}

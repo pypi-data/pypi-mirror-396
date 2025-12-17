@@ -1,0 +1,1015 @@
+[
+  {
+    "rule_id": "2001",
+    "name": "ISO 3166-1 Country Code Standard",
+    "domain": "Reference Data",
+    "calculation_logic": "Field must be a valid two-letter code from the official ISO 3166-1 alpha-2 list. Use a dropdown list in UIs and validate against a reference table.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "All"
+    ],
+    "icon": "bi-globe",
+    "definition": "Ensures all country data uses the standardized two-letter (alpha-2) codes as defined by the International Organization for Standardization.",
+    "businessRule": "Standardized country codes are essential for accurate logistics, regulatory compliance, and sales territory analysis. Prevents ambiguity from using names like 'Holland' vs. 'The Netherlands'.",
+    "exampleGood": "US, DE, CN",
+    "examplePoor": "USA, Germany, China",
+    "improvesDqDimensionIds": [
+      15,
+      57
+    ]
+  },
+  {
+    "rule_id": "2002",
+    "name": "ISO 4217 Currency Code Standard",
+    "domain": "Reference Data",
+    "calculation_logic": "Field must be a valid three-letter code from the official ISO 4217 list. Validate against a reference table.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "All"
+    ],
+    "icon": "bi-currency-dollar",
+    "definition": "Ensures all financial transactions use the standardized three-letter codes for currencies.",
+    "businessRule": "Prevents ambiguity in financial reporting and transactions. Distinguishes between different types of dollars (e.g., USD, CAD, AUD).",
+    "exampleGood": "USD, EUR, JPY",
+    "examplePoor": "$, Euro, Yen",
+    "improvesDqDimensionIds": [
+      4,
+      15,
+      57
+    ]
+  },
+  {
+    "rule_id": "2003",
+    "name": "Address Validation Service (e.g., USPS/Loqate)",
+    "domain": "Data Validation",
+    "calculation_logic": "Validate address data via an API call to a service like USPS Web Tools or a third-party provider. Store the standardized address components.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "All"
+    ],
+    "icon": "bi-mailbox2",
+    "definition": "Ensures all physical addresses are validated, cleansed, and standardized against an official postal service database at the point of entry.",
+    "businessRule": "Accurate addresses are critical for shipping, billing, and customer relationship management. Prevents failed deliveries, returned mail, and customer dissatisfaction.",
+    "exampleGood": "{ street: '1600 PENNSYLVANIA AVE NW', city: 'WASHINGTON', state: 'DC', zip: '20500-0003' }",
+    "examplePoor": "{ street: '1600 penn ave', city: 'Wash DC', zip: '20500' }",
+    "improvesDqDimensionIds": [
+      4,
+      14,
+      15,
+      56,
+      57
+    ]
+  },
+  {
+    "rule_id": "2004",
+    "name": "RFC 5322 Email Format Standard",
+    "domain": "Data Formatting",
+    "calculation_logic": "Validate against a standard regex pattern for email addresses.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "All"
+    ],
+    "icon": "bi-at",
+    "definition": "Ensures that email addresses are syntactically valid according to the format defined by the Internet Engineering Task Force (IETF).",
+    "businessRule": "A valid email format is required for any form of electronic communication with customers, suppliers, or employees.",
+    "exampleGood": "user.name@example.com",
+    "examplePoor": "user@.com, user@domain, user @domain.com",
+    "improvesDqDimensionIds": [
+      57
+    ]
+  },
+  {
+    "rule_id": "2010",
+    "name": "Unique Equipment Identifier (Master Data)",
+    "domain": "Master Data Governance",
+    "calculation_logic": "Identifiers should be issued by a central Master Data Management (MDM) system. Field should be a primary key in asset tables and validated for uniqueness upon creation.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "Heavy Manufacturing",
+      "Transportation & Logistics",
+      "Energy & Utilities"
+    ],
+    "icon": "bi-tag-fill",
+    "definition": "Ensures every significant piece of physical equipment has a single, unique, and non-reusable identifier across all company systems.",
+    "businessRule": "A unique ID is fundamental for tracking asset performance, maintenance history, and financial depreciation. Prevents duplicate records and ensures data can be aggregated accurately.",
+    "exampleGood": "CRN-0043-A (Equipment 43, Site A)",
+    "examplePoor": "Equipment 43 (ambiguous), 43 (not unique)",
+    "improvesDqDimensionIds": [
+      4,
+      15,
+      56
+    ]
+  },
+  {
+    "rule_id": "2021",
+    "name": "ISO 6346 Shipping Package ID Standard",
+    "domain": "Data Formatting",
+    "calculation_logic": "Validate against the regex pattern: [A-Z]{4}[0-9]{7}. The final digit must be a correctly calculated check digit.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "Transportation & Logistics"
+    ],
+    "icon": "bi-box-seam",
+    "definition": "Ensures all shipping container identifiers conform to the international standard (4-letter owner code, 6-digit serial number, 1-digit check digit).",
+    "businessRule": "A valid container ID is essential for tracking, customs, and terminal operations. Invalid IDs lead to lost containers and billing disputes.",
+    "exampleGood": "MSKU1234567",
+    "examplePoor": "MSKU 123456 7 (contains spaces), MSCU1234568 (incorrect check digit)",
+    "improvesDqDimensionIds": [
+      4,
+      15,
+      56,
+      57
+    ]
+  },
+  {
+    "rule_id": "2022",
+    "name": "Standard Carrier Alpha Code (SCAC)",
+    "domain": "Reference Data",
+    "calculation_logic": "Validate against the official NMFTA reference table. Often used as a prefix for PRO (tracking) numbers.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "Transportation & Logistics"
+    ],
+    "icon": "bi-truck-front-fill",
+    "definition": "Ensures the use of the 2-to-4 letter codes used to identify transportation companies.",
+    "businessRule": "SCACs are used by ANSI and in EDI transactions for shipping and customs.",
+    "exampleGood": "MAEU (Acme Corp Line), FDE (FedEx Express)",
+    "examplePoor": "Acme Corp, Federal Express",
+    "improvesDqDimensionIds": [
+      15,
+      57
+    ]
+  },
+  {
+    "rule_id": "2031",
+    "name": "Bill of Materials (BOM) Version Control",
+    "domain": "Master Data Governance",
+    "calculation_logic": "BOM master data must include 'Version', 'EffectiveStartDate', and 'EffectiveEndDate' fields. Production orders must pull the BOM version that is effective on the planned production date.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "Heavy Manufacturing",
+      "CPG"
+    ],
+    "icon": "bi-file-earmark-spreadsheet-fill",
+    "definition": "Ensures that all Bill of Materials have a clear version number and effectivity dates (start/end) to manage changes over time.",
+    "businessRule": "Proper BOM versioning is critical to ensure the correct parts are used in production runs. Using an outdated BOM can lead to incorrect products, scrap, and rework.",
+    "exampleGood": "BOM_EngineBlock_v2.1, Effective: 2024-01-01",
+    "examplePoor": "Using a BOM from last year for a newly designed product.",
+    "improvesDqDimensionIds": [
+      4,
+      53,
+      57
+    ]
+  },
+  {
+    "rule_id": "2041",
+    "name": "Wellbore Unique Identifier (WUID/UWI)",
+    "domain": "Master Data Governance",
+    "calculation_logic": "Follow the industry-standard format, which often encodes country, location, and well sequence information. Governed by an MDM system.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "Energy & Utilities"
+    ],
+    "icon": "bi-geo-alt-fill",
+    "definition": "Ensures every wellbore has a standardized, unique identifier based on its geographic location and other attributes, following industry standards (e.g., PPDM).",
+    "businessRule": "A unique well ID is non-negotiable for regulatory reporting, production allocation, and geological modeling. Prevents catastrophic errors in reservoir management.",
+    "exampleGood": "100/01-01-095-15W4/0",
+    "examplePoor": "Johnson Well #3",
+    "improvesDqDimensionIds": [
+      4,
+      15,
+      56,
+      57
+    ]
+  },
+  {
+    "rule_id": "2005",
+    "name": "E.164 International Phone Number Format",
+    "domain": "Data Formatting",
+    "calculation_logic": "Store numbers in E.164 format: +[country code][subscriber number]. Maximum 15 digits including country code.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "All"
+    ],
+    "icon": "bi-telephone-fill",
+    "definition": "Ensures phone numbers follow the international standard format including country code.",
+    "businessRule": "Standardized phone numbers enable automated dialing, SMS campaigns, and global communication.",
+    "exampleGood": "+14155552671, +31208080808",
+    "examplePoor": "(415) 555-2671, 020-808-0808",
+    "improvesDqDimensionIds": [
+      15,
+      31,
+      57
+    ]
+  },
+  {
+    "rule_id": "2006",
+    "name": "ISO 8601 Date-Time Format",
+    "domain": "Data Formatting",
+    "calculation_logic": "Use YYYY-MM-DD for dates, YYYY-MM-DDTHH:MM:SS for timestamps. Include timezone offset for clarity.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "All"
+    ],
+    "icon": "bi-calendar-event",
+    "definition": "Ensures all date and time data uses the international standard format.",
+    "businessRule": "Prevents ambiguity in global operations where date formats vary (MM/DD/YYYY vs DD/MM/YYYY).",
+    "exampleGood": "2024-03-15, 2024-03-15T14:30:00+00:00",
+    "examplePoor": "03/15/24, 15-Mar-2024, 3/15/2024 2:30 PM",
+    "improvesDqDimensionIds": [
+      5,
+      15,
+      31,
+      57
+    ]
+  },
+  {
+    "rule_id": "2007",
+    "name": "Positive Numeric Values Only",
+    "domain": "Data Validation",
+    "calculation_logic": "Implement database constraint: CHECK (value > 0). Add frontend validation before submission.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "All"
+    ],
+    "icon": "bi-plus-circle",
+    "definition": "Ensures numeric fields that represent quantities, prices, or measurements contain only positive values.",
+    "businessRule": "Negative values in quantity, price, or measurement fields indicate data entry errors or system issues.",
+    "exampleGood": "Quantity: 100, Price: 49.99, Weight: 250.5",
+    "examplePoor": "Quantity: -10, Price: -5.00, Weight: 0",
+    "improvesDqDimensionIds": [
+      4,
+      38,
+      57
+    ]
+  },
+  {
+    "rule_id": "2008",
+    "name": "Mandatory Field Completeness",
+    "domain": "Data Validation",
+    "calculation_logic": "Database NOT NULL constraints on required fields. UI validation preventing form submission with empty required fields.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "All"
+    ],
+    "icon": "bi-asterisk",
+    "definition": "Ensures all fields marked as required/mandatory contain valid non-null values.",
+    "businessRule": "Critical business processes depend on complete core data fields. Missing values cause process failures.",
+    "exampleGood": "Customer Name: 'Acme Corp', Order Date: '2024-03-15', Product ID: '12345'",
+    "examplePoor": "Customer Name: NULL, Order Date: '', Product ID: NULL",
+    "improvesDqDimensionIds": [
+      14,
+      15,
+      57
+    ]
+  },
+  {
+    "rule_id": "2009",
+    "name": "Unique Identifier Non-Reuse Policy",
+    "domain": "Master Data Governance",
+    "calculation_logic": "Use auto-incrementing integers or UUID/GUID. Implement soft deletes instead of hard deletes. Archive records rather than purging.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "All"
+    ],
+    "icon": "bi-key-fill",
+    "definition": "Ensures unique identifiers (customer ID, order number, asset tag) are never reused even after deletion or archival.",
+    "businessRule": "ID reuse causes confusion in historical data, audit trails, and data lineage.",
+    "exampleGood": "Sequential customer IDs that never repeat, UUIDs for transactions",
+    "examplePoor": "Reusing customer ID 1001 after deleting previous customer",
+    "improvesDqDimensionIds": [
+      54,
+      55,
+      56
+    ]
+  },
+  {
+    "rule_id": "2011",
+    "name": "Unit of Measure Standardization",
+    "domain": "Reference Data",
+    "calculation_logic": "Maintain UoM reference table. Store both value and unit. Convert to standard unit for calculations.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "All"
+    ],
+    "icon": "bi-rulers",
+    "definition": "Ensures consistent units of measure across all systems and data fields.",
+    "businessRule": "Mixing units (kg vs lbs, km vs miles) leads to calculation errors, safety issues, and operational mistakes.",
+    "exampleGood": "Weight: 500 KG, Distance: 150 KM, Temperature: 25 C",
+    "examplePoor": "Weight: 500 (no unit), mixing '1100 lbs' and '500 kg' in same field",
+    "improvesDqDimensionIds": [
+      5,
+      15,
+      31,
+      57
+    ]
+  },
+  {
+    "rule_id": "2012",
+    "name": "Hazmat Classification Validation",
+    "domain": "Safety & Compliance",
+    "calculation_logic": "Validate against UN Dangerous Goods list. Require Class, Division, Packing Group, and UN Number.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "Transportation & Logistics",
+      "Heavy Manufacturing",
+      "Energy & Utilities"
+    ],
+    "icon": "bi-radioactive",
+    "definition": "Ensures all hazardous materials are classified according to UN/DOT standards.",
+    "businessRule": "Incorrect classification can lead to catastrophic accidents, regulatory violations, and criminal liability.",
+    "exampleGood": "UN1203, Class 3, Packing Group II (Gasoline)",
+    "examplePoor": "Flammable, Dangerous, Red label",
+    "improvesDqDimensionIds": [
+      4,
+      17,
+      57
+    ]
+  },
+  {
+    "rule_id": "2013",
+    "name": "Customer Credit Limit Validation",
+    "domain": "Business Rule Validation",
+    "calculation_logic": "Real-time check: Order Total + Current Outstanding Balance \u2264 Approved Credit Limit.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "All"
+    ],
+    "icon": "bi-cash-coin",
+    "definition": "Ensures all orders are validated against customer credit limits before approval.",
+    "businessRule": "Prevents bad debt and cash flow issues by enforcing credit controls.",
+    "exampleGood": "Order $50K, Balance $30K, Limit $100K = Approved",
+    "examplePoor": "Order $50K, Balance $60K, Limit $100K = Should be flagged/rejected",
+    "improvesDqDimensionIds": [
+      20,
+      24,
+      57
+    ]
+  },
+  {
+    "rule_id": "2014",
+    "name": "Duplicate Record Prevention",
+    "domain": "Data Quality Rule",
+    "calculation_logic": "Implement unique constraints on natural business keys. Use fuzzy matching for customer names and addresses during data entry.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "All"
+    ],
+    "icon": "bi-files",
+    "definition": "Ensures no duplicate records exist based on defined business keys.",
+    "businessRule": "Duplicate customer, product, or transaction records cause reporting errors and operational inefficiencies.",
+    "exampleGood": "Single customer record per unique email or Tax ID",
+    "examplePoor": "Three records for same customer with slight name variations",
+    "improvesDqDimensionIds": [
+      55,
+      56
+    ]
+  },
+  {
+    "rule_id": "2015",
+    "name": "Date Range Validation",
+    "domain": "Data Validation",
+    "calculation_logic": "Validate: Start Date \u2264 End Date, Birth Date < Today, Transaction Date \u2264 Today (unless future-dated allowed).",
+    "owner": "TBD",
+    "targetIndustries": [
+      "All"
+    ],
+    "icon": "bi-calendar-range",
+    "definition": "Ensures date fields contain logically valid dates within acceptable business ranges.",
+    "businessRule": "Invalid dates (future birth dates, past delivery dates) indicate errors and must be prevented.",
+    "exampleGood": "Birth Date: 1980-05-15, Hire Date: 2020-01-10, Term Date: 2024-12-31",
+    "examplePoor": "Birth Date: 2030-01-01, Hire Date after Term Date",
+    "improvesDqDimensionIds": [
+      20,
+      24,
+      38,
+      57
+    ]
+  },
+  {
+    "rule_id": "2016",
+    "name": "Referential Integrity Enforcement",
+    "domain": "Database Constraint",
+    "calculation_logic": "Database foreign key constraints with appropriate CASCADE or RESTRICT rules.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "All"
+    ],
+    "icon": "bi-link-45deg",
+    "definition": "Ensures foreign key relationships are maintained and no orphan records exist.",
+    "businessRule": "All child records must reference valid parent records. Prevents data inconsistencies.",
+    "exampleGood": "Order.CustomerID references valid Customer.ID",
+    "examplePoor": "Order referencing non-existent CustomerID creating orphan record",
+    "improvesDqDimensionIds": [
+      8,
+      33,
+      47
+    ]
+  },
+  {
+    "rule_id": "2017",
+    "name": "Latitude/Longitude Precision Standard",
+    "domain": "Data Formatting",
+    "calculation_logic": "Store as DECIMAL(9,6) for latitude and DECIMAL(10,6) for longitude. Validate ranges: lat [-90, 90], lon [-180, 180].",
+    "owner": "TBD",
+    "targetIndustries": [
+      "Transportation & Logistics",
+      "Mining",
+      "Energy & Utilities"
+    ],
+    "icon": "bi-geo-alt",
+    "definition": "Ensures geographic coordinates have sufficient precision for business use (typically 6 decimal places).",
+    "businessRule": "Insufficient precision leads to inaccurate location tracking and route optimization errors.",
+    "exampleGood": "Lat: 51.507351, Lon: -0.127758",
+    "examplePoor": "Lat: 51.5 (too imprecise), Lon: 200 (out of range)",
+    "improvesDqDimensionIds": [
+      4,
+      41,
+      57
+    ]
+  },
+  {
+    "rule_id": "2018",
+    "name": "Material Safety Data Sheet (MSDS) Linkage",
+    "domain": "Safety & Compliance",
+    "calculation_logic": "Mandatory field in chemical product master. Validate MSDS ID exists in document management system.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "Heavy Manufacturing",
+      "Energy & Utilities",
+      "Mining"
+    ],
+    "icon": "bi-file-medical",
+    "definition": "Ensures all chemical products have valid MSDS documentation linked in master data.",
+    "businessRule": "MSDS is legally required for worker safety and emergency response. Missing MSDS is a compliance violation.",
+    "exampleGood": "Product: Lubricant XYZ, MSDS ID: MSDS-2024-001",
+    "examplePoor": "Product: Solvent ABC, MSDS ID: NULL or invalid",
+    "improvesDqDimensionIds": [
+      14,
+      17,
+      54
+    ]
+  },
+  {
+    "rule_id": "2019",
+    "name": "Timestamp Immutability Rule",
+    "domain": "Data Integrity",
+    "calculation_logic": "Database triggers to auto-populate timestamps. Revoke UPDATE permission on timestamp columns from application users.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "All"
+    ],
+    "icon": "bi-lock-fill",
+    "definition": "Ensures audit timestamps (created_at, updated_at) cannot be modified by users and are system-generated only.",
+    "businessRule": "Audit trails must be tamper-proof for regulatory compliance and forensic analysis.",
+    "exampleGood": "created_at auto-set by database on INSERT, updated_at auto-set on UPDATE",
+    "examplePoor": "Users manually entering or modifying created_at timestamps",
+    "improvesDqDimensionIds": [
+      30,
+      54,
+      57
+    ]
+  },
+  {
+    "rule_id": "2020",
+    "name": "Percentage Field Range Validation",
+    "domain": "Data Validation",
+    "calculation_logic": "Database constraint: CHECK (percentage >= 0 AND percentage <= 100). Frontend validation with clear error messages.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "All"
+    ],
+    "icon": "bi-percent",
+    "definition": "Ensures fields representing percentages contain values between 0 and 100.",
+    "businessRule": "Percentages outside this range indicate calculation errors or data corruption.",
+    "exampleGood": "Efficiency: 85.5%, Margin: 15.2%, Uptime: 99.9%",
+    "examplePoor": "Efficiency: 150%, Margin: -5%, Uptime: 1000%",
+    "improvesDqDimensionIds": [
+      38,
+      57
+    ]
+  },
+  {
+    "rule_id": "2023",
+    "name": "Price Precision Standard (2 Decimal Places)",
+    "domain": "Data Formatting",
+    "calculation_logic": "Use DECIMAL(19,2) datatype for currency fields. Round all calculations to 2 decimal places.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "All"
+    ],
+    "icon": "bi-currency-dollar",
+    "definition": "Ensures all monetary values are stored with exactly 2 decimal places for currency precision.",
+    "businessRule": "Consistent decimal precision prevents rounding errors in financial calculations and reporting.",
+    "exampleGood": "Price: 19.99, Total: 1234.56",
+    "examplePoor": "Price: 19.999, Total: 1234.5 (inconsistent precision)",
+    "improvesDqDimensionIds": [
+      5,
+      41,
+      57
+    ]
+  },
+  {
+    "rule_id": "2024",
+    "name": "SKU Format Standardization",
+    "domain": "Master Data Governance",
+    "calculation_logic": "Define SKU schema (e.g., Category-Subcategory-Variant-Size). Validate pattern on entry.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "Retail & CPG",
+      "Heavy Manufacturing"
+    ],
+    "icon": "bi-upc-scan",
+    "definition": "Ensures all Stock Keeping Unit (SKU) identifiers follow a consistent format and structure.",
+    "businessRule": "Standardized SKUs enable inventory tracking, forecasting, and system integration.",
+    "exampleGood": "ELC-LUB-SYN-5L (Electronics-Lubricant-Synthetic-5Liter)",
+    "examplePoor": "Product123, LubricantX, random-string",
+    "improvesDqDimensionIds": [
+      15,
+      27,
+      57
+    ]
+  },
+  {
+    "rule_id": "2025",
+    "name": "Serial Number Uniqueness Global",
+    "domain": "Master Data Governance",
+    "calculation_logic": "Central serial number registry. Include manufacturer, model, production date in format.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "Heavy Manufacturing",
+      "Energy & Utilities"
+    ],
+    "icon": "bi-upc",
+    "definition": "Ensures serial numbers for physical assets are globally unique across all sites and systems.",
+    "businessRule": "Unique serials enable warranty tracking, recall management, and asset lifecycle monitoring.",
+    "exampleGood": "CAT-D8-2024-001234 (Caterpillar D8 Bulldozer, 2024, serial 001234)",
+    "examplePoor": "Reusing serial number from decommissioned equipment",
+    "improvesDqDimensionIds": [
+      55,
+      56
+    ]
+  },
+  {
+    "rule_id": "2026",
+    "name": "Temperature Range Validation",
+    "domain": "Data Validation",
+    "calculation_logic": "Context-specific ranges: Ambient -50\u00b0C to 60\u00b0C, Refrigeration -40\u00b0C to 10\u00b0C, Industrial 0\u00b0C to 1500\u00b0C.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "Energy & Utilities",
+      "Heavy Manufacturing",
+      "Transportation & Logistics"
+    ],
+    "icon": "bi-thermometer",
+    "definition": "Ensures temperature readings fall within physically plausible ranges for the specific context.",
+    "businessRule": "Impossible temperature values indicate sensor malfunction or data corruption.",
+    "exampleGood": "Reefer temp: -18\u00b0C, Furnace temp: 850\u00b0C",
+    "examplePoor": "Reefer temp: 150\u00b0C, Ambient temp: -100\u00b0C",
+    "improvesDqDimensionIds": [
+      38,
+      41,
+      57
+    ]
+  },
+  {
+    "rule_id": "2027",
+    "name": "Future Date Prohibition (Transaction Dates)",
+    "domain": "Data Validation",
+    "calculation_logic": "Validation rule: Transaction_Date <= CURRENT_DATE (except for explicitly future-dated transactions).",
+    "owner": "TBD",
+    "targetIndustries": [
+      "All"
+    ],
+    "icon": "bi-calendar-x",
+    "definition": "Prevents transaction dates from being set in the future unless explicitly allowed for scheduling.",
+    "businessRule": "Historical transactions cannot have future dates. Indicates system clock issues or fraudulent backdating.",
+    "exampleGood": "Invoice Date: 2024-03-10 (when today is 2024-03-15)",
+    "examplePoor": "Shipment Date: 2024-04-01 (when today is 2024-03-15 and not pre-scheduled)",
+    "improvesDqDimensionIds": [
+      24,
+      38,
+      57
+    ]
+  },
+  {
+    "rule_id": "2028",
+    "name": "Product Category Classification",
+    "domain": "Reference Data",
+    "calculation_logic": "Use controlled vocabulary from reference table. Hierarchical structure (Category > Subcategory > Class).",
+    "owner": "TBD",
+    "targetIndustries": [
+      "Retail & CPG",
+      "Heavy Manufacturing"
+    ],
+    "icon": "bi-diagram-3",
+    "definition": "Ensures all products are classified using standard industry category taxonomy.",
+    "businessRule": "Consistent categorization enables accurate reporting, forecasting, and regulatory compliance.",
+    "exampleGood": "Industrial Equipment > Power Tools > Drills",
+    "examplePoor": "Misc, Tools, Random category",
+    "improvesDqDimensionIds": [
+      15,
+      27,
+      57
+    ]
+  },
+  {
+    "rule_id": "2029",
+    "name": "Tax ID Format Validation",
+    "domain": "Data Formatting",
+    "calculation_logic": "Country-specific validation: US EIN (XX-XXXXXXX), EU VAT (country code + 9-12 digits).",
+    "owner": "TBD",
+    "targetIndustries": [
+      "All"
+    ],
+    "icon": "bi-123",
+    "definition": "Ensures tax identification numbers follow country-specific format standards.",
+    "businessRule": "Valid tax IDs are required for invoicing, compliance, and vendor payments.",
+    "exampleGood": "US: 12-3456789, DE: DE123456789",
+    "examplePoor": "123456789 (no format), invalid check digit",
+    "improvesDqDimensionIds": [
+      5,
+      17,
+      57
+    ]
+  },
+  {
+    "rule_id": "2030",
+    "name": "Weight/Volume Consistency Check",
+    "domain": "Cross-Field Validation",
+    "calculation_logic": "Calculate implied density. Flag if outside expected range for product type (e.g., steel: 7.5-8.0 g/cm\u00b3).",
+    "owner": "TBD",
+    "targetIndustries": [
+      "Transportation & Logistics",
+      "Heavy Manufacturing"
+    ],
+    "icon": "bi-box-seam-fill",
+    "definition": "Validates that weight and volume measurements are logically consistent based on known density ranges.",
+    "businessRule": "Implausible weight-volume ratios indicate measurement errors or data entry mistakes.",
+    "exampleGood": "Steel: 1000kg for 0.13m\u00b3 (density ~7.7 g/cm\u00b3)",
+    "examplePoor": "Steel: 100kg for 1m\u00b3 (density ~0.1 g/cm\u00b3 - impossible)",
+    "improvesDqDimensionIds": [
+      20,
+      24,
+      38
+    ]
+  },
+  {
+    "rule_id": "2032",
+    "name": "Transport Unit IMO Number Validation",
+    "domain": "Reference Data",
+    "calculation_logic": "Validate format IMO + 7 digits with check digit calculation. Verify against IMO ship database.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "Transportation & Logistics"
+    ],
+    "icon": "bi-water",
+    "definition": "Ensures all vessel identifiers use valid International Maritime Organization numbers.",
+    "businessRule": "IMO numbers are permanent vessel identifiers required for port operations, customs, and safety tracking.",
+    "exampleGood": "IMO 9074729",
+    "examplePoor": "IMO 123, vessel name only, invalid check digit",
+    "improvesDqDimensionIds": [
+      4,
+      56,
+      57
+    ]
+  },
+  {
+    "rule_id": "2033",
+    "name": "Port UNLOCODE Validation",
+    "domain": "Reference Data",
+    "calculation_logic": "Validate against UN/LOCODE reference table. Format: 2-letter country code + 3-letter location code.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "Transportation & Logistics"
+    ],
+    "icon": "bi-pin-map-fill",
+    "definition": "Ensures all port/location codes use the UN/LOCODE standard format.",
+    "businessRule": "Standard location codes enable EDI transactions, customs declarations, and logistics optimization.",
+    "exampleGood": "USNYC (New York), DEHAM (Hamburg), CNSHG (Shanghai)",
+    "examplePoor": "New York, Hamburg, SHG",
+    "improvesDqDimensionIds": [
+      15,
+      57
+    ]
+  },
+  {
+    "rule_id": "2034",
+    "name": "Incoterms\u00ae Validation",
+    "domain": "Reference Data",
+    "calculation_logic": "Validate against controlled list: EXW, FOB, CIF, DAP, DDP, etc.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "Transportation & Logistics",
+      "Heavy Manufacturing"
+    ],
+    "icon": "bi-truck-front",
+    "definition": "Ensures trade terms use official Incoterms\u00ae 2020 codes.",
+    "businessRule": "Proper Incoterms clarify buyer/seller responsibilities for shipping, insurance, and customs.",
+    "exampleGood": "FOB, CIF, DAP",
+    "examplePoor": "Free on Board, Cost Insurance Freight, Delivered",
+    "improvesDqDimensionIds": [
+      15,
+      31,
+      57
+    ]
+  },
+  {
+    "rule_id": "2035",
+    "name": "HS Code Validation (Harmonized System)",
+    "domain": "Reference Data",
+    "calculation_logic": "Validate against HS code reference table (typically 6-10 digits). First 6 digits are internationally standardized.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "Transportation & Logistics",
+      "Heavy Manufacturing"
+    ],
+    "icon": "bi-grid-3x3-gap-fill",
+    "definition": "Ensures product classifications use valid HS (Harmonized System) tariff codes.",
+    "businessRule": "Correct HS codes are mandatory for customs clearance and duty calculation. Errors cause delays and fines.",
+    "exampleGood": "8471.30 (Portable computers), 8704.21 (Diesel trucks)",
+    "examplePoor": "Computer, Truck, 99999999",
+    "improvesDqDimensionIds": [
+      15,
+      17,
+      57
+    ]
+  },
+  {
+    "rule_id": "2036",
+    "name": "Batch/Lot Number Traceability",
+    "domain": "Master Data Governance",
+    "calculation_logic": "Format: Site-Date-Sequence (e.g., NYC-20240315-001). Link to production run records.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "Heavy Manufacturing",
+      "CPG",
+      "Agriculture"
+    ],
+    "icon": "bi-qr-code",
+    "definition": "Ensures all manufactured products have traceable batch or lot numbers for quality control and recalls.",
+    "businessRule": "Batch traceability is essential for product recalls, quality investigations, and regulatory compliance.",
+    "exampleGood": "LOT-2024-Q1-0015, BATCH-ATL-20240301-023",
+    "examplePoor": "Batch 15, Lot A, no traceability",
+    "improvesDqDimensionIds": [
+      54,
+      56
+    ]
+  },
+  {
+    "rule_id": "2037",
+    "name": "Asset Criticality Classification",
+    "domain": "Master Data Governance",
+    "calculation_logic": "Mandatory field in asset master. Based on impact of failure on operations, safety, and revenue.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "All"
+    ],
+    "icon": "bi-star-fill",
+    "definition": "Ensures all physical assets are classified by business criticality (Critical, High, Medium, Low).",
+    "businessRule": "Criticality classification drives maintenance strategies, spare parts stocking, and failure response protocols.",
+    "exampleGood": "Primary Power Generator: Critical, Backup Generator: High, Office Printer: Low",
+    "examplePoor": "All assets marked as Critical, no classification",
+    "improvesDqDimensionIds": [
+      14,
+      48
+    ]
+  },
+  {
+    "rule_id": "2038",
+    "name": "Calibration Due Date Enforcement",
+    "domain": "Compliance & Quality",
+    "calculation_logic": "Track calibration date and due date in asset master. Alert 30 days before expiry. Prevent use if expired.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "Heavy Manufacturing",
+      "Energy & Utilities",
+      "Mining"
+    ],
+    "icon": "bi-calendar-check-fill",
+    "definition": "Ensures all measurement equipment has valid calibration with future expiry dates.",
+    "businessRule": "Using uncalibrated equipment invalidates measurements, fails audits, and creates safety risks.",
+    "exampleGood": "Scale ID: SCALE-001, Last Cal: 2024-01-15, Due: 2025-01-15",
+    "examplePoor": "Equipment with expired or missing calibration dates",
+    "improvesDqDimensionIds": [
+      17,
+      52,
+      53
+    ]
+  },
+  {
+    "rule_id": "2039",
+    "name": "Customer Master Golden Record",
+    "domain": "Master Data Management",
+    "calculation_logic": "MDM process with fuzzy matching on name, tax ID, address. Merge duplicates into golden record.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "All"
+    ],
+    "icon": "bi-person-check-fill",
+    "definition": "Ensures single, authoritative customer record exists per unique business entity.",
+    "businessRule": "Multiple customer records fragment data, duplicate marketing spend, and confuse customer service.",
+    "exampleGood": "One master record for Acme Corp with all attributes complete",
+    "examplePoor": "Three records for Acme Corp, ACME Corporation, Acme Co.",
+    "improvesDqDimensionIds": [
+      55,
+      56
+    ]
+  },
+  {
+    "rule_id": "2040",
+    "name": "Chart of Accounts Validation",
+    "domain": "Reference Data",
+    "calculation_logic": "Validate against active Chart of Accounts. Include effective date ranges for accounts.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "All"
+    ],
+    "icon": "bi-list-ol",
+    "definition": "Ensures all financial transactions post to valid, active general ledger account codes.",
+    "businessRule": "Invalid or inactive GL codes cause financial reporting errors and failed period closings.",
+    "exampleGood": "GL Account: 4000-Revenue-ProductSales (Active)",
+    "examplePoor": "GL Account: 9999-Invalid, posting to inactive/deleted account",
+    "improvesDqDimensionIds": [
+      47,
+      57
+    ]
+  },
+  {
+    "rule_id": "2042",
+    "name": "Permit/License Expiry Tracking",
+    "domain": "Compliance & Quality",
+    "calculation_logic": "Mandatory expiry date field. Automated alerts 90/60/30 days before expiry. Block operations if critical permit expired.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "All"
+    ],
+    "icon": "bi-award-fill",
+    "definition": "Ensures all required business permits and licenses have valid expiry dates tracked and monitored.",
+    "businessRule": "Operating with expired permits risks shutdowns, fines, and legal action.",
+    "exampleGood": "Operating License: Issued 2024-01-01, Expires 2026-01-01 (valid)",
+    "examplePoor": "Permit with no expiry date tracked or expired permit still active in system",
+    "improvesDqDimensionIds": [
+      17,
+      52,
+      53
+    ]
+  },
+  {
+    "rule_id": "2043",
+    "name": "Numeric Precision for Measurements",
+    "domain": "Data Formatting",
+    "calculation_logic": "Define precision requirements per measurement type. Dimensions: 0.1mm, Weight: 0.01kg, Temperature: 0.1\u00b0C.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "Heavy Manufacturing",
+      "Energy & Utilities",
+      "Mining"
+    ],
+    "icon": "bi-rulers",
+    "definition": "Ensures measurement data is stored with appropriate precision for engineering requirements.",
+    "businessRule": "Insufficient precision causes quality issues; excessive precision wastes storage and creates false accuracy.",
+    "exampleGood": "Length: 1234.5 mm, Weight: 567.89 kg",
+    "examplePoor": "Length: 1234 mm (insufficient), Weight: 567.891234567 kg (excessive)",
+    "improvesDqDimensionIds": [
+      41,
+      42
+    ]
+  },
+  {
+    "rule_id": "2044",
+    "name": "Work Order Status Lifecycle Validation",
+    "domain": "Business Rule Validation",
+    "calculation_logic": "State machine validation. Prevent invalid transitions (e.g., Created directly to Closed).",
+    "owner": "TBD",
+    "targetIndustries": [
+      "All"
+    ],
+    "icon": "bi-arrow-right-circle",
+    "definition": "Ensures work orders follow valid status transitions and cannot skip required workflow steps.",
+    "businessRule": "Status must follow defined lifecycle: Created \u2192 Approved \u2192 In Progress \u2192 Completed \u2192 Closed.",
+    "exampleGood": "Status history: Created \u2192 Approved \u2192 In Progress \u2192 Completed",
+    "examplePoor": "Status jumping from Created to Closed, skipping approval",
+    "improvesDqDimensionIds": [
+      21,
+      24
+    ]
+  },
+  {
+    "rule_id": "2045",
+    "name": "Vendor Master Completeness",
+    "domain": "Master Data Governance",
+    "calculation_logic": "Required fields: Legal Name, Tax ID, Payment Terms, Bank Details, Address. Cannot activate until 100% complete.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "All"
+    ],
+    "icon": "bi-building-fill",
+    "definition": "Ensures all vendor/supplier records have complete required fields before activation.",
+    "businessRule": "Incomplete vendor records cause payment failures, compliance issues, and procurement delays.",
+    "exampleGood": "Vendor with all fields populated and validated",
+    "examplePoor": "Vendor missing Tax ID or Bank Details but marked active",
+    "improvesDqDimensionIds": [
+      11,
+      14,
+      15
+    ]
+  },
+  {
+    "rule_id": "2046",
+    "name": "Inventory Count Reconciliation Rule",
+    "domain": "Business Rule Validation",
+    "calculation_logic": "Variance tolerance thresholds (e.g., >5% or >$1000 requires investigation). Mandatory reconciliation notes.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "All"
+    ],
+    "icon": "bi-clipboard-data",
+    "definition": "Ensures physical inventory counts are reconciled with system records and variances investigated.",
+    "businessRule": "Unreconciled variances indicate theft, data errors, or process failures requiring investigation.",
+    "exampleGood": "Physical: 995, System: 1000, Variance: 0.5% (within tolerance)",
+    "examplePoor": "Physical: 800, System: 1000, Variance: 20% (unreconciled)",
+    "improvesDqDimensionIds": [
+      4,
+      20
+    ]
+  },
+  {
+    "rule_id": "2047",
+    "name": "Geofence Boundary Validation",
+    "domain": "Data Validation",
+    "calculation_logic": "Define polygon boundaries for sites. Validate GPS readings against boundaries. Alert on violations.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "Transportation & Logistics",
+      "Mining"
+    ],
+    "icon": "bi-bounding-box",
+    "definition": "Ensures GPS coordinates fall within defined operational boundaries for facilities or service areas.",
+    "businessRule": "Coordinates outside geofence indicate tracking errors, theft, or unauthorized movement.",
+    "exampleGood": "Truck location within terminal fence, equipment within mine lease area",
+    "examplePoor": "Warehouse equipment showing coordinates in ocean or different country",
+    "improvesDqDimensionIds": [
+      38,
+      57
+    ]
+  },
+  {
+    "rule_id": "2048",
+    "name": "Inspection Frequency Compliance",
+    "domain": "Compliance & Quality",
+    "calculation_logic": "Track last inspection date and next due date. Alert when due. Prevent equipment use if overdue for critical assets.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "All"
+    ],
+    "icon": "bi-clipboard-check",
+    "definition": "Ensures all assets undergo required inspections at mandated frequencies.",
+    "businessRule": "Regulatory and safety standards mandate inspection intervals. Missed inspections create liability.",
+    "exampleGood": "Equipment inspected monthly per OSHA requirements, next due tracked",
+    "examplePoor": "Equipment with no inspection history or missed inspections",
+    "improvesDqDimensionIds": [
+      17,
+      43,
+      53
+    ]
+  },
+  {
+    "rule_id": "2049",
+    "name": "Password Strength Requirements",
+    "domain": "Security Standard",
+    "calculation_logic": "Minimum 12 characters, uppercase, lowercase, number, special character. No common passwords. 90-day expiry.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "All"
+    ],
+    "icon": "bi-lock",
+    "definition": "Ensures all user passwords meet minimum complexity and length requirements.",
+    "businessRule": "Weak passwords are the primary vector for security breaches and unauthorized access.",
+    "exampleGood": "P@ssw0rd2024!Secure",
+    "examplePoor": "password, 12345678, company name",
+    "improvesDqDimensionIds": [
+      2,
+      19
+    ]
+  },
+  {
+    "rule_id": "2050",
+    "name": "Shift Code Standardization",
+    "domain": "Reference Data",
+    "calculation_logic": "Controlled vocabulary: DAY, EVENING, NIGHT, ROTATING. Include standard start/end times.",
+    "owner": "TBD",
+    "targetIndustries": [
+      "All"
+    ],
+    "icon": "bi-clock",
+    "definition": "Ensures work shifts are coded consistently across all sites and systems.",
+    "businessRule": "Standard shift codes enable labor cost analysis, scheduling optimization, and compliance reporting.",
+    "exampleGood": "Shift: DAY (06:00-14:00), EVENING (14:00-22:00)",
+    "examplePoor": "Morning, Late shift, Graveyard (inconsistent terminology)",
+    "improvesDqDimensionIds": [
+      15,
+      27
+    ]
+  }
+]
