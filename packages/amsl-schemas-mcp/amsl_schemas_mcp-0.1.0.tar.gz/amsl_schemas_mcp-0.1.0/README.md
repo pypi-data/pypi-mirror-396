@@ -1,0 +1,150 @@
+# AMSL Schemas MCP Server
+
+A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server for AMSL schema management, validation, and discovery. This server provides LLM agents with access to AMSL schema definitions and validation tools for YAML configuration files.
+
+## Overview
+
+The AMSL Schemas MCP Server exposes AMSL schema resources and validation capabilities via the Model Context Protocol. It enables LLM agents to:
+
+- **Discover** available AMSL schema types (collection, assessment, module, agent, global, constants)
+- **Retrieve** full schema definitions from remote sources
+- **Validate** YAML data against AMSL schemas
+
+## Features
+
+- 📚 **6 Schema Resources**: Dedicated resources for each AMSL schema type with detailed descriptions
+- ✅ **Validation Tool**: Validate data against any AMSL schema with detailed error reporting
+- 🔗 **Remote Schemas**: Automatically fetches schemas from the AMSL CDN
+- 🚀 **FastMCP**: Built with the FastMCP framework for minimal boilerplate
+- 📋 **Type Safety**: Full type hints and validation using Pydantic
+
+## Supported Schemas
+
+- **Collection**: YAML structure for RAG document collections
+- **Assessment**: Assessment definitions for modules
+- **Module**: Module content structure with sessions and assessments
+- **Agent**: Agent definitions with steps and logic graphs
+- **Global**: Global configuration settings
+- **Constants**: Reusable constant values and prompts
+
+## Installation
+
+### From PyPI (once published)
+
+```bash
+pip install amsl-schemas-mcp
+```
+
+### From source
+
+```bash
+git clone https://github.com/yourusername/amsl-schemas-mcp.git
+cd amsl-schemas-mcp
+pip install -e .
+```
+
+## Quick Start
+
+### Running the Server
+
+```bash
+amsl-schemas-mcp
+```
+
+Or via Python module:
+
+```bash
+python -m src.server
+```
+
+The server will start listening on stdio for MCP clients.
+
+### Using with an LLM
+
+When connected to an LLM via MCP, you'll have access to:
+
+**Resources:**
+
+- `schema://amsl/collection` - Collection schema
+- `schema://amsl/assessment` - Assessment schema
+- `schema://amsl/module` - Module schema
+- `schema://amsl/agent` - Agent schema
+- `schema://amsl/global` - Global schema
+- `schema://amsl/constants` - Constants schema
+
+**Tools:**
+
+- `Validate AMSL Schema` - Validate YAML data against any schema
+
+## Development
+
+### Setup
+
+```bash
+# Install with development dependencies
+pip install -e ".[dev]"
+```
+
+### Code Quality
+
+Format code with Black:
+
+```bash
+black src tests
+```
+
+Sort imports with isort:
+
+```bash
+isort src tests
+```
+
+Run tests:
+
+```bash
+pytest
+```
+
+### Project Structure
+
+```
+.
+├── src/
+│   ├── __init__.py
+│   └── server.py           # Main MCP server implementation
+├── tests/                  # Test suite
+├── pyproject.toml          # Project configuration & dependencies
+├── LICENSE                 # MIT License
+└── README.md              # This file
+```
+
+## Architecture
+
+The server is built using FastMCP, a lightweight framework for creating MCP servers:
+
+- **Resources**: Each AMSL schema type is exposed as a distinct resource with its own URI
+- **Tools**: A single validation tool accepts any schema type and validates data against it
+- **Async**: Full async/await support for non-blocking operations
+- **Schema Loading**: Schemas are fetched on-demand from the AMSL CDN
+
+## Configuration
+
+### Schema Source
+
+By default, schemas are loaded from:
+
+```
+https://orion.s3.iism.kit.edu/amsl-content/p/schemas/
+```
+
+This can be configured by modifying the `SCHEMAS_ROOT` variable in `src/server.py`.
+
+## MCP Specification
+
+This server fully implements the [Model Context Protocol](https://modelcontextprotocol.io/) specification. Learn more about MCP and how to integrate servers with LLM applications.
+
+## License
+
+MIT License - see [LICENSE](LICENSE) file for details
+
+Built with ❤️ for the AMSL project
