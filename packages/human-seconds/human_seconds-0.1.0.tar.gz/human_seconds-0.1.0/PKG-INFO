@@ -1,0 +1,200 @@
+Metadata-Version: 2.4
+Name: human-seconds
+Version: 0.1.0
+Summary: Convert seconds to a human-readable time string
+Home-page: https://github.com/EgbieAndersonUku1/human_seconds
+Author: Egbie Uku
+Author-email: egbieuku@hotmail.com
+License: MIT
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+License-File: LICENCE
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: black; extra == "dev"
+Requires-Dist: flake8; extra == "dev"
+Dynamic: license-file
+
+# Human Seconds
+
+Convert a number of seconds into a **human-readable time string**.
+
+For example, `3675` seconds becomes:
+
+```
+"1 hour, 1 minute and 15 seconds"
+```
+
+This package is ideal for scripts, applications, or tools where you want to display time in a natural, readable format.
+
+---
+
+## Why?
+
+Working with raw seconds isn’t always user-friendly. Whether you’re logging durations, displaying timers, or showing elapsed time to users, converting seconds into a clear, natural sentence improves readability and user experience.
+
+**Human Seconds** handles this conversion for you cleanly, correctly, and with proper pluralisation, so you can focus on your application logic instead of formatting time.
+
+---
+
+## Features
+
+* Convert seconds into hours, minutes, and seconds
+* Output a clean, human-readable string
+* Correct handling of singular and plural units
+* Small, lightweight, and dependency-free
+
+---
+
+## Technologies
+
+* Python >= 3.9
+
+
+## Installation
+
+Install via pip:
+
+```bash
+pip install human-seconds
+```
+
+---
+
+## Usage
+
+### Basic usage
+
+```python
+from human_seconds import SecondsToTime
+
+time = SecondsToTime(3675)
+print(time.format_to_human_readable())
+# "1 hour, 1 minute and 15 seconds"
+
+
+time = SecondsToTime(62)
+print(time.format_to_human_readable())
+# "1 minute and 2 seconds"
+```
+
+---
+
+### Accessing individual components
+
+```python
+
+time = SecondsToTime(3675)
+
+print(time.hours)    # 1
+print(time.minutes)  # 1
+print(time.seconds)  # the total number of seconds
+
+print(time.hours_minutes_and_seconds)  # (1, 1, 15)
+print(time.format_to_human_readable())             # "1 hour, 1 minute and 15 seconds"
+```
+
+---
+
+### Updating the total seconds via seconds
+
+You can update the total number of seconds after initialisation. The value will be **normalised automatically** into hours, minutes, and seconds.
+
+```python
+
+time         = SecondsToTime(3675)  # original: 1 hour, 1 minute, 15 seconds
+time.seconds = 100                  # update total seconds
+
+print(time.hours)    # 0
+print(time.minutes)  # 1
+print(time.seconds)  # the total number of seconds
+
+print(time.hours_minutes_and_seconds)   # (0, 1, 40)
+print(time.format_to_human_readable()) # "1 minute and 40 seconds"
+```
+
+---
+
+## API overview
+
+### `SecondsToTime(total_seconds: int)`
+
+Creates a new time object from a total number of seconds.
+
+* `seconds` must be a non-negative integer
+
+### Properties
+
+* `hours` → number of hours
+* `minutes` → remaining minutes
+* `seconds` → remaining seconds
+* `hours_minutes_and_seconds` → `(hours, minutes, seconds)` tuple
+
+### Methods
+
+* `format_to_human_readable()` → returns a human-readable time string
+
+---
+
+
+## Edge cases
+
+```python
+SecondsToTime(0).format_to_human_readable()
+# ""
+
+SecondsToTime(3600).format_to_human_readable()
+# "1 hour"
+```
+
+Negative values are not supported.
+
+---
+
+## Requirements
+
+* Python 3.9 or higher
+
+---
+
+## Development
+
+Clone the repository:
+
+```bash
+git clone https://github.com/EgbieAndersonUku1/human_seconds.git .
+cd human-seconds
+```
+
+Example usage
+
+```python
+
+from converter import SecondsToTime
+
+time = SecondsToTime(3675)
+
+print(time.hours)   # 1
+print(time.minutes) # 1
+print(time.seconds) # 15
+print(time.format_to_human_readable()) # '1 hour, 1 minute and 15 seconds'
+
+
+# Use the `seconds` setter to update the remaining seconds;
+# the total time will be automatically normalized
+time.seconds = 100
+
+
+print(time.hours)   # 0
+print(time.minutes) # 1
+print(time.seconds) # 40
+print(time.format_to_human_readable()) # '1 minute and 40 seconds'
+
+```
+
+
+---
+
+## Licence
+
+MIT Licence
