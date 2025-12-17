@@ -1,0 +1,1806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0d1117">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>NC1709 - AI Coding Assistant</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.1.1/marked.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --border-color: #30363d;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --accent: #58a6ff;
+            --accent-hover: #79b8ff;
+            --success: #3fb950;
+            --warning: #d29922;
+            --error: #f85149;
+            --sidebar-width: 280px;
+            --header-height: 56px;
+            --safe-area-inset-top: env(safe-area-inset-top, 0px);
+            --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.5;
+            padding-top: var(--safe-area-inset-top);
+            padding-bottom: var(--safe-area-inset-bottom);
+        }
+
+        /* Layout */
+        .app {
+            display: flex;
+            height: 100%;
+            position: relative;
+        }
+
+        /* Overlay for mobile sidebar */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 40;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .sidebar-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            z-index: 50;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            min-height: var(--header-height);
+        }
+
+        .sidebar-header h1 {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sidebar-header h1::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: var(--success);
+            border-radius: 50%;
+        }
+
+        .sidebar-header .version {
+            font-size: 11px;
+            color: var(--text-secondary);
+            display: block;
+            margin-top: 2px;
+        }
+
+        .close-sidebar {
+            display: none;
+            width: 40px;
+            height: 40px;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: 8px;
+            font-size: 24px;
+        }
+
+        .close-sidebar:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .nav {
+            flex: 1;
+            padding: 8px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: all 0.15s ease;
+            margin-bottom: 4px;
+            font-size: 15px;
+        }
+
+        .nav-item:hover, .nav-item:active {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .nav-item svg {
+            width: 18px;
+            height: 18px;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .nav-section {
+            padding: 12px 14px 6px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            margin-top: 12px;
+        }
+
+        /* Main Content */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-width: 0;
+        }
+
+        .header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            min-height: var(--header-height);
+            gap: 12px;
+            background: var(--bg-secondary);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .menu-btn {
+            display: none;
+            width: 40px;
+            height: 40px;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            cursor: pointer;
+            border-radius: 8px;
+            flex-shrink: 0;
+        }
+
+        .menu-btn:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .menu-btn svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .header h2 {
+            font-size: 17px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 16px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Chat Panel */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .message {
+            margin-bottom: 16px;
+            max-width: 90%;
+        }
+
+        .message.user {
+            margin-left: auto;
+        }
+
+        .message-content {
+            padding: 12px 16px;
+            border-radius: 16px;
+            background: var(--bg-tertiary);
+            word-break: break-word;
+        }
+
+        .message.user .message-content {
+            background: var(--accent);
+            color: white;
+            border-radius: 16px 16px 4px 16px;
+        }
+
+        .message:not(.user) .message-content {
+            border-radius: 16px 16px 16px 4px;
+        }
+
+        .message-content pre {
+            margin: 8px 0;
+            padding: 12px;
+            background: var(--bg-primary);
+            border-radius: 8px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .message-content code {
+            font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+            font-size: 13px;
+        }
+
+        .message-content p {
+            margin-bottom: 8px;
+        }
+
+        .message-content p:last-child {
+            margin-bottom: 0;
+        }
+
+        .chat-input-container {
+            padding: 12px;
+            border-top: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+            padding-bottom: calc(12px + var(--safe-area-inset-bottom));
+        }
+
+        .chat-input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px 16px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            color: var(--text-primary);
+            font-size: 16px;
+            resize: none;
+            min-height: 48px;
+            max-height: 120px;
+            line-height: 1.4;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .send-btn {
+            width: 48px;
+            height: 48px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .send-btn:hover {
+            background: var(--accent-hover);
+            transform: scale(1.05);
+        }
+
+        .send-btn:active {
+            transform: scale(0.95);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .send-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .card-body {
+            padding: 16px;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* Tables - Mobile friendly */
+        .table-container {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 400px;
+        }
+
+        .table th,
+        .table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .table th {
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+            touch-action: manipulation;
+        }
+
+        .btn:hover, .btn:active {
+            background: var(--bg-secondary);
+            border-color: var(--accent);
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover, .btn-primary:active {
+            background: var(--accent-hover);
+        }
+
+        .btn-sm {
+            padding: 8px 12px;
+            font-size: 13px;
+        }
+
+        /* Status badges */
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .badge-success {
+            background: rgba(63, 185, 80, 0.2);
+            color: var(--success);
+        }
+
+        .badge-warning {
+            background: rgba(210, 153, 34, 0.2);
+            color: var(--warning);
+        }
+
+        .badge-error {
+            background: rgba(248, 81, 73, 0.2);
+            color: var(--error);
+        }
+
+        /* Search */
+        .search-container {
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 14px 16px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 16px;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .search-results {
+            margin-top: 16px;
+        }
+
+        .search-result {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+
+        .search-result-header {
+            padding: 12px 16px;
+            background: var(--bg-tertiary);
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .search-result-code {
+            padding: 12px 16px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .search-result-code pre {
+            margin: 0;
+        }
+
+        /* Loading */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--border-color);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 12px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Hidden panels */
+        .panel {
+            display: none;
+            height: 100%;
+        }
+
+        .panel.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Sessions list */
+        .session-item {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+
+        .session-item:hover, .session-item:active {
+            background: var(--bg-tertiary);
+        }
+
+        .session-item-name {
+            font-weight: 500;
+            font-size: 15px;
+        }
+
+        .session-item-meta {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* Plugin/Tool lists */
+        .tool-item {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .tool-item:last-child {
+            border-bottom: none;
+        }
+
+        .tool-name {
+            font-weight: 600;
+            margin-bottom: 6px;
+            font-size: 15px;
+        }
+
+        .tool-description {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .tool-params {
+            margin-top: 8px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .tool-actions {
+            margin-top: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        /* Toast notifications */
+        .toast-container {
+            position: fixed;
+            bottom: calc(20px + var(--safe-area-inset-bottom));
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            width: calc(100% - 32px);
+            max-width: 400px;
+        }
+
+        .toast {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 14px 20px;
+            margin-top: 8px;
+            animation: slideUp 0.3s ease;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                transform: translateX(-100%);
+                box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .sidebar-overlay {
+                display: block;
+            }
+
+            .close-sidebar {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .menu-btn {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .message {
+                max-width: 95%;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .header-actions .btn-text {
+                display: none;
+            }
+
+            .header h2 {
+                font-size: 16px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+
+            .stat-card {
+                padding: 12px;
+            }
+
+            .stat-value {
+                font-size: 24px;
+            }
+
+            .content {
+                padding: 12px;
+            }
+
+            .chat-messages {
+                padding: 8px;
+            }
+        }
+
+        /* Landscape phone */
+        @media (max-height: 500px) and (orientation: landscape) {
+            .header {
+                min-height: 48px;
+                padding: 8px 12px;
+            }
+
+            .chat-input-container {
+                padding: 8px;
+            }
+
+            .chat-input {
+                min-height: 40px;
+                padding: 10px 14px;
+            }
+
+            .send-btn {
+                width: 40px;
+                height: 40px;
+            }
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .empty-state-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .empty-state-description {
+            font-size: 14px;
+            max-width: 300px;
+            margin: 0 auto;
+        }
+
+        /* Welcome Screen */
+        .welcome-screen {
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .welcome-hero {
+            text-align: center;
+            padding: 40px 20px 30px;
+        }
+
+        .welcome-logo {
+            font-size: 48px;
+            font-weight: 800;
+            color: var(--accent);
+            letter-spacing: -2px;
+            margin-bottom: 12px;
+        }
+
+        .welcome-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .welcome-subtitle {
+            font-size: 16px;
+            color: var(--text-secondary);
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .welcome-features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin: 30px 0;
+        }
+
+        .feature-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .feature-icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+
+        .feature-card h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .feature-card p {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .welcome-install {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            margin: 24px 0;
+        }
+
+        .welcome-install h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            text-align: center;
+            color: var(--text-primary);
+        }
+
+        .install-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .install-step {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .step-number {
+            width: 32px;
+            height: 32px;
+            background: var(--accent);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .step-content {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .step-content code {
+            font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+            background: var(--bg-primary);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            color: var(--accent);
+        }
+
+        .step-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .welcome-actions {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin: 24px 0;
+            flex-wrap: wrap;
+        }
+
+        .btn-lg {
+            padding: 14px 28px;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .welcome-note {
+            text-align: center;
+            padding: 16px;
+            background: rgba(88, 166, 255, 0.1);
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .welcome-note p {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        @media (max-width: 600px) {
+            .welcome-hero {
+                padding: 20px 10px;
+            }
+
+            .welcome-logo {
+                font-size: 36px;
+            }
+
+            .welcome-title {
+                font-size: 20px;
+            }
+
+            .welcome-features {
+                grid-template-columns: 1fr;
+            }
+
+            .feature-card {
+                padding: 16px;
+            }
+
+            .welcome-install {
+                padding: 16px;
+            }
+
+            .install-step {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .step-content {
+                align-items: center;
+            }
+
+            .welcome-actions {
+                flex-direction: column;
+            }
+
+            .welcome-actions .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <!-- Sidebar Overlay (mobile) -->
+        <div class="sidebar-overlay" onclick="closeSidebar()"></div>
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div>
+                    <h1>NC1709</h1>
+                    <span class="version" id="version-display">v1.18.6</span>
+                </div>
+                <button class="close-sidebar" onclick="closeSidebar()">&times;</button>
+            </div>
+            <nav class="nav">
+                <div class="nav-item active" data-panel="chat">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                    Chat
+                </div>
+
+                <div class="nav-section">Memory</div>
+                <div class="nav-item" data-panel="sessions">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18v18H3z"></path><path d="M3 9h18M9 21V9"></path></svg>
+                    Sessions
+                </div>
+                <div class="nav-item" data-panel="search">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="M21 21l-4.35-4.35"></path></svg>
+                    Search Code
+                </div>
+
+                <div class="nav-section">Tools</div>
+                <div class="nav-item" data-panel="plugins">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><path d="M3 9h18M9 21V9"></path></svg>
+                    Plugins
+                </div>
+                <div class="nav-item" data-panel="mcp">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+                    MCP Tools
+                </div>
+
+                <div class="nav-section">System</div>
+                <div class="nav-item" data-panel="config">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    Settings
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Chat Panel -->
+            <div id="panel-chat" class="panel active">
+                <div class="header">
+                    <div class="header-left">
+                        <button class="menu-btn" onclick="openSidebar()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                        </button>
+                        <h2>Chat</h2>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn btn-sm" onclick="clearChat()">
+                            <span class="btn-text">Clear</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="content chat-container">
+                    <div class="chat-messages" id="chat-messages">
+                        <!-- Welcome screen for direct visitors -->
+                        <div class="welcome-screen" id="welcome-screen">
+                            <div class="welcome-hero">
+                                <div class="welcome-logo">NC1709</div>
+                                <h2 class="welcome-title">Your AI Coding Partner</h2>
+                                <p class="welcome-subtitle">Powerful local-first AI assistant that brings your code to life</p>
+                            </div>
+
+                            <div class="welcome-features">
+                                <div class="feature-card">
+                                    <div class="feature-icon">&#x1F4BB;</div>
+                                    <h3>Local-First</h3>
+                                    <p>Run AI locally with Ollama or connect to any LLM provider</p>
+                                </div>
+                                <div class="feature-card">
+                                    <div class="feature-icon">&#x1F6E0;</div>
+                                    <h3>17+ Tools</h3>
+                                    <p>File ops, search, bash, git, docker, web browsing & more</p>
+                                </div>
+                                <div class="feature-card">
+                                    <div class="feature-icon">&#x1F50D;</div>
+                                    <h3>Code Intelligence</h3>
+                                    <p>Semantic search and memory across your codebase</p>
+                                </div>
+                            </div>
+
+                            <div class="welcome-install">
+                                <h3>Get Started</h3>
+                                <div class="install-steps">
+                                    <div class="install-step">
+                                        <span class="step-number">1</span>
+                                        <div class="step-content">
+                                            <code>pip install nc1709</code>
+                                            <span class="step-label">Install from PyPI</span>
+                                        </div>
+                                    </div>
+                                    <div class="install-step">
+                                        <span class="step-number">2</span>
+                                        <div class="step-content">
+                                            <code>nc1709</code>
+                                            <span class="step-label">Run in any project</span>
+                                        </div>
+                                    </div>
+                                    <div class="install-step">
+                                        <span class="step-number">3</span>
+                                        <div class="step-content">
+                                            <code>nc1709 --remote</code>
+                                            <span class="step-label">Or connect to this server</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="welcome-actions">
+                                <button class="btn btn-primary btn-lg" onclick="dismissWelcome()">Try Web Chat</button>
+                                <a href="https://github.com/nc1709/nc1709" target="_blank" class="btn btn-lg">View on GitHub</a>
+                            </div>
+
+                            <div class="welcome-note">
+                                <p>The CLI provides the full experience with local tool execution. This web interface offers basic chat capabilities.</p>
+                            </div>
+                        </div>
+
+                        <!-- Chat messages (hidden initially for direct visitors) -->
+                        <div class="message" id="chat-welcome" style="display: none;">
+                            <div class="message-content">
+                                <p><strong>Welcome to NC1709!</strong></p>
+                                <p>I'm your AI coding assistant. Ask me to help with code, search your project, manage git, docker, and more.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chat-input-container">
+                        <div class="chat-input-wrapper">
+                            <textarea
+                                class="chat-input"
+                                id="chat-input"
+                                placeholder="Ask me anything..."
+                                rows="1"
+                                onkeydown="handleChatKeydown(event)"
+                                oninput="autoResizeInput(this)"
+                            ></textarea>
+                            <button class="send-btn" id="send-btn" onclick="sendMessage()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sessions Panel -->
+            <div id="panel-sessions" class="panel">
+                <div class="header">
+                    <div class="header-left">
+                        <button class="menu-btn" onclick="openSidebar()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                        </button>
+                        <h2>Sessions</h2>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn btn-primary btn-sm" onclick="createSession()">+ New</button>
+                    </div>
+                </div>
+                <div class="content">
+                    <div id="sessions-list" class="card">
+                        <div class="loading"><div class="spinner"></div> Loading...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search Panel -->
+            <div id="panel-search" class="panel">
+                <div class="header">
+                    <div class="header-left">
+                        <button class="menu-btn" onclick="openSidebar()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                        </button>
+                        <h2>Search Code</h2>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn btn-sm" onclick="indexProject()">Index</button>
+                    </div>
+                </div>
+                <div class="content">
+                    <div id="index-status" class="stats-grid"></div>
+                    <div class="search-container">
+                        <input
+                            type="text"
+                            class="search-input"
+                            id="search-input"
+                            placeholder="Search semantically... (e.g., 'auth logic')"
+                            onkeydown="if(event.key==='Enter')searchCode()"
+                        >
+                    </div>
+                    <div id="search-results" class="search-results"></div>
+                </div>
+            </div>
+
+            <!-- Plugins Panel -->
+            <div id="panel-plugins" class="panel">
+                <div class="header">
+                    <div class="header-left">
+                        <button class="menu-btn" onclick="openSidebar()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                        </button>
+                        <h2>Plugins</h2>
+                    </div>
+                </div>
+                <div class="content">
+                    <div id="plugins-list">
+                        <div class="loading"><div class="spinner"></div> Loading...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MCP Panel -->
+            <div id="panel-mcp" class="panel">
+                <div class="header">
+                    <div class="header-left">
+                        <button class="menu-btn" onclick="openSidebar()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                        </button>
+                        <h2>MCP Tools</h2>
+                    </div>
+                </div>
+                <div class="content">
+                    <div id="mcp-status" class="stats-grid"></div>
+                    <div id="mcp-tools" class="card">
+                        <div class="card-header">Available Tools</div>
+                        <div class="card-body" id="mcp-tools-list">
+                            <div class="loading"><div class="spinner"></div> Loading...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Config Panel -->
+            <div id="panel-config" class="panel">
+                <div class="header">
+                    <div class="header-left">
+                        <button class="menu-btn" onclick="openSidebar()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                        </button>
+                        <h2>Settings</h2>
+                    </div>
+                </div>
+                <div class="content">
+                    <div class="stats-grid" id="system-status"></div>
+                    <div class="card">
+                        <div class="card-header">Configuration</div>
+                        <div class="card-body">
+                            <pre id="config-display" style="background: var(--bg-primary); padding: 16px; border-radius: 8px; overflow-x: auto; font-size: 13px;"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <script>
+        // Configure marked
+        marked.setOptions({
+            highlight: function(code, lang) {
+                if (lang && hljs.getLanguage(lang)) {
+                    return hljs.highlight(code, { language: lang }).value;
+                }
+                return hljs.highlightAuto(code).value;
+            },
+            breaks: true
+        });
+
+        // Sidebar controls
+        function openSidebar() {
+            document.getElementById('sidebar').classList.add('open');
+            document.querySelector('.sidebar-overlay').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.querySelector('.sidebar-overlay').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // Navigation
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const panel = item.dataset.panel;
+                if (panel) {
+                    // Update nav
+                    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                    item.classList.add('active');
+
+                    // Update panels
+                    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+                    document.getElementById(`panel-${panel}`).classList.add('active');
+
+                    // Close sidebar on mobile
+                    if (window.innerWidth <= 768) {
+                        closeSidebar();
+                    }
+
+                    // Load data for panel
+                    loadPanelData(panel);
+                }
+            });
+        });
+
+        // Load panel data
+        function loadPanelData(panel) {
+            switch(panel) {
+                case 'sessions':
+                    loadSessions();
+                    break;
+                case 'search':
+                    loadIndexStatus();
+                    break;
+                case 'plugins':
+                    loadPlugins();
+                    break;
+                case 'mcp':
+                    loadMCPStatus();
+                    loadMCPTools();
+                    break;
+                case 'config':
+                    loadConfig();
+                    loadStatus();
+                    break;
+            }
+        }
+
+        // Toast notifications
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            container.appendChild(toast);
+
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Auto-resize input
+        function autoResizeInput(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+        }
+
+        // Chat functions
+        function addMessage(role, content) {
+            const messages = document.getElementById('chat-messages');
+            const div = document.createElement('div');
+            div.className = `message ${role}`;
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+
+            if (role === 'assistant') {
+                contentDiv.innerHTML = marked.parse(content);
+                contentDiv.querySelectorAll('pre code').forEach(block => {
+                    hljs.highlightElement(block);
+                });
+            } else {
+                contentDiv.textContent = content;
+            }
+
+            div.appendChild(contentDiv);
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const btn = document.getElementById('send-btn');
+            const message = input.value.trim();
+
+            if (!message) return;
+
+            // Add user message
+            addMessage('user', message);
+            input.value = '';
+            input.style.height = 'auto';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    addMessage('assistant', data.response);
+                } else {
+                    addMessage('assistant', `Error: ${data.detail}`);
+                }
+            } catch (e) {
+                addMessage('assistant', `Error: ${e.message}`);
+            } finally {
+                btn.disabled = false;
+                input.focus();
+            }
+        }
+
+        function handleChatKeydown(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function clearChat() {
+            const messages = document.getElementById('chat-messages');
+            // Hide welcome screen if visible and show simple chat message
+            const welcomeScreen = document.getElementById('welcome-screen');
+            if (welcomeScreen) {
+                welcomeScreen.style.display = 'none';
+            }
+            messages.innerHTML = `
+                <div class="message">
+                    <div class="message-content">
+                        <p>Chat cleared. How can I help you?</p>
+                    </div>
+                </div>
+            `;
+            localStorage.setItem('nc1709_welcomed', 'true');
+        }
+
+        // Sessions
+        async function loadSessions() {
+            const container = document.getElementById('sessions-list');
+
+            try {
+                const response = await fetch('/api/sessions');
+                const data = await response.json();
+
+                if (data.sessions.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📝</div>
+                            <div class="empty-state-title">No sessions yet</div>
+                            <div class="empty-state-description">Start chatting to create your first session!</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = data.sessions.map(s => `
+                    <div class="session-item" onclick="loadSession('${s.id}')">
+                        <div class="session-item-name">${s.name || s.id}</div>
+                        <div class="session-item-meta">
+                            ${s.message_count || 0} messages • ${s.updated_at ? s.updated_at.slice(0, 16) : 'N/A'}
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                container.innerHTML = `<div class="card-body">Error loading sessions: ${e.message}</div>`;
+            }
+        }
+
+        async function loadSession(id) {
+            try {
+                const response = await fetch(`/api/sessions/${id}`);
+                const data = await response.json();
+
+                // Switch to chat panel and load messages
+                document.querySelector('[data-panel="chat"]').click();
+
+                const messages = document.getElementById('chat-messages');
+                messages.innerHTML = '';
+
+                data.messages.forEach(m => {
+                    addMessage(m.role, m.content);
+                });
+
+                showToast(`Loaded session: ${data.name || id}`);
+            } catch (e) {
+                showToast(`Error loading session: ${e.message}`, 'error');
+            }
+        }
+
+        async function createSession() {
+            try {
+                const response = await fetch('/api/sessions', { method: 'POST' });
+                const data = await response.json();
+                showToast(`Created session: ${data.id}`);
+                loadSessions();
+            } catch (e) {
+                showToast(`Error: ${e.message}`, 'error');
+            }
+        }
+
+        // Search
+        async function loadIndexStatus() {
+            const container = document.getElementById('index-status');
+
+            try {
+                const response = await fetch('/api/index/status');
+                const data = await response.json();
+
+                container.innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-value">${data.total_files || 0}</div>
+                        <div class="stat-label">Files</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${data.total_chunks || 0}</div>
+                        <div class="stat-label">Chunks</div>
+                    </div>
+                `;
+            } catch (e) {
+                container.innerHTML = `<div class="stat-card">Error loading status</div>`;
+            }
+        }
+
+        async function searchCode() {
+            const input = document.getElementById('search-input');
+            const results = document.getElementById('search-results');
+            const query = input.value.trim();
+
+            if (!query) return;
+
+            results.innerHTML = '<div class="loading"><div class="spinner"></div> Searching...</div>';
+
+            try {
+                const response = await fetch('/api/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query, n_results: 5 })
+                });
+
+                const data = await response.json();
+
+                if (data.results.length === 0) {
+                    results.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🔍</div>
+                            <div class="empty-state-title">No results</div>
+                            <div class="empty-state-description">Try a different search query</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                results.innerHTML = data.results.map(r => `
+                    <div class="search-result">
+                        <div class="search-result-header">
+                            <span style="word-break: break-all;">${r.location}</span>
+                            <span class="badge badge-success">${(r.similarity * 100).toFixed(0)}%</span>
+                        </div>
+                        <div class="search-result-code">
+                            <pre><code class="language-${r.language || 'plaintext'}">${escapeHtml(r.content)}</code></pre>
+                        </div>
+                    </div>
+                `).join('');
+
+                results.querySelectorAll('pre code').forEach(block => {
+                    hljs.highlightElement(block);
+                });
+            } catch (e) {
+                results.innerHTML = `<p>Error: ${e.message}</p>`;
+            }
+        }
+
+        async function indexProject() {
+            showToast('Indexing project...');
+
+            try {
+                const response = await fetch('/api/index', { method: 'POST' });
+                const data = await response.json();
+
+                showToast(`Indexed ${data.files_indexed} files`);
+                loadIndexStatus();
+            } catch (e) {
+                showToast(`Error: ${e.message}`, 'error');
+            }
+        }
+
+        // Plugins
+        async function loadPlugins() {
+            const container = document.getElementById('plugins-list');
+
+            try {
+                const response = await fetch('/api/plugins');
+                const data = await response.json();
+
+                if (data.plugins.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🔌</div>
+                            <div class="empty-state-title">No plugins</div>
+                            <div class="empty-state-description">No plugins available</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = data.plugins.map(p => `
+                    <div class="card" style="margin-bottom: 12px;">
+                        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                            <span>${p.name} <span style="color: var(--text-secondary); font-size: 12px;">v${p.version}</span></span>
+                            <span class="badge ${p.status === 'active' ? 'badge-success' : 'badge-warning'}">${p.status}</span>
+                        </div>
+                        <div class="card-body">
+                            <p style="color: var(--text-secondary); margin-bottom: 12px; font-size: 14px;">
+                                ${p.builtin ? 'Built-in plugin' : 'Custom plugin'}
+                            </p>
+                            <div class="tool-actions">
+                                ${p.actions.map(a => `<button class="btn btn-sm" onclick="executePlugin('${p.name}', '${a}')">${a}</button>`).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                container.innerHTML = `<p>Error: ${e.message}</p>`;
+            }
+        }
+
+        async function executePlugin(plugin, action) {
+            try {
+                const response = await fetch('/api/plugins/execute', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ plugin, action })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast(data.message);
+                    document.querySelector('[data-panel="chat"]').click();
+                    addMessage('assistant', `**${plugin}:${action}**\n\n${data.message}\n\n${typeof data.data === 'string' ? data.data : JSON.stringify(data.data, null, 2)}`);
+                } else {
+                    showToast(`Error: ${data.error}`, 'error');
+                }
+            } catch (e) {
+                showToast(`Error: ${e.message}`, 'error');
+            }
+        }
+
+        // MCP
+        async function loadMCPStatus() {
+            const container = document.getElementById('mcp-status');
+
+            try {
+                const response = await fetch('/api/mcp/status');
+                const data = await response.json();
+
+                if (!data.available) {
+                    container.innerHTML = '<div class="stat-card">MCP not available</div>';
+                    return;
+                }
+
+                container.innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-value">${data.server.tools}</div>
+                        <div class="stat-label">Local Tools</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${data.client.connected_servers}</div>
+                        <div class="stat-label">Servers</div>
+                    </div>
+                `;
+            } catch (e) {
+                container.innerHTML = `<div class="stat-card">Error loading status</div>`;
+            }
+        }
+
+        async function loadMCPTools() {
+            const container = document.getElementById('mcp-tools-list');
+
+            try {
+                const response = await fetch('/api/mcp/tools');
+                const data = await response.json();
+
+                const tools = [...data.local, ...data.remote];
+
+                if (tools.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🛠️</div>
+                            <div class="empty-state-title">No tools</div>
+                            <div class="empty-state-description">No MCP tools available</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = tools.map(t => `
+                    <div class="tool-item">
+                        <div class="tool-name">${t.name}</div>
+                        <div class="tool-description">${t.description}</div>
+                        ${t.parameters ? `<div class="tool-params">Params: ${t.parameters.map(p => p.name).join(', ')}</div>` : ''}
+                    </div>
+                `).join('');
+            } catch (e) {
+                container.innerHTML = `<p>Error: ${e.message}</p>`;
+            }
+        }
+
+        // Config
+        async function loadConfig() {
+            const display = document.getElementById('config-display');
+
+            try {
+                const response = await fetch('/api/config');
+                const data = await response.json();
+                display.textContent = JSON.stringify(data.config, null, 2);
+            } catch (e) {
+                display.textContent = `Error: ${e.message}`;
+            }
+        }
+
+        async function loadStatus() {
+            const container = document.getElementById('system-status');
+
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+
+                // Update version display
+                document.getElementById('version-display').textContent = `v${data.version || '1.18.6'}`;
+
+                container.innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-value" style="font-size: 24px;">${data.status === 'ok' ? '✅' : '❌'}</div>
+                        <div class="stat-label">Status</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" style="font-size: 16px;">${data.version || 'N/A'}</div>
+                        <div class="stat-label">Version</div>
+                    </div>
+                `;
+            } catch (e) {
+                container.innerHTML = `<div class="stat-card">Error loading status</div>`;
+            }
+        }
+
+        // Utilities
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 768) {
+                closeSidebar();
+            }
+        });
+
+        // Dismiss welcome screen and show chat
+        function dismissWelcome() {
+            const welcomeScreen = document.getElementById('welcome-screen');
+            const chatWelcome = document.getElementById('chat-welcome');
+
+            if (welcomeScreen) {
+                welcomeScreen.style.display = 'none';
+            }
+            if (chatWelcome) {
+                chatWelcome.style.display = 'block';
+            }
+
+            // Store preference
+            localStorage.setItem('nc1709_welcomed', 'true');
+
+            // Focus on chat input
+            document.getElementById('chat-input').focus();
+        }
+
+        // Check if user has already seen welcome
+        function checkWelcomeState() {
+            const welcomed = localStorage.getItem('nc1709_welcomed');
+            if (welcomed === 'true') {
+                dismissWelcome();
+            }
+        }
+
+        // Initial load
+        loadStatus();
+        checkWelcomeState();
+    </script>
+</body>
+</html>
