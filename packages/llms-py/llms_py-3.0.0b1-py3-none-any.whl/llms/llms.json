@@ -1,0 +1,336 @@
+{
+    "version": 3,
+    "auth": {
+        "enabled": false,
+        "github": {
+            "client_id": "GITHUB_CLIENT_ID",
+            "client_secret": "GITHUB_CLIENT_SECRET",
+            "redirect_uri": "http://localhost:8000/auth/github/callback",
+            "restrict_to": "GITHUB_USERS"
+        }
+    },
+    "defaults": {
+        "headers": {
+            "Content-Type": "application/json",
+            "User-Agent": "llmspy.org/1.0"
+        },
+        "text": {
+            "model": "kimi-k2",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": ""
+                        }
+                    ]
+                }
+            ]
+        },
+        "image": {
+            "model": "qwen2.5vl",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": ""
+                            }
+                        },
+                        {
+                            "type": "text",
+                            "text": "Describe the key features of the input image"
+                        }
+                    ]
+                }
+            ]
+        },
+        "audio": {
+            "model": "gpt-4o-audio-preview",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "input_audio",
+                            "input_audio": {
+                                "data": "",
+                                "format": "mp3"
+                            }
+                        },
+                        {
+                            "type": "text",
+                            "text": "Please transcribe and summarize this audio file"
+                        }
+                    ]
+                }
+            ]
+        },
+        "file": {
+            "model": "qwen2.5vl",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "file",
+                            "file": {
+                                "filename": "",
+                                "file_data": ""
+                            }
+                        },
+                        {
+                            "type": "text",
+                            "text": "Please summarize this document"
+                        }
+                    ]
+                }
+            ]
+        },
+        "check": {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "1+1="
+                        }
+                    ]
+                }
+            ],
+            "max_completion_tokens": 16,
+            "stream": false
+        }
+    },
+    "limits": {
+        "client_max_size": 20971520
+    },
+    "convert": {
+        "image": {
+            "max_size": "1536x1024",
+            "max_length": 1572864
+        }
+    },
+    "providers": {
+        "groq": {
+            "enabled": true
+        },
+        "codestral": {
+            "enabled": true,
+            "id": "codestral",
+            "npm": "codestral",
+            "api": "https://codestral.mistral.ai/v1",
+            "env": [
+                "CODESTRAL_API_KEY"
+            ],
+            "models": {
+                "codestral-latest": {
+                    "id": "codestral-latest",
+                    "name": "Codestral",
+                    "attachment": false,
+                    "reasoning": false,
+                    "tool_call": true,
+                    "temperature": true,
+                    "knowledge": "2024-10",
+                    "release_date": "2024-05-29",
+                    "last_updated": "2025-01-04",
+                    "modalities": {
+                        "input": [
+                            "text"
+                        ],
+                        "output": [
+                            "text"
+                        ]
+                    },
+                    "open_weights": true,
+                    "cost": {
+                        "input": 0.0,
+                        "output": 0.0
+                    },
+                    "limit": {
+                        "context": 256000,
+                        "output": 4096
+                    }
+                }
+            },
+            "check": {
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "1+1="
+                            }
+                        ]
+                    }
+                ],
+                "stream": false
+            }
+        },
+        "github-copilot": {
+            "enabled": false
+        },
+        "github-models": {
+            "enabled": false,
+            "check": {
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "1+1="
+                            }
+                        ]
+                    }
+                ],
+                "stream": false
+            }
+        },
+        "zai-coding-plan": {
+            "enabled": true,
+            "temperature": 0.7
+        },
+        "minimax": {
+            "enabled": true,
+            "temperature": 1.0
+        },
+        "openrouter_free": {
+            "enabled": true,
+            "id": "openrouter",
+            "include_models": ":free$"
+        },
+        "ollama": {
+            "enabled": true,
+            "id": "ollama",
+            "npm": "ollama",
+            "api": "http://localhost:11434"
+        },
+        "lmstudio": {
+            "enabled": true,
+            "npm": "lmstudio",
+            "api": "http://127.0.0.1:1234/v1",
+            "models": {}
+        },
+        "google": {
+            "enabled": true,
+            "map_models": {
+                "gemini-flash-latest": "gemini-flash-latest",
+                "gemini-flash-lite-latest": "gemini-flash-lite-latest",
+                "gemini-2.5-pro": "gemini-2.5-pro",
+                "gemini-2.5-flash": "gemini-2.5-flash",
+                "gemini-2.5-flash-lite": "gemini-2.5-flash-lite"
+            },
+            "safety_settings": [
+                {
+                    "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                    "threshold": "BLOCK_ONLY_HIGH"
+                }
+            ],
+            "thinking_config": {
+                "thinkingBudget": 1024,
+                "includeThoughts": true
+            },
+            "check": {
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "1+1="
+                            }
+                        ]
+                    }
+                ],
+                "max_completion_tokens": 512,
+                "reasoning": {
+                    "max_tokens": 128,
+                    "reasoning_effort": "low"
+                },
+                "stream": false
+            }
+        },
+        "anthropic": {
+            "enabled": true,
+            "check": {
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "1+1="
+                            }
+                        ]
+                    }
+                ],
+                "max_completion_tokens": 512,
+                "reasoning": {
+                    "max_tokens": 128,
+                    "reasoning_effort": "low"
+                },
+                "stream": false
+            }
+        },
+        "openai": {
+            "enabled": true
+        },
+        "xai": {
+            "enabled": true
+        },
+        "alibaba": {
+            "enabled": true,
+            "enable_thinking": false
+        },
+        "zai": {
+            "enabled": true,
+            "temperature": 0.7
+        },
+        "mistral": {
+            "enabled": true,
+            "check": {
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "1+1="
+                            }
+                        ]
+                    }
+                ],
+                "stream": false
+            }
+        },
+        "chutes": {
+            "enabled": true
+        },
+        "deepseek": {
+            "enabled": true
+        },
+        "moonshotai": {
+            "enabled": false
+        },
+        "nvidia": {
+            "enabled": true
+        },
+        "huggingface": {
+            "enabled": true
+        },
+        "fireworks-ai": {
+            "enabled": false
+        },
+        "openrouter": {
+            "enabled": true,
+            "id": "openrouter",
+            "exclude_models": ":free$"
+        }
+    }
+}
