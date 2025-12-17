@@ -1,0 +1,966 @@
+{% extends "base.html" %}
+
+{% block title %}Network Maps - Network Management{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-content">
+        <h1>🗺️ Network Maps</h1>
+        <p>Topology maps from {{ maps_data.total_maps }} discoveries across {{ maps_data.sites|length }} sites</p>
+    </div>
+    <div class="page-actions">
+        <button id="help-btn" class="md-button md-button-outlined" title="How to organize maps">
+            <i data-lucide="help-circle"></i>
+            Help
+        </button>
+        <button id="rebuild-thumbnails-btn" class="md-button md-button-outlined">
+            <i data-lucide="refresh-cw"></i>
+            Rebuild Thumbnails
+        </button>
+    </div>
+</div>
+
+<!-- Current Maps Location Info -->
+<div class="maps-location-banner">
+    <div class="location-icon">
+        <i data-lucide="folder-open"></i>
+    </div>
+    <div class="location-info">
+        <span class="location-label">Maps Directory:</span>
+        <code class="location-path">{{ maps_base_dir }}</code>
+    </div>
+    <button class="location-help-btn" onclick="openHelpModal()" title="Learn how to organize maps">
+        <i data-lucide="info"></i>
+    </button>
+</div>
+
+<div class="md-card mb-4">
+    <div class="card-header">
+        <h2>Site Maps Overview</h2>
+        {% if maps_data.last_updated %}
+        <span class="md-badge md-badge-secondary">Last updated: {{ maps_data.last_updated.strftime('%Y-%m-%d %H:%M') }}</span>
+        {% endif %}
+    </div>
+    <div class="card-content">
+        {% if maps_data.sites %}
+        <div class="maps-grid">
+            {% for site_name, site_data in maps_data.sites.items() %}
+            <div class="site-card">
+                <div class="site-header">
+                    <h3><a href="{{ url_for('maps.site_maps', site_name=site_name) }}">{{ site_name }}</a></h3>
+                    <span class="md-badge md-badge-success">{{ site_data.maps|length }} maps</span>
+                </div>
+                <div class="site-maps">
+                    {% for map_data in site_data.maps[:6] %}
+                    <div class="map-preview">
+                        <div class="map-thumbnail">
+                            <a href="{{ url_for('maps.view_map', site_name=site_name, map_name=map_data.name) }}">
+                                <img
+                                    src="{{ url_for('maps.api_thumbnail', site_name=site_name, map_name=map_data.name) }}"
+                                    alt="{{ map_data.name }} thumbnail"
+                                    loading="lazy"
+                                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                                >
+                                <div class="thumbnail-fallback" style="display: none;">
+                                    <i data-lucide="map" size="24"></i>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="map-info">
+                            <div class="map-name">
+                                <a href="{{ url_for('maps.view_map', site_name=site_name, map_name=map_data.name) }}">
+                                    {{ map_data.name }}
+                                </a>
+                            </div>
+                            <div class="map-meta">
+                                <span class="map-date">{{ map_data.created.strftime('%m/%d') if map_data.created else 'N/A' }}</span>
+                                {% if map_data.size_mb %}
+                                <span class="map-size">{{ "%.1f"|format(map_data.size_mb) }}MB</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% if site_data.maps|length > 6 %}
+                    <div class="map-preview more-maps">
+                        <div class="map-thumbnail">
+                            <div class="thumbnail-more">
+                                <i data-lucide="plus" size="24"></i>
+                            </div>
+                        </div>
+                        <div class="map-info">
+                            <div class="map-name">
+                                <a href="{{ url_for('maps.site_maps', site_name=site_name) }}">
+                                    +{{ site_data.maps|length - 6 }} more maps...
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i data-lucide="map" size="48"></i>
+            <h3>No maps found</h3>
+            <p>No topology maps found in the maps directory.</p>
+            <button class="md-button md-button-filled" onclick="openHelpModal()">
+                <i data-lucide="help-circle"></i>
+                Learn How to Add Maps
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Help Modal -->
+<div id="help-modal" class="modal" style="display: none;">
+    <div class="modal-content modal-large">
+        <div class="modal-header">
+            <h3><i data-lucide="help-circle"></i> How to Organize Network Maps</h3>
+            <button class="modal-close" onclick="closeHelpModal()">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="help-section">
+                <h4><i data-lucide="folder"></i> Current Maps Location</h4>
+                <div class="help-path-display">
+                    <code>{{ maps_base_dir }}</code>
+                </div>
+                <p class="help-note">This is where VelocityCMDB looks for your network topology maps.</p>
+            </div>
+
+            <div class="help-section">
+                <h4><i data-lucide="folder-tree"></i> Directory Structure</h4>
+                <p>Maps are organized by <strong>site folders</strong>. Each subfolder in the maps directory becomes a site group in the UI.</p>
+                <div class="help-tree">
+                    <pre>{{ maps_base_dir }}
+├── <span class="tree-folder">datacenter-east/</span>          <span class="tree-comment"># Site folder (becomes a group)</span>
+│   ├── <span class="tree-file">core-topology.svg</span>      <span class="tree-comment"># Map file</span>
+│   ├── <span class="tree-file">wan-connections.svg</span>    <span class="tree-comment"># Another map</span>
+│   └── <span class="tree-file">dmz-network.svg</span>        <span class="tree-comment"># Another map</span>
+├── <span class="tree-folder">datacenter-west/</span>          <span class="tree-comment"># Another site</span>
+│   └── <span class="tree-file">full-topology.svg</span>
+├── <span class="tree-folder">branch-offices/</span>           <span class="tree-comment"># Group for branches</span>
+│   ├── <span class="tree-file">seattle.svg</span>
+│   └── <span class="tree-file">portland.svg</span>
+└── <span class="tree-folder">thumbnails/</span>               <span class="tree-comment"># Auto-generated (don't edit)</span>
+    └── ...</pre>
+                </div>
+            </div>
+
+            <div class="help-section">
+                <h4><i data-lucide="file-image"></i> Supported File Formats</h4>
+                <div class="help-formats">
+                    <div class="format-item format-primary">
+                        <span class="format-ext">.svg</span>
+                        <span class="format-desc">Required for preview — scalable vector graphics</span>
+                    </div>
+                    <div class="format-item">
+                        <span class="format-ext">.json</span>
+                        <span class="format-desc">Optional — topology data (device count shown if present)</span>
+                    </div>
+                    <div class="format-item">
+                        <span class="format-ext">.graphml</span>
+                        <span class="format-desc">Optional — graph markup for import/export</span>
+                    </div>
+                    <div class="format-item">
+                        <span class="format-ext">.drawio</span>
+                        <span class="format-desc">Optional — source file for draw.io/diagrams.net</span>
+                    </div>
+                </div>
+                <p class="help-note"><strong>Note:</strong> An SVG file is required for the map to appear. Maps without SVG files are hidden from the UI.</p>
+            </div>
+
+            <div class="help-section">
+                <h4><i data-lucide="image"></i> Thumbnails</h4>
+                <p>Thumbnails are <strong>generated automatically</strong> when you first view a map. They are cached in:</p>
+                <div class="help-path-display">
+                    <code>{{ maps_base_dir }}/thumbnails/</code>
+                </div>
+                <ul class="help-list">
+                    <li>Thumbnails regenerate if the source SVG is newer than the cached thumbnail</li>
+                    <li>Use the <strong>"Rebuild Thumbnails"</strong> button to force regeneration of all thumbnails</li>
+                    <li>Do not manually edit the thumbnails folder — it's managed by the application</li>
+                </ul>
+            </div>
+
+            <div class="help-section">
+                <h4><i data-lucide="plus-circle"></i> Adding New Maps</h4>
+                <ol class="help-list">
+                    <li>Create a site folder (if it doesn't exist) inside the maps directory</li>
+                    <li>Copy or save your SVG file into the site folder</li>
+                    <li>Refresh this page — your map will appear automatically</li>
+                    <li>Optionally add matching .json, .graphml, or .drawio files with the same base name</li>
+                </ol>
+
+                <div class="help-example">
+                    <h5>Example: Adding a new map</h5>
+                    <div class="help-tree compact">
+                        <pre># Create a new site folder
+mkdir "{{ maps_base_dir }}/my-new-site"
+
+# Copy your SVG map into it
+cp my-diagram.svg "{{ maps_base_dir }}/my-new-site/"
+
+# Optional: Add companion files
+cp my-diagram.json "{{ maps_base_dir }}/my-new-site/"</pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="help-section">
+                <h4><i data-lucide="alert-triangle"></i> Common Issues</h4>
+                <div class="help-troubleshoot">
+                    <div class="troubleshoot-item">
+                        <div class="troubleshoot-problem">Map doesn't appear</div>
+                        <div class="troubleshoot-solution">Ensure it's an SVG file inside a site subfolder, not in the root maps directory</div>
+                    </div>
+                    <div class="troubleshoot-item">
+                        <div class="troubleshoot-problem">Thumbnail not showing</div>
+                        <div class="troubleshoot-solution">Click "Rebuild Thumbnails" or wait for automatic generation on first view</div>
+                    </div>
+                    <div class="troubleshoot-item">
+                        <div class="troubleshoot-problem">Map shows as empty</div>
+                        <div class="troubleshoot-solution">SVG file may be too small (&lt;10KB) or corrupted — verify it opens in a browser</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="md-button md-button-filled" onclick="closeHelpModal()">Got It</button>
+        </div>
+    </div>
+</div>
+
+<!-- Rebuild Thumbnails Modal -->
+<div id="rebuild-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Rebuild Thumbnails</h3>
+            <button class="modal-close" onclick="closeRebuildModal()">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <p>This will regenerate thumbnails for all network maps. This may take a few moments.</p>
+            <div id="rebuild-progress" style="display: none;">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                <div class="progress-text" id="progress-text">Processing...</div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="md-button md-button-outlined" onclick="closeRebuildModal()">Cancel</button>
+            <button class="md-button md-button-filled" onclick="rebuildThumbnails()" id="rebuild-confirm-btn">
+                Rebuild All Thumbnails
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+}
+
+.page-actions {
+    display: flex;
+    gap: 12px;
+}
+
+/* Maps Location Banner */
+.maps-location-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--md-surface-container);
+    border: 1px solid var(--md-outline-variant);
+    border-radius: var(--md-shape-corner-small);
+    margin-bottom: 20px;
+}
+
+.location-icon {
+    color: var(--md-primary);
+    display: flex;
+    align-items: center;
+}
+
+.location-info {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.location-label {
+    font-size: 14px;
+    color: var(--md-on-surface-variant);
+}
+
+.location-path {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 13px;
+    background: var(--md-surface-variant);
+    padding: 4px 10px;
+    border-radius: var(--md-shape-corner-extra-small);
+    color: var(--md-on-surface);
+    word-break: break-all;
+}
+
+.location-help-btn {
+    background: none;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    color: var(--md-on-surface-variant);
+    border-radius: var(--md-shape-corner-small);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.location-help-btn:hover {
+    background: var(--md-surface-variant);
+    color: var(--md-primary);
+}
+
+.maps-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 20px;
+}
+
+.site-card {
+    border: 1px solid var(--md-outline-variant);
+    border-radius: var(--md-shape-corner-medium);
+    padding: 20px;
+    background: var(--md-surface-container);
+}
+
+.site-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.site-header h3 {
+    margin: 0;
+}
+
+.site-header a {
+    color: var(--md-primary);
+    text-decoration: none;
+}
+
+.site-header a:hover {
+    text-decoration: underline;
+}
+
+.site-maps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+}
+
+.map-preview {
+    background: var(--md-surface);
+    border-radius: var(--md-shape-corner-small);
+    border: 1px solid var(--md-outline-variant);
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.map-preview:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.map-preview.more-maps {
+    border: 2px dashed var(--md-outline-variant);
+    background: var(--md-surface-variant);
+}
+
+.map-thumbnail {
+    position: relative;
+    height: 100px;
+    overflow: hidden;
+    background: var(--md-surface-variant);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.map-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.2s ease;
+}
+
+.map-preview:hover .map-thumbnail img {
+    transform: scale(1.05);
+}
+
+.thumbnail-fallback {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--md-surface-variant);
+    color: var(--md-on-surface-variant);
+}
+
+.thumbnail-more {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--md-on-surface-variant);
+}
+
+.map-info {
+    padding: 12px;
+}
+
+.map-name {
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.map-name a {
+    color: var(--md-on-surface);
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.map-name a:hover {
+    color: var(--md-primary);
+}
+
+.map-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: var(--md-on-surface-variant);
+}
+
+.map-date, .map-size {
+    font-size: 12px;
+    color: var(--md-on-surface-variant);
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--md-on-surface-variant);
+}
+
+.empty-state i {
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.empty-state h3 {
+    margin: 0 0 8px 0;
+    color: var(--md-on-surface);
+}
+
+.empty-state p {
+    margin: 0 0 24px 0;
+}
+
+/* Modal Styles */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: var(--md-surface-container-high);
+    border-radius: var(--md-shape-corner-large);
+    min-width: 400px;
+    max-width: 90vw;
+    max-height: 90vh;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-large {
+    width: 700px;
+    max-width: 90vw;
+}
+
+.modal-header {
+    padding: 24px 24px 0 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: var(--md-on-surface);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: var(--md-shape-corner-small);
+    color: var(--md-on-surface-variant);
+}
+
+.modal-close:hover {
+    background: var(--md-surface-variant);
+}
+
+.modal-body {
+    padding: 20px 24px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.modal-footer {
+    padding: 0 24px 24px 24px;
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    flex-shrink: 0;
+}
+
+/* Help Modal Specific Styles */
+.help-section {
+    margin-bottom: 24px;
+}
+
+.help-section:last-child {
+    margin-bottom: 0;
+}
+
+.help-section h4 {
+    margin: 0 0 12px 0;
+    color: var(--md-on-surface);
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--md-outline-variant);
+}
+
+.help-section h4 i {
+    width: 20px;
+    height: 20px;
+    color: var(--md-primary);
+}
+
+.help-path-display {
+    background: var(--md-surface-variant);
+    border-radius: var(--md-shape-corner-small);
+    padding: 12px 16px;
+    margin: 8px 0;
+}
+
+.help-path-display code {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 13px;
+    color: var(--md-on-surface);
+    word-break: break-all;
+}
+
+.help-note {
+    font-size: 13px;
+    color: var(--md-on-surface-variant);
+    margin: 8px 0 0 0;
+}
+
+.help-tree {
+    background: var(--md-surface-variant);
+    border-radius: var(--md-shape-corner-small);
+    padding: 16px;
+    overflow-x: auto;
+}
+
+.help-tree pre {
+    margin: 0;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--md-on-surface);
+    white-space: pre;
+}
+
+.help-tree.compact pre {
+    font-size: 11px;
+}
+
+.tree-folder {
+    color: var(--md-primary);
+    font-weight: 600;
+}
+
+.tree-file {
+    color: var(--md-tertiary, #7cb342);
+}
+
+.tree-comment {
+    color: var(--md-on-surface-variant);
+    font-style: italic;
+}
+
+.help-formats {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 12px 0;
+}
+
+.format-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--md-surface);
+    border-radius: var(--md-shape-corner-small);
+    border: 1px solid var(--md-outline-variant);
+}
+
+.format-item.format-primary {
+    background: rgba(var(--md-primary-rgb, 103, 80, 164), 0.1);
+    border-color: var(--md-primary);
+}
+
+.format-ext {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--md-primary);
+    min-width: 70px;
+}
+
+.format-desc {
+    font-size: 13px;
+    color: var(--md-on-surface-variant);
+}
+
+.help-list {
+    margin: 12px 0;
+    padding-left: 24px;
+}
+
+.help-list li {
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: var(--md-on-surface);
+}
+
+.help-example {
+    background: var(--md-surface);
+    border: 1px solid var(--md-outline-variant);
+    border-radius: var(--md-shape-corner-small);
+    padding: 16px;
+    margin-top: 16px;
+}
+
+.help-example h5 {
+    margin: 0 0 12px 0;
+    font-size: 13px;
+    color: var(--md-on-surface-variant);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.help-troubleshoot {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.troubleshoot-item {
+    padding: 12px 16px;
+    background: var(--md-surface);
+    border-radius: var(--md-shape-corner-small);
+    border-left: 3px solid var(--md-error, #b3261e);
+}
+
+.troubleshoot-problem {
+    font-weight: 600;
+    color: var(--md-on-surface);
+    margin-bottom: 4px;
+    font-size: 14px;
+}
+
+.troubleshoot-solution {
+    font-size: 13px;
+    color: var(--md-on-surface-variant);
+}
+
+/* Progress bar */
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--md-surface-variant);
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 16px 0 8px 0;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--md-primary);
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    text-align: center;
+    font-size: 14px;
+    color: var(--md-on-surface-variant);
+}
+
+/* Button Styles */
+.md-button {
+    padding: 10px 16px;
+    border-radius: var(--md-shape-corner-small);
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.md-button-outlined {
+    background: transparent;
+    border: 1px solid var(--md-outline);
+    color: var(--md-primary);
+}
+
+.md-button-outlined:hover {
+    background: var(--md-surface-variant);
+}
+
+.md-button-filled {
+    background: var(--md-primary);
+    color: var(--md-on-primary);
+}
+
+.md-button-filled:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.md-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        gap: 16px;
+        align-items: stretch;
+    }
+
+    .page-actions {
+        justify-content: flex-end;
+    }
+
+    .maps-location-banner {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .location-info {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .maps-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .site-maps {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    }
+
+    .modal-content {
+        margin: 20px;
+        min-width: unset;
+    }
+
+    .modal-large {
+        width: calc(100vw - 40px);
+    }
+
+    .help-tree pre {
+        font-size: 10px;
+    }
+}
+</style>
+
+<script>
+// Initialize Lucide icons
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+});
+
+// Help modal functionality
+function openHelpModal() {
+    document.getElementById('help-modal').style.display = 'flex';
+    // Re-initialize icons in modal
+    if (typeof lucide !== 'undefined') {
+        setTimeout(() => lucide.createIcons(), 50);
+    }
+}
+
+function closeHelpModal() {
+    document.getElementById('help-modal').style.display = 'none';
+}
+
+// Rebuild thumbnails functionality
+function openRebuildModal() {
+    document.getElementById('rebuild-modal').style.display = 'flex';
+}
+
+function closeRebuildModal() {
+    document.getElementById('rebuild-modal').style.display = 'none';
+    document.getElementById('rebuild-progress').style.display = 'none';
+    document.getElementById('progress-fill').style.width = '0%';
+    document.getElementById('progress-text').textContent = 'Processing...';
+    document.getElementById('rebuild-confirm-btn').disabled = false;
+}
+
+async function rebuildThumbnails() {
+    const progressDiv = document.getElementById('rebuild-progress');
+    const progressFill = document.getElementById('progress-fill');
+    const progressText = document.getElementById('progress-text');
+    const confirmBtn = document.getElementById('rebuild-confirm-btn');
+
+    // Show progress and disable button
+    progressDiv.style.display = 'block';
+    confirmBtn.disabled = true;
+
+    try {
+        // Get all maps data
+        const response = await fetch('/maps/api/maps');
+        const mapsData = await response.json();
+
+        const allMaps = [];
+        for (const [siteName, siteData] of Object.entries(mapsData.sites || {})) {
+            for (const map of siteData.maps || []) {
+                allMaps.push({ siteName, mapName: map.name });
+            }
+        }
+
+        if (allMaps.length === 0) {
+            progressText.textContent = 'No maps found to process';
+            setTimeout(closeRebuildModal, 2000);
+            return;
+        }
+
+        progressText.textContent = `Processing ${allMaps.length} maps...`;
+
+        // Process each map
+        for (let i = 0; i < allMaps.length; i++) {
+            const { siteName, mapName } = allMaps[i];
+
+            try {
+                // Force regenerate thumbnail by adding cache-busting parameter
+                const thumbnailUrl = `/maps/api/thumbnail/${siteName}/${mapName}?rebuild=${Date.now()}`;
+                await fetch(thumbnailUrl);
+
+                const progress = ((i + 1) / allMaps.length) * 100;
+                progressFill.style.width = `${progress}%`;
+                progressText.textContent = `Processed ${i + 1}/${allMaps.length}: ${mapName}`;
+
+                // Small delay to prevent overwhelming the server
+                await new Promise(resolve => setTimeout(resolve, 100));
+            } catch (error) {
+                console.warn(`Failed to regenerate thumbnail for ${siteName}/${mapName}:`, error);
+            }
+        }
+
+        progressText.textContent = 'Thumbnails rebuilt successfully!';
+
+        // Reload thumbnails in current page
+        setTimeout(() => {
+            const images = document.querySelectorAll('.map-thumbnail img');
+            images.forEach(img => {
+                const originalSrc = img.src.split('?')[0]; // Remove existing query params
+                img.src = `${originalSrc}?t=${Date.now()}`;
+            });
+            closeRebuildModal();
+        }, 1000);
+
+    } catch (error) {
+        console.error('Error rebuilding thumbnails:', error);
+        progressText.textContent = 'Error occurred while rebuilding thumbnails';
+        setTimeout(closeRebuildModal, 3000);
+    }
+}
+
+// Event listeners
+document.getElementById('help-btn').addEventListener('click', openHelpModal);
+document.getElementById('rebuild-thumbnails-btn').addEventListener('click', openRebuildModal);
+
+// Close modals when clicking outside
+document.getElementById('help-modal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeHelpModal();
+    }
+});
+
+document.getElementById('rebuild-modal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeRebuildModal();
+    }
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeHelpModal();
+        closeRebuildModal();
+    }
+});
+</script>
+{% endblock %}
