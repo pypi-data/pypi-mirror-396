@@ -1,0 +1,55 @@
+[project]
+name = "Cirilla"
+version = "0.1.90"
+description = "Crilla is a simple way to introduce optimized single-GPU training into your project"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "aiofiles>=24.1.0",
+    "attn-gym>=0.0.4",
+    "bitsandbytes>=0.46.1",
+    "datasets>=4.0.0",
+    "ema-pytorch>=0.7.7",
+    "fandom-py>=0.2.1",
+    "fuzzywuzzy>=0.18.0",
+    "huggingface-hub>=0.33.4",
+    "kernels>=0.8.0",
+    "megablocks[all]>=0.10.0",
+    "ollama>=0.5.3",
+    "openai>=1.90.0",
+    "polars>=1.35.1",
+    "progress-table>=3.1.2",
+    "pydantic>=2.11.7",
+    "pytest>=7.4.4",
+    "python-levenshtein>=0.27.1",
+    "reasoning-gym>=0.1.23",
+    "rich>=14.1.0",
+    "sentencepiece>=0.2.0",
+    "span-marker>=1.7.0",
+    "tokenizers>=0.21.2",
+    "torch>=2.7.0",
+    "torchao==0.13.0",
+    "torchvision>=0.22.0",
+    "transformers>=4.53.2",
+    "vllm>=0.9.2",
+]
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cu128", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+torchvision = [
+  { index = "pytorch-cu128", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.setuptools]
+packages = ["cirilla.Cirilla_model", "cirilla.Few_shot", "cirilla.LLM_pieces", "cirilla.synth_data", "attention-gym.attn_gym"]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
