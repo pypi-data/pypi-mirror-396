@@ -1,0 +1,318 @@
+5.1.2:
+  Bug fixes:
+    - Fix escape characters in regexp pattern(Julien Rouhaud)
+5.1.1:
+  Bug fixes:
+    - Fix pg_stat_activity widgets (Julien Rouhaud, thanks to github user
+      sthattepune for the report)
+5.1.0:
+  New feature:
+    - Improve pg_stat_activity graphs using the new clock_ts column (Julien
+      Rouhaud)
+  Bug fixes:
+    - Fix computation of the system cache (Marc Cousin)
+    - Fix default server value in login form (Pierre Giraud)
+  Misc:
+    - Bump various dependencies (Pierre Giraud, Julien Rouhaud)
+5.0.2:
+  New feature:
+    - Do not display autovacuum workers in the sessions graphs (Marc Cousin)
+    - Allow autocomplete for server name selector in login view (Pierre Giraud)
+    - Show and synchronize the cursor positions in all graphs (Pierre Giraud)
+  Bug fixes:
+    - Fix missing extension detection, including better error reporting if some
+      needed extensions are not installed on the repository server (Julien
+      Rouhaud, thanks to github user koppaline and Rafael Mundel whoc both
+      reported the issue)
+    - Fix pg_stat_activity widget that previously wasn't displaying enough rows
+      in some cases (Marc Cousin, Julien Rouhaud)
+    - Fix widget rendering that could display data from other pages in case
+      quickly changing pages using the browser back button (Pierre Giraud)
+    - Fix database name in widgets that could sometime be missing (Julien
+      Rouhaud)
+    - Fix multiple queries that didn't properly joined the server identifier,
+      leading to duplicated rows if the same queryid exists on multiple remote
+      servers, typically physical replicas (Marc Cousin)
+    - Fix oldest query widget, which didn't take into account idle connections
+      (Marc Cousin)
+    - Fix some date interval shortcuts like "yesterday" or "This month" (Pierre
+      Giraud)
+  Performance improvement
+    - Improve query for the pg_wait_sampling related widgets (Marc Cousin)
+  Misc
+    - Some UI improvements (Pierre Giraud)
+    - Improve widget documentation (Julien Rouhaud, Marc Cousin, Pierre Giraud)
+    - Update javascript dependencies (Julien Rouhaud)
+    - Remove some join (Marc Cousin)
+5.0.1:
+  New feature:
+    - Make the server field in login form required (Pierre Giraud)
+  Bug fixes:
+    - Fix alert messages (Pierre Giraud)
+    - Fix typo in WAL and pg_qualstats related queries (Pierre Giraud)
+    - Various SQL formatting improvements (Pierre Giraud)
+    - Fix postgres 13 and below compatibility (Julien Rouhaud)
+    - Include the missing generated assets in the release (Julien Rouhaud)
+    - Fix various packaging problems (Matthias Dötsch, Pierre Giraud, Julien
+      Rouhaud)
+5.0.0:
+  New feature:
+    - Complete rewrite of the UI using (currently) modern frameworks and
+      libraries. It is now built with ViteJS, VueJS, Vuetify and d3. (Marion
+      Giusti, Pierre-Louis Gonon and Pierre Giraud. Thanks to Dalibo for
+      sponsoring this work).
+    - Allow forcing a snapshot or requesting a catalog refresh from the UI
+      (Julien Rouhaud)
+    - Handle any extension installed in any schema (Julien Rouhaud)
+    - Add support for PostgreSQL 17 (Julien Rouhaud)
+    - Add widgets for pg_stat_user_functions metrics (Julien Rouhaud)
+    - Add pg_stat_activity graphs on the per-server and per-db pages (Julien
+      Rouhaud)
+    - Add table / index bar graphs on the per-server and per-db pages (Julien
+      Rouhaud)
+    - Add pg_stat_archiver widgets (Julien Rouhaud)
+    - Add pg_stat_replication widgets (Julien Rouhaud)
+    - Add pg_stat_database widgets (Julien Rouhaud)
+    - Add pg_stat_replication_slots widgets (Julien Rouhaud)
+    - Add pg_stat_io widgets (Julien Rouhaud)
+    - Add pg_stat_database_conflicts widgets (Julien Rouhaud)
+    - Add pg_stat_slru widgets (Julien Rouhaud)
+    - Add pg_stat_wal widgets (Julien Rouhaud)
+    - Add pg_stat_wal_receiver widgets (Julien Rouhaud)
+    - Add pg_stat_subscription(_statistic) widgets (Julien Rouhaud)
+    - Handle new IO timing and JIT counters added in newer pg_stat_statements
+      versions (Julien Rouhaud)
+  Bug fixes:
+    - Properly handle metric groups that don't return any row (Julien Rouhaud)
+    - Properly handle SQL error when retrieving execution plans (Julien Rouhaud)
+    - Ignore query texts truncated by pg_qualstats when getting a sampled query
+      (Julien Rouhaud)
+    - Fix the worker status retrieval for local server on the config page
+      (Julien Rouhaud)
+    - Detect insufficient privilege when checking for collector processes
+      (Julien Rouhaud)
+  Misc
+    - Assume pg10+ server if no remote connection is available (Julien Rouhaud)
+    - Remove sqlalchemy dependency (Julien Rouhaud)
+    - Split the list of extensions in configuration page to multiple categories
+      depending on their use (Julien Rouhaud)
+    - Show server alias in the breadcrumb selector (Pierre Giraud)
+4.2.1:
+  Misc
+  - sqlalchemy > 1.4 is not supported (thanks to David Mödinger for the report)
+4.2.0:
+  New feature:
+  - Add support for pg_stat_statements.toplevel, added in pg_stat_statements
+    version 1.9 (Julien Rouhaud)
+4.1.4:
+  New features:
+  - Add support for HTTPS (Julien Rouhaud, per initial request from github user
+    hrawulwa, then further requests from github users banlex73  and
+    guruguruguru.  Thanks also to github user guruguruguru for testing the
+    feature)
+  Bug fixes:
+  - Fix explain plan css (Julien Rouhaud, per report from github user
+    Ravi160492)
+  - Fix detection of nodes with the same qualid in the global index suggestion
+    wizard (Pierre Giraud)
+  - Fix detection of powa bgworker in the config page (Julien Rouhaud)
+  Misc:
+  - Improve grid queries performance (Marc Cousin and Julien Rouhaud)
+  - Improve login form serverlist (Uwe Simon)
+4.1.3:
+  New features:
+  - Add a new cookie_expires_days option (Julien Rouhaud, per request from
+    github user Kamal-Villupuram)
+  - Use pgsql language set for highlighting (Christoph Dreis)
+  Bug fixes:
+  - Allow missing pg_stat_kcache records (Julien Rouhaud, per report from
+    Christoph Dreis)
+  - Fix query unjumbling code (Julien Rouhaud, per report from Martin Aparicio
+    and Frédéric Yhuel)
+  - Correctly handle multiple queries with the same qual in the wizard (Julien
+    Rouhaud)
+  Misc:
+  - Update build and build dependencies and highlight.js (Christoph Dreis)
+4.1.2:
+  Bug fixes:
+  - Restore compatibility with tornado 2.0, thanks to github user hrawulwa for
+    the report.
+  - Fix detection of extension in local mode(Julien Rouhaud, thanks to Magnus
+    Hagander for the report)
+4.1.1:
+  New features:
+  - Use locally available info for remote server configuration page when
+    possible (Julien Rouhaud)
+  Bug fixes:
+  - Fix per-query page for queries with identical query identifier executed on
+    multiple remote servers (Julien Rouhaud)
+  - Properly handle situation where the UI doesn't know the remote server
+    PostgreSQL version (Julien Rouhaud)
+  - Fix local server detection (Julien Rouhaud, thanks to github user
+    alepaes1975 for the report)
+4.1.0:
+  New features:
+  - Add compatibility with pg_stat_statements 1.8, and expose all new counters
+    (Julien Rouhaud)
+  - Add compatibility with pg_stat_kcache 2.2 (Julien Rouhaud)
+  Performance improvements:
+  - General performance improvement of per-database queries (Adrien Nayrat)
+4.0.2:
+  New features:
+  - Add powa_coaslesce setting on config page (Adrien Nayrat)
+  Performance improvements:
+  - Fix a cartesian product in the predicate view (Adrien Nayrat)
+  - Fix multiple queries so they can use the existing indexes (Adrien Nayrat)
+  - Multiple performance improvements on the per-predicate views (Adrien Nayrat
+    and Julien Rouhaud)
+  Bug fixes:
+  - Properly ignore queries that weren't called on the given interval (Adrien
+    Nayrat)
+  - Don't display the last retrieved value on graphs, as the value is known to
+    always be zero and lead to wrong graphs (Adrien Nayrat)
+  - Fix links to documentation (Matthias Dötsch)
+  - Fix collector worker status state when srvid greater than 9 (Julien
+    Rouhaud, thanks to Adrien Nayrat for the report)
+4.0.1:
+  Bug fixes:
+  - Fix per-query hypothetical index checking (Julien Rouhaud, thanks to github
+    user hrawulwa)
+4.0.0:
+  New features:
+  - Make the UI compatible with remote-mode setup (Julien Rouhaud)
+  - Query and display powa-collector information (Julien Rouhaud)
+  - Expose system cache hit / disk read metrics on global and per-database
+    pages (Julien Rouhaud)
+  - Expose new metrics added in pg_stat_kcache 2.1 (page faults, context
+    switches...) on global, per-database and per-query pages (Julien Rouhaud)
+  - Add wait events graphs on global and per-database pages (Julien Rouhaud)
+  - Add queries per second counter on global and per-database pages (Julien
+    Rouhaud)
+  - Display configuration changes and PostgreSQL restart on graphs when
+    pg_track_settings is configured (Julien Rouhaud)
+  - Add an url_prefix parameter (Julien Rouhaud and github user rippiedoos)
+  - Add options to forbid the UI from connecting to databases different than
+    the dedicated powa one, or to remote server, either globally or per server.
+  - Provide metric definitions and link to the documentation on the graph
+    (Julien Rouhaud)
+  - Add pg_stat_bgwriter graphs (Julien Rouhaud)
+  - Add database objects (based on pg_stat_all_tables info) graphs (Julien
+    Rouhaud)
+  - Move the "other queries" panel to its own grid (Ronan Dunklau)
+
+  Bug fixes:
+  - Fix longstanding bug in graph hover boxes position (Julien Rouhaud)
+  - Fix the graph preview selection (Julien Rouhaud)
+  - Add pg_wait_sampling in the config extension list (Julien Rouhaud, thanks
+    to Adrien Nayrat for the report)
+  - Don't try to detect if a hypotetical index would be used if no suitable
+    index is detected (Julien Rouhaud, thanks to Guillaume Lelarge for the
+    report)
+  - Fix lost filter when changing the time range (Pierre Giraud, thanks to Marc
+    Cousin for the report)
+  - Fix database wizard query validation for pg11+ (Julien Rouhaud)
+  - Handle hypopg unsupported access methods in dataabase wizard (Julien
+    Rouhaud, thanks to Adrien Di Mascio for the report)
+  - Fix compatibility with SQLAlchemy 1.3+ (Julien Rouhaud, thanks to github
+    user mchubby and irc user ChOcO-Bn for the report)
+  - Fix query detail if no data is found on the selected range (Julien Rouhaud,
+    thanks to irc user ChOcO-Bn for the report)
+  - Fix some metrics in wait events and general query datasources (Julien
+    Rouhaud, thanks to Adrien Nayrat for the report)
+  - Fix per-server graphs having multiple data and pg_stat_kcache enabled
+    (Alexander Kukushkin)
+  - Fix #calls and #rows metrics on the per-query page (Julien Rouhaud)
+  - Fix query detail and performance problems on quals (Ronan Dunklau)
+  - Fix queries for pg_stat_kcache and pg_qualstats (Ronan Dunklau)
+  - Fix query details when multiples users run the same query (Julien Rouhaud)
+  - Fix global databases metrics query (Alexander Kukushkin)
+  - Fix long standing bug in pg_qualstats aggregation
+  - Fix data retrieval when a time interval spread over more than 2 aggregated
+    rows
+
+  Misc:
+    - Display server's alias instead of hostname:port (Adrien Nayrat)
+    - Support pg_qualstats 2
+3.2.0:
+  - Add support for pg_wait_sampling to display wait events statistics and
+    graphs, require pg9.6+ (Julien Rouhaud)
+  - Show a sorted list of servers on login screen (meikomeik)
+  - Add category to the list of column in the config overview page (Julien
+    Rouhaud, thanks to Nehemiah I. Dacres for the feature request)
+  - New breadcrumb and many other UI improvements (Pierre Giraud)
+  - Fix behavior when changing time interval and then changing back to last
+    hour (Julien Rouhaud, reported by Thomas Reiss)
+  - Allow both "user" and "username" in configuration files (Julien Rouhaud)
+3.1.4:
+  - Export all data in csv export (thanks to jdeshayes for the feature request)
+  - Reword double negation, thanks to Pierre Giraud for noticing
+3.1.3:
+  - Fix wrong calculation of microseconds difference (thanks to Eric Champigny)
+3.1.2:
+  - Fix I/O time unit on overview dashboard
+  - Fix problem with explain queries (thanks to dblugeon)
+  - Cosmetic changes to CPU time
+3.1.1:
+  - Detect powa-archivist / powa-web incompatibility
+  - Handle quals which are not optimizable at all
+  - Fix grid rendering.
+  - Change default sorting order to DESC
+  - Change default sort order on query page to duration desc
+  - Use the time interval when rendering urls in Grids
+  - Propagate updatePeriod on zoom to picker
+  - Add export to CSV feature on grid
+  - Fix case when quals dont belong to the same rel
+  - Ignore errors while getting hypoplans
+3.1.0:
+  - Fix figures in query details, thanks to Eric Champigny for the patch
+  - Fix graphs to display local time instead of UTC time
+  - Fix IO timing figures on database overview (thanks to ribbles for the
+    report)
+  - Fix query page when pg_qualstats isn't available
+  - Display dropped databases in the UI (requires at least powa-archvist 3.0.1)
+  - Notify that server is listening, display socket information (thanks to
+    Pierre Hilbert for the feature request)
+  - Always display overall informations on a query, even if not statistics is
+    present
+  - Display server and connection information in top-bar
+3.0.2:
+  - fix regression in period updates
+3.0.1:
+  - Display installed version of handled extensions
+  - Display information on pg_track_settings
+  - Make query detail widget smaller
+  - Fix qualstat_getstatdata, condition was ignored
+  - Better hint on fail wizard.
+  - Fix some syntax erors
+  - Handle case n_distinct is unkown.
+  - On per-cluster view, the avg runtime is displayed, not the total runtime.
+  - Add a "runtime per sec" serie on per-cluster and per-db views.
+  - Show the initially sorted column in grids.
+  - Don't display sidebar on login page.
+  - Add tabbed dashboards
+3.0.0:
+  - Add indexes suggestion for the whole database workload.
+  - Fix bug with negative microsecond differences
+  - Add support for hypopg
+  - Handle example queries from pg_qualstats
+  - Handle prepared statements
+  - Add example on how to specify a client encoding
+2.0.11:
+  - fix bug on "other queries" panel on qual page
+  - other bug fixes
+2.0.10:
+  - add compatibility for wsgi on tornado < 4
+2.0.9:
+  - add index_url config parameter
+2.0.8:
+  - Compatibility with sqlalchemy 1.0.0
+2.0.7:
+  - Add zoom-on-drag behaviour to graphs
+  - Fix redirect after login
+  - Add logging for authentification errors
+2.0.6:
+  - fix bug with python2 relative imports
+2.0.5:
+  - display cpu / user time as a percentage of query time
+  - initial changelog
+
