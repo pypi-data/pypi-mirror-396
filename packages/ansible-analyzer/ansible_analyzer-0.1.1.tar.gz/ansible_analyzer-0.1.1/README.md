@@ -1,0 +1,35 @@
+# Ansible Analyzer
+
+`ansible-analyzer` lets you visualize one or all playbooks from your
+project by building a graph representation of each playbook and role task
+included.
+
+## Usage
+
+To analyze a specific playbook, run:
+
+```sh
+ansible-analyzer playbook -r *roles_dir* -f *playbook_path* -o *output_path*
+```
+
+where
+
+* `-r` is for the local directory containing roles
+* `-f` is for the playbook file path
+* `-o` (optional) is for the graph `.png` output path
+
+To analyze all the playbooks in a given directory, run:
+
+```sh
+ansible-analyzer all -r *roles_dir* -d *playbooks_dir* -o *output_path*
+```
+
+where
+
+* `-r` is for the local directory containing roles
+* `-d` is for the local directory containing playbooks to be analyzed
+* `-o` (optional) is for the graph `.png` output path
+
+Finally, the CLI will save a `.png` file containing a graph representation
+of your project similar to the following:
+![example graph](https://github.com/vshatravenko/ansible-analyzer/blob/main/example_graph.png)
