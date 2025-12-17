@@ -1,0 +1,147 @@
+# UniORM
+
+**UniORM** — SQLite, MySQL va PostgreSQL bilan ishlovchi **universal async ORM**.  
+Oddiy API, Django’ga o‘xshash model tizimi va kuchli query builder’ga ega.
+
+---
+
+## 🚀 Xususiyatlar
+
+- ✅ Async (async/await)
+- ✅ SQLite, MySQL, PostgreSQL
+- ✅ Model + Field tizimi
+- ✅ QueryBuilder & Q object
+- ✅ Migratsiyalar
+- ✅ Minimal va yengil
+
+---
+
+## 📦 O‘rnatish
+
+```bash
+pip install uniorm
+````
+
+Yoki manbadan:
+
+```bash
+git clone https://github.com/yourusername/uniorm.git
+cd uniorm
+pip install -e .
+```
+
+---
+
+## 🔌 Database ulash
+
+### SQLite
+
+```python
+from uniorm import SqliteDatabase
+
+db = SqliteDatabase("db.sqlite3")
+```
+
+### MySQL
+
+```python
+from uniorm import MySQLDatabase
+
+db = MySQLDatabase(
+    database="test",
+    user="root",
+    password="password",
+    host="localhost"
+)
+```
+
+### PostgreSQL
+
+```python
+from uniorm import PostgreSQLDatabase
+
+db = PostgreSQLDatabase(
+    database="test",
+    user="postgres",
+    password="password"
+)
+```
+
+---
+
+## 🧱 Model yaratish
+
+```python
+from uniorm import Model, CharField, IntField
+
+class User(Model):
+    name = CharField(max_length=100)
+    age = IntField()
+
+    class Meta:
+        database = db
+```
+
+---
+
+## ✏️ CRUD amallar
+
+### Create
+
+```python
+user = await User.create(name="Ali", age=20)
+```
+
+### Read
+
+```python
+user = await User.get(id=1)
+users = await User.filter(age__gte=18)
+```
+
+### Update
+
+```python
+user.age = 21
+await user.save()
+```
+
+### Delete
+
+```python
+await user.delete()
+```
+
+---
+
+## 🔍 QueryBuilder
+
+```python
+from uniorm import Q
+
+users = await User.select().where(
+    Q(age__gte=18) & Q(name__contains="a")
+).order_by("-age").limit(10).execute()
+```
+
+---
+
+## 🔄 Migratsiyalar
+
+```python
+from uniorm import MigrationManager
+
+manager = MigrationManager(db)
+await manager.init()
+manager.make_migrations([User])
+await manager.migrate()
+```
+
+---
+
+## ⚠️ Talablar
+
+* Python 3.9+
+* aiosqlite (SQLite)
+* asyncmy (MySQL)
+* psycopg[binary] (PostgreSQL)
