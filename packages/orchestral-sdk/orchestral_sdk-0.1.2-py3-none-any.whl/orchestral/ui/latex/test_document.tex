@@ -1,0 +1,76 @@
+% Test document for Orchestral LaTeX module
+% Compile with: pdflatex -shell-escape test_document.tex
+% Or paste into Overleaf (make sure to include orchestral.tex)
+
+\documentclass{article}
+\input{orchestral.tex}
+
+\begin{document}
+
+\section{Test: Basic Messages}
+
+% Simple user message
+\begin{orchestralusermessage}
+Please list the files in the current directory.
+\end{orchestralusermessage}
+
+\bigskip
+
+% Simple agent message with text only
+\begin{orchestralagentmessage}
+I'll help you list the contents of the current directory. I'll use the \texttt{ls} command.
+\end{orchestralagentmessage}
+
+\bigskip
+
+\section{Test: Agent with Nested Tool}
+
+% Agent message with nested tool panel
+\begin{orchestralagentmessage}
+I'll help you list the contents of the current directory.
+
+% Nested tool panel
+\begin{orchestraltoolmessage}{RunCommand: \texttt{ls}}
+\textbf{Output:}
+
+\begin{verbatim}
+file1.txt
+file2.py
+directory1/
+\end{verbatim}
+\end{orchestraltoolmessage}
+
+The current directory contains 2 files and 1 subdirectory.
+\end{orchestralagentmessage}
+
+\bigskip
+
+\section{Test: Multiple Nested Tools}
+
+\begin{orchestralagentmessage}
+I'll create a Python script and run it.
+
+\begin{orchestraltoolmessage}{WriteFile: \texttt{hello.py}}
+\textbf{File created successfully.}
+\end{orchestraltoolmessage}
+
+\begin{orchestraltoolmessage}{RunCommand: \texttt{python hello.py}}
+\textbf{Output:}
+
+\begin{verbatim}
+Hello, World!
+\end{verbatim}
+\end{orchestraltoolmessage}
+
+The script executed successfully and printed the greeting.
+\end{orchestralagentmessage}
+
+\bigskip
+
+\section{Test: System Message}
+
+\begin{orchestralsystemmessage}
+You are a helpful assistant that assists users with file management and code execution tasks.
+\end{orchestralsystemmessage}
+
+\end{document}
