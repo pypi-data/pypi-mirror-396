@@ -1,0 +1,80 @@
+name: Auto Create Release
+
+on:
+  push:
+    branches: [ release ]
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # 需要写入权限来创建release
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 获取完整历史，以便获取上一个release标签
+
+      - name: Get version from tag or generate one
+        id: version
+        run: |
+          # 获取最新的release标签
+          LATEST_TAG=$(git describe --tags --match="v*" --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "Latest tag: $LATEST_TAG"
+
+          # 提取版本号并增加
+          VERSION=${LATEST_TAG#v}
+          IFS='.' read -ra VERSION_PARTS <<< "$VERSION"
+          MAJOR=${VERSION_PARTS[0]}
+          MINOR=${VERSION_PARTS[1]}
+          PATCH=${VERSION_PARTS[2]}
+
+          # 增加补丁版本号
+          PATCH=$((PATCH + 1))
+          NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+
+          # 检查新版本标签是否已存在
+          while git rev-parse "v$NEW_VERSION" >/dev/null 2>&1; do
+            echo "Tag v$NEW_VERSION already exists, incrementing patch version"
+            PATCH=$((PATCH + 1))
+            NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+          done
+
+          # 生成 changelog
+          if [ "$LATEST_TAG" = "v0.0.0" ]; then
+            # 如果没有之前的标签，获取所有提交
+            CHANGELOG=$(git log --pretty=format:'- %s' origin/main..HEAD)
+          else
+            # 获取从上一个标签到现在的提交
+            CHANGELOG=$(git log --pretty=format:'- %s' $LATEST_TAG..HEAD)
+          fi
+
+          # 设置输出
+          echo "version=v$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "name=Release $NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Tag and Release
+        id: create_release
+        run: |
+          # 创建tag
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a ${{ steps.version.outputs.version }} -m "Release ${{ steps.version.outputs.name }}"
+
+          # 推送tag到远程仓库，这会触发publish工作流
+          git push origin ${{ steps.version.outputs.version }}
+
+          # 等待几秒钟确保GitHub有时间处理tag推送
+          sleep 10
+
+          # 使用GitHub CLI创建release草稿，包含commit messages
+          gh release create ${{ steps.version.outputs.version }} \
+            --title "${{ steps.version.outputs.name }}" \
+            --notes "自动创建的发布版本 ${{ steps.version.outputs.version }}\n\n## 更新内容\n\n${{ steps.version.outputs.changelog }}\n\n## 发布说明\n\n此版本由 GitHub Actions 自动构建和发布。\n包含自上次发布以来的所有提交。" \
+            --draft
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
