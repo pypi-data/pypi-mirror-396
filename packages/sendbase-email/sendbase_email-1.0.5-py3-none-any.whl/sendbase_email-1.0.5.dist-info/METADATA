@@ -1,0 +1,284 @@
+Metadata-Version: 2.4
+Name: sendbase-email
+Version: 1.0.5
+Summary: Official Python SDK for the SendBase Email API. Send transactional emails, manage domains, templates, and more.
+Author-email: SendBase <support@sendbase.app>
+License-Expression: MIT
+Project-URL: Homepage, https://sendbase.app
+Project-URL: Documentation, https://docs.sendbase.app
+Project-URL: Repository, https://github.com/sendbase/sendbase-python
+Project-URL: Issues, https://github.com/sendbase/sendbase-python/issues
+Keywords: email,api,sdk,sendbase,transactional-email
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: Developers
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Communications :: Email
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Typing :: Typed
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: httpx>=0.25.0
+Requires-Dist: pydantic>=2.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.21.0; extra == "dev"
+Requires-Dist: respx>=0.20.0; extra == "dev"
+Dynamic: license-file
+
+# SendBase Email Python SDK
+
+Official Python SDK for the [SendBase Email API](https://sendbase.app). Send transactional emails, manage domains, templates, and more.
+
+## Installation
+
+```bash
+pip install sendbase-email
+```
+
+## Quick Start
+
+```python
+from sendbase_email import SendBaseClient, SendEmailRequest
+
+# Initialize the client
+client = SendBaseClient("your-api-key")
+
+# Send an email
+response = client.emails.send(SendEmailRequest(
+    from_email="sender@yourdomain.com",
+    to=["recipient@example.com"],
+    subject="Hello from SendBase!",
+    html_body="<h1>Welcome!</h1><p>This is a test email.</p>"
+))
+
+print(f"Message ID: {response.message_id}")
+print(f"Status: {response.status_text}")
+```
+
+## Async Support
+
+The SDK provides full async support:
+
+```python
+import asyncio
+from sendbase_email import AsyncSendBaseClient, SendEmailRequest
+
+async def main():
+    async with AsyncSendBaseClient("your-api-key") as client:
+        response = await client.emails.send(SendEmailRequest(
+            from_email="sender@yourdomain.com",
+            to=["recipient@example.com"],
+            subject="Hello!",
+            html_body="<h1>Welcome!</h1>"
+        ))
+        print(f"Message ID: {response.message_id}")
+
+asyncio.run(main())
+```
+
+## Features
+
+### Send Emails
+
+```python
+from sendbase_email import SendBaseClient, SendEmailRequest, EmailRecipient
+
+client = SendBaseClient("your-api-key")
+
+# Simple email
+response = client.emails.send(SendEmailRequest(
+    from_email="sender@yourdomain.com",
+    to=["recipient@example.com"],
+    subject="Hello!",
+    html_body="<h1>Welcome!</h1>"
+))
+
+# With recipient names
+response = client.emails.send(SendEmailRequest(
+    from_email="sender@yourdomain.com",
+    from_name="My App",
+    to=[EmailRecipient(email="user@example.com", name="John Doe")],
+    subject="Hello John!",
+    html_body="<h1>Welcome!</h1>",
+    text_body="Welcome!"
+))
+
+# With CC, BCC, and reply-to
+response = client.emails.send(SendEmailRequest(
+    from_email="sender@yourdomain.com",
+    to=["primary@example.com"],
+    cc=["cc@example.com"],
+    bcc=["bcc@example.com"],
+    reply_to="replies@yourdomain.com",
+    subject="Important Update",
+    html_body="<p>Please review...</p>"
+))
+```
+
+### Using Templates
+
+```python
+# Send with a template
+response = client.emails.send(SendEmailRequest(
+    from_email="sender@yourdomain.com",
+    to=["recipient@example.com"],
+    subject="Welcome!",
+    template_id="your-template-id",
+    template_variables={"name": "John", "company": "Acme Inc"}
+))
+```
+
+### Manage Domains
+
+```python
+from sendbase_email import CreateDomainRequest
+
+# Add a domain
+domain = client.domains.create(CreateDomainRequest(
+    domain_name="yourdomain.com"
+))
+print(f"Domain ID: {domain.id}")
+print(f"DNS Records to configure: {len(domain.dns_records)}")
+
+# List domains
+domains = client.domains.list()
+
+# Verify a domain
+domain = client.domains.verify(domain.id)
+print(f"Verification status: {domain.verification_status_text}")
+```
+
+### Manage Templates
+
+```python
+from sendbase_email import CreateTemplateRequest, UpdateTemplateRequest
+
+# Create a template
+template = client.templates.create(CreateTemplateRequest(
+    name="Welcome Email",
+    subject="Welcome {{name}}!",
+    html_body="<h1>Hello {{name}}</h1><p>Welcome to {{company}}!</p>"
+))
+
+# Preview with variables
+preview = client.templates.preview(
+    template.id,
+    {"name": "John", "company": "Acme Inc"}
+)
+print(preview.html_body)
+
+# Update template
+template = client.templates.update(
+    template.id,
+    UpdateTemplateRequest(subject="Updated: Welcome {{name}}!")
+)
+
+# Delete template
+client.templates.delete(template.id)
+```
+
+### Webhooks
+
+```python
+from sendbase_email import CreateWebhookRequest
+
+# Get available event types
+event_types = client.webhooks.get_event_types()
+for et in event_types:
+    print(f"{et.name}: {et.description}")
+
+# Create a webhook
+result = client.webhooks.create(CreateWebhookRequest(
+    name="My Webhook",
+    url="https://yourapp.com/webhooks/sendbase",
+    event_types=["email.delivered", "email.bounced"]
+))
+print(f"Webhook ID: {result.endpoint.id}")
+print(f"Signing Secret: {result.secret}")  # Store this securely!
+
+# Test webhook
+test_result = client.webhooks.test(result.endpoint.id)
+print(f"Test successful: {test_result.success}")
+```
+
+### Billing
+
+```python
+# Get current usage
+usage = client.billing.get_usage()
+print(f"Emails sent: {usage.emails_sent}/{usage.emails_limit}")
+
+# Get usage history
+history = client.billing.get_usage_history(months=3)
+for period in history:
+    print(f"{period.current_period_start}: {period.emails_sent} emails")
+
+# Get account limits
+limits = client.billing.get_limits()
+print(f"Domains allowed: {limits.domains_allowed}")
+```
+
+## Error Handling
+
+```python
+from sendbase_email import (
+    SendBaseError,
+    SendBaseAuthenticationError,
+    SendBaseValidationError,
+    SendBaseNotFoundError,
+    SendBaseRateLimitError,
+)
+
+try:
+    response = client.emails.send(request)
+except SendBaseAuthenticationError:
+    print("Invalid API key")
+except SendBaseValidationError as e:
+    print(f"Validation error: {e.errors}")
+except SendBaseNotFoundError:
+    print("Resource not found")
+except SendBaseRateLimitError as e:
+    print(f"Rate limited. Retry after {e.retry_after} seconds")
+except SendBaseError as e:
+    print(f"API error: {e.message} (HTTP {e.status_code})")
+```
+
+## Context Manager
+
+Both sync and async clients support context managers for automatic cleanup:
+
+```python
+# Sync
+with SendBaseClient("your-api-key") as client:
+    response = client.emails.send(request)
+
+# Async
+async with AsyncSendBaseClient("your-api-key") as client:
+    response = await client.emails.send(request)
+```
+
+## Configuration
+
+```python
+client = SendBaseClient(
+    api_key="your-api-key",
+    base_url="https://api.sendbase.app/api/v1",  # Custom base URL
+    timeout=60.0  # Request timeout in seconds
+)
+```
+
+## Requirements
+
+- Python 3.9+
+- httpx
+- pydantic
+
+## License
+
+MIT License - see LICENSE file for details.
