@@ -1,0 +1,1 @@
+See Navigator [docs](https://docs.usenavigator.com) for usage and configuration.
