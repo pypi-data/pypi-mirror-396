@@ -1,0 +1,67 @@
+name: Publish to PyPI
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Release Please"]
+    types: [completed]
+  push:
+    tags:
+      - "v*"
+      - "memdex-v*"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Determine release tag
+        id: tag
+        shell: bash
+        run: |
+          git fetch --force --tags
+          sha="${GITHUB_SHA}"
+          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            sha="${{ github.event.workflow_run.head_sha }}"
+          fi
+          tag="$(git tag --points-at "$sha" | grep -E 'v[0-9]+' | head -n 1 || true)"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          if [[ -z "$tag" ]]; then
+            echo "No v* tag on $sha; skipping publish."
+          else
+            echo "Found release tag: $tag"
+          fi
+
+      - name: Install build tooling
+        if: ${{ steps.tag.outputs.tag != '' }}
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install build
+
+      - name: Build
+        if: ${{ steps.tag.outputs.tag != '' }}
+        run: python -m build
+
+      - name: Publish to PyPI (Trusted Publisher)
+        if: ${{ steps.tag.outputs.tag != '' }}
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+
