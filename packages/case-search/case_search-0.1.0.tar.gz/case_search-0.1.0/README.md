@@ -1,0 +1,170 @@
+# Case Search MCP Server
+
+這是一個 Model Context Protocol (MCP) server，用於查詢 CSV 檔案中的案件資訊。
+
+## 功能
+
+- 根據案件編號 (case_id) 查詢案件資訊
+- 以 JSON 格式回傳完整的案件資料
+- 支援透過 stdio 與 MCP 客戶端通訊
+
+## 安裝
+
+### 從 PyPI 安裝（推薦）
+
+```bash
+# 使用 uvx 直接執行（不需要安裝）
+uvx case-search
+
+# 或安裝到本地環境
+pip install case-search
+```
+
+### 從原始碼安裝
+
+```bash
+# 複製專案
+git clone https://github.com/plion818/case-search.git
+cd case-search
+
+# 使用 uv 安裝相依套件
+uv pip install -e .
+```
+
+## 使用方式
+
+### 方式一：透過 uvx 執行（推薦）
+
+最簡單的方式，不需要事先安裝：
+
+```bash
+uvx case-search
+```
+
+### 方式二：本地安裝後執行
+
+```bash
+# 安裝後執行
+pip install case-search
+case-search
+```
+
+### 方式三：在 Claude Desktop 中使用
+
+編輯 Claude Desktop 設定檔，加入以下內容：
+
+**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+
+**macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+
+**使用已發佈的套件（推薦）：**
+
+```json
+{
+  "mcpServers": {
+    "case-search": {
+      "command": "uvx",
+      "args": ["case-search"]
+    }
+  }
+}
+```
+
+**使用本地開發版本：**
+
+```json
+{
+  "mcpServers": {
+    "case-search": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "c:\\Users\\plion818\\2. Learn\\MCP\\case_search",
+        "case-search"
+      ]
+    }
+  }
+}
+```
+
+或使用絕對路徑指定 Python 執行檔：
+
+```json
+{
+  "mcpServers": {
+    "case-search": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "c:\\Users\\plion818\\2. Learn\\MCP\\case_search",
+        "run",
+        "case-search"
+      ]
+    }
+  }
+}
+```
+
+## 工具說明
+
+### search_case
+
+根據案件編號查詢案件資訊。
+
+**輸入參數：**
+- `case_id` (string, 必填): 案件編號，例如 "2023-0001", "2024-0002", "2025-0001"
+
+**輸出範例：**
+
+```json
+{
+  "case_id": "2025-0001",
+  "taxpayer_name": "建宏科技股份有限公司",
+  "taxpayer_id": "11122233",
+  "tax_type": "營所稅",
+  "declaration_type": "結算申報",
+  "filing_date": "2025-05-31",
+  "declared_amount": 1250000,
+  "assessed_amount": 1300000,
+  "status": "核定",
+  "handler": "王大明",
+  "jurisdiction": "中區國稅局臺中分局",
+  "last_updated": "2025-09-15 14:20:00"
+}
+```
+
+如果找不到案件，會回傳錯誤訊息：
+
+```json
+{
+  "error": "找不到案件編號 2099-0001 的資料"
+}
+```
+
+## 資料檔案
+
+案件資料儲存在專案根目錄的 `data.csv` 檔案中，包含以下欄位：
+
+- case_id: 案件編號
+- taxpayer_name: 納稅人名稱
+- taxpayer_id: 稅籍編號
+- tax_type: 稅目
+- declaration_type: 申報類型
+- filing_date: 申報日期
+- declared_amount: 申報金額
+- assessed_amount: 核定金額
+- status: 案件狀態
+- handler: 承辦人
+- jurisdiction: 管轄機關
+- last_updated: 最後更新時間
+
+## 開發
+
+本專案使用 Python 3.10+ 和以下主要套件：
+
+- mcp[cli] >= 1.24.0
+- pandas >= 2.0.0
+
+## 授權
+
+此專案由 plion818 開發維護。
