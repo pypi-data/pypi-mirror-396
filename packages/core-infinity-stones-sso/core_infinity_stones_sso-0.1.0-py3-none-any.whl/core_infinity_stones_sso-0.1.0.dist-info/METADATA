@@ -1,0 +1,496 @@
+Metadata-Version: 2.4
+Name: core-infinity-stones-sso
+Version: 0.1.0
+Summary: A library for Microsoft SSO authentication and authorization with RBAC support
+License: MIT
+License-File: LICENSE
+Author: Omar Afifi
+Requires-Python: >=3.10,<4.0
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
+Requires-Dist: alembic (>=1.12.1,<2.0.0)
+Requires-Dist: fastapi (>=0.104.1,<0.105.0)
+Requires-Dist: httpx (>=0.25.2,<0.26.0)
+Requires-Dist: msal (>=1.25.0,<2.0.0)
+Requires-Dist: psycopg2-binary (>=2.9.9,<3.0.0)
+Requires-Dist: pydantic (>=2.5.0,<3.0.0)
+Requires-Dist: pydantic-settings (>=2.1.0,<3.0.0)
+Requires-Dist: python-jose[cryptography] (>=3.3.0,<4.0.0)
+Requires-Dist: python-multipart (>=0.0.6,<0.0.7)
+Requires-Dist: sqlalchemy (>=2.0.23,<3.0.0)
+Requires-Dist: uvicorn[standard] (>=0.24.0,<0.25.0)
+Description-Content-Type: text/markdown
+
+# Core Infinity Stones SSO Authentication Library
+
+A private library for Microsoft Single Sign-On (SSO) authentication and authorization with hybrid Role-Based Access Control (RBAC) support.
+
+## Features
+
+- ✅ Complete Microsoft SSO login and logout flows
+- ✅ **Microsoft Azure AD groups** - Use Azure AD groups for authorization
+- ✅ **Microsoft application roles** - Use app roles defined in Azure AD
+- ✅ **Database roles and permissions** - Store custom roles in your database
+- ✅ Token refresh support - Refresh expired tokens without re-authentication
+- ✅ FastAPI integration with middleware and dependencies
+- ✅ PostgreSQL database support with Alembic migrations
+- ✅ Secure JWT token handling and validation
+- ✅ Automatic user creation and role synchronization
+
+## Installation
+
+### Prerequisites
+
+- Python 3.10+
+- Poetry
+- PostgreSQL database
+
+### Setup
+
+1. Clone the repository and install dependencies:
+
+```bash
+poetry install
+```
+
+2. Create a `.env` file (optional, only needed for migrations):
+
+```bash
+cp .env.example .env
+```
+
+3. Configure your environment variables (for migrations only):
+
+```env
+MICROSOFT_CLIENT_ID=your_client_id_here
+MICROSOFT_CLIENT_SECRET=your_client_secret_here
+MICROSOFT_TENANT_ID=your_tenant_id_here
+MICROSOFT_REDIRECT_URI=http://localhost:8000/auth/callback
+DATABASE_URL=postgresql://user:password@localhost:5432/microsoft_sso_db
+SECRET_KEY=your-secret-key-here-change-this-in-production
+```
+
+4. Set up the database:
+
+```bash
+# Create initial migration
+alembic revision --autogenerate -m "Initial migration"
+
+# Apply migrations
+alembic upgrade head
+
+# Set up initial database roles/permissions (optional)
+python examples/setup_database.py
+```
+
+## Azure AD Setup
+
+1. Go to [Azure Portal](https://portal.azure.com)
+2. Navigate to **Azure Active Directory** > **App registrations**
+3. Create a new registration:
+   - Name: Your app name
+   - Supported account types: Single tenant
+   - Redirect URI: `http://localhost:8000/auth/callback` (or your production URL)
+4. After creation, note:
+   - **Application (client) ID** → `MICROSOFT_CLIENT_ID`
+   - **Directory (tenant) ID** → `MICROSOFT_TENANT_ID`
+5. Go to **Certificates & secrets** and create a new client secret → `MICROSOFT_CLIENT_SECRET`
+6. Go to **API permissions** and add:
+   - Microsoft Graph > Delegated permissions:
+     - `User.Read`
+     - `GroupMember.Read.All` (to read user's group memberships)
+     - `email`
+     - `offline_access` (to get refresh tokens)
+   - Click **Grant admin consent** (if you have admin rights)
+
+## Quick Start
+
+### Recommended: Using Class Initializers (For Compiled Packages)
+
+```python
+from fastapi import FastAPI, Depends
+from core_infinity_stones_sso import Settings, MicrosoftSSOAuthManager, User
+
+app = FastAPI()
+
+# Initialize with explicit parameters (no .env file needed)
+settings = Settings(
+    microsoft_client_id="your_client_id",
+    microsoft_client_secret="your_client_secret",
+    microsoft_tenant_id="your_tenant_id",
+    microsoft_redirect_uri="http://localhost:8000/auth/callback",
+    database_url="postgresql://user:pass@localhost:5432/db",
+    secret_key="your-secret-key",
+)
+
+# Create auth manager
+auth_manager = MicrosoftSSOAuthManager(settings)
+
+# Include auth routes
+app.include_router(auth_manager.get_router())
+
+@app.get("/protected")
+def protected_route(user: User = Depends(auth_manager.get_current_user_dependency())):
+    return {
+        "message": f"Hello {user.email}!",
+        "groups": user.get_group_names(),  # Microsoft groups
+        "app_roles": user.get_app_role_names(),  # Microsoft app roles
+        "db_roles": user.get_db_role_names(),  # Database roles
+        "permissions": user.get_permission_names(),  # Permissions from roles
+    }
+
+# Require a Microsoft group
+@app.get("/admin")
+def admin_route(user: User = Depends(auth_manager.require_group("Administrators"))):
+    return {"message": "Admin access granted"}
+
+# Require a Microsoft application role
+@app.get("/app-admin")
+def app_admin_route(user: User = Depends(auth_manager.require_app_role("App.Admin"))):
+    return {"message": "App admin access granted"}
+
+# Require a database role
+@app.get("/editor")
+def editor_route(user: User = Depends(auth_manager.require_db_role("Editor"))):
+    return {"message": "Editor access granted"}
+
+# Require a permission
+@app.get("/manage-users")
+def manage_users(user: User = Depends(auth_manager.require_permission("user.manage"))):
+    return {"message": "Can manage users"}
+
+```
+
+### Alternative: Using Environment Variables (Backward Compatibility)
+
+```python
+from fastapi import FastAPI, Depends
+from core_infinity_stones_sso import (
+    get_current_user,
+    require_group,
+    require_app_role,
+    require_db_role,
+    require_permission,
+    auth_router,
+    User,
+)
+
+app = FastAPI()
+app.include_router(auth_router)  # Uses .env file or environment variables
+
+@app.get("/protected")
+def protected_route(user: User = Depends(get_current_user)):
+    return {"message": f"Hello {user.email}!"}
+
+# Require a Microsoft group
+@app.get("/admin")
+def admin_route(user: User = Depends(require_group("Administrators"))):
+    return {"message": "Admin access granted"}
+
+# Require an application role
+@app.get("/app-admin")
+def app_admin_route(user: User = Depends(require_app_role("App.Admin"))):
+    return {"message": "App admin access granted"}
+
+# Require a database role
+@app.get("/editor")
+def editor_route(user: User = Depends(require_db_role("Editor"))):
+    return {"message": "Editor access granted"}
+```
+
+### React Frontend Integration
+
+See `examples/react_frontend_example.md` for complete React integration guide.
+
+## API Endpoints
+
+### Authentication Endpoints
+
+- `GET /auth/login` - Initiate Microsoft SSO login (redirects to Microsoft)
+- `GET /auth/callback` - OAuth callback handler (exchanges code for token)
+- `POST /auth/refresh` - Refresh access token using refresh token
+- `POST /auth/logout` - Logout endpoint
+- `GET /auth/me` - Get current authenticated user information
+
+## Usage Examples
+
+### Protecting Routes
+
+```python
+from fastapi import Depends
+from core_infinity_stones_sso import (
+    get_current_user,
+    require_group,
+    require_app_role,
+    require_db_role,
+    require_permission,
+    User,
+)
+
+# Require authentication
+@app.get("/protected")
+def protected(user: User = Depends(get_current_user)):
+    return {
+        "user": user.email,
+        "groups": user.get_group_names(),  # Microsoft groups
+        "app_roles": user.get_app_role_names(),  # Microsoft app roles
+        "db_roles": user.get_db_role_names(),  # Database roles
+        "permissions": user.get_permission_names(),  # Permissions
+    }
+
+# Require specific Microsoft group
+@app.get("/admin")
+def admin(user: User = Depends(require_group("Administrators"))):
+    return {"message": "Admin only"}
+
+# Require specific Microsoft application role
+@app.get("/app-admin")
+def app_admin(user: User = Depends(require_app_role("App.Admin"))):
+    return {"message": "App admin only"}
+
+# Require specific database role
+@app.get("/editor")
+def editor(user: User = Depends(require_db_role("Editor"))):
+    return {"message": "Editor only"}
+
+# Require specific permission
+@app.get("/manage-users")
+def manage_users(user: User = Depends(require_permission("user.manage"))):
+    return {"message": "Can manage users"}
+
+# Check groups, app_roles, db_roles, or permissions separately
+if user.has_group("Managers"):  # Check group membership
+    pass
+if user.has_app_role("App.Admin"):  # Check application role
+    pass
+if user.has_db_role("Editor"):  # Check database role
+    pass
+if user.has_permission("user.manage"):  # Check permission
+    pass
+```
+
+### Token Refresh
+
+The library supports token refresh using Microsoft refresh tokens:
+
+```python
+# After login, you'll receive a refresh_token in the response
+# Use it to refresh the access token:
+
+POST /auth/refresh
+{
+    "refresh_token": "your_refresh_token_here"
+}
+
+# Response:
+{
+    "access_token": "new_jwt_token",
+    "token_type": "bearer",
+    "user": {...},
+    "refresh_token": "new_refresh_token_if_provided"
+}
+```
+
+## How Authorization Works
+
+The library supports **three separate authorization mechanisms**:
+
+### 1. Microsoft Azure AD Groups
+
+- User group memberships are fetched from Microsoft Graph API
+- Stored in JWT token (not in database)
+- Always up-to-date with Azure AD
+- Use `require_group()` or `user.has_group()`
+
+### 2. Microsoft Application Roles
+
+- Application roles defined in your Azure AD app registration
+- Returned in ID token during login
+- Stored in JWT token (not in database)
+- Use `require_app_role()` or `user.has_app_role()`
+
+### 3. Database Roles and Permissions
+
+- Custom roles stored in your PostgreSQL database
+- Roles have permissions
+- Hierarchical: User → Role → Permission
+- Stored in JWT token for performance
+- Use `require_db_role()` or `require_permission()`
+
+**Key Features:**
+
+- **Hybrid Approach**: Combine Microsoft groups/app_roles with database roles
+- **Token-Based**: All authorization info stored in JWT token
+- **Always Current**: Microsoft groups/app_roles refreshed on login, database roles loaded from DB
+- **Separate Checks**: Check each type independently - no confusion
+- **Flexible**: Use whichever authorization method fits your needs
+
+**To use Microsoft groups:**
+
+1. Create groups in Azure AD (e.g., "Administrators", "Managers", "Employees")
+2. Add users to these groups in Azure AD
+3. Use `require_group("Administrators")` in your code
+
+**To use Microsoft application roles:**
+
+1. Go to Azure Portal > App Registrations > Your App > App roles
+2. Create application roles (e.g., "App.Admin", "App.User", "App.Manager")
+3. Assign these roles to users or groups in Azure AD
+4. Use `require_app_role("App.Admin")` in your code
+
+**To use database roles:**
+
+1. Create roles and permissions in your database (see `examples/setup_database.py`)
+2. Assign roles to users via the `user_roles` table
+3. Use `require_db_role("Editor")` in your code
+
+## Database Migrations in Downstream Apps
+
+The library supports **selective model inclusion** for downstream apps. Each app can choose which tables it needs:
+
+- **App 1 (User only)**: Only needs the `users` table
+- **App 2 (User + RBAC)**: Needs `users`, `roles`, `permissions`, and association tables
+
+### Setting Up Alembic in Your Downstream App
+
+1. **Install Alembic in your app:**
+
+```bash
+poetry add alembic
+# or
+pip install alembic
+```
+
+2. **Initialize Alembic:**
+
+```bash
+cd your_app
+alembic init alembic
+```
+
+3. **Configure `alembic/env.py`:**
+
+**For App 1 (User table only):**
+
+```python
+# alembic/env.py
+from core_infinity_stones_sso.models import get_library_metadata
+
+# Get metadata for User table only
+target_metadata = get_library_metadata(include_rbac=False)
+
+# If you have your own app models, combine them:
+# from sqlalchemy import MetaData
+# from your_app.models import Base as AppBase
+# combined_metadata = MetaData()
+# get_library_metadata(include_rbac=False).tometadata(combined_metadata)
+# AppBase.metadata.tometadata(combined_metadata)
+# target_metadata = combined_metadata
+```
+
+**For App 2 (User + RBAC tables):**
+
+```python
+# alembic/env.py
+from core_infinity_stones_sso.models import get_library_metadata
+
+# Get metadata for User + Role + Permission tables
+target_metadata = get_library_metadata(include_rbac=True)
+
+# If you have your own app models, combine them:
+# from sqlalchemy import MetaData
+# from your_app.models import Base as AppBase
+# combined_metadata = MetaData()
+# get_library_metadata(include_rbac=True).tometadata(combined_metadata)
+# AppBase.metadata.tometadata(combined_metadata)
+# target_metadata = combined_metadata
+```
+
+4. **Set your database URL in `alembic.ini` or `alembic/env.py`:**
+
+```python
+# In alembic/env.py, before target_metadata:
+config.set_main_option("sqlalchemy.url", "postgresql://user:pass@localhost/dbname")
+```
+
+5. **Create and run migrations:**
+
+```bash
+# Create initial migration
+alembic revision --autogenerate -m "Initial migration"
+
+# Apply migrations
+alembic upgrade head
+```
+
+### Example Alembic Configurations
+
+See `examples/alembic_env_user_only.py` for a complete example of App 1 setup, and `examples/alembic_env_with_rbac.py` for App 2 setup.
+
+### Combining Library Models with Your App Models
+
+If your app has its own models, you can combine them with the library models:
+
+```python
+# alembic/env.py
+from sqlalchemy import MetaData
+from core_infinity_stones_sso.models import get_library_metadata
+from your_app.models import Base as AppBase
+
+# Get library metadata
+library_metadata = get_library_metadata(include_rbac=True)  # or False
+
+# Combine with your app's metadata
+combined_metadata = MetaData()
+library_metadata.tometadata(combined_metadata)
+AppBase.metadata.tometadata(combined_metadata)
+
+target_metadata = combined_metadata
+```
+
+## Project Structure
+
+```
+core_infinity_stones_sso/
+├── __init__.py           # Package exports
+├── config.py             # Configuration settings
+├── models.py             # Database models (User, Role, Permission)
+├── database.py           # Database connection and session management
+├── auth.py               # Core Microsoft SSO authentication logic
+└── fastapi_integration.py # FastAPI dependencies and router
+
+examples/
+├── basic_usage.py        # Basic FastAPI integration example
+├── basic_usage_with_init.py # Example with class initializers
+├── setup_database.py     # Database initialization script
+├── alembic_env_user_only.py # Alembic config for User-only apps
+├── alembic_env_with_rbac.py # Alembic config for apps with RBAC
+└── react_frontend_example.md # React integration guide
+
+alembic/                  # Database migrations (for library development only)
+```
+
+## Development
+
+### Running Tests
+
+```bash
+poetry run pytest
+```
+
+### Code Formatting
+
+```bash
+poetry run black .
+poetry run ruff check .
+```
+
+## License
+
+Private library for internal use only.
+
