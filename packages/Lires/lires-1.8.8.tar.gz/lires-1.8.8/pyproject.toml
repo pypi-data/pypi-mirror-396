@@ -1,0 +1,83 @@
+[build-system]
+requires = ["setuptools", "wheel", "pyyaml", "pybind11"]
+build-backend = "setuptools.build_meta"
+
+[project.scripts]
+"lires" = "lires.exec:run"
+"lrs-config" = "lires.cmd.config:run"
+"lrs-utils" = "lires.cmd.miscUtils:main"
+"lrs-clear" = "lires.cmd.clear:main"
+"lrs-log" = "lires.cmd.log:main"
+"lrs-user" = "lires.cmd.userManage:run"
+"lrs-invite" = "lires.cmd.invite:run"
+"lrs-index" = "lires.cmd.index:main"
+"lrs-cluster" = "lires.cmd.cluster:main"
+"lrs-status" = "lires.cmd.status:main"
+
+[project.urls]
+"Homepage" = "https://github.com/MenxLi/Lires"
+"Bug Tracker" = "https://github.com/MenxLi/Lires/issues"
+
+[project]
+name = "Lires"
+authors = [
+  { name="Li, Mengxun", email="mengxunli@whu.edu.cn" },
+]
+description = "A self-hosted literature management system."
+readme = "README.md"
+requires-python = ">=3.10"      # to support pep604 (structural pattern matching)
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Medical Science Apps."
+]
+dynamic = [
+    "version",
+]
+license = { file = "LICENSE" }
+dependencies = [
+    # for successful import from basic lires packages,
+    # such as lires.version, lires.config, 
+    # and use lires.api
+    "typing_extensions",
+    "pyyaml",
+    "aiohttp",
+    "deprecated",
+]
+
+[project.optional-dependencies]
+core = [
+    "pybtex",
+    "pylatexenc",
+    "tornado",
+    "fastapi",
+    "pydantic >= 2.0.0",
+    "uvicorn",
+    "aiofiles",
+    "aiosqlite",
+    "PyMuPDF",
+    "nbib",
+    "tqdm",
+    "pillow",
+    "numpy",
+]
+ai = [
+    "scikit-learn >= 1.5.0",
+    "safetensors",
+    "torch",
+    "openai >= 1.0.0",
+    "transformers",
+    "sentencepiece",
+    "protobuf",
+    "accelerate",
+    "basaran",
+]
+all = [
+    "Lires[core,ai]",
+]
+dev = [
+    "Lires[all]",
+    "pytest",
+    "pytest-html",
+    "pytest-asyncio",
+]

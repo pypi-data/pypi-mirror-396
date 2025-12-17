@@ -1,0 +1,1 @@
+import{i as s}from"./is-extendable-CiA4f1iz.js";var i=s,u=function(r){i(r)||(r={});for(var n=arguments.length,a=1;a<n;a++){var e=arguments[a];i(e)&&f(r,e)}return r};function f(t,r){for(var n in r)o(r,n)&&(t[n]=r[n])}function o(t,r){return Object.prototype.hasOwnProperty.call(t,r)}export{u as e};
