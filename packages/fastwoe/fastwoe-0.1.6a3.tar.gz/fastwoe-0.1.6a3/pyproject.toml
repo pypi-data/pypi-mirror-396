@@ -1,0 +1,243 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "fastwoe/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["fastwoe"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/fastwoe",
+    "/tests",
+    "/README.md",
+    "/LICENSE",
+]
+
+[project]
+name = "fastwoe"
+dynamic = ["version"]
+description = "Fast Weight of Evidence (WOE) encoding and inference"
+readme = "README.md"
+requires-python = ">=3.9,<3.13"
+authors = [
+    {name = "xRiskLab", email = "contact@xrisklab.ai"}
+]
+license = {text = "MIT"}
+keywords = ["machine-learning", "feature-engineering", "woe", "weight-of-evidence", "statistical-inference"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "numpy>=1.21.0",
+    "pandas>=1.3.0",
+    "scipy>=1.7.0",
+    "scikit-learn>=1.3.0,<1.8.0",
+    "rich>=13.7.0",
+    "loguru>=0.7.0",
+    "numba>=0.60.0",
+    "packaging>=21.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=22.0.0",
+    "ruff>=0.11.13",
+]
+examples = [
+    "matplotlib>=3.5.0",
+    "seaborn>=0.11.0",
+    "jupyter>=1.0.0",
+    "statsmodels>=0.13.0",
+    "fisher_scoring>=2.0.5",
+    "pygam>=0.10.1",
+]
+faiss = [
+    "faiss-cpu>=1.12.0",
+]
+plotting = [
+    "matplotlib>=3.5.0",
+]
+faiss-gpu = [
+    "faiss-gpu-cu12>=1.12.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/xRiskLab/fastwoe"
+Repository = "https://github.com/xRiskLab/fastwoe"
+Documentation = "https://github.com/xRiskLab/fastwoe#readme"
+Issues = "https://github.com/xRiskLab/fastwoe/issues"
+PyPI = "https://pypi.org/project/fastwoe/"
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --cov=fastwoe --cov-report=term-missing --log-cli-level=INFO -s"
+testpaths = ["tests"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "compatibility: marks tests as compatibility tests across Python/sklearn versions",
+]
+
+# Logging configuration
+log_cli = true
+log_cli_level = "INFO"
+log_cli_format = "%(levelname)s:%(name)s:%(message)s"
+log_cli_date_format = "%Y-%m-%d %H:%M:%S"
+
+# Logging configuration
+log_level = "INFO"
+log_format = "%(levelname)s:%(name)s:%(message)s"
+log_date_format = "%Y-%m-%d %H:%M:%S"
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "B", "C4", "UP", "SLF", "ARG", "D"]
+ignore = [
+    "E203",   # whitespace before ':'
+    "E501",   # line too long
+    "N806",   # Variable in function should be lowercase (allow X, y for ML)
+    "N803",   # Argument name should be lowercase (allow X_train, y_train for ML)
+    "UP035",  # typing.Dict and typing.List are still needed for Python 3.9 compatibility
+    "UP006",  # ignore Dict spelling for Python 3.9 compatibility
+    "UP007",  # Union[X, Y] needed for Python 3.9 compatibility (| syntax is 3.10+)
+    "UP045",  # Optional[X] needed for Python 3.9 compatibility (X | None is 3.10+)
+    "F841",   # unused variable (equivalent to pylint W0612)
+    "SLF001", # protected access (equivalent to pylint protected-access)
+    "C901",   # too complex (common C013 equivalent)
+    "ARG001", # unused function argument (equivalent to pylint unused-argument)
+    "ARG002", # unused method argument (equivalent to pylint unused-argument)
+    "ARG003", # unused class method argument (equivalent to pylint unused-argument)
+    "ARG004", # unused static method argument (equivalent to pylint unused-argument)
+    "ARG005", # unused lambda argument (equivalent to pylint unused-argument)
+    "D100",   # missing docstring in public module
+    "D101",   # missing docstring in public class
+    "D102",   # missing docstring in public method
+    "D103",   # missing docstring in public function
+    "D104",   # missing docstring in public package
+    "D105",   # missing docstring in magic method
+    "D106",   # missing docstring in public nested class
+    "D107",   # missing docstring in __init__
+    "D200",   # short docstring should fit on one line
+    "D205",   # blank line required between summary and description
+    "D212",   # multi-line docstring summary should start at the first line
+    "D400",   # first line should end with a period
+    "D415",   # first line should end with punctuation
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [
+    "D",      # ignore all docstring rules in tests
+    "SLF001", # allow protected access in tests
+    "ARG",    # allow unused arguments in test fixtures
+    "N801",   # class name should use CapWords convention
+    "N802",   # function name should be lowercase
+]
+"examples/*" = [
+    "D",      # ignore docstring rules in examples
+    "N803",   # argument name should be lowercase
+    "N806",   # variable in function should be lowercase
+    "C408",   # unnecessary collection call (dict() vs {})
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"  # Use Google docstring convention
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.0",
+    "pytest-cov>=6.1.1",
+    "ruff>=0.11.13",
+    "twine>=6.1.0",
+    "jupyter>=1.0.0",
+    "ipykernel>=6.0.0",
+    "matplotlib>=3.5.0",
+    "seaborn>=0.11.0",
+    "rich>=13.7.0", # Required for pretty printing
+    "prek>=0.2.0",
+    "ty>=0.0.1a21",
+    "faiss-cpu>=1.12.0", # Required for FAISS tests
+]
+
+[tool.pylint.messages_control]
+disable = [
+    "C0103",      # invalid-name (allow X, y, X_train, etc. for ML)
+    "W0212",      # protected-access (allow testing private methods)
+    "W0613",      # unused-argument (common in test fixtures)
+    "W0612",      # unused-variable (common in test setup)
+    "C0115",      # missing-class-docstring (not needed for test classes)
+    "C0116",      # missing-function-docstring (not needed for test methods)
+    "R0903",      # too-few-public-methods (common for mock classes)
+    "W0107",      # unnecessary-pass (sometimes needed for empty methods)
+    "C0415",      # import-outside-toplevel (common in tests for mocking)
+    "R1714",      # consider-using-in (minor style preference)
+    "E0401",      # import-error (dependencies should be available)
+    "E0611",      # no-name-in-module (module exists but linter can't find it)
+]
+
+# prek - Python Requirements Checker
+[tool.prek]
+# Check that imports match dependencies in pyproject.toml
+check-imports = true
+# Exclude test and example files from strict import checking
+exclude = [
+    "tests/**",
+    "examples/**",
+]
+
+[tool.pylint.format]
+max-line-length = 88
+
+[tool.pylint.basic]
+# Allow single letter variable names (common in ML: X, y)
+good-names = ["i", "j", "k", "ex", "Run", "_", "X", "y"]
+# Add typings directory to Python path for type checking
+init-hook = "import sys; sys.path.insert(0, 'typings')"
+
+# ty type checker configuration
+[tool.ty.rules]
+unresolved-reference = "ignore"
+possibly-missing-attribute = "ignore"
+unresolved-import = "ignore"
+
+# Include our type stubs directory in the src path
+[tool.ty.src]
+include = ["typings"]
+
+[[tool.ty.overrides]]
+include = ["examples/**"]
+[tool.ty.overrides.rules]
+unresolved-import = "ignore"
+unsupported-operator = "ignore"
+
+# Ignore errors in deployment code but provide type stubs
+[[tool.ty.overrides]]
+include = ["deployment/**"]
+[tool.ty.overrides.rules]
+no-matching-overload = "ignore"
+unresolved-attribute = "ignore"
+
+# Sourcery configuration
+[tool.sourcery]
+[tool.sourcery.rules]
+disable = [
+    "extract-duplicate-method",
+    "extract-method",
+]
