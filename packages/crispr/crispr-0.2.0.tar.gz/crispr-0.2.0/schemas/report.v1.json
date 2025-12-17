@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omniscoder.github.io/crispr-gpu/schemas/report.v1.json",
+  "title": "crispr-gpu artifact report (v1)",
+  "type": "object",
+  "required": ["schema", "schema_version", "generated_at_utc", "provenance", "demo", "benchmarks"],
+  "properties": {
+    "schema": { "const": "crispr-gpu/report/v1" },
+    "schema_version": { "const": 1 },
+    "generated_at_utc": { "type": "string" },
+    "schemas_used": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "object",
+        "required": ["schema", "schema_version"],
+        "properties": {
+          "schema": { "type": "string" },
+          "schema_version": { "type": "integer", "minimum": 1 }
+        },
+        "additionalProperties": true
+      }
+    },
+    "provenance": { "type": "object" },
+    "demo": { "type": "object" },
+    "benchmarks": { "type": "array" },
+    "kernel_microbench": { "type": ["object", "null"] },
+    "artifacts": {
+      "type": ["object", "null"],
+      "additionalProperties": {
+        "type": "object",
+        "required": ["sha256", "size_bytes"],
+        "properties": {
+          "sha256": { "type": "string" },
+          "size_bytes": { "type": "integer", "minimum": 0 }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

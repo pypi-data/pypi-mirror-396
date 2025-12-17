@@ -1,0 +1,170 @@
+# crispr-gpu
+
+CUDA-accelerated CRISPR off-target search with configurable MIT/CFD scoring, C++/Python APIs, and a single CLI.
+
+**crispr-gpu produces deterministic, schema-versioned benchmark and scoring reports suitable for peer review, CI, and regulated environments.**
+
+## Quickstart (CLI)
+
+```bash
+# Build index
+crispr-gpu index \
+  --fasta hg38.fa \
+  --pam NGG \
+  --guide-length 20 \
+  --out hg38_spcas9_ngg.idx
+
+# Score guides (Hamming, brute-force search)
+crispr-gpu score \
+  --index hg38_spcas9_ngg.idx \
+  --guides guides.tsv \
+  --max-mm 4 \
+  --score-model cfd \
+  --output hits.tsv
+
+# Use FM-index backend (K=0 fast; K>0 experimental)
+crispr-gpu score \
+  --index hg38_spcas9_ngg.idx \
+  --guides guides.tsv \
+  --search-backend fmi \
+  --max-mm 0 \
+  --output hits.tsv
+```
+
+## Quickstart (Python)
+
+```python
+import crispr_gpu as cg
+
+idx = cg.GenomeIndex.load("hg38_spcas9_ngg.idx")
+
+params = cg.EngineParams()
+params.score_params.model = cg.ScoreModel.CFD
+params.max_mismatches = 4
+params.backend = cg.Backend.GPU
+# Optional: FM backend (K=0 recommended publicly)
+# params.search_backend = cg.SearchBackend.FMIndex
+
+engine = cg.OffTargetEngine(idx, params)
+
+hits = engine.score_guide(
+    cg.Guide(name="my_g1", sequence="GGGAAACCCGGGAAACCCGG", pam="NGG")
+)
+for h in hits[:5]:
+    print(h.chrom_id, h.pos, h.mismatches, h.score)
+```
+
+## Install (from source)
+
+```bash
+pip install crispr            # from PyPI
+# or build locally
+cmake -B build -S . -DCRISPR_GPU_ENABLE_CUDA=ON -DCRISPR_GPU_BUILD_PYTHON=ON
+cmake --build build --config Release
+ctest --output-on-failure --test-dir build   # optional
+pip install .
+```
+
+## Docs
+- docs/getting_started.md
+- docs/cfd_tables.md
+- docs/benchmarks.md
+- docs/methods.md
+- docs/reproducibility.md
+- docs/schemas.md
+
+## Synthetic Benchmark (quick sanity)
+Synthetic genome, NGG, guide length 20, K=4, Hamming, 50 random guides.
+
+| Backend | GPU warmup | Genome size | Time (s) |
+| --- | --- | --- | --- |
+| CPU | n/a | 5 Mb | ~0.30 |
+| GPU | cold (includes CUDA init) | 5 Mb | ~1.48 |
+| GPU | warm (CRISPR_GPU_WARMUP=1) | 5 Mb | ~0.53 |
+| CPU | n/a | 50 Mb | ~2.80 |
+| GPU | warm | 50 Mb | ~1.60 |
+
+Run it yourself:
+```bash
+cmake -B build -S . -DCRISPR_GPU_ENABLE_CUDA=ON -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+./benchmarks/run_synthetic.sh              # CPU + GPU (if available)
+CRISPR_GPU_WARMUP=1 ./benchmarks/run_synthetic.sh   # warm GPU timing
+BENCH_SCALE=large ./benchmarks/run_synthetic.sh     # 50 Mb genome
+```
+
+## End-to-end demo + report (stable JSON)
+
+Generates a deterministic demo run, a synthetic benchmark JSONL, and a versioned report bundle:
+
+```bash
+python3 scripts/artifact_run.py --out-dir reports/latest --quick
+```
+
+Demo-only:
+```bash
+python3 scripts/artifact_run.py --out-dir reports/latest --mode demo --quick
+```
+
+Schemas:
+- `schemas/score_result.v1.json`
+- `schemas/bench_run.v1.json`
+- `schemas/report.v1.json`
+
+## How to cite and reproduce
+
+- Cite: see `CITATION.cff`.
+- Reproduce (CPU-only, publishable bundle):
+  ```bash
+  python3 scripts/artifact_run.py --out-dir reports/latest --quick --skip-gpu --redact
+  ```
+- Guarantees: deterministic outputs with schema-versioned JSON/JSONL; v1 schemas are additive-only and breaking changes land as v2 side-by-side (details: `docs/reproducibility.md`).
+
+## Docker
+
+See `docker/README.md` for CPU and CUDA images that run the demo + benchmarks and emit `/out/report.json`.
+
+## Version
+0.2.0
+
+## License
+MIT
+### Scoring modes
+
+The scorer supports Hamming (default), MIT, and CFD.
+
+CLI:
+
+```bash
+# Hamming (default)
+crispr-gpu score --index hg38.idx --guides guides.tsv
+
+# CFD scoring with bundled defaults
+crispr-gpu score --index hg38.idx --guides guides.tsv --score-model cfd
+
+# MIT scoring with a custom table
+crispr-gpu score --index hg38.idx --guides guides.tsv \
+  --score-model mit \
+  --score-table data/mit_custom.json
+```
+
+Python:
+
+```python
+from crispr_gpu import OffTargetEngine, EngineParams, ScoreParams, SearchBackend, GenomeIndex
+
+idx = GenomeIndex.load("hg38.idx")
+params = EngineParams(
+    search_backend=SearchBackend.FMIndex,
+    score_params=ScoreParams(model='cfd', table_path='data/cfd_default.json'),
+)
+eng = OffTargetEngine(idx, params)
+hits = eng.score_guides(guides)
+```
+
+Bundled defaults live under `data/cfd_default.json` and `data/mit_default.json`; supply `--score-table` / `table_path` to override.
+
+### Search backends
+
+- `brute` (default): scans the precomputed protospacer site list; fully supports mismatches (K>0) and is the production path for K>0.
+- `fmi`: FM-index backend for exact search (K=0) only. K>0 via FM is currently disabled in public builds; if requested, the engine will throw. Use `brute` for mismatches.
