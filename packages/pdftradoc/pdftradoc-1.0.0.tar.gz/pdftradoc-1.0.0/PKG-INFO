@@ -1,0 +1,268 @@
+Metadata-Version: 2.4
+Name: pdftradoc
+Version: 1.0.0
+Summary: A Python library for translating PDF documents while preserving the original layout
+Author: PdfTradoc
+License: MIT
+Project-URL: Homepage, https://github.com/pdftradoc/pdftradoc
+Project-URL: Documentation, https://github.com/pdftradoc/pdftradoc#readme
+Project-URL: Repository, https://github.com/pdftradoc/pdftradoc
+Project-URL: Issues, https://github.com/pdftradoc/pdftradoc/issues
+Keywords: pdf,translation,translate,document,overlay,layout,preserve,pymupdf,fitz
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Text Processing :: Linguistic
+Classifier: Topic :: Multimedia :: Graphics :: Graphics Conversion
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: PyMuPDF>=1.23.0
+Requires-Dist: deep-translator>=1.11.0
+Requires-Dist: Pillow>=10.0.0
+Dynamic: license-file
+Dynamic: requires-python
+
+# pdftradoc
+
+A Python library for translating PDF documents while preserving the original layout.
+
+## Features
+
+- Extract text segments from PDF with position, font, color, and style information
+- Translate segments automatically using Google Translate API
+- Generate translated PDF using overlay approach (preserves original layout)
+- Support for external translation (you translate, library generates PDF)
+- Automatic font size adjustment when translation is longer than original
+- Watermark exclusion (TCPDF, etc.)
+
+## Installation
+
+```bash
+pip install pymupdf deep-translator pillow
+```
+
+Then copy the `pdftradoc` folder to your project.
+
+## Quick Start
+
+### Option 1: Automatic Translation
+
+```python
+from pdftradoc import extract, translate, apply_overlay
+
+# 1. Extract segments from PDF
+extract("document.pdf", "segments.json")
+
+# 2. Translate automatically (Italian to Albanian)
+translate("segments.json", source_lang="it", target_lang="sq")
+
+# 3. Generate translated PDF
+apply_overlay("document.pdf", "segments.json", "translated.pdf", dpi=200)
+```
+
+### Option 2: External Translation (Manual)
+
+```python
+from pdftradoc import extract, apply_overlay
+
+# 1. Extract segments
+extract("document.pdf", "segments.json")
+
+# 2. Edit segments.json manually or with your translation system
+#    Add translations to the "translation" field for each segment
+
+# 3. Generate PDF with your translations
+apply_overlay("document.pdf", "segments.json", "translated.pdf", dpi=200)
+```
+
+## JSON Format
+
+After extraction, the JSON file contains:
+
+```json
+{
+  "source": "document.pdf",
+  "pages": 2,
+  "segments": [
+    {
+      "id": 0,
+      "page": 0,
+      "text": "Original text",
+      "translation": "",
+      "bbox": [100.0, 200.0, 300.0, 220.0],
+      "font": "Helvetica",
+      "size": 12.0,
+      "color": [0.0, 0.0, 0.0],
+      "bold": false,
+      "italic": false,
+      "rotation": 0,
+      "origin": [100.0, 218.0]
+    }
+  ]
+}
+```
+
+### Segment Fields
+
+| Field | Description |
+|-------|-------------|
+| `id` | Unique segment identifier |
+| `page` | Page number (0-indexed) |
+| `text` | Original text |
+| `translation` | Translated text (fill this!) |
+| `bbox` | Bounding box [x0, y0, x1, y1] |
+| `font` | Font name |
+| `size` | Font size in points |
+| `color` | RGB color [r, g, b] (0-1 range) |
+| `bold` | Is bold text |
+| `italic` | Is italic text |
+| `rotation` | Text rotation in degrees |
+| `origin` | Text baseline origin [x, y] |
+
+## API Reference
+
+### extract(pdf_path, json_path)
+
+Extract all text segments from a PDF.
+
+```python
+result = extract("document.pdf", "segments.json")
+# Returns: {"segments": 150, "pages": 5, "json_path": "segments.json"}
+```
+
+### translate(json_path, source_lang, target_lang, ...)
+
+Auto-translate segments using Google Translate.
+
+```python
+result = translate(
+    "segments.json",
+    source_lang="it",      # Source language (or "auto")
+    target_lang="sq",      # Target language
+    batch_size=50,         # Segments per batch
+    skip_short=2,          # Skip segments shorter than this
+    preserve_numbers=True  # Don't translate number-only segments
+)
+# Returns: {"total": 150, "translated": 120, "skipped": 30, "errors": []}
+```
+
+### apply_overlay(pdf_path, json_path, output_path, dpi=150, font_path=None)
+
+Generate translated PDF using overlay approach.
+
+```python
+result = apply_overlay(
+    "document.pdf",
+    "segments.json",
+    "translated.pdf",
+    dpi=200,               # Image resolution (higher = better quality)
+    font_path=None         # Optional: path to custom TTF font
+)
+# Returns: {"applied": 120, "pages_processed": 5, "errors": []}
+```
+
+### apply(pdf_path, json_path, output_path)
+
+Generate translated PDF using redaction approach (faster, smaller files).
+
+```python
+result = apply("document.pdf", "segments.json", "translated.pdf")
+```
+
+### stats(json_path)
+
+Get statistics from a JSON file.
+
+```python
+result = stats("segments.json")
+# Returns: {"total_segments": 150, "translated": 120, "percentage": 80.0, ...}
+```
+
+### show(json_path, max_segments=20)
+
+Display segments from a JSON file.
+
+```python
+show("segments.json", max_segments=10)
+```
+
+## Language Codes
+
+Common language codes for translation:
+
+| Code | Language |
+|------|----------|
+| `auto` | Auto-detect |
+| `it` | Italian |
+| `en` | English |
+| `de` | German |
+| `sq` | Albanian |
+| `fr` | French |
+| `es` | Spanish |
+| `pt` | Portuguese |
+| `ru` | Russian |
+| `zh-CN` | Chinese (Simplified) |
+| `ja` | Japanese |
+| `ar` | Arabic |
+
+## DPI Settings
+
+The `dpi` parameter in `apply_overlay` affects quality and file size:
+
+| DPI | Quality | File Size | Use Case |
+|-----|---------|-----------|----------|
+| 100 | Low | Small | Draft, quick preview |
+| 150 | Medium | Medium | Standard use |
+| 200 | High | Large | Final documents |
+| 300 | Very High | Very Large | Print quality |
+
+## Dependencies
+
+- `PyMuPDF` (fitz) - PDF manipulation
+- `deep-translator` - Google Translate API
+- `Pillow` - Image processing
+
+## Examples
+
+### Translate German PDF to Albanian
+
+```python
+from pdftradoc import extract, translate, apply_overlay
+
+extract("german_doc.pdf", "segments.json")
+translate("segments.json", source_lang="de", target_lang="sq")
+apply_overlay("german_doc.pdf", "segments.json", "albanian_doc.pdf", dpi=200)
+```
+
+### Translate with Custom Font
+
+```python
+apply_overlay(
+    "document.pdf",
+    "segments.json",
+    "translated.pdf",
+    dpi=200,
+    font_path="/path/to/custom-font.ttf"
+)
+```
+
+### Check Translation Progress
+
+```python
+from pdftradoc import stats
+
+result = stats("segments.json")
+print(f"Translated: {result['translated']}/{result['total_segments']} ({result['percentage']}%)")
+```
+
+## License
+
+MIT License
