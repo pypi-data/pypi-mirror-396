@@ -1,0 +1,75 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fastapi-template-cli"
+version = "2.0.0"
+description = "A powerful CLI tool for generating production-ready FastAPI applications with SQLAlchemy and MongoDB support"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+authors = [
+    {name = "FastAPI Template CLI", email = "sohailahmad34280@gmail.com"}
+]
+
+keywords = ["fastapi", "cli", "scaffold", "template", "python", "sqlalchemy", "mongodb", "beanie", "async"]
+
+dependencies = [
+    "typer>=0.9.0",
+    "jinja2>=3.1.0",
+    "rich>=10.11.0",
+    "colorama>=0.4.6",
+    "shellingham>=1.3.0",
+    "ruff>=0.12.11",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.6.5",
+]
+
+[project.urls]
+Homepage = "https://github.com/Sohail342/fastapi-template"
+Documentation = "https://github.com/Sohail342/fastapi-template#readme"
+Repository = "https://github.com/Sohail342/fastapi-template"
+Issues = "https://github.com/Sohail342/fastapi-template/issues"
+
+[project.scripts]
+fastapi-template-cli = "fastapi_template_cli.cli:app"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["fastapi_template_cli*"]
+
+[tool.setuptools.package-data]
+fastapi_template_cli = [
+    "templates/**/*",
+    "templates/**/.*",
+]
+
+# ----------------------------
+# Ruff configuration
+# ----------------------------
+[tool.ruff]
+line-length = 88
+target-version = "py38"
+exclude = [
+  ".venv",
+  "venv",
+  "fastapi_template_cli.egg-info",
+  "fastapi_template_cli/templates/modular/app/main.py",
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+
+[tool.uv.workspace]
+members = ["test-project"]

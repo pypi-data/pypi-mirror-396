@@ -1,0 +1,65 @@
+[project]
+name = "{{ project_name }}"
+version = "0.1.0"
+description = "{{ description }}"
+authors = [
+    {name = "{{ author }}"},
+]
+
+requires-python = ">=3.10"
+
+dependencies = [
+    "fastapi>=0.116",
+    "uvicorn[standard]>=0.35",
+    "pydantic>=2.11",
+    "python-dotenv>=1.1",
+    "fastapi-users[{{ orm_type }}]>=14.0",
+    "python-multipart>=0.0.20",
+    "pydantic-settings>=2.10",
+    {% if orm_type == "sqlalchemy" %}
+    "alembic>=1.15",
+    {% endif %}
+    {% if orm_type == "sqlalchemy" %}
+    "asyncpg>=0.30",
+    "psycopg2-binary>=2.9",
+    {% endif %}
+    {% if project_type == "modular" %}
+    {% if celery %}
+    "celery>=5.3",
+    {% endif %}
+    {% if redis %}
+    "redis>=6.4",
+    {% endif %}
+    {% endif %}
+]
+
+[dependency-groups]
+
+prod = [
+    "gunicorn>=21.2,<22.0",
+]
+
+dev = [
+    "pytest>=8.4.1",
+    "httpx>=0.28.1",
+    "ruff>=0.12.11",
+    "mypy>=1.17.1",
+    "pre-commit>=3.7.0",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+lint.extend-select = ["I"]
+fix = true
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+combine-as-imports = true
+force-single-line = false
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true

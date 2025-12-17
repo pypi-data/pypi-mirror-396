@@ -1,0 +1,17 @@
+from app.models.users import User
+{% if orm_type == "sqlalchemy" %}
+from fastapi_users_db_sqlalchemy import SQLAlchemyUserDatabase
+from fastapi import Depends
+from app.database.session import get_db
+{% else %}
+from fastapi_users.db import BeanieUserDatabase
+{% endif %}
+
+
+{% if orm_type == "sqlalchemy" %}
+async def get_user_db(session=Depends(get_db)):
+    yield SQLAlchemyUserDatabase(session, User)
+{% else %}
+async def get_user_db():
+    yield BeanieUserDatabase(User)
+{% endif %}

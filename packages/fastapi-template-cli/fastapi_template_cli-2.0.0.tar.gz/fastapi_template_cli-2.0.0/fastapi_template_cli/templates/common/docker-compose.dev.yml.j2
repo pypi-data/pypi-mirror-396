@@ -1,0 +1,112 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        INSTALL_EXTRAS: dev
+    env_file:
+      - .env.dev
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app/app  # Mount source for live reload
+      {% if orm_type == 'sqlalchemy' %}
+      - ./alembic:/app/alembic
+      {% endif %}
+    command: >
+      uvicorn app.main:app
+      --host 0.0.0.0
+      --port 8000
+      --reload
+    depends_on:
+      {% if orm_type == 'sqlalchemy' %}
+      - db
+      {% else %}
+      - mongo
+      {% endif %}
+      {% if redis %}
+      - redis
+      {% endif %}
+
+  {% if orm_type == 'sqlalchemy' %}
+  db:
+    image: postgres:15-alpine
+    env_file:
+      - .env.dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+  {% else %}
+  mongo:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    env_file:
+      - .env.dev
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+  {% endif %}
+
+  {% if redis %}
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+  {% endif %}
+
+  {% if celery %}
+  celery:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        INSTALL_EXTRAS: dev
+    env_file:
+      - .env.dev
+    volumes:
+      - ./app:/app/app
+    command: celery -A app.workers.celery_app worker --loglevel=INFO
+    depends_on:
+      {% if orm_type == 'sqlalchemy' %}
+      - db
+      {% else %}
+      - mongo
+      {% endif %}
+      {% if redis %}
+      - redis
+      {% endif %}
+  {% endif %}
+
+  {% if celery_beat %}
+  celery-beat:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        INSTALL_EXTRAS: dev
+    env_file:
+      - .env.dev
+    volumes:
+      - ./app:/app/app
+    command: celery -A app.workers.celery_app beat --loglevel=INFO
+    depends_on:
+      {% if orm_type == 'sqlalchemy' %}
+      - db
+      {% else %}
+      - mongo
+      {% endif %}
+      {% if redis %}
+      - redis
+      {% endif %}
+  {% endif %}
+
+volumes:
+  {% if orm_type == 'sqlalchemy' %}
+  postgres_data:
+  {% else %}
+  mongo_data:
+  {% endif %}

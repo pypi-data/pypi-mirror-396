@@ -1,0 +1,57 @@
+# Stage 1: Builder
+FROM python:3.12-slim AS builder
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential curl \
+ && rm -rf /var/lib/apt/lists/*
+
+# Install uv.
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# Copy dependency files
+COPY pyproject.toml ./
+
+ARG INSTALL_EXTRAS=prod
+# Create Lock file
+RUN uv lock
+# Install packages
+RUN uv sync --${INSTALL_EXTRAS} --frozen --no-cache
+
+
+# Stage 2: Runtime
+FROM python:3.12-slim
+WORKDIR /app
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# Runtime deps only
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    && useradd -m appuser
+
+# Copy installed packages
+COPY --from=builder /bin/uv /bin/uv
+COPY --from=builder /bin/uvx /bin/uvx
+
+# Copy python virtual environment created by uv
+COPY --from=builder /app/.venv /app/.venv
+
+# Make venv primary PATH
+ENV PATH="/app/.venv/bin:$PATH"
+
+# Copy Code
+COPY ./app ./app
+COPY ./alembic.ini ./
+COPY ./alembic ./alembic
+COPY docker/docker-entrypoint.sh /usr/local/bin/
+
+# Setup
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh \
+    && chown -R appuser:appuser /app
+
+USER appuser
+
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+
+CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "app.main:app", "-b", "0.0.0.0:8000", "--workers", "4", "--timeout", "120"]
