@@ -1,0 +1,43 @@
+name: publish-packages
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      is_test:
+        description: "Publish packages to test repositories instead of production"
+        required: true
+        type: boolean
+        default: false
+
+jobs:
+  packages:
+    name: "Build and publish release"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Build package
+        run: make build
+
+      - name: Publish packages to PyPI Test
+        if: ${{ (github.event.inputs.is_test || 'false') == 'true' }}
+        run: |
+          uv publish --index testpypi --token ${{ secrets.TEST_PYPI_TOKEN }}
+
+      - name: Publish release packages to PyPI
+        if: ${{ (github.event.inputs.is_test || 'false') == 'false' }}
+        run: uv publish --token ${{ secrets.PYPI_TOKEN }}
