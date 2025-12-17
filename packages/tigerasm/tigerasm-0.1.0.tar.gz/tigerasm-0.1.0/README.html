@@ -1,0 +1,4491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="description" content="TigerASM - High-Performance Runtime Assembler for Python with JIT Compilation for x86_64 and ARM64">
+    <meta name="theme-color" content="#0a0e17">
+    <title>TigerASM - Runtime Assembler Documentation</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0e17;
+            --bg-secondary: #141821;
+            --bg-tertiary: #1a1f2e;
+            --accent-primary: #00ffaa;
+            --accent-secondary: #00d4ff;
+            --accent-tertiary: #7c3aed;
+            --text-primary: #e5e7eb;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --border-color: rgba(0, 255, 170, 0.15);
+            --code-bg: #0d1117;
+            --shadow-glow: rgba(0, 255, 170, 0.2);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Animated Graph Pattern Background */
+        .graph-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
+        .graph-background svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .graph-line {
+            stroke: var(--accent-primary);
+            stroke-width: 1;
+            fill: none;
+            opacity: 0.3;
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        .graph-node {
+            fill: var(--accent-primary);
+            opacity: 0.6;
+            animation: nodePulse 3s ease-in-out infinite;
+        }
+
+        /* CPU Processing Elements */
+        .cpu-core {
+            fill: var(--accent-secondary);
+            opacity: 0.7;
+            animation: cpuPulse 2s ease-in-out infinite;
+        }
+
+        .data-packet {
+            fill: var(--accent-primary);
+            opacity: 0.8;
+        }
+
+        .processing-wave {
+            stroke: var(--accent-tertiary);
+            stroke-width: 2;
+            fill: none;
+            opacity: 0.5;
+            animation: waveTravel 3s linear infinite;
+        }
+
+        .memory-block {
+            fill: var(--accent-secondary);
+            stroke: var(--accent-primary);
+            stroke-width: 1;
+            opacity: 0.4;
+            animation: memoryAccess 4s ease-in-out infinite;
+        }
+
+        .instruction-flow {
+            stroke: var(--accent-primary);
+            stroke-width: 2;
+            stroke-dasharray: 5, 5;
+            fill: none;
+            opacity: 0.6;
+            animation: flowAnimation 2s linear infinite;
+        }
+
+        .register-indicator {
+            fill: var(--accent-tertiary);
+            opacity: 0.7;
+            animation: registerBlink 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.2; }
+            50% { opacity: 0.4; }
+        }
+
+        @keyframes nodePulse {
+            0%, 100% { opacity: 0.4; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.2); }
+        }
+
+        @keyframes cpuPulse {
+            0%, 100% { 
+                opacity: 0.5;
+                filter: drop-shadow(0 0 5px var(--accent-secondary));
+            }
+            50% { 
+                opacity: 1;
+                filter: drop-shadow(0 0 15px var(--accent-secondary));
+            }
+        }
+
+        @keyframes waveTravel {
+            0% { stroke-dashoffset: 0; }
+            100% { stroke-dashoffset: 100; }
+        }
+
+        @keyframes memoryAccess {
+            0%, 100% { opacity: 0.3; }
+            25% { opacity: 0.7; }
+            50% { opacity: 0.4; }
+            75% { opacity: 0.8; }
+        }
+
+        @keyframes flowAnimation {
+            0% { stroke-dashoffset: 0; }
+            100% { stroke-dashoffset: -20; }
+        }
+
+        @keyframes registerBlink {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        @keyframes particleFloat {
+            0% {
+                transform: translateY(0) translateX(0);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100vh) translateX(50px);
+                opacity: 0;
+            }
+        }
+
+        @keyframes dataStream {
+            0% {
+                transform: translateX(-100%);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateX(100vw);
+                opacity: 0;
+            }
+        }
+
+        @keyframes hexRotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .particle {
+            fill: var(--accent-primary);
+            opacity: 0.6;
+        }
+
+        .hex-pattern {
+            stroke: var(--accent-primary);
+            stroke-width: 0.5;
+            fill: none;
+            opacity: 0.2;
+            animation: hexRotate 20s linear infinite;
+        }
+
+        .binary-stream {
+            fill: var(--accent-secondary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            opacity: 0.3;
+            animation: dataStream 8s linear infinite;
+        }
+
+        /* Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header / Navigation */
+        header {
+            padding: 2rem 0;
+            border-bottom: 1px solid var(--border-color);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(10, 14, 23, 0.9);
+            animation: slideDown 0.6s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo-icon {
+            width: 80px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 900;
+            font-size: 1rem;
+            color: var(--bg-primary);
+            box-shadow: 0 0 30px var(--shadow-glow);
+            animation: logoGlow 3s ease-in-out infinite;
+            letter-spacing: 0.1em;
+        }
+
+        @keyframes logoGlow {
+            0%, 100% { box-shadow: 0 0 20px var(--shadow-glow); }
+            50% { box-shadow: 0 0 40px var(--shadow-glow), 0 0 60px var(--shadow-glow); }
+        }
+
+        .logo-text {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        nav ul {
+            display: flex;
+            gap: 2.5rem;
+            list-style: none;
+        }
+
+        nav a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            position: relative;
+            padding: 0.5rem 0;
+        }
+
+        nav a::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+            transition: width 0.3s ease;
+        }
+
+        nav a:hover {
+            color: var(--accent-primary);
+        }
+
+        nav a:hover::after {
+            width: 100%;
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 8rem 0 6rem;
+            text-align: center;
+            position: relative;
+            animation: fadeInUp 0.8s ease-out 0.2s both;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hero h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 5rem;
+            font-weight: 900;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary), var(--accent-tertiary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.02em;
+            line-height: 1.1;
+        }
+
+        .hero .subtitle {
+            font-size: 1.5rem;
+            color: var(--text-secondary);
+            margin-bottom: 3rem;
+            font-weight: 300;
+        }
+
+        .hero .version-badge {
+            display: inline-block;
+            padding: 0.5rem 1.5rem;
+            background: rgba(0, 255, 170, 0.1);
+            border: 1px solid var(--border-color);
+            border-radius: 50px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--accent-primary);
+            margin-bottom: 2rem;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            margin-top: 3rem;
+        }
+
+        .btn {
+            padding: 1rem 2.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-size: 1.1rem;
+            cursor: pointer;
+            border: none;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: var(--bg-primary);
+            box-shadow: 0 10px 40px rgba(0, 255, 170, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 50px rgba(0, 255, 170, 0.5);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-primary);
+            border: 2px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(0, 255, 170, 0.1);
+            border-color: var(--accent-primary);
+            transform: translateY(-3px);
+        }
+
+        /* Features Grid */
+        .features {
+            padding: 6rem 0;
+            animation: fadeInUp 0.8s ease-out 0.4s both;
+        }
+
+        .section-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 3rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 4rem;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .feature-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2.5rem;
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.4s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-8px);
+            border-color: var(--accent-primary);
+            box-shadow: 0 20px 60px rgba(0, 255, 170, 0.2);
+        }
+
+        .feature-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .feature-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .feature-card h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .feature-card p {
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        /* Code Example Section */
+        .code-example {
+            padding: 6rem 0;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+            animation: fadeInUp 0.8s ease-out 0.6s both;
+        }
+
+        /* Examples Section */
+        .examples {
+            padding: 6rem 0;
+            animation: fadeInUp 0.8s ease-out 0.7s both;
+        }
+
+        .examples-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(550px, 1fr));
+            gap: 3rem;
+            margin-top: 3rem;
+        }
+
+        .example-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            overflow: hidden;
+            transition: all 0.4s ease;
+            position: relative;
+        }
+
+        .example-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary), var(--accent-tertiary));
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.5s ease;
+        }
+
+        .example-card:hover {
+            transform: translateY(-10px);
+            border-color: var(--accent-primary);
+            box-shadow: 0 25px 70px rgba(0, 255, 170, 0.25);
+        }
+
+        .example-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .example-header {
+            padding: 2rem 2.5rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            background: linear-gradient(135deg, rgba(0, 255, 170, 0.05), rgba(0, 212, 255, 0.05));
+        }
+
+        .example-number {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1;
+            min-width: 70px;
+        }
+
+        .example-header h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.6rem;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .example-description {
+            padding: 0 2.5rem 1.5rem;
+            color: var(--text-secondary);
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+
+        .example-card .code-block {
+            margin: 0;
+            border-radius: 0;
+            border: none;
+            border-top: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .example-output {
+            padding: 1.5rem 2.5rem;
+            background: var(--bg-tertiary);
+            border-top: 1px solid var(--border-color);
+        }
+
+        .output-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--accent-secondary);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .output-text {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent-primary);
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+
+        @media (max-width: 1200px) {
+            .examples-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .code-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            margin-top: 3rem;
+        }
+
+        .code-block {
+            background: var(--code-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .code-header {
+            background: var(--bg-tertiary);
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .code-header .title {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent-primary);
+            font-size: 0.9rem;
+        }
+
+        .copy-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 0.4rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .copy-btn:hover {
+            background: rgba(0, 255, 170, 0.1);
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+
+        .code-content {
+            padding: 1.5rem;
+            overflow-x: auto;
+        }
+
+        pre {
+            margin: 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .code-line {
+            display: block;
+        }
+
+        .keyword { color: #ff79c6; }
+        .function { color: var(--accent-secondary); }
+        .string { color: #f1fa8c; }
+        .comment { color: var(--text-muted); font-style: italic; }
+        .number { color: #bd93f9; }
+        .variable { color: var(--accent-primary); }
+
+        /* API Reference */
+        .api-reference {
+            padding: 6rem 0;
+            animation: fadeInUp 0.8s ease-out 0.8s both;
+        }
+
+        /* Device Support Section */
+        .device-support {
+            padding: 6rem 0;
+            animation: fadeInUp 0.8s ease-out 0.9s both;
+        }
+
+        .support-intro {
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto 4rem;
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            line-height: 1.8;
+        }
+
+        .devices-grid {
+            display: grid;
+            gap: 4rem;
+        }
+
+        .device-category {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 3rem;
+            transition: all 0.3s ease;
+        }
+
+        .device-category:hover {
+            border-color: var(--accent-primary);
+            box-shadow: 0 15px 50px rgba(0, 255, 170, 0.15);
+        }
+
+        .category-header {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .category-icon {
+            font-size: 3rem;
+            line-height: 1;
+        }
+
+        .category-header h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            color: var(--accent-primary);
+            margin: 0;
+        }
+
+        .device-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 2rem;
+        }
+
+        .device-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2rem;
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .device-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+            transform: scaleX(0);
+            transition: transform 0.4s ease;
+        }
+
+        .device-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-primary);
+            box-shadow: 0 20px 40px rgba(0, 255, 170, 0.2);
+        }
+
+        .device-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .device-header {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .device-icon {
+            font-size: 3rem;
+            line-height: 1;
+        }
+
+        .device-info h4 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.4rem 1rem;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .status-full {
+            background: rgba(0, 255, 170, 0.2);
+            color: var(--accent-primary);
+            border: 1px solid var(--accent-primary);
+        }
+
+        .status-partial {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+            border: 1px solid #ffc107;
+        }
+
+        .status-recommended {
+            background: rgba(124, 58, 237, 0.2);
+            color: var(--accent-tertiary);
+            border: 1px solid var(--accent-tertiary);
+        }
+
+        .status-future {
+            background: rgba(0, 212, 255, 0.2);
+            color: var(--accent-secondary);
+            border: 1px solid var(--accent-secondary);
+        }
+
+        .device-desc {
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .device-features {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .device-features li {
+            padding: 0.5rem 0;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .os-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .os-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2rem 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .os-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-primary);
+            box-shadow: 0 15px 30px rgba(0, 255, 170, 0.2);
+        }
+
+        .os-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .os-card h4 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.3rem;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+        }
+
+        .os-versions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .os-versions span {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            padding: 0.3rem 0.8rem;
+            background: var(--bg-primary);
+            border-radius: 6px;
+        }
+
+        .platform-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .platform-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2rem 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .platform-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-primary);
+        }
+
+        .platform-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .platform-card h4 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .platform-card p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+        }
+
+        .platform-status {
+            font-size: 0.8rem;
+            color: var(--accent-primary);
+            font-weight: 600;
+        }
+
+        .python-versions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .python-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2rem 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .python-card.recommended {
+            border-color: var(--accent-tertiary);
+            background: linear-gradient(135deg, rgba(124, 58, 237, 0.05), rgba(124, 58, 237, 0.1));
+        }
+
+        .python-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 255, 170, 0.15);
+        }
+
+        .version-number {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent-primary);
+            margin-bottom: 1rem;
+        }
+
+        .requirements-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+        }
+
+        .requirement-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        .requirement-card.recommended-req {
+            border-color: var(--accent-tertiary);
+            background: linear-gradient(135deg, rgba(124, 58, 237, 0.05), rgba(124, 58, 237, 0.1));
+        }
+
+        .requirement-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-primary);
+        }
+
+        .req-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .requirement-card h4 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.3rem;
+            color: var(--text-primary);
+            margin-bottom: 1.5rem;
+        }
+
+        .req-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .req-list li {
+            padding: 0.7rem 0;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.95rem;
+        }
+
+        .req-list li:last-child {
+            border-bottom: none;
+        }
+
+        .req-list strong {
+            color: var(--accent-primary);
+            font-weight: 600;
+        }
+
+        .dependencies-info {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
+        }
+
+        .dep-intro {
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            font-size: 1rem;
+        }
+
+        .dep-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .dep-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .dep-card:hover {
+            border-color: var(--accent-primary);
+            transform: translateX(5px);
+        }
+
+        .dep-card h4 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+        }
+
+        .dep-command {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--code-bg);
+            padding: 0.8rem 1rem;
+            border-radius: 6px;
+            color: var(--accent-primary);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .dep-card p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        .dep-card code {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--code-bg);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            color: var(--accent-secondary);
+            font-size: 0.85rem;
+        }
+
+        .performance-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .perf-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2rem 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .perf-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-primary);
+        }
+
+        .perf-badge {
+            display: inline-block;
+            padding: 0.5rem 1.5rem;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+            letter-spacing: 0.05em;
+        }
+
+        .perf-excellent {
+            background: rgba(0, 255, 170, 0.2);
+            color: var(--accent-primary);
+            border: 2px solid var(--accent-primary);
+        }
+
+        .perf-good {
+            background: rgba(0, 212, 255, 0.2);
+            color: var(--accent-secondary);
+            border: 2px solid var(--accent-secondary);
+        }
+
+        .perf-moderate {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+            border: 2px solid #ffc107;
+        }
+
+        .perf-card h4 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .perf-card p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+        }
+
+        .perf-metric {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--accent-primary);
+            padding: 0.8rem;
+            background: var(--bg-primary);
+            border-radius: 6px;
+        }
+
+        .installation-matrix {
+            margin-top: 4rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 3rem;
+        }
+
+        .matrix-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            color: var(--accent-primary);
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .matrix-grid {
+            display: grid;
+            gap: 1px;
+            background: var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .matrix-row {
+            display: grid;
+            grid-template-columns: 1.5fr 1.5fr 2fr 1fr;
+            gap: 1px;
+            background: var(--border-color);
+        }
+
+        .matrix-header {
+            background: var(--bg-tertiary);
+        }
+
+        .matrix-header .matrix-cell {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            color: var(--accent-primary);
+            background: var(--bg-primary);
+        }
+
+        .matrix-cell {
+            background: var(--bg-tertiary);
+            padding: 1.2rem 1.5rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .matrix-cell code {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--code-bg);
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            color: var(--accent-primary);
+            font-size: 0.85rem;
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+
+        .status-green {
+            background: var(--accent-primary);
+            box-shadow: 0 0 10px var(--accent-primary);
+        }
+
+        .status-yellow {
+            background: #ffc107;
+            box-shadow: 0 0 10px #ffc107;
+        }
+
+        @media (max-width: 1200px) {
+            .device-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .requirements-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .matrix-row {
+                grid-template-columns: 1fr;
+            }
+
+            .matrix-cell {
+                border-bottom: 1px solid var(--border-color);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .os-grid, .platform-grid, .python-versions, .performance-grid, .dep-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .api-grid {
+            display: grid;
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .api-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .api-section:hover {
+            border-color: var(--accent-primary);
+            box-shadow: 0 10px 40px rgba(0, 255, 170, 0.15);
+        }
+
+        .api-section h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            color: var(--accent-primary);
+        }
+
+        .method {
+            margin-bottom: 2rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .method:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .method-signature {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--code-bg);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            border-left: 4px solid var(--accent-primary);
+            font-size: 0.95rem;
+        }
+
+        .method-description {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .parameters {
+            margin-top: 1rem;
+        }
+
+        .parameters h5 {
+            color: var(--accent-secondary);
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .param-list {
+            list-style: none;
+            margin-left: 0;
+        }
+
+        .param-list li {
+            padding: 0.5rem 0;
+            color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+        }
+
+        .param-name {
+            color: var(--accent-primary);
+            font-weight: 600;
+        }
+
+        /* Instructions Table */
+        .instructions {
+            padding: 6rem 0;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+        }
+
+        .instruction-categories {
+            display: grid;
+            gap: 3rem;
+            margin-top: 3rem;
+        }
+
+        .instruction-category {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2.5rem;
+        }
+
+        .instruction-category h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.8rem;
+            margin-bottom: 2rem;
+            color: var(--accent-secondary);
+        }
+
+        .instruction-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .instruction-item {
+            background: var(--bg-secondary);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .instruction-item:hover {
+            border-color: var(--accent-primary);
+            transform: translateX(5px);
+        }
+
+        .instruction-name {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent-primary);
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .instruction-desc {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        /* Footer */
+        footer {
+            padding: 4rem 0 2rem;
+            border-top: 1px solid var(--border-color);
+            text-align: center;
+        }
+
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .footer-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: var(--accent-primary);
+        }
+
+        .copyright {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* Scroll to top button */
+        .scroll-top {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border: none;
+            border-radius: 50%;
+            color: var(--bg-primary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            opacity: 0;
+            transform: translateY(100px);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            box-shadow: 0 10px 30px rgba(0, 255, 170, 0.3);
+        }
+
+        .scroll-top.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .scroll-top:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 255, 170, 0.5);
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .hero h1 {
+                font-size: 4rem;
+            }
+
+            .code-container {
+                grid-template-columns: 1fr;
+            }
+
+            nav ul {
+                gap: 1.5rem;
+            }
+
+            .section-title {
+                font-size: 2.5rem;
+            }
+
+            .device-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .requirements-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .matrix-row {
+                grid-template-columns: 1fr;
+            }
+
+            .matrix-cell {
+                border-bottom: 1px solid var(--border-color);
+            }
+
+            .examples-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 968px) {
+            .hero h1 {
+                font-size: 3.5rem;
+            }
+
+            nav ul {
+                gap: 1rem;
+                font-size: 0.9rem;
+            }
+
+            .section-title {
+                font-size: 2rem;
+            }
+
+            .feature-icon, .device-icon, .platform-icon {
+                font-size: 2rem;
+            }
+
+            .example-number {
+                font-size: 2rem;
+                min-width: 50px;
+            }
+
+            .example-header h3 {
+                font-size: 1.3rem;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .hero {
+                padding: 5rem 0 4rem;
+            }
+
+            .features, .examples, .api-reference, .device-support, .instructions {
+                padding: 4rem 0;
+            }
+
+            .container {
+                padding: 0 1.5rem;
+            }
+
+            header {
+                padding: 1.5rem 0;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .os-grid, .platform-grid, .python-versions, .performance-grid, .dep-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .hero h1 {
+                font-size: 2.8rem;
+                line-height: 1.2;
+            }
+
+            .hero .subtitle {
+                font-size: 1.1rem;
+            }
+
+            .logo-text {
+                font-size: 1.5rem;
+            }
+
+            .logo-icon {
+                width: 60px;
+                height: 40px;
+                font-size: 0.85rem;
+            }
+
+            .category-header h3 {
+                font-size: 1.5rem;
+            }
+
+            .device-category, .api-section, .instruction-category {
+                padding: 2rem 1.5rem;
+            }
+
+            .installation-matrix {
+                padding: 2rem 1.5rem;
+            }
+
+            .matrix-title {
+                font-size: 1.5rem;
+            }
+
+            nav ul {
+                flex-wrap: wrap;
+                gap: 0.8rem;
+            }
+
+            nav a {
+                font-size: 0.85rem;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .hero h1 {
+                font-size: 2.2rem;
+            }
+
+            .hero .subtitle {
+                font-size: 1rem;
+            }
+
+            .cta-buttons {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .btn {
+                width: 100%;
+                padding: 0.9rem 2rem;
+                font-size: 1rem;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 1.5rem;
+            }
+
+            nav ul {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .section-title {
+                font-size: 1.8rem;
+            }
+
+            .feature-card, .example-card, .device-card, .os-card, .platform-card {
+                padding: 1.5rem;
+            }
+
+            .example-header {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 1.5rem;
+            }
+
+            .example-number {
+                font-size: 1.8rem;
+            }
+
+            .example-description {
+                padding: 0 1.5rem 1rem;
+                font-size: 0.9rem;
+            }
+
+            .code-header {
+                padding: 0.8rem 1rem;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .code-content {
+                padding: 1rem;
+            }
+
+            pre {
+                font-size: 0.8rem;
+            }
+
+            .method-signature, .dep-command {
+                font-size: 0.8rem;
+                padding: 0.8rem 1rem;
+                overflow-x: auto;
+            }
+
+            .footer-content {
+                flex-direction: column;
+                gap: 2rem;
+                text-align: center;
+            }
+
+            .footer-links {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .device-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .category-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .category-icon {
+                font-size: 2.5rem;
+            }
+
+            .api-section h3, .category-header h3 {
+                font-size: 1.5rem;
+            }
+
+            .hero {
+                padding: 4rem 0 3rem;
+            }
+
+            .features, .examples, .api-reference, .device-support, .instructions, .code-example {
+                padding: 3rem 0;
+            }
+
+            .container {
+                padding: 0 1rem;
+            }
+
+            .graph-background {
+                opacity: 0.2;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .hero h1 {
+                font-size: 1.8rem;
+            }
+
+            .hero .subtitle {
+                font-size: 0.9rem;
+            }
+
+            .logo-text {
+                font-size: 1.2rem;
+            }
+
+            .logo-icon {
+                width: 50px;
+                height: 35px;
+                font-size: 0.75rem;
+            }
+
+            .section-title {
+                font-size: 1.5rem;
+            }
+
+            .version-badge {
+                font-size: 0.8rem;
+                padding: 0.4rem 1rem;
+            }
+
+            .feature-icon, .device-icon {
+                font-size: 1.8rem;
+            }
+
+            .instruction-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .python-card {
+                padding: 1.5rem 1rem;
+            }
+
+            .version-number {
+                font-size: 2rem;
+            }
+
+            .status-badge {
+                font-size: 0.7rem;
+                padding: 0.3rem 0.8rem;
+            }
+
+            .scroll-top {
+                width: 45px;
+                height: 45px;
+                bottom: 1.5rem;
+                right: 1.5rem;
+                font-size: 1.3rem;
+            }
+
+            pre {
+                font-size: 0.75rem;
+            }
+
+            .output-text {
+                font-size: 0.85rem;
+            }
+        }
+
+        /* Touch device optimizations */
+        @media (hover: none) and (pointer: coarse) {
+            .feature-card:hover,
+            .example-card:hover,
+            .device-card:hover,
+            .os-card:hover,
+            .platform-card:hover,
+            .python-card:hover,
+            .perf-card:hover {
+                transform: none;
+            }
+
+            .btn:hover {
+                transform: none;
+            }
+
+            nav a:hover::after {
+                width: 0;
+            }
+
+            /* Make touch targets larger */
+            nav a {
+                padding: 0.8rem 0.5rem;
+            }
+
+            .copy-btn {
+                padding: 0.6rem 1.2rem;
+                font-size: 0.9rem;
+            }
+
+            .scroll-top {
+                width: 55px;
+                height: 55px;
+            }
+        }
+
+        /* Landscape phone optimization */
+        @media (max-width: 968px) and (orientation: landscape) {
+            .hero {
+                padding: 3rem 0 2rem;
+            }
+
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .features, .examples, .api-reference, .device-support, .instructions {
+                padding: 3rem 0;
+            }
+        }
+
+        /* High DPI displays */
+        @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+            .graph-line {
+                stroke-width: 0.5;
+            }
+
+            body {
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .graph-background,
+            .scroll-top,
+            header,
+            footer,
+            .cta-buttons {
+                display: none;
+            }
+
+            body {
+                background: white;
+                color: black;
+            }
+
+            .section-title,
+            .logo-text,
+            h1, h2, h3, h4 {
+                color: black;
+            }
+        }
+
+        /* FAQ Section */
+        .faq-section {
+            padding: 6rem 0;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            animation: fadeInUp 0.8s ease-out 1s both;
+        }
+
+        .faq-intro {
+            text-align: center;
+            max-width: 700px;
+            margin: 0 auto 4rem;
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+        }
+
+        .faq-grid {
+            display: grid;
+            gap: 3rem;
+        }
+
+        .faq-category {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 2.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .faq-category:hover {
+            border-color: var(--accent-primary);
+            box-shadow: 0 10px 40px rgba(0, 255, 170, 0.15);
+        }
+
+        .faq-category-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.8rem;
+            color: var(--accent-primary);
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .faq-icon {
+            font-size: 2rem;
+        }
+
+        .faq-items {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .faq-item {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .faq-item:hover {
+            border-color: var(--accent-primary);
+        }
+
+        .faq-question {
+            padding: 1.5rem 2rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+            transition: all 0.3s ease;
+        }
+
+        .faq-question:hover {
+            background: rgba(0, 255, 170, 0.05);
+        }
+
+        .question-text {
+            font-family: 'Inter', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            flex: 1;
+        }
+
+        .toggle-icon {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: var(--bg-primary);
+            border-radius: 50%;
+            font-size: 1.5rem;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+            margin-left: 1rem;
+        }
+
+        .faq-item.active .toggle-icon {
+            transform: rotate(45deg);
+            background: linear-gradient(135deg, var(--accent-secondary), var(--accent-tertiary));
+        }
+
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease, padding 0.4s ease;
+            padding: 0 2rem;
+        }
+
+        .faq-item.active .faq-answer {
+            max-height: 1000px;
+            padding: 0 2rem 1.5rem;
+        }
+
+        .faq-answer p {
+            color: var(--text-secondary);
+            line-height: 1.8;
+            margin-bottom: 1rem;
+        }
+
+        .faq-answer ul {
+            list-style: none;
+            padding-left: 0;
+            margin: 1rem 0;
+        }
+
+        .faq-answer ul li {
+            padding: 0.5rem 0 0.5rem 1.5rem;
+            color: var(--text-secondary);
+            position: relative;
+            line-height: 1.6;
+        }
+
+        .faq-answer ul li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: var(--accent-primary);
+            font-weight: 700;
+        }
+
+        .faq-answer ol {
+            padding-left: 1.5rem;
+            margin: 1rem 0;
+        }
+
+        .faq-answer ol li {
+            padding: 0.5rem 0;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .faq-answer strong {
+            color: var(--accent-primary);
+            font-weight: 600;
+        }
+
+        .faq-answer code {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--code-bg);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            color: var(--accent-primary);
+            font-size: 0.9rem;
+        }
+
+        .code-snippet {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--code-bg);
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            color: var(--accent-primary);
+            margin: 1rem 0;
+            overflow-x: auto;
+            line-height: 1.6;
+            font-size: 0.9rem;
+        }
+
+        .faq-contact {
+            margin-top: 4rem;
+            text-align: center;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 3rem 2rem;
+        }
+
+        .faq-contact h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            color: var(--accent-primary);
+            margin-bottom: 1rem;
+        }
+
+        .faq-contact p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+        }
+
+        .contact-buttons {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        @media (max-width: 768px) {
+            .faq-category {
+                padding: 1.5rem;
+            }
+
+            .faq-category-title {
+                font-size: 1.5rem;
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .faq-question {
+                padding: 1.2rem 1.5rem;
+            }
+
+            .question-text {
+                font-size: 1rem;
+                padding-right: 1rem;
+            }
+
+            .toggle-icon {
+                width: 28px;
+                height: 28px;
+                font-size: 1.3rem;
+            }
+
+            .faq-answer {
+                padding: 0 1.5rem;
+            }
+
+            .faq-item.active .faq-answer {
+                padding: 0 1.5rem 1.2rem;
+            }
+
+            .faq-contact {
+                padding: 2rem 1.5rem;
+            }
+
+            .faq-contact h3 {
+                font-size: 1.6rem;
+            }
+
+            .contact-buttons {
+                flex-direction: column;
+            }
+
+            .contact-buttons .btn {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .faq-section {
+                padding: 3rem 0;
+            }
+
+            .faq-category-title {
+                font-size: 1.3rem;
+            }
+
+            .faq-icon {
+                font-size: 1.5rem;
+            }
+
+            .question-text {
+                font-size: 0.95rem;
+            }
+
+            .faq-answer p,
+            .faq-answer li {
+                font-size: 0.9rem;
+            }
+
+            .code-snippet {
+                font-size: 0.8rem;
+                padding: 0.8rem;
+            }
+        }
+
+        /* Smooth scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Selection */
+        ::selection {
+            background: var(--accent-primary);
+            color: var(--bg-primary);
+        }
+    </style>
+</head>
+<body>
+    <!-- Animated Graph Background -->
+    <div class="graph-background">
+        <svg id="graph-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <div class="logo-icon">TASM</div>
+                    <div class="logo-text">TigerASM</div>
+                </div>
+                <nav>
+                    <ul>
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#quickstart">Quick Start</a></li>
+                        <li><a href="#examples">Examples</a></li>
+                        <li><a href="#api">API</a></li>
+                        <li><a href="#instructions">Instructions</a></li>
+                        <li><a href="#devices">Devices</a></li>
+                        <li><a href="#faq">FAQ</a></li>
+                        <li><a href="https://github.com/yourusername/tigerasm">GitHub</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="version-badge">v1.0.0</div>
+            <h1>TigerASM</h1>
+            <p class="subtitle">High-Performance Runtime Assembler for Python</p>
+            <p class="subtitle">JIT Compilation • x86_64 & ARM64 • Virtual Memory</p>
+            <div class="cta-buttons">
+                <a href="#quickstart" class="btn btn-primary">Get Started</a>
+                <a href="#api" class="btn btn-secondary">Documentation</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <div class="container">
+            <h2 class="section-title">Features</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>JIT Compilation</h3>
+                    <p>Runtime assembly compilation and execution with native performance. Write assembly code and execute it instantly.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3>Multi-Architecture</h3>
+                    <p>Full support for both x86_64 and aarch64 (ARM64) architectures with automatic detection.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💾</div>
+                    <h3>Virtual Memory</h3>
+                    <p>10MB simulated memory space for data manipulation with full read/write capabilities.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔧</div>
+                    <h3>Register Control</h3>
+                    <h3>Complete register state management for both x86_64 and ARM64 architectures.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📁</div>
+                    <h3>File Operations</h3>
+                    <p>Load and save binary files directly to/from memory with seamless integration.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🚀</div>
+                    <h3>Python Native</h3>
+                    <p>Built with Rust and PyO3 for maximum performance while maintaining Python simplicity.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quick Start Section -->
+    <section id="quickstart" class="code-example">
+        <div class="container">
+            <h2 class="section-title">Quick Start</h2>
+            <div class="code-container">
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="title">Installation</span>
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><span class="code-line"><span class="comment"># Install via pip</span></span>
+<span class="code-line"><span class="keyword">pip</span> install tigerasm</span>
+<span class="code-line"></span>
+<span class="code-line"><span class="comment"># Or build from source</span></span>
+<span class="code-line"><span class="keyword">git</span> clone https://github.com/yourusername/tigerasm</span>
+<span class="code-line"><span class="keyword">cd</span> tigerasm</span>
+<span class="code-line"><span class="keyword">pip</span> install maturin</span>
+<span class="code-line">maturin develop --release</span></pre>
+                    </div>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="title">Basic Example</span>
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                    </div>
+                    <div class="code-content">
+                        <pre><span class="code-line"><span class="keyword">from</span> <span class="variable">tigerasm</span> <span class="keyword">import</span> TigerASM</span>
+<span class="code-line"></span>
+<span class="code-line"><span class="comment"># Create assembler instance</span></span>
+<span class="code-line"><span class="variable">asm</span> = <span class="function">TigerASM</span>()</span>
+<span class="code-line"><span class="variable">asm</span>.<span class="function">setup</span>(<span class="string">"x86_64"</span>)</span>
+<span class="code-line"></span>
+<span class="code-line"><span class="comment"># Write assembly code</span></span>
+<span class="code-line"><span class="variable">asm</span>.<span class="function">asm</span>(<span class="string">"""</span></span>
+<span class="code-line"><span class="string">    mov rax, 42</span></span>
+<span class="code-line"><span class="string">    add rax, 8</span></span>
+<span class="code-line"><span class="string">    ret</span></span>
+<span class="code-line"><span class="string">"""</span>)</span>
+<span class="code-line"></span>
+<span class="code-line"><span class="comment"># Execute and get result</span></span>
+<span class="code-line"><span class="variable">asm</span>.<span class="function">execute</span>()</span>
+<span class="code-line"><span class="function">print</span>(<span class="string">f"Result: </span><span class="variable">{asm.get('rax')}</span><span class="string">"</span>)</span></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Examples Section -->
+    <section id="examples" class="examples">
+        <div class="container">
+            <h2 class="section-title">Examples</h2>
+            
+            <div class="examples-grid">
+                <!-- Example 1: Simple Calculator -->
+                <div class="example-card">
+                    <div class="example-header">
+                        <div class="example-number">01</div>
+                        <h3>Simple Calculator</h3>
+                    </div>
+                    <p class="example-description">Calculate (10 + 20) × 3 using assembly instructions</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="title">calculator.py</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <div class="code-content">
+                            <pre><span class="code-line"><span class="keyword">from</span> <span class="variable">tigerasm</span> <span class="keyword">import</span> TigerASM</span>
+<span class="code-line"></span>
+<span class="code-line"><span class="variable">asm</span> = <span class="function">TigerASM</span>()</span>
+<span class="code-line"><span class="variable">asm</span>.<span class="function">setup</span>(<span class="string">"x86_64"</span>)</span>
+<span class="code-line"></span>
+<span class="code-line"><span class="comment"># Calculate (10 + 20) * 3</span></span>
+<span class="code-line"><span class="variable">asm</span>.<span class="function">asm</span>(<span class="string">"""</span></span>
+<span class="code-line"><span class="string">    mov rax, 10</span></span>
+<span class="code-line"><span class="string">    add rax, 20</span></span>
+<span class="code-line"><span class="string">    mov rbx, 3</span></span>
+<span class="code-line"><span class="string">    imul rax, rbx</span></span>
+<span class="code-line"><span class="string">    ret</span></span>
+<span class="code-line"><span class="string">"""</span>)</span>
+<span class="code-line"></span>
+<span class="code-line"><span class="variable">asm</span>.<span class="function">execute</span>()</span>
+<span class="code-line"><span class="function">print</span>(<span class="string">f"Result: </span><span class="variable">{asm.get('rax')}</span><span class="string">"</span>)</span>
+<span class="code-line"><span class="comment"># Output: Result: 90</span></span></pre>
+                        </div>
+                    </div>
+                    <div class="example-output">
+                        <div class="output-label">Output:</div>
+                        <div class="output-text">Result: 90</div>
+                    </div>
+                </div>
+
+                <!-- Example 2: Loop with Labels -->
+                <div class="example-card">
+                    <div class="example-header">
+                        <div class="example-number">02</div>
+                        <h3>Loop with Labels</h3>
+                    </div>
+                    <p class="example-description">Sum numbers from 1 to 10 using a loop structure</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="title">sum_loop.py</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <div class="code-content">
+                            <pre><span class="code-line"><span class="variable">asm</span> = <span class="function">TigerASM</span>()</span>
+<span class="code-line"><span class="variable">asm</span>.<span class="function">setup</span>(<span class="string">"x86_64"</span>)</span>
+<span class="code-line"></span>
+<span class="code-line"><span class="comment"># Sum numbers 1 to 10</span></span>
+<span class="code-line"><span class="variable">asm</span>.<span class="function">asm</span>(<span class="string">"""</span></span>
+<span class="code-line"><span class="string">    mov rax, 0      ; sum accumulator</span></span>
+<span class="code-line"><span class="string">    mov rcx, 1      ; counter</span></span>
+<span class="code-line"><span class="string">    </span></span>
+<span class="code-line"><span class="string">loop_start:</span></span>
+<span class="code-line"><span class="string">    add rax, rcx    ; add counter to sum</span></span>
+<span class="code-line"><span class="string">    inc rcx         ; increment counter</span></span>
+<span class="code-line"><span class="string">    cmp rcx, 11     ; compare with 11</span></span>
+<span class="code-line"><span class="string">    jl loop_start   ; jump if less than</span></span>
+<span class="code-line"><span class="string">    </span></span>
+<span class="code-line"><span class="string">    ret</span></span>
+<span class="code-line"><span class="string">"""</span>)</span>
+<span class="code-line"></span>
+<span class="code-line"><span class="variable">asm</span>.<span class="function">execute</span>()</span>
+<span class="code-line"><span class="function">print</span>(<span class="string">f"Sum 1-10: </span><span class="variable">{asm.get('rax')}</span><span class="string">"</span>)</span></pre>
+                        </div>
+                    </div>
+                    <div class="example-output">
+                        <div class="output-label">Output:</div>
+                        <div class="output-text">Sum 1-10: 55</div>
+                    </div>
+                </div>
+
+                <!-- Example 3: Memory Operations -->
+                <div class="example-card">
+                    <div class="example-header">
+                        <div class="example-number">03</div>
+                        <h3>Memory Operations</h3>
+                    </div>
+                    <p class="example-description">Read and manipulate data stored in virtual memory</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="title">memory_ops.py</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <div class="code-content">
+                            <pre><span class="code-line"><span class="variable">asm</span> = <span class="function">TigerASM</span>()</span>
+<span class="code-line"><span class="variable">asm</span>.<span class="function">setup</span>(<span class="string">"x86_64"</span>)</span>
+<span class="code-line"></span>
+<span class="code-line"><span class="comment"># Write data to memory</span></span>
+<span class="code-line"><span class="variable">asm</span>.<span class="function">write_mem</span>(<span class="number">0x1000</span>, <span class="number">42</span>, <span class="number">8</span>)</span>
+<span class="code-line"><span class="variable">asm</span>.<span class="function">write_mem</span>(<span class="number">0x1008</span>, <span class="number">58</span>, <span class="number">8</span>)</span>
+<span class="code-line"></span>
+<span class="code-line"><span class="comment"># Set base address register</span></span>
+<span class="code-line"><span class="variable">asm</span>.<span class="function">mov</span>(<span class="string">"rax"</span>, <span class="number">0x1000</span>)</span>
+<span class="code-line"></span>
+<span class="code-line"><span class="comment"># Read and sum values from memory</span></span>
+<span class="code-line"><span class="variable">asm</span>.<span class="function">asm</span>(<span class="string">"""</span></span>
+<span class="code-line"><span class="string">    mov rbx, [rax]      ; Load first value</span></span>
+<span class="code-line"><span class="string">    mov rcx, [rax + 8]  ; Load second value</span></span>
+<span class="code-line"><span class="string">    add rbx, rcx        ; Sum them</span></span>
+<span class="code-line"><span class="string">    mov rax, rbx        ; Return in rax</span></span>
+<span class="code-line"><span class="string">    ret</span></span>
+<span class="code-line"><span class="string">"""</span>)</span>
+<span class="code-line"></span>
+<span class="code-line"><span class="variable">asm</span>.<span class="function">execute</span>()</span>
+<span class="code-line"><span class="function">print</span>(<span class="string">f"Sum: </span><span class="variable">{asm.get('rax')}</span><span class="string">"</span>)</span></pre>
+                        </div>
+                    </div>
+                    <div class="example-output">
+                        <div class="output-label">Output:</div>
+                        <div class="output-text">Sum: 100</div>
+                    </div>
+                </div>
+
+                <!-- Example 4: String Processing -->
+                <div class="example-card">
+                    <div class="example-header">
+                        <div class="example-number">04</div>
+                        <h3>String Length Calculator</h3>
+                    </div>
+                    <p class="example-description">Calculate the length of a null-terminated string in memory</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="title">string_length.py</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <div class="code-content">
+                            <pre><span class="code-line"><span class="variable">asm</span> = <span class="function">TigerASM</span>()</span>
+<span class="code-line"><span class="variable">asm</span>.<span class="function">setup</span>(<span class="string">"x86_64"</span>)</span>
+<span class="code-line"></span>
+<span class="code-line"><span class="comment"># Write string to memory</span></span>
+<span class="code-line"><span class="variable">text</span> = <span class="string">b"Hello, TigerASM!\x00"</span></span>
+<span class="code-line"><span class="variable">asm</span>.<span class="function">write_bytes</span>(<span class="number">0x2000</span>, <span class="variable">text</span>)</span>
+<span class="code-line"></span>
+<span class="code-line"><span class="comment"># Count string length</span></span>
+<span class="code-line"><span class="variable">asm</span>.<span class="function">asm</span>(<span class="string">"""</span></span>
+<span class="code-line"><span class="string">    mov rsi, 0x2000     ; String address</span></span>
+<span class="code-line"><span class="string">    xor rax, rax        ; Length counter</span></span>
+<span class="code-line"><span class="string">    </span></span>
+<span class="code-line"><span class="string">count_loop:</span></span>
+<span class="code-line"><span class="string">    mov bl, [rsi + rax] ; Load byte</span></span>
+<span class="code-line"><span class="string">    test bl, bl         ; Check if zero</span></span>
+<span class="code-line"><span class="string">    jz done             ; Exit if zero</span></span>
+<span class="code-line"><span class="string">    inc rax             ; Increment counter</span></span>
+<span class="code-line"><span class="string">    jmp count_loop</span></span>
+<span class="code-line"><span class="string">    </span></span>
+<span class="code-line"><span class="string">done:</span></span>
+<span class="code-line"><span class="string">    ret</span></span>
+<span class="code-line"><span class="string">"""</span>)</span>
+<span class="code-line"></span>
+<span class="code-line"><span class="variable">asm</span>.<span class="function">execute</span>()</span>
+<span class="code-line"><span class="function">print</span>(<span class="string">f"String length: </span><span class="variable">{asm.get('rax')}</span><span class="string">"</span>)</span></pre>
+                        </div>
+                    </div>
+                    <div class="example-output">
+                        <div class="output-label">Output:</div>
+                        <div class="output-text">String length: 16</div>
+                    </div>
+                </div>
+
+                <!-- Example 5: Bitwise Operations -->
+                <div class="example-card">
+                    <div class="example-header">
+                        <div class="example-number">05</div>
+                        <h3>Bitwise Operations</h3>
+                    </div>
+                    <p class="example-description">Perform bit manipulation and shift operations</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="title">bitwise.py</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <div class="code-content">
+                            <pre><span class="code-line"><span class="variable">asm</span> = <span class="function">TigerASM</span>()</span>
+<span class="code-line"><span class="variable">asm</span>.<span class="function">setup</span>(<span class="string">"x86_64"</span>)</span>
+<span class="code-line"></span>
+<span class="code-line"><span class="variable">asm</span>.<span class="function">asm</span>(<span class="string">"""</span></span>
+<span class="code-line"><span class="string">    mov rax, 0b11110000</span></span>
+<span class="code-line"><span class="string">    mov rbx, 0b10101010</span></span>
+<span class="code-line"><span class="string">    </span></span>
+<span class="code-line"><span class="string">    and rax, rbx        ; AND operation</span></span>
+<span class="code-line"><span class="string">    or rax, 0b00001111  ; OR with mask</span></span>
+<span class="code-line"><span class="string">    </span></span>
+<span class="code-line"><span class="string">    mov rax, 1</span></span>
+<span class="code-line"><span class="string">    shl rax, 4          ; Shift left by 4 (multiply by 16)</span></span>
+<span class="code-line"><span class="string">    </span></span>
+<span class="code-line"><span class="string">    ret</span></span>
+<span class="code-line"><span class="string">"""</span>)</span>
+<span class="code-line"></span>
+<span class="code-line"><span class="variable">asm</span>.<span class="function">execute</span>()</span>
+<span class="code-line"><span class="function">print</span>(<span class="string">f"Result: </span><span class="variable">{asm.get('rax')}</span><span class="string">"</span>)</span>
+<span class="code-line"><span class="function">print</span>(<span class="string">f"Binary: </span><span class="variable">{bin(asm.get('rax'))}</span><span class="string">"</span>)</span></pre>
+                        </div>
+                    </div>
+                    <div class="example-output">
+                        <div class="output-label">Output:</div>
+                        <div class="output-text">Result: 16<br>Binary: 0b10000</div>
+                    </div>
+                </div>
+
+                <!-- Example 6: Binary File Processing -->
+                <div class="example-card">
+                    <div class="example-header">
+                        <div class="example-number">06</div>
+                        <h3>Binary File Checksum</h3>
+                    </div>
+                    <p class="example-description">Load a binary file and calculate its checksum</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="title">checksum.py</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <div class="code-content">
+                            <pre><span class="code-line"><span class="variable">asm</span> = <span class="function">TigerASM</span>()</span>
+<span class="code-line"><span class="variable">asm</span>.<span class="function">setup</span>(<span class="string">"x86_64"</span>)</span>
+<span class="code-line"></span>
+<span class="code-line"><span class="comment"># Load binary data</span></span>
+<span class="code-line"><span class="variable">bytes_loaded</span> = <span class="variable">asm</span>.<span class="function">load_binary_file</span>(<span class="string">"input.bin"</span>, <span class="number">0x10000</span>)</span>
+<span class="code-line"></span>
+<span class="code-line"><span class="comment"># Calculate checksum</span></span>
+<span class="code-line"><span class="variable">asm</span>.<span class="function">asm</span>(<span class="string">f"""</span></span>
+<span class="code-line"><span class="string">    mov rsi, 0x10000         ; Data address</span></span>
+<span class="code-line"><span class="string">    mov rcx, </span><span class="variable">{bytes_loaded}</span><span class="string">  ; Byte count</span></span>
+<span class="code-line"><span class="string">    xor rax, rax             ; Checksum accumulator</span></span>
+<span class="code-line"><span class="string">    </span></span>
+<span class="code-line"><span class="string">checksum_loop:</span></span>
+<span class="code-line"><span class="string">    test rcx, rcx</span></span>
+<span class="code-line"><span class="string">    jz checksum_done</span></span>
+<span class="code-line"><span class="string">    mov bl, [rsi]            ; Load byte</span></span>
+<span class="code-line"><span class="string">    add rax, rbx             ; Add to checksum</span></span>
+<span class="code-line"><span class="string">    inc rsi</span></span>
+<span class="code-line"><span class="string">    dec rcx</span></span>
+<span class="code-line"><span class="string">    jmp checksum_loop</span></span>
+<span class="code-line"><span class="string">    </span></span>
+<span class="code-line"><span class="string">checksum_done:</span></span>
+<span class="code-line"><span class="string">    ret</span></span>
+<span class="code-line"><span class="string">"""</span>)</span>
+<span class="code-line"></span>
+<span class="code-line"><span class="variable">asm</span>.<span class="function">execute</span>()</span>
+<span class="code-line"><span class="variable">checksum</span> = <span class="variable">asm</span>.<span class="function">get</span>(<span class="string">'rax'</span>)</span>
+<span class="code-line"><span class="function">print</span>(<span class="string">f"Checksum: </span><span class="variable">{checksum:#x}</span><span class="string">"</span>)</span></pre>
+                        </div>
+                    </div>
+                    <div class="example-output">
+                        <div class="output-label">Output:</div>
+                        <div class="output-text">Checksum: 0x2a4f</div>
+                    </div>
+                </div>
+
+                <!-- Example 7: Fibonacci Sequence -->
+                <div class="example-card">
+                    <div class="example-header">
+                        <div class="example-number">07</div>
+                        <h3>Fibonacci Sequence</h3>
+                    </div>
+                    <p class="example-description">Calculate the nth Fibonacci number using recursion</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="title">fibonacci.py</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <div class="code-content">
+                            <pre><span class="code-line"><span class="variable">asm</span> = <span class="function">TigerASM</span>()</span>
+<span class="code-line"><span class="variable">asm</span>.<span class="function">setup</span>(<span class="string">"x86_64"</span>)</span>
+<span class="code-line"></span>
+<span class="code-line"><span class="comment"># Calculate 10th Fibonacci number iteratively</span></span>
+<span class="code-line"><span class="variable">asm</span>.<span class="function">asm</span>(<span class="string">"""</span></span>
+<span class="code-line"><span class="string">    mov rcx, 10         ; n = 10</span></span>
+<span class="code-line"><span class="string">    mov rax, 0          ; fib(0)</span></span>
+<span class="code-line"><span class="string">    mov rbx, 1          ; fib(1)</span></span>
+<span class="code-line"><span class="string">    </span></span>
+<span class="code-line"><span class="string">    cmp rcx, 0</span></span>
+<span class="code-line"><span class="string">    je done</span></span>
+<span class="code-line"><span class="string">    </span></span>
+<span class="code-line"><span class="string">fib_loop:</span></span>
+<span class="code-line"><span class="string">    dec rcx</span></span>
+<span class="code-line"><span class="string">    cmp rcx, 0</span></span>
+<span class="code-line"><span class="string">    je done</span></span>
+<span class="code-line"><span class="string">    </span></span>
+<span class="code-line"><span class="string">    mov rdx, rax        ; temp = fib(n-2)</span></span>
+<span class="code-line"><span class="string">    mov rax, rbx        ; fib(n-2) = fib(n-1)</span></span>
+<span class="code-line"><span class="string">    add rbx, rdx        ; fib(n-1) = fib(n-1) + fib(n-2)</span></span>
+<span class="code-line"><span class="string">    jmp fib_loop</span></span>
+<span class="code-line"><span class="string">    </span></span>
+<span class="code-line"><span class="string">done:</span></span>
+<span class="code-line"><span class="string">    mov rax, rbx</span></span>
+<span class="code-line"><span class="string">    ret</span></span>
+<span class="code-line"><span class="string">"""</span>)</span>
+<span class="code-line"></span>
+<span class="code-line"><span class="variable">asm</span>.<span class="function">execute</span>()</span>
+<span class="code-line"><span class="function">print</span>(<span class="string">f"Fibonacci(10): </span><span class="variable">{asm.get('rax')}</span><span class="string">"</span>)</span></pre>
+                        </div>
+                    </div>
+                    <div class="example-output">
+                        <div class="output-label">Output:</div>
+                        <div class="output-text">Fibonacci(10): 55</div>
+                    </div>
+                </div>
+
+                <!-- Example 8: Array Operations -->
+                <div class="example-card">
+                    <div class="example-header">
+                        <div class="example-number">08</div>
+                        <h3>Array Maximum Finder</h3>
+                    </div>
+                    <p class="example-description">Find the maximum value in an array stored in memory</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="title">array_max.py</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <div class="code-content">
+                            <pre><span class="code-line"><span class="variable">asm</span> = <span class="function">TigerASM</span>()</span>
+<span class="code-line"><span class="variable">asm</span>.<span class="function">setup</span>(<span class="string">"x86_64"</span>)</span>
+<span class="code-line"></span>
+<span class="code-line"><span class="comment"># Create array in memory</span></span>
+<span class="code-line"><span class="variable">array</span> = [<span class="number">5</span>, <span class="number">12</span>, <span class="number">7</span>, <span class="number">23</span>, <span class="number">9</span>, <span class="number">15</span>, <span class="number">3</span>, <span class="number">18</span>]</span>
+<span class="code-line"><span class="keyword">for</span> <span class="variable">i</span>, <span class="variable">val</span> <span class="keyword">in</span> <span class="function">enumerate</span>(<span class="variable">array</span>):</span>
+<span class="code-line">    <span class="variable">asm</span>.<span class="function">write_mem</span>(<span class="number">0x3000</span> + <span class="variable">i</span> * <span class="number">8</span>, <span class="variable">val</span>, <span class="number">8</span>)</span>
+<span class="code-line"></span>
+<span class="code-line"><span class="comment"># Find maximum value</span></span>
+<span class="code-line"><span class="variable">asm</span>.<span class="function">asm</span>(<span class="string">f"""</span></span>
+<span class="code-line"><span class="string">    mov rsi, 0x3000          ; Array address</span></span>
+<span class="code-line"><span class="string">    mov rcx, </span><span class="variable">{len(array)}</span><span class="string">      ; Array length</span></span>
+<span class="code-line"><span class="string">    mov rax, [rsi]           ; Initialize max with first element</span></span>
+<span class="code-line"><span class="string">    </span></span>
+<span class="code-line"><span class="string">find_max:</span></span>
+<span class="code-line"><span class="string">    dec rcx</span></span>
+<span class="code-line"><span class="string">    cmp rcx, 0</span></span>
+<span class="code-line"><span class="string">    je max_done</span></span>
+<span class="code-line"><span class="string">    </span></span>
+<span class="code-line"><span class="string">    add rsi, 8               ; Move to next element</span></span>
+<span class="code-line"><span class="string">    mov rbx, [rsi]           ; Load element</span></span>
+<span class="code-line"><span class="string">    cmp rbx, rax             ; Compare with max</span></span>
+<span class="code-line"><span class="string">    jle find_max             ; Skip if not greater</span></span>
+<span class="code-line"><span class="string">    mov rax, rbx             ; Update max</span></span>
+<span class="code-line"><span class="string">    jmp find_max</span></span>
+<span class="code-line"><span class="string">    </span></span>
+<span class="code-line"><span class="string">max_done:</span></span>
+<span class="code-line"><span class="string">    ret</span></span>
+<span class="code-line"><span class="string">"""</span>)</span>
+<span class="code-line"></span>
+<span class="code-line"><span class="variable">asm</span>.<span class="function">execute</span>()</span>
+<span class="code-line"><span class="function">print</span>(<span class="string">f"Maximum value: </span><span class="variable">{asm.get('rax')}</span><span class="string">"</span>)</span></pre>
+                        </div>
+                    </div>
+                    <div class="example-output">
+                        <div class="output-label">Output:</div>
+                        <div class="output-text">Maximum value: 23</div>
+                    </div>
+                </div>
+
+                <!-- Example 9: Simple JIT Compiler -->
+                <div class="example-card">
+                    <div class="example-header">
+                        <div class="example-number">09</div>
+                        <h3>Simple JIT Compiler</h3>
+                    </div>
+                    <p class="example-description">Build a basic JIT compiler that compiles and executes mathematical expressions at runtime</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="title">simple_jit.py</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                        </div>
+                        <div class="code-content">
+                            <pre><span class="code-line"><span class="keyword">from</span> <span class="variable">tigerasm</span> <span class="keyword">import</span> TigerASM</span>
+<span class="code-line"></span>
+<span class="code-line"><span class="keyword">class</span> <span class="function">SimpleJIT</span>:</span>
+<span class="code-line">    <span class="keyword">def</span> <span class="function">__init__</span>(<span class="variable">self</span>):</span>
+<span class="code-line">        <span class="variable">self</span>.<span class="variable">asm</span> = <span class="function">TigerASM</span>()</span>
+<span class="code-line">        <span class="variable">self</span>.<span class="variable">asm</span>.<span class="function">setup</span>(<span class="string">"x86_64"</span>)</span>
+<span class="code-line">    </span>
+<span class="code-line">    <span class="keyword">def</span> <span class="function">compile_expression</span>(<span class="variable">self</span>, <span class="variable">expr</span>):</span>
+<span class="code-line">        <span class="comment"># Simple expression parser: "a + b * c"</span></span>
+<span class="code-line">        <span class="comment"># Supports: +, -, *, with operator precedence</span></span>
+<span class="code-line">        <span class="variable">tokens</span> = <span class="variable">expr</span>.<span class="function">replace</span>(<span class="string">'('</span>, <span class="string">''</span>).<span class="function">replace</span>(<span class="string">')'</span>, <span class="string">''</span>).<span class="function">split</span>()</span>
+<span class="code-line">        </span>
+<span class="code-line">        <span class="variable">self</span>.<span class="variable">asm</span>.<span class="function">clear</span>()</span>
+<span class="code-line">        <span class="variable">code</span> = []</span>
+<span class="code-line">        </span>
+<span class="code-line">        <span class="comment"># Simple RPN (Reverse Polish Notation) evaluator</span></span>
+<span class="code-line">        <span class="comment"># Convert: "2 + 3 * 4" -> handles precedence</span></span>
+<span class="code-line">        <span class="keyword">if</span> <span class="string">'*'</span> <span class="keyword">in</span> <span class="variable">tokens</span>:</span>
+<span class="code-line">            <span class="comment"># Handle multiplication first (precedence)</span></span>
+<span class="code-line">            <span class="variable">idx</span> = <span class="variable">tokens</span>.<span class="function">index</span>(<span class="string">'*'</span>)</span>
+<span class="code-line">            <span class="variable">left</span> = <span class="function">int</span>(<span class="variable">tokens</span>[<span class="variable">idx</span>-<span class="number">1</span>])</span>
+<span class="code-line">            <span class="variable">right</span> = <span class="function">int</span>(<span class="variable">tokens</span>[<span class="variable">idx</span>+<span class="number">1</span>])</span>
+<span class="code-line">            </span>
+<span class="code-line">            <span class="variable">code</span>.<span class="function">append</span>(<span class="string">f"mov rax, </span><span class="variable">{left}</span><span class="string">"</span>)</span>
+<span class="code-line">            <span class="variable">code</span>.<span class="function">append</span>(<span class="string">f"mov rbx, </span><span class="variable">{right}</span><span class="string">"</span>)</span>
+<span class="code-line">            <span class="variable">code</span>.<span class="function">append</span>(<span class="string">"imul rax, rbx"</span>)</span>
+<span class="code-line">            </span>
+<span class="code-line">            <span class="comment"># Handle remaining addition</span></span>
+<span class="code-line">            <span class="keyword">if</span> <span class="variable">idx</span> > <span class="number">1</span> <span class="keyword">and</span> <span class="variable">tokens</span>[<span class="variable">idx</span>-<span class="number">2</span>] == <span class="string">'+'</span>:</span>
+<span class="code-line">                <span class="variable">first</span> = <span class="function">int</span>(<span class="variable">tokens</span>[<span class="number">0</span>])</span>
+<span class="code-line">                <span class="variable">code</span>.<span class="function">append</span>(<span class="string">f"add rax, </span><span class="variable">{first}</span><span class="string">"</span>)</span>
+<span class="code-line">        <span class="keyword">else</span>:</span>
+<span class="code-line">            <span class="comment"># Simple addition/subtraction</span></span>
+<span class="code-line">            <span class="variable">num1</span> = <span class="function">int</span>(<span class="variable">tokens</span>[<span class="number">0</span>])</span>
+<span class="code-line">            <span class="variable">op</span> = <span class="variable">tokens</span>[<span class="number">1</span>]</span>
+<span class="code-line">            <span class="variable">num2</span> = <span class="function">int</span>(<span class="variable">tokens</span>[<span class="number">2</span>])</span>
+<span class="code-line">            </span>
+<span class="code-line">            <span class="variable">code</span>.<span class="function">append</span>(<span class="string">f"mov rax, </span><span class="variable">{num1}</span><span class="string">"</span>)</span>
+<span class="code-line">            <span class="keyword">if</span> <span class="variable">op</span> == <span class="string">'+'</span>:</span>
+<span class="code-line">                <span class="variable">code</span>.<span class="function">append</span>(<span class="string">f"add rax, </span><span class="variable">{num2}</span><span class="string">"</span>)</span>
+<span class="code-line">            <span class="keyword">elif</span> <span class="variable">op</span> == <span class="string">'-'</span>:</span>
+<span class="code-line">                <span class="variable">code</span>.<span class="function">append</span>(<span class="string">f"sub rax, </span><span class="variable">{num2}</span><span class="string">"</span>)</span>
+<span class="code-line">        </span>
+<span class="code-line">        <span class="variable">code</span>.<span class="function">append</span>(<span class="string">"ret"</span>)</span>
+<span class="code-line">        <span class="variable">self</span>.<span class="variable">asm</span>.<span class="function">asm</span>(<span class="string">'</span><span class="variable">\n</span><span class="string">'</span>.<span class="function">join</span>(<span class="variable">code</span>))</span>
+<span class="code-line">        </span>
+<span class="code-line">    <span class="keyword">def</span> <span class="function">execute</span>(<span class="variable">self</span>):</span>
+<span class="code-line">        <span class="variable">self</span>.<span class="variable">asm</span>.<span class="function">execute</span>()</span>
+<span class="code-line">        <span class="keyword">return</span> <span class="variable">self</span>.<span class="variable">asm</span>.<span class="function">get</span>(<span class="string">'rax'</span>)</span>
+<span class="code-line"></span>
+<span class="code-line"><span class="comment"># Usage example</span></span>
+<span class="code-line"><span class="variable">jit</span> = <span class="function">SimpleJIT</span>()</span>
+<span class="code-line"></span>
+<span class="code-line"><span class="comment"># Compile and execute: 5 + 3 * 4 = 17</span></span>
+<span class="code-line"><span class="variable">jit</span>.<span class="function">compile_expression</span>(<span class="string">"5 + 3 * 4"</span>)</span>
+<span class="code-line"><span class="function">print</span>(<span class="string">f"Result: </span><span class="variable">{jit.execute()}</span><span class="string">"</span>)</span>
+<span class="code-line"></span>
+<span class="code-line"><span class="comment"># Compile different expression: 100 - 25 = 75</span></span>
+<span class="code-line"><span class="variable">jit</span>.<span class="function">compile_expression</span>(<span class="string">"100 - 25"</span>)</span>
+<span class="code-line"><span class="function">print</span>(<span class="string">f"Result: </span><span class="variable">{jit.execute()}</span><span class="string">"</span>)</span></pre>
+                        </div>
+                    </div>
+                    <div class="example-output">
+                        <div class="output-label">Output:</div>
+                        <div class="output-text">Result: 17<br>Result: 75</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- API Reference -->
+    <section id="api" class="api-reference">
+        <div class="container">
+            <h2 class="section-title">API Reference</h2>
+            <div class="api-grid">
+                <div class="api-section">
+                    <h3>Core Methods</h3>
+                    
+                    <div class="method">
+                        <div class="method-signature">TigerASM()</div>
+                        <div class="method-description">Create a new TigerASM instance with default configuration.</div>
+                    </div>
+
+                    <div class="method">
+                        <div class="method-signature">setup(arch: str = None)</div>
+                        <div class="method-description">Configure the target architecture. Auto-detects if not specified.</div>
+                        <div class="parameters">
+                            <h5>Parameters:</h5>
+                            <ul class="param-list">
+                                <li><span class="param-name">arch</span>: Architecture name - "x86_64", "aarch64", etc.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="method">
+                        <div class="method-signature">asm(code: str, file=None)</div>
+                        <div class="method-description">Add assembly code to the program. Can accept code as string or from file.</div>
+                        <div class="parameters">
+                            <h5>Parameters:</h5>
+                            <ul class="param-list">
+                                <li><span class="param-name">code</span>: Assembly source code as string</li>
+                                <li><span class="param-name">file</span>: Optional file-like object to read from</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="method">
+                        <div class="method-signature">execute()</div>
+                        <div class="method-description">Compile and execute the assembled code. Results are stored in registers.</div>
+                    </div>
+
+                    <div class="method">
+                        <div class="method-signature">clear()</div>
+                        <div class="method-description">Clear all assembly code and reset the executable buffer.</div>
+                    </div>
+                </div>
+
+                <div class="api-section">
+                    <h3>Register Operations</h3>
+                    
+                    <div class="method">
+                        <div class="method-signature">mov(register: str, value: int)</div>
+                        <div class="method-description">Set a register value directly in simulation mode.</div>
+                        <div class="parameters">
+                            <h5>Parameters:</h5>
+                            <ul class="param-list">
+                                <li><span class="param-name">register</span>: Register name (e.g., "rax", "x0")</li>
+                                <li><span class="param-name">value</span>: Value to set (64-bit integer)</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="method">
+                        <div class="method-signature">get(register: str = "rax") -> int</div>
+                        <div class="method-description">Get the current value of a register.</div>
+                        <div class="parameters">
+                            <h5>Parameters:</h5>
+                            <ul class="param-list">
+                                <li><span class="param-name">register</span>: Register name to read</li>
+                            </ul>
+                            <h5>Returns:</h5>
+                            <ul class="param-list">
+                                <li>64-bit integer value of the register</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="method">
+                        <div class="method-signature">dump_regs() -> str</div>
+                        <div class="method-description">Get a formatted string of all x86_64 register values for debugging.</div>
+                    </div>
+                </div>
+
+                <div class="api-section">
+                    <h3>Memory Operations</h3>
+                    
+                    <div class="method">
+                        <div class="method-signature">write_mem(address: int, value: int, size: int)</div>
+                        <div class="method-description">Write data to virtual memory at specified address.</div>
+                        <div class="parameters">
+                            <h5>Parameters:</h5>
+                            <ul class="param-list">
+                                <li><span class="param-name">address</span>: Memory address (0 to memory_size)</li>
+                                <li><span class="param-name">value</span>: Value to write</li>
+                                <li><span class="param-name">size</span>: Size in bytes (1, 2, 4, or 8)</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="method">
+                        <div class="method-signature">read_mem(address: int, size: int) -> int</div>
+                        <div class="method-description">Read data from virtual memory.</div>
+                        <div class="parameters">
+                            <h5>Parameters:</h5>
+                            <ul class="param-list">
+                                <li><span class="param-name">address</span>: Memory address to read from</li>
+                                <li><span class="param-name">size</span>: Size in bytes (1, 2, 4, or 8)</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="method">
+                        <div class="method-signature">write_bytes(address: int, data: bytes)</div>
+                        <div class="method-description">Write raw bytes to memory.</div>
+                    </div>
+
+                    <div class="method">
+                        <div class="method-signature">read_bytes(address: int, size: int) -> bytes</div>
+                        <div class="method-description">Read raw bytes from memory.</div>
+                    </div>
+
+                    <div class="method">
+                        <div class="method-signature">alloc(size: int) -> int</div>
+                        <div class="method-description">Allocate a zeroed memory block and return its address.</div>
+                        <div class="parameters">
+                            <h5>Returns:</h5>
+                            <ul class="param-list">
+                                <li>Starting address of allocated block, or 0 if out of memory</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="api-section">
+                    <h3>File Operations</h3>
+                    
+                    <div class="method">
+                        <div class="method-signature">load_file(filename: str)</div>
+                        <div class="method-description">Load assembly code from a file.</div>
+                    </div>
+
+                    <div class="method">
+                        <div class="method-signature">load_binary_file(filename: str, address: int) -> int</div>
+                        <div class="method-description">Load binary data from file into memory at specified address.</div>
+                        <div class="parameters">
+                            <h5>Returns:</h5>
+                            <ul class="param-list">
+                                <li>Number of bytes loaded</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="method">
+                        <div class="method-signature">save_memory_to_file(filename: str, address: int, size: int)</div>
+                        <div class="method-description">Save a memory region to a binary file.</div>
+                    </div>
+
+                    <div class="method">
+                        <div class="method-signature">install(filename: str)</div>
+                        <div class="method-description">Save the compiled executable buffer to a file.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Instructions Section -->
+    <section id="instructions" class="instructions">
+        <div class="container">
+            <h2 class="section-title">Supported Instructions</h2>
+            <div class="instruction-categories">
+                <div class="instruction-category">
+                    <h3>Data Movement</h3>
+                    <div class="instruction-grid">
+                        <div class="instruction-item">
+                            <div class="instruction-name">mov dst, src</div>
+                            <div class="instruction-desc">Move data between registers/memory</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">push reg</div>
+                            <div class="instruction-desc">Push register to stack</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">pop reg</div>
+                            <div class="instruction-desc">Pop from stack to register</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="instruction-category">
+                    <h3>Arithmetic</h3>
+                    <div class="instruction-grid">
+                        <div class="instruction-item">
+                            <div class="instruction-name">add dst, src</div>
+                            <div class="instruction-desc">Addition</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">sub dst, src</div>
+                            <div class="instruction-desc">Subtraction</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">mul reg</div>
+                            <div class="instruction-desc">Unsigned multiplication</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">imul dst, src</div>
+                            <div class="instruction-desc">Signed multiplication</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">div reg</div>
+                            <div class="instruction-desc">Unsigned division</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">inc reg</div>
+                            <div class="instruction-desc">Increment register</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">dec reg</div>
+                            <div class="instruction-desc">Decrement register</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">neg reg</div>
+                            <div class="instruction-desc">Negate register</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="instruction-category">
+                    <h3>Logical Operations</h3>
+                    <div class="instruction-grid">
+                        <div class="instruction-item">
+                            <div class="instruction-name">and dst, src</div>
+                            <div class="instruction-desc">Bitwise AND</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">or dst, src</div>
+                            <div class="instruction-desc">Bitwise OR</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">xor dst, src</div>
+                            <div class="instruction-desc">Bitwise XOR</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">not reg</div>
+                            <div class="instruction-desc">Bitwise NOT</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">test dst, src</div>
+                            <div class="instruction-desc">Logical compare (AND without storing)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="instruction-category">
+                    <h3>Shifts & Rotates</h3>
+                    <div class="instruction-grid">
+                        <div class="instruction-item">
+                            <div class="instruction-name">shl reg, count</div>
+                            <div class="instruction-desc">Shift left (logical)</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">shr reg, count</div>
+                            <div class="instruction-desc">Shift right (logical)</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">sar reg, count</div>
+                            <div class="instruction-desc">Shift right (arithmetic)</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">rol reg, count</div>
+                            <div class="instruction-desc">Rotate left</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">ror reg, count</div>
+                            <div class="instruction-desc">Rotate right</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="instruction-category">
+                    <h3>Control Flow</h3>
+                    <div class="instruction-grid">
+                        <div class="instruction-item">
+                            <div class="instruction-name">cmp dst, src</div>
+                            <div class="instruction-desc">Compare operands</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">jmp label</div>
+                            <div class="instruction-desc">Unconditional jump</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">je/jz label</div>
+                            <div class="instruction-desc">Jump if equal/zero</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">jne/jnz label</div>
+                            <div class="instruction-desc">Jump if not equal/zero</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">jg label</div>
+                            <div class="instruction-desc">Jump if greater (signed)</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">jl label</div>
+                            <div class="instruction-desc">Jump if less (signed)</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">ja label</div>
+                            <div class="instruction-desc">Jump if above (unsigned)</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">jb label</div>
+                            <div class="instruction-desc">Jump if below (unsigned)</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">call label</div>
+                            <div class="instruction-desc">Call subroutine</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">ret</div>
+                            <div class="instruction-desc">Return from subroutine</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">nop</div>
+                            <div class="instruction-desc">No operation</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Instructions Section -->
+    <section id="instructions" class="instructions">
+        <div class="container">
+            <h2 class="section-title">Supported Instructions</h2>
+            <div class="instruction-categories">
+                <div class="instruction-category">
+                    <h3>Data Movement</h3>
+                    <div class="instruction-grid">
+                        <div class="instruction-item">
+                            <div class="instruction-name">mov dst, src</div>
+                            <div class="instruction-desc">Move data between registers/memory</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">push reg</div>
+                            <div class="instruction-desc">Push register to stack</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">pop reg</div>
+                            <div class="instruction-desc">Pop from stack to register</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="instruction-category">
+                    <h3>Arithmetic</h3>
+                    <div class="instruction-grid">
+                        <div class="instruction-item">
+                            <div class="instruction-name">add dst, src</div>
+                            <div class="instruction-desc">Addition</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">sub dst, src</div>
+                            <div class="instruction-desc">Subtraction</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">mul reg</div>
+                            <div class="instruction-desc">Unsigned multiplication</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">imul dst, src</div>
+                            <div class="instruction-desc">Signed multiplication</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">div reg</div>
+                            <div class="instruction-desc">Unsigned division</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">inc reg</div>
+                            <div class="instruction-desc">Increment register</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">dec reg</div>
+                            <div class="instruction-desc">Decrement register</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">neg reg</div>
+                            <div class="instruction-desc">Negate register</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="instruction-category">
+                    <h3>Logical Operations</h3>
+                    <div class="instruction-grid">
+                        <div class="instruction-item">
+                            <div class="instruction-name">and dst, src</div>
+                            <div class="instruction-desc">Bitwise AND</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">or dst, src</div>
+                            <div class="instruction-desc">Bitwise OR</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">xor dst, src</div>
+                            <div class="instruction-desc">Bitwise XOR</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">not reg</div>
+                            <div class="instruction-desc">Bitwise NOT</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">test dst, src</div>
+                            <div class="instruction-desc">Logical compare (AND without storing)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="instruction-category">
+                    <h3>Shifts & Rotates</h3>
+                    <div class="instruction-grid">
+                        <div class="instruction-item">
+                            <div class="instruction-name">shl reg, count</div>
+                            <div class="instruction-desc">Shift left (logical)</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">shr reg, count</div>
+                            <div class="instruction-desc">Shift right (logical)</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">sar reg, count</div>
+                            <div class="instruction-desc">Shift right (arithmetic)</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">rol reg, count</div>
+                            <div class="instruction-desc">Rotate left</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">ror reg, count</div>
+                            <div class="instruction-desc">Rotate right</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="instruction-category">
+                    <h3>Control Flow</h3>
+                    <div class="instruction-grid">
+                        <div class="instruction-item">
+                            <div class="instruction-name">cmp dst, src</div>
+                            <div class="instruction-desc">Compare operands</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">jmp label</div>
+                            <div class="instruction-desc">Unconditional jump</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">je/jz label</div>
+                            <div class="instruction-desc">Jump if equal/zero</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">jne/jnz label</div>
+                            <div class="instruction-desc">Jump if not equal/zero</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">jg label</div>
+                            <div class="instruction-desc">Jump if greater (signed)</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">jl label</div>
+                            <div class="instruction-desc">Jump if less (signed)</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">ja label</div>
+                            <div class="instruction-desc">Jump if above (unsigned)</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">jb label</div>
+                            <div class="instruction-desc">Jump if below (unsigned)</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">call label</div>
+                            <div class="instruction-desc">Call subroutine</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">ret</div>
+                            <div class="instruction-desc">Return from subroutine</div>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-name">nop</div>
+                            <div class="instruction-desc">No operation</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Device Support Section -->
+    <section id="devices" class="device-support">
+        <div class="container">
+            <h2 class="section-title">Device Support</h2>
+            
+            <div class="support-intro">
+                <p>TigerASM is built with cross-platform compatibility in mind, supporting multiple architectures and operating systems for maximum flexibility.</p>
+            </div>
+
+            <div class="devices-grid">
+                <!-- Architecture Support -->
+                <div class="device-category">
+                    <div class="category-header">
+                        <div class="category-icon">🏗️</div>
+                        <h3>Architecture Support</h3>
+                    </div>
+                    
+                    <div class="device-cards">
+                        <div class="device-card supported">
+                            <div class="device-header">
+                                <div class="device-icon">💻</div>
+                                <div class="device-info">
+                                    <h4>x86_64 / AMD64</h4>
+                                    <div class="status-badge status-full">Full Support</div>
+                                </div>
+                            </div>
+                            <p class="device-desc">Complete support for Intel and AMD 64-bit processors with full instruction set implementation.</p>
+                            <ul class="device-features">
+                                <li>✓ All arithmetic and logical operations</li>
+                                <li>✓ Advanced bit manipulation</li>
+                                <li>✓ Memory addressing modes</li>
+                                <li>✓ Control flow instructions</li>
+                                <li>✓ Register state management</li>
+                            </ul>
+                        </div>
+
+                        <div class="device-card supported">
+                            <div class="device-header">
+                                <div class="device-icon">📱</div>
+                                <div class="device-info">
+                                    <h4>ARM64 / AArch64</h4>
+                                    <div class="status-badge status-full">Full Support</div>
+                                </div>
+                            </div>
+                            <p class="device-desc">Native support for ARM 64-bit architecture, perfect for Apple Silicon and ARM servers.</p>
+                            <ul class="device-features">
+                                <li>✓ ARM instruction syntax</li>
+                                <li>✓ 31 general-purpose registers (x0-x30)</li>
+                                <li>✓ Branch and conditional instructions</li>
+                                <li>✓ SIMD operations ready</li>
+                                <li>✓ Apple M1/M2/M3 optimized</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Operating Systems -->
+                <div class="device-category">
+                    <div class="category-header">
+                        <div class="category-icon">🖥️</div>
+                        <h3>Operating Systems</h3>
+                    </div>
+                    
+                    <div class="os-grid">
+                        <div class="os-card supported">
+                            <div class="os-icon">🪟</div>
+                            <h4>Windows</h4>
+                            <div class="status-badge status-full">Supported</div>
+                            <div class="os-versions">
+                                <span>Windows 10</span>
+                                <span>Windows 11</span>
+                                <span>Server 2019+</span>
+                            </div>
+                        </div>
+
+                        <div class="os-card supported">
+                            <div class="os-icon">🐧</div>
+                            <h4>Linux</h4>
+                            <div class="status-badge status-full">Supported</div>
+                            <div class="os-versions">
+                                <span>Ubuntu 20.04+</span>
+                                <span>Debian 11+</span>
+                                <span>Fedora 35+</span>
+                                <span>Arch Linux</span>
+                            </div>
+                        </div>
+
+                        <div class="os-card supported">
+                            <div class="os-icon">🍎</div>
+                            <h4>macOS</h4>
+                            <div class="status-badge status-full">Supported</div>
+                            <div class="os-versions">
+                                <span>macOS 11+</span>
+                                <span>Intel & Apple Silicon</span>
+                                <span>Monterey, Ventura, Sonoma</span>
+                            </div>
+                        </div>
+
+                        <div class="os-card partial">
+                            <div class="os-icon">🐧</div>
+                            <h4>BSD</h4>
+                            <div class="status-badge status-partial">Experimental</div>
+                            <div class="os-versions">
+                                <span>FreeBSD</span>
+                                <span>OpenBSD</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Platforms & Devices -->
+                <div class="device-category">
+                    <div class="category-header">
+                        <div class="category-icon">⚡</div>
+                        <h3>Platforms & Devices</h3>
+                    </div>
+                    
+                    <div class="platform-grid">
+                        <div class="platform-card">
+                            <div class="platform-icon">🖥️</div>
+                            <h4>Desktop Workstations</h4>
+                            <p>Intel Core, AMD Ryzen, Apple M-series</p>
+                            <div class="platform-status">✓ Fully Supported</div>
+                        </div>
+
+                        <div class="platform-card">
+                            <div class="platform-icon">💼</div>
+                            <h4>Laptops</h4>
+                            <p>x86_64 and ARM64 laptops, MacBooks</p>
+                            <div class="platform-status">✓ Fully Supported</div>
+                        </div>
+
+                        <div class="platform-card">
+                            <div class="platform-icon">☁️</div>
+                            <h4>Cloud Instances</h4>
+                            <p>AWS, Azure, GCP, DigitalOcean</p>
+                            <div class="platform-status">✓ Fully Supported</div>
+                        </div>
+
+                        <div class="platform-card">
+                            <div class="platform-icon">🏢</div>
+                            <h4>Enterprise Servers</h4>
+                            <p>Data center x86_64 and ARM64 servers</p>
+                            <div class="platform-status">✓ Fully Supported</div>
+                        </div>
+
+                        <div class="platform-card">
+                            <div class="platform-icon">🎮</div>
+                            <h4>Development Boards</h4>
+                            <p>Raspberry Pi 4/5, NVIDIA Jetson</p>
+                            <div class="platform-status">⚠️ Limited Testing</div>
+                        </div>
+
+                        <div class="platform-card">
+                            <div class="platform-icon">📦</div>
+                            <h4>Containers</h4>
+                            <p>Docker, Kubernetes, LXC</p>
+                            <div class="platform-status">✓ Fully Supported</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Python Versions -->
+                <div class="device-category">
+                    <div class="category-header">
+                        <div class="category-icon">🐍</div>
+                        <h3>Python Compatibility</h3>
+                    </div>
+                    
+                    <div class="python-versions">
+                        <div class="python-card supported">
+                            <div class="version-number">3.8</div>
+                            <div class="status-badge status-full">Supported</div>
+                        </div>
+                        <div class="python-card supported">
+                            <div class="version-number">3.9</div>
+                            <div class="status-badge status-full">Supported</div>
+                        </div>
+                        <div class="python-card supported recommended">
+                            <div class="version-number">3.10</div>
+                            <div class="status-badge status-recommended">Recommended</div>
+                        </div>
+                        <div class="python-card supported recommended">
+                            <div class="version-number">3.11</div>
+                            <div class="status-badge status-recommended">Recommended</div>
+                        </div>
+                        <div class="python-card supported">
+                            <div class="version-number">3.12</div>
+                            <div class="status-badge status-full">Supported</div>
+                        </div>
+                        <div class="python-card future">
+                            <div class="version-number">3.13</div>
+                            <div class="status-badge status-future">Coming Soon</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Requirements -->
+                <div class="device-category">
+                    <div class="category-header">
+                        <div class="category-icon">📋</div>
+                        <h3>System Requirements</h3>
+                    </div>
+                    
+                    <div class="requirements-grid">
+                        <div class="requirement-card">
+                            <div class="req-icon">🔧</div>
+                            <h4>Minimum Requirements</h4>
+                            <ul class="req-list">
+                                <li><strong>CPU:</strong> Any x86_64 or ARM64 processor</li>
+                                <li><strong>RAM:</strong> 256 MB available memory</li>
+                                <li><strong>Storage:</strong> 50 MB free space</li>
+                                <li><strong>Python:</strong> 3.8 or higher</li>
+                                <li><strong>OS:</strong> 64-bit operating system</li>
+                            </ul>
+                        </div>
+
+                        <div class="requirement-card recommended-req">
+                            <div class="req-icon">⭐</div>
+                            <h4>Recommended</h4>
+                            <ul class="req-list">
+                                <li><strong>CPU:</strong> Multi-core processor (4+ cores)</li>
+                                <li><strong>RAM:</strong> 2 GB or more</li>
+                                <li><strong>Storage:</strong> 200 MB free space</li>
+                                <li><strong>Python:</strong> 3.10 or 3.11</li>
+                                <li><strong>Build Tools:</strong> Rust toolchain (for source builds)</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Build Dependencies -->
+                <div class="device-category">
+                    <div class="category-header">
+                        <div class="category-icon">🛠️</div>
+                        <h3>Build Dependencies</h3>
+                    </div>
+                    
+                    <div class="dependencies-info">
+                        <p class="dep-intro">For building from source, you'll need the following tools:</p>
+                        
+                        <div class="dep-grid">
+                            <div class="dep-card">
+                                <h4>🦀 Rust Toolchain</h4>
+                                <div class="dep-command">rustc 1.70.0 or higher</div>
+                                <p>Install via: <code>curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh</code></p>
+                            </div>
+
+                            <div class="dep-card">
+                                <h4>📦 Maturin</h4>
+                                <div class="dep-command">pip install maturin</div>
+                                <p>PyO3 build tool for Rust-Python bindings</p>
+                            </div>
+
+                            <div class="dep-card">
+                                <h4>🔨 C/C++ Compiler</h4>
+                                <div class="dep-command">GCC, Clang, or MSVC</div>
+                                <p>Required for linking native code</p>
+                            </div>
+
+                            <div class="dep-card">
+                                <h4>🐍 Python Dev Headers</h4>
+                                <div class="dep-command">python3-dev (Linux) / python-devel (Fedora)</div>
+                                <p>Included with most Python installations</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Performance Notes -->
+                <div class="device-category">
+                    <div class="category-header">
+                        <div class="category-icon">🚀</div>
+                        <h3>Performance Notes</h3>
+                    </div>
+                    
+                    <div class="performance-grid">
+                        <div class="perf-card">
+                            <div class="perf-badge perf-excellent">Excellent</div>
+                            <h4>Native x86_64 Desktop</h4>
+                            <p>Intel Core i5+ or AMD Ryzen 5+</p>
+                            <div class="perf-metric">~1-2ms JIT compilation for typical programs</div>
+                        </div>
+
+                        <div class="perf-card">
+                            <div class="perf-badge perf-excellent">Excellent</div>
+                            <h4>Apple Silicon (M1/M2/M3)</h4>
+                            <p>Native ARM64 compilation</p>
+                            <div class="perf-metric">~1-2ms JIT compilation, superior power efficiency</div>
+                        </div>
+
+                        <div class="perf-card">
+                            <div class="perf-badge perf-good">Good</div>
+                            <h4>Cloud VM Instances</h4>
+                            <p>AWS EC2, Azure VM, GCP Compute</p>
+                            <div class="perf-metric">~2-5ms depending on instance type</div>
+                        </div>
+
+                        <div class="perf-card">
+                            <div class="perf-badge perf-moderate">Moderate</div>
+                            <h4>ARM Development Boards</h4>
+                            <p>Raspberry Pi 4/5</p>
+                            <div class="perf-metric">~5-10ms, suitable for prototyping</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Installation Matrix -->
+            <div class="installation-matrix">
+                <h3 class="matrix-title">Installation Quick Reference</h3>
+                <div class="matrix-grid">
+                    <div class="matrix-row matrix-header">
+                        <div class="matrix-cell">Platform</div>
+                        <div class="matrix-cell">Architecture</div>
+                        <div class="matrix-cell">Installation Method</div>
+                        <div class="matrix-cell">Status</div>
+                    </div>
+                    <div class="matrix-row">
+                        <div class="matrix-cell">Windows</div>
+                        <div class="matrix-cell">x86_64</div>
+                        <div class="matrix-cell"><code>pip install tigerasm</code></div>
+                        <div class="matrix-cell"><span class="status-dot status-green"></span> Ready</div>
+                    </div>
+                    <div class="matrix-row">
+                        <div class="matrix-cell">Linux</div>
+                        <div class="matrix-cell">x86_64</div>
+                        <div class="matrix-cell"><code>pip install tigerasm</code></div>
+                        <div class="matrix-cell"><span class="status-dot status-green"></span> Ready</div>
+                    </div>
+                    <div class="matrix-row">
+                        <div class="matrix-cell">macOS</div>
+                        <div class="matrix-cell">x86_64</div>
+                        <div class="matrix-cell"><code>pip install tigerasm</code></div>
+                        <div class="matrix-cell"><span class="status-dot status-green"></span> Ready</div>
+                    </div>
+                    <div class="matrix-row">
+                        <div class="matrix-cell">macOS</div>
+                        <div class="matrix-cell">ARM64</div>
+                        <div class="matrix-cell"><code>pip install tigerasm</code></div>
+                        <div class="matrix-cell"><span class="status-dot status-green"></span> Ready</div>
+                    </div>
+                    <div class="matrix-row">
+                        <div class="matrix-cell">Linux</div>
+                        <div class="matrix-cell">ARM64</div>
+                        <div class="matrix-cell"><code>pip install tigerasm</code></div>
+                        <div class="matrix-cell"><span class="status-dot status-green"></span> Ready</div>
+                    </div>
+                    <div class="matrix-row">
+                        <div class="matrix-cell">BSD</div>
+                        <div class="matrix-cell">x86_64</div>
+                        <div class="matrix-cell">Build from source</div>
+                        <div class="matrix-cell"><span class="status-dot status-yellow"></span> Experimental</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section id="faq" class="faq-section">
+        <div class="container">
+            <h2 class="section-title">Frequently Asked Questions</h2>
+            
+            <div class="faq-intro">
+                <p>Find answers to common questions about TigerASM, installation, usage, and troubleshooting.</p>
+            </div>
+
+            <div class="faq-grid">
+                <!-- General Questions -->
+                <div class="faq-category">
+                    <h3 class="faq-category-title">
+                        <span class="faq-icon">💡</span>
+                        General Questions
+                    </h3>
+                    
+                    <div class="faq-items">
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="toggleFAQ(this)">
+                                <span class="question-text">What is TigerASM?</span>
+                                <span class="toggle-icon">+</span>
+                            </div>
+                            <div class="faq-answer">
+                                <p>TigerASM is a high-performance runtime assembler for Python that allows you to write and execute assembly code directly in your Python programs. It supports both x86_64 and ARM64 architectures with JIT (Just-In-Time) compilation, virtual memory management, and full register control.</p>
+                            </div>
+                        </div>
+
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="toggleFAQ(this)">
+                                <span class="question-text">Why would I use TigerASM instead of pure Python?</span>
+                                <span class="toggle-icon">+</span>
+                            </div>
+                            <div class="faq-answer">
+                                <p>TigerASM is ideal for:</p>
+                                <ul>
+                                    <li>Performance-critical code sections requiring native speed</li>
+                                    <li>Low-level system programming and bit manipulation</li>
+                                    <li>Learning assembly programming in a Python environment</li>
+                                    <li>Building JIT compilers and runtime code generation</li>
+                                    <li>Prototyping CPU-specific optimizations</li>
+                                    <li>Educational purposes and assembly language teaching</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="toggleFAQ(this)">
+                                <span class="question-text">Is TigerASM production-ready?</span>
+                                <span class="toggle-icon">+</span>
+                            </div>
+                            <div class="faq-answer">
+                                <p>TigerASM is stable and well-tested for x86_64 and ARM64 architectures. However, as with any low-level tool, thorough testing in your specific use case is recommended. It's currently best suited for performance optimization, educational projects, and prototyping rather than safety-critical applications.</p>
+                            </div>
+                        </div>
+
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="toggleFAQ(this)">
+                                <span class="question-text">What makes TigerASM different from other assemblers?</span>
+                                <span class="toggle-icon">+</span>
+                            </div>
+                            <div class="faq-answer">
+                                <p>TigerASM is unique because it:</p>
+                                <ul>
+                                    <li>Integrates seamlessly with Python via PyO3</li>
+                                    <li>Provides runtime JIT compilation</li>
+                                    <li>Includes virtual memory simulation (10MB)</li>
+                                    <li>Supports both x86_64 and ARM64 natively</li>
+                                    <li>Offers simple Python API for complex operations</li>
+                                    <li>Built with Rust for safety and performance</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Installation & Setup -->
+                <div class="faq-category">
+                    <h3 class="faq-category-title">
+                        <span class="faq-icon">⚙️</span>
+                        Installation & Setup
+                    </h3>
+                    
+                    <div class="faq-items">
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="toggleFAQ(this)">
+                                <span class="question-text">How do I install TigerASM?</span>
+                                <span class="toggle-icon">+</span>
+                            </div>
+                            <div class="faq-answer">
+                                <p>Installation is simple via pip:</p>
+                                <div class="code-snippet">pip install tigerasm</div>
+                                <p>For building from source:</p>
+                                <div class="code-snippet">git clone https://github.com/yourusername/tigerasm<br>cd tigerasm<br>pip install maturin<br>maturin develop --release</div>
+                            </div>
+                        </div>
+
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="toggleFAQ(this)">
+                                <span class="question-text">What are the system requirements?</span>
+                                <span class="toggle-icon">+</span>
+                            </div>
+                            <div class="faq-answer">
+                                <p><strong>Minimum:</strong></p>
+                                <ul>
+                                    <li>Any x86_64 or ARM64 processor</li>
+                                    <li>256 MB RAM</li>
+                                    <li>50 MB disk space</li>
+                                    <li>Python 3.8 or higher</li>
+                                    <li>64-bit operating system</li>
+                                </ul>
+                                <p><strong>Recommended:</strong> 4+ core CPU, 2 GB RAM, Python 3.10 or 3.11</p>
+                            </div>
+                        </div>
+
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="toggleFAQ(this)">
+                                <span class="question-text">Does TigerASM work on my operating system?</span>
+                                <span class="toggle-icon">+</span>
+                            </div>
+                            <div class="faq-answer">
+                                <p>TigerASM supports:</p>
+                                <ul>
+                                    <li><strong>Windows:</strong> 10, 11, Server 2019+</li>
+                                    <li><strong>Linux:</strong> Ubuntu 20.04+, Debian 11+, Fedora 35+, Arch</li>
+                                    <li><strong>macOS:</strong> 11+ (Big Sur and later), Intel and Apple Silicon</li>
+                                    <li><strong>BSD:</strong> FreeBSD, OpenBSD (experimental)</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="toggleFAQ(this)">
+                                <span class="question-text">Can I use TigerASM with virtual environments?</span>
+                                <span class="toggle-icon">+</span>
+                            </div>
+                            <div class="faq-answer">
+                                <p>Yes! TigerASM works perfectly with virtual environments:</p>
+                                <div class="code-snippet">python -m venv myenv<br>source myenv/bin/activate  # or myenv\Scripts\activate on Windows<br>pip install tigerasm</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Usage & Features -->
+                <div class="faq-category">
+                    <h3 class="faq-category-title">
+                        <span class="faq-icon">🔧</span>
+                        Usage & Features
+                    </h3>
+                    
+                    <div class="faq-items">
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="toggleFAQ(this)">
+                                <span class="question-text">How do I choose between x86_64 and ARM64?</span>
+                                <span class="toggle-icon">+</span>
+                            </div>
+                            <div class="faq-answer">
+                                <p>TigerASM auto-detects your architecture by default. You can explicitly set it:</p>
+                                <div class="code-snippet">asm = TigerASM()<br>asm.setup("x86_64")  # For Intel/AMD<br># or<br>asm.setup("aarch64")  # For ARM</div>
+                                <p>Use <code>asm.get_arch()</code> to check the current architecture.</p>
+                            </div>
+                        </div>
+
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="toggleFAQ(this)">
+                                <span class="question-text">What assembly instructions are supported?</span>
+                                <span class="toggle-icon">+</span>
+                            </div>
+                            <div class="faq-answer">
+                                <p>TigerASM supports a comprehensive instruction set including:</p>
+                                <ul>
+                                    <li><strong>Data Movement:</strong> mov, push, pop</li>
+                                    <li><strong>Arithmetic:</strong> add, sub, mul, imul, div, inc, dec, neg</li>
+                                    <li><strong>Logical:</strong> and, or, xor, not, test</li>
+                                    <li><strong>Shifts:</strong> shl, shr, sal, sar, rol, ror</li>
+                                    <li><strong>Control Flow:</strong> jmp, je, jne, jg, jl, call, ret</li>
+                                    <li><strong>Comparison:</strong> cmp, test</li>
+                                </ul>
+                                <p>See the Instructions section for the complete list.</p>
+                            </div>
+                        </div>
+
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="toggleFAQ(this)">
+                                <span class="question-text">How much memory can I use?</span>
+                                <span class="toggle-icon">+</span>
+                            </div>
+                            <div class="faq-answer">
+                                <p>TigerASM provides 10 MB of virtual memory (10,485,760 bytes) for your programs. This is sufficient for most use cases. You can:</p>
+                                <ul>
+                                    <li>Store data structures and arrays</li>
+                                    <li>Load binary files into memory</li>
+                                    <li>Allocate blocks with <code>alloc()</code></li>
+                                    <li>Read/write with <code>read_mem()</code> and <code>write_mem()</code></li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="toggleFAQ(this)">
+                                <span class="question-text">Can I debug my assembly code?</span>
+                                <span class="toggle-icon">+</span>
+                            </div>
+                            <div class="faq-answer">
+                                <p>Yes! TigerASM provides several debugging tools:</p>
+                                <ul>
+                                    <li><code>dump_regs()</code> - Display all register values</li>
+                                    <li><code>get(register)</code> - Check specific register values</li>
+                                    <li><code>read_mem()</code> - Inspect memory contents</li>
+                                    <li><code>get_arch()</code> - Verify architecture</li>
+                                </ul>
+                                <p>You can also print intermediate values and step through execution by breaking your code into smaller segments.</p>
+                            </div>
+                        </div>
+
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="toggleFAQ(this)">
+                                <span class="question-text">How fast is TigerASM?</span>
+                                <span class="toggle-icon">+</span>
+                            </div>
+                            <div class="faq-answer">
+                                <p>TigerASM is very fast:</p>
+                                <ul>
+                                    <li><strong>JIT Compilation:</strong> ~1-2ms for typical programs</li>
+                                    <li><strong>Execution:</strong> Native CPU speed (no interpreter overhead)</li>
+                                    <li><strong>Memory Access:</strong> Direct hardware access</li>
+                                </ul>
+                                <p>Performance is comparable to hand-written C/C++ for the assembly portions.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Troubleshooting -->
+                <div class="faq-category">
+                    <h3 class="faq-category-title">
+                        <span class="faq-icon">🔍</span>
+                        Troubleshooting
+                    </h3>
+                    
+                    <div class="faq-items">
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="toggleFAQ(this)">
+                                <span class="question-text">I get "Unsupported architecture" error</span>
+                                <span class="toggle-icon">+</span>
+                            </div>
+                            <div class="faq-answer">
+                                <p>This error occurs if you're not on x86_64 or ARM64. TigerASM only supports 64-bit architectures. Check your system:</p>
+                                <div class="code-snippet">import platform<br>print(platform.machine())</div>
+                                <p>Should output: "x86_64", "AMD64", "arm64", or "aarch64"</p>
+                            </div>
+                        </div>
+
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="toggleFAQ(this)">
+                                <span class="question-text">My assembly code doesn't execute correctly</span>
+                                <span class="toggle-icon">+</span>
+                            </div>
+                            <div class="faq-answer">
+                                <p>Common issues:</p>
+                                <ul>
+                                    <li><strong>Missing 'ret':</strong> Always end with <code>ret</code> instruction</li>
+                                    <li><strong>Wrong syntax:</strong> Check instruction format and operands</li>
+                                    <li><strong>Label typos:</strong> Ensure jump targets match label names</li>
+                                    <li><strong>Memory bounds:</strong> Verify addresses are within 0 to 10MB</li>
+                                    <li><strong>Register names:</strong> Use correct names (rax, rbx for x86_64; x0, x1 for ARM)</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="toggleFAQ(this)">
+                                <span class="question-text">"Memory address out of bounds" error</span>
+                                <span class="toggle-icon">+</span>
+                            </div>
+                            <div class="faq-answer">
+                                <p>This happens when accessing memory outside the 10MB range:</p>
+                                <ul>
+                                    <li>Valid range: 0 to 10,485,760 (0x000000 to 0xA00000)</li>
+                                    <li>Check your address calculations</li>
+                                    <li>Use <code>memory_size()</code> to verify bounds</li>
+                                    <li>Use <code>alloc()</code> for safe memory allocation</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="toggleFAQ(this)">
+                                <span class="question-text">Installation fails with compiler errors</span>
+                                <span class="toggle-icon">+</span>
+                            </div>
+                            <div class="faq-answer">
+                                <p>If building from source fails:</p>
+                                <ul>
+                                    <li><strong>Install Rust:</strong> <code>curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh</code></li>
+                                    <li><strong>Update Rust:</strong> <code>rustup update</code></li>
+                                    <li><strong>Install build tools:</strong>
+                                        <ul>
+                                            <li>Linux: <code>sudo apt install build-essential</code></li>
+                                            <li>macOS: <code>xcode-select --install</code></li>
+                                            <li>Windows: Install Visual Studio Build Tools</li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="toggleFAQ(this)">
+                                <span class="question-text">Can I use floating-point operations?</span>
+                                <span class="toggle-icon">+</span>
+                            </div>
+                            <div class="faq-answer">
+                                <p>Floating-point support is not currently implemented. TigerASM focuses on integer operations. For floating-point math, use Python's native capabilities or libraries like NumPy alongside TigerASM.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Advanced Topics -->
+                <div class="faq-category">
+                    <h3 class="faq-category-title">
+                        <span class="faq-icon">🚀</span>
+                        Advanced Topics
+                    </h3>
+                    
+                    <div class="faq-items">
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="toggleFAQ(this)">
+                                <span class="question-text">Can I call Python functions from assembly?</span>
+                                <span class="toggle-icon">+</span>
+                            </div>
+                            <div class="faq-answer">
+                                <p>Direct calls are not supported, but you can:</p>
+                                <ul>
+                                    <li>Execute assembly, return to Python, process results</li>
+                                    <li>Use memory as shared data structure</li>
+                                    <li>Store function pointers in registers for simple callbacks</li>
+                                    <li>Split complex operations between Python and assembly</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="toggleFAQ(this)">
+                                <span class="question-text">How do I build a JIT compiler with TigerASM?</span>
+                                <span class="toggle-icon">+</span>
+                            </div>
+                            <div class="faq-answer">
+                                <p>Check out Example 9 (Simple JIT Compiler) in the Examples section! The basic approach:</p>
+                                <ol>
+                                    <li>Parse your input language/expressions</li>
+                                    <li>Generate assembly code as strings</li>
+                                    <li>Use <code>asm.asm()</code> to load the code</li>
+                                    <li>Call <code>execute()</code> to run it</li>
+                                    <li>Retrieve results from registers</li>
+                                </ol>
+                            </div>
+                        </div>
+
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="toggleFAQ(this)">
+                                <span class="question-text">Is TigerASM thread-safe?</span>
+                                <span class="toggle-icon">+</span>
+                            </div>
+                            <div class="faq-answer">
+                                <p>Each TigerASM instance is independent. For multi-threaded use:</p>
+                                <ul>
+                                    <li>Create separate TigerASM instances per thread</li>
+                                    <li>Don't share instances between threads</li>
+                                    <li>Virtual memory is per-instance (isolated)</li>
+                                    <li>Use Python's threading primitives for synchronization if needed</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="toggleFAQ(this)">
+                                <span class="question-text">Can I save compiled code for later use?</span>
+                                <span class="toggle-icon">+</span>
+                            </div>
+                            <div class="faq-answer">
+                                <p>Yes! Use the <code>install()</code> method:</p>
+                                <div class="code-snippet">asm.execute()  # Compile first<br>asm.install("compiled.bin")  # Save to file</div>
+                                <p>Note: The saved file is platform-specific and may not be directly executable outside TigerASM.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Community & Support -->
+                <div class="faq-category">
+                    <h3 class="faq-category-title">
+                        <span class="faq-icon">💬</span>
+                        Community & Support
+                    </h3>
+                    
+                    <div class="faq-items">
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="toggleFAQ(this)">
+                                <span class="question-text">Where can I get help?</span>
+                                <span class="toggle-icon">+</span>
+                            </div>
+                            <div class="faq-answer">
+                                <p>Support channels:</p>
+                                <ul>
+                                    <li><strong>GitHub Issues:</strong> Bug reports and feature requests</li>
+                                    <li><strong>Documentation:</strong> This comprehensive guide</li>
+                                    <li><strong>Examples:</strong> Working code samples in the Examples section</li>
+                                    <li><strong>Stack Overflow:</strong> Tag your questions with "tigerasm"</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="toggleFAQ(this)">
+                                <span class="question-text">Can I contribute to TigerASM?</span>
+                                <span class="toggle-icon">+</span>
+                            </div>
+                            <div class="faq-answer">
+                                <p>Absolutely! Contributions are welcome:</p>
+                                <ul>
+                                    <li>Submit pull requests on GitHub</li>
+                                    <li>Report bugs and issues</li>
+                                    <li>Improve documentation</li>
+                                    <li>Add examples and tutorials</li>
+                                    <li>Share your projects built with TigerASM</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="toggleFAQ(this)">
+                                <span class="question-text">What license is TigerASM under?</span>
+                                <span class="toggle-icon">+</span>
+                            </div>
+                            <div class="faq-answer">
+                                <p>TigerASM is released under the MIT License. You can use it freely in personal and commercial projects, with attribution.</p>
+                            </div>
+                        </div>
+
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="toggleFAQ(this)">
+                                <span class="question-text">Is there a Discord or Slack community?</span>
+                                <span class="toggle-icon">+</span>
+                            </div>
+                            <div class="faq-answer">
+                                <p>Community channels are being set up! Check the GitHub repository for the latest links to Discord, Slack, or other community platforms.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Still Have Questions -->
+            <div class="faq-contact">
+                <h3>Still have questions?</h3>
+                <p>Can't find what you're looking for? Reach out to us!</p>
+                <div class="contact-buttons">
+                    <a href="https://github.com/yourusername/tigerasm/issues" class="btn btn-primary">Open an Issue</a>
+                    <a href="mailto:support@tigerasm.dev" class="btn btn-secondary">Email Support</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="logo">
+                    <div class="logo-icon">TASM</div>
+                    <div class="logo-text">TigerASM</div>
+                </div>
+                <ul class="footer-links">
+                    <li><a href="https://github.com/yourusername/tigerasm">GitHub</a></li>
+                    <li><a href="https://pypi.org/project/tigerasm">PyPI</a></li>
+                    <li><a href="#api">Documentation</a></li>
+                    <li><a href="mailto:hello@tigerasm.dev">Contact</a></li>
+                </ul>
+            </div>
+            <div class="copyright">
+                © 2024 TigerASM. Built with Rust & PyO3. Licensed under MIT.
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scroll to Top Button -->
+    <button class="scroll-top" onclick="scrollToTop()">↑</button>
+
+    <script>
+        // Generate animated graph pattern with CPU processing visualization
+        function generateGraph() {
+            const svg = document.getElementById('graph-svg');
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            
+            svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+            
+            // Generate background grid
+            const gridSize = 50;
+            for (let x = 0; x < width; x += gridSize) {
+                for (let y = 0; y < height; y += gridSize) {
+                    if (Math.random() > 0.7) {
+                        const hex = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                        const size = 15;
+                        const points = [];
+                        for (let i = 0; i < 6; i++) {
+                            const angle = (Math.PI / 3) * i;
+                            points.push(`${x + size * Math.cos(angle)},${y + size * Math.sin(angle)}`);
+                        }
+                        hex.setAttribute('points', points.join(' '));
+                        hex.setAttribute('class', 'hex-pattern');
+                        hex.style.transformOrigin = `${x}px ${y}px`;
+                        hex.style.animationDelay = `${Math.random() * 5}s`;
+                        svg.appendChild(hex);
+                    }
+                }
+            }
+            
+            // Generate CPU cores (large processing nodes)
+            const coreCount = 4;
+            const cores = [];
+            for (let i = 0; i < coreCount; i++) {
+                const angle = (Math.PI * 2 * i) / coreCount;
+                const radius = Math.min(width, height) * 0.3;
+                const core = {
+                    x: width / 2 + radius * Math.cos(angle),
+                    y: height / 2 + radius * Math.sin(angle),
+                    size: 40
+                };
+                cores.push(core);
+                
+                // Draw CPU core
+                const coreCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                coreCircle.setAttribute('cx', core.x);
+                coreCircle.setAttribute('cy', core.y);
+                coreCircle.setAttribute('r', core.size);
+                coreCircle.setAttribute('class', 'cpu-core');
+                coreCircle.style.animationDelay = `${i * 0.5}s`;
+                svg.appendChild(coreCircle);
+                
+                // Draw core ring
+                const coreRing = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                coreRing.setAttribute('cx', core.x);
+                coreRing.setAttribute('cy', core.y);
+                coreRing.setAttribute('r', core.size + 10);
+                coreRing.setAttribute('class', 'processing-wave');
+                coreRing.setAttribute('stroke-dasharray', '20, 10');
+                coreRing.style.animationDelay = `${i * 0.5}s`;
+                svg.appendChild(coreRing);
+            }
+            
+            // Generate memory blocks
+            const memoryCount = 8;
+            for (let i = 0; i < memoryCount; i++) {
+                const x = (width / (memoryCount + 1)) * (i + 1);
+                const y = height * 0.1;
+                
+                const memBlock = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                memBlock.setAttribute('x', x - 20);
+                memBlock.setAttribute('y', y - 10);
+                memBlock.setAttribute('width', 40);
+                memBlock.setAttribute('height', 20);
+                memBlock.setAttribute('class', 'memory-block');
+                memBlock.style.animationDelay = `${i * 0.2}s`;
+                svg.appendChild(memBlock);
+            }
+            
+            // Generate network nodes
+            const nodes = [];
+            const nodeCount = 40;
+            
+            for (let i = 0; i < nodeCount; i++) {
+                nodes.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    delay: Math.random() * 3
+                });
+            }
+            
+            // Generate connections between nodes
+            nodes.forEach((node, i) => {
+                nodes.forEach((otherNode, j) => {
+                    if (i < j) {
+                        const distance = Math.sqrt(
+                            Math.pow(node.x - otherNode.x, 2) + 
+                            Math.pow(node.y - otherNode.y, 2)
+                        );
+                        
+                        if (distance < 200) {
+                            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                            line.setAttribute('x1', node.x);
+                            line.setAttribute('y1', node.y);
+                            line.setAttribute('x2', otherNode.x);
+                            line.setAttribute('y2', otherNode.y);
+                            line.setAttribute('class', 'graph-line');
+                            line.style.animationDelay = `${node.delay}s`;
+                            svg.appendChild(line);
+                        }
+                    }
+                });
+            });
+            
+            // Draw nodes
+            nodes.forEach(node => {
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', node.x);
+                circle.setAttribute('cy', node.y);
+                circle.setAttribute('r', 3);
+                circle.setAttribute('class', 'graph-node');
+                circle.style.animationDelay = `${node.delay}s`;
+                svg.appendChild(circle);
+            });
+            
+            // Generate instruction flows between cores
+            for (let i = 0; i < coreCount; i++) {
+                const nextCore = (i + 1) % coreCount;
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                const midX = (cores[i].x + cores[nextCore].x) / 2;
+                const midY = (cores[i].y + cores[nextCore].y) / 2;
+                const controlX = midX + (Math.random() - 0.5) * 100;
+                const controlY = midY + (Math.random() - 0.5) * 100;
+                
+                path.setAttribute('d', `M ${cores[i].x} ${cores[i].y} Q ${controlX} ${controlY} ${cores[nextCore].x} ${cores[nextCore].y}`);
+                path.setAttribute('class', 'instruction-flow');
+                path.style.animationDelay = `${i * 0.3}s`;
+                svg.appendChild(path);
+            }
+            
+            // Generate register indicators around cores
+            cores.forEach((core, coreIndex) => {
+                for (let i = 0; i < 8; i++) {
+                    const angle = (Math.PI * 2 * i) / 8;
+                    const distance = core.size + 30;
+                    const x = core.x + distance * Math.cos(angle);
+                    const y = core.y + distance * Math.sin(angle);
+                    
+                    const register = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    register.setAttribute('x', x - 4);
+                    register.setAttribute('y', y - 4);
+                    register.setAttribute('width', 8);
+                    register.setAttribute('height', 8);
+                    register.setAttribute('class', 'register-indicator');
+                    register.style.animationDelay = `${(coreIndex * 0.5) + (i * 0.1)}s`;
+                    svg.appendChild(register);
+                }
+            });
+            
+            // Animated data packets moving through the system
+            function createDataPacket() {
+                const packet = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                const startNode = nodes[Math.floor(Math.random() * nodes.length)];
+                const endNode = nodes[Math.floor(Math.random() * nodes.length)];
+                
+                packet.setAttribute('cx', startNode.x);
+                packet.setAttribute('cy', startNode.y);
+                packet.setAttribute('r', 5);
+                packet.setAttribute('class', 'data-packet');
+                
+                svg.appendChild(packet);
+                
+                const duration = 2000 + Math.random() * 2000;
+                const startTime = Date.now();
+                
+                function animate() {
+                    const elapsed = Date.now() - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    
+                    const x = startNode.x + (endNode.x - startNode.x) * progress;
+                    const y = startNode.y + (endNode.y - startNode.y) * progress;
+                    
+                    packet.setAttribute('cx', x);
+                    packet.setAttribute('cy', y);
+                    
+                    if (progress < 1) {
+                        requestAnimationFrame(animate);
+                    } else {
+                        svg.removeChild(packet);
+                    }
+                }
+                
+                animate();
+            }
+            
+            // Create particles floating up
+            function createParticle() {
+                const particle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                particle.setAttribute('cx', Math.random() * width);
+                particle.setAttribute('cy', height);
+                particle.setAttribute('r', Math.random() * 3 + 1);
+                particle.setAttribute('class', 'particle');
+                
+                const duration = 5000 + Math.random() * 5000;
+                particle.style.animation = `particleFloat ${duration}ms linear`;
+                
+                svg.appendChild(particle);
+                
+                setTimeout(() => {
+                    if (svg.contains(particle)) {
+                        svg.removeChild(particle);
+                    }
+                }, duration);
+            }
+            
+            // Create binary streams
+            function createBinaryStream() {
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                const binaryStr = Array(20).fill(0).map(() => Math.random() > 0.5 ? '1' : '0').join('');
+                text.textContent = binaryStr;
+                text.setAttribute('x', -100);
+                text.setAttribute('y', Math.random() * height);
+                text.setAttribute('class', 'binary-stream');
+                
+                const duration = 8000 + Math.random() * 4000;
+                text.style.animationDuration = `${duration}ms`;
+                
+                svg.appendChild(text);
+                
+                setTimeout(() => {
+                    if (svg.contains(text)) {
+                        svg.removeChild(text);
+                    }
+                }, duration);
+            }
+            
+            // Spawn data packets periodically
+            setInterval(createDataPacket, 1000);
+            
+            // Spawn particles periodically
+            setInterval(createParticle, 300);
+            
+            // Spawn binary streams periodically
+            setInterval(createBinaryStream, 2000);
+            
+            // Initial spawns
+            for (let i = 0; i < 5; i++) {
+                setTimeout(createDataPacket, i * 200);
+            }
+            for (let i = 0; i < 10; i++) {
+                setTimeout(createParticle, i * 500);
+            }
+            for (let i = 0; i < 3; i++) {
+                setTimeout(createBinaryStream, i * 1000);
+            }
+        }
+
+        // Copy code functionality
+        function copyCode(button) {
+            const codeBlock = button.closest('.code-block');
+            const code = codeBlock.querySelector('pre').textContent;
+            
+            navigator.clipboard.writeText(code).then(() => {
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                button.style.background = 'rgba(0, 255, 170, 0.2)';
+                button.style.color = 'var(--accent-primary)';
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.background = 'transparent';
+                    button.style.color = 'var(--text-secondary)';
+                }, 2000);
+            });
+        }
+
+        // FAQ toggle functionality
+        function toggleFAQ(element) {
+            const faqItem = element.closest('.faq-item');
+            const wasActive = faqItem.classList.contains('active');
+            
+            // Close all other FAQs in the same category (optional - remove these lines for multiple open)
+            const category = faqItem.closest('.faq-category');
+            category.querySelectorAll('.faq-item.active').forEach(item => {
+                if (item !== faqItem) {
+                    item.classList.remove('active');
+                }
+            });
+            
+            // Toggle current FAQ
+            if (wasActive) {
+                faqItem.classList.remove('active');
+            } else {
+                faqItem.classList.add('active');
+            }
+        }
+
+        // Scroll to top functionality
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Show/hide scroll to top button
+        window.addEventListener('scroll', () => {
+            const scrollTop = document.querySelector('.scroll-top');
+            if (window.pageYOffset > 500) {
+                scrollTop.classList.add('visible');
+            } else {
+                scrollTop.classList.remove('visible');
+            }
+        });
+
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+
+        // Initialize on load
+        window.addEventListener('load', () => {
+            generateGraph();
+        });
+
+        // Regenerate graph on resize
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                document.getElementById('graph-svg').innerHTML = '';
+                generateGraph();
+            }, 250);
+        });
+
+        // Add intersection observer for animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -100px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        // Observe animated elements
+        document.querySelectorAll('.feature-card, .api-section, .instruction-category, .example-card, .device-category, .faq-category').forEach(el => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(30px)';
+            el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+            observer.observe(el);
+        });
+    </script>
+</body>
+</html>
