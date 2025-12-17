@@ -1,0 +1,76 @@
+[build-system]
+requires = [ "setuptools>=77.0.0", "wheel",]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gateagent-gateway"
+version = "0.1.6"
+description = "Local gateway for collecting and managing agent events with Google Sheets integration"
+requires-python = ">=3.8"
+keywords = [ "agent", "gateway", "tracking", "events", "google-sheets", "fastapi",]
+classifiers = [ "Development Status :: 3 - Alpha", "Intended Audience :: Developers", "Programming Language :: Python :: 3", "Programming Language :: Python :: 3.10", "Programming Language :: Python :: 3.11", "Programming Language :: Python :: 3.12", "Framework :: FastAPI", "Topic :: Software Development :: Libraries :: Python Modules",]
+dependencies = [ "fastapi>=0.110.0", "uvicorn>=0.29.0", "requests>=2.25.0",]
+license = "MIT"
+[[project.authors]]
+name = "Anshul Basia"
+email = "anshulbasia@alumni.iitd.ac.in"
+
+[[project.authors]]
+name = "Siddharth Goyal"
+email = "goyal.siddharth22@gmail.com"
+
+[[project.maintainers]]
+name = "Anshul Basia"
+email = "anshulbasia@alumni.iitd.ac.in"
+
+[[project.maintainers]]
+name = "Siddharth Goyal"
+email = "goyal.siddharth22@gmail.com"
+
+[project.readme]
+file = "README.md"
+content-type = "text/markdown"
+
+[project.optional-dependencies]
+dev = [ "pytest>=7.0.0", "pytest-asyncio>=0.21.0", "httpx>=0.24.0", "black>=23.0.0", "ruff>=0.1.0", "mypy>=1.0.0",]
+
+[project.scripts]
+revert-gate = "src.cli:start"
+gateagent = "src.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/gateagent/gateway/ext"
+Repository = "https://github.com/gateagent/gateway/ext"
+Issues = "https://github.com/gateagent/gateway/issues"
+
+[tool.black]
+line-length = 100
+target-version = [ "py38", "py39", "py310", "py311",]
+
+[tool.ruff]
+line-length = 100
+target-version = "py38"
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+
+[tool.ruff.lint]
+select = [ "E", "F", "I", "N", "W", "UP",]
+ignore = []
+
+[tool.setuptools.package-data]
+src = [ "py.typed", "ui/*", "ui/assets/*",]
+
+[tool.pytest.ini_options]
+testpaths = [ "tests",]
+python_files = [ "test_*.py",]
+python_classes = [ "Test*",]
+python_functions = [ "test_*",]
+asyncio_mode = "auto"
+
+[tool.setuptools.packages.find]
+where = [ ".",]
+include = [ "src*",]
