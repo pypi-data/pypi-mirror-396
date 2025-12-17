@@ -1,0 +1,174 @@
+[project]
+name = "pyserde"
+description = "Yet another serialization library on top of dataclasses"
+authors = [{ name = "yukinarit", email = "yukinarit84@gmail.com" }]
+license = { file = "LICENSE" }
+readme = "README.md"
+requires-python = ">=3.10,<4.0"
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dynamic = ["version"]
+dependencies = [
+  "typing-inspect>=0.4.0",
+  "typing_extensions>=4.1.0,<4.16.0",
+  "casefy",
+  "jinja2",
+  "plum-dispatch>=2.3",
+  "beartype>=0.18.4",
+]
+
+[project.optional-dependencies]
+msgpack = ["msgpack"]
+toml = [
+  "tomli; python_version < '3.11'",
+  "tomli-w",
+]
+yaml = ["pyyaml"]
+numpy = [
+  "numpy>1.22.0,<3.0.0",
+]
+jaxtyping = ["jaxtyping<0.3.0"]
+orjson = ["orjson"]
+sqlalchemy = ["sqlalchemy>2"]
+all = [
+  "msgpack",
+  "tomli; python_version < '3.11'",
+  "tomli-w",
+  "pyyaml",
+  "numpy>1.22.0,<3.0.0",
+  "jaxtyping<0.3.0",
+  "orjson",
+  "sqlalchemy>2",
+]
+
+[project.urls]
+Repository = "https://github.com/yukinarit/pyserde"
+Homepage = "https://github.com/yukinarit/pyserde"
+
+[dependency-groups]
+dev = [
+  "pyyaml",
+  "tomli; python_version <= '3.11'",
+  "tomli-w",
+  "msgpack",
+  "numpy>1.22.0,<3.0.0",
+  "mypy==1.19.0",
+  "black==25.12.0",
+  "pyright==1.1.407",
+  "ruff==0.14.9",
+  "pytest",
+  "pytest-cov",
+  "pytest-watch",
+  "pytest-flake8",
+  "coverage==7.6.8",
+  "pdoc>=15,<16",
+  "more-itertools>=10.5.0,<10.6",
+  "pre-commit==4.1.0",
+  "pytest-xdist>=3.5.0,<4.0",
+  "types-PyYAML>=6.0.9,<7.0",
+  "msgpack-types>=0.5,<0.6",
+  "envclasses>=0.3.1,<0.4",
+  "jedi",
+  "jaxtyping<0.3.0",
+]
+
+[build-system]
+requires = ["hatchling>=1.26", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.targets.wheel]
+packages = ["serde"]
+
+[tool.black]
+target-version = ["py312"]
+line-length = 100
+
+[tool.pyright]
+include = [
+  "examples",
+  "serde/core.py",
+  "serde/compat.py",
+  "serde/inspect.py",
+  "serde/json.py",
+  "serde/se.py",
+  "serde/de.py",
+  "serde/msgpack.py",
+  "serde/toml.py",
+  "serde/yaml.py",
+  "serde/pickle.py",
+  "tests/common.py",
+  "tests/imported.py",
+  "tests/test_custom.py",
+  "tests/test_kwonly.py",
+  "tests/test_flatten.py",
+  "tests/test_lazy_type_evaluation.py",
+  "tests/test_type_check.py",
+  "tests/data.py",
+]
+exclude = [
+  "serde/numpy.py",
+  "serde/__init__.py",
+  "examples/type_numpy_jaxtyping.py"
+]
+pythonVersion = "3.12"
+reportMissingImports = false
+reportUnhashable = false
+reportAttributeAccessIssue = false
+
+[tool.mypy]
+strict = true
+ignore_missing_imports = true
+exclude = [
+  "serde/numpy.py",
+  "examples/alias.py",
+  "examples/generics_pep695.py",
+  "examples/custom_class_serializer.py",
+  "examples/global_custom_class_serializer.py",
+  "tests/.*",
+  "bench/.*",
+]
+explicit_package_bases = true
+
+[[tool.mypy.overrides]]
+# to avoid complaints about generic type ndarray
+module = "examples.type_numpy_jaxtyping"
+ignore_errors = true
+
+[tool.ruff]
+line-length = 100
+extend-exclude = [
+  "examples/generics_pep695.py",
+  "examples/type_alias_pep695.py",
+  "examples/type_statement.py",
+]
+
+[tool.ruff.lint]
+select = [
+  "E", # pycodestyle errors
+  "W", # pycodestyle warnings
+  "F", # pyflakes
+  "C", # flake8-comprehensions
+  "B", # flake8-bugbear
+  "NPY201", # numpy2-deprecation
+]
+ignore = ["B904"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 30
+
+[tool.ruff.lint.per-file-ignores]
+# https://docs.kidger.site/jaxtyping/faq/#flake8-or-ruff-are-throwing-an-error
+"examples/type_numpy_jaxtyping.py" = ["F722"]
