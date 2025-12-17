@@ -1,0 +1,201 @@
+# Learning-to-Rank from Scratch
+
+A complete implementation of a Learning-to-Rank system using **LambdaMART** with **LightGBM** for query-document ranking on the MovieLens dataset.
+
+## 🎯 Overview
+
+This project implements a state-of-the-art ranking system that learns to rank movies for users based on:
+- **Features**: TF-IDF similarity, document popularity, engagement signals
+- **Model**: LambdaMART using LightGBM with pairwise preference learning
+- **Baseline**: BM25 for comparison
+- **Evaluation**: NDCG@10, MAP (Mean Average Precision), Precision@K
+- **Validation**: 5-fold cross-validation with comprehensive metric comparison
+
+## 📊 Dataset
+
+**MovieLens 100K** - Contains 100,000 ratings from 943 users on 1,682 movies
+- Ratings converted to relevance labels (0-3 scale)
+- Query-document-relevance triplets created from user-movie interactions
+- Rich metadata including genres, titles, and user demographics
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+```bash
+pip install -r requirements.txt
+```
+
+### Run the Notebook
+
+```bash
+jupyter notebook learning_to_rank.ipynb
+```
+
+The notebook will:
+1. Download the MovieLens dataset automatically
+2. Engineer features from movie metadata and user interactions
+3. Train LambdaMART model with cross-validation
+4. Compare against BM25 baseline
+5. Generate metric comparison charts
+6. Analyze feature importance
+
+## 🔧 Features Engineering
+
+### 1. TF-IDF Similarity Features
+- User profiles created from highly-rated movies
+- Cosine similarity between user profile and candidate movies
+- Captures content-based relevance
+
+### 2. Document Popularity Features
+- Number of ratings per movie
+- Average rating and standard deviation
+- Number of unique users
+- Popularity score (composite metric)
+
+### 3. Engagement Signal Features
+- User activity level (number of ratings)
+- User rating patterns (mean, std)
+- User demographics (age, gender)
+- Movie genre indicators (18 genres)
+
+## 📈 Model Architecture
+
+### LambdaMART Configuration
+```python
+{
+    'objective': 'lambdarank',
+    'metric': 'ndcg',
+    'ndcg_eval_at': [10],
+    'learning_rate': 0.05,
+    'num_leaves': 31,
+    'max_depth': 6,
+    'min_data_in_leaf': 20,
+    'feature_fraction': 0.8,
+    'bagging_fraction': 0.8,
+    'bagging_freq': 5
+}
+```
+
+### Training Strategy
+- **Objective**: Pairwise preference learning (lambdarank)
+- **Optimization**: Directly optimizes NDCG
+- **Cross-validation**: 5-fold GroupKFold (groups by user)
+- **Comparison**: BM25 baseline on same splits
+
+## 📊 Evaluation Metrics
+
+### NDCG@10 (Normalized Discounted Cumulative Gain)
+- Measures ranking quality with position-based discounting
+- Considers graded relevance labels
+- Primary metric for ranking evaluation
+
+### MAP (Mean Average Precision)
+- Evaluates precision across all relevant items
+- Emphasizes finding all relevant documents
+
+### Precision@K
+- Measures fraction of relevant items in top-K results
+- Simple interpretable metric
+
+## 📁 Project Structure
+
+```
+learning-to-rank-from-scratch/
+├── learning_to_rank.ipynb      # Main notebook with complete implementation
+├── requirements.txt             # Python dependencies
+├── README.md                    # This file
+├── .gitignore                  # Git ignore rules
+└── ml-100k/                    # MovieLens dataset (auto-downloaded)
+```
+
+## 📸 Visualizations
+
+The notebook generates three key visualizations:
+1. **Metric Comparison by Fold** - Shows LambdaMART vs BM25 for each CV fold
+2. **Average Metric Comparison** - Mean performance with error bars
+3. **Feature Importance** - Top contributing features to ranking quality
+
+## 🎓 Key Concepts
+
+### Learning-to-Rank
+Learning-to-Rank treats ranking as a supervised machine learning problem:
+- **Input**: Query-document pairs with features
+- **Output**: Relevance scores for ranking
+- **Approaches**: Pointwise, Pairwise (this project), Listwise
+
+### LambdaMART
+LambdaMART combines:
+- **LambdaRank**: Uses lambda gradients from pairwise preferences
+- **MART (Multiple Additive Regression Trees)**: Gradient boosted decision trees
+- **Direct NDCG optimization**: Optimizes the actual ranking metric
+
+### Why Pairwise Learning?
+- More data efficient than pointwise approaches
+- Captures relative ordering directly
+- Better suited for ranking tasks than regression
+
+## 🔬 Expected Results
+
+LambdaMART typically outperforms BM25 baseline by:
+- **NDCG@10**: 10-30% improvement
+- **MAP**: 15-25% improvement
+- **Precision@10**: 10-20% improvement
+
+Results may vary based on:
+- Train/test split
+- Feature engineering quality
+- Hyperparameter tuning
+- Dataset characteristics
+
+## 🛠️ Customization
+
+### Adding New Features
+Edit the feature engineering section in the notebook:
+```python
+feature_columns = [
+    'your_new_feature',
+    # ... existing features
+]
+```
+
+### Tuning Hyperparameters
+Modify the LightGBM parameters:
+```python
+params = {
+    'objective': 'lambdarank',
+    'learning_rate': 0.1,  # Adjust
+    'num_leaves': 63,       # Adjust
+    # ...
+}
+```
+
+### Using Different Datasets
+Replace the MovieLens loading code with your dataset:
+- Ensure query-document-relevance triplet format
+- Adapt feature engineering to your domain
+
+## 📚 References
+
+- [LambdaMART Paper](https://www.microsoft.com/en-us/research/publication/from-ranknet-to-lambdarank-to-lambdamart-an-overview/)
+- [LightGBM Documentation](https://lightgbm.readthedocs.io/)
+- [MovieLens Dataset](https://grouplens.org/datasets/movielens/)
+- [Learning to Rank Overview](https://en.wikipedia.org/wiki/Learning_to_rank)
+
+## 📝 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🤝 Contributing
+
+Contributions are welcome! Feel free to:
+- Report bugs
+- Suggest features
+- Submit pull requests
+- Improve documentation
+
+## ⭐ Acknowledgments
+
+- GroupLens Research for the MovieLens dataset
+- Microsoft Research for LambdaMART algorithm
+- LightGBM team for the excellent gradient boosting framework
