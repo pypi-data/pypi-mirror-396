@@ -1,0 +1,419 @@
+Metadata-Version: 2.4
+Name: stacksense-cli
+Version: 0.1.0
+Summary: AI-powered code intelligence for developers
+Home-page: https://portfolio-pied-five-61.vercel.app/
+Author: PilgrimStack
+Author-email: PilgrimStack <dev@stacksense.dev>
+License-Expression: LicenseRef-Proprietary
+Project-URL: Homepage, https://stacksense.dev
+Project-URL: Documentation, https://stacksense.dev/docs
+Project-URL: Repository, https://github.com/stacksense/stacksense
+Keywords: ai,code-analysis,developer-tools,cli,llm
+Classifier: Development Status :: 4 - Beta
+Classifier: Environment :: Console
+Classifier: Intended Audience :: Developers
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Software Development
+Classifier: Topic :: Software Development :: Code Generators
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE.md
+Requires-Dist: openai
+Requires-Dist: httpx
+Requires-Dist: rich
+Requires-Dist: prompt_toolkit
+Requires-Dist: colorama
+Requires-Dist: ddgs
+Requires-Dist: newspaper3k
+Requires-Dist: requests
+Requires-Dist: readability-lxml
+Requires-Dist: lxml[html_clean]
+Requires-Dist: networkx
+Requires-Dist: graphviz
+Requires-Dist: scikit-learn
+Requires-Dist: numpy
+Requires-Dist: fastapi
+Requires-Dist: uvicorn
+Requires-Dist: aiohttp
+Requires-Dist: aiofiles
+Requires-Dist: python-dotenv
+Requires-Dist: packaging
+Requires-Dist: markdown
+Requires-Dist: pydantic
+Requires-Dist: cryptography
+Requires-Dist: click
+Provides-Extra: parsing
+Requires-Dist: tree-sitter>=0.21.3; extra == "parsing"
+Requires-Dist: tree-sitter-languages>=1.10.2; extra == "parsing"
+Provides-Extra: full
+Requires-Dist: tree-sitter>=0.21.3; extra == "full"
+Requires-Dist: tree-sitter-languages>=1.10.2; extra == "full"
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: Cython>=0.29; extra == "dev"
+Requires-Dist: build; extra == "dev"
+Dynamic: author
+Dynamic: home-page
+Dynamic: license-file
+Dynamic: requires-python
+
+# 🧠 StackSense
+
+**AI-Powered Code Intelligence for Developers**
+
+StackSense is a powerful CLI tool that brings AI-driven code understanding to your terminal. Powered by multiple AI providers for flexibility and performance.
+
+**Created by:** [Pilgrimstack](https://portfolio-pied-five-61.vercel.app/)
+
+---
+
+## ✨ Features
+
+### 🗣️ Interactive AI Chat
+- Natural conversations about your code
+- Context-aware AI with full repository understanding
+- Code generation with permission workflow
+- Multi-provider support (OpenRouter, OpenAI, Grok, TogetherAI)
+
+### 📊 Diagram-First Workflow
+- AI creates architecture diagrams before coding
+- Iterative refinement with user approval
+- Tech stack capture for future sessions
+
+### 🔧 Agentic Code Modification
+- AI proposes changes, you approve
+- File/folder creation with explicit permission
+- Command execution with user confirmation
+- Quality-focused task chunking
+
+### 🧠 Persistent Memory
+- AI remembers what it learns about your codebase
+- Cross-session knowledge retention
+- Automatic learning from approved changes
+- Storage at `~/.stacksense/{workspace}/{repo}/`
+
+### 📊 Dependency Diagrams
+- Automatic dependency graph generation
+- Multi-language support (Python, JavaScript, TypeScript, Go, Rust)
+- Export to JSON, DOT, and Mermaid formats
+- Programmatic diagram modification (add/remove nodes and edges)
+
+### 🔍 Intelligent Repository Scanning
+- Smart file discovery with gitignore support
+- Language detection and framework identification
+- Incremental scanning with caching
+
+### 🌐 Web Search Integration
+- Deep search: AI fetches and reads actual page content
+- Prioritizes StackOverflow, GitHub, Reddit, Medium, Dev.to
+- Rate limited to prevent abuse
+
+### 🔄 Dynamic Model Switching
+- Switch between 100+ models on-the-fly
+- One-shot model usage: `model:qwen2.5 your question`
+- Permanent switching: `/model llama-3.3-70b`
+- Works best with OpenRouter for maximum flexibility
+
+---
+
+## 🚀 Installation
+
+### Basic Install (Python 3.9+)
+
+```bash
+pipx install stacksense
+# Or with pip:
+pip install stacksense
+```
+
+✅ All 40+ AI tools work with regex-based code parsing
+
+### Full Install (Python 3.9-3.12) 
+
+```bash
+pipx install "stacksense[full]"
+# Or with pip:
+pip install "stacksense[full]"
+```
+
+✅ Enhanced syntax parsing with tree-sitter for more accurate diagrams
+
+> **Note**: Tree-sitter support requires Python <3.13. On Python 3.13+, StackSense automatically falls back to regex parsing.
+
+### Development Install
+
+```bash
+git clone https://github.com/AmariahAK/Stacksense.git
+cd stacksense
+pip install -e ".[dev]"
+```
+
+### Prerequisites
+
+- **Python 3.9+** (3.9-3.12 for full tree-sitter support)
+- **API Key** from your chosen provider
+
+### API Key Setup
+
+StackSense v1.0 supports **OpenRouter** only. More providers coming soon!
+
+```bash
+# OpenRouter (available in v1.0 - access to 100+ models)
+OPENROUTER_API_KEY="sk-or-v1-your-key-here"
+
+# Coming in v2.0:
+# OLLAMA - Local models (no API key needed)
+
+# Coming in v3.0:
+# OPENAI_API_KEY="sk-your-key-here"
+# GROK_API_KEY="xai-your-key-here"
+# TOGETHER_API_KEY="your-key-here"
+```
+
+---
+
+## 📖 Quick Start
+
+### Initial Setup
+
+```bash
+# Configure AI provider
+stacksense --setup-ai
+
+# Run diagnostics (check configuration)
+stacksense doctor
+```
+
+### Start AI Chat
+
+```bash
+# Chat with repository context
+stacksense chat
+
+# Chat with a specific workspace
+stacksense chat --workspace ~/projects/myapp
+```
+
+### Credits & Account Management
+
+```bash
+# View your current credit balance
+stacksense credits
+
+# Buy more credits (opens pricing page)
+stacksense upgrade
+
+# Redeem a license key after purchase
+stacksense redeem YOUR-LICENSE-KEY
+
+# Login on a new device to restore credits
+stacksense login your@email.com YOUR-ORDER-KEY
+
+# Check account status
+stacksense status
+```
+
+---
+
+## 🤖 Supported AI Providers
+
+| Provider | Description | Status | Version |
+|----------|-------------|--------|---------|
+| **OpenRouter** | Multi-provider gateway | ✅ Available | v1.0 |
+| Ollama | Local models | 🔜 Coming | v2.0 |
+| OpenAI | GPT-4, GPT-4o | 🔜 Coming | v3.0 |
+| Grok (xAI) | Grok-2, real-time | 🔜 Coming | v3.0 |
+| TogetherAI | Llama, Qwen, Mistral | 🔜 Coming | v3.0 |
+
+### Recommended: OpenRouter
+
+OpenRouter is the only provider in v1.0 because it provides access to **100+ models** from multiple providers (OpenAI, Anthropic, Google, Meta, Mistral, etc.) through a single API key. This gives you maximum flexibility while we work on adding more providers.
+
+Get your free API key: [openrouter.ai/keys](https://openrouter.ai/keys)
+
+### Tool Calling
+
+All providers share **40 tools** through our unified agent architecture with **smart slicing** support:
+
+#### Free Tools (0 credits)
+| Tool | Description |
+|------|-------------|
+| `ask_user` | Request permission for actions |
+| `stop_command` | Stop a running terminal command |
+| `git_status` | Show changed/staged/untracked files |
+| `slice_output` | AI-controlled re-slicing of content |
+
+#### Basic Tools (1 credit)
+| Tool | Description |
+|------|-------------|
+| `get_diagram` | View codebase structure |
+| `read_file` | Read file contents (with smart slicing) |
+| `search_code` | Search for keywords |
+| `recall_memory` | Get previous learnings |
+| `list_tasks` | View current tasks |
+| `update_diagram` | Modify diagram incrementally |
+| `recall_search_learnings` | Check saved search insights |
+| `list_groups` | View file groups |
+| `git_diff` | Show git changes |
+| `find_file` | Find files by pattern |
+| `summarize_file` | One-line file summary |
+| `get_dependencies` | List project dependencies |
+| `hot_reload_status` | Check dev server status |
+
+#### Medium Tools (2-3 credits)
+| Tool | Description | Credits |
+|------|-------------|---------|
+| `save_learning` | Save insights (replaces existing) | 2 |
+| `save_search_learning` | Save web search insight | 2 |
+| `create_task` | Create a task | 2 |
+| `update_task` | Mark task done/blocked | 2 |
+| `clear_tasks` | Clear all tasks | 2 |
+| `group_files` | Group related files together | 2 |
+| `dependency_tree` | Show why package is installed | 2 |
+| `explain_error` | Parse error messages | 2 |
+| `analyze_stack_trace` | Extract stack trace info | 2 |
+| `estimate_complexity` | File complexity score | 2 |
+| `code_smell_scan` | Find code issues | 2 |
+| `project_health` | Overall project health check | 2 |
+| `suggest_related_files` | Find related files | 2 |
+| `create_snippet` | Save code snippets | 2 |
+| `read_url` | Fetch HTTPS URLs | 2 |
+| `web_search` | Deep web search | 3 |
+| `write_file` | Create/modify files | 3 |
+| `run_command` | Execute terminal commands | 3 |
+| `run_tests` | Execute test suite | 3 |
+
+#### Premium Tools (4-5 credits)
+| Tool | Description | Credits |
+|------|-------------|---------|
+| `diagram_generate` | Generate architecture diagram | 4 |
+| `agent` | Spawn sub-agent | 5 |
+| `repo_scan` | Full repository scan | 5 |
+
+
+---
+
+## 🔧 Tab Completion
+
+**Press Tab to trigger the dropdown menu.** Type a prefix, then press Tab to see options:
+
+| Prefix | Action | Example |
+|--------|--------|---------|
+| `model:` + TAB | Select model for one query | `model:qwen` |
+| `/model` + TAB | Select model permanently | `/model llama` |
+| `@` + TAB | Attach file to context (5 max) | `@src/main.py` |
+
+**Note:** Dropdowns show 5 items at a time. Use ↑↓ arrows to navigate, Tab/Enter to select.
+
+---
+
+## 🔍 Web Search
+
+StackSense has two search modes:
+
+### Regular Search (`search:` command)
+```
+search:python asyncio best practices
+```
+Returns URLs and short snippets.
+
+### Deep Search (AI fetches full pages)
+```
+search:deep python asyncio best practices
+```
+AI visits top 5 results, reads full content, and summarizes.
+
+---
+
+## 📊 Task Management
+
+StackSense tracks your progress with `todo.json`:
+
+```json
+{
+  "project": "my-app",
+  "tasks": [
+    {
+      "id": 1,
+      "title": "Implement auth",
+      "status": "done",
+      "completed_at": "2024-12-09T10:00:00Z"
+    },
+    {
+      "id": 2,
+      "title": "Add user model",
+      "status": "in_progress",
+      "started_at": "2024-12-09T11:00:00Z"
+    }
+  ],
+  "total": 10,
+  "completed": 1
+}
+```
+
+---
+
+## 🧠 Memory System
+
+StackSense remembers what it learns:
+
+```json
+{
+  "learnings": {
+    "authentication": {
+      "summary": "JWT with PyJWT, 15min expiry",
+      "files": ["auth/jwt.py", "auth/middleware.py"]
+    }
+  },
+  "patterns": {
+    "error_handling": "Return JSON with status and message"
+  }
+}
+```
+
+---
+
+## 🔐 License System
+
+StackSense uses a secure license system:
+
+```bash
+# View status
+stacksense status
+
+# Activate key
+stacksense set-key YOUR-KEY
+```
+
+---
+
+## 📚 Documentation
+
+Full documentation: [stacksense-docs.vercel.app](https://stacksense-docs.vercel.app/)
+
+### Additional Docs
+- [Known Limitations](docs/limitations.md) - Free model behavior and workarounds
+- [AI Models](docs/ai-models.md) - Provider setup and model recommendations
+- [Chat Interface](docs/chat-interface.md) - Commands and features
+- [Diagram System](docs/DIAGRAM_SYSTEM_README.md) - Architecture visualization
+
+---
+
+## 💬 Community
+
+Join our Discord: [discord.gg/stacksense](https://discord.gg/stacksense)
+
+---
+
+## 📜 License
+
+MIT License. See [LICENSE.md](license/LICENSE.md) for full details.
+
+Copyright (c) 2024 Pilgrimstack.
