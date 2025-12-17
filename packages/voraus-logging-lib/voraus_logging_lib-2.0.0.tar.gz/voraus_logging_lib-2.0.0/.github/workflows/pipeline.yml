@@ -1,0 +1,91 @@
+name: CI pipeline
+
+permissions:
+  contents: write
+  id-token: write
+  issues: write
+  pages: write
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - "main"
+    tags:
+      - "*"
+
+jobs:
+  tests-and-coverage:
+    uses: ./.github/workflows/tests_and_coverage.yml
+    secrets: inherit
+  linting:
+    uses: ./.github/workflows/linting.yml
+  build:
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+  publish-pypi:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+    needs:
+      - tests-and-coverage
+      - linting
+      - build
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        env:
+          url: https://pypi.org/p/voraus-logging-lib
+
+  create-github-release:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+    needs:
+      - publish-pypi
+      - publish-docs
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Run JReleaser
+        uses: jreleaser/release-action@v2
+        with:
+          version: 1.13.1
+        env:
+          JRELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JRELEASER_PROJECT_VERSION: ${{ github.ref_name }}
+
+  publish-docs:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+    needs:
+      - tests-and-coverage
+      - linting
+      - build
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: docs
+          path: docs
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

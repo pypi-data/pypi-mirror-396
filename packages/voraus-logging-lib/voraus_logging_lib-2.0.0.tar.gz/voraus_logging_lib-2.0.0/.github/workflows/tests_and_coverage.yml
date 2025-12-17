@@ -1,0 +1,57 @@
+name: Tests & Coverage
+
+on: [workflow_call]
+
+
+jobs:
+  test-python:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+
+    - uses: astral-sh/setup-uv@v7
+
+    - name: Run tests
+      run: uv run tox
+
+    - name: Upload coverage artifact
+      if: matrix.os == 'ubuntu-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-${{ matrix.python-version }}
+        path: reports/.coverage.*test
+        include-hidden-files: true
+
+  coverage-python:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: test-python
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Download all coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+          path: reports
+
+      - uses: astral-sh/setup-uv@v7
+
+
+      - name: Combine coverage results
+        run: uv run tox run -e combine-test-reports
+
+      - name: Upload combined python coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-coverage-report
+          path: reports/coverage-python.xml

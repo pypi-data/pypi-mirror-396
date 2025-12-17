@@ -1,0 +1,240 @@
+[build-system]
+requires = ["setuptools>=42", "wheel", "setuptools_scm[toml]~=9.0"]
+build-backend = "setuptools.build_meta"
+
+# Enables the usage of setuptools_scm
+[tool.setuptools_scm]
+
+
+[project]
+name = "voraus-logging-lib"
+authors = [
+    { name = "Jan-Frederik Schmidt", email = "jan-frederik.schmidt@vorausrobotik.com" },
+]
+description = "A library that helps with setting up the logger compliant to our coding and system guidelines."
+license = "MIT"
+license-files = ["LICEN[CS]E*"]
+readme = { file = "README.md", content-type = "text/markdown" }
+urls.Repository = "https://github.com/vorausrobotik/voraus-logging-lib"
+requires-python = ">=3.11"
+dynamic = ["version"]  # Uses setuptools_scm to determine the version
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: Implementation :: PyPy",
+    "Typing :: Typed",
+]
+
+dependencies = [
+    # Begin template-managed dependencies
+    "importlib-metadata",
+    # End template-managed dependencies
+    # Add additional runtime dependencies below this line
+    "rich",
+]
+
+# Add CLI entry points here
+[project.scripts]
+# Syntax: <CLI command> = "<import name>.<module>:<object>"
+# For example:
+# voraus-logging-lib = "voraus_logging_lib.cli.main:app"
+
+[tool.setuptools.package-data]
+"*" = [
+    "py.typed"
+]
+
+# Optionally: Add more package data here, for example:
+# "voraus_logging_lib" = [
+#     "assets/**",  # Recursively adds all files in src/voraus_logging_lib/assets/** to the package
+# ]
+
+[dependency-groups]
+dev = [
+    {include-group = "tox"},
+    {include-group = "lint"},
+    {include-group = "test"},
+    {include-group = "doc"},
+    {include-group = "build"},
+    {include-group = "ci"},
+]
+lint = [
+    {include-group = "lint-template"},
+    # Add additional linting dependencies here
+]
+test = [
+    {include-group = "test-template"},
+    # Add additional testing dependencies here
+]
+doc = [
+    {include-group = "doc-template"},
+    # Add additional documentation dependencies below this line
+]
+build = [
+    {include-group = "build-template"},
+    # Add additional build dependencies below this line
+]
+
+ci = [
+    {include-group = "ci-template"},
+    # Add additional CI dependencies below this line
+]
+
+###########################################################
+# The following dependencies are managed via the template.#
+# Do not modify them manually to prevent conflicts during #
+# template updates.                                       #
+###########################################################
+
+tox = ["tox~=4.0", "tox-uv~=1.0"]
+lint-template = [
+    "mypy~=1.0",
+    "pytest~=9.0",
+    "types-docutils",
+    "types-setuptools",
+    "jinja2~=3.0",
+    "ruff~=0.0",
+    "codespell~=2.0",
+]
+test-template = [
+    "pytest~=9.0",
+    "pytest-randomly~=4.0",
+    "pytest-cov~=7.0",
+    "coverage[toml]~=7.0",
+]
+doc-template = [
+    "sphinx~=8.0",
+    "sphinxawesome-theme~=5.0",
+    "sphinx-selective-exclude~=1.0",
+    "sphinx-autodoc-typehints~=3.0",
+    "pymarkdownlnt~=0.0",
+    "doc8~=2.0",
+    "pip-licenses-cli~=3.0",
+    "jinja2~=3.0",
+    "snowballstemmer~=3.0",
+    "myst-parser~=4.0",
+]
+
+build-template = [
+    "build[uv]~=1.0"
+]
+ci-template = [
+    "voraus-pipeline-utils~=0.0",
+    "twine~=6.0"
+]
+
+########################################
+# End of template-managed dependencies #
+########################################
+
+[tool.uv]
+default-groups = ["tox"]
+
+[tool.pyright]
+include = ["src/**", "tests/**", "docs/**"]
+
+[tool.ruff]
+line-length = 120
+src = ["src"]
+extend-exclude = [
+    "conf.py",
+    "log",
+    "docs/_scripts/generate_license_information.py",
+]
+target-version = "py311"
+lint.select = ["ALL"]
+lint.ignore = [
+    "COM812",   # Recommended to ignore when using the ruff formatter
+    "ISC001",   # Recommended to ignore when using the ruff formatter
+]
+lint.flake8-type-checking.runtime-evaluated-base-classes = ["pydantic.BaseModel"]
+lint.pep8-naming.extend-ignore-names = ["is_[A-Z]*", "on_enter_[A-Z]*"]
+lint.pydocstyle.convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "ANN401",   # `Any` type annotation
+    "D103",     # Missing docstring in public function
+    "FBT001",   # Parametrized tests are allowed to have boolean typed positional arguments in their definitions
+    "PLR0913",  # Matrix tests tend to have more 'arguments' than regular functions
+    "S101",     # Use of `assert` detected
+    "S311",     # Random numbers in our tests aren't for cryptographic purposes
+    "SLF001",   # Private member access
+    "T201",     # Allow print in tests as this is preferred over logging
+]
+"**/__init__.py" = [
+    "F401", # Imported but unused
+    "F403", # Wildcard imports
+]
+"docs/docs_src/**" = [
+    "S101", # Assert found
+]
+
+[tool.mypy]
+# Functions need to be annotated
+disallow_untyped_defs = true
+warn_unused_ignores = true
+exclude = [
+    "voraus-logging-lib-\\d+", # Ignore temporary folder created by setuptools when building an sdist
+    "venv.*/",
+    "log/",
+    "build/",
+    "dist/",
+]
+
+[tool.pytest.ini_options]
+addopts = """
+    -vv
+    --doctest-modules
+    --import-mode=append
+    --ignore-glob=voraus-logging-lib-[0-9]*
+    --ignore="docs/_scripts"
+    --cov=voraus_logging_lib
+    --cov-config=pyproject.toml
+    --cov-report=
+    """
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.paths]
+# Maps coverage measured in site-packages to source files in src
+source = ["src/", ".tox/*/lib/python*/site-packages/"]
+
+[tool.coverage.report]
+exclude_also = ["\\.\\.\\.", "if TYPE_CHECKING:"]
+partial_branches = ["pragma: no branch", "if not TYPE_CHECKING:"]
+
+[tool.coverage.html]
+directory = "reports/coverage_html"
+
+[tool.coverage.xml]
+output = "reports/coverage-python.xml"
+
+[tool.codespell]
+skip = './reports, ./build, ./dist, ./venv*, ./docs/build, ./docs/license_compliance.rst, ./.*'
+count = true
+quiet-level = 2
+
+[[tool.mypy.overrides]]
+module = [
+    # Ignore packages that do not provide type hints here
+    # For example, add "dash.*" to ignore all imports from Dash
+    "sphinxawesome_theme.postprocess",
+]
+ignore_missing_imports = true
+
+[tool.doc8]
+max-line-length = 120
+ignore-path = ["docs/license_compliance.rst", "docs/build/**"]
+
+[tool.pymarkdown]
+plugins.md013.code_block_line_length = 120
+plugins.md013.heading_line_length = 120
+plugins.md013.line_length = 120
+plugins.md007.indent = 4
