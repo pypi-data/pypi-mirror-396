@@ -1,0 +1,126 @@
+# Timesat
+
+**Timesat** provides Python bindings for the [TIMESAT](https://github.com/TIMESAT) algorithms — a suite of routines for analyzing time-series of satellite remote sensing data.  
+This package wraps the original **Fortran-based TIMESAT core** into a modern Python interface for convenient use in data analysis and research workflows.
+
+---
+
+## Features
+
+- Native Python bindings for the **TIMESAT Fortran core**
+- Cross-platform precompiled binaries (macOS Intel & ARM, Linux, Windows)
+- Supports **Python 3.10–3.12**
+- Compatible with **NumPy ≥ 2.0**
+- Provides high performance through the compiled Fortran backend
+- Simple API for fitting and extracting vegetation metrics from time-series data
+
+---
+
+## Installation
+
+You can install the latest release directly from PyPI:
+
+```bash
+pip install timesat
+```
+
+---
+
+## Version log
+
+### 4.1.12 – Debugged Windows parallel processing
+
+### 4.1.11 – Added parallel processing
+
+### 4.1.10 – Improved NoData Handling
+Pixels whose land-cover class is not included in the SETTINGS table now receive a proper NoData value instead of zero.
+
+### 4.1.9 – Performance release
+- Build system updated to compile the Fortran core with high-optimization for improved runtime performance.
+- Minor internal clean-ups to keep behaviour consistent across platforms.
+- Note: Due to more aggressive optimization, very small floating-point differences (round-off level) may occur compared to earlier versions.
+
+### 4.1.8 – Bugfixes and QA improvements
+- **Fixed:** Issue related to handling of negative slopes in the time-series processing.
+- **Added:** Switch for VPP (vegetation peak/phenology) calculation to give users more control over how metrics are derived.
+- **Added:** `yfitqa` output for basic quality assessment of the fitted time-series.
+
+---
+
+## License
+SPDX-License-Identifier: LicenseRef-Proprietary-TIMESAT
+TIMESAT Python Bindings License
+© 2025 Zhanzhang Cai, Lars Eklundh, and Per Jönsson
+
+This software provides Python bindings to the proprietary TIMESAT Fortran core.
+Use of this software is governed by the license terms set forth below.
+Redistribution, modification, or commercial use is prohibited except as explicitly
+permitted in this license agreement or by written consent of the authors.
+
+## PROPRIETARY LICENSE AGREEMENT
+
+Copyright (c) 2025 Zhanzhang Cai, Lars Eklundh, Per Jönsson. 
+All rights reserved.
+
+1. License Grant
+You are granted a non-transferable, non-exclusive, revocable license 
+to use the precompiled binary libraries distributed with this package 
+solely for the purpose of building and running the Python interface code 
+distributed with this repository. 
+
+2. Restrictions
+You may NOT:
+- redistribute, sublicense, sell, lease, or otherwise transfer the Library 
+  or any derivative works to any third party;
+- reverse engineer, decompile, disassemble, or otherwise attempt to derive 
+  the source code of the Library;
+- modify, adapt, translate, or create derivative works based on the Library.
+
+3. Ownership
+The Library is and shall remain the exclusive property of 
+Zhanzhang Cai, Lars Eklundh, and Per Jönsson. 
+This license does not transfer to you any ownership rights.
+
+4. Termination
+This license is effective until terminated. 
+Violation of any of the above restrictions will result in automatic termination. 
+Upon termination, you must immediately cease using the Library 
+and destroy all copies in your possession.
+
+5. Disclaimer of Warranty
+The Library is provided "AS IS" without warranty of any kind, 
+express or implied, including but not limited to warranties of 
+merchantability or fitness for a particular purpose. 
+You assume all risks associated with the use of the Library.
+
+6. Limitation of Liability
+In no event shall Zhanzhang Cai, Lars Eklundh, and Per Jönsson 
+be liable for any damages (including, without limitation, 
+lost profits, business interruption, or lost information) 
+arising out of the use of or inability to use the Library.
+
+
+Contact:
+Dr. Zhanzhang Cai, zhanzhang.cai@nateko.lu.se
+Department of Physical Geography and Ecosystem Science
+Lund University, Sweden
+https://www.nateko.lu.se
+
+
+---
+
+## Citation
+
+If you use **TIMESAT** in your research, please cite the corresponding release on Zenodo:
+
+> Cai, Z., Eklundh, L., & Jönsson, P. (2025). *TIMESAT4:  is a software package for analysing time-series of satellite sensor data* (Version 4.1.x) [Computer software]. Zenodo.   
+> [https://doi.org/10.5281/zenodo.17369757](https://doi.org/10.5281/zenodo.17369757)
+
+---
+
+## Acknowledgments
+
+- [TIMESAT](https://www.nateko.lu.se/TIMESAT) — Original analysis framework for satellite time-series data.  
+- This project acknowledges the Swedish National Space Agency (SNSA), the European Environment Agency (EEA), and the European Space Agency (ESA) for their support and for providing access to satellite data and related resources that made this software possible.
+
+---
