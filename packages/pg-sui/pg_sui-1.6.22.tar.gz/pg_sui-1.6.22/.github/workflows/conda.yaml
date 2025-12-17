@@ -1,0 +1,148 @@
+name: conda
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      run_conda_build:
+        description: "Build and upload conda package"
+        required: false
+        default: "true"
+
+jobs:
+  tests:
+    name: Unit tests (pip)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Clean test artifacts
+        run: rm -rf dist build .pytest_cache tmp_test_output
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        env:
+          MPLCONFIGDIR: ${{ runner.temp }}/mpl
+        run: |
+          python -m pip install -U pip
+          python -m pip install ".[dev,gui]"
+
+      - name: Run tests
+        env:
+          MPLCONFIGDIR: ${{ runner.temp }}/mpl
+        run: pytest -q
+
+  clean:
+    name: Clean conda build cache
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up micromamba
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-name: conda-clean
+          create-args: >-
+            micromamba
+          init-shell: bash
+
+      - name: Clean conda build cache
+        run: |
+          micromamba clean --all --yes
+
+  conda-package:
+    name: Build conda package
+    runs-on: ${{ matrix.os }}
+    needs: [tests, clean]
+    if: |
+      startsWith(github.ref, 'refs/tags/v') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.run_conda_build == 'true')
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            subdir: linux-64
+          - os: macos-latest
+            subdir: osx-arm64
+    defaults:
+      run:
+        shell: bash -l {0}
+    env:
+      MPLCONFIGDIR: /tmp/mpl
+      # Resolve token from common secret names to avoid misconfiguration
+      UPLOAD_TOKEN: ${{ secrets.PGSUI_UPLOAD_TOKEN || secrets.CONDA_UPLOAD_TOKEN }}
+      CONDA_SUBDIR: ${{ matrix.subdir }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up micromamba
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-name: conda-build
+          create-args: >-
+            python=3.11
+            pip
+            conda-build
+            anaconda-client
+            -c conda-forge
+            -c defaults
+          init-shell: bash
+          cache-environment: true
+
+      - name: Build recipe
+        env:
+          PKG_VERSION: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          RAW_VERSION=${PKG_VERSION:-}
+          CLEAN_VERSION=${RAW_VERSION#v}
+          # Conda versions cannot contain hyphens or plus signs; normalize to dots (e.g., v1.6.14-dev2 -> 1.6.14.dev2)
+          CLEAN_VERSION=${CLEAN_VERSION//-/.}
+          CLEAN_VERSION=${CLEAN_VERSION//+/.}
+          export PKG_VERSION=${CLEAN_VERSION:-1.6.8}
+          export SETUPTOOLS_SCM_PRETEND_VERSION=${PKG_VERSION}
+          # Help conda/jinja resolve version even if .git metadata is absent
+          export GIT_DESCRIBE_TAG=${PKG_VERSION}
+          echo "Building conda package version: ${PKG_VERSION} for ${CONDA_SUBDIR}"
+          conda build conda/recipe --output-folder conda/dist -c btmartin721 -c conda-forge -c bioconda -c pytorch -c defaults
+
+      - name: Upload conda artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: conda-packages-${{ matrix.subdir }}
+          path: |
+            conda/dist/**/*.tar.bz2
+            conda/dist/**/*.conda
+
+      - name: Verify upload token
+        run: |
+          set -euo pipefail
+          if [[ -z "${UPLOAD_TOKEN:-}" ]]; then
+            echo "No Anaconda token available. Set one of the secrets: PGSUI_UPLOAD_TOKEN, CONDA_UPLOAD_TOKEN, ANACONDA_API_TOKEN, ANACONDA_TOKEN, or ANACONDA_UPLOAD_TOKEN."
+            exit 1
+          fi
+          echo "::add-mask::${UPLOAD_TOKEN}"
+
+      - name: Publish to Anaconda
+        run: |
+          set -euo pipefail
+          files=$(find conda/dist -type f \( -name '*.tar.bz2' -o -name '*.conda' \))
+          if [[ -z "${files}" ]]; then
+            echo "No conda artifacts found to upload."
+            exit 1
+          fi
+          # macOS bash (3.2) lacks mapfile/readarray, so rely on word splitting
+          anaconda -t "$UPLOAD_TOKEN" upload --label main --user btmartin721 $files
