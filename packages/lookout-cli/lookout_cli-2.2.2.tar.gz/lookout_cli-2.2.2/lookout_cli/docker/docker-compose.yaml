@@ -1,0 +1,82 @@
+name: lookout
+
+services:
+  lookout_core:
+    container_name: lookout_core
+    image: ghcr.io/greenroom-robotics/lookout_core:${LOOKOUT_VERSION:-latest}
+    volumes:
+      - /dev/shm:/dev/shm
+      - /tmp:/tmp
+      - ~/.config/greenroom:/home/ros/.config/greenroom
+      - ${LOOKOUT_RECORDING_DIR:-/tmp/rosbags}:/home/ros/rosbags
+      - ${LOOKOUT_LOG_DIR:-/tmp/log}:/home/ros/.ros/log
+      - ${LOOKOUT_MODEL_DIR:-/tmp/log}:/home/ros/models
+    command: ${LOOKOUT_CORE_COMMAND:-tail -f /dev/null}
+    privileged: true
+    ipc: host
+    pid: host
+    environment:
+      - ROS_DOMAIN_ID
+      - ROS_AUTOMATIC_DISCOVERY_RANGE
+      - RMW_IMPLEMENTATION
+      - LOOKOUT_CONFIG
+      - LOOKOUT_CONFIG_DIR
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility,video,graphics
+      - DISPLAY
+      - QT_X11_NO_MITSHM=1
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    stop_signal: SIGINT
+
+  lookout_ui:
+    container_name: lookout_ui
+    image: ghcr.io/greenroom-robotics/lookout_ui:${LOOKOUT_VERSION:-latest}
+    environment:
+      VITE_LOOKOUT_NAMESPACE_VESSEL: ${LOOKOUT_NAMESPACE_VESSEL}
+      USE_HTTPS: false
+    stop_signal: SIGINT
+
+  lookout_greenstream:
+    container_name: lookout_greenstream
+    image: ghcr.io/greenroom-robotics/lookout_greenstream:${LOOKOUT_VERSION:-latest}
+    volumes:
+      - /dev:/dev
+      - /dev/shm:/dev/shm # Explicit shm mounting to ensure os shm size is used
+      - /tmp:/tmp
+      - ~/.config/greenroom:/home/ros/.config/greenroom
+      - ${LOOKOUT_LOG_DIR:-/tmp/log}:/home/ros/.ros/log
+    command: ${LOOKOUT_GREENSTREAM_COMMAND:-tail -f /dev/null}
+    privileged: true
+    ipc: host
+    pid: host
+    environment:
+      - ROS_DOMAIN_ID
+      - ROS_AUTOMATIC_DISCOVERY_RANGE
+      - RMW_IMPLEMENTATION
+      - LOOKOUT_CONFIG
+      - LOOKOUT_CONFIG_DIR
+      - GST_DEBUG=2
+      - USE_HTTPS=false
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility,video,graphics
+      - DISPLAY
+      - QT_X11_NO_MITSHM=1
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    stop_signal: SIGINT
+
+  lookout_docs:
+    container_name: lookout_docs
+    image: ghcr.io/greenroom-robotics/lookout_docs:${LOOKOUT_VERSION:-latest}
+    stop_signal: SIGINT
