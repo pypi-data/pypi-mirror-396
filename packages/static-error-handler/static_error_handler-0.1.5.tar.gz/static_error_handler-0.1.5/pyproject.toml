@@ -1,0 +1,83 @@
+[build-system]
+requires = ["hatchling>=1.18"]
+build-backend = "hatchling.build"
+
+[project]
+name = "static_error_handler"
+dynamic = ["version"]
+description = "A minimal Python adaptation of Rust's Result type"
+readme = "README.md"
+authors = [{ name = "J-joon" }]
+license = { file = "LICENSE" }
+requires-python = ">=3.13"
+
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
+
+[project.optional-dependencies]
+dev = [
+  "ruff>=0.6",
+  "mypy>=1.11",
+  "pytest>=8.0",
+  "coverage[toml]>=7.6",
+  "pre-commit>=3.8",
+]
+
+[tool.hatch.version]
+path = "src/static_error_handler/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/static_error_handler"]
+include = ["src/static_error_handler/py.typed"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "src/static_error_handler/**",
+  "tests/**",
+  "README.md",
+  "LICENSE",
+  "pyproject.toml",
+]
+
+[tool.hatch.envs.dev]
+features = ["dev"]
+
+[tool.hatch.envs.dev.scripts]
+lint = "ruff check ."
+format = "ruff format ."
+typecheck = "mypy src tests"
+test = "pytest -q"
+cov = "coverage run -m pytest && coverage report -m"
+
+[tool.ruff]
+line-length = 100
+# omit target-version => inferred from requires-python by tooling / interpreter context
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+ignore = ["E203"]
+
+[tool.mypy]
+# omit python_version => uses the interpreter that runs mypy (your uv venv)
+strict = true
+warn_unreachable = true
+show_error_codes = true
+pretty = true
+packages = ["static_error_handler"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.coverage.run]
+branch = true
+source = ["static_error_handler"]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+fail_under = 95
