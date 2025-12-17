@@ -1,0 +1,465 @@
+Metadata-Version: 2.4
+Name: oblique-classifier-1
+Version: 0.3.0
+Summary: OC1 Oblique Decision Tree - Implementation of Murthy et al. (AAAI-1992)
+Home-page: https://github.com/HxRJILI/Oblique-Classifier-1
+Author: Fatima-Ezzahrae AKEBLI, Yasser
+Author-email: RJILI Houssam <houssam.rjili@example.com>
+Maintainer-email: RJILI Houssam <houssam.rjili@example.com>
+License: MIT
+Project-URL: Homepage, https://github.com/HxRJILI/Oblique-Classifier-1
+Project-URL: Documentation, https://github.com/HxRJILI/Oblique-Classifier-1#readme
+Project-URL: Repository, https://github.com/HxRJILI/Oblique-Classifier-1.git
+Project-URL: Issues, https://github.com/HxRJILI/Oblique-Classifier-1/issues
+Keywords: machine-learning,decision-tree,oblique-tree,classification,oc1,murthy
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Science/Research
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Education
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Classifier: Topic :: Scientific/Engineering :: Information Analysis
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: numpy>=1.20.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0.0; extra == "dev"
+Requires-Dist: build; extra == "dev"
+Requires-Dist: twine; extra == "dev"
+Provides-Extra: viz
+Requires-Dist: matplotlib>=3.5.0; extra == "viz"
+Dynamic: home-page
+Dynamic: license-file
+Dynamic: requires-python
+
+# OC1: Oblique Classifier 1
+
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Tests](https://img.shields.io/badge/tests-236%20passed-green.svg)]()
+
+A Python implementation of the **OC1 oblique decision tree algorithm** as described in:
+
+> **"OC1: A randomized algorithm for building oblique decision trees"**  
+> Sreerama K. Murthy, Simon Kasif, Steven Salzberg, and Richard Beigel  
+> *AAAI-1992*
+
+## Overview
+
+OC1 (Oblique Classifier 1) builds decision trees using **oblique hyperplanes** (linear combinations of attributes) rather than axis-parallel splits. This often results in **smaller and more accurate trees** than traditional methods like C4.5 or CART, especially for datasets with diagonal or complex decision boundaries.
+
+### Key Features
+
+- **Oblique Splits**: Uses hyperplanes of the form `∑(aᵢxᵢ) + a_{d+1} = 0`
+- **Hill-Climbing Optimization**: Sequential coefficient perturbation with local search
+- **Randomization**: Multiple random restarts to escape local minima
+- **Impurity Measures**: Sum Minority (SM) and Max Minority (MM)
+- **Pruning**: Impurity-based and Reduced Error Pruning (REP)
+- **Evaluation Tools**: Cross-validation, confusion matrix, classification report
+- **Visualization**: Decision boundary and hyperplane plotting (requires matplotlib)
+- **Export Methods**: JSON, dictionary, and DOT format for tree visualization
+
+## Team Members
+
+| GitHub Username | Name |
+|-----------------|------|
+| **HxRJILI** | RJILI Houssam |
+| **Kim8x-srscb** | Fatima-Ezzahrae AKEBLI |
+| **Yasseriads** | Yasser |
+
+---
+
+## Installation
+
+### Prerequisites
+
+- Python 3.8 or higher
+- NumPy
+
+### Install from Source
+
+```bash
+# Clone the repository
+git clone https://github.com/HxRJILI/Oblique-Classifier-1.git
+cd Oblique-Classifier-1
+
+# Create virtual environment (recommended)
+python -m venv .venv
+.venv\Scripts\activate  # Windows
+# source .venv/bin/activate  # Linux/Mac
+
+# Install in development mode
+pip install -e .
+
+# Or install dependencies directly
+pip install numpy
+```
+
+### Install Development Dependencies
+
+```bash
+pip install -r requirements-dev.txt
+```
+
+---
+
+## Quick Start
+
+```python
+import numpy as np
+from oc1 import ObliqueDecisionTree
+
+# Create sample data
+X = np.array([
+    [0, 0], [0.2, 0.1], [0.1, 0.2],  # Class 0
+    [1, 1], [0.8, 0.9], [0.9, 0.8],  # Class 1
+])
+y = np.array([0, 0, 0, 1, 1, 1])
+
+# Train oblique decision tree
+tree = ObliqueDecisionTree(
+    max_depth=5,
+    impurity_measure="sm",  # Sum Minority
+    n_restarts=5,           # Random restarts
+    random_state=42,
+)
+tree.fit(X, y)
+
+# Make predictions
+predictions = tree.predict(X)
+print(f"Predictions: {predictions}")
+
+# Get accuracy
+accuracy = tree.score(X, y)
+print(f"Accuracy: {accuracy:.2%}")
+
+# View tree structure
+print(tree.print_tree())
+```
+
+---
+
+## API Reference
+
+### ObliqueDecisionTree
+
+```python
+from oc1 import ObliqueDecisionTree
+
+tree = ObliqueDecisionTree(
+    max_depth=None,           # Maximum tree depth (None = unlimited)
+    min_samples_leaf=1,       # Minimum samples per leaf
+    min_samples_split=2,      # Minimum samples to split
+    impurity_measure="sm",    # "sm" (Sum Minority) or "mm" (Max Minority)
+    max_iterations=100,       # Hill-climbing iterations per node
+    n_restarts=5,             # Random restarts (1 = deterministic)
+    random_state=None,        # Random seed for reproducibility
+    impurity_threshold=0.0,   # Stop splitting threshold
+    verbose=False,            # Enable verbose logging
+    log_file=None,            # Optional log file path
+)
+```
+
+#### Methods
+
+| Method | Description |
+|--------|-------------|
+| `fit(X, y)` | Train the decision tree |
+| `predict(X)` | Predict class labels |
+| `predict_proba(X)` | Predict class probabilities |
+| `score(X, y)` | Calculate classification accuracy |
+| `get_depth()` | Get maximum tree depth |
+| `get_n_leaves()` | Count number of leaf nodes |
+| `get_hyperplanes()` | Get all splitting hyperplanes |
+| `print_tree()` | Get string representation of tree |
+| `prune(method, ...)` | Prune the tree |
+| `to_dict()` | Export tree as dictionary |
+| `to_json()` | Export tree as JSON string |
+| `to_dot()` | Export tree in DOT format |
+| `feature_importances_` | Get feature importance scores |
+
+### Synthetic Datasets
+
+```python
+from oc1.data import (
+    make_diagonal_dataset,       # 45° diagonal boundary
+    make_xor_dataset,            # XOR problem
+    make_oblique_classification, # Custom angle boundary
+    make_multiclass_oblique,     # Multi-class sectors
+    make_3d_oblique,             # 3D oblique plane
+)
+
+# Example
+X, y = make_diagonal_dataset(n_samples=100, random_state=42)
+```
+
+### Evaluation Tools
+
+```python
+from oc1.evaluation import (
+    train_test_split,      # Split data into train/test sets
+    cross_validate,        # K-fold cross-validation
+    confusion_matrix,      # Classification confusion matrix
+    classification_report, # Precision, recall, F1-score
+)
+```
+
+### Visualization (requires matplotlib)
+
+```python
+from oc1.visualization import (
+    plot_decision_boundary_2d,  # Plot 2D decision regions
+    plot_hyperplanes_2d,        # Plot all hyperplanes
+)
+```
+
+---
+
+## Usage Examples
+
+### Pruning
+
+```python
+from oc1 import ObliqueDecisionTree
+from oc1.evaluation import train_test_split
+from oc1.data import make_diagonal_dataset
+
+# Generate data
+X, y = make_diagonal_dataset(n_samples=200, random_state=42)
+X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2)
+
+# Build tree
+tree = ObliqueDecisionTree(max_depth=10, random_state=42)
+tree.fit(X_train, y_train)
+
+# Prune using Reduced Error Pruning
+tree.prune(method="rep", X_val=X_val, y_val=y_val)
+
+# Or prune by impurity threshold
+tree.prune(method="impurity", impurity_threshold=2.0)
+```
+
+### Cross-Validation
+
+```python
+from oc1 import ObliqueDecisionTree
+from oc1.evaluation import cross_validate
+from oc1.data import make_diagonal_dataset
+
+X, y = make_diagonal_dataset(n_samples=200, random_state=42)
+
+tree = ObliqueDecisionTree(max_depth=5, random_state=42)
+
+# 5-fold cross-validation
+results = cross_validate(tree, X, y, cv=5, random_state=42)
+
+print(f"Mean accuracy: {results['test_score'].mean():.3f}")
+print(f"Std accuracy: {results['test_score'].std():.3f}")
+```
+
+### Logging
+
+```python
+from oc1 import ObliqueDecisionTree
+from oc1.data import make_diagonal_dataset
+
+X, y = make_diagonal_dataset(n_samples=100, random_state=42)
+
+# Enable verbose logging
+tree = ObliqueDecisionTree(max_depth=5, verbose=True, random_state=42)
+tree.fit(X, y)
+
+# Or log to file
+tree = ObliqueDecisionTree(
+    max_depth=5,
+    log_file="tree_construction.log",
+    random_state=42
+)
+tree.fit(X, y)
+
+# Get log summary
+summary = tree.logger.get_log_summary()
+print(f"Nodes created: {summary['nodes_created']}")
+```
+
+### Visualization
+
+```python
+from oc1 import ObliqueDecisionTree
+from oc1.visualization import plot_decision_boundary_2d, plot_hyperplanes_2d
+from oc1.data import make_diagonal_dataset
+import matplotlib.pyplot as plt
+
+X, y = make_diagonal_dataset(n_samples=100, random_state=42)
+
+tree = ObliqueDecisionTree(max_depth=5, random_state=42)
+tree.fit(X, y)
+
+# Plot decision boundary
+plot_decision_boundary_2d(tree, X, y)
+plt.show()
+
+# Plot hyperplanes
+plot_hyperplanes_2d(tree, X)
+plt.show()
+```
+
+### Export Tree
+
+```python
+from oc1 import ObliqueDecisionTree
+import json
+
+tree = ObliqueDecisionTree(max_depth=3, random_state=42)
+tree.fit(X, y)
+
+# Export as dictionary
+tree_dict = tree.to_dict()
+
+# Export as JSON
+tree_json = tree.to_json(indent=2)
+with open("tree.json", "w") as f:
+    f.write(tree_json)
+
+# Export as DOT (for Graphviz)
+dot_string = tree.to_dot()
+with open("tree.dot", "w") as f:
+    f.write(dot_string)
+```
+
+---
+
+## Project Structure
+
+```
+Oblique-Classifier-1/
+├── oc1/
+│   ├── __init__.py              # Package exports
+│   ├── core/
+│   │   ├── node.py              # ObliqueTreeNode class
+│   │   ├── tree.py              # ObliqueDecisionTree classifier
+│   │   ├── splits.py            # Impurity measures, partitioning
+│   │   ├── hill_climb.py        # Coefficient perturbation
+│   │   └── logging.py           # TreeConstructionLogger
+│   ├── data/
+│   │   └── datasets.py          # Synthetic test datasets
+│   ├── evaluation/
+│   │   └── __init__.py          # Evaluation tools
+│   ├── visualization/
+│   │   └── __init__.py          # Plotting utilities
+│   └── tests/
+│       ├── task1_tests/         # Core tree construction tests
+│       ├── task2_tests/         # Randomization tests
+│       └── task3_tests/         # Pruning & evaluation tests
+├── examples/
+│   ├── task2_demo.py            # Task 2 demonstration
+│   └── task3_demo.py            # Task 3 demonstration
+├── requirements.txt             # Runtime dependencies
+├── requirements-dev.txt         # Development dependencies
+├── setup.py                     # Package installation
+└── TESTING_GUIDE.md             # Testing documentation
+```
+
+---
+
+## Running Tests
+
+```bash
+# Run all tests (236 tests)
+pytest oc1/tests/ -v
+
+# Run specific task tests
+pytest oc1/tests/task1_tests/ -v  # Core tree construction
+pytest oc1/tests/task2_tests/ -v  # Randomization
+pytest oc1/tests/task3_tests/ -v  # Pruning & evaluation
+
+# Run with coverage report
+pytest oc1/tests/ --cov=oc1 --cov-report=html
+
+# Run specific test file
+pytest oc1/tests/task1_tests/test_tree.py -v
+```
+
+---
+
+## Paper Fidelity
+
+This implementation follows the original OC1 paper exactly:
+
+### Task 1: Core Tree Construction
+
+| Feature | Paper Section | Implementation |
+|---------|---------------|----------------|
+| Hyperplane equation `∑(aᵢxᵢ) + a_{d+1} = 0` | Section 2 | `evaluate_hyperplane()` |
+| Partition rule (V > 0 → left) | Section 2 | `partition_data()` |
+| Sum Minority impurity | Section 2.4 | `calculate_impurity()` |
+| Max Minority impurity | Section 2.4 | `calculate_impurity()` |
+| Perturbation formula (Eq. 1): `Uⱼ = aₘxⱼᵐ - Vⱼ/xⱼᵐ` | Section 2.2 | `compute_u_values()` |
+| Sequential hill-climbing | Section 2.1 | `hill_climb()` |
+
+### Task 2: Randomization
+
+| Feature | Paper Section | Implementation |
+|---------|---------------|----------------|
+| Random hyperplane initialization | Section 2.3 | `initialize_hyperplane(method="random")` |
+| K random trials | Section 2.3 | `n_restarts` parameter |
+| Multi-coefficient perturbation | Section 2 | `perturb_multiple_coefficients()` |
+| Random perturbation order | Section 2 | `use_random_perturbation_order` |
+
+### Task 3: Pruning & Evaluation
+
+| Feature | Paper Section | Implementation |
+|---------|---------------|----------------|
+| Impurity-based pruning | Section 2.4 | `prune(method="impurity")` |
+| Reduced Error Pruning | Section 2.4 | `prune(method="rep")` |
+| Stopping criteria | Section 2.4 | `max_depth`, `min_samples_leaf`, `impurity_threshold` |
+
+---
+
+## Why Oblique Trees?
+
+Axis-parallel decision trees (like CART or C4.5) can only create splits perpendicular to feature axes. For datasets with diagonal decision boundaries, this requires many splits to approximate the true boundary.
+
+**Oblique trees** use hyperplanes that can be oriented at any angle, often resulting in:
+- ✅ **Smaller trees** (fewer nodes)
+- ✅ **Better accuracy** on oblique data
+- ✅ **More interpretable** decision boundaries
+
+```
+Axis-Parallel Tree (many splits)     Oblique Tree (one split)
+        |                                    \
+   -----+-----                                \
+        |                                      \
+   -----+-----           vs                     \
+        |                                        \
+   -----+-----                                    \
+```
+
+---
+
+## References
+
+```bibtex
+@inproceedings{murthy1992oc1,
+  title={OC1: A randomized algorithm for building oblique decision trees},
+  author={Murthy, Sreerama K and Kasif, Simon and Salzberg, Steven and Beigel, Richard},
+  booktitle={Proceedings of the National Conference on Artificial Intelligence (AAAI)},
+  pages={322--327},
+  year={1992}
+}
+```
+
+---
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
