@@ -1,0 +1,333 @@
+Metadata-Version: 2.4
+Name: fiddler-langgraph
+Version: 1.1.0
+Summary: Python SDK for instrumenting GenAI Applications with Fiddler
+Home-page: https://fiddler.ai
+Author: Fiddler AI
+Author-email: Fiddler AI <support@fiddler.ai>
+License-Expression: Apache-2.0
+Project-URL: Homepage, https://fiddler.ai
+Project-URL: Documentation, https://docs.fiddler.ai
+Project-URL: Repository, https://github.com/fiddler-labs/fiddler-sdk
+Project-URL: Issues, https://github.com/fiddler-labs/fiddler-sdk/issues
+Keywords: fiddler,ai,genai,llm,monitoring,observability,instrumentation,langgraph,langchain,opentelemetry
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: System :: Monitoring
+Classifier: Topic :: Software Development :: Quality Assurance
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: pip>=21.0
+Requires-Dist: opentelemetry-api<=1.35.0,>=1.19.0
+Requires-Dist: opentelemetry-sdk<=1.35.0,>=1.19.0
+Requires-Dist: opentelemetry-instrumentation<=0.56b0,>=0.40b0
+Requires-Dist: opentelemetry-exporter-otlp-proto-http<=1.35.0,>=1.19.0
+Requires-Dist: pydantic>=2.0
+Provides-Extra: dev
+Requires-Dist: pytest>=8.3.5; extra == "dev"
+Requires-Dist: pytest-cov>=6.1.1; extra == "dev"
+Requires-Dist: mypy>=1.16.1; extra == "dev"
+Requires-Dist: black>=25.1.0; extra == "dev"
+Requires-Dist: isort>=6.0; extra == "dev"
+Requires-Dist: flake8>=7.2.0; extra == "dev"
+Requires-Dist: pre-commit>=4.2.0; extra == "dev"
+Requires-Dist: bandit>=1.8.5; extra == "dev"
+Requires-Dist: pylint>=3.3.7; extra == "dev"
+Requires-Dist: ruff>=0.12.0; extra == "dev"
+Requires-Dist: nox>=2025.5.1; extra == "dev"
+Requires-Dist: tomli==2.2.1; extra == "dev"
+Requires-Dist: langgraph<=1.0.1,>=0.3.28; extra == "dev"
+Requires-Dist: langchain-community<=1.0.0,>=0.3.27; extra == "dev"
+Requires-Dist: langchain-openai<=1.0.0,>=0.2.14; extra == "dev"
+Requires-Dist: langchain-chroma<=1.0.0,>=0.1.6; extra == "dev"
+Requires-Dist: langgraph-supervisor>=0.0.1; extra == "dev"
+Dynamic: author
+Dynamic: home-page
+Dynamic: requires-python
+
+# Fiddler LangGraph SDK
+
+SDK for instrumenting GenAI Applications with Fiddler using OpenTelemetry and LangGraph.
+
+## Installation
+
+```bash
+pip install fiddler-langgraph
+```
+
+**Note**: This SDK supports LangGraph versions >= 0.3.28 and <= 1.0.2 If you already have LangGraph installed in your environment, the SDK will work with your existing version as long as it falls within this range. If LangGraph is not installed or is outside the supported range, you'll get a helpful error message with installation instructions.
+
+### With Example Dependencies
+
+To run the example scripts in the `examples/` directory:
+
+```bash
+pip install fiddler-langgraph[examples]
+```
+
+### Development Dependencies
+
+For development and testing:
+
+```bash
+pip install fiddler-langgraph[dev]
+```
+
+## Quick Start
+
+```python
+from fiddler_langgraph import FiddlerClient
+
+# Initialize the FiddlerClient with basic configuration
+client = FiddlerClient(
+    url="https://your-instance.fiddler.ai",
+    api_key="fdl_api_key",
+    application_id="fdl_application_id"  # Must be a valid UUID4
+)
+
+# For langgraph, you can instrument like below
+from fiddler_langgraph.tracing.instrumentation import LangGraphInstrumentor, set_llm_context, set_conversation_id
+LangGraphInstrumentor(client).instrument()
+
+# Set additional context for LLM processing
+from langchain_openai import ChatOpenAI
+model = ChatOpenAI(model='gpt-4o-mini')
+set_llm_context(model, "Previous conversation context")
+
+# Set conversation ID for multi-turn conversations
+from langgraph.graph import StateGraph
+workflow = StateGraph(state_schema=State)
+app = workflow.compile()
+set_conversation_id("conversation_123")
+app.invoke({"messages": [{"role": "user", "content": "Write a novel"}]})
+```
+
+## LangGraph Usage Examples
+
+### Basic Instrumentation
+
+```python
+from fiddler_langgraph.tracing.instrumentation import LangGraphInstrumentor
+
+# Initialize and instrument
+instrumentor = LangGraphInstrumentor(client)
+instrumentor.instrument()
+```
+
+### Setting LLM Context
+
+```python
+from fiddler_langgraph.tracing.instrumentation import set_llm_context
+from langchain_openai import ChatOpenAI
+
+model = ChatOpenAI(model='gpt-4o-mini')
+set_llm_context(model, "User prefers concise responses")
+```
+
+### Conversation Tracking
+
+```python
+from fiddler_langgraph.tracing.instrumentation import set_conversation_id
+import uuid
+
+# Set conversation ID for tracking multi-turn conversations
+conversation_id = str(uuid.uuid4())
+set_conversation_id(conversation_id)
+```
+
+## Configuration
+
+The Fiddler SDK provides flexible configuration options for OpenTelemetry integration and performance tuning.
+
+### Basic Configuration
+
+```python
+client = FiddlerClient(
+    api_key="your-api-key",
+    application_id="your-app-id",  # Must be a valid UUID4
+    url="https://your-instance.fiddler.ai"
+)
+```
+
+### Advanced Configuration
+
+```python
+from opentelemetry.sdk.trace import SpanLimits, sampling
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import Compression
+
+# Custom span limits for high-volume applications
+custom_limits = SpanLimits(
+    max_events=64,
+    max_links=64,
+    max_span_attributes=64,
+    max_event_attributes=64,
+    max_link_attributes=64,
+    max_span_attribute_length=4096,
+)
+
+# Sampling strategy for production
+sampler = sampling.TraceIdRatioBased(0.1)  # Sample 10% of traces
+
+client = FiddlerClient(
+    api_key="your-api-key",
+    application_id="your-app-id",
+    url="https://your-instance.fiddler.ai",
+    span_limits=custom_limits,
+    sampler=sampler,
+    console_tracer=False,  # Set to True for debugging
+    compression=Compression.Gzip,  # Enable gzip compression (default)
+)
+```
+
+### Compression Options
+
+The SDK supports compression for OTLP export to reduce payload size:
+
+```python
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import Compression
+
+# Enable gzip compression (default, recommended for production)
+client = FiddlerClient(
+    api_key="your-api-key",
+    application_id="your-app-id",
+    url="https://your-instance.fiddler.ai",
+    compression=Compression.Gzip,
+)
+
+# Disable compression (useful for debugging or local development)
+client = FiddlerClient(
+    api_key="your-api-key",
+    application_id="your-app-id",
+    url="https://your-instance.fiddler.ai",
+    compression=Compression.NoCompression,
+)
+
+# Use deflate compression (alternative to gzip)
+client = FiddlerClient(
+    api_key="your-api-key",
+    application_id="your-app-id",
+    url="https://your-instance.fiddler.ai",
+    compression=Compression.Deflate,
+)
+```
+
+### Environment Variables for Batch Processing
+
+Configure batch span processor behavior using environment variables:
+
+```python
+import os
+
+# Configure batch processing
+os.environ['OTEL_BSP_MAX_QUEUE_SIZE'] = '500'
+os.environ['OTEL_BSP_SCHEDULE_DELAY_MILLIS'] = '500'
+os.environ['OTEL_BSP_MAX_EXPORT_BATCH_SIZE'] = '50'
+os.environ['OTEL_BSP_EXPORT_TIMEOUT'] = '10000'
+
+client = FiddlerClient(
+    api_key="your-api-key",
+    application_id="your-app-id",
+    url="https://your-instance.fiddler.ai"
+)
+```
+
+### Default Configuration
+
+The SDK uses restrictive defaults to prevent excessive resource usage:
+
+- **Span Limits**: 32 events/links/attributes per span, 2048 character attribute length
+- **Batch Processing**: 100 queue size, 1000ms delay, 10 batch size, 5000ms timeout
+- **Sampling**: Always on (100% sampling)
+
+## Features
+
+### Core Features
+
+- **OpenTelemetry Integration**: Full tracing support with configurable span limits
+- **Input Validation**: UUID4 validation for application IDs, URL validation
+- **Flexible Configuration**: Custom span limits, sampling strategies, and batch processing
+- **Resource Management**: Conservative defaults to prevent resource exhaustion
+
+### LangGraph Instrumentation
+
+- **Automatic Tracing**: Complete workflow tracing with span hierarchy
+- **LLM Context Setting**: Set additional context information for LLM processing via `set_llm_context()`
+- **Conversation Tracking**: Set conversation IDs for multi-turn conversations via `set_conversation_id()`
+- **Message Serialization**: Smart handling of complex message content (lists, dicts)
+- **Attribute Truncation**: Automatic truncation of long attribute values (256 character limit)
+- **Error Handling**: Comprehensive error tracking and status reporting
+
+### Monitoring and Observability
+
+- **Span Types**: Different span types for chains, tools, retrievers, and LLMs
+- **Agent Tracking**: Automatic agent name and ID generation
+- **Performance Metrics**: Timing, token usage, and model information
+- **Error Context**: Detailed error information with stack traces
+
+## Validation and Error Handling
+
+The SDK includes comprehensive validation:
+
+- **Application ID**: Must be a valid UUID4 string
+- **URL**: Must have valid scheme (http/https) and netloc
+- **Attribute Values**: Automatically truncated to prevent oversized spans
+- **Message Content**: Smart serialization of complex data structures
+
+## Performance Considerations
+
+- **High-volume applications**: Increase span limits and batch processing parameters
+- **Low-latency requirements**: Decrease batch schedule delay
+- **Memory constraints**: Use restrictive span limits and smaller batch sizes
+- **Debugging**: Enable console tracer and use higher attribute limits
+- **Production**: Use appropriate sampling strategies to control data volume
+
+## Requirements
+
+- Python 3.10, 3.11, 3.12, or 3.13
+- Dependencies (automatically installed):
+  - opentelemetry-api (1.34.1)
+  - opentelemetry-sdk (1.34.1)
+  - opentelemetry-instrumentation (0.55b1)
+  - opentelemetry-exporter-otlp-proto-http (1.34.1)
+  - langgraph (0.4.8)
+  - langchain (0.3.26)
+  - langchain-core (automatically installed with langchain)
+
+## Development
+
+### Running Tests
+
+```bash
+# Run all tests
+pytest
+
+# Run specific test file
+pytest tests/core/test_client.py
+
+# Run with coverage
+pytest --cov=fiddler_langgraph
+```
+
+### Code Quality
+
+```bash
+# Run linting
+flake8 fiddler_langgraph/
+
+# Run type checking
+mypy fiddler_langgraph/
+
+# Run security checks
+bandit -r fiddler_langgraph/
+```
+
+## License
+
+Apache License 2.0 - see LICENSE file for details
