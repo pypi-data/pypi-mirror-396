@@ -1,0 +1,231 @@
+Metadata-Version: 2.4
+Name: aiedatools
+Version: 0.1.1
+Summary: A modern, open-source Python library built for efficient, scalable data profiling and visualization
+Author-email: "Dr. Mathesis" <dr.mathesis@outlook.com>
+License: LICENSE
+Project-URL: Homepage, https://github.com/mathesis-universe/aiedatools
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: numpy>=2.0.0
+Requires-Dist: pandas>=2.2.2
+Requires-Dist: polars
+Requires-Dist: duckdb
+Requires-Dist: plotly
+Requires-Dist: scipy
+Requires-Dist: pyarrow
+Requires-Dist: google-cloud-bigquery
+Requires-Dist: sentence-transformers
+Dynamic: license-file
+
+# aiedatools
+
+**aiedatools** is a modern, open-source Python library built for efficient, scalable data profiling and visualization. It is designed for data scientists working with Pandas, Polars, and Google BigQuery (currently). 
+
+---
+
+## Features
+- Fast, rich profiling summaries across diverse datasets
+- Interactive visualizations for single and multi-variable analysis
+- Google BigQuery → Polars DataFrame workflows with type safety
+- Works with Pandas, Polars, Arrow, dicts, and more
+- Statistical testing (p-value matrix) and correlation heatmaps
+
+## Installation
+Requires Python >= 3.10. Install via pip:
+
+```bash
+pip install aiedatools
+```
+
+## Dependencies
+- numpy >= 2.0.0
+- pandas >= 2.2.2
+- polars
+- duckdb
+- plotly
+- scipy
+- pyarrow
+- google-cloud-bigquery
+
+---
+
+## Quick Start
+
+### 1. Table Profiling
+```python
+from aiedatools import profile_table
+import polars as pl
+df = pl.read_csv('mydata.csv')
+summary = profile_table(df)
+print(summary.head())
+```
+- Detects column type (cat/num/date/key)
+- Computes missing rate, unique levels, distributions, outlier indicators
+
+### 2. Plotting
+#### Categorical with Bar Plot
+```python
+from aiedatools import plot_cat_bar
+plot_cat_bar(df, 'category')
+# With target variable:
+plot_cat_bar(df, 'category', target_col='score')
+```
+#### Numeric Histogram and Box Plot
+```python
+from aiedatools import plot_numeric
+plot_numeric(df, 'value', plot_type='hist')
+plot_numeric(df, 'value', plot_type='box')
+```
+
+### 3. Two-variable Analysis
+#### Correlation Heatmap and P-value Heatmap
+```python
+from aiedatools import plot_corr_heatmap, plot_pvalue_heatmap
+plot_corr_heatmap(df, var_num=['score', 'age', 'income'])
+plot_pvalue_heatmap(df, list_var_num=['score', 'age'], list_var_cat=['category'])
+```
+
+### 4. BigQuery to Polars
+```python
+from aiedatools import bq_to_polars
+query = "SELECT * FROM `project.dataset.my_table` LIMIT 1000"
+df = bq_to_polars(query)
+```
+
+---
+
+## Detailed Usage Examples
+
+### Profiling a Polars DataFrame
+```python
+import polars as pl
+from aiedatools import profile_table
+
+df = pl.DataFrame({
+    'group': ['A', 'A', 'B', 'B', 'C'],
+    'score': [85, 87, 90, 75, 88],
+    'age': [20, 20, 21, 19, 22]
+})
+profile = profile_table(df)
+print(profile)
+```
+
+### Plotting with Top N Categories and Target
+```python
+from aiedatools import plot_cat_bar
+plot_cat_bar(df, 'group', target_col='score', number_of_bars=2)
+```
+
+### Numeric Variable Distribution with KDE Overlay
+```python
+from aiedatools import plot_numeric
+plot_numeric(df, 'score', plot_type=['hist', 'box'])
+```
+
+### Custom Correlation Heatmap with Options
+```python
+from aiedatools import plot_corr_heatmap
+plot_corr_heatmap(df, var_num=['score', 'age'], colorscale='Viridis', round_decimals=3, color_by_absolute=True)
+```
+
+### BigQuery: Load Results Directly to Polars
+```python
+from aiedatools import bq_to_polars
+query = 'SELECT category, COUNT(*) as cnt FROM `myproject.mydataset.table` GROUP BY category'
+df_bq = bq_to_polars(query)
+print(df_bq.head())
+```
+
+---
+
+## API Overview
+
+### Profile & Plot
+- `profile_table(table)` — Profile columns, detect types, missingness, value distributions, outliers
+- `plot_cat_bar(table, cat_col, target_col=None, number_of_bars=None)` — Bar plot for categorical columns, with support for target aggregation, top-N selection, and "other values"
+- `plot_numeric(table, num_col, plot_type='hist')` — Histogram or box plot of numeric columns
+
+### Two-variable Analysis
+- `plot_corr_heatmap(df, var_num, ...)` — Correlation heatmap for selected columns
+- `plot_pvalue_heatmap(df, list_var_num, list_var_cat, ...)` — P-value matrix and heatmap (supports numeric, categorical, and mixed pairs)
+
+### Cloud-to-Analytics (BigQuery)
+- `bq_to_polars(query)` — Runs BigQuery SQL and returns a Polars DataFrame, fixing Arrow types for compatibility
+
+---
+
+## Advanced Usage
+
+### Custom Column Type Thresholds
+You can adjust `num_to_cat_threshold` and `cat_to_key_threshold` in `profile_table` to fine-tune column classification.
+
+```python
+profile = profile_table(df, num_to_cat_threshold=10, cat_to_key_threshold=50)
+```
+
+### Use with Arrow Tables or Dictionaries
+
+```python
+import pyarrow as pa
+arrow_table = pa.table({'cat': ['A', 'B'], 'val': [1, 2]})
+profile_table(arow_table)
+```
+
+### Plot Customization
+- All plotting functions return a Plotly Figure (`fig`) — you can further modify it (e.g., layout, colors).
+
+```python
+_, fig = plot_cat_bar(df, 'group')
+fig.update_layout(title='Custom Title')
+fig.show()
+```
+
+### BigQuery Authentication via Service Account Key
+Be sure to authenticate with Google Cloud before using `bq_to_polars`. This can be done via the `GOOGLE_APPLICATION_CREDENTIALS` environment variable:
+
+#### Linux / macOS (bash, zsh, etc.)
+
+##### Temporary (current session only):
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS=/path/to/your/service-account-key.json
+```
+##### Permanent (all sessions): 
+Please get steps from internet.
+
+#### Windows 
+
+##### Temporary (current session only):
+CMD
+```bash
+set GOOGLE_APPLICATION_CREDENTIALS="C:\path\to\your\service-account-file.json"
+```
+Powershell
+```bash
+$env:GOOGLE_APPLICATION_CREDENTIALS="C:\path\to\your\service-account-file.json"
+```
+##### Permanent (all sessions): 
+CMD/Powershell
+```bash
+setx GOOGLE_APPLICATION_CREDENTIALS "C:\path\to\your\service-account-file.json"
+```
+
+##### Verify
+CMD
+```bash
+echo %GOOGLE_APPLICATION_CREDENTIALS%
+``` 
+
+Powershell
+```bash
+echo $env:GOOGLE_APPLICATION_CREDENTIALS
+```
+
+## License
+GNU GENERAL PUBLIC LICENSE Version 3
+
+## Author
+Dr. Mathesis ([dr.mathesis@outlook.com](mailto:dr.mathesis@outlook.com))  
+
+[Project Homepage](https://github.com/mathesis-universe/aiedatools)
