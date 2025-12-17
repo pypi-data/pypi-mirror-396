@@ -1,0 +1,157 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://gitlab.cern.ch/digitalmemory/utils/-/raw/master/oais_utils/sip-schema-d1.json",
+    "title": "SIP high level metadata",
+    "description": "High level metadata defining a SIP accepted by CERN Digital Memory OAIS.",
+    "type": "object",
+    "properties":
+    {
+        "created_by":
+        {
+            "type": "string"
+        },
+        "source":
+        {
+            "description": "A unique string identifying the upstream source digital repository (producer). `local` means the package was created from a local file system.",
+            "type": "string",
+            "enum":
+            [
+                "cds",
+                "zenodo",
+                "cod",
+                "ilcdoc",
+                "ilcagenda",
+                "local",
+                "indico"
+            ]
+        },
+        "resource_id":
+        {
+            "description": "A unique (in the context of the upstream source) string identifier for the resource",
+            "type": "string"
+        },
+        "sip_creation_timestamp":
+        {
+            "description": "Date time timestamp of SIP creation",
+            "type": "integer"
+        },
+        "files":
+        {
+            "type": "array",
+            "items":
+            {
+                "$ref": "#/definitions/file"
+            }
+        },
+        "audit":
+        {
+            "type": "array",
+            "items":
+            {
+                "$ref": "#/definitions/step"
+            }
+        }
+    },
+    "definitions":
+    {
+        "step":
+        {
+            "type": "object",
+            "description": "A step in the SIP lifetime",
+            "properties":
+            {
+                "tool":
+                {
+                    "type": "object",
+                    "description": "Details on the tool responsible for this action"
+                },
+                "action":
+                {
+                    "description": "Descriptive name for the action",
+                    "type": "string"
+                },
+                "timestamp":
+                {
+                    "type": "integer"
+                },
+                "message":
+                {
+                    "type": "string"
+                }
+            }
+        },
+        "file":
+        {
+            "description": "Object describing a single File with informations from its origin, checksums and bag location",
+            "type": "object",
+            "properties":
+            {
+                "origin":
+                {
+                    "type": "object",
+                    "properties":
+                    {
+                        "url":
+                        {
+                            "oneOf":
+                            [
+                                {
+                                    "type": "array"
+                                },
+                                {
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "filename":
+                        {
+                            "type": "string"
+                        },
+                        "path":
+                        {
+                            "type": "string"
+                        }
+                    },
+                    "required":
+                    [
+                        "url",
+                        "filename",
+                        "path"
+                    ]
+                },
+                "size":
+                {
+                    "type": "integer"
+                },
+                "bagpath":
+                {
+                    "description": "Path where the file can be found inside the SIP",
+                    "type": "string"
+                },
+                "metadata":
+                {
+                    "description": "Describes if the file is to be considered metadata",
+                    "type": "boolean"
+                },
+                "downloaded":
+                {
+                    "description": "Describes if the file is included in the bag or not",
+                    "type": "boolean"
+                },
+                "checksum":
+                {
+                    "description": "Available checksums for the file",
+                    "oneOf":
+                    [
+                        {
+                            "type": "array"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ]
+                }
+            }
+        }
+    }
+}
