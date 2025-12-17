@@ -1,0 +1,104 @@
+[project]
+name = "portfolio-mcp"
+version = "0.0.2"
+description = "Portfolio analysis MCP server powered by mcp-refcache - Comprehensive portfolio metrics, optimization, and risk analysis"
+readme = "README.md"
+authors = [
+    { name = "l4b4r4b4b4", email = "lucas.cansino@mail.de" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "fastmcp>=2.14.0",
+    "finquant-enhanced>=0.7.1",
+    "mcp-refcache>=0.1.0",
+    "numpy>=2.0.0",
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.10.0",
+    "typer>=0.15.0",
+    "yfinance>=0.2.66",
+]
+
+[project.scripts]
+portfolio-mcp = "app.__main__:app"
+
+[build-system]
+requires = ["hatchling>=1.0.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.uv]
+compile-bytecode = true
+
+[dependency-groups]
+dev = [
+    "mypy>=1.19.0",
+    "pre-commit>=4.5.0",
+    "pytest>=9.0.1",
+    "pytest-asyncio>=1.3.0",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.14.8",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+src = ["app", "tests"]
+exclude = [".agent", ".external", "archive"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W", "F", "I", "B", "C4", "UP", "RUF", "D", "ANN", "TCH", "SIM", "PT",
+]
+ignore = [
+    "E501", "B008", "D100", "D104", "D107", "ANN401",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["D", "ANN", "S101"]
+"__init__.py" = ["D"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+python_classes = ["Test*"]
+
+[tool.coverage.run]
+source = ["app"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
+
+[tool.coverage.html]
+skip_empty = true
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_ignores = true
+disallow_untyped_decorators = false
+
+[[tool.mypy.overrides]]
+module = ["fastmcp.*", "mcp_refcache.*", "finquant.*", "yfinance.*"]
+ignore_missing_imports = true
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv", "archive"]
