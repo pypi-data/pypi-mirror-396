@@ -1,0 +1,42 @@
+# MANIFEST.in - Control what goes into the PyPI sdist
+#
+# This file ensures only the Python CLI package is included in PyPI releases.
+# Backend (Cloudflare Workers) and website are part of the monorepo but
+# should NOT be distributed via pip.
+
+# Include essential files
+include LICENSE
+include README.md
+include GETTING_STARTED.md
+include pyproject.toml
+include requirements.txt
+
+# Include Python source
+recursive-include src *.py
+recursive-include tui *.py *.tcss
+
+# Exclude everything else
+prune backend
+prune website
+prune scripts
+prune .github
+prune .claude
+prune outputs
+prune dist
+prune venv
+prune __pycache__
+prune *.egg-info
+
+# Exclude dev/build files
+exclude .env
+exclude .env.*
+exclude main.py
+exclude tui.py
+exclude .gitignore
+exclude CHANGELOG.md
+
+# Exclude any node_modules that might exist
+global-exclude node_modules
+global-exclude *.pyc
+global-exclude __pycache__
+global-exclude .DS_Store
