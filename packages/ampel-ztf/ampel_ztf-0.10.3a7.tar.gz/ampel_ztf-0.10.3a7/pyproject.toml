@@ -1,0 +1,166 @@
+[project]
+name = "ampel-ztf"
+version = "0.10.3a7"
+description = "Zwicky Transient Facility support for the Ampel system"
+requires-python = ">=3.11, <4"
+authors = [
+    { name = "Valery Brinnel" },
+    { name = "Jakob van Santen", email = "jakob.van.santen@desy.de" },
+    { name = "Sjoert van Velzen" },
+    { name = "Jakob Nordin" }
+]
+maintainers = [
+    { name = "Jakob van Santen", email = "jakob.van.santen@desy.de" },
+]
+license = "BSD-3-Clause"
+readme = "README.md"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Topic :: Scientific/Engineering :: Astronomy",
+    "Typing :: Typed",
+]
+dependencies = [
+    "ampel-interface (>=0.10.4.post2,<0.11)",
+    "ampel-catalogmatch (>=0.10.0a2,<0.11.0)",
+    "astropy (>=7.2.0,<8.0.0)",
+    "matplotlib (>=3.10.8,<4.0.0)",
+    "backoff (>=2.2.1,<3.0.0)",
+    "fastavro (>=1.12.1,<2.0.0)",
+    "requests (>=2.32.5,<3.0.0)",
+    "ampel-alerts (>=0.10.4a0,<0.11.0)",
+    "ampel-photometry (>=0.10.1,<0.11.0)",
+    "scipy (>=1.16.3,<2.0.0)",
+    "requests-toolbelt (>=1.0.0,<2.0.0)",
+]
+
+[project.optional-dependencies]
+archive = ["ampel-ztf-archive (>=0.7.1,<0.8.0)"]
+healpix = ["healpy (>=1.19.0,<2.0.0)"]
+light-curve = ["light-curve (>=0.10.5,<0.11.0)"]
+kafka = ["confluent-kafka (>=2.12.2,<3.0.0)"]
+plot = ["ampel-plot (>=0.9.1,<0.10.0)"]
+fp = ["pandas (>=2.3.3,<3.0.0)", "planobs (>=0.7.3,<0.8.0)"]
+bayes = ["pandas (>=2.3.3,<3.0.0)", "planobs (>=0.7.3,<0.8.0)", "ampel-plot (>=0.9.1,<0.10.0)"]
+[dependency-groups]
+dev = [
+    "pytest-ampel-core (>=0.10.0a5,<0.11)",
+    "mypy (>=1.13,<2.0)",
+    "pytest-mock (>=3.15.1,<4.0.0)",
+    "pytest-asyncio (>=1.3.0,<2.0.0)",
+    "before-after (>=1.0.1,<2.0.0)",
+    "types-requests (>=2.32.4.20250913,<3.0.0.0)",
+    "types-pytz (>=2025.2.0.20251108,<2026.0.0.0)",
+    "syrupy (>=5.0.0,<6.0.0)",
+]
+
+[tool.poetry]
+packages = [
+    {include = "ampel"},
+]
+exclude = ["ampel/py.typed"]
+
+[project.urls]
+homepage = "https://ampelproject.github.io"
+repository = "https://github.com/AmpelAstro/Ampel-ZTF"
+
+[build-system]
+requires = ["poetry-core>=1.0.0", "setuptools >= 40.6.0", "wheel"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.coverage.run]
+relative_files = true
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "--showlocals -ra"
+filterwarnings = [
+    "error",
+    # pulled in by matplotlib
+    "ignore:datetime.datetime.utcfromtimestamp\\(\\) is deprecated:DeprecationWarning:dateutil",
+    # Expected `list[definition-ref]` but got `tuple` - serialized value may not be as expected
+    "ignore:Pydantic serializer warnings:UserWarning",
+    # UserWarning: Field name "job_sig" shadows an attribute in parent "AbsEventUnit"
+    "ignore:Field name \".*\" shadows an attribute in parent:UserWarning",
+]
+
+[tool.mypy]
+namespace_packages = true
+packages = [
+  "ampel"
+]
+plugins = [
+  "pydantic.mypy",
+]
+show_error_codes = true
+warn_unused_ignores = true
+check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = [
+  "astropy.*",
+  "confluent_kafka.*",
+  "pandas.*",
+  "requests_toolbelt.*",
+  "scipy.*",
+  "healpy",
+  "light_curve",
+  "planobs.*"
+]
+ignore_missing_imports = true
+
+[tool.black]
+line-length = 88
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E4",
+    "E7",
+    "E9",
+    "F",
+    "I",
+    "UP",
+    "B",
+    "DTZ",
+    # "T20",
+    "PT",
+    "RET",
+    "SLF",
+    "SIM",
+    # # "ARG", # sometimes your arguments have to conform to an interface
+    # # "ERA", # seems to prohibit all comments, that's bad
+    "PL",
+    "PERF",
+    "RUF",
+]
+ignore = [
+    "E741",    # ambiguous variable name
+    "UP009",   # UTF-8 encoding declaration is unnecessary
+    "E501",    # line too long
+    "PLR09",   # too many (arguments|branches)
+    "PLR2004", # Magic value used in comparison
+    "RUF012",  # Mutable class attributes should be annotated with `typing.ClassVar`
+               # fine for AmpelUnit, actually (ruff has a special case for pydantic)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["ampel"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [
+    "RUF018",  # assignment in assert is just fine in tests
+    "SLF001",  # allow private member access
+    "T201",    # allow print()
+]
+
+[tool.ruff.lint.flake8-unused-arguments]
+ignore-variadic-names = true
