@@ -1,0 +1,41 @@
+"""
+FortiOS Extension Controller API
+Extension controller configuration endpoints for FortiExtender and FortiGate connectors
+"""
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ....client import FortiOS
+
+
+class ExtensionController:
+    """
+    Extension Controller API helper class
+    Provides access to extension controller configuration endpoints
+    """
+
+    def __init__(self, client: 'FortiOS') -> None:
+        """
+        Initialize ExtensionController helper
+
+        Args:
+            client: FortiOS client instance
+        """
+        self._client = client
+
+        # Initialize endpoint classes
+        from .dataplan import Dataplan
+        from .extender import Extender
+        from .extender_profile import ExtenderProfile
+        from .extender_vap import ExtenderVap
+        from .fortigate import Fortigate
+        from .fortigate_profile import FortigateProfile
+
+        self.dataplan = Dataplan(client)
+        self.extender = Extender(client)
+        self.extender_profile = ExtenderProfile(client)
+        self.extender_vap = ExtenderVap(client)
+        self.fortigate = Fortigate(client)
+        self.fortigate_profile = FortigateProfile(client)
