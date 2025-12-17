@@ -1,0 +1,139 @@
+//
+// Copyright 2025 Formata, Inc. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+
+fn test_data_func() {}
+
+#[test]
+fn data_id() {
+    let func = self.test_data_func;
+    let data = Data.from_id(func.id());
+    assert(data.exists());
+    assert_eq(data.id(), func.id());
+}
+
+#[test]
+fn objs() {
+    const func = self.test_data_func;
+    const data = func.data();
+    const objs = data.objs();
+
+    assert_eq(objs.len(), 1);
+    assert_eq(objs, [self]);
+}
+
+field_to_drop: 'hi'
+
+#[test]
+fn field_drop() {
+    assert_eq(self.field_to_drop, 'hi');
+    Data.field('self.field_to_drop').drop();
+    assert_eq(self.field_to_drop, null);
+}
+
+field_to_attach: 'yo'
+obj_for_attach: {}
+
+#[test]
+fn attach_drop() {
+    assert_eq(typeof self.obj_for_attach, 'obj');
+    const data = Data.field('self.field_to_attach');
+    
+    assert(data.attach(self.obj_for_attach));
+    assert_eq(data.objs().len(), 2);
+
+    data.drop_from(self);
+    assert_eq(data.objs().len(), 1);
+    assert_eq(data.objs(), [self.obj_for_attach]);
+
+    data.move(self.obj_for_attach, self);
+    assert_eq(data.objs(), [self]);
+}
+
+#[attr]
+to_from_field: 'traveler'
+#[attr]
+fn to_from_func() -> str { 'traveler function' }
+
+#[test]
+fn to_from_blob() {
+    const dest = new {};
+    const field_data = Data.field('self.to_from_field');
+    const func_data = (self.to_from_func).data();
+    
+    const field_blob = field_data.blob();
+    const func_blob = func_data.blob();
+
+    const new_field_data = Data.load_blob(field_blob, dest);
+    const new_func_data = Data.load_blob(func_blob, dest);
+
+    assert_eq(new_field_data.objs(), [dest]);
+    assert_eq(new_func_data.objs(), [dest]);
+    assert(new_field_data != field_data);
+    assert(new_func_data != func_data);
+
+    assert_eq(dest.to_from_field, 'traveler');
+    assert_eq(dest.to_from_func(), 'traveler function');
+    assert_eq(dest.attributes('to_from_field'), {'attr': null});
+    assert_eq(dest.attributes('to_from_func'), {'attr': null});
+
+    //dbg(func_blob); // binary blob for "self.to_from_func"
+    drop(dest);
+}
+
+#[test]
+fn load_const_blob() {
+    // Load the binary for "self.to_from_func" into a new object
+    const blank = new {};
+    const func = Data.load_blob(
+        |20, 0, 0, 0, 0, 0, 0, 0, 73, 69, 81, 122, 70, 88, 70, 89, 114, 70, 52, 90, 103, 116, 89, 65, 114, 110, 53, 100, 12, 0, 0, 0, 0, 0, 0, 0, 116, 111, 95, 102, 114, 111, 109, 95, 102, 117, 110, 99, 1, 0, 0, 0, 0, 0, 0, 0, 20, 0, 0, 0, 0, 0, 0, 0, 54, 77, 78, 57, 104, 65, 68, 70, 84, 68, 81, 74, 77, 104, 81, 102, 45, 88, 52, 114, 1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 70, 110, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 97, 116, 116, 114, 1, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 66, 97, 115, 101, 38, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 82, 101, 116, 73, 110, 115, 1, 1, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 66, 97, 115, 101, 50, 0, 0, 0, 5, 0, 0, 0, 17, 0, 0, 0, 0, 0, 0, 0, 116, 114, 97, 118, 101, 108, 101, 114, 32, 102, 117, 110, 99, 116, 105, 111, 110, 1, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 66, 97, 115, 101, 39, 0, 0, 0|,
+        blank
+    ) as fn;
+    
+    assert_eq(func(), 'traveler function');
+    assert_eq(func.attributes(), {'attr': null});
+}
+
+Outright: {
+
+    //#[attr]
+    //fn to_from_func() -> str { 'traveler function' }
+    // Note: "data" prefix is optional & implied here, but other bin formats may be introduced later on
+    data@v1 |20, 0, 0, 0, 0, 0, 0, 0, 73, 69, 81, 122, 70, 88, 70, 89, 114, 70, 52, 90, 103, 116, 89, 65, 114, 110, 53, 100, 12, 0, 0, 0, 0, 0, 0, 0, 116, 111, 95, 102, 114, 111, 109, 95, 102, 117, 110, 99, 1, 0, 0, 0, 0, 0, 0, 0, 20, 0, 0, 0, 0, 0, 0, 0, 54, 77, 78, 57, 104, 65, 68, 70, 84, 68, 81, 74, 77, 104, 81, 102, 45, 88, 52, 114, 1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 70, 110, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 97, 116, 116, 114, 1, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 66, 97, 115, 101, 38, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 82, 101, 116, 73, 110, 115, 1, 1, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 66, 97, 115, 101, 50, 0, 0, 0, 5, 0, 0, 0, 17, 0, 0, 0, 0, 0, 0, 0, 116, 114, 97, 118, 101, 108, 101, 114, 32, 102, 117, 110, 99, 116, 105, 111, 110, 1, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 66, 97, 115, 101, 39, 0, 0, 0|
+    
+    #[test]
+    fn outright_data_parsing() {
+        assert_eq(self.to_from_func(), 'traveler function');
+        assert_eq((self.to_from_func).attributes(), {'attr': null});
+    }
+}
+
+
+InvalidateValidate: {
+    field: 42;
+
+    #[test]
+    fn invalidate_field() {
+        let validated = false;
+        
+        ?Data.field('self.field').invalidate('testing');
+        if (?Data.field('self.field').validate('testing')) {
+            validated = true;
+        }
+
+        assert(validated);
+    }
+}
