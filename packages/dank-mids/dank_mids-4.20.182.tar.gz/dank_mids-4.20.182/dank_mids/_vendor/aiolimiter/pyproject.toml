@@ -1,0 +1,141 @@
+[project]
+name = "aiolimiter"
+description = "asyncio rate limiter, a leaky bucket implementation"
+requires-python = ">=3.9"
+
+authors = [
+    {name = "Martijn Pieters", email = "mj@zopatista.com"}
+]
+
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE.txt"]
+
+keywords = [
+    "asyncio",
+    "rate-limiting",
+    "leaky-bucket",
+]
+classifiers = [
+    "Framework :: AsyncIO",
+    "Intended Audience :: Developers",
+]
+
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://github.com/mjpieters/aiolimiter"
+Repository = "https://github.com/mjpieters/aiolimiter"
+Documentation = "http://aiolimiter.readthedocs.org/en/stable/"
+Issues = "https://github.com/mjpieters/aiolimiter/issues"
+Changelog = "https://github.com/mjpieters/aiolimiter/blob/main/CHANGELOG.md"
+"Coverage: codecov" = "https://codecov.io/github/mjpieters/aiolimiter"
+
+[dependency-groups]
+dev = [
+    "dunamai>=1.24.1",
+    "pre-commit~=4.2",
+    "pyright~=1.1",
+    "pytest-asyncio~=1.0",
+    "pytest-cov~=7.0",
+    "pytest~=8.4",
+    "ruff~=0.12",
+    "towncrier~=25.8",
+    "tox-uv~=1.26",
+    "tox~=4.27",
+    "typing-extensions>=4.12.2",
+]
+docs = [
+    "aiohttp-theme~=0.1",
+    "dunamai>=1.24.1",
+    "sphinx-autobuild>=2024.10.3",
+    "sphinx-autodoc-typehints>=2.3.0",
+    "sphinx>=7.4.0",
+    "sphinxcontrib-spelling~=8.0",
+    "toml>=0.10.2 ; python_full_version < '3.11'",
+]
+
+[tool.uv]
+default-groups = [
+    "dev",
+    "docs",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "CHANGELOG.md",
+    "tests",
+]
+
+[build-system]
+requires = ["hatchling~=1.27", "uv-dynamic-versioning~=0.8"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "uv-dynamic-versioning"
+
+[tool.ruff.lint]
+extend-select = [
+    "B",    # bugbear
+    "I",    # isort
+    "SIM",  # simplify
+    "UP",   # pyupgrade
+    "RUF",  # additional ruff rules
+]
+
+[tool.pyright]
+pythonVersion = "3.9"
+include = ["src", "tests"]
+strict = ["src", "tests"]
+# When running under pre-commit, tell pyright where to find the project dependencies
+venvPath = "."
+venv = ".venv"
+
+[tool.coverage.report]
+show_missing = true
+precision = 2
+
+[tool.coverage.run]
+relative_files = true
+source = [
+    "src"
+]
+branch = true
+omit = [
+    "src/aiolimiter/__init__.py",
+]
+
+[tool.coverage.xml]
+output = "coverage.xml"
+
+[tool.tox]
+skipsdist = true
+envlist = ["py39{9,10,11,12,13,14,14t}", "pypy3"]
+
+[tool.tox.env_run_base]
+runner = "uv-venv-lock-runner"
+dependency_groups = ["dev"]
+description = "Run test under {base_python}"
+commands = [["pytest"]]
+
+[tool.pytest.ini_options]
+addopts = [
+    "--cov",
+    "--cov-report=term",
+    "--cov-report=xml",
+    "--no-cov-on-fail",
+]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+
+[tool.towncrier]
+directory = "changelog.d/"
+template = "changelog.d/towncrier_template.md"
+filename = "CHANGELOG.md"
+package_dir = "src"
+package = "aiolimiter"
+title_format = "## {name} {version} ({project_date})"
+issue_format = "[#{issue}](https://github.com/mjpieters/aiolimiter/issues/{issue})"
+start_string = "<!-- Towncrier release notes start -->\n"
+underlines = ["", "", ""]
