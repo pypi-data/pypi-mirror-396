@@ -1,0 +1,188 @@
+# CloudInvoke
+
+The easiest way to run code on the cloud with automatic dependency detection and file upload support.
+
+## Features
+
+- **Decorator-based remote execution**: Simply add a decorator to run functions on the cloud
+- **Automatic dependency detection**: Automatically detects and bundles required imports and helper functions
+- **File upload support**: Automatically detects and uploads file dependencies
+- **Async execution**: Support for fire-and-forget execution patterns
+- **Full stdout/stderr capture**: See all output from remote execution
+
+## Installation
+
+### From PyPI (once published)
+
+```bash
+pip install cloudinvoke
+```
+
+### From wheel file
+
+```bash
+pip install cloudinvoke-0.1.0-py3-none-any.whl
+```
+
+### From source
+
+```bash
+git clone https://github.com/yourusername/cloudinvoke.git
+cd cloudinvoke
+pip install -e .
+```
+
+## Quick Start
+
+```python
+from cloudinvoke import CloudRunner
+
+# Initialize the runner with your API credentials
+runner = CloudRunner(
+    api_key="your_runpod_api_key",
+    endpoint_id="your_endpoint_id"
+)
+
+# Decorate functions to run them on the cloud
+@runner.remote
+def process_data(x, y):
+    import torch
+    # Your computation here
+    return x + y
+
+# Call the function normally - it executes on the cloud
+result = process_data(5, 3)
+print(result)  # 8
+```
+
+## Usage
+
+### Basic Remote Execution
+
+```python
+from cloudinvoke import CloudRunner
+
+runner = CloudRunner(api_key="your_api_key")
+
+@runner.remote
+def my_function(x, y):
+    import numpy as np
+    return np.array([x, y]).sum()
+
+result = my_function(10, 20)
+print(result)  # 30
+```
+
+### Async Execution
+
+For fire-and-forget patterns or when you want to submit multiple jobs:
+
+```python
+@runner.remote_async
+def long_running_task(n):
+    import time
+    time.sleep(n)
+    return f"Slept for {n} seconds"
+
+# Returns immediately with a request ID
+request_id = long_running_task(10)
+
+# Get the result later
+result = runner.get_result(request_id, wait=True)
+print(result)
+```
+
+### Automatic File Upload
+
+CloudInvoke automatically detects file references in your code and uploads them:
+
+```python
+@runner.remote
+def process_csv():
+    import pandas as pd
+    # File is automatically uploaded and available
+    df = pd.read_csv('data.csv')
+    return df.shape[0]
+
+result = process_csv()
+```
+
+### Debug Mode
+
+Enable debug mode to see the generated code and execution details:
+
+```python
+runner = CloudRunner(
+    api_key="your_api_key",
+    debug=True  # Enable debug output
+)
+
+@runner.remote
+def test_function(x):
+    return x * 2
+
+result = test_function(5)
+# Prints the generated code, function name, args, etc.
+```
+
+## Configuration
+
+The `CloudRunner` class accepts the following parameters:
+
+- `api_key` (str, required): Your RunPod API key
+- `endpoint_id` (str): RunPod endpoint ID (default: "yv68hhady2hgii")
+- `base_url` (str): Base URL for RunPod API (default: "https://api.runpod.ai/v2")
+- `poll_interval` (float): Seconds between status polls (default: 1.0)
+- `timeout` (int): Maximum seconds to wait for execution (default: 300)
+- `debug` (bool): Print debug information (default: False)
+- `auto_upload_files` (bool): Automatically detect and upload files (default: True)
+- `base_dir` (str): Base directory for resolving file paths (default: '.')
+
+## How It Works
+
+CloudInvoke analyzes your decorated functions to:
+
+1. Extract the function source code
+2. Recursively collect all dependencies (imports and helper functions)
+3. Detect file references in the code
+4. Bundle everything into a payload
+5. Submit to RunPod for execution
+6. Poll for results and return them
+
+## Requirements
+
+- Python 3.7+
+- requests>=2.25.0
+
+## Development
+
+### Building from source
+
+```bash
+# Install development dependencies
+pip install -e ".[dev]"
+
+# Run tests
+pytest
+
+# Build wheel
+python -m build
+```
+
+### Running tests
+
+```bash
+pytest tests/
+```
+
+## License
+
+MIT License - see LICENSE file for details
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## Support
+
+For issues and questions, please use the GitHub issue tracker.
