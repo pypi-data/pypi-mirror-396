@@ -1,0 +1,128 @@
+Metadata-Version: 2.4
+Name: jarvis-tool-registry
+Version: 0.1.0a5
+Summary: Tool Registry service for ARP runtimes (tool discovery, schemas, invocation).
+Author: Agent Runtime Protocol
+License: MIT License
+        
+        Copyright (c) 2025 AgentRuntimeProtocol
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+        
+Project-URL: Repository, https://github.com/AgentRuntimeProtocol/Tool_Registry
+Project-URL: Issues, https://github.com/AgentRuntimeProtocol/Tool_Registry/issues
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: jarvis-model==0.1.0a5
+Provides-Extra: dev
+Requires-Dist: pyright>=1.1.0; extra == "dev"
+Requires-Dist: pytest>=7; extra == "dev"
+Requires-Dist: pytest-cov>=4; extra == "dev"
+Dynamic: license-file
+
+# Tool Registry
+
+This repo will contain the **Tool Registry** service: a standalone tool provider for ARP runtimes.
+
+Current phase: MVP implementation (stdlib-only).
+
+## Design docs
+
+- `docs/intro.md`
+- `docs/design/overview.md`
+
+## Install
+
+From PyPI (once published):
+
+```bash
+pipx install jarvis-tool-registry
+```
+
+Pre-release (e.g. `0.1.0a1`):
+
+```bash
+pipx install --pip-args="--pre" jarvis-tool-registry
+```
+
+Or in a virtualenv:
+
+```bash
+pip install jarvis-tool-registry
+```
+
+## Run locally
+
+Create a virtualenv, install `jarvis-model`, then install and run the service:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+
+pip install -e path/to/jarvis-model
+pip install -e .
+
+tool-registry
+```
+
+Env vars:
+
+- `TOOL_REGISTRY_HOST` (default `127.0.0.1`)
+- `TOOL_REGISTRY_PORT` (default `8000`)
+- `TOOL_REGISTRY_DOMAINS` (default `core`)
+
+Endpoints:
+
+- `GET /v1/tools`
+- `GET /v1/tools/{name}`
+- `POST /v1/tools/{name}:invoke` (body: `{"args": {...}}`)
+
+More docs:
+
+- `docs/intro.md`
+- `docs/adding_tools.md`
+
+## Run tests
+
+From the repo root:
+
+```bash
+python3 -m unittest discover -v
+```
+
+Or (if you have `pytest` installed):
+
+```bash
+pytest -q
+```
+
+## MVP capabilities + known gaps
+
+Capabilities:
+
+- Tool discovery (`GET /v1/tools`) and schema detail (`GET /v1/tools/{name}`).
+- Validated invocation (`POST /v1/tools/{name}:invoke`) with normalized `ToolResult`/`Error`.
+- Simple in-repo “domain modules” pattern for adding tools.
+
+Known gaps:
+
+- No auth, rate limiting, or multi-tenant policy layer yet.
+- Stdlib HTTP server only (FastAPI/ASGI swap is a future improvement).
+- No MCP aggregation implementation in this MVP.
