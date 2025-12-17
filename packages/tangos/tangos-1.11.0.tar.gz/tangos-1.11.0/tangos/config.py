@@ -1,0 +1,131 @@
+"""Configuration module for tangos
+
+Rather than change anything directly in this file, you can create a config_local.py with the variable you
+want to override and it will automatically take precedence.
+"""
+
+import os
+
+import sqlalchemy.dialects.mysql
+
+home = os.environ['HOME']
+db = os.environ.get("TANGOS_DB_CONNECTION", home+"/tangos_data.db")
+base = os.environ.get("TANGOS_SIMULATION_FOLDER", home+"/")
+
+testing_db_user = os.environ.get("TANGOS_TESTING_DB_USER", None)
+testing_db_password = os.environ.get("TANGOS_TESTING_DB_PASSWORD", None)
+testing_db_backend = os.environ.get("TANGOS_TESTING_DB_BACKEND", 'sqlite')
+
+DOUBLE_PRECISION = sqlalchemy.Float().\
+    with_variant(sqlalchemy.dialects.mysql.DOUBLE(asdecimal=False), "mysql")
+LARGE_BINARY = sqlalchemy.LargeBinary().\
+    with_variant(sqlalchemy.dialects.mysql.LONGBLOB(), "mysql")
+
+default_fileset_handler_class = "pynbody.PynbodyInputHandler"
+
+default_linking_threshold = 0.005
+# the percentage of particles in common between two objects before the database bothers to store the relationship
+
+min_halo_particles = 1000
+# the minimum number of particles needed in an object before the database bothers to store it
+
+max_num_objects = None
+# the maximum number of objects of any one class to store in the database (or None for no limit).
+# Normally, the most massive objects will be stored, but this does depend on either the halo finder
+# ordering appropriately, or the re-ordering of objects being enabled (which is the default)
+
+
+pynbody_build_kdtree_threshold_count = 2000
+# If the number of regions being queried on a timestep is expected to exceed this number,
+# a KDTree will be built to accelerate the region queries.
+
+pynbody_build_kdtree_all_cpus = True
+# If True, allow the server process to take over all available CPUs when building a
+# KDTree. This is despite the fact that most parallelism takes place across different client
+# processes, but is probably best set to True on the assumption that those clients are just going
+# to be waiting on the server anyway. If set to False, pynbody determines the number of
+# CPUs for the KDTree build, which on a system well configured for tangos would be 1.
+
+default_backend = 'null'
+# the default paralellism backend. Set e.g. to mpi4py to avoid having to pass --backend mpi4py to all parallel runs.
+
+enable_async_message_processing = False
+# Async message processing was introduced in an effort to separate out long pynbody operations
+# on the server into a different thread. However, it can lead to subtle race conditions (e.g.
+# when transmitting numpy arrays which get turned into several return messages) and may (?) also
+# be implicated in hangs. It is also not clear whether the performance gains are meaningful in
+# any way. The above flag disables the async processing and makes the server process do everything
+# in a single queue, which should be more reliable. It may be that async processing should be
+# removed from the codebase entirely, but I am leaving it like this for now.
+
+
+
+# names of property modules to import; default is for backwards compatibility on systems with N-Body-Shop extensions
+# N.B. since version 1.0.10 it is also possible to use entry point tangos.property_modules. For example, in your
+# my_fab_tangos_properties package setup.py's call to setup() add the keyword argument:
+#
+#       entry_points={"tangos.property_modules" : [
+#           "fab = my_fab_tangos_properties"
+#       ]}
+#
+
+property_modules = os.environ.get("TANGOS_PROPERTY_MODULES", "tangos_nbodyshop_properties")
+property_modules = property_modules.split(",")
+property_modules = map(str.strip, property_modules)
+
+file_ignore_pattern = []
+
+max_traverse_depth = 3
+
+# merger tree thinning criteria (applied at query time, not at time of writing links)
+mergertree_min_fractional_weight = 0.02 # as a fraction of the weight of the strongest link from each halo
+mergertree_min_fractional_NDM = 0.01 # as a fraction of the most massive halo at each timestep - set to zero for no thinning
+mergertree_max_nhalos = 30 # maximum number of halos per step - discard the least massive ones
+mergertree_timeout = 15.0 # seconds before abandoning the construction of a merger tree in the web interface
+mergertree_max_hops = 500 # maximum number of timesteps to scan
+
+# relation finding paremeters for multi hop queries
+num_multihops_max_default = 100     # the maximum number of links to follow when searching for related halos
+max_relative_time_difference = 1e-4     # the maximum fractional difference in time between two contemporaneous timesteps when searching for related halos
+
+# On some network file systems, concurrency using sqlite is dodgy to say the least. After committing a transaction
+# on one node, and before attempting to open a new transaction on another node, it seems empirically helpful to
+# allow a significant time delay. This variable controls that delay.
+DEFAULT_SLEEP_BEFORE_ALLOWING_NEXT_LOCK = 1.0
+# number of seconds to sleep after a lock is released before reallocating it
+
+# Default format to use in the webview. Can be either svg or png
+webview_default_image_format = 'svg'
+
+# Caching time in seconds for image and data in the web server
+webview_cache_time = 3600
+
+# The default dpi to adopt when plotting in matplotlib and returning to web browser
+webview_plots_dpi = 100
+
+# Default atol for assert_almost_equal when using the diff tool
+diff_default_atol = 1e-3
+
+# Default rtol for assert_amost_equal when using the diff tool
+diff_default_rtol = 1e-3
+
+
+# Database import: how many rows to copy at a time
+DB_IMPORT_CHUNK_SIZE = 10
+
+# Property writer: longest to wait before trying to commit properties (even if in middle of timestep)
+PROPERTY_WRITER_MAXIMUM_TIME_BETWEEN_COMMITS = 600 # seconds
+
+# Property writer: don't bother committing even if a timestep is finished if this time hasn't elapsed:
+PROPERTY_WRITER_MINIMUM_TIME_BETWEEN_COMMITS = 300 # seconds
+
+# Minimum time between providing updates to the user during tangos write, when running in parallel
+# Note that this is a 'polling' interval, for checking whether to update the display. Internally, the
+# statistics are updated whenever a commit is made by any process (and the frequency of such commits
+# is determined above).
+PROPERTY_WRITER_PARALLEL_STATISTICS_TIME_BETWEEN_UPDATES = 600 # seconds
+
+try:
+    from .config_local import *
+except:
+    pass

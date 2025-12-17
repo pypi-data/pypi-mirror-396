@@ -1,0 +1,160 @@
+{% extends "layout.jinja2" %}
+
+{% macro make_table(object_type) %}
+    <form id="properties_form_{{ object_type }}" class="autorestore">
+        <p><span id="update-marker-{{ object_type }}"></span>Page
+            <select name="page" id="page-{{ object_type }}">
+                <option value="1" selected>1</option>
+            </select> of <span id="num-pages-{{ object_type }}">1</span>.
+            Total <span id="num-objects-{{ object_type }}">...</span>;
+            maximum
+            <select name="per_page" id="per-page-{{ object_type }}">
+                {% for perpage in [10,20,50,100,200] %}
+                    <option value="{{ perpage }}" {%  if perpage == 50 %}selected{% endif %}>{{ perpage }}</option>
+                {% endfor %}
+            </select>
+            per page.</p>
+        <table class="data-table" id="table-{{ object_type }}">
+            <tr id="label-row-{{ object_type }}">
+                <th id="label-number-{{ object_type }}">Number</th>
+                <th class="editable" id="label-colid-1-{{ object_type }}"></th>
+                <th id="label-go-{{ object_type }}">Go &rarr;</th>
+            </tr>
+            <tr>
+                <th id="plotctl-number-{{ object_type }}"></th>
+                <th id="plotctl-colid-1-{{ object_type }}" class="plotcontrols"></th>
+                <th></th>
+            </tr>
+
+
+        </table>
+    </form>
+{% endmacro %}
+
+{% block content %}
+    <script type="text/javascript" src="{{ request.static_url('tangos.web:static/timestepdata.js') }}"></script>
+
+    <h1>Timestep: {{ timestep }}</h1>
+
+    <p>
+    <span class="mono">
+    {% if previous[1]!="" %}Previous: <a href="{{ previous[1] }}">{{ previous[0] }}</a>{% endif %}
+    {% if previous[1]!="" and next[1]!="" %} | {% endif %}
+    {% if next[1]!="" %}Next: <a href="{{ next[1] }}">{{ next[0] }}</a>{% endif %}
+    </span>
+    </p>
+    <table id="objects-container"><tr>
+
+    {% for this_object in objects %}
+        {%  if this_object['n_items']>0 %}
+        <td>
+            <h2>{{ this_object['title'] }}</h2>
+
+            {{ make_table(this_object['typetag']) }}
+        </td>
+        {% endif %}
+    {% endfor %}
+
+    </tr></table>
+
+
+
+<script>
+
+
+$.fn.markAsColumnInsertPoint = function(editable_tag) {
+    if(this.length===0)
+        return;
+    $(this).closest('form').on('change', function() {
+        updateTableDisplay(editable_tag);
+    });
+    return $(this).makeEditableTemplate(addBlankColumn, removeColumn, updateColumnData, editable_tag);
+
+}
+
+
+
+function updateColumnData(miniLanguageQuery, columnId, editable_tag) {
+
+    $('#label-'+columnId).data('miniLanguageQuery', miniLanguageQuery);
+
+    if(window.dataTables[editable_tag][miniLanguageQuery]!==undefined) {
+        data = window.dataTables[editable_tag][miniLanguageQuery]
+        if (data===undefined || data.error!==undefined) {
+            $('#label-' + columnId).html("<span class='load_table_failed'>" + miniLanguageQuery + "</span>")
+        } else {
+            $('#label-' + columnId).html(miniLanguageQuery);
+            updatePlotControlElements('#plotctl-' + columnId, miniLanguageQuery,
+                data.is_number, data.is_boolean, false, true, true);
+        }
+    } else {
+        $('#label-'+columnId).html("<div class='progress-spinner'></div>"+miniLanguageQuery);
+        updatePlotControlElements('#plotctl-' + columnId, miniLanguageQuery, false, false, false);
+        requestColumnData(editable_tag, miniLanguageQuery, function() {
+            updateColumnData(miniLanguageQuery, columnId, editable_tag);
+        });
+    }
+    updateTableDisplay(editable_tag);
+}
+
+function addBlankColumn(after, object_tag) {
+    var new_name = "column-"+Math.random().toString(36).substring(7);
+    $('.data-table tr').each(function(index) {
+        $(this).find("#label-"+after).after("<th id='label-"+new_name+"' class='editable'></th>");
+        $(this).find("#plotctl-"+after).after("<th id='plotctl-"+new_name+"' class='plotcontrols'></th>");
+    })
+    $('#label-'+new_name).markAsColumnInsertPoint(object_tag);
+    updateTableDisplay(object_tag);
+    return new_name;
+}
+
+function removeColumn(name, object_tag) {
+     $('.data-table tr').each(function(index) {
+        $(this).find("#label-"+name).remove();
+        $(this).find("#plotctl-"+name).remove();
+    })
+    updateTableDisplay(object_tag);
+}
+
+
+function setupDynamicTables() {
+
+    setupTimestepTables('{{ timestep_url }}');
+
+    {% for this_object in objects %}
+        if(window.dataTables['{{ this_object['typetag'] }}']===undefined) {
+            window.dataTables['{{ this_object['typetag'] }}'] = {};
+        }
+
+        $('#label-number-{{ this_object['typetag'] }}').data('miniLanguageQuery', "halo_number()");
+        $('#label-go-{{ this_object['typetag'] }}').data('miniLanguageQuery', "*go_link");
+        $('#label-colid-1-{{ this_object["typetag"] }}').markAsColumnInsertPoint('{{ this_object["typetag"] }}');
+        updateTableDisplay('{{ this_object['typetag']  }}');
+        requestColumnData('{{ this_object["typetag"] }}', "halo_number()", function() {
+            let tables = window.dataTables['{{ this_object["typetag"]  }}'];
+            let numbers = tables['halo_number()'].data_formatted;
+            let links = new Array(numbers.length);
+
+            // ensure order array is in place; will not destroy an existing order if it's already been worked out
+            getOrderArray('{{ this_object["typetag"] }}', numbers.length);
+
+            for(i=0; i<numbers.length; i++) {
+                links[i] = `<a href="{{ this_object["object_url"] }}${numbers[i]}">Go &rarr;</a>`
+            }
+            tables['*go_link'] = Object();
+            tables['*go_link'].data_formatted = links;
+            updatePlotControlElements('#plotctl-number-{{ this_object['typetag'] }}',
+                'halo_number()', true, false, false, false, true);
+            updateTableDisplay('{{ this_object['typetag']  }}');
+        })
+    {% endfor %}
+
+}
+
+
+setupDynamicTables();
+
+
+</script>
+
+{% endblock content %}
