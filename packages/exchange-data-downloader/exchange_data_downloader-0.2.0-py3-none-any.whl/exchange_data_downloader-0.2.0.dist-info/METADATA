@@ -1,0 +1,129 @@
+Metadata-Version: 2.4
+Name: exchange-data-downloader
+Version: 0.2.0
+Summary: exchange-data-downloader — простая библиотека для скачивания и распаковки исторических данных с криптовалютных бирж. Поддерживает организацию файлов по папкам, кэширование и разные типы данных (klines, trades, funding и др.). Идеально для бэктестов и аналитики.
+Author: LoveBloodAndDiamonds
+License: MIT License
+        
+        Copyright (c) 2025 LoveBloodAndDiamonds
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+        
+Project-URL: Github, https://github.com/LoveBloodAndDiamonds/exchange-data-downloader
+Project-URL: Author, https://t.me/LoveBloodAndDiamonds
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: loguru>=0.7.3
+Dynamic: license-file
+
+# Exchange Data Downloader
+
+`exchange-data-downloader` — простая библиотека для скачивания и распаковки исторических данных с криптовалютных бирж. Она автоматически создаёт структуру папок, кэширует уже загруженные файлы и умеет работать с разными типами данных (klines, trades, funding и др.). Отлично подходит для бэктестов, аналитических пайплайнов и подготовки датасетов.
+
+## Установка
+
+```bash
+pip install exchange-data-downloader
+```
+или
+```bash
+uv add exchange-data-downloader
+```
+или
+```bash
+poetry add exchange-data-downloader
+```
+
+## Быстрый старт
+
+```python
+from exdata.binance import Downloader
+
+downloader = Downloader(data_folder_path="data/binance")
+csv_path = downloader.download(
+    symbol="BTCUSDT",
+    year=2024,
+    month=4,
+    timeframe="1h",
+    market_type="futures/um",
+    period_type="monthly",
+    data_type="klines",
+    unzip=True,
+)
+
+print(f"Файл сохранён по пути: {csv_path}")
+```
+
+- `year`, `month`, `day` передаются числами — библиотека сама добавит ведущие нули.
+- Если файл уже скачан и распакован, повторный вызов просто вернёт путь из кэша.
+- Параметр `unzip` по умолчанию равен `False` — библиотека вернёт путь к ZIP. Передайте `unzip=True`, если нужен путь к распакованному CSV.
+
+## Дополнительные примеры
+
+### Загрузка дневных trades
+
+```python
+csv_path = downloader.download(
+    symbol="TRXUSDT",
+    year=2025,
+    month=3,
+    day=15,
+    data_type="trades",
+    period_type="daily",
+    market_type="spot",
+)
+```
+
+### Обход диапазона дат
+
+```python
+from exdata.utils import generate_intervals
+
+intervals = generate_intervals(
+    start_year=2024,
+    start_month=12,
+    start_day=1,
+    end_year=2025,
+    end_month=1,
+    end_day=5,
+)
+
+for current in intervals:
+    downloader.download(
+        symbol="ETHUSDT",
+        year=current.year,
+        month=current.month,
+        day=current.day,
+        data_type="aggTrades",
+        period_type="daily",
+        market_type="futures/um",
+        timeframe=None,
+    )
+```
+
+Функция `generate_intervals` возвращает кортеж объектов `date`, что упрощает обход диапазонов.
+
+## Полезные замечания
+
+- Для kline-подобных типов (`klines`, `markPriceKlines`, `indexPriceKlines` и т.д.) параметр `timeframe` обязателен.
+- Для `period_type="daily"` необходимо указать день (`day`), для `monthly` — наоборот, `day` не используется.
+- Библиотека выбрасывает `InvalidParamsError`, если параметры указаны некорректно, и `NotFoundError`, если источник не вернул данные.
+
+Используйте `exchange-data-downloader`, чтобы не тратить время на ручные скачивания и сосредоточиться на аналитике. Удачных тестов!
