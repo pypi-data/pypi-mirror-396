@@ -1,0 +1,105 @@
+Metadata-Version: 2.4
+Name: auralis-worker
+Version: 0.2.6
+Summary: Auralis Worker Node - Distributed AI Compute Platform
+Author-email: Auralis Team <hello@auralis.dev>
+License-Expression: MIT
+Project-URL: Homepage, https://auralis.dev
+Project-URL: Repository, https://github.com/auralis-dev/auralis
+Project-URL: Documentation, https://docs.auralis.dev
+Keywords: distributed,compute,ai,docker,worker
+Classifier: Development Status :: 4 - Beta
+Classifier: Environment :: Console
+Classifier: Intended Audience :: Developers
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Topic :: System :: Distributed Computing
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Requires-Dist: aiohttp>=3.9.0
+Requires-Dist: certifi>=2024.0.0
+
+# 🌌 Auralis Worker Node
+
+The worker node polls for pending jobs, executes them in Docker containers, and streams logs back to the dashboard.
+
+## Prerequisites
+
+- **Python 3.10+**
+- **Docker** installed and running
+- AWS credentials configured
+- Supabase credentials configured
+
+## Setup
+
+1. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. **Configure environment variables:**
+   Create a `.env` file in the worker directory:
+   ```env
+   # Supabase
+   SUPABASE_URL=your-supabase-url
+   SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+   # AWS S3
+   AWS_ACCESS_KEY_ID=your-aws-key
+   AWS_SECRET_ACCESS_KEY=your-aws-secret
+   AWS_REGION=us-east-1
+   S3_BUCKET_NAME=auralis-job
+
+   # Worker Config
+   WORKER_ID=my-local-worker
+   COMPUTE_TYPE=cpu
+   POLL_INTERVAL=10
+   WORK_DIR=/tmp/auralis-worker
+   ```
+
+## Usage
+
+### Auto-Poll Mode (Default)
+Continuously polls for pending jobs and executes them:
+```bash
+python main.py
+```
+
+### Run Specific Job
+Execute a specific job by ID:
+```bash
+python main.py --job-id abc123-def456
+```
+
+### Options
+```
+-j, --job-id    Run a specific job by ID
+-w, --worker-id Unique worker identifier (default: worker-<pid>)
+```
+
+## How It Works
+
+1. **Poll**: Worker checks Supabase for `PENDING` jobs
+2. **Claim**: Worker atomically claims a job (`PENDING` → `CLAIMED`)
+3. **Download**: Downloads project zip from S3
+4. **Build**: Builds Docker image from Dockerfile
+5. **Run**: Executes container with output volume mounted
+6. **Stream**: Logs are streamed to Supabase in real-time
+7. **Upload**: Output files are uploaded to S3
+8. **Complete**: Job marked as `COMPLETED` or `FAILED`
+
+## Architecture
+
+```
+worker/
+├── main.py           # Entry point, polling loop
+├── job_runner.py     # Docker build & run logic
+├── supabase_client.py # Job queries & log streaming
+├── s3_client.py      # File upload/download
+└── requirements.txt  # Dependencies
+```
