@@ -1,0 +1,202 @@
+Metadata-Version: 2.4
+Name: x_dm_python
+Version: 1.1.6
+Classifier: Programming Language :: Rust
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Dist: pytest>=7.0 ; extra == 'test'
+Requires-Dist: pytest-asyncio>=0.21 ; extra == 'test'
+Provides-Extra: test
+Summary: Twitter DM 批量并发发送库 (Rust 实现, 提供 Python 绑定)
+Author-email: robin <robin528919@gmail.com>
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown; charset=UTF-8; variant=GFM
+Project-URL: Homepage, https://github.com/yourusername/twitter-dm-static
+Project-URL: Repository, https://github.com/yourusername/twitter-dm-static.git
+Project-URL: Issues, https://github.com/yourusername/twitter-dm-static/issues
+
+# Twitter Full Feature Library
+
+基于 Rust 开发的高性能 Twitter (X) 全功能自动化库，通过 PyO3 提供完全异步的 Python 接口。不仅支持私信批量发送，还涵盖了发帖、用户管理、媒体上传、收件箱同步等完整功能。
+
+## ✨ 功能特性
+
+- 📨 **消息服务 (DM)**: 支持单条/批量发送私信、自定义文案、媒体附件
+- 📝 **帖子服务 (Posts)**: 发布推文、回复、引用、转发、点赞、删除
+- 👥 **用户服务 (User)**: 获取个人资料、修改资料（头像/背景/简介/名称）
+- 📤 **媒体服务 (Upload)**: 支持图片/视频上传、分片上传
+- 📥 **收件箱 (Inbox)**: 获取私信会话、消息更新
+- 🔒 **安全认证**: 基于 cookies 的认证机制，支持 JA3/JA4 指纹绕过
+- ⚡ **高性能**: 使用 Tokio 实现真正的并发请求
+- 🐍 **Python 绑定**: 提供符合 Python 习惯的完整异步 API
+
+## 📦 安装
+
+### 从源码构建 Python 扩展
+
+```bash
+# 安装 maturin (Python 包构建工具)
+pip install maturin
+
+# 开发模式安装 (快速测试)
+maturin develop
+
+# 或者构建 release wheel
+maturin build --release
+```
+
+### 使用 Rust
+
+在 `Cargo.toml` 中添加依赖:
+
+```toml
+[dependencies]
+x_dm_python = { path = "." }
+tokio = { version = "1", features = ["full"] }
+```
+
+## 🚀 快速开始
+
+### Python 使用示例 (异步 API)
+
+> **重要**: 所有操作均为异步，请确保在 `async` 函数中运行。
+
+```python
+import asyncio
+import x_dm_python
+
+async def main():
+    # 初始化客户端 (需要有效的 cookies)
+    cookies = "ct0=your_csrf_token; auth_token=your_auth_token; twid=u%3D123456789"
+    client = x_dm_python.Twitter(cookies)
+
+    # 1. 发送推文
+    print("--- 发布推文 ---")
+    tweet_result = await client.create_tweet(
+        text="Hello from x_dm_python! 🚀",
+        # reply_to="tweet_id_if_reply",
+        # media_ids=["media_id_1"]
+    )
+    if tweet_result.success:
+        print(f"推文发送成功: {tweet_result.tweet_id}")
+    
+        # 点赞该推文
+        await client.favorite_tweet(tweet_result.tweet_id)
+
+    # 2. 修改个人资料
+    print("\n--- 更新资料 ---")
+    profile_result = await client.edit_profile(
+        name="Rust Python Bot",
+        description="Automated by x_dm_python library"
+    )
+    if profile_result.success:
+        print(f"资料更新成功: {profile_result.name}")
+
+    # 3. 获取用户信息
+    print("\n--- 获取信息 ---")
+    user_info = await client.get_profile("elonmusk")
+    if user_info.success:
+        print(f"用户: {user_info.name}, 粉丝数: {user_info.followers_count}")
+
+    # 4. 批量发送私信
+    print("\n--- 批量私信 ---")
+    user_ids = ["123456789", "987654321"]
+    batch_result = await client.send_batch_direct_messages(
+        user_ids=user_ids, 
+        message="这是一条批量测试消息！"
+    )
+    print(f"成功: {batch_result.success_count}, 失败: {batch_result.failure_count}")
+
+# 运行
+asyncio.run(main())
+```
+
+### Rust 使用示例
+
+```rust
+use x_dm_python::{Twitter, CreateTweetParams};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // 初始化客户端
+    let cookies = "ct0=...; auth_token=...; twid=...";
+    let client = Twitter::new(cookies.to_string(), None)?;
+
+    // 发布推文
+    let params = CreateTweetParams::new("Hello from Rust!");
+    let result = client.create_tweet(params).await?;
+    println!("Sent tweet ID: {:?}", result.tweet_id);
+
+    // 获取用户资料
+    let profile = client.get_profile("elonmusk").await?;
+    println!("Elon's followers: {:?}", profile.followers_count);
+
+    Ok(())
+}
+```
+
+## 📖 API 文档概览
+
+核心类 `Twitter` 聚合了所有功能模块：
+
+### 📝 Posts (帖子)
+- `create_tweet(text: str, ...)`: 发推文/回复
+- `delete_tweet(tweet_id: str)`: 删除推文
+- `favorite_tweet(tweet_id: str)`: 点赞
+- `unfavorite_tweet(tweet_id: str)`: 取消点赞
+- `create_retweet(tweet_id: str)`: 转发
+- `delete_retweet(tweet_id: str)`: 取消转发
+- `get_tweets(user_id: str)`: 获取用户推文列表
+
+### 👥 User (用户)
+- `get_profile(screen_name: str)`: 通过用户名获取资料
+- `get_profile_by_id(rest_id: str)`: 通过 ID 获取资料
+- `edit_profile(name: str, description: str, ...)`: 编辑资料
+- `change_profile_image(media_id: str)`: 更换头像
+- `change_background_image(media_id: str)`: 更换背景图
+
+### 📨 DM (私信)
+- `send_direct_message(user_id: str, message: str)`: 发送单条
+- `send_batch_direct_messages(user_ids: List[str], ...)`: 批量发送
+
+### 📤 Upload (上传)
+- `upload_image(bytes: bytes, category: str)`: 上传图片
+- `upload_video(...)`: 上传视频 (Rust API)
+
+### 📥 Inbox (收件箱)
+- `get_user_updates(...)`: 获取消息更新
+
+*(详细参数请参考代码注释或生成的 Python 类型提示)*
+
+## 🔐 获取 Twitter Cookies
+
+1. 浏览器登录 Twitter (X)
+2. F12 打开开发者工具 -> Network
+3. 发送任意请求，查看 Request Headers 中的 `Cookie`
+4. 确保包含: `ct0` (CSRF Token), `auth_token`, `twid`
+
+## 🏗️ 架构设计
+
+本项目采用**模块化组合模式**：
+
+- **common**: 基础 HTTP 客户端、认证、错误处理
+- **x (Core)**:
+  - `dm`: 私信模块
+  - `posts`: 帖子/推文模块
+  - `user`: 用户资料模块
+  - `upload`: 媒体上传模块
+  - `inbox`: 收件箱模块
+- **python**: PyO3 绑定层
+- **lib.rs**: 统一入口 `Twitter` 结构体
+
+## 📜 许可证
+
+MIT License
+
