@@ -1,0 +1,340 @@
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling", "hatch-build-scripts", "hatch"]
+
+##############################
+# >>> Hatch Build Config <<< #
+##############################
+
+[project]
+name = "reactpy"
+description = "It's React, but in Python."
+readme = "README.md"
+keywords = [
+  "react",
+  "reactjs",
+  "reactpy",
+  "components",
+  "asgi",
+  "wsgi",
+  "website",
+  "interactive",
+  "reactive",
+  "javascript",
+  "server",
+]
+license = "MIT"
+authors = [
+  { name = "Mark Bakhit", email = "archiethemonger@gmail.com" },
+  { name = "Ryan Morshead", email = "ryan.morshead@gmail.com" },
+]
+requires-python = ">=3.11"
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = ["fastjsonschema>=2.14.5", "requests>=2", "lxml>=4", "anyio>=3"]
+dynamic = ["version"]
+urls.Changelog = "https://reactpy.dev/docs/about/changelog.html"
+urls.Documentation = "https://reactpy.dev/"
+urls.Source = "https://github.com/reactive-python/reactpy"
+
+[project.optional-dependencies]
+all = ["reactpy[asgi,jinja,testing]"]
+asgi = ["asgiref", "asgi-tools", "servestatic", "orjson"]
+jinja = ["jinja2-simple-tags", "jinja2>=3"]
+testing = ["playwright", "uvicorn[standard]"]
+
+[tool.hatch.version]
+path = "src/reactpy/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+include = ["/src"]
+artifacts = ["/src/reactpy/static/"]
+
+[tool.hatch.build.targets.wheel]
+artifacts = ["/src/reactpy/static/"]
+
+[tool.hatch.metadata]
+license-files = { paths = ["LICENSE"] }
+
+[tool.hatch.envs.default]
+installer = "uv"
+
+[project.scripts]
+reactpy = "reactpy._console.cli:entry_point"
+
+[[tool.hatch.build.hooks.build-scripts.scripts]]
+commands = []
+artifacts = []
+
+#############################
+# >>> Hatch Test Runner <<< #
+#############################
+[tool.hatch.envs.hatch-test.scripts]
+run = [
+  'hatch --env default run "src/build_scripts/install_playwright.py"',
+  "hatch --env default run javascript:build --dev",
+  "hatch --env default build -t wheel",
+  "pytest{env:HATCH_TEST_ARGS:} {args} --max-worker-restart 10",
+]
+run-cov = [
+  'hatch --env default run "src/build_scripts/install_playwright.py"',
+  "hatch --env default run javascript:build --dev",
+  "hatch --env default build -t wheel",
+  'hatch --env default run "src/build_scripts/delete_old_coverage.py"',
+  "coverage run -m pytest{env:HATCH_TEST_ARGS:} {args} --max-worker-restart 10",
+]
+cov-combine = "coverage combine"
+cov-report = "coverage report"
+
+[tool.hatch.envs.hatch-test]
+extra-dependencies = [
+  "pytest-sugar",
+  "pytest-asyncio",
+  "pytest-timeout",
+  "responses",
+  "exceptiongroup",
+  "jsonpointer",
+  "starlette",
+]
+features = ["all"]
+
+[[tool.hatch.envs.hatch-test.matrix]]
+python = ["3.11", "3.12", "3.13", "3.14"]
+
+[tool.pytest.ini_options]
+addopts = ["--strict-config", "--strict-markers"]
+filterwarnings = """
+  ignore::DeprecationWarning:uvicorn.*
+  ignore::DeprecationWarning:websockets.*
+  ignore::UserWarning:tests.test_core.test_vdom
+  ignore::UserWarning:tests.test_pyscript.test_components
+  ignore::UserWarning:tests.test_utils
+"""
+testpaths = "tests"
+xfail_strict = true
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+log_cli_level = "INFO"
+timeout = 120
+
+#######################################
+# >>> Hatch Documentation Scripts <<< #
+#######################################
+[tool.hatch.envs.docs]
+template = "docs"
+dependencies = ["poetry"]
+detached = true
+
+[tool.hatch.envs.docs.scripts]
+build = [
+  "cd docs && poetry install",
+  "cd docs && poetry run sphinx-build -a -T -W --keep-going -b doctest source build",
+]
+docker_build = [
+  "hatch run docs:build",
+  "docker build . --file ./docs/Dockerfile --tag reactpy-docs:latest",
+]
+docker_serve = [
+  "hatch run docs:docker_build",
+  "docker run --rm -p 5000:5000 reactpy-docs:latest",
+]
+check = [
+  "cd docs && poetry install",
+  "cd docs && poetry run sphinx-build -a -T -W --keep-going -b doctest source build",
+  "docker build . --file ./docs/Dockerfile",
+]
+serve = [
+  "cd docs && poetry install",
+  "cd docs && poetry run python main.py --watch=../src/ --ignore=**/_auto/* --ignore=**/custom.js --ignore=**/node_modules/* --ignore=**/package-lock.json -a -E -b html source build",
+]
+
+################################
+# >>> Hatch Python Scripts <<< #
+################################
+
+[tool.hatch.envs.python]
+extra-dependencies = [
+  "reactpy[all]",
+  "pyright",
+  "types-toml",
+  "types-click",
+  "types-requests",
+  "types-lxml",
+  "jsonpointer",
+  "pytest",
+]
+
+[tool.hatch.envs.python.scripts]
+type_check = ["pyright src/reactpy"]
+
+############################
+# >>> Hatch JS Scripts <<< #
+############################
+
+[tool.hatch.envs.javascript]
+detached = true
+
+[tool.hatch.envs.javascript.scripts]
+check = [
+  'hatch run javascript:build',
+  'bun run --cwd "src/js" lint',
+  'bun run --cwd "src/js/packages/event-to-object" checkTypes',
+  'bun run --cwd "src/js/packages/@reactpy/client" checkTypes',
+  'bun run --cwd "src/js/packages/@reactpy/app" checkTypes',
+]
+fix = ['bun install --cwd "src/js"', 'bun run --cwd "src/js" format']
+test = ['hatch run javascript:build_event_to_object --dev', 'bun test']
+build = [
+  'hatch run "src/build_scripts/clean_js_dir.py"',
+  'bun install --cwd "src/js"',
+  'hatch run javascript:build_event_to_object {args}',
+  'hatch run javascript:build_client {args}',
+  'hatch run javascript:build_app {args}',
+  'hatch --env default run "src/build_scripts/copy_dir.py" "src/js/node_modules/@pyscript/core/dist" "src/reactpy/static/pyscript"',
+  'hatch --env default run "src/build_scripts/copy_dir.py" "src/js/node_modules/morphdom/dist" "src/reactpy/static/morphdom"',
+
+]
+build_event_to_object = [
+  'hatch run "src/build_scripts/build_js_event_to_object.py" {args}',
+]
+build_client = ['hatch run "src/build_scripts/build_js_client.py" {args}']
+build_app = ['hatch run "src/build_scripts/build_js_app.py" {args}']
+publish_event_to_object = [
+  'hatch run javascript:build_event_to_object',
+  'cd "src/js/packages/event-to-object" && bun publish --access public',
+]
+publish_client = [
+  'hatch run javascript:build_client',
+  'cd "src/js/packages/@reactpy/client" && bun publish --access public',
+]
+
+#########################
+# >>> Generic Tools <<< #
+#########################
+
+[tool.pyright]
+reportIncompatibleVariableOverride = false
+
+[tool.coverage.run]
+source_pkgs = ["reactpy"]
+branch = false
+parallel = false
+omit = [
+  "src/reactpy/__init__.py",
+  "src/reactpy/_console/*",
+  "src/reactpy/__main__.py",
+  "src/reactpy/executors/pyscript/layout_handler.py",
+  "src/reactpy/executors/pyscript/component_template.py",
+]
+
+[tool.coverage.report]
+fail_under = 100
+show_missing = true
+skip_covered = true
+sort = "Name"
+exclude_also = [
+  "no ?cov",
+  '\.\.\.',
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
+
+[tool.ruff]
+line-length = 88
+lint.select = [
+  "A",
+  "ARG",
+  "B",
+  "C",
+  "DTZ",
+  "E",
+  # error message linting is overkill
+  # "EM",
+  "F",
+  # TODO: turn this on later
+  # "FBT",
+  "I",
+  "ICN",
+  "N",
+  "PLC",
+  "PLE",
+  "PLR",
+  "PLW",
+  "Q",
+  "RUF",
+  "S",
+  "T",
+  "TID",
+  "UP",
+  "W",
+  "YTT",
+]
+lint.ignore = [
+  # TODO: turn this on later
+  "N802",
+  "N806", # allow TitleCase functions/variables
+  # We're not any cryptography
+  "S311",
+  # For loop variable re-assignment seems like an uncommon mistake
+  "PLW2901",
+  # Let Black deal with line-length
+  "E501",
+  # Allow args/attrs to shadow built-ins
+  "A002",
+  "A003",
+  # Allow unused args (useful for documenting what the parameter is for later)
+  "ARG001",
+  "ARG002",
+  "ARG005",
+  # Allow non-abstract empty methods in abstract base classes
+  "B027",
+  # Allow boolean positional values in function calls, like `dict.get(... True)`
+  "FBT003",
+  # If we're making an explicit comparison to a falsy value it was probably intentional
+  "PLC1901",
+  # Ignore checks for possible passwords
+  "S105",
+  "S106",
+  "S107",
+  # Ignore complexity
+  "C901",
+  "PLR0911",
+  "PLR0912",
+  "PLR0913",
+  "PLR0915",
+  # Allow imports anywhere
+  "PLC0415",
+]
+lint.unfixable = [
+  # Don't touch unused imports
+  "F401",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["reactpy"]
+known-third-party = ["js"]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests can use magic values, assertions, and relative imports
+"**/tests/**/*" = ["PLR2004", "S101", "TID252"]
+"docs/**/*.py" = [
+  # Examples require some extra setup before import
+  "E402",
+  # Allow exec
+  "S102",
+  # Allow print
+  "T201",
+]
+"scripts/**/*.py" = [
+  # Allow print
+  "T201",
+]
