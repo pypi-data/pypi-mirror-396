@@ -1,0 +1,1 @@
+# Greenhub.ai Model Boilerplate
