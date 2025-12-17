@@ -1,0 +1,380 @@
+# OpenVerb
+
+Lightweight helpers for working with [OpenVerb](https://openverb.org) verb libraries.
+
+**OpenVerb** is an open, text-first standard for describing what actions an AI is allowed to perform inside an application. Instead of wiring one-off "tools" or plugins, applications expose **verb libraries**: JSON files that describe actions (verbs), their parameters, and their results.
+
+This package provides Python helpers for loading, validating, and executing OpenVerb actions.
+
+## Installation
+
+```bash
+pip install openverb
+```
+
+## Quick Start
+
+```python
+from openverb import load_library, create_executor
+
+# Load library
+library = load_library({
+    'namespace': 'my.app',
+    'version': '1.0.0',
+    'verbs': [
+        {
+            'name': 'create_item',
+            'category': 'data',
+            'description': 'Create a new item',
+            'params': {
+                'collection': {'type': 'string', 'required': True},
+                'data': {'type': 'object', 'required': True}
+            }
+        }
+    ]
+})
+
+# Create executor
+executor = create_executor(library)
+
+# Register handler
+def create_item_handler(params):
+    collection = params['collection']
+    data = params['data']
+    # Your implementation here
+    return {
+        'verb': 'create_item',
+        'status': 'success',
+        'data': {'id': '123', **data}
+    }
+
+executor.register('create_item', create_item_handler)
+
+# Execute action
+action = {
+    'verb': 'create_item',
+    'params': {
+        'collection': 'jobs',
+        'data': {
+            'client': 'Smith Construction',
+            'job_type': 'Boundary Survey'
+        }
+    }
+}
+
+result = executor.execute(action)
+print(result)
+# {'verb': 'create_item', 'status': 'success', 'data': {'id': '123', ...}}
+```
+
+## Core Concepts
+
+From the [OpenVerb specification](https://github.com/sgthancel/openverb/blob/main/SPEC.md):
+
+- **Verb** – An action the AI can perform (e.g. `create_item`, `navigate`, `create_file`)
+- **Verb Library** – A JSON file that groups related verbs under a namespace (e.g. `openverb.core`)
+- **Action** – A single request from the AI to execute a verb with parameters
+- **Executor** – Your code that takes `(verb, params)` and performs the real work
+
+## API Reference
+
+### `load_library(source)`
+
+Load a verb library from a JSON string, dict, or file path.
+
+```python
+# From dict
+library = load_library({'namespace': 'test', 'verbs': [...]})
+
+# From JSON string
+library = load_library('{"namespace": "test", "verbs": [...]}')
+
+# From file
+library = load_library('openverb.core.json')
+library = load_library(Path('openverb.core.json'))
+```
+
+### `build_registry(library)`
+
+Build a verb registry for quick lookup by verb name.
+
+```python
+registry = build_registry(library)
+verb_def = registry['create_item']
+```
+
+### `validate_action(action, verb_def)`
+
+Validate an action against a verb definition.
+
+```python
+validation = validate_action(action, verb_def)
+if not validation['valid']:
+    print(validation['error'])
+```
+
+### `create_executor(library)`
+
+Create a simple executor with handler registration.
+
+```python
+executor = create_executor(library)
+
+# Register handlers
+executor.register('create_item', lambda params: {
+    'verb': 'create_item',
+    'status': 'success',
+    'data': {...}
+})
+
+# Execute actions
+result = executor.execute(action)
+```
+
+**Executor methods:**
+
+- `register(verb_name, handler)` - Register a handler for a verb
+- `execute(action)` - Execute an action
+- `get_registry()` - Get the verb registry
+- `get_verbs()` - Get list of verb names
+- `get_verb(name)` - Get a specific verb definition
+
+### `load_core_library()`
+
+Load the official `openverb.core` library.
+
+```python
+from openverb import load_core_library
+
+core = load_core_library()
+print(core['namespace'])  # 'openverb.core'
+```
+
+## Type Hints
+
+Full type hint support:
+
+```python
+from openverb import (
+    VerbLibrary,
+    Verb,
+    Action,
+    ActionResult,
+    VerbHandler
+)
+
+library: VerbLibrary = {...}
+action: Action = {'verb': 'create_item', 'params': {...}}
+
+def handler(params: dict) -> ActionResult:
+    return {'verb': '...', 'status': 'success', 'data': {...}}
+```
+
+## Complete Example
+
+```python
+from openverb import load_library, create_executor
+
+# Simple in-memory database
+db = {'jobs': []}
+
+# Load library
+library = load_library({
+    'namespace': 'my.app',
+    'version': '1.0.0',
+    'verbs': [
+        {
+            'name': 'create_item',
+            'category': 'data',
+            'description': 'Create an item',
+            'params': {
+                'collection': {'type': 'string', 'required': True},
+                'data': {'type': 'object', 'required': True}
+            }
+        },
+        {
+            'name': 'list_items',
+            'category': 'data',
+            'description': 'List items',
+            'params': {
+                'collection': {'type': 'string', 'required': True}
+            }
+        }
+    ]
+})
+
+# Create executor
+executor = create_executor(library)
+
+# Register handlers
+def create_item(params):
+    collection = params['collection']
+    data = params['data']
+    if collection not in db:
+        db[collection] = []
+    
+    item_id = str(len(db[collection]))
+    item = {'id': item_id, **data}
+    db[collection].append(item)
+    
+    return {
+        'verb': 'create_item',
+        'status': 'success',
+        'data': item
+    }
+
+def list_items(params):
+    collection = params['collection']
+    return {
+        'verb': 'list_items',
+        'status': 'success',
+        'items': db.get(collection, [])
+    }
+
+executor.register('create_item', create_item)
+executor.register('list_items', list_items)
+
+# Execute actions
+result1 = executor.execute({
+    'verb': 'create_item',
+    'params': {
+        'collection': 'jobs',
+        'data': {
+            'client': 'Smith Construction',
+            'job_type': 'Boundary Survey'
+        }
+    }
+})
+print('Created:', result1)
+
+result2 = executor.execute({
+    'verb': 'list_items',
+    'params': {'collection': 'jobs'}
+})
+print('Jobs:', result2)
+```
+
+## Using with AI Models
+
+```python
+# 1. Provide the library to the AI in your prompt
+verbs = executor.get_verbs()
+prompt = f"""
+Available actions: {', '.join(verbs)}
+
+You can perform these actions by responding with:
+{{"verb": "create_item", "params": {{"collection": "jobs", "data": {{...}}}}}}
+"""
+
+# 2. Parse AI response and execute
+import json
+ai_response = '{"verb":"create_item","params":{...}}'
+action = json.loads(ai_response)
+result = executor.execute(action)
+```
+
+## OpenVerb Core Library
+
+The official `openverb.core` library includes these verbs:
+
+**Data:**
+- `create_item` - Create a new item in a collection
+- `get_item` - Fetch a single item by ID
+- `list_items` - List items with optional filtering
+- `update_item` - Update fields on an item
+- `delete_item` - Delete an item
+- `search_items` - Search items with free-text query
+
+**File System:**
+- `create_file` - Create a new file
+- `read_file` - Read file contents
+- `write_file` - Write/overwrite file
+- `delete_file` - Delete a file
+
+**Navigation:**
+- `navigate` - Navigate to a route/view
+
+**Communication:**
+- `notify_user` - Show user notification
+
+**System:**
+- `log_message` - Write to application log
+- `run_command` - Execute pre-approved command
+
+**Analysis:**
+- `calculate` - Perform calculations
+
+**NLP:**
+- `summarize_text` - Generate text summaries
+- `transform_text` - Transform text (rewrite, translate, etc.)
+
+Load it with:
+```python
+from openverb import load_core_library
+core = load_core_library()
+```
+
+## Flask Example
+
+```python
+from flask import Flask, request, jsonify
+from openverb import create_executor, load_core_library
+
+app = Flask(__name__)
+executor = create_executor(load_core_library())
+
+# Register handlers
+executor.register('create_item', create_item_handler)
+executor.register('list_items', list_items_handler)
+
+@app.route('/execute', methods=['POST'])
+def execute_action():
+    action = request.json
+    result = executor.execute(action)
+    return jsonify(result)
+
+if __name__ == '__main__':
+    app.run()
+```
+
+## FastAPI Example
+
+```python
+from fastapi import FastAPI
+from openverb import create_executor, load_core_library
+
+app = FastAPI()
+executor = create_executor(load_core_library())
+
+# Register handlers
+executor.register('create_item', create_item_handler)
+
+@app.post("/execute")
+async def execute_action(action: dict):
+    result = executor.execute(action)
+    return result
+```
+
+## Philosophy
+
+From the [OpenVerb README](https://github.com/sgthancel/openverb):
+
+> AI already "thinks" and talks in verbs. OpenVerb turns that into a clear, reusable action API.
+
+OpenVerb is:
+- ✅ **Language-native** – Verbs are how humans and AIs naturally express actions
+- ✅ **Text-first** – Works with any LLM that can read/write text
+- ✅ **Framework-agnostic** – Use with agents, tools, MCP, or your own executor
+- ✅ **Simple JSON** – Verb libraries are just JSON files
+
+## Links
+
+- [Specification](https://github.com/sgthancel/openverb/blob/main/SPEC.md)
+- [Core Library](https://github.com/sgthancel/openverb/blob/main/libraries/openverb.core.json)
+- [Examples](https://github.com/sgthancel/openverb/tree/main/examples)
+- [Website](https://openverb.org)
+- [npm Package](https://www.npmjs.com/package/openverb)
+
+## License
+
+MIT © Roman Hancel
