@@ -1,0 +1,97 @@
+name: Publish to PyPI
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g., 0.1.0)'
+        required: true
+        type: string
+
+permissions:
+  id-token: write  # 用于 OIDC 身份验证
+  contents: read   # 用于检出代码
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+
+      - name: Extract version from tag
+        id: extract_version
+        run: |
+          # 从GITHUB_REF中提取版本号，例如从refs/tags/v0.1.2提取0.1.2
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "release" ]; then
+            # 如果是release事件，从release tag中提取版本号
+            VERSION=${{ github.event.tag_name }}
+            VERSION=${VERSION#v}  # 移除可能的前缀'v'
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          elif [ -n "${{ github.event.inputs.version }}" ]; then
+            # 如果是手动触发且有输入版本号
+            VERSION="${{ github.event.inputs.version }}"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          else
+            # 否则尝试获取最新tag
+            LATEST_TAG=$(git describe --tags --match="v*" --abbrev=0 2>/dev/null || echo "v0.0.0")
+            VERSION=${LATEST_TAG#v}
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          fi
+
+          echo "Extracted version: $VERSION"
+
+      - name: Update version in pyproject.toml
+        run: |
+          # 使用Python脚本更新pyproject.toml中的版本号，确保格式正确
+          python <<EOF
+          import re
+          import os
+
+          version = "${{ steps.extract_version.outputs.version }}"
+          print(f"Updating pyproject.toml with version: {version}")
+
+          # 读取文件内容
+          with open("pyproject.toml", "r") as f:
+              content = f.read()
+
+          # 替换版本号
+          new_content = re.sub(r'^version = .+$', f'version = "{version}"', content, flags=re.MULTILINE)
+
+          # 写回文件
+          with open("pyproject.toml", "w") as f:
+              f.write(new_content)
+
+          # 验证更新
+          with open("pyproject.toml", "r") as f:
+              updated_content = f.read()
+              print("Updated content:")
+              for line in updated_content.split("\n"):
+                  if line.startswith("version"):
+                      print(line)
+          EOF
+
+      - name: Build package
+        run: python -m build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+          print-hash: true
+
