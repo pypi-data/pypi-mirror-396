@@ -1,0 +1,148 @@
+"""
+# GKE Log Tools
+
+Log management tools for GKE with GCS archive access and signed URL generation.
+
+## Installation
+
+```bash
+pip install gke-log-tools
+```
+
+## Quick Start
+
+```python
+from gke_log_tools import generate_signed_url_for_log, list_archived_logs_for_deployment
+
+# Generate signed URL for archived log
+url_result = generate_signed_url_for_log(
+    namespace="prod-app",
+    deployment_name="ecommerce",
+    environment="prod",
+    log_date="2025-08-15",
+    cluster="main-cluster",
+    project="my-project"
+)
+
+print(f"Download URL: {url_result['signed_url']}")
+print(f"Expires in: {url_result['expires_in']}")
+
+# List available archived logs
+logs_list = list_archived_logs_for_deployment(
+    namespace="prod-app",
+    deployment_name="ecommerce",
+    environment="prod",
+    cluster="main-cluster",
+    project="my-project"
+)
+
+for log in logs_list['log_files']:
+    print(f"{log['filename']} - {log['size_mb']} MB")
+```
+
+## Features
+
+- Generate signed URLs for GCS archived logs
+- List available log files from GCS bucket
+- Fetch recent logs from NFS storage via IAP
+- Thread-safe credential management
+- Automatic token refresh for signing
+- Fixes SignatureDoesNotMatch errors
+
+## Usage Examples
+
+### Archived Logs from GCS
+
+```python
+from gke_log_tools import generate_signed_url_for_log
+
+result = generate_signed_url_for_log(
+    namespace="14300-cabp",
+    deployment_name="ecommerce",
+    environment="prod",
+    log_date="2025-08-15",
+    cluster="cluster-1",
+    project="project-1"
+)
+
+if result['success']:
+    # Use signed URL to download log
+    import requests
+    response = requests.get(result['signed_url'])
+    log_content = response.text
+```
+
+### Recent Logs from NFS
+
+```python
+from gke_log_tools import fetch_recent_log_from_nfs_sync
+
+result = fetch_recent_log_from_nfs_sync(
+    namespace="prod-app",
+    deployment_name="ecommerce",
+    log_date="2025-12-10",  # Within last 6 days
+    cluster="main",
+    project="my-project"
+)
+
+if result['success']:
+    print(f"Log URL: {result['signed_url']}")
+```
+
+### List All Archived Logs
+
+```python
+from gke_log_tools import list_archived_logs_for_deployment
+
+result = list_archived_logs_for_deployment(
+    namespace="prod-app",
+    deployment_name="ecommerce",
+    environment="prod",
+    cluster="main",
+    project="my-project",
+    max_results=100
+)
+
+for log in result['log_files']:
+    print(f"{log['log_date']}: {log['filename']} ({log['size_mb']} MB)")
+```
+
+## Configuration
+
+Environment setup for NFS access:
+
+```bash
+# For NFS mappings
+export NFS_MAPPINGS_CSV=nfs_mappings.csv
+```
+
+NFS mappings CSV format:
+```csv
+host_url,vm_name,vm_zone,vm_project,nfs_path
+www.example.com,nfs-vm-1,us-central1-a,my-project,/mnt/nfs/logs
+```
+
+## GCS Bucket Structure
+
+Expected GCS log archive structure:
+```
+cimm_log_archive/
+├── {namespace}/
+│   └── {deployment}/
+│       └── {environment}/
+│           └── logs/
+│               ├── server.log.2025-08-15
+│               ├── server.log.2025-08-14
+│               └── ...
+```
+
+## Requirements
+
+- gke-cache-builder>=1.0.2
+- google-cloud-storage>=2.10.0
+- google-auth>=2.23.0
+
+## License
+
+MIT License
+"""
