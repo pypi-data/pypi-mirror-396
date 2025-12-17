@@ -1,0 +1,226 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lex-pdftotext"
+version = "1.0.0"
+description = "Extract and structure text from Brazilian legal PDF documents (PJe format)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+    {name = "Felipe Bertrand Sardenberg Moulin", email = "felipe.moulin.juiz@gmail.com"}
+]
+keywords = [
+    "pdf",
+    "text extraction",
+    "legal documents",
+    "brazilian law",
+    "pje",
+    "document processing",
+    "rag",
+    "markdown",
+    "lex-intelligentia"
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Legal Industry",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Text Processing",
+    "Topic :: Office/Business",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "pymupdf>=1.23.0",
+    "pdfplumber>=0.10.0",
+    "click>=8.0.0",
+    "python-dotenv>=1.0.0",
+    "tqdm>=4.65.0",
+    "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+vision = [
+    "google-generativeai>=0.3.0",
+    "Pillow>=10.0.0",
+]
+gui = [
+    "pywebview>=4.0",
+]
+dev = [
+    "black>=24.0.0",
+    "isort>=5.13.0",
+    "flake8>=7.0.0",
+    "ruff>=0.6.0",
+    "mypy>=1.11.0",
+    "types-PyYAML>=6.0.0",
+    "pytest>=8.3.0",
+    "pytest-cov>=6.0.0",
+    "pytest-mock>=3.14.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-xdist>=3.6.0",
+    "sphinx>=7.4.0",
+    "sphinx-rtd-theme>=2.0.0",
+    "pre-commit>=3.8.0",
+    "bandit>=1.7.0",
+    "radon>=6.0.0",
+    "build>=1.0.0",
+    "twine>=5.0.0",
+]
+build = [
+    "pyinstaller>=6.0.0",
+]
+all = [
+    "lex-pdftotext[vision,gui,dev,build]",
+]
+
+[project.urls]
+Homepage = "https://github.com/fbmoulin/pdftotext"
+Documentation = "https://fbmoulin.github.io/pdftotext/"
+Repository = "https://github.com/fbmoulin/pdftotext"
+Issues = "https://github.com/fbmoulin/pdftotext/issues"
+Changelog = "https://github.com/fbmoulin/pdftotext/blob/main/CHANGELOG.md"
+
+[project.scripts]
+lex-pdftotext = "src.lex_pdftotext.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[tool.setuptools.package-data]
+"src.lex_pdftotext" = ["py.typed"]
+
+# Black configuration
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312"]
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+# isort configuration
+[tool.isort]
+profile = "black"
+line_length = 100
+skip_gitignore = true
+known_first_party = ["src", "lex_pdftotext"]
+
+# Ruff configuration
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = [
+    ".eggs",
+    ".git",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".tox",
+    ".venv",
+    "build",
+    "dist",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by black)
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]  # unused imports in __init__.py
+
+# MyPy configuration
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false  # Set to true when all types are added
+ignore_missing_imports = true
+show_error_codes = true
+show_error_context = true
+pretty = true
+
+# Pytest configuration
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+    "--showlocals",
+]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+# Coverage configuration
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+    "*/__pycache__/*",
+    "*/venv/*",
+]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if TYPE_CHECKING:",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "@abstractmethod",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+# Bandit configuration
+[tool.bandit]
+exclude_dirs = [
+    "tests",
+    ".venv",
+    "venv",
+    "build",
+    "dist",
+]
+skips = [
+    "B101",  # assert_used - we use asserts for type narrowing with MyPy
+    "B110",  # try_except_pass - intentional for cleanup error suppression
+    "B112",  # try_except_continue - intentional for error recovery in loops
+]
