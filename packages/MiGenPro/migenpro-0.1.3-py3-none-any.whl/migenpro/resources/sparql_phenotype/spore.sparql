@@ -1,0 +1,10 @@
+PREFIX fair: <http://fairbydesign.nl/ontology/>
+SELECT DISTINCT (IF(CONTAINS(?accessionRaw, '.'), ?accessionRaw, CONCAT(?accessionRaw, '.1')) AS ?accession) ?sporeForming ?taxid
+WHERE {
+    ?morphology fair:physiologyAndMetabolism/fair:sporeFormation/fair:sporeFormation ?sporeForming ;
+    fair:sequenceInformation/fair:genomeSequences ?genome .
+    ?genome fair:accession ?accessionRaw ;
+    fair:database 'ncbi' ;
+    fair:ncbiTaxId ?taxid ;
+    FILTER( strStarts(?accessionRaw, 'GCA_')).
+}

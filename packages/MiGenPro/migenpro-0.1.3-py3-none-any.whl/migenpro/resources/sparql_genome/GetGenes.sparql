@@ -1,0 +1,24 @@
+PREFIX gbol: <http://gbol.life/0.1/>
+
+SELECT DISTINCT ?contig ?gene ?geneLabel ?beginpos ?endpos ?strand
+WHERE {
+    # Get genes with their locations and associated information
+    ?contigRaw a gbol:Contig ;
+    gbol:feature ?geneRaw .
+
+    ?geneRaw gbol:locusTag ?geneLabel ;
+    gbol:location ?loc .
+
+    ?loc gbol:begin/gbol:position ?beginpos ;
+    gbol:end/gbol:position ?endpos ;
+    gbol:strand ?strand .
+
+    # Select for pfam database
+    #?geneRaw gbol:transcript/gbol:feature/gbol:protein/gbol:feature/gbol:xref/gbol:db/gbol:id 'pfam' .
+
+    # Bind simplified URIs for contig and gene
+    BIND (replace(str(?geneRaw), 'http://gbol.life/0.1/', '') as ?gene) .
+    BIND (replace(str(?contigRaw), 'http://gbol.life/0.1/', '') as ?contig) .
+}
+# Order first by contig then by begin position.
+ORDER BY ?contig ?beginpos

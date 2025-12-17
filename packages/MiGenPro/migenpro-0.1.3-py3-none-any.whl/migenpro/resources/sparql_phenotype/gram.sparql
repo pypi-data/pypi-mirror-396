@@ -1,0 +1,13 @@
+PREFIX fair: <http://fairbydesign.nl/ontology/>
+SELECT DISTINCT (IF(CONTAINS(?accessionRaw, '.'), ?accessionRaw, CONCAT(?accessionRaw, '.1')) AS ?accession) ?gram ?taxid 
+WHERE {
+    # Gram stain
+    # Get species from genome by coupling the taxID to the NCBI taxonomy object and its taxID.
+    # Get phenotype from the morphology tab.
+    ?morphology fair:morphology/fair:cellMorphology/fair:gramStain ?gram ;
+    fair:sequenceInformation/fair:genomeSequences ?genome .
+    ?genome fair:accession ?accessionRaw ;
+            fair:database 'ncbi' ;
+            fair:ncbiTaxId ?taxid ;
+    FILTER( strStarts( ?accessionRaw, 'GCA_' ) ) .
+}

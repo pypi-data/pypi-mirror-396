@@ -1,0 +1,17 @@
+PREFIX gbol: <http://gbol.life/0.1/>
+
+SELECT ?genomeID ?accession (COUNT(?accession) AS ?count)
+WHERE {
+    VALUES ?db {'pfam'}
+
+    ?genomeID gbol:scientificName ?name .
+    #BIND(REPLACE(STR(?organism), '.*/(.*)/organism', '$1') AS ?genomeID)
+
+    ?feature a gbol:ProteinDomain ;
+             gbol:xref ?xref .
+    ?xref gbol:accession ?accession ;
+          gbol:db/gbol:id ?db .
+
+    ?contig (((gbol:feature/gbol:transcript)/gbol:feature)/gbol:protein)/gbol:feature ?feature .
+}
+GROUP BY ?accession ?genomeID

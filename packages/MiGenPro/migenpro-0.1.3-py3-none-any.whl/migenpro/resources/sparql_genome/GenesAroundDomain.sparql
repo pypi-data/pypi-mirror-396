@@ -1,0 +1,41 @@
+PREFIX gbol: <http://gbol.life/0.1/>
+PREFIX pfam: <http://gbol.life/0.1/db/pfam/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+SELECT DISTINCT ?seed ?gene2 ?strand ?strand2 ?beginpos ?beginpos2 ?endpos ?endpos2 ?sample ?contig ?scientificName
+WHERE {
+   ?contig a gbol:Contig .
+   ?contig gbol:feature ?seed .
+
+   ?seed gbol:location ?loc .
+   ?loc gbol:begin ?begin .
+   ?begin gbol:position ?beginpos .
+   ?loc gbol:end ?end .
+   ?end gbol:position ?endpos .
+   ?loc gbol:strand ?strand .
+
+   ?seed gbol:transcript ?trans .
+   ?trans gbol:feature ?cds .
+   ?cds gbol:protein ?protein .
+   ?protein gbol:feature ?domain .
+   ?domain gbol:xref ?xref .
+   ?xref gbol:db ?db .
+   ?db gbol:id 'pfam' .
+
+   #    FILTER(?beginpos - 20000 < ?beginpos2 )
+   #    FILTER(?beginpos + 20000 > ?beginpos2 )
+
+   ?contig gbol:feature ?gene2 .
+   ?gene2 a gbol:Gene .
+   ?gene2  gbol:location ?loc2 .
+   ?loc2 gbol:strand ?strand2 .
+   ?loc2 gbol:begin ?begin2 .
+   ?begin2 gbol:position ?beginpos2 .
+   ?loc2 gbol:end ?end2 .
+   ?end2 gbol:position ?endpos2 .
+
+   ?seed gbol:provenance ?prov .
+   ?gene2 gbol:provenance ?prov2 .
+   ?prov gbol:origin ?origin .
+   ?prov2 gbol:origin ?origin .
+   ?origin <http://www.w3.org/ns/prov#wasAttributedTo> ?provOrigin .
+} ORDER BY ?beginpos2

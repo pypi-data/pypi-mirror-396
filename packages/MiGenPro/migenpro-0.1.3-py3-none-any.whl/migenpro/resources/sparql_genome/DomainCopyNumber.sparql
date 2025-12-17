@@ -1,0 +1,15 @@
+PREFIX gbol: <http://gbol.life/0.1/>
+
+SELECT ?genomeID ?accession (COUNT(?accession) AS ?count)
+WHERE {
+    VALUES ?db {'pfam'}
+
+    ?_ gbol:name ?genomeID .
+    ?feature a gbol:CDS ;
+             gbol:xref ?xref .
+    ?xref gbol:accession ?pfamDomain ;
+          gbol:db/gbol:id ?db .
+
+    BIND(REPLACE(STR(?pfamDomain), '.[0-9]+$', '') AS ?accession)
+}
+GROUP BY ?accession ?genomeID
