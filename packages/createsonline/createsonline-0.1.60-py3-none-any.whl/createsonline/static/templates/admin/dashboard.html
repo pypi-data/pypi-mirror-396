@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - CREATESONLINE Admin{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <h1>Admin Dashboard</h1>
+    <p class="subtitle">Welcome to CREATESONLINE Admin Panel v0.1.6</p>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon">📊</div>
+        <div class="stat-content">
+            <h3>Total Models</h3>
+            <p class="stat-value">{{ total_models|default:0 }}</p>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon">📝</div>
+        <div class="stat-content">
+            <h3>Total Records</h3>
+            <p class="stat-value">{{ total_records|default:0 }}</p>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon">👥</div>
+        <div class="stat-content">
+            <h3>Active Users</h3>
+            <p class="stat-value">{{ active_users|default:0 }}</p>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon">🤖</div>
+        <div class="stat-content">
+            <h3>AI Status</h3>
+            <p class="stat-value">{{ ai_status|default:"Active" }}</p>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-grid">
+    <div class="card">
+        <div class="card-header">
+            <h2>Recent Activity</h2>
+        </div>
+        <div class="card-body">
+            <div class="activity-list">
+                {% if recent_activity %}
+                    {% for activity in recent_activity %}
+                    <div class="activity-item">
+                        <span class="activity-time">{{ activity.time }}</span>
+                        <span class="activity-desc">{{ activity.description }}</span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="empty-state">No recent activity</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2>Registered Models</h2>
+        </div>
+        <div class="card-body">
+            <div class="model-list">
+                {% if models %}
+                    {% for model in models %}
+                    <div class="model-item">
+                        <a href="/admin/{{ model.name }}">
+                            <strong>{{ model.verbose_name }}</strong>
+                            <span class="badge badge-info">{{ model.count }} records</span>
+                        </a>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="empty-state">No models registered yet</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2>System Information</h2>
+        </div>
+        <div class="card-body">
+            <table class="info-table">
+                <tr>
+                    <td><strong>Framework</strong></td>
+                    <td>CREATESONLINE</td>
+                </tr>
+                <tr>
+                    <td><strong>Version</strong></td>
+                    <td>{{ version|default:"0.1.6" }}</td>
+                </tr>
+                <tr>
+                    <td><strong>Admin Version</strong></td>
+                    <td>{{ admin_version|default:"0.1.6" }}</td>
+                </tr>
+                <tr>
+                    <td><strong>AI Enabled</strong></td>
+                    <td>
+                        {% if ai_enabled %}
+                            <span class="badge badge-success">Yes</span>
+                        {% else %}
+                            <span class="badge badge-warning">No</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2>Quick Actions</h2>
+        </div>
+        <div class="card-body">
+            <div class="quick-actions">
+                <button class="btn btn-primary" onclick="window.location.href='/admin/create'">
+                    Add New Record
+                </button>
+                <button class="btn btn-secondary" onclick="window.location.href='/admin/settings'">
+                    Settings
+                </button>
+                <button class="btn btn-info" onclick="window.location.href='/admin/docs'">
+                    Documentation
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.dashboard-header {
+    margin-bottom: 2rem;
+}
+
+.dashboard-header .subtitle {
+    color: var(--text-secondary);
+    margin-top: 0.5rem;
+}
+
+.activity-list, .model-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.activity-item {
+    display: flex;
+    gap: 1rem;
+    padding: 0.5rem;
+    border-left: 3px solid var(--primary-color);
+    background: var(--background-light);
+}
+
+.activity-time {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    white-space: nowrap;
+}
+
+.model-item a {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: var(--background-light);
+    border-radius: 4px;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s;
+}
+
+.model-item a:hover {
+    background: var(--primary-color);
+    color: white;
+}
+
+.info-table {
+    width: 100%;
+}
+
+.info-table tr {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.info-table td {
+    padding: 0.75rem 0;
+}
+
+.quick-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.quick-actions .btn {
+    width: 100%;
+}
+
+.empty-state {
+    color: var(--text-secondary);
+    text-align: center;
+    padding: 2rem;
+}
+</style>
+{% endblock %}
