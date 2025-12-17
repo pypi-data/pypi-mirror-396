@@ -1,0 +1,69 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "flash-colreduce"
+version = "0.2.0"
+description = "Fast, memory-efficient attention column reduction (e.g., sum, mean)"
+readme = { file = "README.md", content-type = "text/markdown" }
+requires-python = ">=3.10"
+license = { text = "MIT License" }
+authors = [{ name = "Z Lab" }]
+keywords = [
+  "triton",
+  "pytorch",
+  "cuda",
+  "attention",
+  "transformers",
+  "gpu",
+  "kernels",
+]
+classifiers = [
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Scientific/Engineering :: Mathematics",
+]
+dependencies = [
+  "torch>=2.1",
+  "triton>=3.0.0",
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest>=7",
+  "pytest-cov>=4",
+]
+dev = [
+  "black>=24.0",
+]
+bench = [
+  "matplotlib>=3.7",
+  "rich>=13.7",
+]
+all = [
+  "flash-colreduce[test]",
+  "flash-colreduce[dev]",
+  "flash-colreduce[bench]",
+]
+
+[project.urls]
+Homepage = "https://github.com/z-lab/flash-colreduce"
+Issues = "https://github.com/z-lab/flash-colreduce/issues"
+
+[tool.black]
+line-length = 120
+target-version = ["py310"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["flash_colreduce*"]
