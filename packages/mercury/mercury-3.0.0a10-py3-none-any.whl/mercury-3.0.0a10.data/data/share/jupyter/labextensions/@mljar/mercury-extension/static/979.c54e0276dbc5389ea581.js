@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunk_mljar_mercury_extension=self.webpackChunk_mljar_mercury_extension||[]).push([[360,979],{360:(e,r,c)=>{c.r(r),c.d(r,{IMercuryCellExecutor:()=>u});const u=new(c(262).Token)("@mljar/mercury-extension:MercuryCellExecutor","Mercury cell executor")}}]);
