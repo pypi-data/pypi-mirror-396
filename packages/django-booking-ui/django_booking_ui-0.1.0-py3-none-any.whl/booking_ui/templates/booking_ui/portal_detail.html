@@ -1,0 +1,29 @@
+{% extends "booking_ui/base.html" %}
+{% block title %}Booking {{ booking.reference }} | {{ branding.site_name }}{% endblock %}
+{% block content %}
+  <h1>Booking {{ booking.reference }}</h1>
+  <p class="bu-muted">{{ booking.client_name }}{% if booking.email %} · {{ booking.email }}{% elif booking.client_email %} · {{ booking.client_email }}{% endif %}</p>
+  <ul class="bu-details">
+    {% if booking.service %}<li><strong>Service:</strong> {{ booking.service }}</li>{% endif %}
+    {% if booking.provider %}<li><strong>Provider:</strong> {{ booking.provider }}</li>{% endif %}
+    {% if booking.start %}<li><strong>When:</strong> {{ booking.start|date:"l, j M Y H:i" }}</li>{% endif %}
+    {% if booking.status %}<li><strong>Status:</strong> {{ booking.status }}</li>{% endif %}
+  </ul>
+
+  <div class="bu-actions">
+    {% if can_reschedule %}
+      <a class="bu-button bu-button-secondary" href="{% if tenant %}{% url 'booking_ui_reschedule' tenant_slug=tenant.slug reference=booking.reference %}{% else %}{% url 'booking_ui_reschedule' reference=booking.reference %}{% endif %}">Reschedule</a>
+    {% else %}
+      <p class="bu-muted">Rescheduling not available for this booking.</p>
+    {% endif %}
+
+    {% if can_cancel %}
+      <form method="post" action="{% if tenant %}{% url 'booking_ui_cancel_booking' tenant_slug=tenant.slug reference=booking.reference %}{% else %}{% url 'booking_ui_cancel_booking' reference=booking.reference %}{% endif %}">
+        {% csrf_token %}
+        <button class="bu-button bu-button-danger" type="submit">Cancel booking</button>
+      </form>
+    {% else %}
+      <p class="bu-muted">Cancellation not available.</p>
+    {% endif %}
+  </div>
+{% endblock %}

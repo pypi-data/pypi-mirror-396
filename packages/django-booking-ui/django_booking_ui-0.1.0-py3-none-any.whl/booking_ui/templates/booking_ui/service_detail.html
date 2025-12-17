@@ -1,0 +1,26 @@
+{% extends "booking_ui/base.html" %}
+{% block title %}{{ service.name }} | {{ branding.site_name }}{% endblock %}
+{% block content %}
+  <div class="bu-breadcrumb"><a href="{% if tenant %}{% url 'booking_ui_services' tenant_slug=tenant.slug %}{% else %}{% url 'booking_ui_services' %}{% endif %}">All services</a></div>
+  <h1>{{ service.name }}</h1>
+  <p class="bu-muted">{{ service.description }}</p>
+  <p class="bu-meta">
+    {% if service.duration %}<span>{{ service.duration }} mins</span>{% endif %}
+    {% if service.price %}<span>£{{ service.price }}</span>{% endif %}
+  </p>
+
+  {% if providers %}
+    <h2>Choose a provider</h2>
+    <div class="bu-grid">
+      {% for provider in providers %}
+        <article class="bu-card">
+          <h3>{{ provider.name }}</h3>
+          <p class="bu-muted">{{ provider.description }}</p>
+          <a class="bu-button" href="{% if tenant %}{% url 'booking_ui_schedule_provider' tenant_slug=tenant.slug service_slug=service.slug provider_slug=provider.slug %}{% else %}{% url 'booking_ui_schedule_provider' service_slug=service.slug provider_slug=provider.slug %}{% endif %}">Select</a>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <a class="bu-button" href="{% if tenant %}{% url 'booking_ui_schedule' tenant_slug=tenant.slug service_slug=service.slug %}{% else %}{% url 'booking_ui_schedule' service_slug=service.slug %}{% endif %}">Pick a time</a>
+  {% endif %}
+{% endblock %}

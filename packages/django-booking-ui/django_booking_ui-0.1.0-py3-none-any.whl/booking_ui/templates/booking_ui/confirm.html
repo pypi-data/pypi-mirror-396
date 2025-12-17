@@ -1,0 +1,28 @@
+{% extends "booking_ui/base.html" %}
+{% block title %}Confirm | {{ service.name }} | {{ branding.site_name }}{% endblock %}
+{% block content %}
+  <div class="bu-breadcrumb">
+    <a href="{% if tenant %}{% url 'booking_ui_schedule' tenant_slug=tenant.slug service_slug=service.slug %}{% else %}{% url 'booking_ui_schedule' service_slug=service.slug %}{% endif %}">Change time</a>
+  </div>
+  <h1>Confirm booking</h1>
+  <p class="bu-muted">{{ service.name }}{% if provider %} with {{ provider.name }}{% endif %}</p>
+  <p><strong>{{ slot|date:"l, j M Y" }}</strong> at <strong>{{ slot|time:"H:i" }}</strong></p>
+
+  <form method="post" class="bu-form">
+    {% csrf_token %}
+    <input type="hidden" name="slot" value="{{ slot|date:'c' }}">
+    {% if provider %}<input type="hidden" name="provider" value="{{ provider.slug }}">{% endif %}
+    {{ form.non_field_errors }}
+    <div class="bu-form-grid">
+      {% for field in form %}
+        <div class="bu-form-field">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}<small class="bu-muted">{{ field.help_text }}</small>{% endif %}
+          {% for error in field.errors %}<div class="bu-error">{{ error }}</div>{% endfor %}
+        </div>
+      {% endfor %}
+    </div>
+    <button type="submit" class="bu-button">Confirm booking</button>
+  </form>
+{% endblock %}

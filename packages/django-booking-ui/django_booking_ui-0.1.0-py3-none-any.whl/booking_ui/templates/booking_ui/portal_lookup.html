@@ -1,0 +1,19 @@
+{% extends "booking_ui/base.html" %}
+{% block title %}Find booking | {{ branding.site_name }}{% endblock %}
+{% block content %}
+  <h1>Find your booking</h1>
+  <form method="post" class="bu-form">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="bu-form-grid">
+      {% for field in form %}
+        <div class="bu-form-field">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% for error in field.errors %}<div class="bu-error">{{ error }}</div>{% endfor %}
+        </div>
+      {% endfor %}
+    </div>
+    <button type="submit" class="bu-button">View booking</button>
+  </form>
+{% endblock %}
