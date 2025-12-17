@@ -1,0 +1,28 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+nuclio-sdk = { editable = true, path = "." }
+
+[dev-packages]
+flake8 = "*"
+twine = "*"
+bleach = "==3.3.0"
+black = "==24.3.0"
+importlib_metadata = "<3"
+build = ">0.2"
+pytest = "*"
+pytest-asyncio = "==0.23.5"
+exceptiongroup = "*"
+iniconfig = "*"
+
+[scripts]
+fmt = "black ."
+build = "python -m build --sdist --wheel --outdir dist/"
+test = "python -m unittest discover -s nuclio_sdk/test -p 'test_*.py' -v"
+upload = "twine upload dist/*"
+upload-test = "twine upload --repository testpypi dist/*"
+lint = "black --check --diff ."
+flake8 = "flake8 nuclio_sdk"
