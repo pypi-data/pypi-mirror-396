@@ -1,0 +1,678 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+from ..analytics.acoustics import (
+    schroeder_integration,
+    calculate_rt60,
+    octave_band_filter,
+    get_octave_bands,
+)
+import json
+from ..room.objects import AmbisonicReceiver
+from importlib import resources
+import jinja2
+
+
+def plot_room(room, filename=None, show=True):
+    fig = plt.figure(figsize=(10, 8))
+    ax = fig.add_subplot(111, projection='3d')
+
+    # Plot Walls
+    for wall in room.walls:
+        # Create a list of vertices for the polygon
+        verts = [list(zip(wall.vertices[:, 0], wall.vertices[:, 1], wall.vertices[:, 2]))]
+
+        trans = np.mean(wall.material.transmission)
+        alpha = max(0.1, 1.0 - trans)  # If fully transparent, still show faint
+
+        if trans > 0.5:
+            alpha = 0.2
+
+        color = 'gray'
+        if "glass" in wall.material.name.lower():
+            color = 'cyan'
+            alpha = 0.15
+        elif "wood" in wall.material.name.lower():
+            color = 'peru'
+        elif "brick" in wall.material.name.lower():
+            color = 'firebrick'
+        elif "concrete" in wall.material.name.lower():
+            color = 'lightgray'
+
+        poly = Poly3DCollection(verts, alpha=alpha, edgecolor='k', facecolor=color, linewidths=0.5)
+        ax.add_collection3d(poly)
+
+    # Plot Furniture
+    for furn in room.furniture:
+        face_polys = []
+        for face in furn.faces:
+            pts = furn.vertices[face]
+            face_polys.append(list(zip(pts[:, 0], pts[:, 1], pts[:, 2])))
+
+        color = 'orange'
+        if "human" in furn.name.lower() or "person" in furn.name.lower():
+            color = 'blue'
+        elif "car" in furn.name.lower():
+            color = 'red'
+
+        poly = Poly3DCollection(face_polys, alpha=0.8, edgecolor='k', facecolor=color, linewidths=0.5)
+        ax.add_collection3d(poly)
+
+    # Plot Sources
+    for src in room.sources:
+        ax.scatter(src.position[0], src.position[1], src.position[2], c='red',
+                   s=100, marker='^', label=f"Source: {src.name}", depthshade=False)
+
+        if hasattr(src, 'orientation') and hasattr(src, 'directivity') and src.directivity != "omnidirectional":
+            # Draw orientation arrow
+            ax.quiver(src.position[0], src.position[1], src.position[2],
+                      src.orientation[0], src.orientation[1], src.orientation[2],
+                      length=2.0, color='red', linewidth=2, arrow_length_ratio=0.2)
+
+    # Plot Receivers
+    for rx in room.receivers:
+        ax.scatter(rx.position[0], rx.position[1], rx.position[2], c='green',
+                   s=100, marker='o', label=f"Rx: {rx.name}", depthshade=False)
+
+    # Auto-scale axes
+    all_verts = []
+    for w in room.walls:
+        all_verts.extend(w.vertices)
+    for f in room.furniture:
+        all_verts.extend(f.vertices)
+    all_verts = np.array(all_verts)
+
+    if len(all_verts) > 0:
+        max_range = np.array([
+            all_verts[:, 0].max()-all_verts[:, 0].min(),
+            all_verts[:, 1].max()-all_verts[:, 1].min(),
+            all_verts[:, 2].max()-all_verts[:, 2].min()
+        ]).max() / 2.0
+
+        mid_x = (all_verts[:, 0].max()+all_verts[:, 0].min()) * 0.5
+        mid_y = (all_verts[:, 1].max()+all_verts[:, 1].min()) * 0.5
+        mid_z = (all_verts[:, 2].max()+all_verts[:, 2].min()) * 0.5
+
+        ax.set_xlim(mid_x - max_range, mid_x + max_range)
+        ax.set_ylim(mid_y - max_range, mid_y + max_range)
+        ax.set_zlim(mid_z - max_range, mid_z + max_range)
+
+    ax.set_xlabel('X (m)')
+    ax.set_ylabel('Y (m)')
+    ax.set_zlabel('Z (m)')
+
+    # Create unique legend handles
+    handles, labels = ax.get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))
+    if by_label:
+        ax.legend(by_label.values(), by_label.keys())
+
+    plt.title("Room Geometry")
+    plt.tight_layout()
+
+    if filename:
+        plt.savefig(filename, dpi=150)
+        print(f"Room image saved to {filename}")
+
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
+
+
+def plot_room_3d_interactive(room, filename=None, show=True):
+    """
+    Plot the room in an interactive 3D view using Plotly.
+
+    :param room: The Room object to visualize.
+    :param filename: Path to save HTML file. If None, not saved.
+    :param show: Whether to open the plot in a browser.
+    """
+    import plotly.graph_objects as go
+
+    fig = go.Figure()
+
+    # 1. Plot Walls
+    for wall in room.walls:
+        # Vertices for this wall
+        x = wall.vertices[:, 0]
+        y = wall.vertices[:, 1]
+        z = wall.vertices[:, 2]
+
+        # Close the loop for Mesh3d or scatter?
+        # Mesh3d needs triangulation (i, j, k).
+        # For simple quads (0,1,2,3), we can split into 2 triangles: (0,1,2) and (0,2,3)
+
+        if len(wall.vertices) == 4:
+            i = [0, 0]
+            j = [1, 2]
+            k = [2, 3]
+        else:
+            # Simplified fan triangulation from vertex 0
+            n = len(wall.vertices)
+            i = [0] * (n - 2)
+            j = list(range(1, n - 1))
+            k = list(range(2, n))
+
+        # Color logic
+        color = 'gray'
+        opacity = 0.3
+        if "glass" in wall.material.name.lower():
+            color = 'cyan'
+            opacity = 0.2
+        elif "brick" in wall.material.name.lower():
+            color = 'firebrick'
+            opacity = 1.0
+        elif "concrete" in wall.material.name.lower():
+            color = 'lightgray'
+            opacity = 0.5
+        elif "asphalt" in wall.material.name.lower():
+            color = 'black'
+            opacity = 1.0
+        elif "grass" in wall.material.name.lower():
+            color = 'green'
+            opacity = 1.0
+        elif "wood" in wall.material.name.lower():
+            color = 'peru'
+            opacity = 1.0
+
+        fig.add_trace(go.Mesh3d(
+            x=x, y=y, z=z,
+            i=i, j=j, k=k,
+            opacity=opacity,
+            color=color,
+            name=wall.name,
+            showscale=False,
+            hoverinfo='name'
+        ))
+
+        # Add wireframe outline (Scatter3d lines)
+        # Append first point to end to close loop
+        xl = np.append(x, x[0])
+        yl = np.append(y, y[0])
+        zl = np.append(z, z[0])
+        fig.add_trace(go.Scatter3d(
+            x=xl, y=yl, z=zl,
+            mode='lines',
+            line=dict(color='black', width=2),
+            showlegend=False,
+            hoverinfo='skip'
+        ))
+
+    # 2. Plot Furniture
+    for furn in room.furniture:
+        # Mesh approach: combine all faces? Or one trace per face?
+        # One trace per object is cleaner.
+        # We need global vertices list and index list for the mesh.
+
+        all_x = []
+        all_y = []
+        all_z = []
+        all_i = []
+        all_j = []
+        all_k = []
+        v_offset = 0
+
+        # Triangulate each face
+        for face_indices in furn.faces:
+            # Get vertices for this face
+            face_verts = furn.vertices[face_indices]
+            nx = face_verts[:, 0]
+            ny = face_verts[:, 1]
+            nz = face_verts[:, 2]
+
+            all_x.extend(nx)
+            all_y.extend(ny)
+            all_z.extend(nz)
+
+            # Local indices (0, 1, 2, 3) -> Global (v_offset+0, ...)
+            # Triangulate fan (0,1,2), (0,2,3)
+            n_v = len(face_indices)
+            for t in range(n_v - 2):
+                all_i.append(v_offset + 0)
+                all_j.append(v_offset + t + 1)
+                all_k.append(v_offset + t + 2)
+
+            v_offset += n_v
+
+        color = 'orange'
+        if "human" in furn.name.lower() or "person" in furn.name.lower():
+            color = 'blue'
+
+        fig.add_trace(go.Mesh3d(
+            x=all_x, y=all_y, z=all_z,
+            i=all_i, j=all_j, k=all_k,
+            color=color,
+            opacity=1.0,
+            name=furn.name,
+            showscale=False
+        ))
+
+    # 3. Sources and Receivers
+    for src in room.sources:
+        fig.add_trace(go.Scatter3d(
+            x=[src.position[0]], y=[src.position[1]], z=[src.position[2]],
+            mode='markers',
+            marker=dict(size=8, color='red', symbol='diamond'),
+            name=f"Src: {src.name}"
+        ))
+
+        if hasattr(src, 'orientation') and hasattr(src, 'directivity') and src.directivity != "omnidirectional":
+            fig.add_trace(go.Cone(
+                x=[src.position[0]], y=[src.position[1]], z=[src.position[2]],
+                u=[src.orientation[0]], v=[src.orientation[1]], w=[src.orientation[2]],
+                sizemode="absolute",
+                sizeref=2,
+                anchor="tail",
+                showscale=False,
+                colorscale=[[0, 'red'], [1, 'red']],
+                name=f"{src.name} Orientation"
+            ))
+
+    for rx in room.receivers:
+        fig.add_trace(go.Scatter3d(
+            x=[rx.position[0]], y=[rx.position[1]], z=[rx.position[2]],
+            mode='markers',
+            marker=dict(size=8, color='green', symbol='circle'),
+            name=f"Rx: {rx.name}"
+        ))
+
+    # Layout settings
+    fig.update_layout(
+        title="Room Interactive 3D View",
+        scene=dict(
+            xaxis_title='X (m)',
+            yaxis_title='Y (m)',
+            zaxis_title='Z (m)',
+            aspectmode='data'  # Keep real aspect ratio
+        ),
+        margin=dict(l=0, r=0, b=0, t=40)
+    )
+
+    if filename:
+        fig.write_html(filename)
+        print(f"Interactive 3D plot saved to {filename}")
+
+    if show:
+        fig.show()
+
+
+def plot_room_2d(room, filename=None, show=True):
+    """
+    Plot the room in 2D (Top View).
+
+    Displays the floor plan, furniture footprints, sources, and receivers.
+
+    :param room: The Room object.
+    :type room: rayroom.room.Room
+    :param filename: If provided, save the figure to this path.
+    :type filename: str, optional
+    :param show: If True, show the plot window. Defaults to True.
+    :type show: bool
+    """
+    fig, ax = plt.subplots(figsize=(10, 8))
+
+    # 1. Plot Floor/Walls Footprint
+    # We can iterate walls. If a wall is vertical (normal has z=0), it appears as a line.
+    # If a wall is floor (normal has z=1), it appears as a polygon area.
+
+    # Draw floor polygon first if identifiable
+    floor_walls = [w for w in room.walls if abs(w.normal[2]) > 0.9]  # Floor or ceiling
+    vertical_walls = [w for w in room.walls if abs(w.normal[2]) < 0.1]
+
+    # If we have a floor, fill it
+    for wall in floor_walls:
+        if wall.vertices[0, 2] < 1.0:  # Assume floor is low
+            poly = plt.Polygon(wall.vertices[:, :2], fill=True, facecolor='#e6e6e6',
+                               edgecolor='none', alpha=0.5, label='Floor')
+            ax.add_patch(poly)
+
+    # Draw Wall outlines
+    for wall in vertical_walls:
+        # Project vertices to 2D
+        pts = wall.vertices[:, :2]
+        # It's a loop in 3D, in 2D it might be a line segment (seen from top)
+        # or a rectangle if it has thickness (but here walls are planes)
+        # A vertical plane wall projects to a line segment.
+        # We can just plot the closed loop, which will look like a line (0 area).
+
+        color = 'k'
+        if "glass" in wall.material.name.lower():
+            color = 'cyan'
+
+        ax.plot(pts[:, 0], pts[:, 1], color=color, linewidth=2)
+
+    # Plot Furniture (Projected footprint)
+    for furn in room.furniture:
+        # Find convex hull of vertices in 2D? Or just plot all faces projected?
+        # Simple bounding box or just points?
+        # Let's project all faces that point up?
+        # Or just all vertices projected.
+
+        pts = furn.vertices[:, :2]
+        # Draw a hull or just scatter?
+        # Better: Draw faces.
+
+        # Draw faces that are roughly horizontal?
+        # Or just fill the footprint.
+        # Let's just draw edges of faces.
+        for face in furn.faces:
+            f_pts = furn.vertices[face][:, :2]
+            poly = plt.Polygon(f_pts, fill=True, facecolor='orange', alpha=0.5, edgecolor='darkorange')
+            if "person" in furn.name.lower():
+                poly.set_facecolor('blue')
+                poly.set_edgecolor('darkblue')
+            ax.add_patch(poly)
+
+    # Plot Sources
+    for src in room.sources:
+        ax.scatter(src.position[0], src.position[1], c='red', s=150, marker='^', label=f"{src.name}", zorder=10)
+        ax.annotate(src.name, (src.position[0], src.position[1]), xytext=(5, 5), textcoords='offset points')
+
+        # Show orientation if directional
+        if hasattr(src, 'orientation') and hasattr(src, 'directivity') and src.directivity != "omnidirectional":
+            dx, dy = src.orientation[0], src.orientation[1]
+            ax.arrow(src.position[0], src.position[1], dx*0.5, dy*0.5,
+                     head_width=0.1, head_length=0.1, fc='red', ec='red', zorder=10)
+
+    # Plot Receivers
+    for rx in room.receivers:
+        ax.scatter(rx.position[0], rx.position[1], c='green', s=150, marker='o', label=f"{rx.name}", zorder=10)
+        ax.annotate(rx.name, (rx.position[0], rx.position[1]), xytext=(5, 5), textcoords='offset points')
+
+    ax.set_xlabel('X (m)')
+    ax.set_ylabel('Y (m)')
+    ax.set_aspect('equal')
+    ax.grid(True, linestyle=':', alpha=0.6)
+
+    # Create unique legend handles
+    handles, labels = ax.get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))
+    if by_label:
+        ax.legend(by_label.values(), by_label.keys(), loc='upper right')
+
+    plt.title("Room Top View")
+    plt.tight_layout()
+
+    if filename:
+        plt.savefig(filename, dpi=150)
+        print(f"Room 2D image saved to {filename}")
+
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
+
+
+def plot_reverberation_time(rir, fs, filename=None, show=True):
+    """
+    Plot RT60 across standard octave bands.
+
+    :param rir: Room Impulse Response.
+    :param fs: Sampling frequency.
+    :param filename: Path to save the plot.
+    :param show: Whether to display the plot.
+    """
+    fig, ax = plt.subplots(figsize=(10, 6))
+    bands = get_octave_bands(subdivisions=10)
+    rt60s = []
+    for freq in bands:
+        filtered_rir = octave_band_filter(rir, fs, freq)
+        sch_db = schroeder_integration(filtered_rir)
+        rt60 = calculate_rt60(sch_db, fs)
+        rt60s.append(rt60)
+
+    # Filter out NaN values to prevent plotting issues
+    valid_indices = ~np.isnan(rt60s)
+    bands_to_plot = np.array(bands)[valid_indices]
+    rt60s_to_plot = np.array(rt60s)[valid_indices]
+
+    ax.plot(bands_to_plot, rt60s_to_plot, '-', label='T20')
+    ax.set_xscale('log')
+    base_bands = get_octave_bands(subdivisions=1)
+    ax.set_xticks(base_bands)
+    ax.set_xticklabels([str(b) for b in base_bands])
+    ax.minorticks_on()
+    ax.set_xlim(left=125)
+
+    ax.set_xlabel("Frequency (Hz)")
+    ax.set_ylabel("Reverberation Time (s)")
+    ax.set_title("Reverberation Time (RT60)")
+    ax.grid(True, which="both", ls="--", alpha=0.6)
+    ax.set_ylim(bottom=0)
+    plt.tight_layout()
+    if filename:
+        plt.savefig(filename, dpi=150)
+        print(f"Reverberation time plot saved to {filename}")
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
+
+
+def plot_decay_curve(rir, fs, band=None, schroeder=False, filename=None, show=True):
+    """
+    Plot the energy decay curve for the RIR.
+
+    :param rir: Room Impulse Response.
+    :param fs: Sampling frequency.
+    :param band: Center frequency of an octave band to filter for. If None, broadband is used.
+    :param schroeder: If True, plot the Schroeder curve. Otherwise, plot the filtered envelope.
+    :param filename: Path to save the plot.
+    :param show: Whether to display the plot.
+    """
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    target_rir = rir
+    title = "Energy Decay Curve"
+    if band:
+        target_rir = octave_band_filter(rir, fs, band)
+        title += f" ({band} Hz Octave Band)"
+
+    is_ambisonic = target_rir.ndim > 1
+
+    if schroeder:
+        # For Schroeder, we still analyze the W channel for ambisonic
+        rir_to_process = target_rir[:, 0] if is_ambisonic else target_rir
+        sch_db = schroeder_integration(rir_to_process)
+        time_axis = np.arange(len(sch_db)) / fs
+
+        ax.plot(time_axis * 1000, sch_db, label="Schroeder Curve")
+        ax.set_xlabel("Time (ms)")
+        ax.set_ylim(-80, 5)  # Typical dynamic range for RIRs
+
+        # Find where the curve drops to -60dB for a better x-axis limit
+        below_60_indices = np.where(sch_db <= -60)[0]
+        if len(below_60_indices) > 0:
+            # Get the time of the first sample that drops below -60dB
+            t_60_db = time_axis[below_60_indices[0]] * 1000
+            # Set x-limit to be a bit beyond this point
+            ax.set_xlim(0, t_60_db * 1.1)
+        else:
+            # Fallback if the decay never reaches -60dB
+            max_time_ms = time_axis.max() * 1000
+            ax.set_xlim(0, max_time_ms * 1.1)
+
+        title += " - Schroeder Method"
+
+    else:
+        # Decay curve as a line plot
+        if is_ambisonic:
+            # Multi-channel line plot for Ambisonic
+            channels = ['W', 'X', 'Y', 'Z']
+            colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']
+            num_channels = target_rir.shape[1]
+
+            for i in range(num_channels):
+                sch_db = schroeder_integration(target_rir[:, i])
+                time_axis = np.arange(len(sch_db)) / fs
+                ax.plot(time_axis, sch_db, label=f"Channel {channels[i]}", color=colors[i % len(colors)])
+
+        else:  # Mono plot
+            sch_db = schroeder_integration(target_rir)
+            time_axis = np.arange(len(sch_db)) / fs
+            ax.plot(time_axis, sch_db, label="Decay Curve")
+
+        ax.set_xlabel("Time (s)")
+        ax.set_ylim(-80, 5)  # Positive range for absolute values
+        ax.set_xlim(0, 0.45)
+    ax.set_ylabel("Sound Pressure Level (dB)")
+    ax.set_title(title)
+    ax.grid(True, which="both", ls="--", alpha=0.6)
+    # Add RT60 line if possible, calculated from W channel for ambisonic
+    rir_for_rt60 = target_rir[:, 0] if is_ambisonic else target_rir
+    sch_db_rt60 = schroeder_integration(rir_for_rt60)
+    rt60 = calculate_rt60(sch_db_rt60, fs)
+    if not np.isnan(rt60):
+        y_level = -60
+        ax.axhline(y_level, color='r', linestyle='--', label=f'RT60: {rt60:.2f} s')
+    ax.legend()
+    plt.tight_layout()
+    if filename:
+        plt.savefig(filename, dpi=150)
+        print(f"Decay curve plot saved to {filename}")
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
+
+
+def plot_spectrogram(audio_data, fs, title="Spectrogram", filename=None, show=True):
+    """
+    Plot the spectrogram of an audio signal.
+
+    :param audio_data: The audio signal.
+    :param fs: Sampling frequency.
+    :param title: Title of the plot.
+    :param filename: Path to save the plot.
+    :param show: Whether to display the plot.
+    """
+    fig, ax = plt.subplots(figsize=(10, 4))
+    Pxx, freqs, bins, im = ax.specgram(audio_data, Fs=fs, NFFT=1024, noverlap=512)
+    fig.colorbar(im, ax=ax, format='%+2.0f dB')
+    ax.set_title(title)
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Frequency (Hz)")
+    plt.tight_layout()
+
+    if filename:
+        plt.savefig(filename, dpi=150)
+        print(f"Spectrogram saved to {filename}")
+
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
+
+
+def save_mesh(room, filename):
+    """
+    Save the room geometry as an OBJ mesh file.
+
+    :param room: The Room object to save.
+    :param filename: Path to save the OBJ file.
+    """
+    with open(filename, 'w') as f:
+        f.write("# RayRoom Room Geometry\n")
+        vertex_offset = 1  # OBJ indices are 1-based
+
+        # --- Walls ---
+        for wall in room.walls:
+            f.write(f"o {wall.name}\n")
+            # Write vertices for this wall
+            for v in wall.vertices:
+                f.write(f"v {v[0]} {v[1]} {v[2]}\n")
+
+            # Write face for this wall
+            face_indices = " ".join(str(i) for i in range(vertex_offset, vertex_offset + len(wall.vertices)))
+            f.write(f"f {face_indices}\n")
+            vertex_offset += len(wall.vertices)
+
+        # --- Furniture ---
+        for furn in room.furniture:
+            f.write(f"o {furn.name}\n")
+
+            # Write vertices for this furniture
+            for v in furn.vertices:
+                f.write(f"v {v[0]} {v[1]} {v[2]}\n")
+            # Write faces for this furniture
+            for face in furn.faces:
+                face_indices_str = " ".join([str(vertex_offset + i) for i in face])
+                f.write(f"f {face_indices_str}\n")
+
+            vertex_offset += len(furn.vertices)
+    print(f"Room mesh saved to {filename}")
+
+
+def save_mesh_viewer(room, obj_filename, html_filename):
+    """
+    Save an HTML file with a 3D viewer for the given OBJ file.
+
+    :param room: The Room object to get object names from.
+    :param obj_filename: Path to the OBJ file to view.
+    :param html_filename: Path to save the HTML file.
+    """
+    try:
+        with open(obj_filename, 'r') as f:
+            obj_content = f.read()
+    except FileNotFoundError:
+        print(f"Error: Could not find OBJ file at {obj_filename}")
+        return
+
+    # Escape backticks for JavaScript template literal
+    obj_content_js = obj_content.replace('`', '\\`')
+
+    objects_data = []
+    for w in room.walls:
+        objects_data.append({"name": w.name, "description": w.material.name, "type": "wall"})
+    for f in room.furniture:
+        objects_data.append({"name": f.name, "description": f.material.name, "type": "furniture"})
+    for r in room.receivers:
+        desc = "Ambisonic Receiver" if isinstance(r, AmbisonicReceiver) else "Mono Receiver"
+        objects_data.append({"name": r.name, "description": desc, "type": "receiver"})
+    for s in room.sources:
+        desc = "Source"
+        if s.directivity != "omnidirectional":
+            desc += f" ({s.directivity})"
+        objects_data.append({"name": s.name, "description": desc, "type": "source"})
+    objects_data_json = json.dumps(objects_data)
+
+    receivers_data = []
+    for r in room.receivers:
+        data = {"name": r.name, "position": r.position.tolist(), "radius": r.radius}
+        if isinstance(r, AmbisonicReceiver):
+            data["type"] = "ambisonic"
+            data["x_axis"] = r.x_axis.tolist()
+            data["y_axis"] = r.y_axis.tolist()
+            data["z_axis"] = r.z_axis.tolist()
+        else:
+            data["type"] = "mono"
+        receivers_data.append(data)
+    receivers_json = json.dumps(receivers_data)
+
+    sources_data = []
+    for s in room.sources:
+        data = {
+            "name": s.name,
+            "position": s.position.tolist(),
+            "orientation": s.orientation.tolist(),
+            "directivity": s.directivity,
+        }
+        sources_data.append(data)
+    sources_json = json.dumps(sources_data)
+
+    # Load template
+    template_str = resources.read_text('rayroom.room.templates', 'viewer_template.html')
+    template = jinja2.Template(template_str)
+
+    # Render template
+    html_content = template.render(
+        obj_content_js=obj_content_js,
+        receivers_json=receivers_json,
+        sources_json=sources_json,
+        objects_data_json=objects_data_json
+    )
+
+    with open(html_filename, 'w') as f:
+        f.write(html_content)
+    print(f"Mesh viewer saved to {html_filename}")
