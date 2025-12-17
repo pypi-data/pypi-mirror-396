@@ -1,0 +1,84 @@
+Metadata-Version: 2.4
+Name: totp-rs
+Version: 1.0.0
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: Zero-Clause BSD (0BSD)
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
+Classifier: Programming Language :: Python :: Implementation :: CPython
+Classifier: Programming Language :: Python :: Implementation :: PyPy
+Classifier: Programming Language :: Rust
+Classifier: Topic :: Security
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Typing :: Typed
+Summary: Fast RFC 6238-compliant TOTP implementation
+Keywords: 2fa,auth,hmac,otp,rfc6238,totp
+Author-email: Kamil Monicz <kamil@monicz.dev>
+License-Expression: 0BSD
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown; charset=UTF-8; variant=GFM
+Project-URL: Issues, https://github.com/Zaczero/pkgs/issues
+Project-URL: Repository, https://github.com/Zaczero/pkgs/tree/main/totp-rs
+
+# totp-rs
+
+Fast [RFC 6238](https://datatracker.ietf.org/doc/html/rfc6238)-compliant TOTP implementation.
+
+## Install
+
+```bash
+pip install totp-rs
+```
+
+## Usage
+
+```py
+from totp_rs import totp_generate, totp_verify
+
+secret_b32 = "JBSWY3DPEHPK3PXP"
+
+code = totp_generate(secret_b32)
+
+assert totp_verify(secret_b32, code)
+```
+
+## Benchmarks
+
+See `benchmark.py`.
+
+Benchmarks use `window=1` (typical drift tolerance).
+
+Linux x86_64, CPython 3.14, `pyperf --rigorous`:
+
+```text
++-----------------+---------------+-------------+
+| Benchmark       | totp-rs 1.0.0 | pyotp 2.9.0 |
++-----------------+---------------+-------------+
+| generate        |      456.6 ns |   17.191 µs |
+| verify ok       |      436.7 ns |   35.315 µs |
+| verify prev ok  |      518.5 ns |   17.655 µs |
+| verify bad      |      598.9 ns |   53.279 µs |
++-----------------+---------------+-------------+
+
++-----------------+------------------+
+| Benchmark       | Speedup vs pyotp |
++-----------------+------------------+
+| generate        |           37.65x |
+| verify ok       |           80.87x |
+| verify prev ok  |           34.05x |
+| verify bad      |           88.96x |
++-----------------+------------------+
+```
+
+## Notes
+
+- Implements RFC 6238 TOTP (HOTP + time counter).
+- Constant-time code comparison.
+- Uses RustCrypto implementations for HMAC/SHA-1/SHA-2.
+
