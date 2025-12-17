@@ -1,0 +1,153 @@
+[project]
+name = "natscale"
+dynamic = []
+description = ""
+authors = [
+    { name = "TX.Mao", email = "mtianxiang@gmail.com" },
+]
+dependencies = [
+    "loguru>=0.7.0",
+    "typer>=0.15.2",
+    "nats-py>=2.12.0",
+    "tqdm>=4.67.1",
+    "pyyaml>=6.0.3",
+    "faststream>=0.6.4",
+    "anyio>=4.12.0",
+]
+requires-python = ">=3.12"
+readme = "README.md"
+version = "0.1.2"
+
+[project.license]
+text = "MIT"
+
+[project.scripts]
+natscale = "natscale.cli:main"
+
+[dependency-groups]
+dev = [
+    "tox>=4.25.0",
+    "tox-pdm>=0.7.2",
+    "radon>=5.1.0",
+    "pre-commit>=4.2.0",
+    "detect-secrets>=1.5.0",
+    "pytest-asyncio>=1.3.0",
+]
+test = [
+    "pytest>=8.3.5",
+    "pytest-cov>=6.2.1",
+    "pytest-html>=4.1.1",
+    "pytest-xdist>=3.7.0",
+    "pytest-sugar>=1.0.0",
+    "pytest-mock>=3.14.1",
+    "pytest-watcher>=0.4.3",
+]
+lint = [
+    "ruff>=0.12.0",
+]
+type = [
+    "mypy>=1.15.0",
+]
+
+[tool.builder-opt]
+cython_modules_path = [
+    "src/natscale/utils",
+    "src/natscale/cli",
+]
+
+[tool.setuptools_scm]
+tag_regex = "^v(\\d+\\.\\d+\\.\\d+)$"
+fallback_version = "0.1.0"
+
+[tool.ruff]
+line-length = 88
+indent-width = 4
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E4",
+    "E7",
+    "E9",
+    "F",
+    "E501",
+]
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.radon]
+cc_max = "C"
+cc_min = "A"
+mi_min = "A"
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests",
+]
+asyncio_mode = "auto"
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--cov",
+    "--cov-append",
+    "--cov-report=term-missing",
+    "--html=htmlcov/report.html",
+    "-n=4",
+    "--color=yes",
+]
+markers = [
+    "stone: 安全网测试。数量少，覆盖小，代表用户使用程序最基本的用法，用于在重构中作为测试的基石",
+    "stable: 重要、基础且稳定的 Api 和组件",
+    "alpha: 重要、基础但在未来可能发生变动的 Api 和组件",
+    "beta: 开发中，很可能剧烈变动或被移除的Api, 且影响范围较 alpha 小",
+    "fast: Run fast and no IO, less resources",
+    "slow: Run slow, need more resources",
+    "gpu: Must run with gpu environment",
+    "doing: doing tag, less than 3 features at a time",
+    "todo: todo tag, less than 10 features at a time",
+    "maybe: maybe tag",
+    "onetime: one-time tests, use it like archive",
+    "deprecated: deprecated api's test",
+    "smoke: Smoke tests for basic functionality, like stone but less important and not running in develop, useful for AI project e.g. small data patch test",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+
+[tool.mypy]
+python_version = "3.12"
+disallow_untyped_defs = false
+no_implicit_optional = true
+show_error_codes = true
+strict_equality = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+
+[tool.pdm]
+distribution = true
+
+[tool.pdm.scripts]
+natscale = "natscale.cli:main"
+clean = "sh -c 'rm -rf build dist src/*.egg-info && find src/natscale -type f \\( -name \"*.c\" -o -name \"*.so\" \\) -delete'"
+watch = "ptw . --no-cov -m '(stone or stable or alpha or doing) and (not slow)'  --delay 1.0 --clear --tb=no"
+test = "pytest tests --no-cov -m '(stone or stable or alpha)' "
+lint = "pdm run pre-commit run --all-files"
+
+[tool.pdm.options]
+build = [
+    "--no-sdist",
+    "-v",
+]
+
+[tool.pdm.version]
+source = "scm"
+tag_regex = "^v(\\d+\\.\\d+\\.\\d+)$"
+
+[build-system]
+requires = [
+    "pdm-backend",
+]
+build-backend = "pdm.backend"
