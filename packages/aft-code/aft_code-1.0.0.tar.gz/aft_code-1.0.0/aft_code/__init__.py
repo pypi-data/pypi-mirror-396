@@ -1,0 +1,1 @@
+from .core import (append_txt,w_diagonal)
