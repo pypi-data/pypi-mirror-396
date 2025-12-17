@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orchestral</title>
+    <link rel="stylesheet" href="/static/style.css">
+
+    <!-- KaTeX for LaTeX rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+    <!-- Highlight.js for syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/nord.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Left Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h3>Conversations</h3>
+                <button id="new-conversation-btn" class="btn btn-small" title="New conversation">+</button>
+            </div>
+            <div class="conversations-list" id="conversations-list">
+                <!-- Conversation items will be inserted here -->
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Header -->
+            <div class="header">
+                <div class="header-content">
+                    <button id="toggle-sidebar-btn" class="btn btn-icon" title="Toggle sidebar">☰</button>
+                    <h1 style="font-weight: 200; letter-spacing: 1.3px;">
+                        Orchestral
+                    </h1>
+                    <div class="usage-tracker" id="usage-tracker">
+                        <span class="status-dot" id="status-dot"></span>
+                        <span class="usage-divider" id="status-divider"></span>
+                        <span class="usage-cost-content" id="usage-cost-content">Connecting...</span>
+                        <span class="usage-divider" id="cost-token-divider"></span>
+                        <span class="usage-token-content" id="usage-token-content"></span>
+                    </div>
+                    <button id="toggle-settings-btn" class="btn btn-icon" title="Toggle settings" style="font-size: 22px;">⚙</button>
+                </div>
+            </div>
+
+            <!-- Chat History -->
+            <div class="chat-container" id="chat-container">
+                <!-- Messages will be inserted here -->
+            </div>
+
+            <!-- Input Area -->
+            <div class="input-container">
+            <div class="input-content">
+                <button id="mic-btn" class="btn btn-icon mic-btn" title="Voice input (click to start recording)">
+                    <img src="/static/microphone.png" alt="Microphone" class="mic-icon">
+                </button>
+                <textarea
+                    id="user-input"
+                    placeholder=" Type your message... (Enter to send, Shift+Enter for new line, Esc to interrupt)"
+                    rows="1"
+                ></textarea>
+                <div class="input-controls">
+                    <div class="input-controls-left">
+                        <div class="model-selector-container">
+                            <button id="model-btn" class="btn btn-secondary" title="Select model">
+                                <span id="model-display">GPT-4o-mini</span>
+                            </button>
+                            <div id="model-dropdown" class="model-dropdown hidden">
+                                <div class="model-group">
+                                    <div class="model-group-label">OpenAI</div>
+                                    <div class="model-item" data-provider="openai" data-model="gpt-4o-mini">GPT-4o-mini</div>
+                                    <div class="model-item" data-provider="openai" data-model="gpt-4o">GPT-4o</div>
+                                    <div class="model-item" data-provider="openai" data-model="gpt-4.1-mini">GPT-4.1-mini</div>
+                                    <div class="model-item" data-provider="openai" data-model="gpt-4.1">GPT-4.1</div>
+                                    <div class="model-item" data-provider="openai" data-model="gpt-5-mini">GPT-5-mini</div>
+                                    <div class="model-item" data-provider="openai" data-model="gpt-5">GPT-5</div>
+                                </div>
+                                <div class="model-divider"></div>
+                                <div class="model-group">
+                                    <div class="model-group-label">Anthropic</div>
+                                    <div class="model-item" data-provider="anthropic" data-model="claude-3-5-haiku-latest">Claude Haiku 3.5</div>
+                                    <div class="model-item" data-provider="anthropic" data-model="claude-sonnet-4-0">Claude Sonnet 4</div>
+                                    <div class="model-item" data-provider="anthropic" data-model="claude-opus-4-0">Claude Opus 4</div>
+                                </div>
+                                <div class="model-divider"></div>
+                                <div class="model-group">
+                                    <div class="model-group-label">Google</div>
+                                    <div class="model-item" data-provider="google" data-model="gemini-2.0-flash-exp">Gemini 2.0 Flash</div>
+                                    <div class="model-item" data-provider="google" data-model="gemini-1.5-pro">Gemini 1.5 Pro</div>
+                                    <div class="model-item" data-provider="google" data-model="gemini-1.5-flash">Gemini 1.5 Flash</div>
+                                </div>
+                                <div class="model-divider"></div>
+                                <div class="model-group">
+                                    <div class="model-group-label">Groq</div>
+                                    <div class="model-item" data-provider="groq" data-model="llama-3.3-70b-versatile">Llama 3.3 70B</div>
+                                    <div class="model-item" data-provider="groq" data-model="llama-3.1-8b-instant">Llama 3.1 8B</div>
+                                    <div class="model-item" data-provider="groq" data-model="meta-llama/llama-4-scout-17b-16e-instruct">Llama 4 Scout 17B</div>
+                                    <div class="model-item" data-provider="groq" data-model="meta-llama/llama-4-maverick-17b-128e-instruct">Llama 4 Maverick 17B</div>
+                                    <div class="model-item" data-provider="groq" data-model="openai/gpt-oss-20b">GPT-OSS 20B</div>
+                                    <div class="model-item" data-provider="groq" data-model="openai/gpt-oss-120b">GPT-OSS 120B</div>
+                                    <div class="model-item" data-provider="groq" data-model="qwen/qwen3-32b">Qwen 3 32B</div>
+                                </div>
+                            </div>
+                        </div>
+                        <button id="undo-btn" class="btn btn-secondary" title="Undo last message">Undo</button>
+                    </div>
+                    <div class="input-controls-right">
+                        <button id="send-btn" class="btn btn-primary" title="Send message (Enter)">Send</button>
+                        <button id="cancel-edit-btn" class="btn cancel-edit-btn" title="Cancel edit">✕</button>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>  <!-- End Main Content -->
+
+        <!-- Right Settings Sidebar -->
+        <div class="settings-sidebar hidden" id="settings-sidebar">
+            <div class="settings-header">
+                <h3>Settings</h3>
+            </div>
+            <div class="settings-content">
+                <!-- Controls Section -->
+                <div class="settings-section">
+                    <h4 class="settings-section-title">Controls</h4>
+                    <div class="settings-group">
+                        <div class="setting-item">
+                            <label class="setting-label">
+                                <input type="checkbox" id="stream-toggle" checked>
+                                <span>Stream responses</span>
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <label class="setting-label">
+                                <input type="checkbox" id="cache-toggle" checked>
+                                <span>Create prompt caches</span>
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-with-action">
+                                <label class="setting-label">
+                                    <input type="checkbox" id="system-prompt-toggle">
+                                    <span>Display system prompt</span>
+                                </label>
+                                <button id="edit-system-prompt-btn" class="btn btn-icon-small" title="Edit system prompt">⚙</button>
+                            </div>
+                        </div>
+                        <div class="setting-item">
+                            <label class="setting-label">
+                                <input type="checkbox" id="toggle-model-names-checkbox">
+                                <span>Show model names</span>
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <button id="refresh-settings-btn" class="btn btn-secondary btn-full-width">Refresh Conversation</button>
+                        </div>
+                        <div class="setting-item">
+                            <button id="clear-settings-btn" class="btn btn-secondary btn-full-width">Clear Conversation</button>
+                        </div>
+                        <!-- Reset Streaming Blocklist button removed - auto-reset on model change handles this -->
+                        <div class="setting-item">
+                            <button id="report-bug-btn" class="btn btn-secondary btn-full-width" disabled>Report Bug</button>
+                            <span class="setting-hint">Coming soon</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Agent Settings Section -->
+                <div class="settings-section">
+                    <h4 class="settings-section-title">Agent Settings</h4>
+                    <div class="settings-group">
+                        <div class="setting-item">
+                            <label class="setting-label-block">Workspace:</label>
+                            <div id="workspace-display" class="workspace-display" title="Click to view full path">
+                                ...
+                            </div>
+                            <button id="edit-workspace-btn" class="btn btn-secondary btn-full-width">Edit Workspace</button>
+                        </div>
+                        <div class="setting-item">
+                            <label class="setting-label-block">Tools:</label>
+                            <div id="tool-toggles-container" class="tool-toggle-list">
+                                <div class="setting-hint">Loading tools...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LaTeX Export Section -->
+                <div class="settings-section">
+                    <h4 class="settings-section-title">LaTeX Export</h4>
+                    <div class="settings-group">
+                        <div class="setting-item">
+                            <button id="latex-help-btn" class="btn btn-secondary btn-full-width">How to Use LaTeX Export</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>  <!-- End Settings Sidebar -->
+    </div>  <!-- End Container -->
+
+    <!-- Rename Modal -->
+    <div id="rename-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Rename Conversation</h3>
+            <input type="text" id="rename-input" placeholder="Enter new name" />
+            <div class="modal-buttons">
+                <button id="rename-cancel-btn" class="btn btn-secondary">Cancel</button>
+                <button id="rename-confirm-btn" class="btn btn-primary">Rename</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Workspace Modal -->
+    <div id="workspace-modal" class="modal hidden">
+        <div class="modal-content modal-wide">
+            <h3>Edit Workspace</h3>
+            <input type="text" id="workspace-input" placeholder="Enter workspace path" />
+            <div class="modal-buttons">
+                <button id="workspace-cancel-btn" class="btn btn-secondary">Cancel</button>
+                <button id="workspace-confirm-btn" class="btn btn-primary">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit System Prompt Modal -->
+    <div id="system-prompt-modal" class="modal hidden">
+        <div class="modal-content modal-wide">
+            <h3>Edit System Prompt</h3>
+            <textarea id="system-prompt-input" placeholder="Enter system prompt"></textarea>
+            <div class="modal-buttons">
+                <button id="system-prompt-cancel-btn" class="btn btn-secondary">Cancel</button>
+                <button id="system-prompt-confirm-btn" class="btn btn-primary">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LaTeX Help Modal -->
+    <div id="latex-help-modal" class="modal hidden">
+        <div class="modal-content modal-wide latex-help-modal">
+            <h3>How to Use LaTeX Export</h3>
+            <div class="latex-help-content">
+                <div class="latex-help-step">
+                    <div class="latex-help-step-number">1</div>
+                    <div class="latex-help-step-content">
+                        <h4>Create <code>orchestral.tex</code> in your Overleaf project</h4>
+                        <p>Download or copy the Orchestral LaTeX module to your project:</p>
+                        <div class="latex-help-buttons">
+                            <button id="copy-orchestral-tex-btn" class="btn btn-secondary">
+                                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="margin-right: 6px; vertical-align: middle;">
+                                    <rect x="5" y="5" width="9" height="9" rx="1" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                                    <path d="M3 11V3C3 2.44772 3.44772 2 4 2H10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                </svg>
+                                Copy orchestral.tex
+                            </button>
+                            <button id="download-orchestral-tex-btn" class="btn btn-secondary">
+                                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="margin-right: 6px; vertical-align: middle;">
+                                    <path d="M8 2V11M8 11L11 8M8 11L5 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M2 13H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                </svg>
+                                Download orchestral.tex
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="latex-help-divider"></div>
+
+                <div class="latex-help-step">
+                    <div class="latex-help-step-number">2</div>
+                    <div class="latex-help-step-content">
+                        <h4>Add to your document's preamble</h4>
+                        <p>In your main <code>.tex</code> file, add this line after <code>\documentclass</code>:</p>
+                        <pre class="latex-code-block"><code>\input{orchestral}</code></pre>
+                    </div>
+                </div>
+
+                <div class="latex-help-divider"></div>
+
+                <div class="latex-help-step">
+                    <div class="latex-help-step-number">3</div>
+                    <div class="latex-help-step-content">
+                        <h4>Copy panels using the T<sub style="font-size: 1em;">E</sub>X button</h4>
+                        <p>Click the <span class="latex-tex-button-demo">T<sub style="font-size: 1em;">E</sub>X</span> button on any message panel to copy its LaTeX code.</p>
+                        <p>Paste it into your document and it will look like:</p>
+                        <pre class="latex-code-block"><code>\begin{orchestralusermessage}
+    Hello world!
+\end{orchestralusermessage}</code></pre>
+                        <p class="latex-help-note">Agent messages, system prompts, and tool outputs each have their own styled environments!</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button id="latex-help-close-btn" class="btn btn-primary">Got it!</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Max Cost Modal -->
+    <div id="max-cost-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Set Maximum Cost</h3>
+            <div style="margin-bottom: 12px; color: #88aadd; font-size: 13px;">
+                Set a cost limit for this conversation. The agent will be interrupted when the limit is exceeded.
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 18px; color: #aaccff;">$</span>
+                <input type="number" id="max-cost-input" placeholder="1.00" min="0" step="0.01" style="flex: 1;" />
+            </div>
+            <div class="modal-buttons">
+                <button id="max-cost-clear-btn" class="btn btn-secondary">Clear Max</button>
+                <button id="max-cost-cancel-btn" class="btn btn-secondary">Cancel</button>
+                <button id="max-cost-confirm-btn" class="btn btn-primary">Set</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Approval Request Modal -->
+    <div id="approval-modal" class="modal hidden">
+        <div class="modal-content modal-wide">
+            <h3>⚠️ Approval Required</h3>
+            <div id="approval-description" class="approval-description"></div>
+            <details id="approval-details" class="approval-details">
+                <summary>Technical Details</summary>
+                <div class="approval-technical" id="approval-technical">
+                    <!-- Arguments will be inserted here dynamically -->
+                </div>
+            </details>
+            <div class="modal-buttons">
+                <button id="approval-deny-btn" class="btn btn-secondary">Deny</button>
+                <button id="approval-approve-btn" class="btn btn-primary">Approve</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Popup Notification Container -->
+    <div id="popup-container" class="popup-container"></div>
+
+    <!-- Feature modules -->
+    <script src="/static/js/websocket-manager.js"></script>
+    <script src="/static/js/latex-renderer.js"></script>
+    <script src="/static/js/image-renderer.js"></script>
+    <script src="/static/js/panel-actions.js"></script>
+
+    <!-- Main app -->
+    <script src="/static/app.js"></script>
+</body>
+</html>
