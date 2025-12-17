@@ -1,0 +1,188 @@
+Metadata-Version: 2.4
+Name: cmad
+Version: 0.1.0.post5
+Summary: CMAD: A Lightweight Framework for Extreme Spatio-Temporal Anomaly Detection
+Author: Maloy Kumar Devnath, Sudip Chakraborty, Vandana P. Janeja
+License: iHARP
+Project-URL: Homepage, https://github.com/bitsbytes-maker/cmad
+Project-URL: Source, https://github.com/bitsbytes-maker/cmad
+Project-URL: Issues, https://github.com/bitsbytes-maker/cmad/issues
+Project-URL: Paper, https://doi.org/10.1145/3678717.3691280
+Keywords: cmad,convolution matrix anomaly detection,clusters of anomalous events detection,anomaly detection,extreme event detection,spatio temporal anomaly detection,spatio temporal data mining,geospatial,geoai,climate,cryosphere,unsupervised-learning,machine learning,data science
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Science/Research
+Classifier: Topic :: Scientific/Engineering
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Classifier: Topic :: Scientific/Engineering :: Information Analysis
+Classifier: Topic :: Scientific/Engineering :: GIS
+Classifier: Topic :: Scientific/Engineering :: Atmospheric Science
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: numpy
+Requires-Dist: torch
+Requires-Dist: opencv-python
+Requires-Dist: matplotlib
+
+# Convolution Matrix Anomaly Detection (CMAD)
+
+**CMAD** is a lightweight, unsupervised framework for detecting **clusters of negative spatio-temporal anomalies**
+in sequential 2D data. It is designed for applications such as ice melt detection, environmental degradation,
+loss analysis, and decline-focused change detection.
+
+CMAD operates on **consecutive time steps**, requires **no labels**, and adapts automatically
+to arbitrary spatial resolutions.
+
+---
+
+## ⚠️ Important Version Note
+
+**This version of CMAD detects _clusters of negative anomalies only_.**
+
+An anomalous event is identified **when a spatially contiguous cluster of locations**
+exhibits an **extreme negative change between consecutive time steps** that exceeds
+the normal (e.g., loss, decrease, melting, erosion).
+
+Positive changes are intentionally ignored in this release.
+
+---
+
+## Key Features
+
+- ✔ Unsupervised (no training labels required)
+- ✔ Works with **images or generic 2D time-series arrays**
+- ✔ Supports arbitrary spatial dimensions (no fixed size)
+- ✔ Adaptive IQR-based thresholding
+- ✔ Binary anomaly masks (`1 = anomaly, 0 = normal`)
+- ✔ CPU-only by default (GPU-ready via PyTorch)
+- ✔ Suitable for large spatio-temporal datasets
+
+---
+
+## Method Overview
+
+Given a time series of 2D data  
+\[
+X = \{X_1, X_2, \dots, X_T\}, \quad X_t \in \mathbb{R}^{H \times W}
+\]
+
+CMAD performs:
+
+1. **Temporal differencing**
+   \[
+   D_t = X_{t+1} - X_t
+   \]
+
+2. **2×2 convolution with stride-2 downsampling**
+   - Captures localized spatial changes while reducing resolution
+
+3. **Second-stage 2×2 pooling**
+   - Aggregates local neighborhoods to emphasize **spatially coherent patterns**
+
+4. **Adaptive IQR-based thresholding**
+   - Per-cell thresholds learned from training data
+
+5. **Back-projection**
+   - Detected anomalous regions are mapped back to the original spatial resolution
+     using back projection strategy
+
+6. **Negative-only cluster filtering**
+   - A region is marked anomalous **only if**:
+     - It exceeds the adaptive threshold **and**
+     - The temporal difference is **negative**
+     - The signal forms a **spatially contiguous cluster**
+
+---
+
+
+## Demo Code 
+```python
+from cmad import CMAD
+import numpy as np
+
+X_train = np.random.randn(30, 64, 64)
+X_test  = np.random.randn(10, 64, 64)
+
+
+#Demo Code for CPU
+cmad = CMAD(device="cpu")
+cmad.fit_from_array(X_train)
+
+anomaly_masks = cmad.predict_from_array(X_test)
+print(anomaly_masks.shape)  # (T-1, H, W)
+
+
+## Demo Code for GPU (cuda)
+cmad = CMAD(device="cuda")
+cmad.fit_from_array(X_train)
+anomaly_masks = cmad.predict_from_array(X_test)
+
+## Demo Code for Apple Silicon (MPS)
+cmad = CMAD(device="mps")
+cmad.fit_from_array(X_train)
+anomaly_masks = cmad.predict_from_array(X_test)
+
+```
+
+## Synthetic Demo Example
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+from cmad import CMAD
+
+T, H, W = 20, 50, 50
+X = np.random.randn(T, H, W)
+
+# Inject negative anomaly
+X[10:, 20:25, 20:25] -= 5
+
+X_train = X[:15]
+X_test = X[15:]
+
+cmad = CMAD(device="cpu")
+cmad.fit_from_array(X_train)
+
+anomaly_masks = cmad.predict_from_array(X_test)
+
+accumulated = anomaly_masks.sum(axis=0)
+plt.imshow(accumulated, cmap="hot")
+plt.colorbar()
+plt.title("Accumulated Negative Anomalies")
+plt.show()
+
+
+
+```
+
+## Installation
+
+```bash
+pip install cmad
+```
+
+
+## Citation
+
+If you use CMAD in your research, please cite the following paper:
+
+```bibtex
+@inproceedings{devnath2024cmad,
+  author    = {Maloy Kumar Devnath and Sudip Chakraborty and Vandana P. Janeja},
+  title     = {CMAD: Advancing Understanding of Geospatial Clusters of Anomalous Melt Events in Sea Ice Extent},
+  booktitle = {Proceedings of the 32nd ACM SIGSPATIAL Conference},
+  year      = {2024},
+  publisher = {ACM},
+  doi       = {10.1145/3678717.3691280}
+}
+```
+
+**Full Reference**
+
+Maloy Kumar Devnath, Sudip Chakraborty, and Vandana P. Janeja. 2024.  
+*CMAD: Advancing Understanding of Geospatial Clusters of Anomalous Melt Events in Sea Ice Extent.*  
+Proceedings of the 32nd ACM International Conference on Advances in Geographic Information Systems (SIGSPATIAL ’24).  
+ACM. https://doi.org/10.1145/3678717.3691280
+
