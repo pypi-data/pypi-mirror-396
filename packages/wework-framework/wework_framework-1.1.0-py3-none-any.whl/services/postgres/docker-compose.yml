@@ -1,0 +1,22 @@
+version: "3.9"
+
+networks:
+  wework_network:
+    name: wework_network
+    external: true
+
+services:
+  postgres:
+    image: postgres:17
+    container_name: postgres17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "mypass@postgres"
+      POSTGRES_DB: afbwework
+    ports:
+      - "5432:5432"
+    networks:
+      - wework_network
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
