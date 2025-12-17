@@ -1,0 +1,124 @@
+Metadata-Version: 2.4
+Name: redacted-py
+Version: 1.0.9
+Summary: Redacting classified documents
+Author-email: Cyril Dever <cdever@pep-s.com>
+License: Copyright (c) 2024 Cyril Dever
+        
+        Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+        
+          1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+          2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+        
+        Subject to the terms and conditions of this license, each copyright holder and contributor hereby grants to those receiving rights under this license a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable (except for failure to satisfy the conditions of this license) patent license to make, have made, use, offer to sell, sell, import, and otherwise transfer this software, where such license applies only to those patent claims, already acquired or hereafter acquired, licensable by such copyright holder or contributor that are necessarily infringed by:
+        
+          (a) their Contribution(s) (the licensed copyrights of copyright holders and non-copyrightable additions of contributors, in source or binary form) alone; or
+          (b) combination of their Contribution(s) with the work of authorship to which such Contribution(s) was added by such copyright holder or contributor, if, at the time the Contribution is added, such addition causes such combination to be necessarily infringed. The patent license shall not apply to any other combinations which include the Contribution.
+        
+        Except as expressly stated above, no rights or licenses from any copyright holder or contributor is granted under this license, whether expressly, by implication, estoppel or otherwise.
+        
+        DISCLAIMER
+        
+        THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+        
+Project-URL: Homepage, https://github.com/cyrildever/redacted
+Keywords: data,obfuscation,data masking,redacted,classified
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.10.2
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: feistel-py>=1.0.0
+Dynamic: license-file
+
+# redacted-py
+_Redacting classified documents_
+
+![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/cyrildever/redacted)
+![GitHub last commit](https://img.shields.io/github/last-commit/cyrildever/redacted)
+![GitHub issues](https://img.shields.io/github/issues/cyrildever/redacted)
+![GitHub license](https://img.shields.io/github/license/cyrildever/redacted)
+![PyPI - Version](https://img.shields.io/pypi/v/redacted-py)
+
+This repository holds the code base for my `redacted-py` library in Python. \
+It is mainly based off my [Feistel cipher for Format-Preserving Encryption](https://github.com/cyrildever/feistel-py) to which I added a few tools to handle document, database and file manipulation to ease out the operation.
+
+### Motivation
+
+In some fields (like healthcare for instance), protecting the privacy of data whilst being able to conduct in-depth studies is both vital and mandatory. Redacting documents and databases is therefore the obligatory passage.
+With `redacted-py`, I provide a simple yet secure tool to help redacting documents based on either a dictionary, a record layout or a tag to decide which parts should actually be redacted.
+
+
+### Usage
+
+You can use either a dictionary or a tag (or both) to identify the words you want to redact in a document.
+The tag should be placed before any word that should be redacted. The default tag is the tilde character (`~`).
+
+For example, the following sentence will only see the word `tagged` redacted: `"This is a ~tagged sentence"`.
+
+```console
+$ pip install redacted-py
+```
+
+```python
+from redacted import DefaultRedactor, Dictionary
+from feistel import FPECipher, SHA_256
+
+source = "Some text ~tagged or using words in a dictionary"
+
+cipher = FPECipher(SHA_256, key, 10)
+redactor = DefaultRedactor(cipher)
+redacted = redactor.redact(source)
+
+expanded = redactor.expand(redacted)
+assert expanded == source, "Original data should equal ciphered then deciphered data"
+
+cleansed = redactor.clean(expanded)
+assert cleansed == "Some text tagged or using words in a dictionary", "Cleaning should remove any tag mark"
+```
+
+You may also use it in the console with the following command line instructions:
+```
+usage: python3 -m redacted [-h] [-b | --both | --no-both] [-d DICTIONARY] [-H HASH] [-i INPUT] [-k KEY] [-o OUTPUT] [-r ROUNDS] [-t TAG] [-x | --expand | --no-expand]
+
+options:
+  -h, --help            show this help message and exit
+  -b, --both, --no-both
+                        Add to use both dictionary and tag
+  -d DICTIONARY, --dictionary DICTIONARY
+                        The optional path to the dictionary of words to redact
+  -H HASH, --hash HASH  The hash engine for the round function [default sha-256]
+  -i INPUT, --input INPUT
+                        The path to the document to be redacted
+  -k KEY, --key KEY     The optional key for the FPE scheme (leave it empty to use default)
+  -o OUTPUT, --output OUTPUT
+                        The name of the output file
+  -r ROUNDS, --rounds ROUNDS
+                        The number of rounds for the Feistel cipher [default 10]
+  -t TAG, --tag TAG     The optional tag that prefixes words to redact [default ~]
+  -x, --expand, --no-expand
+                        Add to expand a redacted document
+```
+
+
+### Tests
+
+```console
+$ git clone https://github.com/cyrildever/redacted.git
+$ cd redacted/py/
+$ pip install -e .
+$ python3 -m unittest discover
+```
+
+
+### License
+
+The use of the `redacted` libraries and executables are subject to fees for commercial purpose and to the respect of the [BSD-2-Clause-Patent license](LICENSE). \
+Please [contact me](mailto:cdever@pep-s.com) to get further information.
+
+_NB: It is still under development so use in production at your own risk for now._
+
+
+<hr />
+&copy; 2024-2025 Cyril Dever. All rights reserved.
