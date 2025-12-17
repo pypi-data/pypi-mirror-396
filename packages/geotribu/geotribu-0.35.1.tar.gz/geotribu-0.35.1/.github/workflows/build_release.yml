@@ -1,0 +1,284 @@
+name: "📦 Build & 🚀 Release"
+
+# Triggers
+on:
+  push:
+    branches:
+      - main
+
+    paths:
+      - ".github/workflows/build_release.yml"
+      - "builder/"
+      - "geotribu_cli/**/*.py"
+      - pyproject.toml
+
+    tags:
+      - "*"
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/build_release.yml"
+      - "builder/"
+      - pyproject.toml
+
+# Globals
+env:
+  PROJECT_FOLDER: "geotribu_cli"
+  PYTHON_VERSION: "3.10"
+  PYINSTALLER_LOG_LEVEL: "DEBUG"
+
+# Sets permissions of the GITHUB_TOKEN
+permissions:
+  contents: read
+
+# Jobs definition
+jobs:
+  build-python-wheel:
+    name: "🐍 Python Wheel"
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Get source code
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+          cache-dependency-path: pyproject.toml
+
+      - name: Install project requirements
+        run: |
+          python -m pip install -U pip setuptools wheel
+          python -m pip install -U build
+
+      - name: Install project as a package
+        run: python -m pip install -e .[all,packaging]
+
+      - name: Build a binary wheel and a source tarball
+        run: >-
+          python -m
+          build
+          --sdist
+          --wheel
+          --outdir dist/
+          .
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: python_wheel
+          path: dist/*
+          if-no-files-found: error
+
+  build-macos:
+    name: "🍏 Mac OS"
+    runs-on: macos-15
+
+    steps:
+      - name: Get source code
+        uses: actions/checkout@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+          cache-dependency-path: pyproject.toml
+
+      - name: Install project requirements
+        run: |
+          python -m pip install -U pip setuptools wheel
+
+      - name: Install project as a package
+        run: python -m pip install -e .[all,packaging]
+
+      - name: Generates Executable
+        run: python -O ./builder/pyinstaller_build_macos.py
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: macos_executable
+          path: dist/*
+          if-no-files-found: error
+
+  build-ubuntu:
+    name: "🐧 Ubuntu LTS"
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Get source code
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+          cache-dependency-path: pyproject.toml
+
+      - name: Install project requirements
+        run: |
+          python -m pip install -U pip setuptools wheel
+
+      - name: Install project as a package
+        run: python -m pip install -e .[all,packaging]
+
+      - name: Generates Executable
+        run: python -O ./builder/pyinstaller_build_ubuntu.py
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: ubuntu_executable
+          path: dist/*
+          if-no-files-found: error
+
+  build-windows:
+    name: "🏠 Windows"
+
+    runs-on: windows-latest
+
+    steps:
+      - name: Get source code
+        uses: actions/checkout@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+          cache-dependency-path: pyproject.toml
+
+      - name: Install project requirements
+        run: |
+          python -m pip install -U pip setuptools wheel
+
+      - name: Install project as a package
+        run: python -m pip install -e .[all,packaging]
+
+      - name: Generates MS Version Info
+        run: python .\builder\version_info_templater.py
+
+      - name: Generates MS Executable
+        run: python -O .\builder\pyinstaller_build_windows.py
+
+      - name: Save it as artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: windows_executable
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: "🚀 GitHub Release"
+    runs-on: ubuntu-latest
+    needs:
+      - build-macos
+      - build-python-wheel
+      - build-ubuntu
+      - build-windows
+
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: Retrieve artifact from Python build
+        uses: actions/download-artifact@v6
+        with:
+          name: python_wheel
+          path: builds/wheel/
+
+      - name: Retrieve artifact from MacOS build
+        uses: actions/download-artifact@v6
+        with:
+          name: macos_executable
+          path: builds/macos/
+
+      - name: Retrieve artifact from Ubuntu build
+        uses: actions/download-artifact@v6
+        with:
+          name: ubuntu_executable
+          path: builds/ubuntu/
+
+      - name: Retrieve artifact from Windows build
+        uses: actions/download-artifact@v6
+        with:
+          name: windows_executable
+          path: builds/windows/
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          discussion_category_name: announcements
+          fail_on_unmatched_files: true
+          files: builds/**/*
+          generate_release_notes: true
+
+  release-pypi:
+    name: "🐍 Release on PyPI"
+    runs-on: ubuntu-latest
+    needs:
+      - build-python-wheel
+    environment:
+      name: pypi
+      url: https://pypi.org/project/geotribu/
+    permissions:
+      id-token: write
+
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: Retrieve artifact from Python build
+        uses: actions/download-artifact@v6
+        with:
+          name: python_wheel
+          path: builds/wheel/
+
+      - name: Publish to PyPI
+        if: startsWith(github.ref, 'refs/tags')
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: builds/wheel
+          print-hash: true
+
+  release-ghcr:
+    name: "🐳 Release as Docker container"
+    runs-on: ubuntu-latest
+    needs:
+      - release
+      - release-pypi
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ${{ github.repository }}
+
+    if: startsWith(github.ref, 'refs/tags/')
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

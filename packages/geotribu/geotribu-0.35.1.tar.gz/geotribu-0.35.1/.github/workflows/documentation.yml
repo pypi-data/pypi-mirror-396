@@ -1,0 +1,122 @@
+name: "📚 Documentation"
+
+on:
+  push:
+    branches:
+        - main
+    paths:
+      - "docs/**/*"
+      - ".github/workflows/documentation.yml"
+      - "geotribu_cli/**/*.py"
+
+    tags:
+      - "*"
+
+  pull_request:
+    branches:
+        - main
+    paths:
+      - ".github/workflows/documentation.yml"
+      - docs/**/*
+      - pyproject.toml
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow one concurrent deployment
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  build-docs:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Get source code
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+          cache-dependency-path: pyproject.toml
+
+      - name: Install project requirements
+        run: |
+          python -m pip install -U pip setuptools wheel
+
+      - name: Install project as a package
+        run: python -m pip install -e .[all]
+
+      - name: Génère les exemples de sortie
+        env:
+          GEOTRIBU_PROMPT_AFTER_SEARCH: false
+        run: |
+          geotribu --help > docs/usage/cli_sample_help.txt
+          geotribu comments latest --results-number 5 > docs/usage/cli_sample_comments_latest.txt
+          geotribu rss --format-output table --results-number 3 > docs/usage/cli_sample_rss.txt
+          geotribu rss -f rdp -o table > docs/usage/cli_sample_rss_rdp.txt
+          geotribu sc orfeo > docs/usage/cli_sample_search_content_orfeo.txt
+          geotribu sc -n 10 "+title:openstreetmap postgis" > docs/usage/cli_sample_search_content_advanced.txt
+          geotribu search-image postgis > docs/usage/cli_sample_search_images_postgis.txt
+          geotribu search-image postgis -f logo -o json > docs/usage/cli_sample_search_images_postgis_logos_json.txt
+
+          geotribu img search name:qgis > docs/usage/cli_sample_search_images_name_qgis.txt
+          geotribu img search "openstreetmap logo" > docs/usage/cli_sample_search_images_openstreetmap_or_logo.txt
+          geotribu img search "+openstreetmap +logo" > docs/usage/cli_sample_search_images_openstreetmap_and_logo.txt
+          geotribu img search "+path:logo +name:qgis" > docs/usage/cli_sample_search_images_path_logo_name_qgis.txt
+
+      - name: Generates dependencies graph page with pipdetree
+        run: |
+          python -m pip install -U "pipdeptree<3"
+          echo -e "\`\`\`{mermaid}" > docs/misc/dependencies.md
+          pipdeptree --exclude pip,pipdeptree,setuptools,wheel --mermaid >> docs/misc/dependencies.md
+          echo -e "    lunr -- "any" --> nltk" >> docs/misc/dependencies.md
+          echo -e "\`\`\`" >> docs/misc/dependencies.md
+
+      # this job must run before installing other dependencies to avoid listing everything
+      - name: Generates licenses page with pip-licences
+        run: |
+          python -m pip install -U "pip-licenses<5"
+          pip-licenses --format=markdown --with-authors --with-description --with-urls --ignore-packages geotribu,pipdeptree --output-file=docs/misc/licenses.md
+
+      - name: Install documentation requirements
+        run: |
+          python -m pip install -e .[doc]
+
+      - name: Build doc using Sphinx
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # required to avoid GH API rate limit
+        run: sphinx-build -b html -j auto -d docs/_build/cache -q docs docs/_build/html
+
+      - name: Save build doc as artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: documentation
+          path: docs/_build/html/*
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+        if: github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main')
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v4
+        if: github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main')
+        with:
+          # Upload entire repository
+          path: docs/_build/html/
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        if: github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main')
+        uses: actions/deploy-pages@v4
