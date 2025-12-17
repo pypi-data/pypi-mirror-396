@@ -1,0 +1,63 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "lumi_cua_sdk"
+dynamic = ["version"]
+description = 'This is the Python SDK for Computer Use Agent, allowing you to easily control the computer desktop environment from your applications.'
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+keywords = []
+authors = [
+  { name = "lvguojun", email = "lvguojun.001@bytedance.com" },
+  { name = "lelili", email = "lelili@bytedance.com" }
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = [
+    "requests>=2.25.0",
+    "pydantic>=1.8.0",
+    "aiohttp>=3.10.11",
+    "httpx",
+    "websockets>=10.0"
+]
+
+[project.urls]
+Source = "https://github.com/lelili2021/lumi-cua-sdk.git"
+
+[tool.hatch.version]
+path = "src/lumi_cua_sdk/__about__.py"
+
+[tool.hatch.envs.types]
+extra-dependencies = [
+  "mypy>=1.0.0",
+]
+
+[tool.hatch.envs.types.scripts]
+check = "mypy --install-types --non-interactive {args:src/lumi_cua_sdk tests}"
+
+[tool.coverage.run]
+source_pkgs = ["lumi_cua_sdk", "tests"]
+branch = true
+parallel = true
+omit = [
+  "src/lumi_cua_sdk/__about__.py",
+]
+
+[tool.coverage.paths]
+lumi_cua_sdk = ["src/lumi_cua_sdk", "*/lumi-cua-sdk/src/lumi_cua_sdk"]
+tests = ["tests", "*/lumi-cua-sdk/tests"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
