@@ -1,0 +1,75 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fido-mds"
+version = "2025.12"
+authors = [
+    {name = "Johan Lundberg", email = "lundberg@sunet.se"}
+]
+description = "FIDO Alliance Metadata Service in a package"
+readme = "README.md"
+license = "BSD-3-Clause"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3 :: Only",
+]
+dependencies = [
+    "fido2>=1.0.0",
+    "pydantic>=2.0",
+    "cryptography",
+    "pyOpenSSL",
+    "asn1crypto",
+]
+
+[project.urls]
+Homepage = "https://github.com/SUNET/python-fido-mds"
+Repository = "https://github.com/SUNET/python-fido-mds"
+Issues = "https://github.com/SUNET/python-fido-mds/issues"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "mypy",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+fido_mds = [
+    "data/metadata.json",
+    "data/apple_webauthn_root_ca.pem",
+    "data/google_hardware_attestation_root_ca.json"
+]
+
+[tool.pytest.ini_options]
+testpaths = ["src"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["F401", "I"]
+ignore = []
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
