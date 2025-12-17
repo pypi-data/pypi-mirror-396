@@ -1,0 +1,81 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "guts_base"
+version = "2.0.0b3"
+authors = [
+  { name="Florian Schunck", email="fluncki@protonmail.com" },
+]
+description = "Basic GUTS model implementation in pymob"
+readme = "README.md"
+requires-python = ">=3.10, <3.12"
+dependencies=[
+    "openpyxl >= 3.1.3",
+    "Bottleneck >= 1.5.0",
+    "expydb >= 0.6.0",
+    "pymob[numpyro,interactive]>=0.5.26,<0.6.0",
+    "pint",
+    "types-pymob-guts-base",
+]
+license = {file = "LICENSE"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "Natural Language :: English",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+
+[project.urls]
+"Homepage" = "https://gitlab.uni-osnabrueck.de/fschunck/guts-base"
+"Issue Tracker" = "https://gitlab.uni-osnabrueck.de/fschunck/guts-base/issues"
+
+[tool.setuptools.packages.find]
+include = ["guts_base*"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest >= 7.3", 
+    "bumpver", 
+    "pre-commit",
+    "ipykernel",
+    "ipywidgets",
+]
+
+[project.scripts]
+import-openguts = "guts_base.data.openguts:create_database_and_import_data"
+convert-time-of-death-to-openguts = "guts_base.data.time_of_death:time_of_death_to_openguts"
+
+[tool.bumpver]
+current_version = "2.0.0b3"
+version_pattern = "MAJOR.MINOR.PATCH[PYTAGNUM]"
+commit_message = "bump version {old_version} -> {new_version}"
+tag_message = "{new_version}"
+tag_scope = "default"
+pre_commit_hook = ""
+post_commit_hook = ""
+commit = true
+tag = true
+push = true
+
+[tool.bumpver.file_patterns]
+"pyproject.toml" = [
+    'current_version = "{version}"',
+    'version = "{version}"'
+]
+"guts_base/__init__.py" = [
+    '__version__ = "{version}"'
+]
+
+[tool.pytest.ini_options]
+markers = [
+    "slow='mark test as slow.'",
+    "integration='Very slow integration tests.'",
+    "batch1='Batch 1 of integration tests.'",
+    "batch2='Batch 2 of integration tests.'",
+    "batch3='Batch 3 of integration tests.'",
+    "batch4='Batch 4 of integration tests.'",
+]
