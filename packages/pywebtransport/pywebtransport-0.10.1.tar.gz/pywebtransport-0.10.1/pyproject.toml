@@ -1,0 +1,187 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pywebtransport"
+dynamic = ["version"]
+description = "An async-native WebTransport stack for Python."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.12"
+authors = [{ name = "lemonsterfy", email = "lemonsterfy@gmail.com" }]
+keywords = ["async", "http3", "networking", "protocol", "quic", "webtransport"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: AsyncIO",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Communications",
+    "Topic :: Internet",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Networking",
+    "Typing :: Typed",
+]
+
+dependencies = ["aioquic>=1.3.0,<2.0.0", "cryptography>=46.0.3,<47.0.0"]
+
+[project.optional-dependencies]
+all = ["msgpack>=1.1.2,<2.0.0", "protobuf>=6.33.2,<7.0.0"]
+dev = [
+    "black>=25.12.0,<26.0.0",
+    "flake8>=7.3.0,<8.0.0",
+    "isort>=7.0.0,<8.0.0",
+    "mypy>=1.19.0,<2.0.0",
+    "pywebtransport[test]",
+]
+docs = [
+    "mkdocs>=1.6.1,<2.0.0",
+    "mkdocs-material>=9.7.0,<10.0.0",
+    "mkdocstrings[python]>=1.0.0,<2.0.0",
+]
+msgpack = ["msgpack>=1.1.2,<2.0.0"]
+protobuf = ["protobuf>=6.33.2,<7.0.0"]
+test = [
+    "psutil>=7.1.3,<8.0.0",
+    "pytest>=9.0.2,<10.0.0",
+    "pytest-asyncio>=1.3.0,<2.0.0",
+    "pytest-benchmark>=5.2.3,<6.0.0",
+    "pytest-cov>=7.0.0,<8.0.0",
+    "pytest-mock>=3.15.1,<4.0.0",
+    "types-psutil==7.1.3.20251211",
+    "uvloop>=0.22.1,<1.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/lemonsterfy/pywebtransport"
+Documentation = "https://docs.pywebtransport.org"
+Repository = "https://github.com/lemonsterfy/pywebtransport.git"
+Issues = "https://github.com/lemonsterfy/pywebtransport/issues"
+Changelog = "https://github.com/lemonsterfy/pywebtransport/blob/main/CHANGELOG.md"
+
+[tool.hatch.version]
+path = "src/pywebtransport/version.py"
+
+[tool.hatch.build.targets.sdist]
+include = ["/CHANGELOG.md", "/LICENSE", "/NOTICE", "/README.md", "/src"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pywebtransport"]
+
+[tool.black]
+line-length = 120
+target-version = ["py312"]
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 120
+known_first_party = ["pywebtransport"]
+
+[tool.mypy]
+mypy_path = "src"
+python_version = "3.12"
+show_error_codes = true
+strict = true
+warn_no_return = true
+warn_unreachable = true
+
+[[tool.mypy.overrides]]
+module = ["aioquic.*", "google.protobuf.*", "msgpack.*", "pytest_benchmark.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+minversion = "9.0"
+addopts = "-ra -q --strict-markers --strict-config --ignore-glob='tests/e2e/test_[0-9][0-9]_*.py'"
+testpaths = ["tests"]
+norecursedirs = "tests/performance tests/benchmark"
+asyncio_mode = "strict"
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "performance: Performance tests",
+    "benchmark: Benchmark tests",
+]
+
+[tool.coverage.run]
+source = ["src"]
+branch = true
+parallel = true
+data_file = ".cache/coverage/.coverage"
+omit = ["tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+    "if TYPE_CHECKING:",
+]
+show_missing = true
+precision = 2
+
+[tool.tox]
+requires = ["tox>=4"]
+env_list = ["lint", "py312", "py313"]
+
+[tool.tox.env_run_base]
+description = "Run pytest for {env_name}"
+package = "editable"
+deps = ["-r dev-requirements.txt"]
+commands = [
+    [
+        "pytest",
+        "--cov=pywebtransport",
+        "--cov-report=term",
+        "{posargs}",
+    ],
+]
+
+[tool.tox.env.lint]
+description = "Run code quality checks"
+base_python = ["python3.12"]
+package = "skip"
+deps = ["-r dev-requirements.txt"]
+commands = [
+    [
+        "black",
+        "--check",
+        "src",
+        "tests",
+    ],
+    [
+        "flake8",
+        "src",
+        "tests",
+    ],
+    [
+        "mypy",
+        "src",
+        "tests",
+    ],
+]
