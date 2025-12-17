@@ -1,0 +1,78 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wework-framework"
+version = "1.1.2"
+description = "A modular full-stack framework for building modern web applications"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+    {name = "WeWork Team", email = "info@wework.dev"}
+]
+keywords = ["framework", "fastapi", "react", "fullstack", "web", "development"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Framework :: FastAPI",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+]
+dependencies = [
+    "sqlalchemy[asyncio]>=1.4",
+    "asyncpg>=0.27",
+    "alembic>=1.10",
+    "pydantic>=1.10",
+    "python-dotenv",
+    "httpx",
+    "fastapi",
+    "uvicorn[standard]",
+    "pywebpush>=1.9.0",
+    "redis>=4.5",
+    "passlib[bcrypt]",
+    "python-jose[cryptography]",
+    "pydantic[email]",
+    "python-multipart",
+    "click>=8.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+]
+
+[project.scripts]
+wework = "src.cli.main:cli"
+
+[project.urls]
+Documentation = "https://github.com/wecanco/WeWork/docs"
+Source = "https://github.com/wecanco/WeWork"
+Tracker = "https://github.com/wecanco/WeWork/issues"
+
+[tool.setuptools]
+# Use find_packages to automatically discover all packages
+packages = { find = { exclude = [
+    "tests*",
+    "examples*",
+    "frontend*",
+    "venv*",
+    "env*",
+    "ENV*",
+    ".venv*",
+    "node_modules*",
+    "dist*",
+    "build*",
+    "*.egg-info*",
+] } }
+
+[tool.setuptools.package-data]
+"*" = ["*.md", "*.txt", "*.json", "*.yaml", "*.yml"]
+"src.cli.templates" = ["**/*"]
+

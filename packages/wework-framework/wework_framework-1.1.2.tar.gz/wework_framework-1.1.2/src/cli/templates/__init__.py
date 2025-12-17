@@ -1,0 +1,4 @@
+"""
+WeWork CLI Templates
+"""
+
