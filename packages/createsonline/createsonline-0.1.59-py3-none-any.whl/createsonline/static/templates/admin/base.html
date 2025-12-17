@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}CREATESONLINE Admin{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/admin.css">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="admin-container">
+        <header class="admin-header">
+            <div class="header-brand">
+                <span class="brand-mark">
+                    <img src="/static/image/logo-header-h100.png" alt="CREATESONLINE">
+                </span>
+                <div class="brand-copy">
+                    <span class="brand-title">CREATESONLINE Admin</span>
+                    <span class="brand-version">v0.1.6</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <span class="user-info">Admin Panel</span>
+                <button class="btn btn-sm" onclick="window.location.href='/admin/logout'">Logout</button>
+            </div>
+        </header>
+
+        <div class="admin-layout">
+            <aside class="admin-sidebar">
+                <nav class="sidebar-nav">
+                    <div class="nav-section">
+                        <h3 class="nav-section-title">Dashboard</h3>
+                        <ul class="nav-menu">
+                            <li class="nav-item">
+                                <a href="/admin/" class="nav-link {% if request is defined and request.path == '/admin/' %}active{% endif %}">
+                                    <span class="nav-icon">?</span>
+                                    <span class="nav-text">Home</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="nav-section">
+                        <h3 class="nav-section-title">Models</h3>
+                        <ul class="nav-menu">
+                            {% block sidebar_menu %}{% endblock %}
+                        </ul>
+                    </div>
+
+                    <div class="nav-section">
+                        <h3 class="nav-section-title">System</h3>
+                        <ul class="nav-menu">
+                            <li class="nav-item">
+                                <a href="/admin/settings" class="nav-link">
+                                    <span class="nav-icon">&#9881;</span>
+                                    <span class="nav-text">Settings</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </nav>
+            </aside>
+
+            <main class="admin-main">
+                {% block breadcrumbs %}
+                <div class="breadcrumbs">
+                    <a href="/admin/">Home</a>
+                </div>
+                {% endblock %}
+
+                {% block messages %}{% endblock %}
+
+                <div class="admin-content">
+                    {% block content %}{% endblock %}
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="/static/js/admin.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
