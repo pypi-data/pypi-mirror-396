@@ -1,0 +1,14 @@
+docksible_certbot:
+  depends_on:
+    - docksible_webserver
+    - docksible_app
+
+  image: certbot/certbot
+  container_name: docksible_certbot
+  volumes:
+    - "{{ ansible_env.HOME }}/docker-compose-volumes/certbot-data:/etc/letsencrypt"
+    - "{{ ansible_env.HOME }}/docker-compose-volumes/app-data:/var/www/html"
+  command: >
+    certonly --non-interactive --webroot --webroot-path=/var/www/html
+    --email {{ email }} --agree-tos --no-eff-email --force-renewal
+    -d {{ domain }} -d www.{{ domain }} {{ test_cert }}
