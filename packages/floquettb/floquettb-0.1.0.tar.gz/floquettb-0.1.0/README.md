@@ -1,0 +1,125 @@
+# FloquetTB
+
+A Python package for Floquet engineering of tight-binding models with topological property calculations.
+
+## Features
+
+- **Floquet Hamiltonian Calculation**: Compute effective Floquet Hamiltonians using high-frequency expansion
+- **Topology Calculations**: Calculate Wilson loops, Chern numbers, and Berry curvature
+- **Band Structure Plotting**: Visualize Floquet band structures with spin projection
+- **Circular Polarization Support**: Full support for circularly polarized light driving
+
+## Installation
+
+```bash
+pip install floquettb
+```
+
+Or install from source:
+
+```bash
+git clone https://github.com/yourusername/floquettb.git
+cd floquettb
+pip install -e .
+```
+
+## Dependencies
+
+- numpy >= 1.19.0
+- scipy >= 1.5.0
+- matplotlib >= 3.3.0
+- pythtb == 1.8.0 (required, install separately)
+
+## Quick Start
+
+```python
+from pythtb import tb_model
+from floquettb import FloquetTB  # or: from floquettb.floquettb import FloquetTB
+import numpy as np
+
+# 1. Create a tight-binding model
+lat = [[1.0, 0.0], [0.5, np.sqrt(3.0)/2.0]]
+orb = [[1.0/3.0, 1.0/3.0], [2.0/3.0, 2.0/3.0]]
+my_model = tb_model(2, 2, lat, orb, nspin=1)
+
+# Set hoppings
+t = 1.0
+my_model.set_hop(-t, 0, 1, [0, 0])
+my_model.set_hop(-t, 0, 1, [0, -1])
+my_model.set_hop(-t, 0, 1, [-1, 0])
+
+# 2. Convert to Floquet model
+floquet_model = FloquetTB(my_model)
+
+# 3. Apply circularly polarized light
+omega = 10.0  # Driving frequency
+A_drive = 1.0  # Driving amplitude
+floquet_model.compute_floquet_hamiltonian(
+    A=A_drive, 
+    omega=omega, 
+    polarization='circular_left', 
+    order=2
+)
+
+# 4. Calculate topological properties
+results = floquet_model.calculate_all_topology(
+    mesh_size=101,
+    occ=[0, 1],  # Occupied bands
+    return_plots=True
+)
+
+print(f"Chern number: {results['chern_number']:.6f}")
+
+# 5. Plot band structure
+kpath = [[0.0, 0.0], [2.0/3.0, 1.0/3.0], [0.5, 0.5], [0.0, 0.0]]
+fig, ax = floquet_model.plotbands(
+    kpath=kpath, 
+    label="Floquet Band Structure",
+    A=A_drive, 
+    omega=omega,
+    proj_spin=False
+)
+```
+
+## API Reference
+
+### FloquetTB Class
+
+#### Methods
+
+- `compute_floquet_hamiltonian(A, omega, polarization='circular_left', order=1)`: Compute effective Floquet Hamiltonian
+- `plotbands(kpath, label="Floquet Band Structure", n_points=300, A=None, omega=None, proj_spin=False)`: Plot band structure
+- `calculate_wilson_loop(mesh_size=51, occ=None, dir=1, start_k=[0.0, 0.0], contin=True, return_plot=False)`: Calculate Wilson loop
+- `calculate_chern_number(mesh_size=51, occ=None, start_k=[0.0, 0.0], dirs=None)`: Calculate Chern number
+- `calculate_berry_curvature(mesh_size=51, occ=None, start_k=[0.0, 0.0], dirs=None, return_plot=False, log=False)`: Calculate Berry curvature
+- `calculate_all_topology(mesh_size=51, occ=None, start_k=[0.0, 0.0], return_plots=False, log=False)`: Calculate all topological properties
+
+## Examples
+
+See the `examples/` directory for more detailed examples.
+
+## Citation
+
+If you use FloquetTB in your research, please cite:
+
+```bibtex
+@software{floquettb2024,
+  title={FloquetTB: A Python package for Floquet engineering of tight-binding models},
+  author={Your Name},
+  year={2024},
+  url={https://github.com/yourusername/floquettb}
+}
+```
+
+## License
+
+MIT License
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## Acknowledgments
+
+This package is built on top of [pythtb](http://www.physics.rutgers.edu/pythtb/), a Python tight-binding package.
+
