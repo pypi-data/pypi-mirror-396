@@ -1,0 +1,48 @@
+# -*- coding: utf-8 -*-
+# :Project:   pglast — Virtualenv targets
+# :Created:   gio 03 ago 2017 16:55:55 CEST
+# :Author:    Lele Gaifax <lele@metapensiero.it>
+# :License:   GNU General Public License version 3 or later
+# :Copyright: © 2017, 2018, 2020, 2024, 2025 Lele Gaifax
+#
+
+PIP := $(VENVDIR)/bin/pip
+PYPROJECT_TOML ?= pyproject.toml
+PYPROJECT_TOML_TIMESTAMP := $(VENVDIR)/$(PYPROJECT_TOML).timestamp
+
+help::
+	@printf "\nPython virtualenv related targets\n"
+	@printf   "=================================\n\n"
+
+help::
+	@printf "virtualenv\n\tsetup the Python virtualenv and install required packages\n"
+
+.PHONY: virtualenv
+virtualenv: $(VENVDIR) install-editable
+
+$(VENVDIR):
+	@echo "Bootstrapping Python 3 virtualenv..."
+	@$(SYS_PYTHON) -m venv --prompt $(notdir $(TOPDIR)) $@
+	@$(MAKE) upgrade-pip
+
+help::
+	@printf "upgrade-pip\n\tupgrade pip\n"
+
+.PHONY: upgrade-pip
+upgrade-pip:
+	@echo "Upgrading pip..."
+	@$(PIP) install --no-cache-dir --upgrade pip
+
+help::
+	@printf "install-editable\n\tinstall/update required Python packages\n"
+
+.PHONY: install-editable
+install-editable: $(PYPROJECT_TOML_TIMESTAMP)
+
+$(PYPROJECT_TOML_TIMESTAMP): $(PYPROJECT_TOML)
+	@echo "Installing pglast in editable mode..."
+	@PATH="$(TOPDIR)/bin:$(PATH)" $(PIP) install .[dev,test]
+	@touch $@
+
+distclean::
+	rm -rf $(VENVDIR)
