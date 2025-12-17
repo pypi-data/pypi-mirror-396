@@ -1,0 +1,260 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    # run CI only if files in these whitelisted paths are changed
+    paths:
+      - '.github/workflows/**'
+      - 'rdmo/**'
+      - 'testing/**'
+      - 'webpack/**'
+      - .eslintrc.js
+      - .nvmrc
+      - .pre-commit-config.yaml
+      - conftest.py
+      - package.json
+      - pyproject.toml
+
+# Ref: https://docs.github.com/en/actions/using-jobs/using-concurrency
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONDONTWRITEBYTECODE: 1
+  FORCE_COLOR: 1 # colored output by pytest etc.
+
+permissions: {}
+
+jobs:
+
+  build-wheel:
+    name: Build python wheel
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        persist-credentials: false
+        fetch-depth: 0  # important for setuptools_scm
+    # build the webpack bundle
+    - uses: actions/setup-node@v6
+      with:
+        node-version: 22
+        cache: npm
+    - run: npm ci && npm run build:dist
+    - name: Build and inspect package
+      uses: hynek/build-and-inspect-python-package@efb823f52190ad02594531168b7a2d5790e66516 # v2.14.0
+
+  test:
+    name: "Test (Python: ${{ matrix.python-version }}, DB: ${{ matrix.db-backend }})"
+    needs: build-wheel
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.13']
+        db-backend: [mysql, postgres]
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        persist-credentials: false
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v6
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: pip
+    - name: Download wheel
+      uses: actions/download-artifact@v6
+      with:
+        name: Packages
+        path: dist
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update && sudo apt-get install --yes pandoc texlive-latex-base texlive-latex-extra texlive-luatex librsvg2-bin
+        pandoc --version
+        python -m pip install --upgrade pip
+        python -m pip --version
+    - name: Install rdmo[mysql] from wheel and start mysql
+      run: |
+        python -m pip install "$(ls dist/*.whl)[ci,mysql]"
+        sudo systemctl start mysql.service
+      if: matrix.db-backend == 'mysql'
+    - name: Install rdmo[postgres] from wheel and start postgresql
+      run: |
+        python -m pip install "$(ls dist/*.whl)[ci,postgres]"
+        sudo systemctl start postgresql.service
+        pg_isready
+        sudo -u postgres psql --command="CREATE USER postgres_user PASSWORD 'postgres_password' CREATEDB"
+      if: matrix.db-backend == 'postgres'
+    - name: Prepare Env
+      run: |
+        cp -r testing/media testing/media_root && mkdir testing/log
+    - name: Run package status tests first
+      run: |
+        pytest rdmo/core/tests/test_package_status.py --nomigrations --verbose
+      if: matrix.python-version == '3.13' && matrix.db-backend == 'postgres'
+    - name: Run Tests
+      run: |
+        pytest -p randomly -p no:cacheprovider --cov --reuse-db --numprocesses=auto --dist=loadscope
+      env:
+        GITHUB_DB_BACKEND: ${{ matrix.db-backend }}
+    - name: Upload coverage data to coveralls.io
+      uses: coverallsapp/github-action@5cbfd81b66ca5d10c19b062c04de0199c215fb6e # v2.3.7
+      with:
+        flag-name: '${{ matrix.db-backend }}: ${{ matrix.python-version }}'
+        parallel: true
+        fail-on-error: false
+        allow-empty: true
+
+  test-e2e:
+    name: "End-to-end Test (Python: ${{ matrix.python-version }}, DB: ${{ matrix.db-backend }})"
+    needs: build-wheel
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        python-version: ['3.13']
+        db-backend: [postgres]
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        persist-credentials: false
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v6
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: pip
+    - name: Download wheel
+      uses: actions/download-artifact@v6
+      with:
+        name: Packages
+        path: dist
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update && sudo apt install --yes pandoc texlive-latex-base texlive-latex-extra texlive-luatex librsvg2-bin
+        python -m pip install --upgrade pip
+    - name: Install rdmo[postgres] from wheel and start postgresql
+      run: |
+        python -m pip install "$(ls dist/*.whl)[ci,postgres]"
+        sudo systemctl start postgresql.service
+        pg_isready
+        sudo -u postgres psql --command="CREATE USER postgres_user PASSWORD 'postgres_password' CREATEDB"
+    - name: Prepare Env
+      run: |
+        cp -r testing/media testing/media_root && mkdir testing/log
+    - name: Install e2e tests dependencies
+      run: |
+        playwright install --with-deps chromium
+    - run: mkdir screenshots
+    - name: Collect static files into static root (only required if rdmo is installed from wheel)
+      run: python testing/manage.py collectstatic --noinput
+    - name: Run end-to-end tests
+      run: pytest -p randomly -p no:cacheprovider --reuse-db --numprocesses=auto --dist=loadscope -m e2e --nomigrations
+      env:
+        DJANGO_DEBUG: True
+        GITHUB_DB_BACKEND: ${{ matrix.db-backend }}
+    - uses: actions/upload-artifact@v5
+      with:
+        name: screenshots
+        path: screenshots/**/*.png
+
+  coveralls:
+    name: Indicate completion to coveralls
+    needs: test
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Run Coveralls finish
+      uses: coverallsapp/github-action@5cbfd81b66ca5d10c19b062c04de0199c215fb6e # v2.3.7
+      with:
+        parallel-finished: true
+        fail-on-error: false
+
+  dev-setup:
+    # Ref: structlog (MIT licensed) <https://github.com/hynek/structlog/blob/main/.github/workflows/ci.yml>
+    name: "Test dev setup on ${{ matrix.os }}"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: python -Im pip install --editable .[dev]
+      - run: python -Ic 'import rdmo; print(rdmo.__version__)'
+
+  dependencies:
+    name: Test installation of all dependencies
+    needs: build-wheel
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Download wheel
+        uses: actions/download-artifact@v6
+        with:
+          name: Packages
+          path: dist
+      - name: Install os requirements for python-ldap
+        run: sudo apt-get update && sudo apt-get install --yes libldap2-dev libsasl2-dev
+      - run: python -m pip install --upgrade pip
+      - name: Install rdmo wheel with all optional dependency groups
+        run: python -m pip install --no-compile "$(ls dist/*.whl)[all]"
+      - name: Verify installed packages have compatible dependencies
+        run: python -m pip check
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install --include=dev
+      - name: Write info to step summary
+        run: |
+          {
+            echo -e "# ✓ All dependency groups successfully installed in combination\n\n"
+            echo '<details><summary>Installed Python packages (dependency tree)</summary>'
+            echo -e "\n\`\`\`console"
+            echo "$ python -m pipdeptree --local-only --exclude=pip,pipdeptree"
+            python -m pipdeptree --local-only --exclude=pip,pipdeptree
+            echo -e "\`\`\`\n</details>"
+            echo '<details><summary>Outdated Python dependencies</summary>'
+            echo -e "\n\`\`\`console"
+            echo "$ python -m pip list --outdated"
+            python -m pip list --outdated
+            echo -e "\`\`\`\n</details>"
+            echo '<details><summary>Installed JavaScript packages (dependency tree)</summary>'
+            echo -e "\n\`\`\`console"
+            echo "$ npm list --all"
+            npm list --all
+            echo -e "\`\`\`\n</details>"
+            echo '<details><summary>Outdated JavaScript dependencies</summary>'
+            echo -e "\n\`\`\`console"
+            echo "$ npm outdated --long"
+            npm outdated --long || true
+            echo -e "\`\`\`\n</details>"
+          } >> $GITHUB_STEP_SUMMARY
+
+  required-checks-pass:
+    if: always()
+    needs:
+      - build-wheel
+      - test
+      - coveralls
+      - test-e2e
+      - dev-setup
+      - dependencies
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: re-actors/alls-green@05ac9388f0aebcb5727afa17fcccfecd6f8ec5fe # v1.2.2
+        with:
+          jobs: ${{ toJSON(needs) }}
