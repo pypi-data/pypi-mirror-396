@@ -1,0 +1,39 @@
+[package]
+name = "gnss_tec_core"
+version = "0.4.0"
+edition = "2024"
+description = "Optimized RINEX file parser for the pygnss-tec Python package."
+license = "MIT"
+readme = "README.md"
+
+[lib]
+name = "gnss_tec_core"
+crate-type = ["cdylib"]
+
+[features]
+default = []
+custom-alloc = ["tikv-jemallocator", "mimalloc"]
+
+[dependencies]
+arrow = { version = "57.1.0", default-features = false, features = ["pyarrow"] }
+pyo3 = { version = "0.26", features = ["extension-module", "abi3-py39"] }
+rayon = "1.11.0"
+rinex = { git = "https://github.com/nav-solutions/rinex.git", branch = "main", features = [
+    "flate2",
+    "nav",
+    "qc",
+] }
+rustc-hash = "2.1.1"
+
+[target.'cfg(target_family = "unix")'.dependencies]
+tikv-jemallocator = { version = "0.6", optional = true }
+
+[target.'cfg(target_family = "windows")'.dependencies]
+mimalloc = { version = "0.1", optional = true }
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+strip = "symbols"
