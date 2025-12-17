@@ -1,0 +1,83 @@
+[tool.poetry]
+name = "EorzeaEnv"
+version = "2.2.12"
+description = "Final Fantasy XIV weather & time tools."
+keywords = ["eorzea", "ffxiv", "ff14", "final fantasy"]
+authors = ["Elton Chou <plscd748@gmail.com>"]
+maintainers = ["Elton Chou <plscd748@gmail.com>"]
+homepage = "https://github.com/EltonChou/EorzeaEnv"
+repository = "https://github.com/EltonChou/EorzeaEnv"
+license = "MIT"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Topic :: Utilities",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+readme = "README.md"
+packages = [{ include = "EorzeaEnv", from = "." }]
+include = ["README.md", "CHANGELOG.md", "LICENSE"]
+
+[tool.poetry.urls]
+"Bug Reports" = "https://github.com/EltonChou/EorzeaEnv/issues"
+
+[tool.poetry.dependencies]
+python = ">=3.8,<=3.13"
+numpy = [
+    { version = "^1.19.0", python = ">=3.8,<3.12" },
+    { version = "^2.0", python = ">=3.12" },
+]
+rapidfuzz = "^2.0.11"
+
+[tool.poetry.group.test.dependencies]
+pytest = "^6.2.5"
+coverage = { extras = ["toml"], version = "^6.4.4" }
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2.5"
+autopep8 = "^1.6.0"
+tox = "^3.25.1"
+coverage = { extras = ["toml"], version = "^6.4.4" }
+flake8 = "^5.0.4"
+pre-commit = "^2.20.0"
+mypy = ">0.971"
+black = "^24.3.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.mypy]
+files = ["EorzeaEnv/**/*.py"]
+ignore_missing_imports = true
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+
+[tool.pytest.ini_options]
+junit_family = "xunit2"
+addopts = "-ra -q"
+testpaths = ["test"]
+
+[tool.coverage.run]
+omit = ["*/site-packages/*", "*/tests/*", "*/test/*"]
+parallel = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+exclude_lines = [
+    "pragma: no cover",
+    "@abstract",
+    "@overload",
+    "pass",
+    "raise NotImplementedError",
+    "warnings.warn",
+]
