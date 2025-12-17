@@ -1,0 +1,64 @@
+[build-system]
+requires = [
+  "setuptools>=68",
+  "setuptools_scm[toml]>=8",
+  "wheel",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "expops"
+description = "MLOps Platform with step-based pipeline execution"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { file = "LICENSE" }
+dynamic = ["version"]
+
+dependencies = [
+  "pandas",
+  "numpy",
+  "scikit-learn",
+  "joblib",
+  "networkx>=2.6",
+  "PyYAML",
+  "pydantic>=2",
+  "dask>=2023.1.0",
+  "distributed>=2023.1.0",
+  "lz4==4.0.2",
+  "redis>=5.0.0",
+  "google-cloud-firestore>=2.18.0",
+  "google-cloud-pubsub>=2.20.0",
+  "google-cloud-storage>=2.18.0",
+  "fastapi>=0.110",
+  "uvicorn>=0.25",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "pytest-cov",
+]
+slurm = [
+  "dask-jobqueue>=0.8.0",
+]
+
+[project.scripts]
+mlops = "mlops.main:main"
+mlops-platform = "mlops.main:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"mlops.web" = ["ui/*"]
+
+[tool.setuptools_scm]
+version_scheme = "no-guess-dev"
+local_scheme = "no-local-version"
+write_to = "src/mlops/_version.py"
+
+

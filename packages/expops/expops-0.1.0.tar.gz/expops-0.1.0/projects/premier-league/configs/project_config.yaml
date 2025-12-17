@@ -1,0 +1,221 @@
+metadata:
+  name: "premier-league"
+  description: "Premier League 3-class classification with generic FE, NN A/B, XGB A/B, logistic baseline, and ensemble"
+  version: "1.0.0"
+
+environment:
+  venv:
+    name: "premier-league-env"
+    requirements_file: "projects/premier-league/requirements.txt"
+    reporting:
+      name: "premier-league-env-reporting"
+      requirements_file: "projects/premier-league/charts/requirements.txt"
+
+reproducibility:
+  random_seed: 43
+  experiment_tracking:
+    enabled: true
+    backend: "noop"
+
+data:
+  sources:
+    training:
+      path: "projects/premier-league/data/England CSV.csv"
+    validation:
+      path: "projects/premier-league/data/England CSV.csv"
+
+model:
+  framework: "custom"
+  language: "python"
+  name: "premier_league_model"
+  version: "1.0.0"
+  parameters:
+    custom_script_path: "projects/premier-league/models/premier_league_model.py"
+    cache:
+      backend:
+        type: gcp
+        gcp_project: mlops-platform-470017
+        credentials_json: keys/firestore.json
+      object_store:
+        type: gcs
+        bucket: mlops-platform123
+        prefix: projects/premier-league/cache/steps
+    executor:
+      n_workers: 4
+    hyperparameters:
+      test_size: 0.2
+      pca_components: 21
+
+    pipeline:
+      process_adjlist: |
+        feature_engineering_generic preprocess_linear_nn
+        feature_engineering_generic preprocess_xgb
+        feature_engineering_generic pca_scree
+        feature_engineering_generic goals_distribution
+        preprocess_linear_nn linear_training
+        preprocess_linear_nn nn_training_a
+        preprocess_linear_nn nn_training_b
+        preprocess_xgb xgb_training_a
+        preprocess_xgb xgb_training_b
+        linear_training linear_inference
+        nn_training_a nn_inference_a
+        nn_training_b nn_inference_b
+        xgb_training_a xgb_inference_a
+        xgb_training_b xgb_inference_b
+        nn_inference_a nn_best_selection
+        nn_inference_b nn_best_selection
+        xgb_inference_a xgb_best_selection
+        xgb_inference_b xgb_best_selection
+        nn_best_selection nn_best_inference
+        xgb_best_selection xgb_best_inference
+        linear_training ensemble_inference
+        nn_best_selection ensemble_inference
+        xgb_best_selection ensemble_inference
+        linear_inference test_metrics_comparison
+        nn_best_inference test_metrics_comparison
+        xgb_best_inference test_metrics_comparison
+        ensemble_inference test_metrics_comparison
+
+      processes:
+        - name: "feature_engineering_generic"
+          description: "Generic FE: parse dates, derive labels (H/D/A), stratified indices"
+          code_function: "define_feature_engineering_generic_process"
+
+        - name: "preprocess_linear_nn"
+          description: "Preprocess for linear/nn: OHE + StandardScaler"
+          code_function: "define_preprocess_linear_nn_process"
+
+        - name: "preprocess_xgb"
+          description: "Preprocess for xgb: OHE only"
+          code_function: "define_preprocess_xgb_process"
+
+        - name: "linear_training"
+          description: "Train a multinomial Logistic Regression classifier"
+          code_function: "define_linear_training_process"
+
+        - name: "nn_training_a"
+          description: "Train NN classifier branch A"
+          code_function: "define_nn_training_process"
+          hyperparameters:
+            nn_params:
+              hidden_layers: [128, 64]
+              learning_rate: 0.001
+              epochs: 50
+
+        - name: "nn_training_b"
+          description: "Train NN classifier branch B"
+          code_function: "define_nn_training_process"
+          hyperparameters:
+            nn_params:
+              hidden_layers: [256, 128, 64]
+              learning_rate: 0.0008
+              epochs: 50
+
+        - name: "xgb_training_a"
+          description: "Train an XGBoost classifier (branch A)"
+          code_function: "define_xgb_training_process"
+          hyperparameters:
+            xgb_params:
+              n_estimators: 350
+              max_depth: 4
+              learning_rate: 0.1
+              subsample: 0.9
+              colsample_bytree: 0.9
+
+        - name: "xgb_training_b"
+          description: "Train an XGBoost classifier (branch B) with different hyperparameters"
+          code_function: "define_xgb_training_process"
+          hyperparameters:
+            xgb_params:
+              n_estimators: 500
+              max_depth: 8
+              learning_rate: 0.05
+              subsample: 0.8
+              colsample_bytree: 0.8
+
+        - name: "nn_inference_a"
+          description: "Run test inference for NN branch A and compute classification metrics"
+          code_function: "define_nn_inference_process"
+          hyperparameters:
+            train_key: nn_training_a
+
+        - name: "nn_inference_b"
+          description: "Run test inference for NN branch B and compute classification metrics"
+          code_function: "define_nn_inference_process"
+          hyperparameters:
+            train_key: nn_training_b
+
+        - name: "xgb_inference_a"
+          description: "Run test inference for XGBoost branch A and compute classification metrics"
+          code_function: "define_xgb_inference_process"
+          hyperparameters:
+            train_key: xgb_training_a
+
+        - name: "xgb_inference_b"
+          description: "Run test inference for XGBoost branch B and compute classification metrics"
+          code_function: "define_xgb_inference_process"
+          hyperparameters:
+            train_key: xgb_training_b
+
+        - name: "linear_inference"
+          description: "Run test inference for Logistic Regression and compute classification metrics"
+          code_function: "define_linear_inference_process"
+
+        - name: "nn_best_selection"
+          description: "Select best NN by F1 from A/B"
+          code_function: "define_select_best_nn_process"
+
+        - name: "xgb_best_selection"
+          description: "Select best XGB by F1 from A/B"
+          code_function: "define_select_best_xgb_process"
+
+        - name: "nn_best_inference"
+          description: "Stable best NN inference for charts"
+          code_function: "define_nn_best_inference_process"
+
+        - name: "xgb_best_inference"
+          description: "Stable best XGB inference for charts"
+          code_function: "define_xgb_best_inference_process"
+
+        - name: "ensemble_inference"
+          description: "Weighted soft-vote ensemble across Logistic, best NN, best XGB"
+          code_function: "define_ensemble_inference_process"
+
+        - name: "pca_scree"
+          type: chart
+          description: "Render PCA scree plot"
+
+        - name: "goals_distribution"
+          type: chart
+          description: "Render goals distribution plot"
+
+        - name: "test_metrics_comparison"
+          type: chart
+          description: "Compare classification metrics across models and ensemble"
+
+experiment_tracking:
+  enabled: true
+  experiment_name: "premier-league"
+
+reporting:
+  enabled: true
+  static_entrypoint: "projects/premier-league/charts/plot_metrics.py"
+  dynamic_entrypoint: "projects/premier-league/charts/plot_metrics.js"
+  charts:
+    - name: "pca_scree"
+      probe_paths:
+        feat: "feature_engineering_generic/feature_analysis"
+    - name: "goals_distribution"
+      probe_paths:
+        feat: "feature_engineering_generic/derive_labels_and_indices"
+    - name: "test_metrics_comparison"
+      probe_paths:
+        linear: "linear_inference/test_inference_classification"
+        nn_best: "nn_best_inference/test_inference_classification"
+        xgb_best: "xgb_best_inference/test_inference_classification"
+        ensemble: "ensemble_inference"
+    - name: "nn_losses"
+      type: dynamic
+      probe_paths:
+        nn_a: "nn_training_a/train_and_evaluate_nn_classifier"
+        nn_b: "nn_training_b/train_and_evaluate_nn_classifier"

@@ -1,0 +1,130 @@
+metadata:
+  name: "titanic"
+  description: "Titanic classification project with parallel NN branches and XGBoost"
+  version: "1.0.0"
+
+environment:
+  venv:
+    name: "titanic-env"
+    requirements_file: "projects/titanic/requirements.txt"
+    reporting:
+      name: "titanic-env-reporting"
+      requirements_file: "projects/titanic/charts/requirements.txt"
+
+reproducibility:
+  random_seed: 41
+  experiment_tracking:
+    enabled: true
+    backend: "noop"
+
+data:
+  sources:
+    training:
+      path: "projects/titanic/data/Titanic-Dataset.csv"
+    validation:
+      path: "projects/titanic/data/Titanic-Dataset.csv"
+
+model:
+  framework: "custom"
+  language: "python"
+  name: "titanic_model"
+  version: "1.0.0"
+  parameters:
+    custom_script_path: "projects/titanic/models/titanic_model.py"
+    cache:
+      backend:
+        type: gcp
+        gcp_project: mlops-platform-470017
+        credentials_json: keys/firestore.json
+      object_store:
+        type: gcs
+        bucket: mlops-platform123
+        prefix: projects/titanic/cache/steps
+    executor:
+      n_workers: 3
+    hyperparameters:
+      test_size: 0.2
+
+    pipeline:
+      process_adjlist: |
+        data_preprocessing nn_training_a
+        data_preprocessing nn_training_b
+        data_preprocessing linear_training
+        nn_training_a nn_a_inference
+        nn_training_b nn_b_inference
+        linear_training linear_inference
+        nn_a_inference test_metrics_comparison
+        nn_b_inference test_metrics_comparison
+        linear_inference test_metrics_comparison
+
+      processes:
+        - name: "data_preprocessing"
+          description: "Load Titanic CSV, engineer features, encode and split into train/test"
+          code_function: "define_data_preprocessing_process"
+
+        - name: "nn_training_a"
+          description: "Train NN branch A with specified hyperparameters"
+          code_function: "define_nn_training_process"
+          hyperparameters:
+            nn_params:
+              hidden_layers: [64, 32]
+              learning_rate: 0.01
+              epochs: 50
+              batch_size: 64
+
+        - name: "nn_training_b"
+          description: "Train NN branch B with different hyperparameters"
+          code_function: "define_nn_training_process"
+          hyperparameters:
+            nn_params:
+              hidden_layers: [128, 64, 32]
+              learning_rate: 0.005
+              epochs: 80
+              batch_size: 64
+
+        - name: "linear_training"
+          description: "Train a Logistic Regression model in parallel"
+          code_function: "define_linear_training_process"
+          hyperparameters:
+            linear_params:
+              C: 1.0
+              penalty: "l2"
+              solver: "lbfgs"
+              max_iter: 200
+
+        - name: "nn_a_inference"
+          description: "Run test inference for NN branch A and compute metrics"
+          code_function: "define_nn_a_inference_process"
+
+        - name: "nn_b_inference"
+          description: "Run test inference for NN branch B and compute metrics"
+          code_function: "define_nn_b_inference_process"
+
+        - name: "linear_inference"
+          description: "Run test inference for Linear model branch and compute metrics"
+          code_function: "define_linear_inference_process"
+
+        - name: "test_metrics_comparison"
+          type: chart
+          description: "Compare test metrics across NN A, NN B, and Linear"
+
+experiment_tracking:
+  enabled: true
+  experiment_name: "titanic"
+
+reporting:
+  enabled: true
+  static_entrypoint: "projects/titanic/charts/plot_metrics.py"
+  dynamic_entrypoint: "projects/titanic/charts/plot_metrics.js"
+  charts:
+    - name: "nn_losses"
+      type: dynamic
+      probe_paths:
+        nn_a: "nn_training_a/train_and_evaluate_nn"
+        nn_b: "nn_training_b/train_and_evaluate_nn"
+
+    - name: "test_metrics_comparison"
+      probe_paths:
+        nn_a: "nn_a_inference/test_inference"
+        nn_b: "nn_b_inference/test_inference"
+        linear: "linear_inference/test_inference"
