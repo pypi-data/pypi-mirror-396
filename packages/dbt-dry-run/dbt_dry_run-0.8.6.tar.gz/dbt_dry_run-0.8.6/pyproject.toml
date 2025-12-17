@@ -1,0 +1,99 @@
+[tool.poetry]
+name = "dbt-dry-run"
+version = "0.8.6"
+description = "Dry run dbt projects"
+authors = ["Connor Charles <connor.charles@autotrader.co.uk>",
+           "Phil hope <philip.hope@autotrader.co.uk>",
+           "Angelos Georgiadis <angelos.georgiadis@autotrader.co.uk>",
+           "Richard Wilmer <richard.wilmer@autotrader.co.uk>",
+           "Cat Wates <catherine.wates@autotrader.co.uk>",
+           "Shu Wang <shu.wang@autotrader.co.uk>",
+           "Stevie Woods <steven.woods@autotrader.co.uk>"]
+readme = "README.md"
+license = "Apache-2.0"
+repository = "https://github.com/autotraderuk/dbt-dry-run"
+
+[tool.poetry.scripts]
+dbt-dry-run = "dbt_dry_run.__main__:main"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.15"
+agate = ">=1.7.0,<1.10"
+google-cloud-bigquery = "^3"
+pydantic = "<3"
+tenacity = "^8.2"
+networkx = ">=2.3,<4.0"
+pyyaml = "~6"
+typer = "~0"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.11.5"
+pytest = "^9.0.0"
+types-pyyaml = "^6.0.12.20250915"
+pytest-cov = "^4.0.0"
+twine = "^3.8.0"
+pytest-mock = "^3.7.0"
+dbt-bigquery = "~1.10.0"
+numpy = [
+  {version = ">=1.26", python = ">=3.9"},
+]
+pandas = [
+  {version = ">=2.1.1", python = ">=3.12"},
+]
+mypy = "^1.18.2"
+
+[build-system]
+requires = ["poetry-core>=1.5.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+testpaths = "dbt_dry_run/test"
+filterwarnings = [
+    "error",
+    "ignore:Deprecated call to",
+    "ignore:pkg_resources is deprecated as an API",
+    "ignore:invalid escape sequence",
+    "ignore:unclosed",
+    "ignore:'cgi' is deprecated and slated for removal",
+    "ignore:Your application has authenticated using end user credentials",
+    "ignore::UserWarning",
+    "ignore:.*custom tp_new.*in Python 3.14.*:DeprecationWarning",
+    "ignore:.*utcnow.*:DeprecationWarning",
+    "ignore:.*is deprecated and will be removed in Click 9.0.*",
+    "ignore:.*Please upgrade to the latest Python version.*",
+    'ignore:.*Use open\(\) instead.*'
+]
+pythonpath = [
+  "."
+]
+
+[tool.coverage.run]
+source = ["dbt_dry_run"]
+branch = true
+
+[tool.coverage.report]
+precision = 2
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "raise NotImplemented",
+    "if TYPE_CHECKING:",
+    "@overload"
+]
+
+[tool.mypy]
+follow_imports = "silent"
+strict_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+disallow_any_generics = true
+check_untyped_defs = true
+no_implicit_reexport = false
+warn_unused_configs = true
+disallow_subclassing_any = true
+disallow_incomplete_defs = true
+disallow_untyped_decorators = true
+disallow_untyped_calls = false
+disallow_untyped_defs = true
+ignore_missing_imports = true
+plugins = ['pydantic.mypy']
