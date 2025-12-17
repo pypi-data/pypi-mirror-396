@@ -1,0 +1,95 @@
+"""
+Author: Michael Rapp (michael.rapp.ml@gmail.com)
+
+Provides classes that allow writing predictions to one or several sinks.
+"""
+from dataclasses import replace
+from functools import reduce
+from itertools import chain
+from typing import Any, List, Optional, Tuple, override
+
+import numpy as np
+
+from mlrl.testbed_sklearn.experiments.dataset import Attribute, AttributeType, TabularDataset
+from mlrl.testbed_sklearn.experiments.output.dataset.dataset_prediction import PredictionDataset
+
+from mlrl.testbed.experiments.input.data import DatasetInputData
+from mlrl.testbed.experiments.output.data import DatasetOutputData, OutputData
+from mlrl.testbed.experiments.output.sinks import Sink
+from mlrl.testbed.experiments.output.writer import DataExtractor, DatasetExtractor, ResultWriter
+from mlrl.testbed.experiments.problem_domain import ClassificationProblem
+from mlrl.testbed.experiments.state import ExperimentState
+
+from mlrl.util.arrays import is_sparse
+
+
+class PredictionWriter(ResultWriter):
+    """
+    Allows to write predictions to one or several sinks.
+    """
+
+    class PredictionExtractor(DatasetExtractor):
+        """
+        Uses `DatasetInputData` that has previously been loaded via an input reader.
+        """
+
+        @override
+        def _create_output_data(self, data: Any) -> Optional[DatasetOutputData]:
+            return PredictionDataset(data)
+
+    class DefaultExtractor(DataExtractor):
+        """
+        The extractor to be used by a `PredictionWriter`, by default.
+        """
+
+        @staticmethod
+        def __get_unique_values(array) -> np.ndarray:
+            if is_sparse(array):
+                data = array.data
+
+                if array.nnz < reduce(lambda aggr, ndim: aggr * ndim, array.shape, 1):
+                    return np.fromiter(set(chain(np.zeros(shape=1, dtype=data.dtype), data)), dtype=data.dtype)
+
+                return np.unique(data)
+
+            return np.unique(array)
+
+        @override
+        def extract_data(self, state: ExperimentState, _: List[Sink]) -> List[Tuple[ExperimentState, OutputData]]:
+            """
+            See :func:`mlrl.testbed.experiments.output.writer.DataExtractor.extract_data`
+            """
+            prediction_result = state.prediction_result.prediction_result if state.prediction_result else None
+            dataset = state.dataset_as(TabularDataset)
+
+            if prediction_result and dataset:
+                predictions = prediction_result.predictions
+                nominal_values = None
+
+                if issubclass(predictions.dtype.type, np.integer):
+                    if isinstance(state.problem_domain, ClassificationProblem):
+                        attribute_type = AttributeType.NOMINAL
+                        unique_values = self.__get_unique_values(predictions)
+                        unique_values.sort()
+                        nominal_values = [str(value) for value in unique_values]
+                    else:
+                        attribute_type = AttributeType.ORDINAL
+                else:
+                    attribute_type = AttributeType.NUMERICAL
+
+                outputs = dataset.outputs
+                outputs = [Attribute('Prediction ' + output.name, attribute_type, nominal_values) for output in outputs]
+                return [(state, PredictionDataset(replace(dataset, y=predictions, outputs=outputs)))]
+
+            return []
+
+    def __init__(self, *extractors: DataExtractor):
+        """
+        :param extractors: Extractors that should be used for extracting the output data to be written to the sinks
+        """
+        super().__init__(PredictionWriter.PredictionExtractor(properties=PredictionDataset.PROPERTIES,
+                                                              context=PredictionDataset.CONTEXT),
+                         *extractors,
+                         PredictionWriter.DefaultExtractor(),
+                         input_data=DatasetInputData(properties=PredictionDataset.PROPERTIES,
+                                                     context=PredictionDataset.CONTEXT))
