@@ -1,0 +1,52 @@
+name: Build wheels
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    env:
+      # ---- Linux ----
+      # Build manylinux + musllinux wheels
+      CIBW_ARCHS_LINUX: "x86_64"
+      CIBW_MANYLINUX_X86_64_IMAGE: "manylinux2014"
+      CIBW_MUSLLINUX_X86_64_IMAGE: "musllinux_1_2"
+
+      # ---- macOS ----
+      # Build Intel, Apple Silicon, and universal2 wheels
+      CIBW_ARCHS_MACOS: "x86_64 arm64 universal2"
+
+      # ---- Windows ----
+      # Build both 32-bit and 64-bit wheels
+      CIBW_ARCHS_WINDOWS: "AMD64 x86"
+
+      # ---- General settings ----
+      # Build wheels for CPython 3.11–3.14
+      CIBW_BUILD: "cp311-* cp312-* cp313-* cp314-*"
+
+      # If needed, skip PyPy or unsupported combos
+      CIBW_SKIP: "pp* *-manylinux_i686"
+
+      # Output
+      CIBW_OUTPUT_DIR: "wheelhouse"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install cibuildwheel
+        run: pip install "cibuildwheel>=2.23"
+
+      - name: Build wheels
+        run: cibuildwheel
+
+      - name: Upload wheels as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}
+          path: wheelhouse/*.whl
