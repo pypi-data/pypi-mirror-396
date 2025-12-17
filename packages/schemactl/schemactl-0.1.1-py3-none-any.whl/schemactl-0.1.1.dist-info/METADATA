@@ -1,0 +1,247 @@
+Metadata-Version: 2.4
+Name: schemactl
+Version: 0.1.1
+Summary: next‑generation database migration tool
+License: MIT
+Author: Teams
+Author-email: teams@dotlabs.dev
+Requires-Python: >=3.12,<4.0
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
+Requires-Dist: alembic (>=1.17.2,<2.0.0)
+Requires-Dist: asyncpg (>=0.31.0,<0.32.0)
+Requires-Dist: click (>=8.3.1,<9.0.0)
+Requires-Dist: greenlet (>=3.3.0,<4.0.0)
+Requires-Dist: python-dotenv (>=1.2.1,<2.0.0)
+Requires-Dist: rich (>=14.2.0,<15.0.0)
+Requires-Dist: sqlalchemy (>=2.0.45,<3.0.0)
+Description-Content-Type: text/markdown
+
+# schemactl
+
+> **framework‑agnostic database schema evolution tool for Python**
+
+`schemactl` is a next‑generation database migration tool built on top of **SQLAlchemy metadata** and **Alembic autogeneration**.
+
+Unlike traditional migration tools, `schemactl` is designed as a **schema evolution engine**, not just a migration runner. It is architecture‑first, deterministic, and ready to integrate with **LLMs, agents, and autonomous workflows**.
+
+---
+
+## Why schemactl?
+
+Most migration tools are:
+
+* framework‑coupled
+* imperative and manual
+* hard to reason about at scale
+* unfriendly to AI‑assisted workflows
+
+`schemactl` takes a different approach:
+
+* **Framework‑agnostic** – works with pure SQLAlchemy
+* **Metadata‑driven** – schema is the single source of truth
+* **Diff‑based** – migrations are generated from real schema changes
+* **Deterministic** – reproducible and auditable
+* **AI‑ready** – designed for LLM review, risk analysis, and human‑in‑the‑loop control
+
+---
+
+## Core Concepts
+
+### Schema as Code
+
+Your SQLAlchemy models (metadata) define the desired state of the database. For example, in `app/models.py`:
+
+```python
+from sqlalchemy import Column, Integer, String, DateTime, Boolean
+from sqlalchemy.orm import declarative_base
+from datetime import datetime
+
+Base = declarative_base()
+
+class User(Base):
+    __tablename__ = 'users'
+    
+    id = Column(Integer, primary_key=True)
+    email = Column(String(255), unique=True, nullable=False)
+    username = Column(String(100), unique=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    is_active = Column(Boolean, default=True)
+```
+
+`schemactl` compares this metadata against the actual database schema and generates migrations automatically.
+
+---
+
+### Evolution, Not Just Migration
+
+Instead of thinking in terms of *"apply SQL files"*, `schemactl` models:
+
+* schema **diffs**
+* schema **versions**
+* schema **state**
+
+This enables future features like:
+
+* automated rollback planning
+* migration safety scoring
+* AI‑assisted reviews
+* policy enforcement
+
+---
+
+## Installation
+
+```bash
+pip install schemactl
+```
+
+---
+
+## CLI Overview
+
+```bash
+schemactl --help
+```
+
+Planned commands:
+
+```text
+schemactl new       # generate a new migration from metadata diff
+schemactl up        # create DB (if needed) and apply pending migrations
+schemactl create    # create the database
+schemactl drop      # drop the database
+schemactl migrate   # run pending migrations
+schemactl rollback  # rollback the last migration
+schemactl down      # alias for rollback
+schemactl status    # show migration status
+#schemactl dump      # dump schema.sql
+#schemactl load      # load schema.sql
+schemactl wait      # wait for DB readiness
+```
+
+
+---
+
+## Usage
+
+### 1. Generate a Migration
+
+To generate an empty migration file:
+
+```bash
+schemactl new --message add_users_table
+```
+
+To auto-generate a migration based on model changes, use the `--auto` flag and specify the path to your models:
+
+```bash
+schemactl new \
+  --message create_initial_tables \
+  --auto \
+  --models app.models
+```
+
+The command generates a new migration file:
+```text
+migrations/
+└── 20251215_create_initial_tables.sql
+```
+
+The content of the generated file will look like this:
+
+```sql
+-- migrate:up
+-- Auto-generated migration: create_initial_tables
+CREATE TABLE users (
+    id SERIAL NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    username VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP WITHOUT TIME ZONE,
+    is_active BOOLEAN,
+    PRIMARY KEY (id),
+    UNIQUE (email),
+    UNIQUE (username)
+);
+
+-- migrate:down
+-- Rollback: create_initial_tables
+DROP TABLE users;
+```
+
+---
+
+### 2. Apply Migrations
+
+```bash
+schemactl up
+```
+
+What happens:
+
+* Creates the database if it does not exist
+* Ensures the `schema_migrations` table exists
+* Applies all pending migrations in order
+* Records applied revisions deterministically
+
+---
+
+## Project Structure
+
+```text
+.
+├── schemactl/              # Main package source
+│   ├── cli.py              # CLI commands
+│   ├── services/           # Business logic and services
+│   │   └── migration.py
+│   │   └── model_loader.py
+│   ├── adapters/           # Database and Alembic adapters
+│   │   ├── alembic.py
+│   │   └── database.py
+├── migrations/             # Generated migration files
+├── tests/                  # Unit and integration tests
+├── pyproject.toml          # Project configuration (Poetry)
+└── poetry.lock             # Poetry lock file
+```
+
+This structure follows **Clean Architecture** and keeps infrastructure concerns isolated.
+
+---
+
+## Design Principles
+
+* Architecture first, code second
+* Prefer declarative over imperative
+* Explicit state tracking
+* Simple core, extensible edges
+
+---
+
+## Status
+
+⚠️ **Early development / experimental**
+
+APIs may change.
+Migration format is not yet stable.
+
+---
+
+## License
+
+MIT
+
+---
+
+## Contributing
+
+Contributions are welcome, especially in:
+
+* migration safety
+* rollback logic
+* Async / cloud databases
+
+Design discussions > code dumps.
+
