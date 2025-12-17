@@ -1,0 +1,246 @@
+name: Docker (CPU) publish
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref to build (tag/branch/SHA)"
+        required: true
+        default: "v0.2.0"
+      publish_latest:
+        description: "Also push :latest (only for stable semver tags)"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish-cpu:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref_name }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Git metadata
+        id: git
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Compute tags/refs
+        id: vars
+        shell: bash
+        run: |
+          set -euo pipefail
+          ref_in="${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref_name }}"
+
+          want_latest="true"
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            want_latest="${{ inputs.publish_latest }}"
+          fi
+
+          tag="$ref_in"
+          if [[ "$tag" =~ ^refs/tags/(.+)$ ]]; then tag="${BASH_REMATCH[1]}"; fi
+          if [[ "$tag" =~ ^refs/heads/(.+)$ ]]; then tag="${BASH_REMATCH[1]}"; fi
+          tag="${tag//\//-}"
+
+          publish_latest=false
+          is_semver=false
+          if [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            is_semver=true
+          fi
+          if [[ "$is_semver" == "true" ]] && [[ "$want_latest" == "true" ]]; then
+            publish_latest=true
+          fi
+
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "publish_latest=$publish_latest" >> "$GITHUB_OUTPUT"
+          echo "is_semver=$is_semver" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ghcr.io/${{ github.repository }}-cpu
+          tags: |
+            type=raw,value=${{ steps.vars.outputs.tag }}
+            type=raw,value=latest,enable=${{ steps.vars.outputs.publish_latest }}
+
+      - name: Resolve existing digest (avoid mutating stable tags)
+        id: resolve
+        shell: bash
+        run: |
+          set -euo pipefail
+          image="ghcr.io/${{ github.repository }}-cpu"
+          tag="${{ steps.vars.outputs.tag }}"
+
+          if [[ "${{ steps.vars.outputs.is_semver }}" != "true" ]]; then
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if out="$(docker buildx imagetools inspect "${image}:${tag}" 2>/dev/null)"; then
+            digest="$(printf '%s\n' "$out" | awk '/^Digest:/ {sub(/^Digest:[[:space:]]*/, "", $0); print $0; exit}')"
+            if [[ -z "$digest" ]]; then
+              echo "Unable to parse digest for ${image}:${tag}" >&2
+              exit 1
+            fi
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: docker/build-push-action@v5
+        id: build
+        if: steps.resolve.outputs.exists != 'true'
+        with:
+          context: .
+          file: docker/Dockerfile.cpu
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            CRISPR_GPU_IMAGE_REPOSITORY=ghcr.io/${{ github.repository }}-cpu
+            CRISPR_GPU_GIT_REF=${{ steps.vars.outputs.tag }}
+            CRISPR_GPU_GIT_SHA=${{ steps.git.outputs.sha }}
+            CRISPR_GPU_GITHUB_RUN_ID=${{ github.run_id }}
+
+      - name: Update :latest tag without rebuild
+        if: steps.resolve.outputs.exists == 'true' && steps.vars.outputs.publish_latest == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          image="ghcr.io/${{ github.repository }}-cpu"
+          digest="${{ steps.resolve.outputs.digest }}"
+          docker buildx imagetools create -t "${image}:latest" "${image}@${digest}"
+
+      - name: Final image digest
+        id: image
+        shell: bash
+        run: |
+          set -euo pipefail
+          image="ghcr.io/${{ github.repository }}-cpu"
+          digest="${{ steps.build.outputs.digest }}"
+          if [[ "${{ steps.resolve.outputs.exists }}" == "true" ]]; then
+            digest="${{ steps.resolve.outputs.digest }}"
+          fi
+          if [[ -z "$digest" ]]; then
+            echo "Unable to determine image digest" >&2
+            exit 1
+          fi
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+
+      - uses: sigstore/cosign-installer@v3
+
+      - name: Cosign keyless sign (digest)
+        shell: bash
+        run: |
+          set -euo pipefail
+          cosign sign --yes "${{ steps.image.outputs.image }}@${{ steps.image.outputs.digest }}"
+
+      - name: Compute cosign signature reference
+        id: cosign
+        shell: bash
+        run: |
+          set -euo pipefail
+          image="${{ steps.image.outputs.image }}"
+          digest="${{ steps.image.outputs.digest }}"
+
+          sig_ref="$(cosign triangulate --type signature "${image}@${digest}" 2>/dev/null || true)"
+          if [[ -z "$sig_ref" ]]; then
+            hex="${digest#sha256:}"
+            sig_ref="${image}:sha256-${hex}.sig"
+          fi
+
+          echo "signature_ref=$sig_ref" >> "$GITHUB_OUTPUT"
+          echo "Signed: ${image}@${digest}"
+          echo "Signature ref: ${sig_ref}"
+
+      - name: Generate SBOM (SPDX JSON)
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ steps.image.outputs.image }}@${{ steps.image.outputs.digest }}
+          registry-username: ${{ github.actor }}
+          registry-password: ${{ secrets.GITHUB_TOKEN }}
+          format: spdx-json
+          output-file: sbom.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+
+      - name: Cosign keyless attest SBOM (digest)
+        shell: bash
+        run: |
+          set -euo pipefail
+          cosign attest --yes --type spdxjson --predicate sbom.spdx.json "${{ steps.image.outputs.image }}@${{ steps.image.outputs.digest }}"
+
+      - name: Smoke: run demo inside image (provenance)
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf out
+          mkdir -p out
+
+          docker run --rm \
+            -v "$PWD/out:/out" \
+            -e CRISPR_GPU_IMAGE_REPOSITORY="${{ steps.image.outputs.image }}" \
+            -e CRISPR_GPU_IMAGE_DIGEST="${{ steps.image.outputs.digest }}" \
+            -e CRISPR_GPU_COSIGN_SIGNATURE="${{ steps.cosign.outputs.signature_ref }}" \
+            -e CRISPR_GPU_GITHUB_RUN_ID="${{ github.run_id }}" \
+            -e CRISPR_GPU_GIT_REF="${{ steps.vars.outputs.tag }}" \
+            -e CRISPR_GPU_GIT_SHA="${{ steps.git.outputs.sha }}" \
+            "${{ steps.image.outputs.image }}@${{ steps.image.outputs.digest }}" \
+            --out-dir /out --quick --skip-gpu --redact
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          p = Path("out/report.json")
+          assert p.exists(), f"missing {p}"
+          r = json.loads(p.read_text(encoding="utf-8"))
+          c = (r.get("provenance") or {}).get("container") or {}
+
+          assert c.get("inside_container") is True
+          assert c.get("image_repository")
+          assert c.get("image_digest", "").startswith("sha256:")
+          assert c.get("cosign_signature")
+          assert c.get("github_run_id")
+          assert c.get("git_ref")
+          assert c.get("git_sha")
+          print("container provenance ok")
+          PY
+
+      - name: Publish summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "### crispr-gpu CPU image published"
+            echo ""
+            echo "- Image: \`${{ steps.image.outputs.image }}@${{ steps.image.outputs.digest }}\`"
+            echo "- Cosign signature ref: \`${{ steps.cosign.outputs.signature_ref }}\`"
+            echo "- Git ref: \`${{ steps.vars.outputs.tag }}\`"
+            echo "- Git sha: \`${{ steps.git.outputs.sha }}\`"
+            echo "- Workflow run id: \`${{ github.run_id }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,94 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install build jsonschema
+      - name: Build sdist only (CPU-only to avoid CUDA dependency)
+        run: python -m build --sdist
+        env:
+          SKBUILD_CONFIGURE_OPTIONS: "-DCRISPR_GPU_ENABLE_CUDA=OFF"
+      - name: Build CPU CLI (for sample bundle)
+        run: |
+          cmake -B build_cli -S . \
+            -DCRISPR_GPU_ENABLE_CUDA=OFF \
+            -DCRISPR_GPU_BUILD_PYTHON=OFF \
+            -DCRISPR_GPU_ENABLE_TESTS=OFF \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build build_cli --config Release
+      - name: Generate sample artifact bundle (CPU-only)
+        run: |
+          export PATH="$PWD/build_cli:$PATH"
+          python3 scripts/artifact_run.py --out-dir sample_bundle --quick --skip-gpu --redact
+          python3 scripts/validate_artifacts.py sample_bundle
+          mkdir -p release_assets
+          cp sample_bundle/report.json "release_assets/crispr-gpu-${{ github.ref_name }}-report.json"
+          cp sample_bundle/report.md "release_assets/crispr-gpu-${{ github.ref_name }}-report.md"
+          cp sample_bundle/demo/score_cpu.json "release_assets/crispr-gpu-${{ github.ref_name }}-score_cpu.json"
+          cp sample_bundle/bench_synthetic.jsonl "release_assets/crispr-gpu-${{ github.ref_name }}-bench_synthetic.jsonl"
+          tar -czf "release_assets/crispr-gpu-${{ github.ref_name }}-sample-bundle.tar.gz" -C sample_bundle .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release_assets
+          path: release_assets/*
+
+  publish-pypi:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, 'rc') && !contains(github.ref_name, 'a') && !contains(github.ref_name, 'b')
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
+
+  release-assets:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: release_assets
+          path: release_assets
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dist/*
+            release_assets/*
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          draft: false
+          prerelease: false

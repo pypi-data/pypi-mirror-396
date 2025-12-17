@@ -1,0 +1,42 @@
+FROM nvidia/cuda:12.0.1-devel-ubuntu22.04
+
+ARG CRISPR_GPU_IMAGE_REPOSITORY=""
+ARG CRISPR_GPU_GIT_REF=""
+ARG CRISPR_GPU_GIT_SHA=""
+ARG CRISPR_GPU_GITHUB_RUN_ID=""
+
+ENV CRISPR_GPU_IMAGE_REPOSITORY=$CRISPR_GPU_IMAGE_REPOSITORY
+ENV CRISPR_GPU_GIT_REF=$CRISPR_GPU_GIT_REF
+ENV CRISPR_GPU_GIT_SHA=$CRISPR_GPU_GIT_SHA
+ENV CRISPR_GPU_GITHUB_RUN_ID=$CRISPR_GPU_GITHUB_RUN_ID
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    ca-certificates \
+    cmake \
+    git \
+    ninja-build \
+    python3 \
+    python3-dev \
+    python3-pip \
+    time \
+  && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /opt/crispr-gpu
+COPY . .
+
+# Build + install (CUDA)
+RUN cmake -B build -S . \
+      -DCRISPR_GPU_ENABLE_CUDA=ON \
+      -DCRISPR_GPU_BUILD_PYTHON=ON \
+      -DCRISPR_GPU_ENABLE_TESTS=OFF \
+      -DCMAKE_BUILD_TYPE=Release \
+  && cmake --build build -j"$(nproc)" \
+  && cmake --install build --prefix /usr/local
+
+VOLUME ["/out"]
+
+ENTRYPOINT ["python3", "scripts/artifact_run.py"]
+CMD ["--out-dir", "/out", "--quick"]

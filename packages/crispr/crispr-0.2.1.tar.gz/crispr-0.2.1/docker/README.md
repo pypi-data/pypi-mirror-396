@@ -1,0 +1,40 @@
+# Docker
+
+These images are intended for artifact evaluation: run a deterministic demo + synthetic benchmark and emit a versioned report bundle.
+
+## Published images (GHCR)
+
+- CPU (stable releases): `ghcr.io/omniscoder/crispr-gpu-cpu:vX.Y.Z`
+- CPU (newest stable): `ghcr.io/omniscoder/crispr-gpu-cpu:latest`
+
+Note: do **not** use `:latest` for scientific claims; pin a release tag or (preferably) an immutable digest `@sha256:...`.
+
+## CPU image
+
+Build:
+```bash
+docker build -f docker/Dockerfile.cpu -t crispr-gpu:cpu .
+```
+
+Run (writes into `./reports_docker` on the host):
+```bash
+mkdir -p reports_docker
+docker run --rm -v "$(pwd)/reports_docker:/out" crispr-gpu:cpu
+```
+
+## CUDA image
+
+Build:
+```bash
+docker build -f docker/Dockerfile.cuda -t crispr-gpu:cuda .
+```
+
+Run (requires NVIDIA Container Toolkit):
+```bash
+mkdir -p reports_docker
+docker run --rm --gpus all -v "$(pwd)/reports_docker:/out" crispr-gpu:cuda
+```
+
+Outputs:
+- `/out/report.json` (schema: `schemas/report.v1.json`)
+- `/out/report.md`
