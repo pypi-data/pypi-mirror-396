@@ -1,0 +1,186 @@
+name: Build Python Wheels
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [x86_64, i686]
+        python-version: ['3.10', '3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          args: --release --out dist --interpreter python${{ matrix.python-version }}
+          sccache: 'true'
+          manylinux: auto
+          working-directory: lib_python
+          maturin-version: "1.9.2"
+      
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-linux-${{ matrix.target }}-py${{ matrix.python-version }}
+          path: lib_python/dist
+
+  windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        target: [x64, x86]
+        python-version: ['3.10', '3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: ${{ matrix.target }}
+      
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          args: --release --out dist --interpreter python${{ matrix.python-version }}
+          sccache: 'true'
+          working-directory: lib_python
+          maturin-version: "1.9.2"
+      
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-windows-${{ matrix.target }}-py${{ matrix.python-version }}
+          path: lib_python/dist
+
+  # macOS Intel (x86_64) - use macos-13 for native x86_64 build
+  macos-x86_64:
+    runs-on: macos-13
+    timeout-minutes: 60
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      
+      - name: Build wheels (x86_64)
+        uses: PyO3/maturin-action@v1
+        with:
+          target: x86_64-apple-darwin
+          args: --release --out dist --interpreter python${{ matrix.python-version }}
+          sccache: 'true'
+          working-directory: lib_python
+          maturin-version: "1.9.2"
+        env:
+          MACOSX_DEPLOYMENT_TARGET: '10.12'
+      
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-macos-x86_64-py${{ matrix.python-version }}
+          path: lib_python/dist
+
+  # macOS Apple Silicon (aarch64) - native build with pipx
+  macos-aarch64:
+    runs-on: macos-14
+    timeout-minutes: 60
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Python and build wheel
+        shell: bash
+        run: |
+          set -ex
+          
+          # Install specific Python version
+          brew install python@${{ matrix.python-version }}
+          
+          # Set Python path
+          PYTHON_BIN="/opt/homebrew/opt/python@${{ matrix.python-version }}/bin/python${{ matrix.python-version }}"
+          
+          # Verify Python architecture
+          $PYTHON_BIN --version
+          $PYTHON_BIN -c "import platform; print(f'Architecture: {platform.machine()}')"
+          
+          # Create virtual environment
+          $PYTHON_BIN -m venv /tmp/buildenv
+          
+          # Activate and install maturin
+          source /tmp/buildenv/bin/activate
+          pip install --upgrade pip
+          pip install maturin==1.9.2
+          
+          # Build wheel natively (no --target flag)
+          cd lib_python
+          maturin build --release --interpreter $PYTHON_BIN
+          
+          # Copy wheel to dist
+          mkdir -p dist
+          cp target/wheels/*.whl dist/
+        env:
+          MACOSX_DEPLOYMENT_TARGET: '11.0'
+      
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-macos-aarch64-py${{ matrix.python-version }}
+          path: lib_python/dist
+
+  sdist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build sdist
+        uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: --out dist
+          working-directory: lib_python
+          maturin-version: "1.9.2"
+      - name: Upload sdist
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-sdist
+          path: lib_python/dist
+
+  release:
+    name: Release to PyPI
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [linux, windows, macos-x86_64, macos-aarch64, sdist]
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          path: dist
+          merge-multiple: true
+      
+      - name: List distribution files
+        run: ls -la dist/
+      
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          skip-existing: true
