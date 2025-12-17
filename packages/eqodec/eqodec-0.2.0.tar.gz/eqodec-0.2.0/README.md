@@ -1,0 +1,153 @@
+# EQODEC
+
+**EQODEC** is a lightweight Python package that provides **carbon-aware loss functions** and **energy-efficiency evaluation metrics** for neural compression and representation learning systems.
+
+It enables researchers and engineers to **explicitly account for carbon cost during model training and evaluation**, rather than treating emissions as a post-hoc reporting metric.
+
+> _Optimize quality, bitrate, and carbon cost — jointly._
+
+---
+
+## Motivation
+
+The rapid growth of neural compression, generative models, and large-scale inference has significantly increased the **energy and carbon footprint** of data storage and transmission systems. While existing codecs optimize for **rate–distortion trade-offs**, they do not account for **environmental impact during training or inference**.
+
+EQODEC addresses this gap by:
+
+-   Integrating **carbon awareness directly into the training objective**
+-   Providing a standardized **Energy-Efficiency Score (EES)** for fair evaluation
+-   Remaining **model-agnostic and framework-lightweight**
+
+---
+
+## Key Features
+
+-   **Carbon-Aware Loss Function**
+
+    -   Drop-in replacement for standard rate–distortion losses
+    -   Supports reconstruction, bitrate, and carbon regularization terms
+
+-   **Energy-Efficiency Score (EES)**
+
+    -   Quantifies storage savings per unit carbon cost
+    -   Suitable for neural codecs, traditional codecs, and hybrid pipelines
+
+-   **Framework-Agnostic Design**
+
+    -   Works with any neural compression architecture
+    -   Minimal assumptions about latent representations
+
+-   **CodeCarbon Integration**
+
+    -   Uses real-world carbon intensity estimates
+    -   Graceful fallback when regional data is unavailable
+
+---
+
+## Installation
+
+```bash
+pip install eqodec
+```
+
+### Requirements
+
+-   Python ≥ 3.8
+-   PyTorch
+-   NumPy
+-   CodeCarbon
+
+---
+
+## Quick Start
+
+### 1. Carbon-Aware Loss Function
+
+```python
+import torch
+from eqodec import CarbonAwareLoss, get_local_carbon_intensity
+
+carbon_intensity = get_local_carbon_intensity()
+
+criterion = CarbonAwareLoss(
+    lambda_recon=5.0,
+    lambda_rate=0.5,
+    lambda_carbon=0.005,
+    carbon_intensity=carbon_intensity
+)
+
+loss, metrics = criterion(x_hat, x, latent)
+```
+
+**Loss formulation:**
+
+[
+\mathcal{L}
+= \lambda*r \mathcal{L}*{\text{recon}}
+
+-   \lambda*b \mathcal{L}*{\text{rate}}
+-   \lambda*c \mathcal{L}*{\text{carbon}}
+    ]
+
+---
+
+### 2. Energy-Efficiency Score (EES)
+
+```python
+from eqodec import energy_efficiency_score
+
+ees = energy_efficiency_score(
+    baseline_bytes=2.3e9,
+    compressed_bytes=1.9e9,
+    kg_co2=0.82
+)
+```
+
+**Definition:**
+
+[
+\text{EES} = \frac{\text{GB Saved}}{\text{kgCO}_2}
+]
+
+Higher values indicate **more sustainable compression**.
+
+---
+
+## Use Cases
+
+-   Neural image, video, and audio compression
+-   Learned entropy models and autoencoders
+-   Carbon-aware representation learning
+-   Sustainability benchmarking of codecs
+-   Research on green AI and efficient ML systems
+
+---
+
+## Design Philosophy
+
+EQODEC is intentionally:
+
+-   **Minimal** – no datasets, no training loops
+-   **Composable** – integrates into existing pipelines
+-   **Transparent** – interpretable loss components
+-   **Research-first** – aligned with reproducible evaluation
+
+---
+
+## Relation to the EQODEC Framework
+
+This package is the **modular, reusable extraction** of the EQODEC research framework:
+
+> _EQODEC: A Carbon-Aware Neural Compression Framework_
+
+The full experimental pipeline (ConvGRU architecture, FFmpeg evaluation, Vimeo-90K benchmarking) is maintained separately in the research repository.
+
+---
+
+## Contact
+
+For questions, issues, or research collaboration:
+
+**Ian Jure Macalisang**
+GitHub: [https://github.com/ianjure](https://github.com/ianjure)
+Email: [ianjuremacalisang2.com](mailto:ianjuremacalisang2.com)
