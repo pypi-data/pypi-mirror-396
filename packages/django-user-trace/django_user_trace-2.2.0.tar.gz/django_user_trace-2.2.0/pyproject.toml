@@ -1,0 +1,136 @@
+[project]
+name = "django-user-trace"
+version = "2.2.0"
+description = "A Python logging filter for Django user attributes."
+license = "MIT"
+authors = [
+  { name = "Jonathan Hiles", email = "jonathan@hil.es>" },
+]
+readme = "README.md"
+repository = "https://github.com/axieum/django-user-trace"
+documentation = "https://axieum.github.io/django-user-trace/latest/"
+keywords = ["async", "django", "logs", "logging", "middleware", "sync", "trace", "tracing", "user", "web"]
+classifiers = [
+  "Framework :: Django",
+  "Framework :: Django :: 5.0",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Typing :: Typed",
+]
+requires-python = ">=3.10"
+dependencies = [
+  "django>=5.0",
+]
+
+[project.optional-dependencies]
+celery = ["celery>=5.3"]
+channels = ["channels>=4.2"]
+
+[project.urls]
+"Funding" = "https://github.com/sponsors/axieum"
+"Issue tracker" = "https://github.com/axieum/django-user-trace/issues"
+"Release notes" = "https://axieum.github.io/django-user-trace/latest/changelog/"
+
+[dependency-groups]
+dev = [
+  "daphne>=4.1.2",
+  "pre-commit>=4.2.0",
+  "ruff>=0.11.7",
+]
+docs = [
+  "mike>=1.1.2",
+  "mkdocs>=1.4.2",
+  "mkdocs-awesome-pages-plugin>=2.8.0",
+  "mkdocs-gen-files>=0.4.0",
+  "mkdocs-git-revision-date-localized-plugin>=1.1.0",
+  "mkdocs-material>=9.0.9",
+  "mkdocs-minify-plugin>=0.6.2",
+]
+test = [
+  "pytest>=8.3.5",
+  "pytest-asyncio>=0.26.0",
+  "pytest-cov>=6.1.1",
+  "pytest-django>=4.11.1",
+  "pytest-mock>=3.14.0",
+  "pytest-xdist>=3.6.1",
+  "syrupy>=4.9.1",
+]
+typing = [
+  "mypy>=1.15.0",
+  "django-stubs>=5.2.0",
+  "starlette>=0.46.2",
+]
+
+[tool.ruff]
+src = ["src", "tests"]
+target-version = "py310"
+line-length = 120
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ruff.lint]
+select = [
+  "ANN",   # flake8-annotations
+  "ASYNC", # flake8-async
+  "B",     # flake8-bugbear
+  "A",     # flake8-builtins
+  "C4",    # flake8-comprehensions
+  "DJ",    # flake8-django
+  "LOG",   # flake8-logging
+  "G",     # flake8-logging-format
+  "PIE",   # flake8-pie
+  "T20",   # flake8-print
+  "PYI",   # flake8-pyi
+  "PT",    # flake8-pytest-style
+  "SIM",   # flake8-simplify
+  "TC",    # flake8-type-checking
+  "I",     # isort
+  "N",     # pep8-naming
+  "PERF",  # perflint
+  "E",     # pycodestyle
+  "W",     # pycodestyle
+  "F",     # pyflakes
+  "UP",    # pyupgrade
+  "RUF",   # ruff-specific rules
+]
+ignore = [
+  "ANN401", # Dynamically typed expressions (typing.Any) are disallowed in {name}
+  "E501", # Line too long
+  "PT013", # Found incorrect import of pytest, use simple `import pytest` instead
+]
+
+[tool.mypy]
+files = ["src", "tests"]
+strict = true
+plugins = ["mypy_django_plugin.main"]
+
+  [[tool.mypy.overrides]]
+  module = "celery.*"
+  ignore_missing_imports = true
+
+  [[tool.mypy.overrides]]
+  module = "channels.*"
+  ignore_missing_imports = true
+
+[tool.django-stubs]
+django_settings_module = "example.settings"
+
+[tool.pytest.ini_options]
+addopts = "-n auto"
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+DJANGO_SETTINGS_MODULE = "example.settings"
+
+[tool.coverage.report]
+exclude_lines = [
+  "pragma: no cover",
+  "if TYPE_CHECKING:",
+]
+show_missing = true
+
+[build-system]
+requires = ["uv_build>=0.9.17,<0.10.0"]
+build-backend = "uv_build"
