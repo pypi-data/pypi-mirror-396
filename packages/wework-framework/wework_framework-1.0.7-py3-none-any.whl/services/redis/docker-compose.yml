@@ -1,0 +1,37 @@
+version: "3.9"
+
+networks:
+  wework_network:
+    name: wework_network
+    external: true
+
+services:
+  redis:
+    image: redis:7
+    container_name: redis7
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redisdata:/data
+    networks:
+      - wework_network
+    restart: unless-stopped
+    command: >
+      redis-server 
+      --appendonly yes 
+      --appendfsync everysec
+      --maxmemory 1gb 
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+      --tcp-keepalive 60
+      --timeout 0
+      --bind 0.0.0.0
+      --protected-mode no
+      --tcp-backlog 511
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
