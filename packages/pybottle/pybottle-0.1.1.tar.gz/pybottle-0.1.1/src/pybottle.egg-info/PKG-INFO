@@ -1,0 +1,225 @@
+Metadata-Version: 2.4
+Name: pybottle
+Version: 0.1.1
+Summary: Cryptographic message containers with signing and encryption
+Author-email: Mark Karpelès <mark@klb.jp>
+License-Expression: MIT
+Project-URL: Homepage, https://github.com/KarpelesLab/pybottle
+Project-URL: Repository, https://github.com/KarpelesLab/pybottle
+Project-URL: Issues, https://github.com/KarpelesLab/pybottle/issues
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Security :: Cryptography
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: cryptography>=41.0.0
+Requires-Dist: cbor2>=5.4.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0.0; extra == "dev"
+Dynamic: license-file
+
+# pybottle
+
+[![Tests](https://github.com/KarpelesLab/pybottle/actions/workflows/tests.yml/badge.svg)](https://github.com/KarpelesLab/pybottle/actions/workflows/tests.yml)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+A Python library for cryptographic message containers with signing and encryption. This is a port of the Go [cryptutil](https://github.com/KarpelesLab/cryptutil) library.
+
+## Features
+
+- **Bottle**: Signed, encrypted message containers with CBOR/JSON serialization
+- **IDCard**: Identity cards linking signing keys to encryption keys
+- **Opener**: For opening (decrypting/verifying) bottles
+- **Keychain**: Private key storage and management
+- **Membership**: Group membership support
+
+### Supported Key Types
+
+- RSA (signing and encryption)
+- ECDSA P-256 (signing, ECDH encryption)
+- Ed25519 (signing, converts to X25519 for encryption)
+- X25519 (ECDH encryption)
+
+## Installation
+
+```bash
+pip install pybottle
+```
+
+Or install from source:
+
+```bash
+git clone https://github.com/KarpelesLab/pybottle.git
+cd pybottle
+pip install -e .
+```
+
+## Quick Start
+
+### Basic Message Signing
+
+```python
+from cryptography.hazmat.primitives.asymmetric import ec
+from pybottle import new_bottle, EMPTY_OPENER
+
+# Generate a key
+private_key = ec.generate_private_key(ec.SECP256R1())
+
+# Create and sign a bottle
+bottle = new_bottle(b"Hello, World!")
+bottle.sign(private_key)
+
+# Verify the signature
+data, result = EMPTY_OPENER.open(bottle)
+assert result.signed_by(private_key.public_key())
+```
+
+### Encrypted Messages
+
+```python
+from cryptography.hazmat.primitives.asymmetric import ec
+from pybottle import new_bottle, new_opener
+
+# Generate keys for sender and recipient
+alice = ec.generate_private_key(ec.SECP256R1())
+bob = ec.generate_private_key(ec.SECP256R1())
+
+# Alice creates an encrypted, signed message for Bob
+bottle = new_bottle(b"Secret message for Bob")
+bottle.encrypt(bob.public_key())
+bottle.bottle_up()  # Wrap so signature covers encryption
+bottle.sign(alice)
+
+# Serialize to bytes
+cbor_data = bottle.to_cbor()
+
+# Bob opens the bottle
+opener = new_opener(bob)
+data, result = opener.open_cbor(cbor_data)
+
+print(data)  # b"Secret message for Bob"
+print(result.signed_by(alice.public_key()))  # True
+print(result.decryption_count)  # 1
+```
+
+### Multiple Recipients
+
+```python
+# Encrypt for multiple recipients - any of them can decrypt
+bottle = new_bottle(b"Message for the group")
+bottle.encrypt(bob.public_key(), charlie.public_key(), dave.public_key())
+```
+
+### Using IDCards
+
+IDCards allow a signing key to specify additional keys for encryption:
+
+```python
+from pybottle import new_idcard, new_opener
+from cryptography.hazmat.primitives.asymmetric import ec, x25519
+
+# Create signing and encryption keys
+sign_key = ec.generate_private_key(ec.SECP256R1())
+encrypt_key = x25519.X25519PrivateKey.generate()
+
+# Create an IDCard
+idcard = new_idcard(sign_key.public_key())
+idcard.add_key_purpose(encrypt_key.public_key(), "decrypt")
+
+# Now you can encrypt to the IDCard (uses decrypt-capable keys)
+bottle = new_bottle(b"Message")
+bottle.encrypt(idcard)
+
+# Open with either key
+opener = new_opener(encrypt_key)
+data, result = opener.open(bottle)
+```
+
+### Wrapping Data
+
+```python
+from pybottle import wrap, EMPTY_OPENER
+
+# Wrap a Python object in a bottle
+data = {"user": "alice", "action": "login", "timestamp": 1234567890}
+bottle = wrap(data)
+
+# The content-type is automatically set
+print(bottle.header["ct"])  # "cbor"
+
+# Parse it back
+result_data, _ = EMPTY_OPENER.parse(bottle)
+print(result_data)  # {"user": "alice", ...}
+```
+
+## Interoperability with Go
+
+This library is designed to be wire-compatible with the Go [cryptutil](https://github.com/KarpelesLab/cryptutil) library. Bottles created in Python can be opened in Go and vice versa.
+
+Static test keys matching the Go tests are available:
+
+```python
+from pybottle.testkeys import get_alice, get_bob, get_chloe, get_daniel
+
+# alice, bob: ECDSA P-256 keys
+# chloe, daniel: Ed25519 keys
+alice = get_alice()
+bob = get_bob()
+```
+
+## API Reference
+
+### Bottle Functions
+
+- `new_bottle(data: bytes) -> Bottle` - Create a new bottle with raw data
+- `wrap(data: Any) -> Bottle` - Create a bottle with CBOR-encoded data
+- `wrap_json(data: Any) -> Bottle` - Create a bottle with JSON-encoded data
+
+### Bottle Methods
+
+- `bottle.sign(private_key)` - Sign the bottle
+- `bottle.encrypt(*recipients)` - Encrypt for recipients
+- `bottle.bottle_up()` - Wrap bottle in another bottle (for layering)
+- `bottle.to_cbor() -> bytes` - Serialize to CBOR
+- `bottle.to_json() -> bytes` - Serialize to JSON
+
+### Opener Functions
+
+- `new_opener(*keys) -> Opener` - Create an opener with private keys
+- `EMPTY_OPENER` - An opener without keys (for signature verification only)
+
+### Opener Methods
+
+- `opener.open(bottle) -> (bytes, OpenResult)` - Open a bottle
+- `opener.open_cbor(data) -> (bytes, OpenResult)` - Open CBOR-encoded bottle
+- `opener.parse(bottle) -> (Any, OpenResult)` - Open and parse contents
+
+### OpenResult
+
+- `result.signed_by(key) -> bool` - Check if signed by a key
+- `result.decryption_count` - Number of decryption layers
+- `result.signatures` - List of verified signatures
+
+## Development
+
+```bash
+# Install with dev dependencies
+pip install -e ".[dev]"
+
+# Run tests
+pytest
+
+# Run tests with coverage
+pytest --cov=pybottle
+```
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details.
