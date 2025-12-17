@@ -1,0 +1,65 @@
+"""Error dialog screen."""
+
+from __future__ import annotations
+
+import textwrap
+
+from textual.app import ComposeResult
+from textual.binding import Binding
+from textual.screen import ModalScreen
+from textual.widgets import Static
+
+from ...widgets import Dialog
+
+
+class ErrorScreen(ModalScreen):
+    """Modal screen for displaying error messages."""
+
+    BINDINGS = [
+        Binding("enter", "close", "Close"),
+        Binding("escape", "close", "Close"),
+        Binding("y", "copy_message", "Copy"),
+    ]
+
+    CSS = """
+    ErrorScreen {
+        align: center middle;
+        background: transparent;
+    }
+
+    #error-dialog {
+        width: 60;
+        max-width: 80%;
+        border: solid $error;
+        border-subtitle-color: $error;
+    }
+
+    #error-message {
+        padding: 1;
+    }
+
+    #error-message.flash {
+        background: $error 50%;
+    }
+    """
+
+    def __init__(self, title: str, message: str):
+        super().__init__()
+        self.title_text = title
+        self.message = message
+
+    def compose(self) -> ComposeResult:
+        shortcuts = [("Copy", "y"), ("Close", "<enter>")]
+        wrapped = textwrap.fill(self.message, width=56)
+        with Dialog(id="error-dialog", title=self.title_text, shortcuts=shortcuts):
+            yield Static(wrapped, id="error-message")
+
+    def action_close(self) -> None:
+        self.dismiss()
+
+    def action_copy_message(self) -> None:
+        self.app.copy_to_clipboard(self.message)
+        # Flash the message to indicate copy
+        msg = self.query_one("#error-message", Static)
+        msg.add_class("flash")
+        self.set_timer(0.15, lambda: msg.remove_class("flash"))
