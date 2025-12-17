@@ -1,0 +1,40 @@
+# latexthings
+
+A Python package for generating LaTeX code for tables, images, and document wrapping.
+
+## Installation
+
+```bash
+pip install latexthings
+```
+
+## Usage
+
+```python
+from latexthings import latexTable, latexImage, wrapLatex
+
+# Create a LaTeX table
+table_data = [
+    ["Header 1", "Header 2"],
+    ["Row 1 Col 1", "Row 1 Col 2"],
+    ["Row 2 Col 1", "Row 2 Col 2"]
+]
+latex_table = latexTable(table_data)
+
+# Create a LaTeX image
+latex_img = latexImage("path/to/image.png")
+
+# Wrap content in a complete LaTeX document
+document = wrapLatex(latex_table + "\n\n" + latex_img)
+print(document)
+```
+
+## Functions
+
+- `latexTable(list)`: Converts a 2D list into a LaTeX table
+- `latexImage(image)`: Creates LaTeX code for including an image
+- `wrapLatex(text)`: Wraps content in a complete LaTeX document structure
+
+## License
+
+MIT License
