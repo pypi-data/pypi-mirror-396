@@ -1,0 +1,66 @@
+<idea-plugin>
+    <id>com.github.bellini666.pytest-language-server</id>
+    <name>pytest Language Server</name>
+    <vendor email="hackedbellini@gmail.com" url="https://github.com/bellini666/pytest-language-server">Thiago Bellini Ribeiro</vendor>
+
+
+
+    <description><![CDATA[
+        A blazingly fast Language Server Protocol implementation for pytest fixtures, written in Rust.
+        <br/><br/>
+        <b>Features:</b>
+        <ul>
+            <li>Go to Definition: Jump to fixture definitions from usage</li>
+            <li>Code Completion: Smart auto-completion for pytest fixtures with context-aware suggestions</li>
+            <li>Find References: Find all usages of a fixture</li>
+            <li>Hover Documentation: View fixture signatures and docstrings</li>
+            <li>Diagnostics: Warnings for undeclared fixtures used in function bodies</li>
+            <li>Code Actions: Quick fixes to add missing fixture parameters</li>
+            <li>Fixture Priority: Correctly handles pytest's fixture shadowing rules</li>
+        </ul>
+        <br/>
+        The plugin includes pre-built binaries for macOS (Intel and Apple Silicon), Linux (x86_64 and ARM64),
+        and Windows (x86_64). No additional setup required!
+    ]]></description>
+
+    <change-notes><![CDATA[
+        For detailed release notes and changelog, please visit:
+        <br/>
+        <a href="https://github.com/bellini666/pytest-language-server/releases">GitHub Releases</a>
+    ]]></change-notes>
+
+    <category>Code editing</category>
+    <url>https://github.com/bellini666/pytest-language-server</url>
+
+    <idea-version since-build="242"/>
+
+    <!-- Required dependencies -->
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.redhat.devtools.lsp4ij</depends>
+    <!-- Python support is optional - works with PyCharm or IntelliJ IDEA + Python plugin -->
+    <depends optional="true" config-file="python-support.xml">com.intellij.modules.python</depends>
+
+    <!-- LSP4IJ Extension Points -->
+    <extensions defaultExtensionNs="com.redhat.devtools.lsp4ij">
+        <server id="pytestLanguageServer"
+                name="pytest Language Server"
+                factoryClass="com.github.bellini666.pytestlsp.PytestLanguageServerFactory">
+            <description><![CDATA[
+                A blazingly fast Language Server Protocol implementation for pytest fixtures, written in Rust.
+                Provides go-to-definition, code completion, find-references, hover documentation, diagnostics,
+                and code actions for pytest fixtures.
+            ]]></description>
+        </server>
+    </extensions>
+
+    <!-- IntelliJ Platform Extensions -->
+    <extensions defaultExtensionNs="com.intellij">
+        <projectService serviceImplementation="com.github.bellini666.pytestlsp.PytestLanguageServerService"/>
+        <notificationGroup id="pytest Language Server" displayType="BALLOON"/>
+    </extensions>
+
+    <!-- Startup activity for logging and diagnostics -->
+    <extensions defaultExtensionNs="com.intellij">
+        <projectActivity implementation="com.github.bellini666.pytestlsp.PytestLanguageServerListener"/>
+    </extensions>
+</idea-plugin>
