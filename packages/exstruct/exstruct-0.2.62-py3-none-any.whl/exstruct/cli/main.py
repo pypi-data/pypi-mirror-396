@@ -1,0 +1,97 @@
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+
+from exstruct import process_excel
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Dev-only CLI stub for ExStruct extraction."
+    )
+    parser.add_argument("input", type=Path, help="Excel file (.xlsx/.xlsm/.xls)")
+    parser.add_argument(
+        "-o",
+        "--output",
+        type=Path,
+        help="Output path. If omitted, writes to stdout.",
+    )
+    parser.add_argument(
+        "-f",
+        "--format",
+        default="json",
+        choices=["json", "yaml", "yml", "toon"],
+        help="Export format",
+    )
+    parser.add_argument(
+        "--image",
+        action="store_true",
+        help="(placeholder) Render PNG alongside JSON",
+    )
+    parser.add_argument(
+        "--pdf",
+        action="store_true",
+        help="(placeholder) Render PDF alongside JSON",
+    )
+    parser.add_argument(
+        "--dpi",
+        type=int,
+        default=144,
+        help="DPI for image rendering (placeholder)",
+    )
+    parser.add_argument(
+        "-m",
+        "--mode",
+        default="standard",
+        choices=["light", "standard", "verbose"],
+        help="Extraction detail level",
+    )
+    parser.add_argument(
+        "--pretty",
+        action="store_true",
+        help="Pretty-print JSON output (indent=2). Default is compact JSON.",
+    )
+    parser.add_argument(
+        "--sheets-dir",
+        type=Path,
+        help="Optional directory to write one file per sheet (format follows --format).",
+    )
+    parser.add_argument(
+        "--print-areas-dir",
+        type=Path,
+        help="Optional directory to write one file per print area (format follows --format).",
+    )
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+
+    input_path: Path = args.input
+    if not input_path.exists():
+        print(f"File not found: {input_path}", flush=True)
+        return 0
+
+    try:
+        process_excel(
+            file_path=input_path,
+            output_path=args.output,
+            out_fmt=args.format,
+            image=args.image,
+            pdf=args.pdf,
+            dpi=args.dpi,
+            mode=args.mode,
+            pretty=args.pretty,
+            sheets_dir=args.sheets_dir,
+            print_areas_dir=args.print_areas_dir,
+        )
+        return 0
+    except Exception as e:
+        print(f"Error: {e}", flush=True)
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
