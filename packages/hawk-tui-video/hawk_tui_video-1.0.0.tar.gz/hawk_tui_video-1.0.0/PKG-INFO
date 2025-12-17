@@ -1,0 +1,119 @@
+Metadata-Version: 2.4
+Name: hawk-tui-video
+Version: 1.0.0
+Summary: Terminal-based TikTok video creator with AI image generation
+Project-URL: Homepage, https://hawktui.xyz
+Project-URL: Repository, https://github.com/carsonmulligan/hawktui
+Project-URL: Documentation, https://hawktui.xyz
+Author: Carson Mulligan
+License: MIT
+License-File: LICENSE
+Keywords: ai,cli,replicate,terminal,tiktok,tui,video
+Classifier: Development Status :: 4 - Beta
+Classifier: Environment :: Console
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: End Users/Desktop
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Multimedia :: Video
+Requires-Python: >=3.11
+Requires-Dist: httpx>=0.27.0
+Requires-Dist: pillow>=10.0.0
+Requires-Dist: python-dotenv>=1.0.0
+Requires-Dist: replicate>=0.25.0
+Requires-Dist: rich>=13.0.0
+Requires-Dist: textual>=0.50.0
+Description-Content-Type: text/markdown
+
+# HawkTUI
+
+Terminal-based TikTok video creator with AI image generation.
+
+Generate images using custom Replicate models and assemble them into 9:16 TikTok videos with FFmpeg.
+
+## Installation
+
+```bash
+pip install hawktui
+```
+
+### Requirements
+
+- Python 3.11+
+- FFmpeg (for video creation)
+
+```bash
+# macOS
+brew install ffmpeg
+
+# Ubuntu/Debian
+sudo apt install ffmpeg
+```
+
+## Setup
+
+1. Get your API token from [Replicate](https://replicate.com/account/api-tokens)
+
+2. Create a `.env` file in your project directory:
+
+```bash
+REPLICATE_API_TOKEN=r8_your_token_here
+```
+
+3. Configure your models in `hawk/config.py`
+
+## Usage
+
+```bash
+# Run the TUI
+hawktui
+
+# Or
+hawk
+```
+
+## Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| `↑/↓` | Navigate |
+| `Tab` | Switch panels |
+| `Enter` | Select/Open |
+| `Space` | Toggle image selection |
+| `a` | Select all images |
+| `v` | Create video |
+| `b` | Browse folder |
+| `d` | Delete selected |
+| `1/2/3` | Switch projects |
+| `q` | Quit |
+
+## How It Works
+
+1. **Select a project** - Choose from your configured Replicate models
+2. **Enter a prompt** - Type your image generation prompt
+3. **Generate** - Press Enter to generate images via Replicate
+4. **Select images** - Use Space to select images for your video
+5. **Create video** - Press `v` to assemble a TikTok-format video
+
+## Configuration
+
+Edit `hawk/config.py` to add your own Replicate models:
+
+```python
+PROJECTS = {
+    "my-project": Project(
+        name="My Project",
+        slug="my-project",
+        model="username/model-name",
+        trigger="TOK",  # Optional trigger word
+        description="Description",
+    ),
+}
+```
+
+## License
+
+MIT
