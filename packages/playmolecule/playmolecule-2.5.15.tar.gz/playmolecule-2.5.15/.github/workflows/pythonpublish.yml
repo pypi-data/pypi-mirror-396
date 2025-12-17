@@ -1,0 +1,40 @@
+name: Test code and publish package
+
+on: [push]
+
+jobs:
+  test:
+    uses: acellera/github-actions-workflows/.github/workflows/test_package.yml@main
+    with:
+      os: "ubuntu-latest"
+      python-version: "3.10"
+    secrets: inherit
+
+  deploypypi:
+    if: startsWith(github.event.ref, 'refs/tags/')
+    needs: test
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest"]
+        python-version: ["3.10"]
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "${{ matrix.python-version }}"
+
+      - name: Build PyPI 📦
+        run: |
+          pip install build
+          python -m build --sdist --outdir dist/ .
+
+      - name: Publish distribution 📦 to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PUBLIC_PYPI_API_TOKEN }}
+          skip_existing: true

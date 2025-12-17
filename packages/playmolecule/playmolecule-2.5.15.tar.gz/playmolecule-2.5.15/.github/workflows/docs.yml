@@ -1,0 +1,59 @@
+name: Build docs
+
+on:
+  push:
+    tags:
+      - "*"
+  workflow_dispatch:
+
+jobs:
+  makedocs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: "read"
+      id-token: "write"
+
+    defaults:
+      run:
+        shell: bash -l {0}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER_DOCS }}
+          service_account: ${{ secrets.GCP_DOC_SERVICE_ACCOUNT }}
+
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          activate-environment: deploy
+          python-version: "3.11"
+
+      - name: Install conda deps
+        run: |
+          conda install -y -q nbconvert sphinx=8.2.3 python=3.11
+          pip install pydata-sphinx-theme==0.16.1 sphinx-argparse sphinx-notfound-page sphinx-sitemap
+          pip install .
+
+      - name: Generate rst docs
+        run: |
+          cd docs; make rst
+        env:
+          PM_SKIP_SETUP: 1
+
+      - name: Publish to GCP intermediate docs bucket
+        uses: "google-github-actions/upload-cloud-storage@v1"
+        with:
+          path: "docs/source"
+          destination: "software-acellera-intermediate/public_docs/playmolecule/${{ github.ref_name }}"
+
+      - name: Write update file to upload
+        run: echo "Updated" > update
+
+      - name: Upload "update" file to trigger new docs
+        uses: "google-github-actions/upload-cloud-storage@v1"
+        with:
+          path: "update"
+          destination: "software-acellera-intermediate/"

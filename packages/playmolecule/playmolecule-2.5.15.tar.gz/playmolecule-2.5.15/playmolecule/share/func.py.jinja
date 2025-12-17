@@ -1,0 +1,27 @@
+from pathlib import Path
+
+
+def {{ function_name }}(
+    {% for arg in function_args %}{{ arg }}
+    {% endfor %}
+):
+    """
+    {% for doc in function_docs %}{{ doc }}
+    {% endfor %}
+    Returns
+    -------
+    exec_dir : ExecutableDirectory
+        Returns an executable directory with the setup for the run
+    """
+    args = locals() # Should be first line in the function
+
+    from {{ module_path }} import __manifest__, files
+    return _inner_function(
+        args=args,
+        function_name="{{ function }}",
+        function_resources={{ function_resources }},
+        func_manifest=__manifest__["functions"][{{function_idx}}],
+        slpm_path="{{ slpm_path }}",
+        files=files,
+        run_sh="{{ run_sh }}",
+    )

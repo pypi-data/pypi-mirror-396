@@ -1,0 +1,219 @@
+{
+  "datasets": [
+    {
+      "name": "file_3ptb",
+      "path": "3ptb.pdb",
+      "description": "3ptb test dataset file"
+    }
+  ],
+  "meta_keywords": ["preparation", "protein", "nucleic", "rna", "dna"],
+  "citations": [{ "url": "", "bibtex": "" }],
+  "container_config": {
+    "name": "ProteinPrepareNew",
+    "version": "1",
+    "condaenvs": [
+      {
+        "name": "base",
+        "channels": ["acellera", "conda-forge"],
+        "dependencies": [
+          "python=3.10",
+          "pdb2pqr>=3.6.1",
+          "moleculekit>=1.6.1",
+          "numpy",
+          "matplotlib-base",
+          "pandas",
+          "rdkit",
+          "chembl_structure_pipeline",
+          "openbabel",
+          "pyyaml",
+          {
+            "pip": [
+              "acellera-aceprep",
+              "acellera-proteinprepare",
+              "xlsxwriter",
+              "openpyxl",
+              "playmolecule<2"
+            ]
+          }
+        ]
+      }
+    ],
+    "postinstallcommands": [
+      "python -c \"from aceprep.acedict import pdbSMILESdata\""
+    ],
+    "envvarcommands": ["export ACEDICT_NODL=1"]
+  },
+  "functions": [
+    {
+      "function": "proteinprepare.apps.proteinpreparenew.app.main",
+      "description": "ProteinPrepare despite it's name prepares proteins but also other systems including nucleic acids",
+      "outputs": {
+        "output.pdb": "The protonated PDB file",
+        "details.csv": "A report of all modified residue protonation states",
+        "pka_plot.png": "A plot showing the pKa values of each residue"
+      },
+      "params": [
+        {
+          "mandatory": true,
+          "description": "Output directory to store the results",
+          "type": "Path",
+          "name": "outdir",
+          "tag": "--outdir",
+          "value": null,
+          "nargs": null,
+          "choices": null
+        },
+        {
+          "mandatory": false,
+          "description": "PDB file. A PDB file of the input structure. Mutually exclusive with the `pdbid` option.",
+          "type": "Path",
+          "name": "pdbfile",
+          "tag": "--pdbfile",
+          "value": null,
+          "nargs": null,
+          "choices": null,
+          "gui_options": { "disables": ["pdbid"] }
+        },
+        {
+          "mandatory": false,
+          "description": "PDB ID. A PDB ID. Mutually exclusive with the `pdbfile` option.",
+          "type": "str",
+          "name": "pdbid",
+          "tag": "--pdbid",
+          "value": null,
+          "nargs": null,
+          "choices": null,
+          "gui_options": { "disables": ["pdbfile"] }
+        },
+        {
+          "mandatory": false,
+          "description": "The pH at which to protonate the input system",
+          "type": "float",
+          "name": "pH",
+          "tag": "--pH",
+          "value": 7.2,
+          "nargs": null,
+          "choices": null,
+          "gui_options": {
+            "group": "Advanced options",
+            "min_value": 0,
+            "max_value": 14
+          }
+        },
+        {
+          "mandatory": false,
+          "description": "The chain to be kept. By default it will keep all chains",
+          "type": "str",
+          "name": "chain",
+          "tag": "--chain",
+          "value": null,
+          "nargs": null,
+          "choices": null,
+          "gui_options": { "group": "Advanced options" }
+        },
+        {
+          "mandatory": false,
+          "description": "residue mutations structured as <chain>:<resid>#<resname> where resname is an aminoacid in standard abbreviation (e.g. ALA) or REMOVE (e.g.: A:2#GLY)",
+          "type": "str",
+          "name": "mutations",
+          "tag": "--mutations",
+          "value": null,
+          "nargs": null,
+          "choices": null,
+          "gui_options": { "group": "Advanced options" }
+        },
+        {
+          "mandatory": false,
+          "description": "Reprotonate residues. list of reprotonations to perform structured as comma-separated <chain>:<resid>#<protonation> where <protonation> is True/False for binary",
+          "type": "str",
+          "name": "reprotonate",
+          "tag": "--reprotonate",
+          "value": null,
+          "nargs": null,
+          "choices": null,
+          "gui_options": { "group": "Advanced options" }
+        },
+        {
+          "mandatory": false,
+          "description": "Remove waters from the structure",
+          "type": "bool",
+          "name": "remove_water",
+          "tag": "--remove-water",
+          "value": false,
+          "nargs": null,
+          "choices": null,
+          "gui_options": { "group": "Advanced options" }
+        },
+        {
+          "mandatory": false,
+          "description": "Remove hetero-atoms from the structure",
+          "type": "bool",
+          "name": "remove_heteroatoms",
+          "tag": "--remove-heteroatoms",
+          "value": false,
+          "nargs": null,
+          "choices": null,
+          "gui_options": { "group": "Advanced options" }
+        },
+        {
+          "mandatory": false,
+          "description": "Scratch directory to store temporary files",
+          "type": "Path",
+          "name": "scratchdir",
+          "tag": "--scratchdir",
+          "value": null,
+          "nargs": null,
+          "choices": null
+        }
+      ],
+      "tests": {
+        "simple": {
+          "description": "Prepare 3PTB structure from RCSB",
+          "arguments": { "pdbid": "3ptb" },
+          "expected_outputs": [
+            "web_content.pickle",
+            "output.pdb",
+            "pka_plot.png",
+            "details.csv"
+          ]
+        }
+      }
+    },
+    {
+      "function": "proteinprepare.apps.proteinpreparenew.app.bar",
+      "description": "Second function",
+      "outputs": {
+        "output.pdb": "The protonated PDB file"
+      },
+      "params": [
+        {
+          "mandatory": true,
+          "description": "Output directory to store the results",
+          "type": "Path",
+          "name": "outdir",
+          "tag": "--outdir",
+          "value": null,
+          "nargs": null,
+          "choices": null
+        },
+        {
+          "mandatory": true,
+          "description": "PDB file. A PDB file of the input structure. Mutually exclusive with the `pdbid` option.",
+          "type": "str",
+          "name": "pdbid",
+          "tag": "--pdbid",
+          "value": null,
+          "nargs": null,
+          "choices": null
+        }
+      ],
+      "tests": {
+        "bar_test": {
+          "description": "Prepare 3PTB structure from RCSB",
+          "arguments": { "pdbid": "3ptb" },
+          "expected_outputs": ["web_content.pickle"]
+        }
+      }
+    }
+  ]
+}
