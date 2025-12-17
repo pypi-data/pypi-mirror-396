@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}IvoryOS | Design execution{% endblock %}
+
+{% block body %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.js"></script>
+
+    {% if no_deck_warning and not dismiss %}
+        {# auto pop import when there is no deck#}
+        <script type="text/javascript">
+            function OpenBootstrapPopup() {
+                $("#importModal").modal('show');
+            }
+            window.onload = function () {
+                OpenBootstrapPopup();
+            };
+        </script>
+    {% endif %}
+
+    <div class="row">
+        {% include 'components/run_panel.html' %}
+        {% include 'components/progress_panel.html' %}
+        {% include 'components/logging_panel.html' %}
+    </div>
+
+    {# Include error modal #}
+    {% include 'components/error_modal.html' %}
+
+    <script src="{{ url_for('static', filename='js/socket_handler.js') }}"></script>
+
+{% endblock %}
