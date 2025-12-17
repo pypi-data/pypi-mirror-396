@@ -1,0 +1,223 @@
+# Quantum PQC Migration Toolkit
+
+A Python toolkit for assessing and planning organizational migration from classical public-key cryptography to post-quantum cryptographic (PQC) algorithms.
+
+## Overview
+
+As quantum computing advances, organizations face the critical challenge of migrating their cryptographic infrastructure to quantum-resistant algorithms before cryptographically relevant quantum computers (CRQCs) become available. This toolkit helps organizations:
+
+- **Assess quantum-vulnerability risk** across their cryptographic inventory
+- **Prioritize systems** for migration based on data sensitivity, exposure, and lifetime
+- **Recommend target algorithms** aligned with NIST PQC standards (FIPS 203-205)
+- **Model risk scenarios** through Monte Carlo simulation of adoption strategies
+
+## Installation
+
+```bash
+pip install quantum-pqc-migration-toolkit
+```
+
+Or install from source:
+
+```bash
+git clone https://github.com/quantum-pqc-migration-toolkit/quantum-pqc-migration-toolkit.git
+cd quantum-pqc-migration-toolkit
+pip install -e .
+```
+
+## Quick Start
+
+### 1. Create a Sample Inventory
+
+```bash
+pqc-migrate init -o my_inventory.yaml
+```
+
+This generates a sample YAML file demonstrating the inventory format.
+
+### 2. Edit Your Inventory
+
+Modify the generated file to reflect your systems:
+
+```yaml
+systems:
+  - name: customer_database
+    sector: technology
+    current_algos:
+      - RSA-2048
+      - ECDSA-P256
+    tls_versions:
+      - TLS1.2
+      - TLS1.3
+    data_lifetime_years: 15
+    data_sensitivity: high
+    internet_exposed: false
+    vendor_type: first_party
+    system_role: database
+    has_qkd: false
+    description: Primary customer data storage
+```
+
+### 3. Analyze Your Inventory
+
+```bash
+pqc-migrate analyze my_inventory.yaml
+```
+
+This produces a prioritized table of systems with risk scores and migration recommendations.
+
+### 4. Run Simulation (Optional)
+
+```bash
+pqc-migrate analyze my_inventory.yaml --simulate --runs 1000
+```
+
+Compare risk outcomes across early, baseline, and late adoption strategies.
+
+## CLI Commands
+
+| Command | Description |
+|---------|-------------|
+| `pqc-migrate init` | Create a sample inventory file |
+| `pqc-migrate analyze <file>` | Analyze inventory and generate recommendations |
+| `pqc-migrate simulate <file>` | Run Monte Carlo strategy comparison |
+| `pqc-migrate info <algorithm>` | Display PQC algorithm information |
+
+### Analyze Options
+
+```bash
+pqc-migrate analyze inventory.yaml \
+  --strategy baseline \     # Adoption strategy: early, baseline, late
+  --json report.json \      # Output JSON report
+  --csv report.csv \        # Output CSV report
+  --simulate \              # Include Monte Carlo simulation
+  --runs 1000               # Number of simulation runs
+```
+
+## Python API
+
+```python
+from quantum_pqc_migration_toolkit import (
+    load_inventory,
+    compute_inventory_risk,
+    plan_inventory_migration,
+    compare_strategies,
+    Scenario,
+)
+
+# Load inventory
+systems = load_inventory("inventory.yaml")
+
+# Create scenario
+scenario = Scenario.baseline()
+
+# Compute risk assessments
+assessments = compute_inventory_risk(systems, scenario)
+
+# Generate migration recommendations
+recommendations = plan_inventory_migration(systems, assessments, scenario)
+
+# View results
+for rec in recommendations:
+    print(f"{rec.system_name}: Priority {rec.priority_score}, "
+          f"Migrate to {rec.target_kem}/{rec.target_sig} by {rec.migrate_by_year}")
+
+# Compare adoption strategies via Monte Carlo
+results = compare_strategies(systems, scenario, n_runs=1000)
+for strategy, result in results.items():
+    print(f"{strategy}: Mean risk = {result.mean_risk:.4f}")
+```
+
+## Inventory Schema
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | System identifier |
+| `sector` | string | Industry sector (healthcare, financial, technology, etc.) |
+| `current_algos` | list | Current cryptographic algorithms |
+| `tls_versions` | list | Supported TLS versions |
+| `data_lifetime_years` | int | How long data must remain confidential |
+| `data_sensitivity` | string | Sensitivity level: critical, high, medium, low |
+| `internet_exposed` | bool | Whether system is internet-facing |
+| `vendor_type` | string | Supply chain position: first_party, third_party, tier1_vendor, saas |
+| `system_role` | string | Functional role: pki, authentication, database, api_gateway, etc. |
+| `has_qkd` | bool | Whether quantum key distribution is available |
+
+## Risk Scoring
+
+The risk engine computes a PQ risk score (0-1) for each system based on:
+
+1. **Algorithm vulnerability**: Classical algorithms (RSA, ECDSA, ECDH) vs PQC/hybrid
+2. **Data lifetime**: Overlap between data protection needs and quantum threat timeline
+3. **Sector baseline**: Industry-specific breach rates from empirical data
+4. **Exposure factors**: Internet-facing, supply chain position, system criticality
+5. **Adoption timing**: Risk multipliers based on early, baseline, or late migration
+
+### Key Parameters
+
+- **Quantum arrival window**: 2030-2035 (baseline), aligned with NSM-10 planning
+- **Laggard uplift**: ~340% increased breach probability for late adopters
+- **PQC overhead**: ML-KEM ~2.3x compute, ~4.6x key size growth
+
+## Supported Algorithms
+
+### Target PQC Algorithms (NIST FIPS 203-205)
+
+**Key Encapsulation (FIPS 203)**
+- ML-KEM-512, ML-KEM-768, ML-KEM-1024
+
+**Digital Signatures (FIPS 204)**
+- ML-DSA-44, ML-DSA-65, ML-DSA-87
+
+**Stateless Hash-Based Signatures (FIPS 205)**
+- SLH-DSA-128s/128f, SLH-DSA-192s/192f, SLH-DSA-256s/256f
+
+### Hybrid Schemes
+
+For backward compatibility:
+- X25519 + ML-KEM-768
+- ECDSA-P256 + ML-DSA-65
+
+## Examples
+
+See the `examples/` directory for sample inventories:
+
+- `hospital_inventory.yaml` - Healthcare organization with 12 systems
+- `saas_startup_inventory.yaml` - Cloud-native SaaS company with 12 systems
+
+## Theory Background
+
+This toolkit implements a simplified, practitioner-oriented version of Monte Carlo supply-chain risk models. Key parameters are derived from:
+
+- **NIST PQC Standards**: FIPS 203 (ML-KEM), FIPS 204 (ML-DSA), FIPS 205 (SLH-DSA)
+- **NSM-10 Timelines**: Federal implementation deadlines for PQC migration
+- **Empirical breach data**: Sector baselines from industry data breach reports
+- **Performance analysis**: Computational overhead and key/signature size factors
+
+The simulation models quantum arrival uncertainty using triangular distributions and compares organizational risk under different adoption strategies (early, baseline, late).
+
+## Future Work
+
+- Optimization of PQC rollout schedules using combinatorial optimization
+- Integration with vulnerability scanners for automated crypto discovery
+- Extended hybrid scheme recommendations
+- Cost modeling for migration planning
+
+## Author
+
+Syon Balakrishnan
+Email: balakrishnansyon@gmail.com
+
+## Acknowledgments
+
+- EM Normandie Business School for supply-chain security research collaboration
+- ThreatVisor for applied cybersecurity context and pilot testing
+- NIST for the post-quantum cryptography standardization effort (FIPS 203-205)
+
+## License
+
+MIT License
+
+## Contributing
+
+Contributions are welcome. Please open an issue to discuss proposed changes before submitting a pull request.
