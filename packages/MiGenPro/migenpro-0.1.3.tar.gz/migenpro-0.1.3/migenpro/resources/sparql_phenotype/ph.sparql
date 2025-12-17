@@ -1,0 +1,28 @@
+PREFIX fair: <http://fairbydesign.nl/ontology/>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+SELECT DISTINCT (IF(CONTAINS(?accessionRaw, '.'), ?accessionRaw, CONCAT(?accessionRaw, '.1')) AS ?accession) ?optimalPh ?taxid
+where {
+    # Get phenotype from the morphology tab.
+    ?morphology fair:cultureAndGrowthConditions/fair:culturePh/fair:ph ?phenotype ;
+    fair:sequenceInformation/fair:genomeSequences ?genome .
+
+    ?genome fair:accession ?accessionRaw ;
+    fair:database 'ncbi' ;
+    FILTER( strStarts( ?accessionRaw, 'GCA_' ) ) .
+    OPTIONAL {?genome fair:ncbiTaxId ?taxid}
+
+
+    # Split the value if it contains a hyphen
+    BIND(IF(CONTAINS(?phenotype, '-'), STRBEFORE(?phenotype, '-'), ?phenotype) AS ?part1)
+    BIND(IF(CONTAINS(?phenotype, '-'), STRAFTER(?phenotype, '-'), ?phenotype) AS ?part2)
+
+    # Remove leading zeros from both parts
+    BIND(REPLACE(?part1, '^0+', '') AS ?cleanPart1)    BIND(REPLACE(?part2, '^0+', '') AS ?cleanPart2)
+
+    # Convert the parts to numbers
+    BIND(xsd:decimal(?cleanPart1) AS ?num1)
+    BIND(xsd:decimal(?cleanPart2) AS ?num2)
+
+    # Handle the case where there is no hyphen (use only the first part as the final value)
+    BIND(IF(CONTAINS(?phenotype, '-'), (?num1 + ?num2) / 2.0, ?num1) AS ?optimalPh)
+}

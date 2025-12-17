@@ -1,0 +1,14 @@
+PREFIX gbol: <http://gbol.life/0.1/>
+SELECT DISTINCT ?PfamID ?begin WHERE {
+
+VALUES ?gene { '%1$s' }
+?geneRaw gbol:transcript ?trans ;
+gbol:locusTag ?gene .
+?trans gbol:feature ?cds .
+?cds gbol:protein/gbol:feature ?domain ;
+gbol:location/gbol:begin/gbol:position ?begin .
+?domain gbol:accession ?PfamID .
+
+?xref gbol:db/gbol:id 'pfam' .
+
+} ORDER BY ?begin

@@ -1,0 +1,14 @@
+PREFIX gbol:<http://gbol.life/0.1/>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+select distinct ?accession (MIN(?evalue) AS ?minevalue)
+where {
+    ?contig gbol:feature/gbol:transcript/gbol:feature/gbol:protein/gbol:feature ?feature .
+    ?feature a gbol:ProteinDomain .
+    ?feature gbol:provenance/gbol:annotation ?prov .
+    ?prov gbol:evalue ?evalue;
+    gbol:pvalue ?pvalue .
+    ?feature gbol:xref ?xref .
+    ?xref gbol:accession ?accession .
+    ?xref gbol:db <http://gbol.life/0.1/db/pfam/34.0>
+}
+GROUP BY ?accession

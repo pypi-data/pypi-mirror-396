@@ -1,0 +1,11 @@
+PREFIX fair: <http://fairbydesign.nl/ontology/>
+SELECT DISTINCT (IF(CONTAINS(?accessionRaw, '.'), ?accessionRaw, CONCAT(?accessionRaw, '.1')) AS ?accession) ?temperatureRange ?taxid
+ 
+WHERE {
+    ?morphology fair:cultureAndGrowthConditions/fair:cultureTemp/fair:range  ?temperatureRange ;
+                fair:cultureAndGrowthConditions/fair:cultureTemp/fair:growth ?growth ;
+                fair:sequenceInformation/fair:genomeSequences ?genome .
+    ?genome fair:accession ?accessionRaw ;
+            fair:database 'ncbi' ;
+            fair:ncbiTaxId ?taxid ;
+}

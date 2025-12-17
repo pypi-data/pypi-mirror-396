@@ -1,0 +1,30 @@
+PREFIX fair: <http://fairbydesign.nl/ontology/>
+
+SELECT DISTINCT ?accession ?gram ?taxid
+WHERE {
+    {
+        SELECT DISTINCT (IF(CONTAINS(?accessionRaw, '.'), ?accessionRaw, CONCAT(?accessionRaw, '.1')) AS ?accession) ?gram ?taxid
+        WHERE {
+            ?morphology fair:morphology/fair:cellMorphology/fair:gramStain ?gram ;
+            fair:sequenceInformation/fair:genomeSequences ?genome .
+            ?genome fair:accession ?accessionRaw ;
+                    fair:database 'ncbi' ;
+                    fair:ncbiTaxId ?taxid ;
+            FILTER( strStarts( ?accessionRaw, 'GCA_' ) && ?gram = 'negative' )
+        }
+        LIMIT 10
+    }
+    UNION
+    {
+        SELECT DISTINCT (IF(CONTAINS(?accessionRaw, '.'), ?accessionRaw, CONCAT(?accessionRaw, '.1')) AS ?accession) ?gram ?taxid
+        WHERE {
+            ?morphology fair:morphology/fair:cellMorphology/fair:gramStain ?gram ;
+            fair:sequenceInformation/fair:genomeSequences ?genome .
+            ?genome fair:accession ?accessionRaw ;
+                    fair:database 'ncbi' ;
+                    fair:ncbiTaxId ?taxid ;
+            FILTER( strStarts( ?accessionRaw, 'GCA_' ) && ?gram = 'positive' )
+        }
+        LIMIT 10
+    }
+}

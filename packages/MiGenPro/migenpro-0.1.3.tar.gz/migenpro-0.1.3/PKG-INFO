@@ -1,0 +1,186 @@
+Metadata-Version: 2.4
+Name: MiGenPro
+Version: 0.1.3
+Summary: Microbial Genome Prospecting (MiGenPro) combines phenotype and genomic linked data. Migenpro serves as a framework for the generation of machine learning models that predict microbial traits from genome sequences. 
+License: MIT  license
+License-File: LICENSE
+Author: Mike Loomans
+Author-email: mike.loomans@wur.nl
+Requires-Python: >=3.11.4,<3.16
+Classifier: License :: Other/Proprietary License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
+Requires-Dist: PyQt5
+Requires-Dist: bio (==1.7.1)
+Requires-Dist: cwltool (>=3.1.2)
+Requires-Dist: dask
+Requires-Dist: docker
+Requires-Dist: ete4 (==4.3.0)
+Requires-Dist: imbalanced-learn (>=0.13.0)
+Requires-Dist: importlib_resources
+Requires-Dist: ipython
+Requires-Dist: jinja2
+Requires-Dist: matplotlib
+Requires-Dist: notebook (>=7.4.4,<8.0.0)
+Requires-Dist: numpy (>=2.1.3)
+Requires-Dist: pandas (>=2.2.3)
+Requires-Dist: pyarrow (>=21.0.0)
+Requires-Dist: pygenprop
+Requires-Dist: pytest (>=8.4.1,<9.0.0)
+Requires-Dist: requests
+Requires-Dist: scikit-learn (>=1.5.2,<1.6)
+Requires-Dist: seaborn (==0.13.2)
+Requires-Dist: shap (>=0.48.0)
+Project-URL: Homepage, https://gitlab.com/wurssb/migenpro
+Description-Content-Type: text/markdown
+
+![Coverage](https://migenpro-f51bc2.gitlab.io/coverage.svg)
+![codequality](https://migenpro-f51bc2.gitlab.io/pylint.svg)
+<img src="https://gitlab.com/pig-paradigm/migenpro/-/raw/experimental/docs/MIT_logo.png?ref_type=heads&inline=false" alt="MIT Logo" width="50" height="20">
+
+# MiGenPro - Microbial Genome Processing Toolkit
+MiGenPro: A flexible linked data framework for phenotype-genotype prediction of microbial traits using  machine learning. 
+
+## Functionalities
+- Genome annotation based on taxonomy identifiers.
+- Data formatting and cleaning for microbial genome datasets.
+- Conversion of raw query data into structured feature and phenotype matrices.
+- Advanced filtering options to remove low-frequency features or phenotypes.
+- Parallel processing support for efficient handling of large datasets.
+- Easy training and prediction with machine learning models on microbial characteristics.
+
+![workflow_overview.svg](./data_visualisation/workflow_overview.svg)
+
+## Quickstart
+
+## Installation with pip in a special conda environment
+```bash
+conda create -n migenpro -c bioconda ;   
+conda activate migenpro ;
+pip install migenpro
+```
+
+Run the workflow from phenotype graph to phenotype prediction using the following command:
+```bash
+migenpro --df --gq --ml --annotation \
+  --sapp_jar ./binaries/SAPP-2.0.jar \
+  --phenotype_query_file sparql_phenotype:demo_gram.sparql \
+  --phenotype_hdt_file ./data/bacdive.hdt \
+  --genome_query_file sparql_genome:DomainCopyNumber.sparql \
+  --abs_frequency 1 \
+  --threads 20 \
+  --sampling_type SMOTEN --train --predict --output ./demo_output \
+  --cwl_file ./binaries/workflow-hub-cwl-runner.cwl
+```
+The --param_grids flag can be used to optimise the parameters of the machine learning models.
+An example json file is available at: `tests/resources/param_grid.json`
+
+The individual steps:
+1. Querying phenotype graphs
+2. Annotating genomes
+3. Querying the annotated genomes
+4. Training machine learning models
+5. Predicting phenotypes with existing models
+6. Feature importance analysis
+7. Summarising the results
+
+
+#### 1. Querying phenotype graphs
+```bash  
+migenpro --df \
+    --phenotype_query_file sparql_phenotype:demo_gram.sparql \
+    --phenotype_hdt_file ./output/bacdive.hdt \
+    --abs_frequency 1 \
+    --sapp_jar binaries/SAPP-2.0.jar \
+    --output ./output/
+```
+
+#### 2. Annotating genomes
+Genome annotation is done by default using the workflow: https://workflowhub.eu/workflows/1170/
+this can be changed using the `--cwl_file` flag with a workflow of your choice granted that it takes a fasta file as input.
+You can speed up this process with the `--threads` flag. 
+```bash
+migenpro --annotation \
+    --genome_query_file sparql_genome:DomainCopyNumber.sparql \
+    --sapp_jar ./binaries/SAPP-2.0.jar 
+```
+
+#### 3. Querying the annotated genomes
+
+```bash
+migenpro --gq \
+    --genome_query_file path/to/genome_query_file.sparql \
+    --sapp_jar binaries/SAPP-2.0.jar \
+    --output ./output/ 
+```
+
+#### 4. Training machine learning models 
+We will now use the default parameters for training the models.
+If you wish to optimise the parameters you can do this using the `--param_grids` flag.
+To modify training settings you can use the 
+```bash
+migenpro --ml \
+      --feature_matrix ./output/feature_matrix.tsv \
+      --phenotype_matrix ./output/phenotype_matrix.tsv \
+      --output ./output/
+```
+
+#### 5. Predicting phenotypes with existing models
+You can do this through the docker container or from the source code. 
+1. You will need to obtain a protein domain matrix of the desired genomes you can do this using the java code. 
+2. For ease of use we will use the python scripts that were made with the following command. The default output directory is "output/mloutput" if desired you can change this using the --output [output\_directory\_location]
+
+```bash
+migenpro --ml \
+      --feature_matrix ./output/feature_matrix.tsv \
+      --phenotype_matrix ./output/phenotype_matrix.tsv \
+      --output ./output/
+```
+
+
+#### 6. Feature importance analysis
+```bash
+migenpro --fi \
+        --models path/to/models \
+        --feature_matrix path/to/features.tsv \
+        --phenotype_matrix path/to/phenotype.tsv \
+        --output ./output/
+```
+
+#### 7. Summarising the results
+
+Wait for the script to finish and retrieve the results of your prediction from the output directory. 
+There the predictions are given in the following format: 
+
+| Genome | Phenotype | Prediction | Confidence |
+|--------|-----------|------------|------------|
+| GCA123 | Temperature | mesophilic | 0.96 |
+
+```bash
+migenpro --summarise \
+        --output ./output/
+```
+
+## Contributing 
+### Pull the git repo:
+```bash
+git pull git@gitlab.com:pig-paradigm/migenpro.git
+cd migenpro
+```
+
+### Installing the needed dependencies. 
+A pip requirements.txt file is located in the installation directory which you can install using the following command.
+
+```bash 
+conda create -n migenpro python=3.12.5 --file installation/requirements.txt
+```
+
+## Recreating the results from the study
+The files needed to recreate our results are located on https://zenodo.org/records/16995284. 
+Apply the steps from this tutorial namely the `/data_visualisation/construct_all_graphs_from_summaries.ipynb` to recreate the graphs. 
+
+## Maintainers
+Jasper J. Koehorst (@jjkoehorst) and Mike Loomans (@MikeLoomans1999)
+

@@ -1,0 +1,20 @@
+PREFIX gbol: <http://gbol.life/0.1/>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+SELECT DISTINCT ?gene ?featureID ?begin ?end ?evalue ?pvalue ?score
+WHERE {
+    ?geneRaw gbol:transcript/gbol:feature ?cds ;
+             gbol:locusTag ?gene .
+
+    ?cds gbol:protein/gbol:feature ?domain ;
+         gbol:location/gbol:begin/gbol:position ?begin ;
+         gbol:location/gbol:end/gbol:position ?end .
+
+    ?domain rdf:type gbol:ProteinDomain ;
+            gbol:accession ?featureID ;
+            gbol:provenance/gbol:annotation ?annotation .
+
+    ?annotation gbol:evalue ?evalue ;
+                gbol:pvalue ?pvalue ;
+                gbol:score ?score .
+}
+ORDER BY ?gene ?begin
