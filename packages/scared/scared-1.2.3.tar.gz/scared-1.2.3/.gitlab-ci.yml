@@ -1,0 +1,175 @@
+image: hub.eshard.int:5000/ci:2026.04.01
+
+stages:
+  - lint
+  - test
+  - build
+  - deploy
+  - hook
+
+# -------------------- LINTING --------------------
+lint:
+  stage: lint
+  script:
+    - conda activate
+    - conda install psutil
+    - pip install pydocstyle flake8 pep8-naming flake8-docstrings
+    - flake8 --config=.flake8 scared tests setup.py
+
+# # -------------------- TEST JOBS --------------------
+
+.test:python:
+  stage: test
+  script:
+    - eval "$(conda shell.bash hook)"
+    - conda activate py$PYTHON_VERSION
+    # - if [[ -n "$NUMPY_VERSION" ]]; then conda install numpy=$NUMPY_VERSION; fi
+    - pip install .[test]
+    - pytest --color=yes -vv --cov=scared tests
+  variables:
+    PYTHON_VERSION: "310"
+    NUMPY_VERSION: ""
+
+
+test:python313-intel:
+  extends: .test:python
+  variables:
+    PYTHON_VERSION: "313"
+    # NUMPY_VERSION: "1.26.4"
+
+test:python313:
+  extends: .test:python
+  variables:
+    PYTHON_VERSION: "313"
+
+test:python313-arm:
+  extends: .test:python
+  tags:
+    - arm
+  variables:
+    PYTHON_VERSION: "313"
+
+test:python312:
+  extends: .test:python
+  variables:
+    PYTHON_VERSION: "312"
+
+test:python311:
+  extends: .test:python
+  variables:
+    PYTHON_VERSION: "311"
+
+
+# -------------------- BUILD JOBS --------------------
+
+.build:conda:
+  stage: build
+  script:
+    - export CONDA_SUBDIR=$ARCHITECTURE
+    - cd .recipe
+    - conda install conda-build psutil
+    # - pip3 install --upgrade psutil
+    - conda config --add channels $ANACONDA_CHANNEL
+    # - if [[ "$ARCHITECTURE" == "linux-aarch64" ]]; then apt update && apt install -y qemu-user-static; fi  # Enable ARM emulation
+    - conda build --output-folder out prod
+    - conda clean --all -y
+  artifacts:
+    paths:
+      - ".recipe/out/*/*.tar.bz2"
+      - ".recipe/out/*/*.conda"
+  variables:
+    ARCHITECTURE: "linux-64"
+  # only:
+  #   - tags
+
+build:conda:x86_64:
+  extends: .build:conda
+  variables:
+    ARCHITECTURE: "linux-64"
+
+build:conda:arm64:
+  extends: .build:conda
+  tags:
+    - arm
+  variables:
+    ARCHITECTURE: "linux-aarch64"
+
+
+build:pypi:src:
+  stage: build
+  script:
+    - conda activate
+    - pip install -U pip setuptools setuptools-scm
+    - python setup.py sdist
+  artifacts:
+    paths:
+      - "dist/*"
+
+build:pypi:wheel:
+  stage: build
+  script:
+    - conda activate
+    - git fetch --tags
+    - pip install -U pip setuptools setuptools-scm wheel
+    - python setup.py bdist_wheel
+  artifacts:
+    paths:
+      - "dist/*"
+
+
+# -------------------- DEPLOY JOBS --------------------
+
+deploy:pypi:
+  stage: deploy
+  script:
+    - conda activate
+    - pip install -U pip setuptools twine
+    - twine upload --repository-url $PYPI_REPOSITORY dist/*.tar.gz -u $PYPI_USERNAME -p $PYPI_PWD
+    - twine upload --repository-url $PYPI_REPOSITORY dist/*.whl -u $PYPI_USERNAME -p $PYPI_PWD
+  only:
+    - tags
+#  when: manual
+
+deploy:conda:
+  stage: deploy
+  script:
+    - cd .recipe
+    - conda activate
+    - conda config --add channels $ANACONDA_CHANNEL
+    - conda update conda
+    - conda install anaconda-client
+    - 'test -n "$ANACONDA_TOKEN" || { echo "ERROR: ANACONDA_TOKEN is not set"; exit 1; }'
+    - anaconda -t "$ANACONDA_TOKEN" upload out/*/scared*.conda
+    - anaconda -t "$ANACONDA_TOKEN" upload out/*/scared*.tar.bz2
+  only:
+    - tags
+#  when: manual
+  artifacts:
+    paths:
+      - ".recipe/out/*/*.tar.bz2"
+      - ".recipe/out/*/*.conda"
+
+# -------------------- DOCUMENTATION --------------------
+
+pages:
+  stage: build
+  script:
+    - conda activate py313
+    - conda install psutil
+    - conda install -c conda-forge myst-parser
+    - pip install -e .
+    - cd docs
+    - ./build_doc.sh
+  artifacts:
+    paths:
+      - public
+  only:
+    - tags
+
+# -------------------- Webhook --------------------
+notify-webhook:
+  stage: hook
+  script:
+    - curl -X POST $ASV_PUBLISH_URL -H "X-Tag:$CI_COMMIT_TAG"
+  only:
+    - tags
