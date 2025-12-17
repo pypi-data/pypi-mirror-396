@@ -1,0 +1,758 @@
+{% extends 'generic/object.html' %}
+{% load buttons %}
+{% load custom_links %}
+{% load helpers %}
+{% load plugins %}
+{% load tabs %}
+{% load i18n %}
+{% load perms %}
+{% load custom_filters %}
+{% load render_table from django_tables2 %}
+
+{% block extra_controls %}
+    {# Add button to create Circuit from Segment data #}
+    {% if perms.circuits.add_circuit %}
+        <a href="{{ create_circuit_url }}" class="btn btn-success" title="Create a new Circuit pre-filled with Segment data">
+            <i class="mdi mdi-plus-circle" aria-hidden="true"></i> {% trans "Generate Circuit" %}
+        </a>
+    {% endif %}
+{% endblock extra_controls %}
+
+{% block content %}
+
+    <div class="row mb-3">
+        <div class="col col-md-6">
+            <!-- Segment card -->
+            <div class="card">
+                <h5 class="card-header">Segment</h5>
+                <div class="card-body">
+                    <table class="table table-hover attr-table">
+                        <tr>
+                            <th scope="row">Name</th>
+                            <td>{{ object.name|placeholder }}</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Segment Type</th>
+                            <td>
+                                <span class="badge text-bg-{{ object.get_segment_type_color }}">
+                                    {{ object.get_segment_type_display }}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Network Label</th>
+                            <td>{{ object.network_label|placeholder }}</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Install Date</th>
+                            <td>{{ object.install_date|placeholder }}</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Termination Date</th>
+                            <td>{{ object.termination_date|placeholder }}</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Provider</th>
+                            <td>
+                                {% if object.provider %}
+                                    <a href="{{ object.provider.get_absolute_url }}">{{ object.provider }}</a>
+                                {% else %}
+                                    {{ ''|placeholder }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Provider ID</th>
+                            <td>{{ object.provider_segment_id|placeholder }}</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Status</th>
+                            <td>
+                                <span class="badge text-bg-{{ object.get_status_color }}">{{ object.get_status_display }}</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Ownership Type</th>
+                            <td>
+                                <span class="badge text-bg-{{ object.get_ownership_type_color }}">{{ object.get_ownership_type_display }}</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Date Status</th>
+                            <td>{% include 'cesnet_service_path_plugin/inc/date_status_badge.html' with record=object %}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            {% plugin_left_page object %}
+        </div>
+        <div class="col col-md-6">
+            <!-- Tags, Comments, Imported Data cards -->
+            {% include 'inc/panels/custom_fields.html' %}
+            {% include 'inc/panels/tags.html' %}
+            {% include 'inc/panels/comments.html' %}
+             <!-- Path Information Card -->
+            <div class="card">
+                <h5 class="card-header">
+                    Path Information
+                    {% if object.has_path_data %}
+                        <div class="card-actions">
+                            <a href="{% url 'plugins:cesnet_service_path_plugin:segment_map' pk=object.pk %}" 
+                               class="btn btn-outline-success btn-sm">
+                                <i class="mdi mdi-map" aria-hidden="true"></i> View on Map
+                            </a>
+                            <a href="{% url 'plugins:cesnet_service_path_plugin:segment_geojson_download' pk=object.pk %}" 
+                               class="btn btn-outline-primary btn-sm">
+                                <i class="mdi mdi-download" aria-hidden="true"></i> Download GeoJSON
+                            </a>
+                            <a href="{% url 'plugins:cesnet_service_path_plugin:segment_path_clear' pk=object.pk %}" 
+                               class="btn btn-outline-danger btn-sm">
+                                <i class="mdi mdi-trash-can-outline" aria-hidden="true"></i> Clear Path
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="card-actions">
+                            <a href="{% url 'plugins:cesnet_service_path_plugin:segment_map' pk=object.pk %}" 
+                               class="btn btn-outline-success btn-sm">
+                                <i class="mdi mdi-map" aria-hidden="true"></i> View Start / End on Map
+                            </a>
+                        </div>      
+                    {% endif %}
+                </h5>
+                <div class="card-body">
+                    <table class="table table-hover attr-table">
+                        <tr>
+                            <th scope="row">Has Path Data</th>
+                            <td>
+                                {% if object.has_path_data %}
+                                    <span class="badge text-bg-success">
+                                        <i class="mdi mdi-check" aria-hidden="true"></i> Yes
+                                    </span>
+                                {% else %}
+                                    <span class="badge text-bg-secondary">
+                                        <i class="mdi mdi-close" aria-hidden="true"></i> No
+                                    </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% if object.has_path_data %}
+                            <tr>
+                                <th scope="row">Path Length</th>
+                                <td>
+                                    {% if object.path_length_km %}
+                                        {{ object.path_length_km }} km
+                                    {% else %}
+                                        {{ ''|placeholder }}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Source Format</th>
+                                <td>{{ object.get_path_source_format_display|default:object.path_source_format|placeholder }}</td>
+                            </tr>
+                            {% if object.path_notes %}
+                                <tr>
+                                    <th scope="row">Path Notes</th>
+                                    <td>{{ object.path_notes|linebreaks }}</td>
+                                </tr>
+                            {% endif %}
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+            {% plugin_right_page object %}
+        </div>
+    </div>
+
+    <!-- Contract Information Card - Full Width - two columns -->
+    {% if has_contract_view_perm %}
+    <div class="row mb-3">
+        <div class="col-6">
+            <div class="card">
+                <h5 class="card-header">
+                    Active Contract Information
+                    {% if contract_info %}
+                        <div class="card-actions">
+                            <a href="{{ contract_info.get_absolute_url }}"
+                               class="btn btn-outline-primary btn-sm"
+                               title="View full contract details">
+                                <i class="mdi mdi-eye" aria-hidden="true"></i> Detail View
+                            </a>
+                            {% if has_contract_change_perm %}
+                                <a href="{% url 'plugins:cesnet_service_path_plugin:contractinfo_edit' pk=contract_info.pk %}"
+                                   class="btn btn-outline-warning btn-sm">
+                                    <i class="mdi mdi-pencil" aria-hidden="true"></i> Edit
+                                </a>
+                            {% endif %}
+                            {% if has_contract_add_perm and contract_info.is_active %}
+                                <a href="{% url 'plugins:cesnet_service_path_plugin:contractinfo_add' %}?contract_number={{ contract_info.contract_number|urlencode }}&charge_currency={{ contract_info.charge_currency|urlencode }}&non_recurring_charge={{ contract_info.non_recurring_charge }}&recurring_charge={{ contract_info.recurring_charge }}&recurring_charge_period={{ contract_info.recurring_charge_period|urlencode }}&number_of_recurring_charges={{ contract_info.number_of_recurring_charges }}&start_date={{ contract_info.start_date|date:'Y-m-d' }}&end_date={{ contract_info.end_date|date:'Y-m-d' }}&notes={{ contract_info.notes|urlencode }}&segments={{ object.pk }}&previous_version={{ contract_info.pk }}&contract_type=amendment&return_url={{ request.path|urlencode }}"
+                                   class="btn btn-outline-success btn-sm"
+                                   title="Clone to create new version">
+                                    <i class="mdi mdi-content-copy" aria-hidden="true"></i> New Version
+                                </a>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <div class="card-actions">
+                            {% if has_contract_add_perm %}
+                                <a href="{% url 'plugins:cesnet_service_path_plugin:contractinfo_add' %}?segments={{ object.pk }}&return_url={{ request.path }}"
+                                   class="btn btn-outline-success btn-sm">
+                                    <i class="mdi mdi-plus-thick" aria-hidden="true"></i> Add Contract Info
+                                </a>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </h5>
+                <div class="card-body">
+                    {% if contract_info %}
+                        <table class="table table-hover attr-table">
+                            <tr>
+                                <th scope="row">Contract Number</th>
+                                <td>
+                                    <a href="{{ contract_info.get_absolute_url }}">{{ contract_info.contract_number|placeholder }}</a>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Contract Type</th>
+                                <td>
+                                    <span class="badge text-bg-{{ contract_info.get_contract_type_color }}">
+                                        {{ contract_info.get_contract_type_display }}
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Version</th>
+                                <td>
+                                    <span class="badge text-bg-info">v{{ contract_info.version }}</span>
+                                    {% if contract_info.is_active %}
+                                        <span class="badge text-bg-success ms-2">Active</span>
+                                    {% else %}
+                                        <span class="badge text-bg-secondary ms-2">Superseded</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Currency</th>
+                                <td>
+                                    <span class="badge text-bg-{{ contract_info.get_currency_color }}">
+                                        {{ contract_info.get_charge_currency_display }}
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Recurring Charge</th>
+                                <td class="text-end">
+                                    <strong>{{ contract_info.charge_currency }} {{ contract_info.recurring_charge|floatformat:2|spacecomma }}</strong>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Recurring Period</th>
+                                <td>{{ contract_info.get_recurring_charge_period_display|placeholder }}</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Number of Charges</th>
+                                <td class="text-end">{{ contract_info.number_of_recurring_charges|placeholder }}</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Total Recurring Cost</th>
+                                <td class="text-end">
+                                    <strong>{{ contract_info.charge_currency }} {{ contract_info.total_recurring_cost|floatformat:2|spacecomma }}</strong>
+                                </td>
+                            </tr>
+                            {% if contract_info.non_recurring_charge %}
+                                <tr>
+                                    <th scope="row">Non-Recurring Charge</th>
+                                    <td class="text-end">{{ contract_info.charge_currency }} {{ contract_info.non_recurring_charge|floatformat:2|spacecomma }}</td>
+                                </tr>
+                            {% endif %}
+                            <tr class="table-active">
+                                <th scope="row">Total Contract Value</th>
+                                <td class="text-end">
+                                    <strong>{{ contract_info.charge_currency }} {{ contract_info.total_contract_value|floatformat:2|spacecomma }}</strong>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Start Date</th>
+                                <td>{{ contract_info.start_date|placeholder }}</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">End Date</th>
+                                <td>
+                                    {% if contract_info.end_date %}
+                                        <span class="badge text-bg-{{ contract_info.get_end_date_color }}"
+                                              title="{{ contract_info.get_end_date_tooltip }}">
+                                            {{ contract_info.end_date }}
+                                        </span>
+                                    {% else %}
+                                        {{ ''|placeholder }}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% if contract_info.commitment_end_date %}
+                                <tr>
+                                    <th scope="row">Commitment End Date</th>
+                                    <td>
+                                        <span class="badge text-bg-{{ contract_info.get_commitment_end_date_color }}"
+                                              title="{{ contract_info.get_commitment_end_date_tooltip }}">
+                                            {{ contract_info.commitment_end_date }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                            {% if contract_info.notes %}
+                                <tr>
+                                    <th scope="row">Notes</th>
+                                    <td>{{ contract_info.notes|linebreaks }}</td>
+                                </tr>
+                            {% endif %}
+                        </table>
+                    {% else %}
+                        <div class="text-muted">
+                            <i class="mdi mdi-information-outline" aria-hidden="true"></i>
+                            No contract information available for this segment.
+                            {% if has_contract_add_perm %}
+                                <a href="{% url 'plugins:cesnet_service_path_plugin:contractinfo_add' %}?segments={{ object.pk }}&return_url={{ request.path }}">
+                                    Add contract information
+                                </a>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-6">
+            <div class="card">
+                <h5 class="card-header">Contract Version History</h5>
+                <div class="card-body">
+                    {% if contract_chains %}
+                        {% for chain in contract_chains %}
+                            {% if chain.version_history %}
+                                <h5 class="mb-3 {% if not forloop.first %}mt-4{% endif %}">
+                                    {{ chain.latest.contract_number|default:"Contract" }}
+                                    <span class="badge text-bg-secondary ms-2">{{ chain.version_count }} version{{ chain.version_count|pluralize }}</span>
+                                </h5>
+                                <table class="table table-hover table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Version</th>
+                                            <th>Type</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for version in chain.version_history %}
+                                        <tr {% if version.pk == selected_contract_id %}class="table-active"{% endif %}>
+                                            <td>
+                                                <span class="badge text-bg-info">v{{ version.version }}</span>
+                                            </td>
+                                            <td>
+                                                <span class="badge text-bg-{{ version.get_contract_type_color }}">
+                                                    {{ version.get_contract_type_display }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {% if version.is_active %}
+                                                    <span class="badge text-bg-success">Active</span>
+                                                {% else %}
+                                                    <span class="badge text-bg-secondary">Superseded</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if version.pk != selected_contract_id %}
+                                                    <a href="?contract_version={{ version.pk }}" class="btn btn-sm btn-outline-primary">
+                                                        <i class="mdi mdi-eye"></i> View
+                                                    </a>
+                                                {% else %}
+                                                    <span class="text-muted">Current</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-muted">
+                            <i class="mdi mdi-information-outline" aria-hidden="true"></i>
+                            No contract version history available.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Technical Specifications Card - Full Width -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card">
+                <h5 class="card-header">
+                    <i class="mdi mdi-cog" aria-hidden="true"></i>
+                    Technical Specifications
+                    <span class="badge text-bg-{{ object.get_segment_type_color }} ms-2">
+                        {{ object.get_segment_type_display }}
+                    </span>
+                </h5>
+                <div class="card-body">
+                    {% if object.segment_type == 'dark_fiber' %}
+                        {% if object.dark_fiber_data %}
+                            {% with data=object.dark_fiber_data %}
+                                <div class="row">
+                                    {% if data.fiber_mode %}
+                                        <div class="col-md-6 col-lg-4 mb-3">
+                                            <div class="d-flex flex-column">
+                                                <small class="mb-1">Fiber Mode</small>
+                                                <strong>{{ data.get_fiber_mode_display }}</strong>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                    {% if data.single_mode_subtype %}
+                                        <div class="col-md-6 col-lg-4 mb-3">
+                                            <div class="d-flex flex-column">
+                                                <small class="mb-1">Single-mode Subtype</small>
+                                                <strong>{{ data.get_single_mode_subtype_display }}</strong>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                    {% if data.multimode_subtype %}
+                                        <div class="col-md-6 col-lg-4 mb-3">
+                                            <div class="d-flex flex-column">
+                                                <small class="mb-1">Multimode Subtype</small>
+                                                <strong>{{ data.get_multimode_subtype_display }}</strong>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                    {% if data.jacket_type %}
+                                        <div class="col-md-6 col-lg-4 mb-3">
+                                            <div class="d-flex flex-column">
+                                                <small class="mb-1">Jacket Type</small>
+                                                <strong>{{ data.get_jacket_type_display }}</strong>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                    {% if data.fiber_attenuation_max %}
+                                        <div class="col-md-6 col-lg-4 mb-3">
+                                            <div class="d-flex flex-column">
+                                                <small class="mb-1">Fiber Attenuation (dB/km)</small>
+                                                <strong>{{ data.fiber_attenuation_max }}</strong>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                    {% if data.total_loss %}
+                                        <div class="col-md-6 col-lg-4 mb-3">
+                                            <div class="d-flex flex-column">
+                                                <small class="mb-1">Total Loss (dB)</small>
+                                                <strong>{{ data.total_loss }}</strong>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                    {% if data.total_length %}
+                                        <div class="col-md-6 col-lg-4 mb-3">
+                                            <div class="d-flex flex-column">
+                                                <small class="mb-1">Total Length (km)</small>
+                                                <strong>{{ data.total_length }}</strong>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                    {% if data.number_of_fibers %}
+                                        <div class="col-md-6 col-lg-4 mb-3">
+                                            <div class="d-flex flex-column">
+                                                <small class="mb-1">Number of Fibers</small>
+                                                <strong>{{ data.number_of_fibers }}</strong>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                    {% if data.connector_type_side_a %}
+                                        <div class="col-md-6 col-lg-4 mb-3">
+                                            <div class="d-flex flex-column">
+                                                <small class="mb-1">Connector Side A</small>
+                                                <strong>{{ data.get_connector_type_side_a_display }}</strong>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                    {% if data.connector_type_side_b %}
+                                        <div class="col-md-6 col-lg-4 mb-3">
+                                            <div class="d-flex flex-column">
+                                                <small class="mb-1">Connector Side B</small>
+                                                <strong>{{ data.get_connector_type_side_b_display }}</strong>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="mt-3">
+                                    <a href="{% url 'plugins:cesnet_service_path_plugin:darkfibersegmentdata_edit' pk=data.pk %}" class="btn btn-sm btn-primary">
+                                        <i class="mdi mdi-pencil"></i> Edit
+                                    </a>
+                                    <a href="{% url 'plugins:cesnet_service_path_plugin:darkfibersegmentdata_delete' pk=data.pk %}" class="btn btn-sm btn-danger">
+                                        <i class="mdi mdi-delete"></i> Delete
+                                    </a>
+                                </div>
+                            {% endwith %}
+                        {% else %}
+                            <div class="text-muted">
+                                <i class="mdi mdi-information-outline" aria-hidden="true"></i>
+                                No dark fiber technical specifications configured.
+                                <a href="{% url 'plugins:cesnet_service_path_plugin:darkfibersegmentdata_add' %}?segment={{ object.pk }}" class="btn btn-sm btn-success ms-2">
+                                    <i class="mdi mdi-plus-thick"></i> Add Dark Fiber Data
+                                </a>
+                            </div>
+                        {% endif %}
+                    {% elif object.segment_type == 'optical_spectrum' %}
+                        {% if object.optical_spectrum_data %}
+                            {% with data=object.optical_spectrum_data %}
+                                <div class="row">
+                                    {% if data.wavelength %}
+                                        <div class="col-md-6 col-lg-4 mb-3">
+                                            <div class="d-flex flex-column">
+                                                <small class="mb-1">Wavelength (nm)</small>
+                                                <strong>{{ data.wavelength }}</strong>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                    {% if data.spectral_slot_width %}
+                                        <div class="col-md-6 col-lg-4 mb-3">
+                                            <div class="d-flex flex-column">
+                                                <small class="mb-1">Spectral Slot Width (GHz)</small>
+                                                <strong>{{ data.spectral_slot_width }}</strong>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                    {% if data.itu_grid_position %}
+                                        <div class="col-md-6 col-lg-4 mb-3">
+                                            <div class="d-flex flex-column">
+                                                <small class="mb-1">ITU Grid Position</small>
+                                                <strong>{{ data.itu_grid_position }}</strong>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                    {% if data.chromatic_dispersion %}
+                                        <div class="col-md-6 col-lg-4 mb-3">
+                                            <div class="d-flex flex-column">
+                                                <small class="mb-1">Chromatic Dispersion (ps/nm)</small>
+                                                <strong>{{ data.chromatic_dispersion }}</strong>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                    {% if data.pmd_tolerance %}
+                                        <div class="col-md-6 col-lg-4 mb-3">
+                                            <div class="d-flex flex-column">
+                                                <small class="mb-1">PMD Tolerance (ps)</small>
+                                                <strong>{{ data.pmd_tolerance }}</strong>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                    {% if data.modulation_format %}
+                                        <div class="col-md-6 col-lg-4 mb-3">
+                                            <div class="d-flex flex-column">
+                                                <small class="mb-1">Modulation Format</small>
+                                                <strong>{{ data.get_modulation_format_display }}</strong>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="mt-3">
+                                    <a href="{% url 'plugins:cesnet_service_path_plugin:opticalspectrumsegmentdata_edit' pk=data.pk %}" class="btn btn-sm btn-primary">
+                                        <i class="mdi mdi-pencil"></i> Edit
+                                    </a>
+                                    <a href="{% url 'plugins:cesnet_service_path_plugin:opticalspectrumsegmentdata_delete' pk=data.pk %}" class="btn btn-sm btn-danger">
+                                        <i class="mdi mdi-delete"></i> Delete
+                                    </a>
+                                </div>
+                            {% endwith %}
+                        {% else %}
+                            <div class="text-muted">
+                                <i class="mdi mdi-information-outline" aria-hidden="true"></i>
+                                No optical spectrum technical specifications configured.
+                                <a href="{% url 'plugins:cesnet_service_path_plugin:opticalspectrumsegmentdata_add' %}?segment={{ object.pk }}" class="btn btn-sm btn-success ms-2">
+                                    <i class="mdi mdi-plus-thick"></i> Add Optical Spectrum Data
+                                </a>
+                            </div>
+                        {% endif %}
+                    {% elif object.segment_type == 'ethernet_service' %}
+                        {% if object.ethernet_service_data %}
+                            {% with data=object.ethernet_service_data %}
+                                <div class="row">
+                                    {% if data.port_speed %}
+                                        <div class="col-md-6 col-lg-4 mb-3">
+                                            <div class="d-flex flex-column">
+                                                <small class="mb-1">Port Speed (Mbps)</small>
+                                                <strong>{{ data.port_speed }}</strong>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                    {% if data.vlan_id %}
+                                        <div class="col-md-6 col-lg-4 mb-3">
+                                            <div class="d-flex flex-column">
+                                                <small class="mb-1">VLAN ID</small>
+                                                <strong>{{ data.vlan_id }}</strong>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                    {% if data.vlan_tags %}
+                                        <div class="col-md-6 col-lg-4 mb-3">
+                                            <div class="d-flex flex-column">
+                                                <small class="mb-1">VLAN Tags</small>
+                                                <strong>{{ data.vlan_tags }}</strong>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                    {% if data.encapsulation_type %}
+                                        <div class="col-md-6 col-lg-4 mb-3">
+                                            <div class="d-flex flex-column">
+                                                <small class="mb-1">Encapsulation Type</small>
+                                                <strong>{{ data.get_encapsulation_type_display }}</strong>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                    {% if data.interface_type %}
+                                        <div class="col-md-6 col-lg-4 mb-3">
+                                            <div class="d-flex flex-column">
+                                                <small class="mb-1">Interface Type</small>
+                                                <strong>{{ data.get_interface_type_display }}</strong>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                    {% if data.mtu_size %}
+                                        <div class="col-md-6 col-lg-4 mb-3">
+                                            <div class="d-flex flex-column">
+                                                <small class="mb-1">MTU Size (bytes)</small>
+                                                <strong>{{ data.mtu_size }}</strong>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="mt-3">
+                                    <a href="{% url 'plugins:cesnet_service_path_plugin:ethernetservicesegmentdata_edit' pk=data.pk %}" class="btn btn-sm btn-primary">
+                                        <i class="mdi mdi-pencil"></i> Edit
+                                    </a>
+                                    <a href="{% url 'plugins:cesnet_service_path_plugin:ethernetservicesegmentdata_delete' pk=data.pk %}" class="btn btn-sm btn-danger">
+                                        <i class="mdi mdi-delete"></i> Delete
+                                    </a>
+                                </div>
+                            {% endwith %}
+                        {% else %}
+                            <div class="text-muted">
+                                <i class="mdi mdi-information-outline" aria-hidden="true"></i>
+                                No ethernet service technical specifications configured.
+                                <a href="{% url 'plugins:cesnet_service_path_plugin:ethernetservicesegmentdata_add' %}?segment={{ object.pk }}" class="btn btn-sm btn-success ms-2">
+                                    <i class="mdi mdi-plus-thick"></i> Add Ethernet Service Data
+                                </a>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-muted">
+                            <i class="mdi mdi-information-outline" aria-hidden="true"></i>
+                            No technical specifications available for this segment type.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Service Path or Segment Topology Visualization Card -->
+    {% include './inc/topology_visualization.html' %}
+    
+    {% include './inc/topology_segment_card.html' %}
+    
+    
+    <!-- A and B cards in full width row -->
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <div class="card">
+                <h5 class="card-header">Side A</h5>
+                <table class="table table-hover attr-table">
+                    <tr>
+                        <th scope="row">Site</th>
+                        <td>
+                            {% if object.site_a %}
+                                <a href="{{ object.site_a.get_absolute_url }}">{{ object.site_a }}</a>
+                            {% else %}
+                                {{ ''|placeholder }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Location</th>
+                        <td>
+                            {% if object.location_a %}
+                                <a href="{{ object.location_a.get_absolute_url }}">{{ object.location_a }}</a>
+                            {% else %}
+                                {{ ''|placeholder }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <h5 class="card-header">Side B</h5>
+                <table class="table table-hover attr-table">
+                    <tr>
+                        <th scope="row">Site</th>
+                        <td>
+                            {% if object.site_b %}
+                                <a href="{{ object.site_b.get_absolute_url }}">{{ object.site_b }}</a>
+                            {% else %}
+                                {{ ''|placeholder }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Location</th>
+                        <td>
+                            {% if object.location_b %}
+                                <a href="{{ object.location_b.get_absolute_url }}">{{ object.location_b }}</a>
+                            {% else %}
+                                {{ ''|placeholder }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col col-12">
+            {% load render_table from django_tables2 %}
+            <div class="card">
+                <h5 class="card-header">
+                    Related Circuits
+                    <div class="card-actions">
+                        <a href="{% url 'plugins:cesnet_service_path_plugin:segmentcircuitmapping_add' %}?segment={{ object.pk }}&return_url={{ request.path }}"
+                           class="btn btn-ghost-primary btn-sm">
+                            <i class="mdi mdi-plus-thick" aria-hidden="true"></i> {% trans "Add to Circuit" %}
+                        </a>
+                    </div>
+                </h5>
+                {% render_table circuits_table 'inc/table.html' %}
+                {% include 'inc/paginator.html' with paginator=circuits_table.paginator page=circuits_table.page %}
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col col-12">
+            {% load render_table from django_tables2 %}
+            <div class="card">
+                <h5 class="card-header">
+                    Related ServicePaths
+                    <div class="card-actions">
+                        <a href="{% url 'plugins:cesnet_service_path_plugin:servicepathsegmentmapping_add' %}?segment={{ object.pk }}&return_url={{ request.path }}"
+                           class="btn btn-ghost-primary btn-sm">
+                            <i class="mdi mdi-plus-thick" aria-hidden="true"></i> {% trans "Add to ServicePath" %}
+                        </a>
+                    </div>
+                </h5>
+                {% render_table service_paths_table 'inc/table.html' %}
+                {% include 'inc/paginator.html' with paginator=service_paths_table.paginator page=service_paths_table.page %}
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col col-md-12">{% plugin_full_width_page object %}</div>
+    </div>
+{% endblock content %}
