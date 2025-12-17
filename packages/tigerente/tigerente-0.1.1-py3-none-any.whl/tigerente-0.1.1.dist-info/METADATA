@@ -1,0 +1,64 @@
+Metadata-Version: 2.3
+Name: tigerente
+Version: 0.1.1
+Summary: Add your description here
+Requires-Dist: bleak>=2.0.0
+Requires-Dist: click>=8.3.1
+Requires-Dist: mpy-cross>=1.26.1.post2
+Requires-Dist: pyyaml>=6.0.3
+Requires-Dist: rich>=14.2.0
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+
+# Tigerente
+
+A command line tool to connect to and manage LEGO Spike Primes running Spielzeug.
+
+It works by running a background process that keeps the bluetooth connection alive; any commands are sent to it.
+
+## Name
+
+Nobody had a good idea how to name this, so we chose something that has to do with toys.
+
+## Features
+
+- Connect & Disconnect
+- Sync folders
+- Reboot
+- Start & Stop programs
+
+## TODO / Roadmap
+
+- ``--watch``-Flag to sync changes directly without rerunning ``tente sync``
+- Command to download and flash Spielzeug automatically
+- Command to rename a device
+- More?
+
+## Example usage
+
+```bash
+# Connect to a hub
+$ tente connect
+These devices seem to be nearby:
+- HubA (34:08:E1:8D:26:98)
+- HubB (38:0B:3C:A2:27:91)
+Choose a device to connect to: HubB
+[✔] (00:11) Connected to HubB.
+
+# Sync the "src" folder to the connected hub
+$ tente sync src
+[ℹ] You are connected to HubB.
+  Sync directory... ━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:04
+[✔] Synced.
+
+# Again, but ensure you are connected to HubA
+$ tente sync src --dev HubA 
+[ℹ] You are connected to HubA.
+  Sync directory... ━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:05
+[✔] Synced.
+
+# Disconnect from the connected hub
+$ tente disconnect
+[ℹ] You were connected to HubA.
+[✔] (00:03) Disconnected.
+```
