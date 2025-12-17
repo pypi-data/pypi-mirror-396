@@ -1,0 +1,220 @@
+# pyspotlib
+
+Python client library for the Spot messaging protocol. This is a port of [spotlib](https://github.com/KarpelesLab/spotlib) (Go) to Python.
+
+## Features
+
+- Connect to Spot servers via WebSocket
+- End-to-end encrypted messaging using [pybottle](https://github.com/KarpelesLab/pybottle)
+- Query/response pattern for RPC-style communication
+- Encrypted blob storage
+- ID card caching for efficient encryption
+- Automatic connection management and reconnection
+
+## Installation
+
+```bash
+pip install pyspotlib
+```
+
+Or install from source:
+
+```bash
+git clone https://github.com/KarpelesLab/pyspotlib.git
+cd pyspotlib
+pip install -e .
+```
+
+## Quick Start
+
+```python
+import asyncio
+from pyspotlib import new_client
+
+async def main():
+    # Create and connect a client
+    client = await new_client()
+    await client.wait_online()
+
+    print(f"Connected! Target ID: {client.target_id}")
+
+    # Get server time
+    server_time = await client.get_time()
+    print(f"Server time: {server_time}")
+
+    # Store and retrieve encrypted data
+    await client.store_blob("my_key", b"secret data")
+    data = await client.fetch_blob("my_key")
+
+    await client.close()
+
+asyncio.run(main())
+```
+
+## API Reference
+
+### Creating a Client
+
+```python
+from pyspotlib import new_client, Client, DiskStore
+
+# Simple ephemeral client (generates new key each time)
+client = await new_client()
+
+# Client with persistent key storage
+store = DiskStore("/path/to/keys")
+client = await new_client(store=store)
+
+# Client without auto-start
+client = Client()
+await client.start()
+```
+
+### Client Properties
+
+- `client.target_id` - The client's address in `k.<hash>` format
+- `client.idcard` - The client's identity card
+- `client.idcard_bin` - The client's signed identity card as bytes
+
+### Querying Endpoints
+
+```python
+# Query a system endpoint
+result = await client.query("@/time", b"")
+
+# Query another client's endpoint
+result = await client.query("k.<hash>/endpoint", payload)
+
+# With custom timeout
+result = await client.query("@/time", b"", timeout=60.0)
+```
+
+### Sending Messages
+
+```python
+# Send without waiting for response
+await client.send_to("k.<hash>/endpoint", payload)
+
+# With custom sender address
+await client.send_to("k.<hash>/endpoint", payload, sender="/my-sender")
+```
+
+### Blob Storage
+
+```python
+# Store encrypted blob (only you can decrypt it)
+await client.store_blob("key", b"data")
+
+# Fetch blob
+data = await client.fetch_blob("key")
+
+# Delete blob
+await client.store_blob("key", b"")
+```
+
+### Message Handlers
+
+```python
+# Set a handler for incoming messages
+async def my_handler(msg):
+    # Process message
+    return response_bytes, None  # (response, error)
+
+client.set_handler("my_endpoint", my_handler)
+
+# Remove handler
+client.set_handler("my_endpoint", None)
+```
+
+### Built-in Handlers
+
+The client automatically responds to these endpoints:
+
+- `ping` - Echo back the message (up to 128 bytes)
+- `version` - Return library version info
+- `finger` - Return the client's signed ID card
+- `check_update` - Logs update check request
+- `idcard_update` - Updates ID card cache from server notifications
+
+### PacketConn (Packet-based Messaging)
+
+For easy packet-based communication:
+
+```python
+# Create a packet connection
+conn = client.listen_packet("my_endpoint")
+
+# Receive packets
+data, addr = await conn.read_from(timeout=10.0)
+print(f"Received {len(data)} bytes from {addr}")
+
+# Send packets
+await conn.write_to(b"response data", addr)
+
+# Get local address
+print(f"Listening on: {conn.local_addr()}")
+
+# Clean up
+await conn.close()
+```
+
+### Utility Methods
+
+```python
+# Get server time
+time = await client.get_time()
+
+# Get ID card for a recipient
+idcard = await client.get_idcard(hash_bytes)
+idcard = await client.get_idcard_for_recipient("k.<hash>/endpoint")
+
+# Get raw ID card bytes
+idcard_bytes = await client.get_idcard_bin(hash_bytes)
+
+# Get group members
+members = await client.get_group_members(group_key_bytes)
+
+# Check connection status
+total, online = client.connection_count()
+
+# Wait for connection
+connected = await client.wait_online(timeout=30.0)
+
+# Query with explicit timeout (alternative syntax)
+result = await client.query_timeout(30.0, "@/time", b"")
+```
+
+## Address Formats
+
+| Format | Description |
+|--------|-------------|
+| `k.<hash>` | Key-based address (SHA-256 hash of public key, base64url) |
+| `k.<hash>/endpoint` | Key-based with endpoint |
+| `@/endpoint` | System endpoint |
+
+## Protocol
+
+pyspotlib implements the Spot protocol as defined in [spotproto](https://github.com/KarpelesLab/spotproto). Messages are encrypted end-to-end using the Bottle format from pybottle.
+
+### Message Flags
+
+- `MsgFlagResponse` (0x01) - Response message
+- `MsgFlagError` (0x02) - Error response
+- `MsgFlagNotBottle` (0x04) - Unencrypted body
+
+## Dependencies
+
+- [pybottle](https://github.com/KarpelesLab/pybottle) >= 0.1.1 - Cryptographic message containers
+- [websockets](https://websockets.readthedocs.io/) >= 12.0 - WebSocket client
+- [cbor2](https://cbor2.readthedocs.io/) >= 5.6.0 - CBOR encoding
+- [httpx](https://www.python-httpx.org/) >= 0.27.0 - HTTP client
+
+## License
+
+MIT License - see LICENSE file for details.
+
+## Related Projects
+
+- [spotlib](https://github.com/KarpelesLab/spotlib) - Go implementation
+- [spotproto](https://github.com/KarpelesLab/spotproto) - Protocol definition
+- [pybottle](https://github.com/KarpelesLab/pybottle) - Python cryptographic containers
