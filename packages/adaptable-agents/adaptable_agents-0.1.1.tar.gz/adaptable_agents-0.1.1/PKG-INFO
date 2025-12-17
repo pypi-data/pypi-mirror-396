@@ -1,0 +1,269 @@
+Metadata-Version: 2.4
+Name: adaptable-agents
+Version: 0.1.1
+Summary: Python client for Adaptable Agents API - wrap your LLM clients with automatic context generation
+Author: Adaptable Agents Team
+License-Expression: MIT
+Project-URL: Homepage, https://github.com/your-org/adaptable-agents
+Project-URL: Documentation, https://docs.adaptable-agents.com
+Project-URL: Repository, https://github.com/your-org/adaptable-agents-python-package
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: requests>=2.31.0
+Requires-Dist: openai>=1.0.0
+Requires-Dist: anthropic>=0.18.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0.0; extra == "dev"
+Requires-Dist: black>=23.0.0; extra == "dev"
+Requires-Dist: mypy>=1.0.0; extra == "dev"
+Dynamic: license-file
+
+# Adaptable Agents Python Client
+
+A Python client library that wraps your LLM clients (OpenAI, Anthropic, etc.) with automatic context generation from the Adaptable Agents API. This package seamlessly integrates with your existing LLM workflows to enhance responses with relevant past experiences.
+
+## Features
+
+- **Automatic Context Integration**: Automatically fetches relevant past experiences and appends them to your prompts
+- **Memory Storage**: Optionally stores input/output pairs as memories for future learning
+- **OpenAI Support**: Drop-in replacement for OpenAI client with context integration
+- **Anthropic Support**: Drop-in replacement for Anthropic client with context integration
+- **Easy Configuration**: Simple API key-based setup
+
+## Installation
+
+```bash
+pip install adaptable-agents
+```
+
+Or install from source:
+
+```bash
+git clone https://github.com/your-org/adaptable-agents-python-package.git
+cd adaptable-agents-python-package
+pip install -e .
+```
+
+### Development Setup with uv
+
+This project uses [uv](https://github.com/astral-sh/uv) for fast virtual environment management. To set up a development environment:
+
+```bash
+# Install uv (if not already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Create and activate virtual environment
+uv venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install the package in editable mode with dev dependencies
+uv pip install -e ".[dev]"
+```
+
+The `.python-version` file specifies Python 3.11, which `uv` will automatically use.
+
+## Quick Start
+
+### OpenAI Integration
+
+```python
+from adaptable_agents import AdaptableOpenAIClient
+
+# Initialize the client with your API keys
+client = AdaptableOpenAIClient(
+    adaptable_api_key="your-adaptable-agents-api-key",
+    openai_api_key="your-openai-api-key",
+    memory_scope_path="customer-support/billing",  # Optional: organize by scope
+    api_base_url="http://localhost:8000"  # Optional: defaults to localhost
+)
+
+# Use it just like the regular OpenAI client
+response = client.chat.completions.create(
+    model="gpt-4",
+    messages=[
+        {"role": "user", "content": "User asked about billing issues with subscription renewal"}
+    ]
+)
+
+print(response.choices[0].message.content)
+```
+
+### Anthropic Integration
+
+```python
+from adaptable_agents import AdaptableAnthropicClient
+
+# Initialize the client
+client = AdaptableAnthropicClient(
+    adaptable_api_key="your-adaptable-agents-api-key",
+    anthropic_api_key="your-anthropic-api-key",
+    memory_scope_path="engineering/frontend",
+    api_base_url="http://localhost:8000"
+)
+
+# Use it just like the regular Anthropic client
+response = client.messages.create(
+    model="claude-3-opus-20240229",
+    max_tokens=1024,
+    messages=[
+        {"role": "user", "content": "How do I implement authentication?"}
+    ]
+)
+
+print(response.content[0].text)
+```
+
+## How It Works
+
+1. **Context Retrieval**: Before making an LLM call, the client automatically fetches relevant context from the Adaptable Agents API based on your input
+2. **Prompt Enhancement**: The context is prepended to your user prompt to provide information from past successful interactions
+3. **LLM Generation**: The enhanced prompt is sent to your LLM provider (OpenAI, Anthropic, etc.)
+4. **Memory Storage** (optional): After generation, the input/output pair is stored as a memory for future learning
+
+## Advanced Usage
+
+### Custom Context Configuration
+
+```python
+from adaptable_agents import AdaptableOpenAIClient, ContextConfig
+
+config = ContextConfig(
+    similarity_threshold=0.85,  # Higher threshold = more similar results
+    max_items=10  # Maximum number of past experiences to include
+)
+
+client = AdaptableOpenAIClient(
+    adaptable_api_key="your-api-key",
+    openai_api_key="your-openai-key",
+    context_config=config,
+    memory_scope_path="my-scope"
+)
+```
+
+### Disable Automatic Memory Storage
+
+```python
+client = AdaptableOpenAIClient(
+    adaptable_api_key="your-api-key",
+    openai_api_key="your-openai-key",
+    auto_store_memories=False  # Don't automatically store memories
+)
+```
+
+### Manual Memory Storage
+
+```python
+from adaptable_agents import AdaptableAgent
+
+agent = AdaptableAgent(
+    api_key="your-api-key",
+    memory_scope_path="customer-support/billing"
+)
+
+# Store a memory manually
+agent.store_memory(
+    input_text="User asked about refund policy",
+    output_text="Explained 30-day refund policy and processed refund",
+    context="Customer was unsatisfied with service",
+    success_score=0.95
+)
+```
+
+### Using Existing Client Instances
+
+```python
+from openai import OpenAI
+from adaptable_agents import AdaptableOpenAIClient
+
+# Use your existing OpenAI client
+existing_client = OpenAI(api_key="your-key")
+
+# Wrap it with adaptable agents
+client = AdaptableOpenAIClient(
+    adaptable_api_key="your-adaptable-key",
+    openai_client=existing_client,
+    memory_scope_path="my-scope"
+)
+```
+
+## API Reference
+
+### AdaptableOpenAIClient
+
+Wrapper for OpenAI client with context integration.
+
+**Parameters:**
+- `adaptable_api_key` (str): API key for Adaptable Agents API
+- `openai_api_key` (str, optional): OpenAI API key (if not using existing client)
+- `api_base_url` (str): Base URL of Adaptable Agents API (default: "http://localhost:8000")
+- `memory_scope_path` (str): Memory scope path for organizing memories (default: "default")
+- `context_config` (ContextConfig, optional): Configuration for context generation
+- `auto_store_memories` (bool): Whether to automatically store memories (default: True)
+- `openai_client` (OpenAI, optional): Pre-initialized OpenAI client
+
+### AdaptableAnthropicClient
+
+Wrapper for Anthropic client with context integration.
+
+**Parameters:**
+- `adaptable_api_key` (str): API key for Adaptable Agents API
+- `anthropic_api_key` (str, optional): Anthropic API key (if not using existing client)
+- `api_base_url` (str): Base URL of Adaptable Agents API (default: "http://localhost:8000")
+- `memory_scope_path` (str): Memory scope path for organizing memories (default: "default")
+- `context_config` (ContextConfig, optional): Configuration for context generation
+- `auto_store_memories` (bool): Whether to automatically store memories (default: True)
+- `anthropic_client` (Anthropic, optional): Pre-initialized Anthropic client
+
+### AdaptableAgent
+
+Core client for interacting with Adaptable Agents API.
+
+**Parameters:**
+- `api_key` (str): API key for Adaptable Agents API
+- `api_base_url` (str): Base URL of Adaptable Agents API (default: "http://localhost:8000")
+- `memory_scope_path` (str): Memory scope path (default: "default")
+- `context_config` (ContextConfig, optional): Context configuration
+
+**Methods:**
+- `get_context(input_text: str, use_cache: bool = False) -> Optional[str]`: Fetch context
+- `store_memory(input_text: str, output_text: str, context: Optional[str] = None, success_score: float = 1.0) -> Optional[Dict]`: Store memory
+- `format_prompt_with_context(user_prompt: str, context: Optional[str]) -> str`: Format prompt with context
+
+## Memory Scopes
+
+Memory scopes allow you to organize memories hierarchically. Use different scopes for different contexts:
+
+- `customer-support/billing` - Billing-related support memories
+- `engineering/frontend` - Frontend engineering memories
+- `sales/enterprise` - Enterprise sales memories
+- `custom/scope/path` - Any custom hierarchical structure
+
+## Requirements
+
+- Python >= 3.8
+- requests >= 2.31.0
+- openai >= 1.0.0 (for OpenAI support)
+- anthropic >= 0.18.0 (for Anthropic support)
+
+## License
+
+MIT License
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## Support
+
+For issues and questions, please open an issue on GitHub or contact support@adaptable-agents.com.
