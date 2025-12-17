@@ -1,0 +1,86 @@
+Metadata-Version: 2.1
+Name: atomic_save
+Version: 0.0.0
+Summary: A tool that guarantees fully intact files by writing them atomically.
+Home-page: https://github.co.jp/
+Author: bib_inf
+Author-email: contact.bibinf@gmail.com
+License: CC0 v1.0
+Classifier: Programming Language :: Python :: 3
+Classifier: Topic :: Software Development :: Libraries
+Classifier: License :: CC0 1.0 Universal (CC0 1.0) Public Domain Dedication
+Description-Content-Type: text/markdown
+
+English description follows Japanese.
+
+## atomic-save
+
+### 概要
+
+- **atomic-save** は、ファイルを **破損させない安全な保存** を実現する Python の小型ツールです。
+- 保存途中にプログラムが落ちても、ファイルは **完全に書き込まれた状態** か **保存前の状態** のどちらかになります。
+
+
+## 使い方の例
+
+```python
+import atomic_save
+
+# 文字列を atomic に保存
+atomic_save["./testfile.txt"] = "hello!"
+
+# バイト列を atomic に保存
+atomic_save["./testfile.txt"] = b"hello!"
+```
+
+
+## 動作原理
+
+データはまず **一時ファイル** に完全に書き込まれます。
+その後、書き込みが正常終了した段階で、一時ファイルが元ファイルと **atomic に置き換え** られます。
+これにより、途中まで書かれた壊れたファイルが残ることはありません。
+
+* 一時ファイル名の形式: `<元ファイル名>.<6桁16進ランダム>.atomic_save_temp`
+* 保存できる型: **str（文字列）**, **bytes（バイト列）**
+* 元ファイルが存在しない場合も問題なく保存可能
+  途中で落ちても「元々ファイルがなかった状態」に戻ります。
+
+保存後の読み込みは通常どおり `open()` で行ってください。
+成功した保存結果は常に元のファイル名に収まります。
+
+---
+
+## atomic-save
+
+### Overview
+
+- **atomic-save** is a lightweight Python utility that guarantees **corruption-free file writing**.
+- Even if a crash occurs mid-save, the file will end up either **fully written** or **completely unchanged**.
+
+
+## Usage Example
+
+```python
+import atomic_save
+
+# Save text atomically
+atomic_save["./testfile.txt"] = "hello!"
+
+# Save bytes atomically
+atomic_save["./testfile.txt"] = b"hello!"
+```
+
+
+## How It Works
+
+atomic-save writes all data into a **temporary file** first.
+After the write finishes successfully, it **atomically replaces** the original file with the completed temporary file.
+This design ensures no partially written file ever appears.
+
+* Temporary file format: `<original_filename>.<6-digit hex random>.atomic_save_temp`
+* Allowed value types: **str**, **bytes**
+* When the original file does not exist, saving works normally.
+  If a crash occurs, the state cleanly falls back to “file did not exist.”
+
+Reading the file requires no special API—just open the file normally.
+If the save succeeds, the completed data always appears under the original name.
