@@ -1,0 +1,59 @@
+Metadata-Version: 2.4
+Name: anu-ctlab-io
+Version: 1.1.0
+Summary: python I/O for the ANU CTLab array storage format(s)
+Project-URL: Repository, https://github.com/MaterialsPhysicsANU/anu_ctlab_io
+Project-URL: Issues, https://github.com/MaterialsPhysicsANU/anu_ctlab_io/issues
+Project-URL: Changelog, https://github.com/MaterialsPhysicsANU/anu_ctlab_io/blob/main/CHANGELOG.md
+Project-URL: Documentation, https://anu-ctlab-io.readthedocs.io
+Author-email: Owen Dowley <owen.dowley@anu.edu.au>, Bogdan Maviichuk <bogdan.maviichuk@anu.edu.au>, Lachlan Deakin <lachlan.deakin@anu.edu.au>
+Maintainer-email: Owen Dowley <owen.dowley@anu.edu.au>
+License-Expression: MIT
+License-File: LICENSE.md
+Requires-Python: >=3.12
+Requires-Dist: dask[array]>=2025.2.0
+Requires-Dist: deprecation>=2.1.0
+Requires-Dist: dictdiffer>=0.9.0
+Requires-Dist: lark>=1.2.2
+Requires-Dist: numpy>=2.2.3
+Requires-Dist: xarray>=2025.1.2
+Provides-Extra: all
+Requires-Dist: netcdf4>=1.7.2; extra == 'all'
+Requires-Dist: ome-zarr-models>=1.3; extra == 'all'
+Requires-Dist: scipy>=1.16.1; extra == 'all'
+Requires-Dist: zarr>=3.1.1; extra == 'all'
+Provides-Extra: netcdf
+Requires-Dist: netcdf4>=1.7.2; extra == 'netcdf'
+Requires-Dist: scipy>=1.16.1; extra == 'netcdf'
+Provides-Extra: zarr
+Requires-Dist: ome-zarr-models>=1.3; extra == 'zarr'
+Requires-Dist: zarr>=3.1.1; extra == 'zarr'
+Description-Content-Type: text/x-rst
+
+anu_ctlab_io package
+--------------------
+python I/O for the ANU CTLab array storage format(s).
+
+Introduction
+============
+
+This package loads data provided in the specific NetCDF and Zarr formats produced by the ANU CTLab.
+The intention is that the consumers of the data we produce should be able to load that data and then
+work with that directly in standard scientific python workflows, rather than needing to use the
+pre-existing MANGO toolchain.
+
+The specific netcdf and zarr loading functionality is contained in extras, so you will
+generally want to install this package as either ``anu_ctlab_io[netcdf]`` or ``anu_ctlab_io[zarr]``
+depending on the format of data you want to read.
+The ``all`` extra enables all supported formats.
+
+Examples
+========
+.. code-block :: python3
+
+    import anu_ctlab_io
+    from dask_image import ndfilters
+
+    dataset = anu_ctlab_io.Dataset.from_path(<path-to-your-data>)
+    blurred = ndfilters.gaussian_filter(dataset.data, sigma=3)
+    print(blurred.mean().compute())
