@@ -1,0 +1,84 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: {{PROJECT_NAME_SNAKE}}_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: {{PROJECT_NAME_SNAKE}}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - {{PROJECT_NAME_SNAKE}}_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: {{PROJECT_NAME_SNAKE}}_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - {{PROJECT_NAME_SNAKE}}_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    container_name: {{PROJECT_NAME_SNAKE}}_api
+    env_file: .env
+    entrypoint: ["python", "src/init_db.py"]
+    command: ["uvicorn", "src.api.app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--log-level", "info"]
+    environment:
+      - TZ=Asia/Tehran
+    ports:
+      - "8000:8000"
+    networks:
+      - {{PROJECT_NAME_SNAKE}}_network
+    volumes:
+      - ./:/app:rw
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    image: node:25-alpine
+    working_dir: /app
+    container_name: {{PROJECT_NAME_SNAKE}}_frontend
+    environment:
+      - TZ=Asia/Tehran
+      - VITE_API_BASE_URL=/api
+      - VITE_PROXY_TARGET=http://api:8000
+    ports:
+      - "3000:3000"
+    networks:
+      - {{PROJECT_NAME_SNAKE}}_network
+    volumes:
+      - ./frontend:/app:rw
+      - /app/node_modules
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    restart: unless-stopped
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  {{PROJECT_NAME_SNAKE}}_network:
+    name: {{PROJECT_NAME_SNAKE}}_network
+    driver: bridge
+
