@@ -1,0 +1,556 @@
+import json
+import os
+import os.path
+import shutil
+import time
+import traceback
+
+from urllib.request import urlretrieve
+from copr.exceptions import CoprRequestException
+from munch import Munch
+
+from copr_common.enums import (
+    ActionTypeEnum,
+    BackendResultEnum,
+    StorageEnum,
+    CreaterepoReason,
+)
+from copr_common.worker_manager import WorkerManager
+from copr_common.lock import lock
+
+from copr_backend.worker_manager import BackendQueueTask
+from copr_backend.storage import storage_for_enum, BackendStorage, PulpStorage
+
+from .sign import create_user_keys, CoprKeygenRequestError
+from .constants import PULP_REDIRECT_FILE
+from .exceptions import CreateRepoError, CoprSignError, FrontendClientException
+from .helpers import (get_redis_logger, silent_remove, ensure_dir_exists,
+                      call_copr_repo, copy2_but_hardlink_rpms)
+from .sign import get_pubkey
+
+
+class Action(object):
+    """ Object to send data back to fronted
+
+    :param copr_backend.callback.FrontendCallback frontent_callback:
+        object to post data back to frontend
+
+    :param destdir: filepath with build results
+
+    :param dict action: dict-like object with action task
+
+    Expected **action** keys:
+
+        - action_type: main field determining what action to apply
+        # TODO: describe actions
+
+    """
+
+    @classmethod
+    def create_from(cls, opts, action, log=None):
+        action_class = cls.get_action_class(action)
+        return action_class(opts, action, log)
+
+    @classmethod
+    def get_action_class(cls, action):
+        action_type = action["action_type"]
+        action_class = {
+            ActionTypeEnum("legal-flag"): LegalFlag,
+            ActionTypeEnum("createrepo"): Createrepo,
+            ActionTypeEnum("update_comps"): CompsUpdate,
+            ActionTypeEnum("gen_gpg_key"): GenerateGpgKey,
+            ActionTypeEnum("rawhide_to_release"): RawhideToRelease,
+            ActionTypeEnum("fork"): Fork,
+            ActionTypeEnum("remove_dirs"): RemoveDirs,
+        }.get(action_type, None)
+
+        if action_type == ActionTypeEnum("delete"):
+            object_type = action["object_type"]
+            action_class = {
+                "copr": DeleteProject,
+                "build": DeleteBuild,
+                "builds": DeleteMultipleBuilds,
+                "chroot": DeleteChroot,
+            }.get(object_type, action_class)
+
+        if not action_class:
+            raise ValueError("Unexpected action type: {}".format(action))
+        return action_class
+
+    # TODO: get more form opts, decrease number of parameters
+    def __init__(self, opts, action, log=None):
+
+        self.opts = opts
+        self.data = action
+
+        self.ext_data = json.loads(action.get("data", "{}"))
+
+        self.destdir = self.opts.destdir
+        self.front_url = self.opts.frontend_base_url
+        self.results_root_url = self.opts.results_baseurl
+
+        self.log = log if log else get_redis_logger(self.opts, "backend.actions", "actions")
+
+        self.storage = None
+        if isinstance(self.ext_data, dict):
+            enum = self.ext_data.get("storage", StorageEnum.backend)
+            owner = self.ext_data.get("ownername")
+            project = self.ext_data.get("projectname")
+            devel = self.ext_data.get("devel")
+            appstream = self.ext_data.get("appstream")
+            args = [owner, project, appstream, devel, self.opts, self.log]
+            self.storage = storage_for_enum(enum, *args)
+
+            # Even though we already have `self.storage` which uses an
+            # appropriate storage for the project (e.g. Pulp), the project
+            # still has some data on backend (logs, srpm-builds chroot, etc).
+            # Many actions need to be performed on `self.storage` and
+            # `self.backend_storage` at the same time
+            self.backend_storage = storage_for_enum(StorageEnum.backend, *args)
+
+    def __str__(self):
+        return "<{}(Action): {}>".format(self.__class__.__name__, self.data)
+
+    def run(self):
+        """
+        This is an abstract class, implement this function for specific actions
+        in their own classes
+        """
+        raise NotImplementedError()
+
+
+class LegalFlag(Action):
+    def run(self):
+        self.log.debug("Action legal-flag: ignoring")
+
+
+class Createrepo(Action):
+    def run(self):
+        self.log.info("Action createrepo")
+        project_dirnames = self.ext_data["project_dirnames"]
+        chroots = self.ext_data["chroots"]
+        reason = self.ext_data["reason"]
+        result = BackendResultEnum("success")
+
+        for project_dirname in project_dirnames:
+            for chroot in chroots:
+                success = self.storage.init_project(
+                    project_dirname,
+                    chroot,
+                    reason=reason,
+                )
+                if not success:
+                    result = BackendResultEnum("failure")
+
+        if isinstance(self.storage, PulpStorage):
+            self.add_http_redirect()
+
+        return result
+
+    def add_http_redirect(self):
+        """
+        Create a HTTP redirect for this project.  See:
+        https://pagure.io/fedora-infra/ansible/blob/main/f/roles/copr/backend/templates/lighttpd/pulp-redirect.lua.j2
+        """
+        path = PULP_REDIRECT_FILE
+        fullname = "{0}/{1}".format(self.storage.owner, self.storage.project)
+        try:
+            with open(path, "r", encoding="utf-8") as fp:
+                projects = fp.read().splitlines()
+
+            if fullname in projects:
+                return
+
+            lockdir = "/var/lock/copr-backend"
+            with lock(path, lockdir=lockdir, timeout=-1, log=self.log):
+                with open(path, "a", encoding="utf-8") as fp:
+                    print(fullname, file=fp)
+
+        except FileNotFoundError:
+            # Ignoring because this Copr instance doesn't need redirects
+            pass
+
+
+class GPGMixin(object):
+    def generate_gpg_key(self, ownername, projectname):
+        if self.opts.do_sign is False:
+            # skip key creation, most probably sign component is unused
+            return True
+        try:
+            create_user_keys(ownername, projectname, self.opts)
+            return True
+        except CoprKeygenRequestError as e:
+            self.log.exception(e)
+            return False
+
+
+class Fork(Action, GPGMixin):
+    """
+    Fork build results from one project to another.
+
+    Please note that CoprDir support is not yet implemented. On a positive note,
+    It doesn't polute the main CoprDir with builds from other CoprDirs. The
+    results are just not copied.
+
+    See https://github.com/fedora-copr/copr/issues/3820
+    """
+
+    def run(self):
+        self.log.info("Action fork %s", self.data["object_type"])
+        result = BackendResultEnum("success")
+        data = json.loads(self.data["data"])
+        builds_map = json.loads(self.data["data"])["builds_map"]
+
+        if isinstance(self.storage, PulpStorage):
+            # For other actions, we do this in `Action` constructor. But forking
+            # actions doesn't have just one owner and project but a source owner
+            # and project, and destination owner and project. So we need this
+            # workaround to specify which one to work with
+            self.storage.owner = self.data["new_value"].split("/")[0]
+            self.storage.project = self.data["new_value"].split("/")[1]
+
+        try:
+            if self.opts.do_sign:
+                pubkey_path = os.path.join(
+                    self.destdir,
+                    self.data["new_value"],
+                    "pubkey.gpg"
+                )
+                ensure_dir_exists(os.path.dirname(pubkey_path), self.log)
+
+                # Generate brand new gpg key.
+                self.generate_gpg_key(data["user"], data["copr"])
+                # Put the new public key into forked build directory.
+                get_pubkey(data["user"], data["copr"], self.log, self.opts.sign_domain, pubkey_path)
+
+            kwargs = {
+                "src_fullname": self.data["old_value"],
+                "dst_fullname": self.data["new_value"],
+                "builds_map": builds_map,
+            }
+
+            # It doesn't matter what storage is used, we need to fork on
+            # backend anyway, so that logfiles, etc are copied
+            if not self.backend_storage.fork_project(**kwargs):
+                result = BackendResultEnum("failure")
+
+            if isinstance(self.storage, PulpStorage):
+                if not self.storage.fork_project(**kwargs):
+                    result = BackendResultEnum("failure")
+
+        except (CoprSignError, CreateRepoError, CoprRequestException, IOError) as ex:
+            self.log.error("Failure during project forking")
+            self.log.error(str(ex))
+            self.log.error(traceback.format_exc())
+            result = BackendResultEnum("failure")
+        return result
+
+
+class DeleteProject(Action):
+    def run(self):
+        self.log.debug("Action delete copr")
+        project_dirnames = self.ext_data["project_dirnames"]
+
+        if not self.storage.owner:
+            self.log.error("Received empty ownername!")
+            return BackendResultEnum("failure")
+
+        for dirname in project_dirnames:
+            if not dirname:
+                self.log.warning("Received empty dirname!")
+                continue
+            self.storage.delete_project(dirname)
+            if not isinstance(self.storage, BackendStorage):
+                self.backend_storage.delete_project(dirname)
+
+            if isinstance(self.storage, PulpStorage):
+                self.remove_http_redirect(dirname)
+
+        return BackendResultEnum("success")
+
+    def remove_http_redirect(self, dirname):
+        """
+        Remove a HTTP redirect for this project.
+        """
+        path = PULP_REDIRECT_FILE
+        fullname = "{0}/{1}".format(self.storage.owner, dirname)
+        try:
+            with open(path, "r", encoding="utf-8") as fp:
+                projects = fp.read().splitlines()
+
+            if fullname not in projects:
+                return
+
+            lockdir = "/var/lock/copr-backend"
+            with lock(path, lockdir=lockdir, timeout=-1, log=self.log):
+                with open(path, "r", encoding="utf-8") as fp:
+                    projects = fp.read().splitlines()
+
+                filtered_projects = [p for p in projects if p != fullname]
+                with open(path, "w", encoding="utf-8") as fp:
+                    for project in filtered_projects:
+                        print(project, file=fp)
+
+        except FileNotFoundError:
+            # Ignoring because this Copr instance doesn't need redirects
+            pass
+
+
+class CompsUpdate(Action):
+    def run(self):
+        self.log.debug("Action comps update")
+
+        ext_data = json.loads(self.data["data"])
+        ownername = ext_data["ownername"]
+        projectname = ext_data["projectname"]
+        chroot = ext_data["chroot"]
+        url_path = ext_data["url_path"]
+
+        remote_comps_url = self.opts.frontend_base_url + url_path
+        self.log.info(remote_comps_url)
+
+        path = os.path.join(self.destdir, ownername, projectname, chroot)
+        ensure_dir_exists(path, self.log)
+        local_comps_path = os.path.join(path, "comps.xml")
+        result = BackendResultEnum("success")
+        if not ext_data.get("comps_present", True):
+            silent_remove(local_comps_path)
+            self.log.info("deleted comps.xml for %s/%s/%s from %s ",
+                          ownername, projectname, chroot, remote_comps_url)
+        else:
+            try:
+                urlretrieve(remote_comps_url, local_comps_path)
+                self.log.info("saved comps.xml for %s/%s/%s from %s ",
+                              ownername, projectname, chroot, remote_comps_url)
+            except Exception:
+                self.log.exception("Failed to update comps from %s at location %s",
+                                   remote_comps_url, local_comps_path)
+                result = BackendResultEnum("failure")
+        return result
+
+
+class DeleteMultipleBuilds(Action):
+    def run(self):
+        self.log.debug("Action delete multiple builds.")
+
+        # == EXAMPLE DATA ==
+        # ownername: @copr
+        # projectname: testproject
+        # project_dirnames:
+        #   testproject:pr:10:
+        #     srpm-builds: [00849545, 00849546]
+        #     fedora-30-x86_64: [00849545-example, 00849545-foo]
+        #   [...]
+
+        project_dirnames = self.ext_data["project_dirnames"]
+        build_ids = self.ext_data["build_ids"]
+
+        result = BackendResultEnum("success")
+        for project_dirname, chroot_builddirs in project_dirnames.items():
+            success = self.storage.delete_builds(
+                project_dirname,
+                chroot_builddirs,
+                build_ids,
+            )
+            if not success:
+                result = BackendResultEnum("failure")
+        return result
+
+
+class DeleteBuild(Action):
+    def run(self):
+        self.log.info("Action delete build.")
+
+        # == EXAMPLE DATA ==
+        # ownername: @copr
+        # projectname: TEST1576047114845905086Project10Fork
+        # project_dirname: TEST1576047114845905086Project10Fork:pr:12
+        # chroot_builddirs:
+        #   srpm-builds: [00849545]
+        #   fedora-30-x86_64: [00849545-example]
+
+        valid = "object_id" in self.data
+        keys = {"ownername", "projectname", "project_dirname",
+                "chroot_builddirs", "appstream"}
+        for key in keys:
+            if key not in self.ext_data:
+                valid = False
+                break
+
+        if not valid:
+            self.log.exception("Invalid action data")
+            return BackendResultEnum("failure")
+
+        success = self.storage.delete_builds(
+            self.ext_data["project_dirname"],
+            self.ext_data["chroot_builddirs"],
+            [self.data['object_id']],
+        )
+        return BackendResultEnum("success" if success else "failure")
+
+
+class DeleteChroot(Action):
+    def run(self):
+        self.log.info("Action delete project chroot.")
+        chroot = self.ext_data["chrootname"]
+        self.storage.delete_repository(chroot)
+        return BackendResultEnum("success")
+
+
+class GenerateGpgKey(Action, GPGMixin):
+    def run(self):
+        ext_data = json.loads(self.data["data"])
+        self.log.info("Action generate gpg key: %s", ext_data)
+
+        ownername = ext_data["ownername"]
+        projectname = ext_data["projectname"]
+
+        success = self.generate_gpg_key(ownername, projectname)
+        return BackendResultEnum("success") if success else BackendResultEnum("failure")
+
+
+class RawhideToRelease(Action):
+    def run(self):
+        data = json.loads(self.data["data"])
+        appstream = data["appstream"]
+        try:
+            chrootdir = os.path.join(self.opts.destdir, data["ownername"],
+                                     data["copr_dir"], data["dest_chroot"])
+            if not os.path.exists(chrootdir):
+                self.log.info("Create directory: %s", chrootdir)
+                os.makedirs(chrootdir)
+
+            if isinstance(self.storage, PulpStorage):
+                self.storage.init_project(
+                    data["copr_dir"],
+                    data["dest_chroot"],
+                    reason=CreaterepoReason.new_chroot,
+                )
+
+            for build in data["builds"]:
+                srcdir = os.path.join(self.opts.destdir, data["ownername"],
+                                      data["copr_dir"], data["rawhide_chroot"], build)
+                destdir = os.path.join(chrootdir, build)
+                if os.path.exists(srcdir) and not os.path.exists(destdir):
+                    # We can afford doing hardlinks in this case because the
+                    # RPMs are not modified at all (contrary to "project
+                    # forking", where we have to re-sign the files).
+                    self.log.info("Copying directory (link RPMs): %s -> %s",
+                                  srcdir, destdir)
+                    shutil.copytree(srcdir, destdir,
+                                    copy_function=copy2_but_hardlink_rpms)
+                    with open(os.path.join(destdir, "build.info"), "a") as f:
+                        f.write("\nfrom_chroot={}".format(data["rawhide_chroot"]))
+
+                if isinstance(self.storage, PulpStorage):
+                    build_id = int(build.split("-")[0])
+                    response =self.storage.client.get_content(
+                        [build_id],
+                        data["rawhide_chroot"],
+                        fields=["prn"],
+                    )
+                    rpms = response.json()["results"]
+                    prns = [rpm["prn"] for rpm in rpms]
+                    success = self.storage.create_repository_version(
+                        data["copr_dir"],
+                        data["dest_chroot"],
+                        prns,
+                    )
+                    if not success:
+                        return BackendResultEnum("failure")
+
+            return self._createrepo_repeatedly(chrootdir, appstream)
+
+        # pylint: disable=broad-except
+        except Exception:
+            self.log.exception("Unexpected error when forking from rawhide")
+            return BackendResultEnum("failure")
+
+    def _createrepo_repeatedly(self, chrootdir, appstream):
+        # If this project stores RPMs in Pulp, there is no need to run the
+        # createrepo on backend, because there are no pacakges there. And we
+        # don't need to manually do publish in Pulp either because it does it
+        # implicitly.
+        if isinstance(self.storage, PulpStorage):
+            return BackendResultEnum("success")
+        for i in range(5):
+            if call_copr_repo(chrootdir, appstream=appstream, logger=self.log):
+                return BackendResultEnum("success")
+            self.log.error("Createrepo failed, trying again #%s", i)
+            time.sleep(10)
+        return BackendResultEnum("failure")
+
+
+class RemoveDirs(Action):
+    """
+    Delete outdated CoprDir instances.  Frontend gives us only a list of
+    sub-directories to remove.
+    """
+    def _run_internal(self):
+        copr_dirs = json.loads(self.data["data"])
+        for copr_dir in copr_dirs:
+            assert len(copr_dir.split('/')) == 2
+            assert ':pr:' in copr_dir
+            directory = os.path.join(self.destdir, copr_dir)
+            self.log.info("RemoveDirs: removing %s", directory)
+            try:
+                shutil.rmtree(directory)
+            except FileNotFoundError:
+                self.log.error("RemoveDirs: %s not found", directory)
+
+    def run(self):
+        result = BackendResultEnum("failure")
+        try:
+            self._run_internal()
+            result = BackendResultEnum("success")
+        except OSError:
+            self.log.exception("RemoveDirs OSError")
+        return result
+
+
+class ActionQueueTask(BackendQueueTask):
+    def __init__(self, task):
+        self.task = task
+
+    @property
+    def id(self):
+        return self.task.data["id"]
+
+    @property
+    def frontend_priority(self):
+        return self.task.data.get("priority", 0)
+
+    @property
+    def owner(self):
+        """
+        Owner of the project this action belongs to
+        """
+        return self.task.data["project_owner"]
+
+
+class ActionWorkerManager(WorkerManager):
+    worker_prefix = 'action_worker'
+
+    def start_task(self, worker_id, task):
+        command = [
+            'copr-backend-process-action',
+            '--daemon',
+            '--task-id', repr(task),
+            '--worker-id', worker_id,
+        ]
+        # TODO: mark as started on FE, and let user know in UI
+        self.start_daemon_on_background(command)
+
+    def finish_task(self, worker_id, task_info):
+        task_id = self.get_task_id_from_worker_id(worker_id)
+
+        result = Munch()
+        result.id = int(task_id)
+        result.result = int(task_info['status'])
+
+        try:
+            self.frontend_client.update({"actions": [result]})
+        except FrontendClientException:
+            self.log.exception("can't post to frontend, retrying indefinitely")
+            return False
+        return True

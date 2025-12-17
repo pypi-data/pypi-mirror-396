@@ -1,0 +1,52 @@
+import os
+from logging import Formatter
+from typing import Dict, List
+
+mockchain = "/usr/bin/mockchain"
+# rsync path
+rsync = "/usr/bin/rsync"
+
+DEF_BUILD_TIMEOUT = 3600 * 6
+DEF_REPOS = []
+DEF_CHROOT = None
+DEF_BUILD_USER = "mockbuilder"
+DEF_DESTDIR = os.getcwd()
+DEF_MACROS = {}
+DEF_BUILDROOT_PKGS = ""
+
+
+DEF_CONSECUTIVE_FAILURE_THRESHOLD = 10
+CONSECUTIVE_FAILURE_REDIS_KEY = "copr:sys:consecutive_build_fails"
+PULP_REDIRECT_FILE = "/var/lib/copr/public_html/pulp-redirect.txt"
+
+
+class BuildStatus(object):
+    FAILURE = 0
+    SUCCEEDED = 1
+    RUNNING = 3
+    PENDING = 4
+    SKIPPED = 5
+    STARTING = 6
+
+    @classmethod
+    def string(cls, number):
+        """ convert number to string """
+        for key, val in cls.__dict__.items():
+            if isinstance(val, int) and number == val:
+                return key
+        raise AttributeError("no such status id: {0} ".format(number))
+
+
+LOG_REDIS_FIFO = "copr:backend:log:fifo::"
+
+default_log_format = Formatter(
+    '[%(asctime)s][%(levelname)6s][PID:%(process)d][%(name)10s][%(filename)s:%(funcName)s:%(lineno)d] %(message)s')
+build_log_format = Formatter(
+    '[%(asctime)s][%(levelname)6s][PID:%(process)d] %(message)s')
+script_log_format = Formatter(
+    "[%(asctime)s][%(thread)s][%(levelname)6s]: %(message)s")
+
+# dict of OS versions that are too old or the use sqlite repodata so they need --database
+# option with createrepo. This dict is in format "os_family": <list of versions>
+# e.g. "rhel": ["7", "6", "5"]
+CHROOTS_USING_SQLITE_REPODATA: Dict[str, List[str]] = {}
