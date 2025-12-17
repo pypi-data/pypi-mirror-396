@@ -1,0 +1,83 @@
+[project]
+name = "jumpthegun"
+description = "Make Python CLI tools win the speed race, by cheating!"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.8"
+authors = [
+  { name = "Tal Einat", email = "taleinat@gmail.com" },
+]
+keywords = [
+  "cli",
+]
+classifiers = [
+  "Development Status :: 1 - Planning",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: MacOS :: MacOS X",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Software Development :: Libraries",
+]
+readme = "README.md"
+dynamic = ["version"]
+
+[project.optional-dependencies]
+test = [
+  "pytest>=7,<8",
+]
+
+[project.scripts]
+jumpthegunctl = "jumpthegun.jumpthegunctl:main"
+
+[project.urls]
+Homepage = "https://github.com/taleinat/jumpthegun"
+
+[build-system]
+requires = ["hatchling>=1.8.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/jumpthegun/__version__.py"
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+  "/.github",
+  "/docs",
+]
+[tool.hatch.build.targets.sdist.shared-data]
+"src/jumpthegun.sh" = "bin/jumpthegun"
+
+[tool.hatch.build.targets.wheel]
+only-include = ["src"]
+sources = ["src"]
+[tool.hatch.build.targets.wheel.shared-data]
+"src/jumpthegun.sh" = "bin/jumpthegun"
+
+[tool.black]
+line-length = 88
+target-version = ["py38", "py39", "py310", "py311", "py312", "py313", "py314"]
+include = '\.pyi?$'
+extend-exclude = 'src/jumpthegun/_vendor|tests/testproj'
+
+[tool.isort]
+atomic = true
+profile = "black"
+line_length = 88
+skip_gitignore = true
+extend_skip_glob = ["src/jumpthegun/_vendor", "tests/testproj"]
+known_first_party = ["jumpthegun"]
+
+[tool.mypy]
+mypy_path='./src'
+exclude = [
+  "^tests/"
+]

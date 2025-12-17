@@ -1,0 +1,163 @@
+Index: tests/__test_sleep_and_exit_on_signal/pyproject.toml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/tests/__test_sleep_and_exit_on_signal/pyproject.toml b/tests/__test_sleep_and_exit_on_signal/pyproject.toml
+new file mode 100644
+--- /dev/null	(date 1749224085884)
++++ b/tests/__test_sleep_and_exit_on_signal/pyproject.toml	(date 1749224085884)
+@@ -0,0 +1,14 @@
++[project]
++name = "sleep_and_exit_on_signal"
++version = "0.0.0"
++[project.scripts]
++__test_sleep_and_exit_on_signal = "sleep_and_exit_on_signal.main:main"
++
++[build-system]
++requires = ["hatchling>=1.8.0"]
++build-backend = "hatchling.build"
++
++[tool.hatch.build.targets.sdist]
++only-include = ["sleep_and_exit_on_signal"]
++[tool.hatch.build.targets.wheel]
++only-include = ["sleep_and_exit_on_signal"]
+Index: tests/test_jumpthegun.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import os\nimport re\nimport shutil\nimport signal\nimport subprocess\nimport sys\nimport textwrap\nfrom pathlib import Path\nfrom typing import List, Union\n\nimport pytest\n\nfrom jumpthegun.jumpthegunctl import get_pid_and_socket_file_paths\n\n\ndef get_bin_path(project_path: Path) -> Path:\n    venv_path = project_path.with_name(project_path.name + \"_venv\")\n    bin_dir_name = \"Scripts\" if sys.platform == \"win32\" else \"bin\"\n    return venv_path / bin_dir_name\n\n\n@pytest.fixture\ndef testproj(request, testproj_with_jumpthegun, testproj_without_jumpthegun) -> Path:\n    testproj_name = getattr(request, \"param\", \"testproj_without_jumpthegun\")\n    if testproj_name == \"testproj_with_jumpthegun\":\n        return testproj_with_jumpthegun\n    elif testproj_name == \"testproj_without_jumpthegun\":\n        return testproj_without_jumpthegun\n    else:\n        raise Exception(f\"Invalid project name parameter provided: {testproj_name}\")\n\n\n@pytest.fixture(scope=\"session\")\ndef testproj_with_jumpthegun() -> Path:\n    return _setup_test_project(\"testproj_with_jumpthegun\", with_jumpthegun=True)\n\n\n@pytest.fixture(scope=\"session\")\ndef testproj_without_jumpthegun() -> Path:\n    return _setup_test_project(\"testproj_without_jumpthegun\", with_jumpthegun=False)\n\n\ndef _setup_test_project(name: str, with_jumpthegun: bool) -> Path:\n    root_dir = Path(__file__).parent.parent\n    testenvs_dir = root_dir / \".testenvs\"\n    testenvs_dir.mkdir(exist_ok=True)\n    ver_dir = testenvs_dir / sys.version.split()[0]\n    ver_dir.mkdir(exist_ok=True)\n\n    proj_dir = ver_dir / name\n    if not proj_dir.exists():\n        sources_dir = Path(__file__).parent / \"testproj\"\n        shutil.copytree(sources_dir, proj_dir)\n        venv_path = get_bin_path(proj_dir).parent\n        subprocess.run(\n            [sys.executable, \"-m\", \"venv\", str(venv_path.resolve())],\n            check=True,\n        )\n        bin_path = get_bin_path(proj_dir)\n        if with_jumpthegun:\n            # Need pip >= 21.3 for editable installation without setup.py.\n            # See: https://pip.pypa.io/en/stable/news/#v21-3\n            subprocess.run(\n                [str(bin_path / \"pip\"), \"install\", \"--upgrade\", \"pip >= 21.3\"],\n                cwd=str(root_dir),\n                check=True,\n            )\n        subprocess.run(\n            [str(bin_path / \"pip\"), \"install\", \"black\", \"flake8\", \"isort\"],\n            cwd=str(root_dir),\n            check=True,\n        )\n        if with_jumpthegun:\n            subprocess.run(\n                [str(bin_path / \"pip\"), \"install\", \"-e\", \".\"],\n                cwd=str(root_dir),\n                check=True,\n            )\n        sleep_and_exit_on_signal_script = textwrap.dedent(\n            \"\"\"\\\n            #!/usr/bin/env python\n            import sleep_and_exit_on_signal\n\n            sleep_and_exit_on_signal.main()\n            \"\"\"\n        )\n        script_path = bin_path / \"__test_sleep_and_exit_on_signal\"\n        script_path.write_text(sleep_and_exit_on_signal_script)\n        script_path.chmod(0o755)\n\n        module_file_path = (\n            bin_path.parent\n            / \"lib\"\n            / f\"python{'.'.join(map(str, sys.version_info[:2]))}\"\n            / \"site-packages\"\n            / \"sleep_and_exit_on_signal.py\"\n        )\n        shutil.copyfile(\n            Path(__file__).parent / \"sleep_and_exit_on_signal.py\",\n            module_file_path,\n        )\n\n    return proj_dir\n\n\n@pytest.mark.parametrize(\n    \"testproj\",\n    [\"testproj_with_jumpthegun\", \"testproj_without_jumpthegun\"],\n    ids=[\"testproj_with_jumpthegun\", \"testproj_without_jumpthegun\"],\n    indirect=True,\n)\n@pytest.mark.parametrize(\n    \"tool_cmd\",\n    [\n        [\"black\", \"--check\", \".\"],\n        [\"isort\", \"--check\", \".\"],\n        [\"flake8\"],\n    ],\n    ids=lambda tool_cmd: tool_cmd[0],\n)\ndef test_jumpthegun_start_run_stop(testproj: Path, tool_cmd: List[str]) -> None:\n    without_jumpthegun_proc = run(tool_cmd, proj_path=testproj)\n    assert without_jumpthegun_proc.returncode != 0\n\n    run([\"jumpthegun\", \"start\", tool_cmd[0]], proj_path=testproj, check=True)\n    try:\n        proc1 = run(\n            [\"jumpthegun\", \"run\", \"--no-autorun\", *tool_cmd], proj_path=testproj\n        )\n        proc2 = run([\"jumpthegun\", \"run\", *tool_cmd], proj_path=testproj)\n    finally:\n        run([\"jumpthegun\", \"stop\", tool_cmd[0]], proj_path=testproj, check=True)\n\n    assert proc1.stdout == without_jumpthegun_proc.stdout\n    assert proc1.stderr == without_jumpthegun_proc.stderr\n    assert proc1.returncode == without_jumpthegun_proc.returncode\n\n    assert proc2.stdout == without_jumpthegun_proc.stdout\n    assert proc2.stderr == without_jumpthegun_proc.stderr\n    assert proc2.returncode == without_jumpthegun_proc.returncode\n\n\ndef test_jumpthegun_autorun(testproj: Path) -> None:\n    tool_cmd = [\"flake8\"]\n\n    without_jumpthegun_proc = run(tool_cmd, proj_path=testproj)\n    assert without_jumpthegun_proc.returncode != 0\n\n    try:\n        proc1 = run(\n            [\"jumpthegun\", \"run\", \"--no-autorun\", *tool_cmd], proj_path=testproj\n        )\n        proc2 = run([\"jumpthegun\", \"run\", *tool_cmd], proj_path=testproj)\n        proc3 = run(\n            [\"jumpthegun\", \"run\", \"--no-autorun\", *tool_cmd], proj_path=testproj\n        )\n    finally:\n        run([\"jumpthegun\", \"stop\", tool_cmd[0]], proj_path=testproj, check=True)\n\n    assert proc1.stdout == without_jumpthegun_proc.stdout\n    assert proc1.stderr == without_jumpthegun_proc.stderr\n    assert proc1.returncode == without_jumpthegun_proc.returncode\n\n    assert proc2.stdout == without_jumpthegun_proc.stdout\n    assert proc2.stderr == without_jumpthegun_proc.stderr\n    assert proc2.returncode == without_jumpthegun_proc.returncode\n\n    assert proc3.stdout == without_jumpthegun_proc.stdout\n    assert proc3.stderr == without_jumpthegun_proc.stderr\n    assert proc3.returncode == without_jumpthegun_proc.returncode\n\n\n@pytest.mark.parametrize(\n    \"testproj\",\n    [\"testproj_with_jumpthegun\", \"testproj_without_jumpthegun\"],\n    ids=[\"testproj_with_jumpthegun\", \"testproj_without_jumpthegun\"],\n    indirect=True,\n)\n@pytest.mark.parametrize(\n    \"signum\", [signal.SIGINT, signal.SIGTERM, signal.SIGUSR1, signal.SIGUSR2]\n)\ndef test_signal_forwarding(testproj: Path, signum: int) -> None:\n    subcmd = [\"__test_sleep_and_exit_on_signal\"]\n    run([\"jumpthegun\", \"start\", subcmd[0]], proj_path=testproj, check=True)\n    try:\n        proc = run(\n            [\"jumpthegun\", \"run\", \"--no-autorun\", *subcmd],\n            proj_path=testproj,\n            background=True,\n        )\n        assert proc.stdout is not None\n        assert proc.stdout.readline() == b\"Sleeping...\\n\"\n        assert proc.poll() is None\n        proc.send_signal(signum)\n        proc.wait(5)\n        assert b\"Received signal\" in proc.stdout.read()\n    finally:\n        try:\n            run([\"jumpthegun\", \"stop\", subcmd[0]], proj_path=testproj, check=True)\n        except subprocess.CalledProcessError as stop_proc:\n            print(\"`jumpthegun stop` failed!\")\n            print(\"stop proc stdout:\", stop_proc.stdout.decode())\n            print(\"stop proc stderr:\", stop_proc.stderr.decode())\n            pid_file, _ = get_pid_and_socket_file_paths(subcmd[0])\n            out_file = pid_file.with_suffix(\".out\")\n            print(out_file.read_text())\n            raise\n\n\ndef run(\n    cmd: List[str], proj_path: Path, background: bool = False, check: bool = False\n) -> Union[subprocess.CompletedProcess, subprocess.Popen]:\n    if background and check:\n        raise ValueError(\"Must not set both background=True and check=True.\")\n\n    pass_through_env_vars = {\n        key: value\n        for key, value in os.environ.items()\n        if re.fullmatch(r\"HOME|TMPDIR|USER|XDG_.*\", key)\n    }\n\n    bin_path = get_bin_path(proj_path).resolve()\n    proc_kwargs = dict(\n        cwd=str(proj_path),\n        env={\n            **pass_through_env_vars,\n            \"PATH\": f\"{str(bin_path)}:{os.getenv('PATH', '')}\".strip(\":\"),\n            \"VIRTUAL_ENV\": str(bin_path.parent),\n        },\n        stdin=subprocess.DEVNULL,\n        stdout=subprocess.PIPE,\n        stderr=subprocess.PIPE,\n    )\n\n    if background:\n        return subprocess.Popen(cmd, **proc_kwargs)\n    else:\n        try:\n            return subprocess.run(cmd, check=check, **proc_kwargs)\n        except subprocess.CalledProcessError as proc_exc:\n            if proc_exc.stdout:\n                print(\"Stdout:\")\n                print(proc_exc.stdout.decode())\n            if proc_exc.stdout:\n                print(\"Stderr:\")\n                print(proc_exc.stderr.decode())\n            raise\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/tests/test_jumpthegun.py b/tests/test_jumpthegun.py
+--- a/tests/test_jumpthegun.py	(revision e16ae5c207450f45cbef0045123ba2168f23644f)
++++ b/tests/test_jumpthegun.py	(date 1749284703287)
+@@ -4,9 +4,9 @@
+ import signal
+ import subprocess
+ import sys
+-import textwrap
++import tempfile
+ from pathlib import Path
+-from typing import List, Union
++from typing import Generator, List, Union
+ 
+ import pytest
+ 
+@@ -19,6 +19,13 @@
+     return venv_path / bin_dir_name
+ 
+ 
++@pytest.fixture(scope="session", autouse=True)
++def jumpthegun_cache_home() -> Generator[Path, None, None]:
++    with tempfile.TemporaryDirectory(prefix="jumpthegun_cache_home") as cache_dir:
++        os.environ["JUMPTHEGUN_CACHE_HOME"] = cache_dir
++        yield Path(cache_dir)
++
++
+ @pytest.fixture
+ def testproj(request, testproj_with_jumpthegun, testproj_without_jumpthegun) -> Path:
+     testproj_name = getattr(request, "param", "testproj_without_jumpthegun")
+@@ -76,28 +83,36 @@
+                 cwd=str(root_dir),
+                 check=True,
+             )
+-        sleep_and_exit_on_signal_script = textwrap.dedent(
+-            """\
+-            #!/usr/bin/env python
+-            import sleep_and_exit_on_signal
+-
+-            sleep_and_exit_on_signal.main()
+-            """
+-        )
+-        script_path = bin_path / "__test_sleep_and_exit_on_signal"
+-        script_path.write_text(sleep_and_exit_on_signal_script)
+-        script_path.chmod(0o755)
+-
+-        module_file_path = (
+-            bin_path.parent
+-            / "lib"
+-            / f"python{'.'.join(map(str, sys.version_info[:2]))}"
+-            / "site-packages"
+-            / "sleep_and_exit_on_signal.py"
+-        )
+-        shutil.copyfile(
+-            Path(__file__).parent / "sleep_and_exit_on_signal.py",
+-            module_file_path,
++        # sleep_and_exit_on_signal_script = textwrap.dedent(
++        #     f"""#!{str(bin_path / "python")}
++        #     # -*- coding: utf-8 -*-
++        #     import re
++        #     import sys
++        #     import sleep_and_exit_on_signal
++        #     if __name__ == '__main__':
++        #         sys.argv[0] = re.sub(r'(-script\.pyw|\.exe)?$', '', sys.argv[0])
++        #         sys.exit(sleep_and_exit_on_signal.main())
++        #     """
++        # )
++        # script_path = bin_path / "__test_sleep_and_exit_on_signal"
++        # script_path.write_text(sleep_and_exit_on_signal_script)
++        # script_path.chmod(0o755)
++        #
++        # module_file_path = (
++        #     bin_path.parent
++        #     / "lib"
++        #     / f"python{'.'.join(map(str, sys.version_info[:2]))}"
++        #     / "site-packages"
++        #     / "sleep_and_exit_on_signal.py"
++        # )
++        # shutil.copyfile(
++        #     Path(__file__).parent / "sleep_and_exit_on_signal.py",
++        #     module_file_path,
++        # )
++        subprocess.run(
++            [str(bin_path / "pip"), "install", "."],
++            cwd=str(Path(__file__).parent / "__test_sleep_and_exit_on_signal"),
++            check=True,
+         )
+ 
+     return proj_dir
+@@ -216,15 +231,17 @@
+     pass_through_env_vars = {
+         key: value
+         for key, value in os.environ.items()
+-        if re.fullmatch(r"HOME|TMPDIR|USER|XDG_.*", key)
++        if re.fullmatch(r"HOME|TMPDIR|USER|XDG_.*|JUMPTHEGUN_CACHE_HOME", key)
+     }
+ 
+     bin_path = get_bin_path(proj_path).resolve()
++    path_entries = os.getenv("PATH", os.defpath).split(os.pathsep)
++    path_entries.insert(0, str(bin_path))
+     proc_kwargs = dict(
+         cwd=str(proj_path),
+         env={
+             **pass_through_env_vars,
+-            "PATH": f"{str(bin_path)}:{os.getenv('PATH', '')}".strip(":"),
++            "PATH": os.pathsep.join(path_entries),
+             "VIRTUAL_ENV": str(bin_path.parent),
+         },
+         stdin=subprocess.DEVNULL,
+Index: src/jumpthegun.sh
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>#!/bin/bash\nset -eEu -o pipefail\n\nfunction usage() {\n  echo \"Usage: $0 command tool_name ...\"\n  echo\n  echo \"Available commands:\"\n  echo\n  echo \"run tool_name [OPTIONS] [arg ...]    Run a CLI tool.\"\n  echo \"start tool_name                      Start a daemon for a CLI tool.\"\n  echo \"stop tool_name                       Stop a daemon for a CLI tool.\"\n  echo \"restart tool_name                    Restart a daemon for a CLI tool.\"\n  echo\n}\n\nfunction err_exit() {\n  err_msg=\"$1\"\n  echo \"$err_msg\" >&2\n  exit 1\n}\n\nfunction get_service_runtime_dir() {\n  runtime_dir=\"${XDG_RUNTIME_DIR:-}\"\n  if [ -n \"$runtime_dir\" ]; then\n    echo -n \"$runtime_dir/jumpthegun\"\n  else\n    temp_dir=\"${TMPDIR:-/tmp}\"\n    shopt -s nullglob\n    service_runtime_dirs=(\"$temp_dir/jumpthegun-$USER\"-??????)\n    shopt -u nullglob\n    if [[ ${#service_runtime_dirs[@]} -eq 1 ]]; then\n      echo -n \"${service_runtime_dirs[0]}\"\n    elif [[ ${#service_runtime_dirs[@]} -gt 1 ]]; then\n      err_exit \"Error: Multiple service runtime dirs found.\"\n    fi\n  fi\n}\n\nfunction hash_str() {\n  if [[ $OSTYPE == \"darwin\"* ]]; then\n    echo -n \"$1\" | shasum -a 256 - | head -c 8\n  else\n    echo -n \"$1\" | sha256sum - | head -c 8\n  fi\n}\n\nautorun=1\ncase \"${1:-}\" in\n-h|--help)\n  usage && exit 0 ;;\nstart|stop|restart|version|--version)\n  [[ \"$2\" =~ -h|--help ]] && usage && exit 0\n  tool_name=\"$2\"\n\n  # Find the tool's Python executable and check if it has JumpTheGun installed.\n  tool_path=\"$(command -v -- \"$tool_name\" 2>/dev/null)\" || err_exit \"Command not found: $tool_name\"\n  shebang=\"$(head -n 1 -- \"$tool_path\" 2>/dev/null)\"\n  [[ \"${shebang:0:2}\" == \"#!\" ]] || err_exit \"No shebang (#!) found in script: $tool_path\"\n  if ! python_executable=\"$(${shebang#\\#!} -c 'import sys; print(sys.executable); import jumpthegun' 2>/dev/null)\"; then\n    # Find JumpTheGun's code.\n    SCRIPT_DIR=$( cd -- \"$( dirname -- \"${BASH_SOURCE[0]}\" )\" &> /dev/null && pwd )\n    jumpthegunctl_path=\"$SCRIPT_DIR/jumpthegunctl\"\n    jumpthegunctl_shebang=\"$(head -n 1 -- \"$jumpthegunctl_path\")\"\n    jumpthegunctl_python_executable=\"$(${jumpthegunctl_shebang#\\#!} -c 'import sys; print(sys.executable)')\"\n    jumpthegun_lib_dir=\"$(\"$jumpthegunctl_python_executable\" -c 'import jumpthegun, os; print(os.path.dirname(jumpthegun.__file__))')\"\n\n    # Make a copy of this version of JumpTheGun's code in a cache directory.\n    dir_name=\"lib-$(hash_str \"$python_executable|$(head -n 1 \"$jumpthegun_lib_dir/__version__.py\")\")\"\n    cache_home=${XDG_CACHE_HOME:-\"$HOME/.cache\"}\n    cache_dir=\"$cache_home/jumpthegun/$dir_name\"\n    if [ ! -d \"$cache_dir\" ]; then\n      mkdir -p \"$cache_dir\"\n      cp -r -- \"$jumpthegun_lib_dir\" \"$cache_dir/jumpthegun\"\n      find \"$cache_dir/jumpthegun\" -type f -not -name '*.py' -exec rm {} +\n    fi\n\n    # Add the cache directory to PYTHONPATH.\n    if [[ -n \"${PYTHONPATH:-}\" ]]; then\n      export PYTHONPATH=\"$cache_dir:$PYTHONPATH\"\n    else\n      export PYTHONPATH=\"$cache_dir\"\n    fi\n  fi\n\n  # Run JumpTheGun.\n  set -f  # Disable filename expansion (globbing).\n  exec $python_executable -c \"from jumpthegun.jumpthegunctl import main; main()\" \"$@\"\n  ;;\nrun)\n  shift\n  [[ $# -eq 0 ]] && usage && exit 1\n  if [[ \"$1\" == \"--no-autorun\" ]]; then\n    autorun=0\n    shift\n  fi\n  [[ \"$1\" =~ -h|--help ]] && usage && exit 0\n  tool_name=\"$1\"\n  shift\n  ;;\n*)\n  usage && exit 1 ;;\nesac\n\n# Find service runtime directory.\nservice_runtime_dir=\"$(get_service_runtime_dir)\"\nif [[ -z \"$service_runtime_dir\" ]]; then\n  [[ autorun -eq 1 ]] && \"${BASH_SOURCE[0]}\" start \"$tool_name\" &>/dev/null &\n  exec \"$tool_name\" \"$@\"\nfi\n\n# Calculate the isolated path for pid and socket files.\nisolated_root=\"$(dirname \"$(command -v -- \"$tool_name\")\")\"\nisolated_root_hash=\"$(hash_str \"$isolated_root\")\"\nisolated_path=\"$service_runtime_dir/$isolated_root_hash\"\n\n# Check that socket file exists.\nif [[ ! -f \"$isolated_path/$tool_name.sock\" ]]; then\n  [[ autorun -eq 1 ]] && \"${BASH_SOURCE[0]}\" start \"$tool_name\" &>/dev/null &\n  exec \"$tool_name\" \"$@\"\nfi\n\n# Open Unix domain socket connection\nexec 3<>\"$isolated_path/$tool_name.sock\"\n\n# Close socket connection upon exit.\nfunction close_connection {\n  exec 3<&-\n}\ntrap close_connection EXIT\n\n\n# Read companion process PID.\nread -r -u 3 pid\n\n# Forward some signals.\nfunction forward_signal() {\n  kill -s \"$1\" \"$pid\"\n}\nfor sig in INT TERM USR1 USR2; do\n  trap \"forward_signal $sig\" \"$sig\"\ndone\n\n# Send argv and cwd.\noLang=\"${LANG-}\" oLcAll=\"${LC_ALL-}\"\nLANG=C LC_ALL=C\n# Add an x in front to avoid special-casing having zero arguments.\nargv_str=$(printf ' %q' x \"$@\")\n# Remove the leading \" x \".\nargv_str=\"${argv_str:3}\"\nprintf '%d\\n%s%d\\n%s' \"${#argv_str}\" \"$argv_str\" \"${#PWD}\" \"$PWD\" >&3\nLANG=\"$oLang\" LC_ALL=\"$oLcAll\"\n\n# Send env vars.\nx=\"$(mktemp)\"\nenv -0 > \"$x\" 2>/dev/null\nif [[ $OSTYPE == \"darwin\"* ]]; then\n  stat -f %z \"$x\" >&3\nelse\n  stat -c %s \"$x\" >&3\nfi\ncat \"$x\" >&3\nrm \"$x\"\n\n\n# Read stdout and stderr from connection, line by line, and echo them.\nIFS=\nwhile read -r -u 3 line; do\n  case \"$line\" in\n    1*)\n      # stdout\n      n_newlines=\"${line:1}\"\n      for (( i=1; i <= n_newlines; i++ )); do\n        read -r -u 3 line\n        echo \"$line\"\n      done\n      read -r -u 3 line\n      echo -n \"$line\"\n      ;;\n    2*)\n      # stderr\n      n_newlines=\"${line:1}\"\n      for (( i=1; i <= n_newlines; i++ )); do\n        read -r -u 3 line\n        echo \"$line\" >&2\n      done\n      read -r -u 3 line\n      echo -n \"$line\" >&2\n      ;;\n    3*)\n      # stdin\n      read -r line2\n      echo \"$line2\" >&3\n      ;;\n    rc=*)\n      # exit\n      rc=\"${line:3}\"\n      exit \"$rc\"\n      ;;\n    *)\n      echo \"Error: Unexpected output from jumpthegun daemon.\" >&2\n      exit 1\n      ;;\n  esac\ndone\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/jumpthegun.sh b/src/jumpthegun.sh
+--- a/src/jumpthegun.sh	(revision e16ae5c207450f45cbef0045123ba2168f23644f)
++++ b/src/jumpthegun.sh	(date 1749238992588)
+@@ -66,7 +66,7 @@
+ 
+     # Make a copy of this version of JumpTheGun's code in a cache directory.
+     dir_name="lib-$(hash_str "$python_executable|$(head -n 1 "$jumpthegun_lib_dir/__version__.py")")"
+-    cache_home=${XDG_CACHE_HOME:-"$HOME/.cache"}
++    cache_home=${JUMPTHEGUN_CACHE_HOME:-${XDG_CACHE_HOME:-"$HOME/.cache"}}
+     cache_dir="$cache_home/jumpthegun/$dir_name"
+     if [ ! -d "$cache_dir" ]; then
+       mkdir -p "$cache_dir"
+diff --git a/tests/sleep_and_exit_on_signal.py b/tests/__test_sleep_and_exit_on_signal/sleep_and_exit_on_signal/main.py
+rename from tests/sleep_and_exit_on_signal.py
+rename to tests/__test_sleep_and_exit_on_signal/sleep_and_exit_on_signal/main.py
+diff --git a/tests/__test_sleep_and_exit_on_signal/sleep_and_exit_on_signal/__init__.py b/tests/__test_sleep_and_exit_on_signal/sleep_and_exit_on_signal/__init__.py
+new file mode 100644

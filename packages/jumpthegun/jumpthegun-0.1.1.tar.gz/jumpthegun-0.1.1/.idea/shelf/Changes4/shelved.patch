@@ -1,0 +1,61 @@
+Index: src/jumpthegun.sh
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>#!/bin/bash\nset -eEu -o pipefail\n\nfunction usage() {\n  echo \"Usage: $0 command tool_name ...\"\n  echo\n  echo \"Available commands:\"\n  echo\n  echo \"run tool_name [OPTIONS] [arg ...]    Run a CLI tool.\"\n  echo \"start tool_name                      Start a daemon for a CLI tool.\"\n  echo \"stop tool_name                       Stop a daemon for a CLI tool.\"\n  echo \"restart tool_name                    Restart a daemon for a CLI tool.\"\n  echo\n}\n\nfunction err_exit() {\n  err_msg=\"$1\"\n  echo \"$err_msg\" >&2\n  exit 1\n}\n\nfunction get_service_runtime_dir() {\n  runtime_dir=\"${XDG_RUNTIME_DIR:-}\"\n  if [ -n \"$runtime_dir\" ]; then\n    echo -n \"$runtime_dir/jumpthegun\"\n  else\n    temp_dir=\"${TMPDIR:-/tmp}\"\n    shopt -s nullglob\n    service_runtime_dirs=(\"$temp_dir/jumpthegun-$USER\"-??????)\n    shopt -u nullglob\n    if [[ ${#service_runtime_dirs[@]} -eq 1 ]]; then\n      echo -n \"${service_runtime_dirs[0]}\"\n    elif [[ ${#service_runtime_dirs[@]} -gt 1 ]]; then\n      err_exit \"Error: Multiple service runtime dirs found.\"\n    fi\n  fi\n}\n\nfunction hash_str() {\n  if [[ $OSTYPE == \"darwin\"* ]]; then\n    echo -n \"$1\" | shasum -a 256 - | head -c 8\n  else\n    echo -n \"$1\" | sha256sum - | head -c 8\n  fi\n}\n\nautorun=1\ncase \"${1:-}\" in\n-h|--help)\n  usage && exit 0 ;;\nstart|stop|restart|version|--version)\n  [[ \"$2\" =~ -h|--help ]] && usage && exit 0\n  tool_name=\"$2\"\n\n  # Find the tool's Python executable and check if it has JumpTheGun installed.\n  tool_path=\"$(command -v -- \"$tool_name\")\"\n  shebang=\"$(head -n 1 -- \"$tool_path\")\"\n  if ! python_executable=\"$(${shebang#\\#!} -c 'import sys; print(sys.executable); import jumpthegun' 2>/dev/null)\"; then\n    # Find JumpTheGun's code.\n    SCRIPT_DIR=$( cd -- \"$( dirname -- \"${BASH_SOURCE[0]}\" )\" &> /dev/null && pwd )\n    jumpthegunctl_path=\"$SCRIPT_DIR/jumpthegunctl\"\n    jumpthegunctl_shebang=\"$(head -n 1 -- \"$jumpthegunctl_path\")\"\n    jumpthegunctl_python_executable=\"$(${jumpthegunctl_shebang#\\#!} -c 'import sys; print(sys.executable)')\"\n    jumpthegun_lib_dir=\"$(\"$jumpthegunctl_python_executable\" -c 'import jumpthegun, os; print(os.path.dirname(jumpthegun.__file__))')\"\n\n    # Make a copy of this version of JumpTheGun's code in a cache directory.\n    dir_name=\"lib-$(hash_str \"$python_executable|$(head -n 1 \"$jumpthegun_lib_dir/__version__.py\")\")\"\n    cache_home=${XDG_CACHE_HOME:-\"$HOME/.cache\"}\n    cache_dir=\"$cache_home/jumpthegun/$dir_name\"\n    if [ ! -d \"$cache_dir\" ]; then\n      mkdir -p \"$cache_dir\"\n      cp -r -- \"$jumpthegun_lib_dir\" \"$cache_dir/jumpthegun\"\n      find \"$cache_dir/jumpthegun\" -type f -not -name '*.py' -exec rm {} +\n    fi\n\n    # Add the cache directory to PYTHONPATH.\n    if [[ -n \"${PYTHONPATH:-}\" ]]; then\n      export PYTHONPATH=\"$cache_dir:$PYTHONPATH\"\n    else\n      export PYTHONPATH=\"$cache_dir\"\n    fi\n  fi\n\n  # Run JumpTheGun.\n  exec \"$python_executable\" -c \"from jumpthegun.jumpthegunctl import main; main()\" \"$@\"\n  ;;\nrun)\n  shift\n  [[ $# -eq 0 ]] && usage && exit 1\n  if [[ \"$1\" == \"--no-autorun\" ]]; then\n    autorun=0\n    shift\n  fi\n  [[ \"$1\" =~ -h|--help ]] && usage && exit 0\n  tool_name=\"$1\"\n  shift\n  ;;\n*)\n  usage && exit 1 ;;\nesac\n\n# Find service runtime directory.\nservice_runtime_dir=\"$(get_service_runtime_dir)\"\nif [[ -z \"$service_runtime_dir\" ]]; then\n  [[ autorun -eq 1 ]] && \"${BASH_SOURCE[0]}\" start \"$tool_name\" &>/dev/null &\n  exec \"$tool_name\" \"$@\"\nfi\n\n# Calculate the isolated path for pid and port files.\nisolated_root=\"$(dirname \"$(command -v -- \"$tool_name\")\")\"\nisolated_root_hash=\"$(hash_str \"$isolated_root\")\"\nisolated_path=\"$service_runtime_dir/$isolated_root_hash\"\n\n# Check that port file exists.\nif [[ ! -f \"$isolated_path/$tool_name.port\" ]]; then\n  [[ autorun -eq 1 ]] && \"${BASH_SOURCE[0]}\" start \"$tool_name\" &>/dev/null &\n  exec \"$tool_name\" \"$@\"\nfi\n\n# Read port from port file.\nIFS= read -r port <\"$isolated_path/$tool_name.port\"\n\n# Open TCP connection.\nexec 3<>\"/dev/tcp/127.0.0.1/$port\"\n\n# Close TCP connection upon exit.\nfunction close_connection {\n  exec 3<&-\n}\ntrap close_connection EXIT\n\n\n# Read companion process PID.\nread -r -u 3 pid\n\n# Forward some signals.\nfunction forward_signal() {\n  kill -s \"$1\" \"$pid\"\n}\nfor sig in INT TERM USR1 USR2; do\n  trap \"forward_signal $sig\" \"$sig\"\ndone\n\n# Send strings with bytes len prepended.\nfunction send_with_bytes_len_prefix() {\n  to_send_str=\"$*\"\n  to_send_bytes_len=\"$(echo -n \"$to_send_str\" | wc -c | cut -f1)\"\n  printf '%d\\n%s' \"$to_send_bytes_len\" \"$to_send_str\" >&3\n}\n\n\n# Send cmdline arguments.\nsend_with_bytes_len_prefix \"$@\"\n\n# Send cwd.\nsend_with_bytes_len_prefix \"$PWD\"\n\n# Send env vars.\nx=\"$(mktemp)\"\nenv -0 > \"$x\" 2>/dev/null\ndu -b \"$x\" | cut -f 1 >&3\ncat \"$x\" >&3\nrm \"$x\"\n\n\n# Read stdout and stderr from connection, line by line, and echo them.\nIFS=\nwhile read -r -u 3 line; do\n  case \"$line\" in\n    1*)\n      # stdout\n      n_newlines=\"${line:1}\"\n      for (( i=1; i <= n_newlines; i++ )); do\n        read -r -u 3 line\n        echo \"$line\"\n      done\n      read -r -u 3 line\n      echo -n \"$line\"\n      ;;\n    2*)\n      # stderr\n      n_newlines=\"${line:1}\"\n      for (( i=1; i <= n_newlines; i++ )); do\n        read -r -u 3 line\n        echo \"$line\" >&2\n      done\n      read -r -u 3 line\n      echo -n \"$line\" >&2\n      ;;\n    3*)\n      # stdin\n      read -r line2\n      echo \"$line2\" >&3\n      ;;\n    rc=*)\n      # exit\n      rc=\"${line:3}\"\n      exit \"$rc\"\n      ;;\n    *)\n      echo \"Error: Unexpected output from jumpthegun daemon.\" >&2\n      exit 1\n      ;;\n  esac\ndone\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/jumpthegun.sh b/src/jumpthegun.sh
+--- a/src/jumpthegun.sh	(revision b8be4b0625f071494604c7e3d84a7e08ed8b2408)
++++ b/src/jumpthegun.sh	(date 1683876294337)
+@@ -144,23 +144,39 @@
+ # Send strings with bytes len prepended.
+ function send_with_bytes_len_prefix() {
+   to_send_str="$*"
+-  to_send_bytes_len="$(echo -n "$to_send_str" | wc -c | cut -f1)"
++  #to_send_bytes_len="$(echo -n "$to_send_str" | wc -c | cut -f1)"
++  oLang="${LANG-}" oLcAll="${LC_ALL-}"
++  LANG=C LC_ALL=C
++  to_send_bytes_len=${#to_send_str}
++  LANG="$oLang" LC_ALL="$oLcAll"
+   printf '%d\n%s' "$to_send_bytes_len" "$to_send_str" >&3
+ }
+ 
++# Get env vars as a single string separate by null bytes.
++env_vars_str=$(env -0)
+ 
+-# Send cmdline arguments.
+-send_with_bytes_len_prefix "$@"
++# Send cmdline arguments and cwd.
++oLang="${LANG-}" oLcAll="${LC_ALL-}"
++LANG=C LC_ALL=C
++printf '%d\n%s%d\n%s%d\n%s' "${#*}" "$*" "${#PWD}" "$PWD" "${#env_vars_str}" "$env_vars_str" >&3
++LANG="$oLang" LC_ALL="$oLcAll"
+ 
+-# Send cwd.
+-send_with_bytes_len_prefix "$PWD"
++## Send cmdline arguments.
++#send_with_bytes_len_prefix "$@"
++#
++## Send cwd.
++#send_with_bytes_len_prefix "$PWD"
+ 
+-# Send env vars.
+-x="$(mktemp)"
+-env -0 > "$x" 2>/dev/null
+-du -b "$x" | cut -f 1 >&3
+-cat "$x" >&3
+-rm "$x"
++## Send env vars.
++#x="$(mktemp)"
++#env -0 > "$x" 2>/dev/null
++#if [[ $OSTYPE == "darwin"* ]]; then
++#  stat -f %z "$x" >&3
++#else
++#  stat -c %s "$x" >&3
++#fi
++#cat "$x" >&3
++#rm "$x"
+ 
+ 
+ # Read stdout and stderr from connection, line by line, and echo them.

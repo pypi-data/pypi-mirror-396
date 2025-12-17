@@ -1,0 +1,178 @@
+Index: src/jumpthegun/start.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/jumpthegun/start.py b/src/jumpthegun/start.py
+new file mode 100644
+--- /dev/null	(date 1682078105427)
++++ b/src/jumpthegun/start.py	(date 1682078105427)
+@@ -0,0 +1,168 @@
++import os
++import socket
++import sys
++
++__version__ = "0.0.4"
++
++
++def start(tool_name: str, daemonize: bool = True) -> None:
++    config = read_config()
++
++    # Import the tool and get its entrypoint function.
++    #
++    # Override sys.stdout and sys.stderr while loading the tool runner,
++    # so that any references to them kept during module imports (e.g for
++    # setting up logging) already reference the overrides.
++    output_redirector = SocketOutputRedirector()
++    with output_redirector.override_outputs_for_imports():
++        tool_entrypoint = get_tool_entrypoint(tool_name)
++        tool_runner = tool_entrypoint.load()
++
++    pid_file_path, port_file_path = get_pid_and_port_file_paths(tool_name)
++
++    if pid_file_path.exists():
++        file_pid = int(pid_file_path.read_text())
++        if pid_exists(file_pid):
++            raise DaemonAlreadyExistsError(tool_name=tool_name)
++
++    if daemonize:
++        # Do the double-fork dance to daemonize.
++        # See:
++        # * https://stackoverflow.com/a/5386753,
++        # * https://www.win.tue.nl/~aeb/linux/lk/lk-10.html
++
++        pid = os.fork()
++        if pid > 0:
++            print(f'"jumpthegun {tool_name}" daemon process starting...')
++            return
++
++        os.setsid()
++
++        pid = os.fork()
++        if pid > 0:
++            sys.exit(0)
++
++        # redirect standard file descriptors
++        sys.__stdout__.flush()
++        sys.__stderr__.flush()
++        stdin = open("/dev/null", "rb")
++        stdout = open("/dev/null", "ab")
++        stderr = open("/dev/null", "ab")
++        os.dup2(stdin.fileno(), sys.__stdin__.fileno())
++        os.dup2(stdout.fileno(), sys.__stdout__.fileno())
++        os.dup2(stderr.fileno(), sys.__stderr__.fileno())
++
++    # Write pid file.
++    pid = os.getpid()
++    pid_file_path.write_bytes(b"%d\n" % pid)
++
++    # Open socket.
++    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
++    sock.bind(("127.0.0.1", 0))
++
++    # Write port file.
++    host, port = sock.getsockname()
++    port_file_path.write_bytes(b"%d\n" % port)
++
++    # Listen for connections.
++    sock.listen()
++    print(f"Listening on {host}:{port} (pid={pid}) ...")
++    sock.settimeout(config.idle_timeout_seconds)
++    subproc_pids = set()
++    try:
++        while True:
++            conn, address = sock.accept()
++            print(f"Got connection from: {address}")
++            newpid = os.fork()
++            if newpid == 0:
++                break
++
++            # Avoid "zombie" processes: Reap completed sub-processes.
++            done_subproc_pids = {
++                x for x in subproc_pids if os.waitpid(x, os.WNOHANG)[0] != 0
++            }
++            subproc_pids -= done_subproc_pids
++            subproc_pids.add(newpid)
++    except BaseException as exc:
++        # Server is exiting: Clean up as needed.
++        sock.close()
++        if pid_file_path.exists():
++            file_pid = int(pid_file_path.read_text())
++            if file_pid == pid:
++                pid_file_path.unlink(missing_ok=True)
++                port_file_path.unlink(missing_ok=True)
++        if isinstance(exc, socket.timeout):
++            print(
++                f"Exiting after receiving no connections for {config.idle_timeout_seconds} seconds."
++            )
++            return
++        raise
++
++    # Send pid.
++    conn.sendall(b"%d\n" % os.getpid())
++
++    rfile = conn.makefile("rb", 0)
++    sys.argv[1:] = shlex.split(rfile.readline().strip().decode())
++    sys.argv[0] = tool_name
++
++    sys.stdin.close()
++    sys.stdin = io.TextIOWrapper(cast(BinaryIO, StdinWrapper(conn)))
++    output_redirector.set_socket(conn)
++
++    # start_time = time.monotonic()
++    try:
++        retval = tool_runner()
++    except BaseException as exc:
++        # end_time = time.monotonic()
++        # print(f"Time: {end_time - start_time}", file=sys.__stdout__)
++        # print("EXCEPTION", str(exc), file=sys.__stderr__)
++        if isinstance(exc, SystemExit):
++            exit_code = exc.code
++        else:
++            traceback.print_exc()
++            exit_code = 1
++        # print(f"{exit_code=}", file=sys.__stdout__)
++        if isinstance(exit_code, bool):
++            exit_code = int(exit_code)
++        elif not isinstance(exit_code, int):
++            exit_code = 1
++    else:
++        if isinstance(retval, int):
++            exit_code = retval
++        else:
++            exit_code = 0
++    finally:
++        conn.sendall(b"rc=%d\n" % exit_code)
++        # print(f"Goodbye! rc={exit_code}", file=sys.__stdout__)
++
++        sys.stdin.close()
++        sys.stdout.close()
++        sys.stderr.close()
++        conn.shutdown(socket.SHUT_WR)
++        sys.exit(0)
++
++
++def print_usage() -> None:
++    """Print a message about how to run start."""
++    print(f"Usage: {sys.argv[0]} tool_name")
++
++
++def main() -> None:
++    args = sys.argv[1:]
++
++    if any(arg == "-h" or arg == "--help" for arg in args):
++        print_usage()
++        sys.exit(0)
++    if len(args) == 1:
++        (tool_name,) = args
++        if tool_name == "version" or tool_name == "--version":
++            print(f"jumpthegun v{__version__}")
++            sys.exit(0)
++        start(tool_name)
++
++    print_usage()
++    sys.exit(1)
++
++
++if __name__ == "__main__":
++    main()
