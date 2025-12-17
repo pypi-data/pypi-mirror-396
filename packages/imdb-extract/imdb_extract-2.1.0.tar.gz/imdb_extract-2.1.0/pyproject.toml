@@ -1,0 +1,106 @@
+[tool.poetry]
+name = "imdb_extract"
+version = "2.1.0"
+description = "Download IMDB series information."
+authors = ["Berthold Höllmann <berthold@xn--hllmanns-n4a.de>"]
+readme = 'README.rst'
+license = "BSD"
+repository = "https://github.com/berhoel/IMDBExtract"
+homepage = "https://python.xn--hllmanns-n4a.de/IMDBExtract/"
+documentation = "https://python.xn--hllmanns-n4a.de/IMDBExtract/"
+
+packages = [ { include = "berhoel" }, ]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+requests = "^2.23.0"
+lxml = "^4.5.0"
+BeautifulSoup4 = "^4.8.2"
+selenium = "^4.7.2"
+webdriver-manager = "^3.8.3"
+
+[tool.poetry.group.dev.dependencies]
+black = "*"
+flake8 = "^4.0.0"
+pdbpp = "*"
+tox = "*"
+pylint = "*"
+pylint-plugin-utils = "*"
+pytest = "*"
+pytest-benchmark = "*"
+pytest-black = "*"
+pytest-cov = "*"
+pytest-env = "*"
+pytest-flake8 = "*"
+pytest-isort = "*"
+pytest-mock = "*"
+pytest-runner = "*"
+pytest-sugar = "*"
+xdoctest = "*"
+rope = "*"
+berhoel-sphinx-settings = { git = "https://gitlab.com/berhoel/python/berhoel-sphinx-settings.git", rev = "main" }
+sphinx-argparse-cli = "^1.10.0"
+bhoelhelper = "^1.3.0"
+tomli = "^2.0.1"
+
+[tool.flit.metadata]
+classifiers=  [
+              'Development Status :: 4 - Beta',
+              'License :: OSI Approved :: BSD License',
+              'Programming Language :: Python',
+              'Programming Language :: Python :: Implementation :: CPython',
+              'Operating System :: OS Independent'
+              ]
+
+[tool.poetry.scripts]
+imdb_extract = 'berhoel.imdb_extract:main'
+
+[tool.berhoel.helper.set_version]
+version_files = ["berhoel/imdb_extract/_version.py"]
+
+[tool.isort]
+multi_line_output = 3
+dedup_headings = true
+include_trailing_comma = true
+indent = '    '
+float_to_top = true
+namespace_packages = ['berhoel']
+force_grid_wrap = 0
+balanced_wrapping = true
+use_parentheses = true
+length_sort = true
+line_length = 88
+combine_as_imports = true
+sections = [
+  'FUTURE',
+  'STDLIB',
+  'THIRDPARTY',
+  'FIRSTPARTY',
+  'LOCALFOLDER',
+]
+import_heading_stdlib = 'Standard library imports.'
+import_heading_thirdparty = 'Third party library imports.'
+import_heading_firstparty = 'First party library imports.'
+import_heading_localfolder = 'Local library imports.'
+default_section = "THIRDPARTY"
+known_first_party = ['berhoel']
+known_third_party = ["pytest"]
+force_to_top = ['setuptools']
+forced_separate = ['__pyver', '__pyplat']
+
+[tool.pytest.ini_options]
+junit_family = "xunit2"
+doctest_encoding = "UTF-8"
+minversion = "7.0"
+addopts = "--doctest-modules --ff --pdb -s --cov=berhoel --cov-report=term --cov-report=html --cov-branch --isort --black --flake8"
+testpaths = ["berhoel"]
+
+[tool.flake8]
+max-line-length = 88
+
+[tool.pylint.messages_control]
+max-line-length = 88
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
