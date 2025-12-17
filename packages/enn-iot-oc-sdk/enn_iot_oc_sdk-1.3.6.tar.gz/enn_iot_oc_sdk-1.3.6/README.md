@@ -1,0 +1,396 @@
+# ENN IoC 数据SDK生成器
+
+> 🚀 工业物联网数据SDK自动化生成工具 - 从数据定义到SDK发布的一站式解决方案
+
+[![Python](https://img.shields.io/badge/Python-3.7%2B-blue)](https://python.org)
+[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen)](#)
+
+## 📖 项目简介
+
+ENN IoC SDK Generator 是一个专为工业物联网场景设计的SDK自动化生成工具。它能够根据JSON数据源和YAML配置，自动生成完整的Python数据访问SDK，包括实体类、Repository接口、数据关联处理和标准化用户文档。
+
+### 🎯 核心价值
+
+- **🤖 全自动化** - 从数据定义到SDK发布的完整自动化流程
+- **📊 数据驱动** - 基于JSON数据智能推断字段类型和结构
+- **🔗 关系映射** - 支持复杂的实体关系和嵌套对象自动加载
+- **📦 开箱即用** - 生成的SDK符合企业级标准，可直接发布到PyPI
+- **📚 文档齐全** - 自动生成标准格式的用户文档
+
+---
+
+## ✨ 功能特性
+
+### 🏗️ SDK生成
+- ✅ 基于JSON数据自动生成`@dataclass`实体类
+- ✅ 智能类型推断（str, int, float, bool, list, dict等）
+- ✅ 自动生成单行/多行实体的Repository接口
+- ✅ 支持外键关系和嵌套对象（一对一、一对多）
+- ✅ 自动处理实体间的数据关联加载
+
+### 📋 配置管理
+- ✅ 简洁的YAML配置定义实体关系
+- ✅ 强制主键定义，确保数据完整性
+- ✅ 灵活的表名映射和字段类型自定义
+- ✅ 支持复杂的嵌套对象关系
+
+### 🚀 发布自动化
+- ✅ 一键版本号管理（支持直接指定或自动递增）
+- ✅ 自动化发布前检查和验证
+- ✅ PyPI包自动构建和上传
+- ✅ Git标签自动创建和推送
+- ✅ 标准格式用户文档自动生成
+
+### 🔧 企业级特性
+- ✅ 完全类型安全的实体和Repository
+- ✅ 统一的异常处理和错误提示
+- ✅ 内置数据缓存机制
+- ✅ 符合企业SDK开发规范
+
+---
+
+## 🚀 快速开始
+
+### 1️⃣ 环境准备
+
+```bash
+# 克隆项目
+git clone <repository-url>
+cd ioc-sdk-generator
+
+# 安装依赖
+pip install -r requirements.txt
+```
+
+### 2️⃣ 准备数据
+
+将JSON数据文件放入数据目录：
+
+```
+data/
+└── your_project/
+    ├── relations.yaml      # 实体关系配置
+    └── source/             # JSON数据源
+        ├── customer.json
+        └── order.json
+```
+
+### 3️⃣ 配置实体关系
+
+创建 `relations.yaml` 定义实体关系（详见 [Relations配置指南.md](Relations配置指南.md)）：
+
+```yaml
+entities:
+  Customer:
+    table: customer
+    row_type: multiple
+    fields:
+      cust_id: {type: string, role: pk}
+      name: {type: string}
+      profile_id: {type: string, role: fk, to: Profile}
+      profile: {
+        type: object,
+        from: Customer.profile_id,
+        role: embed,
+        to: Profile
+      }
+
+  Profile:
+    table: profile
+    row_type: multiple
+    fields:
+      profile_id: {type: string, role: pk}
+      level: {type: string}
+```
+
+### 4️⃣ 生成SDK
+
+```bash
+python main.py --data-dir data/your_project --output-dir output
+```
+
+### 5️⃣ 使用生成的SDK
+
+```python
+from output.infrastructure.model import Customer, CustomerRepoImpl
+
+# 创建Repository实例
+repo = CustomerRepoImpl(eo_id="your_eo_id", instance_id="your_instance")
+
+# 查询数据（自动加载嵌套对象）
+customers = repo.list()
+customer = repo.find_by_id("CUST_001")
+
+# 访问嵌套对象
+if customer and customer.profile:
+    print(f"客户: {customer.name}")
+    print(f"等级: {customer.profile.level}")
+```
+
+---
+
+## 📁 项目结构
+
+```
+ioc-sdk-generator/
+├── README.md                       # 📖 项目主文档
+├── FINAL_RELEASE_GUIDE.md         # 🚀 完整发布指南
+├── Relations配置指南.md            # ⚙️ 配置详细说明
+├── 文档生成说明.md                 # 📚 用户文档生成说明
+│
+├── main.py                         # 🔧 SDK生成器入口
+├── setup.py                        # 📦 PyPI包配置
+├── requirements.txt                # 📋 项目依赖
+│
+├── generator/                      # 🏗️ 代码生成器
+│   ├── config_parser.py           # 配置解析
+│   ├── entity_generator.py        # 实体生成
+│   ├── repository_generator.py    # Repository生成
+│   └── type_inferencer.py         # 类型推断
+│
+├── enn_iot_oc/                    # 🎯 SDK基础框架
+│   ├── infrastructure/
+│   │   ├── repository/            # Repository基类
+│   │   │   ├── single_repo_base.py   # 单行实体基类
+│   │   │   └── multi_repo_base.py    # 多行实体基类
+│   │   └── util/                  # 工具类
+│   └── core/                      # 核心功能
+│
+├── ioc_data_sdk/                  # 📦 发布的SDK包
+│   ├── __init__.py                # 版本和导出
+│   ├── entities.py                # 实体定义
+│   └── repositories.py            # Repository定义
+│
+├── data/                          # 📊 数据目录
+│   ├── demo/                      # 示例数据
+│   └── demo_new/                  # 其他示例
+│
+├── output/                        # 📤 生成的代码输出
+│   └── infrastructure/model/      # 生成的实体和Repository
+│
+├── user_docs/                     # 📚 生成的用户文档
+│
+├── pre_release_check.sh           # ✅ 发布前检查脚本
+├── release.sh                     # 🚀 完整发布脚本
+└── generate_standard_user_docs.py # 📝 用户文档生成脚本
+```
+
+---
+
+## 🛠️ 完整工作流程
+
+### 开发阶段
+
+```bash
+# 1. 准备数据和配置
+# 编辑 data/your_project/source/*.json
+# 编辑 data/your_project/relations.yaml
+
+# 2. 生成SDK代码
+python main.py --data-dir data/your_project --output-dir output
+
+# 3. 测试验证
+python test_all_repositories.py
+```
+
+### 发布阶段
+
+```bash
+# 方式1：直接指定版本号（推荐）
+./pre_release_check.sh 1.3.5
+
+# 方式2：自动递增版本
+./pre_release_check.sh patch   # 1.3.4 -> 1.3.5
+./pre_release_check.sh minor   # 1.3.4 -> 1.4.0
+./pre_release_check.sh major   # 1.3.4 -> 2.0.0
+
+# 方式3：交互式输入
+./pre_release_check.sh --interactive
+
+# 生成用户文档
+python generate_standard_user_docs.py
+
+# 发布到PyPI
+python setup.py sdist bdist_wheel
+twine upload dist/*
+```
+
+**详细发布流程请参考**: [FINAL_RELEASE_GUIDE.md](FINAL_RELEASE_GUIDE.md)
+
+---
+
+## 📊 配置文件说明
+
+### relations.yaml 核心原则
+
+**只定义关键字段**:
+
+```yaml
+entities:
+  EntityName:
+    table: table_name          # 对应JSON文件名
+    row_type: multiple         # single(单行) 或 multiple(多行)
+    fields:
+      id: {type: string, role: pk}              # 主键(必需)
+      ref_id: {type: string, role: fk, to: Ref} # 外键
+      refObj: {                                 # 嵌套对象
+        type: object,
+        from: EntityName.ref_id,
+        role: embed,
+        to: Ref
+      }
+```
+
+**字段角色说明**:
+- `role: pk` - 主键（每个实体必需）
+- `role: fk` - 外键（关联其他实体）
+- `role: embed` - 嵌入字段（自动加载关联数据）
+
+**更多配置详情**: [Relations配置指南.md](Relations配置指南.md)
+
+---
+
+## 📚 生成的内容
+
+### 1. 实体类
+
+```python
+@dataclass
+class Customer:
+    """客户实体"""
+    cust_id: str = ""
+    name: str = ""
+    profile_id: str = ""
+    profile: Optional[Profile] = None  # 嵌套对象
+```
+
+### 2. Repository实现
+
+```python
+class CustomerRepoImpl(MultiRepoBase[Customer]):
+    """客户Repository"""
+
+    def list(self) -> List[Customer]:
+        """获取所有客户（自动加载嵌套对象）"""
+
+    def find_by_id(self, pk: str) -> Optional[Customer]:
+        """根据ID查找客户"""
+
+    def save(self, entity: Customer) -> None:
+        """保存单个客户"""
+
+    def save_all(self, entities: List[Customer]) -> None:
+        """批量保存客户"""
+```
+
+### 3. 标准用户文档
+
+自动生成包含以下章节的完整文档：
+- 安装指南
+- 第4章：仓库行为矩阵
+- 第5章：实体 ↔ 仓库映射
+- 第6章：代码模板
+- 第7章：大模型生成约束
+- 常见问题
+- 技术支持
+
+**文档生成说明**: [文档生成说明.md](文档生成说明.md)
+
+---
+
+## 🔧 支持的实体类型
+
+| 实体类型 | row_type | Repository方法 | 使用场景 |
+|---------|----------|----------------|----------|
+| 单行实体 | single | `find()`, `save()` | 配置信息、系统设置 |
+| 多行实体 | multiple | `list()`, `find_by_id()`, `save()`, `save_all()` | 业务数据、记录列表 |
+
+## 🧪 类型推断
+
+自动从JSON数据推断字段类型：
+
+| JSON示例 | Python类型 |
+|---------|-----------|
+| `"text"` | `str` |
+| `123` | `int` |
+| `123.45` | `float` |
+| `true/false` | `bool` |
+| `[1,2,3]` | `List[T]` |
+| `{}` | `Dict[str, Any]` |
+
+---
+
+## ⚠️ 重要注意事项
+
+### 配置要求
+
+1. **主键必需**: 每个实体必须定义 `role: pk` 的主键字段
+2. **文件匹配**: JSON文件名必须与 `table` 值对应
+3. **关系完整**: 外键引用的目标实体必须在配置中定义
+
+### 数据完整性
+
+- 外键值必须在目标实体中存在
+- 避免循环引用（A→B→A）
+- 嵌套对象字段名称必须准确
+
+### 版本号管理
+
+- 支持直接指定版本号：`./pre_release_check.sh 1.3.5`
+- 支持自动递增：`./pre_release_check.sh patch|minor|major`
+- 修改版本号前会提示确认
+
+---
+
+## 📚 文档索引
+
+| 文档 | 说明 |
+|-----|------|
+| [README.md](README.md) | 📖 项目主文档（本文档）|
+| [FINAL_RELEASE_GUIDE.md](FINAL_RELEASE_GUIDE.md) | 🚀 完整发布指南 |
+| [Relations配置指南.md](Relations配置指南.md) | ⚙️ relations.yaml详细说明 |
+| [文档生成说明.md](文档生成说明.md) | 📚 用户文档生成说明 |
+
+---
+
+## 🤝 贡献指南
+
+1. Fork 本仓库
+2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 开启 Pull Request
+
+---
+
+## 📄 许可证
+
+本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情
+
+---
+
+## 🎉 快速总结
+
+使用本工具，您只需要：
+
+1. 📊 准备JSON数据
+2. ⚙️ 编写relations.yaml配置
+3. 🚀 运行生成器 `python main.py --data-dir data/your_project --output-dir output`
+4. ✅ 执行发布检查 `./pre_release_check.sh 1.3.5`
+5. 📚 生成用户文档 `python generate_standard_user_docs.py`
+6. 📦 发布到PyPI `twine upload dist/*`
+
+无需手写代码，自动获得类型安全、功能完整的企业级SDK！
+
+> 💡 **马上开始**: `python main.py --data-dir data/demo --output-dir output`
+
+---
+
+<div align="center">
+
+**[⬆ 返回顶部](#enn-ioc-数据sdk生成器)**
+
+Made with ❤️ by ENN Energy IoT Team
+
+</div>
