@@ -1,0 +1,20 @@
+openapi: "{{ openapi_version or '3.0.0' }}"
+info:
+  title: {{ title }}
+  description: {{ description }}
+  version: "{{ version }}"
+# https://www.jvt.me/posts/2022/05/29/openapi-json-patch/
+{%- if servers %}
+servers:
+{{ servers|yaml_pretty }}
+{%- endif -%}
+{%- if security_name %}
+security:
+  - {{ security_name }}: []
+{%- endif %}
+{%- if components %}
+components:
+{{ components|yaml_pretty }}
+{%- endif %}
+paths:
+{{ paths|yaml_pretty }}
