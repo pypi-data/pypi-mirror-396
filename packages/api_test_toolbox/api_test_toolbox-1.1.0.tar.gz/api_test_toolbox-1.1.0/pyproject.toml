@@ -1,0 +1,137 @@
+[project]
+name = "api_test_toolbox"
+version = "1.1.0"
+description = "Several tools for testing API results on my FastAPI projects."
+authors = [
+    { name = "Miguel", email = "miguel@dacosys.com" }
+]
+requires-python = ">=3.9,<4.0"
+
+dependencies = [
+    "requests",
+    "setuptools>=70.0.0",
+    "uvloop>=0.17.0; sys_platform != 'win32'",
+    "httpx"
+]
+
+[project.urls]
+Repository = "https://gitlab.com/dacosys_open/api_test_toolbox"
+
+[tool.pytest.ini_options]
+
+pythonpath = [
+    "src"
+]
+junit_family = "xunit2"
+
+addopts = [
+    #    "--strict-markers",
+    "-m not longrun and not setup and not reception_test",
+    "--junitxml=./coverage/junit_report.xml"
+]
+
+
+markers = [
+    "longrun: Slow longrunning tests",
+    "setup: Setup tests that will break a test run if run in threads",
+    "reception_test: Slow longrunning tests",
+    "last: test to run last. deprecated"
+]
+
+[pytest]
+env_files = [
+    ".env",
+    ".test.env",
+    ".deploy.env"
+]
+
+
+[dependency-groups]
+dev = [
+    "dill>=0.4.0",
+    "coverage[toml]>=7.10.7",
+    "pytest-cov",
+    "pytest-depends",
+    "pytest-env",
+    "pytest-html",
+    "pytest-ordering",
+    "pytest-xdist",
+    "pytest>=8.4.2",
+    "ruff",
+]
+
+[tool.ruff]
+line-length = 180
+lint.select = ["E", "W", "F", "I", "C", "B", "Q", "SIM", "UP", "PYI", "PT"]
+lint.ignore = [
+    "Q000", # don't be pedantic about 'string' / "string"
+    "Q001", # don't be pedantic about '''string''' / """string"""
+]
+exclude = [
+    ".venv",
+    "build",
+    "dist",
+    "docs/build",
+    "**/__pycache__"
+]
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    "src/api_test_toolbox",
+]
+
+[tool.coverage.run]
+parallel = true
+concurrency = ["thread"]
+
+
+data_file = "./coverage/.coverage"
+
+# This tells coverage.py which directory/package to measure.
+# Replace 'your_package_name' with the name of your source code folder (e.g., 'src', 'app').
+#source = ["src/stock_control_api"]
+source_dirs = ["src/api_test_toolbox"]
+
+# Set to true to measure branch coverage (if/else, while loops, etc.)
+branch = true
+
+# Optionally, configure the command line to run your tests.
+# If you use 'pytest', this is a convenient way to define it.
+#command_line = "-m pytest  -k \"not longrun and not reception_test\" ./tests/integration/item/item/test_item_add.py"
+command_line = "-m pytest -k \"not longrun and not reception_test\""
+
+# This tells coverage.py which code files to completely ignore during measurement.
+omit = [
+    # Exclude all files in a top-level 'tests' directory
+    'tests/*',
+    'cloud_build/*',
+]
+
+[tool.coverage.report]
+# Fail the command if the total coverage is below this percentage.
+fail_under = 90
+
+# Show line numbers of missing statements in the console report.
+show_missing = true
+
+# Exclude lines that match these regexes from the report (like 'if TYPE_CHECKING:').
+# Note: You can use the built-in 'pragma: no cover' by default, this adds to it.
+exclude_lines = [
+    'if __name__ == "__main__":',
+]
+
+
+[tool.coverage.xml]
+output = "coverage/coverage.xml"
+[tool.coverage.html]
+directory = "coverage/html"
+
+[tool.uv]
+package = true
+
+[[tool.uv.index]]
+name = "testpypi"
+url = "https://test.pypi.org/simple/"
+publish-url = "https://test.pypi.org/legacy/"
+explicit = true
+
