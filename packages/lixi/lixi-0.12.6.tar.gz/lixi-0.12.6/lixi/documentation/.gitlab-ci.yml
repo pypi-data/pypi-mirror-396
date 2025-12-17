@@ -1,0 +1,26 @@
+image: python:3.6.9
+
+stages:
+    - clone
+
+clone:
+    tags:
+        - shared
+    stage: clone
+    script:
+        - git config --global user.email "$TARGET_EMAIL"
+        - git config --global user.name "$TARGET_USERNAME"
+        - git config --global http.sslverify false
+        - git clone http://$TARGET_USERNAME:$TARGET_PASSWORD@$TARGET_GIT_URL
+        - ls
+        - python3 create_documentation.py
+    artifacts:
+        expire_in: 1 day
+        paths:
+        - index.html
+        - search.html
+        - ./css/*
+        - ./fonts/*
+        - ./img/*
+        - ./js/*
+        - ./mkdocs/*
