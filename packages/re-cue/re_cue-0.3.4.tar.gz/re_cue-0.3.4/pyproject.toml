@@ -1,0 +1,87 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "re-cue"
+version = "0.3.4"
+description = "RE-cue: Universal reverse engineering toolkit for multi-framework codebases"
+readme = "README-PYTHON.md"
+authors = [
+    {name = "RE-cue Project"},
+]
+license = {text = "MIT"}
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Software Development :: Documentation",
+    "Topic :: Software Development :: Code Generators",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Utilities",
+    "Typing :: Typed",
+]
+dependencies = [
+    "jinja2>=3.0.0",
+    "pyyaml>=6.0",
+]
+requires-python = ">=3.9"
+keywords = ["reverse-engineering", "documentation", "api", "openapi", "specification", "code-analysis"]
+
+[project.urls]
+Homepage = "https://github.com/cue-3/re-cue"
+Documentation = "https://cue-3.github.io/re-cue/"
+Repository = "https://github.com/cue-3/re-cue"
+"Bug Tracker" = "https://github.com/cue-3/re-cue/issues"
+"Issue Tracker" = "https://github.com/cue-3/re-cue/issues"
+Changelog = "https://github.com/cue-3/re-cue/blob/main/docs/releases/CHANGELOG.md"
+"Source Code" = "https://github.com/cue-3/re-cue"
+Discussions = "https://github.com/cue-3/re-cue/discussions"
+
+[project.scripts]
+recue = "reverse_engineer.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["reverse_engineer*"]
+
+[tool.setuptools.package-data]
+reverse_engineer = [
+    "templates/**/*.md",
+    "templates/**/*.json", 
+    "templates/**/*.yaml",
+    "templates/**/*.yml",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "C90"]
+extend-select = []  # Phase 3: Consider adding more rules
+ignore = ["E501"]  # Ignore line-too-long for now (many in generated docs)
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+# ty configuration - using command line options instead of config
+# Run: ty check --python 3.9 reverse_engineer/
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
