@@ -1,0 +1,131 @@
+# PrimeLLM Python SDK
+
+Official Python SDK for the PrimeLLM unified AI API.
+
+## Installation (Local Development)
+
+```bash
+cd py-sdk
+pip install -e .
+```
+
+## Quick Start
+
+```python
+from primellm import PrimeLLM
+
+# Create client with API key
+client = PrimeLLM(api_key="primellm_live_XXXX")
+
+# Or set PRIMELLM_API_KEY environment variable
+# client = PrimeLLM()
+
+# Make a chat request
+resp = client.chat(
+    model="gpt-5.1",
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+
+# Access the response
+print(resp["choices"][0]["message"]["content"])
+print(resp["usage"]["total_tokens"])
+print(resp["credits"]["remaining"])
+```
+
+## Available Models
+
+| Model | Description |
+|-------|-------------|
+| `gpt-5.1` | Latest GPT model |
+| `claude-sonnet-4.5` | Claude Sonnet 4.5 |
+| `gemini-3.0` | Gemini 3.0 |
+
+## API Reference
+
+### `PrimeLLM(api_key=None, base_url="https://api.primellm.in")`
+
+Create a new PrimeLLM client.
+
+- `api_key`: Your PrimeLLM API key. If not provided, reads from `PRIMELLM_API_KEY` env var.
+- `base_url`: API base URL (default: `https://api.primellm.in`)
+
+### `client.chat(model, messages, **kwargs)`
+
+Send a chat completion request (OpenAI-compatible format).
+
+**Parameters:**
+- `model`: Model name (e.g., `"gpt-5.1"`)
+- `messages`: List of message dicts with `role` and `content`
+- `**kwargs`: Additional parameters like `temperature`, `max_tokens`
+
+**Returns:** Dict with OpenAI-style response:
+```python
+{
+    "id": "chatcmpl_xxx",
+    "model": "gpt-5.1",
+    "choices": [
+        {
+            "message": {"role": "assistant", "content": "..."},
+            "finish_reason": "stop"
+        }
+    ],
+    "usage": {
+        "prompt_tokens": 10,
+        "completion_tokens": 20,
+        "total_tokens": 30
+    },
+    "credits": {
+        "cost": 0.00006,
+        "remaining": 149.99
+    }
+}
+```
+
+### `client.generate(model, messages, **kwargs)`
+
+Legacy endpoint (for backwards compatibility).
+
+**Returns:**
+```python
+{
+    "reply": "...",
+    "model": "gpt-5.1",
+    "tokens_used": 30,
+    "cost": 0.00006,
+    "credits_remaining": 149.99
+}
+```
+
+## Examples
+
+### With System Prompt
+
+```python
+resp = client.chat(
+    model="claude-sonnet-4.5",
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "What is Python?"},
+    ],
+)
+```
+
+### With Temperature
+
+```python
+resp = client.chat(
+    model="gpt-5.1",
+    messages=[{"role": "user", "content": "Write a poem"}],
+    temperature=0.9,
+)
+```
+
+## Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `PRIMELLM_API_KEY` | Your PrimeLLM API key |
+
+## License
+
+MIT
