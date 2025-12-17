@@ -1,0 +1,102 @@
+
+[project]
+name = "muxtools"
+dynamic = ["version"]
+description = "A library for various muxing and automation tools for anything and everything fansubbing related"
+authors = [{ name = "Vodes", email = "vodes.imp@gmail.com" }]
+dependencies = [
+    "requests>=2.31.0",
+    "fontcollector>=3.1.2",
+    "langcodes>=3.5.0",
+    "language_data>=1.0.1",
+    "ass>=0.5.3",
+    "wget>=3.2",
+    "rich>=13.1.0",
+    "pyparsebluray>=0.1.4",
+    "pydantic>=2.5.0",
+    "psutil>=5.6.4",
+    "videotimestamps>=1.0.0",
+    "typed-ffmpeg-compatible~=3.7.1",
+    "mkvinfo~=0.0.3",
+    "typing-extensions>=4.12.0"
+]
+classifiers = [
+    "Natural Language :: English",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "Programming Language :: Python :: 3.10",
+    "Operating System :: OS Independent",
+    "Typing :: Typed",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Topic :: Multimedia :: Sound/Audio :: Conversion",
+    "Topic :: Multimedia :: Video",
+    "Topic :: Multimedia :: Video :: Conversion",
+    "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
+]
+requires-python = ">=3.10"
+readme = "README.md"
+license = "MPL-2.0"
+
+[build-system]
+requires = ["hatchling>=1.27.0", "versioningit"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.4, <9.0.0",
+    "ruff>=0.6.5",
+    "scipy-stubs>=1.15.2.1",
+    "types-psutil>=7.0.0.20250218",
+    "types-requests>=2.31.0.20240406",
+    "py7zr>=0.20.5",
+    "sox>=1.5.0",
+    "mypy==1.17.1",
+    "ty==0.0.1a19",
+]
+
+[project.urls]
+"Source Code" = "https://github.com/Vodes/muxtools"
+
+[project.scripts]
+muxtools = "muxtools:entry_point"
+
+[tool.hatch.build]
+artifacts = ["muxtools/_version.py"]
+
+[tool.hatch.version]
+source = "versioningit"
+default-version = "0.0.0+unknown"
+next-version = "minor"
+write = { file = "muxtools/_version.py", template = "__version__ = \"{normalized_version}\"\n__version_tuple__ = {version_tuple}" }
+
+[tool.hatch.version.format]
+distance = "{next_version}.dev{distance}+{vcs}{rev}"
+dirty = "{next_version}+dirty"
+distance-dirty = "{next_version}.dev{distance}+{vcs}{rev}.dirty"
+
+[tool.ruff]
+line-length = 150
+indent-width = 4
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["F", "E", "RUF012"]
+ignore = ["E722", "E501"]
+fixable = ["F541", "F401", "E712", "E711"]
+exclude = ["__init__.py"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = false
+
+[tool.mypy]
+local_partial_types = true
+allow_redefinition_new = true
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests",
+]
