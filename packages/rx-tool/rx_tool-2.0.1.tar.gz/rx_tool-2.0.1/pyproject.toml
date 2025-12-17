@@ -1,0 +1,153 @@
+[project]
+name = "rx-tool"
+version = "2.0.1"
+description = "High-performance file search and analysis tool powered by ripgrep"
+readme = "README.md"
+requires-python = ">=3.13"
+license = {text = "MIT"}
+authors = [{ name = "wlame", email = "wlarne@gmail.com" }]
+keywords = ["regex", "search", "ripgrep", "log-analysis", "file-search", "pattern-matching", "cli", "tool"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Text Processing",
+    "Topic :: Utilities",
+    "Environment :: Console",
+]
+dependencies = [
+    "fastapi>=0.118.0",
+    "sh>=2.2.2",
+    "uvicorn>=0.37.0",
+    "click>=8.1.0",
+    "prometheus-client>=0.21.0",
+    "psutil>=7.1.2",
+    "httpx>=0.28.1",
+    "zstandard>=0.23.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/wlame/rx-tool"
+Repository = "https://github.com/wlame/rx-tool"
+Issues = "https://github.com/wlame/rx-tool/issues"
+Changelog = "https://github.com/wlame/rx-tool/blob/main/CHANGELOG.md"
+
+[project.scripts]
+rx = "rx.cli.main:cli"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+# Don't respect .gitignore for frontend/dist since we need it in the package
+ignore-vcs = true
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/rx/**",
+    "README.md",
+    "pyproject.toml",
+]
+exclude = [
+    "src/rx/frontend/node_modules/**",
+    "src/rx/frontend/src/**",
+    "src/rx/frontend/public/**",
+    "src/rx/frontend/*.json",
+    "src/rx/frontend/*.ts",
+    "src/rx/frontend/*.js",
+    "src/rx/frontend/*.md",
+    "src/rx/frontend/*.html",
+    "src/rx/frontend/.gitignore",
+    "src/rx/frontend/bun.lock",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rx"]
+exclude = [
+    "src/rx/frontend/node_modules/**",
+    "src/rx/frontend/src/**",
+    "src/rx/frontend/public/**",
+    "src/rx/frontend/*.json",
+    "src/rx/frontend/*.ts",
+    "src/rx/frontend/*.js",
+    "src/rx/frontend/*.md",
+    "src/rx/frontend/*.html",
+    "src/rx/frontend/.gitignore",
+    "src/rx/frontend/bun.lock",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.8.0",
+]
+build = [
+    "pyinstaller>=6.0.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+addopts = [
+    "--strict-markers",
+    "--cov=rx",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+]
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["*/tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+# Enable unused import detection
+select = [
+    "F",  # Pyflakes (includes F401 for unused imports)
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "I",  # isort (import sorting)
+    "UP",    # pyupgrade
+    "B",     # flake8-bugbear
+    "SIM",   # flake8-simplify
+    "RUF",   # Ruff-specific rules
+]
+
+# Auto-fix these rules
+fixable = ["ALL"]
+unfixable = []
+
+# Ignore specific rules if needed
+ignore = []
+
+# Configure isort behavior
+[tool.ruff.lint.isort]
+known-first-party = ["rx"]
+lines-after-imports = 2
+
+
+[tool.ruff.format]
+# Preserve quote style - don't enforce double or single quotes
+quote-style = "preserve"
