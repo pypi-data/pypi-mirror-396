@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package jsonservice;
+option go_package = "./jsonservice";
+
+// Service definition for handling JSON data processing
+service JsonService {
+  // ProcessJson processes a single JSON request
+  rpc ProcessJson (JsonRequest) returns (JsonResponse) {}
+  
+  // StreamJson handles continuous JSON data processing
+  rpc StreamJson (stream JsonRequest) returns (stream JsonResponse) {}
+  
+  // GenerateProof manually generates proof for specified parameters
+  rpc GenerateProof (GenerateProofRequest) returns (GenerateProofResponse) {}
+}
+
+// Request message containing JSON data to be processed
+message JsonRequest {
+  string json_data = 1;        // The actual JSON data to process
+  string event_type = 2;       // Type of the event (raw, hash, zk)
+  int64 timestamp = 3;         // Unix timestamp of the request
+  map<string, string> metadata = 4;  // Additional metadata
+}
+
+// Response message containing processed results
+message JsonResponse {
+  string status = 1;           // Status of the processing (success/error)
+  string message = 2;          // Human-readable message
+  string result_json = 3;      // Processed JSON result
+  int64 timestamp = 4;         // Unix timestamp of the response
+  string error = 5;            // Error message if any
+  map<string, string> metadata = 6;  // Additional metadata in response
+}
+
+// Request message for manual proof generation
+message GenerateProofRequest {
+  uint32 record_id = 1;        // Record ID to generate proof for
+  string target_asset = 2;     // Target asset (e.g., BTC, ETH)
+  uint32 hours_back = 3;       // How many hours back to generate proofs for (e.g., 24 for last 24 hours)
+  bool upload_to_backend = 4;  // Whether to upload proof to backend (default: true)
+}
+
+// Response message containing proof generation results
+message GenerateProofResponse {
+  string status = 1;           // Status of the operation (success/error)
+  string message = 2;          // Human-readable message
+  repeated ProofResult proofs = 3;  // Generated proofs
+  int32 total_processed = 4;   // Total number of entries processed
+  int32 successful_proofs = 5; // Number of successful proof generations
+  string error = 6;            // Error message if any
+}
+
+// Individual proof result
+message ProofResult {
+  uint32 entry_id = 1;         // Entry ID that proof was generated for
+  string date = 2;             // Date of the entry
+  string proof_data = 3;       // Base64 encoded proof data
+  bool uploaded = 4;           // Whether proof was successfully uploaded to backend
+  string error = 5;            // Error message if proof generation failed
+}
