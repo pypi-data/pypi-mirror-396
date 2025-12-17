@@ -1,0 +1,72 @@
+{% load filters %}
+
+{% if cisco_device_type_support %}
+    <div class="card">
+        <h5 class="card-header">Cisco Device Type Support</h5>
+        <table class="table table-hover panel-body attr-table">
+            <tbody>
+                {% if cisco_device_type_support.eox_announcement_date %}
+                    <tr {{ cisco_device_type_support.eox_announcement_date|expiration_class }}>
+                        <td style="width: 45%">EoX Announcement Date</td>
+                        <td>{{ cisco_device_type_support.eox_announcement_date|placeholder }}</td>
+                    </tr>
+                    <tr {{ cisco_device_type_support.end_of_sale_date|expiration_class }}>
+                        <td>End-of-Sale Date</td>
+                        <td>
+                            {{ cisco_device_type_support.end_of_sale_date|placeholder }}<br>
+                            {% include "cisco/inc/device_type_eos_bar.html" %}
+                        </td>
+                    </tr>
+                    <tr {{ cisco_device_type_support.end_of_sw_maintenance_releases|expiration_class }}>
+                        <td>End of SW Maintenance Releases Date</td>
+                        <td>
+                            {{ cisco_device_type_support.end_of_sw_maintenance_releases|placeholder }}<br>
+                            {% include "cisco/inc/device_type_eosm_bar.html" %}
+                        </td>
+                    </tr>
+                    <tr {{ cisco_device_type_support.end_of_routine_failure_analysis_date|expiration_class }}>
+                        <td>End of Routine Failure Analysis Date</td>
+                        <td>
+                            {{ cisco_device_type_support.end_of_routine_failure_analysis_date|placeholder }}<br>
+                            {% include "cisco/inc/device_type_eorfa_bar.html" %}
+                        </td>
+                    </tr>
+                    <tr {{ cisco_device_type_support.end_of_svc_attach_date|expiration_class }}>
+                        <td>End of New Service Attachment Date</td>
+                        <td>
+                            {{ cisco_device_type_support.end_of_svc_attach_date|placeholder }}<br>
+                            {% include "cisco/inc/device_type_eosvca_bar.html" %}
+                        </td>
+                    </tr>
+                    <tr {{ cisco_device_type_support.end_of_service_contract_renewal|expiration_class }}>
+                        <td>End of Service Contract Renewal Date</td>
+                        <td>
+                            {{ cisco_device_type_support.end_of_service_contract_renewal|placeholder }}<br>
+                            {% include "cisco/inc/device_type_eoscr_bar.html" %}
+                        </td>
+                    </tr>
+                    <tr {{ cisco_device_type_support.end_of_security_vul_support_date|expiration_class }}>
+                        <td>End of Vulnerability/Security Support</td>
+                        <td>
+                            {{ cisco_device_type_support.end_of_security_vul_support_date|placeholder }}<br>
+                            {% include "cisco/inc/device_type_eosvs_bar.html" %}
+                        </td>
+                    </tr>
+                    <tr {{ cisco_device_type_support.last_date_of_support|expiration_class }}>
+                        <td>Last Date of Support</td>
+                        <td>
+                            {{ cisco_device_type_support.last_date_of_support|placeholder }}<br>
+                            {% include "cisco/inc/device_type_last_day_support_bar.html" %}
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr {{ cisco_device_type_support.eox_has_error|eox_class }}>
+                        <td style="width: 40%">EoX Status</td>
+                        <td style="width: 40px"><i {{ cisco_device_type_support.eox_has_error|eox_class_boolian }}></i></td>
+                        <td>{{ cisco_device_type_support.eox_error }}</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+{% endif %}
