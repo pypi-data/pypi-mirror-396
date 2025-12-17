@@ -1,0 +1,57 @@
+Metadata-Version: 2.4
+Name: bfabric_app_runner
+Version: 0.5.0
+Summary: Application runner for B-Fabric apps
+Author-email: Leonardo Schwarz <leonardo.schwarz@fgcz.ethz.ch>
+License: GPL-3.0
+Requires-Python: >=3.12
+Requires-Dist: bfabric<2,>=1.16.0
+Requires-Dist: cyclopts<5.0,>=4.0
+Requires-Dist: glom<25.0,>=24.11
+Requires-Dist: mako<2.0,>=1.3.10
+Requires-Dist: pandera[polars]<0.27,>=0.26.0
+Requires-Dist: pydantic<3.0,>=2.12.3
+Provides-Extra: dev
+Requires-Dist: autodoc-pydantic>=2.2.0; extra == 'dev'
+Requires-Dist: bfabric[dev,typing]; extra == 'dev'
+Requires-Dist: mypy>=1.18.2; extra == 'dev'
+Requires-Dist: myst-parser>=4.0.1; extra == 'dev'
+Requires-Dist: sphinx-autobuild>=2024.10.3; extra == 'dev'
+Requires-Dist: sphinx-book-theme>=1.1.4; extra == 'dev'
+Requires-Dist: sphinx>=8.0.2; extra == 'dev'
+Requires-Dist: sphinxcontrib-plantuml>=0.31; extra == 'dev'
+Requires-Dist: types-pyyaml>=6.0.12.20250915; extra == 'dev'
+Provides-Extra: doc
+Requires-Dist: autodoc-pydantic>=2.2.0; extra == 'doc'
+Requires-Dist: myst-parser>=4.0.1; extra == 'doc'
+Requires-Dist: sphinx-autobuild>=2024.10.3; extra == 'doc'
+Requires-Dist: sphinx-book-theme>=1.1.4; extra == 'doc'
+Requires-Dist: sphinx>=8.0.2; extra == 'doc'
+Requires-Dist: sphinxcontrib-plantuml>=0.31; extra == 'doc'
+Provides-Extra: test
+Requires-Dist: inline-snapshot>=0.30.0; extra == 'test'
+Requires-Dist: logot>=1.5.1; extra == 'test'
+Requires-Dist: pyfakefs>=5.10.0; extra == 'test'
+Requires-Dist: pytest-mock>=3.15.1; extra == 'test'
+Requires-Dist: pytest>=8.4.2; extra == 'test'
+Description-Content-Type: text/markdown
+
+The app runner is an experimental tool that standardizes the integration of one-off apps into B-Fabric.
+
+**The API is subject to drastic changes in the next time.**
+
+The main idea is that an app provides a specification of the following steps:
+
+- dispatch -> create `inputs.yml` files and 1 `chunks.yml` file
+- process -> process a particular chunk (after inputs have been prepared)
+- collect -> collect the results of a chunk and create `outputs.yml` files
+
+The individual app can be in a container environment or a script running in the same environment as the app runner.
+
+To make this possible input and output staging is abstracted and communicated through `inputs.yml` and `outputs.yml`
+specification files.
+A command is available to stage the inputs or register the outputs respectively then.
+
+## Quick Start
+
+See the [examples/](examples/) directory for templates and detailed instructions on creating new applications. Start with development mode for testing, then build for production after updating the version in `pyproject.toml`.
