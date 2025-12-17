@@ -1,0 +1,303 @@
+Metadata-Version: 2.4
+Name: vibelab
+Version: 0.0.1
+Summary: Rigorous evaluation tool for comparing LLM coding agents
+Author: VibeLab Contributors
+License: PolyForm Noncommercial 1.0.0
+Requires-Python: >=3.11
+Requires-Dist: aiofiles>=23.0.0
+Requires-Dist: anthropic>=0.18.0
+Requires-Dist: fastapi>=0.104.0
+Requires-Dist: openai>=1.0.0
+Requires-Dist: pydantic>=2.0.0
+Requires-Dist: typer>=0.9.0
+Requires-Dist: uvicorn>=0.24.0
+Provides-Extra: all-drivers
+Requires-Dist: docker>=6.0.0; extra == 'all-drivers'
+Requires-Dist: modal>=0.60.0; extra == 'all-drivers'
+Provides-Extra: dev
+Requires-Dist: mypy>=1.7.0; extra == 'dev'
+Requires-Dist: pytest>=7.4.0; extra == 'dev'
+Requires-Dist: ruff>=0.1.0; extra == 'dev'
+Provides-Extra: docker
+Requires-Dist: docker>=6.0.0; extra == 'docker'
+Provides-Extra: modal
+Requires-Dist: modal>=0.60.0; extra == 'modal'
+Provides-Extra: orbstack
+Requires-Dist: docker>=6.0.0; extra == 'orbstack'
+Description-Content-Type: text/markdown
+
+# VibeLab
+
+> **⚠️ ALPHA RELEASE - USE WITH CAUTION**  
+> This project is in alpha and under active development. Breaking changes are expected and will occur. Use at your own risk.
+
+A rigorous evaluation tool for comparing LLM coding agents.
+
+## Overview
+
+VibeLab helps software engineers evaluate and compare LLM coding agents (Claude Code, OpenAI Codex, Cursor, Gemini CLI) through controlled experiments. Instead of ad-hoc "vibe checks," get reproducible, comparable results across different agent configurations.
+
+## Features
+
+- **Comparative Runs**: Test the same task across multiple agents side-by-side
+- **Datasets**: Organize scenarios into collections for batch evaluation
+- **Result Tracking**: Persistent storage of all runs with code diffs, logs, and metrics
+- **Human Feedback**: Add notes and quality scores (Perfect/Good/Workable/Bad) to evaluate run fitness
+- **LLM Judges**: Automatic graders that mimic human scores using few-shot examples
+- **Judgements**: LLM-generated assessments with alignment scores showing judge-human correlation
+- **Web Dashboard**: Visual comparison interface with diff viewer and dataset analytics
+- **Extensible**: Add new agent harnesses by implementing a simple protocol
+
+## Installation
+
+VibeLab can be run directly with `uvx` without installation:
+
+```bash
+# Run commands directly with uvx (no installation needed)
+uvx vibelab start start-cmd
+```
+
+Or install it permanently:
+
+```bash
+# Install with uv
+uv tool install vibelab
+
+# Or with pip
+pip install vibelab
+```
+
+### Prerequisites
+
+- Python 3.11+
+- Git
+- Agent CLIs you plan to use:
+
+```bash
+# Claude Code
+npm install -g @anthropic-ai/claude-code
+
+# OpenAI Codex
+npm install -g @openai/codex
+```
+
+## Quick Start
+
+### Run a comparison
+
+```bash
+# Compare Claude Code and Codex on the same task
+uvx vibelab run run-cmd \
+  --code github:owner/repo@main \
+  --prompt "Add input validation to the login form" \
+  --executor claude-code:anthropic:sonnet \
+  --executor openai-codex:openai:gpt-4o
+```
+
+### View results
+
+```bash
+# List recent results
+uvx vibelab result list
+
+# View a specific result
+uvx vibelab result get <result-id>
+
+# View the code diff
+uvx vibelab result diff <result-id>
+```
+
+### Launch the web UI
+
+```bash
+# Production mode (serves built frontend from package)
+uvx vibelab start start-cmd
+
+# Development mode (starts frontend dev server)
+uvx vibelab start start-cmd --dev
+```
+
+## CLI Reference
+
+### `vibelab run`
+
+Execute a scenario against one or more executors.
+
+```bash
+uvx vibelab run run-cmd \
+  --code <CODE_REF> \           # github:owner/repo@ref or local:/path
+  --prompt <TEXT> \             # Task instructions
+  --executor <SPEC> \           # harness:provider:model (repeatable)
+  [--timeout <SECONDS>] \       # Default: 1800
+  [--driver <DRIVER>]           # local (default), docker, modal
+```
+
+**Options:**
+- `--code`: Repository reference. Formats:
+  - `github:owner/repo` - Latest default branch
+  - `github:owner/repo@branch` - Specific branch
+  - `github:owner/repo#commit` - Specific commit
+  - `local:/path/to/repo` - Local directory
+- `--prompt`: Task instructions for the agent
+- `--executor`: Agent specification as `harness:provider:model` (can be repeated)
+- `--timeout`: Maximum execution time per agent in seconds (default: 1800)
+- `--driver`: Execution driver: `local`, `docker`, or `modal`
+
+### `vibelab scenario`
+
+Manage scenarios (code + prompt combinations).
+
+```bash
+uvx vibelab scenario create --code <REF> --prompt <TEXT>
+uvx vibelab scenario list [--limit N]
+uvx vibelab scenario get <ID>
+```
+
+### `vibelab dataset`
+
+Manage datasets (collections of scenarios for batch evaluation).
+
+```bash
+uvx vibelab dataset create --name <NAME> [--description <TEXT>]
+uvx vibelab dataset list [--limit N]
+uvx vibelab dataset get <ID>
+uvx vibelab dataset delete <ID>
+uvx vibelab dataset add-scenario --dataset <ID> --scenario <ID>
+uvx vibelab dataset remove-scenario --dataset <ID> --scenario <ID>
+uvx vibelab dataset run --dataset <ID> --executor <SPEC> [--trials N] [--minimal]
+```
+
+**Options:**
+- `--trials`: Number of runs per scenario-executor pair (default: 1)
+- `--minimal`: Only run scenario-executor pairs that don't have completed results
+- `--executor`: Agent specification as `harness:provider:model` (can be repeated)
+
+### `vibelab result`
+
+View and filter results, update notes and quality scores.
+
+```bash
+uvx vibelab result list [--scenario ID] [--executor SPEC] [--status STATUS]
+uvx vibelab result get <ID>
+uvx vibelab result diff <ID>
+uvx vibelab result update-notes <ID> [--notes TEXT] [--clear]
+uvx vibelab result update-quality <ID> [--quality 1-4] [--clear]
+uvx vibelab result update <ID> [--notes TEXT] [--quality 1-4] [--clear-notes] [--clear-quality]
+```
+
+**Filter options:**
+- `--scenario`: Filter by scenario ID
+- `--executor`: Filter by executor spec (partial match)
+- `--status`: Filter by status: `queued`, `running`, `completed`, `failed`, `timeout`
+
+**Update commands:**
+- `update-notes`: Add or update notes for a result. Use `--notes "-"` to read from stdin, or `--clear` to remove notes.
+- `update-quality`: Set quality score (1=Bad, 2=Workable, 3=Good, 4=Perfect). Use `--clear` to remove score.
+- `update`: Update both notes and quality in one command.
+
+### `vibelab executor`
+
+List available agent configurations.
+
+```bash
+uvx vibelab executor list
+uvx vibelab executor list --harness claude-code
+uvx vibelab executor list --harness claude-code --provider anthropic
+```
+
+### `vibelab start`
+
+Launch the web server.
+
+```bash
+uvx vibelab start start-cmd [--port 8000] [--host 127.0.0.1] [--frontend-port 5173] [--dev/--no-dev]
+```
+
+**Options:**
+- `--port`: Backend server port (default: 8000)
+- `--host`: Backend server host (default: 127.0.0.1)
+- `--frontend-port`: Frontend dev server port (default: 5173, only used with --dev)
+- `--dev/--no-dev`: Development mode with frontend dev server, or production mode serving static files (default: --no-dev, production mode)
+
+## Configuration
+
+VibeLab stores data in `~/.vibelab/` by default.
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `VIBELAB_HOME` | `~/.vibelab` | Data directory |
+| `VIBELAB_DRIVER` | `local` | Default execution driver |
+| `VIBELAB_TIMEOUT` | `1800` | Default timeout (seconds) |
+| `VIBELAB_LOG_LEVEL` | `INFO` | Logging verbosity |
+
+### API Keys
+
+Configure API keys for the agents you want to use:
+
+```bash
+# Claude Code
+export ANTHROPIC_API_KEY=sk-ant-...
+
+# OpenAI Codex
+export OPENAI_API_KEY=sk-...
+
+# Cursor
+export CURSOR_API_KEY=your-cursor-api-key
+```
+
+## Supported Agents
+
+| Harness | Provider | Models |
+|---------|----------|--------|
+| `claude-code` | `anthropic` | `opus`, `sonnet`, `haiku` |
+| `openai-codex` | `openai` | `gpt-4o`, `o3`, `o4-mini` |
+| `cursor` | `cursor` | `composer-1` |
+
+## Data Layout
+
+```
+~/.vibelab/
+├── data.db                    # SQLite database
+└── results/
+    └── {result_id}/
+        ├── patch.diff         # Git patch of changes
+        ├── stdout.log
+        ├── stderr.log
+        └── harness/           # Harness-specific artifacts
+            └── trajectory.json
+```
+
+## Web UI
+
+The web interface provides:
+
+- **Dashboard**: Recent scenarios and quick actions
+- **Scenarios**: Table view of all scenarios with metrics
+- **Datasets**: Collections of scenarios for batch evaluation
+- **Dataset Analytics**: Matrix view showing scenario-executor status across all combinations
+- **Runs**: Table view of all runs across scenarios with quality scores
+- **Executors**: Single table view of all executor tuples (harness:provider:model) with filtering, selection, and quick run creation
+- **Run Creation**: Form to configure and launch new comparisons
+- **Scenario Detail**: Table view of all results for a scenario with comparison, judge management, and judgement display
+- **Compare Mode**: Side-by-side comparison of two results
+- **Result Detail**: Full diff viewer, logs, metrics, human notes/quality, and LLM judge judgements
+- **Judgements**: Centralized view of all LLM judge assessments and pending judgements
+
+Launch with:
+```bash
+uvx vibelab start start-cmd
+```
+
+## Documentation
+
+- [SPEC.md](SPEC.md) - Product requirements
+- [PLAN.md](PLAN.md) - Implementation plan
+- [DEVELOPMENT.md](DEVELOPMENT.md) - Development setup
+- [AGENTS.md](AGENTS.md) - Instructions for AI coding agents
+
+## License
+
+[PolyForm Noncommercial 1.0.0](LICENSE) - Free to use for personal and non-commercial purposes. Commercial use and resale are not permitted.
