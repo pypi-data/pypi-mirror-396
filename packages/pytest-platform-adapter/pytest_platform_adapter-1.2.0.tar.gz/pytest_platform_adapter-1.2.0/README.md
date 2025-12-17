@@ -1,0 +1,285 @@
+# pytest-platform-adapter
+
+[![Release
+Status](https://img.shields.io/pypi/v/pytest-platform-adapter)](https://pypi.python.org/pypi/pytest-platform-adapter)
+[![Downloads](https://img.shields.io/pypi/dm/pytest-platform-adapter)](https://pypi.python.org/pypi/pytest-platform-adapter)
+[![Build](https://github.com/blackyau/pytest-platform-adapter/actions/workflows/deploy.yml/badge.svg)](https://github.com/allure-framework/allure-python/actions/workflows/build.yaml)
+
+Pytest集成自动化平台插件
+
+## 功能
+
+- 根据用例 `allure.title` 中的 ID 筛选执行的用例
+- 跳过所有用例的执行，快速生成 Allure 报告
+- 周期性的通过 RESTApi 上报执行用例的整体进度
+- 在执行前插入全局 / 特性级环境检查用例，失败时可批量 skip/xfail 后续业务用例
+
+## 环境依赖
+
+- Python >= 3.6
+- pytest >= 7.1.2
+- allure-pytest >= 2.9.45
+
+## 安装
+
+### 在线安装
+
+#### 官网在线安装
+
+执行以下命令即可完成安装
+
+```shell
+pip install pytest-platform-adapter
+```
+
+#### 国内镜像站在线安装
+
+如果安装遇到网络相关问题，也可以使用临时使用清华大学 PyPI 源安装本插件，安装命令如下：
+
+```shell
+pip install -i https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple pytest-platform-adapter
+```
+
+### 离线安装
+
+#### 官网下载离线安装
+
+前往 PyPI 官网中的 pytest-platform-adapter 项目文件下载界面 https://pypi.org/project/pytest-platform-adapter/#files
+
+下载最新的 Built Distribution（构建发布版本），例如：`pytest_platform_adapter-x.x.x-py3-none-any.whl` 传输到需要离线安装的环境上
+
+然后在命令行中使用以下命令安装（你需要提前安装 `pytest` 和 `allure-pytest`）
+
+```
+# 需要把下面的 x.x.x 替换为实际的版本号
+pip install pytest_platform_adapter-x.x.x-py3-none-any.whl
+```
+
+#### 国内镜像站下载离线安装
+
+前往清华大学 PyPI 源本插件的下载文件页 https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple/pytest-platform-adapter/
+
+下载最新（版本号最大）的扩展名为 `.whl` 的构建发布版本文件，例如：`pytest_platform_adapter-x.x.x-py3-none-any.whl` 传输到需要离线安装的环境上
+
+然后在命令行中使用以下命令安装（你需要提前安装 `pytest` 和 `allure-pytest`）
+
+```
+# 需要把下面的 x.x.x 替换为实际的版本号
+pip install pytest_platform_adapter-x.x.x-py3-none-any.whl
+```
+
+## 使用方法
+
+### 根据 Allure title 中的 ID 筛选用例
+
+假设有以下测试用例
+
+```python
+import allure
+
+@allure.title('19936-测试用例1')
+def test_case1():
+    assert True
+
+@allure.title('19930-测试用例2')
+def test_case2():
+    assert True
+
+@allure.title('19939-测试用例3')
+def test_case3():
+    assert True
+```
+
+该插件提供两种方式来筛选测试用例：
+
+1. 通过命令行参数指定测试ID：
+```bash
+pytest tests/ -v --case-ids="19936,19930"
+```
+
+2. 通过文件指定测试ID：
+```bash
+pytest tests/ -v --case-ids-file="test_ids.txt"
+```
+
+其中 test_ids.txt 的内容格式如下：
+```
+19936
+19930
+```
+
+### 跳过所有用例
+
+使用 `--scan` 参数，启用扫描模式。在扫描模式下，所有用例都会被 skip 不会执行，可以用于快速生成 Allure 报告。使用方法如下：
+
+```shell
+pytest --scan --alluredir allure-results
+```
+
+### 将执行进展通过RESTApi回报
+
+在 pytest.ini 中配置以下内容
+
+```ini
+[pytest]
+platform_ip = 127.0.0.1
+platform_port = 8080
+platform_path = /api/autoplatform/task/refresh_data_count
+platform_use_https = False
+```
+
+执行用例的过程中（前 10 个用例的时候执行完就立刻回报，之后就是每隔 10 个用例才回报一次） 会将测试用例的整体进展以 `POST` 的方式回报给 `http://127.0.0.1:8080/api/autoplatform/task/refresh_data_count` 请求体如下：
+
+```json
+{
+  "pipeline": "JOB_NAME",
+  "build_number": "BUILD_NUMBER",
+  "passed_case_count": 29,
+  "skipped_case_count": 1,
+  "failed_case_count": 0,
+  "selected_case": 100
+}
+```
+
+其中 `JOB_NAME` 和 `BUILD_NUMBER` 是通过环境变量获取的。
+
+### 环境检查
+
+环境检查由额外的 pytest 用例构成，通过配置它们的 NodeID 可以在收集阶段将这些用例插入到业务用例之前执行。可同时启用“全局检查”和“特性级检查”。
+
+#### 配置项-推荐
+
+在 `pytest.ini` 中添加以下内容：
+
+```ini
+[pytest]
+platform_env_global_checks =
+    tests/env_check/test_global_env_check.py::TestGlobalEnvCheck
+platform_env_behavior_checks =
+    tests/env_check/test_function_env_check.py::TestFunctionEnvCheck
+platform_env_behavior_scope = epic     # epic / feature / story
+platform_env_fail_action = skip        # skip / xfail / none
+platform_env_collect_mode = force      # force / auto
+```
+
+- `platform_env_global_checks`：在每次用例执行前跑一遍的检查用例列表。
+- `platform_env_behavior_checks`：特性级检查用例列表，插件会读取这些用例标签并在同一特性的首个用例前插入执行。
+- `platform_env_behavior_scope`：定义特性的级别可选的有 epic/feature/story（分别对应 Allure Report 的 behaviors 中的一级目录、二级目录、三级目录）
+- `platform_env_fail_action`：检查失败后对后续业务用例的处理方式，`skip` 为直接跳过、`xfail` 为继续执行并动态加上 `xfail`（失败记为 XFAIL、通过记为 XPASS）、`none` 仅记录日志不干预执行。
+- `platform_env_collect_mode`：环境检查收集模式，默认 `force`。
+  - `force`（强制）：即使本次命令行只收集了业务目录，也会强制把 `platform_env_global_checks` / `platform_env_behavior_checks` 声明的 NodeID 注入收集范围；环境检查用例不受 `-m`/`-k` 等筛选影响永远执行；全局检查永远执行；特性级检查仅在本次业务用例中存在同一行为标签（scope 对应 epic/feature/story）的情况下才执行，没有匹配的特性级检查不会执行。
+  - `auto`（自动）：不额外注入收集参数，仅执行本次 pytest 收集到的检查用例；如果声明的 NodeID 没有被收集到则不会执行。
+
+#### 命令行
+
+- `--env-check-mode={off,global,behavior,all}`：快速控制启用的检查范围。
+- `--env-check-scope=<epic|feature|story>`：临时覆盖行为层级设定。
+- `--env-check-collect-mode={force,auto}`：临时覆盖 `platform_env_collect_mode`，控制环境检查的收集/执行策略。
+- 当 `platform_env_fail_action=xfail` 时，会在受影响的业务用例上自动添加 `pytest.mark.xfail(run=True, strict=False)`，用例依旧执行，只是失败时记为 XFAIL。
+
+当检查用例失败时，插件会在 `pytest_runtest_setup` 阶段统一对后续业务用例执行 `skip` 或 `xfail`，并在日志中说明对应的检查节点。检查用例自身依旧遵循 pytest 原生语义，可继续使用 `skip/xfail/flaky` 等标记。
+
+
+## 调试方法
+
+### 部署虚拟环境
+
+新建一个虚拟环境，建议使用 Python 3.11.9 。
+
+安装依赖
+
+```shell
+pip install -r requirements.txt
+```
+
+在项目根目录（与pyproject.toml同一路径）执行以下命令安装本插件
+
+```shell
+pip install -e .
+```
+
+执行 `pytest --help` 检查返回的内容是否包含以下文本，如果有的话就说明安装成功了
+
+```
+usage: pytest [options] [file_or_dir] [file_or_dir] [...]
+
+positional arguments:
+  file_or_dir
+
+general:
+
+..... 省略中间
+
+自动化平台插件:
+  --case_ids=CASE_IDS   要执行的测试用例ID列表，使用逗号分隔，例如：19936,19930
+  --case_ids_file=CASE_IDS_FILE
+                        包含测试用例ID的文件路径，文件中每行一个ID
+  --scan                扫描模式：快速生成 Allure 报告而不实际执行测试
+
+[pytest] ini-options in the first pytest.ini|tox.ini|setup.cfg|pyproject.toml file found:
+
+..... 省略中间
+
+  platform_ip (string): 自动化平台IP
+  platform_port (string):
+                        自动化平台端口
+
+```
+
+### 创建测试用例
+
+在项目根目录新建 tests 目录，然后在 tests 目录中新建以 test_ 开头的 py 文件，作为测试用例。
+
+例如新建 `test_aaa.py`，在文件中写入以下内容
+
+```python
+import allure
+
+
+class TestAbc:
+    @allure.title('19936-用例1')
+    def test_abc(self):
+        print('test_abc 用例执行中')
+
+# @pytest.mark.xfail(reason='跳过')
+class TestAbd:
+    @allure.title('19930-用例2')
+    def test_abd(self):
+        with allure.step('步骤1'):
+            pass
+
+# @pytest.mark.xfail(reason='跳过')
+class TestAbe:
+    @allure.title('19932-用例3')
+    def test_abe(self):
+        pass
+        # raise AssertionError()
+        # pytest.fail('用例失败')
+```
+
+### 配置执行入口
+
+然后再项目根目录新建 main.py 作为执行的入口，写入以下内容。
+
+```python
+import pytest
+import os
+import shutil
+
+if __name__ == '__main__':
+    pytest_options = [
+        'tests/',
+        # '--case_ids', '456456',
+        # '--scan',
+        '-v',
+        '--alluredir', 'allure-results']
+    # shutil.rmtree('allure-results')  # 如果需要清空 allure-results 目录就解除本行注释
+    pytest.main(pytest_options)
+    os.system('allure generate allure-results -o ./report --clean')
+```
+
+通过为 main.py 中的 pytest_options 列表，添加 `--case_ids` 参数可以排除指定的用例，添加或删除 `--scan` 参数可以启用或禁用扫描模式。
+
+> 注意：如果发现 pytest_runtest_logreport 中的逻辑没有被执行。那可能是没有用例被选中（也就是本次没有执行任何用例）
+
+修改 `plugin.py` 的话不用重新 `pip install` 安装本插件，它是实时生效的。因为 `pip install -e` 的本质是在 Python 解释器的 `site-packages` 里面做了一个软链接到了本项目。
