@@ -1,0 +1,61 @@
+"""
+Enumeration types for rettxidentity library.
+
+Includes MatchDecision, Script, and ReasonCode enums.
+"""
+
+from enum import Enum
+
+
+class MatchDecision(Enum):
+    """Match decision outcome for identity comparison."""
+
+    PASS = "PASS"  # Safe to proceed to locking
+    BORDERLINE = "BORDERLINE"  # Requires admin review
+    FAIL = "FAIL"  # Do not lock; request correction
+
+
+class Script(Enum):
+    """Writing system script detected in text."""
+
+    LATIN = "LATIN"
+    GREEK = "GREEK"
+    GEORGIAN = "GEORGIAN"
+    CYRILLIC = "CYRILLIC"
+    MIXED = "MIXED"
+    UNKNOWN = "UNKNOWN"
+
+
+class ReasonCode(Enum):
+    """Explanation codes for match decisions."""
+
+    # Date of Birth
+    DOB_EXACT_MATCH = "DOB_EXACT_MATCH"
+    DOB_MISSING = "DOB_MISSING"
+    DOB_MISMATCH = "DOB_MISMATCH"
+
+    # Mutation
+    MUTATION_EXACT_MATCH = "MUTATION_EXACT_MATCH"
+    MUTATION_MISSING = "MUTATION_MISSING"
+    MUTATION_MISMATCH = "MUTATION_MISMATCH"
+
+    # Country
+    COUNTRY_EXACT_MATCH = "COUNTRY_EXACT_MATCH"
+    COUNTRY_MISSING = "COUNTRY_MISSING"
+    COUNTRY_MISMATCH = "COUNTRY_MISMATCH"
+
+    # Name Matching
+    NAME_EXACT_MATCH = "NAME_EXACT_MATCH"
+    NAME_MATCH_AFTER_NORMALIZATION = "NAME_MATCH_AFTER_NORMALIZATION"
+    NAME_MATCH_AFTER_TRANSLITERATION_GREEK = "NAME_MATCH_AFTER_TRANSLITERATION_GREEK"
+    NAME_MATCH_AFTER_TRANSLITERATION_GEORGIAN = "NAME_MATCH_AFTER_TRANSLITERATION_GEORGIAN"
+    NAME_MATCH_AFTER_TRANSLITERATION_CYRILLIC = "NAME_MATCH_AFTER_TRANSLITERATION_CYRILLIC"
+    NAME_LOW_SIMILARITY_GIVEN = "NAME_LOW_SIMILARITY_GIVEN"
+    NAME_LOW_SIMILARITY_SURNAME = "NAME_LOW_SIMILARITY_SURNAME"
+    NAME_ORDER_SWAPPED = "NAME_ORDER_SWAPPED"
+
+    # Script
+    SCRIPT_MISMATCH = "SCRIPT_MISMATCH"
+
+    # Decision
+    BORDERLINE_REVIEW_REQUIRED = "BORDERLINE_REVIEW_REQUIRED"
