@@ -1,0 +1,590 @@
+import matplotlib.pyplot as plt
+import seaborn as sns
+from deap.tools import selNSGA2
+from lightgbm import LGBMRegressor
+from matplotlib import cm
+from matplotlib.colors import Normalize
+from sklearn.base import ClassifierMixin
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import RidgeCV, LassoCV, ElasticNetCV
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.svm import LinearSVR
+from sklearn.tree import DecisionTreeRegressor
+
+from evolutionary_forest.component.decision_making.bend_angle_knee import (
+    find_knee_based_on_bend_angle,
+)
+from evolutionary_forest.component.environmental_selection import EnvironmentalSelection
+from evolutionary_forest.component.fitness import RademacherComplexityR2, R2PACBayesian
+from evolutionary_forest.multigene_gp import *
+from evolutionary_forest.utility.multiobjective.fitness_normalization import (
+    fitness_normalization,
+    fitness_restore_back,
+)
+from evolutionary_forest.utility.sliced_predictor import SlicedPredictor
+from evolutionary_forest.utils import pareto_front_2d
+
+if TYPE_CHECKING:
+    from evolutionary_forest.forest import EvolutionaryForestRegressor
+
+
+class ParetoFrontTool:
+    @staticmethod
+    def calculate_test_pareto_front(
+        self: "EvolutionaryForestRegressor",
+        test_x,
+        test_y,
+        flag=None,
+        parameters: dict = None,
+    ):
+        """
+        Calculate the Pareto front for test data based on the evolutionary forest regressor.
+
+        This function determines the Pareto front from the current population of the model and
+        computes the normalized prediction error for the test dataset. The results are appended
+        to the `pareto_front` attribute of the `EvolutionaryForestRegressor` object.
+
+        Parameters:
+        - self (EvolutionaryForestRegressor): An instance of the EvolutionaryForestRegressor class.
+        - test_x (array-like): Test input data. Each row represents an instance and each column represents a feature.
+        - test_y (array-like): True target values for the test input data.
+        """
+        # Calculate normalization factors for scaling and test dataset
+        normalization_factor_scaled = np.mean((self.y - np.mean(self.y)) ** 2)
+        normalization_factor_test = np.mean((test_y - np.mean(test_y)) ** 2)
+
+        multiobjective_plot = False
+        if multiobjective_plot:
+            fitness_values = [ind.fitness.wvalues for ind in self.pop]
+            # Extract x and y coordinates from fitness values
+            x = np.array([fitness[0] for fitness in fitness_values])
+            y = np.array([fitness[1] for fitness in fitness_values])
+            knee_index = np.argmax(x + y)
+
+            # Create scatter plot
+            plt.scatter(x / (x.max() - x.min()), y / (y.max() - y.min()))
+            plt.scatter(
+                x[knee_index] / (x.max() - x.min()),
+                y[knee_index] / (y.max() - y.min()),
+                color="red",
+                label="Knee Point",
+            )
+            plt.title("Fitness Scatter Plot")
+            plt.xlabel("Fitness Value 1")
+            plt.ylabel("Fitness Value 2")
+            plt.grid(True)
+            plt.show()
+
+        noise_target_pareto_front = False
+        noise_input_pareto_front = False
+        less_sample_front = False
+        more_sample_front = False
+        transfer_model_front = False
+        adversarial_front = False
+
+        if flag == "Bias-Variance":
+            noise_target_pareto_front = True
+            transfer_model_front = True
+
+        if flag in ["SAM", "Mixup"]:
+            transfer_model_front = True
+
+        # Compute normalized prediction error for each individual
+        individual_list = self.pop
+        # individual_list = self.model_size_archive
+        only_top_individuals = False
+        if only_top_individuals:
+            # normalize all fitness values based on max and min
+            fitness_normalization(individual_list, False)
+            if hasattr(individual_list[0], "sam_loss"):
+                individual_list = sorted(individual_list, key=lambda x: x.sam_loss)[:10]
+            else:
+                individual_list = selNSGA2(individual_list, 10)
+            fitness_restore_back(individual_list)
+        for ind in self.hof:
+            prediction = self.individual_prediction(test_x, [ind])[0]
+            errors = (test_y - prediction) ** 2
+            test_error_normalized_by_test = np.mean(errors) / normalization_factor_test
+            self.pareto_front.append(
+                test_error_normalized_by_test,
+            )
+
+            if adversarial_front:
+                for adversarial_std in [0.1]:
+                    noisy_test_error_normalized_by_test = (
+                        ParetoFrontTool.adversarial_prediction(
+                            ind,
+                            self,
+                            adversarial_std,
+                            normalization_factor_test,
+                            test_x,
+                            test_y,
+                        )
+                    )
+
+            if noise_input_pareto_front:
+                for input_noise_std in [0.1]:
+                    noisy_test_error_normalized_by_test = (
+                        ParetoFrontTool.noisy_prediction(
+                            ind,
+                            self,
+                            input_noise_std,
+                            normalization_factor_test,
+                            test_x,
+                            test_y,
+                        )
+                    )
+
+            # feature construction
+            train_x = self.X
+            constructed_train_x = self.feature_generation(train_x, ind)
+            # fix too large values
+            constructed_train_x = np.nan_to_num(
+                constructed_train_x.astype(np.float32), posinf=0, neginf=0
+            )
+            # scaling test data
+            if self.x_scaler is not None:
+                scaled_test_x = self.x_scaler.transform(test_x)
+            else:
+                scaled_test_x = test_x
+            constructed_test_x = self.feature_generation(scaled_test_x, ind)
+            # fix too large values
+            constructed_test_x = np.nan_to_num(
+                constructed_test_x.astype(np.float32), posinf=0, neginf=0
+            )
+
+            if less_sample_front:
+                loss_on_more_data = ParetoFrontTool.get_loss_on_less_data(
+                    self, ind, train_x, self.y, test_x, test_y, less_sample=0.5
+                )
+            if more_sample_front:
+                loss_on_more_data = ParetoFrontTool.get_loss_on_more_data(
+                    self,
+                    ind,
+                    train_x,
+                    self.y,
+                    test_x,
+                    test_y,
+                    more_samples=100,
+                )
+            if noise_target_pareto_front:
+                for target_noise_std in [0.1, 1]:
+                    # std=0.1, 1
+                    loss_on_noisy_target = ParetoFrontTool.get_loss_on_noisy_target(
+                        self,
+                        constructed_test_x,
+                        constructed_train_x,
+                        test_y,
+                        normalization_factor_test,
+                        std=target_noise_std,
+                    )
+                    self.pareto_front.append(
+                        loss_on_noisy_target,
+                    )
+            if transfer_model_front:
+                for model in [
+                    "KNN",
+                    "WKNN",
+                    "ElasticNet",
+                    "Lasso",
+                    "LinearSVR",
+                    "RF",
+                    "LightGBM",
+                ]:
+                    test_error_normalized_knn = ParetoFrontTool.model_transfer(
+                        self,
+                        normalization_factor_test,
+                        constructed_train_x,
+                        constructed_test_x,
+                        test_y,
+                        model_name=model,
+                    )
+                    self.pareto_front.append(
+                        test_error_normalized_knn,
+                    )
+            del prediction
+            del errors
+
+    @staticmethod
+    def noisy_prediction(ind, self, std, normalization_factor_test, test_x, test_y):
+        noise = np.random.normal(0, std * test_x.std(axis=0), test_x.shape)
+        noisy_prediction = self.individual_prediction(test_x + noise, [ind])[0]
+        noisy_errors = (test_y - noisy_prediction) ** 2
+        noisy_test_error_normalized_by_test = (
+            np.mean(noisy_errors) / normalization_factor_test
+        )
+        return noisy_test_error_normalized_by_test
+
+    @staticmethod
+    def adversarial_prediction(
+        ind, self, std, normalization_factor_test, test_x, test_y
+    ):
+        worst_loss = np.zeros(test_x.shape[0])
+        for t in range(10):
+            rng = np.random.RandomState(100 + t)
+            noise = rng.normal(
+                0,
+                std * test_x.std(axis=0),
+                test_x.shape,
+            )
+            noisy_prediction = self.individual_prediction(test_x + noise, [ind])[0]
+            noisy_errors = (test_y - noisy_prediction) ** 2
+            worst_loss = np.maximum(worst_loss, noisy_errors)
+        worst_error_normalized_by_test = np.mean(worst_loss) / normalization_factor_test
+        return worst_error_normalized_by_test
+
+    @staticmethod
+    def get_loss_on_less_data(
+        self, ind, train_x, train_y, test_x, test_y, less_sample=0.5
+    ):
+        test_x = self.x_scaler.transform(test_x)
+        constructed_test_x = self.feature_generation(test_x, ind)
+
+        # sample less data
+        sample_index = np.random.choice(len(train_x), int(less_sample * len(train_x)))
+        train_x = train_x[sample_index]
+        constructed_train_x = self.feature_generation(train_x, ind)
+        train_y = train_y[sample_index]
+
+        model = Pipeline(
+            [
+                ("scaler", StandardScaler()),
+                ("model", SlicedPredictor(RidgeCV())),
+            ]
+        )
+        model.fit(constructed_train_x, train_y)
+
+        # make prediction
+        prediction = model.predict(constructed_test_x)
+        prediction = self.y_scaler.inverse_transform(
+            prediction.reshape(-1, 1)
+        ).flatten()
+        loss_on_more_data = (test_y - prediction) ** 2
+        return np.mean(loss_on_more_data)
+
+    @staticmethod
+    def get_loss_on_more_data(
+        self, ind, train_x, train_y, test_x, test_y, more_samples=100
+    ):
+        if len(train_x) + more_samples > 0.8 * (len(train_x) + len(test_x)):
+            # invalid
+            return None
+
+        test_x = self.x_scaler.transform(test_x)
+        # sample more data
+        sample_index = np.random.choice(len(test_x), more_samples, replace=False)
+        train_x = np.concatenate([train_x, test_x[sample_index]])
+        constructed_train_x = self.feature_generation(train_x, ind)
+        # y need to be scaled
+        sampled_y = test_y[sample_index]
+        sampled_y = self.y_scaler.transform(sampled_y.reshape(-1, 1)).flatten()
+        train_y = np.concatenate([train_y, sampled_y])
+
+        # remove the sample data
+        test_x = np.delete(test_x, sample_index, axis=0)
+        test_y = np.delete(test_y, sample_index, axis=0)
+        constructed_test_x = self.feature_generation(test_x, ind)
+
+        model = Pipeline(
+            [
+                ("scaler", StandardScaler()),
+                ("model", SlicedPredictor(RidgeCV())),
+            ]
+        )
+        model.fit(constructed_train_x, train_y)
+        # make prediction
+        prediction = model.predict(constructed_test_x)
+        prediction = self.y_scaler.inverse_transform(
+            prediction.reshape(-1, 1)
+        ).flatten()
+        loss_on_more_data = (test_y - prediction) ** 2
+        return np.mean(loss_on_more_data)
+
+    @staticmethod
+    def get_loss_on_noisy_target(
+        self,
+        constructed_test_x,
+        constructed_train_x,
+        test_y,
+        normalization_factor_test,
+        std=0.1,
+    ):
+        train_y = self.y
+        noisy_train_y = train_y + np.random.normal(
+            0, std * train_y.std(), train_y.shape
+        )
+        model = Pipeline(
+            [
+                ("scaler", StandardScaler()),
+                ("model", SlicedPredictor(RidgeCV())),
+            ]
+        )
+        model.fit(constructed_train_x, noisy_train_y)
+        # make prediction
+        prediction = model.predict(constructed_test_x)
+        prediction = self.y_scaler.inverse_transform(
+            prediction.reshape(-1, 1)
+        ).flatten()
+        loss_on_noisy_target = (test_y - prediction) ** 2
+        return np.mean(loss_on_noisy_target) / normalization_factor_test
+
+    @staticmethod
+    def model_transfer(
+        self,
+        normalization_factor_test,
+        constructed_train_x,
+        constructed_test_x,
+        test_y,
+        model_name="KNN",
+    ):
+        train_y = self.y
+        if model_name == "KNN":
+            model = Pipeline(
+                [
+                    ("scaler", StandardScaler()),
+                    ("model", SlicedPredictor(KNeighborsRegressor(n_neighbors=5))),
+                ]
+            )
+        elif model_name == "Lasso":
+            model = Pipeline(
+                [
+                    ("scaler", StandardScaler()),
+                    ("model", SlicedPredictor(LassoCV())),
+                ]
+            )
+        elif model_name == "ElasticNet":
+            model = Pipeline(
+                [
+                    ("scaler", StandardScaler()),
+                    ("model", SlicedPredictor(ElasticNetCV())),
+                ]
+            )
+        elif model_name == "LinearSVR":
+            model = Pipeline(
+                [
+                    ("scaler", StandardScaler()),
+                    ("model", SlicedPredictor(LinearSVR())),
+                ]
+            )
+        elif model_name == "WKNN":
+            model = Pipeline(
+                [
+                    ("scaler", StandardScaler()),
+                    (
+                        "model",
+                        SlicedPredictor(
+                            KNeighborsRegressor(n_neighbors=5, weights="distance")
+                        ),
+                    ),
+                ]
+            )
+        elif model_name == "DT":
+            model = SlicedPredictor(DecisionTreeRegressor())
+        elif model_name == "RF":
+            model = SlicedPredictor(RandomForestRegressor())
+        elif model_name == "LightGBM":
+            model = SlicedPredictor(LGBMRegressor(verbosity=-1))
+        else:
+            raise Exception("Model name is not supported")
+
+        # In scikit-learn, LassoCV does not perform well for float32.
+        model.fit(constructed_train_x.astype(np.float64), train_y)
+
+        prediction = model.predict(constructed_test_x)
+        if self.y_scaler is not None:
+            prediction = self.y_scaler.inverse_transform(
+                prediction.reshape(-1, 1)
+            ).flatten()
+        errors = (test_y - prediction) ** 2
+        test_error_normalized_transfer_model = (
+            np.mean(errors) / normalization_factor_test
+        )
+        return test_error_normalized_transfer_model
+
+    @staticmethod
+    def calculate_sharpness_pareto_front(self: "EvolutionaryForestRegressor", x_train):
+        if self.experimental_configuration.pac_bayesian_comparison and isinstance(
+            self.environmental_selection, EnvironmentalSelection
+        ):
+            pac = R2PACBayesian(self, **self.param)
+
+            # Calculate normalization factors
+            normalization_factor_scaled = np.mean((self.y - np.mean(self.y)) ** 2)
+
+            # Compute sharpness and other metrics for each individual
+            for ind in self.pop:
+                ParetoFrontTool.sharpness_estimation(self, ind, pac)
+                sharpness_value = ind.fitness_list[1][0]
+                """
+                1. Normalized fitness values (case values represent cross-validation squared error)
+                2. Normalized sharpness values
+                """
+                self.pareto_front.append(
+                    (
+                        float(np.mean(ind.case_values) / normalization_factor_scaled),
+                        float(sharpness_value / normalization_factor_scaled),
+                    )
+                )
+
+            self.pareto_front, _ = pareto_front_2d(self.pareto_front)
+
+    @staticmethod
+    def sharpness_estimation(self, ind, pac, force=False):
+        if not isinstance(self.score_func, R2PACBayesian) or force:
+            if isinstance(self.score_func, RademacherComplexityR2):
+                ind.rademacher_fitness_list = ind.fitness_list
+            pac.assign_complexity(ind, ind.pipe)
+
+    @staticmethod
+    def calculate_pareto_front_on_test(
+        self: "EvolutionaryForestRegressor", test_x, test_y
+    ):
+        if self.experimental_configuration.pac_bayesian_comparison and isinstance(
+            self.environmental_selection, EnvironmentalSelection
+        ):
+            calculate_sharpness = False
+            pac = R2PACBayesian(self, **self.param)
+            if isinstance(self, ClassifierMixin):
+                pac.classification = True
+                pac.instance_weights = self.class_weight
+            self.training_test_pareto_front = []
+            self.test_pareto_front = []
+
+            """
+            Please ensure both training data and test data are scaled.
+            If test data is calculated on unscaled data,
+            whereas training data is calculated on scaled data,
+            the result will be wrong.
+            """
+            # Calculate normalization factors
+            normalization_factor_test = np.mean((test_y - np.mean(test_y)) ** 2)
+            normalization_factor_scaled = np.mean((self.y - np.mean(self.y)) ** 2)
+
+            # Compute sharpness and other metrics for each individual
+            for ind in self.pop:
+                if calculate_sharpness:
+                    # calculate sharpness based on training data
+                    ParetoFrontTool.sharpness_estimation(self, ind, pac)
+                    sharpness_value = ind.fitness_list[1][0]
+
+                prediction = self.individual_prediction(test_x, [ind])[0]
+
+                errors = (test_y - prediction) ** 2
+                assert len(errors) == len(test_y)
+                """
+                1. Normalized test error (1-Test R2)
+                2. Normalized sharpness values / model size
+                3. Normalized test error, but use same normalization factor as training data
+                """
+                test_error_normalized_by_test = (
+                    np.mean(errors) / normalization_factor_test
+                )
+
+                if calculate_sharpness:
+                    # if sharpness is calculated on training data, it should be scaled on training data
+                    sharpness_normalized = float(
+                        sharpness_value / normalization_factor_scaled
+                    )
+                    self.test_pareto_front.append(
+                        (
+                            test_error_normalized_by_test,
+                            sharpness_normalized,
+                        )
+                    )
+                training_fitness_normalized = float(
+                    np.mean(ind.case_values) / normalization_factor_scaled
+                )
+                # Three parts:
+                # 1. Training Error
+                # 2. Model Size
+                # 3. Test Error
+                self.training_test_pareto_front.append(
+                    (
+                        training_fitness_normalized,
+                        sum([len(gene) for gene in ind.gene]),
+                        test_error_normalized_by_test,
+                    )
+                )
+                del prediction
+                del errors
+
+            # plot a pareto front formed by test error and sharpness
+            if len(self.test_pareto_front) > 0:
+                self.test_pareto_front, _ = pareto_front_2d(self.test_pareto_front)
+                self.test_pareto_front = self.test_pareto_front.tolist()
+
+            # The information of Pareto Front
+            self.training_test_pareto_front = np.array(self.training_test_pareto_front)
+            # The Pareto Front is obtained based on Training Error and Model Size
+            _, indices = pareto_front_2d(self.training_test_pareto_front[:, :2])
+            self.training_test_pareto_front = self.training_test_pareto_front[indices]
+            self.training_test_pareto_front = self.training_test_pareto_front.tolist()
+
+
+def create_scatter_plot(data, color_map="viridis"):
+    data[:, :2] = (data[:, :2] - data[:, :2].min(axis=0)) / (
+        data[:, :2].max(axis=0) - data[:, :2].min(axis=0)
+    )
+    _, traditional_knee = find_knee_based_on_bend_angle(data[:, :2], local=True)
+    _, complexity_knee, knee_index = find_knee_based_on_bend_angle(
+        data[:, :2],
+        local=True,
+        number_of_cluster=3,
+        return_all_knees=True,
+        minimal_complexity=True,
+    )
+
+    # Extract x, y, and color values
+    x = [point[0] for point in data]
+    y = [point[1] for point in data]
+    # Exchange X and Y
+    x, y = y, x
+    colors = [point[2] for point in data]
+
+    # Create colormap object and normalize colors
+    colormap = cm.get_cmap(color_map)
+    normalize = Normalize(vmin=min(colors), vmax=max(colors))
+
+    # Highlight points on the scatter plot
+    sns.scatterplot(x=x, y=y, hue=colors, palette=color_map)
+    legend = plt.legend(title="Test RSE")
+
+    # Convert knee_index to integers for indexing
+    knee_index_int = [int(k) for k in knee_index]
+
+    # Annotate knee points with letters
+    for i, index in enumerate(knee_index_int):
+        plt.annotate(
+            chr(ord("A") + i),
+            (x[index], y[index]),
+            fontsize=12,
+            color="red",
+            weight="bold",
+        )
+
+    # Get the color for traditional_knee and complexity_knee from the color map
+    traditional_knee_color = colormap(normalize(colors[traditional_knee]))
+    complexity_knee_color = colormap(normalize(colors[complexity_knee]))
+
+    # Highlight traditional_knee with a special marker (e.g., a star)
+    plt.scatter(
+        x[traditional_knee],
+        y[traditional_knee],
+        marker="*",
+        s=100,
+        c=traditional_knee_color,
+        label="Traditional Knee",
+    )
+
+    # Highlight complexity_knee with a different special marker (e.g., a diamond)
+    plt.scatter(
+        x[complexity_knee],
+        y[complexity_knee],
+        marker="D",
+        s=50,
+        c=complexity_knee_color,
+        label="Complexity Knee",
+    )
+
+    plt.xlabel("Objective B: Complexity")
+    plt.ylabel("Objective A: Training Error")
