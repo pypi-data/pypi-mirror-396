@@ -1,0 +1,237 @@
+Metadata-Version: 2.4
+Name: paradoxlf
+Version: 0.4.0
+Summary: A latent memory and active inference engine for AI agents.
+Home-page: https://github.com/ethcocoder/paradoxlf
+Author: Natnael Ermiyas (Ethco Coders & Inotrade)
+Author-email: contact@ethcocoder.com
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Classifier: Development Status :: 3 - Alpha
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: numpy>=1.21.0
+Requires-Dist: psutil>=5.8.0
+Requires-Dist: Pillow>=9.0.0
+Provides-Extra: gpu
+Requires-Dist: torch>=1.10.0; extra == "gpu"
+Provides-Extra: viz
+Requires-Dist: matplotlib; extra == "viz"
+Requires-Dist: scikit-learn; extra == "viz"
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: license-file
+Dynamic: provides-extra
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+# Paradox: Latent Memory & Simulation Engine
+
+**Paradox** is a lightweight, hardware-agnostic cognitive architecture for AI agents. It provides a dynamic "Latent Memory" that doesn't just store data but allows for active simulation, evolution, and proximity-based retrieval.
+
+## 🎯 The Main Point
+**"Extreme Efficiency through Abstraction."**
+
+We have too much data and not enough hardware. Paradox solves this by replacing heavy "Real Objects" with lightweight "Latent Vectors", allowing you to perform Supercomputer-scale tasks on a Laptop.
+
+*   **Don't store the Cake** (100MB Object).
+*   **Store the Recipe** (1KB Vector).
+*   **Bake it on demand.**
+
+## 🚀 Key Features
+
+*   **Hybrid Compute:** Automatically runs on **GPU (PyTorch)** if available, gracefully falls back to **CPU (NumPy/MMap)**.
+*   **Active Inference:** Built-in `SimulationEnv` allows memory vectors to evolve over time based on physics-like dynamics.
+*   **Infinite Scaling:** Supports disk-backed storage (`numpy.memmap`) for datasets larger than RAM.
+*   **Plugin Architecture:** Easily plug in custom Neural Encoders (BERT, CLIP, VAEs) to auto-vectorize raw data.
+
+## 🌍 Innovation Impact
+
+Paradox is a fundamental engine for **Massive Scale Simulation** across industries:
+
+| Domain | Problem | Paradox Solution | Impact |
+| :--- | :--- | :--- | :--- |
+| **Software Eng** | Objects consume too much RAM. | Stores *recipes* (vectors), reconstructs on demand. | Handle billion-scale datasets on laptops. |
+| **Scientific Sim** | Simulating millions of particles requires Supercomputers. | Latent physics allows interacting with millions of entities. | Neuroscience/Physics modeling on commodity hardware. |
+| **Big Data & IoT** | Searching billions of logs is slow. | Proximity search finds anomalies instantly (O(1) approx). | Real-time analytics & anomaly detection. |
+| **Game Dev** | Massive procedural worlds crash memory. | Latent storage for entities; procedural reconstruction. | Infinite worlds with efficient AI. |
+| **AI / ML** | Large models don't fit on GPU. | Compresses parameters/objects into latent space. | Run massive models locally. |
+
+**Key Takeaways:**
+*   **📉 Memory Efficiency:** Drastically reduces RAM needs.
+*   **📈 Scalability:** From thousands to billions of objects.
+*   **🚀 Production-Ready:** Deployable as a library or cloud service.
+
+## 📦 Installation
+
+```bash
+git clone https://github.com/ethcocoder/paradoxlf.git
+cd paradoxlf
+pip install .
+```
+
+## ⚡ Quick Start
+
+### 1. Basic Memory & Search
+```python
+from paradox.engine import LatentMemoryEngine
+
+# Initialize (Auto-detects CPU vs GPU)
+engine = LatentMemoryEngine(dimension=128)
+
+# Add Data
+engine.add([0.1, 0.5, ...], attributes={"name": "concept_A"})
+
+# Search
+results = engine.query([0.1, 0.5, ...], k=5)
+print(results)
+```
+
+### 2. Auto-Encoding Raw Data
+```python
+from paradox.engine import LatentMemoryEngine
+from paradox.encoder import BaseEncoder
+
+# Define a custom encoder (e.g., wrapper around OpenAI/HuggingFace)
+class MyTextEncoder(BaseEncoder):
+    def encode(self, text):
+        # ... logic to turn text into vector ...
+        return vector
+
+engine = LatentMemoryEngine(dimension=768)
+engine.set_encoder(MyTextEncoder(768))
+
+# Now simply add text!
+engine.add("Artificial Intelligence is evolving", {"category": "AI"})
+```
+
+### 3. Simulation (The "Active" Part)
+Paradox allows you to run simulations on your memory, letting concepts interact or drift.
+
+```python
+from paradox.simulation import SimulationEnv
+
+def semantic_drift(vectors, dt, backend):
+    return vectors * 0.01 # Simple example
+
+sim = SimulationEnv(engine)
+sim.run(steps=100, dynamics_fn=semantic_drift)
+```
+
+### 4. Visualization
+Visualize your latent space in 2D using PCA or t-SNE.
+
+```python
+from paradox.visualization import LatentVisualizer
+
+viz = LatentVisualizer(engine)
+viz.plot_2d(method="pca", output_file="memory_map.png")
+```
+
+## 💻 How to Use: Library vs Framework
+
+Paradox is designed to be used in two distinct ways depending on your needs.
+
+### 📚 Mode 1: The Library (Static Usage)
+**Use when:** You want a fast vector database or smart storage for your *existing* application.
+*   **You control the loop.** You just push/pull data.
+*   **Example:** Storing million embeddings for a Chatbot.
+
+```python
+from paradox import LatentMemoryEngine
+
+db = LatentMemoryEngine(dimension=512)
+db.add(vector, {"text": "hello"})
+result = db.query(query_vector)
+```
+
+### 🏗️ Mode 2: The Framework (Active Usage)
+**Use when:** You want to build a *living simulation* or agent that evolves on its own.
+*   **Paradox controls the loop.** You define the rules, Paradox moves the world.
+*   **Example:** A traffic simulation where cars (vectors) move closer if they are "jammed".
+
+```python
+from paradox import SimulationEnv
+
+def traffic_physics(vectors, dt, backend):
+    # Custom logic to move vectors based on rules
+    return updated_vectors
+
+sim = SimulationEnv(engine)
+sim.run(steps=1000, dynamics_fn=traffic_physics)
+# The engine is actively "thinking" and updating state
+```
+
+### 🎮 Try the Demo
+Watch Paradox manage 1,000 autonomous agents in a traffic simulation:
+```bash
+### 🎮 Try the Demo
+Watch Paradox manage 1,000 autonomous agents in a traffic simulation:
+```bash
+python examples/traffic_sim_demo.py
+```
+
+## 🎨 Multimedia Support (v0.2.0 Alpha)
+Paradox now supports encoding **Images** and "Dreaming" **Videos** via Latent Interpolation.
+
+### Image Search & Reconstruction
+```python
+from paradox.media import SimpleImageEncoder, SimpleImageDecoder
+from paradox import LatentMemoryEngine
+
+# Encode images into vectors
+encoder = SimpleImageEncoder(64, 64)
+engine = LatentMemoryEngine(dimension=encoder.dimension)
+engine.set_encoder(encoder)
+
+engine.add("my_photo.jpg")
+results = engine.query(encoder.encode("query.jpg"))
+```
+
+### Video Dreaming
+Paradox can generate new video frames by interpolating between two latent states (e.g., "Left" -> "Right").
+```bash
+python examples/video_demo.py
+# Output: dream_video.gif
+```
+
+## 🧪 Latent Blending (v0.3.0)
+Paradox v0.3.0 introduces the `ParadoxMixer`, allowing you to perform arithmetic on concepts.
+
+*   **Interpolation:** `ratio=0.5` gives a perfect mix derived from both parents.
+*   **Arithmetic:** `King - Man + Woman = Queen`.
+
+```python
+from paradox import ParadoxMixer
+
+# Mix two concepts
+vec_purple = ParadoxMixer.interpolate(vec_red, vec_blue, ratio=0.5)
+
+# solve analogy
+vec_queen = ParadoxMixer.analogy(vec_man, vec_king, vec_woman)
+```
+
+## 🚀 Performance (v0.4.0)
+Paradox v0.4.0 includes massive optimizations for scale:
+*   **Auto-Parallel Simulation:** Automatically distributes simulation physics across all CPU cores using lightweight threads.
+*   **Hybrid Mixer:** Automatically detects PyTorch tensors and uses GPU acceleration for blending.
+
+```python
+# Enable parallel simulation explicitly (default is 'auto')
+sim.run(steps=1000, dynamics_fn=my_physics, parallel=True)
+```
+
+## 🤝 Contributing
+Open source contributions are welcome. Please submit a PR for review.
+
+## 📄 License
+MIT License
