@@ -1,0 +1,36 @@
+[build-system]
+requires = ["scikit-build-core", "nanobind", "wheel"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "tdscontrol"
+authors = [
+    {name = "Pieter Appeltans", email = "appeltanspieter@gmail.com"},
+]
+description = "A Python wrapper for TDS Control, a library for the analysis"
+readme = "README.md"
+requires-python = ">=3.9"
+keywords = ["Control theory", "Dynamical systems", "Spectral methods", "Time-delay systems"]
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
+
+dynamic = ["version"]
+
+[tool.scikit-build]
+build-dir = "build/{wheel_tag}"
+wheel.packages = ["python/tdscontrol"]
+
+[tool.scikit-build.cmake.define]
+PYTHON_BINDINGS = "ON"
+BUILD_TESTING = "OFF"
+
+[tool.scikit-build.metadata.version]
+provider = "scikit_build_core.metadata.regex"
+input = "VERSION"
+
+[[tool.scikit-build.generate]]
+location = "install"
+path = "tdscontrol/version.py"
+template = '''
+__version__ = "${version}"
+'''
