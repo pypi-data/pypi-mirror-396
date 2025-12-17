@@ -1,0 +1,103 @@
+{% load filters %}
+
+{% if cisco_device_support %}
+    <div class="card">
+        <h5 class="card-header">Cisco Software Release</h5>
+        <table class="table table-hover panel-body attr-table">
+            <tbody>
+                <tr {{ cisco_device_support.recommended_release|coverage_class }} >
+                    <td style="width: 40%">Recommended Release</td>
+                    <td colspan="2">{{ cisco_device_support.recommended_release|linebreaksbr|placeholder }}</td>
+                </tr>
+                {% if "PID without Cisco software" in cisco_device_support.recommended_release %}
+                    {# Comment: If PID have no Cisco software omit the desired and current release #}
+                {% else %}
+                    <tr {{ cisco_device_support.desired_release_status|desired_release_status_class }}>
+                        <td>Desired Release</td>
+                        <td style="width: 40px"><i {{ cisco_device_support.desired_release_status|coverage_class_boolian }}></i></td>
+                        <td>{{ cisco_device_support.desired_release|placeholder }}</td>
+                    </tr>
+                    <tr {{ cisco_device_support.current_release_status|current_release_status_class }}>
+                        <td>Current Release</td>
+                        <td style="width: 40px"><i {{ cisco_device_support.current_release_status|coverage_class_boolian }}></i></td>
+                        <td>{{ cisco_device_support.current_release|placeholder }}</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+    <div class="card">
+        <h5 class="card-header">Cisco Device Support</h5>
+        <table class="table table-hover panel-body attr-table">
+            <tbody>
+                <tr {{ cisco_device_support.sr_no_owner|coverage_class }}>
+                    <td style="width: 40%">Is associated with a Cisco ID</td>
+                    <td style="width: 40px"><i {{ cisco_device_support.sr_no_owner|coverage_class_boolian }}></i></td>
+                    <td>{{ cisco_device_support.api_status|placeholder }}</td>
+                </tr>
+                <tr {{ cisco_device_support.contract_supplier|coverage_class }}>
+                    <td>Contract Status</td>
+                    <td><i {{ cisco_device_support.contract_supplier|coverage_class_boolian }}></i></td>
+                    <td>{{ cisco_device_support.contract_supplier|contract_supplier_text|placeholder }}</td>
+                </tr>
+                <tr {{ cisco_device_support.is_covered|coverage_class }}>
+                    <td>Is under Cisco Support?</td>
+                    <td colspan="2"><i {{ cisco_device_support.is_covered|coverage_class_boolian }}></i></td>
+                </tr>
+                <tr {{ cisco_device_support.coverage_end_date|expiration_class }}>
+                    <td>Contract Coverage End Date</td>
+                    <td colspan="2">
+                        {{ cisco_device_support.coverage_end_date|placeholder }}<br>
+                        {% include "cisco/inc/device_contract_coverage_bar.html" %}
+                    </td>
+                </tr>
+                <tr {{ cisco_device_support.service_line_descr|coverage_class }}>
+                    <td>Service Level Description</td>
+                    <td colspan="2">{{ cisco_device_support.service_line_descr|placeholder }}</td>
+                </tr>
+                <tr {{ cisco_device_support.service_contract_number|coverage_class }}>
+                    <td>Service Contract Number</td>
+                    <td colspan="2">{{ cisco_device_support.service_contract_number|placeholder }}</td>
+                </tr>
+                <tr {{ cisco_device_support.warranty_end_date|coverage_class }}>
+                    <td>Warranty End Date</td>
+                    <td colspan="2">{{ cisco_device_support.warranty_end_date|placeholder }}</td>
+                </tr>
+                <tr {{ cisco_device_support.warranty_type|coverage_class }}>
+                    <td>Warranty Type</td>
+                    <td colspan="2">{{ cisco_device_support.warranty_type|placeholder }}</td>
+                </tr>
+            </tbody>
+        </table>
+        {% if not cisco_device_support.contract_supplier or "Cisco SNTC" in cisco_device_support.contract_supplier or "Not covered" in cisco_device_support.contract_supplier %}
+            {# Comment: Omit the partner support contract table #}
+        {% else %}
+            <h5 class="card-header">{{ cisco_device_support.contract_supplier }} Device Support</h5>
+            <table class="table table-hover panel-body attr-table">
+                <tbody>
+                    <tr {{ cisco_device_support.partner_status|coverage_class }}>
+                        <td style="width: 40%">Contract Status</td>
+                        <td>{{ cisco_device_support.partner_status|placeholder }}</td>
+                    </tr>
+                    <tr {{ cisco_device_support.partner_coverage_end_date|expiration_class }}>
+                        <td>Contract Coverage End Date</td>
+                        <td>
+                            {{ cisco_device_support.partner_coverage_end_date|placeholder }}<br>
+                            {% include "cisco/inc/device_partner_contract_coverage_bar.html" %}
+                        </td>
+                    </tr>
+                    <tr {{ cisco_device_support.partner_service_level|coverage_class }}>
+                        <td>Service Level Description</td>
+                        <td>{{ cisco_device_support.partner_service_level|placeholder }}</td>
+                    </tr>
+                    <tr {{ cisco_device_support.partner_customer_number|coverage_class }}>
+                        <td>Customer Number</td>
+                        <td>{{ cisco_device_support.partner_customer_number|placeholder }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
+{% endif %}
+
+{% include "cisco/cisco_device_type_support.html" %}
