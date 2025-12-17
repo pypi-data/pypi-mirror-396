@@ -1,0 +1,74 @@
+Metadata-Version: 2.3
+Name: gdbplotter
+Version: 0.1.0
+Summary: Simple UI for printing GDB memory values
+License: The MIT License (MIT)
+         
+         Copyright (c) 2025 Atabey Önür
+         
+         Permission is hereby granted, free of charge, to any person obtaining a copy
+         of this software and associated documentation files (the "Software"), to deal
+         in the Software without restriction, including without limitation the rights
+         to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+         copies of the Software, and to permit persons to whom the Software is
+         furnished to do so, subject to the following conditions:
+         
+         The above copyright notice and this permission notice shall be included in all
+         copies or substantial portions of the Software.
+         
+         THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+         IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+         FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+         AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+         LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+         OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+         SOFTWARE.
+Requires-Dist: matplotlib>=3.10.7
+Requires-Dist: numpy>=2.3.5
+Requires-Python: >=3.13
+Description-Content-Type: text/markdown
+
+# gdbplotter
+
+Lightweight Python tool that connects to a running gdb server and visualises data from given memory addresses. Be aware that this only really makes sense on target architectures that allow reading the memory while the target is running (e.g. "Cortex Live Watch"). Tested with various STM32 processors and regular STLinks.
+
+## Features
+- Communicate with a GDB server and read out specific memory regions
+- Specify decoding rules for each region
+- Simple plotting UI for quick inspection of numeric traces
+
+## Installation
+
+Install from source into a virtual environment:
+
+```shell
+uv sync
+```
+
+## Usage
+
+- Run interactively (should be installed into *Scripts* or *bin* of the virtualenv by default):
+
+```
+gdbplotter
+```
+
+- Run as python module (if previous method doesnt work)
+```
+python -m gdbplotter
+```
+
+- Or import in your own scripts:
+
+```py
+from gdbplotter import gdbparser
+# parse gdb output and plot
+```
+
+## Configuration
+
+Upon first run of the GUI, the tool will create a file called `gdbplotter_config.json` in the working directory — edit this to change default behavior (input paths, plotting options, etc.).
+
+## Tests
+
+There is a small test helper in `test/gdbservermock.py` for development. Run tests or examples manually as needed.
