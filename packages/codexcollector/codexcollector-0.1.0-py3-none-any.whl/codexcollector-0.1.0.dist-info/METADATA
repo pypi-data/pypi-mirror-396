@@ -1,0 +1,516 @@
+Metadata-Version: 2.4
+Name: codexcollector
+Version: 0.1.0
+Summary: A Python package for collecting and extracting text from documents across multiple formats and sources.
+Project-URL: Homepage, https://github.com/NotAndroid37/codexcollector
+Project-URL: Repository, https://github.com/NotAndroid37/codexcollector
+Project-URL: Issues, https://github.com/NotAndroid37/codexcollector/issues
+Project-URL: Documentation, https://github.com/NotAndroid37/codexcollector#readme
+Author: NotAndroid37
+License: MIT
+License-File: LICENSE
+Keywords: NLP,corpus building,document extraction,document parsing,docx,natural language processing,pdf,text extraction,text processing,web scraping
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: Text Processing
+Classifier: Topic :: Text Processing :: Linguistic
+Requires-Python: >=3.10
+Requires-Dist: beautifulsoup4>=4.12.0
+Requires-Dist: chardet>=5.2.0
+Requires-Dist: docx2txt>=0.9
+Requires-Dist: pandas>=2.2.3
+Requires-Dist: pypdf>=5.1.0
+Requires-Dist: python-docx>=1.1.0
+Requires-Dist: python-pptx>=1.0.2
+Requires-Dist: requests>=2.32.0
+Description-Content-Type: text/markdown
+
+# CodexCollector
+
+A Python package for collecting and extracting text from documents across multiple formats and sources.
+
+## Overview
+
+CodexCollector provides a unified interface for document ingestion from both filesystem paths and web URLs. It automatically handles format detection, text extraction, metadata collection, and error logging, making it easy to build text corpora from diverse document sources.
+
+**Key Capabilities:**
+- Extract text from multiple document formats (Word, PowerPoint, PDF, plain text)
+- Collect documents from local filesystems with recursive directory traversal
+- Scrape and download documents from websites with configurable crawling depth
+- Automatic encoding detection for text files
+- Metadata extraction (creation dates) where available
+- Comprehensive error logging for failed ingestions
+- Rate limiting and timeout controls for web requests
+- File size validation and filtering
+
+## Installation
+
+### Requirements
+- Python ≥3.10
+- Dependencies installed automatically via pip/uv
+
+### Using uv (recommended)
+
+```bash
+# Clone the repository
+git clone https://github.com/NotAndroid37/codexcollector.git
+cd codexcollector
+
+# Install dependencies
+uv sync
+
+# Or install in development mode
+uv pip install -e .
+```
+
+### Using pip
+
+```bash
+# Clone the repository
+git clone https://github.com/NotAndroid37/codexcollector.git
+cd codexcollector
+
+# Install dependencies
+pip install -e .
+```
+
+## Quick Start
+
+### Basic Filesystem Collection
+
+```python
+from codexcollector import CodexCollector
+
+# Initialize collector with default settings
+collector = CodexCollector()
+
+# Collect documents from a directory
+corpus = collector.collect('/path/to/documents')
+
+# Access collected documents
+for doc_id, document in corpus.items():
+    print(f"Document {doc_id}: {document['filename']}")
+    print(f"Source: {document['source']}")
+    print(f"Text length: {len(document['text'])} characters")
+    print(f"Date: {document['date']}")
+```
+
+### Basic Web Collection
+
+```python
+from codexcollector import CodexCollector
+
+# Configure for web scraping
+collector = CodexCollector(
+    request_delay=2.0,  # 2 seconds between requests
+    timeout=30,
+    max_crawl_depth=2   # Crawl starting page + 2 levels deep
+)
+
+# Collect documents from a website
+corpus = collector.collect('https://example.com/docs')
+
+# Check for errors
+if collector.error_log:
+    print(f"Failed to process {len(collector.error_log)} files")
+    for source, error in collector.error_log.items():
+        print(f"  {source}: {error}")
+```
+
+## Configuration
+
+### CodexCollector Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `supported_extensions` | `set[str]` | `{'.pdf', '.docx', '.doc', '.pptx', '.ppt', '.txt', '.md', '.rtf'}` | File extensions to process (must include leading dot) |
+| `max_file_size_mb` | `int` | `100` | Maximum file size in MB (0 = no limit) |
+| `request_delay` | `float` | `1.0` | Delay between web requests in seconds |
+| `timeout` | `int` | `30` | HTTP request timeout in seconds |
+| `excluded_dirs` | `set[str]` | `{'.git', '__pycache__', ...}` | Directory names to skip during traversal |
+| `max_crawl_depth` | `int` | `2` | Maximum depth for recursive web crawling (0 = starting page only) |
+| `default_encoding` | `str` | `'utf-8'` | Default encoding when chardet fails or as fallback |
+| `max_collection_time` | `int` | `0` | Maximum collection time in seconds (0 = no limit) |
+
+**Default excluded directories:**
+```python
+{'.git', '__pycache__', '.pytest_cache', 'node_modules', '.vscode',
+ '.idea', 'venv', '.env', 'logs', 'tmp', 'temp'}
+```
+
+## Advanced Usage
+
+### Custom File Filtering
+
+```python
+from codexcollector import CodexCollector
+
+# Only collect PDFs and Word documents, limit file size
+collector = CodexCollector(
+    supported_extensions={'.pdf', '.docx'},
+    max_file_size_mb=25,
+    excluded_dirs={'archive', 'backup', 'temp'}
+)
+
+corpus = collector.collect('/data/documents')
+```
+
+### Web Scraping with Depth Control
+
+```python
+from codexcollector import CodexCollector
+
+# Configure deep crawling with rate limiting
+collector = CodexCollector(
+    max_crawl_depth=3,      # Starting page + 3 levels
+    request_delay=1.5,      # Respectful crawling
+    timeout=60,
+    max_collection_time=600  # 10 minute timeout
+)
+
+corpus = collector.collect('https://research-papers.example.com')
+```
+
+### Progress Tracking
+
+```python
+from codexcollector import CodexCollector
+
+def progress_callback(current, total):
+    """Called after each document is processed."""
+    percentage = (current / total) * 100
+    print(f"Progress: {current}/{total} ({percentage:.1f}%)")
+
+collector = CodexCollector()
+corpus = collector.collect(
+    '/large/document/collection',
+    progress_callback=progress_callback
+)
+```
+
+### Custom Text Encoding
+
+```python
+from codexcollector import CodexCollector
+
+# Use Latin-1 as fallback for Western European documents
+collector = CodexCollector(
+    default_encoding='latin-1'
+)
+
+corpus = collector.collect('/path/to/european/docs')
+```
+
+### Collection with Timeout
+
+```python
+from codexcollector import CodexCollector
+
+# Limit collection to 5 minutes
+collector = CodexCollector(max_collection_time=300)
+
+corpus = collector.collect('https://large-site.example.com')
+
+print(f"Collected {len(corpus)} documents")
+print(f"Errors: {len(collector.error_log)}")
+```
+
+## Output Format
+
+### Corpus Structure
+
+The `collect()` method returns a dictionary (corpus) mapping integer IDs to document dictionaries:
+
+```python
+{
+    0: {
+        'filename': 'report.pdf',
+        'source': '/path/to/report.pdf',
+        'text': 'Document content...',
+        'date': '2024-01-15T10:30:00'
+    },
+    1: {
+        'filename': 'presentation.pptx',
+        'source': 'https://example.com/presentation.pptx',
+        'text': 'Slide text content...',
+        'date': None
+    }
+}
+```
+
+### Document Dictionary Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `filename` | `str` | Name of the file extracted from path or URL |
+| `source` | `str \| None` | Original source path or URL |
+| `text` | `str` | Extracted text content (empty string on failure) |
+| `date` | `str \| None` | ISO format creation date from metadata, or None if unavailable |
+
+### Type Safety
+
+CodexCollector provides TypedDict definitions for better type hints:
+
+```python
+from codexcollector import Document, CorpusType
+
+# Type-safe document creation
+doc: Document = {
+    'filename': 'example.pdf',
+    'source': '/path/to/example.pdf',
+    'text': 'Content here',
+    'date': '2024-01-01T00:00:00'
+}
+
+# Type-safe corpus
+corpus: CorpusType = {0: doc}
+```
+
+## Error Handling
+
+CodexCollector implements graceful degradation - individual document failures don't halt collection:
+
+```python
+from codexcollector import CodexCollector
+
+collector = CodexCollector()
+corpus = collector.collect('/path/to/documents')
+
+# Check error log for failures
+if collector.error_log:
+    print(f"\nFailed to process {len(collector.error_log)} files:")
+    for source, error in collector.error_log.items():
+        print(f"  {source}")
+        print(f"    Error: {error}")
+
+# Successful documents are still in the corpus
+print(f"\nSuccessfully collected {len(corpus)} documents")
+```
+
+### Custom Exceptions
+
+```python
+from codex_exceptions import IngestionError, ConfigurationError
+
+try:
+    collector = CodexCollector(max_file_size_mb=-1)
+except ConfigurationError as e:
+    print(f"Invalid configuration: {e}")
+
+# IngestionError is caught internally and logged to error_log
+```
+
+## Supported File Formats
+
+| Format | Extensions | Library | Metadata |
+|--------|------------|---------|----------|
+| Word (modern) | `.docx` | `python-docx` | Creation date |
+| Word (legacy) | `.doc` | `docx2txt` | None |
+| PowerPoint | `.pptx`, `.ppt` | `python-pptx` | Creation date |
+| PDF | `.pdf` | `pypdf` | Creation date |
+| Plain text | `.txt`, `.md`, `.rtf` | Built-in | None |
+
+**Note:** For files without embedded metadata, the file system modification time is used as a fallback for the `date` field.
+
+## Architecture
+
+### Design Patterns
+
+**Protocol-Based Extension**: Text extractors implement the `TextExtractor` protocol, enabling easy addition of new format support without modifying core code.
+
+```python
+class TextExtractor(Protocol):
+    def extract_text(self, file_path: Path) -> str: ...
+    def extract_metadata(self, file_path: Path) -> dict[str, str | None]: ...
+```
+
+**Composition Over Inheritance**: Format-specific extractors are composed into the collector rather than inherited, allowing runtime configuration and testing.
+
+### Key Methods
+
+- `collect(source, progress_callback=None)` - Main public API for document collection
+- `_is_url(source)` - Detects whether source is URL or filesystem path
+- `_discover_files_from_path(path)` - Recursive filesystem traversal
+- `_discover_files_from_url(url)` - Web crawling with depth control
+- `_extract_from_file(file_path, source)` - Format-specific text extraction
+- `_download_file(url, temp_path)` - Streaming download for web sources
+
+## Dependencies
+
+### Core Dependencies
+
+- `beautifulsoup4` - HTML parsing for web scraping
+- `chardet` - Character encoding detection
+- `docx2txt` - Legacy Word document support
+- `pandas` - Data structure support
+- `pypdf` - PDF text extraction
+- `python-docx` - Modern Word document parsing
+- `python-pptx` - PowerPoint parsing
+- `requests` - HTTP requests for web scraping
+
+### Development Dependencies
+
+- `ipykernel` - Jupyter notebook support
+
+## Testing
+
+Run the included test suite:
+
+```bash
+# Run basic tests
+uv run python test_codexcollector.py
+
+# Or using pytest (if installed)
+pytest test_codexcollector.py -v
+```
+
+The test suite covers:
+- Initialization and configuration validation
+- URL vs. file path detection
+- Filename extraction from URLs
+- Collection timeout checking
+- Type safety with TypedDict
+
+## Performance Considerations
+
+### Large Collections
+
+- Use `max_file_size_mb` to skip oversized files
+- Set `max_collection_time` to prevent indefinite execution
+- Implement `progress_callback` for monitoring
+
+### Web Scraping
+
+- Adjust `request_delay` to respect server rate limits (recommended: ≥1.0 seconds)
+- Use `max_crawl_depth` to limit scope and prevent infinite crawling
+- Set reasonable `timeout` values for slow servers
+
+### Text Encoding
+
+- Use `default_encoding` to skip chardet for known-encoding collections
+- For homogeneous sources, setting a specific encoding improves performance
+
+## Limitations
+
+- **PDF extraction**: No OCR support - scanned documents without text layers return empty strings
+- **Legacy formats**: `.doc` and `.ppt` files have limited metadata extraction
+- **Web scraping**: Respects same-domain restriction and doesn't handle JavaScript-rendered content
+- **Encoding detection**: May fail on very short files or files with mixed encodings
+- **File formats**: No support for EPUB, ODT, or other formats (extensible via Protocol)
+
+## Use Cases
+
+### Building Text Corpora
+
+```python
+from codexcollector import CodexCollector
+
+# Collect academic papers
+collector = CodexCollector(supported_extensions={'.pdf'})
+corpus = collector.collect('/research/papers')
+
+# Extract just the text for analysis
+texts = [doc['text'] for doc in corpus.values()]
+```
+
+### Document Archive Mining
+
+```python
+from codexcollector import CodexCollector
+
+# Process large archive with progress tracking
+def show_progress(current, total):
+    if current % 100 == 0:
+        print(f"Processed {current}/{total} documents...")
+
+collector = CodexCollector(
+    max_file_size_mb=50,
+    excluded_dirs={'backup', 'archive_v1', 'duplicates'}
+)
+
+corpus = collector.collect(
+    '/corporate/document/archive',
+    progress_callback=show_progress
+)
+```
+
+### Web Documentation Collection
+
+```python
+from codexcollector import CodexCollector
+
+# Scrape technical documentation
+collector = CodexCollector(
+    supported_extensions={'.pdf', '.docx'},
+    max_crawl_depth=3,
+    request_delay=2.0
+)
+
+corpus = collector.collect('https://docs.example.com/api')
+```
+
+## Contributing
+
+Contributions are welcome! Areas for improvement:
+
+1. **Additional format support**: EPUB, ODT, etc.
+2. **OCR integration**: For scanned PDFs
+3. **Parallel processing**: For large collections
+4. **Incremental collection**: Track processed files to avoid reprocessing
+5. **Custom stopword filtering**: At collection time
+6. **Robots.txt compliance**: Enhanced web scraping ethics
+
+### Development Process
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Add tests for new functionality
+4. Ensure all tests pass (`uv run python test_codexcollector.py`)
+5. Submit a pull request
+
+## Roadmap
+
+- [ ] OCR integration for scanned documents (pytesseract)
+- [ ] Parallel processing for large corpora (multiprocessing)
+- [ ] Additional file format support (EPUB, ODT)
+- [ ] Robots.txt compliance for web scraping
+- [ ] Incremental collection with state persistence
+- [ ] Content-type validation before download
+- [ ] Language-specific encoding presets
+- [ ] Custom extractor registration API
+
+## Known Issues
+
+- Legacy Word (.doc) and PowerPoint (.ppt) files may not extract text correctly in all cases
+- Web crawling doesn't handle JavaScript-rendered content
+- Temporary files from web downloads are created in current directory (consider using tempfile module)
+
+## License
+
+This project is licensed under the MIT License.
+
+## Citation
+
+If you use CodexCollector in academic work, please cite:
+
+```
+[Add citation information]
+```
+
+## Support
+
+- Issues: [GitHub Issues](https://github.com/NotAndroid37/codexcollector/issues)
+- Documentation: [Full documentation link]
+
+---
+
+Built for seamless document collection and text extraction.
