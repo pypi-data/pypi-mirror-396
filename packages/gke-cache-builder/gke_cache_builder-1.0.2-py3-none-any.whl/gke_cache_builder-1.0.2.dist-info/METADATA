@@ -1,0 +1,115 @@
+Metadata-Version: 2.4
+Name: gke-cache-builder
+Version: 1.0.2
+Summary: [Protected] GKE Multi-Cluster Cache Builder with Fuzzy Search
+License: MIT
+Project-URL: Homepage, https://github.com/yourusername/gke-cache-builder
+Project-URL: Repository, https://github.com/yourusername/gke-cache-builder
+Project-URL: Issues, https://github.com/yourusername/gke-cache-builder/issues
+Keywords: gke,kubernetes,cache,fuzzy-search,multi-cluster
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: google-cloud-resource-manager>=1.10.0
+Requires-Dist: google-cloud-container>=2.30.0
+Requires-Dist: google-auth>=2.23.0
+Requires-Dist: kubernetes>=28.1.0
+Requires-Dist: python-dotenv>=1.0.0
+Dynamic: license-file
+
+"""
+# GKE Cache Builder
+
+Multi-cluster GKE cache builder with fuzzy search capabilities for hosts, namespaces, and clients.
+
+## Installation
+
+```bash
+pip install gke-cache-builder
+```
+
+## Quick Start
+
+```python
+from gke_cache_builder import build_cache, get_cache, fuzzy_search_hosts
+
+# Build cache from GCP organization
+cache = build_cache(org_id="123456789")
+
+# Get cached data
+cache_data = get_cache()
+
+# Fuzzy search for hosts
+results = fuzzy_search_hosts("example.com", max_results=5)
+```
+
+## Features
+
+- Multi-cluster GKE discovery
+- Host-to-namespace mapping
+- Fuzzy search for hosts, namespaces, and clients
+- CSV-based client name mapping
+- NFS storage mapping support
+- Thread-safe operations
+
+## Configuration
+
+Set environment variables:
+
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+export GCP_ORG_ID=123456789
+export CLIENT_MAPPINGS_CSV=client_mappings.csv
+```
+
+## Usage Examples
+
+### Building Cache
+
+```python
+from gke_cache_builder import build_cache
+
+# Build from organization
+cache = build_cache(org_id="123456789")
+
+# Build from folder
+cache = build_cache(folder_id="987654321")
+```
+
+### Searching
+
+```python
+from gke_cache_builder import fuzzy_search_hosts, fuzzy_search_namespaces
+
+# Search hosts
+host_results = fuzzy_search_hosts("acme", max_results=5, min_score=0.4)
+
+# Search namespaces
+ns_results = fuzzy_search_namespaces("prod", max_results=5)
+```
+
+### Client CSV Mapping
+
+```python
+from gke_cache_builder import get_csv_handler, create_sample_csv
+
+# Create sample CSV
+create_sample_csv("client_mappings.csv")
+
+# Use CSV handler
+handler = get_csv_handler()
+client_data = handler.get_client_data("www.example.com")
+```
+
+## License
+
+MIT License
+"""
