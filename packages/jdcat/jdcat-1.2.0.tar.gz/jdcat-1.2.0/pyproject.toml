@@ -1,0 +1,73 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jdcat"
+version = "1.2.0"
+description = "支持基础入参测试"
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+authors = [
+  { name = "Sensitive Check Team" }
+]
+license = { text = "MIT" }
+keywords = ["security", "proxy", "sensitive-data", "testing", "mitmproxy"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Security",
+  "Topic :: Software Development :: Testing",
+  "Topic :: Internet :: Proxy Servers"
+]
+dependencies = [
+  "typer>=0.12.3",
+  "PyYAML>=6.0.1",
+  "fastapi>=0.111.0",
+  "uvicorn[standard]>=0.23.0",
+  "httpx>=0.26.0",
+  "mitmproxy>=10.0.0,<11.1.0",
+  "rumps>=0.4.0"
+]
+
+[project.urls]
+Homepage = "https://github.com/sensitive-check/jdcat"
+Repository = "https://github.com/sensitive-check/jdcat"
+Issues = "https://github.com/sensitive-check/jdcat/issues"
+
+[project.scripts]
+jdcat = "jdcat.__main__:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+# 从当前目录开始查找所有包，但排除测试和临时目录
+where = ["."]
+include = ["jdcat*", "sensitive_check_local*", "mitmproxy*", "root_helper*"]
+exclude = ["test*", ".*", "dist*", "build*", "*.egg-info*"]
+
+[tool.setuptools.package-data]
+# 将运行所需资源纳入 wheel：本地服务模块与 mitm 插件、常见配置与资产
+"sensitive_check_local" = ["*.yaml", "*.json", "assets/**"]
+"mitmproxy" = ["*.py"]
+"root_helper" = ["*.py"]
+"jdcat" = ["resources/*.plist"]
+"*" = ["*.yaml", "*.json", "*.py"]
+
+# 使用data-files确保资源文件被正确包含
+[tool.setuptools.data-files]
+"share/jdcat/resources" = ["resources/*.plist"]
+"share/jdcat/root_helper" = ["root_helper/*.py"]
+[tool.sensitive_check_local]
+# 默认开启：仅保留XHR/Fetch类API请求，过滤静态资源
+capture.filter_xhr_only = true
+# 可用环境变量覆盖：CAPTURE_FILTER_XHR_ONLY=true|false
