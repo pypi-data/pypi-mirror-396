@@ -1,0 +1,1508 @@
+{
+  "projectName": "klondike-spec-cli",
+  "version": "0.1.0",
+  "features": [
+    {
+      "id": "F001",
+      "category": "infrastructure",
+      "priority": 1,
+      "description": "Initialize Python project with pyproject.toml and pith dependency",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "pyproject.toml exists with correct metadata",
+        "pith (pypith) is listed as dependency",
+        "Project can be installed in development mode with pip install -e .",
+        "Entry point 'klondike' is configured"
+      ],
+      "estimatedEffort": "small",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-07T12:58:15.173825",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "pyproject.toml",
+        "src/klondike_spec_cli/__init__.py"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": "2025-12-07T12:58:08.773009",
+      "notes": null
+    },
+    {
+      "id": "F002",
+      "category": "core",
+      "priority": 1,
+      "description": "Define core data models for features and progress",
+      "dependencies": [
+        "F001"
+      ],
+      "acceptanceCriteria": [
+        "Feature dataclass/model with all required fields defined",
+        "FeatureRegistry model for managing features.json",
+        "Session dataclass for progress tracking",
+        "ProgressLog model for agent-progress.json",
+        "Models support JSON serialization/deserialization"
+      ],
+      "estimatedEffort": "medium",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-07T12:58:21.825881",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "src/klondike_spec_cli/models.py",
+        "tests/test_models.py"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": null,
+      "notes": null
+    },
+    {
+      "id": "F003",
+      "category": "core",
+      "priority": 1,
+      "description": "Implement 'klondike init' command to initialize .klondike directory",
+      "dependencies": [
+        "F002"
+      ],
+      "acceptanceCriteria": [
+        "Running 'klondike init' creates .klondike directory",
+        "Creates features.json with empty feature list and metadata",
+        "Creates agent-progress.json with initialization session",
+        "Creates config.yaml with default settings",
+        "Generates agent-progress.md from JSON",
+        "Shows error if .klondike already exists (unless --force)"
+      ],
+      "estimatedEffort": "medium",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-07T12:58:29.395542",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "src/klondike_spec_cli/cli.py"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": null,
+      "notes": null
+    },
+    {
+      "id": "F004",
+      "category": "core",
+      "priority": 1,
+      "description": "Implement 'klondike feature add' command",
+      "dependencies": [
+        "F002",
+        "F003"
+      ],
+      "acceptanceCriteria": [
+        "Can add a single feature interactively",
+        "Can add feature with --id, --description, --category flags",
+        "Auto-generates next available feature ID if not specified",
+        "Validates feature ID format (F###)",
+        "Updates metadata.totalFeatures count",
+        "Regenerates agent-progress.md"
+      ],
+      "estimatedEffort": "medium",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-07T12:58:34.728170",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "src/klondike_spec_cli/cli.py"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": null,
+      "notes": null
+    },
+    {
+      "id": "F005",
+      "category": "core",
+      "priority": 1,
+      "description": "Implement 'klondike feature list' command",
+      "dependencies": [
+        "F002",
+        "F003"
+      ],
+      "acceptanceCriteria": [
+        "Lists all features with ID, description, status",
+        "Supports --status filter (not-started, in-progress, blocked, verified)",
+        "Supports --category filter",
+        "Supports --json output format",
+        "Shows summary counts at bottom"
+      ],
+      "estimatedEffort": "small",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-07T12:58:34.828338",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "src/klondike_spec_cli/cli.py"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": null,
+      "notes": null
+    },
+    {
+      "id": "F006",
+      "category": "core",
+      "priority": 1,
+      "description": "Implement 'klondike feature start' command",
+      "dependencies": [
+        "F002",
+        "F003"
+      ],
+      "acceptanceCriteria": [
+        "Sets feature status to 'in-progress'",
+        "Sets lastWorkedOn timestamp",
+        "Validates feature exists",
+        "Shows warning if another feature is already in-progress",
+        "Updates agent-progress.md"
+      ],
+      "estimatedEffort": "small",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-07T12:58:34.940451",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "src/klondike_spec_cli/cli.py"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": null,
+      "notes": null
+    },
+    {
+      "id": "F007",
+      "category": "core",
+      "priority": 1,
+      "description": "Implement 'klondike feature verify' command",
+      "dependencies": [
+        "F002",
+        "F003"
+      ],
+      "acceptanceCriteria": [
+        "Sets feature status to 'verified' and passes to true",
+        "Requires --evidence flag with path(s) to evidence files",
+        "Sets verifiedAt timestamp and verifiedBy identifier",
+        "Updates metadata.passingFeatures count",
+        "Validates evidence files exist",
+        "Updates agent-progress.md"
+      ],
+      "estimatedEffort": "medium",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-07T12:58:35.038637",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "src/klondike_spec_cli/cli.py"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": null,
+      "notes": null
+    },
+    {
+      "id": "F008",
+      "category": "core",
+      "priority": 2,
+      "description": "Implement 'klondike feature block' command",
+      "dependencies": [
+        "F002",
+        "F003"
+      ],
+      "acceptanceCriteria": [
+        "Sets feature status to 'blocked'",
+        "Requires --reason flag explaining the blocker",
+        "Optionally accepts --blocked-by for dependency feature IDs",
+        "Updates agent-progress.md"
+      ],
+      "estimatedEffort": "small",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-07T12:58:35.136475",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "src/klondike_spec_cli/cli.py"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": null,
+      "notes": null
+    },
+    {
+      "id": "F009",
+      "category": "core",
+      "priority": 1,
+      "description": "Implement 'klondike session start' command",
+      "dependencies": [
+        "F002",
+        "F003"
+      ],
+      "acceptanceCriteria": [
+        "Creates new session entry in agent-progress.json",
+        "Validates artifact integrity (features.json, agent-progress.json)",
+        "Shows current project status summary",
+        "Lists recommended next features to work on",
+        "Regenerates agent-progress.md"
+      ],
+      "estimatedEffort": "medium",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-07T12:58:40.338604",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "src/klondike_spec_cli/cli.py"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": null,
+      "notes": null
+    },
+    {
+      "id": "F010",
+      "category": "core",
+      "priority": 1,
+      "description": "Implement 'klondike session end' command",
+      "dependencies": [
+        "F002",
+        "F003",
+        "F009"
+      ],
+      "acceptanceCriteria": [
+        "Updates current session with completion data",
+        "Prompts for session summary if not provided",
+        "Validates all in-progress features are handled",
+        "Shows warning for uncommitted git changes",
+        "Regenerates agent-progress.md"
+      ],
+      "estimatedEffort": "medium",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-07T12:58:40.436739",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "src/klondike_spec_cli/cli.py"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": null,
+      "notes": null
+    },
+    {
+      "id": "F011",
+      "category": "core",
+      "priority": 2,
+      "description": "Implement 'klondike status' command",
+      "dependencies": [
+        "F002",
+        "F003"
+      ],
+      "acceptanceCriteria": [
+        "Shows project name and version",
+        "Shows feature counts by status",
+        "Shows progress percentage",
+        "Shows current session info if active",
+        "Shows last session summary",
+        "Supports --json output"
+      ],
+      "estimatedEffort": "small",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-07T12:58:40.543803",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "src/klondike_spec_cli/cli.py"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": null,
+      "notes": null
+    },
+    {
+      "id": "F012",
+      "category": "core",
+      "priority": 2,
+      "description": "Implement 'klondike progress' command to regenerate markdown",
+      "dependencies": [
+        "F002",
+        "F003"
+      ],
+      "acceptanceCriteria": [
+        "Generates agent-progress.md from agent-progress.json",
+        "Uses proper markdown formatting with session log",
+        "Includes quick reference section with current priorities",
+        "Supports --output flag for custom output path"
+      ],
+      "estimatedEffort": "medium",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-07T12:58:40.642977",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "src/klondike_spec_cli/cli.py"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": null,
+      "notes": null
+    },
+    {
+      "id": "F013",
+      "category": "core",
+      "priority": 2,
+      "description": "Implement 'klondike validate' command",
+      "dependencies": [
+        "F002",
+        "F003"
+      ],
+      "acceptanceCriteria": [
+        "Validates features.json against schema",
+        "Validates metadata counts match actual counts",
+        "Validates agent-progress.json structure",
+        "Checks for orphaned/missing features",
+        "Reports all issues found with suggestions to fix",
+        "Returns non-zero exit code on validation failure"
+      ],
+      "estimatedEffort": "medium",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-07T12:58:40.752911",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "src/klondike_spec_cli/cli.py"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": null,
+      "notes": null
+    },
+    {
+      "id": "F014",
+      "category": "core",
+      "priority": 3,
+      "description": "Implement 'klondike feature edit' command",
+      "dependencies": [
+        "F002",
+        "F003"
+      ],
+      "acceptanceCriteria": [
+        "Can update feature notes with --notes flag",
+        "Can add acceptance criteria with --add-criteria flag",
+        "Cannot modify description or id (enforces immutability)",
+        "Shows clear error for forbidden modifications",
+        "Supports updating priority"
+      ],
+      "estimatedEffort": "small",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-07T13:37:38.010160",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "52 tests passing",
+        "notes/criteria update works",
+        "description immutable"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": "2025-12-07T13:35:37.865580",
+      "notes": ""
+    },
+    {
+      "id": "F015",
+      "category": "infrastructure",
+      "priority": 2,
+      "description": "Bake templates into the executable",
+      "dependencies": [
+        "F001"
+      ],
+      "acceptanceCriteria": [
+        "Templates are included in package data",
+        "Templates can be extracted to .klondike/templates/ on demand",
+        "Includes features.json template",
+        "Includes agent-progress.json template",
+        "Includes config.yaml template"
+      ],
+      "estimatedEffort": "small",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-07T13:13:40.174946",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "tests/test_templates.py",
+        "dist/klondike_spec_cli-0.1.0-py3-none-any.whl"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": "2025-12-07T13:09:04.637149",
+      "notes": null
+    },
+    {
+      "id": "F016",
+      "category": "infrastructure",
+      "priority": 2,
+      "description": "Implement configuration management",
+      "dependencies": [
+        "F003"
+      ],
+      "acceptanceCriteria": [
+        "Reads config from .klondike/config.yaml",
+        "Supports default_category, default_priority settings",
+        "Supports progress_output_path setting",
+        "Supports verifiedBy identifier for current user/agent"
+      ],
+      "estimatedEffort": "small",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-07T13:26:07.043829",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "tests/test_models.py:TestConfig",
+        "manual-cli-test"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": "2025-12-07T13:13:54.405417",
+      "notes": null
+    },
+    {
+      "id": "F017",
+      "category": "ui",
+      "priority": 3,
+      "description": "Add rich terminal output with colors and formatting",
+      "dependencies": [
+        "F001"
+      ],
+      "acceptanceCriteria": [
+        "Status indicators use color coding (green=verified, yellow=in-progress, red=blocked)",
+        "Progress bars for overall completion",
+        "Tables are properly formatted",
+        "Colors can be disabled with --no-color flag"
+      ],
+      "estimatedEffort": "small",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-07T13:41:39.130691",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "52 tests passing",
+        "rich tables/colors work",
+        "--no-color flag works"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": "2025-12-07T13:37:55.529484",
+      "notes": null
+    },
+    {
+      "id": "F018",
+      "category": "testing",
+      "priority": 2,
+      "description": "Set up pytest testing infrastructure",
+      "dependencies": [
+        "F001"
+      ],
+      "acceptanceCriteria": [
+        "pytest is configured in pyproject.toml",
+        "Test directory structure exists",
+        "At least one passing test exists",
+        "Coverage reporting is configured"
+      ],
+      "estimatedEffort": "small",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-07T12:58:45.610251",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "tests/test_models.py",
+        "pyproject.toml"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": null,
+      "notes": null
+    },
+    {
+      "id": "F019",
+      "category": "testing",
+      "priority": 2,
+      "description": "Unit tests for data models",
+      "dependencies": [
+        "F002",
+        "F018"
+      ],
+      "acceptanceCriteria": [
+        "Tests for Feature model serialization/deserialization",
+        "Tests for FeatureRegistry operations",
+        "Tests for Session model",
+        "Tests for ProgressLog operations",
+        "All tests pass"
+      ],
+      "estimatedEffort": "medium",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-07T12:58:45.704909",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "tests/test_models.py"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": null,
+      "notes": null
+    },
+    {
+      "id": "F020",
+      "category": "testing",
+      "priority": 2,
+      "description": "Integration tests for CLI commands",
+      "dependencies": [
+        "F003",
+        "F004",
+        "F005",
+        "F018"
+      ],
+      "acceptanceCriteria": [
+        "Tests for 'klondike init' command",
+        "Tests for 'klondike feature add' command",
+        "Tests for 'klondike feature list' command",
+        "Uses pith CliRunner for testing",
+        "Tests verify file system changes"
+      ],
+      "estimatedEffort": "medium",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-07T13:28:40.338007",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "tests/test_cli.py (13 tests)"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": "2025-12-07T13:26:38.246526",
+      "notes": null
+    },
+    {
+      "id": "F021",
+      "category": "docs",
+      "priority": 3,
+      "description": "Create README with installation and usage instructions",
+      "dependencies": [
+        "F003",
+        "F004",
+        "F005"
+      ],
+      "acceptanceCriteria": [
+        "Installation instructions (pip install)",
+        "Quick start guide",
+        "Command reference table",
+        "Example workflow walkthrough"
+      ],
+      "estimatedEffort": "small",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-07T12:58:45.801949",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "README.md"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": null,
+      "notes": null
+    },
+    {
+      "id": "F022",
+      "category": "infrastructure",
+      "priority": 3,
+      "description": "Set up GitHub Actions CI/CD",
+      "dependencies": [
+        "F018"
+      ],
+      "acceptanceCriteria": [
+        "Runs tests on push and PR",
+        "Runs linting (ruff)",
+        "Runs type checking (mypy)",
+        "Publishes to PyPI on release tag"
+      ],
+      "estimatedEffort": "medium",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-07T13:42:48.954378",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "ci.yml and publish.yml workflows created with test/lint/mypy/publish steps"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": "2025-12-07T13:41:59.546120",
+      "notes": null
+    },
+    {
+      "id": "F023",
+      "category": "core",
+      "priority": 3,
+      "description": "Implement 'klondike feature import' command",
+      "dependencies": [
+        "F002",
+        "F003"
+      ],
+      "acceptanceCriteria": [
+        "Can import features from a YAML or JSON file",
+        "Validates imported features against schema",
+        "Merges with existing features (no duplicates)",
+        "Shows summary of imported features"
+      ],
+      "estimatedEffort": "medium",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-07T13:46:27.974537",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "58 tests passing",
+        "import-features command works with YAML/JSON",
+        "dry-run",
+        "duplicates"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": "2025-12-07T13:43:04.725238",
+      "notes": null
+    },
+    {
+      "id": "F024",
+      "category": "core",
+      "priority": 3,
+      "description": "Implement 'klondike feature export' command",
+      "dependencies": [
+        "F002",
+        "F003"
+      ],
+      "acceptanceCriteria": [
+        "Exports features to YAML or JSON format",
+        "Supports --status filter to export subset",
+        "Supports --output flag for file path",
+        "Default outputs to stdout"
+      ],
+      "estimatedEffort": "small",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-07T13:46:32.103954",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "58 tests passing",
+        "export-features command works with YAML/JSON",
+        "status filter"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": null,
+      "notes": null
+    },
+    {
+      "id": "F025",
+      "category": "infrastructure",
+      "priority": 4,
+      "description": "Add shell completion support",
+      "dependencies": [
+        "F003"
+      ],
+      "acceptanceCriteria": [
+        "Bash completion script can be generated",
+        "Zsh completion script can be generated",
+        "PowerShell completion script can be generated",
+        "Completes command names and feature IDs"
+      ],
+      "estimatedEffort": "medium",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-07T13:59:51.609824",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "93 tests passing",
+        "'klondike completion bash/zsh/powershell' generates valid completion scripts"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": "2025-12-07T13:56:24.497057",
+      "notes": null
+    },
+    {
+      "id": "F026",
+      "category": "core",
+      "priority": 2,
+      "description": "Implement 'klondike report' command for stakeholder reports",
+      "dependencies": [
+        "F002",
+        "F003"
+      ],
+      "acceptanceCriteria": [
+        "Generates human-readable progress report",
+        "Shows completed features in current session",
+        "Shows overall progress metrics",
+        "Supports --format flag (markdown, plain)",
+        "Suitable for sharing with stakeholders"
+      ],
+      "estimatedEffort": "medium",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-07T13:33:09.802639",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "47 tests passing",
+        "report command works with markdown/plain formats",
+        "--output flag tested"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": "2025-12-07T13:29:42.811851",
+      "notes": null
+    },
+    {
+      "id": "F027",
+      "category": "infrastructure",
+      "priority": 1,
+      "description": "Update repository prompts to use klondike CLI",
+      "dependencies": [
+        "F003",
+        "F009",
+        "F010"
+      ],
+      "acceptanceCriteria": [
+        "session-start.prompt.md uses 'klondike session start'",
+        "session-end.prompt.md uses 'klondike session end'",
+        "verify-feature.prompt.md uses 'klondike feature verify'",
+        "init-project.prompt.md uses 'klondike init'",
+        "All prompts reference .klondike directory structure"
+      ],
+      "estimatedEffort": "medium",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-07T13:07:12.033473",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        ".github/copilot-instructions.md"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": "2025-12-07T13:00:20.368040",
+      "notes": null
+    },
+    {
+      "id": "F028",
+      "category": "security",
+      "priority": 4,
+      "description": "Validate and sanitize all user inputs",
+      "dependencies": [
+        "F003",
+        "F004"
+      ],
+      "acceptanceCriteria": [
+        "Feature IDs are validated against pattern",
+        "File paths are validated and sanitized",
+        "JSON/YAML inputs are validated against schema",
+        "No path traversal vulnerabilities"
+      ],
+      "estimatedEffort": "small",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-07T13:52:06.879606",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "72 tests passing with 14 validation-specific tests covering feature ID",
+        "path",
+        "description",
+        "and priority validation"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": "2025-12-07T13:46:51.425429",
+      "notes": null
+    },
+    {
+      "id": "F029",
+      "category": "core",
+      "priority": 3,
+      "description": "Implement git integration for session management",
+      "dependencies": [
+        "F009",
+        "F010"
+      ],
+      "acceptanceCriteria": [
+        "Session start checks for uncommitted changes",
+        "Session end warns if changes are uncommitted",
+        "Can show recent git log in status",
+        "Optional auto-commit on session end"
+      ],
+      "estimatedEffort": "medium",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-07T13:56:06.633237",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "85 tests passing",
+        "git status shows in 'klondike status'",
+        "session start checks uncommitted changes",
+        "session end has --auto-commit option"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": "2025-12-07T13:52:27.172783",
+      "notes": null
+    },
+    {
+      "id": "F030",
+      "category": "performance",
+      "priority": 5,
+      "description": "Optimize for large feature registries",
+      "dependencies": [
+        "F002"
+      ],
+      "acceptanceCriteria": [
+        "Handles 100+ features without noticeable lag",
+        "Lazy loading of feature details",
+        "Efficient JSON parsing"
+      ],
+      "estimatedEffort": "small",
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-07T14:02:11.592527",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "98 tests passing including 5 performance tests. Handles 150 features",
+        "1000 lookups in under 50ms."
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": "2025-12-07T14:00:10.574583",
+      "notes": null
+    },
+    {
+      "id": "F031",
+      "category": "core",
+      "priority": 2,
+      "description": "Copilot agent launcher with context-aware prompts",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "klondike copilot start launches copilot with project context",
+        "Auto-includes current in-progress feature in prompt",
+        "Sets safe --allow-tool permissions",
+        "Supports --model flag for model selection",
+        "Passes --resume for session continuity"
+      ],
+      "estimatedEffort": null,
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-07T14:47:07.018864",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "src/klondike_spec_cli/cli.py",
+        "tests/test_cli.py (11 copilot tests passing)",
+        "dry-run shows context-aware prompt"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": "2025-12-07T14:44:13.995459",
+      "notes": null
+    },
+    {
+      "id": "F032",
+      "category": "infrastructure",
+      "priority": 2,
+      "description": "MCP server exposing klondike tools to copilot",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "klondike mcp serve starts MCP server",
+        "Exposes get_features/start_feature/verify_feature/get_status tools",
+        "Generates mcp-config.json for copilot",
+        "klondike mcp install registers with copilot config",
+        "Works with copilot --additional-mcp-config flag"
+      ],
+      "estimatedEffort": null,
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-07T14:58:37.754824",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "tests/test_mcp.py (14 passing tests)",
+        "manual verification of mcp serve/install/config commands"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": "2025-12-07T14:52:54.890508",
+      "notes": null
+    },
+    {
+      "id": "F033",
+      "category": "core",
+      "priority": 2,
+      "description": "Generate feature-specific prompts for copilot",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "klondike feature prompt F001 generates copilot-ready prompt",
+        "Includes description/criteria/dependencies in prompt",
+        "Outputs to stdout or file with --output",
+        "Supports --interactive to launch copilot -i with prompt",
+        "Includes pre-commit verification instructions"
+      ],
+      "estimatedEffort": null,
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-08T07:08:42.406528",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "uv run klondike feature prompt F033 output"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": "2025-12-08T07:05:24.014367",
+      "notes": null
+    },
+    {
+      "id": "F034",
+      "category": "infrastructure",
+      "priority": 2,
+      "description": "Generate AGENTS.md from klondike configuration",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "klondike generate agents-md creates AGENTS.md",
+        "Includes project conventions from config.yaml",
+        "Includes pre-commit verification requirements",
+        "References features.json for context",
+        "Follows copilot AGENTS.md format specification"
+      ],
+      "estimatedEffort": null,
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-08T17:35:35.989766",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "AGENTS.md"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": "2025-12-08T17:35:35.514457",
+      "notes": null
+    },
+    {
+      "id": "F035",
+      "category": "core",
+      "priority": 3,
+      "description": "Auto-delegate feature PRs via copilot",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "klondike feature pr F001 launches copilot delegate mode",
+        "Auto-generates PR description from acceptance criteria",
+        "Includes verification evidence in PR body",
+        "Supports --draft flag for draft PRs",
+        "Shows link to created PR on completion"
+      ],
+      "estimatedEffort": null,
+      "status": "not-started",
+      "passes": false,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "evidenceLinks": [],
+      "blockedBy": null,
+      "lastWorkedOn": null,
+      "notes": null
+    },
+    {
+      "id": "F036",
+      "category": "infrastructure",
+      "priority": 3,
+      "description": "Copilot session resume integration",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "klondike session resume runs copilot --resume with context",
+        "Stores copilot session IDs in agent-progress.json",
+        "klondike session list-copilot shows available sessions",
+        "Auto-suggests resume when starting new klondike session"
+      ],
+      "estimatedEffort": null,
+      "status": "not-started",
+      "passes": false,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "evidenceLinks": [],
+      "blockedBy": null,
+      "lastWorkedOn": null,
+      "notes": null
+    },
+    {
+      "id": "F037",
+      "category": "infrastructure",
+      "priority": 3,
+      "description": "Export session progress as GitHub gist",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "klondike session share creates GitHub gist with summary",
+        "Includes feature progress and next steps",
+        "Returns gist URL for stakeholder sharing",
+        "Supports --private flag for private gists",
+        "Stores gist URL in session record"
+      ],
+      "estimatedEffort": null,
+      "status": "not-started",
+      "passes": false,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "evidenceLinks": [],
+      "blockedBy": null,
+      "lastWorkedOn": null,
+      "notes": null
+    },
+    {
+      "id": "F038",
+      "category": "core",
+      "priority": 3,
+      "description": "AI-powered feature suggestions from codebase analysis",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "klondike suggest analyzes codebase with copilot",
+        "Proposes new features based on TODOs/FIXMEs",
+        "Identifies missing test coverage as features",
+        "Outputs suggested features in import-compatible format",
+        "Supports --auto-add to directly add suggestions"
+      ],
+      "estimatedEffort": null,
+      "status": "not-started",
+      "passes": false,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "evidenceLinks": [],
+      "blockedBy": null,
+      "lastWorkedOn": null,
+      "notes": null
+    },
+    {
+      "id": "F039",
+      "category": "infrastructure",
+      "priority": 2,
+      "description": "Local CI check command that detects and runs project CI checks",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Reports pass/fail status"
+      ],
+      "estimatedEffort": null,
+      "status": "not-started",
+      "passes": false,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "evidenceLinks": [],
+      "blockedBy": null,
+      "lastWorkedOn": null,
+      "notes": null
+    },
+    {
+      "id": "F040",
+      "category": "infrastructure",
+      "priority": 1,
+      "description": "Scaffold .github directory with copilot instructions, prompts, and templates during init",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "init creates .github/copilot-instructions.md",
+        "init creates .github/instructions/ with files",
+        "init creates .github/prompts/ with files",
+        "init creates .github/templates/ with files"
+      ],
+      "estimatedEffort": null,
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-08T02:07:04.843289",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "Manual testing verified: (1) klondike init creates .github/ with 18 files including copilot-instructions.md",
+        "instructions/",
+        "prompts/",
+        "templates/ subdirectories (2) --skip-github flag correctly skips .github creation (3) Template variable substitution works for PROJECT_NAME",
+        "DATE",
+        "CREATED_AT (4) 142 tests pass including 9 new tests for GitHub templates"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": "2025-12-08T01:44:15.138939",
+      "notes": null
+    },
+    {
+      "id": "F041",
+      "category": "docs",
+      "priority": 2,
+      "description": "Improve pith help for all subcommands with comprehensive intents and examples",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "All subcommands have 8+ intents for semantic search",
+        "Examples are formatted with $ prefix and comments",
+        "Related commands listed in docstrings",
+        "Release command has pith decorator and intents"
+      ],
+      "estimatedEffort": null,
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-08T06:51:34.923218",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "klondike pith feature -vv output",
+        "semantic search working",
+        "144 tests passing"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": "2025-12-08T06:51:31.020276",
+      "notes": null
+    },
+    {
+      "id": "F042",
+      "category": "integration",
+      "priority": 2,
+      "description": "Integration test",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Feature works as described"
+      ],
+      "estimatedEffort": null,
+      "status": "not-started",
+      "passes": false,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "evidenceLinks": [],
+      "blockedBy": null,
+      "lastWorkedOn": null,
+      "notes": null
+    },
+    {
+      "id": "F043",
+      "category": "e2e-testing",
+      "priority": 2,
+      "description": "E2E test",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Feature works as described"
+      ],
+      "estimatedEffort": null,
+      "status": "not-started",
+      "passes": false,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "evidenceLinks": [],
+      "blockedBy": null,
+      "lastWorkedOn": null,
+      "notes": null
+    },
+    {
+      "id": "F044",
+      "category": "infrastructure",
+      "priority": 1,
+      "description": "Extract data access layer from cli.py into dedicated module",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Create data.py with load_features/save_features/load_progress/save_progress/load_config functions",
+        "Update cli.py to import from data module",
+        "All existing tests continue to pass",
+        "No circular import issues"
+      ],
+      "estimatedEffort": null,
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-11T09:45:02.602274",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "Created data.py module with all data access functions",
+        "updated cli.py imports",
+        "all 181 tests passing"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": "2025-12-11T09:42:24.204764",
+      "notes": "Implementation: Move lines 55-275 (constants, helper functions, load/save operations) to src/klondike_spec_cli/data.py. This is the foundational refactor that other modules will depend on. Keep get_klondike_dir, ensure_klondike_dir, load_features, save_features, load_progress, save_progress, load_config, regenerate_progress_md, update_quick_reference. Gotchas: Other modules may need to import from data.py, handle circular imports carefully. Dependencies: None - this is first."
+    },
+    {
+      "id": "F045",
+      "category": "infrastructure",
+      "priority": 1,
+      "description": "Extract feature command handlers from cli.py into features.py module",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Create commands/features.py with all _feature_* helper functions",
+        "Move feature command handler to new module",
+        "cli.py imports and delegates to features module",
+        "All feature-related tests pass"
+      ],
+      "estimatedEffort": null,
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-11T09:51:45.361334",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "Created commands/features.py with all feature handlers",
+        "cli.py delegates properly",
+        "all 181 tests passing"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": "2025-12-11T09:45:06.371568",
+      "notes": "Implementation: Create src/klondike_spec_cli/commands/features.py. Move _feature_add, _feature_list, _feature_start, _feature_verify, _feature_block, _feature_show, _feature_edit, _feature_prompt functions (lines 700-1100 approx). Keep the @app.command decorator in cli.py but delegate to the new module. Dependencies: F044 (data access layer). Edge cases: feature command dispatcher logic should stay in cli.py."
+    },
+    {
+      "id": "F046",
+      "category": "infrastructure",
+      "priority": 1,
+      "description": "Extract session command handlers from cli.py into sessions.py module",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Create commands/sessions.py with _session_start and _session_end functions",
+        "Move session command handler to new module",
+        "cli.py imports and delegates to sessions module",
+        "All session-related tests pass"
+      ],
+      "estimatedEffort": null,
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-11T09:55:50.189873",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "Created commands/sessions.py with session_start() and session_end() functions",
+        "cli.py delegates properly",
+        "all 181 tests passing"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": "2025-12-11T09:52:30.961333",
+      "notes": "Implementation: Create src/klondike_spec_cli/commands/sessions.py. Move _session_start, _session_end functions (lines 1150-1300 approx). Keep @app.command decorator in cli.py. Dependencies: F044 (data access layer). Small scope - good second command extraction."
+    },
+    {
+      "id": "F047",
+      "category": "infrastructure",
+      "priority": 2,
+      "description": "Extract init/upgrade command handlers from cli.py into init.py module",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Create commands/init.py with init command logic and _upgrade_project function",
+        "Move _parse_agent_option helper to new module",
+        "cli.py imports and delegates to init module",
+        "All init/upgrade tests pass"
+      ],
+      "estimatedEffort": null,
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-11T10:01:18.025606",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "Created commands/init.py with init_command()",
+        "upgrade_command()",
+        "and upgrade_project() functions",
+        "cli.py delegates properly",
+        "all 181 tests passing"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": "2025-12-11T09:57:04.512349",
+      "notes": "Implementation: Create src/klondike_spec_cli/commands/init.py. Move init command body, upgrade command body, _upgrade_project helper, _parse_agent_option helper (lines 280-500 approx). Keep @app.command decorators in cli.py. Dependencies: F044 (data access layer). This is a larger extraction due to init complexity."
+    },
+    {
+      "id": "F048",
+      "category": "infrastructure",
+      "priority": 2,
+      "description": "Extract report command handlers from cli.py into reporting.py module",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Create commands/reporting.py with report command logic and helper functions",
+        "Move _generate_markdown_report and _generate_plain_report and _generate_progress_bar functions",
+        "cli.py imports and delegates to reporting module",
+        "Report generation tests pass"
+      ],
+      "estimatedEffort": null,
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-11T10:06:30.115050",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "Created commands/reporting.py with report_command and helpers",
+        "cli.py delegates",
+        "all 181 tests passing",
+        "cli.py now 1737 lines"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": "2025-12-11T10:04:33.594960",
+      "notes": "Implementation: Create src/klondike_spec_cli/commands/reporting.py. Move report command logic, _generate_markdown_report, _generate_plain_report, _generate_progress_bar functions (lines 1520-1850 approx). Keep @app.command decorator in cli.py. Dependencies: F044 (data access layer). Self-contained - good candidate for extraction."
+    },
+    {
+      "id": "F049",
+      "category": "infrastructure",
+      "priority": 2,
+      "description": "Extract import/export command handlers from cli.py into io.py module",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Create commands/io.py with import_features and export_features command logic",
+        "cli.py imports and delegates to io module",
+        "Import/export functionality tests pass"
+      ],
+      "estimatedEffort": null,
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-11T10:08:45.145421",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "Created commands/io.py with import/export commands",
+        "cli.py delegates",
+        "all 181 tests passing",
+        "cli.py now 1546 lines (down from 1737)"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": "2025-12-11T10:06:41.909044",
+      "notes": "Implementation: Create src/klondike_spec_cli/commands/io.py. Move import_features command logic (lines 1860-2020 approx) and export_features command logic (lines 2100-2180 approx). Keep @app.command decorators in cli.py. Dependencies: F044 (data access layer). Edge cases: YAML parsing error handling, file format validation."
+    },
+    {
+      "id": "F050",
+      "category": "infrastructure",
+      "priority": 2,
+      "description": "Extract copilot command handlers from cli.py into copilot_cmd.py module",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Create commands/copilot_cmd.py with copilot command dispatch and helper functions",
+        "Move _copilot_start",
+        "_copilot_list_worktrees",
+        "_copilot_cleanup_worktrees functions",
+        "cli.py imports and delegates to copilot_cmd module",
+        "Copilot integration tests pass"
+      ],
+      "estimatedEffort": null,
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-11T10:17:57.351141",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "Created commands/copilot_cmd.py with copilot_start",
+        "copilot_list_worktrees",
+        "copilot_cleanup_worktrees functions. Removed old _copilot_* functions from cli.py. All 181 tests passing. Commit: c6eb14d"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": "2025-12-11T10:17:51.361692",
+      "notes": "Implementation: Create src/klondike_spec_cli/commands/copilot_cmd.py (name avoids conflict with existing copilot.py module). Move copilot command dispatch logic and _copilot_start, _copilot_list_worktrees, _copilot_cleanup_worktrees functions (lines 2015-2130 approx). Keep @app.command decorator in cli.py. Dependencies: F044 (data access layer), existing copilot.py module."
+    },
+    {
+      "id": "F051",
+      "category": "infrastructure",
+      "priority": 2,
+      "description": "Extract MCP command handlers from cli.py into mcp_cmd.py module",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Create commands/mcp_cmd.py with mcp command dispatch and helper functions",
+        "Move _mcp_serve",
+        "_mcp_install",
+        "_mcp_config functions",
+        "cli.py imports and delegates to mcp_cmd module",
+        "MCP-related tests pass"
+      ],
+      "estimatedEffort": null,
+      "status": "verified",
+      "passes": true,
+      "verifiedAt": "2025-12-11T10:18:04.430428",
+      "verifiedBy": "coding-agent",
+      "evidenceLinks": [
+        "Created commands/mcp_cmd.py with mcp_serve",
+        "mcp_install",
+        "mcp_config functions. Removed old _mcp_* functions from cli.py. Fixed test to check exception message instead of stdout. All 181 tests passing. Commit: c6eb14d"
+      ],
+      "blockedBy": null,
+      "lastWorkedOn": "2025-12-11T10:18:00.123116",
+      "notes": "Implementation: Create src/klondike_spec_cli/commands/mcp_cmd.py (name avoids conflict with existing mcp_server.py). Move mcp command dispatch and _mcp_serve, _mcp_install, _mcp_config functions (lines 2410-2510 approx). Keep @app.command decorator in cli.py. Dependencies: F044 (data access layer), existing mcp_server.py module."
+    },
+    {
+      "id": "F052",
+      "category": "infrastructure",
+      "priority": 2,
+      "description": "Extract release command from cli.py into release.py module",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Create commands/release.py with release command logic and _bump_version helper",
+        "cli.py imports and delegates to release module",
+        "Release workflow tests pass"
+      ],
+      "estimatedEffort": null,
+      "status": "not-started",
+      "passes": false,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "evidenceLinks": [],
+      "blockedBy": null,
+      "lastWorkedOn": null,
+      "notes": "Implementation: Create src/klondike_spec_cli/commands/release.py. Move release command logic and _bump_version helper (lines 2520-2700 approx). Keep @app.command decorator in cli.py. Dependencies: F044 (data access layer), git.py module. Self-contained release workflow logic."
+    },
+    {
+      "id": "F053",
+      "category": "infrastructure",
+      "priority": 3,
+      "description": "Create commands package with __init__.py exposing all command modules",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Create src/klondike_spec_cli/commands/__init__.py",
+        "Export all command handler functions from submodules",
+        "Update cli.py to import from commands package",
+        "Clean import structure with no circular dependencies"
+      ],
+      "estimatedEffort": null,
+      "status": "not-started",
+      "passes": false,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "evidenceLinks": [],
+      "blockedBy": null,
+      "lastWorkedOn": null,
+      "notes": "Implementation: Create commands/__init__.py that re-exports all command handlers from submodules. This creates a clean API: from klondike_spec_cli.commands import feature_add, session_start, etc. Should be done after individual command modules are extracted. Dependencies: F044-F052. This is the consolidation step."
+    },
+    {
+      "id": "F054",
+      "category": "infrastructure",
+      "priority": 3,
+      "description": "Final cli.py cleanup - remove dead code and optimize imports",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "cli.py reduced to under 500 lines",
+        "All command decorators and routing remain in cli.py",
+        "No unused imports",
+        "All tests pass with full coverage maintained"
+      ],
+      "estimatedEffort": null,
+      "status": "not-started",
+      "passes": false,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "evidenceLinks": [],
+      "blockedBy": null,
+      "lastWorkedOn": null,
+      "notes": "Implementation: After all command extractions are complete, cli.py should contain only: imports, Pith app definition, @app.command decorated functions that delegate to command modules, and main() entry point. Remove any orphaned helper functions. Run ruff to clean imports. Dependencies: F044-F053. This is the final cleanup step. Verify line count reduction from 3000+ to under 500."
+    },
+    {
+      "id": "F055",
+      "category": "infrastructure",
+      "priority": 4,
+      "description": "Remove unused imports in command modules",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "No unused imports in commands/init.py",
+        "No unused imports across all command modules",
+        "Ruff check passes with no import warnings"
+      ],
+      "estimatedEffort": null,
+      "status": "not-started",
+      "passes": false,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "evidenceLinks": [],
+      "blockedBy": null,
+      "lastWorkedOn": null,
+      "notes": "Implementation: Run ruff check --select F401 to find unused imports. Remove Option import from init.py (parameters are function args, not CLI decorators). Edge cases: Some imports may be used for type hints only. Context: Cleanup after cli.py refactoring. Gotchas: Ensure imports needed for TYPE_CHECKING blocks are preserved."
+    },
+    {
+      "id": "F056",
+      "category": "infrastructure",
+      "priority": 4,
+      "description": "Move progress bar utility to formatting.py module",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "generate_progress_bar function exists in formatting.py",
+        "reporting.py imports from formatting module",
+        "All tests pass after move"
+      ],
+      "estimatedEffort": null,
+      "status": "not-started",
+      "passes": false,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "evidenceLinks": [],
+      "blockedBy": null,
+      "lastWorkedOn": null,
+      "notes": "Implementation: Move generate_progress_bar() from commands/reporting.py to formatting.py. Update import in reporting.py. Edge cases: Function is self-contained with no dependencies. Context: Consolidate display utilities in formatting.py for consistency. Gotchas: Ensure the function signature and behavior remain unchanged."
+    },
+    {
+      "id": "F057",
+      "category": "docs",
+      "priority": 5,
+      "description": "Remove duplicate docstrings between CLI decorators and command functions",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Command functions have concise implementation-focused docstrings",
+        "CLI decorator @app.command has user-facing documentation",
+        "No duplicate examples or usage info between layers"
+      ],
+      "estimatedEffort": null,
+      "status": "not-started",
+      "passes": false,
+      "verifiedAt": null,
+      "verifiedBy": null,
+      "evidenceLinks": [],
+      "blockedBy": null,
+      "lastWorkedOn": null,
+      "notes": "Implementation: Keep full docstrings on @app.command decorators (user-facing help). Reduce command function docstrings to brief implementation notes. Edge cases: init_command and upgrade_command in commands/init.py have full copies. Context: Docstring duplication makes maintenance harder. Gotchas: Ensure klondike --help and klondike pith still show correct documentation."
+    }
+  ],
+  "metadata": {
+    "createdAt": "2025-12-07T00:00:00Z",
+    "lastUpdated": "2025-12-11T10:24:14.318199",
+    "totalFeatures": 57,
+    "passingFeatures": 44
+  }
+}
