@@ -1,0 +1,111 @@
+Metadata-Version: 2.4
+Name: zippy-data
+Version: 0.1.0
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Rust
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Requires-Dist: pandas>=1.0 ; extra == 'pandas'
+Requires-Dist: pyarrow>=10.0 ; extra == 'arrow'
+Requires-Dist: duckdb>=0.8 ; extra == 'duckdb'
+Requires-Dist: datasets>=2.0 ; extra == 'hf'
+Requires-Dist: pandas>=1.0 ; extra == 'all'
+Requires-Dist: pyarrow>=10.0 ; extra == 'all'
+Requires-Dist: duckdb>=0.8 ; extra == 'all'
+Requires-Dist: datasets>=2.0 ; extra == 'all'
+Requires-Dist: pytest>=7.0 ; extra == 'dev'
+Requires-Dist: pytest-cov ; extra == 'dev'
+Requires-Dist: mypy ; extra == 'dev'
+Requires-Dist: ruff ; extra == 'dev'
+Requires-Dist: datasets>=2.0 ; extra == 'dev'
+Provides-Extra: pandas
+Provides-Extra: arrow
+Provides-Extra: duckdb
+Provides-Extra: hf
+Provides-Extra: all
+Provides-Extra: dev
+Summary: High-performance, multi-language dataset storage format
+Keywords: dataset,storage,ml,ai,huggingface
+Author-email: Omneity Labs <zippy@omarkama.li>
+License: Apache-2.0 OR MIT
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown; charset=UTF-8; variant=GFM
+Project-URL: Homepage, https://zippydata.org
+Project-URL: Repository, https://github.com/zippydata/zippy
+Project-URL: Documentation, https://zippydata.org/docs
+
+# Zippy (ZDS) Python Package
+
+High-performance, HuggingFace-compatible dataset storage format.
+
+## Installation
+
+```bash
+pip install zippy-zds
+
+# With optional dependencies
+pip install zippy-zds[pandas]
+pip install zippy-zds[all]
+```
+
+## Quick Start
+
+```python
+from zippy import ZDSStore, ZDataset, ZIterableDataset
+
+# Create a store
+store = ZDSStore.open("./my_dataset", collection="train")
+
+# Add documents
+store.put("doc1", {"text": "Hello world", "label": 1})
+store.put("doc2", {"text": "Goodbye world", "label": 0})
+
+# Map-style dataset (random access)
+dataset = store.to_dataset()
+print(dataset[0])  # {"text": "Hello world", "label": 1}
+print(len(dataset))  # 2
+
+# Iterable dataset (streaming)
+iterable = store.to_iterable_dataset()
+for doc in iterable:
+    print(doc)
+
+# With shuffle buffer
+for doc in iterable.shuffle(buffer_size=1000):
+    print(doc)
+```
+
+## DataFrame Integration
+
+```python
+from zippy import read_zds, to_zds
+
+# Load as DataFrame (requires pandas)
+df = read_zds("./my_dataset", collection="train")
+
+# Export DataFrame to ZDS
+to_zds(df, "./output", collection="exported")
+```
+
+## HuggingFace Compatibility
+
+ZDS datasets are designed to work seamlessly with HuggingFace training loops:
+
+```python
+from zippy import ZIterableDataset
+
+dataset = ZIterableDataset.from_store("./my_dataset", collection="train")
+
+# Works with DataLoader
+from torch.utils.data import DataLoader
+loader = DataLoader(dataset, batch_size=32)
+```
+
