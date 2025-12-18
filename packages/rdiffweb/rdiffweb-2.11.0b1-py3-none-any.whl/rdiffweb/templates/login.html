@@ -1,0 +1,54 @@
+{% extends 'layout.html' %}
+{% set username = None %}
+{% block title %}
+  {% trans %}Login{% endtrans %}
+{% endblock %}
+{% block body %}
+  <div class="container mb-auto">
+    <div class="row">
+      <div class="col-12 offset-md-1 col-md-10 offset-lg-2 col-lg-8 text-center">
+        <h1>
+          <img alt="{{ header_name }}"
+               class="mt-4 mb-4"
+               height="192"
+               src="{{ url_for('/logo', v=cache_invalid) }}"/>
+        </h1>
+        <p class="text-secondary">
+          {% if welcome_msg %}
+            {% autoescape false %}
+              {{ welcome_msg }}
+            {% endautoescape %}
+          {% else %}
+            {% trans %}A simplified backup management software for quick access to your archives through an
+            efficient web interface.{% endtrans %}
+            <br />
+            <br />
+            <a href="https://rdiffweb.org/">{% trans %}website{% endtrans %}</a> •
+            <a href="https://groups.google.com/d/forum/rdiffweb">{% trans %}community{% endtrans %}</a>
+          {% endif %}
+        </p>
+      </div>
+    </div>
+  </div>
+  {% block content %}
+    <div class="container mb-auto">
+      <div class="row">
+        <div class="col-12 offset-md-1 col-md-10 offset-lg-2 col-lg-8">
+          <h2>{% trans %}Welcome back{% endtrans %}</h2>
+        </div>
+        <div class="col-12 offset-md-1 col-md-10 offset-lg-2 col-lg-8 form-login">
+          <form role="form" method="post" action="{{ url_for() }}">
+            {% include 'message.html' %}
+            {{ form }}
+          </form>
+          {% if oauth_enabled %}
+            <p class="mt-4 mb-4 text-center">──────── OR ────────</p>
+            <p class="mt-4 text-center">
+              <a href="{{ url_for('/oauth/login') }}">{% trans %}Sign in with {{ oauth_provider_name }}{% endtrans %}</a>
+            </p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  {% endblock content %}
+{% endblock body %}

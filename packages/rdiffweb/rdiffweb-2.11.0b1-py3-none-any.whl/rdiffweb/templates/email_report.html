@@ -1,0 +1,130 @@
+{% extends 'email_layout.html' %}
+{% block title %}
+  {% if time_range == 30 %}
+    {% trans %}Monthly Backup Report{% endtrans %}
+  {% elif time_range == 7 %}
+    {% trans %}Weekly Backup Report{% endtrans %}
+  {% elif time_range == 1 %}
+    {% trans %}Daily Backup Report{% endtrans %}
+  {% else %}
+    {% trans %}Backup Report{% endtrans %}
+  {% endif %}
+{% endblock title %}
+{% block body %}
+  <h1>
+    <a>{% trans username=(user.fullname or user.username) %}Hey {{ username }},{% endtrans %}</a>
+  </h1>
+  <p>
+    {% set start =  start_time.epoch|format_date("medium") %}
+    {% set end =  end_time.epoch|format_date("medium") %}
+    {% if time_range == 30 %}
+      {% trans %}Here is your monthly backup report for last month presenting an overview of the activities within your backup from {{ start }} to {{ end }}.{% endtrans %}
+    {% elif time_range == 7 %}
+      {% trans %}Here is your weekly backup report for previous week presenting an overview of the activities within your backup from {{ start }} to {{ end }}.{% endtrans %}
+    {% elif time_range == 1 %}
+      {% trans %}Here is your daily backup report for yesterday presenting an overview of the activities within your backup for {{ start }}.{% endtrans %}
+    {% else %}
+      {% trans %}Here is your backup report presenting an overview of the activities within your backup from {{ start }} to {{ end }}.{% endtrans %}
+    {% endif %}
+  </p>
+  {# Quota Usage #}
+  {{ storage_usage(disk_usage, disk_quota) }}
+  {# Repo statistics #}
+  {% for repo in data %}
+    <b>{{ repo.display_name }}</b>
+    {% call card('bg-light') %}
+      {% call card_body() %}
+        {# Status #}
+        {% call row() %}
+          {% call col('text-success' if repo.status[0] == 'ok' else 'text-warning') %}
+            <b>{% trans %}Status{% endtrans %}</b>
+          {% endcall %}
+          {% call col('text-success' if repo.status[0] == 'ok' else 'text-warning') %}
+            <b>{{ repo.status[1] }}</b>
+          {% endcall %}
+        {% endcall %}
+        {# Last backup Date #}
+        {% call row() %}
+          {% call col() %}
+            {% trans %}Last backup Date{% endtrans %}
+          {% endcall %}
+          {% call col() %}
+            {{ repo.last_backup_date.epoch|format_datetime("long") if repo.last_backup_date else '-' }}
+          {% endcall %}
+        {% endcall %}
+        {# Current size #}
+        {% call row() %}
+          {% call col() %}
+            {% trans %}Current size{% endtrans %}
+          {% endcall %}
+          {% call col() %}
+            {{ repo.sourcefilesize|filesize if repo.sourcefilesize is not none else '-' }}
+          {% endcall %}
+        {% endcall %}
+        {# Avg. Time #}
+        {% call row() %}
+          {% call col() %}
+            {% trans %}Avg. Time{% endtrans %}
+          {% endcall %}
+          {% call col() %}
+            {% if repo.elapsedtime %}
+              {{ repo.elapsedtime|timespan }}
+            {% else %}
+              -
+            {% endif %}
+          {% endcall %}
+        {% endcall %}
+        {# New files #}
+        {% call row() %}
+          {% call col() %}
+            {% trans %}New files{% endtrans %}
+          {% endcall %}
+          {% call col() %}
+            {% if repo.newfiles %}
+              {{ repo.newfiles }} ({{ repo.newfilesize|filesize if repo.newfilesize is not none else '-' }})
+            {% else %}
+              -
+            {% endif %}
+          {% endcall %}
+        {% endcall %}
+        {# Deleted files #}
+        {% call row() %}
+          {% call col() %}
+            {% trans %}Deleted files{% endtrans %}
+          {% endcall %}
+          {% call col() %}
+            {% if repo.deletedfiles %}
+              {{ repo.deletedfiles }}  ({{ repo.deletedfilesize|filesize if repo.deletedfilesize is not none else '-' }})
+            {% else %}
+              -
+            {% endif %}
+          {% endcall %}
+        {% endcall %}
+        {# Changed files #}
+        {% call row() %}
+          {% call col() %}
+            {% trans %}Changed files{% endtrans %}
+          {% endcall %}
+          {% call col() %}
+            {% if repo.changedfiles %}
+              {{ repo.changedfiles }} ({{ repo.changedsourcesize|filesize if repo.changedsourcesize is not none else '-' }})
+            {% else %}
+              -
+            {% endif %}
+          {% endcall %}
+        {% endcall %}
+        {# Error Count #}
+        {% call row() %}
+          {% call col() %}
+            {% trans %}Error Count{% endtrans %}*
+          {% endcall %}
+          {% call col() %}
+            {{ repo.errors if repo.errors is not none else '-' }}
+          {% endcall %}
+        {% endcall %}
+      {% endcall %}
+    {% endcall %}
+    {{ mb4() }}
+  {% endfor %}
+  *{% trans %}A small number of errors does not indicate a problem with your backup.{% endtrans %}
+{% endblock body %}
