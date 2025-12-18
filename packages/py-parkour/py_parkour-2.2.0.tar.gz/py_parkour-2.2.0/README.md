@@ -1,0 +1,183 @@
+```text
+  _____       _--_          _                   
+ |  __ \     |  _ \        | |                  
+ | |__) |   _| |_) |__ _ __| | ___ ___  _   _ _ __ 
+ |  ___/ | | |  _ // _` | '__| |/ / _ \| | | | '__|
+ | |   | |_| | | \ \ (_| | |  |   < (_) | |_| | |  
+ |_|    \__, |_|  \_\__,_|_|  |_|\_\___/ \__,_|_|  
+         __/ |                                     
+        |___/                                      
+```
+
+> **Version**: 2.2.0  
+> **Author**: zinzied (zinzied@gmail.com)
+
+[![PyPI version](https://badge.fury.io/py/py-parkour.svg)](https://badge.fury.io/py/py-parkour)
+
+# 🏃 Py-Parkour: The Hybrid Scraper Framework
+
+**Py-Parkour** is a lightweight automation utility designed to solve the biggest annoyances in modern web scraping:
+
+1.  🍪 **Cookie Consents**: Detecting and destroying GDPR/modal popups.
+2.  🧭 **Pagination**: Auto-detecting "Next" buttons or infinite scroll.
+3.  🎭 **Verification Gates**: Generating temporary identities (Email/SMS) for signups.
+4.  👻 **Hybrid Scraping**: Break in with the browser, then steal the session for fast API calls.
+5.  📡 **API Discovery**: Automatically detect hidden JSON APIs.
+
+It turns your scraper into a **workflow automation platform**.
+
+---
+
+## 📦 Installation
+
+```bash
+pip install py-parkour[full]
+```
+
+Or for development:
+```bash
+pip install -r requirements.txt
+playwright install
+```
+
+---
+
+## 🚀 How to Use It
+
+### 1. The "Unified" Bot
+The `ParkourBot` is your main entry point. It wraps a Playwright browser and gives you access to all gadgets.
+
+```python
+import asyncio
+from py_parkour import ParkourBot
+
+async def main():
+    bot = ParkourBot(headless=False)
+    await bot.start()
+    await bot.goto("https://target-website.com")
+    # ... use gadgets here ...
+    await bot.close()
+
+asyncio.run(main())
+```
+
+### 2. 🍪 Gadget: Crusher (Cookie Bypasser)
+Don't write brittle selectors for every "Accept Cookies" button.
+
+```python
+await bot.crush_cookies()
+```
+
+### 3. 🧭 Gadget: Compass (Auto-Pagination)
+Stop guessing if the site uses `?page=2` or a "Next >" button.
+
+```python
+async for page_number in bot.crawl(max_pages=10):
+    print(f"Scraping Page {page_number}: {bot.current_url}")
+```
+
+### 4. 🎭 Gadget: Disguises (Temp Identity)
+Need to sign up to view data? Generate a burner identity.
+
+```python
+identity = await bot.identity.generate_identity(country="US")
+print(f"Using email: {identity.email}")
+
+code = await bot.identity.wait_for_code()
+await bot.driver.page.fill("#otp-input", code)
+```
+
+### 5. ✨ The "Magic" Auto-Setup
+Try to automate the entire signup flow (Experimental).
+
+```python
+await bot.auto_setup_identity("https://example.com/signup")
+```
+
+### 6. 👻 Gadget: Shadow (Session Bridge) ⭐ NEW
+Stop choosing between "fast" (requests) and "capable" (browser). Use both.
+Break in with the browser, then steal the session for high-speed API calls.
+
+```python
+# 1. Login with the browser
+await bot.goto("https://target.com/login")
+# ... do login stuff ...
+
+# 2. Transfer the session to a fast aiohttp client
+async with await bot.shadow.create_session() as session:
+    async with session.get("https://target.com/api/secret-data") as resp:
+        print(await resp.json())
+```
+
+### 7. 📡 Gadget: Radar (API Detector) ⭐ NEW
+Why scrape HTML if there's a hidden API? Radar listens to background traffic.
+
+```python
+await bot.goto("https://complex-spa-site.com")
+
+# Check what we found
+print(f"Latest JSON found: {bot.radar.latest_json}")
+
+# Replay captured requests
+for req in bot.radar.requests:
+    if "api/v1/users" in req['url']:
+        print(f"Found User API: {req['url']}")
+```
+
+### 8. 🖱️ Gadget: GhostCursor (Human Movement)
+Stop teleporting the mouse. Move it like a human with Bezier curves.
+
+```python
+await bot.ghost.click("#submit-btn")
+```
+
+### 9. 📐 Gadget: SpatialCompass (Geometric Finding)
+Find elements relative to others ("Right of label", "Below header").
+
+```python
+await bot.spatial.find_right_of("label:text('Email')")
+```
+
+### 10. ⌨️ Gadget: ChaosTyper (Human Typing)
+Type with realistic speed variations and occasional typos + corrections.
+
+```python
+await bot.typer.type_human("#input", "Hello World")
+```
+
+### 11. ⚖️ Gadget: Solicitor (Captcha Solving)
+Connect to external solvers (like 2Captcha) to bypass ReCaptcha, hCaptcha, and Turnstile.
+
+```python
+# Configure
+bot.solicitor.set_solver(TwoCaptchaSolver(api_key="KEY"))
+
+# Solve
+await bot.solicitor.solve_recaptcha_v2() # Auto-injects
+await bot.solicitor.solve_turnstile()    # Auto-injects
+token = await bot.solicitor.solve_recaptcha_v3("KEY", action="login")
+```
+
+---
+
+
+## 🎯 Where to use it?
+
+Py-Parkour is best for:
+
+1.  **Complex Scraping**: Sites that require login or have heavy popups.
+2.  **QA Automation**: Testing "User Registration" flows without using real email addresses.
+3.  **Bot Development**: Quickly spinning up bots that need to pass "verify your email" checks.
+4.  **API Hunting**: Discovering undocumented APIs behind SPAs.
+
+## 🏗 Architecture
+- **Core**: Async Playwright wrapper.
+- **Gadgets**: Modular tools attached to the bot (`.crusher`, `.compass`, `.identity`, `.shadow`, `.radar`, `.ghost`, `.spatial`, `.typer`, `.solicitor`).
+
+---
+
+
+For more detailed examples on using **Compass** and **Radar**, check out the [Gadgets Guide](GUIDE.md).
+
+*Built with ❤️ for Scrapers who hate boilerplate.*
+
