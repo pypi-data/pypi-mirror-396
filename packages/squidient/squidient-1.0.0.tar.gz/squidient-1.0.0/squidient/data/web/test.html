@@ -1,0 +1,143 @@
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf-8"/>
+    <link rel="stylesheet" media="all" href="https://s3.amazonaws.com/dynatable-docs-assets/css/reset.css" />
+    <link rel="stylesheet" media="all" href="https://s3.amazonaws.com/dynatable-docs-assets/css/bootstrap-2.3.2.min.css" />
+    <link rel="stylesheet" media="all" href="https://s3.amazonaws.com/dynatable-docs-assets/css/application.css" />
+    <link rel="stylesheet" media="all" href="https://s3.amazonaws.com/dynatable-docs-assets/css/project.css" />
+    <link rel="stylesheet" media="all" href="https://s3.amazonaws.com/dynatable-docs-assets/css/pygments.css" />
+    <link rel="stylesheet" media="all" href="https://s3.amazonaws.com/dynatable-docs-assets/css/share.css" />
+    <link rel="stylesheet" media="all" href="https://s3.amazonaws.com/dynatable-docs-assets/css/bootstrap-2.3.2.min.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Righteous&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0-beta1/jquery.js"></script>
+    <script type='text/javascript' src='https://s3.amazonaws.com/dynatable-docs-assets/js/highcharts.js'></script>
+    <link rel="stylesheet" media="all" href="jquery.dynatable.css" />
+    <link rel="stylesheet" media="all" href="testsuite.css" />
+    <script type='text/javascript' src='jquery.dynatable.js'></script>
+    <script type='text/javascript' src='testsuite.js'></script>
+    <script type="text/javascript" src="../reports/tests/tests.js"></script>
+    <script type="text/javascript" src="../reports/report.js"></script>
+  </head>
+  
+  <body>
+    <h3 class="first-heading"><a href="index.html"><img src="img/png/squidient_logo.png" alt="" height="80" width="80">squidient report</a></h3>
+    <br></br>
+    <h4><div class="content">Branch: <span class="branch"></span> - Revision: <span class="revision"></span></div></h4>
+    <h3><div class="content"><span class="name"></span></div></h3>
+    <p>
+    </p>
+    <table id="test" class="table table-bordered">
+      <thead>
+        <th>Build</th>
+        <th>MPI</th>
+        <th>Openmp</th>
+        <th>Json</th>
+        <th>Job</th>
+        <th>Output</th>
+        <th>Alya</th>
+        <th>Postprocess</th>
+        <th>Job Id</th>
+        <th>Hostname</th>
+        <th>Init Time</th>
+        <th>Alya Time</th>
+        <th>Postprocess Time</th>
+        <th>Validation Time</th>
+        <th>Job Time</th>
+        <th>Retries</th>
+        <th>Status</th>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+
+    <script type='text/javascript'>
+      $(document).ready(function() {
+        name=testsuiteJSON.getParameter("name")
+        $(".content .name").html(name)
+        try {
+          var r=testsuiteJSON.parse(testsuiteJSON.reports+"report.json")
+        }
+        catch(err){
+          var r=report
+        }
+        try {
+          var t=testsuiteJSON.parse(testsuiteJSON.tests+"tests.json")
+        }
+        catch(err){
+          var t=tests
+        }
+        $(".content .revision").html(r.alyaRevision)
+        $(".content .branch").html(r.tag)
+        var rec = []
+        t=tests[name]
+        t=t.instances
+        for (x in t) {
+          dir=testsuiteJSON.tests + name + "/" + t[x].build + "/" + t[x].mpi + "_" + t[x].openmp + "/"
+          t[x].job=testsuiteJSON.setUrl(testsuiteJSON.FILE_CLOUD, dir + "/JOB.SB", null)
+          t[x].json=testsuiteJSON.setUrl(testsuiteJSON.FILE_CONFIG, dir + "/" + name + ".json", null)
+          t[x].output_out=testsuiteJSON.setUrl(testsuiteJSON.FILE_OK, dir + "/test.out", null)
+          t[x].output_err=testsuiteJSON.setUrl(testsuiteJSON.FILE_KO, dir + "/test.err", null)
+          t[x].output=t[x].output_out + " " + t[x].output_err
+          t[x].alya_out=testsuiteJSON.setUrl(testsuiteJSON.FILE_OK, dir + "/alya.out", null)
+          t[x].alya_err=testsuiteJSON.setUrl(testsuiteJSON.FILE_KO, dir + "/alya.err", null)
+          t[x].alya=t[x].alya_out + " " + t[x].alya_err
+          t[x].postprocess_out=testsuiteJSON.setUrl(testsuiteJSON.FILE_OK, dir + "/post.out", null)
+          t[x].postprocess_err=testsuiteJSON.setUrl(testsuiteJSON.FILE_KO, dir + "/post.err", null)
+          t[x].postprocess=t[x].postprocess_out + " " + t[x].postprocess_err
+          var link="files.html"
+          if (t[x].status) {
+            t[x].status=testsuiteJSON.setUrl(testsuiteJSON.OK, link, {"name": t[x].name, "build": t[x].build, "mpi": t[x].mpi, "openmp": t[x].openmp}, 9, "Success")
+            if (t[x].relaunched) {
+              t[x].relaunched="yes"
+              t[x].status=testsuiteJSON.setUrl(testsuiteJSON.WARNING, link, {"name": t[x].name, "build": t[x].build, "mpi": t[x].mpi, "openmp": t[x].openmp}, 8, "Success (job has been relaunched")
+            }
+          }else{
+            t[x].status=testsuiteJSON.setUrl(testsuiteJSON.KO, link, {"name": t[x].name, "build": t[x].build, "mpi": t[x].mpi, "openmp": t[x].openmp}, 1, "Error")
+            if (t[x].error=="execution"){
+              t[x].status=testsuiteJSON.setUrl(testsuiteJSON.KO, dir + "/alya.out", null, 1, "Error")
+            }
+            else if (t[x].error=="job"){
+              t[x].status=testsuiteJSON.setUrl(testsuiteJSON.SYS_KO, dir + "/alya.err", null, 2, "Job error")
+            }
+            else if (t[x].error=="binding"){
+              t[x].status=testsuiteJSON.setUrl(testsuiteJSON.SYS_BINDING, dir + "/alya.err", null, 3, "Binding error")
+            }
+            else if (t[x].error=="overload"){
+              t[x].status=testsuiteJSON.setUrl(testsuiteJSON.SYS_WEIGHT, dir + "/alya.err", null, 4, "Overload error")
+            }
+            else if (t[x].error=="timeout"){
+              t[x].status=testsuiteJSON.setUrl(testsuiteJSON.TIME, dir + "/test.err", null, 5, "Timeout")
+            }
+            else if (t[x].error=="skipped"){
+              t[x].status=testsuiteJSON.setUrl(testsuiteJSON.SKIPPED, dir + "/alya.out", null, 6, "Skipped")
+            }
+            else if (t[x].error=="tolerance"){
+              t[x].status=testsuiteJSON.setUrl(testsuiteJSON.TOL, link, {"name": t[x].name, "build": t[x].build, "mpi": t[x].mpi, "openmp": t[x].openmp}, 7, "Tolerance error")
+            }
+          }
+          if (t[x].relaunched) {
+            t[x].relaunched="yes"
+          }else{
+            t[x].relaunched="no"
+          }
+        }
+        var dynatable = $('#test').dynatable({
+          dataset: {
+            records: t,
+            sorts :{'status': 1}
+          },
+          features: {
+            paginate: true,
+            pushState: true,
+            search: true,
+            recordCount: true,
+            perPageSelect: true
+          }
+        });
+      });
+    </script>
+  </body>
+</html>

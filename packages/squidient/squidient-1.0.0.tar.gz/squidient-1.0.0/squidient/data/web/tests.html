@@ -1,0 +1,125 @@
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf-8"/>
+    <link rel="stylesheet" media="all" href="https://s3.amazonaws.com/dynatable-docs-assets/css/reset.css" />
+    <link rel="stylesheet" media="all" href="https://s3.amazonaws.com/dynatable-docs-assets/css/bootstrap-2.3.2.min.css" />
+    <link rel="stylesheet" media="all" href="https://s3.amazonaws.com/dynatable-docs-assets/css/application.css" />
+    <link rel="stylesheet" media="all" href="https://s3.amazonaws.com/dynatable-docs-assets/css/project.css" />
+    <link rel="stylesheet" media="all" href="https://s3.amazonaws.com/dynatable-docs-assets/css/pygments.css" />
+    <link rel="stylesheet" media="all" href="https://s3.amazonaws.com/dynatable-docs-assets/css/share.css" />
+    <link rel="stylesheet" media="all" href="https://s3.amazonaws.com/dynatable-docs-assets/css/bootstrap-2.3.2.min.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Righteous&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0-beta1/jquery.js"></script>
+    <script type='text/javascript' src='https://s3.amazonaws.com/dynatable-docs-assets/js/highcharts.js'></script>
+    <link rel="stylesheet" media="all" href="jquery.dynatable.css" />
+    <link rel="stylesheet" media="all" href="testsuite.css" />
+    <script type='text/javascript' src='jquery.dynatable.js'></script>
+    <script type='text/javascript' src='testsuite.js'></script>
+    <script type="text/javascript" src="../reports/tests/tests.js"></script>
+    <script type="text/javascript" src="../reports/report.js"></script>
+  </head>
+  
+  <body>
+    <h3 class="first-heading"><a href="index.html"><img src="img/png/squidient_logo.png" alt="" height="80" width="80">squidient report</a></h3>
+    <br></br>
+    <h4><div class="content">Branch: <span class="branch"></span> - Revision: <span class="revision"></span></span></div></h4>
+    <p>
+    <b>Tests</b>
+    </p>
+    <table id="tests" class="table table-bordered">
+      <thead>
+        <th>Name</th>
+        <th>Authors</th>
+        <th>Description</th>
+        <th>Modules</th>
+        <th>Postprocess</th>
+        <th>Retry</th>
+        <th>Status</th>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+
+    <script type='text/javascript'>
+      $(document).ready(function() {
+        //$(".content .name").html(name)
+        try {
+          var r=testsuiteJSON.parse(testsuiteJSON.reports+"report.json")
+        }
+        catch(err){
+          var r=report
+        }
+        try {
+          var t=testsuiteJSON.parse(testsuiteJSON.tests+"tests.json")
+        }
+        catch(err){
+          var t=tests
+        }
+        $(".content .revision").html(r.alyaRevision)
+        $(".content .branch").html(r.tag)
+        var rec = []
+        for (x in tests) {
+          t[x].modules=testsuiteJSON.concatenate(t[x].modules)
+          t[x].authors=testsuiteJSON.concatenate(testsuiteJSON.mailToName(t[x].authors), ", ")
+          if (t[x].description.length>100){
+            t[x].description="<div title=\""+t[x].description+"\">"+t[x].description.substring(0, 100)+"...</div>"
+          }
+          var link="test.html"
+          if (t[x].status) {
+            t[x].status=testsuiteJSON.setUrl(testsuiteJSON.OK, link, {"name": t[x].name}, 91, "Success")
+            if (t[x].instances.length == 0) {
+              t[x].status=testsuiteJSON.setUrl(testsuiteJSON.SKIPPED, link, {"name": t[x].name}, 92, "Skipped")
+            }
+            if (t[x].retry) {
+              t[x].status=testsuiteJSON.setUrl(testsuiteJSON.WARNING, link, {"name": t[x].name}, 8, "Success (some jobs have been relaunched)")
+            }
+          }else{
+            t[x].status=testsuiteJSON.setUrl(testsuiteJSON.KO, link, {"name": t[x].name}, 1, "Error")
+            if (t[x].error=="job"){
+              t[x].status=testsuiteJSON.setUrl(testsuiteJSON.SYS_KO, link, {"name": t[x].name}, 2, "Job error")
+            }
+            else if (t[x].error=="binding"){
+              t[x].status=testsuiteJSON.setUrl(testsuiteJSON.SYS_BINDING, link, {"name": t[x].name}, 3, "Binding error")
+            }
+            else if (t[x].error=="overload"){
+              t[x].status=testsuiteJSON.setUrl(testsuiteJSON.SYS_WEIGHT, link, {"name": t[x].name}, 4, "Overload error")
+            }
+            else if (t[x].error=="timeout"){
+              t[x].status=testsuiteJSON.setUrl(testsuiteJSON.TIME, link, {"name": t[x].name}, 5, "Timeout")
+            }
+            else if (t[x].error=="skipped"){
+              t[x].status=testsuiteJSON.setUrl(testsuiteJSON.SKIPPED, link, {"name": t[x].name}, 6, "Skipped")
+            }
+            else if (t[x].error=="tolerance"){
+              t[x].status=testsuiteJSON.setUrl(testsuiteJSON.TOL, link, {"name": t[x].name}, 7, "Tolerance error")
+            }
+          }
+          if (t[x].retry) {
+            t[x].retry="yes"
+          }else{
+            t[x].retry="no"
+          }
+          t[x].name=testsuiteJSON.setUrl(t[x].name, link, {"name": t[x].name})
+          rec.push(t[x])
+        }
+        var dynatable = $('#tests').dynatable({
+          dataset: {
+            records: rec,
+            perPageDefault: 20,
+            sorts :{'status': 1}
+          },
+          features: {
+            paginate: true,
+            pushState: true,
+            search: true,
+            recordCount: true,
+            perPageSelect: true
+          }
+        });
+      });
+    </script>
+  </body>
+</html>

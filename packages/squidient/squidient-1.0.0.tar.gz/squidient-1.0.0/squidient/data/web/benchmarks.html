@@ -1,0 +1,93 @@
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf-8"/>
+    <link rel="stylesheet" media="all" href="https://s3.amazonaws.com/dynatable-docs-assets/css/reset.css" />
+    <link rel="stylesheet" media="all" href="https://s3.amazonaws.com/dynatable-docs-assets/css/bootstrap-2.3.2.min.css" />
+    <link rel="stylesheet" media="all" href="https://s3.amazonaws.com/dynatable-docs-assets/css/application.css" />
+    <link rel="stylesheet" media="all" href="https://s3.amazonaws.com/dynatable-docs-assets/css/project.css" />
+    <link rel="stylesheet" media="all" href="https://s3.amazonaws.com/dynatable-docs-assets/css/pygments.css" />
+    <link rel="stylesheet" media="all" href="https://s3.amazonaws.com/dynatable-docs-assets/css/share.css" />
+    <link rel="stylesheet" media="all" href="https://s3.amazonaws.com/dynatable-docs-assets/css/bootstrap-2.3.2.min.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Righteous&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0-beta1/jquery.js"></script>
+    <script type='text/javascript' src='https://s3.amazonaws.com/dynatable-docs-assets/js/highcharts.js'></script>
+    <link rel="stylesheet" media="all" href="jquery.dynatable.css" />
+    <link rel="stylesheet" media="all" href="testsuite.css" />
+    <script type='text/javascript' src='jquery.dynatable.js'></script>
+    <script type='text/javascript' src='testsuite.js'></script>
+    <script type="text/javascript" src="../reports/benchmark_report.js"></script>
+  </head>
+  
+  <body>
+    <h3 class="first-heading"><a href="index.html"><img src="img/png/squidient_logo.png" alt="" height="80" width="80">squidient monitoring report</a></h3>
+    <br></br>
+    <h4><div class="content">Branch: <span class="branch"></span> - Revision: <span class="revision"></span></div></h4>
+    <p>
+    </p>
+    <table id="steps" class="table table-bordered">
+      <thead>
+        <th>Stage</th>
+        <th>Total</th>
+        <th>Failed</th>
+        <th>Status</th>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+
+    <script type='text/javascript'>
+      $(document).ready(function() {
+        try {
+          var r=testsuiteJSON.parse(testsuiteJSON.reports+"benchmark_report.json")
+        }
+        catch(err){
+          var r=report
+        }
+        $(".content .revision").html(r.alyaRevision)
+        $(".content .branch").html(r.tag)
+        var rec = []
+        if ("builds" in r){
+          d = {}
+          d.stage = "builds"
+          d.total = r.builds.total
+          d.failed = r.builds.failed
+          page="bb.html"
+          if (r.builds.status) {
+            d.status=testsuiteJSON.setUrl(testsuiteJSON.OK, page, null, 1)
+          }else{
+            d.status=testsuiteJSON.setUrl(testsuiteJSON.KO, page, null, 1)
+          }
+          rec.push(d)
+        }
+        if ("tests" in r){
+          d = {}
+          d.stage = "tests"
+          d.total = r.tests.total
+          d.failed = r.tests.failed
+          page="btests.html"
+          if (r.tests.status) {
+            d.status=testsuiteJSON.setUrl(testsuiteJSON.OK, page, null, 1)
+          }else{
+            d.status=testsuiteJSON.setUrl(testsuiteJSON.KO, page, null, 1)
+          }
+          rec.push(d)
+        }
+        var dynatable = $('#steps').dynatable({
+          dataset: {
+            records: rec
+          },
+          features: {
+            paginate: true,
+            pushState: true,
+            search: true,
+            recordCount: true,
+            perPageSelect: true
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
