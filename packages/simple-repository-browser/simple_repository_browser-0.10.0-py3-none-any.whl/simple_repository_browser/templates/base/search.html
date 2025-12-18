@@ -1,0 +1,85 @@
+{% extends "page.html" %}
+
+{% block page_banner %}
+{% endblock page_banner %}
+
+
+{% block banner_split %}
+{% endblock banner_split %}
+
+
+{% macro package_card(content) -%}
+<a href="{{ url_for('project', project_name=content.canonical_name) }}">
+    <div class="card" style="margin: 1em;">
+      <div class="card-body">
+         <img src="{{ static_file_url('/images/python-logo-only.svg') }}" style="padding: 0 1em 0 0.5em; vertical-align: top; width: 64px;" >
+         <div style="display: inline-block; width: calc(100% - 70px);">
+          {{ content.canonical_name }} &nbsp;&nbsp;&nbsp;{{ content.release_version or '' }}
+             <span style="float: right; text-decoration: none; font-size: smaller; color: gray;">{{ content.release_date.strftime('%b %d, %Y') if content.release_date else '' }}</span>
+          <p style="text-decoration: none; font-size: smaller; color: gray; margin: 0.1em 0 0 0;">{{ content.summary or '' }}</p>
+         </div>
+      </div>
+    </div>
+</a>
+{%- endmacro %}
+
+{% block page_content %}
+    {{ super() }}
+    <div class="container">
+      <div class="row">
+<!--        <div class="col-md-3"></div>-->
+          <div class="col-md-9 mx-auto">
+
+            {% if results_count == 0 %}
+              No results found.
+            {% else %}
+              Found {{ results_count }} results
+                {% if n_pages > 1%}. Page {{ page }} of {{ n_pages }}:{% endif %}
+              <br>
+
+              {% for result in results %}
+                {{ package_card(result) }}
+              {% endfor %}
+            {% endif %}
+          </div>
+          {% if n_pages > 1 %}
+            <nav aria-label="...">
+              <ul class="pagination justify-content-center">
+                {% if page > 1 %}{# Note: page starts at 1. #}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('search').include_query_params(query=search_query, page=page-1) }}">
+                            Previous
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">
+                            Previous
+                        </span>
+                    </li>
+                {% endif %}
+                <li class="page-item active">
+                  <span class="page-link">
+                    Page {{ page }} of {{ n_pages }}
+                  </span>
+                </li>
+                {% if page < n_pages %}
+                    <li class="page-item">
+                      <a class="page-link" href="{{ url_for('search').include_query_params(query=search_query, page=page+1) }}">
+                          Next
+                      </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">
+                            Next
+                        </span>
+                    </li>
+                {% endif %}
+              </ul>
+            </nav>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+{% endblock page_content %}
