@@ -1,0 +1,57 @@
+"""Role v1 package."""
+
+# ===================================================================
+# AUTO-GENERATED SECTION - ONLY EDIT BELOW THE CLOSING COMMENT BLOCK
+# ===================================================================
+# This section is automatically managed by protoc-gen-meshpy.
+#
+# DO NOT EDIT ANYTHING IN THIS SECTION MANUALLY!
+# Your changes will be overwritten during code generation.
+#
+# To add custom imports and exports, scroll down to the
+# "MANUAL SECTION" indicated below.
+# ===================================================================
+
+# Generated protobuf imports
+from .role_pb2 import Role
+
+# ===================================================================
+# END OF AUTO-GENERATED SECTION
+# ===================================================================
+#
+# MANUAL SECTION - ADD YOUR CUSTOM IMPORTS AND EXPORTS BELOW
+#
+# You can safely add your own imports, functions, classes, and exports
+# in this section. They will be preserved across code generation.
+#
+# Example:
+#   from my_custom_module import my_function
+#
+# ===================================================================
+
+from .role import (
+    must_parse_role_parts,
+    parse_role_parts,
+    role_from_full_resource_name,
+    role_full_resource_name_from_group,
+    role_full_resource_name_from_group_id,
+    role_is_valid,
+    role_is_valid_and_specified,
+)
+
+# ===================================================================
+# MODULE EXPORTS
+# ===================================================================
+# Combined auto-generated and manual exports
+__all__ = [
+    # Generated exports
+    "Role",
+    # Manual exports
+    "must_parse_role_parts",
+    "parse_role_parts",
+    "role_from_full_resource_name",
+    "role_full_resource_name_from_group",
+    "role_full_resource_name_from_group_id",
+    "role_is_valid",
+    "role_is_valid_and_specified",
+]
