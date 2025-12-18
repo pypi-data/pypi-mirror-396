@@ -1,0 +1,494 @@
+"""Command-line interface for Marx."""
+
+import os
+import re
+import shutil
+import sys
+from pathlib import Path
+
+import click
+
+from marx import __version__
+from marx.config import SUPPORTED_AGENTS, load_environment_from_file
+from marx.docker_runner import DockerRunner, ReviewPrompt
+from marx.exceptions import DependencyError, MarxError
+from marx.github import GitHubClient
+from marx.review import (
+    count_issues_by_priority,
+    merge_reviews,
+    post_github_review,
+    save_merged_review,
+)
+from marx.ui import (
+    confirm,
+    console,
+    display_issue,
+    display_pr_table,
+    display_review_summary,
+    print_error,
+    print_header,
+    print_info,
+    print_success,
+    print_warning,
+    prompt_for_selection,
+)
+
+
+def check_dependencies(require_docker: bool = True) -> None:
+    """Check for required system dependencies."""
+    missing = []
+
+    if not shutil.which("git"):
+        missing.append("git")
+
+    if not shutil.which("gh"):
+        missing.append("gh (GitHub CLI)")
+
+    if require_docker and not shutil.which("docker"):
+        missing.append("docker")
+
+    if missing:
+        raise DependencyError(
+            f"Missing required dependencies: {', '.join(missing)}\n"
+            "Please install them and try again."
+        )
+
+
+def parse_agent_argument(agents_str: str) -> tuple[list[str], dict[str, str]]:
+    """Validate and parse agent definitions with optional model overrides."""
+
+    tokens = [token.strip() for token in re.split(r"[\s,]+", agents_str) if token.strip()]
+
+    selected: list[str] = []
+    model_overrides: dict[str, str] = {}
+    invalid: list[str] = []
+
+    for token in tokens:
+        agent_part, has_model, model_part = token.partition(":")
+        agent = agent_part.lower()
+
+        if agent not in SUPPORTED_AGENTS:
+            invalid.append(agent_part or token)
+            continue
+
+        if agent not in selected:
+            selected.append(agent)
+
+        if has_model:
+            model = model_part.strip()
+            if not model:
+                raise click.BadParameter(f"Agent '{agent_part}' is missing a model name after ':'")
+            model_overrides[agent] = model
+
+    if invalid:
+        raise click.BadParameter(
+            f"Invalid agent(s): {', '.join(invalid)}. "
+            f"Valid agents are: {', '.join(sorted(SUPPORTED_AGENTS))}"
+        )
+
+    if not selected:
+        raise click.BadParameter("No valid agents specified")
+
+    return selected, model_overrides
+
+
+def parse_single_agent(agent_str: str) -> tuple[str, str | None]:
+    """Parse a single agent specification with optional model override.
+
+    Returns a tuple of (agent_name, model_override).
+    """
+    agent_part, has_model, model_part = agent_str.strip().partition(":")
+    agent = agent_part.lower()
+
+    if agent not in SUPPORTED_AGENTS:
+        raise click.BadParameter(
+            f"Invalid agent: {agent_part}. "
+            f"Valid agents are: {', '.join(sorted(SUPPORTED_AGENTS))}"
+        )
+
+    model_override = None
+    if has_model:
+        model = model_part.strip()
+        if not model:
+            raise click.BadParameter(f"Agent '{agent_part}' is missing a model name after ':'")
+        model_override = model
+
+    return agent, model_override
+
+
+def select_pr_interactive(github_client: GitHubClient) -> tuple[int, str]:
+    """Interactively select a PR from the list."""
+    print_header("🔍 Fetching open PRs with reviewers (excluding yours)...")
+
+    current_user = github_client.get_current_user()
+    print_success(f"Current user: {current_user}")
+
+    prs = github_client.list_prs()
+    filtered_prs = github_client.filter_prs_for_user(prs, current_user)
+
+    if not filtered_prs:
+        print_warning(
+            f"No open PRs with reviewers found in {github_client.repo} "
+            "(excluding PRs where you are the author or reviewer)"
+        )
+        sys.exit(0)
+
+    print_success(f"Found {len(filtered_prs)} PR(s) with reviewers")
+    console.print()
+
+    pr_data = []
+    for pr in filtered_prs:
+        review_requests = pr.get("reviewRequests", [])
+        reviews = pr.get("reviews", [])
+
+        requested_reviewers = github_client._extract_reviewer_logins(review_requests)
+        review_authors = github_client._extract_reviewer_logins(reviews, key="author")
+
+        all_reviewers = list(set(requested_reviewers + review_authors))
+
+        pr_data.append(
+            {
+                "number": pr["number"],
+                "title": pr["title"],
+                "author": pr.get("author", {}).get("login", "unknown"),
+                "branch": pr["headRefName"],
+                "reviewers": ", ".join(all_reviewers) if all_reviewers else "None",
+                "additions": pr.get("additions", 0),
+                "deletions": pr.get("deletions", 0),
+            }
+        )
+
+    display_pr_table(pr_data)
+    console.print()
+
+    selection = prompt_for_selection(len(pr_data))
+    selected = pr_data[selection - 1]
+
+    return selected["number"], selected["branch"]
+
+
+def setup_run_directory(
+    script_dir: Path, pr_number: int, branch_name: str, resume_mode: bool
+) -> Path:
+    """Set up the run artifacts directory."""
+    sanitized_branch = branch_name.replace("/", "-")
+    run_dir = script_dir / "runs" / f"pr-{pr_number}-{sanitized_branch}"
+    run_dir.parent.mkdir(parents=True, exist_ok=True)
+
+    if resume_mode:
+        if not run_dir.exists():
+            raise MarxError(
+                f"Resume mode requested but no artifacts found at {run_dir}\n"
+                "Run the agents at least once before using --resume."
+            )
+        print_success(f"Using existing run artifacts directory: {run_dir}")
+    else:
+        if run_dir.exists():
+            if confirm(
+                f"Existing run directory detected: {run_dir}\n"
+                "Do you want to remove it and start fresh?",
+                default=False,
+            ):
+                shutil.rmtree(run_dir)
+                print_success("Removed existing run directory")
+            else:
+                print_info("Reusing existing run directory")
+
+        run_dir.mkdir(parents=True, exist_ok=True)
+        print_success(f"Run artifacts directory: {run_dir}")
+
+    return run_dir
+
+
+@click.command()
+@click.option(
+    "--pr",
+    type=int,
+    help="Specify PR number directly (skip interactive selection)",
+)
+@click.option(
+    "--agents",
+    type=str,
+    help=(
+        f"Comma- or space-separated list of agents to run ({', '.join(SUPPORTED_AGENTS)}). "
+        "Append :model to override the default model (e.g., claude:opus). Default: all agents"
+    ),
+)
+@click.option(
+    "--repo",
+    type=str,
+    help="Repository in the format owner/repo (e.g., acmecorp/my-app)",
+)
+@click.option(
+    "--resume",
+    is_flag=True,
+    help="Reuse artifacts from the previous run and skip AI execution",
+)
+@click.option(
+    "--dedupe-with",
+    "dedupe_with",
+    type=str,
+    help=(
+        f"Agent to use for deduplication ({', '.join(SUPPORTED_AGENTS)}). "
+        "Append :model to override the default model (e.g., claude:opus). "
+        "Default: first agent from --agents"
+    ),
+)
+@click.version_option(version=__version__, prog_name="marx")
+def main(
+    pr: int | None,
+    agents: str | None,
+    repo: str | None,
+    resume: bool,
+    dedupe_with: str | None,
+) -> None:
+    """Interactive script to fetch open GitHub PRs with reviewers and run automated code review
+    with multiple AI models (Claude, Codex, Gemini) inside Docker.
+
+    \b
+    Prerequisites:
+      - git
+      - gh (GitHub CLI)
+      - docker (not required with --resume)
+
+    \b
+    Environment Variables:
+      GITHUB_TOKEN  GitHub API token (required for container access)
+      MARX_REPO     Optional owner/name override when auto-detect fails
+
+    \b
+    Examples:
+      marx                                 # Interactive mode with all agents
+      marx --pr 123                        # Review PR #123 with all agents
+      marx --pr 123 --agents claude        # Review PR #123 with Claude only
+      marx --agents codex,gemini           # Interactive mode with Codex and Gemini
+      marx --repo acmecorp/my-app          # Review PRs in specific repository
+      marx --pr 123 --repo acmecorp/my-app # Review specific PR in specific repository
+      marx --resume --pr 123               # Reuse artifacts without rerunning agents
+      marx --dedupe-with claude:opus       # Use Claude with opus model for deduplication
+    """
+    try:
+        load_environment_from_file()
+
+        require_docker = not resume
+        check_dependencies(require_docker)
+
+        agents_to_run = list(SUPPORTED_AGENTS)
+        model_overrides: dict[str, str] = {}
+        if agents:
+            parsed_agents, model_overrides = parse_agent_argument(agents)
+            agents_to_run = parsed_agents
+            if resume:
+                print_warning("--agents option is ignored when --resume is used")
+                agents_to_run = list(SUPPORTED_AGENTS)
+                model_overrides = {}
+
+        dedupe_agent: str | None = None
+        dedupe_model_override: str | None = None
+        if dedupe_with:
+            if resume:
+                print_warning("--dedupe-with option is ignored when --resume is used")
+            else:
+                dedupe_agent, dedupe_model_override = parse_single_agent(dedupe_with)
+                print_info(
+                    f"Using {dedupe_agent} for deduplication"
+                    + (f" (model: {dedupe_model_override})" if dedupe_model_override else "")
+                )
+
+        if model_overrides:
+            for agent_name, model_name in model_overrides.items():
+                print_info(f"Using custom model for {agent_name}: {model_name}")
+
+        github_client = GitHubClient(repo=repo)
+        print_info(f"Repository: {github_client.repo}")
+
+        print_header("🔍 Validating repository and PR...")
+        github_client.validate_repository()
+        print_success(f"Repository {github_client.repo} is accessible")
+
+        if not os.environ.get("GITHUB_TOKEN"):
+            print_warning("GITHUB_TOKEN environment variable is not set")
+            print_info("The AI agents may not be able to access GitHub API inside the container")
+
+        if pr:
+            print_info(f"Using PR #{pr} from command line")
+            github_client.validate_pr(pr)
+            pr_data = github_client.get_pr(pr)
+            pr_number = pr_data["number"]
+            branch_name = pr_data["headRefName"]
+            commit_sha = pr_data.get("headRefOid", "")
+            print_success(f"Found PR #{pr_number} with branch: {branch_name}")
+        else:
+            pr_number, branch_name = select_pr_interactive(github_client)
+            pr_data = github_client.get_pr(pr_number)
+            commit_sha = pr_data.get("headRefOid", "")
+
+        if commit_sha:
+            print_success(f"PR head commit: {commit_sha[:8]}")
+        else:
+            print_warning("Unable to determine the PR head commit SHA")
+
+        script_dir = Path(__file__).parent.parent
+        run_dir = setup_run_directory(script_dir, pr_number, branch_name, resume)
+
+        claude_output = run_dir / "claude-review.json"
+        codex_output = run_dir / "codex-review.json"
+        gemini_output = run_dir / "gemini-review.json"
+        dedup_output = run_dir / "dedup-review.json"
+        merged_output = run_dir / "merged-review.json"
+
+        if not resume:
+            dedup_output.unlink(missing_ok=True)
+
+        if resume:
+            print_header("⏩ Resume Mode: Reusing previous agent results")
+
+            for agent_name, output_file in [
+                ("claude", claude_output),
+                ("codex", codex_output),
+                ("gemini", gemini_output),
+            ]:
+                if output_file.exists():
+                    print_info(f"Found {agent_name} review: {output_file}")
+                else:
+                    print_warning(
+                        f"No {agent_name} review found at {output_file}, creating placeholder"
+                    )
+                    placeholder = {
+                        "pr_summary": {
+                            "number": pr_number,
+                            "title": "Not run",
+                            "description": f"{agent_name} review not found in resume mode",
+                        },
+                        "issues": [],
+                    }
+                    import json
+
+                    with open(output_file, "w") as f:
+                        json.dump(placeholder, f)
+        else:
+            docker_runner = DockerRunner(script_dir)
+            docker_runner.ensure_image()
+
+            prompt_config = ReviewPrompt(
+                repo=github_client.repo,
+                pr_number=pr_number,
+                commit_sha=commit_sha,
+                agent_name="",
+            )
+
+            print_header(
+                f"🤖 Running automated code review with AI models: {', '.join(agents_to_run)}"
+            )
+            print_info("Launching parallel reviews (this may take a few minutes)...")
+
+            docker_runner.run_agents_parallel(
+                agents_to_run, prompt_config, run_dir, model_overrides
+            )
+
+            if len(agents_to_run) > 1:
+                effective_dedupe_agent = dedupe_agent if dedupe_agent else agents_to_run[0]
+                effective_dedupe_model = (
+                    dedupe_model_override if dedupe_agent else model_overrides.get(agents_to_run[0])
+                )
+                print_header(f"🧹 Deduplicating issues with {effective_dedupe_agent.capitalize()}")
+                review_files = {agent: run_dir / f"{agent}-review.json" for agent in agents_to_run}
+
+                try:
+                    docker_runner.run_deduplication_agent(
+                        effective_dedupe_agent,
+                        prompt_config,
+                        run_dir,
+                        review_files,
+                        effective_dedupe_model,
+                    )
+                    print_success("Deduplication pass completed")
+                except Exception as exc:
+                    print_warning(f"Deduplication step failed: {exc}")
+
+            for agent_name in SUPPORTED_AGENTS:
+                output_file = run_dir / f"{agent_name}-review.json"
+                if agent_name not in agents_to_run:
+                    placeholder = {
+                        "pr_summary": {
+                            "number": pr_number,
+                            "title": "Not run",
+                            "description": f"{agent_name} was not selected",
+                        },
+                        "issues": [],
+                    }
+                    import json
+
+                    with open(output_file, "w") as f:
+                        json.dump(placeholder, f)
+
+        print_info("Merging results from all models...")
+        merged_review = merge_reviews(claude_output, codex_output, gemini_output, dedup_output)
+        save_merged_review(merged_review, merged_output)
+
+        print_success("Merged code review completed! 📝")
+        console.print()
+
+        p0_count, p1_count, p2_count = count_issues_by_priority(merged_review.issues)
+        total_issues = len(merged_review.issues)
+
+        display_review_summary(
+            merged_review.pr_summary.title,
+            merged_review.descriptions,
+            p0_count,
+            p1_count,
+            p2_count,
+            total_issues,
+        )
+
+        if total_issues > 0:
+            if p0_count > 0:
+                print_header("🔴 P0 - Critical Issues")
+                for issue in merged_review.issues:
+                    if issue.priority == "P0":
+                        display_issue(issue.model_dump(), "🔴")
+
+            if p1_count > 0:
+                print_header("🟡 P1 - Important Issues")
+                for issue in merged_review.issues:
+                    if issue.priority == "P1":
+                        display_issue(issue.model_dump(), "🟡")
+
+            if p2_count > 0:
+                print_header("🔵 P2 - Suggestions")
+                for issue in merged_review.issues:
+                    if issue.priority == "P2":
+                        display_issue(issue.model_dump(), "🔵")
+
+        print_info("Individual reviews saved:")
+        console.print(f"  [cyan]{claude_output}[/cyan]")
+        console.print(f"  [cyan]{codex_output}[/cyan]")
+        console.print(f"  [cyan]{gemini_output}[/cyan]")
+        print_info(f"Merged review saved to: {merged_output}")
+
+        if total_issues > 0:
+            post_github_review(merged_review, github_client, pr_number, commit_sha, run_dir)
+
+        console.print()
+        console.print("[bold green]Review artifacts directory:[/bold green]")
+        console.print(f"[cyan]  {run_dir}[/cyan]")
+        console.print()
+        print_info("Need a local checkout? Run:")
+        console.print(f"[cyan]  gh pr checkout {pr_number}[/cyan]")
+
+    except MarxError as e:
+        print_error(str(e))
+        sys.exit(1)
+    except KeyboardInterrupt:
+        print_warning("\nOperation cancelled by user")
+        sys.exit(130)
+    except Exception as e:
+        print_error(f"Unexpected error: {e}")
+        import traceback
+
+        traceback.print_exc()
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
