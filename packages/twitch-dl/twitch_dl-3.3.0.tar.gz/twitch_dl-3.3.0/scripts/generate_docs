@@ -1,0 +1,181 @@
+#!/usr/bin/env python3
+
+"""
+Auto-generates documentation from command defs in console.py.
+"""
+
+from typing import Optional
+import click
+import html
+import os
+import re
+import shutil
+import textwrap
+
+from click import Command, Group, Context
+from click.core import UNSET
+
+from twitchdl.cli import cli
+
+
+START_MARKER = "<!-- ------------------- generated docs start ------------------- -->"
+END_MARKER = "<!-- ------------------- generated docs end ------------------- -->"
+
+
+def main():
+    update_changelog()
+
+    parent_ctx = Context(cli, info_name="twitch-dl")
+    for name, command in cli.commands.items():
+        ctx = Context(cli, info_name=name, parent=parent_ctx)
+        path = os.path.join("docs", "commands", f"{name}.md")
+        update_docs(command, path, ctx)
+
+    for name, command in cli.commands.items():
+        if isinstance(command, Group):
+            for sub_name, sub_command in command.commands.items():
+                ctx = Context(cli, info_name=f"{name} {sub_name}", parent=parent_ctx)
+                path = os.path.join("docs", "commands", f"{name}_{sub_name}.md")
+                update_docs(sub_command, path, ctx, command)
+
+
+def update_changelog():
+    print("Updating: docs/changelog.md")
+    root = os.path.realpath(os.path.dirname(os.path.dirname(__file__)))
+    source = os.path.join(root, "CHANGELOG.md")
+    target = os.path.join(root, "docs/changelog.md")
+    shutil.copy(source, target)
+
+
+def update_docs(command: Command, path: str, ctx: Context, group: Optional[Group] = None):
+    content = render_command(command, ctx, group)
+
+    if not os.path.exists(path):
+        print(f"Creating: {path}")
+        content = f"{START_MARKER}\n{content.strip()}\n\n{END_MARKER}"
+    else:
+        print(f"Updating: {path}")
+        [_, handwritten] = read(path).split(END_MARKER)
+        content = f"{START_MARKER}\n{content.strip()}\n\n{END_MARKER}\n\n{handwritten.strip()}"
+
+    write(path, content)
+
+
+def render_command(command: Command, ctx: Context, group: Optional[Group] = None):
+    if group:
+        content = f"\n# twitch-dl {group.name} {command.name}\n\n"
+    else:
+        content = f"\n# twitch-dl {command.name}\n\n"
+
+    if command.help:
+        content += textwrap.dedent(command.help).strip() + "\n\n"
+
+    content += render_usage(ctx, command)
+    content += render_sub_commands(ctx, command)
+    content += render_options(ctx, command)
+    return content
+
+
+def render_usage(ctx: Context, command: Command):
+    content = "### USAGE\n\n"
+    content += "```\n"
+    content += command.get_usage(ctx).replace("Usage: ", "")
+
+    content += "\n```\n\n"
+    return content
+
+
+def render_sub_commands(ctx: Context, group: Command):
+    if not isinstance(group, Group):
+        return ""
+
+    content = "### COMMANDS\n\n"
+
+    content += "| Command | Description |\n"
+    content += "| ------- | ----------- |\n"
+
+    for command in group.commands.values():
+        assert isinstance(command, Command)
+        assert command.help is not None
+        path = f"{group.name}_{command.name}.md"
+        description = command.help.strip().split("\n")[0].strip()
+        content += f"| [{command.name}]({path}) | {description} |\n"
+
+    return content
+
+
+def render_options(ctx: Context, command: Command):
+    options = list(get_options(command))
+
+    if not options:
+        return ""
+
+    content = "### OPTIONS\n\n"
+
+    content += "<table>\n"
+    content += "<tbody>"
+    for opts, help in options:
+        content += textwrap.dedent(f"""
+        <tr>
+            <td class="code">{escape(opts)}</td>
+            <td>{escape(help)}</td>
+        </tr>
+        """)
+    content += "</tbody>\n"
+    content += "</table>\n\n"
+
+    return content
+
+
+def get_options(command: Command):
+    for option in command.params:
+        if isinstance(option, click.Option) and not option.hidden:
+            opts = ", ".join(option.opts)
+            opts += option_type(option)
+
+            help = option.help or ""
+            help = re.sub(r"\s+", " ", help)
+            help += choices(option)
+            if option.default and option.default != UNSET:
+                help += f" [default: `{option.default}`]"
+
+            yield opts, help
+
+
+def option_type(option: click.Option):
+    match option.type:
+        case click.types.StringParamType():
+            return " TEXT"
+        case click.types.Choice():
+            return " TEXT"
+        case click.types.IntParamType():
+            return " INTEGER"
+        case _:
+            return ""
+
+
+def choices(option: click.Option):
+    if isinstance(option.type, click.Choice):
+        choices = ", ".join(f"`{c}`" for c in option.type.choices)
+        return f" Possible values: {choices}."
+    return ""
+
+
+def read(path: str):
+    with open(path, "r") as f:
+        return f.read()
+
+
+def write(path: str, content: str):
+    with open(path, "w") as f:
+        return f.write(content)
+
+
+def escape(text: str):
+    text = html.escape(text)
+    text = re.sub(r"`([\S]+)`", "<code>\\1</code>", text)
+    return text
+
+
+if __name__ == "__main__":
+    main()

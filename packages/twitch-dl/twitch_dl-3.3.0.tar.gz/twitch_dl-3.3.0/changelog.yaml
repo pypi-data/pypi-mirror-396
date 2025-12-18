@@ -1,0 +1,403 @@
+3.3.0:
+  date: 2025-12-15
+  changes:
+    - "Better support for HD streams (1440p, 2160p), these should now work without providing an access token and regardless of your geo location"
+    - "Add `videos --skip-live` and `download --skip-live` option to skip videos currently being broadcast (#176)"
+
+3.2.0:
+  date: 2025-09-25
+  changes:
+    - "**Requires Python 3.9+**"
+    - "Experimental command `twitch-dl chat` has been split into separte subcommands `twitch-dl chat video` and `twitch-dl chat json`"
+    - "Add `twitch-dl chat ytt` for generating chat as subtitles which can be uploaded to youtube"
+
+3.1.0:
+  date: 2025-05-16
+  changes:
+    - "**BREAKING** Running `chat --json` will output to file instead of printing JSON to screen"
+    - "Use video creation date instead of publishing date because the latter can be blank in some cases (#183)"
+    - "Don't break if chapters failed to load, print warning and continue without chapter info"
+
+3.0.0:
+  date: 2025-04-12
+  changes:
+    - "Add ability to download sub-only videos without authentication (thanks to @Haehnchen)"
+    - "**BREAKING**: Default video format has been changed from mkv to mp4, since that's a more common format."
+    - "**BREAKING**: When running `twitch-dl info --json`, the JSON format for playlists has changed."
+    - "Fix invalid filenames on windows when using {datetime} or {time} placeholders."
+
+2.11.0:
+  date: 2025-03-03
+  changes:
+    - "Download clips concurrently, which greatly improves the download speed when downloading multiple clips when using `clips --download`"
+    - "Add info --auth-token option to be able to show info for a sub-only video"
+
+2.10.0:
+  date: 2025-01-09
+  changes:
+    - "Add chat --image-format option to specify intermediate frame format"
+    - "Add chat --keep option to keep the generated frames"
+    - "Add chat --no-join option to skip video generation"
+
+2.9.4:
+  date: 2025-01-06
+  changes:
+    - "Fix bug with cache directory creation (#171)"
+
+2.9.3:
+  date: 2025-01-04
+  changes:
+    - "IMPORTANT: Fix issue where the folder passed to `--cache-dir` when downloading videos would be deleted (#168)"
+    - "Fix encoding issue on windows where unicode characters in filename could break video download (#170)"
+
+2.9.2:
+  date: 2024-09-12
+  changes:
+    - "Use video owner instead of creator when naming files, since creator can be the person who uploaded the video, not the author."
+    - "Fix issue with cropping where blank frames were generated at the start of video (#166)"
+    - "Add ffmpeg info to `twitch-dl env`"
+
+2.9.1:
+  date: 2024-09-10
+  changes:
+    - "Fix compatibility with python 3.8"
+
+2.9.0:
+  date: 2024-09-10
+  changes:
+    - "Download VODs to cache dir instead of temp dir (#105, #115, #164)"
+    - "Add `download --cache-dir` to allow user to override the default cache dir"
+    - "Add `cache` command for viewing cache usage and clearing cache"
+    - "Chat rendering improvements: align fonts to a common baseline, scale badges and emotes"
+
+2.8.2:
+  date: 2024-09-08
+  changes:
+    - "Fix breaking bug in chat renderer"
+
+2.8.1:
+  date: 2024-09-07
+  changes:
+    - "Embed additional metadata to videos: `date` (publish date) and `show` (game name)"
+
+2.8.0:
+  date: 2024-09-07
+  changes:
+    - "When downloading a video with `--start` and/or `--end` offsets, crop the video to the exact times given, used to be rounded to the nearest VOD boundary (usually 10s)"
+
+2.7.0:
+  date: 2024-09-05
+  changes:
+    - "Add new options when prompting if a file should be overwritten: overwrite, overwrite all, skip, skip all, abort (thanks @NuVanDibe)"
+    - "Embed chapter metadata in video, allows skipping to chapter if video player supports it"
+    - "Increase default worker count to 10, seems to improve speeds"
+    - "Fix a bug where some clip slugs would not be recognized"
+    - "Add `--skip-existing` option to `download` command"
+    - "Add `--json` option to `chat` command"
+    - "Improvements to chat renderer"
+
+2.6.0:
+  date: 2024-08-30
+  changes:
+    - "Add `chat` command for rendering twitch chat as a video which can then be embedded into a downloaded stream using ffmpeg."
+
+2.5.0:
+  date: 2024-08-30
+  changes:
+    - "Add support for HD video qualities (#163)"
+
+2.4.0:
+  date: 2024-08-30
+  changes:
+    - "Add `clips --target-dir` option. Use in conjunction with `--download` to specify target directory."
+    - "Fix a crash when downloading clips (#160)"
+    - "Handle video URLs which contain the channel name (#162)"
+    - "Don't stop downloading clips if one download fails"
+
+2.3.1:
+  date: 2024-05-19
+  changes:
+    - "Fix fetching access token (#155, thanks @KryptonicDragon)"
+
+2.3.0:
+  date: 2024-04-27
+  changes:
+    - "Show more playlist data when choosing quality"
+    - "Improve detection of 'source' quality for Twitch Enhanced Broadcast Streams (#154)"
+
+2.2.4:
+  date: 2024-04-25
+  changes:
+    - "Add m dot url support to video and clip regexes (thanks @localnerve)"
+
+2.2.3:
+  date: 2024-04-24
+  changes:
+    - "Respect --dry-run option when downloading videos"
+    - "Add automated tests on github actions"
+
+2.2.2:
+  date: 2024-04-23
+  changes:
+    - "Fix more compat issues Python < 3.10 (#152)"
+
+2.2.1:
+  date: 2024-04-23
+  changes:
+    - "Fix compat with Python < 3.10 (#152)"
+    - "Fix division by zero in progress calculation when video duration is reported as 0"
+
+2.2.0:
+  date: 2024-04-10
+  changes:
+    - "**Requires Python 3.8+**"
+    - "Migrated to Click library for generating the commandline interface"
+    - "Add shell auto completion, see 'Shell completion' in docs."
+    - "Add setting defaults via environment variables, see 'Environment variables' in docs"
+    - "Add `download --concat` option to avoid using ffmeg for joinig vods and concat them instead. This will produce a `.ts` file by default."
+    - "Add `download --dry-run` option to skip actual download (thanks @metacoma)"
+    - "Add video description to metadata (#129)"
+    - "Add `clips --compact` option for listing clips in one-per-line mode"
+
+2.1.4:
+  date: 2024-01-06
+  changes:
+    - "Fix error caused by twitch requiring https for the usher api (thanks @deanpcmad)"
+
+2.1.3:
+  date: 2023-05-07
+  changes:
+    - "Replace client ID with one that works for now (thanks @mwhite34)"
+
+2.1.2:
+  date: 2023-04-18
+  changes:
+    - "Fix error caused by twitch changing the Usher domain (thanks @adsa95)"
+
+2.1.1:
+  date: 2022-11-20
+  changes:
+    - "Fix Python 3.7 compatibility (#117, thanks @eliduvid)"
+    - "Fix default value for game_ids (#102, thanks @FunnyPocketBook)"
+
+2.1.0:
+  date: 2022-11-20
+  changes:
+    - "Add chapter list to `info` command"
+    - "Add `download --chapter` option for downloading a single chapter"
+
+2.0.1:
+  date: 2022-09-09
+  changes:
+    - "Fix an issue where a temp vod file would be renamed while still being open, which caused an exception on Windows (#111)"
+
+2.0.0:
+  date: 2022-08-18
+  description: |
+    This release switches from using `requests` to `httpx` for making http
+    requests, and from threads to `asyncio` for concurrency. This enables
+    easier implementation of new features, but has no breaking changes for the
+    CLI.
+  changes:
+    - "**BREAKING**: Require Python 3.7 or later."
+    - "Add `--rate-limit` option to `download` for limiting maximum bandwidth when downloading."
+    - "Add `--compact` option to `download` for displaying one video per line."
+    - "Allow passing multiple video ids to `download` to download multiple videos successively."
+    - "Improved progress meter, updates on each chunk downloaded, instead of each VOD downloaded."
+    - "Improved speed estimate, displays recent speed instead of average speed since the start of download."
+    - |
+      Decreased default concurrent downloads to 5. This seems to be enough to
+      saturate the download link in most cases. You can override this by setting
+      the `-w` option. Please test and report back if this works for you.
+
+1.22.0:
+  date: 2022-06-25
+  changes:
+    - "Add support for downloading subscriber-only VODs (#48, thanks @cemiu)"
+
+1.21.0:
+  date: 2022-02-27
+  changes:
+    - "Add `env` command for printing environment info for attaching to bug reports"
+
+1.20.0:
+  date: 2022-02-25
+  changes:
+    - "Add `--json` option to `videos` command (#92, thanks @miff2000)"
+    - "Add `--all` option to `videos` and `clips` commands to list all clips or videos in one go."
+    - "Modify how `--pager` works, will make multiple requests if needed to show all available items, ignoring `--limit`."
+
+1.19.0:
+  date: 2022-02-05
+  changes:
+    - "Add support for downloading audio only (#10)"
+
+1.18.1:
+  date: 2022-02-05
+  changes:
+    - "Fix issues with output formats (#87, #89)"
+    - "Fix issues when downloading clip with no game set (#78)"
+    - "Add option to use clip slug in `--output` format"
+
+1.18.0:
+  date: 2022-01-25
+  changes:
+    - "Add `--output` option to `download` command which allows setting output file template (#70)"
+    - "Ask to overwrite before downloading to avoid later prompt"
+
+1.17.1:
+  date: 2022-01-19
+  changes:
+    - "Upgrade m3u8 lib to 1.0.0+"
+
+1.17.0:
+  date: 2021-12-03
+  changes:
+    - "Fix speed calculation when resuming download (#75, thanks CroquetteTheThe)"
+    - "Add artist and title metadata to resulting video (#80)"
+
+1.16.1:
+  date: 2021-07-31
+  changes:
+    - "Fix compat with older versions of python (#71)"
+
+1.16.0:
+  date: 2021-06-09
+  changes:
+    - "Fix clips download caused by Twitch changes (#64, thanks to all participants)"
+
+1.15.0:
+  date: 2021-02-15
+  changes:
+    - "Add support for new format of clip slug (thanks @Loveangel1337)"
+
+1.14.1:
+  date: 2021-01-14
+  changes:
+    - "Handle videos which don't exist more gracefully"
+
+1.14.0:
+  date: 2021-01-14
+  changes:
+    - "Added `info` command for displaying video or clip info (#51)"
+    - "Don't show there are more videos when there aren't (#52, thanks @scottyallen)"
+    - "Fixed Twitch regression for getting the access token (#53)"
+
+1.13.1:
+  date: 2020-11-23
+  changes:
+    - "Fixed clip download issue (#45)"
+
+1.13.0:
+  date: 2020-11-10
+  changes:
+    - "Added `clips` command for listing and batch downloading clips (#26)"
+
+1.12.1:
+  date: 2020-09-29
+  changes:
+    - "Fix bug introduced in previous version which broke joining"
+
+1.12.0:
+  date: 2020-09-29
+  changes:
+    - "Added `source` as alias for best available quality (#33)"
+    - "Added `--no-join` option to `download` to skip ffmpeg join (#36)"
+    - "Added `--overwrite` option to `download` to overwrite target without prompting for confirmation (#37)"
+    - "Added `--pager` option to `videos`, don't page by default (#30)"
+
+1.11.0:
+  date: 2020-09-03
+  changes:
+    - "Make downloading more robust, fixes issues with some VODs (#35)"
+    - "Bundle twitch-dl to a standalone archive, simplifying installation, see installation instructions in README"
+
+1.10.2:
+  date: 2020-08-11
+  changes:
+    - "Fix version number displayed by `twitch-dl --version` (#29)"
+
+1.10.1:
+  date: 2020-08-09
+  changes:
+    - "Fix videos incorrectly identified as clips (#28)"
+    - "Make download command work with video URLs lacking 'www' before 'twitch.tv'"
+    - "Print an error when video or clip is not found instead of an exception trace"
+
+1.10.0:
+  date: 2020-08-07
+  changes:
+    - "Add `--quality` option to `download` command, allows specifying the video quality to download. In this case, twitch-dl will require no user input. (#22)"
+    - "Fix download of clips which contain numbers in their slug (#24)"
+    - "Fix URL to video displayed by `videos` command (it was missing /videos/)"
+
+1.9.0:
+  date: 2020-06-10
+  changes:
+    - "**Breaking**: wrongly named `--max_workers` option changed to `--max-workers`. The shorthand option `-w` remains the same."
+    - "Fix bug where `videos` command would crash if there was no game info (#21)"
+    - "Allow unicode characters in filenames, no longer strips e.g. cyrillic script"
+
+1.8.0:
+  date: 2020-05-17
+  changes:
+    - "Fix videos command (#18)"
+    - "**Breaking**: `videos` command no longer takes the `--offset` parameter due to API changes"
+    - "Add paging to `videos` command to replace offset"
+    - "Add `--game` option to `videos` command to filter by game"
+
+1.7.0:
+  date: 2020-04-25
+  changes:
+    - "Support for specifying broadcast type when listing videos (#13)"
+
+1.6.0:
+  date: 2020-04-11
+  changes:
+    - "Support for downloading clips (#15)"
+
+1.5.1:
+  date: 2020-04-11
+  changes:
+    - "Fix VOD naming issue (#12)"
+    - "Nice console output while downloading"
+
+1.5.0:
+  date: 2020-04-10
+  changes:
+    - "Fix video downloads after Twitch deprecated access token access"
+    - "Don't print errors when retrying download, only if all fails"
+
+1.4.0:
+  date: 2019-08-23
+  changes:
+    - "Fix usage of deprecated v3 API"
+    - "Use m3u8 lib for parsing playlists"
+    - "Add `--keep` option not preserve downloaded VODs"
+
+1.3.1:
+  date: 2019-08-13
+  changes:
+    - "No changes, bumped to fix issue with pypi"
+
+1.3.0:
+  date: 2019-08-13
+  changes:
+    - "Add `--sort` and `--offset` options to `videos` command, allows paging (#7)"
+    - "Show video URL in `videos` command output"
+
+1.2.0:
+  date: 2019-07-05
+  changes:
+    - "Add `--format` option to `download` command for specifying the output format (#6)"
+    - "Add `--version` option for printing program version"
+
+1.1.0:
+  date: 2019-06-06
+  changes:
+    - "Allow limiting download by start and end time"
+
+1.0.0:
+  date: 2019-04-30
+  changes:
+    - "Initial release"

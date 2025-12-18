@@ -1,0 +1,78 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools_scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "twitch-dl"
+authors = [{ name="Ivan Habunek", email="ivan@habunek.com" }]
+description = "Quickly download videos from twitch.tv from the comort of your terminal emulator"
+keywords=["twitch", "vod", "video", "download"]
+readme = "README.md"
+license = { file="LICENSE" }
+requires-python = ">=3.9"
+dynamic = ["version"]
+
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+]
+
+dependencies = [
+    "click>=8.0.0,<9.0.0",
+    "httpx>=0.17.0,<1.0.0",
+    "m3u8>=3.0.0,<7.0.0",
+    "wcwidth>=0.2,<1.0.0"
+]
+
+[tool.setuptools]
+packages = [
+    "twitchdl",
+    "twitchdl.commands",
+    "twitchdl.chat",
+]
+
+[tool.setuptools_scm]
+
+[project.optional-dependencies]
+# This is made optional because it is not pure python, and when used prevents
+# distribution of twitch-dl as a pyz archive while keeping it cross-platform.
+chat = [
+    "pillow>=9",
+    "fonttools>=4,<5",
+]
+
+[project.urls]
+"Homepage" = "https://twitch-dl.bezdomni.net/"
+"Source" = "https://github.com/ihabunek/twitch-dl"
+
+[project.scripts]
+twitch-dl = "twitchdl.cli:cli"
+
+[tool.pyright]
+typeCheckingMode = "strict"
+pythonVersion = "3.9"
+
+[tool.ruff]
+line-length = 100
+target-version = "py38"
+
+[tool.pytest.ini_options]
+addopts = "-v"
+testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "build",
+    "pytest",
+    "pyyaml",
+    "setuptools",
+    "twine",
+    "vermin",
+]
+
+test = [
+    "pytest",
+    "vermin",
+]
