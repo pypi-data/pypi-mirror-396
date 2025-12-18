@@ -1,0 +1,37 @@
+{
+  "$id":"metadata.crawler.login.checker",
+
+  // create a browser in the crawler engine
+  "summary":{
+    "type":"URL",
+  },
+
+  "browser":{
+    "config":"${browser_config}",
+    "options":"${browser_options}",
+  },
+
+  "crawler":{
+    "login":[
+      {
+        "_kind":"open",
+        "url":"${login_url}", 
+      },
+      {
+        "_kind":"br_cookie",
+        "value":"__sentinel__", // if it's empty, read from cookie file automatically
+      },
+      {
+        "_kind":"open",
+        "url":"${logged_in_url}",
+      }
+    ],
+
+    // check the login status
+    "data":{
+      "_kind":"ele_presents",
+      "target_CS_WE":"${logged_in_element}", // check by element
+      "wait_time":"${login_wait_time:-20}", // by default is 3 sconeds
+    },
+  },
+}

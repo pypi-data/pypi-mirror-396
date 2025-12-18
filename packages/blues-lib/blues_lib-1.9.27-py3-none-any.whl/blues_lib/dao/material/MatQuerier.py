@@ -1,0 +1,67 @@
+from blues_lib.type.output.SQLSTDOut import SQLSTDOut
+from blues_lib.dao.sql.TableQuerier import TableQuerier
+
+class MatQuerier(TableQuerier):
+
+  _TABLE = 'ap_mat'
+
+  def __init__(self) -> None:
+    super().__init__(self._TABLE)
+
+  def exist(self,value:any,field:str='mat_id')->bool:
+    fields = [field]
+    conditions = [
+      {
+        'field':field,
+        'comparator':'=',
+        'value':value,
+      },
+    ]
+    stdout:SQLSTDOut = self.get(fields,conditions)
+    return stdout.count>0
+
+  def random(self,fields='*',conditions:list[dict]=None,size:int=1)->SQLSTDOut:
+    '''
+    @description: Get a random row
+    @param {dict} query : the query dict,like:
+      [
+        {"field":"mat_chan","comparator":"=","value":"${mat_chan}"},
+        {"field":"mat_stat","comparator":"=","value":"available","operator":"and"},
+      ]
+    @param {int} size : the size of the random rows
+    @returns {SQLSTDOut}
+    '''
+    # get the latest
+    orders = [{
+      'field':'rand()',
+      'sort':''
+    }]
+    # get one row
+    pagination = {
+      'no':1,
+      'size':size
+    }
+    return self.get(fields,conditions,orders,pagination)
+
+  def latest(self,fields='*',conditions:list[dict]=None,size:int=1)->SQLSTDOut:
+    '''
+    @description: Get the latest rows
+    @param {list[dict]} conditions :
+      [
+        {"field":"mat_chan","comparator":"=","value":"${mat_chan}"},
+        {"field":"mat_stat","comparator":"=","value":"available","operator":"and"},
+      ]
+    @param {int} size : the size of the latest rows
+    @returns {SQLSTDOut}
+    '''
+    # get the latest
+    orders = [{
+      'field':'mat_ctime',
+      'sort':'desc'
+    }]
+    # get one row
+    pagination = {
+      'no':1,
+      'size':size
+    }
+    return self.get(fields,conditions,orders,pagination)
