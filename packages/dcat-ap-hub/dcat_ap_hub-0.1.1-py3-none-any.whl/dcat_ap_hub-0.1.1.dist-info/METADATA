@@ -1,0 +1,83 @@
+Metadata-Version: 2.4
+Name: dcat-ap-hub
+Version: 0.1.1
+Summary: A library for loading datasets and models whose metadata is provided in the DCAT-AP format.
+Author-email: maxbrzr <maximilian.burzer@kit.edu>
+License-File: LICENSE
+Requires-Python: >=3.11
+Requires-Dist: accelerate>=1.12.0
+Requires-Dist: beautifulsoup4>=4.13.5
+Requires-Dist: chardet>=5.2.0
+Requires-Dist: ipykernel>=6.30.0
+Requires-Dist: opencv-python>=4.12.0.88
+Requires-Dist: openpyxl>=3.1.5
+Requires-Dist: pandas-stubs>=2.3.0.250703
+Requires-Dist: pandas>=2.3.1
+Requires-Dist: pypdf>=6.1.0
+Requires-Dist: rdflib>=7.1.4
+Requires-Dist: requests>=2.32.4
+Requires-Dist: torch>=2.9.0
+Requires-Dist: tqdm>=4.67.1
+Requires-Dist: transformers>=4.57.1
+Requires-Dist: types-requests>=2.32.4.20250611
+Requires-Dist: types-tqdm>=4.67.0.20250516
+Description-Content-Type: text/markdown
+
+# DCAT-AP Hub
+
+This library enables easy downloading and loading of datasets and models whose metadata is provided in the DCAT-AP format. Currently, only JSON-LD is supported.
+
+### How To Install
+
+```bash
+pip install dcat-ap-hub
+```
+
+### How To Load Datasets
+
+```python
+from dcat_ap_hub import Dataset
+
+url = "https://data.europa.eu/api/hub/repo/datasets/7b715249-0c76-4592-9df6-f36b9a47f6e5.jsonld"
+
+ds = Dataset.from_url(url)
+files = ds.download(data_dir="./data")
+```
+
+### How To Load Huggingface Models
+
+```python
+from dcat_ap_hub import Dataset
+
+url = "https://ki-daten.hlrs.de/hub/repo/datasets/6f75de8b60a9f8a2fdf7b69cbd86d9e64bcb3837.jsonld"
+
+ds = Dataset.from_url(url)
+ds.download(data_dir="./data")
+model, processor, metadata = ds.load_model(model_dir="./models")
+```
+
+### How To Process Datasets If Supported
+
+```python
+from dcat_ap_hub import Dataset
+
+url = "https://data.europa.eu/api/hub/repo/datasets/7b715249-0c76-4592-9df6-f36b9a47f6e5.jsonld"
+
+ds = Dataset.from_url(url)
+ds.download(data_dir="./data")
+files = ds.process(processed_dir="./processed")
+```
+
+### Funding
+
+This project was developed using resources from the HammerHAI project, an EU co-funded AI Factory initiative operated by the High-Performance Computing Center Stuttgart and supported by the European Commission as well as German federal and state ministries. It is funded by the European High Performance Computing Joint Undertaking under Grant Agreement No. 101234027.
+
+<!-- ### With Custom Parsing
+
+```python
+from dcat_ap_hub import download_data, apply_parsing
+
+json_ld_metadata = "http://localhost:8081/datasets/uci-har.jsonld"
+metadata = download_data(json_ld_metadata)
+df = apply_parsing(metadata)
+``` -->
