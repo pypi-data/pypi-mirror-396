@@ -1,0 +1,225 @@
+Metadata-Version: 2.4
+Name: dtflow
+Version: 0.1.3
+Summary: A flexible data transformation tool for ML training formats (SFT, RLHF, Pretrain)
+Project-URL: Homepage, https://github.com/yourusername/DataTransformer
+Project-URL: Documentation, https://github.com/yourusername/DataTransformer#readme
+Project-URL: Repository, https://github.com/yourusername/DataTransformer
+Project-URL: Issues, https://github.com/yourusername/DataTransformer/issues
+Project-URL: Changelog, https://github.com/yourusername/DataTransformer/blob/main/CHANGELOG.md
+Author-email: Your Name <your.email@example.com>
+Maintainer-email: Your Name <your.email@example.com>
+License-Expression: MIT
+Keywords: ai,data-processing,data-transformation,machine-learning,nlp,pretrain,rlhf,sft
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: Text Processing
+Requires-Python: >=3.8
+Requires-Dist: fire>=0.4.0
+Requires-Dist: numpy>=1.20.0
+Requires-Dist: pyyaml>=5.4.0
+Requires-Dist: tqdm>=4.60.0
+Provides-Extra: dev
+Requires-Dist: black>=21.0; extra == 'dev'
+Requires-Dist: flake8>=3.9.0; extra == 'dev'
+Requires-Dist: isort>=5.9.0; extra == 'dev'
+Requires-Dist: mypy>=0.910; extra == 'dev'
+Requires-Dist: pytest-cov>=2.12.0; extra == 'dev'
+Requires-Dist: pytest>=6.0.0; extra == 'dev'
+Provides-Extra: display
+Requires-Dist: rich>=10.0.0; extra == 'display'
+Provides-Extra: docs
+Requires-Dist: myst-parser>=0.15.0; extra == 'docs'
+Requires-Dist: sphinx-rtd-theme>=0.5.0; extra == 'docs'
+Requires-Dist: sphinx>=4.0.0; extra == 'docs'
+Provides-Extra: full
+Requires-Dist: pandas>=1.3.0; extra == 'full'
+Requires-Dist: pyarrow; extra == 'full'
+Requires-Dist: rich>=10.0.0; extra == 'full'
+Requires-Dist: scikit-learn>=0.24.0; extra == 'full'
+Provides-Extra: mcp
+Requires-Dist: mcp>=1.0.0; extra == 'mcp'
+Provides-Extra: similarity
+Requires-Dist: scikit-learn>=0.24.0; extra == 'similarity'
+Provides-Extra: storage
+Requires-Dist: pandas>=1.3.0; extra == 'storage'
+Requires-Dist: pyarrow; extra == 'storage'
+Description-Content-Type: text/markdown
+
+# dtflow
+
+简洁的数据格式转换工具，专为机器学习训练数据设计。
+
+## 安装
+
+```bash
+pip install dtflow
+```
+
+## 快速开始
+
+```python
+from dtflow import DataTransformer
+
+# 加载数据
+dt = DataTransformer.load("data.jsonl")
+
+# 链式操作：过滤 -> 转换 -> 保存
+(dt.filter(lambda x: x.score > 0.8)
+   .to(lambda x: {"q": x.question, "a": x.answer})
+   .save("output.jsonl"))
+```
+
+## 核心功能
+
+### 数据加载与保存
+
+```python
+# 支持 JSONL、JSON、CSV、Parquet
+dt = DataTransformer.load("data.jsonl")
+dt.save("output.jsonl")
+
+# 从列表创建
+dt = DataTransformer([{"q": "问题", "a": "答案"}])
+```
+
+### 数据过滤
+
+```python
+# Lambda 过滤
+dt.filter(lambda x: x.score > 0.8)
+
+# 支持属性访问
+dt.filter(lambda x: x.language == "zh")
+```
+
+### 数据转换
+
+```python
+# 自定义转换
+dt.to(lambda x: {"question": x.q, "answer": x.a})
+
+# 使用预设模板
+dt.to(preset="openai_chat", user_field="q", assistant_field="a")
+```
+
+### 预设模板
+
+| 预设名称 | 输出格式 |
+|---------|---------|
+| `openai_chat` | `{"messages": [{"role": "user", ...}, {"role": "assistant", ...}]}` |
+| `alpaca` | `{"instruction": ..., "input": ..., "output": ...}` |
+| `sharegpt` | `{"conversations": [{"from": "human", ...}, {"from": "gpt", ...}]}` |
+| `dpo_pair` | `{"prompt": ..., "chosen": ..., "rejected": ...}` |
+| `simple_qa` | `{"question": ..., "answer": ...}` |
+
+### 其他操作
+
+```python
+# 采样
+dt.sample(100)           # 随机采样 100 条
+dt.head(10)              # 前 10 条
+dt.tail(10)              # 后 10 条
+
+# 分割
+train, test = dt.split(ratio=0.8, shuffle=True, seed=42)
+
+# 统计
+stats = dt.stats()       # 总数、字段信息
+count = dt.count(lambda x: x.score > 0.9)
+
+# 打乱
+dt.shuffle(seed=42)
+```
+
+## CLI 命令
+
+```bash
+# 数据采样
+dt sample data.jsonl --num=10
+dt sample data.csv --num=100 --sample_type=head
+
+# 数据转换 - 预设模式
+dt transform data.jsonl --preset=openai_chat
+dt transform data.jsonl --preset=alpaca
+
+# 数据转换 - 配置文件模式
+dt transform data.jsonl                    # 首次运行生成配置文件
+# 编辑 .dt/data.py 后再次运行
+dt transform data.jsonl --num=100          # 执行转换
+```
+
+## 错误处理
+
+```python
+# 跳过错误项（默认）
+dt.to(transform_func, on_error="skip")
+
+# 抛出异常
+dt.to(transform_func, on_error="raise")
+
+# 保留原始数据
+dt.to(transform_func, on_error="keep")
+
+# 返回错误信息
+result, errors = dt.to(transform_func, return_errors=True)
+```
+
+## 设计哲学
+
+### 函数式优于类继承
+
+不需要复杂的 OOP 抽象，直接用函数解决问题：
+
+```python
+# ✅ 简单直接
+dt.to(lambda x: {"q": x.question, "a": x.answer})
+
+# ❌ 不需要这种设计
+class MyFormatter(BaseFormatter):
+    def format(self, item): ...
+```
+
+### 预设是便利层，不是核心抽象
+
+90% 的需求用 `transform(lambda x: ...)` 就能解决。预设只是常见场景的快捷方式：
+
+```python
+# 预设：常见场景的便利函数
+dt.to(preset="openai_chat")
+
+# 自定义：完全控制转换逻辑
+dt.to(lambda x: {
+    "messages": [
+        {"role": "user", "content": x.q},
+        {"role": "assistant", "content": x.a}
+    ]
+})
+```
+
+### KISS 原则
+
+- 一个核心类 `DataTransformer` 搞定所有操作
+- 链式 API，代码像自然语言
+- 属性访问 `x.field` 代替 `x["field"]`
+- 不过度设计，不追求"可扩展框架"
+
+### 实用主义
+
+不追求学术上的完美抽象，只提供**足够好用的工具**。
+
+## License
+
+MIT
