@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkcodechecker=self.webpackChunkcodechecker||[]).push([[690],{74690:(e,c,r)=>{r.r(c),r.d(c,{default:()=>t});var u=r(72084);const t=(0,r(14486).A)({name:"Product"},(function(){var e=this._self._c;return e(u.A,{attrs:{id:"product",fluid:""}},[e("router-view")],1)}),[],!1,null,null,null).exports}}]);
