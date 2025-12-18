@@ -1,0 +1,197 @@
+Metadata-Version: 2.1
+Name: flask-scheduler-manager
+Version: 1.0.0
+Summary: 基于Flask SQLAlchemy和flask_apscheduler的动态定时任务管理系统
+Home-page: https://github.com/BingerYang/flask-scheduler-manager
+Author: binger
+Author-email: xuehen_521@126.com
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: Flask (>=2.0.0)
+Requires-Dist: SQLAlchemy (>=1.4.0)
+Requires-Dist: flask-sqlalchemy (>=2.5.0)
+Requires-Dist: flask-apscheduler (>=1.12.0)
+Requires-Dist: APScheduler (>=3.10.0)
+Requires-Dist: redis (>=4.5.0)
+
+# Flask Scheduler Manager
+
+基于Flask、SQLAlchemy和flask_apscheduler的动态定时任务管理系统。
+
+## 功能特性
+
+- ✅ 定时任务SQLAlchemy持久化管理
+- ✅ 动态添加、删除、更新定时任务
+- ✅ 任务启用/禁用控制
+- ✅ 一键数据库迁移
+- ✅ 支持Cron和Interval两种调度方式
+- ✅ 完整的任务状态管理
+
+## 安装
+
+```bash
+pip install -e .
+```
+
+或者从PyPI安装（发布后）：
+
+```bash
+pip install flask-scheduler-manager
+```
+
+## 快速开始
+
+### 1. 初始化Flask应用
+
+```python
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+from flask_scheduler_manager import SchedulerManager
+
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///scheduler.db'
+app.config['SCHEDULER_API_ENABLED'] = True
+
+db = SQLAlchemy(app)
+scheduler_manager = SchedulerManager(app, db)
+
+# 初始化数据库
+with app.app_context():
+    db.create_all()
+    scheduler_manager.init_db()
+
+if __name__ == '__main__':
+    app.run(debug=True)
+```
+
+### 2. 添加定时任务
+
+```python
+# 添加一个Cron任务
+scheduler_manager.add_job(
+    job_id='task_1',
+    func='your_module:your_function',  # 函数路径
+    trigger='cron',
+    hour=10,
+    minute=30,
+    enabled=True
+)
+
+# 添加一个Interval任务
+scheduler_manager.add_job(
+    job_id='task_2',
+    func='your_module:another_function',
+    trigger='interval',
+    minutes=5,
+    enabled=True
+)
+```
+
+### 3. 管理任务
+
+```python
+# 获取所有任务
+jobs = scheduler_manager.get_all_jobs()
+
+# 获取单个任务
+job = scheduler_manager.get_job('task_1')
+
+# 更新任务
+scheduler_manager.update_job(
+    job_id='task_1',
+    hour=11,
+    minute=0
+)
+
+# 启用/禁用任务
+scheduler_manager.enable_job('task_1')
+scheduler_manager.disable_job('task_1')
+
+# 删除任务
+scheduler_manager.remove_job('task_1')
+```
+
+## 数据库迁移
+
+### 一键迁移（推荐用于开发）
+
+```python
+from flask_scheduler_manager.migrations import migrate_database
+
+with app.app_context():
+    migrate_database(app, db)
+```
+
+### 使用Flask-Migrate（推荐用于生产环境）
+
+```bash
+# 安装Flask-Migrate
+pip install flask-migrate
+
+# 初始化迁移
+flask db init
+
+# 创建迁移
+flask db migrate -m "Initial migration"
+
+# 应用迁移
+flask db upgrade
+```
+
+## 完整示例
+
+```python
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+from flask_scheduler_manager import SchedulerManager
+from flask_scheduler_manager.migrations import migrate_database
+
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///scheduler.db'
+app.config['SCHEDULER_API_ENABLED'] = True
+
+db = SQLAlchemy(app)
+scheduler_manager = SchedulerManager(app, db)
+
+# 初始化数据库
+with app.app_context():
+    migrate_database(app, db)
+    scheduler_manager.init_db()
+
+# 定义任务函数
+def my_task():
+    print("执行定时任务")
+
+# 添加任务
+scheduler_manager.add_job(
+    job_id='task_1',
+    func='__main__:my_task',
+    trigger='interval',
+    seconds=10,
+    enabled=True
+)
+
+if __name__ == '__main__':
+    app.run()
+```
+
+## 文档
+
+- [安装和使用指南](INSTALL.md)
+- [API文档](docs/API.md)
+- [示例应用](example/README.md)
+
+## 许可证
+
+MIT License
