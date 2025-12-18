@@ -1,0 +1,292 @@
+Metadata-Version: 2.4
+Name: llm-distil
+Version: 0.1.0
+Summary: Knowledge Distillation for Large Language Models
+Home-page: https://github.com/parmanu-lcs2/llm_distil
+Author: Parmanu, LCS2, IIT Delhi
+Author-email: 
+License: Apache-2.0
+Project-URL: Homepage, https://github.com/parmanu-lcs2/llm_distil
+Project-URL: Bug Reports, https://github.com/parmanu-lcs2/llm_distil/issues
+Project-URL: Source, https://github.com/parmanu-lcs2/llm_distil
+Keywords: llm,knowledge-distillation,transformer,gpt,model-compression,nlp,deep-learning,pytorch
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: torch>=1.12.0
+Requires-Dist: transformers>=4.30.0
+Requires-Dist: datasets>=2.10.0
+Requires-Dist: evaluate>=0.4.0
+Requires-Dist: rouge-score>=0.1.2
+Requires-Dist: tqdm>=4.65.0
+Requires-Dist: numpy>=1.23.0
+Requires-Dist: pandas>=1.3.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: black>=22.0.0; extra == "dev"
+Requires-Dist: flake8>=4.0.0; extra == "dev"
+Requires-Dist: jupyter>=1.0.0; extra == "dev"
+Provides-Extra: logging
+Requires-Dist: wandb>=0.15.0; extra == "logging"
+Requires-Dist: tensorboard>=2.11.0; extra == "logging"
+Dynamic: home-page
+Dynamic: license-file
+Dynamic: requires-python
+
+# llm_distil: Knowledge Distillation for Large Language Models
+
+![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)
+![PyTorch](https://img.shields.io/badge/PyTorch-1.12+-red.svg)
+![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)
+
+A clean, production-ready library for distilling large language models using three knowledge distillation methods: **KD**, **RevKD**, and **GKD**.
+
+## Features
+
+- **Three Distillation Methods**:
+  - **KD (Knowledge Distillation)**: Standard forward KL divergence (mean-seeking)
+  - **RevKD (Reverse Knowledge Distillation)**: Reverse KL divergence (mode-seeking)
+  - **GKD (Generalized Knowledge Distillation)**: Generalized JSD with on-policy generation
+  
+- **Parameter-Efficient Fine-Tuning (PEFT)**:
+  - **LoRA**: Low-Rank Adaptation (~0.1-1% trainable params)
+  - **QLoRA**: Quantized LoRA with 4-bit/8-bit quantization
+  - **Prefix Tuning**: Learn prefix vectors
+  - **Prompt Tuning**: Learn soft prompts
+  - **IA3**: Infused Adapter by Inhibiting and Amplifying Inner Activations
+  
+- **HuggingFace Integration**: Built on top of `transformers.Trainer` for seamless workflow
+- **Easy-to-Use API**: Clean interfaces following best practices
+- **Flexible Configuration**: Dataclass-based configs with validation
+- **Comprehensive Metrics**: ROUGE, BLEU, perplexity tracking
+
+## Installation
+
+```bash
+pip install llm-distil
+```
+
+Or install from source:
+
+```bash
+git clone https://github.com/parmanu-lcs2/llm_distil.git
+cd llm_distil
+pip install -e .
+```
+
+For development with logging tools:
+
+```bash
+pip install -e ".[dev,logging]"
+```
+
+**Optional**: For PEFT support (LoRA, QLoRA, etc.):
+
+```bash
+pip install peft>=0.7.0 bitsandbytes>=0.41.0 accelerate>=0.24.0
+```
+
+## Quick Start
+
+### Standard Knowledge Distillation (KD)
+
+```python
+from llm_distil import KnowledgeDistillation, DistillationConfig
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+# Load models
+teacher = AutoModelForCausalLM.from_pretrained("gpt2-medium")
+student = AutoModelForCausalLM.from_pretrained("gpt2")
+tokenizer = AutoTokenizer.from_pretrained("gpt2")
+tokenizer.pad_token = tokenizer.eos_token  # Required for GPT-2
+
+# Configure distillation
+config = DistillationConfig(
+    teacher_model_name="gpt2-medium",
+    student_model_name="gpt2",
+    temperature=2.0,
+    kd_loss_weight=0.5,
+    epochs=3,  # Note: 'epochs' not 'num_train_epochs'
+    batch_size=8,  # Note: 'batch_size' not 'per_device_train_batch_size'
+    learning_rate=5e-5,
+)
+
+# Initialize and train (teacher auto-moves to student's device)
+kd = KnowledgeDistillation(teacher, student, config)
+kd.train(train_dataset, eval_dataset)
+
+# Evaluate
+metrics = kd.evaluate(test_dataset)
+print(f"Perplexity: {metrics['perplexity']:.2f}")
+
+# Save the distilled student
+kd.save_student("./distilled_gpt2")
+```
+
+### Reverse Knowledge Distillation (RevKD)
+
+```python
+from llm_distil import ReverseKnowledgeDistillation
+
+# Same setup as above, just use RevKD
+revkd = ReverseKnowledgeDistillation(teacher, student, config)
+revkd.train(train_dataset, eval_dataset)
+```
+
+### Generalized Knowledge Distillation (GKD)
+
+```python
+from llm_distil import GeneralizedKnowledgeDistillation, DistillationConfig
+
+# GKD-specific config
+config = DistillationConfig(
+    teacher_model_name="gpt2-medium",
+    student_model_name="gpt2",
+    lambda_gkd=0.5,  # Mixture weight
+    beta_gkd=0.5,    # On-policy weight
+    epochs=3,  # Note: 'epochs' not 'num_train_epochs'
+)
+
+gkd = GeneralizedKnowledgeDistillation(teacher, student, config)
+gkd.train(train_dataset, eval_dataset)
+```
+
+### Parameter-Efficient Fine-Tuning with LoRA
+
+```python
+from llm_distil import KnowledgeDistillation, DistillationConfig
+
+# LoRA config - only train ~0.3M parameters instead of 117M!
+config = DistillationConfig(
+    teacher_model_name="gpt2-medium",
+    student_model_name="gpt2",
+    temperature=2.0,
+    kd_loss_weight=0.5,
+    epochs=3,
+    use_peft=True,  # Enable PEFT
+    peft_type="lora",  # Options: lora, qlora, prefix, prompt, ia3
+    lora_r=8,  # LoRA rank
+    lora_alpha=16,  # LoRA alpha
+    lora_dropout=0.1
+)
+
+kd = KnowledgeDistillation(teacher, student, config)
+kd.train(train_dataset, eval_dataset)
+
+# Save only adapters (~few MB instead of ~500MB)
+kd.save_student("./lora_adapters")
+```
+
+## API Reference
+
+| Class | Description | Key Parameters |
+|-------|-------------|----------------|
+| `KnowledgeDistillation` | Standard forward KL | `temperature`, `kd_loss_weight` |
+| `ReverseKnowledgeDistillation` | Reverse KL (mode-seeking) | `temperature`, `kd_loss_weight` |
+| `GeneralizedKnowledgeDistillation` | JSD with on-policy | `lambda_gkd`, `beta_gkd` |
+| `DistillationConfig` | Configuration dataclass | All training hyperparameters |
+
+## Comparison of Methods
+
+| Method | Loss Function | Behavior | Best For |
+|--------|---------------|----------|----------|
+| **KD** | Forward KL: `KL(Teacher \|\| Student)` | Mean-seeking, covers all modes | General-purpose distillation |
+| **RevKD** | Reverse KL: `KL(Student \|\| Teacher)` | Mode-seeking, focuses on peaks | High-confidence predictions |
+| **GKD** | JSD: `λ·JSD(T,S) + (1-λ)·JSD(T,S_gen)` | Mixture of off/on-policy | Generative tasks |
+
+**Temperature Scaling**: KD and RevKD use temperature T to soften distributions. Loss is scaled by T² to preserve gradient magnitudes.
+
+**On-Policy Generation**: GKD generates sequences from the student during training for more robust distillation.
+
+## Expected Results
+
+On **Databricks Dolly-15k** (instruction-following dataset):
+
+### Quick Demo (200 examples, 1 epoch)
+
+| Model | Perplexity | Training Time | Trainable Params | Model Size |
+|-------|------------|---------------|------------------|------------|
+| Teacher (GPT2-medium) | ~100-150 | - | 355M | 355M params |
+| Student Baseline | ~80-120 | 2-3 min | 124M | 124M params |
+| Student + KD | ~75-110 | 3-4 min | 124M | 124M params |
+| Student + RevKD | ~75-110 | 3-4 min | 124M | 124M params |
+| Student + GKD | ~75-110 | 4-5 min | 124M | 124M params |
+| **Student + LoRA** | **~75-110** | **2-3 min** | **0.3M (0.26%)** | **124M + 2MB** |
+
+*Quick demo results on single GPU (T4/A100)*
+
+**LoRA Benefits**: 99.7% fewer trainable parameters, 75% less memory, 95% storage savings
+
+### Full Training (1000 examples, 3 epochs)
+
+| Model | Perplexity | Training Time | Model Size |
+|-------|------------|---------------|------------|
+| Teacher (GPT2-medium) | ~25.3 | - | 355M params |
+| Student Baseline | ~32.1 | 45 min | 124M params |
+| Student + KD | ~28.7 | 52 min | 124M params |
+| Student + RevKD | ~29.2 | 51 min | 124M params |
+| Student + GKD | ~28.4 | 65 min | 124M params |
+
+*Full training results on single A100 GPU*
+
+## Examples
+
+### Scripts
+- **All Methods Comparison**: [`examples/distill_dolly15k.py`](examples/distill_dolly15k.py) - Complete pipeline comparing KD, RevKD, and GKD
+- **LoRA vs Full FT**: [`examples/distill_with_lora.py`](examples/distill_with_lora.py) - Parameter-efficient distillation comparison
+
+### Notebooks
+- **Standard Distillation**: [`notebooks/dolly15k_distillation_demo.ipynb`](notebooks/dolly15k_distillation_demo.ipynb) - Interactive demo with all 3 methods
+- **LoRA Distillation**: [`notebooks/lora_distillation_demo.ipynb`](notebooks/lora_distillation_demo.ipynb) - Full fine-tuning vs LoRA comparison
+
+## Documentation
+
+See [`docs/API_GUIDE.md`](docs/API_GUIDE.md) for detailed API documentation and advanced usage.
+
+## Citation
+
+If you use this library, please cite:
+
+```bibtex
+@inproceedings{ramesh-etal-2025-generalization,
+    title = "On the Generalization vs Fidelity Paradox in Knowledge Distillation",
+    author = "Ramesh, Suhas Kamasetty  and
+      Sengupta, Ayan  and
+      Chakraborty, Tanmoy",
+    editor = "Che, Wanxiang  and
+      Nabende, Joyce  and
+      Shutova, Ekaterina  and
+      Pilehvar, Mohammad Taher",
+    booktitle = "Findings of the Association for Computational Linguistics: ACL 2025",
+    month = jul,
+    year = "2025",
+    address = "Vienna, Austria",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2025.findings-acl.923/",
+    doi = "10.18653/v1/2025.findings-acl.923",
+    pages = "17930--17951",
+    ISBN = "979-8-89176-256-5",
+}
+```
+
+## License
+
+Apache License 2.0 - see [LICENSE](LICENSE) file for details.
+
+## Contributing
+
+Contributions welcome! Please open an issue or PR.
+
+## Acknowledgments
+
+Built with [HuggingFace Transformers](https://huggingface.co/transformers/) and inspired by research in knowledge distillation for LLMs.
