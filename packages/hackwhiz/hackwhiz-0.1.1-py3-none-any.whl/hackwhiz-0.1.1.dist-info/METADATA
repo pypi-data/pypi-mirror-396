@@ -1,0 +1,108 @@
+Metadata-Version: 2.4
+Name: hackwhiz
+Version: 0.1.1
+Summary: Tiny NumPy-based tensors and neural-network building blocks for teaching and quick experiments.
+Author: HackWhiz
+License: MIT License
+        
+        Copyright (c) 2025 Hackwhiz
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+        
+Project-URL: Homepage, https://github.com/yaroslavsazhchenko/HackwhizAIFramework
+Project-URL: Bug Tracker, https://github.com/yaroslavsazhchenko/HackwhizAIFramework/issues
+Project-URL: Source, https://github.com/yaroslavsazhchenko/HackwhizAIFramework
+Keywords: tensor,numpy,deep-learning,educational,hackwhiz
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: numpy>=1.21
+Dynamic: license-file
+
+# hackwhiz
+
+Tiny NumPy-based tensors, layers, and optimizers intended for teaching and quick experiments.
+
+## Features
+- Lightweight `Tensor` wrapper with handy creation helpers (`rand`, `randn`, `zeros`, `ones`, `eye`, `arange`) and NumPy interoperability.
+- Minimal neural network pieces: `Linear`, `Relu`, `CrossEntropy`, and a simple `Module` interface.
+- Straightforward SGD optimizer plus `Dataset` and `DataLoader` utilities for batching.
+- Pure Python on top of NumPy, so it runs anywhere NumPy does.
+
+## Installation
+```bash
+pip install hackwhiz
+```
+
+## Quickstart
+```python
+import hackwhiz as hw
+from hackwhiz import nn, optim
+
+hw.manual_seed(7)
+
+class Model(nn.Module):
+    def __init__(self):
+        self.layers = [
+            nn.Linear(2, 4),
+            nn.Relu(),
+            nn.Linear(4, 2),
+        ]
+        self.loss = nn.CrossEntropy()
+
+    def forward(self, x, targ):
+        for layer in self.layers:
+            x = layer(x)
+        return self.loss(x, targ)
+
+    def backward(self):
+        self.loss.backward()
+        for layer in reversed(self.layers):
+            layer.backward()
+
+model = Model()
+opt = optim.SGD(model.parameters(), lr=0.1)
+
+x = hw.tensor([[1.0, 0.0], [0.0, 1.0], [1.0, 1.0], [0.0, 0.0]])
+y = hw.tensor([0, 1, 0, 1])
+
+for _ in range(50):
+    opt.zero_grad()
+    loss = model(x, y)
+    model.backward()
+    opt.step()
+
+print(f"final loss: {loss.item():.4f}")
+```
+
+## Development
+- Create an environment and install in editable mode: `python -m venv .venv && source .venv/bin/activate && pip install -e .`.
+- Run the example script above to sanity-check changes.
+- Build a release: `pip install build twine && python -m build` then `twine check dist/*` and `twine upload dist/*`.
