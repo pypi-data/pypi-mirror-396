@@ -1,0 +1,91 @@
+#!/usr/bin/env python3
+"""Snapcraft `configure` hook for the Vantage Agents snap."""
+
+import os
+import subprocess
+import sys
+from contextlib import contextmanager
+from pathlib import Path
+from typing import Union
+
+SNAP_COMMON_PATH = "/var/snap/vantage-agent/common"
+SNAP_INSTANCE_NAME = os.environ["SNAP_INSTANCE_NAME"]
+DOTENV_PREFIX = "VANTAGE_AGENT_"
+DOTENV_FILE_LOCATION = Path(f"{SNAP_COMMON_PATH}/.env")
+AGENT_VARIABLES_MAP: dict[str, Union[str, int]] = {
+    "BASE_API_URL": "https://apis.vantagecompute.ai",
+    "OIDC_DOMAIN": "auth.vantagecompute.ai/realms/vantage",
+    "OIDC_CLIENT_ID": "dummy",
+    "OIDC_CLIENT_SECRET": "dummy",
+    "PARTITIONS_JSON_PATH": "/nfs/slurm/etc/aws/partitions.json",
+    "SLURM_CONF_PATH": "/etc/slurm/slurm.conf",
+    "TASK_JOBS_INTERVAL_SECONDS": 30,
+    "CACHE_DIR": f"{SNAP_COMMON_PATH}/.cache",
+    "CLUSTER_NAME": "",
+    "IS_CLOUD_CLUSTER": "false",
+    "SENTRY_DSN": "",
+    "SENTRY_ENV": "snap-env",
+    "SENTRY_TRACES_SAMPLE_RATE": "0.01",
+    "SENTRY_SAMPLE_RATE": "0.25",
+    "SENTRY_PROFILING_SAMPLE_RATE": "0.01",
+}
+
+
+@contextmanager
+def handle_error(message: str):
+    """Handle any errors encountered in this context manager."""
+    try:
+        yield
+    except Exception as exc:
+        sys.exit(f"Failed to {message} (from configure hook) -- {exc}")
+
+
+def run_bash(bash_string: str) -> str:
+    """Run bash command and return output as string."""
+    return subprocess.check_output(bash_string.split()).decode().rstrip()
+
+
+def daemon_starter():
+    """Start the daemon."""
+    with handle_error(f"start {SNAP_INSTANCE_NAME}.vtg-agent"):
+        run_bash(f"snapctl start --enable {SNAP_INSTANCE_NAME}.vtg-agent")
+
+
+def daemon_stopper():
+    """Stop the daemon."""
+    with handle_error(f"stop {SNAP_INSTANCE_NAME}.vtg-agent"):
+        run_bash(f"snapctl stop --disable {SNAP_INSTANCE_NAME}.vtg-agent")
+
+
+def snapctl_get(snap_config_value: str) -> Union[str, None]:
+    """Get snap config from snapctl.
+
+    Return python None if snapctl returns the empty string.
+    """
+    snapctl_out: Union[str, None]
+    snapctl_out = run_bash(f"snapctl get {snap_config_value}")
+
+    if snapctl_out == "":
+        snapctl_out = None
+
+    return snapctl_out
+
+
+def configure_dotenv_files():
+    """Configure the .env files based on the snap mode."""
+    with handle_error(f"configure .env for {SNAP_INSTANCE_NAME}"):
+        env_file_content = ""
+        for env_var, env_value in AGENT_VARIABLES_MAP.items():
+            snapctl_value = snapctl_get(env_var.lower().replace("_", "-"))
+            if snapctl_value is not None:
+                env_value = snapctl_value
+            elif bool(env_value) is False:
+                continue
+            env_file_content += f"{DOTENV_PREFIX}{env_var}={env_value}\n"
+        DOTENV_FILE_LOCATION.write_text(env_file_content)
+
+
+if __name__ == "__main__":
+    daemon_stopper()
+    configure_dotenv_files()
+    daemon_starter()
