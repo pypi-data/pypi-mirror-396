@@ -1,0 +1,27 @@
+name: devrun
+version: 0.2.7
+description:
+  Consolidated development tool runner agent with integrated tool documentation
+  for pytest, pyright, ruff, prettier, make, and gt
+license: See LICENSE.md
+artifacts:
+  agent:
+    - agents/devrun/devrun.md
+  doc:
+    - docs/devrun/tools/gt.md
+    - docs/devrun/tools/make.md
+    - docs/devrun/tools/prettier.md
+    - docs/devrun/tools/pyright.md
+    - docs/devrun/tools/pytest.md
+    - docs/devrun/tools/ruff.md
+scripts:
+  - name: devrun-reminder-hook
+    path: scripts/devrun/devrun_reminder_hook.py
+    description: Output devrun agent reminder for UserPromptSubmit hook
+hooks:
+  - id: devrun-reminder-hook
+    lifecycle: UserPromptSubmit
+    matcher: "*"
+    invocation: erk kit exec devrun devrun-reminder-hook
+    description: Output devrun agent reminder on every prompt
+    timeout: 30
