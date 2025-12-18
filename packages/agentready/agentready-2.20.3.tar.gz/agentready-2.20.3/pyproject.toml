@@ -1,0 +1,115 @@
+[project]
+name = "agentready"
+version = "2.20.3"
+description = "Assess and bootstrap git repositories for AI-assisted development with automated remediation and continuous learning"
+authors = [{name = "Jeremy Eder", email = "jeder@redhat.com"}]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.12"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Quality Assurance",
+]
+
+dependencies = [
+    "click>=8.1.0",
+    "jinja2>=3.1.0",
+    "pyyaml>=6.0",
+    "gitpython>=3.1.0",
+    "radon>=6.0.0",
+    "lizard>=1.17.0",
+    "anthropic>=0.74.0",
+    "jsonschema>=4.17.0",
+    "requests>=2.31.0",
+    "pydantic>=2.0.0",
+    "pandas>=2.0.0",
+    "plotly>=5.0.0",
+    "scipy>=1.10.0",
+    "PyGithub>=2.1.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "flake8>=6.0.0",
+    "ruff>=0.1.0",
+]
+
+[project.scripts]
+agentready = "agentready.cli.main:cli"
+
+[build-system]
+requires = ["setuptools>=68.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+agentready = [
+    "data/*.md",
+    "data/*.yaml",
+    "templates/*.j2",
+    "templates/**/*.j2",
+    "templates/**/*.yml.j2",
+    "templates/**/*.yaml.j2",
+    "templates/**/*.md.j2"
+]
+
+[tool.black]
+target-version = ["py312"]
+extend-exclude = '''
+/(
+  \.eggs
+  | \.git
+  | \.venv
+  | venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 88
+skip_gitignore = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v"
+markers = [
+    "integration: marks tests as integration tests (select with '-m integration')",
+]
+
+[tool.coverage.run]
+source = ["src/agentready"]
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/.venv/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]

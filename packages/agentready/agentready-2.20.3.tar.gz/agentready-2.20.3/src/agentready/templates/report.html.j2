@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ theme_name }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline';">
+    <title>AgentReady Assessment - {{ repository.name }}</title>
+    <style>
+        /* Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            /* Default theme colors - will be overridden by active theme */
+            {% for var, value in theme.to_css_vars().items() %}
+            {{ var }}: {{ value }};
+            {% endfor %}
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            font-size: 18px;                 /* Increased from 16px */
+            color: var(--text-primary);
+            background: var(--background);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: var(--surface);
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 16px var(--shadow);
+        }
+
+        /* Header */
+        header {
+            border-bottom: 3px solid var(--primary);
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 36px;                 /* Increased from 32px (2rem) */
+            color: var(--text-primary);
+            margin-bottom: 15px;
+        }
+
+        .report-header {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 30px;
+            margin-bottom: 20px;
+        }
+
+        .repo-info h2 {
+            font-size: 30px;                 /* Increased from 24px (1.5rem) */
+            color: var(--text-primary);
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .repo-info .info-line {
+            color: var(--text-secondary);
+            font-size: 18px;                 /* Increased from 15px (0.95rem) */
+            margin: 6px 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        .repo-info .info-line code {
+            background: var(--surface-elevated);
+            padding: 2px 8px;
+            border-radius: 3px;
+            color: var(--text-primary);
+        }
+
+        .meta-info {
+            text-align: right;
+            color: var(--text-muted);
+            font-size: 17px;                 /* Increased from 14px (0.9rem) */
+        }
+
+        .meta-info .info-line {
+            margin: 6px 0;
+        }
+
+        .meta-info strong {
+            color: var(--text-secondary);
+        }
+
+        /* Summary Cards */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .summary-card {
+            background: var(--surface-elevated);
+            color: var(--text-primary);
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid var(--border);
+        }
+
+        .summary-card.score {
+            border-color: var(--primary);
+            background: linear-gradient(135deg, var(--surface-elevated) 0%, var(--primary-dark) 100%);
+        }
+
+        .summary-card.certification {
+            border-color: var(--primary-light);
+        }
+
+        .summary-card.assessed {
+            border-color: var(--success);
+        }
+
+        .summary-card.duration {
+            border-color: var(--neutral);
+        }
+
+        .summary-card h3 {
+            font-size: 18px;             /* Increased from 14px (0.9rem) */
+            font-weight: 500;
+            opacity: 0.9;
+            margin-bottom: 10px;
+            color: var(--text-secondary);
+        }
+
+        .summary-card .value {
+            font-size: 56px;             /* Increased from 32px (2rem) */
+            font-weight: 700;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin: 30px 0;
+            padding: 20px;
+            background: var(--surface-elevated);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .control-group label {
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 17px;                 /* Increased from 14px (0.9rem) */
+        }
+
+        select, input[type="search"] {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 17px;                 /* Increased from 14px (0.9rem) */
+            background: var(--surface);
+            color: var(--text-primary);
+        }
+
+        input[type="search"] {
+            min-width: 250px;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid var(--border);
+            background: var(--surface);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 17px;                 /* Increased from 14px (0.9rem) */
+            color: var(--text-primary);
+            transition: all 0.2s;
+        }
+
+        .filter-btn:hover {
+            border-color: var(--primary);
+            background: var(--surface-elevated);
+        }
+
+        .filter-btn.active {
+            background: var(--primary);
+            color: var(--text-primary);
+            border-color: var(--primary);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 15px;                 /* Increased from 12px (0.75rem) */
+            font-weight: 600;
+            margin-left: 5px;
+        }
+
+        /* Certification Ladder */
+        .cert-ladder {
+            display: flex;
+            justify-content: space-between;
+            margin: 30px 0;
+            padding: 20px;
+            background: var(--surface-elevated);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .cert-level {
+            flex: 1;
+            text-align: center;
+            padding: 15px 10px;
+            border-radius: 6px;
+            margin: 0 5px;
+            transition: all 0.3s;
+            background: var(--surface);
+            border: 2px solid var(--border);
+        }
+
+        .cert-level.platinum { border-color: var(--primary-light); }
+        .cert-level.gold { border-color: var(--warning); }
+        .cert-level.silver { border-color: var(--neutral); }
+        .cert-level.bronze { border-color: #92400e; }
+        .cert-level.needs-improvement { border-color: var(--danger); }
+
+        .cert-level.active {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px var(--shadow);
+            border: 3px solid var(--primary);
+            background: var(--surface-elevated);
+        }
+
+        .cert-level h4 {
+            font-size: 17px;                 /* Increased from 14px (0.9rem) */
+            margin-bottom: 5px;
+            color: var(--text-primary);
+        }
+
+        .cert-level .range {
+            font-size: 15px;                 /* Increased from 13px (0.8rem) */
+            opacity: 0.7;
+            color: var(--text-muted);
+        }
+
+        /* Findings */
+        .findings {
+            margin: 30px 0;
+        }
+
+        .finding {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 15px;
+            overflow: hidden;
+            transition: all 0.2s;
+            background: var(--surface);
+        }
+
+        .finding:hover {
+            box-shadow: 0 4px 12px var(--shadow);
+            border-color: var(--primary);
+        }
+
+        .finding-header {
+            padding: 15px 20px;
+            background: var(--surface-elevated);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .finding-header:hover {
+            background: var(--surface);
+        }
+
+        .finding-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex: 1;
+        }
+
+        .status-icon {
+            font-size: 26px;                 /* Increased from 24px (1.5rem) */
+        }
+
+        .finding-info h3 {
+            font-size: 22px;                 /* Increased from 16px (1rem) */
+            color: var(--text-primary);
+            margin-bottom: 3px;
+        }
+
+        .finding-meta {
+            font-size: 17px;                 /* Increased from 14px (0.85rem) */
+            color: var(--text-muted);
+        }
+
+        .tier-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 15px;                 /* Increased from 12px (0.75rem) */
+            font-weight: 600;
+        }
+
+        .tier-1 { background: #7f1d1d; color: #fca5a5; }
+        .tier-2 { background: #78350f; color: #fdba74; }
+        .tier-3 { background: #713f12; color: #fde68a; }
+        .tier-4 { background: #064e3b; color: #6ee7b7; }
+
+        .score-display {
+            font-size: 26px;                 /* Increased from 24px (1.5rem) */
+            font-weight: 700;
+            min-width: 80px;
+            text-align: right;
+        }
+
+        .score-pass { color: var(--success); }
+        .score-fail { color: var(--danger); }
+        .score-skip { color: var(--neutral); }
+
+        .finding-body {
+            padding: 20px;
+            display: none;
+            background: var(--surface);
+        }
+
+        .finding.expanded .finding-body {
+            display: block;
+        }
+
+        .finding-section {
+            margin-bottom: 20px;
+        }
+
+        .finding-section h4 {
+            font-size: 17px;                 /* Increased from 14px (0.9rem) */
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .evidence-list, .remediation-steps {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .evidence-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 17px;                 /* Increased from ~16px */
+        }
+
+        .evidence-list li:before {
+            content: "▸ ";
+            color: var(--primary);
+            font-weight: 700;
+            margin-right: 8px;
+        }
+
+        .remediation-steps li {
+            padding: 10px 0 10px 30px;
+            position: relative;
+            color: var(--text-secondary);
+            font-size: 17px;                 /* Increased from ~16px */
+        }
+
+        .remediation-steps li:before {
+            content: counter(step);
+            counter-increment: step;
+            position: absolute;
+            left: 0;
+            top: 10px;
+            background: var(--primary);
+            color: var(--text-primary);
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;                 /* Increased from 12px (0.75rem) */
+            font-weight: 700;
+        }
+
+        .remediation-steps {
+            counter-reset: step;
+        }
+
+        code {
+            background: var(--surface-elevated);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;                 /* Increased from ~14px (0.9em) */
+            color: var(--primary-light);
+        }
+
+        pre {
+            background: var(--background);
+            color: var(--text-secondary);
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 10px 0;
+            border: 1px solid var(--border);
+        }
+
+        pre code {
+            background: none;
+            color: inherit;
+            padding: 0;
+        }
+
+        /* Footer */
+        footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 17px;                 /* Increased from 14px (0.9rem) */
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            input[type="search"] {
+                min-width: 100%;
+            }
+
+            .cert-ladder {
+                flex-direction: column;
+            }
+
+            .cert-level {
+                margin: 5px 0;
+            }
+        }
+
+        /* Hidden class */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Theme Switcher */
+        .theme-switcher {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .theme-switcher label {
+            font-size: 17px;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .theme-select {
+            padding: 8px 12px;
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            background: var(--surface);
+            color: var(--text-primary);
+            font-size: 17px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .theme-select:hover {
+            border-color: var(--primary);
+        }
+
+        .theme-select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+        }
+
+        @media (max-width: 768px) {
+            .theme-switcher {
+                position: static;
+                justify-content: center;
+                margin-bottom: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Theme Switcher -->
+    <div class="theme-switcher">
+        <label for="theme-select">Theme:</label>
+        <select id="theme-select" class="theme-select">
+            {% for theme_key, theme_data in available_themes.items() %}
+            <option value="{{ theme_key }}" {% if theme_key == theme_name %}selected{% endif %}>
+                {{ theme_data.display_name }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>🤖 AgentReady Assessment Report</h1>
+            <div class="report-header">
+                <div class="repo-info">
+                    <h2>{{ repository.name }}</h2>
+                    <div class="info-line">📁 {{ repository_display_path }}</div>
+                    <div class="info-line">🌿 <code>{{ repository.branch }}</code> @ <code>{{ commit_hash_short }}</code></div>
+                </div>
+                {% if metadata %}
+                <div class="meta-info">
+                    <div class="info-line"><strong>Assessed:</strong> {{ metadata.assessment_timestamp_human }}</div>
+                    <div class="info-line"><strong>AgentReady:</strong> v{{ metadata.agentready_version }}</div>
+                    <div class="info-line"><strong>Run by:</strong> {{ metadata.executed_by }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </header>
+
+        <!-- Summary Cards -->
+        <div class="summary-grid">
+            <div class="summary-card score">
+                <h3>Overall Score</h3>
+                <div class="value">{{ "%.1f"|format(overall_score) }}</div>
+            </div>
+            <div class="summary-card certification">
+                <h3>Certification</h3>
+                <div class="value">{{ certification_level }}</div>
+            </div>
+            <div class="summary-card assessed">
+                <h3>Assessed</h3>
+                <div class="value">{{ attributes_assessed }}/{{ attributes_total }}</div>
+            </div>
+            <div class="summary-card duration">
+                <h3>Duration</h3>
+                <div class="value">{{ "%.1f"|format(duration_seconds) }}s</div>
+            </div>
+        </div>
+
+        <!-- Certification Ladder -->
+        <div class="cert-ladder">
+            <div class="cert-level platinum {% if certification_level == 'Platinum' %}active{% endif %}">
+                <h4>💎 Platinum</h4>
+                <p class="range">90-100</p>
+            </div>
+            <div class="cert-level gold {% if certification_level == 'Gold' %}active{% endif %}">
+                <h4>🥇 Gold</h4>
+                <p class="range">75-89</p>
+            </div>
+            <div class="cert-level silver {% if certification_level == 'Silver' %}active{% endif %}">
+                <h4>🥈 Silver</h4>
+                <p class="range">60-74</p>
+            </div>
+            <div class="cert-level bronze {% if certification_level == 'Bronze' %}active{% endif %}">
+                <h4>🥉 Bronze</h4>
+                <p class="range">40-59</p>
+            </div>
+            <div class="cert-level needs-improvement {% if certification_level == 'Needs Improvement' %}active{% endif %}">
+                <h4>⚠️ Needs Work</h4>
+                <p class="range">0-39</p>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <div class="control-group">
+                <label>Filter:</label>
+                <button class="filter-btn active" data-filter="all">All <span class="badge">{{ findings|length }}</span></button>
+                <button class="filter-btn" data-filter="pass">Pass <span class="badge">{{ findings|selectattr('status', 'equalto', 'pass')|list|length }}</span></button>
+                <button class="filter-btn" data-filter="fail">Fail <span class="badge">{{ findings|selectattr('status', 'equalto', 'fail')|list|length }}</span></button>
+                <button class="filter-btn" data-filter="skipped">Skipped <span class="badge">{{ (findings|selectattr('status', 'equalto', 'skipped')|list|length + findings|selectattr('status', 'equalto', 'not_applicable')|list|length) }}</span></button>
+            </div>
+
+            <div class="control-group">
+                <label>Sort:</label>
+                <select id="sort-select">
+                    <option value="category">Category</option>
+                    <option value="score-desc">Score (High to Low)</option>
+                    <option value="score-asc">Score (Low to High)</option>
+                    <option value="tier">Tier (Essential First)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <input type="search" id="search-box" placeholder="Search attributes...">
+            </div>
+        </div>
+
+        <!-- Findings -->
+        <div class="findings" id="findings-container">
+            {% for finding in findings %}
+            <div class="finding"
+                 data-status="{{ finding.status }}"
+                 data-tier="{{ finding.attribute.tier }}"
+                 data-category="{{ finding.attribute.category }}"
+                 data-score="{{ finding.score if finding.score else 0 }}"
+                 data-name="{{ finding.attribute.name|lower }}">
+
+                <div class="finding-header" onclick="toggleFinding(this)">
+                    <div class="finding-title">
+                        <span class="status-icon">
+                            {% if finding.status == 'pass' %}✅
+                            {% elif finding.status == 'fail' %}❌
+                            {% elif finding.status in ['skipped', 'not_applicable'] %}⊘
+                            {% else %}⚠️{% endif %}
+                        </span>
+                        <div class="finding-info">
+                            <h3>{{ finding.attribute.name }}</h3>
+                            <div class="finding-meta">
+                                {{ finding.attribute.category }} •
+                                <span class="tier-badge tier-{{ finding.attribute.tier }}">Tier {{ finding.attribute.tier }}</span>
+                                {% if finding.measured_value %} • {{ finding.measured_value }}{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% if finding.score is not none %}
+                    <div class="score-display score-{{ finding.status }}">
+                        {{ "%.0f"|format(finding.score) }}
+                    </div>
+                    {% else %}
+                    <div class="score-display score-skip">—</div>
+                    {% endif %}
+                </div>
+
+                <div class="finding-body">
+                    {% if finding.evidence %}
+                    <div class="finding-section">
+                        <h4>Evidence</h4>
+                        <ul class="evidence-list">
+                            {% for item in finding.evidence %}
+                            <li>{{ item }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+
+                    {% if finding.remediation %}
+                    <div class="finding-section">
+                        <h4>Remediation</h4>
+                        <p><strong>{{ finding.remediation.summary }}</strong></p>
+
+                        {% if finding.remediation.steps %}
+                        <ol class="remediation-steps">
+                            {% for step in finding.remediation.steps %}
+                            <li>{{ step }}</li>
+                            {% endfor %}
+                        </ol>
+                        {% endif %}
+
+                        {% if finding.remediation.commands %}
+                        <h4 style="margin-top: 15px;">Commands</h4>
+                        <pre><code>{{ finding.remediation.commands|join('\n') }}</code></pre>
+                        {% endif %}
+
+                        {% if finding.remediation.examples %}
+                        <h4 style="margin-top: 15px;">Examples</h4>
+                        {% for example in finding.remediation.examples %}
+                        <pre><code>{{ example }}</code></pre>
+                        {% endfor %}
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if finding.error_message %}
+                    <div class="finding-section">
+                        <h4>Error</h4>
+                        <p style="color: #dc2626;">{{ finding.error_message }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <footer>
+            {% if metadata %}
+            <p>Generated by <strong>AgentReady v{{ metadata.agentready_version }}</strong> (Research v{{ metadata.research_version }})</p>
+            <p>Repository: {{ repository_display_path }} • Branch: {{ repository.branch }} • Commit: {{ commit_hash_short }}</p>
+            <p style="font-size: 0.85rem; color: #666;">Assessed by {{ metadata.executed_by }} on {{ metadata.assessment_timestamp_human }}</p>
+            {% else %}
+            <p>Generated by <strong>AgentReady</strong></p>
+            <p>Repository: {{ repository_display_path }} • Branch: {{ repository.branch }} • Commit: {{ commit_hash_short }}</p>
+            {% endif %}
+            <p style="margin-top: 10px; font-size: 0.85rem;">
+                🤖 Generated with <a href="https://claude.com/claude-code" style="color: #2563eb;">Claude Code</a>
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // Security: Using Jinja2's tojson filter for proper XSS prevention
+        // tojson creates JavaScript objects directly, no JSON.parse() needed
+        const ASSESSMENT = {{ assessment_dict|tojson }};
+
+        // Embedded theme data (properly escaped)
+        const THEMES = {{ available_themes_dict|tojson }};
+        const DEFAULT_THEME = {{ theme_name|tojson }};
+
+        // Theme management with localStorage persistence
+        function applyTheme(themeName) {
+            const theme = THEMES[themeName];
+            if (!theme) {
+                console.warn(`Theme ${themeName} not found, using default`);
+                themeName = DEFAULT_THEME;
+            }
+
+            const themeData = THEMES[themeName];
+            const root = document.documentElement;
+
+            // Apply CSS custom properties
+            root.style.setProperty('--background', themeData.background);
+            root.style.setProperty('--surface', themeData.surface);
+            root.style.setProperty('--surface-elevated', themeData.surface_elevated);
+            root.style.setProperty('--primary', themeData.primary);
+            root.style.setProperty('--primary-light', themeData.primary_light);
+            root.style.setProperty('--primary-dark', themeData.primary_dark);
+            root.style.setProperty('--text-primary', themeData.text_primary);
+            root.style.setProperty('--text-secondary', themeData.text_secondary);
+            root.style.setProperty('--text-muted', themeData.text_muted);
+            root.style.setProperty('--success', themeData.success);
+            root.style.setProperty('--warning', themeData.warning);
+            root.style.setProperty('--danger', themeData.danger);
+            root.style.setProperty('--neutral', themeData.neutral);
+            root.style.setProperty('--border', themeData.border);
+            root.style.setProperty('--shadow', themeData.shadow);
+
+            // Update data attribute for potential CSS targeting
+            root.setAttribute('data-theme', themeName);
+
+            // Save preference to localStorage
+            try {
+                localStorage.setItem('agentready-theme', themeName);
+            } catch (e) {
+                console.warn('Could not save theme preference to localStorage:', e);
+            }
+        }
+
+        // Load theme from localStorage on page load
+        function loadSavedTheme() {
+            try {
+                const savedTheme = localStorage.getItem('agentready-theme');
+                if (savedTheme && THEMES[savedTheme]) {
+                    return savedTheme;
+                }
+            } catch (e) {
+                console.warn('Could not load theme preference from localStorage:', e);
+            }
+            return DEFAULT_THEME;
+        }
+
+        // Initialize theme on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = loadSavedTheme();
+            const themeSelect = document.getElementById('theme-select');
+
+            // Apply saved theme if different from default
+            if (savedTheme !== DEFAULT_THEME) {
+                applyTheme(savedTheme);
+                if (themeSelect) {
+                    themeSelect.value = savedTheme;
+                }
+            }
+
+            // Set up theme switcher
+            if (themeSelect) {
+                themeSelect.addEventListener('change', (e) => {
+                    applyTheme(e.target.value);
+                });
+            }
+        });
+
+        // Toggle finding expansion
+        function toggleFinding(header) {
+            const finding = header.parentElement;
+            finding.classList.toggle('expanded');
+        }
+
+        // Filter functionality
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Update active button
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                const filter = btn.dataset.filter;
+                const findings = document.querySelectorAll('.finding');
+
+                findings.forEach(finding => {
+                    const status = finding.dataset.status;
+
+                    if (filter === 'all') {
+                        finding.classList.remove('hidden');
+                    } else if (filter === 'skipped') {
+                        if (status === 'skipped' || status === 'not_applicable' || status === 'error') {
+                            finding.classList.remove('hidden');
+                        } else {
+                            finding.classList.add('hidden');
+                        }
+                    } else {
+                        if (status === filter) {
+                            finding.classList.remove('hidden');
+                        } else {
+                            finding.classList.add('hidden');
+                        }
+                    }
+                });
+            });
+        });
+
+        // Sort functionality
+        document.getElementById('sort-select').addEventListener('change', (e) => {
+            const sortBy = e.target.value;
+            const container = document.getElementById('findings-container');
+            const findings = Array.from(container.querySelectorAll('.finding'));
+
+            findings.sort((a, b) => {
+                if (sortBy === 'category') {
+                    return a.dataset.category.localeCompare(b.dataset.category);
+                } else if (sortBy === 'score-desc') {
+                    return parseFloat(b.dataset.score) - parseFloat(a.dataset.score);
+                } else if (sortBy === 'score-asc') {
+                    return parseFloat(a.dataset.score) - parseFloat(b.dataset.score);
+                } else if (sortBy === 'tier') {
+                    return parseInt(a.dataset.tier) - parseInt(b.dataset.tier);
+                }
+            });
+
+            findings.forEach(finding => container.appendChild(finding));
+        });
+
+        // Search functionality
+        document.getElementById('search-box').addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const findings = document.querySelectorAll('.finding');
+
+            findings.forEach(finding => {
+                const name = finding.dataset.name;
+                const category = finding.dataset.category.toLowerCase();
+
+                if (name.includes(query) || category.includes(query)) {
+                    finding.classList.remove('hidden');
+                } else {
+                    finding.classList.add('hidden');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

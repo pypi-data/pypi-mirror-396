@@ -1,0 +1,25 @@
+{% extends "_base/workflows/security.yml.j2" %}
+
+{% block codeql_language %}javascript{% endblock %}
+
+{% block language_security %}
+  npm-audit:
+    name: NPM Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: npm audit --audit-level=moderate || true
+{% endblock %}
