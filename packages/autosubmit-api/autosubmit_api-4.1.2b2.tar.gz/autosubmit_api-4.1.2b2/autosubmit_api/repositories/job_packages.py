@@ -1,0 +1,68 @@
+from abc import ABC, abstractmethod
+from typing import Any, List
+
+from pydantic import BaseModel
+from sqlalchemy import Engine, Table, create_engine
+
+from autosubmit_api.config.basicConfig import APIBasicConfig
+from autosubmit_api.database import tables
+from autosubmit_api.database.common import (
+    create_sqlite_db_engine,
+)
+from autosubmit_api.persistance.experiment import ExperimentPaths
+
+
+class JobPackageModel(BaseModel):
+    exp_id: Any
+    package_name: Any
+    job_name: Any
+
+
+class JobPackagesRepository(ABC):
+    @abstractmethod
+    def get_all(self) -> List[JobPackageModel]:
+        """
+        Get all job packages.
+        """
+
+
+class JobPackagesSQLRepository(JobPackagesRepository):
+    def __init__(self, engine: Engine, table: Table):
+        self.engine = engine
+        self.table = table
+
+    def get_all(self):
+        with self.engine.connect() as conn:
+            statement = self.table.select()
+            result = conn.execute(statement).all()
+        return [
+            JobPackageModel(
+                exp_id=row.exp_id,
+                package_name=row.package_name,
+                job_name=row.job_name,
+            )
+            for row in result
+        ]
+
+
+def create_job_packages_repository(expid: str, wrapper=False) -> JobPackagesRepository:
+    """
+    Create a job packages repository.
+
+    :param wrapper: Whether to use the alternative wrapper job packages table.
+    """
+    if APIBasicConfig.DATABASE_BACKEND == "postgres":
+        # Postgres
+        _engine = create_engine(APIBasicConfig.DATABASE_CONN_URL)
+        _table = (
+            tables.table_change_schema(expid, tables.WrapperJobPackageTable)
+            if wrapper
+            else tables.table_change_schema(expid, tables.JobPackageTable)
+        )
+    else:
+        # SQLite
+        _engine = create_sqlite_db_engine(
+            ExperimentPaths(expid).job_packages_db, read_only=True
+        )
+        _table = tables.WrapperJobPackageTable if wrapper else tables.JobPackageTable
+    return JobPackagesSQLRepository(_engine, _table)
