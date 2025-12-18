@@ -1,0 +1,228 @@
+# Django Credo SDK
+
+[![PyPI version](https://badge.fury.io/py/django-credo-sdk.svg)](https://badge.fury.io/py/django-credo-sdk)
+[![Python Versions](https://img.shields.io/pypi/pyversions/django-credo-sdk.svg)](https://pypi.org/project/django-credo-sdk/)
+[![Django Versions](https://img.shields.io/badge/django-4.0%2B%20%7C%205.0%2B%20%7C%206.0%2B-blue.svg)](https://www.djangoproject.com/)
+
+Unofficial Django SDK for integrating **Credo Payment Gateway** into your Django applications. This SDK provides a clean, type-safe interface for accepting payments, verifying transactions, and handling webhooks.
+
+## ✨ Features
+
+- 🚀 **Easy Integration** - Drop-in Django app with REST API views
+- 🔒 **Type Safety** - Fully typed request/response models
+- 💳 **Payment Routing** - Support for multi-destination payments (split payments)
+- 🔔 **Unified Webhooks** - Single endpoint for both customer redirects and server notifications
+- 🎨 **Model Mixins** - Add payment functionality directly to your Django models
+- 🧪 **Debug Interface** - Built-in test page for development
+- 🌍 **Production Ready** - Sandbox and production environment support
+
+## 📦 Installation
+
+```bash
+pip install django-credo-sdk
+```
+
+## 🚀 Quick Start
+
+### 1. Add to Django Settings
+
+```python
+# settings.py
+INSTALLED_APPS = [
+    ...
+    'credo_pay',
+]
+
+# Credo Configuration
+CREDO_PUBLIC_KEY = 'your_public_key'
+CREDO_SECRET_KEY = 'your_secret_key'
+CREDO_TERMINAL_ID = 'your_terminal_id'
+CREDO_ENVIRONMENT = 'sandbox'  # or 'production'
+CREDO_DEFAULT_CALLBACK_URL = 'https://yoursite.com/api/credo/webhook/'
+```
+
+### 2. Initialize Payment
+
+```python
+from credo_pay import CredoClient
+
+client = CredoClient()
+
+response = client.initialize_payment(
+    amount=15000,  # Amount in Naira (₦150.00)
+    email="customer@example.com",
+    callback_url="https://yoursite.com/api/credo/webhook/",
+    first_name="John",
+    last_name="Doe"
+)
+
+# Redirect customer to payment page
+payment_url = response.authorization_url
+```
+
+### 3. Verify Payment
+
+```python
+# After payment callback
+verification = client.verify_payment(reference='transaction_reference')
+
+if verification.is_successful:
+    print(f"Payment successful: ₦{verification.trans_amount}")
+elif verification.is_failed:
+    print(f"Payment failed: {verification.status_description}")
+```
+
+### 4. Handle Webhooks
+
+Create a custom webhook view to handle payment notifications:
+
+```python
+# views.py
+from credo_pay import CredoWebhookView
+from django.shortcuts import redirect
+
+class MyWebhookView(CredoWebhookView):
+    """Custom webhook handler for your application."""
+    
+    def handle_callback(self, callback_data, verify_response):
+        """Handle customer redirect (GET request)"""
+        if verify_response and verify_response.is_successful:
+            # Update your order/transaction
+            Order.objects.filter(
+                reference=callback_data.reference
+            ).update(status='paid')
+            return redirect('/payment/success/')
+        return redirect('/payment/failed/')
+    
+    def handle_webhook(self, event):
+        """Handle server notification (POST request)"""
+        if event.is_successful:
+            # Process successful payment
+            Order.objects.filter(
+                reference=event.business_ref
+            ).update(status='paid')
+```
+
+```python
+# urls.py
+from django.urls import path
+from .views import MyWebhookView
+
+urlpatterns = [
+    path('api/credo/webhook/', MyWebhookView.as_view(), name='credo-webhook'),
+]
+```
+
+## 📚 Advanced Usage
+
+### Payment Routing (Split Payments)
+
+Route payments to different bank accounts using service codes:
+
+```python
+response = client.initialize_routed_payment(
+    amount=15000,
+    email="customer@example.com",
+    service_code="YOUR_SERVICE_CODE",
+    bank_account="0114877128",
+    callback_url="https://yoursite.com/webhook/"
+)
+```
+
+### Model Mixins
+
+Add payment functionality to your models:
+
+```python
+from django.db import models
+from credo_pay.mixins import CredoPaymentMixin
+
+class Order(CredoPaymentMixin, models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    
+    def get_payment_amount(self):
+        return int(self.total_amount)
+    
+    def get_payment_email(self):
+        return self.user.email
+
+# Initialize payment for an order
+order = Order.objects.get(id=1)
+payment_response = order.initialize_credo_payment()
+redirect_url = payment_response.authorization_url
+```
+
+### Register Webhook Handlers
+
+Add custom logic for specific webhook events:
+
+```python
+def on_payment_success(event):
+    print(f"Payment received: {event.trans_ref}")
+    # Send confirmation email, trigger fulfillment, etc.
+
+client.register_webhook_handler(
+    "transaction.successful",
+    on_payment_success
+)
+```
+
+## 🔧 Configuration Options
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `CREDO_PUBLIC_KEY` | Your Credo public key | Required |
+| `CREDO_SECRET_KEY` | Your Credo secret key | Required |
+| `CREDO_TERMINAL_ID` | Your terminal ID | Required |
+| `CREDO_ENVIRONMENT` | `sandbox` or `production` | `sandbox` |
+| `CREDO_DEFAULT_CALLBACK_URL` | Default webhook URL | `None` |
+| `CREDO_WEBHOOK_SECRET_TOKEN` | Webhook signature verification token | `None` |
+| `CREDO_BUSINESS_CODE` | Your business code | `None` |
+
+## 🧪 Testing
+
+The SDK includes a debug interface for testing:
+
+```bash
+# Run development server
+python manage.py runserver
+
+# Visit debug interface
+http://localhost:8000/api/credo/debug/
+```
+
+## 📖 Documentation
+
+For complete documentation, visit the [GitHub repository](https://github.com/onuigb0/django-sdk-for-credo).
+
+### Transaction Status Codes
+
+| Code | Status | Description |
+|------|--------|-------------|
+| 0 | Successful | Transaction completed |
+| 3 | Failed | Transaction failed |
+| 5 | Settled | Transaction settled |
+| 7 | Declined | Declined by fraud check |
+| 9 | Abandoned | Customer abandoned |
+| 13 | Attempted | Payment attempted |
+| 14 | Initialised | Payment page loaded |
+| 15 | Initialising | Payment request sent |
+
+## 🤝 Support
+
+- **Credo Support**: hello@credocentral.com
+- **Sandbox Dashboard**: https://www.credodemo.com
+- **Production Dashboard**: https://www.credocentral.com
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## ⚠️ Disclaimer
+
+This is an **unofficial** SDK and is not affiliated with or endorsed by Credo. Use at your own discretion.
+
+---
+
+Made with ❤️ for the Django community
