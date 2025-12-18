@@ -1,0 +1,150 @@
+import os
+from argparse import ArgumentParser, Namespace
+
+from loguru import logger
+from tqdm import tqdm
+import torch
+import numpy as np
+
+from cabrnet.archs.generic.model import CaBRNet
+from cabrnet.core.utils.data import DatasetManager
+from cabrnet.core.utils.optimizers import OptimizerManager
+from cabrnet.core.utils.parser import load_config
+from cabrnet.core.utils.exceptions import ArgumentError
+
+description = "evaluates the accuracy of a CaBRNet model"
+
+
+def create_parser(parser: ArgumentParser | None = None) -> ArgumentParser:
+    r"""Creates the argument parser for evaluating a CaBRNet model.
+
+    Args:
+        parser (ArgumentParser, optional): Parent parser (if any).
+            Default: None
+
+    Returns:
+        The parser itself.
+    """
+    if parser is None:
+        parser = ArgumentParser(description)
+    parser = CaBRNet.create_parser(parser)
+    parser = DatasetManager.create_parser(parser)
+    parser = OptimizerManager.create_parser(parser)
+    parser.add_argument(
+        "-c",
+        "--checkpoint-dir",
+        type=str,
+        required=False,
+        metavar="/path/to/checkpoint/dir",
+        help="path to a checkpoint directory "
+        "(alternative to --model-arch, --model-state-dict, --dataset and --training)",
+    )
+    parser.add_argument(
+        "--targets",
+        type=str,
+        nargs="+",
+        default=["test_set"],
+        required=False,
+        metavar="dataset-name",
+        help="name of the target dataset(s). Default: test_set",
+    )
+    return parser
+
+
+def check_args(args: Namespace) -> Namespace:
+    r"""Checks the validity of the arguments and updates the namespace if necessary.
+
+    Args:
+        args (Namespace): Parsed arguments.
+
+    Returns:
+        Modified argument namespace.
+    """
+    if args.checkpoint_dir is not None:
+        # Fetch all files from directory
+        for param, name in zip(
+            [args.model_arch, args.model_state_dict, args.dataset, args.training],
+            ["--model-arch", "--model-state-dict", "--dataset", "--training"],
+        ):
+            if param is not None:
+                logger.warning(f"Ignoring option {name}: using content pointed by --checkpoint-dir instead")
+        args.model_arch = os.path.join(args.checkpoint_dir, CaBRNet.DEFAULT_MODEL_CONFIG)
+        args.model_state_dict = os.path.join(args.checkpoint_dir, CaBRNet.DEFAULT_MODEL_STATE)
+        args.dataset = os.path.join(args.checkpoint_dir, DatasetManager.DEFAULT_DATASET_CONFIG)
+        args.training = os.path.join(args.checkpoint_dir, OptimizerManager.DEFAULT_TRAINING_CONFIG)
+
+    # Check configuration completeness
+    for param, name, option in zip(
+        [args.model_arch, args.model_state_dict, args.dataset, args.training],
+        ["model", "state dictionary", "dataset", "training"],
+        ["-m", "-s", "-d", "-t"],
+    ):
+        if param is None:
+            raise ArgumentError(f"Missing {name} configuration file (option {option}).")
+    return args
+
+
+def execute(args: Namespace) -> None:
+    r"""Evaluates the accuracy of a CaBRNet model.
+
+    Args:
+        args (Namespace): Parsed arguments.
+
+    """
+    # Check and post-process options
+    args = check_args(args)
+
+    model = CaBRNet.build_from_config(args.model_arch, state_dict_path=args.model_state_dict)
+    model.eval()
+
+    # Register auxiliary training parameters (e.g. loss configuration)
+    trainer = load_config(args.training)
+    model.register_training_params(trainer)
+
+    # Dataloaders
+    dataloaders = DatasetManager.get_dataloaders(config=args.dataset, sampling_ratio=args.sampling_ratio)
+    model.to(args.device)
+
+    # Check relevance of all targets first
+    for target in args.targets:
+        if not dataloaders.get(target):
+            raise ArgumentError(f"Unknown target dataset: {target}")
+
+    for target in args.targets:
+        logger.info(f"Target: {target}")
+        logger.info("Evaluating classifier")
+        model.eval()
+        model.to(args.device)
+
+        # Show progress on progress bar if needed
+        data_iter = tqdm(
+            dataloaders[target],
+            desc="Model evaluation",
+            total=len(dataloaders[target]),
+            leave=False,
+            position=0,
+            disable=not args.verbose,
+        )
+        with torch.no_grad():
+            class_mapping = model.prototype_class_mapping
+            for xs, ys in data_iter:
+                xs = xs.to(args.device)
+
+                # Perform inference
+                sims = model.similarities(xs)
+
+                for sim, y in zip(sims, ys):
+                    proto_map = -np.ones((sim.shape[1], sim.shape[2]))
+                    for pidx in range(sim.shape[0]):
+                        if class_mapping[pidx][y.item()] == 1:
+                            if torch.max(sim[pidx]) < 1.0:
+                                # Ignore low similarity scores
+                                continue
+                            # Location of highest activation
+                            print((sim[pidx] == torch.max(sim[pidx])) * (pidx + 1))
+                            loc = ((sim[pidx] == torch.max(sim[pidx])) * (pidx + 1)).cpu().numpy()
+                            proto_map += loc
+                    print(proto_map)
+                    break
+                break
+            break
