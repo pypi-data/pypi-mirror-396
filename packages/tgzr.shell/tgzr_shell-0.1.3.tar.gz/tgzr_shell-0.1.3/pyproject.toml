@@ -1,0 +1,102 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tgzr.shell"
+dynamic = ["version"]
+description = 'tgzr command line interface'
+readme = "README.md"
+requires-python = ">=3.8"
+license = "GPL-3.0-or-later"
+keywords = []
+authors = [
+  { name = "Dee", email = "dee.sometech@gmail.com" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+
+dependencies = [
+  "pydantic-settings>=2.8.1",
+  "tgzr-cli",
+]
+
+[dependency-groups]
+dev = [
+    "pyinstaller>=6.17.0",
+]
+nicegui = [
+    "nicegui>=2.24.2",
+    "pywebview>=6.1",
+]
+qt = [
+    "pyside6>=6.6.3.1",
+    "qtpy>=2.4.3",
+]
+
+[project.urls]
+Documentation = "https://github.com/open-tgzr/tgzr.shell#readme"
+Issues = "https://github.com/open-tgzr/tgzr.shell/issues"
+Source = "https://github.com/open-tgzr/tgzr.shell"
+
+[tool.hatch.version]
+source = "vcs"
+fallback-version = "0.0.0"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "./src/tgzr/shell/_version.py"
+
+[tool.hatch.build]
+# this is needed bc it is otherwise not included in the build:
+artifacts = ['_version.py']
+packages = ["src/tgzr"]
+
+[tool.hatch.build.targets.wheel]
+# this is needed bc it is otherwise not included in the build:
+artifacts = ['_version.py']
+packages = ["src/tgzr"]
+
+[project.entry-points."tgzr.cli.plugin"]
+shell_cli = "tgzr.shell.cli_plugin:install_cli"
+
+[project.entry-points."tgzr.shell.app_plugin"]
+#TODO: this must have its own package bc it needs nicegui: tgzr_shell_doc = "tgzr.shell.doc_app.app:app"
+
+[tool.hatch.envs.types]
+extra-dependencies = [
+  "mypy>=1.0.0",
+]
+[tool.hatch.envs.types.scripts]
+check = "mypy --install-types --non-interactive {args:src/tgzr/shell tests}"
+
+[tool.coverage.run]
+source_pkgs = ["tgzr.shell", "tests"]
+branch = true
+parallel = true
+omit = [
+  "src/tgzr/shell/_version.py",
+]
+
+[tool.coverage.paths]
+tgzr.shell = ["src/tgzr/shell", "*/tgzr.shell/src/tgzr/shell"]
+tests = ["tests", "*/tgzr/shell/tests"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
+
+[tool.uv.sources]
+tgzr-cli = { path = "../tgzr.cli", editable = true }
+
