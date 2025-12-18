@@ -1,0 +1,166 @@
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf-8"/>
+    <link rel="stylesheet" media="all" href="https://s3.amazonaws.com/dynatable-docs-assets/css/reset.css" />
+    <link rel="stylesheet" media="all" href="https://s3.amazonaws.com/dynatable-docs-assets/css/bootstrap-2.3.2.min.css" />
+    <link rel="stylesheet" media="all" href="https://s3.amazonaws.com/dynatable-docs-assets/css/application.css" />
+    <link rel="stylesheet" media="all" href="https://s3.amazonaws.com/dynatable-docs-assets/css/project.css" />
+    <link rel="stylesheet" media="all" href="https://s3.amazonaws.com/dynatable-docs-assets/css/pygments.css" />
+    <link rel="stylesheet" media="all" href="https://s3.amazonaws.com/dynatable-docs-assets/css/share.css" />
+    <link href='//fonts.googleapis.com/css?family=Nunito:300' rel='stylesheet' type='text/css'>
+    <link href="//fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet" type="text/css">
+    <link rel="stylesheet" media="all" href="https://s3.amazonaws.com/dynatable-docs-assets/css/bootstrap-2.3.2.min.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Righteous&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0-beta1/jquery.js"></script>
+    <script type='text/javascript' src='https://s3.amazonaws.com/dynatable-docs-assets/js/highcharts.js'></script>
+    <link rel="stylesheet" media="all" href="jquery.dynatable.css" />
+    <link rel="stylesheet" media="all" href="testsuite.css" />
+    <script type='text/javascript' src='jquery.dynatable.js'></script>
+    <script type='text/javascript' src='testsuite.js'></script>
+    <script type="text/javascript" src="../reports/cc/cc.js"></script>
+    <script type="text/javascript" src="../reports/report.js"></script>
+  </head>
+  <body>
+    <h3 class="first-heading"><a href="index.html"><img src="img/png/squidient_logo.png" alt="" height="80" width="80">squidient report</a></h3>
+    <br></br>
+    <h4><div class="content">Branch: <span class="branch"></span> - Revision: <span class="revision"></span></div></h4>
+    <p>
+    <b>Code Coverage (summary)</b>
+    </p>
+    <table id="summary" class="table table-bordered">
+      <thead>
+        <th>Type</th>
+        <th>Total</th>
+        <th>Covered</th>
+        <th>Uncovered</th>
+        <th>Coverage</th>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+    <p>
+    <b>Code Coverage (details)</b>
+    </p>
+    <table id="details" class="table table-bordered">
+      <thead>
+      <th>File</th>
+      <th>Path</th>
+      <th>Functions</th>
+      <th>Covered Functions</th>
+      <th>Function Coverage</th>
+      <th>Blocks</th>
+      <th>Covered Blocks</th>
+      <th>Block Coverage</th>
+      <th>New Lines</th>
+      <th>Covered New Lines</th>
+      <th>Uncovered New Lines</th>
+      <th>New Line Coverage</th>
+      <th>Status</th>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+
+    <script type='text/javascript'>
+      $(document).ready(function() {
+        try {
+          var r=testsuiteJSON.parse(testsuiteJSON.reports+"report.json")
+        }
+        catch(err){
+          var r=report
+        }
+        try {
+          var c=testsuiteJSON.parse(testsuiteJSON.cc+"cc.json")
+        }
+        catch(err){
+          var c=cc
+        }
+        $(".content .revision").html(r.alyaRevision)
+        $(".content .branch").html(r.tag)
+        var summary=c.summary
+        var files=c.files
+        for (f in files){
+          sort_file=4
+          sort_icon=8
+          filename=files[f].name
+          files[f].newLineCoverage=100
+          image=testsuiteJSON.OK_BLACK
+          tt="This file is entirely covered."
+          if (files[f].uncoveredNewLines>0){
+            files[f].newLineCoverage=Math.round(100*files[f].coveredNewLines/files[f].newLines)
+            if (files[f].newLineCoverage==0){
+              filename="<font color=\"red\">"+filename+"<\/font>"
+              sort_file=1
+              sort_icon=1
+              tt="Your contributions are not covered at all. You must include new tests to cover them!"
+              image=testsuiteJSON.KO
+            }else{
+              filename="<font color=\"orange\">"+filename+"<\/font>"
+              sort_file=2
+              sort_icon=2
+              tt="Your contributions are partially covered. You should include new tests to cover them entirely!"
+              image=testsuiteJSON.WARNING
+            }
+          }else if (files[f].modified){
+            filename="<font color=\"green\">"+filename+"<\/font>"
+            sort_file=3
+            sort_icon=7
+            image=testsuiteJSON.OK
+            if (files[f].blockCoverage<100){
+              sort_icon=3
+              tt="All your contributions are covered. However, the file has still uncovered areas, which you can help cover by adding new tests."
+              image=testsuiteJSON.WARNING_GREEN
+            }
+            if (files[f].blockCoverage==0){
+              sort_icon=4
+              tt="You only removed lines without adding anything. The file is not covered at all, but the code coverage will not decrease. You can help cover this file by adding new tests."
+              image=testsuiteJSON.KO_GREEN
+            }
+          }else{
+            if (files[f].blockCoverage==0){
+              sort_icon=5
+              tt="This file is not covered at all! Help us cover it by adding new tests."
+              image=testsuiteJSON.KO_BLACK
+            }else if(files[f].blockCoverage<100){
+              sort_icon=6
+              tt="This file is partially covered. Help us increase the coverage by adding new tests."
+              image=testsuiteJSON.WARNING_BLACK
+            }
+          }
+          files[f].file=testsuiteJSON.setUrl(filename, testsuiteJSON.cc_dir+files[f].url,{}, sort_file+files[f].name)
+          files[f].status=testsuiteJSON.setUrl(image, testsuiteJSON.cc_dir+files[f].url, {}, sort_icon, tt)
+
+        }
+      var dynatable = $('#summary').dynatable({
+        dataset: {
+          records: summary
+        },
+        features: {
+          paginate: false,
+          pushState: false,
+          search: false,
+          recordCount: false,
+          perPageSelect: false
+        }
+      });
+      var dynatable2 = $('#details').dynatable({
+        dataset: {
+          records: files,
+          perPageDefault: 20,
+          sorts :{'file': 1}
+        },
+        features: {
+          paginate: true,
+          pushState: true,
+          search: true,
+          recordCount: true,
+          perPageSelect: true
+        }
+      });
+    });
+    </script>
+  </body>
+</html>
