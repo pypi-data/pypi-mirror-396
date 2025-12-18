@@ -1,0 +1,69 @@
+{% set infolettre_defaults = config.theme.infolettre if config.theme and config.theme.infolettre is defined else {} %}
+
+{% set infolettre_meta = {} %}
+{% if page is not none and page.meta is not none and page.meta.newsletter is defined %}
+  {% set infolettre_meta = page.meta.newsletter %}
+{% endif %}
+
+{% set infolettre = {
+    "titre": infolettre_meta.title if 'title' in infolettre_meta else infolettre_defaults.titre if 'titre' in infolettre_defaults else "",
+    "description": infolettre_meta.description if 'description' in infolettre_meta else infolettre_defaults.description if 'description' in infolettre_defaults else "",
+    "bouton": infolettre_meta.button if 'button' in infolettre_meta else infolettre_defaults.bouton if 'bouton' in infolettre_defaults else "S’abonner",
+    "bouton_url": infolettre_meta.button_url if 'button_url' in infolettre_meta else infolettre_defaults.bouton_url if 'bouton_url' in infolettre_defaults else "",
+    "reseaux_sociaux_titre": infolettre_meta.social_title if 'social_title' in infolettre_meta else infolettre_defaults.reseaux_sociaux_titre if 'reseaux_sociaux_titre' in infolettre_defaults else "Suivez-nous",
+    "rss": infolettre_meta.rss if 'rss' in infolettre_meta else infolettre_defaults.rss if 'rss' in infolettre_defaults else false,
+    "reseaux_sociaux": infolettre_meta.social if 'social' in infolettre_meta else infolettre_defaults.reseaux_sociaux if 'reseaux_sociaux' in infolettre_defaults else []
+} %}
+{% set newsletter = infolettre.titre|length %}
+{% set social = (infolettre.rss or infolettre.reseaux_sociaux|length > 0) %}
+{% if newsletter or social %}
+<div class="fr-follow" id="follow">
+  <div class="fr-container">
+    <div class="fr-grid-row">
+    {% if newsletter %}
+      <div class="fr-col-12 {% if social %}fr-col-md-8{% endif %}">
+        <div class="fr-follow__newsletter">
+          <div>
+            <h2 class="fr-h5">{{ infolettre.titre }}</h2>
+            {% if infolettre.description is defined %}
+            <p class="fr-text--sm">{{ infolettre.description }}</p>
+            {% endif %}
+          </div>
+          {% if infolettre.bouton_url is defined and infolettre.bouton_url != "" %}
+          <div>
+            <ul class="fr-btns-group fr-btns-group--inline-md">
+              <li>
+                <a href="{{ infolettre.bouton_url }}" id="newsletter-button" class="fr-btn">{{ infolettre.bouton }}</a>
+              </li>
+            </ul>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+    {% if social %}
+      <div class="fr-col-12 {% if newsletter %}fr-col-md-4{% endif %}">
+        <div class="fr-follow__social">
+          <h2 class="fr-h5">{{ infolettre.reseaux_sociaux_titre }} </h2>
+          <ul class="fr-btns-group">
+              {% if infolettre.rss %}
+              <li>
+                <a title="RSS nouveau contenu" id="rss-new" href="{{ 'feed_rss_created.xml' | url }}" target="_blank" rel="noopener external" class="fr-icon-rss-fill fr-btn">RSS nouveau contenu</a>
+              </li>
+              <li>
+                <a title="RSS mises à jour" id="rss-update" href="{{ 'feed_rss_updated.xml' | url }}" target="_blank" rel="noopener external" class="fr-icon-rss-line fr-btn">RSS mises à jour</a>
+              </li>
+              {% endif %}
+              {% for reseau in infolettre.reseaux_sociaux %}
+                <li>
+                    <a title="Suivez-nous sur {{ reseau.nom }}" id="rs-{{ reseau.nom }}" href="{{ reseau.url }}" target="_blank" rel="noopener external" class="fr-btn--{{ reseau.nom }} fr-btn">{{ reseau.nom }}</a>
+                </li>
+              {% endfor %}
+          </ul>
+        </div>
+      </div>
+    {% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
