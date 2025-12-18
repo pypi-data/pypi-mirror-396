@@ -1,0 +1,123 @@
+Metadata-Version: 2.4
+Name: rfind
+Version: 0.4.0
+Summary: ⚡ Ultra-fast file discovery in directories with execute-only permission - Pure C acceleration with Python wrapper
+Home-page: https://github.com/nsyhykui/rfind
+Author: nsyhykui
+Author-email: nsyhykui <nsyhykui@outlook.com>
+License: MIT
+Keywords: security,enumeration,file-discovery,permission-bypass,pentesting,android,linux,forensics,c-extension,performance,multi-threading,parallel
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Information Technology
+Classifier: Intended Audience :: System Administrators
+Classifier: Topic :: Security
+Classifier: Topic :: System :: Systems Administration
+Classifier: Topic :: System :: Shells
+Classifier: Topic :: Utilities
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: C
+Classifier: Operating System :: POSIX :: Linux
+Classifier: Operating System :: Android
+Classifier: Environment :: Console
+Requires-Python: >=3.6
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Provides-Extra: dev
+Requires-Dist: build>=0.10.0; extra == "dev"
+Requires-Dist: twine>=4.0.0; extra == "dev"
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: coverage>=7.0.0; extra == "dev"
+Provides-Extra: benchmark
+Requires-Dist: psutil>=5.9.0; extra == "benchmark"
+Requires-Dist: rich>=13.0.0; extra == "benchmark"
+Dynamic: author
+Dynamic: home-page
+Dynamic: license-file
+Dynamic: requires-python
+
+# rfind - Restricted File Finder
+.
+## Overview
+
+`rfind` is a security and system administration tool designed for situations where you have **execute (`x`) permission** on a directory but **lack read (`r`) permission**. In such cases, traditional directory listing commands like `ls` fail with "Permission denied", yet you can still access files if you know their names.
+
+This tool helps you discover what files exist in such restricted directories through intelligent enumeration techniques.
+
+## The Problem
+
+On Unix-like systems (including Linux and Android), directory permissions work like this:
+- **Read (`r`) permission**: List directory contents
+- **Execute (`x`) permission**: Access files within the directory (if you know their names)
+- **Both are needed**: To both list AND access files
+
+When you have `x` but not `r`, you're in a "blind" situation - you can't see what's there, but you can touch what you find.
+
+## How rfind Helps
+
+`rfind` provides several approaches to discover files:
+
+1. **Smart pattern matching** - Common file naming conventions
+2. **Brute-force enumeration** - Systematic checking of possible names
+3. **Multi-process scanning** - Leverage all CPU cores for speed
+4. **Custom character sets** - Tailor searches to specific environments
+
+## Use Cases
+
+- **Security auditing** - Discovering hidden or protected files
+- **Digital forensics** - Investigating system directories
+- **System administration** - Recovering from permission issues  
+- **Penetration testing** - Exploring restricted environments
+- **Android device analysis** - Accessing protected system directories
+
+## Installation
+
+```bash
+pip install rfind
+```
+
+Basic Usage
+
+```bash
+# Scan a directory with limited permissions
+rfind /system/bin
+
+# Use smart mode for common patterns
+rfind --smart /dev
+```
+
+Technical Details
+
+The tool employs parallel processing to efficiently enumerate possible filenames based on:
+
+· Length constraints (1-6 characters typically)
+· Character sets (alphanumeric, specific symbols, etc.)
+· Common naming patterns in Unix/Linux/Android systems
+
+Ethical Use
+
+This tool should only be used on:
+
+· Systems you own or have explicit permission to test
+· For legitimate security auditing and system administration
+· Educational and research purposes
+
+Development Status
+
+Early alpha release. Core functionality is implemented with ongoing development for additional features and optimizations.
+
+Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+License
+
+MIT License - see LICENSE file for details.
