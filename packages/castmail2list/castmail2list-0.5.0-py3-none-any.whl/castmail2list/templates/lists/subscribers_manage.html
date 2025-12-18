@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Subscribers') }} - {{ mailing_list.display }}{% endblock %}
+
+{% block content %}
+
+<h2>{{ _('Subscribers for "%(name)s"', name=mailing_list.display) }}</h2>
+
+{%- include "flash.html" %} {# Show flash messages #}
+
+<p>
+    <a href="{{ url_for('lists.edit', list_id=mailing_list.id) }}" role="button">{{ _('Edit List Settings') }}</a>
+</p>
+
+<h3>{{ _('Add Subscriber') }}</h3>
+<form method="POST">
+    <fieldset class="grid">
+        {{ form.csrf_token }}
+
+        {{ form.name(placeholder=form.name.label.text) }}
+
+        {{ form.email(placeholder=form.email.label.text) }}
+
+        {{ form.comment(placeholder=form.comment.label.text) }}
+
+        {{ form.submit }}
+    </fieldset>
+</form>
+
+<h3>{{ _('Direct Subscribers') }}</h3>
+<p>{{ _('All direct subscribers of this list. May include other mailing lists whose recipients you will find in a second table below.') }}</p>
+{% if subscribers_direct %}
+<table class="striped">
+    <thead>
+        <tr>
+            <th>{{ _('Name') }}</th>
+            <th>{{ _('Email') }}</th>
+            <th>{{ _('Comment') }}</th>
+            <th>{{ _('Actions') }}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {%- for _email, subscriber in subscribers_direct.items() %}
+        {%- if subscriber.subscriber_type == "list" %}{% set list = is_email_a_list(subscriber.email) %}{% endif %}
+        <tr>
+            <td>{{ subscriber.name if subscriber.name }}</td>
+            <td>
+                <a href="{{ url_for('subscribers.by_email', email=subscriber.email) }}">{{ subscriber.email }}</a>
+                {% if list %}
+                ({{ _('List') }}{%- if list.deleted %} - <strong>{{ _('Deactivated') }}</strong>{% endif %})
+                {% endif %}
+            </td>
+            <td>{{ subscriber.comment if subscriber.comment }}</td>
+            <td>
+                <a href="{{ url_for('lists.subscriber_edit', list_id=mailing_list.id, subscriber_email=subscriber.email) }}" role="button" class="">{{ _('Edit') }}</a>
+                <a href="{{ url_for('lists.subscriber_delete', list_id=mailing_list.id, subscriber_email=subscriber.email) }}" role="button" class="danger" onclick="return confirm('{{ _('Are you sure you want to delete subscriber') }} {{ subscriber.name }} <{{ subscriber.email }}> {{ _('from this list?') }}')">{{ _('Delete') }}</a>
+            </td>
+        </tr>
+        {%- endfor %}
+    </tbody>
+</table>
+{%- else %}
+<p><em>{{ _('No subscribers yet.') }}</em></p>
+{%- endif %}
+
+<h3>{{ _('Indirect Recipients') }}</h3>
+<p>{{ _('All indirect recipients of this list via subscribed mailing lists.') }}</p>
+{%- if recipients_indirect %}
+<table class="striped">
+    <thead>
+        <tr>
+            <th>{{ _('Name') }}</th>
+            <th>{{ _('Email') }}</th>
+            <th>{{ _('Via List') }}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {%- for email, rec in recipients_indirect.items() %}
+        <tr>
+            <td>{{ rec.name if rec.name }}</td>
+            <td>
+                <a href="{{ url_for('subscribers.by_email', email=rec.email) }}">{{ rec.email }}</a>
+            </td>
+            <td>
+                {%- for listid in rec.source %}
+                <a href="{{ url_for('lists.subscribers_manage', list_id=listid) }}">
+                    {{- get_list_by_id(listid).display -}}
+                </a>
+                {%- if not loop.last %}, {% endif %}
+                {%- endfor %}
+            </td>
+        </tr>
+        {%- endfor %}
+    </tbody>
+</table>
+{%- else %}
+<p><em>{{ _('No indirect recipients.') }}</em></p>
+{%- endif %}
+
+{% endblock %}
