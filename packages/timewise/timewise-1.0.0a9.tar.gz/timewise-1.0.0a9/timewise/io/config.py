@@ -1,0 +1,73 @@
+from pathlib import Path
+from typing import List
+import pandas as pd
+from pydantic import BaseModel, Field, model_validator
+
+from .download import Downloader
+from ..query import QueryType
+from ..backend import BackendType
+from ..types import TYPE_MAP
+from ..util.path import expand
+
+
+class DownloadConfig(BaseModel):
+    input_csv: Path
+    chunk_size: int = 500_000
+    max_concurrent_jobs: int = 4
+    poll_interval: float = 10.0
+    queries: List[QueryType] = Field(..., description="One or more queries per chunk")
+    backend: BackendType = Field(..., discriminator="type")
+    resubmit_failed: bool = False
+
+    service_url: str = "https://irsa.ipac.caltech.edu/TAP"
+
+    @property
+    def expanded_input_csv(self) -> Path:
+        return expand(self.input_csv)
+
+    @model_validator(mode="after")
+    def validate_input_csv_columns(self) -> "DownloadConfig":
+        """Ensure that the input CSV contains all columns required by queries."""
+        # only validate if the CSV actually exists
+        if not self.expanded_input_csv.exists():
+            raise ValueError(f"CSV file does not exist: {self.expanded_input_csv}")
+
+        # read just the header and first 10 lines
+        input_table = pd.read_csv(self.expanded_input_csv, nrows=10)
+
+        missing_columns = set()
+        wrong_dtype = set()
+        for qc in self.queries:
+            for col, dtype in qc.input_columns.items():
+                if col not in input_table.columns:
+                    missing_columns.add(col)
+                else:
+                    try:
+                        input_table[col].astype(TYPE_MAP[dtype])
+                    except Exception:
+                        wrong_dtype.add(col)
+
+        msg = f"CSV file {self.expanded_input_csv}: "
+        if missing_columns:
+            raise KeyError(msg + f"Missing required columns: {sorted(missing_columns)}")
+        if wrong_dtype:
+            raise TypeError(
+                msg
+                + f"Columns not convertable to right data type: {sorted(wrong_dtype)}"
+            )
+
+        return self
+
+    def build_downloader(self, **overwrite) -> Downloader:
+        default = {
+            "service_url": self.service_url,
+            "input_csv": self.expanded_input_csv,
+            "chunk_size": self.chunk_size,
+            "backend": self.backend,
+            "queries": self.queries,
+            "max_concurrent_jobs": self.max_concurrent_jobs,
+            "poll_interval": self.poll_interval,
+            "resubmit_failed": self.resubmit_failed,
+        }
+        default.update(overwrite)
+        return Downloader(**default)  # type: ignore
