@@ -1,0 +1,63 @@
+name: Lint and Format Check
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    name: Lint and Format Check
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          python-version: "3.12"
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+
+      - name: Install dependencies
+        run: |
+          uv sync --dev
+
+      - name: Run Ruff linter and formatter
+        run: |
+          # 使用 Ruff 进行代码检查和格式化
+          uv run ruff check --fix src/ examples/ --exclude "src/ts_rag/tashan_core/" || true
+          uv run ruff format --check src/ examples/ --exclude "src/ts_rag/tashan_core/" || true
+          # For tests/, check only critical issues
+          uv run ruff check tests/ --select=E9,F63,F7,F82 --exclude "src/ts_rag/tashan_core/" || true
+
+      - name: Run Flake8 (additional linting)
+        run: |
+          # Use consistent configuration with local pre-commit
+          uv run flake8 src/ examples/ --max-line-length=120 --extend-ignore=E203,W503,D,E501,F811 --exclude "src/ts_rag/tashan_core/" || true
+
+  pre-commit:
+    runs-on: ubuntu-latest
+    name: Pre-commit Hooks Check
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          python-version: "3.12"
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+
+      - name: Install dependencies
+        run: |
+          uv sync --dev
+
+      - name: Run pre-commit
+        run: |
+          uv run pre-commit run --all-files

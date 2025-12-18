@@ -1,0 +1,35 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: mixed-line-ending
+
+  # 使用 Ruff 替代多个工具（Black、isort、部分 Flake8 功能）
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.2
+    hooks:
+      - id: ruff
+        args: [--fix, --line-length=120]
+        types_or: [python, pyi, jupyter]
+        exclude: ^src/ts_rag/tashan_core/
+      - id: ruff-format  # 替代 Black
+        types_or: [python, pyi, jupyter]
+        exclude: ^src/ts_rag/tashan_core/
+
+  # 保留 Flake8 作为额外检查（补充 Ruff 未覆盖的规则）
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.3.0
+    hooks:
+      - id: flake8
+        additional_dependencies: [flake8-docstrings==1.7.0]
+        args:
+          - --max-line-length=120
+          - --extend-ignore=E203,W503,D,E501,F811
+          - --per-file-ignores=examples/*:E402
+        exclude: ^src/ts_rag/tashan_core/|^tests/

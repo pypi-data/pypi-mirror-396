@@ -1,0 +1,111 @@
+name: Release & Publish
+
+on:
+  push:
+    tags:
+      - 'v*'  # 触发条件：推送以 v 开头的标签（如 v1.0.0）
+
+permissions:
+  contents: write  # 允许写入内容（创建 release）
+
+jobs:
+  release-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+
+      - name: Install dependencies
+        run: |
+          uv sync --dev
+          uv add --dev twine
+
+      - name: Run code quality checks
+        run: |
+          uv run pre-commit run --all-files
+
+      - name: Build package
+        run: |
+          uv build
+
+      - name: Check package
+        run: |
+          uv run twine check dist/*
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          if [ -f "CHANGELOG.md" ]; then
+            # 从 CHANGELOG.md 提取最新版本的更新内容
+            # 查找与当前标签匹配的版本号部分
+            VERSION=${GITHUB_REF#refs/tags/v}
+            echo "notes<<EOF" >> $GITHUB_OUTPUT
+            echo "## TashanRAG v$VERSION" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            # 提取从版本标记到下一个版本标记之间的内容
+            awk -v ver="$VERSION" '
+              /^## / {
+                if (found) exit;
+                if ($0 ~ "v" ver) {
+                  found=1;
+                  next;
+                }
+              }
+              found { print }
+            ' CHANGELOG.md >> $GITHUB_OUTPUT 2>/dev/null || echo "查看 CHANGELOG.md 获取详细更新信息" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            echo "### 安装方式" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            echo '```bash' >> $GITHUB_OUTPUT
+            echo "pip install tashanrag==$VERSION" >> $GITHUB_OUTPUT
+            echo '```' >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "notes<<EOF" >> $GITHUB_OUTPUT
+            echo "## TashanRAG ${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            echo "发布版本 ${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            echo "### 安装方式" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            echo '```bash' >> $GITHUB_OUTPUT
+            echo "pip install tashanrag==${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+            echo '```' >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: ${{ steps.release_notes.outputs.notes }}
+          files: |
+            dist/*
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
+
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          uv run twine upload dist/*
+
+      - name: Release Confirmation
+        run: |
+          echo "✅ Release ${{ github.ref_name }} published successfully!"
+          echo "📦 Package available on PyPI: https://pypi.org/project/ts-rag/"
+          echo "🚀 GitHub Release created: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ github.ref_name }}"
