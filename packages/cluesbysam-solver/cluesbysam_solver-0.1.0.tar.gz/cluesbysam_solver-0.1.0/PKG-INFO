@@ -1,0 +1,179 @@
+Metadata-Version: 2.3
+Name: cluesbysam-solver
+Version: 0.1.0
+Summary: Wrapper around the Z3 SMT Solver to assist in solving CluesBySam puzzles.
+Author: Joost Rijneveld
+Author-email: Joost Rijneveld <joost@joostrijneveld.nl>
+Requires-Dist: z3-solver>=4.15.4.0
+Requires-Python: >=3.13
+Description-Content-Type: text/markdown
+
+# CluesBySam Solver
+
+This project provides a thin wrapper around the [Z3 SMT solver](https://en.wikipedia.org/wiki/Z3_Theorem_Prover) to assist in solving [CluesBySam puzzles](https://cluesbysam.com). Of course the whole point of such puzzles is to solve them manually, but it seemed like a nice problem to apply Z3 to. In the end the majority of this project focusses on providing an ergonomic API; the actual Z3 complexity is very low. It turns out finding a way to formalize Sam's clues can be quite fun in and of itself!
+
+## Installation
+
+Ensure you have Z3 installed, e.g. by following the instructions in the [Z3 repository](https://github.com/Z3Prover/z3). This package depends on the Z3 Python bindings, available on PyPI as [`z3-solver`](https://pypi.org/project/z3-solver/).
+
+Then, install this package using your favorite Python package management frontend, for example:
+
+```
+pip install cluesbysam-solver
+```
+
+## Usage example
+
+This section describes a fictional 3x3 puzzle; I wouldn't want to give away the solution to any of Sam's puzzles!
+
+First we define a grid of people for our puzzle:
+
+```python
+grid = (
+    ('Alice', 'Bob', 'Carol'),
+    ('Dave', 'Eve', 'Frank'),
+    ('Grace', 'Heidi', 'Ivan'),
+)
+```
+
+Then we initialize the solver:
+
+```python
+from cluesbysam_solver import ClueSolver
+
+cs = ClueSolver(grid)
+```
+
+The primary function we'll be using is `ClueSolver.add`, to add the clues as assertions for z3.
+
+Let's assume Frank is revealed initially to be *Innocent*, providing the following clue: *"Carol is one of my 3 criminal neighbors"*. We formalize this as follows:
+
+```python
+from cluesbysam_solver import INNOCENT, CRIMINAL
+
+p = cs.people
+cs.add(p['Frank'] == INNOCENT)
+
+# <Frank> Carol is one of my 3 criminal neighbors
+cs.add(p['Carol'] == CRIMINAL)
+cs.add(cs.num_criminals(cs.neighbors("Frank")) == 3)
+```
+
+This gives us the following output, revealing Carol's role (perhaps unsurprisingly):
+
+```
+... Adding clue:
+Frank == 0
+[+] Frank must be:      Innocent
+
+... Adding clue:
+Carol == 1
+[+] Carol must be:      Criminal
+
+... Adding clue:
+0 + Heidi + Bob + Eve + Ivan + Carol == 3
+[!] No new information
+```
+
+Now, let's assume Carol gives us the clue that *"Alice only shares innocent neighbors with Grace*." We first get the shared neighbors by computing the intersection of their neighbors, and then assert that they must all be innocent.
+
+```python
+# <Carol> Alice only shares innocent neighbors with Grace
+shared_neighbors = cs.neighbors("Alice") & cs.neighbors("Grace")
+cs.add(cs.num_innocents(shared_neighbors) == len(shared_neighbors))
+```
+
+This gives us Dave and Eve;
+
+```
+... Adding clue:
+2 - (0 + Dave + Eve) == 2
+[+] Dave must be:       Innocent
+[+] Eve must be:        Innocent
+```
+
+Dave says that *"The criminals in row 1 are connected."* There's a convenient function to express exactly that; specifying either `row` or `column` and the expected role, we get an assertion to add. 
+
+```python
+# <Dave> The criminals in row 1 are connected
+cs.add(cs.connected(role=CRIMINAL, row=1))
+```
+
+Unfortunately, it does not immediately lead to much..
+
+```
+... Adding clue:
+And(Not(And(Bob == 0, 0 + Alice > 0, 0 + Carol > 0)),
+    Not(And(Alice == 0, False, 0 + Bob + Carol > 0)),
+    Not(And(Carol == 0, 0 + Bob + Alice > 0, False)))
+[!] No new information
+```
+
+We still have Eve, though, who tells us that *"There are exactly 2 innocents in column C."* Using `ClueSolver.column(a: str)` and `ClueSolver.row(i: int)`, we can quickly get the people in a column or row by specifying a column letter or row number.
+
+```python
+# <Eve> There are exactly 2 innocents in column C
+cs.add(cs.num_innocents(cs.column("C")) == 2)
+```
+
+A throve of information!
+
+```
+... Adding clue:
+3 - (0 + Frank + Ivan + Carol) == 2
+[+] Bob must be:        Criminal
+[+] Heidi must be:      Criminal
+[+] Ivan must be:       Innocent
+```
+
+Heidi's clue is *"Only one row has exactly 2 innocents."* That's somewhat tricky to express, but we can always rely on native Z3 functions for more complex statements. In this case, we use `AtMost` and `AtLeast` to specify that the statement ('[..] has exactly 2 innocents') pertains to a single row, without having to define which one.
+
+You can import `AtMost` and `AtLeast` (as well as functions such as `Or` and `Implies`) directly from Z3, but `cluesbysam_solver` also exposes them. In this case we could have added both assertions at once using `And`, but can also specify them separately.
+
+```python
+# <Heidi> Only one row has exactly 2 innocents
+from cluesbysam_solver import AtMost, AtLeast
+
+cs.add(AtMost(*(cs.num_innocents(cs.row(i)) == 2 for i in range(1, 4)), 1))
+cs.add(AtLeast(*(cs.num_innocents(cs.row(i)) == 2 for i in range(1, 4)), 1))
+```
+
+This gives us the following.
+
+```
+... Adding clue:
+AtMost((3 - (0 + Bob + Alice + Carol) == 2,
+        3 - (0 + Dave + Eve + Frank) == 2,
+        3 - (0 + Grace + Ivan + Heidi) == 2),
+       1)
+[!] No new information
+
+... Adding clue:
+AtLeast((3 - (0 + Bob + Alice + Carol) == 2,
+         3 - (0 + Dave + Eve + Frank) == 2,
+         3 - (0 + Grace + Ivan + Heidi) == 2),
+        1)
+[+] Grace must be:      Innocent
+```
+
+
+Ivan tells us *"The number of criminals in the corners is even"*. Z3 does not have an `Even` and `Odd` function, but as clues involving odd and even numbers are quite common, `ClueSolver` provides them.
+
+```python
+# <Ivan> The number of criminals in the corners is even
+from cluesbysam_solver import Even
+
+cs.add(Even(cs.num_criminals(cs.corners())))
+```
+
+And that concludes this example!
+
+```
+... Adding clue:
+Exists(x!8, 0 + Grace + Alice + Ivan + Carol == 2*x!8)
+[+] Alice must be:      Criminal
+
+Puzzle complete! All roles have been identified!
+```
+
+Other functions that this example did not cover are `above(person)`, `below(person)`, `left_of(person)` and `right_of(person)`, doing as their name suggests, as well as `edges()` to retrieve the people on the edges.
