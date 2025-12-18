@@ -1,0 +1,226 @@
+#!/usr/bin/env python3
+# Copyright 2020 Adobe. All rights reserved.
+# This file is licensed to you under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License. You may obtain a copy
+# of the License at http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS
+# OF ANY KIND, either express or implied. See the License for the specific language
+# governing permissions and limitations under the License.
+
+import argparse
+import logging
+import os
+import sys
+import yaml
+from .config_generator import ConfigProcessor
+from multiprocessing import Pool, cpu_count
+from .filter_rules import FilterRules
+
+logging.basicConfig()
+logging.root.setLevel(logging.INFO)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+class Loader(yaml.SafeLoader):
+    """
+    Overloading the default YAML Loader by adding the custom include tag
+    """
+
+    ROOT_DIR = os.path.abspath(os.curdir)
+
+    def __init__(self, stream):
+
+        self._root = os.path.split(stream.name)[0]
+        super(Loader, self).__init__(stream)
+
+    def include(self, node):
+        """
+        Method implementing the custom include tag logic that will grab a value from a yaml key in a specified folder
+        at a specified path
+        :param node: String containing the path and optionally key variables
+        :return: String values representing the extracted value for the specified path, key combination under node
+        """
+        node_value = self.construct_yaml_str(node)
+        parts = node_value.split(" ", 1)  # Split into at most 2 parts
+
+        if len(parts) == 1:
+            # Only path provided, return entire file content
+            path = parts[0]
+            filename = os.path.join(self.ROOT_DIR, path)
+            with open(filename, 'r') as f:
+                return yaml.load(f, Loader=Loader)  # nosec B506 # Custom Loader inherits from SafeLoader
+        else:
+            # Both path and key provided
+            path, key = parts
+            filename = os.path.join(self.ROOT_DIR, path)
+            with open(filename, 'r') as f:
+                yaml_structure = yaml.load(f, Loader=Loader)  # nosec B506 # Custom Loader inherits from SafeLoader
+                return self.__traverse_path(path=key, yaml_dict=yaml_structure)
+
+    def __traverse_path(self, path: str, yaml_dict: dict):
+        """
+        Method for safe traversing a yaml dictionary to extract a value from a key path
+        :param path: String representing the keys needed to traverse the dictionary
+        :param yaml_dict: YAML dictionary
+        :return: String representing the value for the key path specified
+        """
+        keys = path.split(".")
+
+        current_key = keys.pop(0)
+
+        if current_key in yaml_dict:
+            if len(keys) == 0:
+                return yaml_dict[current_key]
+            else:
+                if isinstance(yaml_dict[current_key], dict):
+                    return self.__traverse_path(path=".".join(keys), yaml_dict=yaml_dict[current_key])
+                else:
+                    raise Exception("{1}[{0}] is not traversable.".format(
+                        current_key, yaml_dict))
+        else:
+            raise Exception("Key not found for {0} in dictionary {1}.".format(
+                current_key, yaml_dict))
+
+
+# Register the include constructor
+Loader.add_constructor('!include', Loader.include)
+
+
+def merge_configs(directories, levels, output_dir, enable_parallel, filter_rules, allow_unicode):
+    """
+    Method for running the merge configuration logic under different formats
+    :param directories: list of paths for leaf directories
+    :param levels: list of hierarchy levels to traverse
+    :param output_dir: where to save the generated configs
+    :param enable_parallel: to enable parallel config generation
+    :param allow_unicode: allow unicode characters in output
+    """
+    config_processor = ConfigProcessor()
+    process_config = []
+    for path in directories:
+        process_config.append((config_processor, path, levels, output_dir, filter_rules, allow_unicode))
+
+    if enable_parallel:
+        logger.info("Processing config in parallel")
+        with Pool(cpu_count()) as p:
+            p.map(merge_logic, process_config)
+    else:
+        for config in process_config:
+            merge_logic(config)
+
+
+def merge_logic(process_params):
+    """
+    Method implementing the merge config logic
+    :param process_params: tuple that contains config for running the merge_logic
+    """
+    config_processor = process_params[0]
+    path = process_params[1]
+    levels = process_params[2]
+    output_dir = process_params[3]
+    filter_rules = process_params[4]
+    allow_unicode = process_params[5]
+
+    # load the !include tag
+    Loader.add_constructor('!include', Loader.include)
+
+    # override the Yaml SafeLoader with our custom loader
+    yaml.SafeLoader = Loader  # type: ignore
+
+    # for path in directories:
+    # use the HIML deep merge functionality
+    output = dict(
+        config_processor.process(path=path, output_format="yaml", print_data=False, multi_line_string=True))
+    # exchange the levels to which to run for with the values extracted from the yaml structure
+    level_values = [output.get(level) for level in levels]
+
+    # create the publish path and all level_values except the last one
+    # Filter out None values and convert to strings
+    valid_level_values = [str(val) for val in level_values[:-1] if val is not None]
+    publish_path = os.path.join(output_dir, '') + '/'.join(valid_level_values)
+    if not os.path.exists(publish_path):
+        os.makedirs(publish_path)
+
+    if filter_rules:
+        if filter_rules not in output:
+            raise Exception("Filter rule key '{}' not found in config".format(filter_rules))
+        filter = FilterRules(output[filter_rules], levels)
+        filter.run(output)
+
+    # create the yaml file for output using the publish_path and last level_values element
+    filename = "{0}/{1}.yaml".format(publish_path, level_values[-1])
+    logger.info("Found input config directory: %s", path)
+    logger.info("Storing generated config to: %s", filename)
+    with open(filename, "w+") as f:
+        f.write(yaml.dump(output, allow_unicode=allow_unicode))
+
+
+def is_leaf_directory(dir, leaf_directories):
+    return any(dir.startswith(leaf) for leaf in leaf_directories)
+
+
+def get_leaf_directories(src, leaf_directories, exit_on_empty=True):
+    """
+    Method for doing a deep search of directories matching either the desired
+    leaf directories.
+    :param src: the source path to start looking from
+    :param leaf_directories: list of leaf directory patterns to match
+    :param exit_on_empty: whether to exit when no directories are found (default: True)
+    :return: the list of absolute paths
+    """
+    directories = []
+
+    for root, dirs, files in os.walk(src):
+        for dr in dirs:
+            # if directory is hidden skip
+            if dr.startswith('.') or root.split("/")[1].startswith("."):
+                continue
+            elif is_leaf_directory(dr, leaf_directories):
+                directory = root + "/" + dr
+                directories.append(directory)
+            else:
+                continue
+
+    if len(directories) == 0 and exit_on_empty:
+        sys.exit("No leaf directories found")
+
+    return directories
+
+
+def get_parser():
+    """Create and return the argument parser"""
+    parser = argparse.ArgumentParser()
+    parser.add_argument('path', type=str, help='The configs directory')
+
+    parser.add_argument('--output-dir', dest='output_dir', type=str,
+                        help='output directory, where generated configs will be saved', required=True)
+    parser.add_argument('--levels', dest='hierarchy_levels', nargs='+',
+                        help='hierarchy levels, for instance: env, region, cluster', required=True)
+    parser.add_argument('--leaf-directories', dest='leaf_directories', nargs='+',
+                        help='leaf directories, for instance: cluster', required=True)
+    parser.add_argument('--enable-parallel', dest='enable_parallel', default=False,
+                        action='store_true', help='Process config using multiprocessing')
+    parser.add_argument('--filter-rules-key', dest='filter_rules', default=None, type=str,
+                        help='keep these keys from the generated data, based on the configured filter key')
+    parser.add_argument('--allow-unicode', dest='allow_unicode', default=False,
+                        action='store_true', help='allow unicode characters in output (default: False, outputs escape sequences)')
+    return parser
+
+
+def parser_options(args):
+    parser = get_parser()
+    return parser.parse_args(args)
+
+
+def run(args=None):
+    opts = parser_options(args)
+
+    # extract the list of absolute paths for leaf directories
+    dirs = get_leaf_directories(opts.path, opts.leaf_directories)
+
+    # merge the configs using HIML
+    merge_configs(dirs, opts.hierarchy_levels,
+                  opts.output_dir, opts.enable_parallel, opts.filter_rules, opts.allow_unicode)
