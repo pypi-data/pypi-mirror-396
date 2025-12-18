@@ -1,0 +1,357 @@
+Metadata-Version: 2.4
+Name: threddsclient
+Version: 0.4.7
+Summary: Thredds catalog client
+Home-page: https://github.com/bird-house/threddsclient
+Download-URL: https://github.com/bird-house/threddsclient
+Author: Birdhouse
+License: Apache 2.0
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Science/Research
+Classifier: Operating System :: MacOS :: MacOS X
+Classifier: Operating System :: Microsoft :: Windows
+Classifier: Operating System :: POSIX
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Topic :: Scientific/Engineering :: Atmospheric Science
+Requires-Python: >=3.8,<4
+License-File: LICENCE.txt
+License-File: AUTHORS.rst
+Requires-Dist: requests
+Requires-Dist: beautifulsoup4
+Requires-Dist: lxml
+Dynamic: author
+Dynamic: classifier
+Dynamic: description
+Dynamic: download-url
+Dynamic: home-page
+Dynamic: license
+Dynamic: license-file
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+=========================
+Thredds Client for Python
+=========================
+
+|Travis Build| |Install with Conda| |Join the Chat|
+
+Installing Thredds Client
+=========================
+
+Anaconda
+--------
+
+|Version-GitHub| |Version-Anaconda| |Version-PyPI| |Downloads|
+
+Thredds client is available as Anaconda package. Install it with the
+following command:
+
+.. code-block:: bash
+
+    conda install -c conda-forge threddsclient
+
+From PyPI
+---------
+
+Thredds Client is available from PyPI to install directly with ``pip`` or ``poetry``.
+
+.. code-block:: bash
+
+    pip install threddsclient
+
+
+.. code-block:: bash
+
+    poetry add threddsclient
+
+
+From GitHub
+-----------
+
+Check out code from the birdy GitHub repo and start the installation:
+
+.. code-block:: bash
+
+    git clone https://github.com/bird-house/threddsclient.git
+    cd threddsclient
+    conda env create -f environment.yml
+    source activate threddsclient
+    python setup.py develop
+
+Alternatively, you can also install it directly with ``pip`` using a virtual environment of your choice:
+
+.. code-block:: bash
+
+    pip install "threddsclient @ git+https://github.com/bird-house/threddsclient.git"
+
+
+Using Thredds Client
+====================
+
+Read the Thredds tutorial on catalogs: `Thredds Catalog
+Primer <http://www.unidata.ucar.edu/software/thredds/current/tds/tutorial/CatalogPrimer.html>`__
+
+Get download URLs of a catalog
+------------------------------
+
+.. code-block:: python
+
+        import threddsclient
+        urls = threddsclient.download_urls('http://example.com/thredds/catalog.xml')
+
+Get OpenDAP URLs of a catalog
+-----------------------------
+
+.. code-block:: python
+
+        import threddsclient
+        urls = threddsclient.opendap_urls('http://example.com/thredds/catalog.xml')
+
+Navigate in catalog
+-------------------
+
+Start reading a catalog
+
+.. code-block:: python
+
+        import threddsclient
+        cat = threddsclient.read_url('http://example.com/thredds/catalog.xml')
+
+Get a list of references to other catalogs & follow them
+
+.. code-block:: python
+
+        refs = cat.references
+
+        print refs[0].name
+        cat2 = refs[0].follow()
+
+Get a list of datasets in this catalog
+
+.. code-block:: python
+
+        data  = cat.datasets
+
+Get flat list of all direct datasets (data files) in the catalog
+
+.. code-block:: python
+
+        datasets = cat.flat_datasets()
+
+Get flat list of all references in the catalog
+
+.. code-block:: python
+
+        references = cat.flat_references()
+
+Crawl thredds catalog
+---------------------
+
+Crawl recursive all direct datasets in catalog following the catalog
+references. Stop recursion at a given depth level.
+
+.. code-block:: python
+
+       import threddsclient
+       for ds in threddsclient.crawl('http://example.com/thredds/catalog.xml', depth=2):
+           print ds.name
+
+Development
+===========
+
+Install sources
+---------------
+
+Check out code from the birdy GitHub repo and start the installation:
+
+.. code-block:: sh
+
+   git clone https://github.com/bird-house/threddsclient.git
+   cd threddsclient
+   conda env create -f environment.yml
+   python setup.py develop
+
+Install additional dependencies:
+
+.. code-block:: sh
+
+    conda install pytest flake8 sphinx bumpversion
+    # OR
+    pip install -r requirements_dev.txt
+
+Bump a new version
+------------------
+
+Make a new version of Birdy in the following steps:
+
+* Make sure everything is commit to GitHub.
+* Update ``CHANGES.rst`` with the next version.
+* Dry Run: ``bumpversion --dry-run --verbose --new-version {NEW_VERSION} patch``
+* Do it: ``bumpversion --new-version {NEW_VERSION} patch``
+* Push it: ``git push --tags``
+
+See the bumpversion_ documentation for details.
+
+.. _bumpversion: https://pypi.org/project/bumpversion/
+
+Examples with IPython Notebook
+------------------------------
+
+-  `NOAA Thredds
+   Catalog <http://nbviewer.ipython.org/github/bird-house/threddsclient/blob/master/examples/noaa_example.ipynb>`__
+
+.. |Travis Build| image:: https://travis-ci.org/bird-house/threddsclient.svg?branch=master
+   :target: https://travis-ci.org/bird-house/threddsclient
+.. |Install with Conda| image:: https://anaconda.org/conda-forge/threddsclient/badges/installer/conda.svg
+   :target: https://anaconda.org/conda-forge/threddsclient
+.. |License| image:: https://anaconda.org/conda-forge/threddsclient/badges/license.svg
+   :target: https://anaconda.org/conda-forge/threddsclient
+.. |Join the Chat| image:: https://badges.gitter.im/bird-house/birdhouse.svg
+   :target: https://gitter.im/bird-house/birdhouse?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
+.. |Version-GitHub| image:: https://img.shields.io/github/v/release/bird-house/threddsclient?label=GitHub
+   :target: https://github.com/bird-house/threddsclient/releases
+.. |Version-Anaconda| image:: https://anaconda.org/conda-forge/threddsclient/badges/version.svg
+   :target: https://anaconda.org/conda-forge/threddsclient
+.. |Version-PyPI| image:: https://img.shields.io/pypi/v/threddsclient?color=blue
+   :target: https://pypi.org/project/threddsclient/
+.. |Downloads| image:: https://anaconda.org/conda-forge/threddsclient/badges/downloads.svg
+   :target: https://anaconda.org/conda-forge/threddsclient
+
+Authors
+=======
+
+*  Scott Wales scott.wales@unimelb.edu.au
+*  Carsten Ehbrecht ehbrecht@dkrz.de
+
+=======
+Changes
+=======
+
+`Unreleased <https://github.com/bird-house/threddsclient/tree/master>`_
+==========================================================================================
+
+* Nothing new for the moment.
+
+.. _changes_0.4.7:
+
+`0.4.7 <https://github.com/bird-house/threddsclient/tree/v0.4.7>`_ (2025-12-15)
+==========================================================================================
+
+* Add `url` and `download_url` to project setup for reference by PyPI package.
+* Add Python 3.13 and 3.14 to CI and project.
+* Update default Python 3.13 in CI for tests.
+* Remove Python 3.6 and 3.7 from CI.
+
+.. _changes_0.4.6:
+
+`0.4.6 <https://github.com/bird-house/threddsclient/tree/v0.4.6>`_ (2024-07-09)
+==========================================================================================
+
+* Drop Python 3.7.
+* Add Python 3.12.
+
+.. _changes_0.4.5:
+
+`0.4.5 <https://github.com/bird-house/threddsclient/tree/v0.4.5>`_ (2024-01-22)
+==========================================================================================
+
+* Fixed TDS v5 and HYRAX catalog traversing issue (#15)
+
+.. _changes_0.4.4:
+
+`0.4.4 <https://github.com/bird-house/threddsclient/tree/v0.4.4>`_ (2023-07-11)
+==========================================================================================
+
+* add shield badges for PyPI and GitHub releases
+* fix rendering of code blocks in ``README.rst``
+* add missing classifiers and python requirements to ``setup.py`` to allow validators to detect appropriate versions
+* add python 3.9, 3.10 and 3.11 to the supported versions in ``setup.py`` and validate them in GitHub CI
+* drop Travis CI configuration in favor of GitHub CI
+* fix ``test_noaa`` with the target THREDDS server responding differently than originally tested
+
+`0.4.3 <https://github.com/bird-house/threddsclient/tree/v0.4.3>`_ (2023-05-31)
+==========================================================================================
+
+* fix xml parsing for recent versions
+
+`0.4.2 <https://github.com/bird-house/threddsclient/tree/v0.4.2>`_ (2019-11-20)
+==========================================================================================
+
+* fixed conda links in Readme.
+
+`0.4.1 <https://github.com/bird-house/threddsclient/tree/v0.4.1>`_ (2019-11-06)
+==========================================================================================
+
+* fixed docs formatting.
+
+`0.4.0 <https://github.com/bird-house/threddsclient/tree/v0.4.0>`_ (2019-11-06)
+==========================================================================================
+
+* drop Python 2.7 (#5)
+* fix pip install (#4)
+
+`0.3.5 <https://github.com/bird-house/threddsclient/tree/v0.3.5>`_ (2018-10-05)
+==========================================================================================
+
+* support for Python 3.x (#1)
+
+`0.3.4 <https://github.com/bird-house/threddsclient/tree/v0.3.4>`_ (2015-10-25)
+==========================================================================================
+
+* fixed travis build/tests
+* updated docs
+
+0.3.3 (2015-10-24)
+==========================================================================================
+
+* converted docs to rst.
+* MANIFEST.in added.
+
+0.3.2 (2015-07-15)
+==========================================================================================
+
+*  append catalog.xml to catalog url if missing
+*  crawl method added
+
+0.3.1 (2015-06-14)
+==========================================================================================
+
+*  fixed catalog.follow()
+*  using dataset.download_url()
+*  added ipython example
+*  cleaned up Readme
+
+0.3.0 (2015-06-13)
+==========================================================================================
+
+*  Refactored
+*  added catalog.opendap_urls()
+
+0.2.0 (2015-06-08)
+==========================================================================================
+
+*  Refactored
+*  using CollectionDataset
+*  added catalog.download_urls()
+
+0.1.1 (2015-06-05)
+==========================================================================================
+
+*  Fixed catalog generation.
+*  added pytest dependency.
+
+0.1.0 (2015-03-13)
+==========================================================================================
+
+*  Version by https://github.com/ScottWales/threddsclient.
