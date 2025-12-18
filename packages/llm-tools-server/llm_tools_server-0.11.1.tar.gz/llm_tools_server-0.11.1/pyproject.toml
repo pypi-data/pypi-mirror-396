@@ -1,0 +1,166 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llm-tools-server"
+version = "0.11.1"
+description = "Reusable Flask server for LLM backends (Ollama, LM Studio) with tool calling"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    {name = "LLM API Server Contributors"}
+]
+keywords = ["llm", "openai", "api", "flask", "ollama", "lmstudio", "tools"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "flask>=3.0.0",
+    "flask-cors>=4.0.0",
+    "requests>=2.31.0",
+    "python-dotenv>=1.0.0",
+    "langchain-core>=0.1.0",
+]
+
+[project.optional-dependencies]
+webui = ["open-webui"]
+websearch = []  # No additional deps - uses Ollama API (requires OLLAMA_API_KEY)
+eval = ["markdown>=3.5.0"]
+rag = [
+    "langchain>=0.3.0",
+    "langchain-community>=0.0.13",
+    "langchain-huggingface>=0.3.0",
+    "langchain-text-splitters>=0.3.0",
+    "faiss-cpu>=1.8.0",
+    "sentence-transformers>=2.3.0",
+    "beautifulsoup4>=4.12.0",
+    "tiktoken>=0.5.0",
+    "rank-bm25>=0.2.2",
+    "readability-lxml>=0.8.1",
+    "tqdm>=4.65.0",
+]
+dev = ["pytest", "pytest-mock", "black", "ruff", "mypy"]
+
+[project.urls]
+Homepage = "https://github.com/assareh/llm-tools-server"
+Repository = "https://github.com/assareh/llm-tools-server"
+Issues = "https://github.com/assareh/llm-tools-server/issues"
+
+[tool.setuptools]
+license-files = []
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["llm_tools_server*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.json", "*.md"]
+
+[tool.black]
+line-length = 120
+target-version = ['py311', 'py312']
+exclude = '''
+/(
+    \.git
+  | \.venv
+  | venv
+  | build
+  | dist
+  | __pycache__
+  | \.eggs
+)/
+'''
+
+[tool.ruff]
+# Ruff is a fast Python linter that replaces flake8, isort, pylint, and more
+line-length = 120
+target-version = "py311"
+
+# Exclude directories
+exclude = [
+    ".git",
+    ".venv",
+    "venv",
+    "__pycache__",
+    "build",
+    "dist",
+    ".eggs",
+    "*.egg-info",
+]
+
+[tool.ruff.lint]
+# Enable these rule sets
+select = [
+    "E",     # pycodestyle errors
+    "W",     # pycodestyle warnings
+    "F",     # pyflakes
+    "I",     # isort (import sorting)
+    "N",     # pep8-naming
+    "UP",    # pyupgrade (modernize Python code)
+    "B",     # flake8-bugbear (find likely bugs)
+    "C4",    # flake8-comprehensions
+    "SIM",   # flake8-simplify
+    "PTH",   # flake8-use-pathlib
+    "RUF",   # Ruff-specific rules
+]
+
+# Ignore specific rules
+ignore = [
+    "E501",   # Line too long (handled by black)
+    "B008",   # Function calls in argument defaults
+    "B905",   # zip without explicit strict parameter
+    "N802",   # Function name should be lowercase
+    "N803",   # Argument name should be lowercase
+    "N806",   # Variable in function should be lowercase
+    "SIM108", # Use ternary operator (sometimes less readable)
+    "PTH",    # Prefer pathlib - we use os.path which is fine
+    "RUF005", # Iterable unpacking style preference
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Allow unused imports in __init__.py files
+"__init__.py" = ["F401", "F403"]
+
+[tool.ruff.lint.isort]
+# Configure import sorting
+known-first-party = ["llm_tools_server"]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+
+[tool.mypy]
+# MyPy type checking configuration
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+exclude = [
+    "venv/",
+    ".venv/",
+    "build/",
+    "dist/",
+]
+
+[tool.pytest.ini_options]
+# Pytest configuration
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",                    # Verbose output
+    "--strict-markers",      # Raise error on unknown markers
+    "--tb=short",            # Shorter traceback format
+    "--disable-warnings",    # Disable warnings in output
+]
+markers = [
+    "unit: Unit tests (fast, no external dependencies)",
+    "integration: Integration tests (may require backends)",
+]
