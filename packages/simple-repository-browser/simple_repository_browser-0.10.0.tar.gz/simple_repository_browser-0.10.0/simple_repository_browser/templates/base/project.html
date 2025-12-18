@@ -1,0 +1,454 @@
+{% extends "page.html" %}
+
+{% block title %}
+{{ project.name }} · {{ super() }}
+{% endblock title %}
+
+
+{% block extra_head %}
+{{ super() }}
+<script src="{{ static_file_url('/vendored/jquery.min.js') }}" defer></script>
+<script src="{{ static_file_url('/vendored/popper.min.js') }}" defer></script>
+<script src="{{ static_file_url('/vendored/bootstrap.bundle.min.js') }}" defer></script>
+{% endblock extra_head %}
+
+{% macro page_banner() %}
+<div class="row pt-4 pb-5">
+  <div class="col-md-6">
+    <h1> {{ project.name }} {{ this_release.version }}</h1>
+    <br>
+    {% if 'latest-release' in this_release.labels %}
+    <span class="pip-command" id="pip-command">pip install {{ project.name }}
+      <a href="#" onClick="javascript: navigator.clipboard.writeText('python -m pip install {{ project.name }}=={{ this_release.version }}'); return false;"><i class="fa fad fa-clone fa-fw"></i></a>
+    </span>
+    {% else %}
+    <span class="pip-command" id="pip-command">pip install {{ project.name }}=={{ this_release.version }}
+      <a href="#" onClick="javascript: navigator.clipboard.writeText('python -m pip install {{ project.name }}=={{ this_release.version }}'); return false;"><i class="fa fad fa-clone fa-fw"></i></a>
+    </span>
+    {% endif %}
+  </div>
+
+  <div class="offset-md-2 col-md-4 text-end">
+    <br>
+    {% if 'yanked' in this_release.labels %}
+        {# Note: We don't include partial yank in this condition intentionally. #}
+    <a class="status-badge status-badge--bad" href="{{ url_for('project_version', project_name=project.name, version=latest_release.version) }}">
+      <i class="fa fa-exclamation-triangle fa-fw"></i>&nbsp
+        <span>This release has been yanked</span>
+    </a>
+    {% elif 'latest-release' in this_release.labels %}
+    <a class="status-badge status-badge--good" href="">
+      <i class="fa fa-check fa-fw"></i>&nbsp
+        <span>Latest version</span>
+    </a>
+    {% else %}
+    <a class="status-badge status-badge--bad" href="{{ url_for('project_version', project_name=project.name, version=latest_release.version) }}">
+      <i class="fa fa-exclamation-triangle fa-fw"></i>&nbsp
+        <span>Newer version available ({{ latest_release.version }})</span>
+    </a>
+    {% endif %}
+    <br><br>
+    <span data-source="release_date">
+        Released:
+        {% set release_date=file_info.upload_time %}
+        {% if (release_date and release_date.year > 1990) %}
+            <!-- TODO: Show locale date -->
+            {{ release_date.strftime('%b %d, %Y') }}
+        {% else %}
+            Unknown
+        {% endif %}
+    </span>
+  </div>
+</div>
+{% endmacro %}
+
+
+{% block page_content %}
+        <section class="jumbotron jumbo-banner" id="page-banner">
+            <div class="container">
+            {{ page_banner() }}
+            </div>
+        </section>
+
+        <section class="jumbotron jumbo-separator" id="banner-split">
+            <div class="container">
+              <div data-source="summary">
+                  {{ file_metadata.summary or 'No summary available' }}
+              </div>
+            </div>
+        </section>
+
+    <div class="container" id="page-content">
+      <div class="row">
+        <div class="col-md-3">
+          <div class="d-grid gap-2 d-md-block page-navigation">
+            <strong>Navigation</strong>
+            <button class="btn btn-link col-md-12 rounded-0 description text-start" type="button" data-purpose="page-select">
+              <i class="fa fa-align-left fa-fw"></i>
+              Description
+            </button>
+            <button class="btn btn-link col-md-12 rounded-0 releases text-start" type="button" data-purpose="page-select">
+              <i class="fa fa-history fa-fw"></i>
+                Releases
+            </button>
+            <button class="btn btn-link col-md-12 rounded-0 files text-start" type="button" data-purpose="page-select">
+              <i class="fa fa-download fa-fw"></i>
+              Files
+            </button>
+            <button class="btn btn-link col-md-12 rounded-0 dependencies text-start" type="button" data-purpose="page-select">
+              <i class="fa fa-sitemap fa-fw"></i>
+              Dependencies
+            </button>
+          </div>
+          <hr/>
+          <div id="project_urls">
+            <strong>Project Links</strong>
+              {% set icon_lookup={
+                "Blog": "fa-blog",
+                "Community": "fa-users",
+                'Documentation': 'fa-book',
+                'Download': 'fa-download',
+                'Donate': 'fa-donate',
+                'Forum': 'fa-comments',
+                "Source": "fa-code-branch",
+                "Github": "fa-code-branch",
+                "Repository": "fa-code-branch",
+                "Releases": "fa-tags",
+                "Source Code": "fa-code-branch",
+                "Code": "fa-code-branch",
+                "Tracker": "fa-bug",
+                "Issues": "fa-bug",
+                "Bug Tracker": "fa-bug",
+                "Discussions": "fa-comments",
+                "Changelog": "fa-scroll",
+                "Release Notes": "fa-scroll",
+                "Homepage": "fa-home",
+              } %}
+              {% for name, url in file_metadata.project_urls.items() %}
+              {% set fa_icon=icon_lookup.get(name, 'fa-link') %}
+                <button class="btn btn-link col-md-12 rounded-0 text-start">
+                     <a href="{{ url }}">
+                         <i class="fa fa-align-left fa-fw {{ fa_icon }}"></i>
+                         {{ name }}
+                     </a>
+                </button>
+              {% endfor %}
+          </div>
+          <hr/>
+          <div>
+              <strong>Meta</strong>
+              {% if file_metadata.author %}
+              <div data-source="author"><strong>Author: </strong> {{ file_metadata.author }}</div>
+              {% endif %}
+              {% if file_metadata.maintainer %}
+              <div data-source="maintainer"><strong>Maintainer: </strong> {{ file_metadata.maintainer }}</div>
+              {% endif %}
+              {% if file_metadata.requires_python %}
+              <div data-source="requires_python"><strong>Requires Python: </strong> {{ file_metadata.requires_python }}</div>
+              {% endif %}
+          </div>
+          {% if '_source_repository' in project.private_metadata %}
+          <hr/>
+          <div>
+            <strong>Source: </strong>
+            {{ project.private_metadata['_source_repository'] }}
+          </div>
+          {% endif %}
+          {% block sidebar_additional_content
+ %}
+
+          {% endblock sidebar_additional_content
+%}
+          <hr/>
+          <div id="classifiers">
+              <strong>Classifiers</strong>
+              <br>
+
+              {% for classifier_header, classifiers in classifiers_by_top_level.items() %}
+              <br><h6>{{ classifier_header }}</h6>
+              <ul>
+              {% for classifier in classifiers %}
+               <li>{{ classifier.split('::', 1)[1] }}</li>
+              {% endfor %}
+              </ul>
+              {% endfor %}
+          </div>
+        </div>
+        <div class="col-md-9">
+          <div class="row">
+            <div id="description-page" data-purpose="page-switch" data-source="description">
+              {{ file_metadata.description|safe or 'Description not available' }}
+            </div>
+          </div>
+          <div id="releases-page" data-purpose="page-switch" data-source="releases">
+          {% for release_info in releases|reverse %}
+            {% if 'quarantined' not in release_info.labels %}
+            <a href="{{ url_for('project_version', project_name=project.name, version=release_info.version) }}">
+            {% endif %}
+                <div class="card m-1em">
+                  <div class="card-body">
+                    <span class="listing-icon">
+                      <i class="far fa-folder-open"></i>
+                    </span>
+                    {{ release_info.version }}
+                    {% if release_info.release_date %}
+                        <span style="float: right; text-decoration: none; font-size: smaller; color: gray;">
+                            {{ release_info.release_date.strftime('%b %d, %Y') }}
+                        </span>
+                    {% endif %}
+                    {% if 'quarantined' in release_info.labels %}
+                        <span style="float: right; text-decoration: none; font-size: smaller; color: gray;">
+                            <button class="btn btn-danger position-relative me-2 mb-1 btn-sm active" data-bs-toggle="tooltip" data-bs-placement="right" title="{{ release_info.labels["quarantined"] }}">
+                                Quarantined
+                            </button>
+                        </span>
+                    {% endif %}
+                    {% if 'yanked' in release_info.labels %}
+                        {# Note: We don't include partial yank in this condition intentionally. #}
+                        <span style="float: right; text-decoration: none; font-size: smaller; color: gray;">
+                            <button class="btn btn-danger position-relative me-2 mb-1 btn-sm active" data-bs-toggle="tooltip" data-bs-placement="right" title="{{ release_info.labels["yanked"] }}">
+                                Yanked
+                            </button>
+                        </span>
+                    {% endif %}
+                    {% if release_info.version == this_release.version %}
+                    <span style="float: right; text-decoration: none; font-size: smaller; color: gray;">
+                       <button class="btn base-color position-relative me-2 mb-1 btn-sm active">
+                           This release
+                       </button>
+                    </span>
+                    {% endif %}
+                    {% if release_info.version.is_prerelease %}
+                    <span style="float: right; text-decoration: none; font-size: smaller; color: gray;">
+                       <button class="btn btn-warning position-relative me-2 mb-1 btn-sm active">
+                           Pre-release
+                       </button>
+                    </span>
+                    {% endif %}
+                    {% if release_info.version.__class__.__name__ == 'InvalidVersion' %}
+                    <span style="float: right; text-decoration: none; font-size: smaller; color: gray;">
+                       <button class="btn btn-danger position-relative me-2 mb-1 btn-sm active" data-bs-toggle="tooltip" data-bs-placement="right" title="Version string does not conform to PEP 440">
+                           Invalid version
+                       </button>
+                    </span>
+                    {% endif %}
+                  </div>
+                </div>
+            {% if 'quarantined' not in release_info.labels %}
+            </a>
+            {% endif %}
+          {% endfor %}
+          </div>
+          <div id="files-page" data-purpose="page-switch" data-source="files">
+           {% if compatibility_matrix.matrix %}
+            <h3>
+                Wheel compatibility matrix
+            </h3>
+            <div class="table-responsive">
+                <table class="table table-hover text-center table-sm">
+                    <thead class="table-info">
+                      <tr>
+                        <th scope="col" class="base-color">
+                            Platform
+                        </th>
+                        {% for py_abi_name in compatibility_matrix.py_and_abi_names %}
+                        <th scope="col" class="secondary-color">
+                            {{ py_abi_name }}
+                        </th>
+                        {% endfor %}
+                      </tr>
+                    </thead>
+                    {% for platform_tag in compatibility_matrix.platform_names %}
+                    <tr>
+                      <td class="table-light">
+                        {{ platform_tag }}
+                      </td>
+                      {% for py_and_abi in compatibility_matrix.py_and_abi_names %}
+                        <td>
+                            {% if (py_and_abi, platform_tag) in compatibility_matrix.matrix %}
+                            <a href="{{ compatibility_matrix.matrix[(py_and_abi, platform_tag)].url }}" class="link-unstyled">
+                                <i class="fas fa-check"></i>
+                            </a>
+                            {% endif %}
+                        </td>
+                      {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+            <br>
+           {% endif %}
+            <h3>
+                Files in release
+            </h3>
+            <div id="project_files">
+               {% for file in this_release.files %}
+                <a href="{{file.url}}">
+                 <div class="card m-1em">
+                  <div class="card-body">
+                    <span class="listing-icon">
+                      <i class="far fa-file"></i>
+                    </span>
+                    {{ file['filename'] }}{% if file_metadata.files_info[file.filename].size %} ({{ fmt_size(file_metadata.files_info[file.filename].size) }}){% endif %}
+                    {% if file.yanked is not none and file.yanked is not false %}
+                        <span style="float: right; text-decoration: none; font-size: smaller; color: gray;">
+                            <button class="btn btn-danger position-relative me-2 mb-1 btn-sm"  data-bs-toggle="tooltip" data-bs-placement="right" {% if file.yanked is not true %}title="{{ file.yanked }}" {% endif %}>
+                                Yanked
+                            </button>
+                        </span>
+                    {% endif %}
+                  </div>
+                 </div>
+                </a>
+              {% endfor %}
+            </div>
+          </div>
+          <div id="dependencies-page" data-purpose="page-switch">
+              {% if not file_metadata.requires_dist %}
+                No dependencies
+              {% else %}
+                <div>
+                    <div class="float-end">
+                    Extras:
+                    {% for extra in file_metadata.requires_dist.extras() %}
+                        <button id="btn-extra-{{ extra }}" class="btn btn-info position-relative me-2 mb-1 btn-sm" onclick="toggle_extra('{{  extra }}')">
+                            {{ extra }}
+                            <span id="btn-extra-{{ extra }}-filter-on" class="position-absolute top-0 start-100 translate-middle badge rounded-pill" style="display: none;">
+                                <i class="fas fa-binoculars fa-1x" style="color: black;"></i>
+                            </span>
+                        </button>
+                    {% else %}
+                        None
+                    {% endfor %}
+                    </div>
+                    <div class="clearfix"></div>
+                    Dependencies:
+                    <script>
+                        function toggle_extra(extra) {
+                          elements = document.querySelectorAll("[data-extra='"+ extra +"']");
+                          button = document.getElementById('btn-extra-' + extra + '-filter-on');
+                          extra_currently_hidden = button.style.display === 'none';
+
+                          if (extra_currently_hidden) {
+                              button.style.display = 'block';
+                          } else {
+                              button.style.display = 'none';
+                          }
+
+                          for (let i = 0; i < elements.length; i++) {
+                            if (extra_currently_hidden) {
+                              elements[i].style.display = 'block';
+                            } else {
+                              elements[i].style.display = 'none';
+                            }
+                          }
+                        }
+                    </script>
+
+                    {% for requirement in file_metadata.requires_dist %}
+                       {% if not requirement.is_valid %}
+                         <div class="card m-1em">
+                           <div class="card-body">
+                            Invalid requirement ("<code>{{ requirement.spec }}</code>")
+                           </div>
+                         </div>
+                       {% else %}
+                        <a href="{{ url_for('project', project_name=requirement.name) }}">
+                         {# For now, take just the first extra. #}
+                         {% set extra=file_metadata.requires_dist.extra_for_requirement(requirement) %}
+                         <div class="card m-1em" {% if extra %}data-extra="{{ extra[0] }}"{% endif %} style="{% if extra %}display: none;{% endif %}">
+                           <div class="card-body">
+                             <span class="listing-icon">
+                               <img class="pe-2 pb-1" src="{{ static_file_url('/images/python-logo-only.svg') }}" style="width: 3em;" >
+                             </span>
+                             {{ requirement.name }}{% if requirement.extras %}[{{ ','.join(requirement.extras) }}]{% endif %}
+                             <span class="text-decoration-none fs-6" style="float: right; color: gray;">
+                               {{  render_markers(
+                                        requirement,
+                                        format_strings={
+                                            'combine_nested_expr': '''{lhs} {op} {rhs}''',
+                                            'expr': '''<button type="button" class="btn btn-info btn-sm me-2 mb-1">{lhs} {op} {rhs}</button>''',
+                                        }
+                                    )|safe
+                               }}
+                             </span>
+                             <span>
+                               {% if requirement.specifier %} ({{ requirement.specifier }}) {% endif %}
+                               {% if requirement.url %} ({{ requirement.url }}) {% endif %}
+                             </span>
+                           </div>
+                         </div>
+                        </a>
+                      {% endif %}
+                    {% endfor %}
+                </div>
+              {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+{% endblock page_content %}
+
+
+{% block extra_footer %}
+
+<script>
+
+function show_page(page_class){
+  $('button[data-purpose="page-select"]').addClass('btn-link').removeClass('btn-primary')
+  $('button[data-purpose="page-select"].' + page_class).addClass('btn-primary').removeClass('btn-link')
+
+  $('div[data-purpose="page-switch"]').addClass('d-none');
+  $('#' + page_class + '-page').removeClass('d-none').removeClass('d-none').removeClass('d-none');
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+    $('button.releases').click(
+      function() {
+        show_page('releases');
+        history.replaceState( {} , 'Releases', '{{ url_for('project_version', project_name=project.name, version=this_release.version) }}/releases' );
+      }
+    )
+
+    $('button.description').click(
+      function() {
+        show_page('description');
+        history.replaceState( {} , 'Description', '{{ url_for('project_version', project_name=project.name, version=this_release.version) }}/description' );
+      }
+    )
+
+    $('button.files').click(
+      function() {
+        show_page('files');
+        history.replaceState( {} , 'Files', '{{ url_for('project_version', project_name=project.name, version=this_release.version) }}/files' );
+      }
+    )
+
+    $('button.dependencies').click(
+      function() {
+        show_page('dependencies');
+        history.replaceState( {} , 'Releases', '{{ url_for('project_version', project_name=project.name, version=this_release.version) }}/dependencies' );
+      }
+    )
+
+      var url_parts = window.location.href.split('/')
+      last_part = url_parts[url_parts.length - 1]
+      if (last_part === 'files') {
+        show_page('files');
+      } else if (last_part === 'releases') {
+        show_page('releases');
+      } else if (last_part === 'dependencies') {
+        show_page('dependencies');
+      } else {
+        show_page('description');
+      }
+
+    // Enable bootstrap v5 tooltips.
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+    {{ super() }}
+{% endblock extra_footer %}

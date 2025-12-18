@@ -1,0 +1,79 @@
+[build-system]
+requires = ["setuptools>=61", "setuptools_scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "simple-repository-browser"
+dynamic = ["version"]
+description = "A web interface to browse and search packages in any simple package repository (PEP-503), inspired by PyPI / warehouse"
+requires-python = ">=3.11"
+authors = [
+    {name = "Phil Elson"},
+    {name = "Francesco Iannaccone"},
+    {name = "Ivan Sinkarenko"},
+]
+dependencies = [
+  "httpx",
+  "aiosqlite",
+  "diskcache",
+  "docutils",
+  "fastapi",
+  "importlib_metadata>=6.0",
+  "jinja2",
+  "markdown",
+  "markupsafe",
+  "packaging",
+  "parsley",
+  "pkginfo>=1.12",
+  "readme-renderer[md]",
+  "simple-repository~=0.10",
+  "typing-extensions",
+  "uvicorn",
+  "authlib",
+  "starlette[full]",
+]
+readme = "README.md"
+
+[project.urls]
+Homepage = "https://github.com/simple-repository/simple-repository-browser"
+
+[project.optional-dependencies]
+test = [
+  "pytest",
+  "pytest-asyncio",
+]
+dev = [
+  "simple-repository-browser[test]",
+]
+
+[project.scripts]
+simple-repository-browser = "simple_repository_browser.__main__:main"
+
+[tool.setuptools_scm]
+version_file = "simple_repository_browser/_version.py"
+
+[tool.ruff.lint.isort]
+force-sort-within-sections = true
+
+# [tool.mypy]
+# check_untyped_defs = true
+# disallow_untyped_defs = true
+# disallow_untyped_calls = true
+
+[[tool.mypy.overrides]]
+module = [
+    "diskcache",
+    "parsley",
+    "setuptools",
+]
+ignore_missing_imports = true
+
+[tool.setuptools]
+include-package-data = false
+
+[tool.setuptools.packages.find]
+include = ["simple_repository_browser", "simple_repository_browser.*"]
+namespaces = false
+
+[tool.setuptools.package-data]
+"*" = ["static/**/*", "templates/**/*"]
