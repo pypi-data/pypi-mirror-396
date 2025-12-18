@@ -1,0 +1,31 @@
+<div class="fade-in space-y-3">
+    {% for check in checks %}
+    <div class="flex items-center justify-between p-3 rounded-lg {% if check.passed %}bg-sage-50 border border-sage-200{% else %}bg-terra-50 border border-terra-200{% endif %}">
+        <div class="flex items-center gap-3">
+            {% if check.passed %}
+            <svg class="w-5 h-5 text-sage-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+            {% else %}
+            <svg class="w-5 h-5 text-terra-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+            {% endif %}
+            <div>
+                <p class="font-medium {% if check.passed %}text-sage-800{% else %}text-terra-800{% endif %}">{{ check.name }}</p>
+                <p class="text-sm {% if check.passed %}text-sage-600{% else %}text-terra-600{% endif %}">{{ check.message }}</p>
+            </div>
+        </div>
+        <code class="text-xs bg-white px-2 py-1 rounded border border-clay-200 text-clay-700">{{ check.value }}</code>
+    </div>
+    {% endfor %}
+    
+    <div class="mt-4 p-4 rounded-lg {% if all_passed %}bg-sage-100 border border-sage-300{% else %}bg-terra-100 border border-terra-300{% endif %}">
+        {% if all_passed %}
+        <p class="font-medium text-sage-800">All critical checks passed! Your configuration is ready.</p>
+        {% else %}
+        <p class="font-medium text-terra-800">Some checks failed. Please update your configuration.</p>
+        <p class="text-sm text-terra-700 mt-1">Check your environment variables or Django settings.</p>
+        {% endif %}
+    </div>
+</div>
