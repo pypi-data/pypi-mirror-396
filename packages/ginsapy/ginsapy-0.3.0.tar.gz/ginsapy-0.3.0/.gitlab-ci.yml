@@ -1,0 +1,63 @@
+###########################################################################################################
+# Gantner Instruments GInsApy CI/CD integration
+###########################################################################################################
+stages:
+  - build
+  - publish
+###########################################################################################################
+# Test & Build
+###########################################################################################################
+.build:
+  stage: build
+  before_script:
+    - cmake -S . -B build -DGINS_GINSAPY_VIRTUALENV:BOOL=ON -DGINS_GINSAPY_ENABLE_DOC:BOOL=ON
+  script:
+    - cmake --build build
+    - cmake --install build --prefix build/install
+  artifacts:
+    paths:
+      - build/install/
+    when: on_success
+    expire_in: 30 days
+
+build:win:
+  extends: .build
+  tags: [win-shared]
+
+build:linux:
+  extends: .build
+  tags: [gi-build:20.04]
+
+###########################################################################################################
+# PyPi Build+Release
+###########################################################################################################
+build:python-dist:
+  stage: build
+  tags: [ gi-build:20.04 ]
+  image: python:3.11
+  variables:
+    GIT_DEPTH: "0"
+  script:
+    - python -m pip install -U pip build
+    - python -m build
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 30 days
+  rules:
+    - if: $CI_COMMIT_TAG
+
+publish:pypi:
+  stage: publish
+  tags: [ gi-build:20.04 ]
+  image: python:3.11
+  needs: ["build:python-dist"]
+  variables:
+    TWINE_USERNAME: "__token__"
+    TWINE_PASSWORD: "$PYPI_API_TOKEN"
+  script:
+    - python -m pip install -U pip twine
+    - python -m twine check dist/*
+    - python -m twine upload --non-interactive dist/*
+  rules:
+    - if: $CI_COMMIT_TAG

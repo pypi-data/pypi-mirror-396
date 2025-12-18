@@ -1,0 +1,184 @@
+# Gantner Instruments GInsapy
+
+
+## Description: Package - GInsapy
+
+Basic GinsData functionalities are implemented in different Python modules and
+classes. All the interface scripts with examples and documentation is
+delivered in an interface package called GInsapy.
+
+---
+**NOTE**
+
+**Do not use in Gi.cloud!**
+
+This Package only works if you have LAN connection to a **Q.station, Q.core** or if you have a local **GI.bench** installation.
+
+---
+
+**highspeedport_client:**
+All functions wrapped around "eGateHighSpeedPort" allow for Network communication with Q.station devices.
+
+**postprocessbuffer_manager, postprocessbuffer_client:**
+All Functions wrapped around "eGateHighSpeedPort_PostProcessBufferServer" allow to handle buffers in a local GI.bench, 
+but no communication via Network.
+
+---
+**NOTE**
+
+The latest implementation functions of dll that this library uses is documented with the headerfile **eGateHighSpeedPort.c** located at
+
+`C:\Users\Public\Documents\Gantner Instruments\GI.bench\api\c++\include\GInsData`
+
+---
+
+## Python
+
+With the programming language Python it is possible to use C-style APIs of DLLs.
+This offers the possibility to implement the C-style API (eGateHighSpeedPort
+API) of the Gantner Instruments GInsData Library to read buffered data into a
+program.
+
+The latest releases of Python can be downloaded here: [www.python.org](www.python.org)
+
+The GInsData library is available as 32/64-bit DLL (giutility.dll) and installed with your GI.bench installation or Q.core.
+
+----
+
+This package is tested with **Python 3.10**
+
+and supports **Python 3.10–3.14**.
+
+It should work with these Python versions, but dependency compatibility is only ensured for the tested environment.
+
+----
+
+## Quickstart guide
+
+### Building the wheel and installing the packages
+
+There is a script that automatically does everything:
+(The -r flag can be added, to install all packages required to run the examples)
+
+```bash
+python startup.py
+```
+
+**or** you do it manually by creating your own virtual environment:
+
+### Creating a virtual environment
+
+To create a virtual environment the following command needs to be run:
+
+```bash
+python -m venv venv
+```
+
+After the creation, the virtual environment needs to be activated using:
+
+```bash
+`.\\venv\\Scripts\\activate`
+```
+
+or on Linux/Max:
+    
+```bash
+source venv/bin/activate
+```
+
+### Running the examples
+
+The execution path needs to contain the giutility.dll file.
+With the default GI.bench installation, that path will be 
+
+> C:\Users\Public\Documents\Gantner Instruments\GI.bench\api\bin\windows\x64\
+
+Now every example can be run using
+
+```bash
+python C:\\your\\path\\to\\project\\ginsapy\\src\\any_example.py
+```
+
+Use -h or --help to get more information about **default** and **additional** arguments:
+
+```bash
+python C:\\your\\path\\to\\project\\ginsapy\\src\\any_example.py -h
+```
+
+---
+**NOTE**
+
+Only functions that can have an IP-Address as an argument can be used for Network communication.
+
+---
+
+## Development 
+
+### Used as submodule in
+* gi-sphinx
+
+### Pylint
+
+This module uses pylint to ensure that the code follows conventions.
+
+### source directory
+
+Includes examples and libraries
+
+### doc directory
+
+Inlcudes Sphinx docu. To generate the html code, run 
+
+```bash
+.\\doc\\make.bat html
+```
+
+### Generate loose requirements
+
+**Do this in a bash shell using the lowest version you want to support!**
+
+Install uv to easily install all needed python versions (coss-platform)
+
+``` bash
+pip install uv
+```
+
+```bash
+python -m pip install -U pip tox
+```
+
+```bash
+python -m pip install pip-tools
+```
+```bash
+python -m pip install pipreqs
+```
+
+
+To ensure we support multiple python versions we don't want to pin every dependency.
+Instead we pin everything on the lowest version (that we support) and make
+it loose for every version above.
+
+from root package dir (/ginsapy)
+
+```bash
+./gen-requirements.sh
+```
+
+#### Ensure python-package version compatibility
+
+```bash
+uv python install 3.10 3.11 3.12 3.13 3.14
+```
+
+Now run for all envs
+
+```bash
+tox
+```
+
+of for a specific version only -> look what you defined in pyproject.toml
+
+```bash
+tox -e py310
+```
