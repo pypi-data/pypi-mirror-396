@@ -1,0 +1,106 @@
+= Components Inputs
+
+Ce composant expose plusieurs `inputs`, uniquement `odoo_version` est obligatoire.
+
+[tabs]
+======
+
+file .gitlab-ci.yml::
++
+====
+[,yml]
+----
+# .gitlab-ci.yml du projet
+include:
+  - component: $CI_SERVER_FQDN/gitlab-ci/odoo-quality/runbot@1
+    inputs:
+      name: "custom:runbot" <1>
+      odoo_version: "15.0" <2>
+      docker_registry: "other-registry" <3>
+      stage: "deploy" <4>
+      runbot_args: "--step-name='My Step'" <5>
+      tag: "runner-tag" <6>
+      other_services:
+        - name: minio/minio <7>
+          alias: minio
+        - name: registry.mangono.io/dockers/pyenv-ubuntu <7>
+          alias: other-mangono-image
+      runbot_version: "1.0.0-beta1" <8>
+      runbot_workdir: $ROOT_PATH/sub/folder <9>
+
+"odoo:custom:runbot:15.0": <1> <2>
+    variables:
+        ROOT_PATH: "toto" <10>
+----
+<1> `job-name` permet de changer le nom du job. Il faudra utiliser ce nouveau nom aussi pour ajouter des xref:13_ci_env_var.adoc[].
+<2> `odoo-version` Est utilisé dans le nom du job ainsi que dans le nom de l'image.
+<3> `docker-registry` Permet de changer le _registry_ de l'image odoo utilisée.
+<4> `stage` Permet de changer le `stage` du job.
+<5> `runbot-args` Permet d'ajouter des arguments à la commande `mangono-runbot run`.
+<6> `job-tag` Permet de changer le `tag` du job.
+<7> `other-services` Permet d'ajouter d'autres services tiers pour des tests de bout-en-bout par exemple.
+<8> `runbot-version` Permet de forcer la version du programme `mangono-runbot` (utile en cas de bug). Cette version suivra les versions du composant.
+<9> `project-path` Permet dans certains cas de ne pas utiliser le dossier racine du projet comme _add-on path_.
+<10> Voir xref:13_ci_env_var.adoc[]
+====
+
+result .gitlab-ci.yml::
++
+====
+[,yml]
+----
+".tmpl:custom:runbot:15.0": <12>
+  # ...
+odoo:custom:runbot:15.0: <1> <2>
+  variables:
+    RUNBOT_DIAG_VERBOSE: 1 <11>
+    ROOT_PATH: toto <10>
+    DB_HOST: database <11>
+    DB_PORT: 5432 <11>
+    POSTGRES_USER: runbot <11>
+    POSTGRES_PASSWORD: runbot-password <11>
+    POSTGRES_HOST_AUTH_METHOD: trust <11>
+  before_script:
+  - pip install "mangono-runbot==1.0.0-beta1" <8>
+  - mangono-runbot --verbose --workdir=$ROOT_PATH/sub/folder diag <9>
+  tags:
+  - runner-tag <6>
+  image:
+    name: other-registry:15.0 <2> <3>
+    entrypoint:
+    - ''
+  stage: deploy <4>
+  services:
+  - name: minio/minio <7>
+    alias: minio
+  - name: registry.mangono.io/dockers/pyenv-ubuntu <7>
+    alias: other-mangono-image
+  - name: postgres:15 <11>
+    alias: database
+  script:
+  - mangono-runbot --verbose --workdir=$ROOT_PATH/sub/folder init <9>
+  - mangono-runbot --verbose --workdir=$ROOT_PATH/sub/folder run --step-name='My Step' <9> <5>
+  - coverage report
+  artifacts:
+    when: always
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: tests/odoo_project/coverage.xml
+      junit:
+      - tests/odoo_project/test_results/*.xml
+----
+<1> `job-name` permet de changer le nom du job. Il faudra utiliser ce nouveau nom aussi pour ajouter des xref:13_ci_env_var.adoc[].
+<2> `odoo-version` Est utilisé dans le nom du job ainsi que dans le nom de l'image.
+<3> `docker-registry` Permet de changer le _registry_ de l'image odoo utilisée.
+<4> `stage` Permet de changer le `stage` du job.
+<5> `runbot-args` Permet d'ajouter des arguments à la commande `mangono-runbot run`.
+<6> `job-tag` Permet de changer le `tag` du job.
+<7> `other-services` Permet d'ajouter d'autres services tiers pour des tests de bout-en-bout par exemple.
+<8> `runbot-version` Permet de forcer la version du programme `mangono-runbot` (utile en cas de bug). Cette version suivra les versions du composant.
+<9> `project-path` Permet dans certains cas de ne pas utiliser le dossier racine du projet comme _add-on path_.
+<10> Voir xref:13_ci_env_var.adoc[]
+<11> Voir xref:13_ci_env_var.adoc[]
+<12> Voir xref:11_ci_components.adoc#component_template[Hidden job]
+====
+======

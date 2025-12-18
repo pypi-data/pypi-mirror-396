@@ -1,0 +1,216 @@
+= Step de test
+
+Une `step` représente une étape du `runbot`.
+Elles seront jouée les unes après les autres. +
+
+IMPORTANT: Le runbot s'arrete dès qu'une `step` est en echec.
+
+== Champs possibles
+Dans chaque `step` vous pouvez préciser les attributs suivants :
+
+|===
+| name | Type Toml | Par défaut
+
+| modules | https://toml.io/en/v1.0.0#array[liste] de https://toml.io/en/v1.0.0#string[string] | *Obligatoire* ou ceux de la xref:01_config_global.adoc[]
+| action | `"tests"` ou `"install"` | `"tests"`
+| test_tags | https://toml.io/en/v1.0.0#array[liste] de https://toml.io/en/v1.0.0#string[string] | `[]`
+| coverage | https://toml.io/en/v1.0.0#boolean[boolean] | `true`
+| log_filters | https://toml.io/en/v1.0.0#array-of-tables[liste de Log Filter] | `[]`
+|===
+
+NOTE: Les champs sont à déclarer après la section `[tool.runbot.step.name]` ou `step.name`.
+
+== Le nom
+
+Le nom de la `step` se trouve directement dans la déclaration de la section.
+En théorie, tous les formats sont acceptés. Mais il ne faut pas non plus être fantaisiste.
+
+NOTE: Si vous voulez mettre des caractères spéciaux ou des espaces, vous devez alors mettre des `"`.
+
+.Nom de `step` valide
+[tabs]
+======
+pyproject.toml::
++
+====
+[,toml]
+----
+[tool.runbot.step.step1] # <1>
+[tool.runbot.step."My Awsome Step"] # <1>
+[tool.runbot.step."Step with 🔥"] # <1>
+----
+====
+
+runbot.toml::
++
+====
+[,toml]
+----
+[step.step1] # <1>
+[step."My Awsome Step"] # <1>
+[step."Step with 🔥"] # <1>
+----
+====
+======
+
+== L'action
+
+Une `step` peut faire l'une des actions suivantes :
+
+`install` ou `warmup`:: Installer un ou plusieurs modules sans éxécuter les tests.
+`tests` ou n'importe qu'elle valeur:: Tester un ou plusieurs modules.
+
+Vous pouvez paramétrer l'action via l'attribut `action` de chaque `step`.
+
+[[default_act_by_name]]
+=== Convention
+Si votre `step` s'appelle `install` ou `warmup`, alors l'action sera forcément `install`.
+
+[tabs]
+======
+pyproject.toml::
++
+====
+[,toml]
+----
+[tool.runbot.step.install] # <1>
+modules = ["sale"]
+[tool.runbot.step.warmup] # <1>
+modules = ["sale"]
+action = "tests" # <2>
+----
+<1> Nom utilisant la convention
+<2> Essai de forcer la valeur
+====
+
+runbot.toml::
++
+====
+[,toml]
+----
+[step.install] # <1>
+modules = ["sale"]
+[step.warmup] # <1>
+modules = ["sale"]
+action = "tests" # <2>
+----
+<1> Nom utilisant la convention
+<2> Essai de forcer la valeur
+====
+
+result.toml::
++
+====
+[,toml]
+----
+[step.install] # <1>
+modules = ["sale"]
+action = "install" # <2>
+
+[step.warmup] # <1>
+modules = ["sale"]
+action = "install" # <2>
+----
+<1> Nom utilisant la convention
+<2> L'action est forcé à `install`
+====
+======
+
+[[default_step]]
+== Step par défaut
+
+Si aucune déclaration d'étape n'existe, une par défaut sera créée à partir de valeur de l'entête.
+
+[tabs]
+======
+pyproject.toml::
++
+====
+[,toml]
+----
+include::partial$sample_config/pyproject_minimal.toml[]
+----
+<1> Configuration d'entête
+<2> Le nom du module à installer et tester
+====
+
+runbot.toml::
++
+====
+[,toml]
+----
+include::partial$sample_config/custom_minimal.toml[]
+----
+<1> Le nom du module à installer et tester
+====
+
+result.toml::
++
+====
+[,toml]
+----
+[tool.runbot]
+[tool.runbot.step.default] # <1>
+modules = ["module_to_test"] # <2>
+action = "tests"
+log-filters = []
+----
+<1> Reprends les valeurs de la section `tool.runbot`
+<2> Le nom du module à installer et tester
+====
+======
+
+
+== Ordre d'éxécution
+
+Elles sont exécutées dans l'ordre de déclaration dans le fichier `toml`
+[tabs]
+======
+pyproject.toml::
++
+====
+[,toml]
+----
+[tool.runbot]
+modules = ["sale"]
+
+[tool.runbot.step.step2]
+name = "Step number 2"
+
+[tool.runbot.step.step1]
+name = "Step number 1"
+----
+====
+
+runbot.toml::
++
+====
+[,toml]
+----
+modules = ["sale"]
+[step.step2]
+name = "Step number 2"
+[step.step1]
+name = "Step number 1"
+----
+====
+
+output::
++
+====
+[,shell]
+----
+$ odoo-runbot diag
+...blabla
+                                         Steps
+┏━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┓
+┃ Step    ┃ Module ┃ Run tests ┃ Activate Coverage ┃ Tags to test ┃ Logger filter ┃
+┡━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━┩
+│ step2   │ sale   │ TESTS     │ ✔                 │              │               │ <1>
+│ step1   │ sale   │ TESTS     │ ✔                 │              │               │ <2>
+└─────────┴────────┴───────────┴───────────────────┴──────────────┴───────────────┘
+----
+<1> C'est bien la `step` "step2" qui sera exécutée en première
+<2> Puis la `step` "step1"
+====
+======

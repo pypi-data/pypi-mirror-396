@@ -1,0 +1,243 @@
+= Assertion de test
+
+Une fonction de test est souvent découpé en 3 étape.
+
+. Init des donnée
+. Appel de la fonction à tester
+. Assert des données modifié par l'étape *2*
+
+[source, python]
+----
+from unittest import TestCase
+import pathlib
+import os
+class TestCaseSimple(TestCase):
+
+    def test_01_assert_chg_dir_ok(self):
+        # Step 1 get data
+        cwd = pathlib.Path.cwd() # Get Current Working Dir
+        expected_dir = "/tmp"
+        # Step 2 Call function
+        os.chdir(expected_dir)
+        # Step 3
+        self.assertEqual(pathlib.Path.cwd(), expected_dir, msg="Can't change current working dir with `os.chdir`")
+----
+
+`unittest` fournit plein de fonction d' `assert` listé ci-dessous.
+La https://docs.python.org/3/library/unittest.html[doc officielle] contient plusieurs exemples.
+
+[IMPORTANT]
+--
+Toutes ces méthodes ont un paramètre `msg` pour permettre d'indiquer ce qu'`assert` cette ligne.
+
+Exemple : `self.assertTrue(value, msg="Assert que XXX est bien remplie car j'attends que YYY")`
+--
+
+
+CAUTION: Pour les record Odoo, il faut éviter de tester l'existance des `ids`, mais utiliser des `recordset` pour assert le type (`_name`)  en même temps
+
+== Tester une erreur - assertRaises
+
+[source,python]
+----
+with self.assertRaises(ValidationError) as e: # <.>
+    self.env['res.partner'].create({})
+
+# Possibilité de vérifier le message d'erreur
+self.assertEqual(e.exception.args[0], "message d'erreur")
+----
+<.> Mettre le bon type d'erreur. Sinon prendra toutes les exceptions.
+
+TIP: Peut-être en décorateur de méthode avec `@unittest.expectedFailure`
+
+
+== Assertion fournit par Odoo
+
+|===
+|Method |Vérifie que |Nouveau en
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertRaises[`assertRaises(exc, fun, ++*++args, ++**++kwds)`]
+|`fun(++*++args, ++**++kwds)` raises _exc_
+| Odoo 12+
+
+| https://github.com/odoo/odoo/blob/-/odoo/tests/common.py[`assertQueries(expected, flush=True)`]
+|Assert **qu'uniquement** les query dans `expected` sont éxecutées
+| Odoo 14+
+
+| https://github.com/odoo/odoo/blob/-/odoo/tests/common.py[`assertQueriesContain(expected, flush=True)`]
+|Assert que toutes les query dans `expected` sont éxecutées. Mais d'autre peuvent être éxecuté en comparaison d' `assertQueries`
+| Odoo 14+
+
+| https://github.com/odoo/odoo/blob/-/odoo/tests/common.py[`assertQueryCount(default=0, **counters)`]
+|Compte le nombre de requêtes SQL éxécutée par la fonction. `counters` permet de tester pour différents logins.
+| Odoo 12+
+
+| https://github.com/odoo/odoo/blob/-/odoo/tests/common.py[`assertRecordValues(records, expected_values)`]
+|Compare `records` avec une liste de dict. En suivant le format du `write`/`create`.
+| Odoo 12+
+
+| https://github.com/odoo/odoo/blob/-/odoo/tests/common.py[`assertItemsEqual(a, b)`]
+| alias de https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertCountEqual[`assertCountEqual(a, b)`]
+| Odoo 12+
+
+| https://github.com/odoo/odoo/blob/-/odoo/tests/common.py[`assertTreesEqual(n1, n2)`]
+| Compare 2 arbre xml/html (noeud).
+| v12+
+
+| https://github.com/odoo/odoo/blob/-/odoo/tests/common.py[`assertXMLEqual(n1, n2)`]
+| Compare 2 arbre xml (noeud). alias de `assertTreesEqual`
+| Odoo 15 +
+
+| https://github.com/odoo/odoo/blob/-/odoo/tests/common.py[`assertHTMLEqual(n1, n2)`]
+| Compare 2 arbre html (noeud). alias de `assertTreesEqual`
+| Odoo 15 +
+
+|===
+
+NOTE:  `assertRaises`, `assertQueryCount`, `assertQueries` sont des fonctions à utiliser comme context manager (`with func():...`)
+
+== Assertions basiques
+
+|===
+|Method |Vérifie que |Nouveau en
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertEqual[`assertEqual(a, b)`]
+|`a == b` |
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertNotEqual[`assertNotEqual(a, b)`]
+|`a != b` |
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertTrue[`assertTrue(x)`]
+|`bool(x) is True` |
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertFalse[`assertFalse(x)`]
+|`bool(x) is False` |
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertIs[`assertIs(a, b)`]
+|`a is b` |3.1
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertIsNot[`assertIsNot(a, b)`]
+|`a is not b` |3.1
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertIsNone[`assertIsNone(x)`]
+|`x is None` |3.1
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertIsNotNone[`assertIsNotNone(x)`]
+|`x is not None` |3.1
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertIn[`assertIn(a, b)`]
+|`a in b` |3.1
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertNotIn[`assertNotIn(a, b)`]
+|`a not in b` |3.1
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertIsInstance[`assertIsInstance(a, b)`]
+|`isinstance(a, b)` |3.2
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertNotIsInstance[`assertNotIsInstance(a, b)`]
+|`not isinstance(a, b)` |3.2
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertIsSubclass[`assertIsSubclass(a, b)`]
+|`issubclass(a, b)` |3.14
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertNotIsSubclass[`assertNotIsSubclass(a, b)`]
+|`not issubclass(a, b)` |3.14
+|===
+
+== Assertions des erreur et warnings
+
+|===
+|Method |Checks that |New in
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertRaises[`assertRaises(exc, fun, ++*++args, ++**++kwds)`]
+|`fun(++*++args, ++**++kwds)` raises _exc_ |
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertRaisesRegex[`assertRaisesRegex(exc, r, fun, ++*++args, ++**++kwds)`]
+|`fun(++*++args, ++**++kwds)` raises _exc_ and the message matches regex
+_r_ |3.1
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertWarns[`assertWarns(warn, fun, ++*++args, ++**++kwds)`]
+|`fun(++*++args, ++**++kwds)` raises _warn_ |3.2
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertWarnsRegex[`assertWarnsRegex(warn, r, fun, ++*++args, ++**++kwds)`]
+|`fun(++*++args, ++**++kwds)` raises _warn_ and the message matches
+regex _r_ |3.2
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertLogs[`assertLogs(logger, level)`]
+|The `with` block logs on _logger_ with minimum _level_ |3.4
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertNoLogs[`assertNoLogs(logger, level)`]
+|The `with` block does not log on _logger_ with minimum _level_ |3.10
+|===
+
+== Assertions des nombres et string
+
+|===
+|Method |Vérifie que |Nouveau en
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertAlmostEqual[`assertAlmostEqual(a, b)`]
+|`round(a-b, 7) == 0` |
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertNotAlmostEqual[`assertNotAlmostEqual(a, b)`]
+|`round(a-b, 7) != 0` |
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertGreater[`assertGreater(a, b)`]
+|`a ++>++ b` |3.1
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertGreaterEqual[`assertGreaterEqual(a, b)`]
+|`a ++>++= b` |3.1
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertLess[`assertLess(a, b)`]
+|`a ++<++ b` |3.1
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertLessEqual[`assertLessEqual(a, b)`]
+|`a ++<++= b` |3.1
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertRegex[`assertRegex(s, r)`]
+|`r.search(s)` |3.1
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertNotRegex[`assertNotRegex(s, r)`]
+|`not r.search(s)` |3.2
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertCountEqual[`assertCountEqual(a, b)`]
+|_a_ and _b_ have the same elements in the same number, regardless of
+their order. |3.2
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertStartsWith[`assertStartsWith(a, b)`]
+|`a.startswith(b)` |3.14
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertNotStartsWith[`assertNotStartsWith(a, b)`]
+|`not a.startswith(b)` |3.14
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertEndsWith[`assertEndsWith(a, b)`]
+|`a.endswith(b)` |3.14
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertNotEndsWith[`assertNotEndsWith(a, b)`]
+|`not a.endswith(b)` |3.14
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertHasAttr[`assertHasAttr(a, b)`]
+|`hastattr(a, b)` |3.14
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertNotHasAttr[`assertNotHasAttr(a, b)`]
+|`not hastattr(a, b)` |3.14
+|===
+
+== Assertion des collections
+
+|===
+|Method |Vérifie que |Nouveau en
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertMultiLineEqual[`assertMultiLineEqual(a, b)`]
+|strings |3.1
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertSequenceEqual[`assertSequenceEqual(a, b)`]
+|sequences |3.1
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertListEqual[`assertListEqual(a, b)`]
+|lists |3.1
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertTupleEqual[`assertTupleEqual(a, b)`]
+|tuples |3.1
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertSetEqual[`assertSetEqual(a, b)`]
+|sets or frozensets |3.1
+
+|https://docs.python.org/3/library/unittest.html#unittest.TestCase.assertDictEqual[`assertDictEqual(a, b)`]
+|dicts |3.1
+|===

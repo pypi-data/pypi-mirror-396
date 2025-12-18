@@ -1,0 +1,78 @@
+= Structure des fichiers
+
+Pour exécuter les tests, Odoo requiert au _strict minimum_ :
+
+. un module
+. un répertoire `tests` dans ce module
+. un fichier de test dont le nom commence par `test_` contenant :
+.. une classe héritant d'une classe de test
+.. une méthode dont le nom commence par `test`
+. un fichier `\\__init__.py` *à la racine* de `tests` qui importe le fichier de test
+. lancer Odoo avec `--test-enable` et `--test-tags`
+
+.Exemple - Structure d'un module test
+----
+awesome_module/
+├── models/
+├── views/
+├── wizard/
+├── data/
+├── security/
+├── tests/
+│   ├── __init__.py
+│   └── test_model.py
+├── __manifest__.py
+└── __init__.py
+----
+
+.Exemple - Contenu de `\\__init__.py`
+[source, python]
+----
+from . import test_model
+----
+
+.Exemple - Contenu de `test_model.py`
+[source, python]
+----
+from odoo.tests.common import TransactionCase # <1>
+
+class MaClasseTest(TransactionCase):
+    def test_01_assert_something(self): # <2>
+        # Test d'une qualité incroyable
+----
+<1> Super `class` de test fournit par Odoo
+<2> Method executant des assertion (`self.assertXXX`)
+
+[IMPORTANT]
+====
+Si vous organisez vos fichiers de test dans des sous-dossier, ils doivent être importés *directement* depuis le fichier `\\__init__.py` *à la racine* de `tests`.
+
+.Dossier `tests` avec sous-dossiers
+----
+tests/
+├── __init__.py
+├── test_model_0.py
+├── sous_dossier_1/
+│   └── test_model_1.py
+└── sous_dossier_2/
+    └── test_model_2.py
+----
+
+.`\\__init__.py` avec sous-dossiers
+[source, python]
+----
+from . import test_model
+from .sous_dossier_1 import test_model_1
+from .sous_dossier_2 import test_model_2
+----
+====
+
+== Module de test
+
+Dans le cadre d'un projet client, il est recommandé de créer un module dédié au test dont le nom sera par convention `<projet>_tests`. +
+Ce module doit être en dernier dans la chaîne de dépendance du projet c'est à dire par convetion qu'il dépendra du module `<projet>_erp`
+// TODO (__cf.__ xref:code_organisation:conventions_developpement_odoo.adoc#diag_depends[Illustration des dépendances]).
+
+Ce module contiendra au minimum un répertoire `tests` et très souvent un répertoire `data`.
+
+C'est possible aussi

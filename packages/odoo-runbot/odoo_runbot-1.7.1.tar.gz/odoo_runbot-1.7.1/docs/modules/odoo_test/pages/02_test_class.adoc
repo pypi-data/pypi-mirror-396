@@ -1,0 +1,67 @@
+= Class de test
+
+Par convention, une classe de test va être structurée comme suit :
+
+. `setUpClass()` - Initialisation de données communes
+. `setUp()` - Initialisation de données par méthode de test
+. `tearDown()` - Nettoyage de données par méthode de test
+. `tearDownClass()` - Nettoyage de données communes
+. `_<private_method>()` - Méthodes privées
+. `test_<method>()` - Méthodes de test
+
+Dans la plupart des cas, vous n'utiliserez que `setUpClass`, les méthodes de tests et éventuellement des méthodes privées.
+
+TIP: Pour le cas le plus courant, utilisez notre link:#_fichier_test[modèle de fichier minimal]
+
+NOTE: Le module `test` de Odoo est une extension de la librairie `unittest` de Python (d'où viennent les méthodes type `setUp` et `tearDown`). Pour plus de détails, vous pouvez consulter la documentation officielle `unittest` : https://docs.python.org/3/library/unittest.html[version _latest_v3_]
+
+.Graphique du flux d'exécution des méthodes `unittest`
+[plantuml]
+----
+start
+:setUpClass;
+repeat :setUp;
+#lightgreen:test_method;
+:tearDown;
+repeat while (Other test ?)
+:tearDownClass;
+stop
+----
+
+== `setUpClass()` et `setUp()`
+
+Ces méthodes servent à initialiser les données qui sont communes et nécessaires pour tous vos tests. Elles ne s'exécutent pas au même moment :
+
+- **`setUpClass()`** est appelée *une seule fois avant _toute_ exécution* des méthodes de test.
+- **`setUp()`** est appelée *une fois avant _chaque_ exécution* des méthodes de test.
+
+Sauf cas très spécifiques, vous n'utiliserez que `setUpClass`.
+
+TIP: Il est très pratique et recommandé de définir des raccourcis vers des modèles / référence dans le `setUpClass` pour y accéder facilement dans les tests
+
+IMPORTANT: Si vous surchargez ces méthodes, n'oubliez pas d'appeler leur `super()`. Beaucoup d'éléments sont mis en place dans les classes parentes dont le `self.env` (dans `setUpClass`) et les `cr.savepoint()` (dans `setUp`).
+
+== `tearDown()` et `tearDownClass()`
+
+Ces méthodes servent à nettoyer les données qui pourraient persister après les tests. Elles ne s'exécutent pas au même moment :
+
+- *`tearDownClass()`* est appelée *une seule fois après exécution de _toutes_* les méthodes de test.
+- *`tearDown()`* est appelée *une fois après _chaque_ exécution* des méthodes de test.
+
+Sauf cas très spécifiques, vous n'aurez jamais à utiliser ces méthodes. La base de données étant _rollback_ après chaque test, les cas de données persistantes à nettoyer après un test relève d'une utilisation avancée.
+
+IMPORTANT: Si vous surchargez ces méthodes, n'oubliez pas d'appeler leur `super()`.
+
+== Méthodes privées
+
+On regroupe ici toutes les méthodes qui vont être communes à plusieurs tests. +
+On y retrouve souvent des méthodes pour créer un modèle à la volée en ne faisant varier qu'un, ou quelques champs. On peut aussi retrouver des méthodes regroupant plusieurs tests courants (si l'on se retrouve à tester les mêmes attributs plusieurs fois).
+
+== Méthodes de test
+
+Leurs noms doivent toujours commencer par `test`, sinon elles ne sont pas exécutées dans la phase de test.
+
+Une méthode de test est construite en deux parties :
+
+. manipulation des données.
+. vérifications.

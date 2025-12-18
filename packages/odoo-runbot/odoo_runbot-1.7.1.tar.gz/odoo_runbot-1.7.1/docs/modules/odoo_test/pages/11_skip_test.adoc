@@ -1,0 +1,75 @@
+= Skip d'un test
+
+"Skipper" un test à plusieurs utilités, la plus courante est pendant la phase de development, ou un test ne passe pas suite à un changement.
+Il est aussi possible de "skip" un test si une condition n'est pas remplis.
+
+
+
+NOTE: La possibilité de "skip" un test est fourni par `unittest` et non par Odoo, mais reste compatible pour les tests Odoo.
+
+== Dans la fonction
+
+Vous pouvez Skip un test en appelant la fonction `self.skipTest("Raison du skip")`. +
+Ceci est pratique si la condition du test dépends de l' `env` Odoo (module installé ou autre), ou si par exemple une API externe ne réponds pas
+
+[,python]
+----
+from unittest import TestCase
+import requests
+
+class TestApi(TestCase):
+
+    def test_01_create_accont(self):
+        resp = requests.get("https://api.awesome.com/health")
+        if not resp.ok:
+            self.skipTest(f"{resp.status_code} {resp.reason}") # <.>
+        # actual test
+----
+<.> Une raison du skip est obligatoire.
+
+
+== Décorateurs skip
+
+Les décorateurs `skip`, `skipIf`, `skipUnless` peuvent être appliqué sur des fonction de test `qui comment par `test_` ou des class de test (qui hérite de `unittest.TestCase` ou d'une sous class). +
+Elles permettent de faire peu de changement dans le code du test, mais sont moins souple pour la condition de "skip".
+
+.unittest.skip
+[,python]
+----
+from unittest import skip
+
+@skip("Waiting for T1309 to be merged")
+def test_03_js_interpretation_inline(self):
+    ...
+
+@skip # Mauvaise pratique, mais fonctionne
+def test_04(self):
+    ...
+----
+
+`skipIf` et `skipUnless` fonctionne en mirroir.
+La condition est évalué au moment ou les fonction de test sont découverte par `unittest`.
+
+.unittest.skipIf, unittest.skipUnless
+[,python]
+----
+from unittest import skipIf, skipUnless
+import os
+
+@skipIf(
+    condition=bool(os.getenv("EXTERNAL_API_URL")),
+    reason="Ce test fonctionne pas si l'URL est dans l'environement"
+)
+def test_api_not_in_env(self):
+    api_url = os.getenv("EXTERNAL_API_URL")
+    # Do stuff....
+
+@skipUnless(
+    condition=bool(os.getenv("EXTERNAL_API_URL")),
+    reason="Ce test fonctionne uniquement si l'URL est dans l'environement"
+)
+def test_api_from_env(self):
+    api_url = os.getenv("EXTERNAL_API_URL")
+    # Do stuff....
+
+----

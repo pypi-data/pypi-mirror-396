@@ -1,0 +1,146 @@
+= Les modules
+
+Les modules peuvent être installé avant les tests, pendant, ou entre 2 "step" de test. +
+Vous pouvez déclarer les modules de façon global pour toutes les "step", mais les préciser par "step" dans une liste static, ou un fichier.
+
+== Configuration dans le TOML
+
+[tabs]
+======
+pyproject.toml::
++
+====
+[,toml]
+----
+include::partial$sample_config/pyproject_classic.toml[]
+----
+<1> Déclaration des modules par défaut pour toutes les "step"
+<2> Utilise les modules définis au global
+<3> Step d' "install"
+<4> Step de tests, avec des https://www.odoo.com/documentation/master/developer/reference/backend/testing.html#test-selection[tags Odoo]
+====
+
+runbot.toml::
++
+====
+[,toml]
+----
+include::partial$sample_config/custom_classic.toml[]
+----
+<1> Déclaration des modules par défaut pour toutes les "step"
+<2> Utilise les modules définis au global
+<3> Step d' "install"
+<4> Step de tests, avec des https://www.odoo.com/documentation/master/developer/reference/backend/testing.html#test-selection[tags Odoo]
+====
+
+
+full.toml::
++
+====
+[,toml]
+----
+include::partial$sample_config/custom_classic.full.toml[]
+----
+
+NOTE: Les modules au global sont dupliqué dans chaque étape
+====
+======
+
+== Configuration dans fichier
+
+Si la liste de module est trop longue, il est préférable de les mettre dans un fichier externe.
+Il faut utiliser `modules-files` qui accepte une liste de nom de fichier.
+
+NOTE: Le chemin est relatif au dossier contenant le fichier de configuration.
+
+CAUTION: Cette fonctionnalité est rarement utilisé.
+
+[,txt]
+----
+. <.>
+├── runbot.toml
+├── file1.txt
+├── file2.txt
+└── file3.txt
+----
+<.> Dossier de départ pour trouver les fichiers
+
+[tabs]
+======
+pyproject.toml::
++
+====
+[,toml]
+----
+include::partial$sample_config/pyproject_module.file.toml[]
+----
+<1> Déclaration de fichier au niveau global
+<2> Remplace de fichier pour l'étape
+<3> Remplace les fichiers par une liste de module
+<4> Utilise la configuration global
+
+`modules-files` est utilisé au lieu de `moudles`
+====
+
+runbot.toml::
++
+====
+[,toml]
+----
+include::partial$sample_config/custom_module.file.toml[]
+----
+<1> Déclaration de fichier au niveau global
+<2> Remplace de fichier pour l'étape
+<3> Remplace les fichiers par une liste de module
+<4> Utilise la configuration global
+====
+
+result.toml::
++
+====
+Si l'utilisation de `modules` avait éte utilisé.
+
+[,toml]
+----
+include::partial$sample_config/result_module.file.toml[]
+----
+<1> Déclaration de fichier au niveau global
+<2> Remplace de fichier pour l'étape
+<3> Remplace les fichiers par une liste de module
+<4> Utilise la configuration global
+====
+======
+
+[%collapsible]
+.Contenue des fichiers
+====
+[tabs]
+======
+file1.txt::
++
+========
+[,toml]
+----
+include::partial$sample_config/file1.txt[]
+----
+========
+
+file2.txt::
++
+=======
+[,toml]
+----
+include::partial$sample_config/file2.txt[]
+----
+=======
+
+file3.txt::
++
+=======
+[,toml]
+----
+include::partial$sample_config/file3.txt[]
+----
+=======
+======
+====

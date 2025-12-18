@@ -1,0 +1,128 @@
+= Migration ancien runbot
+
+L'ancien projet `ci-files` et `ci-runbot` sont en cours d'abandon depuis Janvier 2025 au profit de `component`
+
+Pour l'exemple de la migration du projet https://gitlab.mangono.io/odoo/v15/issues/[Issues]
+
+== Gitlab CI
+
+.Dans `.gitlab-ci.yml`
+[tabs]
+======
+Avant::
++
+====
+[,yml]
+----
+include:
+  - project: odoo-addons/ci-files
+    ref: v2
+    file:
+      - pipeline/odoo-15.yml <1>
+
+# Only run pipeline if a merge request is open or run on a protected ref
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_REF_PROTECTED == "true"'
+
+
+variables:
+  ADDONS_GIT_GENERIC_GRID: "odoo/proprietary-addons/generic_grid" <2>
+  ODOO_IMAGE_NAME: "registry.mangono.io/odoo-cloud/container" <2>
+  RUNBOT_ALLOW_WARNING: "True"
+  BLACK_VERSION: "latest"
+
+runbot:
+  variables:
+    ODOO_MODULE: "issues_erp,issues_tests" <3>
+    BEFORE_ODOO_MODULE: "issues_config" <4>
+    ADDONS_GIT_COMMON_MODULES: "odoo/v15/common-modules" <2>
+
+deploy preview:up:
+  when: manual
+  variables:
+    NESTOR_NAME_PREFIX: "app-"
+    PROD_INSTANCE_NAME: "ndp-app"
+    ODOO_DEPENDS: "odoo-addons/community-addons,odoo/v15/common-modules,odoo-cloud/s3-filestore,odoo-cloud/redis-session,odoo/proprietary-addons/generic_grid"
+----
+<1> La version d'Odoo est fourni par le nom de fichier
+<2> Des addons ajouté
+<3> Les modules testés. Voir <<after_nmig_toml>>
+<4> Les modules installés avant les tests <<after_nmig_toml>>
+====
+
+Après::
++
+====
+[,yml]
+----
+include:
+  - component: $CI_SERVER_FQDN/gitlab-ci/mangono-runbot/odoo-runbot@1
+    inputs:
+      odoo_version: "15.0" <1>
+
+odoo:runbot:15.0: <1>
+  variables:
+    ADDONS_GIT_GENERIC_GRID: "odoo/proprietary-addons/generic_grid" <2>
+    ADDONS_GIT_COMMON_MODULES: "odoo/v15/common-modules" <2>
+    ADDONS_GIT_COMMUNITY_ADDONS: "odoo-addons/community-addons" <2>
+----
+<1> La version d'Odoo est fourni par le nom de fichier
+<2> Des addons ajouté
+
+NOTE:  Les modules testés et installé ce trouve maintenant dans la configuration <<after_nmig_toml>>
+
+====
+======
+
+[[after_nmig_toml]]
+== TOML
+
+.Nouveau fichier `toml`
+[tabs]
+======
+pyproject.toml::
++
+====
+[,toml]
+----
+[tool.runbot]
+[[tool.runbot.pywarnings-filter]]
+name="Warnings raised by module account_invoice_import_simple_pdf"
+action="ignore"
+category="DeprecationWarning"
+message=".*"
+
+[tool.runbot.step.install] # <1>
+modules=["issues_config"] # <1>
+
+[tool.runbot.step.tests] # <2>
+modules=["issues_erp","issues_tests"] # <2>
+----
+<1> Les modules installés avant les tests.
+<2> Les modules testés.
+
+====
+runbot.toml::
++
+====
+[,toml]
+----
+[[pywarnings-filter]]
+name="Warnings raised by module account_invoice_import_simple_pdf"
+action="ignore"
+category="DeprecationWarning"
+message=".*"
+
+[step.install] # <1>
+modules=["issues_config"] # <1>
+
+[step.tests] # <2>
+modules=["issues_erp","issues_tests"] # <2>
+----
+<1> Les modules installés avant les tests.
+<2> Les modules testés.
+====
+
+======

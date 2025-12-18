@@ -1,0 +1,54 @@
+= Fichier de Config
+
+La configuration du `runbot` se trouve dans le fichier `pyproject.toml` à la racine de votre projet.
+
+NOTE: La configuration via le fichier `pyproject.toml` est définie dans le https://peps.python.org/pep-0621/[PEP 621].
+
+== Description du format
+
+La configuration se trouve dans un fichier au format https://toml.io/en/v1.0.0#objectives[toml]. +
+
+Si aucun fichier n'est précisé en argument de `cli` alors le runbot cherche les fichiers suivants :
+
+. `runbot.toml`
+. `pyproject.toml` -> Le point d'entrée est `tool.runbot`.
+
+CAUTION: Le premier trouvé est choisis, l'ordre à une importance forte. Si aucun n'est trouvé alors le programme s'arrêté avec une erreur.
+
+Certaines parties de la config sont des https://toml.io/en/v1.0.0#array-of-tables[listes d'attributs], il faudra l'écrire avec `\[[tool.runbot.sub-part]]`.
+
+IMPORTANT: L'ordre de déclaration des sections a une importance pour le langage `toml` ainsi que pour le `runbot`.
+
+== pyproject.toml vs runbot.toml
+
+Si vous écrivez votre configuration dans le fichier `pyproject.toml` alors toute votre configuration devra être dans le chemin `tool.runbot`. Par contre, pour le fichier `runbot.toml` il ne faut pas précisier la section `tool.runbot` car ce fichier ne sert qu'au runbot.
+
+.Exemple
+[tabs]
+======
+pyproject.toml::
++
+====
+[,toml]
+----
+include::partial$sample_config/pyproject_classic.toml[]
+----
+<1> Déclaration des modules par défaut pour toutes les "step"
+<2> Utilise les modules définis au global
+<3> Step d' "install"
+<4> Step de tests, avec des https://www.odoo.com/documentation/master/developer/reference/backend/testing.html#test-selection[tags Odoo]
+====
+
+runbot.toml::
++
+====
+[,toml]
+----
+include::partial$sample_config/custom_classic.toml[]
+----
+<1> Déclaration des modules par défaut pour toutes les "step"
+<2> Utilise les modules définis au global
+<3> Step d' "install"
+<4> Step de tests, avec des https://www.odoo.com/documentation/master/developer/reference/backend/testing.html#test-selection[tags Odoo]
+====
+======

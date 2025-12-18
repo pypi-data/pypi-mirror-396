@@ -1,0 +1,29 @@
+= Variables d'environnements
+
+Pour chaque inclusion de ce composant, il y a 1 job de créé.
+
+Il est possible de surcharger les variables. Par exemple :
+
+[,yml]
+----
+# .gitlab-ci.yml
+include:
+  - component: $CI_SERVER_FQDN/gitlab-ci/mangono-runbot/odoo-runbot@1
+    inputs:
+      odoo_version: "18.0" <1>
+
+odoo:runbot:18.0: <1>
+  variables:
+    ADDONS_GIT_GENERIC_GRID: "odoo/proprietary-addons/generic_grid" <2>
+    ADDONS_GIT_COMMON_MODULES: "odoo/v15/common-modules" <2>
+    ADDONS_GIT_COMMUNITY_ADDONS: "odoo-addons/community-addons" <2>
+    RUNBOT_DIAG_VERBOSE: 0 # <3>
+----
+<1> Définition de la version d'Odoo, le job de `runbot` aura cette version dans son nom
+<2> Ajout d'_addons_ externes à mon projet
+<3> Surcharge de la variable `RUNBOT_DIAG_VERBOSE` proposé par le composant
+
+CAUTION: Les `variables` font bien une fusion entre celles du composant et les vôtres. +
+Ce n'est pas le cas de toutes les parties du job : `before_script` et `script` sont remplacés.
+
+IMPORTANT: Il faut vous assurer que le job `odoo:runbot:18.0:` sera bien inclut dans votre pipeline. (Voir https://docs.gitlab.com/ci/yaml/includes/#use-rules-with-include[la doc GitLab])

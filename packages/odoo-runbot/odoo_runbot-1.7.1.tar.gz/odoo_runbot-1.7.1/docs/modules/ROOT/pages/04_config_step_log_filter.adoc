@@ -1,0 +1,121 @@
+= Log Filter
+
+Les "Log Filter" dans chaque `step` permettent de filtrer des logs produits par Odoo (ou une librairie) comme autorisés.
+
+Vous pouvez filtrer des _logs_ de niveau `WARNING`, `CRITICAL`, `ERROR`. +
+Les niveaux `INFO` et `DEBUG` sont **toujours acceptés**
+
+Il est possible de décider le nombre de fois, et par qui, ce _log_ doit être émis.
+
+IMPORTANT: Un maximum de `10` _match_ (par `step`) a été choisi. Au-delà, il faut sûrement regarder pourquoi ce log apparait aussi souvent
+
+En version simple, directement dans la `step` dans l'attribut `log-filters` sous la forme d'une https://toml.io/en/v1.0.0#array[liste] de https://toml.io/en/v1.0.0#string[Literal strings] (avec `'` au lieu de `"`)
+Dans cette déclaration, le `level` attendu sera `WARNING` et uniquement `1` occurence de cette regex sera acceptée.
+
+== Champs possibles
+
+|===
+| name | Type Toml | Par défaut
+
+| name | https://toml.io/en/v1.0.0#string[string] | `"Step XX - Filter YYY"` avec `XX` le numéro de la step, `YY` le numéro du filtre
+| regex | https://toml.io/en/v1.0.0#string[Literal strings] | *Obligatoire*
+| logger | https://toml.io/en/v1.0.0#string[string] | `""`
+| level |  https://toml.io/en/v1.0.0#string[string] | `"WARNING"`, possible de mettre `CRITICAL`, `ERROR`
+| min_match | int | `1`
+| max_match | int | `1` max `100`
+|===
+
+NOTE: Seul l'attribut `regex` est obligatoire.
+
+== Format simple
+
+CAUTION: Dans le format simple, le _log_ doit apparaitre **exactement 1 fois**.
+
+
+
+[tabs]
+======
+pyproject.toml::
++
+====
+[,toml]
+----
+[tool.runbot.step.step1]
+# ... Les autres attributs de la step
+log-filters = ['.*my regex filter.*'] # <1>
+----
+<1> Bien mettre entre simple _quote_ `'`
+====
+
+runbot.toml::
++
+====
+[,toml]
+----
+[step.step1]
+# ... Les autres attributs de la step
+log-filters = ['.*my regex filter.*'] # <1>
+----
+<1> Bien mettre entre simple _quote_ `'`
+====
+
+result.toml::
++
+====
+C'est comme si vous aviez écrit cette déclaration.Voir <<_format_complet>>
+[,toml]
+----
+[[tool.runbot.step.step1.log-filters]]
+name = "Step1 - Filter 1" # <1>
+regex = '.*my regex filter.*' # <2>
+min-match = 1 # <1>
+max-match = 1 # <1>
+level = "WARNING" # <1>
+----
+<1> Value par défaut
+<2> Regex en config
+====
+======
+
+
+
+[#_format_complet]
+== Format complet
+
+Il est aussi possible d'être plus précis en choisissant le nombre de fois où le message doit apparaître, et pour quel `logger`. +
+Dans ce cas, c'est une https://toml.io/en/v1.0.0#array-of-tables[liste de tables], donc avec des `[[]]`
+
+[tabs]
+======
+pyproject.toml::
++
+====
+[,toml]
+----
+[tool.runbot.step.step1]
+# ... Les autres attributs de la step
+[[tool.runbot.step.step1.log-filters]]
+name = "Filtre de duplication de string"
+regex = '.*field name have the same string value beetween models.*'
+min-match = 2
+max-match = 5
+level = "WARNING"
+----
+====
+
+runbot.toml::
++
+====
+[,toml]
+----
+[step.step1]
+# ... Les autres attributs de la step
+[[step.step1.log-filters]]
+name = "Filtre de duplication de string"
+regex = '.*field name have the same string value beetween models.*'
+min-match = 2
+max-match = 5
+level = "WARNING"
+----
+====
+======

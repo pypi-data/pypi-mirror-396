@@ -1,0 +1,26 @@
+= CI/CD Components
+
+Ce projet contient à la fois le code python permettant d'éxécuter les test Odoo dans un pipeline GitLab, et un composant de pipeline.
+
+Le la documentation automatique de GitLab pour ce composant est https://gitlab.mangono.io/explore/catalog/gitlab-ci/odoo-quality[disponible ici]
+
+.Configuration minimaliste `.gitlab-ci.yml`
+[,yml]
+----
+include:
+    - component: $CI_SERVER_FQDN/gitlab-ci/odoo-quality/runbot@1.0.0
+    inputs:
+      odoo_version: 12.0 # <.>
+----
+<.> La version de l'image Odoo dans laquelle les tests s'exécuteront
+
+NOTE: Il faut avoir la configuration du `runbot` dans un fichier `toml`. xref:09_sample.adoc[]
+
+
+[[component_template]]
+== Hidden job
+
+Lors de l'inclusion du composant, il y a en rélalité 2 job, le job de runbot et un qui sert de template `.tmpl:odoo:job-name:odoo-version`. +
+Ce job caché est là uniquement pour des raisons techniques et n'a pas lieu d'etre surchargé.
+
+TIP: Sa principale utilité est de changer la balise `before_script` du job sans changer la partie `script`.

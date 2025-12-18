@@ -1,0 +1,38 @@
+= Bonnes pratiques
+
+* Une méthode de test ne doit tester que le résultat d'une fonctionnalité à la fois. +
+L'idée est qu'un changement de cette fonctionnalité n'oblige à changer que ce test et uniquement si cela impact le résultat final afin de ne pas rendre difficile les évolutions.
+
+* Dans la même idée, si l'ordre des résultats n'a pas d'importance fonctionnelle, il est inutile de le tester.
+
+* Il est inutile de tester des éléments basiques de Odoo, il a déjà ses propres classes de tests.
+
+* Pas d'appel de méthode privée en dehors de celles du test.
+
+* Utiliser le plus possible les données existantes dans les datas des modules principaux, sinon les créer dans le module de tests.
+
+* Ne pas utiliser de données en `noupdate`.
+
+* Attention aux dates : les fixer, ne pas utiliser `now()` !
+
+* Avoir un test qui utilise `Form` par type d'objet pour s'assurer que les vues fonctionnent correctement.
+
+* Pas d'installation de module de test en prod et donc pas de code dédié aux tests en production. +
+C'est le module de test qui doit contenir des helpers ou des mocks pour ajouter ce qu'il lui manque.
+
+* Quand un test devient caduc suite à une évolution, plutôt que de le supprimer, ajoutez le décorateur `@unittest.expectedFailure`. Le fait que le test échoue devient le comportement attendu et permet de documenter l'évolution.
+dans le Runbot
+
+== Couverture de code
+
+Pycharm permet d'obtenir la couverture de code des tests en exécutant la configuration de test en mode *Run with Coverage*.
+
+L'interface graphique affiche alors le pourcentage de couverture du code par fichier et par lignes, ainsi que sur chaque fichier les lignes couvertes par les tests.
+
+image::test_coverage_percentage.png[]
+
+image::test_coverage_line.png[]
+
+TIP: Un XML est également généré dans */home/dossier_utilisateur/.cache/Pycharm_version/coverage/nom_projet$nom_configuration*, permettant de suivre dans le temps l'évolution du projet.
+
+IMPORTANT: Ce n'est pas une garantie de la qualité des tests !

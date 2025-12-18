@@ -1,0 +1,36 @@
+= Éxécuter en locale
+
+Dans la commande de lancement de Odoo, installer le module de test avec +
+`-i nom_module_tests`et exécuter les tests avec `-d db_test --test-enable --test-tags=pattern --stop-after-init --no-http`.
+
+== Test tags
+
+Pattern peut être :
+
+- .nom_méthode
+- /nom_module
+- :nom_class
+- nom d'un tag
+- - pattern pour exclure le pattern des tests à exécuter
+
+Les class de test peuvent être tagguées avec le décorateur `@tagged("nom_tag")`.
+
+Exemple :
+[source, python]
+----
+from odoo.tests.common import TransactionCase, tagged
+
+@tagged("nom_tag")
+class ClassTests(TransactionCase):
+    # Do some amazing tests
+----
+
+En argument de `cli`:
+[source, shell]
+----
+-d db_test
+-i module_test
+--test-enable
+--test-tags=/module_tests,:ClassTests,-.fonction_test,nom_tag
+--stop-after-init --no-http
+----

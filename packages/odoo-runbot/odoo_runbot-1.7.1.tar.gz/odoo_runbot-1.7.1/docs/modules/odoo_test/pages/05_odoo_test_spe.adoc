@@ -1,0 +1,40 @@
+= Test dans Odoo
+
+== Simuler un Formulaire
+Il est possible de tester les `onchange` avec l'objet `Form` uniquement disponible dans les tests :
+
+[source,python]
+----
+from odoo.tests import Form
+
+# Récupération de la vue form par défaut des partenaires et initialisation d'un formulaire
+# Peut directement prendre une autre vue par son record, son id ou son xmlid
+partner_form = Form(self.env["res.partner"])
+
+partner_form.name = "Jean-Michel Michel"
+partner_form.street = "1 rue Stique"
+
+# Ajout d'un record à une relation X2many
+partner_form.category_id.add(self.env.ref("tms_tests.test_category_base"))
+
+# Création d'une nouvelle adresse pour le partenaire
+with partner_form.address_ids.new() as address_form:
+    address_form.code = "AddressTest01"
+    address_form.name = "Address Test"
+    # Attribution d'un record à une relation Many2one
+    address_form.address_type_id = self.env.ref("tms_data.tms_address_type_delivery")
+
+partner = partner_form.save()  # Nouveau record de partenaire
+----
+
+Les formulaires peuvent aussi être utilisant en context manager :
+
+[source,python]
+----
+with Form(self.env["res.partner"]) as f:
+ f.param1 = True
+# Une fois le context terminé, le record est automatiquement créé, mais on ne le récupère pas
+record = f.save() # Donc on appelle toujours save pour l'obtenir
+----
+
+IMPORTANT: Il faut s'assurer d'avoir un test par class utilisant les formulaires pour s'assurer du bon fonctionnement des vues.
