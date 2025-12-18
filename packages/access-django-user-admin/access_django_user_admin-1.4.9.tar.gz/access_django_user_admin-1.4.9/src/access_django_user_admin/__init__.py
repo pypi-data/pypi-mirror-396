@@ -1,0 +1,1 @@
+default_app_config = 'access_django_user_admin.apps.Access_Django_User_AdminConfig'
