@@ -1,0 +1,100 @@
+[build-system]
+requires = ["setuptools>=77.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ewoksid31"
+version = "0.8.0"
+authors = [{ name = "ESRF", email = "dau-pydev@esrf.fr" }]
+description = "Data processing workflows for ID31"
+readme = { file = "README.md", content-type = "text/markdown" }
+license-files = ["LICENSE.md"]
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+]
+keywords = ["ewoks"]
+requires-python = ">=3.10"
+dependencies = [
+    "ewokscore",
+    "ewoks >=0.1.2",
+    "ewoksjob[redis] >= 1.0.0",
+    "ewoksorange",
+    "ewoksutils >=1.1.0",
+    "ewoksxrpd >=1.5.0",
+    "scipy",
+    "numpy",
+    "h5py",
+    "hdf5plugin",
+    "PyQt5",
+    "silx[full]",
+    "qtawesome",
+    "siphash24",                # remove pytools sha256 warning
+]
+
+[project.urls]
+Homepage = "https://gitlab.esrf.fr/workflow/ewoksapps/ewoksid31/"
+Documentation = "https://ewoksid31.readthedocs.io/"
+Repository = "https://gitlab.esrf.fr/workflow/ewoks/ewoksapps/ewoksid31/"
+Issues = "https://gitlab.esrf.fr/workflow/ewoksapps/ewoksid31/issues/"
+Changelog = "https://gitlab.esrf.fr/workflow/ewoksapps/ewoksid31/-/blob/main/CHANGELOG.md"
+
+[project.optional-dependencies]
+test = ["pytest >=7", "pytest-qt"]
+dev = [
+    "ewoksid31[test]",
+    "bandit",
+    "black >=25",
+    "flake8 >=4",
+    "isort",
+    "mypy",
+]
+doc = [
+    "ewoksid31[dev]",
+    "ewokssphinx >=1.0.0",
+    "sphinx >=4.5",
+    "sphinx-autodoc-typehints >=1.16",
+    "pydata_sphinx_theme",
+    "sphinxcontrib-autoprogram",
+    "sphinx-argparse",
+    "sphinx-copybutton",
+]
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.coverage.run]
+omit = ["setup.py", "*/tests/*"]
+
+[project.scripts]
+streamline-autocalib = "ewoksid31.app.streamline_autocalib:main"
+
+[project.gui-scripts]
+id31-integrate = "ewoksid31.app.integrate.__main__:main"
+
+[project.entry-points."orange3.addon"]
+ewoksid31 = "orangecontrib.ewoksid31"
+
+[project.entry-points."orange.widgets"]
+ID31 = "orangecontrib.ewoksid31"
+
+[project.entry-points."ewoks.tasks.class"]
+"ewoksid31.tasks.*" = "ewoksid31"
+
+[tool.setuptools.package-data]
+"*" = ["*.mat", "*.png", "workflows/*.json", "app/integrate/*.svg"]
+
+[tool.bandit.assert_used]
+skips = ["*/test_*.py"]
+
+[tool.isort]
+profile = "black"
+
+[tool.mypy]
+python_version = "3.10"
+files = "src"
+ignore_missing_imports = true
+explicit_package_bases = true
