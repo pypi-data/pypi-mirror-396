@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Sphinx-Needs Time Measurement Results</title>
+    <style type = text/css>
+        div.container {width: 100%}
+        div.element {width: 400px; float: left; background-color: #fff; border: 2px solid #333; border-radius: 5px; margin: 10px; padding: 5px; min-height: 300px}
+
+        table.overview td {padding: 10px; background-color: #ddd;}
+        table.overview th {padding: 10px; background-color: #ccc;}
+        table.details td {padding: 5px 10px; background-color: #ddd;}
+        table.details td.head {font-weight: bold; background-color: #ccc;}
+
+        pre {white-space: pre-wrap;}
+
+
+    </style>
+
+</head>
+
+<body style="font-family: 'Arial'">
+<h1>Sphinx-Needs Timing Measurement: {{build_data['project']}}</h1>
+<b>Build Duration: </b> {{"%.2f"|format(build_data['duration'])}}s
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<b>Build timestamp: </b> {{ build_data['timestamp'] }}
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<b>Elements: </b> {{data|length}}
+
+
+<h2>Overview</h2>
+
+<table class="overview">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Function</th>
+            <th>Category</th>
+            <th>Source</th>
+            <th>Overall [s]</th>
+            <th>Average [s]</th>
+            <th>Min [s]</th>
+            <th>Max [s]</th>
+            <th>Amount</th>
+            <th>Min/Max spread [%]</th>
+            <th>Ratio build time[%]</th>
+        </tr>
+    </thead>
+{% for key, value in data.items()|sort(attribute='0') %}
+    <tr>
+        <td>{{ loop.index }}</td>
+        <td style="font-weight: bold"><a href="#{{key}}">{{value['name']}}</a></td>
+        <td>{{ value['category'] }}</td>
+        <td>{{ value['source'] }}</td>
+        <td>{{ "%.7f"|format(value['overall']) }}</td>
+        <td>{{ "%.7f"|format(value['avg']) }}</td>
+        <td>{{ "%.7f"|format(value['min']) }}</td>
+        <td>{{ "%.7f"|format(value['max']) }}</td>
+        <td>{{ "%.0f"|format(value['amount']) }}</td>
+        <td>{{ "%.1f"|format(value['min_max_spread']) }}</td>
+        <td>{{ "%.2f"|format(value['overall'] / build_data['duration']*100) }}</td>
+    </tr>
+{% endfor %}
+</table>
+
+
+<h2>Details</h2>
+<div class="container">
+
+    {% for key, value in data.items()|sort(attribute='1.name') %}
+    <div class="element">
+        <h3 style="text-align: center" id="{{key}}">{{value['name']}} <br> <small>({{value['category']}}, {{value['source']}})</small></h3>
+        <div>
+            <table class="details">
+                {% for result in [('Amount', 'amount'), ('Overall [s]', 'overall'), ('Average [s]', 'avg'), ('Min [s]', 'min'),
+                ('Max [s]', 'max'), ('Min-Max spread [%]', 'min_max_spread')] %}
+                <tr>
+                    <td class="head">{{result[0]}}</td>
+                    <td>{{ "%.5f"|format(value[result[1]]) }}</td>
+                </tr>
+                {% endfor %}
+                <tr>
+                    <td class="head">Ratio build time [%]</td>
+                    <td>{{ "%.2f"|format(value['overall'] / build_data['duration']*100) }}</td>
+                </tr>
+            </table>
+        </div>
+
+        <details>
+            <summary>Max run analysis</summary>
+            <p><b>Max:</b> {{value['max']}}</p>
+            <h3>args</h3>
+            <pre>{{value['max_params']['args']}}</pre>
+            <h3>kwargs</h3>
+            {{value['max_params']['kwargs']}}
+        </details>
+
+        <details>
+            <summary>Show Meta Data</summary>
+            <div>
+                <p><b>File:</b> {{value['file']}}</p>
+                <p><b>Line:</b> {{value['line']}}</p>
+            </div>
+            <h3>Function docs</h3>
+            <div>{{value['doc']|replace('\n', '<br>')|safe}}</div>
+
+        </details>
+    </div>
+    {% endfor %}
+
+</div>
+
+
+</body>
+
+</html>
