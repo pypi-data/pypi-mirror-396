@@ -1,0 +1,103 @@
+# Altimetry Downloader Aviso
+
+A client to download data available on Aviso.
+
+## Install
+
+### Conda
+
+```bash
+conda install -c conda-forge altimetry-downloader-aviso
+```
+
+### Pypi
+
+```bash
+pip install altimetry-downloader-aviso
+```
+
+## Use
+
+
+### List products available in Aviso's catalog
+
+The first version of the client is set up to download Swot products.
+
+```python
+
+>>> altimetry-downloader-aviso summary
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Short Name                    ┃ Title                                                                                              ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ L4_exp_with_SWOT              │ Experimental Products: Multimission Gridded (with SWOT) Level-4 Sea Surface Heights and Velocities │
+│ SWOT_L2_LR_SSH_Basic          │ Altimetry product SWOT Level-2 KaRIn Low Rate SSH - Basic                                          │
+│ SWOT_L2_LR_SSH_Expert         │ Altimetry product SWOT Level-2 KaRIn Low Rate SSH - Expert                                         │
+│ SWOT_L2_LR_SSH_Unsmoothed     │ Altimetry product SWOT Level-2 KaRIn Low Rate SSH - Unsmoothed                                     │
+│ SWOT_L2_LR_SSH_WindWave       │ Altimetry product SWOT Level-2 KaRIn Low Rate SSH - WindWave                                       │
+│ SWOT_L3_LR_SSH_Basic          │ Altimetry product SWOT Level-3 Low Rate SSH - Basic                                                │
+│ SWOT_L3_LR_SSH_Expert         │ Altimetry product SWOT Level-3 Low Rate SSH - Expert                                               │
+│ SWOT_L3_LR_SSH_Unsmoothed     │ Altimetry product SWOT Level-3 Low Rate SSH - Unsmoothed                                           │
+│ SWOT_L3_LR_WIND_WAVE_Extended │ Wind & Wave product SWOT Level-3 WindWave - Extended                                               │
+│ SWOT_L3_LR_WIND_WAVE_Light    │ Wind & Wave product SWOT Level-3 WindWave - Light                                                  │
+└───────────────────────────────┴────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+```
+
+### Get a product details
+
+```python
+
+>>> altimetry-downloader-aviso details SWOT_L3_LR_SSH_Basic
+
+╭───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── Product: SWOT_L3_LR_SSH_Basic ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ │
+│ ┃ Field                     ┃ Value                                                                                                                                                                                                                                                                            ┃ │
+│ ┡━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩ │
+│ │ Id                        │ aa2927ad-d1d6-4867-89d3-1311bc11e6bb                                                                                                                                                                                                                                             │ │
+│ │ Title                     │ Altimetry product SWOT Level-3 Low Rate SSH - Basic                                                                                                                                                                                                                              │ │
+│ │ Short Name                │ SWOT_L3_LR_SSH_Basic                                                                                                                                                                                                                                                             │ │
+│ │ Keywords                  │ Platform(s): SWOT, SWOT                                                                                                                                                                                                                                                          │ │
+│ │                           │ Instrument(s): POSEIDON-3C, KaRIn                                                                                                                                                                                                                                                │ │
+│ │                           │ Parameters(s): Sea Surface Topography                                                                                                                                                                                                                                            │ │
+│ │                           │ Spatial resolution: 2 km                                                                                                                                                                                                                                                         │ │
+│ │                           │                                                                                                                                                                                                                                                                                  │ │
+│ │ Abstract                  │ The SWOT L3_LR_SSH product provides ocean topography measurements obtained from the SWOT KaRIn and nadir altimeter instruments, merged into a single variable. The dataset includes measurements from KaRIn swaths on both sides of the image, while the measurements from the   │ │
+│ │                           │ nadir altimeter are located in the central columns. In the areas between the nadir track and the two KaRIn swaths, as well as on the outer edges of each swath (restricted to cross-track distances ranging from 10 to 60 km), default values are expected.                      │ │
+│ │                           │                                                                                                                                                                                                                                                                                  │ │
+│ │                           │ SWOT L3_LR_SSH is a cross-calibrated product from multiple missions that contains only the ocean topography content necessary for thematic research (e.g., oceanography, geodesy) and related applications. This product is designed to be simple and ready-to-use, and can be   │ │
+│ │                           │ combined with other altimetry missions.  The SWOT L3_LR_SSH product is a research-orientated extension of the L2_LR_SSH product, distributed by the SWOT project (NASA/JPL and CNES) and managed by the SWOT Science Team project DESMOS.                                        │ │
+│ │                           │                                                                                                                                                                                                                                                                                  │ │
+│ │                           │ The "Basic" version of SWOT L3_LR_SSH (the "Expert" version is the subject of a separate metadata sheet) includes only the SSH anomalies and mean dynamic topography.                                                                                                            │ │
+│ │ Level                     │ L3                                                                                                                                                                                                                                                                               │ │
+│ │ URL                       │ https://tds%40odatis-ocean.fr:odatis@tds-odatis.aviso.altimetry.fr/thredds/catalog/L3/SWOT_KARIN-L3_LR_SSH.html                                                                                                                                                                  │ │
+│ │ DOI                       │ https://doi.org/10.24400/527896/A01-2023.017                                                                                                                                                                                                                                     │ │
+│ │ Last Update               │ 2025-03-14 23:00:00+00:00                                                                                                                                                                                                                                                        │ │
+│ │ Last Version              │ v3.0                                                                                                                                                                                                                                                                           │ │
+│ │ Credit                    │ CDS-AVISO                                                                                                                                                                                                                                                                        │ │
+│ │ Organisation              │ AVISO                                                                                                                                                                                                                                                                            │ │
+│ │ Contact                   │ aviso@altimetry.fr                                                                                                                                                                                                                                                               │ │
+│ │ Resolution                │ 2 km                                                                                                                                                                                                                                                                             │ │
+│ │ Temporal extent           │ 2023-03-29 00:00:00, None                                                                                                                                                                                                                                                        │ │
+│ │ Geographic extent         │ -180.0, 180.0, -80.0, 80.0                                                                                                                                                                                                                                                       │ │
+│ └───────────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘ │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+```
+
+
+### Download a product
+
+```python
+
+>>> altimetry-downloader-aviso get SWOT_L3_LR_SSH_Basic --output aviso_dir --cycle 7 --pass 12,13
+
+Downloaded files (2) :
+- aviso_dir/SWOT_L3_LR_SSH_Basic_007_012_20231123T193011_20231123T202137_v3.0.nc
+- aviso_dir/SWOT_L3_LR_SSH_Basic_007_013_20231123T202138_20231123T211304_v3.0.nc
+
+```
+
+# More information
+
+For more information on how to to use altimetry-downloader-aviso, see [documentation](https://robin-cls.github.io/aviso/)
