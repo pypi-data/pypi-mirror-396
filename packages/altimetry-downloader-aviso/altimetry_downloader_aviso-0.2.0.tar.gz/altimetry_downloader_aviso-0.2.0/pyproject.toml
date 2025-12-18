@@ -1,0 +1,85 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "altimetry-downloader-aviso"
+dynamic = ["version"]
+description = "Downloader for datasets hosted on CNES AVISO"
+requires-python = ">=3.10"
+dependencies = [
+    "requests",
+    "numpy",
+    "siphon",
+    "typer",
+    "rich",
+    "files-collections",
+    "pyyaml",
+    "pydantic"
+]
+authors = [
+    {name = "Robin Chevrier", email = "rchevrier@groupcls.com"},
+    {name = "Anne-Sophie Tonneau", email = "atonneau@groupcls.com"}
+]
+maintainers = [
+    {name = "Robin Chevrier", email = "rchevrier@groupcls.com"},
+    {name = "Anne-Sophie Tonneau", email = "atonneau@groupcls.com"}
+]
+classifiers = [
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Oceanography",
+    "Development Status :: 4 - Beta"]
+
+[project.scripts]
+altimetry-downloader-aviso = "altimetry_downloader_aviso.cli:app"
+
+[project.optional-dependencies]
+tests = [
+    "pytest",
+    "pytest-cov",
+    "pytest-mock",
+    "pyyaml",
+]
+# Unpin sphinx<9 when RTD theme is compatible
+doc = ["sphinx<9", "sphinx-autodoc-typehints", "sphinx_rtd_theme"]
+
+[tool.setuptools.package-data]
+"*" = ["*.yaml", "*.yml"]
+
+[tool.setuptools_scm]
+local_scheme = "no-local-version"
+
+[project.urls]
+Homepage = "https://github.com/robin-cls/aviso"
+Documentation = "https://robin-cls.github.io/aviso/"
+Repository = "https://github.com/robin-cls/aviso"
+Issues = "https://github.com/robin-cls/aviso/issues"
+
+[tool.coverage.report]
+exclude_also = [
+    "if TYPE_CHECKING:",
+]
+
+[tool.isort]
+profile = "black"
+known_first_party = ["altimetry_downloader_aviso"]
+
+[tool.pytest.ini_options]
+addopts=["--import-mode=importlib"]
+filterwarnings = [
+    # Turn all other warnings into errors
+    "error",
+    # Can be safely ignored according to
+    # https://github.com/Unidata/netcdf4-python/issues/1354
+    "ignore:numpy\\.ndarray size changed"
+]
