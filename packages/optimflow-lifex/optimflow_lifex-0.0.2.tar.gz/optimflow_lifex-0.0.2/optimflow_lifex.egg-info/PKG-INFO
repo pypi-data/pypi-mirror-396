@@ -1,0 +1,45 @@
+Metadata-Version: 2.4
+Name: optimflow-lifex
+Version: 0.0.2
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: pyrameters
+Requires-Dist: optimflow
+Dynamic: license-file
+
+# Parameter Space Exploration and CMA-ES Optimisation
+
+Extension of [optimflow](https://gitlab.inria.fr/gdesrues1/optimflow).
+
+## Install
+
+```bash
+pip install optimflow-lifex
+```
+
+## Run parameters exploration
+
+```python
+out_path = Path(__file__).parent / "out"
+
+class CMAESParams(OptimParams):
+    Ko = param.Number(0.5, bounds=(0, 2), doc="")
+    Cao = param.Number(10, bounds=(5, 25), doc="")
+
+simulation_params = LifexParams()
+optim_params = CMAESParams()
+
+def lifex_worker(dname: str):
+    params = LifexParams.load_from(dname)
+    Ko = params.lifex_param_set.get("/Ionic model/TTP06/Physical constants/Ko")
+    t = np.linspace(0, 1, 100)
+    res = Ko * np.sin(2 * np.pi * t)
+    np.savetxt(params.out_dir / "result.txt", res)
+
+explo = LifexParameterSpaceExploration(out_path)
+explo.dump_params(simulation_params, optim_params)
+explo.run(lifex_worker)
+explo.gather_results()
+explo.plot_results()
+```
