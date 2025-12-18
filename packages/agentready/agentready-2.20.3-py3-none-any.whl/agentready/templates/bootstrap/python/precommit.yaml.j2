@@ -1,0 +1,23 @@
+{% extends "_base/precommit.yaml.j2" %}
+
+{% block language_formatters %}
+  - repo: https://github.com/psf/black
+    rev: 24.1.1
+    hooks:
+      - id: black
+        language_version: python3.12
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: ["--profile", "black"]
+{% endblock %}
+
+{% block language_linters %}
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.14
+    hooks:
+      - id: ruff
+        args: ["--fix"]
+{% endblock %}

@@ -1,0 +1,27 @@
+{# Base pre-commit configuration - common hooks for all languages #}
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: check-json
+      - id: detect-private-key
+
+  {% block language_formatters %}
+  {# Language-specific formatters and linters (black, prettier, gofmt, etc.) #}
+  {% endblock %}
+
+  {% block language_linters %}
+  {# Language-specific linters (ruff, eslint, golangci-lint, etc.) #}
+  {% endblock %}
+
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v3.0.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]

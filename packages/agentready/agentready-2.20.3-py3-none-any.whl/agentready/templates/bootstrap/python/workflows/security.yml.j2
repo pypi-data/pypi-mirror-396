@@ -1,0 +1,26 @@
+{% extends "_base/workflows/security.yml.j2" %}
+
+{% block codeql_language %}python{% endblock %}
+
+{% block language_security %}
+  safety:
+    name: Dependency Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install safety
+
+      - name: Run safety check
+        run: |
+          safety check --json || true
+{% endblock %}

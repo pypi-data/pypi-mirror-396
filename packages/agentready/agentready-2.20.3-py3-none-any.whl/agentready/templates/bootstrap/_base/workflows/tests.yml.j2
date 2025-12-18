@@ -1,0 +1,44 @@
+{# Base GitHub Actions test workflow - common structure for all languages #}
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    {% block strategy %}
+    {# Language-specific matrix strategy (e.g., Python versions) #}
+    {% endblock %}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      {% block setup_environment %}
+      {# Language-specific environment setup (Python, Node, Go, etc.) #}
+      {% endblock %}
+
+      {% block install_dependencies %}
+      {# Language-specific dependency installation #}
+      {% endblock %}
+
+      {% block run_linters %}
+      {# Language-specific linters and formatters #}
+      {% endblock %}
+
+      {% block run_tests %}
+      {# Language-specific test command #}
+      {% endblock %}
+
+      {% block upload_coverage %}
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        {% block coverage_condition %}if: true{% endblock %}
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: false
+      {% endblock %}

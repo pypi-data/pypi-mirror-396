@@ -1,0 +1,43 @@
+{% extends "_base/workflows/tests.yml.j2" %}
+
+{% block strategy %}
+    strategy:
+      matrix:
+        python-version: ['3.12', '3.13']
+{% endblock %}
+
+{% block setup_environment %}
+      - name: Set up Python {{ '${{ matrix.python-version }}' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: {{ '${{ matrix.python-version }}' }}
+{% endblock %}
+
+{% block install_dependencies %}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+{% endblock %}
+
+{% block run_linters %}
+      - name: Run black
+        run: |
+          black --check .
+
+      - name: Run isort
+        run: |
+          isort --check .
+
+      - name: Run ruff
+        run: |
+          ruff check .
+{% endblock %}
+
+{% block run_tests %}
+      - name: Run pytest
+        run: |
+          pytest --cov=src --cov-report=xml --cov-report=term
+{% endblock %}
+
+{% block coverage_condition %}if: matrix.python-version == '3.11'{% endblock %}

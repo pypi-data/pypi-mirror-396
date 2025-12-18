@@ -1,0 +1,35 @@
+{% extends "_base/workflows/tests.yml.j2" %}
+
+{% block strategy %}
+    strategy:
+      matrix:
+        node-version: ['18', '20', '22']
+{% endblock %}
+
+{% block setup_environment %}
+      - name: Set up Node.js {{ '${{ matrix.node-version }}' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: {{ '${{ matrix.node-version }}' }}
+          cache: 'npm'
+{% endblock %}
+
+{% block install_dependencies %}
+      - name: Install dependencies
+        run: npm ci
+{% endblock %}
+
+{% block run_linters %}
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run Prettier
+        run: npm run format:check
+{% endblock %}
+
+{% block run_tests %}
+      - name: Run tests
+        run: npm test -- --coverage
+{% endblock %}
+
+{% block coverage_condition %}if: matrix.node-version == '20'{% endblock %}
