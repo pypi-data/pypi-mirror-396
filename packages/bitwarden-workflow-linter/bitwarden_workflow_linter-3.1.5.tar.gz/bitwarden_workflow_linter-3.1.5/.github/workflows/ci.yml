@@ -1,0 +1,131 @@
+name: CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-unit:
+    name: Unit Tests
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+          - os: windows-2022
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+        with:
+          python-version-file: ".python-version"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pipenv
+          pipenv install --dev
+
+      - name: Run pytest
+        if: startsWith(matrix.os, 'ubuntu')
+        env:
+          PYTHONPATH: "${{ github.workspace }}/src"
+        run: pipenv run pytest tests --cov=src
+
+      - name: Check type hinting
+        if: startsWith(matrix.os, 'ubuntu')
+        run: pipenv run pytype src
+
+  test-integration:
+    name: Integration Tests
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+          - os: windows-2022
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+        with:
+          python-version-file: ".python-version"
+
+      - name: Install bwwl binary
+        run: python -m pip install --upgrade .
+
+      - name: Test against example workflows
+        # run notes:
+        # - Changing directories will help catch any repo specific paths in the linter
+        #   that would not work in a different repository
+        # - Changing directories utilizes the default_settings.yaml rather than this repos
+        #   settings.yaml, which better simulates running from another repository
+        # - Using strict to ensure that our examples pass all checks including warnings
+        working-directory: .github/workflows
+        env:
+          files: "examples/ examples/example.yaml"
+        run: |
+          echo "$files"
+          bwwl lint --strict -f $files
+
+      - name: Lint - Non-existent file
+        id: non-existent-file
+
+        env:
+          files: ".github/workflows/---does-not-exist.yml"
+        run: |
+          echo "$files"
+          bwwl lint -f $files
+        continue-on-error: true
+
+      - name: Lint - Invalid file
+        id: invalid-file
+
+        env:
+          files: "tests/fixtures/test_workflow_incorrect.yaml"
+        run: |
+          echo "$files"
+          bwwl lint -f $files
+        continue-on-error: true
+
+      - name: Verify failures are detected
+        env:
+          OUTCOME_NON_EXISTENT_FILE: ${{ steps.non-existent-file.outcome }}
+          OUTCOME_INVALID_FILE: ${{ steps.invalid-file.outcome }}
+        run: |
+          if [ "$OUTCOME_NON_EXISTENT_FILE" != "failure" ]; then
+            echo "Linting did not correctly fail on non-existent file."
+            exit 1
+          fi
+          if [ "$OUTCOME_INVALID_FILE" != "failure" ]; then
+            echo "Linting did not correctly fail on invalid file."
+            exit 1
+          fi
+
+      - name: Test bwwl actions - add
+        env:
+          _ACTION: bitwarden/gh-actions
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Avoid rate limiting
+        run: bwwl actions add -o src/bitwarden_workflow_linter/default_actions.json "$_ACTION"
+
+      # TODO: Add this test back in and added related error logging to fix the underlying issue
+      # - name: Test bwwl actions - update
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Avoid rate limiting
+      #   run: bwwl actions update -o src/bitwarden_workflow_linter/default_actions.json
