@@ -1,0 +1,528 @@
+name: "IAM Validator"
+description: "Validate AWS IAM policies for correctness and security. Standalone action with built-in checks and AWS Access Analyzer."
+author: "boogy"
+
+branding:
+  icon: "shield"
+  color: "orange"
+
+inputs:
+  path:
+    description: "Path(s) to IAM policy JSON/YAML file or directory (relative to repository root). For multiple paths, use newline-separated values"
+    required: true
+
+  config-file:
+    description: "Path to custom configuration file (iam-validator.yaml)"
+    required: false
+    default: ""
+
+  fail-on-warnings:
+    description: "Fail validation if warnings are found (default: only fail on errors)"
+    required: false
+    default: "false"
+
+  post-comment:
+    description: "Post validation results as PR comment"
+    required: false
+    default: "true"
+
+  create-review:
+    description: "Create line-specific review comments on PR (requires post-comment: true)"
+    required: false
+    default: "true"
+
+  allow-owner-ignore:
+    description: "Allow CODEOWNERS to ignore findings by replying 'ignore' to review comments"
+    required: false
+    default: "true"
+
+  github-summary:
+    description: "Write summary to GitHub Actions job summary (visible in Actions tab)"
+    required: false
+    default: "false"
+
+  show-console-output:
+    description: "Show enhanced validation results in job logs (CI mode). Set to 'false' to suppress console output"
+    required: false
+    default: "true"
+
+  format:
+    description: "Output format (console, enhanced, json, markdown, sarif, csv, html)"
+    required: false
+    default: "console"
+
+  output-file:
+    description: "Path to save output file (for json, markdown, sarif, csv, html formats)"
+    required: false
+    default: ""
+
+  recursive:
+    description: "Recursively search directories for policy files"
+    required: false
+    default: "true"
+
+  use-access-analyzer:
+    description: "Use AWS IAM Access Analyzer for validation (requires AWS credentials)"
+    required: false
+    default: "false"
+
+  access-analyzer-region:
+    description: "AWS region for Access Analyzer (default: us-east-1)"
+    required: false
+    default: "us-east-1"
+
+  policy-type:
+    description: "Policy type for Access Analyzer (IDENTITY_POLICY, RESOURCE_POLICY, SERVICE_CONTROL_POLICY, RESOURCE_CONTROL_POLICY)"
+    required: false
+    default: "IDENTITY_POLICY"
+
+  run-all-checks:
+    description: "Run custom checks after Access Analyzer (only if use-access-analyzer: true)"
+    required: false
+    default: "false"
+
+  # Custom Policy Check inputs
+  check-access-not-granted:
+    description: "Actions that should NOT be granted (space-separated, max 100). Example: 's3:DeleteBucket iam:CreateAccessKey'"
+    required: false
+    default: ""
+
+  check-access-resources:
+    description: "Resources to check with check-access-not-granted (space-separated, max 100). Example: 'arn:aws:s3:::prod-* arn:aws:iam::*:role/*'"
+    required: false
+    default: ""
+
+  check-no-new-access:
+    description: "Path to existing/baseline policy to compare against for new access checks (relative to repository root)"
+    required: false
+    default: ""
+
+  check-no-public-access:
+    description: "Check that resource policies do not allow public access (RESOURCE_POLICY only)"
+    required: false
+    default: "false"
+
+  public-access-resource-type:
+    description: "Resource type(s) for public access check. Use 'all' to check all 29 types, or specify space-separated types. Options: all, AWS::S3::Bucket, AWS::Lambda::Function, AWS::KMS::Key, AWS::SNS::Topic, AWS::SQS::Queue, etc."
+    required: false
+    default: "AWS::S3::Bucket"
+
+  # Performance & Offline Options
+  custom-checks-dir:
+    description: "Path to directory containing custom validation checks (relative to repository root)"
+    required: false
+    default: ""
+
+  aws-services-dir:
+    description: "Path to directory containing pre-downloaded AWS service definitions for offline mode (relative to repository root). Use 'iam-validator download-services' to create this directory. When specified, disables automatic caching and API calls."
+    required: false
+    default: ""
+
+  log-level:
+    description: "Logging level (debug, info, warning, error, critical)"
+    required: false
+    default: "warning"
+
+  github-token:
+    description: "GitHub token for posting comments and reviews. Defaults to automatic github.token"
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  validation-result:
+    description: "Validation result (success or failure)"
+    value: ${{ steps.validate.outcome }}
+
+  total-policies:
+    description: "Total number of policies validated"
+    value: ${{ steps.validate.outputs.total-policies }}
+
+  valid-policies:
+    description: "Number of valid policies"
+    value: ${{ steps.validate.outputs.valid-policies }}
+
+  invalid-policies:
+    description: "Number of invalid policies"
+    value: ${{ steps.validate.outputs.invalid-policies }}
+
+  total-issues:
+    description: "Total number of issues found"
+    value: ${{ steps.validate.outputs.total-issues }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@cfd55ca82492758d853442341ad4d8010466803a # v6.0.0
+      with:
+        python-version-file: "${{ github.action_path }}/.python-version"
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@ed21f2f24f8dd64503750218de024bcf64c7250a # v7.1.5
+      with:
+        enable-cache: true
+        cache-suffix: ci # Prune cache in CI to reduce bloat
+
+    - name: Sync dependencies
+      working-directory: ${{ github.action_path }}
+      run: uv sync --frozen
+      shell: bash
+
+    - name: Display version information
+      working-directory: ${{ github.action_path }}
+      run: |
+        # Get version from package
+        VERSION=$(uv run python -c "from iam_validator.__version__ import __version__; print(__version__)")
+
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "🛡️ IAM Policy Validator ${VERSION}"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      shell: bash
+
+    - name: Get current week for cache key
+      id: week
+      run: echo "week=$(date +%Y-W%V)" >> $GITHUB_OUTPUT
+      shell: bash
+
+    - name: Restore AWS service definitions cache
+      id: cache-aws-services
+      uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      with:
+        path: ~/.cache/iam-validator/aws_services
+        # Cache key refreshes weekly to get latest AWS service updates
+        key: aws-services-${{ runner.os }}-${{ steps.week.outputs.week }}
+        restore-keys: |
+          aws-services-${{ runner.os }}-
+
+    # Github actions cache is immutable - once saved with a key, it cannot be updated
+    # Attempting to save with an existing key will silently do nothing
+    # This is why we need to update the file modification times to prevent unnecessary re-downloads for long running PRs
+    # https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows#about-the-cache
+    - name: Check cache status and update timestamps
+      run: |
+        if [ -d ~/.cache/iam-validator/aws_services ]; then
+          echo "✅ Cache directory exists"
+          FILE_COUNT=$(ls -1 ~/.cache/iam-validator/aws_services 2>/dev/null | wc -l)
+          echo "📁 Cache files: $FILE_COUNT"
+
+          if [ "$FILE_COUNT" -gt 0 ]; then
+            echo "📋 Sample of cached files:"
+            ls -lh ~/.cache/iam-validator/aws_services | head -5
+
+            # Update file modification times to prevent re-download due to TTL expiration
+            # GitHub Actions cache preserves original timestamps, which can cause files
+            # to appear expired even though they were just restored from cache
+            # Always update timestamps if files exist, regardless of exact cache hit
+            echo ""
+            echo "🔄 Updating file modification times to prevent unnecessary re-downloads"
+            find ~/.cache/iam-validator/aws_services -type f -name "*.json" -exec touch {} +
+            echo "✅ Updated timestamps for all cached files"
+
+            if [ "${{ steps.cache-aws-services.outputs.cache-hit }}" == "true" ]; then
+              echo "✅ Exact cache key match"
+            else
+              echo "ℹ️  Cache restored from previous week using restore-keys fallback"
+            fi
+          fi
+        else
+          echo "❌ Cache directory does not exist - will fetch from API"
+        fi
+      shell: bash
+
+    - name: Pre-validate IAM Policy Files
+      id: prevalidate
+      run: |
+        # Function to check if a file is an IAM policy
+        is_iam_policy() {
+          local file="$1"
+
+          # Check if file exists and is readable
+          if [ ! -f "$file" ] || [ ! -r "$file" ]; then
+            return 1
+          fi
+
+          # Check file extension
+          case "${file##*.}" in
+            json|yaml|yml) ;;
+            *) return 1 ;;
+          esac
+
+          # Check if file contains IAM policy markers
+          # Look for "Version" and "Statement" fields (required in IAM policies)
+          if grep -q '"Version"' "$file" 2>/dev/null && grep -q '"Statement"' "$file" 2>/dev/null; then
+            return 0
+          elif grep -q '^Version:' "$file" 2>/dev/null && grep -q '^Statement:' "$file" 2>/dev/null; then
+            return 0
+          elif grep -q '  Version:' "$file" 2>/dev/null && grep -q '  Statement:' "$file" 2>/dev/null; then
+            return 0
+          fi
+
+          return 1
+        }
+
+        # Parse paths and filter IAM policies
+        IAM_POLICIES=""
+        NON_IAM_FILES=""
+        TOTAL_FILES=0
+        IAM_POLICY_COUNT=0
+
+        IFS=$'\n'
+        for path in ${{ inputs.path }}; do
+          path=$(echo "$path" | xargs)
+          [ -z "$path" ] && continue
+
+          full_path="${{ github.workspace }}/$path"
+
+          # Handle directory or file
+          if [ -d "$full_path" ]; then
+            # Find all JSON/YAML files in directory
+            while IFS= read -r -d '' file; do
+              TOTAL_FILES=$((TOTAL_FILES + 1))
+              if is_iam_policy "$file"; then
+                IAM_POLICIES="$IAM_POLICIES$file"$'\n'
+                IAM_POLICY_COUNT=$((IAM_POLICY_COUNT + 1))
+              else
+                NON_IAM_FILES="$NON_IAM_FILES$file"$'\n'
+              fi
+            done < <(find "$full_path" -type f \( -name "*.json" -o -name "*.yaml" -o -name "*.yml" \) -print0)
+          elif [ -f "$full_path" ]; then
+            # Single file
+            TOTAL_FILES=$((TOTAL_FILES + 1))
+            if is_iam_policy "$full_path"; then
+              IAM_POLICIES="$IAM_POLICIES$full_path"$'\n'
+              IAM_POLICY_COUNT=$((IAM_POLICY_COUNT + 1))
+            else
+              NON_IAM_FILES="$NON_IAM_FILES$full_path"$'\n'
+            fi
+          fi
+        done
+        unset IFS
+
+        # Output summary
+        echo "📊 File Analysis Summary:"
+        echo "  Total files found: $TOTAL_FILES"
+        echo "  IAM policies detected: $IAM_POLICY_COUNT"
+        echo "  Non-IAM files skipped: $((TOTAL_FILES - IAM_POLICY_COUNT))"
+
+        if [ -n "$NON_IAM_FILES" ] && [ $((TOTAL_FILES - IAM_POLICY_COUNT)) -gt 0 ]; then
+          echo ""
+          echo "⏭️  Skipped non-IAM files:"
+          echo "$NON_IAM_FILES" | grep -v '^$' | head -10
+          if [ $((TOTAL_FILES - IAM_POLICY_COUNT)) -gt 10 ]; then
+            echo "  ... and $((TOTAL_FILES - IAM_POLICY_COUNT - 10)) more"
+          fi
+        fi
+
+        # Save IAM policies list for next step
+        echo "$IAM_POLICIES" > /tmp/iam_policies_list.txt
+
+        # Set output for conditional execution
+        echo "iam-policy-count=$IAM_POLICY_COUNT" >> $GITHUB_OUTPUT
+
+        if [ $IAM_POLICY_COUNT -eq 0 ]; then
+          echo ""
+          echo "⚠️  No IAM policies found. Skipping validation."
+          exit 0
+        fi
+      shell: bash
+
+    - name: Run IAM Policy Validator
+      id: validate
+      if: steps.prevalidate.outputs.iam-policy-count > 0
+      working-directory: ${{ github.action_path }}
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_WORKSPACE: ${{ github.workspace }}
+        # Try multiple ways to get PR number for different event types
+        GITHUB_PR_NUMBER: ${{ github.event.pull_request.number || github.event.number }}
+      run: |
+        set -e
+
+        # Read validated IAM policies from previous step
+        if [ -f /tmp/iam_policies_list.txt ]; then
+          echo "📋 Using pre-validated IAM policies list"
+        fi
+
+        # Build base command with log-level FIRST (global argument)
+        BASE_CMD=""
+        if [ -n "${{ inputs.log-level }}" ] && [ "${{ inputs.log-level }}" != "warning" ]; then
+          BASE_CMD="--log-level ${{ inputs.log-level }}"
+        fi
+
+        # Determine command based on use-access-analyzer flag
+        if [ "${{ inputs.use-access-analyzer }}" = "true" ]; then
+          CMD="analyze"
+        else
+          CMD="validate"
+        fi
+
+        # Parse paths (support newline-separated values)
+        PATH_ARGS=""
+        IFS=$'\n'
+        for p in ${{ inputs.path }}; do
+          # Trim whitespace
+          p=$(echo "$p" | xargs)
+          if [ -n "$p" ]; then
+            PATH_ARGS="$PATH_ARGS --path ${{ github.workspace }}/$p"
+          fi
+        done
+        unset IFS
+
+        # Build arguments (command comes after global options)
+        ARGS="$BASE_CMD $CMD $PATH_ARGS"
+
+        # Add config file if specified
+        if [ -n "${{ inputs.config-file }}" ]; then
+          ARGS="$ARGS --config ${{ github.workspace }}/${{ inputs.config-file }}"
+        fi
+
+        # Add format and output
+        ARGS="$ARGS --format ${{ inputs.format }}"
+        if [ -n "${{ inputs.output-file }}" ]; then
+          ARGS="$ARGS --output ${{ github.workspace }}/${{ inputs.output-file }}"
+        fi
+
+        # Add recursive flag
+        if [ "${{ inputs.recursive }}" = "false" ]; then
+          ARGS="$ARGS --no-recursive"
+        fi
+
+        # Add fail-on-warnings flag
+        if [ "${{ inputs.fail-on-warnings }}" = "true" ]; then
+          ARGS="$ARGS --fail-on-warnings"
+        fi
+
+        # Add policy-type flag (works for both validate and analyze commands)
+        if [ -n "${{ inputs.policy-type }}" ]; then
+          ARGS="$ARGS --policy-type ${{ inputs.policy-type }}"
+        fi
+
+        # Add Access Analyzer specific options
+        if [ "${{ inputs.use-access-analyzer }}" = "true" ]; then
+          ARGS="$ARGS --region ${{ inputs.access-analyzer-region }}"
+
+          if [ "${{ inputs.run-all-checks }}" = "true" ]; then
+            ARGS="$ARGS --run-all-checks"
+          fi
+
+          # Custom Policy Checks
+          if [ -n "${{ inputs.check-access-not-granted }}" ]; then
+            ARGS="$ARGS --check-access-not-granted ${{ inputs.check-access-not-granted }}"
+
+            if [ -n "${{ inputs.check-access-resources }}" ]; then
+              ARGS="$ARGS --check-access-resources ${{ inputs.check-access-resources }}"
+            fi
+          fi
+
+          if [ -n "${{ inputs.check-no-new-access }}" ]; then
+            ARGS="$ARGS --check-no-new-access ${{ github.workspace }}/${{ inputs.check-no-new-access }}"
+          fi
+
+          if [ "${{ inputs.check-no-public-access }}" = "true" ]; then
+            ARGS="$ARGS --check-no-public-access"
+
+            if [ -n "${{ inputs.public-access-resource-type }}" ]; then
+              ARGS="$ARGS --public-access-resource-type '${{ inputs.public-access-resource-type }}'"
+            fi
+          fi
+        fi
+
+        # Add GitHub integration flags (only for PRs)
+        if [ "${{ inputs.post-comment }}" = "true" ] && [ -n "${{ github.event.pull_request.number }}" ]; then
+          ARGS="$ARGS --github-comment"
+
+          if [ "${{ inputs.create-review }}" = "true" ]; then
+            ARGS="$ARGS --github-review"
+          fi
+        fi
+
+        # Add github-summary flag (works for all workflow runs)
+        if [ "${{ inputs.github-summary }}" = "true" ]; then
+          ARGS="$ARGS --github-summary"
+        fi
+
+        # Add custom-checks-dir if specified
+        if [ -n "${{ inputs.custom-checks-dir }}" ]; then
+          ARGS="$ARGS --custom-checks-dir ${{ github.workspace }}/${{ inputs.custom-checks-dir }}"
+        fi
+
+        # Add aws-services-dir if specified (for offline mode)
+        if [ -n "${{ inputs.aws-services-dir }}" ]; then
+          ARGS="$ARGS --aws-services-dir ${{ github.workspace }}/${{ inputs.aws-services-dir }}"
+        fi
+
+        # Add owner-ignore flag (default is enabled, so only add flag when disabled)
+        if [ "${{ inputs.allow-owner-ignore }}" = "false" ]; then
+          ARGS="$ARGS --no-owner-ignore"
+        fi
+
+        # Create temp file for JSON metrics extraction
+        METRICS_FILE=$(mktemp)
+
+        # Build the final command based on show-console-output setting
+        if [ "${{ inputs.show-console-output }}" = "true" ]; then
+          # CI mode: show enhanced output in console, write JSON to temp file for metrics
+          # Remove --format from ARGS and add --ci flags
+          FINAL_ARGS="${ARGS//--format ${{ inputs.format }}/--ci --ci-output $METRICS_FILE}"
+        else
+          # Quiet mode: only JSON output for metrics, no console output
+          FINAL_ARGS="${ARGS//--format ${{ inputs.format }}/--format json --output $METRICS_FILE}"
+        fi
+
+        echo "Running: uv run iam-validator $FINAL_ARGS"
+        uv run iam-validator $FINAL_ARGS 2>&1 || EXIT_CODE=$?
+
+        # Extract metrics from JSON output
+        if [ -f "$METRICS_FILE" ] && [ -s "$METRICS_FILE" ]; then
+          TOTAL_POLICIES=$(jq -r '.total_policies // 0' "$METRICS_FILE" 2>/dev/null || echo "0")
+          VALID_POLICIES=$(jq -r '.valid_policies // 0' "$METRICS_FILE" 2>/dev/null || echo "0")
+          INVALID_POLICIES=$(jq -r '.invalid_policies // 0' "$METRICS_FILE" 2>/dev/null || echo "0")
+          TOTAL_ISSUES=$(jq -r '.total_issues // 0' "$METRICS_FILE" 2>/dev/null || echo "0")
+
+          echo "total-policies=$TOTAL_POLICIES" >> $GITHUB_OUTPUT
+          echo "valid-policies=$VALID_POLICIES" >> $GITHUB_OUTPUT
+          echo "invalid-policies=$INVALID_POLICIES" >> $GITHUB_OUTPUT
+          echo "total-issues=$TOTAL_ISSUES" >> $GITHUB_OUTPUT
+
+          # Only show metrics summary if console output is disabled (to avoid duplication)
+          if [ "${{ inputs.show-console-output }}" != "true" ]; then
+            echo "📊 Validation Metrics:"
+            echo "  Total policies: $TOTAL_POLICIES"
+            echo "  Valid: $VALID_POLICIES"
+            echo "  Invalid: $INVALID_POLICIES"
+            echo "  Total issues: $TOTAL_ISSUES"
+          fi
+
+          rm -f "$METRICS_FILE"
+        else
+          echo "⚠️  Warning: Could not extract metrics from validation output"
+          # Fallback to zeros if JSON parsing failed
+          echo "total-policies=0" >> $GITHUB_OUTPUT
+          echo "valid-policies=0" >> $GITHUB_OUTPUT
+          echo "invalid-policies=0" >> $GITHUB_OUTPUT
+          echo "total-issues=0" >> $GITHUB_OUTPUT
+        fi
+
+        # Exit with the validation result
+        exit ${EXIT_CODE:-0}
+      shell: bash
+
+    - name: Save AWS service definitions cache
+      # Only save cache if it was not restored (cache miss)
+      # GitHub Actions cache is immutable - once saved with a key, it cannot be updated
+      # Attempting to save with an existing key will silently do nothing
+      # Use always() to ensure cache is saved even if validation fails
+      if: always() && steps.cache-aws-services.outputs.cache-hit != 'true'
+      uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      with:
+        path: ~/.cache/iam-validator/aws_services
+        key: aws-services-${{ runner.os }}-${{ steps.week.outputs.week }}
+
+    - name: Upload validation report
+      if: always() && inputs.output-file != ''
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      with:
+        name: iam-policy-validation-report
+        path: ${{ github.workspace }}/${{ inputs.output-file }}
+        retention-days: 30
