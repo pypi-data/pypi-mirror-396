@@ -1,0 +1,93 @@
+{% extends 'admin.html' %}
+{% from 'include/datatables.html' import datatables %}
+{% block title %}
+  {% trans %}User management{% endtrans %}
+{% endblock %}
+{% set admin_nav_active="users" %}
+{% macro btn(url, label, icon) %}
+  <a class="btn btn-secondary"
+     href="{{ url }}"
+     aria-label="{{ label }}"
+     data-bs-toggle="tooltip"
+     data-bs-placement="top"
+     title="{{ label }}"
+     role="button">
+    <i class="{{ icon }}" aria-hidden="true"></i>
+  </a>
+{% endmacro %}
+{% block content %}
+  {% from 'include/modal_dialog.html' import modal_dialog, button_confirm, modal_confirm %}
+  <a class="btn btn-success mb-2"
+     href="{{ url_for('admin','users', 'new')}}">{% trans %}Add user{% endtrans %}</a>
+  <!-- Users View -->
+  {% set buttons = [
+  {'text': _('Admins'), 'extend': 'filter', 'column': 2, 'search': 'admin'},
+  {'text': _('LDAP'), 'extend': 'filter', 'column': 0, 'search': 'LDAP'},
+  ] %}
+  {% set role_class = {0:'danger', 5:'warning', 10:'info'} %}
+  {% set role_choices = dict(form.role.choices) %}
+  {% set mfa_choices = dict(form.mfa.choices) %}
+  {% set report_time_range_choices = dict(form.report_time_range.choices) %}
+  {% call datatables(_('User list'), buttons)%}
+    <thead>
+      <tr>
+        <th scope="col">{{ form.username.label.text }}</th>
+        <th scope="col">{{ form.fullname.label.text }}</th>
+        <th scope="col">{{ form.email.label.text }}</th>
+        <th scope="col">{{ form.role.label.text }}</th>
+        <th scope="col">{{ form.user_root.label.text }}</th>
+        <th scope="col">{{ form.mfa.label.text }}</th>
+        <th scope="col">{{ form.report_time_range.label.text }}</th>
+        <th scope="col">{{ form.notes.label.text }}</th>
+        <th scope="col" data-sortable="false"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for user in users %}
+        <tr>
+          <td>
+            <a href="{{ url_for('admin','users','edit', user.username)}}">{{ user.username }}</a>
+            <span class="badge badge-secondary">#{{ user.id }}</span>
+            {% if user.username == username %}
+              <span class="badge badge-success">{% trans %}It's you{% endtrans %}</span>
+            {% endif %}
+            {% if user.status != '' %}
+              <span class="badge badge-danger">
+                {% if user.status == user.STATUS_DISABLED %}
+                  {% trans %}Disabled{% endtrans %}
+                {% elif user.status == user.STATUS_DELETING %}
+                  {% trans %}Deleting{% endtrans %}
+                {% else %}
+                  {{ user.status }}
+                {% endif %}
+              </span>
+            {% endif %}
+          </td>
+          <td>{{ user.fullname }}</td>
+          <td>{{ user.email }}</td>
+          <td>
+            <span class="badge badge-{{ role_class.get(user.role)}}">{{ role_choices.get(user.role) }}</span>
+          </td>
+          <td>
+            {{ user.user_root }}
+            {% if not user.valid_user_root() %}
+              <span class="text-danger">
+                <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+                {% trans %}Root directory not accessible!{% endtrans %}
+              </span>
+            {% endif %}
+          </td>
+          <td>{{ mfa_choices.get(user.mfa) }}</td>
+          <td>{{ report_time_range_choices.get(user.report_time_range) }}</td>
+          <td class="notes">{{ user.notes }}</td>
+          <td class="text-right">
+            <div class="btn-hover text-nowrap">
+              {{ btn(url_for('admin','users','edit', user.username), _('Edit'), "fa fa-pencil-square-o") }}
+              {{ btn(url_for('status', user.username, '/'), _('Overview'), "fa fa-tachometer") }}
+            </div>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  {% endcall %}
+{% endblock content %}

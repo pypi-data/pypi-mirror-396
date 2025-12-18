@@ -1,0 +1,39 @@
+{% extends 'email_layout.html' %}
+{% block title %}
+  {% if repos %}
+    {% trans %}Backup inactive{% endtrans %}
+  {% else %}
+    {% trans %}Notification{% endtrans %}
+  {% endif %}
+{% endblock title %}
+{% block body %}
+  <h1>
+    <a>{% trans username=(user.fullname or user.username) %}Hey {{ username }},{% endtrans %}</a>
+  </h1>
+  <p>{% trans %}You are receiving this email to notify you about your backups.{% endtrans %}</p>
+  {# Quota Usage #}
+  {{ storage_usage(disk_usage, disk_quota) }}
+  {# Inactive repo #}
+  {% if repos %}
+    <p>
+      {% trans %}The following repositories are inactive for some time. We invite you to have a look at your last backup schedule.{% endtrans %}
+    </p>
+    <ul>
+      {% for repo in repos %}
+        <li>
+          <a>{{ repo.display_name }}</a>
+          <br/>
+          <strong style="color: {{ fgcolor(cls) }}">
+            {% if repo.last_backup_date %}
+              {% trans %}Last backup {% endtrans %}
+              <time datetime="{{ repo.last_backup_date }}"
+                    title="{{ repo.last_backup_date }}">{{ repo.last_backup_date | lastupdated }}</time>
+            {% endif %}
+            {% if repo.status[0] != 'ok' %}{{ repo.status[1] }}{% endif %}
+          </strong>
+        </li>
+      {% endfor %}
+    </ul>
+    <p>{% trans %}If you don't want to be notify about this. You need to review your user preferences.{% endtrans %}</p>
+  {% endif %}
+{% endblock body %}

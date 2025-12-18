@@ -1,0 +1,50 @@
+{% extends 'admin.html' %}
+{% from 'include/empty.html' import empty %}
+{% from 'components/log.html' import pre_code %}
+{% block title %}
+  {% trans %}System Logs{% endtrans %}
+{% endblock title %}
+{% set admin_nav_active="logs" %}
+{% block content %}
+  <div class="row">
+    {% if log_files %}
+      <div class="col-md-3">
+        <ul class="list-group">
+          {% set active_name = name %}
+          {% for name, filename in log_files.items() %}
+            <a href="{{ url_for('admin', 'logs', name=name, limit=limit) }}"
+               class="list-group-item{% if name==active_name %} active{% endif %}">{{ filename.split('/') | last }}</a>
+          {% endfor %}
+        </ul>
+      </div>
+      <div class="col-md-9">
+        {% if data %}
+          {# Show log file data #}
+          <div class="alert alert-info">
+            {% trans %}Notice: To prevent performance issues, only the last {{ limit }} lines of the log files are displayed.{% endtrans %}
+            <a href="{{ url_for('admin', 'logs', 'raw', name=name)}}"><b><i class="icon icon-download"></i>{% trans %}Show all logs{% endtrans %}</b></a>
+          </div>
+          {{ pre_code(data)}}
+        {% elif name or date %}
+          {# Log file is empty. #}
+          {% call empty('icon-file', _('Log file empty')) %}
+            <p>{% trans %}This log file is empty. Select another log file to show it's contents.{% endtrans %}</p>
+          {% endcall %}
+        {% else %}
+          {# Log file not selected #}
+          {% call empty('icon-file', _('No log file selected')) %}
+            <p>{% trans %}Select a log file to show it's contents.{% endtrans %}</p>
+          {% endcall %}
+        {% endif %}
+      </div>
+    {% else %}
+      {# Log file not selected #}
+      <div class="col-md-12">
+        {% call empty('icon-file', _('No log file available')) %}
+          <p>{% trans %}The server is not configured to log in any file.{% endtrans %}</p>
+        {% endcall %}
+      </div>
+    {% endif %}
+  </div>
+  <!-- /.row -->
+{% endblock %}
