@@ -1,0 +1,145 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pyrecap"
+dynamic = ["version"]
+description = "Scientific framework for Reproducible Experiment Capture and Provenance"
+authors = [{ name = "Venkateswaran Shekar", email = "vshekar1@bnl.gov" }]
+requires-python = ">=3.10"
+readme = "README.md"
+license = { text = "BSD-3-Clause" }
+dependencies = [
+    "sqlalchemy>=2.0",
+    "pydantic>=2.0",
+    "python-slugify"
+]
+
+keywords = ["experiments", "provenance", "reproducibility"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent"
+]
+
+[project.urls]
+Homepage = "https://github.com/NSLS2/recap"
+Documentation = "https://github.com/NSLS2/recap"
+Repository = "https://github.com/NSLS2/recap.git"
+Issues = "https://github.com/NSLS2/recap/issues"
+
+[project.optional-dependencies]
+dev = [
+    "pytest"
+]
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "recap/_version.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["recap"]
+
+[tool.hatch.build]
+include = [
+    "recap/**",
+    "README.md",
+    "LICENSE*"
+]
+
+[tool.black]
+line-length = 115
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+
+  # The following are specific to Black, you probably don't want those.
+  | blib2to3
+  | tests/data
+)/
+'''
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "C90"]
+ignore = ["E203", "E501"]  # Black-style formatting norms
+
+[tool.ruff.lint.per-file-ignores]
+"**/versioneer.py" = ["ALL"]
+"**/_version.py" = ["ALL"]
+"**/setup.py" = ["ALL"]
+"**/docs/**" = ["ALL"]
+
+[tool.ruff.lint.isort]
+known-first-party = []
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["osx-arm64", "linux-64", "win-64"]
+
+[tool.pixi.pypi-dependencies]
+pyrecap = { path = ".", editable = true }
+
+[tool.pixi.environments]
+default = { solve-group = "default" }
+dev = { features = ["lint", "test"], solve-group = "default" }
+docs = { features = ["docs"], solve-group = "default" }
+build = { features = [ "build" ], solve-group = "default"}
+
+[tool.pixi.feature.test.dependencies]
+pytest = ">=8.4.2,<9"
+
+[tool.pixi.feature.build.dependencies]
+hatch = "*"
+twine = "*"
+
+[tool.pixi.feature.build.tasks]
+build = { cmd = ["hatch", "build"] }
+publish = { cmd = ["hatch", "publish"]}
+check-build = { cmd = ["twine", "check", "dist/*"] }
+
+[tool]
+
+[tool.pixi.feature.lint.tasks]
+lint = { cmd = ["pre-commit", "run", "--all-files"] }
+
+[tool.pixi.feature.docs.dependencies]
+mkdocs-material = "*"
+mkdocstrings = "*"
+pymdown-extensions = "*"
+
+[tool.pixi.feature.docs.tasks]
+docs-build = { cmd = ["mkdocs", "build", "--strict"] }
+docs-deploy = { cmd = ["mkdocs", "gh-deploy", "--force"] }
+
+[tool.pixi.feature.test.tasks]
+test = { cmd = ["pytest", "-s", "-ra", "recap/tests"] }
+
+[tool.pixi.tasks]
+
+[tool.pixi.dependencies]
+pyyaml = ">=6.0.2,<7"
+ipython = ">=9.7.0,<10"
+pytest = "*"
+jupyterlab = ">=4.5.0,<5"
+alembic = ">=1.17.2,<2"

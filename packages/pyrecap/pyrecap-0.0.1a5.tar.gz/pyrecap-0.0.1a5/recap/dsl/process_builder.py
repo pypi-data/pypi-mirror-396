@@ -1,0 +1,411 @@
+from typing import Any
+from uuid import UUID
+
+from pydantic import BaseModel
+from sqlalchemy.exc import NoResultFound
+
+from recap.adapter import Backend
+from recap.dsl.attribute_builder import AttributeGroupBuilder
+from recap.dsl.query import QuerySpec
+from recap.schemas.attribute import AttributeTemplateValidator
+from recap.schemas.process import (
+    CampaignSchema,
+    ProcessRunSchema,
+    ProcessTemplateRef,
+    ProcessTemplateSchema,
+)
+from recap.schemas.resource import ResourceSchema, ResourceSlotSchema
+from recap.schemas.step import StepSchema, StepTemplateRef
+from recap.utils.dsl import lock_instance_fields
+from recap.utils.general import Direction
+
+
+class ProcessTemplateBuilder:
+    def __init__(
+        self,
+        backend: Backend,
+        name: str | None,
+        version: str | None,
+        process_template_id: UUID | None = None,
+    ):
+        self.backend = backend
+        self._uow = None
+        self._ensure_uow()
+        self.name = name
+        self.version = version
+        self._template: ProcessTemplateRef | None = None
+        self._resource_slots: dict[str, ResourceSlotSchema] = {}
+        self._current_step_builder: StepTemplateBuilder | None = None
+        if process_template_id is not None:
+            tmpl = self.backend.get_process_template(
+                name=None, version=None, id=process_template_id, expand=False
+            )
+            self.name = tmpl.name
+            self.version = tmpl.version
+            self._template = tmpl
+        elif self.name is None or self.version is None:
+            raise ValueError(
+                "name and version are required to create a process template"
+            )
+
+    def __enter__(self):
+        self._ensure_uow()
+        if self._template is not None:
+            self._reload_template()
+            self.name = self._template.name
+            self.version = self._template.version
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        if exc_type is None:
+            self.save()
+        else:
+            if self._uow:
+                self._uow.rollback()
+            self._uow = None
+
+    def save(self):
+        self._ensure_uow()
+        self._uow.commit()
+        self._uow = None
+        return self
+
+    @property
+    def template(self) -> ProcessTemplateRef:
+        if not self._template:
+            raise RuntimeError(
+                "Call .save() first or construct template via builder methods"
+            )
+        return self._template
+
+    def _ensure_template(self):
+        self._ensure_uow()
+        if self._template:
+            return
+        if self.name is None or self.version is None:
+            raise ValueError(
+                "name and version are required to create a process template"
+            )
+        self._template = self.backend.create_process_template(self.name, self.version)
+
+    def _reload_template(self):
+        self._ensure_uow()
+        self._template = self.backend.get_process_template(
+            self.name, self.version, expand=True
+        )
+
+    def add_resource_slot(
+        self,
+        name: str,
+        resource_type: str,
+        direction: Direction,
+        create_resource_type=False,
+    ) -> "ProcessTemplateBuilder":
+        self._ensure_uow()
+        self._ensure_template()
+        self._resource_slots[name] = self.backend.add_resource_slot(
+            name, resource_type, direction, self.template, create_resource_type
+        )
+        return self
+
+    def add_step(
+        self,
+        name: str,
+    ):
+        self._ensure_uow()
+        self._ensure_template()
+        step_template = self.backend.add_step(name, self.template)
+        step_template_builder = StepTemplateBuilder(
+            parent=self, step_template=step_template
+        )
+        return step_template_builder
+
+    def get_model(self, *, update: bool = False) -> ProcessTemplateSchema:
+        """
+        Return a pydantic model for the process template, optionally reloading
+        from the backend first. Critical fields are locked against mutation.
+        """
+        self._ensure_uow()
+        if update:
+            self._reload_template()
+        elif self._template is None:
+            self._ensure_template()
+
+        model = self.backend.get_process_template(self.name, self.version, expand=True)
+        return lock_instance_fields(
+            model.model_copy(deep=True),
+            {"id", "create_date", "modified_date", "version"},
+        )
+
+    def set_model(self, model: ProcessTemplateSchema | ProcessTemplateRef):
+        if self._template is None:
+            raise RuntimeError("Template not initialized")
+        if model.id != self._template.id:
+            raise ValueError("ID for this ProcessTemplate does not match the builder")
+        self._template = model
+
+    def _ensure_uow(self):
+        if self._uow is None:
+            self._uow = self.backend.begin()
+        return self._uow
+
+
+class StepTemplateBuilder:
+    """Scoped editor for a single step"""
+
+    def __init__(self, parent: ProcessTemplateBuilder, step_template: StepTemplateRef):
+        self.parent: ProcessTemplateBuilder = parent
+        self.backend: Backend = parent.backend
+        self.process_template = parent.template
+        self._template = step_template
+        self._bound_slots = {}
+
+    def close_step(self) -> ProcessTemplateBuilder:
+        return self.parent
+
+    def param_group(
+        self, group_name: str
+    ) -> "AttributeGroupBuilder[StepTemplateBuilder]":
+        attr_group_builder: AttributeGroupBuilder[StepTemplateBuilder] = (
+            AttributeGroupBuilder(group_name=group_name, parent=self)
+        )
+        return attr_group_builder
+
+    def bind_slot(self, role: str, slot_name: str):
+        slot = self.backend.bind_slot(
+            role, slot_name, self.process_template, self._template
+        )
+        self._bound_slots[slot.name] = slot
+        return self
+
+    def add_parameters(self, param_def: dict[str, list[dict[str, Any]]]):
+        """
+        Add parameters in the form of a dictionary, first level of keys represents groupts which have a list of dictionaries representing parameters
+        {
+            "harvest": [
+                {"name":"arrival", "type": "datetime", "unit": "", default: ""},
+            ]
+        }
+        """
+        for group_key, params in param_def.items():
+            agb = AttributeGroupBuilder(group_name=group_key, parent=self)
+            for param in params:
+                attr = AttributeTemplateValidator.model_validate(param)
+                agb.add_attribute(
+                    attr.name,
+                    attr.type,
+                    attr.unit,
+                    attr.default,
+                    metadata=attr.metadata,
+                )
+            agb.close_group()
+        return self
+
+
+class ProcessRunBuilder:
+    def __init__(
+        self,
+        name: str | None,
+        description: str | None,
+        template_name: str | None,
+        campaign: CampaignSchema | None,
+        backend: Backend,
+        version: str | None = None,
+        process_run_id: UUID | None = None,
+    ):
+        self.backend = backend
+        self._uow = None
+        self.name = name
+        self.description = description
+        self.template_name = template_name
+        self.version = version
+        self._process_template: ProcessTemplateSchema | ProcessTemplateRef | None = None
+        try:
+            if process_run_id is not None:
+                self._ensure_uow()
+                self._process_run = self._reload_process_run(process_run_id)
+                template = self._process_run.template
+                self._process_template = self.backend.get_process_template(
+                    template.name, template.version, expand=True
+                )
+                self.name = self._process_run.name
+                self.description = self._process_run.description
+                self.template_name = template.name
+                self.version = template.version
+            else:
+                if (
+                    name is None
+                    or description is None
+                    or template_name is None
+                    or version is None
+                ):
+                    raise ValueError(
+                        "name, description, template_name, and version are required to create a process run"
+                    )
+                if campaign is None:
+                    raise ValueError("Campaign is required to create a process run")
+                self._ensure_uow()
+                self._process_template = self.backend.get_process_template(
+                    self.template_name, self.version, expand=True
+                )
+                self._process_run = self.backend.create_process_run(
+                    name, description, self._process_template, campaign
+                )
+            self._steps = list(self._process_run.steps.values())
+            self._resources = {}
+        except Exception as e:
+            print(f"Exception occured while creating a procces run: {e}")
+            raise e
+
+    def __enter__(self):
+        self._ensure_uow()
+        if getattr(self, "_process_run", None) is not None:
+            self._process_run = self._reload_process_run(self._process_run.id)
+            template = self._process_run.template
+            self._process_template = self.backend.get_process_template(
+                template.name, template.version, expand=True
+            )
+            self.name = self._process_run.name
+            self.description = self._process_run.description
+            self.template_name = template.name
+            self.version = template.version
+            self._steps = list(self._process_run.steps.values())
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        if exc_type is None:
+            self.persist()
+            self.save()
+        else:
+            if self._uow:
+                self._uow.rollback()
+            self._uow = None
+
+    def save(self):
+        self._ensure_uow()
+        self._uow.commit()
+        self._uow = None
+        return self
+
+    def persist(self):
+        self._process_run = self.backend.update_process_run(self._process_run)
+        return self
+
+    @property
+    def process_run(self) -> ProcessRunSchema:
+        return self._process_run
+
+    def set_model(self, model: ProcessRunSchema):
+        if self._process_run is None:
+            raise RuntimeError("ProcessRun not initialized")
+        if model.id != self._process_run.id:
+            raise ValueError("ID for this ProcessRun does not match the builder")
+        self._process_run = model
+
+    def assign_resource(
+        # self, resource_slot_name: str, resource_name: str, resource_template_name: str
+        self,
+        resource_slot_name: str,
+        resource: ResourceSchema,
+    ) -> "ProcessRunBuilder":
+        self._ensure_uow()
+        resource_slot = None
+        for slot in self._process_template.resource_slots:
+            if slot.name == resource_slot_name:
+                resource_slot = slot
+                break
+        # resource = self.backend.get_resource(resource_name, resource_template_name)
+        if resource_slot is None:
+            raise NoResultFound(f"Resource slot {resource_slot_name} not found")
+        self._process_run = self.backend.assign_resource(
+            resource_slot, resource, self._process_run
+        )
+        return self
+
+    def _check_resource_assignment(self):
+        self._ensure_uow()
+        self.backend.check_resource_assignment(self._process_template, self.process_run)
+
+    @property
+    def steps(self) -> list[StepSchema]:
+        self._ensure_uow()
+        self._check_resource_assignment()
+        if self._steps is None:
+            self._steps = self.backend.get_steps(self.process_run)
+        return self._steps
+
+    def get_params(
+        self,
+        step_name: str | None = None,
+        step_schema: StepSchema | None = None,
+    ) -> type[BaseModel]:
+        self._ensure_uow()
+        if step_name is None and step_schema is None:
+            raise ValueError("Provide step_name or step_schema to get params")
+        if not step_schema and step_name:
+            for step in self.steps:
+                if step.name == step_name:
+                    step_schema = step
+                    break
+
+        if step_schema is None:
+            raise NoResultFound("Step not found with name: {step_name} ")
+        self._check_resource_assignment()
+        return self.backend.get_params(step_schema)
+
+    def set_params(self, filled_params: type[BaseModel]):
+        self._ensure_uow()
+        self.backend.set_params(filled_params)
+        if getattr(self, "_process_run", None) is not None:
+            # Refresh in-memory schema so subsequent persist writes current values
+            self._process_run = self._reload_process_run(self._process_run.id)
+        # Persist immediately so subsequent operations see updated values
+        self.persist()
+        return self
+
+    def add_child_step(
+        self,
+        child_step: StepSchema,
+    ) -> StepSchema:
+        self._ensure_uow()
+        if child_step.parent_id is None:
+            raise ValueError(
+                f"Child step {child_step.name} has no parent_id, was the step created using generate_child()?"
+            )
+        if child_step.process_run_id != self._process_run.id:
+            raise ValueError(
+                f"Child step {child_step.name} does not belong to {self._process_run.name}"
+            )
+        child = self.backend.add_child_step(self.process_run, child_step)
+        # refresh cached steps so subsequent operations see the new child
+        self._steps = None
+        return child
+
+    def get_model(self, *, update: bool = False) -> ProcessRunSchema:
+        """
+        Return a pydantic model representing the process run, optionally reloading
+        from the backend first. Critical fields are locked against mutation.
+        """
+        if update:
+            self._process_run = self._reload_process_run(self._process_run.id)
+        model = self._process_run.model_copy(deep=True)
+        return lock_instance_fields(
+            model, {"id", "create_date", "modified_date", "template"}
+        )
+
+    def _ensure_uow(self):
+        if self._uow is None:
+            self._uow = self.backend.begin()
+        return self._uow
+
+    def _reload_process_run(self, process_run_id: UUID) -> ProcessRunSchema:
+        runs = self.backend.query(
+            ProcessRunSchema,
+            QuerySpec(
+                filters={"id": process_run_id},
+                preloads=["steps", "steps.parameters", "resources"],
+            ),
+        )
+        if not runs:
+            raise ValueError(f"ProcessRun with id {process_run_id} not found")
+        return runs[0]
