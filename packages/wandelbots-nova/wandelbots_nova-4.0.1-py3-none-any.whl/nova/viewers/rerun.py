@@ -1,0 +1,366 @@
+"""Rerun viewer implementation for 3D visualization."""
+
+from __future__ import annotations
+
+import logging
+from typing import TYPE_CHECKING, Sequence, cast
+
+if TYPE_CHECKING:
+    from nova import api
+    from nova.actions import Action
+    from nova.cell.motion_group import MotionGroup
+    from nova.core.nova import Nova
+
+from .base import Viewer
+from .manager import register_viewer
+from .protocol import NovaRerunBridgeProtocol
+from .utils import downsample_trajectory, extract_collision_setups_from_actions
+
+logger = logging.getLogger(__name__)
+
+
+class Rerun(Viewer):
+    """
+    Rerun viewer for 3D visualization of robot motion and program execution.
+
+    This viewer automatically captures and visualizes:
+    - Robot trajectories and motion paths
+    - TCP poses and transformations
+    - Motion group states
+    - Planning requests and responses
+    - Collision scenes and safety zones (optional)
+    - Tool geometries attached to specific TCPs
+
+    Example usage:
+        # 3D view only (default)
+        @nova.program(
+            viewer=nova.viewers.Rerun(
+                tcp_tools={"vacuum": "assets/vacuum_cup.stl"}
+            )
+        )
+
+        # Full interface with detailed analysis panels
+        @nova.program(
+            viewer=nova.viewers.Rerun(
+                show_safety_zones=True,
+                show_collision_link_chain=True,
+                show_collision_tool=True,
+                show_safety_link_chain=True,
+                tcp_tools={
+                    "vacuum": "assets/vacuum_cup.stl",
+                    "gripper": "assets/parallel_gripper.stl"
+                }
+            )
+        )
+    """
+
+    def __init__(
+        self,
+        application_id: str | None = None,
+        spawn: bool = True,
+        show_safety_zones: bool = True,
+        show_collision_scenes: bool = True,
+        show_collision_link_chain: bool = False,
+        show_collision_tool: bool = True,
+        show_safety_link_chain: bool = True,
+        tcp_tools: dict[str, str] | None = None,
+        trajectory_sample_interval_ms: float = 50.0,
+    ) -> None:
+        """
+        Initialize the Rerun viewer.
+
+        Args:
+            application_id: Optional application ID for the rerun recording
+            spawn: Whether to spawn a rerun viewer process automatically
+            show_safety_zones: Whether to visualize safety zones for motion groups
+            show_collision_scenes: Whether to show collision scenes
+            show_collision_link_chain: Whether to show robot collision mesh geometry
+            show_collision_tool: Whether to show TCP tool collision geometry
+            show_safety_link_chain: Whether to show robot safety geometry (from controller)
+            tcp_tools: Optional mapping of TCP IDs to tool asset file paths
+            trajectory_sample_interval_ms: Target time interval in milliseconds between trajectory
+                samples for visualization. Lower values = higher fidelity, higher values = better
+                performance. Sampling is adaptive, keeping more points at high-curvature regions.
+                (default: 50.0ms, equivalent to 20 samples/second)
+        """
+        self.application_id: str | None = application_id
+        self.spawn: bool = spawn
+        self.show_safety_zones: bool = show_safety_zones
+        self.show_collision_scenes: bool = show_collision_scenes
+        self.show_collision_link_chain: bool = show_collision_link_chain
+        self.show_collision_tool: bool = show_collision_tool
+        self.show_safety_link_chain: bool = show_safety_link_chain
+        self.tcp_tools: dict[str, str] = tcp_tools or {}
+        self.trajectory_sample_interval_ms: float = trajectory_sample_interval_ms
+        self._bridge: NovaRerunBridgeProtocol | None = None
+        self._logged_safety_zones: set[str] = (
+            set()
+        )  # Track motion groups that already have safety zones logged
+        self._bridge_initialized: bool = False
+
+        # Register this viewer as active
+        register_viewer(self)
+
+    def configure(self, nova: Nova) -> None:
+        """Configure rerun integration for program execution."""
+        # Skip Rerun viewer entirely when running via operator/novax
+        # to minimize overhead - Rerun is only for local debugging
+        try:
+            from nova.program.runner import is_operator_execution_var
+
+            if is_operator_execution_var.get(False):
+                logger.debug("Skipping Rerun viewer configuration - running via operator/novax")
+                return
+        except (ImportError, LookupError):
+            # If we can't import or get the context var, proceed with configuration
+            pass
+
+        # Allow reconfiguration with different Nova instances (e.g., from decorator temp instance to user instance)
+        # Only reconfigure if it's a different instance
+        if self._bridge is not None:
+            # Check if it's the same Nova instance
+            if hasattr(self._bridge, "nova") and self._bridge.nova is nova:
+                return  # Already configured with this instance
+
+            # Different instance - update the bridge's Nova reference
+            self._bridge.nova = nova
+            return
+
+        try:
+            from nova_rerun_bridge import NovaRerunBridge
+
+            bridge = NovaRerunBridge(
+                nova=nova,
+                spawn=self.spawn,
+                recording_id=self.application_id,
+                show_collision_link_chain=self.show_collision_link_chain,
+                show_collision_tool=self.show_collision_tool,
+                show_safety_link_chain=self.show_safety_link_chain,
+            )
+            self._bridge = cast(NovaRerunBridgeProtocol, bridge)
+        except ImportError:
+            # nova_rerun_bridge not available, skip rerun integration
+            logger.warning(
+                "Rerun viewer configured but nova_rerun_bridge not available. "
+                "Install with: uv add wandelbots-nova --extra nova-rerun-bridge"
+            )
+
+    async def setup_after_preconditions(self) -> None:
+        """Setup async components after preconditions are met.
+
+        This method does nothing as the Rerun viewer uses lazy initialization.
+        The bridge is initialized on first use via _ensure_bridge_initialized().
+        """
+        pass
+
+    async def _setup_async_components(self) -> None:
+        pass
+
+    async def _ensure_bridge_initialized(self) -> None:
+        """Lazy initialization of bridge - called before first use.
+
+        This ensures the blueprint is set up only when needed, avoiding resource
+        conflicts during program startup.
+        """
+        if self._bridge and not self._bridge_initialized:
+            # Initialize the bridge's context manager
+            # By now, the Nova instance is fully connected and ready
+            _ = await self._bridge.__aenter__()
+
+            # Setup blueprint using the user's Nova instance
+            await self._bridge.setup_blueprint()
+            self._bridge_initialized = True
+
+    async def _ensure_safety_zones_logged(self, motion_group: MotionGroup) -> None:
+        """Ensure safety zones are logged for the given motion group.
+
+        This method is called during planning to ensure safety zones are shown
+        only for motion groups that are actually being used.
+
+        Args:
+            motion_group: The motion group to log safety zones for
+        """
+        if not self.show_safety_zones or not self._bridge:
+            return
+
+        # Use the motion group ID as unique identifier
+        motion_group_id = motion_group.id
+
+        if motion_group_id not in self._logged_safety_zones:
+            try:
+                await self._bridge.log_safety_zones(motion_group)
+                self._logged_safety_zones.add(motion_group_id)
+            except Exception as e:
+                logger.warning(
+                    "Could not log safety zones for motion group %s: %s", motion_group_id, e
+                )
+
+    async def _log_planning_results(
+        self,
+        actions: Sequence[Action],
+        trajectory: api.models.JointTrajectory,
+        tcp: str,
+        motion_group: MotionGroup,
+    ) -> None:
+        """Log planning results including actions, trajectory, and collision scenes.
+
+        Args:
+            actions: List of actions that were planned
+            trajectory: The resulting trajectory
+            tcp: TCP used for planning
+            motion_group: The motion group used for planning
+        """
+        if not self._bridge:
+            return
+
+        # Lazy initialization - setup bridge on first use
+        await self._ensure_bridge_initialized()
+
+        try:
+            # Log actions
+            await self._bridge.log_actions(actions=list(actions), motion_group=motion_group)
+
+            # Downsample trajectory for visualization performance
+            # Uses adaptive sampling that keeps more points at high-curvature regions
+            downsampled_trajectory = downsample_trajectory(
+                trajectory, sample_interval_ms=self.trajectory_sample_interval_ms
+            )
+
+            # Log trajectory with tool asset if configured for this TCP
+            tool_asset = self._resolve_tool_asset(tcp)
+            await self._bridge.log_trajectory(
+                trajectory=downsampled_trajectory,
+                tcp=tcp,
+                motion_group=motion_group,
+                collision_setups=extract_collision_setups_from_actions(actions),
+                tool_asset=tool_asset,
+            )
+
+            # Log collision scenes from actions if configured
+            if self.show_collision_scenes:
+                collision_setups = extract_collision_setups_from_actions(actions)
+                if collision_setups:
+                    # Log collision scenes using the sync method
+                    self._bridge.log_collision_setups(collision_setups=collision_setups)
+
+        except Exception as e:
+            logger.error("Failed to log planning results in Rerun viewer: %s", e)
+
+    async def log_planning_success(
+        self,
+        actions: Sequence[Action],
+        trajectory: api.models.JointTrajectory,
+        tcp: str,
+        motion_group: MotionGroup,
+    ) -> None:
+        """Log successful planning results to Rerun viewer.
+
+        Args:
+            actions: List of actions that were planned
+            trajectory: The resulting trajectory
+            tcp: TCP used for planning
+            motion_group: The motion group used for planning
+        """
+        # Lazy initialization - setup bridge on first use
+        await self._ensure_bridge_initialized()
+
+        # Ensure safety zones are logged for this motion group (only on first use)
+        await self._ensure_safety_zones_logged(motion_group)
+
+        # Log the planning results
+        await self._log_planning_results(
+            actions=actions, trajectory=trajectory, tcp=tcp, motion_group=motion_group
+        )
+
+    async def log_planning_failure(
+        self, actions: Sequence[Action], error: Exception, tcp: str, motion_group: MotionGroup
+    ) -> None:
+        """Log planning failure to Rerun viewer.
+
+        Args:
+            actions: List of actions that failed to plan
+            error: The planning error that occurred
+
+            tcp: TCP used for planning
+            motion_group: The motion group used for planning
+        """
+        if not self._bridge:
+            return
+
+        # Lazy initialization - setup bridge on first use
+        await self._ensure_bridge_initialized()
+
+        # Ensure safety zones are logged for this motion group (only on first use)
+        await self._ensure_safety_zones_logged(motion_group)
+
+        try:
+            # Log the failed actions
+            await self._bridge.log_actions(list(actions), motion_group=motion_group)
+
+            # Handle specific PlanTrajectoryFailed errors which have additional data
+            from nova import api
+            from nova.exceptions import PlanTrajectoryFailed
+
+            if isinstance(error, PlanTrajectoryFailed):
+                # Log the trajectory from the failed plan
+                if hasattr(error.error, "joint_trajectory") and error.error.joint_trajectory:
+                    downsampled_trajectory = downsample_trajectory(
+                        error.error.joint_trajectory,
+                        sample_interval_ms=self.trajectory_sample_interval_ms,
+                    )
+                    await self._bridge.log_trajectory(
+                        trajectory=downsampled_trajectory,
+                        tcp=tcp,
+                        motion_group=motion_group,
+                        collision_setups=extract_collision_setups_from_actions(actions),
+                    )
+
+                # Log error feedback if available
+                if hasattr(error.error, "error_feedback") and error.error.error_feedback:
+                    if isinstance(error.error, api.models.PlanTrajectoryFailedResponse):
+                        await self._bridge.log_error_feedback(error.error)
+                    else:
+                        # TODO: handle collision free failed response
+                        logger.warning("Collision free failed response not supported yet")
+
+            # Log error information as text
+            import rerun as rr
+
+            error_message = f"Planning failed: {type(error).__name__}: {str(error)}"
+            rr.log("planning/errors", rr.TextLog(error_message, level=rr.TextLogLevel.ERROR))
+
+            # Log collision scenes from actions if configured (they might be relevant to the failure)
+            if self.show_collision_scenes:
+                collision_setups = extract_collision_setups_from_actions(actions)
+                if collision_setups:
+                    # Log collision scenes using the sync method
+                    self._bridge.log_collision_setups(collision_setups=collision_setups)
+
+        except Exception as e:
+            logger.warning("Failed to log planning failure in Rerun viewer: %s", e)
+
+    def get_bridge(self) -> NovaRerunBridgeProtocol | None:
+        """Get the underlying NovaRerunBridge instance.
+
+        This allows advanced users to access the full bridge functionality.
+
+        Returns:
+            The NovaRerunBridge instance if configured, None otherwise.
+        """
+        return self._bridge
+
+    def cleanup(self) -> None:
+        """Clean up rerun integration after program execution."""
+        self._bridge = None
+        self._logged_safety_zones.clear()  # Reset safety zone tracking
+
+    def _resolve_tool_asset(self, tcp: str) -> str | None:
+        """Resolve the tool asset file path for a given TCP.
+
+        Args:
+            tcp: The TCP ID to resolve tool asset for
+
+        Returns:
+            Path to tool asset file if configured, None otherwise
+        """
+        return self.tcp_tools.get(tcp)
