@@ -1,0 +1,194 @@
+"""
+Specific error classes for errors that may occur in the data.
+Using these exceptions allows to catch/filter more fine-grained.
+"""
+
+from typing import Optional
+
+from rebdhuhn.models import DecisionNode, EbdTableRow, EbdTableSubRow, OutcomeNode
+
+
+# Base exception classes for pipeline distinction
+class GraphConversionError(Exception):
+    """
+    Base class for errors during table-to-graph conversion.
+
+    These errors occur in the shared pipeline stage (table -> graph) and affect
+    both SVG and PlantUML generation.
+    """
+
+
+class PlantumlConversionError(Exception):
+    """
+    Base class for errors during PlantUML generation.
+
+    These errors occur only in the PlantUML pipeline (graph -> puml).
+    Catch this to handle PlantUML-specific failures while allowing SVG generation to proceed.
+    """
+
+
+class SvgConversionError(Exception):
+    """
+    Base class for errors during SVG/DOT generation.
+
+    These errors occur only in the SVG pipeline (graph -> dot -> svg via Kroki).
+    """
+
+
+class NotExactlyTwoOutgoingEdgesError(PlantumlConversionError, NotImplementedError):
+    """
+    Raised if a decision node has more or less than 2 outgoing edges. This is not implemented in our logic yet.
+    (Because it would be a multi-di-graph, not a di-graph.)
+    See issue https://github.com/Hochfrequenz/rebdhuhn/issues/99 for a discussion on this topic.
+    """
+
+    def __init__(self, msg: str, decision_node_key: str, outgoing_edges: list[str]) -> None:
+        """
+        providing the keys allows to easily track down the exact cause of the error
+        """
+        super().__init__(msg)
+        self.decision_node_key = decision_node_key
+        self.outgoing_edges = outgoing_edges
+
+    def __str__(self) -> str:
+        return f"The node {self.decision_node_key} has more than 2 outgoing edges: {', '.join(self.outgoing_edges)}"
+
+
+class PathsNotGreaterThanOneError(PlantumlConversionError, ValueError):
+    """
+    If indegree > 1, the number of paths should always be greater than 1 too.
+    Typically, this is a symptom for loops in the graph (which makes them not a Directed Graph / tree anymore).
+    """
+
+    def __init__(self, node_key: str, indegree: int, number_of_paths: int) -> None:
+        super().__init__(
+            f"The indegree of node '{node_key}' is {indegree} > 1, but the number of paths is {number_of_paths} <= 1."
+        )
+        self.node_key = node_key
+        self.indegree = indegree
+        self.number_of_paths = number_of_paths
+
+
+class GraphTooComplexForPlantumlError(PlantumlConversionError):
+    """
+    Exception raised when a Graph is too complex to convert with PlantUML.
+
+    To understand what this means exactly, we first define the term "last common ancestor" (LCA in the following).
+    Let V be an arbitrary node with indegree > 1.
+    Define K_arr as the set of all possible paths K_i from the root node ("Start") to V.
+    The LCA of V is the node in K_i which is the last common node (orientation is "Start" -> V)
+    of all paths in K_arr. I.e. the node where the paths of K_arr split.
+
+    The definition of the LCA is pictured in `src/last_common_ancestor.svg`.
+
+    The graph is too complex for PlantUML if there are multiple different nodes V with the same LCA.
+    This is also pictured in `src/plantuml_not_convertable.svg`.
+
+    Example: E_0210 has node 300 which is the LCA for both node 310 (indegree 5) and node 380
+    (indegree 4). PlantUML's if/else syntax only supports one "endif" merge point per "if" block,
+    so when a single common ancestor needs to merge multiple different nodes, it cannot be
+    represented in PlantUML.
+
+    Note: The DOT/Graphviz pipeline handles these complex graphs without issues.
+    Use `convert_graph_to_dot()` instead for EBDs that raise this error.
+    """
+
+    def __init__(
+        self,
+        # pylint:disable=line-too-long
+        message: str = "Plantuml conversion doesn't support multiple nodes for an ancestor node. The graph is too complex.",
+    ) -> None:
+        self.message = message
+        super().__init__(self.message)
+
+
+class AmbiguousPlacementCasesError(PlantumlConversionError):
+    """
+    Raised when a decision node has multiple conflicting placement cases.
+
+    During PlantUML conversion, each decision node determines where to place its yes/no branches
+    based on three mutually exclusive cases:
+    - yes_below_no: The yes-branch should be drawn below the no-branch
+    - no_below_yes: The no-branch should be drawn below the yes-branch
+    - common_ancestor: The node is a last common ancestor for merge nodes
+
+    This error is raised when multiple cases are true simultaneously, which indicates
+    a graph structure that the PlantUML converter cannot handle correctly.
+    """
+
+    def __init__(self, node_key: str, yes_node: str, no_node: str, cases: tuple[bool, bool, bool]) -> None:
+        self.node_key = node_key
+        self.yes_node = yes_node
+        self.no_node = no_node
+        self.cases = cases
+        super().__init__(
+            f"Decision node '{node_key}' has ambiguous placement cases: "
+            f"yes_below_no={cases[0]}, no_below_yes={cases[1]}, common_ancestor={cases[2]}. "
+            f"Yes-node: '{yes_node}', No-node: '{no_node}'. "
+            "The graph structure is too complex for PlantUML conversion."
+        )
+
+
+class EbdCrossReferenceNotSupportedError(GraphConversionError, NotImplementedError):
+    """
+    Raised when there is no outcome for a given sub row but a reference to another EBD key instead.
+    See https://github.com/Hochfrequenz/rebdhuhn/issues/105 for an example / a discussion.
+    """
+
+    def __init__(self, decision_node: DecisionNode, row: EbdTableRow):
+        cross_reference: Optional[str] = None
+        for sub_row in row.sub_rows:
+            if sub_row.note is not None and sub_row.note.startswith("EBD "):
+                cross_reference = sub_row.note.split(" ")[1]
+                break
+        super().__init__(
+            f"A cross reference from row {row} to {cross_reference} has been detected but is not supported"
+        )
+        self.row = row
+        self.cross_reference = cross_reference
+        self.decision_node = decision_node
+
+
+class EndeInWrongColumnError(GraphConversionError, ValueError):
+    """
+    Raised when the subsequent step should be "Ende" but is not referenced in the respective column but as a note.
+    This could be easily fixed but still, it needs to be done.
+    I think this is more of a value error (because the raw source data are a mess) than a NotImplementedError.
+    """
+
+    def __init__(self, sub_row: EbdTableSubRow):
+        super().__init__(f"'Ende' in wrong column for row {sub_row}")
+        self.sub_row = sub_row
+
+
+class OutcomeNodeCreationError(GraphConversionError, ValueError):
+    """
+    raised when the outcome node cannot be created from a sub row
+    """
+
+    def __init__(self, decision_node: DecisionNode, sub_row: EbdTableSubRow):
+        super().__init__(f"Cannot create outcome node from sub row {sub_row} for DecisionNode {decision_node}.")
+        self.sub_row = sub_row
+        self.decision_node = decision_node
+
+
+class OutcomeCodeAmbiguousError(GraphConversionError, ValueError):
+    """
+    Raised when the result nodes are ambiguous. This can be the case for "A**" results.
+    """
+
+    def __init__(self, outcome_node1: OutcomeNode, outcome_node2: OutcomeNode):
+        super().__init__(f"Ambiguous result codes:  for [{outcome_node1, outcome_node2}].")
+        self.outcome_nodes = [outcome_node1, outcome_node2]
+
+
+class OutcomeCodeAndFurtherStepError(GraphConversionError, NotImplementedError):
+    """
+    Catches outcome nodes with further steps. This is not implemented yet. This error is not raised currently.
+    """
+
+    def __init__(self, sub_row: EbdTableSubRow):
+        super().__init__(
+            f"Found a sub_row with both a result code {sub_row.result_code} and a reference to another decision node "
+            f"{sub_row.check_result}. This is not implemented yet."
+        )
