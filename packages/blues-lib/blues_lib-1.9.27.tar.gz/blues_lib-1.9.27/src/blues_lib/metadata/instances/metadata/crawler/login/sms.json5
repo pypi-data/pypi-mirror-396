@@ -1,0 +1,116 @@
+{
+  "$id":"metadata.crawler.login.sms",
+
+  "summary":{
+    "type":"URL",
+  },
+
+  "browser":{
+    "config":"${browser_config}",
+    "options":"${browser_options}",
+  },
+
+  "crawler":{
+    "open":[
+      // open the login page
+      {
+        "_kind":"open",
+        "url":"${login_url}",
+      },
+      // open the login dialog [optional]
+      {
+        "_kind":"click",
+        "target_CS_WE":"${popup_trigger_selector}",
+        "timeout":10,
+      }, 
+      // switch to sms mode [optional]
+      {
+        "_kind":"click",
+        "target_CS_WE":"${mode_switch_selector}", 
+        "timeout":10,
+      },
+    ],
+    "send":[
+      // input the phone number
+      {
+        "_kind":"write_text",
+        "target_CS_WE":"${phone_input_selector}", 
+        "value":"${phone_number}",
+      },
+      // agree the protocal - [optional]
+      {
+        "_kind":"choice",
+        "target_CS_WE":"${protocol_choice_selector}",
+        "value":true
+      },
+      // send the sms code
+      {
+        "_kind":"click",
+        "target_CS_WE":"${sms_button_selector}", 
+      },
+    ],
+    "mail":[
+      // send the notification email
+      {
+        "_kind":"email",
+        "value":{
+          "subject":"AutoLive : Submit your login code please",
+          "paras":[
+            {
+              "type":"text",
+              "value":"Need to relogin the ${domain} account, a sms code has sent, please submit it within ${code_expire} seconds.",
+            },
+            {
+              "type":"link",
+              "value":{
+                "href":"http://deepbluenet.com/naps-upload-code.html?site=${domain}&ts=${timestamp}",
+                "text":"Click here to open the upload page.",
+              },
+            },
+          ],
+        },
+      },
+    ],
+    "input":[
+      {
+        "_kind":"css",
+        "target_CS_WE":"${code_wrapper_selector}", 
+        "value":"${code_wrapper_css}",
+      },
+      // input the sms code
+      {
+        "_kind":"auth_code_input",
+        "resetable":"${code_input_resetable}", // must input by char
+        "target_CS_WE":"${code_input_selector}",
+        "value":"__sentinel__", // the sntnl value will be replaced dynamically
+        "code_expire":"${code_expire}",
+        "domain":"${domain}",
+        "timestamp":"${timestamp}",
+      },
+    ],
+    "submit":[
+      // submit the sms code
+      {
+        "_kind":"click",
+        "target_CS_WE":"${submit_button_selector}",
+      },
+    ], 
+
+    "save":[
+      // save the login cookie
+      {
+        "_kind":"file_cookie",
+        "value":"__sentinel__", // it will be replaced dynamically
+        "wait_time":"${login_wait_time}", // by default is 3 sconeds
+      }
+    ],
+
+    // check the login status
+    "data":{
+      "_kind":"ele_presents",
+      "target_CS_WE":"${logged_in_element}", // check by element
+      "wait_time":"${login_wait_time:-2}", // by default is 3 sconeds
+    },
+
+  },
+}
