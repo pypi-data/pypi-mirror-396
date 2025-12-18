@@ -1,0 +1,93 @@
+Metadata-Version: 2.4
+Name: skx
+Version: 0.0.22
+Summary: scikit-learn compatible extensions.
+Author-email: skx <hi@sk-x.org>
+License-Expression: GPL-3.0-or-later
+Project-URL: homepage, https://pypi.org/project/skx
+Project-URL: documentation, https://docs.sk-x.org
+Keywords: scikit-learn,augmentation,resampling,smote,ensemble,voting,mixture-of-experts,mlp,neural-network,multi-output
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Classifier: Operating System :: MacOS
+Classifier: Operating System :: MacOS :: MacOS X
+Classifier: Operating System :: POSIX :: Linux
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: pandas<3.0,>=2.0
+Requires-Dist: numpy<3.0,>=2.0
+Requires-Dist: scikit-learn~=1.7.0
+Requires-Dist: scipy<2.0,>=1.13
+
+## skx
+
+scikit-learn compatible extensions for supervised learning on tabular data.
+
+## Documentation
+
+See [docs.sk-x.org](https://docs.sk-x.org).
+
+## Requirements
+
+- Python >= 3.12
+- scikit-learn ~= 1.7.0
+- numpy >= 2.0, scipy >= 1.13, pandas >= 2.0
+
+## Install
+
+```bash
+pip install skx
+```
+
+## Usage
+
+### Augmentation functions
+
+```python
+import numpy as np
+from skx.augmentation import gaussian_augment
+
+X = np.array([[1, 2], [3, 4], [5, 6]])
+y = np.array([1, 2, 3])
+X_aug, y_aug, sample_weight = gaussian_augment(X, y, factor=2.0, y_std=0.1)
+```
+
+### Augmentation meta-estimators
+
+```python
+from sklearn.linear_model import LinearRegression
+from skx.augmentation import GaussianAugmentedRegressor
+
+reg = GaussianAugmentedRegressor(LinearRegression(), factor=10.0, y_std=0.1)
+reg.fit(X, y)
+pred = reg.predict([[2, 3]])
+```
+
+### Ensembles
+
+```python
+from sklearn.linear_model import LinearRegression
+from skx.ensemble import MixtureOfExpertsRegressor
+
+moe = MixtureOfExpertsRegressor(
+    estimator=LinearRegression(), n_estimators=5, split="kmeans", n_clusters=3
+)
+moe.fit(X, y)
+pred = moe.predict(X)
+```
+
+### Neural network
+
+```python
+from skx.neural_network import LinearScalingMLPRegressor
+
+mlp = LinearScalingMLPRegressor(
+    n_hidden_layers=2,
+    hidden_layer_width=50,
+    shrink_factor=0.5,
+    max_iter=100,
+)
+mlp.fit(X, np.column_stack([y, y]))  # multi-output example
+```
