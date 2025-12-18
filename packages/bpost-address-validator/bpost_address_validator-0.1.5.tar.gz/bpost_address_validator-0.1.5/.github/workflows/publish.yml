@@ -1,0 +1,54 @@
+name: Publish to PyPI
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: "PyPI repository to publish to (pypi or testpypi)"
+        required: false
+        default: pypi
+        type: choice
+        options:
+          - pypi
+          - testpypi
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build-and-publish:
+    name: Build with uv and publish
+    runs-on: ubuntu-latest
+    environment: pypi
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up uv (with Python 3.12)
+        uses: astral-sh/setup-uv@v4
+        with:
+          python-version: "3.12"
+
+      - name: Build distributions with uv
+        run: |
+          rm -rf dist
+          uv build
+
+      # Trusted Publishing (OIDC) — no API token required
+      - name: Publish to TestPyPI (manual input selected)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.repository == 'testpypi' }}
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          # Skip artifacts if the exact version already exists on the repository
+          skip-existing: true
+
+      - name: Publish to PyPI (release or manual input selected)
+        if: ${{ github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.repository == 'pypi') }}
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # Skip artifacts if the exact version already exists on the repository
+          skip-existing: true
