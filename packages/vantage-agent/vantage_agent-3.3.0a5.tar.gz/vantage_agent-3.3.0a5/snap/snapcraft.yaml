@@ -1,0 +1,99 @@
+name: vantage-agent
+base: core24
+version: "0.0.0"
+summary: The Vantage Agent snap
+adopt-info: vantage-agent
+license: MIT
+title: Vantage Agent
+contact: https://vantagecompute.ai/contact
+website: https://vantagecompute.ai
+source-code: https://github.com/vantagecompute/vantage-api
+issues: https://github.com/vantagecompute/vantage-api/issues
+description: |
+  The Vantage Agent Snap deploys the Vantage Agent Python package on your host system. This agent
+  is an essencial component of the Vantage platform for managing and monitoring HPC clusters.
+
+  This snap requires a .env file to exist in the SNAP_COMMON directory in order to start.
+
+  To learn more about the operator of the `vantage-agent`, please visit https://docs.vantagecompute.ai.
+
+grade: stable
+confinement: classic
+
+platforms: 
+  core24:
+    build-for: [amd64]
+    build-on: [amd64]
+
+apps:
+  # Daemon service for running tunnel client as a service
+  vtg-agent:
+    command: bin/vtg-run
+    daemon: simple
+    restart-condition: always
+    restart-delay: 10s
+    install-mode: disable
+    environment:
+      PYTHONPATH: "$SNAP/lib/python3.14/site-packages"
+      PATH: "$SNAP/bin:$PATH"
+      PYTHONHOME: "$SNAP/usr"
+
+parts:
+  vantage-agent:
+    source: .
+    plugin: uv
+    build-attributes: [enable-patchelf]
+    build-snaps:
+      - astral-uv
+    build-packages:
+    - libapt-pkg-dev
+    - gcc
+    - g++
+    - dpkg-dev
+    build-environment:
+      - UV_PYTHON_DOWNLOADS: "auto"
+      - UV_PYTHON_PREFERENCE: "only-managed"
+    override-build: |
+      # Let uv download Python 3.14 and create venv
+      uv venv --relocatable --allow-existing --python "$(which python3 || echo python3)" "${CRAFT_PART_INSTALL}"
+      PARTS_PYTHON_VENV_INTERP_PATH="${CRAFT_PART_INSTALL}/bin/python3"
+      
+      # Install packages
+      uv sync --no-dev --no-editable --reinstall
+      
+      # Find the uv-managed Python 3.14
+      VENV_PYTHON=$(readlink -f "${CRAFT_PART_INSTALL}/bin/python3")
+      UV_PYTHON_DIR=$(dirname "${VENV_PYTHON}")
+      UV_PYTHON_ROOT=$(dirname "${UV_PYTHON_DIR}")
+      
+      # Copy it to usr/bin where the post-build check expects it
+      mkdir -p "${CRAFT_PART_INSTALL}/usr/bin"
+      mkdir -p "${CRAFT_PART_INSTALL}/usr/lib"
+      
+      cp "${VENV_PYTHON}" "${CRAFT_PART_INSTALL}/usr/bin/python3.14"
+      cp -r "${UV_PYTHON_ROOT}/lib/"* "${CRAFT_PART_INSTALL}/usr/lib/"
+      
+      # Fix symlinks in bin/ to point to the bundled Python instead of build-time path
+      cd "${CRAFT_PART_INSTALL}/bin"
+      rm -f python python3 python3.14
+      ln -sf ../usr/bin/python3.14 python3.14
+      ln -sf python3.14 python3
+      ln -sf python3 python
+      
+      # Fix shebangs in all Python scripts to use relative path
+      for script in "${CRAFT_PART_INSTALL}/bin"/*; do
+        if [ -f "$script" ] && head -1 "$script" | grep -q "^#!.*python"; then
+          sed -i '1s|^#!.*python.*|#!/usr/bin/env python3|' "$script"
+        fi
+      done
+      cd "${CRAFT_PART_INSTALL}/bin"
+      rm -f python python3 python3.14
+      ln -sf ../usr/bin/python3.14 python3.14
+      ln -sf python3.14 python3
+      ln -sf python3 python
+
+    override-stage: |
+      craftctl default
+      # Use Python to get version from installed package metadata (works with uv, no pip needed)
+      VERSION=$($CRAFT_STAGE/bin/python3 -c "from vantage_agent import __version__; print(__version__)")
+      craftctl set version="$VERSION"
