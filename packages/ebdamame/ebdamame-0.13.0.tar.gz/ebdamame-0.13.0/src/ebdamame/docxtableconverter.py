@@ -1,0 +1,443 @@
+"""
+This module converts tables read from the docx file into a format that is easily accessible (but still a table).
+"""
+
+import logging
+import re
+from enum import Enum
+from itertools import cycle, groupby
+from typing import Generator, Literal, Optional
+
+from docx.table import Table, _Cell, _Row
+from more_itertools import first, first_true, last
+from pydantic import BaseModel, ConfigDict
+from rebdhuhn.models.ebd_table import (
+    STEP_NUMBER_REGEX,
+    EbdCheckResult,
+    EbdDocumentReleaseInformation,
+    EbdTable,
+    EbdTableMetaData,
+    EbdTableRow,
+    EbdTableSubRow,
+    MultiStepInstruction,
+)
+
+from ._docx_utils import get_ebd_document_release_information_from_body
+from .exceptions import EbdTableNotConvertibleError, StepNumberNotFoundError
+
+_logger = logging.getLogger(__name__)
+
+
+def _is_pruefende_rolle_cell_text(text: str) -> bool:
+    """ "
+    Returns true iff the given text mentions the market role that is responsible for applying this entscheidungsbaum
+    """
+    return text.startswith("Prüfende Rolle: ")
+
+
+def _sort_columns_in_row(docx_table_row: _Row) -> Generator[_Cell, None, None]:
+    """
+    The internal structure of the table rows is not as you'd expect it to be as soon as there are merged columns.
+    This problem is described in https://github.com/python-openxml/python-docx/issues/970#issuecomment-877386927 .
+    We apply the workaround described in the GithHub issue.
+    """
+    for table_column in docx_table_row._tr.tc_lst:  # pylint:disable=protected-access
+        yield _Cell(table_column, docx_table_row.table)
+
+
+_subsequent_step_pattern = re.compile(
+    r"^(?P<bool>(?:ja)|(?:nein))?[\sà\uF0E0-]*(?P<subsequent_step_number>(?:\d+\*?)|ende)?"
+)
+# We look for private use character (U+F0E0) to avoid encoding issues which corresponds to "->" in the docx documents.
+# We allow the character "-" in the middle part as there are currently typos in the BDEW docs.
+_step_number_pattern = re.compile(STEP_NUMBER_REGEX)
+
+
+def _get_index_of_first_column_with_step_number(cells: list[_Cell], ebd_key: str) -> int:
+    """
+    returns the index of the first cell in cells, that contains a step number
+    """
+    first_step_number_cell = first_true(
+        cells, pred=lambda cell: _step_number_pattern.match(cell.text.strip()) is not None
+    )
+    if first_step_number_cell is None:
+        raise StepNumberNotFoundError(ebd_key=ebd_key)
+
+    step_number_column_index = cells.index(first_step_number_cell)
+    _logger.debug("The step number is in column %i", step_number_column_index)
+    return step_number_column_index
+
+
+def _get_use_cases(cells: list[_Cell], ebd_key: str) -> list[str]:
+    """
+    Extract use cases from the given list of cells.
+    May return empty list, never returns None.
+    """
+    index_of_step_number = _get_index_of_first_column_with_step_number(cells, ebd_key=ebd_key)
+    use_cases: list[str]
+    if index_of_step_number != 0:
+        # "use_cases" are present; This means, that this step must only be applied for certain scenarios,
+        use_cases = [c.text for c in cells[0:index_of_step_number]]
+    else:
+        use_cases = []
+    _logger.debug("%i use cases have been found", len(use_cases))
+    return use_cases  # we don't return None here because we need something that has a length in the calling code
+
+
+def _read_subsequent_step_cell(cell: _Cell) -> tuple[Optional[bool], Optional[str]]:
+    """
+    Parses the cell that contains the outcome and the subsequent step (e.g. "ja➡5" where "5" is the subsequent step
+    number). As a result we might also have no boolean values as there is no "ja" or "nein" pointing to the
+    subsequent step, e.g. " 110" at step "105" for E_0594 in FV2504.
+    """
+    cell_text = cell.text.lower().strip()
+    # we first match against the lower case cell text; then we convert the "ende" to upper case again in the end.
+    # this is to avoid confusion with "ja" vs. "Ja"
+    match = _subsequent_step_pattern.match(cell_text)
+    if not match:
+        raise ValueError(f"The cell content '{cell_text}' does not match a cell containing subsequent steps")
+    group_dict = match.groupdict()
+    result_bool = group_dict.get("bool")
+    if result_bool is not None:
+        result_bool = result_bool == "ja"
+    subsequent_step_number = group_dict.get("subsequent_step_number")
+    if subsequent_step_number == "ende":
+        subsequent_step_number = "Ende"
+    return result_bool, subsequent_step_number
+
+
+class _EbdSubRowPosition(Enum):
+    """
+    Describes the position of a subrow in the Docx Table.
+    Most rows in the EBD table have two subrows where each subrow denoted one "ja"/"nein" answer to the question in the
+    description column (left to the subrow). We use this enum to toggle upper➡lower➡upper➡lower ... when iterating
+    over the rows. In the end each EbdTableRow shall contain two EbdTableSubRows of which the first is an "UPPER" and
+    the second is a "LOWER" subrow. As soon as the "LOWER" subrow appeared we flush the two subrows into a EbdTableRow,
+    whenever the "UPPER" subrow appears, we reset the subrow list (see loop in convert_docx_table_to_ebd_table).
+    In EBD E_0003 ("nein", "A01") is the UPPER and ("ja->2",None) is the lower subrow.
+    """
+
+    UPPER = 1  #: the upper sub row
+    LOWER = 2  #: the lower sub row
+
+
+# pylint:disable=too-few-public-methods
+class _EnhancedDocxTableLine(BaseModel):
+    """
+    A structure that primarily contains a single row from a DOCX table but also meta information about previous and
+    following elements in the table. It gathers information that are not directly accessible when only looking at one
+    single row.
+    """
+
+    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
+
+    row: _Row
+    """
+    The row that is currently being processed
+    """
+    sub_row_position: _EbdSubRowPosition
+    """
+    denotes if row is an upper/lower sub row
+    """
+    cells: list[_Cell]
+    """
+    the (sanitized) cells of the row
+    """
+    multi_step_instruction_text: Optional[str] = None
+    """
+    a multistep instruction text that may be applicable to this row (if not None)
+    """
+
+
+def _get_upper_lower_position(cells: list[_Cell]) -> _EbdSubRowPosition:
+    """
+    Takes cells of rows of list and returns the _EbdSubRowPosition:
+    The first two entries are empty -> _EbdSubRowPosition.LOWER
+    else -> _EbdSubRowPosition.UPPER
+    """
+    if all(cell.text == "" for cell in cells[0:2]):
+        return _EbdSubRowPosition.LOWER
+    return _EbdSubRowPosition.UPPER
+
+
+# pylint: disable=too-few-public-methods, too-many-instance-attributes, too-many-arguments, too-many-positional-arguments
+class DocxTableConverter:
+    """
+    converts docx tables to EbdTables
+    """
+
+    def __init__(
+        self,
+        docx_tables: list[Table],
+        ebd_key: str,
+        chapter: str,
+        section: str,
+        ebd_name: str,
+        release_information: Optional[EbdDocumentReleaseInformation] = None,
+    ):
+        """
+        the constructor initializes the instance and reads some metadata from the (first) table header.
+
+        If release_information is not provided, it will be automatically extracted from the
+        document's title page via the table's parent document reference.
+        """
+        self._docx_tables = docx_tables
+        if release_information is None:
+            # Extract release information from the table's parent document
+            # Tables have a reference to their parent document via table.part.element.body
+            body = first(docx_tables).part.element.body
+            self._release_information = get_ebd_document_release_information_from_body(body)
+        else:
+            self._release_information = release_information
+        self._column_index_step_number: int
+        self._column_index_description: int
+        self._column_index_check_result: int
+        self._column_index_result_code: int
+        self._column_index_note: int
+        self._row_index_last_header: Literal[0, 1] = 1  #: the index of the last table header row
+        # the index of the last header row _could_ by dynamically calculated but so far it has always been 1.
+        for row_index in range(0, 2):  # the first two lines/rows are the header of the table.
+            # In the constructor we just want to read the metadata from the table.
+            # For this purpose the first two lines are enough.
+            # Now it feels natural, to loop over the cells/columns of the first row, but before we do so, we have to
+            # remove duplicates. Although there are usually only 5 columns visible, technically there might be even 8.
+            # In these cases (e.g. for E_0453) columns like 'Prüfergebnis' simply occur twice in the docx table header.
+            distinct_cell_texts: list[str] = [
+                x[0]
+                for x in groupby(
+                    first(docx_tables).rows[row_index].cells, lambda cell: cell.text
+                )  # row_cells() is deprecated and returns false rows
+            ]
+            for column_index, table_cell_text in enumerate(distinct_cell_texts):
+                if row_index == 0 and _is_pruefende_rolle_cell_text(table_cell_text):
+                    role = table_cell_text.split(":")[1].strip()
+                    break  # because the prüfende rolle is always a full row with identical column cells
+                if table_cell_text == "Nr.":
+                    self._column_index_step_number = column_index
+                    # In most of the cases this will be 1,
+                    # but it can be 0 if the first row does _not_ contain the "Prüfende Rolle".
+                    # self._row_index_last_header = row_index  # type:ignore[assignment]
+                elif table_cell_text == "Prüfschritt":
+                    self._column_index_description = column_index
+                elif table_cell_text == "Prüfergebnis":
+                    self._column_index_check_result = column_index
+                elif table_cell_text == "Code":
+                    self._column_index_result_code = column_index
+                elif table_cell_text == "Hinweis":
+                    self._column_index_note = column_index
+        # if not self._column_index_step_number:
+        # self._column_index_step_number = 0
+        self._metadata = EbdTableMetaData(
+            ebd_code=ebd_key,
+            ebd_name=ebd_name,
+            chapter=chapter,
+            section=section,
+            role=role,
+            release_information=self._release_information,
+        )
+
+    @staticmethod
+    def _enhance_list_view(table: Table, row_offset: int) -> list[_EnhancedDocxTableLine]:
+        """
+        Loop over the given table and enhance the table rows with additional information.
+        It spares the main loop in _handle_single_table from peeking ahead or looking back.
+        """
+        result: list[_EnhancedDocxTableLine] = []
+        upper_lower_iterator = cycle([_EbdSubRowPosition.UPPER, _EbdSubRowPosition.LOWER])
+        multi_step_instruction_text: Optional[str] = None
+        for table_row, sub_row_position in zip(
+            table.rows[row_offset:],
+            upper_lower_iterator,
+        ):
+            row_cells = list(_sort_columns_in_row(table_row))
+            if len(row_cells) <= 2:
+                # These are the multi-column rows that span that contain stuff like
+                # "Alle festgestellten Antworten sind anzugeben, soweit im Format möglich (maximal 8 Antwortcodes)*."
+                _ = next(upper_lower_iterator)  # reset the iterator
+                multi_step_instruction_text = row_cells[0].text
+                # we store the text in the local variable for now because we don't yet know the next step number
+                continue
+            sub_row_position = _get_upper_lower_position(row_cells)
+            result.append(
+                _EnhancedDocxTableLine(
+                    row=table_row,
+                    sub_row_position=sub_row_position,
+                    multi_step_instruction_text=multi_step_instruction_text,
+                    cells=row_cells,
+                )
+            )
+            multi_step_instruction_text = None
+        return result
+
+    # I see that there are quite a few local variables, but honestly see no reason to break it down any further.
+    # pylint:disable=too-many-arguments, too-many-positional-arguments, too-many-locals
+    def _handle_single_table(
+        self,
+        table: Table,
+        multi_step_instructions: list[MultiStepInstruction],
+        row_offset: int,
+        rows: list[EbdTableRow],
+        sub_rows: list[EbdTableSubRow],
+    ) -> None:
+        """
+        Handles a single table (out of possible multiple tables for 1 EBD).
+        The results are written into rows, sub_rows and multi_step_instructions. Those will be modified.
+        """
+        use_cases: list[str] = []
+        last_row_position: Optional[_EbdSubRowPosition] = None
+        # todo: https://github.com/Hochfrequenz/ebdamame/issues/318 # pylint:disable=fixme
+        description: str = ""
+        step_number: str = ""
+        for row_index, enhanced_table_row in enumerate(self._enhance_list_view(table=table, row_offset=row_offset)):
+            if enhanced_table_row.sub_row_position == _EbdSubRowPosition.UPPER:
+                is_transition_row = len(sub_rows) == 1 and last_row_position == _EbdSubRowPosition.UPPER
+                if is_transition_row:
+                    row = EbdTableRow(
+                        description=description,  # pylint:disable=possibly-used-before-assignment
+                        step_number=step_number,
+                        sub_rows=sub_rows,
+                        use_cases=use_cases or None,
+                    )
+                    rows.append(row)
+                    _logger.debug("Successfully added last single row #%s ('%s')", step_number, description)
+
+                last_row_position = _EbdSubRowPosition.UPPER
+                use_cases = _get_use_cases(enhanced_table_row.cells, ebd_key=self._metadata.ebd_code)
+                sub_rows = []  # clear list every second entry
+                step_number = enhanced_table_row.cells[len(use_cases) + self._column_index_step_number].text.strip()
+                description = enhanced_table_row.cells[len(use_cases) + self._column_index_description].text.strip()
+            boolean_outcome, subsequent_step_number = _read_subsequent_step_cell(
+                enhanced_table_row.cells[len(use_cases) + self._column_index_check_result]
+            )
+            if step_number.endswith("*"):  # pylint:disable=possibly-used-before-assignment
+                # step number is defined and set at this point, because the enhanced list view always starts with UPPER
+                self._handle_single_table_star_exception(table, multi_step_instructions, row_offset, rows, row_index)
+                break
+            sub_row = EbdTableSubRow(
+                check_result=EbdCheckResult(subsequent_step_number=subsequent_step_number, result=boolean_outcome),
+                result_code=enhanced_table_row.cells[len(use_cases) + self._column_index_result_code].text.strip()
+                or None,
+                note=enhanced_table_row.cells[len(use_cases) + self._column_index_note].text.strip() or None,
+            )
+            _logger.debug(
+                "Successfully read sub row %s/%s", sub_row.result_code or subsequent_step_number, boolean_outcome
+            )
+            sub_rows.append(sub_row)
+            if enhanced_table_row.sub_row_position == _EbdSubRowPosition.LOWER:
+                last_row_position = _EbdSubRowPosition.LOWER
+                row = EbdTableRow(
+                    description=description,  # pylint:disable=possibly-used-before-assignment
+                    # description is defined and set at this point because the enhanced list view always starts with
+                    # UPPER. Hence, the second iteration of the outer for loop is the earliest we try access it.
+                    step_number=step_number,
+                    sub_rows=sub_rows,
+                    use_cases=use_cases or None,
+                )
+                rows.append(row)
+                _logger.debug("Successfully read row #%s ('%s')", step_number, description)
+
+            if enhanced_table_row.multi_step_instruction_text:
+                multi_step_instructions.append(
+                    MultiStepInstruction(
+                        first_step_number_affected=step_number,
+                        instruction_text=enhanced_table_row.multi_step_instruction_text,
+                    )
+                )
+
+    # see above boolean_outcome and subsequent_step_number could be ignored iff schemes of *-numbers are always the same
+    # pylint:disable=too-many-locals, too-many-positional-arguments
+    def _handle_single_table_star_exception(
+        self,
+        table: Table,
+        multi_step_instructions: list[MultiStepInstruction],
+        row_offset: int,
+        rows: list[EbdTableRow],
+        row_index: int,
+    ) -> None:
+        """
+        Completes table when handling of single table (out of possible multiple tables for 1 EBD) hit a step
+        with several instructions. Those instructions will be split in individual steps.
+        As above, the results are written into rows, sub_rows and multi_step_instructions. Those will be modified.
+        """
+        use_cases: list[str] = []
+        complete_table = self._enhance_list_view(table=table, row_offset=row_offset)
+        enhanced_table_row = complete_table[row_index]
+        use_cases = _get_use_cases(enhanced_table_row.cells, ebd_key=self._metadata.ebd_code)
+        star_case_result_code = (
+            enhanced_table_row.cells[len(use_cases) + self._column_index_result_code].text.strip() or None
+        )
+        star_case_note = enhanced_table_row.cells[len(use_cases) + self._column_index_note].text.strip() or None
+        while row_index < len(complete_table):
+            enhanced_table_row = complete_table[row_index]
+            step_number = str(int(last(rows).step_number) + 1)
+            description = enhanced_table_row.cells[len(use_cases) + self._column_index_description].text.strip()
+            boolean_outcome, subsequent_step_number = _read_subsequent_step_cell(
+                enhanced_table_row.cells[len(use_cases) + self._column_index_check_result]
+            )
+
+            this_is_the_last_row = row_index == len(complete_table) - 1
+
+            if this_is_the_last_row:
+                next_step = "Ende"
+            else:
+                next_step = str(int(step_number) + 1)
+
+            row = EbdTableRow(
+                description=description,
+                step_number=step_number,
+                sub_rows=[
+                    EbdTableSubRow(
+                        check_result=EbdCheckResult(
+                            subsequent_step_number=subsequent_step_number, result=boolean_outcome
+                        ),
+                        result_code=star_case_result_code,
+                        note=star_case_note,
+                    ),
+                    # point to next step
+                    EbdTableSubRow(
+                        check_result=EbdCheckResult(subsequent_step_number=next_step, result=True),
+                        result_code=None,
+                        note=None,
+                    ),
+                ],
+                use_cases=use_cases or None,
+            )
+            rows.append(row)
+            _logger.debug("Successfully added artificial row #%s ('%s')", step_number, description)
+
+            if enhanced_table_row.multi_step_instruction_text:
+                multi_step_instructions.append(
+                    MultiStepInstruction(
+                        first_step_number_affected=step_number,
+                        instruction_text=enhanced_table_row.multi_step_instruction_text,
+                    )
+                )
+            row_index += 1
+
+    def convert_docx_tables_to_ebd_table(self) -> EbdTable:
+        """
+        Converts the raw docx tables of an EBD to an EbdTable.
+        The latter contains the same data but in an easily accessible format that can be used to e.g. plot real graphs.
+
+        Raises:
+            EbdTableNotConvertibleError: If the table format is not supported (e.g. uses "--" instead of ja/nein).
+        """
+        rows: list[EbdTableRow] = []
+        sub_rows: list[EbdTableSubRow] = []
+        multi_step_instructions: list[MultiStepInstruction] = []
+        try:
+            for table_index, table in enumerate(self._docx_tables):
+                offset: int = 0
+                if table_index == 0:
+                    offset = self._row_index_last_header + 1
+                self._handle_single_table(table, multi_step_instructions, offset, rows, sub_rows)
+        except ValueError as e:
+            if "result is not boolean" in str(e).lower():
+                raise EbdTableNotConvertibleError(
+                    ebd_key=self._metadata.ebd_code,
+                    reason="Table uses non-boolean format (e.g. '--' instead of 'ja/nein')",
+                ) from e
+            raise
+        result = EbdTable(rows=rows, metadata=self._metadata, multi_step_instructions=multi_step_instructions or None)
+        _logger.info("Successfully created an EbdTable for EBD '%s'", result.metadata.ebd_code)
+        return result
