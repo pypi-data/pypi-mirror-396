@@ -1,0 +1,184 @@
+# Copyright (c) 2025 Beijing Volcano Engine Technology Co., Ltd. and/or its affiliates.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import importlib.util
+import json
+import os
+import sys
+import time
+import types
+from typing import Any, Dict, List, MutableMapping, Tuple
+
+import requests
+from yaml import safe_load
+import __main__
+
+
+def read_file(file_path):
+    with open(file_path, "r", encoding="utf-8") as f:
+        data = f.readlines()
+    data = [x.strip() for x in data]
+    return data
+
+
+def formatted_timestamp() -> str:
+    # YYYYMMDDHHMMSS
+    return time.strftime("%Y%m%d%H%M%S", time.localtime())
+
+
+def read_file_to_bytes(file_path: str) -> bytes:
+    if file_path.startswith(("http://", "https://")):
+        response = requests.get(file_path)
+        response.raise_for_status()
+        return response.content
+    else:
+        with open(file_path, "rb") as f:
+            return f.read()
+
+
+def load_module_from_file(module_name: str, file_path: str) -> types.ModuleType:
+    spec = importlib.util.spec_from_file_location(module_name, file_path)
+    if spec:
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        if spec.loader:
+            spec.loader.exec_module(module)
+            return module
+        else:
+            raise ImportError(
+                f"Could not find loader for module {module_name} from {file_path}"
+            )
+    else:
+        raise ImportError(f"Could not load module {module_name} from {file_path}")
+
+
+def flatten_dict(
+    d: MutableMapping[str, Any], parent_key: str = "", sep: str = "_"
+) -> Dict[str, Any]:
+    """Flatten a nested dictionary.
+
+    Input:
+        {"a": {"b": 1}}
+    Output:
+        {"a_b": 1}
+    """
+    items: List[Tuple[str, Any]] = []
+    for k, v in d.items():
+        new_key = f"{parent_key}{sep}{k}" if parent_key else k
+        if isinstance(v, MutableMapping):
+            items.extend(flatten_dict(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
+
+
+def safe_json_serialize(obj) -> str:
+    """Convert any Python object to a JSON-serializable type or string.
+
+    Args:
+      obj: The object to serialize.
+
+    Returns:
+      The JSON-serialized object string or <non-serializable> if the object cannot be serialized.
+    """
+
+    try:
+        return json.dumps(
+            obj, ensure_ascii=False, default=lambda o: "<not serializable>"
+        )
+    except (TypeError, OverflowError):
+        return "<not serializable>"
+
+
+def getenv(
+    env_name: str, default_value: Any = "", allow_false_values: bool = False
+) -> str:
+    """
+    Get environment variable.
+
+    Args:
+        env_name (str): The name of the environment variable.
+        default_value (str): The default value of the environment variable.
+        allow_false_values (bool, optional): Whether to allow the environment variable to be None or false values. Defaults to False.
+
+    Returns:
+        str: The value of the environment variable.
+    """
+    value = os.getenv(env_name, default_value)
+
+    if allow_false_values:
+        return value
+
+    if value:
+        return value
+    else:
+        raise ValueError(
+            f"The environment variable `{env_name}` not exists. Please set this in your environment variable or config.yaml."
+        )
+
+
+def set_envs(config_yaml_path: str, env_from_dotenv: dict = None) -> tuple[dict, dict]:
+    from veadk.utils.logger import get_logger
+
+    logger = get_logger(__name__)
+
+    with open(config_yaml_path, "r", encoding="utf-8") as yaml_file:
+        config_dict = safe_load(yaml_file)
+
+    flatten_config_dict = flatten_dict(config_dict)
+    config_upper_map = {k.upper(): v for k, v in flatten_config_dict.items()}
+    all_keys = {k.upper() for k in flatten_config_dict.keys()} | set(
+        env_from_dotenv.keys() if env_from_dotenv else []
+    )
+    veadk_environments = {}
+    for k in all_keys:
+        if k in os.environ:
+            logger.info(
+                f"Environment variable {k} has been set, value in `config.yaml` will be ignored."
+            )
+            veadk_environments[k] = os.environ[k]
+            continue
+        veadk_environments[k] = str(config_upper_map.get(k))
+        os.environ[k] = str(config_upper_map.get(k))
+    return config_dict, veadk_environments
+
+
+def get_agents_dir():
+    """
+    Get the directory of agents.
+
+    Returns:
+        str: The agents directory (parent directory of the app)
+    """
+    return os.path.dirname(get_agent_dir())
+
+
+def get_agent_dir():
+    """
+    Get the directory of the currently executed entry script.
+
+    Returns:
+        str: The agent directory
+    """
+    # Try using __main__.__file__ (works for most CLI scripts and uv run environments)
+    if hasattr(__main__, "__file__"):
+        full_path = os.path.dirname(os.path.abspath(__main__.__file__))
+    # Fallback to sys.argv[0] (usually gives the entry script path)
+    elif len(sys.argv) > 0 and sys.argv[0]:
+        full_path = os.path.dirname(os.path.abspath(sys.argv[0]))
+    # Fallback to current working directory (for REPL / Jupyter Notebook)
+    else:
+        full_path = os.getcwd()
+
+    return full_path
