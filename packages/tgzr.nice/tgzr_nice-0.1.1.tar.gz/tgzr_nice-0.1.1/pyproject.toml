@@ -1,0 +1,85 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tgzr.nice"
+dynamic = ["version"]
+description = 'Components and tools for TGZR nice apps'
+readme = "README.md"
+requires-python = ">=3.8"
+license = "GPL-3.0-or-later"
+keywords = []
+authors = [
+  { name = "Dee", email = "dee.sometech@gmail.com" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+
+dependencies = [
+  "nicegui>=2.24.2",
+  "pydantic-settings>=2.8.1",
+]
+
+[dependency-groups]
+dev = [
+    "pyinstaller>=6.17.0",
+]
+
+[project.urls]
+Documentation = "https://github.com/open-tgzr/tgzr.nice#readme"
+Issues = "https://github.com/open-tgzr/tgzr.nice/issues"
+Source = "https://github.com/open-tgzr/tgzr.nice"
+
+[tool.hatch.version]
+source = "vcs" 
+fallback-version = "0.0.0"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "./src/tgzr/nice/_version.py"
+
+[tool.hatch.build]
+# this is needed bc it is otherwise not included in the build:
+artifacts = ['_version.py']
+packages = ["src/tgzr"]
+
+[tool.hatch.build.targets.wheel]
+# this is needed bc it is otherwise not included in the build:
+artifacts = ['_version.py']
+packages = ["src/tgzr"]
+
+[tool.hatch.envs.types]
+extra-dependencies = [
+  "mypy>=1.0.0",
+]
+[tool.hatch.envs.types.scripts]
+check = "mypy --install-types --non-interactive {args:src/tgzr/nice tests}"
+
+[tool.coverage.run]
+source_pkgs = ["tgzr.nice", "tests"]
+branch = true
+parallel = true
+omit = [
+  "src/tgzr/nice/_version.py",
+]
+
+[tool.coverage.paths]
+tgzr.nice = ["src/tgzr/nice", "*/tgzr.nice/src/tgzr/nice"]
+tests = ["tests", "*/tgzr/nice/tests"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
+
