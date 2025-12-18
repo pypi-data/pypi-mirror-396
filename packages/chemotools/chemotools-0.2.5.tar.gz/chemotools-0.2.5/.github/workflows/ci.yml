@@ -1,0 +1,68 @@
+name: Python CI
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install Task
+        uses: arduino/setup-task@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Print versions
+        run: |
+          python --version
+          uv --version
+          task --version
+
+      # 1. Install dependencies
+      - name: Install dependencies
+        run: task install
+
+      # 2. Format (check-only)
+      - name: Check formatting
+        run: task format-check
+
+      # 3. Lint
+      - name: Run linting
+        run: task lint
+
+      # 4. Type-check
+      - name: Run type checking
+        run: task type-check
+
+      # 5. Tests with coverage
+      - name: Run tests with coverage
+        run: task coverage
+
+      # 6. Upload coverage reports to Codecov
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      # 7. Build package
+      - name: Build package
+        run: task build

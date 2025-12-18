@@ -1,0 +1,83 @@
+name: Publish Python 🐍 distributions 📦 to PyPI
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+        contents: write
+        id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install Task
+        uses: arduino/setup-task@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Print versions
+        run: |
+          python --version
+          uv --version
+          task --version
+
+      # 1. Install dependencies
+      - name: Install dependencies
+        run: task install:release
+
+      # 2. Build package
+      - name: Build package
+        run: task build
+
+      # 3. Create clean venv with package for SBOM
+      - name: Create release environment
+        run: task install:release:sbom
+
+      # 4. Publish to PyPI
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+      # 5. Generate SBOM from runtime environment
+      - name: Generate SBOM
+        run: |
+          uv tool install cyclonedx-bom
+          
+          CYCLONEDX_VERSION=$(uv tool run cyclonedx-py --version | head -n1)
+          echo "Generating SBOM using $CYCLONEDX_VERSION"
+          
+          # Use the globally installed tool to scan the clean venv
+          uv tool run cyclonedx-py environment \
+            --output-format=json \
+            --output-file=chemotools-${{ github.event.release.tag_name }}-sbom.json \
+            .venv-release
+          echo "cyclonedx-bom-version=$CYCLONEDX_VERSION" >> $GITHUB_OUTPUT
+        id: sbom
+
+      # 6. Upload SBOM as release asset
+      - name: Upload SBOM to release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: chemotools-${{ github.event.release.tag_name }}-sbom.json
+          append_body: true
+          body: |
+            
+            ---
+            **SBOM Information:**
+            - File: `chemotools-${{ github.event.release.tag_name }}-sbom.json`
+            - Generated with: `${{ steps.sbom.outputs.cyclonedx-bom-version }}`
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
