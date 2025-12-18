@@ -1,0 +1,82 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chuk-artifacts"
+version = "0.10"
+description = "Chuk Artifacts provides a production-ready, modular artifact storage system that works seamlessly across multiple storage backends (memory, filesystem, AWS S3, IBM Cloud Object Storage) with Redis or memory-based metadata caching and strict session-based security."
+readme = "README.md"
+requires-python = ">=3.11"
+
+dependencies = [
+  "pydantic>=2.10.6",
+  "pyyaml>=6.0.2",
+  "aioboto3>=14.3.0",
+  "redis>=6.2.0",
+  "chuk-sessions>=0.5.2",
+  "chuk-virtual-fs>=0.3.1",
+  "dotenv>=0.9.9",
+  "asyncio>=3.4.3",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3.5",
+  "ruff>=0.4.6",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["chuk_artifacts*"]
+
+[tool.setuptools.package-data]
+chuk_artifacts = ["py.typed"]
+
+[tool.pytest.ini_options]
+# Pytest configuration for chuk-artifacts
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--verbose",
+    "--tb=short", 
+    "--strict-markers",
+    "--strict-config",
+    "--durations=10",
+    "-ra"
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests", 
+    "security: marks tests as security-focused tests",
+    "performance: marks tests as performance tests"
+]
+filterwarnings = [
+    "ignore::DeprecationWarning:chuk_sessions.*",
+    "ignore::pytest.PytestDeprecationWarning",
+    "ignore::pytest.PytestUnknownMarkWarning"
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest-asyncio>=1.0.0",
+    "pytest>=8.3.5",
+    "pytest-cov>=6.0.0",
+    "ruff>=0.4.6",
+    "mypy>=1.0.0",
+]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = false
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+no_implicit_optional = false
+check_untyped_defs = false
+disable_error_code = ["no-any-return", "misc", "assignment", "arg-type", "operator", "return-value"]
