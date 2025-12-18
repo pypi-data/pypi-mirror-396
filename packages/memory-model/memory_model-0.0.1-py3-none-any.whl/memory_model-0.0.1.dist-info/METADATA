@@ -1,0 +1,175 @@
+Metadata-Version: 2.4
+Name: memory-model
+Version: 0.0.1
+Summary: Official Python SDK for MemoryModel API
+Author: MemoryModel Team
+License: MIT
+Keywords: agents,ai,memory,memory-model,sdk
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Requires-Python: >=3.8
+Requires-Dist: pydantic>=2.0.0
+Requires-Dist: requests>=2.25.0
+Provides-Extra: dev
+Requires-Dist: pytest-asyncio>=0.21.0; extra == 'dev'
+Requires-Dist: pytest>=7.0.0; extra == 'dev'
+Description-Content-Type: text/markdown
+
+# memory-model
+
+Official Python SDK for [MemoryModel](https://memorymodel.dev).
+
+## Installation
+
+```bash
+pip install memory-model
+```
+
+### Local Development
+```bash
+cd sdk-python
+pip install -e .
+```
+
+---
+
+## Quick Start
+
+```python
+from memory_model import MemoryClient
+
+client = MemoryClient(
+    api_key="sk_live_...",
+    default_end_user_id="user_123"
+)
+
+# Add a memory
+client.add("Project deadline is Friday.")
+
+# Search memories
+results = client.search("When is the deadline?")
+for memory in results:
+    print(f"[{memory.similarity:.2f}] {memory.content}")
+```
+
+---
+
+## API Reference
+
+### Constructor
+
+```python
+MemoryClient(
+    api_key: str,                      # Required
+    base_url: str = "https://api.memorymodel.dev",
+    default_end_user_id: str = None,
+    timeout: int = 30,                 # Seconds
+    max_retries: int = 3,              # Retries for 5xx/429
+    api_version: str = "v1"            # API version prefix
+)
+```
+
+### Methods
+
+#### `add(content, *, user_context=None, end_user_id=None)`
+```python
+response = client.add("Meeting moved to 3pm.", user_context="Calendar update")
+print(response.job_id)
+```
+
+#### `add_image(image_data, *, user_context=None, end_user_id=None)`
+```python
+import base64
+with open("screenshot.png", "rb") as f:
+    img_b64 = base64.b64encode(f.read()).decode()
+
+response = client.add_image(img_b64, user_context="Error screenshot")
+```
+
+#### `search(query, *, limit=5, strategy="centroid_aware", end_user_id=None)`
+```python
+results = client.search("What time is the meeting?", limit=3)
+```
+
+#### `list(*, limit=50, memory_type=None, end_user_id=None)`
+```python
+memories = client.list(limit=10)
+```
+
+#### `delete(memory_id, *, end_user_id=None)`
+```python
+client.delete("mem_abc123")
+```
+
+---
+
+## Error Handling
+
+```python
+from memory_model import MemoryClient, MemoryClientError
+
+try:
+    client.search("test")
+except MemoryClientError as e:
+    print(e.message)       # Human-readable error
+    print(e.status)        # HTTP status (401, 429, 500...)
+    print(e.code)          # Error code from API
+    print(e.is_retryable)  # True for 5xx/429
+```
+
+**Automatic Retry**: The SDK retries on 5xx/429 with exponential backoff (1s → 2s → 4s).
+
+---
+
+## Agent Integration
+
+### LangChain / CrewAI Example
+
+```python
+from memory_model import MemoryClient
+from langchain_openai import ChatOpenAI
+from langchain.schema import SystemMessage, HumanMessage
+
+memory = MemoryClient(api_key="sk_live_...", default_end_user_id="user_123")
+llm = ChatOpenAI(model="gpt-4o")
+
+def agent_respond(user_message: str) -> str:
+    # 1. Store user message
+    memory.add(user_message, user_context="User question")
+    
+    # 2. Retrieve context
+    context = memory.search(user_message, limit=3)
+    context_str = "\n".join([f"- {m.content}" for m in context])
+    
+    # 3. Generate response
+    messages = [
+        SystemMessage(content=f"Context:\n{context_str}"),
+        HumanMessage(content=user_message)
+    ]
+    response = llm.invoke(messages)
+    
+    return response.content
+```
+
+---
+
+## Publishing to PyPI
+
+```bash
+cd sdk-python
+
+# Build
+pip install build
+python -m build
+
+# Upload
+pip install twine
+twine upload dist/*
+```
