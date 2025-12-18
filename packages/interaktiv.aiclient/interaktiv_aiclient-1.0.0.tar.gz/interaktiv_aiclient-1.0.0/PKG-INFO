@@ -1,0 +1,123 @@
+Metadata-Version: 2.4
+Name: interaktiv.aiclient
+Version: 1.0.0
+Summary: OpenRouter integration with Plone
+Project-URL: Homepage, https://github.com/interaktivgmbh/interaktiv.aiclient
+Project-URL: PyPI, https://pypi.org/project/interaktiv.aiclient
+Project-URL: Source, https://github.com/interaktivgmbh/interaktiv.aiclient
+Project-URL: Tracker, https://github.com/interaktivgmbh/interaktiv.aiclient/issues
+Author-email: Interaktiv GmbH <info@interaktiv.de>
+License-Expression: GPL-2.0-only
+License-File: LICENSE.md
+Keywords: AI,CMS,OpenRouter,Plone,Python
+Classifier: Development Status :: 4 - Beta
+Classifier: Environment :: Web Environment
+Classifier: Framework :: Plone
+Classifier: Framework :: Plone :: 6.0
+Classifier: Framework :: Plone :: 6.1
+Classifier: Framework :: Plone :: Addon
+Classifier: License :: OSI Approved :: GNU General Public License v2 (GPLv2)
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Requires-Python: <3.14,>=3.10
+Requires-Dist: openai
+Requires-Dist: plone-api
+Requires-Dist: plone-restapi
+Requires-Dist: products-cmfplone
+Provides-Extra: release
+Requires-Dist: zest-pocompile; extra == 'release'
+Requires-Dist: zest-releaser[recommended]; extra == 'release'
+Requires-Dist: zestreleaser-towncrier; extra == 'release'
+Provides-Extra: test
+Requires-Dist: horse-with-no-namespace; extra == 'test'
+Requires-Dist: plone-app-testing; extra == 'test'
+Requires-Dist: plone-restapi[test]; extra == 'test'
+Requires-Dist: pytest; extra == 'test'
+Requires-Dist: pytest-cov; extra == 'test'
+Requires-Dist: pytest-plone>=0.5.0; extra == 'test'
+Description-Content-Type: text/markdown
+
+# interaktiv.aiclient
+
+[![Code checks](https://github.com/interaktivgmbh/interaktiv.aiclient/actions/workflows/ci.yml/badge.svg)](https://github.com/interaktivgmbh/interaktiv.aiclient/actions/workflows/ci.yml)
+
+This is a simple OpenRouter integration for Plone.
+
+Tested for Plone `6.0.15`
+
+## How to use
+
+To get started, fill in your API key and select a model from the AI Client
+controlpanel. Available models are fetched from the OpenRouter Models API.
+
+You can then get the AI Client utility and call its `call` method with a prompt.
+
+```python
+from interaktiv.aiclient.client import AIClient
+from interaktiv.aiclient.interfaces import IAIClient
+from zope.component import getUtility
+
+prompt = [
+    {
+        "role": "user",
+        "content": "Hello World!"
+    }
+]
+
+ai_client: AIClient = getUtility(IAIClient)
+response = ai_client.call(prompt)
+```
+
+For more information on how to construct prompts, please refer to the
+[OpenAI docs](https://platform.openai.com/docs/overview).
+
+## Adding this add-on to your project
+
+Install the add-on using `pip`:
+
+```shell
+pip install interaktiv.aiclient
+```
+
+or if you're using uv:
+
+```shell
+uv pip install interaktiv.aiclient
+```
+
+### Install from source
+
+You can also install the add-on from the source. In your `mx.ini` file, add:
+
+```ini
+[interaktiv.aiclient]
+url = git@github.com:interaktivgmbh/interaktiv.aiclient.git
+rev = v1.0.0
+extras = test
+```
+
+Or using https:
+
+```ini
+[interaktiv.aiclient]
+url = https://github.com/interaktivgmbh/interaktiv.aiclient.git
+rev = v1.0.0
+extras = test
+```
+
+## Contribute
+
+- [Issue tracker](https://github.com/interaktivgmbh/interaktiv.aiclient/issues)
+- [Source code](https://github.com/interaktivgmbh/interaktiv.aiclient/)
+
+## License
+
+The project is licensed under GPLv2.
+
+## Credits and acknowledgements
+
+Generated using [Cookieplone (0.9.10)](https://github.com/plone/cookieplone) and [cookieplone-templates (eae593d)](https://github.com/plone/cookieplone-templates/commit/eae593d854b137cc3ab915e1c638170cbdfb3a78) on 2025-11-21 13:43:16.160908. A special thanks to all contributors and supporters!
