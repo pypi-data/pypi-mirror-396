@@ -1,0 +1,199 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "thyra"
+version = "1.9.0"
+description = "A modern Python library for converting Mass Spectrometry Imaging (MSI) data into SpatialData/Zarr format - your portal to spatial omics"
+authors = ["Theodoros Visvikis <t.visvikis@maastrichtuniversity.nl>"]
+maintainers = ["Theodoros Visvikis <t.visvikis@maastrichtuniversity.nl>"]
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/Tomatokeftes/thyra"
+repository = "https://github.com/Tomatokeftes/thyra"
+documentation = "https://github.com/Tomatokeftes/thyra#readme"
+keywords = [
+    "mass-spectrometry",
+    "imaging",
+    "spatialdata",
+    "zarr",
+    "omics",
+    "bioinformatics",
+    "msi",
+    "imzml",
+    "bruker",
+    "spatial-omics",
+    "data-conversion",
+    "scientific-computing"
+]
+
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: File Formats",
+    "Typing :: Typed",
+    "Environment :: Console",
+]
+packages = [{include = "thyra"}]
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/Tomatokeftes/thyra/issues"
+"Discussions" = "https://github.com/Tomatokeftes/thyra/discussions"
+"Changelog" = "https://github.com/Tomatokeftes/thyra/blob/main/CHANGELOG.md"
+"Contributing" = "https://github.com/Tomatokeftes/thyra/blob/main/CONTRIBUTING.md"
+
+[tool.poetry.dependencies]
+python = ">=3.11, <3.13"
+
+dask = ">=2023.0.0"
+geopandas = ">=0.9.0"
+lxml = ">=4.6.0"
+numpy = ">=2.0.0"
+pandas = ">=2.0.0"
+pyimzML = ">=1.4.0"
+scipy = ">=1.7.0"
+Shapely = ">=1.8.0"
+spatialdata = ">=0.2.0"
+tqdm = ">=4.50.0"
+zarr = ">=3.0.0"
+cryptography = "^45.0.5"
+imagecodecs = ">=2024.1.1"  # For reading compressed TIFF optical images
+
+anndata = ">=0.11.0"
+matplotlib = "^3.10.6"
+
+[tool.poetry.group.test.dependencies]
+pytest = ">=7.0.0"
+pytest-cov = ">=4.0.0"
+mock = ">=4.0.0"
+
+[tool.poetry.group.dev.dependencies]
+black = ">=23.0.0"
+isort = ">=5.12.0"
+flake8 = ">=6.0.0"
+mypy = ">=1.0.0"
+pydocstyle = ">=6.3.0"
+python-semantic-release = "*"
+python-dotenv = "^1.1.1"
+pre-commit = ">=3.0.0"
+bandit = {extras = ["toml"], version = ">=1.7.0"}
+types-requests = ">=2.25.0"
+types-PyYAML = ">=6.0.0"
+psutil = "^7.1.0"
+matplotlib = "^3.10.6"
+ipykernel = "^6.30.1"
+jupyter = "^1.1.1"
+docformatter = "^1.7.7"
+ptitprince = "^0.3.1"
+
+[tool.poetry.scripts]
+thyra = "thyra.__main__:main"
+thyra-check-ontology = "thyra.tools.check_ontology:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+markers = [
+    "unit: marks tests as unit tests (fast, no external dependencies)",
+    "integration: marks tests as integration tests (may be slow, may require external dependencies)"
+]
+addopts = "-v --tb=short -m \"not integration\""
+filterwarnings = [
+    "ignore::DeprecationWarning:pkg_resources.*:",
+    "ignore::DeprecationWarning:xarray_schema.*:",
+    "ignore::UserWarning:spatialdata.models.models:1053"
+]
+
+# =============================================================
+# === SEMANTIC RELEASE CONFIGURATION                         ===
+# =============================================================
+[tool.semantic_release]
+version_toml = ["pyproject.toml:tool.poetry.version"]
+version_variables = [
+    "thyra/__init__.py:__version__",
+]
+build_command = "pip install build && python -m build"
+upload_to_vcs_release = true
+
+[tool.semantic_release.branches.main]
+match = "main"
+prerelease = false
+
+[tool.semantic_release.changelog]
+template_dir = "templates"
+changelog_file = "CHANGELOG.md"
+exclude_commit_patterns = [
+    "chore*",
+    "ci*",
+]
+
+[tool.semantic_release.commit_parser_options]
+allowed_tags = ["build", "chore", "ci", "docs", "feat", "fix", "perf", "style", "refactor", "test"]
+minor_tags = ["feat"]
+patch_tags = ["fix", "perf"]
+
+[tool.semantic_release.remote_settings]
+name = "origin"
+token = { env = "GITHUB_TOKEN" }
+
+# =============================================================
+# === CODE QUALITY TOOL CONFIGURATIONS                     ===
+# =============================================================
+
+[tool.bandit]
+exclude_dirs = ["tests", "docs"]
+skips = ["B101", "B601", "B603", "B607"]  # Allow assert statements, shell usage, and subprocess calls with controlled input
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false  # Set to true once types are added
+disallow_incomplete_defs = false  # Set to true once types are added
+check_untyped_defs = true
+disallow_untyped_decorators = false  # Set to true once types are added
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = [
+    "pyimzml.*",
+    "spatialdata.*",
+    "anndata.*",
+    "zarr.*",
+    "dask.*",
+    "geopandas.*",
+    "shapely.*",
+]
+ignore_missing_imports = true
+
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+line_length = 88
+
+[tool.pydocstyle]
+convention = "google"
+add_ignore = ["D100", "D104", "D105"]  # Missing docstrings in modules, packages, and magic methods
