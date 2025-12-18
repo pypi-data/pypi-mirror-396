@@ -1,0 +1,65 @@
+import pytest
+from hamcrest import assert_that, is_not, none, empty, is_
+from codemie_test_harness.tests.test_data.vendor_assistant_test_data import (
+    vendor_assistant_test_data,
+)
+
+
+@pytest.mark.vendor
+@pytest.mark.api
+@pytest.mark.parametrize(
+    "vendor_type,credential_type,credentials,prompt,expected_response",
+    vendor_assistant_test_data,
+)
+def test_vendor_assistant_installation_and_chat(
+    vendor_assistant_utils,
+    integration,
+    assistant_utils,
+    similarity_check,
+    vendor_type,
+    credential_type,
+    credentials,
+    prompt,
+    expected_response,
+):
+    """Test vendor assistant installation and chat functionality."""
+    _integration = integration(credential_type, credentials)
+
+    setting = vendor_assistant_utils.find_setting_for_integration(
+        vendor=vendor_type,
+        integration_id=_integration.id,
+    )
+    assert_that(setting, is_not(none()))
+    assert_that(setting.invalid or False, is_(False))
+
+    assistants_response = vendor_assistant_utils.get_assistants(
+        vendor=vendor_type,
+        setting_id=setting.setting_id,
+    )
+    assert_that(assistants_response, is_not(none()))
+    assert_that(assistants_response.data, is_not(empty()))
+
+    codemie_id = vendor_assistant_utils.install_first_available_assistant(
+        vendor=vendor_type,
+        setting_id=setting.setting_id,
+    )
+    assert_that(codemie_id, is_not(none()))
+
+    class AssistantIdWrapper:
+        def __init__(self, assistant_id):
+            self.id = assistant_id
+
+    assistant_wrapper = AssistantIdWrapper(codemie_id)
+    response = assistant_utils.ask_assistant(
+        assistant=assistant_wrapper,
+        user_prompt=prompt,
+        minimal_response=True,
+    )
+
+    similarity_check.check_similarity(response, expected_response)
+
+    uninstall_response = vendor_assistant_utils.uninstall_assistant(
+        vendor=vendor_type,
+        codemie_id=codemie_id,
+    )
+    assert_that(uninstall_response.success, is_(True))
