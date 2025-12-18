@@ -1,0 +1,54 @@
+"""
+<description not available>
+"""
+
+# this file was auto-generated
+
+from openminds.properties import Property
+from openminds.v4.sands import CustomAnnotation as OMCustomAnnotation
+from fairgraph import EmbeddedMetadata
+
+
+class CustomAnnotation(EmbeddedMetadata, OMCustomAnnotation):
+    """
+    <description not available>
+    """
+
+    type_ = "https://openminds.om-i.org/types/CustomAnnotation"
+    # forward properties are defined in the parent class (in openMINDS-Python)
+    reverse_properties = []
+    existence_query_properties = ("coordinate_space", "criteria_quality_type", "criteria_type", "type")
+
+    def __init__(
+        self,
+        anchor_points=None,
+        coordinate_space=None,
+        criteria=None,
+        criteria_quality_type=None,
+        criteria_type=None,
+        inspired_by=None,
+        internal_identifier=None,
+        lateralities=None,
+        preferred_visualization=None,
+        specification=None,
+        type=None,
+        id=None,
+        data=None,
+        space=None,
+        release_status=None,
+    ):
+        return EmbeddedMetadata.__init__(
+            self,
+            data=data,
+            anchor_points=anchor_points,
+            coordinate_space=coordinate_space,
+            criteria=criteria,
+            criteria_quality_type=criteria_quality_type,
+            criteria_type=criteria_type,
+            inspired_by=inspired_by,
+            internal_identifier=internal_identifier,
+            lateralities=lateralities,
+            preferred_visualization=preferred_visualization,
+            specification=specification,
+            type=type,
+        )
