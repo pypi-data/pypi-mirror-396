@@ -1,0 +1,1224 @@
+"""
+Azure DevOps REST API Wrapper for TAID.
+
+Uses Azure DevOps REST API for work item operations with automatic markdown formatting support.
+
+Key Features:
+1. Markdown format support: Automatically sets multilineFieldsFormat for description fields
+2. Single-step work item creation: Sets all fields including iteration in one API call
+3. Batch operations: Query work items efficiently with batch fetching
+4. Field mapping: Generic field names to Azure DevOps-specific fields
+
+Key Learnings Applied:
+1. Iteration paths use simplified format: "Project\\SprintName"
+2. Single-step creation with REST API (no longer two-step)
+3. Field names are case-sensitive
+4. WIQL queries need double backslashes for escaping
+5. Markdown fields require multilineFieldsFormat=Markdown parameter
+
+REST API Operations:
+- create_work_item: POST with JSON Patch, supports markdown
+- update_work_item: PATCH with JSON Patch, supports markdown
+- query_work_items: POST WIQL + batch GET for full items
+- link_work_items: PATCH with relation additions
+- get_work_item: GET with full expansion
+"""
+
+import json
+import subprocess
+import base64
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+# Optional requests import for file attachments
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
+
+
+class AzureCLI:
+    """Wrapper for Azure CLI DevOps operations."""
+
+    def __init__(self):
+        self._config = self._ensure_configured()
+
+    def _ensure_configured(self) -> Dict[str, str]:
+        """Verify Azure CLI is configured and return config."""
+        result = subprocess.run(
+            ['az', 'devops', 'configure', '--list'],
+            capture_output=True,
+            text=True
+        )
+        if result.returncode != 0:
+            raise Exception("Azure CLI not configured. Run: az devops configure --defaults organization=<url> project=<name>")
+
+        config = {}
+        for line in result.stdout.strip().split('\n'):
+            if '=' in line:
+                key, value = line.split('=', 1)
+                config[key.strip()] = value.strip()
+        return config
+
+    def _run_command(self, cmd: List[str]) -> Dict[str, Any]:
+        """Execute Azure CLI command and return JSON result."""
+        if '--output' not in cmd and '-o' not in cmd:
+            cmd.extend(['--output', 'json'])
+
+        result = subprocess.run(cmd, capture_output=True, text=True)
+
+        if result.returncode == 0:
+            return json.loads(result.stdout) if result.stdout else {}
+        else:
+            raise Exception(f"Command failed: {' '.join(cmd)}\nError: {result.stderr}")
+
+    def _verify_operation(
+        self,
+        operation: str,
+        success: bool,
+        result: Any,
+        verification_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Return standardized verification result."""
+        return {
+            "success": success,
+            "operation": operation,
+            "result": result,
+            "verification": verification_data
+        }
+
+    # Work Items
+
+    def query_work_items(self, wiql: str) -> List[Dict]:
+        """
+        Query work items using WIQL via REST API.
+
+        Args:
+            wiql: WIQL query string
+
+        Returns:
+            List of full work item dicts (not just IDs)
+
+        Note:
+            REST API query returns only IDs; this method automatically
+            fetches full work items in batches for compatibility.
+        """
+        project = self._get_project()
+
+        # POST WIQL query
+        endpoint = f"{project}/_apis/wit/wiql"
+        params = {"api-version": "7.1"}
+        data = {"query": wiql}
+
+        result = self._make_request("POST", endpoint, data=data, params=params)
+
+        # Extract work item IDs
+        work_item_ids = [item["id"] for item in result.get("workItems", [])]
+
+        if not work_item_ids:
+            return []
+
+        # Batch fetch full work items (up to 200 at a time per API limits)
+        all_items = []
+        batch_size = 200
+
+        for i in range(0, len(work_item_ids), batch_size):
+            batch_ids = work_item_ids[i:i+batch_size]
+            ids_param = ",".join(str(id) for id in batch_ids)
+
+            endpoint = "_apis/wit/workitems"
+            params = {
+                "api-version": "7.1",
+                "ids": ids_param,
+                "$expand": "All"
+            }
+
+            batch_result = self._make_request("GET", endpoint, params=params)
+            all_items.extend(batch_result.get("value", []))
+
+        return all_items
+
+    def get_work_item(self, work_item_id: int) -> Dict:
+        """
+        Get work item by ID using REST API.
+
+        Args:
+            work_item_id: ID of work item to retrieve
+
+        Returns:
+            Work item dict with fields, relations, etc.
+        """
+        endpoint = f"_apis/wit/workitems/{work_item_id}"
+        params = {
+            "api-version": "7.1",
+            "$expand": "All"
+        }
+
+        return self._make_request("GET", endpoint, params=params)
+
+    def verify_work_item_created(
+        self,
+        work_item_id: int,
+        expected_title: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Verify a work item was successfully created."""
+        try:
+            work_item = self.get_work_item(work_item_id)
+
+            verification_data = {
+                "work_item_id": work_item_id,
+                "exists": True,
+                "title": work_item.get("fields", {}).get("System.Title"),
+                "state": work_item.get("fields", {}).get("System.State"),
+                "type": work_item.get("fields", {}).get("System.WorkItemType"),
+            }
+
+            title_matches = True
+            if expected_title:
+                title_matches = verification_data["title"] == expected_title
+                verification_data["title_matches"] = title_matches
+
+            success = verification_data["exists"] and title_matches
+
+            return self._verify_operation(
+                operation="verify_work_item_created",
+                success=success,
+                result=work_item,
+                verification_data=verification_data
+            )
+        except Exception as e:
+            return self._verify_operation(
+                operation="verify_work_item_created",
+                success=False,
+                result=None,
+                verification_data={
+                    "work_item_id": work_item_id,
+                    "exists": False,
+                    "error": str(e)
+                }
+            )
+
+    def verify_work_item_updated(
+        self,
+        work_item_id: int,
+        expected_fields: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Verify a work item was successfully updated with expected field values."""
+        try:
+            work_item = self.get_work_item(work_item_id)
+            fields = work_item.get("fields", {})
+
+            verification_data = {
+                "work_item_id": work_item_id,
+                "exists": True,
+                "fields_verified": {},
+                "all_fields_match": True
+            }
+
+            for field_name, expected_value in expected_fields.items():
+                actual_value = fields.get(field_name)
+                matches = actual_value == expected_value
+
+                verification_data["fields_verified"][field_name] = {
+                    "expected": expected_value,
+                    "actual": actual_value,
+                    "matches": matches
+                }
+
+                if not matches:
+                    verification_data["all_fields_match"] = False
+
+            success = verification_data["exists"] and verification_data["all_fields_match"]
+
+            return self._verify_operation(
+                operation="verify_work_item_updated",
+                success=success,
+                result=work_item,
+                verification_data=verification_data
+            )
+        except Exception as e:
+            return self._verify_operation(
+                operation="verify_work_item_updated",
+                success=False,
+                result=None,
+                verification_data={
+                    "work_item_id": work_item_id,
+                    "exists": False,
+                    "error": str(e)
+                }
+            )
+
+    def create_work_item(
+        self,
+        work_item_type: str,
+        title: str,
+        description: str = "",
+        assigned_to: Optional[str] = None,
+        area: Optional[str] = None,
+        iteration: Optional[str] = None,
+        fields: Optional[Dict[str, Any]] = None,
+        parent_id: Optional[int] = None,
+        verify: bool = False
+    ) -> Dict:
+        """
+        Create a work item using REST API with markdown support.
+
+        Single-step creation that sets all fields including iteration in one API call.
+        Automatically sets multilineFieldsFormat=Markdown for description fields.
+
+        Iteration path format: "ProjectName\\SprintName" (simplified, no \\Iteration\\)
+        Example: "My Project\\Sprint 4"
+
+        Args:
+            work_item_type: Type of work item (Task, Bug, User Story, etc.)
+            title: Work item title
+            description: Work item description (supports markdown)
+            assigned_to: User to assign the work item to
+            area: Area path
+            iteration: Iteration path (set in single call, not two-step)
+            fields: Additional fields to set
+            parent_id: ID of parent work item (will create Parent link)
+            verify: Whether to verify the work item was created correctly
+        """
+        project = self._get_project()
+
+        # Build field updates
+        all_fields = {"System.Title": title}
+
+        if description:
+            all_fields["System.Description"] = description
+        if assigned_to:
+            all_fields["System.AssignedTo"] = assigned_to
+        if area:
+            all_fields["System.AreaPath"] = area
+        if iteration:
+            all_fields["System.IterationPath"] = iteration  # Single-step!
+        if fields:
+            all_fields.update(fields)
+
+        # Build JSON Patch
+        patch = self._build_json_patch(all_fields)
+
+        # Add markdown format operations for eligible fields
+        markdown_fields = [
+            "System.Description",
+            "Microsoft.VSTS.Common.AcceptanceCriteria",
+            "Microsoft.VSTS.TCM.ReproSteps"
+        ]
+        for field in markdown_fields:
+            if field in all_fields:
+                patch.append({
+                    "op": "add",
+                    "path": f"/multilineFieldsFormat/{field}",
+                    "value": "Markdown"
+                })
+
+        # Add parent link if specified
+        if parent_id:
+            base_url = self._get_base_url()
+            patch.append({
+                "op": "add",
+                "path": "/relations/-",
+                "value": {
+                    "rel": "System.LinkTypes.Hierarchy-Reverse",
+                    "url": f"{base_url}/_apis/wit/workitems/{parent_id}"
+                }
+            })
+
+        # API version parameter
+        params = {"api-version": "7.1"}
+
+        # Create via REST API
+        endpoint = f"{project}/_apis/wit/workitems/${work_item_type}"
+        result = self._make_request("POST", endpoint, data=patch, params=params)
+
+        # Verification if requested
+        if verify:
+            work_item_id = result.get('id')
+            if work_item_id:
+                expected_fields = {}
+                if iteration:
+                    expected_fields["System.IterationPath"] = iteration
+
+                verification = self.verify_work_item_created(work_item_id, expected_title=title)
+
+                if iteration and verification["success"]:
+                    iter_verification = self.verify_work_item_updated(work_item_id, expected_fields)
+                    verification["verification"]["iteration_verified"] = iter_verification["verification"]
+                    verification["success"] = verification["success"] and iter_verification["success"]
+
+                return verification
+            else:
+                return self._verify_operation(
+                    operation="create_work_item",
+                    success=False,
+                    result=result,
+                    verification_data={"error": "No work item ID in result"}
+                )
+
+        return result
+
+    def update_work_item(
+        self,
+        work_item_id: int,
+        state: Optional[str] = None,
+        assigned_to: Optional[str] = None,
+        fields: Optional[Dict[str, Any]] = None,
+        verify: bool = False
+    ) -> Dict:
+        """
+        Update a work item using REST API with markdown support.
+
+        Args:
+            work_item_id: ID of work item to update
+            state: New state (e.g., "Done", "In Progress")
+            assigned_to: User to assign to
+            fields: Additional fields to update
+            verify: Whether to verify the update
+
+        Returns:
+            Updated work item dict
+        """
+        project = self._get_project()
+
+        # Build field updates
+        all_fields = {}
+
+        if state:
+            all_fields["System.State"] = state
+        if assigned_to:
+            all_fields["System.AssignedTo"] = assigned_to
+        if fields:
+            all_fields.update(fields)
+
+        if not all_fields:
+            raise ValueError("No fields specified for update")
+
+        # Build JSON Patch
+        patch = self._build_json_patch(all_fields)
+
+        # Add markdown format operations for eligible fields
+        markdown_fields = [
+            "System.Description",
+            "Microsoft.VSTS.Common.AcceptanceCriteria",
+            "Microsoft.VSTS.TCM.ReproSteps"
+        ]
+        for field in markdown_fields:
+            if field in all_fields:
+                patch.append({
+                    "op": "add",
+                    "path": f"/multilineFieldsFormat/{field}",
+                    "value": "Markdown"
+                })
+
+        # API version parameter
+        params = {"api-version": "7.1"}
+
+        # Update via REST API
+        endpoint = f"{project}/_apis/wit/workitems/{work_item_id}"
+        result = self._make_request("PATCH", endpoint, data=patch, params=params)
+
+        # Verification if requested
+        if verify:
+            expected_fields = {}
+            if state:
+                expected_fields["System.State"] = state
+            if fields:
+                expected_fields.update(fields)
+
+            if expected_fields:
+                return self.verify_work_item_updated(work_item_id, expected_fields)
+            else:
+                return self.verify_work_item_created(work_item_id)
+
+        return result
+
+    def add_comment(self, work_item_id: int, comment: str) -> Dict:
+        """Add comment to work item."""
+        cmd = [
+            'az', 'boards', 'work-item', 'comment', 'add',
+            '--id', str(work_item_id),
+            '--comment', comment
+        ]
+        return self._run_command(cmd)
+
+    def link_work_items(self, source_id: int, target_id: int, relation_type: str) -> Dict:
+        """
+        Link two work items using REST API.
+
+        Args:
+            source_id: Source work item ID
+            target_id: Target work item ID
+            relation_type: Relation type (e.g., "System.LinkTypes.Hierarchy-Reverse")
+
+        Returns:
+            Updated source work item dict
+        """
+        project = self._get_project()
+        base_url = self._get_base_url()
+
+        # Build relation patch
+        patch = [{
+            "op": "add",
+            "path": "/relations/-",
+            "value": {
+                "rel": relation_type,
+                "url": f"{base_url}/_apis/wit/workitems/{target_id}"
+            }
+        }]
+
+        # Update source work item with relation
+        endpoint = f"{project}/_apis/wit/workitems/{source_id}"
+        params = {"api-version": "7.1"}
+
+        return self._make_request("PATCH", endpoint, data=patch, params=params)
+
+    def create_work_item_idempotent(
+        self,
+        title: str,
+        work_item_type: str,
+        description: str = "",
+        sprint_name: Optional[str] = None,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """
+        Create work item only if it doesn't already exist.
+
+        Checks for existing work item with same title in current sprint.
+        If found, returns existing item. If not found, creates new item.
+
+        Args:
+            title: Work item title
+            work_item_type: Type (Task, Bug, Feature, etc.)
+            description: Description
+            sprint_name: Optional sprint name to check
+            **kwargs: Additional arguments for create_work_item
+
+        Returns:
+            Dict with keys: id, created (bool), existing (bool), work_item
+        """
+        # Search for existing work item
+        if sprint_name:
+            project = self._config.get('project', '')
+            iteration_path = f"{project}\\\\{sprint_name}"
+
+            wiql = f"""
+                SELECT [System.Id], [System.Title]
+                FROM WorkItems
+                WHERE [System.IterationPath] = '{iteration_path}'
+                AND [System.Title] = '{title.replace("'", "''")}'
+            """
+
+            try:
+                results = self.query_work_items(wiql)
+                if results:
+                    work_item_id = results[0].get('id') or results[0].get('System.Id')
+                    print(f"ℹ️  Work item already exists: WI-{work_item_id} - {title}")
+                    work_item = self.get_work_item(work_item_id)
+                    return {
+                        "id": work_item_id,
+                        "created": False,
+                        "existing": True,
+                        "work_item": work_item
+                    }
+            except Exception as e:
+                print(f"Warning: Could not check for existing work item: {e}")
+
+        # Create new work item
+        if sprint_name:
+            project = self._config.get('project', '')
+            kwargs['iteration'] = f"{project}\\{sprint_name}"
+
+        work_item = self.create_work_item(
+            work_item_type=work_item_type,
+            title=title,
+            description=description,
+            **kwargs
+        )
+
+        return {
+            "id": work_item.get('id'),
+            "created": True,
+            "existing": False,
+            "work_item": work_item
+        }
+
+    # Pull Requests
+
+    def create_pull_request(
+        self,
+        source_branch: str,
+        title: str,
+        description: str,
+        work_item_ids: Optional[List[int]] = None,
+        reviewers: Optional[List[str]] = None
+    ) -> Dict:
+        """Create a pull request."""
+        cmd = [
+            'az', 'repos', 'pr', 'create',
+            '--source-branch', source_branch,
+            '--target-branch', 'main',
+            '--title', title,
+            '--description', description
+        ]
+
+        if work_item_ids:
+            cmd.extend(['--work-items'] + [str(wid) for wid in work_item_ids])
+        if reviewers:
+            cmd.extend(['--reviewers'] + reviewers)
+
+        return self._run_command(cmd)
+
+    def approve_pull_request(self, pr_id: int) -> Dict:
+        """Approve a pull request."""
+        cmd = [
+            'az', 'repos', 'pr', 'set-vote',
+            '--id', str(pr_id),
+            '--vote', 'approve'
+        ]
+        return self._run_command(cmd)
+
+    # Pipelines
+
+    def trigger_pipeline(
+        self,
+        pipeline_id: int,
+        branch: str,
+        variables: Optional[Dict[str, str]] = None
+    ) -> Dict:
+        """Trigger a pipeline run."""
+        cmd = [
+            'az', 'pipelines', 'run',
+            '--id', str(pipeline_id),
+            '--branch', branch
+        ]
+
+        if variables:
+            for key, value in variables.items():
+                cmd.extend(['--variables', f"{key}={value}"])
+
+        return self._run_command(cmd)
+
+    def get_pipeline_run(self, run_id: int) -> Dict:
+        """Get pipeline run details."""
+        cmd = ['az', 'pipelines', 'runs', 'show', '--id', str(run_id)]
+        return self._run_command(cmd)
+
+    # Iterations (Sprints)
+
+    def create_iteration(
+        self,
+        name: str,
+        start_date: Optional[str] = None,
+        finish_date: Optional[str] = None,
+        project: Optional[str] = None
+    ) -> Dict:
+        """Create a new iteration/sprint."""
+        if not project:
+            project = self._config.get('project', '')
+
+        path = f"{project}\\Iteration\\{name}"
+
+        cmd = ['az', 'boards', 'iteration', 'project', 'create', '--name', name, '--path', path]
+
+        if start_date:
+            cmd.extend(['--start-date', start_date])
+        if finish_date:
+            cmd.extend(['--finish-date', finish_date])
+        if project:
+            cmd.extend(['--project', project])
+
+        return self._run_command(cmd)
+
+    def list_iterations(self, project: Optional[str] = None) -> List[Dict]:
+        """List all iterations/sprints."""
+        cmd = ['az', 'boards', 'iteration', 'project', 'list']
+        if project:
+            cmd.extend(['--project', project])
+        return self._run_command(cmd)
+
+    def update_iteration(
+        self,
+        path: str,
+        start_date: Optional[str] = None,
+        finish_date: Optional[str] = None,
+        project: Optional[str] = None
+    ) -> Dict:
+        """
+        Update iteration dates.
+
+        LEARNING: Use --path parameter with FULL path including \\Iteration\\
+        Example: "\\Keychain Gateway\\Iteration\\Sprint 4"
+        """
+        cmd = ['az', 'boards', 'iteration', 'project', 'update', '--path', path]
+        if start_date:
+            cmd.extend(['--start-date', start_date])
+        if finish_date:
+            cmd.extend(['--finish-date', finish_date])
+        if project:
+            cmd.extend(['--project', project])
+        return self._run_command(cmd)
+
+    def create_sprint_work_items_batch(
+        self,
+        sprint_name: str,
+        work_items: List[Dict[str, Any]],
+        project_name: Optional[str] = None
+    ) -> List[Dict]:
+        """
+        Create multiple work items for a sprint efficiently.
+
+        LEARNING: Batch creation is more reliable than individual calls.
+        """
+        if not project_name:
+            project_name = self._config.get('project', '')
+
+        iteration_path = f"{project_name}\\{sprint_name}"
+
+        results = []
+        for item in work_items:
+            result = self.create_work_item(
+                work_item_type=item['type'],
+                title=item['title'],
+                description=item.get('description', ''),
+                iteration=iteration_path,
+                fields=item.get('fields'),
+                parent_id=item.get('parent_id')
+            )
+            results.append(result)
+
+        return results
+
+    def query_sprint_work_items(
+        self,
+        sprint_name: str,
+        project_name: Optional[str] = None,
+        include_fields: Optional[List[str]] = None
+    ) -> List[Dict]:
+        """
+        Query all work items in a sprint.
+
+        LEARNING: WIQL iteration paths use double backslashes for escaping.
+        """
+        if not project_name:
+            project_name = self._config.get('project', '')
+
+        iteration_path = f"{project_name}\\\\{sprint_name}"
+
+        fields = ["System.Id", "System.Title", "System.State", "Microsoft.VSTS.Scheduling.StoryPoints"]
+        if include_fields:
+            fields.extend(include_fields)
+
+        field_list = ", ".join(f"[{field}]" for field in fields)
+
+        wiql = f"""
+            SELECT {field_list}
+            FROM WorkItems
+            WHERE [System.IterationPath] = '{iteration_path}'
+            ORDER BY [System.Id]
+        """
+
+        return self.query_work_items(wiql)
+
+    def check_recent_duplicates(
+        self,
+        title: str,
+        work_item_type: str,
+        hours: int = 1,
+        similarity_threshold: float = 0.95
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Check for recently created work items with similar titles.
+
+        Queries work items of the same type created in the last N hours
+        and calculates title similarity using difflib.SequenceMatcher.
+
+        Args:
+            title: Title to check for duplicates
+            work_item_type: Type of work item (Task, Bug, Feature, etc.)
+            hours: Time window to check (default: 1 hour)
+            similarity_threshold: Similarity threshold (0.0-1.0, default: 0.95)
+
+        Returns:
+            Dict with duplicate work item details if found, None otherwise
+            Format: {
+                'id': work_item_id,
+                'title': work_item_title,
+                'similarity': similarity_score,
+                'created_date': created_date,
+                'state': current_state,
+                'url': work_item_url
+            }
+
+        Example:
+            duplicate = cli.check_recent_duplicates(
+                "Fix authentication bug",
+                "Bug",
+                hours=1
+            )
+            if duplicate:
+                print(f"Duplicate found: #{duplicate['id']} - {duplicate['title']}")
+        """
+        from difflib import SequenceMatcher
+        from datetime import datetime, timedelta
+
+        # Calculate time threshold
+        cutoff_time = datetime.utcnow() - timedelta(hours=hours)
+        cutoff_str = cutoff_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        # Query recent work items of same type
+        # WIQL uses single quotes for string literals
+        wiql = f"""
+            SELECT [System.Id], [System.Title], [System.CreatedDate], [System.State]
+            FROM WorkItems
+            WHERE [System.WorkItemType] = '{work_item_type}'
+            AND [System.CreatedDate] >= '{cutoff_str}'
+            ORDER BY [System.CreatedDate] DESC
+        """
+
+        try:
+            recent_items = self.query_work_items(wiql)
+        except Exception as e:
+            # If query fails, log warning but don't block workflow
+            print(f"Warning: Could not check for duplicates: {e}")
+            return None
+
+        # Check each recent item for title similarity
+        for item in recent_items:
+            fields = item.get('fields', {})
+            item_title = fields.get('System.Title', '')
+
+            # Calculate similarity using SequenceMatcher
+            # SequenceMatcher.ratio() returns value between 0.0 and 1.0
+            similarity = SequenceMatcher(None, title.lower(), item_title.lower()).ratio()
+
+            if similarity >= similarity_threshold:
+                # Found a duplicate
+                item_id = item.get('id')
+                created_date = fields.get('System.CreatedDate', '')
+                state = fields.get('System.State', '')
+
+                # Build work item URL
+                base_url = self._get_base_url()
+                work_item_url = f"{base_url}/_workitems/edit/{item_id}"
+
+                return {
+                    'id': item_id,
+                    'title': item_title,
+                    'similarity': similarity,
+                    'created_date': created_date,
+                    'state': state,
+                    'url': work_item_url
+                }
+
+        # No duplicates found
+        return None
+
+    # REST API Helper Methods
+
+    def _get_base_url(self) -> str:
+        """Get Azure DevOps organization URL from config."""
+        org_url = self._config.get('organization', '')
+        if not org_url:
+            raise Exception("Azure DevOps organization not configured")
+        return org_url.rstrip('/')
+
+    def _get_project(self) -> str:
+        """Get project name from config."""
+        project = self._config.get('project', '')
+        if not project:
+            raise Exception("Azure DevOps project not configured")
+        return project
+
+    def _make_request(
+        self,
+        method: str,
+        endpoint: str,
+        data: Optional[Any] = None,
+        params: Optional[Dict[str, str]] = None
+    ) -> Dict[str, Any]:
+        """
+        Make authenticated REST API request to Azure DevOps.
+
+        Args:
+            method: HTTP method (GET, POST, PATCH)
+            endpoint: API endpoint (e.g., "Project/_apis/wit/workitems/1234")
+            data: Request body (list for JSON Patch, dict for JSON)
+            params: Query parameters (e.g., {"api-version": "7.1"})
+
+        Returns:
+            Response JSON as dict
+
+        Raises:
+            ImportError: If requests library not available
+            Exception: If request fails with status code and error details
+        """
+        if not HAS_REQUESTS:
+            raise ImportError("requests library required for REST API operations. Install with: pip install requests")
+
+        url = f"{self._get_base_url()}/{endpoint}"
+        token = self._get_auth_token()
+        auth = base64.b64encode(f":{token}".encode()).decode()
+
+        # Use correct Content-Type based on data type
+        # JSON Patch operations use application/json-patch+json
+        # Regular JSON operations use application/json
+        if isinstance(data, list):
+            content_type = "application/json-patch+json"
+        else:
+            content_type = "application/json"
+
+        headers = {
+            "Authorization": f"Basic {auth}",
+            "Content-Type": content_type
+        }
+
+        response = requests.request(
+            method=method,
+            url=url,
+            json=data,
+            params=params,
+            headers=headers
+        )
+
+        if response.status_code not in [200, 201]:
+            raise Exception(
+                f"Azure DevOps REST API request failed:\n"
+                f"  Method: {method}\n"
+                f"  URL: {url}\n"
+                f"  Status: {response.status_code}\n"
+                f"  Error: {response.text}"
+            )
+
+        return response.json() if response.text else {}
+
+    def _build_json_patch(self, fields: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """
+        Build JSON Patch operations from field dict.
+
+        Args:
+            fields: Dictionary of field names to values
+                   (e.g., {"System.Title": "Task", "System.State": "Done"})
+
+        Returns:
+            JSON Patch array for PATCH request (RFC 6902 format)
+
+        Example:
+            >>> _build_json_patch({"System.Title": "Task", "System.State": "Done"})
+            [
+                {"op": "add", "path": "/fields/System.Title", "value": "Task"},
+                {"op": "add", "path": "/fields/System.State", "value": "Done"}
+            ]
+        """
+        return [
+            {"op": "add", "path": f"/fields/{name}", "value": value}
+            for name, value in fields.items()
+            if value is not None
+        ]
+
+    def _needs_markdown_format(self, fields: Dict[str, Any]) -> bool:
+        """
+        Check if fields contain markdown-eligible fields.
+
+        Args:
+            fields: Dictionary of field names to values
+
+        Returns:
+            True if any field should use markdown formatting
+        """
+        markdown_fields = [
+            "System.Description",
+            "Microsoft.VSTS.Common.AcceptanceCriteria",
+            "Microsoft.VSTS.TCM.ReproSteps"
+        ]
+        return any(field in fields for field in markdown_fields)
+
+    # File Attachments (requires requests library)
+
+    def _get_auth_token(self) -> str:
+        """Get Azure DevOps access token."""
+        import os
+
+        result = subprocess.run(
+            ['az', 'account', 'get-access-token', '--resource', '499b84ac-1321-427f-aa17-267ca6975798'],
+            capture_output=True,
+            text=True
+        )
+
+        if result.returncode == 0:
+            token_data = json.loads(result.stdout)
+            return token_data.get('accessToken', '')
+
+        return os.environ.get('AZURE_DEVOPS_EXT_PAT', '')
+
+    def attach_file_to_work_item(
+        self,
+        work_item_id: int,
+        file_path: Path,
+        comment: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Attach a file to a work item using Azure DevOps REST API.
+
+        Requires the requests library.
+        """
+        if not HAS_REQUESTS:
+            raise ImportError("requests library required for file attachments. Install with: pip install requests")
+
+        if not isinstance(file_path, Path):
+            file_path = Path(file_path)
+
+        if not file_path.exists():
+            raise Exception(f"File not found: {file_path}")
+
+        org_url = self._config.get('organization', '')
+        project = self._config.get('project', '')
+
+        if not org_url or not project:
+            raise Exception("Azure DevOps organization and project must be configured")
+
+        token = self._get_auth_token()
+        if not token:
+            raise Exception("No Azure DevOps authentication token found")
+
+        auth = base64.b64encode(f":{token}".encode()).decode()
+
+        # Step 1: Upload file
+        upload_url = f"{org_url}/_apis/wit/attachments?fileName={file_path.name}&api-version=7.1"
+
+        with open(file_path, 'rb') as f:
+            file_content = f.read()
+
+        upload_response = requests.post(
+            upload_url,
+            data=file_content,
+            headers={
+                "Authorization": f"Basic {auth}",
+                "Content-Type": "application/octet-stream"
+            }
+        )
+
+        if upload_response.status_code != 201:
+            raise Exception(f"Failed to upload attachment: {upload_response.status_code}")
+
+        attachment_url = upload_response.json().get('url')
+
+        # Step 2: Link to work item
+        patch_url = f"{org_url}/{project}/_apis/wit/workitems/{work_item_id}?api-version=7.1"
+
+        patch_doc = [{
+            "op": "add",
+            "path": "/relations/-",
+            "value": {
+                "rel": "AttachedFile",
+                "url": attachment_url,
+                "attributes": {"comment": comment or f"Attached {file_path.name}"}
+            }
+        }]
+
+        link_response = requests.patch(
+            patch_url,
+            json=patch_doc,
+            headers={
+                "Authorization": f"Basic {auth}",
+                "Content-Type": "application/json-patch+json"
+            }
+        )
+
+        if link_response.status_code not in [200, 201]:
+            raise Exception(f"Failed to link attachment: {link_response.status_code}")
+
+        return {
+            "work_item_id": work_item_id,
+            "file_name": file_path.name,
+            "file_path": str(file_path),
+            "attachment_url": attachment_url,
+            "comment": comment,
+            "success": True
+        }
+
+    def verify_attachment_exists(
+        self,
+        work_item_id: int,
+        filename: str
+    ) -> bool:
+        """
+        Check if a file is attached to a work item.
+
+        Args:
+            work_item_id: Work item ID
+            filename: Name of file to check for
+
+        Returns:
+            True if attachment exists, False otherwise
+        """
+        try:
+            work_item = self.get_work_item(work_item_id)
+            relations = work_item.get('relations', [])
+
+            for relation in relations:
+                if relation.get('rel') == 'AttachedFile':
+                    # Extract filename from URL
+                    url = relation.get('url', '')
+                    if filename in url or relation.get('attributes', {}).get('name') == filename:
+                        return True
+
+            return False
+
+        except Exception as e:
+            print(f"Error checking attachment: {e}")
+            return False
+
+
+# Singleton instance
+azure_cli = AzureCLI()
+
+# Convenience functions for work items
+def query_work_items(wiql: str) -> List[Dict]:
+    """Query work items using WIQL"""
+    return azure_cli.query_work_items(wiql)
+
+def create_work_item(work_item_type: str, title: str, description: str = "", **kwargs) -> Dict:
+    """Create a work item with automatic iteration assignment"""
+    return azure_cli.create_work_item(work_item_type, title, description, **kwargs)
+
+def update_work_item(work_item_id: int, **kwargs) -> Dict:
+    """Update a work item"""
+    return azure_cli.update_work_item(work_item_id, **kwargs)
+
+def add_comment(work_item_id: int, comment: str, agent_name: str = None) -> Dict:
+    """Add a comment to a work item (optionally prefixed with agent name)"""
+    if agent_name:
+        comment = f"[{agent_name}] {comment}"
+    return azure_cli.add_comment(work_item_id, comment)
+
+# Convenience functions for pull requests
+def create_pull_request(source_branch: str, title: str, description: str, work_item_ids: List[int]) -> Dict:
+    """Create a pull request"""
+    return azure_cli.create_pull_request(source_branch, title, description, work_item_ids)
+
+def approve_pull_request(pr_id: int) -> Dict:
+    """Approve a pull request"""
+    return azure_cli.approve_pull_request(pr_id)
+
+# Convenience functions for iterations (NEW)
+def create_sprint(
+    sprint_name: str,
+    start_date: Optional[str] = None,
+    finish_date: Optional[str] = None,
+    project: Optional[str] = None
+) -> Dict:
+    """
+    Create a new sprint/iteration.
+
+    Args:
+        sprint_name: Sprint name (e.g., "Sprint 9")
+        start_date: Start date in YYYY-MM-DD format (optional)
+        finish_date: Finish date in YYYY-MM-DD format (optional)
+        project: Project name (optional)
+
+    Returns:
+        Created iteration details
+
+    Example:
+        create_sprint("Sprint 9", "2025-11-07", "2025-11-20")
+    """
+    return azure_cli.create_iteration(sprint_name, start_date, finish_date, project)
+
+def list_sprints(project: Optional[str] = None) -> List[Dict]:
+    """List all sprints/iterations"""
+    return azure_cli.list_iterations(project)
+
+def update_sprint_dates(
+    sprint_name: str,
+    start_date: str,
+    finish_date: str,
+    project: Optional[str] = None
+) -> Dict:
+    """
+    Update sprint dates using correct path format.
+
+    Args:
+        sprint_name: Sprint name (e.g., "Sprint 4")
+        start_date: Start date in YYYY-MM-DD format
+        finish_date: Finish date in YYYY-MM-DD format
+        project: Project name (optional)
+
+    Example:
+        update_sprint_dates("Sprint 4", "2025-11-07", "2025-11-20")
+    """
+    if not project:
+        project = azure_cli._config.get('project', '')
+
+    # Build full path for iteration update
+    path = f"\\{project}\\Iteration\\{sprint_name}"
+
+    return azure_cli.update_iteration(path, start_date, finish_date, project)
+
+def create_sprint_work_items(
+    sprint_name: str,
+    work_items: List[Dict[str, Any]],
+    project: Optional[str] = None
+) -> List[Dict]:
+    """
+    Create multiple work items for a sprint in batch.
+
+    Args:
+        sprint_name: Sprint name (e.g., "Sprint 4")
+        work_items: List of dicts with keys: type, title, description, fields
+        project: Project name (optional)
+
+    Example:
+        work_items = [
+            {
+                "type": "Task",
+                "title": "Implement feature X",
+                "description": "Details...",
+                "fields": {"Microsoft.VSTS.Scheduling.StoryPoints": 5}
+            }
+        ]
+        results = create_sprint_work_items("Sprint 4", work_items)
+    """
+    return azure_cli.create_sprint_work_items_batch(sprint_name, work_items, project)
+
+def query_sprint_work_items(
+    sprint_name: str,
+    project: Optional[str] = None
+) -> List[Dict]:
+    """
+    Query all work items in a sprint.
+
+    Args:
+        sprint_name: Sprint name (e.g., "Sprint 4")
+        project: Project name (optional)
+
+    Returns:
+        List of work items with Id, Title, State, and Story Points
+    """
+    return azure_cli.query_sprint_work_items(sprint_name, project)
+
+def check_recent_duplicates(
+    title: str,
+    work_item_type: str,
+    hours: int = 1,
+    similarity_threshold: float = 0.95
+) -> Optional[Dict[str, Any]]:
+    """
+    Check for recently created work items with similar titles.
+
+    Args:
+        title: Title to check for duplicates
+        work_item_type: Type of work item (Task, Bug, Feature, etc.)
+        hours: Time window to check (default: 1 hour)
+        similarity_threshold: Similarity threshold (0.0-1.0, default: 0.95)
+
+    Returns:
+        Dict with duplicate work item details if found, None otherwise
+
+    Example:
+        duplicate = check_recent_duplicates("Fix auth bug", "Bug")
+        if duplicate:
+            print(f"Found duplicate: #{duplicate['id']}")
+    """
+    return azure_cli.check_recent_duplicates(title, work_item_type, hours, similarity_threshold)
