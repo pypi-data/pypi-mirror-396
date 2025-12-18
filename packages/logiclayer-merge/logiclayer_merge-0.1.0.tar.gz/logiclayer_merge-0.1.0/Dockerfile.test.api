@@ -1,0 +1,43 @@
+# Use an official Python runtime as a base image
+FROM python:3.9-slim
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=off \
+    PIP_DISABLE_PIP_VERSION_CHECK=on
+
+# Set work directory
+WORKDIR /app
+
+# Install system dependencies required for building Python packages
+RUN apt-get update && apt-get install -y \
+    curl \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Poetry
+ENV POETRY_HOME="/opt/poetry"
+ENV POETRY_VERSION=2.2.1
+RUN curl -sSL https://install.python-poetry.org | python3 -
+ENV PATH="$POETRY_HOME/bin:$PATH"
+
+# Copy poetry files
+COPY pyproject.toml poetry.lock* ./
+
+# Install project dependencies
+RUN poetry config virtualenvs.create false \
+    && poetry install --all-extras --no-interaction --no-ansi --no-root
+
+# Alternative approach if you want to use virtual environment in Docker:
+# RUN poetry install --no-dev --no-interaction --no-ansi
+# ENV PATH="/app/.venv/bin:$PATH"
+
+# Copy the rest of the application code
+COPY . .
+
+# Expose the port your app runs on
+EXPOSE 8000
+
+# Command to run your application
+CMD ["poetry", "run", "uvicorn", "app:layer", "--host", "0.0.0.0", "--port", "8000"]

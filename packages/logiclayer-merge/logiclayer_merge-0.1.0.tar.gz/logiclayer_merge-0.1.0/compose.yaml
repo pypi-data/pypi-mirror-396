@@ -1,0 +1,17 @@
+services:
+  logiclayer-merge:
+    build:
+      context: .
+      dockerfile: Dockerfile.test.api
+    ports:
+      - "8000:8000"
+    environment:
+      - TESSERACT_BACKEND=${TESSERACT_BACKEND}
+      - TESSERACT_SCHEMA=${TESSERACT_SCHEMA}
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:8000/merge || exit 1
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    command: poetry run uvicorn app:layer --host 0.0.0.0 --port 8000
