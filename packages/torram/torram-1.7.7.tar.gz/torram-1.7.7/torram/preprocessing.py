@@ -1,0 +1,168 @@
+import argparse
+import logging
+import multiprocessing as mp
+import zipfile
+from functools import partial
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from typing import Any, Callable, Concatenate, List, Optional, ParamSpec, TypeVar
+
+from tqdm import tqdm
+
+from torram.utils.config import setup_logging_config
+
+P = ParamSpec("P")
+R = TypeVar("R")
+
+
+def _extract_relative_path(f: Path, dataset_dir: Path, output_dir: Path) -> Path:
+    relative_path_to_dir = f.parent.relative_to(dataset_dir)
+    return output_dir / relative_path_to_dir / f.stem
+
+
+def _process_seq(
+    args,
+    process_function: Callable[[Path, Path, Any], List[Path]],
+    extract_output_dir: Callable[[Any, Path, Path], Path],
+    **kwargs,
+) -> List[Path]:
+    f, dataset_dir, temp_dir = args
+    output_dir = extract_output_dir(f, dataset_dir, Path(temp_dir))
+    output_dir.mkdir(parents=True, exist_ok=True)
+    return process_function(f, output_dir=output_dir, **kwargs)
+
+
+def preprocess_to_zip(
+    dataset_dir: Path,
+    output_file: Path,
+    list_sequences: Callable[[Path], List[Any]],
+    process_function: Callable[Concatenate[Any, Path, P], List[Path]],
+    extract_dir_function: Callable[[Any, Path, Path], Path],
+    num_workers: int = mp.cpu_count(),
+    cache_dir: Optional[Path] = None,
+    debug: bool = False,
+    **kwargs,
+) -> None:
+    """Preprocess a list of sequence files and store the results in a zip file.
+
+    List all sequence files in the dataset directory using the provided `list_sequences`
+    function, which should take the dataset directory path as input and return a list
+    of sequence elements.
+
+    def list_sequences(dataset_dir: Path) -> List[Any]:
+        ...
+
+    Processes each sequence file using the provided `process_function`, which should
+    take a sequence file path and an output directory path as input, along with any
+    additional keyword arguments, and return a list of paths to the processed files.
+
+    def process_function(sequence_path: Path, output_dir: Path, **kwargs) -> List[Path]:
+        ...
+
+    A function to map the sequence element to an output directory can be
+    provided. By default, the output directory is constructed by preserving the
+    relative path of the sequence file within the dataset directory.
+
+    def extract_output_dir_from_seq(seq: Any, dataset_dir: Path, output_base_dir: Path) -> Path:
+        ...
+
+    @param dataset_dir: Path to the dataset directory.
+    @param output_file: Path to the output zip file.
+    @param list_sequences: Function to list sequence files in the dataset directory.
+    @param process_function: Function to preprocess each sequence file.
+    @param cache_dir: Optional path to a cache directory for intermediate files.
+    @param extract_dir_function: Function to extract output directory from sequence element.
+    @param num_workers: Number of parallel worker processes to use.
+    @param debug: Whether to enable debug logging and single-threaded processing.
+    @param kwargs: Additional keyword arguments to pass to the preprocessing function.
+    """
+
+    assert output_file.suffix == ".zip", f"Output file must be a zip file, got {output_file}"
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+    logger = logging.getLogger(__name__)
+
+    if cache_dir is not None:
+        temp_dir = cache_dir
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        cache_dir_path = temp_dir
+    else:
+        temp_dir = TemporaryDirectory()
+        cache_dir_path = Path(temp_dir.name)
+
+    # List all sequence files in the dataset directory.
+    sequences = list_sequences(dataset_dir)
+
+    # Process the files in parallel and store the results in the cache directory.
+    logger.info(f"Processing {len(sequences)} sequences")
+    args = [(f, dataset_dir, cache_dir_path) for f in sequences]
+    func = partial(
+        _process_seq,
+        process_function=process_function,
+        extract_output_dir=extract_dir_function,
+        **kwargs,
+    )
+
+    if debug:
+        processed = [func(arg) for arg in tqdm(args)]
+    else:
+        processed = []
+        with mp.Pool(processes=num_workers) as pool:
+            processed += list(tqdm(pool.imap_unordered(func, args), total=len(args)))
+    processed = sum(processed, [])  # Flatten the list of lists.
+
+    # Write the processed files to a zip file.
+    logger.info(f"Writing processed sequences to zip file {output_file}")
+    with zipfile.ZipFile(output_file, "w") as writer:
+        for pf in tqdm(processed, desc="Writing zip"):
+            relative_path = pf.relative_to(cache_dir_path)
+            writer.write(pf, arcname=relative_path)
+
+    # Clean up the temporary directory if not using a cache directory.
+    if isinstance(temp_dir, TemporaryDirectory):
+        temp_dir.cleanup()
+
+
+def preprocess_main(
+    list_sequences: Callable[[Path], List[Any]],
+    process_function: Callable[Concatenate[Any, Path, P], List[Path]],
+    parser: Optional[argparse.ArgumentParser] = None,
+    extract_dir_function: Callable[[Any, Path, Path], Path] = _extract_relative_path,
+):
+    """Main function to preprocess a dataset and store the results in a zip file.
+
+    @param list_sequences: List sequence function (see preprocess_to_zip).
+    @param process_function: Preprocessing function (see preprocess_to_zip).
+    @param parser: Optional argparse.ArgumentParser to use for command-line arguments.
+    @param extract_dir_function: Function to extract output directory from sequence element.
+    """
+    if parser is None:
+        parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset-dir", type=Path, required=True)
+    parser.add_argument("--output-file", type=Path, required=True)
+    parser.add_argument("--cache-dir", type=Path, default=None)
+    parser.add_argument("--num-workers", type=int, default=mp.cpu_count())
+    parser.add_argument("--debug", action="store_true")
+    args = parser.parse_args()
+
+    # Setup logging and print config.
+    setup_logging_config(debug=args.debug)
+    logger = logging.getLogger(__name__)
+    kwargs = {
+        key: value
+        for key, value in vars(args).items()
+        if key not in ["dataset_dir", "output_file", "cache_dir", "debug", "num_workers"]
+    }
+    logger.info(f"Preprocessing with args: {vars(args)}")
+
+    # Run preprocessing main function in multi-process mode.
+    preprocess_to_zip(
+        dataset_dir=args.dataset_dir,
+        output_file=args.output_file,
+        list_sequences=list_sequences,
+        process_function=process_function,
+        extract_dir_function=extract_dir_function,
+        cache_dir=args.cache_dir,
+        num_workers=args.num_workers,
+        debug=args.debug,
+        **kwargs,
+    )
