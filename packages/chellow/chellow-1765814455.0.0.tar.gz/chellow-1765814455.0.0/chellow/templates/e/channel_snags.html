@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}
+	&raquo; DC Contracts &raquo; 
+	{% if contract %}
+		{{contract.name}} &raquo;
+	{% endif %}
+	Channel Snags
+{% endblock %}
+
+{% block inside_head %}
+	<style>
+		#snags.htmx-swapping {
+			opacity: 0;
+			transition: opacity 1s ease-out;
+		}
+	</style>
+{% endblock %}
+
+{% block nav %}
+	<a href="/e/dc_contracts">DC Contracts</a> &raquo; 
+	{% if contract %}
+		<a href="/e/dc_contracts/{{contract.id}}">{{contract.name}}</a> &raquo;
+	{% endif %}
+ 	Channel Snags
+{% endblock %}
+
+{% block content %}
+	<form hx-get="/reports/channel_snags" hx-params="*" hx-include="this" hx-trigger="load, change"
+			hx-target="#snags" hx-swap="outerHTML swap:1s">
+		<fieldset>
+			<legend>Filters</legend>	
+			<input type="hidden" name="dc_contract_id" value="{{contract.id}}">
+			<label>Hide snags &lt; days old</label>
+			{{input_text('days_hidden', initial='5', size=3, maxlength=3)}}
+			<label>Include ignored snags</label> {{input_checkbox('is_ignored', False)}} 
+
+			<label>Only show ongoing snags</label>
+			{{input_checkbox('only_ongoing', initial=True)}} 
+
+			<fieldset>
+
+				<label>Show settlement only</label>
+				{{input_radio('show_settlement', 'yes', initial=False)}} 
+
+				<label>Show non-settlement only</label>
+				{{input_radio('show_settlement', 'no', initial=False)}} 
+
+				<label>Show both</label>
+				{{input_radio('show_settlement', 'both', initial=True)}} 
+
+			</fieldset>
+
+			<label>Hide snags &lt; days long</label>
+			{{input_text('days_long_hidden', initial='', size=3, maxlength=3)}}
+
+			<details>
+				<summary>Comm Filter</summary>
+
+				<fieldset>
+					{% for comm in comms %}
+						<label>{{comm.code}}</label>
+						{{input_checkbox('comm_id', initial=True, value=comm.id)}} 
+					{% endfor %}
+				</fieldset>
+			</details>
+
+		</fieldset>
+	</form>
+
+	<div id="snags"></div>
+{% endblock %}
