@@ -1,0 +1,35 @@
+name: CodeStyle
+
+on:
+  push:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  check-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+
+    name: Code style
+    steps:
+      #----------------------------------------------
+      #       check-out repo and set-up python
+      #----------------------------------------------
+    - uses: actions/checkout@v4
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        version: "0.9.6"
+      #----------------------------------------------
+      #       install
+      #----------------------------------------------
+    - name: Install dependencies
+      run: UV_PYTHON=python3.11 make sync
+      #----------------------------------------------
+      #       lint
+      #----------------------------------------------
+    - name: Run lint
+      run: UV_PYTHON=python3.11 make lint

@@ -1,0 +1,61 @@
+name: QualityChecks
+
+on:
+  push:
+  pull_request:
+    branches:
+      - main
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  check-and-test:
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+      fail-fast: false
+
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.os }} / Python-${{ matrix.python-version }}
+    steps:
+      #----------------------------------------------
+      #       check-out repo and set-up python
+      #----------------------------------------------
+    - uses: actions/checkout@v4
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        version: "0.9.6"
+    - name: Install make
+      if: runner.os == 'Windows'
+      run: choco install make -y
+      #----------------------------------------------
+      #       install
+      #----------------------------------------------
+    - name: Install dependencies
+      run: UV_PYTHON=python${{ matrix.python-version }} make sync
+      #----------------------------------------------
+      #       test
+      #----------------------------------------------
+    - name: Run tests
+      run: UV_PYTHON=python${{ matrix.python-version }} make test
+    - name: Create badge
+      if: runner.os == 'Linux' && matrix.python-version == '3.11'
+      run: |
+        uv pip install genbadge[coverage]
+        uv run genbadge coverage -i coverage.xml -o coverage.svg
+    - name: Uploade coverage artifact
+      if: runner.os == 'Linux' && matrix.python-version == '3.11'
+      uses: actions/upload-artifact@v5
+      with:
+        name: coverage
+        path: |
+          coverage_html/**
+          coverage.svg
+        retention-days: 1
+        overwrite: true

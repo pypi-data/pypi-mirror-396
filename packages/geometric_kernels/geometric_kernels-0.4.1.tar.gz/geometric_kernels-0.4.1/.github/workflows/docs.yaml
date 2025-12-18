@@ -1,0 +1,59 @@
+name: Docs
+
+on:
+  workflow_run:
+    workflows: ["QualityChecks"]       # must match the name in ci.yml
+    types: [completed]
+    branches: [main]
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      #----------------------------------------------
+      #       check out repo and set up uv
+      #----------------------------------------------
+    - uses: actions/checkout@v4
+    - uses: astral-sh/setup-uv@v6
+      with:
+        version: "0.9.6"
+      #----------------------------------------------
+      #       install
+      #----------------------------------------------
+    - name: Set up venv
+      run: UV_PYTHON=3.11 make venv
+    - name: Install dependencies
+      run: |
+        make install
+        uv pip install -r docs/requirements.txt
+    - name: Build documentation
+      run: |
+        make docs
+        ls -all docs/_build/html
+    - name: Clean
+      run: |
+        TMP_DIR=$(mktemp -d -p $(pwd))
+        mv docs/_build/html/* $TMP_DIR
+        rm -rf docs
+        mv $TMP_DIR docs
+        ls -all docs
+        touch docs/.nojekyll
+    - name: Download coverage artifact
+      uses: dawidd6/action-download-artifact@v11
+      with:
+        workflow: quality-checks.yaml
+        workflow_conclusion: success
+        branch: main
+        github_token: ${{secrets.GITHUB_TOKEN}}
+        name: coverage
+        path: docs
+    - name: Push to GitHub
+      run: |
+        git add .
+        git add -f docs/autoapi/*
+        git add -f docs/coverage.svg
+        git add -f docs/coverage_html/*
+        git config --global user.email "none"
+        git config --global user.name "github-actions-bot"
+        git commit -m "build documentation [ci skip]"
+        git push -f origin HEAD:gh-pages
