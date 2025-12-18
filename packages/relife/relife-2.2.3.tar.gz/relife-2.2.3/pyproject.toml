@@ -1,0 +1,106 @@
+[build-system]
+requires = ["setuptools>=80", "setuptools-scm[simple]>=8"]
+build-backend = "setuptools.build_meta"
+
+# to build and publish : https://packaging.python.org/en/latest/tutorials/packaging-projects/
+# about version management : https://packaging.python.org/en/latest/discussions/single-source-version/#single-source-version
+
+#[tool.setuptools_scm]
+## https://setuptools-scm.readthedocs.io/en/latest/extending/#version-number-construction
+## to avoid auto incrementation of version based on the latest git tag
+#version_scheme = "no-guess-dev"
+
+[project]
+name = "relife"
+dynamic = ["version"]
+authors = [
+	{name = "Thomas Guillon", email="thomas.guillon@rte-france.com"},
+]
+maintainers = [
+	{name = "William Grison"},
+]
+description = "ReLife is an open source Python library for asset management based on reliability theory."
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+license = "Apache-2.0"
+license-files = ["LICEN[CS]E*"]
+dependencies = [
+    "numpy >= 2.2.0",
+    "scipy >= 1.15.0",
+    "matplotlib >= 3.10.0",
+    "typing_extensions >= 4.12.2",
+]
+[project.urls]
+Homepage = "https://github.com/rte-france/relife"
+Documentation = "http://opensource.rte-france.com/relife/"
+Issues = "https://github.com/rte-france/relife/issues"
+
+[tool.setuptools.packages.find] # project structure is "flat layout"
+where = ["."] # current directory for flat layout
+include = ["relife*"]  # ["*"] by default
+
+[project.optional-dependencies]
+dev = [
+    "pytest >= 8.3.0",
+    "nox >= 2024.10.0",
+    "isort >= 6.0.0",
+    "black >= 25.1.0",
+    "mypy >= 1.15.0",
+    "mypy-extensions >= 1.0.0",
+    "no-implicit-optional",
+    "scipy-stubs",
+    "Sphinx >= 8.1.3",
+    "pydata-sphinx-theme >= 0.16.1",
+    "sphinx-copybutton >= 0.5.2",
+    "sphinx_design >= 0.6.1",
+    "numpydoc >= 1.8.0",
+    "nbsphinx >= 0.9.7",
+    "myst-parser >= 4.0.1",
+    "jupyterlab >= 4.3.5",
+	"setuptools-scm >= 8.0.0",
+]
+
+[tool.black]
+line-length = 120
+
+[tool.isort]
+profile = 'black'
+
+[tool.mypy]
+plugins = "numpy.typing.mypy_plugin" # needed to type hing nympy
+
+[[tool.mypy.overrides]]
+module = [
+    "relife/data/*",
+    "relife/likelihood/*",
+    "relife/policy/*",
+    "relife/stochastic_process/*",
+]
+ignore_errors = true
+
+
+[tool.pylint.format]
+max-line-length = "88"
+max-args = 10
+disable = """
+    line-too-long,
+"""
+ignored-modules = "scipy.special"
+
+# pytest
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-rxXs"
+# addopts = "-rxXs -k 'not test_ls_integrate[loglogistic]'"
+testpaths = [
+    "relife/tests",
+    "relife/data/tests",
+    "relife/lifetime_model/tests",
+    "relife/likelihood/tests",
+    "relife/stochastic_process/tests",
+    "relife/policy/tests",
+]

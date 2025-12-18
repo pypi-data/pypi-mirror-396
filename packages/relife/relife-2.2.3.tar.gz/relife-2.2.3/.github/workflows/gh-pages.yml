@@ -1,0 +1,39 @@
+name: Build and deploy Github pages
+on:
+  push:
+    branches:
+      - main
+permissions:
+  contents: write
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # fetch all history for all tags and branches
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Install ReLife in dev mode
+        run: | # dev version with sphinx 
+          pip install ".[dev]" 
+
+      - name: Install Pandoc # needed by a sphinx extension used
+        uses: r-lib/actions/setup-pandoc@v2
+        with:
+          pandoc-version: '3.1.11'
+      
+      - name: Build Sphinx Doc
+        run: |
+          cd doc
+          make html
+
+      - name: Deploy
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages # branch on which files are commited
+          folder: ./doc/build/html # The folder the action should deploy.
