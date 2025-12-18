@@ -1,0 +1,100 @@
+import os
+
+import bpy
+from PySide6.QtWidgets import QMessageBox
+from PySide6.QtCore import Qt
+
+import bqt.ui
+import bqt.utils
+
+
+def quit_blender_from_main_thread(*args, **kwargs):
+    # https://github.com/techartorg/bqt/issues/131
+    # running bpy.ops.wm.quit_blender, runs it from the Qt thread.
+    # this can cause an EXCEPTION_ACCESS_VIOLATION on closing blender
+    # bpy.app.timers.register forces method to run in blender main thread instead of qt thread.
+    # TODO but only for blender 4.2 or higher? test this
+    def __quit_blender():
+        # this method needs to return None, to correcly register with bpy.app.timers
+        bpy.ops.wm.quit_blender(*args, **kwargs)
+    bpy.app.timers.register(__quit_blender)
+
+
+def shutdown_blender(*args, **kwargs):
+    """
+    Quit blender, without triggering the save dialogue
+    
+    :param args: catches any arguments passed by bpy handlers, and option to pass args to bpy.ops.wm.quit_blender
+    """
+    # By default changes to preferences are saved on exit, this can be toggled off in the preferences
+    if bpy.context.preferences.use_preferences_save:
+        bpy.ops.wm.save_userpref()
+        
+    quit_blender_from_main_thread(*args, **kwargs)
+
+
+def shutdown_blender_with_save_dialogue():
+    with bpy.context.temp_override(window=bqt.utils.main_blender_window()):
+        quit_blender_from_main_thread("INVOKE_DEFAULT")
+
+
+class WINDOW_OT_SaveFileFromQt(bpy.types.Operator):
+    bl_idname = "wm.save_from_qt"
+    bl_label = "Save_from_Qt"
+
+    def execute(self, context):
+
+        # context override is needed, without a UI, the operators are likely to fail/ no dialogue shows.
+        with bpy.context.temp_override(window=bqt.utils.main_blender_window()):
+            
+            # EXEC_AREA = run the operator directly, saves without dialogue
+            # INVOKE_AREA = behave like a user clicked File → Save, show file browser
+            if context.blend_data.is_saved:
+                # save file
+                bpy.ops.wm.save_mainfile('EXEC_AREA', check_existing=False)
+            else:
+                # ask user where to save the file
+                bpy.ops.wm.save_mainfile('INVOKE_AREA', check_existing=False)
+                
+        return {'FINISHED'}
+
+# todo
+#  when clicking the icon, the dialogue resets to center screen position
+#  support dragging the dialogue around
+#  add qshortcuts https://stackoverflow.com/questions/19845774/is-it-possible-to-use-an-underlined-letter-as-keyboard-shortcut-in-qt
+
+
+class BlenderClosingDialog(QMessageBox):
+    def __init__(self, parent):
+        super().__init__(parent) #, Qt.WindowCloseButtonHint | Qt.WindowSystemMenuHint | Qt.WindowTitleHint | Qt.WindowStaysOnTopHint)
+
+        # hide title bar
+        self.setWindowFlag(Qt.WindowType.FramelessWindowHint)
+
+        filepath = bpy.data.filepath
+        if not filepath:
+            filepath = 'untitled.blend'
+        filename = os.path.split(filepath)[1]
+
+        question_icon = bqt.ui.get_question_pixmap()
+
+        self.setText("Save changes before closing?\n\n" + filename)
+        self.setStandardButtons(QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel)
+        self.setDefaultButton(QMessageBox.StandardButton.Save)
+        self.setIconPixmap(question_icon)
+
+    def execute(self):
+        if not bpy.data.is_dirty:
+            shutdown_blender()
+            return
+
+        choice = super().exec_()
+        if choice == QMessageBox.StandardButton.Save:
+            bpy.utils.register_class(WINDOW_OT_SaveFileFromQt)
+            bpy.app.handlers.save_post.append(shutdown_blender)
+            bpy.ops.wm.save_from_qt()
+        elif choice == QMessageBox.StandardButton.Discard:
+            shutdown_blender()
+        else:  # user clicked cancel
+            pass
+        return choice
