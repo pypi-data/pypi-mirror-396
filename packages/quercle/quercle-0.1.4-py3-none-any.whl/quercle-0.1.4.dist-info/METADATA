@@ -1,0 +1,226 @@
+Metadata-Version: 2.4
+Name: quercle
+Version: 0.1.4
+Summary: Official Python SDK for the Quercle API - AI-powered web search and fetching
+Project-URL: Homepage, https://quercle.dev
+Project-URL: Documentation, https://quercle.dev/docs
+Project-URL: Repository, https://github.com/quercledev/quercle-python
+Author-email: Quercle <support@quercle.dev>
+License: MIT
+License-File: LICENSE
+Keywords: ai,api,fetch,quercle,search,web
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Typing :: Typed
+Requires-Python: >=3.10
+Requires-Dist: httpx>=0.27.0
+Provides-Extra: dev
+Requires-Dist: mypy>=1.10.0; extra == 'dev'
+Requires-Dist: pytest-asyncio>=0.23.0; extra == 'dev'
+Requires-Dist: pytest-cov>=4.1.0; extra == 'dev'
+Requires-Dist: pytest>=8.0.0; extra == 'dev'
+Requires-Dist: ruff>=0.4.0; extra == 'dev'
+Description-Content-Type: text/markdown
+
+# Quercle Python SDK
+
+Official Python SDK for the [Quercle API](https://quercle.dev) - AI-powered web search and fetching.
+
+## Installation
+
+```bash
+uv add quercle
+```
+
+## Quick Start
+
+```python
+from quercle import QuercleClient
+
+# Initialize with API key (or set QUERCLE_API_KEY env var)
+client = QuercleClient(api_key="qk_...")
+
+# Fetch and analyze a URL
+result = client.fetch(
+    url="<any-url>",
+    prompt="Summarize the main points in bullet points"
+)
+print(result)
+
+# Search the web
+result = client.search("What is TypeScript?")
+print(result)
+```
+
+## Authentication
+
+Get your API key at [quercle.dev](https://quercle.dev).
+
+```python
+# Option 1: Pass API key directly
+client = QuercleClient(api_key="qk_...")
+
+# Option 2: Set environment variable
+# export QUERCLE_API_KEY=qk_...
+client = QuercleClient()
+```
+
+## Usage
+
+### Synchronous Client
+
+```python
+from quercle import QuercleClient
+
+# Using context manager (recommended)
+with QuercleClient() as client:
+    # Fetch a URL and analyze content
+    result = client.fetch(
+        url="<any-url>",
+        prompt="Extract the main heading and first paragraph"
+    )
+    print(result)
+
+    # Search the web
+    result = client.search("Python best practices 2024")
+    print(result)
+
+    # Search with domain filtering
+    result = client.search(
+        "machine learning tutorials",
+        allowed_domains=["*.edu", "*.org"],
+        blocked_domains=["*.xyz"]
+    )
+    print(result)
+```
+
+### Asynchronous Client
+
+```python
+import asyncio
+from quercle import AsyncQuercleClient
+
+async def main():
+    async with AsyncQuercleClient() as client:
+        # Fetch
+        result = await client.fetch(
+            url="<any-url>",
+            prompt="Summarize this page"
+        )
+        print(result)
+
+        # Search
+        result = await client.search("Latest AI news")
+        print(result)
+
+        # Parallel requests
+        results = await asyncio.gather(
+            client.search("Python tutorials"),
+            client.search("TypeScript tutorials"),
+        )
+        for r in results:
+            print(r)
+
+asyncio.run(main())
+```
+
+## API Reference
+
+### `QuercleClient` / `AsyncQuercleClient`
+
+#### Constructor
+
+```python
+QuercleClient(
+    api_key: str | None = None,      # API key (or use QUERCLE_API_KEY env var)
+    timeout: float | None = None,    # Request timeout in seconds (default: 120)
+)
+```
+
+#### Methods
+
+**`fetch(url: str, prompt: str) -> str`**
+
+Fetch a URL and analyze its content with AI.
+
+- `url`: The URL to fetch and analyze
+- `prompt`: Instructions for how to analyze the page content
+- Returns: AI-processed analysis of the page content
+
+**`search(query: str, *, allowed_domains: list[str] | None = None, blocked_domains: list[str] | None = None) -> str`**
+
+Search the web and get AI-synthesized answers with citations.
+
+- `query`: The search query
+- `allowed_domains`: Only include results from these domains (e.g., `["*.edu", "*.gov"]`)
+- `blocked_domains`: Exclude results from these domains
+- Returns: AI-synthesized answer with source citations
+
+## Error Handling
+
+```python
+from quercle import QuercleClient, QuercleError
+from quercle.exceptions import (
+    AuthenticationError,
+    InsufficientCreditsError,
+    RateLimitError,
+    TimeoutError,
+)
+
+try:
+    client = QuercleClient()
+    result = client.search("test query")
+except AuthenticationError:
+    print("Invalid API key")
+except InsufficientCreditsError:
+    print("Not enough credits")
+except RateLimitError:
+    print("Too many requests")
+except TimeoutError:
+    print("Request timed out")
+except QuercleError as e:
+    print(f"API error: {e.status_code} - {e.detail}")
+```
+
+## Tool Descriptions
+
+Pre-defined descriptions for building AI agent tools:
+
+```python
+from quercle import (
+    # Tool descriptions
+    FETCH_TOOL_DESCRIPTION,
+    SEARCH_TOOL_DESCRIPTION,
+    # Fetch field descriptions
+    FETCH_URL_DESCRIPTION,
+    FETCH_PROMPT_DESCRIPTION,
+    # Search field descriptions
+    SEARCH_QUERY_DESCRIPTION,
+    SEARCH_ALLOWED_DOMAINS_DESCRIPTION,
+    SEARCH_BLOCKED_DOMAINS_DESCRIPTION,
+)
+```
+
+| Constant | Description |
+|----------|-------------|
+| `FETCH_TOOL_DESCRIPTION` | Fetch a web page and analyze its content using AI... |
+| `SEARCH_TOOL_DESCRIPTION` | Search the web and get an AI-synthesized answer with citations... |
+| `FETCH_URL_DESCRIPTION` | The URL to fetch and analyze |
+| `FETCH_PROMPT_DESCRIPTION` | Instructions for how to analyze the page content... |
+| `SEARCH_QUERY_DESCRIPTION` | The search query to find information about. Be specific |
+| `SEARCH_ALLOWED_DOMAINS_DESCRIPTION` | Only include results from these domains... |
+| `SEARCH_BLOCKED_DOMAINS_DESCRIPTION` | Exclude results from these domains... |
+
+## Requirements
+
+- Python 3.10+
+- httpx
+
+## License
+
+MIT
