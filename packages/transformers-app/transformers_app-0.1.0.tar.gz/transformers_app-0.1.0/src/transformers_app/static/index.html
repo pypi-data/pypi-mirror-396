@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>Settings</title>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="/static/index.css"/>
+
+    <!-- Server-injected JSON (keep your __DEFAULTS_CAPS__ replacement here) -->
+    <script id="server-caps" type="application/json">__DEFAULTS_CAPS__</script>
+
+    <!-- JS -->
+    <script defer src="/static/index.js"></script>
+</head>
+
+<body>
+<div class="wrap" id="wrap">
+    <header>
+        <div><h1>Settings</h1></div>
+    </header>
+
+    <section class="grid">
+        <!-- Context Length -->
+        <div class="card span-2">
+            <div class="title-row">
+                <h2 class="title">Context length</h2>
+                <div class="pill" id="ctxPill">—</div>
+            </div>
+            <p class="subtitle">
+                Context length is the maximum amount of text (messages + replies + system/instructions) the model can
+                keep in mind.
+            </p>
+            <div class="fieldset">
+                <div class="legend">
+                    <span>Context length</span>
+                    <span class="value" id="ctxHuman">—</span>
+                </div>
+                <div class="slider-row">
+                    <input id="ctxSelect" type="range" min="0" max="0" step="1"/>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quantization -->
+        <div class="card">
+            <div class="title-row">
+                <h2 class="title">Quantization</h2>
+                <div class="pill" id="qPill">—</div>
+            </div>
+            <p class="subtitle">
+                Weight/activation precision. Lower precision uses less memory and may be faster, but can affect quality
+                and compatibility.
+            </p>
+
+            <div class="fieldset">
+                <div class="legend"><span>Precision</span><span>Pick one</span></div>
+                <div class="options two" id="quantPrecision"></div>
+            </div>
+
+            <div class="fieldset" id="backendFieldset" aria-hidden="true" style="display:none; margin-top:10px;">
+                <div class="legend"><span>Backend</span><span>Pick one</span></div>
+                <div class="options two" id="quantBackend"></div>
+            </div>
+        </div>
+
+        <!-- Device -->
+        <div class="card">
+            <div class="title-row">
+                <h2 class="title">Device</h2>
+                <div class="pill" id="dPill">—</div>
+            </div>
+            <p class="subtitle">Where inference runs. Options come from runtime capabilities.</p>
+            <div class="fieldset">
+                <div class="legend"><span>Available devices</span><span>Pick one</span></div>
+                <div class="options two" id="deviceOptions"></div>
+            </div>
+        </div>
+
+        <!-- Attention -->
+        <div class="card span-2">
+            <div class="title-row">
+                <h2 class="title">Attention Implementation</h2>
+                <div class="pill" id="aPill">—</div>
+            </div>
+            <p class="subtitle">
+                Traditional attention is optimized for single requests; continuous batching is optimized for multiple
+                parallel requests.
+            </p>
+
+            <div class="fieldset">
+                <div class="legend"><span>Traditional attention</span><span>Optimized for single requests</span></div>
+                <div class="options three" id="attnTraditional"></div>
+            </div>
+
+            <div class="fieldset" style="margin-top:10px;">
+                <div class="legend"><span>Continuous batching</span><span>Optimized for parallel requests</span></div>
+                <div class="options three" id="attnPaged"></div>
+            </div>
+        </div>
+    </section>
+
+    <div class="status" aria-live="polite">
+        <div class="left">
+            <b>Save settings</b>
+            <span id="statusLine">Updating the settings will evict all currently loaded models.</span>
+        </div>
+        <button id="exportBtn" type="button">Save</button>
+    </div>
+</div>
+</body>
+</html>
