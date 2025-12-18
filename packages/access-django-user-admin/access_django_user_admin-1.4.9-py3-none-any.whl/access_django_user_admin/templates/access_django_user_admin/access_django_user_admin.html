@@ -1,0 +1,194 @@
+{% extends base_template %} 
+{% load i18n %} 
+{% load account socialaccount %} 
+{% load static %} 
+{% load user_admin_tags %} 
+{% load get_settings %} 
+{% block title %}Django User Admin{% endblock %} 
+{% block content %}
+
+<!-- search user section -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h2 class="card-title">Search ACCESS-CI Users</h2>
+        <p class="card-text">Search for users to add to ACCESS Django Admin</p>
+    </div>
+    <div class="card-body">
+        <form method="get" action="{% url 'access_django_user_admin:index' %}">
+            <div class="input-group">
+                <input
+                    type="text"
+                    name="q"
+                    class="form-control"
+                    placeholder="Search by name or username..."
+                    value="{{ request.GET.q|default:'' }}"
+                />
+                <button class="btn btn-primary" type="submit">Search</button>
+            </div>
+        </form>
+
+        {% if search_results %}
+        <div class="mt-4">
+            <h5>Search Results</h5>
+            <div class="table-responsive w-100">
+                <table class="table table-striped table-hover w-100">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Status</th>
+                            <th>Staff</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in search_results %}
+                        {% with existing_user=user.portal_login|get_existing_user %}
+                        <tr>
+                            <td>{{ user.portal_login }}</td>
+                            <td>{{ user.first_name }} {{ user.last_name }}</td>
+                            <td>{{ user.email }}</td>
+                            <td>
+                                {% if existing_user %}
+                                <!-- Show status from existing Django user -->
+                                {% if existing_user.is_active %}
+                                <span class="badge bg-success">Active</span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark">Inactive</span>
+                                {% endif %}
+                                {% else %}
+                                <!-- Show default status for new users -->
+                                <span class="badge bg-light text-dark">Not Set</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if existing_user %}
+                                <!-- Show staff status from existing Django user -->
+                                {% if existing_user.is_staff %}
+                                <span class="badge bg-success">Staff</span>
+                                {% else %}
+                                <span class="badge bg-light text-dark">No</span>
+                                {% endif %}
+                                {% else %}
+                                <!-- Show default staff status for new users -->
+                                <span class="badge bg-light text-dark">Not Set</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if existing_user %}
+                                <a
+                                    href="{% url 'access_django_user_admin:edit_user' existing_user.id %}"
+                                    class="btn btn-sm btn-warning"
+                                >
+                                    Update User
+                                </a>
+                                {% else %}
+                                <form
+                                    method="get"
+                                    action="{% url 'access_django_user_admin:add_user' %}"
+                                >
+                                    <input
+                                        type="hidden"
+                                        name="portal_login"
+                                        value="{{ user.portal_login }}"
+                                    />
+                                    <input
+                                        type="hidden"
+                                        name="first_name"
+                                        value="{{ user.first_name }}"
+                                    />
+                                    <input
+                                        type="hidden"
+                                        name="last_name"
+                                        value="{{ user.last_name }}"
+                                    />
+                                    <input
+                                        type="hidden"
+                                        name="email"
+                                        value="{{ user.email }}"
+                                    />
+                                    <button
+                                        type="submit"
+                                        class="btn btn-sm btn-success"
+                                    >
+                                        Select
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endwith %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {% elif request.GET.q %}
+        <div class="alert alert-info mt-3">
+            No users found matching your criteria.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- User List -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h2 class="card-title">Current Users</h2>
+        <p class="card-text">All current users in the ACCESS Django Admin</p>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive w-100">
+            <table class="table table-striped table-hover w-100">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th>Staff</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.first_name }} {{ user.last_name }}</td>
+                        <td>{{ user.email }}</td>
+                        <td>
+                            {% if user.is_active %}
+                            <span class="badge bg-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-warning text-dark">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.is_staff %}
+                            <span class="badge bg-success">Staff</span>
+                            {% else %}
+                            <span class="badge bg-light text-dark">No</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a
+                                href="{% url 'access_django_user_admin:edit_user' user.id %}"
+                                class="btn btn-sm btn-warning"
+                                >Update User</a
+                            >
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center">No users found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

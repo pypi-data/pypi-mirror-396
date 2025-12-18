@@ -1,0 +1,194 @@
+
+{% extends base_template %}
+
+
+{% load i18n %}
+{% load static %}
+{% load user_admin_tags %}
+
+{% block title %}Update User{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h2 class="card-title">Update User: {{ object.username }}</h2>
+        <p class="card-text">Update ACCESS Django user information and groups</p>
+    </div>
+    <div class="card-body">
+        {% if messages %}
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {% for message in messages %}
+                {{ message }}
+            {% endfor %}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endif %}
+
+        <form method="post" novalidate>
+            {% csrf_token %}
+
+            {% if form.errors %}
+            <div class="alert alert-danger">
+                <strong>Please correct the errors below.</strong>
+            </div>
+            {% endif %}
+
+            <!-- Account Information -->
+            <h5 class="border-bottom pb-2 mb-3"><strong>Account Information</strong></h5>
+            <div class="row mb-3">
+                <div class="col-sm-6">
+                    <label for="id_username" class="form-label">Username:</label>
+                    <input type="text" name="username" class="form-control {% if form.username.errors %}is-invalid{% endif %}"
+                          id="id_username" value="{{ form.username.value }}">
+                    {% if form.username.errors %}
+                    <div class="invalid-feedback">{{ form.username.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Personal Information -->
+            <h5 class="border-bottom pb-2 mb-3 mt-4"><strong>Personal Information</strong></h5>
+            <div class="row">
+                <div class="col-sm-6 mb-3">
+                    <label for="id_first_name" class="form-label">First name:</label>
+                    <input type="text" name="first_name" class="form-control {% if form.first_name.errors %}is-invalid{% endif %}"
+                          id="id_first_name" value="{{ form.first_name.value }}">
+                    {% if form.first_name.errors %}
+                    <div class="invalid-feedback">{{ form.first_name.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-sm-6 mb-3">
+                    <label for="id_last_name" class="form-label">Last name:</label>
+                    <input type="text" name="last_name" class="form-control {% if form.last_name.errors %}is-invalid{% endif %}"
+                          id="id_last_name" value="{{ form.last_name.value }}">
+                    {% if form.last_name.errors %}
+                    <div class="invalid-feedback">{{ form.last_name.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-sm-6">
+                    <label for="id_email" class="form-label">Email address:</label>
+                    <input type="email" name="email" class="form-control {% if form.email.errors %}is-invalid{% endif %}"
+                          id="id_email" value="{{ form.email.value }}">
+                    {% if form.email.errors %}
+                    <div class="invalid-feedback">{{ form.email.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Permissions -->
+            <h5 class="border-bottom pb-2 mb-3 mt-4"><strong>Permissions</strong></h5>
+            <div class="row">
+                <div class="col-sm-6 mb-3">
+                    <div class="form-check">
+                        <input type="checkbox" name="is_active" class="form-check-input" id="id_is_active"
+                              {% if form.is_active.value %}checked{% endif %}>
+                        <label class="form-check-label" for="id_is_active">Active</label>
+                        <div class="form-text">Designates whether this user is active. <br />
+                       <strong>Policy</strong>: Rather than delete a user, toggle off Active.</div>
+                    </div>
+                </div>
+                {% if request.user.is_staff %}
+                <div class="col-sm-6 mb-3">
+                    <div class="form-check">
+                        <input type="checkbox" name="is_staff" class="form-check-input" id="id_is_staff"
+                              {% if form.is_staff.value %}checked{% endif %}>
+                        <label class="form-check-label" for="id_is_staff">Staff status</label>
+                        <div class="form-text">Designates whether the user can log into this admin site. </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+
+            <!-- Groups -->
+            <h5 class="border-bottom pb-2 mb-3 mt-4"><strong>Groups</strong></h5>
+            <!-- Simple vertical list -->
+            <ul style="
+                list-style-type: none;
+                padding: 0;
+                margin: 0;
+            ">
+                <!-- First show all current user groups -->
+                {% for group in all_groups %}
+                    {% if group in user_groups %}
+                    <li class="mb-2">
+                        <div class="form-check form-check-sm">
+                            <input type="checkbox" name="groups" value="{{ group.id }}" class="form-check-input" 
+                                id="group_{{ group.id }}" checked>
+                            <label class="form-check-label fw-bold" for="group_{{ group.id }}" 
+                                title="{{ group.name }}">
+                                {{ group.name }}
+                            </label>
+                        </div>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+
+                <!-- Then show remaining available groups -->
+                {% for group in all_groups %}
+                    {% if group not in user_groups %}
+                    <li class="mb-2">
+                        <div class="form-check form-check-sm">
+                            <input type="checkbox" name="groups" value="{{ group.id }}" class="form-check-input" 
+                                id="group_{{ group.id }}">
+                            <label class="form-check-label" for="group_{{ group.id }}" 
+                                title="{{ group.name }}">
+                                {{ group.name }}
+                            </label>
+                        </div>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+
+            {% if all_groups|length == 0 %}
+            <p class="mb-0">No groups available.</p>
+            {% endif %}
+
+
+
+
+            <!-- Submit buttons -->
+            <div class="d-flex justify-content-between mt-4">
+                <div>
+                    <a href="{% url 'access_django_user_admin:index' %}" class="btn btn-outline-secondary">Cancel</a>
+                    <!-- Delete User Button - triggers modal -->
+                    <button type="button" class="btn btn-outline-danger ms-2" data-bs-toggle="modal" data-bs-target="#deleteUserModal">
+                        <i class="bi bi-trash"></i> Delete User
+                    </button>
+                </div>
+                <button type="submit" class="btn btn-outline-success">
+                    <i class="bi bi-save"></i> Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete User Modal -->
+<div class="modal fade" id="deleteUserModal" tabindex="-1" aria-labelledby="deleteUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteUserModalLabel">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete user <strong>{{ object.username }}</strong>?</p>
+                <p class="text-danger">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" action="{% url 'access_django_user_admin:delete_user' object.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete User</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
