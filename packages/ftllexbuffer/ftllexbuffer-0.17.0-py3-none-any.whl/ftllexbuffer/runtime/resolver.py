@@ -1,0 +1,450 @@
+"""Fluent message resolver - converts AST to formatted strings.
+
+Resolves patterns by walking AST, interpolating variables, evaluating selectors.
+Python 3.13+. Indirect dependency: Babel (via plural_rules).
+
+Thread Safety:
+    Uses thread-local storage for resolution stack to prevent race conditions
+    in concurrent resolution scenarios. Each thread gets its own isolated stack.
+"""
+
+from collections.abc import Mapping
+from datetime import date, datetime
+from decimal import Decimal
+from threading import local as thread_local
+
+from ftllexbuffer.diagnostics import (
+    ErrorTemplate,
+    FluentCyclicReferenceError,
+    FluentError,
+    FluentReferenceError,
+    FluentResolutionError,
+)
+from ftllexbuffer.runtime.function_bridge import FunctionRegistry
+from ftllexbuffer.runtime.function_metadata import should_inject_locale
+from ftllexbuffer.runtime.plural_rules import select_plural_category
+from ftllexbuffer.syntax import (
+    Expression,
+    FunctionReference,
+    Identifier,
+    Message,
+    MessageReference,
+    NumberLiteral,
+    Pattern,
+    Placeable,
+    SelectExpression,
+    StringLiteral,
+    Term,
+    TermReference,
+    TextElement,
+    VariableReference,
+    Variant,
+)
+
+# Type alias for user-provided argument values
+# Note: Includes both datetime.date and datetime.datetime for flexibility.
+# datetime.datetime is a subclass of datetime.date, so both are valid inputs.
+type FluentValue = str | int | float | bool | Decimal | datetime | date | None
+
+# Maximum resolution depth to prevent stack overflow from long non-cyclic chains.
+# A chain of 100+ message references is almost certainly a design error.
+# This limit prevents RecursionError crashes while allowing reasonable nesting.
+MAX_RESOLUTION_DEPTH = 100
+
+# Thread-local storage for resolution stack (prevents race conditions)
+_thread_local = thread_local()
+
+
+def _get_resolution_stack() -> list[str]:
+    """Get thread-local resolution stack.
+
+    Creates empty stack on first access per thread.
+    Thread-safe: each thread gets isolated stack.
+    """
+    if not hasattr(_thread_local, "resolution_stack"):
+        _thread_local.resolution_stack = []
+    stack: list[str] = _thread_local.resolution_stack
+    return stack
+
+
+class FluentResolver:
+    """Resolves Fluent messages to strings.
+
+    Aligned with Mozilla python-fluent error handling:
+    - Collects errors instead of embedding them in output
+    - Returns (result, errors) tuples
+    - Provides readable fallbacks per Fluent specification
+
+    """
+
+    __slots__ = (
+        "function_registry",
+        "locale",
+        "messages",
+        "terms",
+        "use_isolating",
+    )
+
+    def __init__(
+        self,
+        locale: str,
+        messages: dict[str, Message],
+        terms: dict[str, Term],
+        *,
+        function_registry: FunctionRegistry,
+        use_isolating: bool = True,
+    ) -> None:
+        """Initialize resolver.
+
+        Args:
+            locale: Locale code for plural selection
+            messages: Message registry
+            terms: Term registry
+            function_registry: Function registry with camelCase conversion (keyword-only)
+            use_isolating: Wrap interpolated values in Unicode bidi marks (keyword-only)
+        """
+        self.locale = locale
+        self.use_isolating = use_isolating
+        self.messages = messages
+        self.terms = terms
+        self.function_registry = function_registry
+        # Note: Resolution stack uses thread-local storage (_get_resolution_stack())
+        # for thread safety in concurrent resolution scenarios
+
+    def resolve_message(
+        self,
+        message: Message,
+        args: Mapping[str, FluentValue] | None = None,
+        attribute: str | None = None,
+    ) -> tuple[str, tuple[FluentError, ...]]:
+        """Resolve message to final string with error collection.
+
+        Mozilla python-fluent aligned API:
+        - Returns (result, errors) tuple
+        - Collects all errors during resolution
+        - Never raises exceptions (graceful degradation)
+
+        Args:
+            message: Message AST
+            args: Variable arguments
+            attribute: Attribute name (optional)
+
+        Returns:
+            Tuple of (formatted_string, errors)
+            - formatted_string: Best-effort output (never empty)
+            - errors: Tuple of exceptions encountered (immutable)
+
+        Note:
+            Per Fluent spec, resolution never fails catastrophically.
+            Errors are collected and fallback values are used.
+        """
+        errors: list[FluentError] = []  # Local error list for this resolution
+        args = args or {}
+
+        # Select pattern (value or attribute)
+        if attribute:
+            attr = next((a for a in message.attributes if a.id.name == attribute), None)
+            if not attr:
+                error = FluentReferenceError(
+                    ErrorTemplate.attribute_not_found(attribute, message.id.name)
+                )
+                errors.append(error)
+                return (f"{{{message.id.name}.{attribute}}}", tuple(errors))
+            pattern = attr.value
+        else:
+            if message.value is None:
+                error = FluentReferenceError(ErrorTemplate.message_no_value(message.id.name))
+                errors.append(error)
+                return (f"{{{message.id.name}}}", tuple(errors))
+            pattern = message.value
+
+        # Check for circular references using thread-local stack
+        msg_key = f"{message.id.name}.{attribute}" if attribute else message.id.name
+        resolution_stack = _get_resolution_stack()
+        if msg_key in resolution_stack:
+            cycle_path = [*resolution_stack, msg_key]
+            error = FluentCyclicReferenceError(ErrorTemplate.cyclic_reference(cycle_path))
+            errors.append(error)
+            return (f"{{{msg_key}}}", tuple(errors))
+
+        # Check for maximum depth (prevents stack overflow from long non-cyclic chains)
+        if len(resolution_stack) >= MAX_RESOLUTION_DEPTH:
+            error = FluentReferenceError(
+                ErrorTemplate.max_depth_exceeded(msg_key, MAX_RESOLUTION_DEPTH)
+            )
+            errors.append(error)
+            return (f"{{{msg_key}}}", tuple(errors))
+
+        try:
+            resolution_stack.append(msg_key)
+            result = self._resolve_pattern(pattern, args, errors)
+            return (result, tuple(errors))
+        finally:
+            resolution_stack.pop()
+
+    def _resolve_pattern(
+        self, pattern: Pattern, args: Mapping[str, FluentValue], errors: list[FluentError]
+    ) -> str:
+        """Resolve pattern by walking elements."""
+        result = ""
+
+        for element in pattern.elements:
+            match element:
+                case TextElement():
+                    result += element.value
+                case Placeable():
+                    try:
+                        value = self._resolve_expression(element.expression, args, errors)
+                        formatted = self._format_value(value)
+
+                        # Wrap in Unicode bidi isolation marks (FSI/PDI)
+                        # Per Unicode TR9, prevents RTL/LTR text interference
+                        if self.use_isolating:
+                            # U+2068 FIRST STRONG ISOLATE (FSI)
+                            # U+2069 POP DIRECTIONAL ISOLATE (PDI)
+                            result += f"\u2068{formatted}\u2069"
+                        else:
+                            result += formatted
+
+                    except (FluentReferenceError, FluentResolutionError) as e:
+                        # Mozilla-aligned error handling:
+                        # Collect error, show readable fallback (not {ERROR: ...})
+                        errors.append(e)
+                        fallback = self._get_fallback_for_placeable(element.expression)
+                        result += fallback
+
+        return result
+
+    def _resolve_expression(  # noqa: PLR0911  # Complex dispatch logic expected
+        self, expr: Expression, args: Mapping[str, FluentValue], errors: list[FluentError]
+    ) -> FluentValue:
+        """Resolve expression to value.
+
+        Uses pattern matching (PEP 636) to reduce complexity.
+        Each case delegates to a specialized resolver method.
+
+        Note: PLR0911 (too many returns) is acceptable here - each case
+        represents a distinct expression type in the Fluent AST.
+        """
+        match expr:
+            case SelectExpression():
+                return self._resolve_select_expression(expr, args, errors)
+            case VariableReference():
+                return self._resolve_variable_reference(expr, args)
+            case MessageReference():
+                return self._resolve_message_reference(expr, args, errors)
+            case TermReference():
+                return self._resolve_term_reference(expr, args, errors)
+            case FunctionReference():
+                return self._resolve_function_call(expr, args, errors)
+            case StringLiteral():
+                return expr.value
+            case NumberLiteral():
+                return expr.value
+            case Placeable():
+                return self._resolve_expression(expr.expression, args, errors)
+            case _:
+                raise FluentResolutionError(ErrorTemplate.unknown_expression(type(expr).__name__))
+
+    def _resolve_variable_reference(
+        self, expr: VariableReference, args: Mapping[str, FluentValue]
+    ) -> FluentValue:
+        """Resolve variable reference from args."""
+        var_name = expr.id.name
+        if var_name not in args:
+            raise FluentReferenceError(ErrorTemplate.variable_not_provided(var_name))
+        return args[var_name]
+
+    def _resolve_message_reference(
+        self, expr: MessageReference, args: Mapping[str, FluentValue], errors: list[FluentError]
+    ) -> str:
+        """Resolve message reference."""
+        msg_id = expr.id.name
+        if msg_id not in self.messages:
+            raise FluentReferenceError(ErrorTemplate.message_not_found(msg_id))
+        message = self.messages[msg_id]
+        # resolve_message returns (result, errors) tuple
+        # We need to accumulate nested errors into our current errors list
+        result, nested_errors = self.resolve_message(
+            message,
+            args,
+            attribute=expr.attribute.name if expr.attribute else None,
+        )
+        # Add nested errors to our error list
+        errors.extend(nested_errors)
+        return result
+
+    def _resolve_term_reference(
+        self, expr: TermReference, args: Mapping[str, FluentValue], errors: list[FluentError]
+    ) -> str:
+        """Resolve term reference."""
+        term_id = expr.id.name
+        if term_id not in self.terms:
+            raise FluentReferenceError(ErrorTemplate.term_not_found(term_id))
+        term = self.terms[term_id]
+
+        # Select pattern (value or attribute)
+        if expr.attribute:
+            attr = next((a for a in term.attributes if a.id.name == expr.attribute.name), None)
+            if not attr:
+                raise FluentReferenceError(
+                    ErrorTemplate.term_attribute_not_found(expr.attribute.name, term_id)
+                )
+            pattern = attr.value
+        else:
+            pattern = term.value
+
+        return self._resolve_pattern(pattern, args, errors)
+
+    def _resolve_select_expression(
+        self, expr: SelectExpression, args: Mapping[str, FluentValue], errors: list[FluentError]
+    ) -> str:
+        """Resolve select expression by matching variant.
+
+        Performance:
+            Uses O(1) dictionary lookup instead of O(k) linear scan.
+            Pre-builds variant index on first access for each select expression.
+        """
+        # Evaluate selector
+        selector_value = self._resolve_expression(expr.selector, args, errors)
+
+        # Build variant index for O(1) lookup (instead of O(k) linear scan)
+        # Index maps: string keys -> variant, number keys -> variant
+        string_variants: dict[str, Variant] = {}
+        number_variants: dict[int | float, Variant] = {}
+        default_variant = None
+
+        for variant in expr.variants:
+            # Track default
+            if variant.default:
+                default_variant = variant
+
+            # Index by key type for O(1) lookup
+            if isinstance(variant.key, Identifier):
+                string_variants[variant.key.name] = variant
+            elif isinstance(variant.key, NumberLiteral):
+                number_variants[variant.key.value] = variant
+
+        # Try exact match using O(1) dictionary lookup
+        matched_variant = None
+        selector_str = str(selector_value)
+
+        # Check string key match first
+        if selector_str in string_variants:
+            matched_variant = string_variants[selector_str]
+        # Check number key match
+        elif isinstance(selector_value, (int, float)) and selector_value in number_variants:
+            matched_variant = number_variants[selector_value]
+
+        # Try plural category match for numbers (O(1) lookup)
+        if matched_variant is None and isinstance(selector_value, (int, float)):
+            plural_category = select_plural_category(selector_value, self.locale)
+            if plural_category in string_variants:
+                matched_variant = string_variants[plural_category]
+
+        # Fallback chain
+        if matched_variant is None:
+            matched_variant = default_variant
+
+        if matched_variant is None and expr.variants:
+            # Last resort: use first variant
+            matched_variant = expr.variants[0]
+
+        if matched_variant is None:
+            raise FluentResolutionError(ErrorTemplate.no_variants())
+
+        # Resolve matched variant pattern
+        return self._resolve_pattern(matched_variant.value, args, errors)
+
+    def _resolve_function_call(
+        self,
+        func_ref: FunctionReference,
+        args: Mapping[str, FluentValue],
+        errors: list[FluentError],
+    ) -> str | int | float:
+        """Resolve function call.
+
+        Uses FunctionRegistry to handle camelCase → snake_case parameter conversion.
+        Uses metadata system to determine if locale injection is needed.
+        """
+        func_name = func_ref.id.name
+
+        # Evaluate positional arguments
+        positional_values: list[FluentValue] = [
+            self._resolve_expression(arg, args, errors) for arg in func_ref.arguments.positional
+        ]
+
+        # Evaluate named arguments (camelCase from FTL)
+        named_values: dict[str, FluentValue] = {
+            arg.name.name: self._resolve_expression(arg.value, args, errors)
+            for arg in func_ref.arguments.named
+        }
+
+        # Check if locale injection is needed (metadata-driven, not magic tuple)
+        # This correctly handles custom functions with same name as built-ins
+        if should_inject_locale(func_name, self.function_registry):
+            # Built-in formatting function: inject locale as second positional argument
+            # FunctionRegistry.call() handles camelCase → snake_case conversion
+            return self.function_registry.call(
+                func_name,
+                [*positional_values, self.locale],
+                named_values,
+            )
+
+        # Custom function or built-in that doesn't need locale: pass args as-is
+        return self.function_registry.call(
+            func_name,
+            positional_values,
+            named_values,
+        )
+
+    def _format_value(self, value: FluentValue | str | int | float) -> str:
+        """Format value to string."""
+        if isinstance(value, str):
+            return value
+        # Check bool BEFORE int/float (bool is subclass of int in Python)
+        if isinstance(value, bool):
+            return "true" if value else "false"
+        if isinstance(value, (int, float)):
+            return str(value)
+        if value is None:
+            return ""
+        return str(value)
+
+    def _get_fallback_for_placeable(self, expr: Expression) -> str:
+        """Get readable fallback for failed placeable per Fluent spec.
+
+        Per Fluent specification, when a placeable fails to resolve,
+        we return a human-readable representation of what was attempted.
+        This is superior to {ERROR: ...} as it:
+        1. Doesn't expose internal diagnostics
+        2. Shows what the translator expected
+        3. Makes errors visible but not alarming
+
+        Args:
+            expr: The expression that failed to resolve
+
+        Returns:
+            Readable fallback string
+
+        Examples:
+            VariableReference($name) → "{$name}"
+            MessageReference(welcome) → "{welcome}"
+            TermReference(-brand) → "{-brand}"
+            FunctionReference(NUMBER) → "{NUMBER(...)}"
+        """
+        match expr:
+            case VariableReference():
+                return f"{{${expr.id.name}}}"
+            case MessageReference():
+                attr_suffix = f".{expr.attribute.name}" if expr.attribute else ""
+                return f"{{{expr.id.name}{attr_suffix}}}"
+            case TermReference():
+                attr_suffix = f".{expr.attribute.name}" if expr.attribute else ""
+                return f"{{-{expr.id.name}{attr_suffix}}}"
+            case FunctionReference():
+                return f"{{{expr.id.name}(...)}}"
+            case SelectExpression():
+                return "{???}"  # Select expressions are complex, use generic fallback
+            case _:
+                return "{???}"  # Unknown expression type
