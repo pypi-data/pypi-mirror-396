@@ -1,0 +1,42 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools-scm"]
+
+[project]
+authors = [{ name = "Pushikoo" }]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Operating System :: OS Independent",
+]
+dependencies = [
+  "pushikoo-interface>=0.3.1",
+  "requests",
+  "loguru",
+  "hypergryph-api",
+  "skland-api",
+]
+description = "Skland (森空岛) getter for Pushikoo"
+name = "pushikoo-getter-skland"
+readme = "README.md"
+requires-python = ">=3.10"
+dynamic = ['version']
+
+[project.optional-dependencies]
+dev = ["ruff", "pytest", 'python-dotenv']
+
+[project.urls]
+"Homepage" = "https://github.com/EvATive7Cloud/pushikoo-getter-skland"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["test"]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.setuptools_scm]
+version_scheme = "post-release"
+local_scheme = "node-and-date"
+
+[project.entry-points."pushikoo.adapter"]
+skland = "pushikoo_getter_skland:SklandGetter"
