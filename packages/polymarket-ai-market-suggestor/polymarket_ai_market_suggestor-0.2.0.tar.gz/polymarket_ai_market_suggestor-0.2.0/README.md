@@ -1,0 +1,212 @@
+# PolySuggest – Polymarket Precision Terminal
+
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat&logo=python)](https://www.python.org/)
+[![LangChain](https://img.shields.io/badge/LangChain-0.3.x-1A4C82?style=flat)](https://python.langchain.com/)
+[![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4o-412991?style=flat&logo=openai)](https://openai.com/)
+[![Typer](https://img.shields.io/badge/Typer-CLI-555?style=flat)](https://typer.tiangolo.com/)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-green.svg)](LICENSE)
+
+The **most precise decision-support terminal for Polymarket traders** – combining real-time market data, AI-driven edge detection, probability calibration, position management, and execution capabilities.
+
+Built for **institutional & advanced retail traders** who need:
+- **Edge discovery** – Model vs market price mismatches
+- **Position management** – Sizing, correlation, portfolio risk
+- **Execution infrastructure** – Limit orders, laddering, liquidation risk
+- **Research workflows** – Trend → hypothesis → execution in minutes
+
+---
+
+## Why PolySuggest?
+
+| Feature | Description |
+|---------|-------------|
+| **Real-time Edge Detection** | Compares trend sentiment to market probability; flags mismatches >20% |
+| **Calibrated Probabilities** | Bayesian inference with credible intervals (e.g., 0.55 ± 0.08) |
+| **Expected Value Ranking** | Ranks markets by risk-adjusted EV × liquidity × confidence |
+| **Portfolio Risk Management** | Correlation analysis, VaR, liquidation warnings, hedge suggestions |
+| **Trend-aware Research** | NewsAPI + Twitter + CoinGecko sentiment signals |
+| **Overlap Protection** | Gamma API checks ensure suggestions are novel |
+| **LLM-powered Reasoning** | GPT-4o produces resolution rules, YES/NO framing, and rationale |
+| **Local Knowledge Base** | SQLite persistence for bundles, calibration tracking, and analytics |
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         DATA LAYER                                  │
+├─────────────────────────────────────────────────────────────────────┤
+│  TrendScanner          │  MarketDataPoller      │  PolymarketClient │
+│  (NewsAPI, Twitter,    │  (Gamma API 1s poll)   │  (Existing markets│
+│   CoinGecko)           │  Order book, OHLCV     │   overlap checks) │
+└──────────┬─────────────┴──────────┬─────────────┴──────────┬────────┘
+           │                        │                        │
+           ▼                        ▼                        ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                       INTELLIGENCE LAYER                            │
+├─────────────────────────────────────────────────────────────────────┤
+│  EdgeDetector          │  InferenceEngine       │  SuggestionEngine │
+│  (Sentiment vs price   │  (Bayesian prob +      │  (LangChain +     │
+│   divergence)          │   credible intervals)  │   GPT-4o)         │
+└──────────┬─────────────┴──────────┬─────────────┴──────────┬────────┘
+           │                        │                        │
+           ▼                        ▼                        ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                       EXECUTION LAYER                               │
+├─────────────────────────────────────────────────────────────────────┤
+│  PortfolioTracker      │  RiskManager           │  OrderManager     │
+│  (Positions, P&L,      │  (VaR, correlation,    │  (Limit orders,   │
+│   exposure)            │   hedge suggestions)   │   laddering)      │
+└──────────┬─────────────┴──────────┬─────────────┴──────────┬────────┘
+           │                        │                        │
+           ▼                        ▼                        ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                        OUTPUT LAYER                                 │
+├─────────────────────────────────────────────────────────────────────┤
+│  CLI (Typer + Rich)    │  Storage (SQLite)      │  Reporting        │
+│  suggest, edges,       │  Bundles, positions,   │  JSON, Markdown,  │
+│  calibrate, trade      │  orders, calibrations  │  dashboards       │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Core Modules
+
+| Module | Purpose |
+|--------|---------|
+| `trend_scanner.py` | NewsAPI, Twitter, CoinGecko trends with VADER sentiment |
+| `polymarket_client.py` | Gamma API client for markets, prices, order book |
+| `market_data.py` | Real-time polling + caching (1s updates) |
+| `edge_detector.py` | Sentiment vs market price divergence scoring |
+| `inference_engine.py` | Bayesian probability estimation with PyMC |
+| `ai.py` | LangChain + GPT-4o suggestion generation |
+| `orchestrator.py` | End-to-end pipeline coordination |
+| `portfolio_tracker.py` | Position management & P&L tracking |
+| `risk_manager.py` | VaR, correlation analysis, liquidation risk |
+| `calibration.py` | Historical accuracy metrics (Brier score, ROI) |
+| `storage.py` | SQLite persistence for all entities |
+| `cli.py` | Typer commands: `suggest`, `edges`, `calibrate`, `trade` |
+
+---
+
+## Quick Start
+
+```bash
+git clone https://github.com/BeachTexture/PolySuggest.git
+cd PolySuggest/polymarket-ai-market-suggestor
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp ENV.sample .env
+# Add your API keys to .env
+```
+
+### Generate Market Suggestions
+
+```bash
+polysuggest suggest "AI regulation" --keywords "AI,regulation" --count 4 \
+  --markdown reports/ai.md --output reports/ai.json
+```
+
+### Detect Edges (Coming Soon)
+
+```bash
+polysuggest edges --top 10              # Top edges by EV
+polysuggest watch --threshold 0.25      # Real-time edge alerts
+```
+
+### Portfolio Commands (Coming Soon)
+
+```bash
+polysuggest positions --summary         # Current holdings & P&L
+polysuggest calibrate                   # Model accuracy report
+polysuggest trade place --market <id> --outcome YES --size 100 --limit 0.45
+```
+
+### History & Analytics
+
+```bash
+polysuggest summarize                   # History of suggestion runs
+polysuggest show 3                      # Detailed view for run #3
+polysuggest insights                    # Aggregated stats
+```
+
+---
+
+## Configuration
+
+Copy `ENV.sample` to `.env` and configure:
+
+| Variable | Description |
+|----------|-------------|
+| `OPENAI_API_KEY` | GPT-4o API key |
+| `OPENAI_MODEL` | Model override (default: `gpt-4o`) |
+| `POLYMARKET_API_BASE` | Gamma API endpoint |
+| `NEWS_API_KEY` | NewsAPI key for trend scanning |
+| `TWITTER_BEARER_TOKEN` | Twitter v2 bearer token |
+| `POLYSUGGEST_DATA_DIR` | SQLite storage directory |
+| `CHROMA_PERSIST_PATH` | Vector store path for RAG |
+
+No API key? Falls back to deterministic heuristic mode for offline testing.
+
+---
+
+## Roadmap
+
+### Phase 1: Market Intelligence Hub (MVP)
+- [x] Trend scanning (NewsAPI, Twitter, CoinGecko)
+- [x] LLM-powered market suggestions
+- [x] Overlap protection via Gamma API
+- [ ] Real-time market data pipeline (1s polling)
+- [ ] Edge detection (sentiment vs price divergence)
+- [ ] Calibration tracking (Brier score, accuracy)
+
+### Phase 2: Edge Engine
+- [ ] Bayesian probability estimation (PyMC)
+- [ ] Expected value ranking
+- [ ] Base rate calculation from historical data
+
+### Phase 3: Portfolio & Execution
+- [ ] Position tracking & P&L
+- [ ] Correlation analysis
+- [ ] Order management (paper trading → live)
+- [ ] Backtesting engine
+
+### Phase 4: Research & ML
+- [ ] Semantic search on market history (RAG)
+- [ ] Multi-model ensemble (GPT-4o + SVM + LSTM)
+- [ ] Automated daily research reports
+
+---
+
+## Development
+
+```bash
+pip install -r requirements.txt
+pytest                                  # Run all tests
+pytest tests/test_storage.py -v         # Single test file
+ruff check src/                         # Lint
+black src/ tests/                       # Format
+```
+
+Run CLI without installing:
+
+```bash
+python -m polysuggest.cli suggest "crypto regulation"
+```
+
+---
+
+## Target Metrics
+
+| Metric | Target |
+|--------|--------|
+| Price update latency | <1 second |
+| Edge detection accuracy | >70% |
+| Calibration (Brier score) | <0.20 |
+| Research velocity | Trend → execution <15 min |
+
+---
+
+## License
+
+Apache-2.0 – see [LICENSE](LICENSE)
