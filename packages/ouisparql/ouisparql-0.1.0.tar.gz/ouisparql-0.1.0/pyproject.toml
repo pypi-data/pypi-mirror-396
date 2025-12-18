@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ouisparql"
+version = "0.1.0"
+authors = [ { name = "Samuel Ortion", email = "samuel@ortion.fr" } ]
+description = "Simple SPARQL in Python"
+readme = "README.rst"
+requires-python = ">=3.9"
+license = "BSD-2-Clause"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Topic :: Database",
+    "Topic :: Software Development :: Libraries :: Python Modules"
+]
+dependencies = [
+    "sparqlwrapper"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest", "pytest-asyncio", "coverage",
+    "black", "flake8", "ruff",
+    "mypy", "pyright", "types-setuptools",
+]
+
+doc = [
+    "sphinx",
+    "sphinx-rtd-theme",
+    # FIXME 3.13t rstcheck depends on pydantic
+    "rstcheck",
+]
+dist = [
+    "build", "wheel", "twine",
+]
+
+[tool.setuptools.package-data]
+ouisparql = [ "py.typed" ]
+
+[tool.setuptools.packages.find]
+include = [ "ouisparql", "ouisparql.adapters" ]
+exclude = [ "tests" ]
+
+[project.urls]
+repository = "https://gitlab.com/sortion/ouisparql"
+documentation = "https://sortion.gitlab.io/ouisparql/"
+issues = "https://gitlab.com/sortion/ouisparql/-/issues"
+package = "https://pypi.org/project/ouisparql/"
+
+[tool.black]
+line-length = 100
+target-version = ["py39"]
+
+[tool.mypy]
+exclude = ["(build|venv)/", ".*/virtualenvs/.*"]
+ignore_missing_imports = true
