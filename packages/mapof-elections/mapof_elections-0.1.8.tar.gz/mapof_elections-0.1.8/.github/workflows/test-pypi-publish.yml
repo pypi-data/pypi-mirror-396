@@ -1,0 +1,94 @@
+name: Package to Test PyPi
+
+on: workflow_dispatch
+
+env:
+  WHL_HOUSE: wheelhouse
+  MAPEL_EL_ARTS: mapel-election-artifacts
+  
+permissions:
+  contents: read
+
+jobs:
+  build-sdist:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+    - name: make sdists
+      run: |
+        mkdir -p $WHL_HOUSE
+        python -m pip install build 
+        python -m build --sdist --outdir $WHL_HOUSE .
+        ls ./$WHL_HOUSE # Listing the contents of ./$WHL_HOUSE for a sanity check
+    - name: Artifactize sdist
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ env.MAPEL_EL_ARTS }}
+        path: ${{ env.WHL_HOUSE }} 
+
+  build-compiled-python-wheels:
+    # The manylinyux action (the following one) runs everything as root. So it
+    # is not predicatble how this interacts with other actions (e.g., it might
+    # create a directory accessible only for root so that subsequent actions
+    # cannot use it).
+    # Hence, it is very convenient to thave this action in a separate job
+    # and publish the outcome as artifacts.
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build mapof-elections wheels
+        uses: pypa/cibuildwheel@v2.20.0
+        env:
+          # We skip old versions of cPython, and all PyPy
+          # because the C++ extension is incompatible with PyPy
+          CIBW_SKIP: "cp36-* cp37-* cp38-* cp39-* pp*"
+          CIBW_BUILD_FRONTEND: "build"
+        with:
+          output-dir: '${{ env.WHL_HOUSE }}'
+      - name: Artifactize compiled-python wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.MAPEL_EL_ARTS }}-${{ matrix.os }}
+          path: ${{ env.WHL_HOUSE }}
+
+  test-pypi-update:
+    needs: [build-compiled-python-wheels, build-sdist]
+    name: Publish to Test PyPI
+    environment:
+      name: test-pypi-upload
+      url: https://test.pypi.org/p/mapof-elections
+    permissions:
+      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
+    runs-on: ubuntu-latest
+    steps: 
+      - uses: actions/download-artifact@v4
+        with:
+          path: ${{ env.WHL_HOUSE }}
+          merge-multiple: true
+      - name: Display structure of downloaded files
+        run: ls -R
+        working-directory: ${{ env.WHL_HOUSE }}
+      - name: Display all artifacts
+        run: ls -R
+        working-directory: ${{ env.WHL_HOUSE }}
+      - name: Publish package to test PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: ${{ env.WHL_HOUSE }}/
+          verbose: true
+          repository-url: https://test.pypi.org/legacy/
